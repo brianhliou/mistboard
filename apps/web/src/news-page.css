@@ -114,6 +114,15 @@
   text-decoration: none;
 }
 
+/* Touch floor (#576). */
+@media (pointer: coarse) {
+  .news-page-months-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+}
+
 /* On a month's own page, that month. */
 .news-page-months-link[aria-current="page"] {
   color: var(--site-text);

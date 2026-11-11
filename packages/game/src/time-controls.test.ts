@@ -46,8 +46,8 @@ test('every rated pace sits in a time class user_ratings can store', () => {
 test('10+5 shares the rapid bucket with 5+5, so it adds no rating pool', () => {
   assert.equal(timeClassFromTimeControl(300_000, 5_000), 'rapid');
   assert.equal(timeClassFromTimeControl(600_000, 5_000), 'rapid');
-  // Casual-only on arrival: nothing it does can reach a rating bucket at all.
-  assert.equal(findTimeControl(600_000, 5_000)?.rated, false);
+  // Rated since 2026-11-06, in that same rapid bucket.
+  assert.equal(findTimeControl(600_000, 5_000)?.rated, true);
 });
 
 test('TIME_CONTROLS entries have consistent label/initialMs derivation', () => {
@@ -131,9 +131,10 @@ test('correspondenceTimeControl mirrors the allowance into initialMs', () => {
 
 test('isOfficialCorrespondenceTimeControl accepts only the official shapes', () => {
   assert.equal(isOfficialCorrespondenceTimeControl(correspondenceTimeControl(3)), true);
+  assert.equal(isOfficialCorrespondenceTimeControl(correspondenceTimeControl(2)), true);
   // Unknown day count.
   assert.equal(
-    isOfficialCorrespondenceTimeControl({ initialMs: 2 * DAY_MS, incrementMs: 0, daysPerMove: 2 }),
+    isOfficialCorrespondenceTimeControl({ initialMs: 5 * DAY_MS, incrementMs: 0, daysPerMove: 5 }),
     false,
   );
   // Allowance must mirror initialMs.
@@ -160,7 +161,7 @@ test('isOfficialCorrespondenceTimeControl accepts only the official shapes', () 
 test('every official live pace is rated-eligible', () => {
   assert.deepEqual(
     RATED_TIME_CONTROLS.map((tc) => tc.id),
-    ['1m1', '3m2', '5m5'],
+    ['1m1', '3m2', '5m5', '10m5'],
   );
   for (const tc of TIME_CONTROLS) {
     assert.equal(
@@ -223,13 +224,14 @@ test('unfloored specs accept every pace their own allowlist offers', () => {
 test('variantDefaultTimeControl: deliberate variants opt out of the house pace', () => {
   assert.equal(variantDefaultTimeControl('jieqi').id, '10m5');
   assert.equal(variantDefaultTimeControl('xiangqi').id, '10m5');
+  assert.equal(variantDefaultTimeControl('three-kingdoms-banqi').id, '5m5');
   // Everything else keeps 3+2, including a spec with no entry at all.
   assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
   assert.equal(variantDefaultTimeControl('fortress-xiangqi').id, '3m2');
   assert.equal(variantDefaultTimeControl('not-a-real-spec').id, '3m2');
 });
 
-test('defaultEngineTimeControl: every bot game starts at 10+5', () => {
+test('defaultEngineTimeControl: bot games start at 10+5 unless the variant names its own', () => {
   // The pace the web chip (landing-bot-policy offerPace), the picker and the
   // server create routes ALL have to apply, or one advertises a pace the other
   // does not start. Human games keep their variant default.
@@ -244,6 +246,13 @@ test('defaultEngineTimeControl: every bot game starts at 10+5', () => {
     assert.equal(defaultEngineTimeControl(gameSpecId).id, '10m5', gameSpecId);
   }
   assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
+});
+
+test('defaultEngineTimeControl: xiangqi mahjong bot games start at its human pace, 5+5', () => {
+  // A turn is one discard and the clock runs only for the seat to discard, so
+  // 10+5 left most of the clock unspent.
+  assert.equal(defaultEngineTimeControl('xiangqi-mahjong').id, '5m5');
+  assert.equal(variantDefaultTimeControl('xiangqi-mahjong').id, '5m5');
 });
 
 test('the bot default clears every engine floor', () => {
@@ -276,7 +285,7 @@ test('officialCorrespondenceDays recognises a stored correspondence pace and not
   // A compressed dev allowance, an increment, or a missing clock fail closed.
   assert.equal(officialCorrespondenceDays(900, 0), null);
   assert.equal(officialCorrespondenceDays(DAY_MS, 1_000), null);
-  assert.equal(officialCorrespondenceDays(2 * DAY_MS, 0), null);
+  assert.equal(officialCorrespondenceDays(5 * DAY_MS, 0), null);
   assert.equal(officialCorrespondenceDays(null, 0), null);
   assert.equal(officialCorrespondenceDays(DAY_MS, null), null);
 });

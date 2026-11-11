@@ -15,11 +15,19 @@ import type Stripe from 'stripe';
 import { currentAccountUser } from './../account-session.js';
 import { createAuthRateLimiter } from './../auth-rate-limit.js';
 import {
+  customTierMode,
   findPatronTier,
   isPatronConfigured,
   oneTimeMonthsForAmount,
+  oneTimeMonthsForUsdCents,
+  PATRON_CUSTOM_MAX_USD,
+  PATRON_CUSTOM_MIN_USD,
   PATRON_TIERS,
+  type PatronConfig,
+  type PatronTierMode,
+  parseCustomAmountUsd,
   patronConfig,
+  usdCentsFromMetadata,
 } from './../patron-config.js';
 import * as persistence from './../persistence.js';
 import { PATRON_ONE_TIME_STATUS } from './../persistence-patron.js';
@@ -61,8 +69,10 @@ export async function tryHandle(
 
 // ── Config (public) ───────────────────────────────────────────────────────────
 // Lets the donate page render the right state without a failed checkout: whether
-// the program is live and which tiers actually have a price configured. No
-// secrets are exposed — only tier keys the client already knows.
+// the program is live, which tiers actually have a price configured, and the
+// custom-amount range. No secrets are exposed, only tier keys the client already
+// knows. Custom amounts need no price id, so they are open whenever the program
+// is configured.
 function handleConfig(request: IncomingMessage, response: ServerResponse): void {
   if (!requireMethod(request, response, 'GET')) return;
   const config = patronConfig();
@@ -72,6 +82,7 @@ function handleConfig(request: IncomingMessage, response: ServerResponse): void 
   writeJson(response, 200, {
     configured: config !== null && availableTiers.length > 0,
     tiers: availableTiers,
+    custom: config ? { minUsd: PATRON_CUSTOM_MIN_USD, maxUsd: PATRON_CUSTOM_MAX_USD } : null,
   });
 }
 
@@ -116,16 +127,9 @@ async function handleCheckout(request: IncomingMessage, response: ServerResponse
   }
 
   const body = await readJsonBodyLocal(request);
-  const tierKey = typeof body.tier === 'string' ? body.tier : '';
-  const tier = findPatronTier(tierKey);
-  if (!tier) {
-    writeJson(response, 400, { error: 'invalid_tier' });
-    return;
-  }
-  const priceId = config.priceByTier.get(tier.key);
-  if (!priceId) {
-    // Configured overall but this tier's price env var is unset.
-    writeJson(response, 400, { error: 'tier_unavailable' });
+  const plan = planCheckout(body, config);
+  if ('error' in plan) {
+    writeJson(response, 400, { error: plan.error });
     return;
   }
 
@@ -143,18 +147,22 @@ async function handleCheckout(request: IncomingMessage, response: ServerResponse
     await persistence.setStripeCustomerId(user.id, customerId);
   }
 
-  const metadata = { mistboard_account_id: user.id, tier: tier.key };
+  const metadata = {
+    mistboard_account_id: user.id,
+    tier: plan.tierKey,
+    usd_cents: String(plan.usdCents),
+  };
   const session = await stripe.checkout.sessions.create({
-    mode: tier.mode,
+    mode: plan.mode,
     customer: customerId,
     client_reference_id: user.id,
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [plan.lineItem],
     success_url: `${config.publicHost}/patron?status=thanks`,
     cancel_url: `${config.publicHost}/patron`,
     metadata,
     // Stamp the same metadata on the subscription / payment so the webhook can
     // resolve account + tier without a DB lookup.
-    ...(tier.mode === 'subscription'
+    ...(plan.mode === 'subscription'
       ? { subscription_data: { metadata } }
       : { payment_intent_data: { metadata } }),
   });
@@ -164,6 +172,62 @@ async function handleCheckout(request: IncomingMessage, response: ServerResponse
     return;
   }
   writeJson(response, 200, { url: session.url });
+}
+
+export type CheckoutPlan = {
+  mode: PatronTierMode;
+  tierKey: string;
+  usdCents: number;
+  lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
+};
+
+export type CheckoutPlanError = 'invalid_tier' | 'tier_unavailable' | 'invalid_amount';
+
+// Turn a checkout request body into the Stripe line item and the metadata the
+// webhook will read. Pure, so the whole request contract is unit-tested:
+//   { tier: 'monthly_10' }                       preset, price id from env
+//   { tier: 'once_custom', amountUsd: 25 }       custom, integer USD 5..1000
+// A custom amount is validated here and only here; the client's own check is a
+// convenience. Its price is inline price_data in USD, on the configured patron
+// product when there is one, and monthly-recurring for the subscription key.
+export function planCheckout(
+  body: Record<string, unknown>,
+  config: Pick<PatronConfig, 'priceByTier' | 'productId'>,
+): CheckoutPlan | { error: CheckoutPlanError } {
+  const tierKey = typeof body.tier === 'string' ? body.tier : '';
+  const customMode = customTierMode(tierKey);
+  if (customMode) {
+    const amountUsd = parseCustomAmountUsd(body.amountUsd);
+    if (amountUsd === null) return { error: 'invalid_amount' };
+    const usdCents = amountUsd * 100;
+    return {
+      mode: customMode,
+      tierKey,
+      usdCents,
+      lineItem: {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: usdCents,
+          ...(config.productId
+            ? { product: config.productId }
+            : { product_data: { name: 'Mistboard Patron' } }),
+          ...(customMode === 'subscription' ? { recurring: { interval: 'month' as const } } : {}),
+        },
+      },
+    };
+  }
+  const tier = findPatronTier(tierKey);
+  if (!tier) return { error: 'invalid_tier' };
+  const priceId = config.priceByTier.get(tier.key);
+  // Configured overall but this tier's price env var is unset.
+  if (!priceId) return { error: 'tier_unavailable' };
+  return {
+    mode: tier.mode,
+    tierKey: tier.key,
+    usdCents: tier.amountUsd * 100,
+    lineItem: { price: priceId, quantity: 1 },
+  };
 }
 
 // ── Billing portal ────────────────────────────────────────────────────────────
@@ -319,8 +383,9 @@ export async function applyEvent(
 }
 
 // A completed Checkout in `payment` mode is a one-time payment: it carries the
-// badge for a fixed number of months from now (the tier's, or derived from the
-// amount when the tier key is unknown), then lapses under the expiry sweep.
+// badge for a fixed number of months from now, then lapses under the expiry
+// sweep. Months come from oneTimeMonthsFromSession: the preset's own count, else
+// the usd_cents metadata the server stamped at checkout.
 // Only a session Stripe reports as PAID grants anything: Alipay, WeChat Pay and
 // cards confirm synchronously, so `checkout.session.completed` already says
 // `paid`; a delayed method completes `unpaid` and pays later through
@@ -338,8 +403,7 @@ export function oneTimeInputFromSession(
   if (session.mode !== 'payment') return null;
   if (session.payment_status !== 'paid') return null;
   const tierKey = session.metadata?.tier ?? null;
-  const tier = tierKey ? findPatronTier(tierKey) : null;
-  const months = tier?.months ?? oneTimeMonthsForAmount(session.amount_total);
+  const months = oneTimeMonthsFromSession(session);
   return {
     accountId,
     stripeCustomerId: customerId,
@@ -350,6 +414,25 @@ export function oneTimeInputFromSession(
     cancelAtPeriodEnd: false,
     isLifetime: false,
   };
+}
+
+// Badge months for a paid one-time session, in this order:
+//   1. a preset tier keeps its own mapping (once_20 -> 4);
+//   2. otherwise the usd_cents metadata the server set at checkout, one month
+//      per $5, floor (a custom $7 -> 1, $25 -> 5);
+//   3. a session with neither (stamped by an older deploy) falls back to
+//      amount_total, but only when the session is in USD. Adaptive Pricing is
+//      on, so amount_total can be yen or rupees; a foreign amount grants 1.
+// Never zero for money received.
+export function oneTimeMonthsFromSession(session: Stripe.Checkout.Session): number {
+  const tierKey = session.metadata?.tier ?? null;
+  const tier = tierKey ? findPatronTier(tierKey) : null;
+  if (tier?.months != null) return tier.months;
+  const usdCents = usdCentsFromMetadata(session.metadata?.usd_cents);
+  if (usdCents !== null) return oneTimeMonthsForUsdCents(usdCents);
+  if (session.currency?.toLowerCase() === 'usd')
+    return oneTimeMonthsForAmount(session.amount_total);
+  return 1;
 }
 
 // Calendar months, UTC, clamped to the last day of the target month so a

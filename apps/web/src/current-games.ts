@@ -40,13 +40,17 @@ import {
   type CurrentGame,
   type CurrentGamePlayer,
   type CurrentGamesResponse,
+  cardSeatName,
   deadlineFractionLeft,
   FINISHED_BOARD_BOTTOM_SEAT,
   FINISHED_BOARD_POV,
   FINISHED_POOL_URL,
+  finishedBoardAspect,
+  finishedBoardBoxAspect,
   finishedBoardTenantPov,
   finishedPoolDue,
   finishedTileKind,
+  finishedWinnerColor,
   isLowClock,
   liveCardShowsHands,
   liveTileKind,
@@ -56,9 +60,16 @@ import {
 } from './current-games-model.js';
 import { watchQueueResultLabel } from './finished-result-label.js';
 import {
+  type FlipSeat,
+  payloadFirstColor,
+  seatInkForVariant,
+  variantSeatsHaveInk,
+} from './flip-seat-ink.js';
+import {
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
+  liveFirstMover,
   matchupSeats,
   namesMatchupLabel,
   terminationLabel,
@@ -70,11 +81,13 @@ import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
+import { seatDiscClass, seatDiscEl } from './seat-disc.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import { formatClock, formatDayClock } from './web-utils.js';
 
@@ -114,6 +127,9 @@ type CardState = {
   handle: ReplayHandle | null;
   mounting: Promise<void> | null;
   payload: Record<string, unknown> | null;
+  // A flip game's bound ink, read from the last board payload. The server sends
+  // a payload only when the ply moved, so this persists between polls.
+  firstColor: FlipSeat | null;
   shownPly: number;
 };
 
@@ -338,12 +354,17 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 
     const [top, bottom] = seatOrder(game);
     const clockEls: Record<string, HTMLElement> = {};
-    const topRow = buildSeatRow(top, clockEls);
+    const firstColor = payloadFirstColor(game.payload);
+    const hasInk = variantSeatsHaveInk(game.gameSpecId);
+    const ink = (seat: CurrentGamePlayer | null): string | null | false =>
+      !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
+    const topRow = buildSeatRow(top, clockEls, ink(top));
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(bottom, clockEls);
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
     article.append(open, topRow, boardRoot, bottomRow);
+    stampSeatInkFamily(article, game.gameSpecId);
 
     let bar: HTMLElement | null = null;
     if (correspondence) {
@@ -365,6 +386,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       boardRoot,
       clockEls,
       clockReceivedAt: Date.now(),
+      firstColor,
       game,
       handle: null,
       meta,
@@ -389,6 +411,13 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   // Serialized per card so a slow mount and a fast poll cannot interleave.
   function showBoard(card: CardState, payload: Record<string, unknown>): Promise<void> {
     card.payload = payload;
+    // A flip game binds its inks on the opening flip, which only the board
+    // payload carries; repaint the circles the first time it does.
+    const firstColor = payloadFirstColor(payload);
+    if (firstColor && firstColor !== card.firstColor) {
+      card.firstColor = firstColor;
+      paintSeatDiscs(card.root, card.game.gameSpecId, firstColor);
+    }
     const run = async (): Promise<void> => {
       if (!isConnected() || !cards.has(card.game.roomId)) return;
       const { mountShowcaseBoard } = await import('./showcase-board.js');
@@ -402,6 +431,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           card.game.roomId,
           {
             autoplay: false,
+            followEnd: true,
             hideReserve: !liveCardShowsHands(card.game.gameSpecId),
             live: true,
             loadPostgameOverride: async (roomId) =>
@@ -418,8 +448,6 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       } else {
         await card.handle.loadGame(card.game.roomId);
       }
-      const end = card.handle.plyCount?.() ?? 0;
-      card.handle.jumpToPly?.(end);
       card.shownPly = card.game.ply;
     };
     card.mounting = (card.mounting ?? Promise.resolve()).then(run).catch((err) => {
@@ -497,7 +525,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       if (at !== tile) finished.grid.insertBefore(tile, at);
       if (existing) return;
       finishedTiles.set(game.roomId, { tile, handle: null });
-      if (finishedTileKind(game.variant) !== 'board') return;
+      if (finishedTileKind(game.variant) === 'fog') return;
       const host = tile.querySelector<HTMLElement>('.current-game-board');
       if (!host) return;
       if (boardObserver) {
@@ -521,6 +549,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   // A tile replaced while its board loaded (a pool refresh) is off the page by
   // the time the mount resolves; its handle is destroyed rather than kept.
   async function mountFinishedBoard(host: HTMLElement, game: FeaturedGame): Promise<void> {
+    if (finishedTileKind(game.variant) === 'hands') {
+      await mountFinishedHands(host, game);
+      return;
+    }
     try {
       const { mountShowcaseBoard } = await import('./showcase-board.js');
       if (!isConnected() || !host.isConnected) return;
@@ -533,6 +565,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
         game.roomId,
         {
           autoplay: false,
+          followEnd: true,
           hideReserve: true,
           loaderForId: apiEventLoader,
           metadataByRoomId: { [game.roomId]: gameMetaForGame(game) },
@@ -560,7 +593,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
         return;
       }
       entry.handle = handle;
-      handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
+      fitFinishedBoard(host);
       // The names were placed for the expected orientation; the mounted board
       // has the final word.
       placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
@@ -568,6 +601,38 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       console.warn('[current-games] finished board failed', err);
       host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
     }
+  }
+
+  // Xiangqi Mahjong: both final hands and the match score from the
+  // finished-match read, with how the match ended on the centre line (a played
+  // out match's `tie` reads as the site's Draw). A match the server will not
+  // show (or a failed read) keeps a plain felt with the variant's name, never
+  // the misty tile: nothing about it is fog.
+  async function mountFinishedHands(host: HTMLElement, game: FeaturedGame): Promise<void> {
+    let drawn = false;
+    try {
+      const [{ loadXmjFinal, xmjFinalHandsSvg }, { readStoredXiangqiPieceSet }] = await Promise.all(
+        [import('./current-games-xmj-card.js'), import('./xiangqi-appearance-storage.js')],
+      );
+      const final = await loadXmjFinal(game.roomId);
+      if (!isConnected() || !host.isConnected) return;
+      if (final) {
+        const winner = finishedWinnerColor(game.result);
+        host.innerHTML = xmjFinalHandsSvg(
+          final.view,
+          finishedBottomSeatColor(game) === 'west' ? 'west' : 'east',
+          winner === 'east' || winner === 'west' ? winner : null,
+          readStoredXiangqiPieceSet(),
+          t('games.finalHands'),
+          terminationLabel(final.reason === 'tie' ? 'draw' : final.reason) || null,
+        );
+        drawn = true;
+      }
+    } catch (err) {
+      console.warn('[current-games] finished hands failed', err);
+    }
+    host.classList.remove('is-loading');
+    if (!drawn && host.isConnected) host.replaceChildren(buildHandsFallback(game.variant));
   }
 
   // ---- clocks -----------------------------------------------------------
@@ -618,7 +683,7 @@ function buildActions(): HTMLElement {
   actions.className = 'current-games-actions';
   const play = document.createElement('a');
   play.className = 'current-games-cta';
-  play.href = '/play';
+  play.href = '/';
   play.textContent = t('games.playNow');
   const post = document.createElement('a');
   post.className = 'current-games-cta is-secondary';
@@ -663,33 +728,41 @@ function renderPill(el: HTMLElement, total: number): void {
   el.hidden = false;
 }
 
-// First mover (red / white) sits at the bottom, the way the player's own room
-// and the TV board orient; the other seat is on top.
-function seatOrder(game: CurrentGame): [CurrentGamePlayer | null, CurrentGamePlayer | null] {
-  const first =
-    game.players.find((player) => player.color === 'red' || player.color === 'white') ??
-    game.players[0] ??
-    null;
+// First mover (red / white / east) sits at the bottom, the way the player's own
+// room and the TV board orient; the other seat is on top. Xiangqi Mahjong's
+// spectator table draws east at the bottom whoever deals, and the feed may list
+// west first, so the rows and the names handed to the board key off the same
+// first-mover set (liveFirstMover), never off list order.
+export function seatOrder(
+  game: Pick<CurrentGame, 'players'>,
+): [CurrentGamePlayer | null, CurrentGamePlayer | null] {
+  const first = liveFirstMover(game.players) ?? null;
   const second = game.players.find((player) => player !== first) ?? null;
   return [second, first];
 }
 
-function buildSeatRow(
+// `ink` is the colour the seat plays (seatInkForVariant), drawn as the shared
+// seat disc /watch uses; null is a flip game before its flip, a dashed ring;
+// false is a variant whose seats have no colour (Xiangqi Mahjong), so no disc.
+export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
+  ink: string | null | false,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
   if (player) row.dataset.color = player.color;
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
-  who.append(
-    playerNameEl(
-      displayLiveName(player?.name, t('games.guest')),
-      profileTargetFor(player),
-      'current-game-seat-name',
-    ),
+  if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
+  const fullName = displayLiveName(player?.name, t('games.guest'));
+  const nameEl = playerNameEl(
+    player?.isEngine ? cardSeatName(fullName) : fullName,
+    profileTargetFor(player),
+    'current-game-seat-name',
   );
+  nameEl.title = fullName;
+  who.append(nameEl);
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
@@ -701,6 +774,32 @@ function buildSeatRow(
   row.append(who, clock);
   if (player) clockEls[player.color] = clock;
   return row;
+}
+
+// Recolour a card's seat discs once a flip game's opening flip is known. The
+// rows are keyed by seat (data-color); the ink each seat plays follows the flip.
+export function paintSeatDiscs(
+  root: HTMLElement,
+  variant: string,
+  firstColor: FlipSeat | null,
+): void {
+  for (const row of root.querySelectorAll<HTMLElement>('.current-game-seat[data-color]')) {
+    const disc = row.querySelector<HTMLElement>('.current-game-seat-disc');
+    const seat = row.dataset.color;
+    if (!disc || !seat) continue;
+    disc.className = seatDiscClass(
+      seatInkForVariant(variant, seat, firstColor),
+      'current-game-seat-disc',
+    );
+  }
+  stampSeatInkFamily(root, variant);
+}
+
+// The Jungle family paints its second ink blue through this ancestor stamp.
+function stampSeatInkFamily(root: HTMLElement, variant: string): void {
+  const family = seatInkFamily(variant);
+  if (family) root.dataset.seatInkFamily = family;
+  else delete root.dataset.seatInkFamily;
 }
 
 function tickCard(card: CardState, now: number): void {
@@ -824,7 +923,7 @@ function matchupLabel(game: CurrentGame): string {
   return namesMatchupLabel(first, second);
 }
 
-function namesFor(game: CurrentGame): { first: string; second: string } {
+export function namesFor(game: Pick<CurrentGame, 'players'>): { first: string; second: string } {
   const [top, bottom] = seatOrder(game);
   return {
     first: displayLiveName(bottom?.name, t('games.guest')),
@@ -916,18 +1015,22 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const firstName = displayParticipantName(game, first);
   const secondName = displayParticipantName(game, second);
   const matchup = namesMatchupLabel(firstName, secondName);
+  const kind = finishedTileKind(game.variant);
   const tile = document.createElement('a');
   tile.className = 'current-game-finished';
   tile.dataset.roomId = game.roomId;
+  tile.dataset.tileKind = kind;
   tile.href = profileGameHref(game);
   tile.setAttribute('aria-label', t('games.finishedGame', { matchup }));
   const board = document.createElement('div');
   board.className = 'current-game-board';
-  if (finishedTileKind(game.variant) === 'fog') {
+  setBoardAspect(board, finishedBoardAspect(game.variant));
+  if (kind === 'fog') {
     board.append(buildFogTile(variantDisplayLabel(game.variant), null));
   } else {
     board.classList.add('is-loading');
   }
+  // The result on the left, when it ended in the bottom-right corner.
   const line = document.createElement('span');
   line.className = 'current-game-finished-line';
   const result = document.createElement('span');
@@ -935,27 +1038,83 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   result.textContent = watchQueueResultLabel(game);
   const reason = terminationLabel(game.termination);
   if (reason) result.title = reason;
-  const when = document.createElement('span');
+  const when = document.createElement('time');
   when.className = 'current-game-finished-when';
   when.textContent = formatGameTime(game.endedAt, locale);
+  const ended = game.endedAt ? new Date(game.endedAt) : null;
+  if (ended && Number.isFinite(ended.getTime())) when.dateTime = ended.toISOString();
   line.append(result, when);
+  const winner = finishedWinnerColor(game.result);
   tile.append(
-    finishedSeatRow('first', first, firstName),
+    finishedSeatRow(game, 'first', first, firstName, winner),
     board,
-    finishedSeatRow('second', second, secondName),
+    finishedSeatRow(game, 'second', second, secondName, winner),
     line,
   );
+  stampSeatInkFamily(tile, game.variant);
   placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
   return tile;
 }
 
-function finishedSeatRow(seat: BoardSeat, color: string, name: string): HTMLElement {
+// The board box's width over height, read by its aspect-ratio.
+function setBoardAspect(board: HTMLElement, aspect: number): void {
+  const box = finishedBoardBoxAspect(aspect);
+  board.style.setProperty('--finished-board-aspect', String(Math.round(box * 10000) / 10000));
+}
+
+// The mounted renderer has the final word on its drawn ratio: the box takes
+// the board SVG's viewBox, so it fills the card edge to edge. Chessground draws
+// in a square box (its only SVG is the arrows layer) and keeps the guess.
+function fitFinishedBoard(host: HTMLElement): void {
+  const svg = [...host.querySelectorAll<SVGSVGElement>('svg[viewBox]')].find(
+    (el) => !el.closest('.cg-wrap') && el.getBoundingClientRect().width > 40,
+  );
+  const box = svg?.viewBox?.baseVal;
+  if (!box || box.width <= 0 || box.height <= 0) return;
+  const aspect = box.width / box.height;
+  setBoardAspect(host, aspect);
+}
+
+// The seat colour whose name sits under the board (placeFinishedSeats).
+function finishedBottomSeatColor(game: FeaturedGame): string {
+  const [first, second] = matchupSeats(game);
+  return FINISHED_BOARD_BOTTOM_SEAT === 'first' ? first : second;
+}
+
+function buildHandsFallback(variant: string): HTMLElement {
+  const tile = document.createElement('div');
+  tile.className = 'current-game-hands-fallback';
+  tile.textContent = variantDisplayLabel(variant);
+  return tile;
+}
+
+function finishedSeatRow(
+  game: FeaturedGame,
+  seat: BoardSeat,
+  color: string,
+  name: string,
+  winner: string | null = null,
+): HTMLElement {
   const row = document.createElement('span');
   row.className = 'current-game-finished-seat';
   row.dataset.seat = seat;
   row.dataset.color = color;
-  row.textContent = name;
+  // The winner's name reads first; a draw leaves both as they are.
+  if (winner) row.dataset.outcome = winner === color ? 'won' : 'lost';
   row.title = name;
+  const label = document.createElement('span');
+  label.className = 'current-game-finished-seat-name';
+  label.textContent = cardSeatName(name);
+  label.title = name;
+  if (variantSeatsHaveInk(game.variant)) {
+    row.append(
+      seatDiscEl(
+        seatInkForVariant(game.variant, color, game.firstColor ?? null),
+        'current-game-seat-disc',
+      ),
+    );
+  }
+  row.append(label);
   return row;
 }
 

@@ -191,8 +191,7 @@ describe('account nav', () => {
       '/engines',
       '/accounts',
       '/titles',
-      '/readouts',
-      '/metrics',
+      '/ops',
       '/broadcast/xiangqi/ops',
     ]);
     expect(document.querySelector('.account-nav-admin')).toBeNull();

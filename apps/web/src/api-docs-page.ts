@@ -1,3 +1,4 @@
+import { prerenderCopy } from './prerender-copy.js';
 // /api-docs: the public HTTP API, rendered from the server's own OpenAPI
 // document (GET /api/openapi.json).
 //
@@ -284,4 +285,13 @@ export async function mountApiDocs(root: HTMLElement): Promise<void> {
       proseParagraph(['The API document could not be loaded. Try again in a moment.']),
     );
   root.append(buildNav(locale), buildStaticPageLayout('apiDocs', content, locale));
+}
+
+export function renderApiDocsShellForPrerender(locale: Locale, doc: OpenApiDocument): string {
+  const content = buildIntro(doc);
+  content.append(renderOpenApi(doc));
+  const root = document.createElement('div');
+  root.className = 'landing-page api-docs-route';
+  root.append(buildNav(locale), buildStaticPageLayout('apiDocs', content, locale));
+  return prerenderCopy(root);
 }

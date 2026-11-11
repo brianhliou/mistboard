@@ -75,3 +75,63 @@ test('a registry error always carries a description, whatever shape npm sent', (
   assert.equal(oddShape.kind, 'unavailable');
   assert.match(oddShape.detail, /statusCode/);
 });
+
+// The report npm gave on 2026-10-31: minimatch's advisory, inherited by
+// serve-handler, counted once per package.
+const advisory = (ghsa, severity = 'moderate') => ({
+  name: 'minimatch',
+  url: `https://github.com/advisories/${ghsa}`,
+  severity,
+});
+const minimatchReport = (minimatchVia = [advisory('GHSA-g3hv-75wg-m249')]) => ({
+  vulnerabilities: {
+    minimatch: { name: 'minimatch', severity: 'moderate', via: minimatchVia },
+    'serve-handler': { name: 'serve-handler', severity: 'moderate', via: ['minimatch'] },
+  },
+  ...counts({ moderate: 2, total: 2 }),
+});
+const ACCEPT = { 'GHSA-g3hv-75wg-m249': { until: '2027-01-31' } };
+
+test('an advisory nobody accepted still fails, inherited package included', () => {
+  // The planted failure: the same report with no acceptances must stay red.
+  const verdict = classifyAuditOutput(JSON.stringify(minimatchReport()), { accepted: {} });
+  assert.equal(verdict.kind, 'vulnerable');
+  assert.equal(verdict.total, 2);
+});
+
+test('an accepted advisory passes, for its package and the one that inherits it', () => {
+  const verdict = classifyAuditOutput(JSON.stringify(minimatchReport()), {
+    accepted: ACCEPT,
+    today: '2026-10-31',
+  });
+  assert.equal(verdict.kind, 'clean');
+  assert.deepEqual(verdict.accepted, ['GHSA-g3hv-75wg-m249']);
+});
+
+test('an acceptance lapses on its date', () => {
+  const verdict = classifyAuditOutput(JSON.stringify(minimatchReport()), {
+    accepted: ACCEPT,
+    today: '2027-02-01',
+  });
+  assert.equal(verdict.kind, 'vulnerable');
+});
+
+test('an accepted advisory never covers a second one on the same package', () => {
+  const report = minimatchReport([
+    advisory('GHSA-g3hv-75wg-m249'),
+    advisory('GHSA-xxxx-new0-0001', 'high'),
+  ]);
+  const verdict = classifyAuditOutput(JSON.stringify(report), {
+    accepted: ACCEPT,
+    today: '2026-10-31',
+  });
+  assert.equal(verdict.kind, 'vulnerable');
+  assert.equal(verdict.total, 2);
+});
+
+test('the shipped acceptance list covers the 10-31 report', () => {
+  // Without options the script's own list applies; a typo in its id would
+  // leave the audit red, and this says so before CI does.
+  const verdict = classifyAuditOutput(JSON.stringify(minimatchReport()), { today: '2026-10-31' });
+  assert.equal(verdict.kind, 'clean');
+});

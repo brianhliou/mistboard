@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
+import { knownEngineFailureOf } from './engine-known-failures.js';
 import { engineCounters } from './obs.js';
 import { PythonPool } from './python-pool.js';
 
@@ -272,4 +273,96 @@ test('affinity A/B: ON keeps each game on its worker; OFF bounces them (reversed
     'affinity OFF: game A bounces to the other worker under reversed order',
   );
   assert.notEqual(off.b2, off.b1, 'affinity OFF: game B bounces too');
+});
+
+// A fake worker that plays a script of actions from the state file, one per
+// dispatch ("hang,crash" → the first request hangs, the next one crashes), then
+// replies ok. Reproduces the Fog Xiangqi incident shape: a timeout, then a retry
+// that dies with "worker N exited", whose last error is not a timeout.
+const FAKE_WORKER_SCRIPTED = `
+import fs from 'node:fs';
+const stateFile = process.env.FAKE_WORKER_STATE;
+process.stdout.write(JSON.stringify({ kind: 'ready', engineId: 'fake', pid: process.pid }) + '\\n');
+let buf = '';
+process.stdin.on('data', (d) => {
+  buf += d.toString();
+  let i;
+  while ((i = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, i).trim();
+    buf = buf.slice(i + 1);
+    if (!line) continue;
+    const req = JSON.parse(line);
+    const actions = fs.readFileSync(stateFile, 'utf8').split(',').filter(Boolean);
+    const action = actions.shift();
+    fs.writeFileSync(stateFile, actions.join(','));
+    if (action === 'hang') continue;
+    if (action === 'crash') process.exit(1);
+    process.stdout.write(JSON.stringify({
+      requestId: req.requestId,
+      ok: true,
+      response: { move: { from: 'e2', to: 'e4' }, engine: { id: 'fake' }, roomId: 'r' },
+    }) + '\\n');
+  }
+});
+`;
+
+async function runScripted(
+  gameSpecId: string,
+  actions: string,
+  timeoutMs: number,
+): Promise<{ err: unknown; poolErrors: number; retries: number }> {
+  const scriptFile = join(dir, 'scripted-worker.mjs');
+  writeFileSync(scriptFile, FAKE_WORKER_SCRIPTED);
+  const stateFile = join(dir, `state-scripted-${gameSpecId}-${actions}`);
+  writeFileSync(stateFile, actions);
+  process.env.FAKE_WORKER_STATE = stateFile;
+  const pool = new PythonPool({
+    engineId: 'fake',
+    gameSpecId,
+    size: 2,
+    pythonBin: process.execPath,
+    scriptPath: scriptFile,
+    cwd: dir,
+    workerSeed: 1,
+    readyTimeoutMs: 5_000,
+  });
+  await pool.start();
+  const errorsBefore = engineCounters.totalPythonPoolErrors;
+  const retriesBefore = engineCounters.totalPythonPoolRetries;
+  let err: unknown = null;
+  try {
+    await pool.chooseMove(PAYLOAD, timeoutMs);
+  } catch (caught) {
+    err = caught;
+  } finally {
+    pool.dispose();
+  }
+  return {
+    err,
+    poolErrors: engineCounters.totalPythonPoolErrors - errorsBefore,
+    retries: engineCounters.totalPythonPoolRetries - retriesBefore,
+  };
+}
+
+test('known failure: a Fog Xiangqi timeout whose retry dies is tagged and does not page', async () => {
+  const { err, poolErrors, retries } = await runScripted('dark-xiangqi', 'hang,crash', 300);
+  assert.ok(err instanceof Error, 'the move still fails');
+  assert.doesNotMatch(err.message, /timeout/i, 'the last error is the crash, not the timeout');
+  assert.equal(knownEngineFailureOf(err), 'fog-xiangqi-belief-timeout');
+  assert.equal(poolErrors, 0, 'no pool-error critical');
+  assert.equal(retries, 0, 'no pool-retry warning');
+});
+
+test('known failure: a Fog Xiangqi crash with no timeout still pages', async () => {
+  const { err, poolErrors } = await runScripted('dark-xiangqi', 'crash,crash', 4_000);
+  assert.ok(err instanceof Error);
+  assert.equal(knownEngineFailureOf(err), null);
+  assert.equal(poolErrors, 1);
+});
+
+test('known failure: the same timeout on another variant still pages', async () => {
+  const { err, poolErrors } = await runScripted('jieqi', 'hang,crash', 300);
+  assert.ok(err instanceof Error);
+  assert.equal(knownEngineFailureOf(err), null);
+  assert.equal(poolErrors, 1);
 });

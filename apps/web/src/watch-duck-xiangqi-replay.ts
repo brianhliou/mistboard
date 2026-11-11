@@ -10,7 +10,7 @@
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
 import type { DuckXiangqiPlayerView } from '@mistboard/game';
-import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { animateDuckXiangqiTurn, duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import {
   type DuckXiangqiPostgameResponse,
   loadDuckXiangqiPostgame,
@@ -60,10 +60,13 @@ export function mountDuckXiangqiWatchReplay(
           to: String(move.to),
           duckTo: typeof move.duckTo === 'string' ? move.duckTo : null,
         }),
-      // Deliberately no animateMove. A ply here moves TWO things, the piece and
-      // the duck, and the shared helper animates one move. Gliding the piece
-      // while the duck teleports reads as a rendering fault rather than as a
-      // turn; a clean cut to the next position is honest about what happened.
+      // A ply moves two things: the piece and the duck glide together.
+      animateMove: (boardEl, view, prevView, direction, orientation) => {
+        if (direction === 'forward') animateDuckXiangqiTurn(boardEl, prevView, view, orientation);
+        else if (prevView) {
+          animateDuckXiangqiTurn(boardEl, view, prevView, orientation, { reverse: true });
+        }
+      },
     },
   );
 }

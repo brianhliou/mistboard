@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
-import { jieqiEnabled, jungleEnabled } from './feature-flags.js';
+import {
+  JIEQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  type RoomTimeControl,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
+import { jieqiEnabled, jungleEnabled, xiangqiMahjongEnabled } from './feature-flags.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
 import { LOBBY_TICKET_STALE_MS, tryHandle } from './routes/lobby.js';
-import type { Room } from './server-types.js';
+import type { LobbyTicket, Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
 const jieqiFlag = 'MISTBOARD_JIEQI_ENABLED';
@@ -156,7 +161,7 @@ function testContext(overrides: Partial<HttpApiContext> = {}): {
     databaseRequired: false,
     drainDeadlineMs: () => null,
     inMemoryGameSummary: () => null,
-    isDraining: () => false,
+    refusesCreate: () => false,
     liveClockIncrementMs: 2000,
     liveClockInitialMs: 180000,
     lobbyQueue: [],
@@ -560,4 +565,77 @@ test('lobby liveness: polling does not extend the 5-minute cap', async () => {
   }
   assert.equal(status, 404, 'the ticket must expire at the TTL even while polled');
   assert.equal((await openRequests(ctx)).length, 0);
+});
+
+// ── Xiangqi Mahjong launch ─────────────────────────────────────────────────
+//
+// Launched 2026-10-25: the flag still gates room creation, but the lobby no
+// longer requires a playtest grant. No persistence here, so every request is
+// a guest.
+
+const xmjCalls: TenantLobbyCall[] = [];
+registerFakeLobbyTenant({
+  kind: 'xiangqi-mahjong',
+  gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+  roomIdPrefix: 'xmj_',
+  errorPrefix: 'xiangqi_mahjong',
+  enabled: xiangqiMahjongEnabled,
+  supportsRated: true,
+  allowsTimeControl: () => true,
+  createRoom: async (timeControl, rated) => {
+    xmjCalls.push([timeControl, rated]);
+    return { id: `xmj_lobby_${xmjCalls.length}`, region: 'global' };
+  },
+});
+
+async function withXmjFlag(run: () => Promise<void>): Promise<void> {
+  const flag = 'MISTBOARD_XIANGQI_MAHJONG_ENABLED';
+  const before = process.env[flag];
+  process.env[flag] = 'true';
+  try {
+    await run();
+  } finally {
+    if (before === undefined) delete process.env[flag];
+    else process.env[flag] = before;
+  }
+}
+
+const xmjPace = { initialMs: 300_000, incrementMs: 5_000 };
+
+test('lobby: a guest can seek launched xiangqi mahjong without a grant', async () => {
+  await withXmjFlag(async () => {
+    xmjCalls.length = 0;
+    const { ctx } = testContext();
+    const res = await post(ctx, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID, timeControl: xmjPace });
+    assert.equal(res.status, 202);
+    assert.ok(responseJson(res).ticketId);
+    assert.equal(ctx.lobbyQueue.length, 1, 'the public seek is queued');
+    assert.equal(xmjCalls.length, 0);
+  });
+});
+
+test('lobby: the open list shows launched xiangqi mahjong to a reader without a grant', async () => {
+  await withXmjFlag(async () => {
+    const { ctx } = testContext({ now: () => 1_000_000 });
+    // An existing player's seek, queued the way POST queues one.
+    const ticket: LobbyTicket = {
+      id: 'xmj-ticket',
+      createdAt: 1_000_000,
+      lastPolledAt: 1_000_000,
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      rated: true,
+      region: null,
+      matchedAt: null,
+      roomId: null,
+      timeControl: xmjPace,
+    };
+    ctx.lobbyQueue.push(ticket);
+    ctx.lobbyTickets.set(ticket.id, ticket);
+    // A public chess seek beside it.
+    await post(ctx, { timeControl: tc });
+    assert.equal(ctx.lobbyQueue.length, 2);
+    const listed = (await openRequests(ctx)) as Array<{ gameSpecId: string }>;
+    assert.equal(listed.length, 2, 'both public seeks are listed');
+    assert.ok(listed.some((seek) => seek.gameSpecId === XIANGQI_MAHJONG_SPEC_ID));
+  });
 });

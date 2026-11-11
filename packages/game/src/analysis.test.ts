@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ABJCHESS_20261031_WIN_PCT_K,
   ABJCHESS_WIN_PCT_K,
   accuracyPercent,
   gameAccuracy,
   moveJudgment,
+  RAPFI_WIN_PCT_K,
   WIN_PCT_K,
   winPercent,
   winPercentK,
@@ -49,6 +51,21 @@ test('winPercent takes an engine curve constant; the default stays lila', () => 
 test('winPercentK picks the curve from the stored analysis engine id', () => {
   assert.equal(winPercentK('ab-jchess-jieqi-analysis@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
   assert.equal(winPercentK('ab-jchess-jieqi-decisions@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
+  // An id on the v0.2d net keeps v0.2b's curve; one on AB-JChess-20261031's net
+  // (the jqe-lineage engine) gets its own refit, where +409cp is 75%.
+  assert.equal(
+    winPercentK(
+      'ab-jchess-jieqi-analysis@1+fe35d87c+abjchess-20261010+nodes50000+consistent-win1+public1',
+    ),
+    ABJCHESS_WIN_PCT_K,
+  );
+  for (const id of [
+    'ab-jchess-jieqi-analysis@1+efc83867+abjchess-20261030+nodes50000+consistent-win1+public1',
+    'ab-jchess-jieqi-decisions@2+efc83867+abjchess-20261030+nodes20000+mpv100000+d6-public',
+  ]) {
+    assert.equal(winPercentK(id), ABJCHESS_20261031_WIN_PCT_K, id);
+  }
+  assert.ok(Math.abs(winPercent(409, null, ABJCHESS_20261031_WIN_PCT_K) - 75) < 0.1);
   assert.equal(winPercentK('pikafish-jieqi-analysis@0.4.0+e75cee3a'), WIN_PCT_K);
   assert.equal(winPercentK('pikafish'), WIN_PCT_K);
   assert.equal(winPercentK(undefined), WIN_PCT_K);
@@ -58,6 +75,72 @@ test('winPercentK picks the curve from the stored analysis engine id', () => {
 test('winPercent clamps extreme cp so it never exceeds the bounds', () => {
   assert.ok(winPercent(100000, null) <= 100);
   assert.ok(winPercent(-100000, null) >= 0);
+});
+
+test('Three Kingdoms Misty scores are expected score times 1000, not centipawns', () => {
+  for (const engineId of [
+    'misty-three-kingdoms-banqi',
+    'misty-three-kingdoms-banqi-level-8',
+    'misty-three-kingdoms-banqi-analysis@1',
+    'misty-three-kingdoms-banqi-decisions@1',
+  ]) {
+    for (const [cp, expected] of [
+      [0, 50],
+      [100, 55],
+      [300, 65],
+      [500, 75],
+      [-500, 25],
+      [1000, 100],
+      [-1000, 0],
+      [1500, 100],
+      [-1500, 0],
+      [30000, 100],
+      [-30000, 0],
+    ] as const) {
+      assert.equal(winPercent(cp, null, engineId), expected, `${engineId}: ${cp}`);
+    }
+    assert.equal(winPercent(null, null, engineId), 50);
+    for (const mate of [1, 10, 30]) {
+      assert.equal(winPercent(null, mate, engineId), 100);
+      assert.equal(winPercent(null, -mate, engineId), 0);
+    }
+    assert.equal(winPercent(null, 0, engineId), 0);
+    assert.equal(winPercent(-500, 1, engineId), 100, 'mate takes precedence over cp');
+  }
+});
+
+test('a Misty 120-point swing is an inaccuracy rather than a chess-curve mistake', () => {
+  const engineId = 'misty-three-kingdoms-banqi-analysis@1';
+  assert.equal(moveJudgment(winPercent(0, null), winPercent(-120, null)), 'mistake');
+  assert.equal(
+    moveJudgment(winPercent(0, null, engineId), winPercent(-120, null, engineId)),
+    'inaccuracy',
+  );
+});
+
+test('engine-id win models preserve existing curves unless the score scale is confirmed', () => {
+  for (const engineId of [
+    'pikafish',
+    'fairy-stockfish',
+    'misty-banqi-analysis@0.2.5+history1',
+    'misty-jungle-analysis@0.2.0',
+    'misty-jungle-flip-analysis@0.2.0+history1',
+    'misty-analysis@0.2.0+sf18+i200',
+    'misty-unconfirmed-analysis@1',
+    'misty-three-kingdoms-banqix-analysis@1',
+    'ab-jchess-jieqi-analysis@0.1.0+1ae95ca6',
+    'ab-jchess-jieqi-decisions@2+efc83867+abjchess-20261030+nodes20000',
+    'rapfi-gomoku-analysis@1',
+    undefined,
+    null,
+  ]) {
+    const k = winPercentK(engineId);
+    for (const cp of [-30000, -500, 0, 500, 30000, null]) {
+      assert.equal(winPercent(cp, null, engineId), winPercent(cp, null, k));
+    }
+    assert.equal(winPercent(null, 3, engineId), winPercent(null, 3, k));
+  }
+  assert.equal(winPercentK('fairy-stockfish'), WIN_PCT_K);
 });
 
 test('accuracyPercent is 100 for a non-losing move and falls with the win drop', () => {
@@ -119,4 +202,35 @@ test('gameAccuracy substitutes a luck-free accuracy for a reveal ply', () => {
   const realized = gameAccuracy(curve);
   const luckFree = gameAccuracy(curve, new Map([[1, 99]]));
   assert.ok(luckFree.first > realized.first, 'a luck-free decision beats the crater outcome');
+});
+
+test("Rapfi analyses are read on Rapfi's own win curve", () => {
+  const id = 'rapfi-gomoku-analysis@1+1387d11312+net6bc0d1b0+n100000+t5000+h32+threads1+pv1';
+  assert.equal(winPercentK(id), RAPFI_WIN_PCT_K);
+  // Rapfi printed EVAL 414 beside WINRATE 0.887953 for one recorded position.
+  assert.ok(Math.abs(winPercent(414, null, winPercentK(id)) - 88.8) < 0.1);
+});
+
+test('CC0 Xiangqi @6 uses its paired curve while historical and unrelated ids stay unchanged', () => {
+  const id = 'pikafish-xiangqi-analysis@6';
+  assert.equal(winPercentK(id), 0.00465696);
+  for (const old of [1, 2, 3, 4, 5]) {
+    assert.equal(winPercentK(`pikafish-xiangqi-analysis@${old}`), WIN_PCT_K);
+  }
+  for (const other of [
+    'pikafish-xiangqi-analysis@60',
+    'pikafish-xiangqi-level-6',
+    'pikafish-jieqi-analysis@6',
+  ]) {
+    assert.equal(winPercentK(other), WIN_PCT_K);
+  }
+  assert.equal(moveJudgment(50, winPercent(-90, null, id)), 'mistake');
+  assert.equal(
+    moveJudgment(50, winPercent(-90, null, 'pikafish-xiangqi-analysis@5')),
+    'inaccuracy',
+  );
+  assert.equal(winPercent(null, null, id), 50);
+  assert.equal(winPercent(2000, null, id), winPercent(1000, null, id));
+  assert.ok(winPercent(null, 1, id) > winPercent(1000, null, id));
+  assert.ok(Math.abs(winPercent(-90, null, id) + winPercent(90, null, id) - 100) < 1e-9);
 });

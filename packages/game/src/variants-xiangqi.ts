@@ -99,6 +99,8 @@ export type XiangqiGameEndReason =
   | 'timeout'
   | 'resignation'
   | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement'
   | 'repetition'
   // Perpetual check: a repetition one side manufactured by checking on every
   // move of the cycle. Xiangqi scores it as a LOSS for the checker, not a draw.

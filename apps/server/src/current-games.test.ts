@@ -6,6 +6,8 @@ import {
   type CurrentGame,
   collectCurrentGames,
   currentGameBoardPayload,
+  isStaleLiveGame,
+  LIVE_STALE_AFTER_MS,
   sortCurrentGames,
   timeClassFor,
 } from './current-games.js';
@@ -49,7 +51,8 @@ function fakeRegistration(args: {
       legacyVariants: [args.channelId],
     },
     isEngineClientId: (clientId: string | undefined) =>
-      clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false,
+      clientId === 'pikafish-jieqi-strongest' ||
+      (clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false),
     engineDisplayName: (clientId: string) => `Engine ${clientId.slice(FAKE_ENGINE_PREFIX.length)}`,
     enabled: () => true,
     rooms: args.rooms,
@@ -287,6 +290,92 @@ test('finished, waiting, paused, engine-only and abandoned rooms are not listed'
   );
 });
 
+// #469: a player who starts a new bot game without resigning the old one left
+// the old one listed until its clock flagged (prod 2026-09-27: five jieqi vs
+// Pikafish games listed, three of them abandoned). Inside the deploy gate's 10
+// minutes, a live game with no move for its class's window is hidden.
+test('a live bot game with no move for its time-class window is hidden, not ended (#469)', () => {
+  const RAPID_TC = { initialMs: 600_000, incrementMs: 5_000 };
+  const engineSeats = { black: `${FAKE_ENGINE_PREFIX}b`, red: 'client-a' };
+  const runningClock = {
+    activeColor: 'red',
+    remainingMs: { red: 300_000, black: 590_000 },
+    runningSince: NOW - 3 * 60_000,
+  };
+  // Blitz (3+2), 3 min since the bot's reply: past the 2-min window, inside the
+  // deploy gate's 10, clock still running toward the flag.
+  hiddenRooms.set(
+    'fkh_abandoned',
+    tenantRoom({
+      id: 'fkh_abandoned',
+      seats: engineSeats,
+      lastEventAt: NOW - 3 * 60_000,
+      clock: runningClock,
+    }),
+  );
+  // Rapid (10+5), same 3 min: a player thinking, still listed.
+  hiddenRooms.set(
+    'fkh_thinking',
+    tenantRoom({
+      id: 'fkh_thinking',
+      seats: engineSeats,
+      lastEventAt: NOW - 3 * 60_000,
+      timeControl: RAPID_TC,
+      clock: runningClock,
+    }),
+  );
+  // Rapid, 6 min: past the 5-min window.
+  hiddenRooms.set(
+    'fkh_rapid_gone',
+    tenantRoom({
+      id: 'fkh_rapid_gone',
+      seats: engineSeats,
+      lastEventAt: NOW - 6 * 60_000,
+      timeControl: RAPID_TC,
+    }),
+  );
+  // A reconnect or seat event is not a move: it does not keep a game fresh.
+  const reconnected = tenantRoom({
+    id: 'fkh_reconnected',
+    seats: engineSeats,
+    lastEventAt: NOW - 3 * 60_000,
+  });
+  (reconnected.events as Array<{ type: string; at: number }>).push({
+    type: 'client-connected',
+    at: NOW - 1_000,
+  });
+  hiddenRooms.set('fkh_reconnected', reconnected);
+  // PvP follows the same rule.
+  openRooms.set('fko_pvp_gone', tenantRoom({ id: 'fko_pvp_gone', lastEventAt: NOW - 3 * 60_000 }));
+  hiddenRooms.set('fkh_fresh', tenantRoom({ id: 'fkh_fresh', seats: engineSeats }));
+
+  assert.deepEqual(
+    collectCurrentGames(context(), NOW)
+      .map((game) => game.roomId)
+      .sort(),
+    ['fkh_fresh', 'fkh_thinking'],
+  );
+  // The game itself is untouched, and its next move lists it again.
+  const abandoned = hiddenRooms.get('fkh_abandoned')!;
+  assert.equal(abandoned.projection?.state.status.type, 'playing');
+  (abandoned.events as Array<{ type: string; at: number }>).push({
+    type: 'move-played',
+    at: NOW - 500,
+  });
+  assert.ok(collectCurrentGames(context(), NOW).some((game) => game.roomId === 'fkh_abandoned'));
+});
+
+test('isStaleLiveGame: window by time class, correspondence never stale', () => {
+  assert.equal(isStaleLiveGame('blitz', NOW - LIVE_STALE_AFTER_MS.blitz, NOW), false);
+  assert.equal(isStaleLiveGame('blitz', NOW - LIVE_STALE_AFTER_MS.blitz - 1, NOW), true);
+  assert.equal(isStaleLiveGame('bullet', NOW - 61_000, NOW), true);
+  assert.equal(isStaleLiveGame('rapid', NOW - 4 * 60_000, NOW), false);
+  assert.equal(isStaleLiveGame('classical', NOW - 7 * 60_000, NOW), false);
+  assert.equal(isStaleLiveGame(null, NOW - 9 * 60_000, NOW), true);
+  assert.equal(isStaleLiveGame('correspondence', NOW - 30 * 86_400_000, NOW), false);
+  assert.equal(isStaleLiveGame('blitz', null, NOW), false);
+});
+
 test('a dormant correspondence game IS listed, with its class and deadline', () => {
   const dueAt = new Date(NOW + 20 * 3_600_000);
   openRooms.set(
@@ -377,6 +466,23 @@ test('engine seats are labelled through the tenant display name, PvE composition
   assert.equal(human?.handle, 'ada');
 });
 
+test('current games keep the Jieqi Pikafish Level 8 label and shared profile link', () => {
+  for (const pveBotId of [undefined, 'pikafish', 'pika-jieqi-strongest']) {
+    hiddenRooms.set(
+      'fkh_level8',
+      tenantRoom({
+        id: 'fkh_level8',
+        seats: { black: 'pikafish-jieqi-strongest', red: 'client-a' },
+        pveBotId,
+      }),
+    );
+    const [game] = collectCurrentGames(context(), NOW);
+    const engineSeat = game?.players.find((player) => player.isEngine);
+    assert.equal(engineSeat?.name, 'Pikafish Level 8');
+    assert.equal(engineSeat?.botId, 'pikafish');
+  }
+});
+
 test('an engine seat fronted by a first-party bot is named after the bot, as the room names it', () => {
   // The room wire resolves the bot profile first; the tile used to resolve the
   // tier name only, so one game read "Pikafish" in the room and
@@ -394,6 +500,36 @@ test('an engine seat fronted by a first-party bot is named after the bot, as the
   assert.equal(engine?.name, 'Pikafish');
   assert.equal(engine?.botId, 'pikafish');
   openRooms.delete('fko_bot');
+});
+
+// A chess-stack room seats the engine under its build id. The tile showed that
+// id ("python-v2-v1.6") where the room shows "Misty", because only the tenant
+// path went through the bot table.
+function chessRoomContext(pveBotId?: string): HttpApiContext {
+  const room = {
+    id: 'fog_chess_pve',
+    gameSpecId: 'dark-chess',
+    rated: false,
+    timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    events: [{ type: 'move-played', at: NOW - 2_000 }],
+    projection: {
+      state: { status: { type: 'playing' }, moveNumber: 35 },
+      seats: { white: 'python-v2-v1.6', black: 'client-guest' },
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    },
+    seatTokens: {},
+    ...(pveBotId ? { pveBotId } : {}),
+  };
+  return { rooms: new Map([[room.id, room]]) } as unknown as HttpApiContext;
+}
+
+test('a chess-stack engine seat is named after the bot that fronts it, not its build id', () => {
+  for (const pveBotId of [undefined, 'misty']) {
+    const [game] = collectCurrentGames(chessRoomContext(pveBotId), NOW);
+    const engine = game?.players.find((player) => player.isEngine);
+    assert.equal(engine?.name, 'Misty', `pveBotId=${pveBotId}`);
+    assert.equal(engine?.botId, 'misty', `pveBotId=${pveBotId}`);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -472,4 +608,15 @@ test('the route filters by channel, counts per channel, and 404s unknown channel
   assert.equal(one.payload.total, 2, 'total stays site-wide so the rail can show it');
   const missing = await getCurrent('?channel=no-such-channel');
   assert.equal(missing.status, 404);
+});
+
+test('internal engine test rooms never enter public live discovery, even with malformed private metadata', () => {
+  const room = tenantRoom({ id: 'fko_internal' });
+  openRooms.set(room.id, room);
+  assert.ok(collectCurrentGames(context(), NOW).some((entry) => entry.roomId === room.id));
+  Object.assign(room.events![0]!, { internalEngineTest: {} });
+  assert.equal(
+    collectCurrentGames(context(), NOW).some((entry) => entry.roomId === room.id),
+    false,
+  );
 });

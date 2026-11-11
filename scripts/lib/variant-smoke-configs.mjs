@@ -10,6 +10,17 @@
 // version suffix at all.
 
 export const VARIANT_SMOKE_CONFIGS = {
+  gomoku: {
+    name: 'gomoku',
+    label: 'Gomoku',
+    usage: 'npm run prod:smoke:gomoku -- [options]',
+    gameSpecId: 'gomoku',
+    defaultTimeoutMs: 60_000,
+    // Gomoku seats Rapfi as white for a black human; dealt openings may start either side.
+    engineColor: 'white',
+    dealtOpening: true,
+    engineSeat: { prefix: 'rapfi-level-' },
+  },
   atomic: {
     name: 'atomic',
     label: 'Atomic Xiangqi',
@@ -144,6 +155,22 @@ export const VARIANT_SMOKE_CONFIGS = {
     defaultTimeoutMs: 40_000,
     engineSeat: { equals: 'pikafish-xiangqi-level-8' },
   },
+  // General Blunder (2026-10-17): Fairy-Stockfish over every root move, playing
+  // the worst one. Its own warm session and pick path, so the ladder row above
+  // does not reach it.
+  'xiangqi-worst': {
+    name: 'xiangqi-worst',
+    label: 'Xiangqi General Blunder',
+    usage: 'npm run prod:smoke:xiangqi-worst -- [options]',
+    gameSpecId: 'xiangqi',
+    engineId: 'fairy-stockfish-xiangqi-worst',
+    // 1M nodes under a 3s ceiling. Measured healthy locally: ~1.5s.
+    defaultTimeoutMs: 40_000,
+    engineSeat: { equals: 'fairy-stockfish-xiangqi-worst' },
+  },
+  // AB-JChess (the top jieqi bot again from AB-JChess-20261031, 2026-10-31): the seat
+  // waits for its first reply, so a binary that cannot load the 20261030 net, or a
+  // build that skipped it after a sha or bench mismatch, fails this row.
   'jieqi-abjchess': {
     name: 'jieqi-abjchess',
     label: 'Jieqi AB-JChess',
@@ -156,6 +183,21 @@ export const VARIANT_SMOKE_CONFIGS = {
     // when that fails (scripts/fetch-abjchess-net.sh), which hides this slot.
     unavailableCause:
       'the server has no AB-JChess binary or net. The build skips the net when the download from the authors\' release fails or its sha256 does not match; search the web build log for "abjchess-net: WARNING", then redeploy once their release answers',
+  },
+  // jqe (2026-10-22): one rung under AB-JChess, its own binary and net. Held behind
+  // MISTBOARD_JQE_ENABLED: off, the server answers 404 `jqe_disabled` and this row
+  // skips; on, a missing binary or net is `invalid_engine` and fails it.
+  'jieqi-jqe': {
+    name: 'jieqi-jqe',
+    label: 'Jieqi jqe',
+    usage: 'npm run prod:smoke:jieqi-jqe -- [options]',
+    gameSpecId: 'jieqi',
+    engineId: 'jqe-jieqi',
+    // 4s movetime behind the jieqi hard timeout, one retry.
+    defaultTimeoutMs: 60_000,
+    engineSeat: { equals: 'jqe-jieqi' },
+    unavailableCause:
+      'MISTBOARD_JQE_ENABLED is on but the server has no jqe binary or net; check the engines release assets (jqe, it014.jqn) in the web build log',
   },
   'jungle-katago': {
     name: 'jungle-katago',

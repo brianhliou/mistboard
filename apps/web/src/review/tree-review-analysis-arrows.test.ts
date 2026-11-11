@@ -165,3 +165,34 @@ describe('a reveal blunder: ranked alternatives before it, the badge on it (jieq
     expect(variations[0]?.querySelectorAll('.move-tree__move')).toHaveLength(1);
   });
 });
+
+it('tree review keeps the stored @6 curve when mounting the review chart', async () => {
+  const lastY = async (version: number) => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const analysis = computeGameAnalysis({
+      engineId: `pikafish-xiangqi-analysis@${version}`,
+      depth: 12,
+      plies: [
+        { ply: 0, cp: 0, mate: null, best: null },
+        { ply: 1, cp: 200, mate: null, best: null },
+      ],
+    });
+    mountXiangqiReview(root, {
+      ariaLabel: 'Review',
+      title: 'Review',
+      summary: '',
+      moves: [{ from: 'b3', to: 'e3' }],
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => analysis,
+        run: async () => analysis,
+      },
+    });
+    await settle();
+    const points = root.querySelector('.advantage-chart__line')!.getAttribute('points')!;
+    return Number(points.split(' ')[1]!.split(',')[1]);
+  };
+  expect(await lastY(6)).toBeCloseTo(4 + 92 / (1 + Math.exp(0.00465696 * 200)), 1);
+  expect(await lastY(5)).toBeCloseTo(4 + 92 / (1 + Math.exp(0.00368208 * 200)), 1);
+});

@@ -2,18 +2,38 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, hostname } from 'node:os';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { tsImport } from 'tsx/esm/api';
+import { printGateSummary, runCiChecks, runGateCommand, skippedCommand } from './ci-checks.mjs';
 import {
+  assertAgentBranchesAccountedFor,
+  readUnshippedAgentBranches,
+} from './lib/agent-branches.mjs';
+import { findReusableBatchCi } from './lib/batch-ci.mjs';
+import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
+import {
+  assertChangelogCommitMatches,
+  assertEntriesAreNew,
   currentMonth,
+  findExistingEntries,
   insertChangelogEntries,
   parseChangelogArg,
   previewInsertion,
 } from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
+import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
   acquireReleaseLock,
   DEFAULT_LOCK_TIMEOUT_MS,
@@ -23,6 +43,15 @@ import {
   readLock,
   releaseOnExit,
 } from './lib/release-lock.mjs';
+import {
+  DEFAULT_SHIP_WINDOW_HOURS,
+  describeShipWindow,
+  evaluateShipWindow,
+  lastProdPush,
+  parseExtraShipReason,
+  parseReleaseLog,
+  parseWindowHours,
+} from './lib/ship-window.mjs';
 import {
   DEFAULT_TEST_DATABASE_URL,
   isDatabaseReachable,
@@ -89,9 +118,15 @@ const release = {
   // on our failure path cancels OUR drain and not a concurrent release's.
   drainOwner: `release-${hostname()}-${process.pid}-${Date.now().toString(36)}`,
   drainCommitted: false,
+  drainStarted: false,
   drainRequired: false,
+  // Where safe-deploy writes what the hold cost ({commitWaitMs, refusedCreates}),
+  // and that cost once read: the "new games held" line and the release record.
+  drainResultFile: path.join(tmpdir(), `mistboard-release-drain-${process.pid}.json`),
+  drainHold: null,
   deployRequired: false,
   headRevision: null,
+  candidateBranch: null,
   // The revision production is expected to serve, which the revision wait, the
   // smoke tier and --expect-revision all track. It is headRevision until
   // another session's push supersedes ours during the hosted CI wait and the
@@ -103,6 +138,11 @@ const release = {
   planReason: null,
   productionRevision: null,
   pushCompleted: false,
+  // When the push reached the remote (ISO), the ship window's anchor for the
+  // next release (scripts/lib/ship-window.mjs). Null until the push succeeds.
+  pushedAt: null,
+  // The ship-window guard's decision for this run, or null when it did not run.
+  shipWindow: null,
   targetRevision: null,
   // The record this release appends to the release log at exit: every timed
   // stage with its duration, the gate it chose, the smoke tier, the CI run.
@@ -112,10 +152,13 @@ const release = {
   gate: null,
   smokeTier: null,
   ciRunUrl: null,
+  ciTestedRevision: null,
+  reusedCiRun: null,
   // The commit the --changelog lines link (HEAD when the release started), and
   // the changelog commit made on top of it; null without --changelog.
   featureRevision: null,
   changelogCommit: null,
+  changelogPlanned: false,
   // How long this release queued behind another for the machine-wide lock.
   lockWaitMs: null,
   lockWaited: false,
@@ -127,16 +170,59 @@ const release = {
 // first time a rare path reaches it (release-prod-structure.test.mjs).
 // confirmAncestor's answers, keyed pushed..tip.
 const ancestryCache = new Map();
+// The ship-window guard's estimate of whether this --push deploys, computed
+// once before the lock (see shipWindowApplies).
+let shipDeployEstimate = null;
+// readRemoteTip's answer: undefined until read, then { revision, committedAt } or null.
+let remoteTipCache;
 
 try {
-  if (!options.plan) ensureCleanWorktree();
-  if (options.changelog.length > 0) checkChangelogPreconditions();
+  if (options.gateOnly) {
+    // Local refs only: the caller updates origin/main when assembling the
+    // batch. Permit uncommitted fixes, with no release lock or mutations.
+    const base = git(['rev-parse', '--verify', `${options.remote}/${options.targetBranch}`]);
+    const head = git(['rev-parse', '--verify', options.head]);
+    const changed = unique([
+      ...readChangedFiles({ base, head }),
+      ...git(['diff', '--name-only', 'HEAD']).split('\n').filter(Boolean),
+      ...git(['ls-files', '--others', '--exclude-standard']).split('\n').filter(Boolean),
+    ]);
+    await runLocalGate(localGateFor(changed, base, true), changed);
+    process.exit(0);
+  }
+  if (options.rehearse) {
+    await timedStage('argument and changelog validation', () => {
+      ensureCleanWorktree();
+      enforceAgentBranchAccounting();
+      if (options.changelog.length > 0) checkChangelogPreconditions();
+    });
+  } else {
+    if (!options.plan) ensureCleanWorktree();
+    if (options.push || options.plan) enforceAgentBranchAccounting();
+    if (options.changelog.length > 0) checkChangelogPreconditions();
+  }
   // One release at a time on this machine, taken before anything reads or
   // fetches origin/main: a release that queued finds main moved by the one it
   // waited for, and the catch-up below has to see that move.
-  if (options.push && !options.plan) {
+  if (options.rehearse) {
+    await timedStage('ship window before lock', () =>
+      enforceShipWindow('before the release lock', { onRefuse: 'throw' }),
+    );
+    await timedStage('release lock', takeReleaseLock);
+    await timedStage('ship window after lock', () =>
+      enforceShipWindow('after taking the release lock', { onRefuse: 'throw' }),
+    );
+    await timedStage('main ancestry check', catchUpBeforeGate);
+  } else if (options.push && !options.plan) {
+    // The ship window, checked before the lock and again once it is held (the
+    // release this one queued behind may have pushed meanwhile). Both run
+    // before the catch-up merge and the --changelog commit, so a refusal
+    // leaves the branch, CHANGELOG.md and the lock as they were.
+    enforceShipWindow('before the release lock');
     await takeReleaseLock();
+    enforceShipWindow('after taking the release lock');
     catchUpBeforeGate();
+    enforceAgentBranchAccounting();
   }
   if (options.changelog.length > 0 && !options.plan) commitChangelog();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
@@ -154,15 +240,32 @@ try {
   console.log(`push: ${options.push ? 'yes' : 'no'}`);
   console.log(`smoke: ${options.smoke}`);
 
-  const plan = runPlan({ headRevision: release.headRevision });
+  const plan = options.rehearse
+    ? await timedStage('production deploy plan', () =>
+        runPlan({ headRevision: release.headRevision }),
+      )
+    : runPlan({ headRevision: release.headRevision });
   release.deployRequired = plan.deployRequired;
   release.planReason = plan.reason;
   release.productionRevision = plan.productionRevision;
+  // Backstop: the early guard estimated no deploy from this branch's own diff,
+  // but the plan against production says this push deploys (the merged-in main
+  // carried something undeployed). Check the window now, before the gate.
+  if ((options.push || options.rehearse) && release.deployRequired && release.shipWindow === null) {
+    enforceShipWindow('after the deploy plan', { force: true, onRefuse: 'throw' });
+  }
 
   const ciPlan = planHostedCi({
     baseRevision: release.targetRevision,
     headRevision: release.headRevision,
   });
+  if (release.changelogPlanned) {
+    ciPlan.changedFiles = unique([...ciPlan.changedFiles, 'CHANGELOG.md']);
+  }
+  if (options.push || options.rehearse) {
+    ciPlan.ciRequired = true;
+    ciPlan.reason = 'release_candidate_requires_ci';
+  }
   release.ciRequired = ciPlan.ciRequired;
   release.ciReason = ciPlan.reason;
   printHostedCiPlan(ciPlan);
@@ -172,7 +275,7 @@ try {
   // unattended; a deploy that would interrupt live games still requires the
   // token and drains first. When the active-game count can't be read, fail
   // safe and require the drain.
-  if (options.push && release.deployRequired) {
+  if ((options.push || options.rehearse) && release.deployRequired) {
     const liveGames = await fetchActiveGameCount();
     if (liveGames === null) {
       release.drainRequired = true;
@@ -190,27 +293,101 @@ try {
 
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
-    release.gate = { kind: gate.kind, reason: gate.reason };
-    console.log(`local gate: ${gate.kind} (${gate.reason})`);
-    for (const command of gate.commands) {
-      runTimed(`local ${command.slice(2).join(' ')}`, command);
+    if (options.rehearse) {
+      await timedStage('local release gate', () => runLocalGate(gate, ciPlan.changedFiles));
+    } else {
+      await runLocalGate(gate, ciPlan.changedFiles);
     }
-    // ci:quick does NOT include test:persistent, and the push below goes out
-    // with --no-verify, which skips the pre-push hook that WOULD have run it.
-    // So without this a persistence change reaches hosted CI unproven: that is
-    // exactly how 2026-08-27 put three red persistent tests on main and froze
-    // the next deploy behind them.
-    await runReleasePersistenceGate(ciPlan.changedFiles);
+    if (release.deployRequired) {
+      runTimed('local production smokes', [
+        'npm',
+        'run',
+        'release:local-smoke',
+        '--',
+        // Targeted gates may build only one app; the smoke needs both artifacts.
+        ...(gate.kind === 'full' || gate.kind === 'broad' ? ['--skip-build'] : []),
+        '--revision',
+        release.headRevision,
+      ]);
+    }
   } else {
     console.log('skip: local gate (--skip-local-ci)');
   }
 
+  if (options.rehearse) {
+    await timedStage('final main check', catchUpWithMain);
+    printRehearsalSummary();
+    process.exit(0);
+  }
+
   if (options.push) {
     catchUpWithMain();
-    // The first count was read before the local gate, minutes ago. A game that
-    // started since would be killed by the container swap undrained (2026-10-01:
-    // the 10:38 PDT swap logged shutdown_without_drain with one game live), so
-    // read it again right before the push that triggers the deploy.
+    enforceAgentBranchAccounting();
+    release.reusedCiRun = findReusableBatchRun();
+    release.candidateBranch = `release/${release.reusedCiRun?.headSha ?? release.headRevision}`;
+    if (!release.reusedCiRun) {
+      runTimed(
+        'git push release candidate',
+        pushCommand(release.headRevision, release.candidateBranch),
+      );
+    }
+    // Include games that started during the local gate in the drain that
+    // overlaps hosted CI.
+    if (release.deployRequired && !release.drainRequired) {
+      const liveGames = await fetchActiveGameCount();
+      if (liveGames !== 0) {
+        release.drainRequired = true;
+        requireUsableDrainToken(liveGames);
+      }
+    }
+    // Announce a pending drain without waiting for zero or committing the
+    // restart. Games finish while hosted CI runs on the candidate branch.
+    if (release.drainRequired) {
+      release.drainStarted = true;
+      runTimed('production drain start', [
+        'node',
+        'scripts/safe-deploy.mjs',
+        '--yes',
+        '--start-only',
+        ...safeDeployBaseArgs(),
+      ]);
+    }
+  }
+
+  if (release.reusedCiRun) {
+    release.ciRunUrl = release.reusedCiRun.url;
+    release.ciTestedRevision = release.reusedCiRun.headSha;
+    console.log(
+      `hosted CI reused: ${release.ciRunUrl ?? release.ciTestedRevision} (release tree matches except CHANGELOG.md)`,
+    );
+  } else if (release.ciRequired && options.ciWait) {
+    const verified = await timedStage('hosted CI wait', () =>
+      waitForGithubCi({
+        headRevision: release.headRevision,
+        branch: release.candidateBranch ?? options.targetBranch,
+        exact: options.push,
+      }),
+    );
+    release.ciTestedRevision = verified.revision;
+    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
+  } else if (!release.ciRequired) {
+    console.log(`skip: hosted CI wait (${release.ciReason})`);
+  } else {
+    console.log('skip: hosted CI wait (--skip-ci-wait)');
+  }
+
+  if (options.push) {
+    // Never merge or adopt a different tree after CI. A normal (non-forced)
+    // push also rejects a non-fast-forward race after this check.
+    const remote = readRemoteTargetRevision();
+    if (remote !== release.targetRevision && remote !== release.headRevision) {
+      throw new Error(
+        'main moved during candidate CI; re-run the release to test a fresh candidate',
+      );
+    }
+    enforceAgentBranchAccounting();
+    // Games may have started during CI when the initial pool was empty.
+    // Re-read immediately before the push that actually deploys.
     if (release.deployRequired && !release.drainRequired) {
       const liveGames = await fetchActiveGameCount();
       if (liveGames !== 0) {
@@ -226,11 +403,14 @@ try {
       }
     }
     if (release.drainRequired) {
+      release.drainStarted = true;
       runTimed('production drain', [
         'node',
         'scripts/safe-deploy.mjs',
         '--yes',
         '--commit',
+        '--result-file',
+        release.drainResultFile,
         ...safeDeployBaseArgs(),
       ]);
       release.drainCommitted = true;
@@ -241,20 +421,10 @@ try {
     }
     runTimed('git push release head', pushCommand(release.headRevision));
     release.pushCompleted = true;
+    release.pushedAt = new Date().toISOString();
     enterPostPushWorkdir();
   } else {
     console.log('skip: git push (pass --push to publish the current commit)');
-  }
-
-  if (release.ciRequired && options.ciWait) {
-    const verified = await timedStage('hosted CI wait', () =>
-      waitForGithubCi({ headRevision: release.headRevision }),
-    );
-    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
-  } else if (!release.ciRequired) {
-    console.log(`skip: hosted CI wait (${release.ciReason})`);
-  } else {
-    console.log('skip: hosted CI wait (--skip-ci-wait)');
   }
 
   if (release.deployRequired) {
@@ -276,14 +446,19 @@ try {
 
   submitIndexNow({ deployRequired: release.deployRequired });
 
+  await rebuildBlog({ deployRequired: release.deployRequired });
+
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
+  reportDrainHold();
   writeReleaseRecord({ elapsedMs, outcome: 'ok' });
 } catch (error) {
-  cancelUnpublishedDrain();
+  await cancelDrainAfterFailure();
+  reportDrainHold();
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
+  if (options.rehearse) printRehearsalSummary(error);
   writeReleaseRecord({
     elapsedMs,
     outcome: 'failed',
@@ -298,6 +473,9 @@ function parseArgsOrExit(args) {
     return parseArgs(args);
   } catch (error) {
     console.error(`release-prod: ${error instanceof Error ? error.message : String(error)}`);
+    if (args.includes('--rehearse')) {
+      console.error('# rehearsal stage summary\nargument and changelog validation: failed');
+    }
     process.exit(2);
   }
 }
@@ -308,18 +486,23 @@ function parseArgs(args) {
     changelog: [],
     changelogSummary: null,
     ciWait: true,
+    extraShip: null,
     ciWorkflow: DEFAULT_CI_WORKFLOW,
     head: 'HEAD',
     help: false,
     localCi: true,
     lockTimeoutMs: DEFAULT_LOCK_TIMEOUT_MS,
     fullCi: false,
+    gateReuse: true,
+    gateOnly: false,
     plan: false,
     planBase: null,
     planFiles: [],
     push: false,
+    rehearse: false,
     remote: DEFAULT_REMOTE,
     smoke: DEFAULT_SMOKE,
+    shipWindowHours: DEFAULT_SHIP_WINDOW_HOURS,
     smokeExplicit: false,
     targetBranch: DEFAULT_TARGET_BRANCH,
     timeoutMs: DEFAULT_TIMEOUT_MS,
@@ -331,12 +514,31 @@ function parseArgs(args) {
       parsed.baseUrl = requiredValue(args, ++index, arg);
     } else if (arg === '--changelog') {
       parsed.changelog.push(parseChangelogArg(requiredValue(args, ++index, arg)));
+    } else if (arg === '--changelog-file') {
+      const file = requiredValue(args, ++index, arg);
+      const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+      for (const [lineNumber, line] of lines.entries()) {
+        if (!line.trim()) continue;
+        try {
+          parsed.changelog.push(parseChangelogArg(line));
+        } catch (error) {
+          throw new Error(`${file}:${lineNumber + 1}: ${error.message}`);
+        }
+      }
     } else if (arg === '--changelog-summary') {
       parsed.changelogSummary = requiredValue(args, ++index, arg);
     } else if (arg === '--ci-workflow') {
       parsed.ciWorkflow = requiredValue(args, ++index, arg);
+    } else if (arg === '--extra-ship') {
+      // A string, never a bare flag: requiredValue rejects a missing or
+      // flag-shaped value, parseExtraShipReason a blank one.
+      const value = args[index + 1];
+      index += 1;
+      parsed.extraShip = parseExtraShipReason(value);
     } else if (arg === '--head') {
       parsed.head = requiredValue(args, ++index, arg);
+    } else if (arg === '--ship-window-hours') {
+      parsed.shipWindowHours = parseWindowHours(requiredValue(args, ++index, arg));
     } else if (arg === '--plan' || arg === '--dry-run') {
       parsed.plan = true;
     } else if (arg === '--lock-timeout-ms') {
@@ -349,12 +551,18 @@ function parseArgs(args) {
       parsed.plan = true;
     } else if (arg === '--push') {
       parsed.push = true;
+    } else if (arg === '--rehearse') {
+      parsed.rehearse = true;
     } else if (arg === '--remote') {
       parsed.remote = requiredValue(args, ++index, arg);
     } else if (arg === '--skip-ci-wait') {
       parsed.ciWait = false;
     } else if (arg === '--full-ci') {
       parsed.fullCi = true;
+    } else if (arg === '--no-gate-reuse') {
+      parsed.gateReuse = false;
+    } else if (arg === '--gate-only') {
+      parsed.gateOnly = true;
     } else if (arg === '--skip-local-ci') {
       parsed.localCi = false;
     } else if (arg === '--smoke') {
@@ -374,18 +582,54 @@ function parseArgs(args) {
     }
   }
 
+  if (
+    parsed.rehearse &&
+    !parsed.help &&
+    (parsed.push || parsed.plan || parsed.gateOnly || !parsed.localCi || !parsed.ciWait)
+  ) {
+    throw new Error(
+      '--rehearse cannot be combined with --push, plan, --gate-only, --skip-local-ci or --skip-ci-wait',
+    );
+  }
+  if (
+    parsed.gateOnly &&
+    !parsed.help &&
+    (parsed.push ||
+      parsed.plan ||
+      parsed.changelog.length > 0 ||
+      !parsed.localCi ||
+      parsed.extraShip !== null)
+  ) {
+    throw new Error(
+      '--gate-only cannot be combined with push, plan, changelog, extra-ship or skip-local-ci',
+    );
+  }
   if (parsed.changelog.length > 0 && !parsed.help) {
     if (parsed.head !== 'HEAD') {
       throw new Error('--changelog commits on top of HEAD; it cannot be combined with --head');
     }
-    if (!parsed.push && !parsed.plan) {
-      throw new Error(
-        '--changelog commits the line for the push to carry: pass --push, or --dry-run to preview it',
-      );
+    if (!parsed.push && !parsed.plan && !parsed.rehearse) {
+      throw new Error('--changelog needs --push, --rehearse, or --dry-run to preview it');
     }
   }
   if (parsed.changelogSummary !== null && parsed.changelog.length === 0) {
     throw new Error('--changelog-summary needs at least one --changelog');
+  }
+  if (
+    parsed.extraShip !== null &&
+    !parsed.push &&
+    !parsed.plan &&
+    !parsed.rehearse &&
+    !parsed.help
+  ) {
+    throw new Error(
+      '--extra-ship bypasses the ship window for a --push: pass --push, or --dry-run',
+    );
+  }
+  if (parsed.push && !parsed.ciWait && !parsed.help) {
+    throw new Error(
+      '--push cannot be combined with --skip-ci-wait; candidates must pass hosted CI',
+    );
   }
 
   return parsed;
@@ -510,8 +754,11 @@ function runPlanModeAndExit() {
     const planned = planChangelog(release.headRevision);
     console.log('');
     console.log(`# changelog (dry run: CHANGELOG.md is not written, nothing is committed)`);
-    console.log(previewInsertion(planned.before, planned.after));
-    console.log(`commit: ${planned.message}`);
+    if (planned.reused) console.log('changelog: reuse committed lines');
+    else {
+      console.log(previewInsertion(planned.before, planned.after));
+      console.log(`commit: ${planned.message}`);
+    }
   }
 
   const changedOverride = planChangedFiles();
@@ -528,10 +775,30 @@ function runPlanModeAndExit() {
   const ciPlan = changedOverride
     ? classifyCiFiles(changedOverride)
     : planHostedCi({ baseRevision: release.targetRevision, headRevision: release.headRevision });
+  if (options.push) {
+    ciPlan.ciRequired = true;
+    ciPlan.reason = 'release_candidate_requires_ci';
+    console.log(`candidate_branch: release/${release.headRevision}`);
+  }
   printHostedCiPlan(ciPlan);
 
   const tier = resolveSmokeTier(release.headRevision, changedOverride);
   console.log(`smoke_tier: ${tier}`);
+
+  // What the ship-window guard would decide for a --push of this head now.
+  console.log('');
+  console.log('# ship window (dry run)');
+  // The same deploy estimate and window read a --push makes before the lock.
+  const verdict = readShipWindow();
+  printShipWindow(verdict);
+  const would = !shipWindowApplies()
+    ? 'not guarded (this push would not restart production)'
+    : verdict.decision === 'allow'
+      ? 'allow'
+      : verdict.decision === 'bypass'
+        ? `bypass (--extra-ship: ${options.extraShip})`
+        : 'refuse (pass --extra-ship "<reason>" for a production bug)';
+  console.log(`ship_window: ${would}`);
   process.exit(0);
 }
 
@@ -568,6 +835,13 @@ function planChangedFiles() {
  * and ran no tests (2026-10-02, b40cb193 shipped a red web test to hosted CI).
  */
 function localGateFor(changedFiles, baseRevision, fullCi) {
+  const snapshot = captureGateStamp({ root: workdir });
+  const reuseStages = options.gateReuse ? readGateStamp(snapshot) : [];
+  const plan = localGatePlanFor(changedFiles, baseRevision, fullCi);
+  return { ...plan, snapshot, reuseStages };
+}
+
+function localGatePlanFor(changedFiles, baseRevision, fullCi) {
   const FULL = { kind: 'full', reason: 'ci:quick', commands: [['npm', 'run', 'ci:quick']] };
   if (fullCi) return { ...FULL, reason: '--full-ci' };
   if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
@@ -619,6 +893,8 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
 }
 
 /**
+ * For --push, require a completed successful run on the exact candidate
+ * branch and SHA. Verification mode can follow main as described below.
  * Wait for hosted CI to pass on `headRevision`, or on whatever main's tip
  * becomes while we wait. Resolves to `{ revision, tip, adopted }`: the
  * revision whose run passed, the newest tip of main confirmed to contain it
@@ -638,7 +914,7 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
  * The decision rules, including the tips that must NOT be adopted, live in
  * lib/ci-run-verdict.mjs.
  */
-async function waitForGithubCi({ headRevision }) {
+async function waitForGithubCi({ headRevision, branch = options.targetBranch, exact = false }) {
   const deadline = Date.now() + options.timeoutMs;
   let revision = headRevision;
   const adopted = [];
@@ -648,8 +924,27 @@ async function waitForGithubCi({ headRevision }) {
   console.log(`# hosted CI wait`);
   while (Date.now() <= deadline) {
     attempt += 1;
-    run = findGithubRun(revision);
+    run = findGithubRun(revision, branch);
     if (run?.url) release.ciRunUrl = run.url;
+    // Promotion requires a successful completed run for this exact candidate.
+    // A cancelled run or partly green jobs cannot authorize production.
+    if (exact) {
+      if (run?.status === 'completed') {
+        if (run.conclusion !== 'success') {
+          throw new Error(
+            `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}: ${run.url ?? revision}`,
+          );
+        }
+        console.log(`hosted CI passed: ${run.url ?? revision}`);
+        return { revision, tip: revision, adopted };
+      }
+      console.log(
+        `attempt ${attempt}: ${run?.status ?? 'waiting for the run to appear'} on ${branch}`,
+      );
+      if (Date.now() + GITHUB_POLL_MS > deadline) break;
+      await sleep(GITHUB_POLL_MS);
+      continue;
+    }
     // Checked every poll, not once (see above).
     const superseded = supersededBy(revision);
     const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
@@ -672,7 +967,11 @@ async function waitForGithubCi({ headRevision }) {
       const tip = superseded && isAncestor === true ? superseded : revision;
       return { revision, tip, adopted };
     }
-    if (decision.outcome === 'fail') throw new Error(decision.message);
+    if (decision.outcome === 'fail') {
+      // Tagged so the caller can tell a red run, which production deploys
+      // anyway, from a wait that never ended.
+      throw Object.assign(new Error(decision.message), { ciRed: { revision, adopted } });
+    }
     if (decision.outcome === 'adopt') {
       console.log(`attempt ${attempt}: ${decision.message}`);
       console.log(
@@ -843,18 +1142,33 @@ function supersededBy(headRevision) {
 }
 
 // The ci.yml push run for one revision, or null when GitHub lists none.
-function findGithubRun(revision) {
-  return listGithubRuns(revision).find((candidate) => candidate.headSha === revision) ?? null;
+function findGithubRun(revision, branch = options.targetBranch) {
+  return (
+    listGithubRuns(revision, branch).find((candidate) => candidate.headSha === revision) ?? null
+  );
 }
 
-function listGithubRuns(headRevision) {
+function findReusableBatchRun() {
+  try {
+    return findReusableBatchCi({
+      root: workdir,
+      headRevision: release.headRevision,
+      findRun: findGithubRun,
+    });
+  } catch (error) {
+    console.log(`warn: could not reuse batch CI (${error.message}); testing a fresh candidate`);
+    return null;
+  }
+}
+
+function listGithubRuns(headRevision, branch = options.targetBranch) {
   const args = [
     'run',
     'list',
     '--workflow',
     options.ciWorkflow,
     '--branch',
-    options.targetBranch,
+    branch,
     '--commit',
     headRevision,
     '--event',
@@ -874,18 +1188,74 @@ function listGithubRuns(headRevision) {
   }
 }
 
-async function runReleasePersistenceGate(changedFiles) {
+async function runLocalGate(gate, changedFiles) {
+  release.gate = { kind: gate.kind, reason: gate.reason };
+  console.log(`local gate: ${gate.kind} (${gate.reason})`);
+  const results = [];
+  let buildSucceeded = false;
+  let loopbackSucceeded = true;
+  for (const command of gate.commands) {
+    if (command.join(' ') === 'npm run ci:quick') {
+      const ci = await runCiChecks({
+        summarize: false,
+        run: runLocalCommand,
+        reuseStages: gate.reuseStages,
+        stamp: false,
+      });
+      results.push(...ci.results);
+      buildSucceeded = ci.buildSucceeded;
+      loopbackSucceeded = ci.loopbackSucceeded;
+    } else {
+      const result = runGateCommand(command, runLocalCommand, undefined, gate.reuseStages);
+      results.push(result);
+      // A targeted verify command owns its build internally. On failure we
+      // cannot prove it built, so persistence must not consume that dist.
+      if (command[2] === 'verify' || command[2] === 'build') {
+        buildSucceeded = result.status === 'passed';
+      }
+    }
+  }
+  // ci:quick excludes persistence, and the push skips the pre-push hook.
+  // Append it even after unrelated failures, using the real build verdict.
+  const persistent = await runReleasePersistenceGate(changedFiles, {
+    buildSucceeded,
+    loopbackSucceeded,
+    reuseStages: gate.reuseStages,
+  });
+  if (persistent) results.push(persistent);
+  if (results.some((result) => result.reused)) console.log(`reused gate ${gate.snapshot.path}`);
+  printGateSummary('release gate', results);
+  writeGateStamp(gate.snapshot, 'release', results, { root: workdir });
+  if (results.some((result) => result.status === 'failed')) {
+    throw new Error('local release gate failed; nothing pushed');
+  }
+}
+
+function runLocalCommand(command) {
+  runTimed(`local ${command.slice(2).join(' ')}`, command);
+  return { status: 0 };
+}
+
+async function runReleasePersistenceGate(
+  changedFiles,
+  { buildSucceeded, loopbackSucceeded, reuseStages },
+) {
   if (!needsPersistenceGate(changedFiles)) return;
+  const command = ['npm', 'run', 'test:persistent'];
+  if (!buildSucceeded) return skippedCommand(command, 'build failed');
+  if (!loopbackSucceeded) return skippedCommand(command, 'loopback preflight failed');
+  if (reuseStages.some((stage) => stage.name === command.join(' ') && stage.ok === true)) {
+    return runGateCommand(command, runLocalCommand, undefined, reuseStages);
+  }
   if (process.env.MISTBOARD_SKIP_PREPUSH_DB === '1') {
-    console.log('release: persistence gate skipped via MISTBOARD_SKIP_PREPUSH_DB=1');
-    return;
+    return skippedCommand(command, 'MISTBOARD_SKIP_PREPUSH_DB=1');
   }
   const databaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
   if (await isDatabaseReachable(databaseUrl)) {
-    runTimed('test:persistent', ['npm', 'run', 'test:persistent']);
-    return;
+    return runGateCommand(command, runLocalCommand);
   }
   console.warn(persistenceGateWarning('release'));
+  return skippedCommand(command, 'Postgres unavailable; hosted CI covers persistence');
 }
 
 function readChangedFiles({ base, head }) {
@@ -930,6 +1300,9 @@ function catchUpWithMain() {
   if (!remote || !release.targetRevision || revisionMatches(remote, release.targetRevision)) {
     return;
   }
+  if (options.rehearse) {
+    throw new Error('main moved during the gate; re-run --rehearse against the new main');
+  }
   git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
   const contained = spawnSync('git', ['merge-base', '--is-ancestor', remote, 'HEAD'], {
     cwd: workdir,
@@ -966,6 +1339,18 @@ function catchUpWithMain() {
   for (const command of commands) {
     runTimed(`local ${command.slice(2).join(' ')} (after merge)`, command);
   }
+  if (options.localCi && release.deployRequired) {
+    // The merge changed the code after the first smoke. Rebuild both apps and
+    // prove this revision too; a smoke of the earlier SHA cannot gate the push.
+    runTimed('local production smokes (after merge)', [
+      'npm',
+      'run',
+      'release:local-smoke',
+      '--',
+      '--revision',
+      release.headRevision,
+    ]);
+  }
 }
 
 // Merge the moved main into HEAD. A conflict aborts the merge and fails the
@@ -999,7 +1384,7 @@ async function takeReleaseLock() {
     }),
     timeoutMs: options.lockTimeoutMs,
   });
-  releaseOnExit(handle);
+  releaseOnExit(handle, process, cancelDrainAfterFailure);
   release.lockWaitMs = Math.round(performance.now() - begun);
   release.lockWaited = handle.waited;
   if (handle.waited) {
@@ -1023,6 +1408,11 @@ function catchUpBeforeGate() {
     stdio: 'ignore',
   });
   if (contained.status === 0) return;
+  if (options.rehearse) {
+    throw new Error(
+      'main moved: merge it before --rehearse so the tested tree is current; rehearsal never changes HEAD',
+    );
+  }
   console.log(
     `${options.remote}/${options.targetBranch} is at ${shortRevision(remote)}, which HEAD does not contain${
       release.lockWaited ? ' (it moved while this release queued)' : ''
@@ -1031,14 +1421,14 @@ function catchUpBeforeGate() {
   mergeRemoteTip(remote, release.lockWaited ? 'while this release queued' : 'before the release');
 }
 
-// --changelog refuses up front, before any lock wait, on the three states that
-// would put a wrong line on the page: an edited CHANGELOG.md, a HEAD that is
-// itself a changelog commit (a retry after a failed release: the line is
-// already committed), and a HEAD the file already links.
+// A retry reuses a complete set of lines already committed on HEAD. Edited
+// changelogs, partial overlap, or a changelog HEAD needing new lines still
+// refuse before the lock or any writes.
 function checkChangelogPreconditions() {
   if (git(['status', '--porcelain', '--', 'CHANGELOG.md']) !== '') {
     throw new Error('--changelog: CHANGELOG.md has uncommitted edits; commit or drop them first');
   }
+  const source = git(['show', 'HEAD:CHANGELOG.md']);
   const subject = git(['log', '-1', '--format=%s', 'HEAD']);
   const touched = git(['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', 'HEAD'])
     .split('\n')
@@ -1047,22 +1437,33 @@ function checkChangelogPreconditions() {
     /^docs\(changelog\)/.test(subject) ||
     (touched.length === 1 && touched[0] === 'CHANGELOG.md')
   ) {
-    throw new Error(
-      `--changelog: HEAD is already a changelog commit (${subject}); release without --changelog`,
-    );
+    const parent = git(['show', 'HEAD^:CHANGELOG.md']);
+    assertChangelogCommitMatches(parent, source, options.changelog);
+    return;
   }
+  if (changelogAlreadyPresent(source)) return;
   const shortHash = git(['rev-parse', '--short=8', 'HEAD']);
-  const source = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
   if (source.includes(`/commit/${shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md already links ${shortHash}`);
   }
   release.featureRevision = git(['rev-parse', '--verify', 'HEAD']);
 }
 
+function changelogAlreadyPresent(source) {
+  // Duplicate arguments are invalid even when every line is already present.
+  assertEntriesAreNew('', options.changelog);
+  if (findExistingEntries(source, options.changelog).length === options.changelog.length) {
+    return true;
+  }
+  assertEntriesAreNew(source, options.changelog);
+  return false;
+}
+
 // The insertion and commit message for --changelog, computed without writing.
 function planChangelog(featureRevision) {
-  const shortHash = git(['rev-parse', '--short=8', featureRevision]);
   const before = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
+  if (changelogAlreadyPresent(before)) return { before, after: before, reused: true };
+  const shortHash = git(['rev-parse', '--short=8', featureRevision]);
   const after = insertChangelogEntries(before, {
     month: currentMonth(),
     entries: options.changelog,
@@ -1086,6 +1487,10 @@ function planChangelog(featureRevision) {
 function commitChangelog() {
   const file = path.join(releaseRoot, 'CHANGELOG.md');
   const planned = planChangelog(release.featureRevision);
+  if (planned.reused) {
+    console.log('changelog: reuse committed lines');
+    return;
+  }
   // Re-checked here: the catch-up merge may have brought in a line for it.
   if (planned.before.includes(`/commit/${planned.shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md on main already links ${planned.shortHash}`);
@@ -1093,6 +1498,8 @@ function commitChangelog() {
   console.log('# changelog');
   console.log(previewInsertion(planned.before, planned.after));
   writeFileSync(file, planned.after);
+  const restore = () => writeFileSync(file, planned.before);
+  if (options.rehearse) process.once('exit', restore);
   try {
     runTimed('changelog grammar test', [
       'npm',
@@ -1104,8 +1511,18 @@ function commitChangelog() {
       'src/changelog-data.test.ts',
     ]);
   } catch (error) {
-    writeFileSync(file, planned.before);
+    restore();
     throw new Error(`changelog grammar test failed; CHANGELOG.md restored (${error.message})`);
+  } finally {
+    if (options.rehearse) {
+      restore();
+      process.removeListener('exit', restore);
+    }
+  }
+  if (options.rehearse) {
+    release.changelogPlanned = true;
+    console.log('changelog: rehearsed and restored; nothing committed');
+    return;
   }
   // SKIP_PRECOMMIT: the hook's Biome pass does not cover Markdown and its
   // typecheck cannot see a CHANGELOG.md edit; the grammar test above is this
@@ -1129,10 +1546,13 @@ function commitChangelog() {
   );
 }
 
-function pushCommand(headRevision) {
-  const command = ['env', 'MISTBOARD_RELEASE_PUSH=1', 'git', 'push'];
-  if (options.localCi) command.push('--no-verify');
-  command.push(options.remote, `${headRevision}:refs/heads/${options.targetBranch}`);
+function pushCommand(headRevision, branch = options.targetBranch) {
+  const command = ['env', 'MISTBOARD_RELEASE_PUSH=1'];
+  if (branch === options.targetBranch && release.candidateBranch) {
+    command.push(`MISTBOARD_RELEASE_CI_VERIFIED=${headRevision}`);
+  }
+  command.push('git', 'push');
+  command.push(options.remote, `${headRevision}:refs/heads/${branch}`);
   return command;
 }
 
@@ -1164,6 +1584,19 @@ async function runSmoke({ deployRequired, headRevision }) {
   // page) — the class of failure the fetch-based smokes cannot see (they
   // verify serving/isolation, not a real run).
   runTimed('prod ceval smoke', npmCommand('prod:smoke:ceval', baseArgs()));
+  // The browser smoke validates the native bot's reply against the kernel and
+  // checks the room UI. Read this checkout's SOURCE launch switch (dist may
+  // be stale after the post-push cwd change). A hidden deploy must never open
+  // a gated route.
+  const { isPublicGameSpec } = await tsImport(
+    path.join(workdir, 'packages/game/src/game-specs.ts'),
+    import.meta.url,
+  );
+  if (isPublicGameSpec('gomoku')) {
+    runTimed('prod Gomoku browser bot smoke', npmCommand('prod:smoke:gomoku-browser', baseArgs()));
+  } else {
+    console.log('skip: prod Gomoku browser bot smoke (publicSurface hidden)');
+  }
   // The /practice catalogue is DATA, and its failure mode is silent: a chapter
   // that loses its practice flag stops being an exercise while the card's count
   // stays truthful, so nothing on the page looks wrong. Cheap (a handful of
@@ -1196,6 +1629,11 @@ async function runSmoke({ deployRequired, headRevision }) {
   // Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) take no new
   // games, so a smoke that starts one can only fail; they are EXEMPT there.
   await runParallelSmokes([
+    {
+      label: 'prod Gomoku smoke',
+      tag: 'gomoku',
+      command: npmCommand('prod:smoke:gomoku', baseArgs()),
+    },
     {
       label: 'prod engine smoke',
       tag: 'engines',
@@ -1243,9 +1681,19 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:xiangqi-pikafish', baseArgs()),
     },
     {
+      label: 'prod Xiangqi General Blunder smoke',
+      tag: 'xiangqi-worst',
+      command: npmCommand('prod:smoke:xiangqi-worst', baseArgs()),
+    },
+    {
       label: 'prod Jieqi AB-JChess smoke',
       tag: 'jieqi-abjchess',
       command: npmCommand('prod:smoke:jieqi-abjchess', baseArgs()),
+    },
+    {
+      label: 'prod Jieqi jqe smoke',
+      tag: 'jieqi-jqe',
+      command: npmCommand('prod:smoke:jieqi-jqe', baseArgs()),
     },
     {
       label: 'prod Jungle KataGo smoke',
@@ -1433,11 +1881,20 @@ function npmCommand(script, args = []) {
 function runTimed(label, command) {
   const startedAt = new Date().toISOString();
   const begun = performance.now();
+  console.log(`# ${label}`);
+  console.log(`started_at: ${startedAt}`);
+  // Check the command itself: time-command forwards a child's signal to
+  // itself, but Node ignores SIGPIPE and can exit zero after printing failed.
+  // Completion flags must follow the command's actual exit-status check.
   try {
-    run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
-    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+    run(command);
+    const ms = Math.round(performance.now() - begun);
+    recordStage({ label, startedAt, ms, ok: true });
+    console.log(`${label}: ok in ${formatDuration(ms)}`);
   } catch (error) {
-    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    const ms = Math.round(performance.now() - begun);
+    recordStage({ label, startedAt, ms, ok: false });
+    console.log(`${label}: failed in ${formatDuration(ms)}`);
     throw error;
   }
 }
@@ -1465,10 +1922,8 @@ function recordStage(stage) {
 // an afternoon of transcript parsing. Never fails the release: a record that
 // cannot be written is a warning.
 function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
-  if (options.plan) return;
-  const logPath =
-    process.env.MISTBOARD_RELEASE_LOG ||
-    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
+  if (options.plan || options.gateOnly || options.rehearse) return;
+  const logPath = releaseLogPath();
   const record = {
     v: 1,
     source: 'release',
@@ -1478,6 +1933,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     outcome,
     ...(error ? { error } : {}),
     head: release.headRevision,
+    candidateBranch: release.candidateBranch,
     expectedRevision: release.expectedRevision,
     adopted: release.adopted,
     targetRevision: release.targetRevision,
@@ -1485,11 +1941,17 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     deployRequired: release.deployRequired,
     ciRequired: release.ciRequired,
     ciRunUrl: release.ciRunUrl,
+    ciTestedRevision: release.ciTestedRevision,
     changelogCommit: release.changelogCommit,
     lockWaitMs: release.lockWaitMs,
     gate: release.gate,
     smokeTier: release.smokeTier,
     push: options.push,
+    pushCompleted: release.pushCompleted,
+    pushedAt: release.pushedAt,
+    ...(options.extraShip ? { extraShip: options.extraShip } : {}),
+    shipWindow: release.shipWindow,
+    drain: release.drainHold,
     stages: release.stages,
     hostname: hostname(),
     cwd: releaseRoot,
@@ -1504,6 +1966,180 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
         writeError instanceof Error ? writeError.message : String(writeError)
       })`,
     );
+  }
+}
+
+function printRehearsalSummary(error = null) {
+  console.log('# rehearsal stage summary');
+  for (const stage of release.stages) {
+    console.log(`${stage.label}: ${stage.ok ? 'ok' : 'failed'} (${formatDuration(stage.ms)})`);
+  }
+  console.log(
+    error ? `rehearsal: failed (${error.message})` : 'rehearsal: ok; stopped before remote writes',
+  );
+}
+
+function releaseLogPath() {
+  return (
+    process.env.MISTBOARD_RELEASE_LOG ||
+    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl')
+  );
+}
+
+// The ship window (scripts/lib/ship-window.mjs): a --push that deploys is
+// refused while the last production push is younger than --ship-window-hours
+// (default 4), unless --extra-ship "<reason>" names the production bug it
+// fixes; the reason lands in this run's release record. A refusal exits 3
+// before anything is written (onRefuse 'exit'); the post-plan backstop throws
+// instead, because by then a --changelog commit may exist and the failure
+// path has to report it.
+function enforceShipWindow(when, { force = false, onRefuse = 'exit' } = {}) {
+  // Re-read the remote each check: main may have moved while the lock queued.
+  remoteTipCache = undefined;
+  if (!force && !shipWindowApplies()) return;
+  const verdict = readShipWindow();
+  release.shipWindow = {
+    decision: verdict.decision,
+    checked: when,
+    windowHours: verdict.windowHours,
+    lastPushAt: verdict.last ? new Date(verdict.last.at).toISOString() : null,
+    lastPushSource: verdict.last?.source ?? null,
+    lastPushCwd: verdict.last?.cwd ?? null,
+    opensAt: verdict.opensAt === null ? null : new Date(verdict.opensAt).toISOString(),
+  };
+  printShipWindow(verdict);
+  if (verdict.decision === 'allow') return;
+  if (verdict.decision === 'bypass') {
+    console.log(`ship window: bypassed by --extra-ship (${options.extraShip}); logged`);
+    return;
+  }
+  const message =
+    `release refused ${when}: production was pushed less than ${verdict.windowHours}h ago. ` +
+    'Park this work (commit it on its branch) and batch it into the next ship, or pass ' +
+    '--extra-ship "<reason>" when it fixes a production bug.';
+  if (onRefuse === 'throw') {
+    throw new Error(
+      `${message}${
+        release.changelogCommit
+          ? ` The changelog commit ${shortRevision(release.changelogCommit)} stays on this branch; ` +
+            're-run later without --changelog.'
+          : ''
+      }`,
+    );
+  }
+  console.error(message);
+  process.exit(3);
+}
+
+function printShipWindow(verdict) {
+  const parked = verdict.decision === 'allow' ? [] : readParkedWork();
+  for (const line of describeShipWindow(verdict, { now: Date.now(), parked })) {
+    console.log(line);
+  }
+}
+
+// Whether this --push deploys, estimated before the lock from what the branch
+// adds over the remote main (the exact plan against production runs later,
+// after the catch-up merge; the backstop above covers a disagreement). An
+// estimate that cannot be made assumes a deploy.
+function shipWindowApplies() {
+  if (shipDeployEstimate === null) {
+    try {
+      const tip = readRemoteTip()?.revision;
+      const head = git(['rev-parse', '--verify', options.head]);
+      const base = tip ? git(['merge-base', tip, head]) : null;
+      if (base && revisionMatches(base, head)) {
+        shipDeployEstimate = {
+          deployRequired: false,
+          reason: 'head is already on the remote main',
+        };
+      } else {
+        const args = ['node', 'scripts/prod-smoke-plan.mjs', '--head', head];
+        if (base) args.push('--base', base);
+        const plan = parsePlan(runCapture('ship-window deploy estimate', args, { quiet: true }));
+        shipDeployEstimate = { deployRequired: plan.deployRequired, reason: plan.reason };
+      }
+    } catch (error) {
+      shipDeployEstimate = {
+        deployRequired: true,
+        reason: `estimate failed, assuming a deploy (${firstLine(
+          error instanceof Error ? error.message : String(error),
+        )})`,
+      };
+    }
+    if (!shipDeployEstimate.deployRequired) {
+      console.log(`ship window: not guarded (no deploy expected: ${shipDeployEstimate.reason})`);
+    }
+  }
+  return shipDeployEstimate.deployRequired;
+}
+
+function readShipWindow() {
+  let text = '';
+  try {
+    text = readFileSync(releaseLogPath(), 'utf8');
+  } catch {}
+  return evaluateShipWindow({
+    now: Date.now(),
+    last: lastProdPush({
+      records: parseReleaseLog(text),
+      tip: readRemoteTip(),
+      containsRevision: (head, tip) => {
+        // readRemoteTip already fetched main. A definite non-ancestor proves
+        // an old false-success record never landed; unknown keeps the guard.
+        const result = spawnSync('git', ['merge-base', '--is-ancestor', head, tip], {
+          cwd: workdir,
+          stdio: 'ignore',
+        });
+        return result.status === 0 ? true : result.status === 1 ? false : null;
+      },
+    }),
+    windowHours: options.shipWindowHours,
+    extraShip: options.extraShip,
+  });
+}
+
+// The remote main's tip and its committer date, the signal for a push from
+// outside this script. Cached for the run's pre-push checks (remoteTipCache);
+// null (with a warning) when the remote cannot be read, leaving the log as the
+// only source.
+function readRemoteTip() {
+  if (remoteTipCache !== undefined) return remoteTipCache;
+  try {
+    const revision = readRemoteTargetRevision();
+    if (!revision) {
+      remoteTipCache = null;
+      return null;
+    }
+    git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
+    const committedAt = Date.parse(git(['log', '-1', '--format=%cI', revision]));
+    remoteTipCache = { revision, committedAt };
+  } catch (error) {
+    console.warn(
+      `warn: ship window could not read ${options.remote}/${options.targetBranch} (${firstLine(
+        error instanceof Error ? error.message : String(error),
+      )}); judging from the release log alone`,
+    );
+    remoteTipCache = null;
+  }
+  return remoteTipCache;
+}
+
+function enforceAgentBranchAccounting() {
+  assertAgentBranchesAccountedFor({
+    root: workdir,
+    head: options.head,
+    base: `${options.remote}/${options.targetBranch}`,
+  });
+}
+
+// The ship-window reminder uses the same branch inventory as the release gate.
+function readParkedWork() {
+  try {
+    const base = readRemoteTip()?.revision ?? `${options.remote}/${options.targetBranch}`;
+    return readUnshippedAgentBranches({ root: workdir, head: options.head, base });
+  } catch {
+    return [];
   }
 }
 
@@ -1580,7 +2216,11 @@ function run(command) {
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.signal) throw new Error(`${command[0]} exited with signal ${result.signal}`);
-  if (result.status !== 0) throw new Error(`${command[0]} exited with ${result.status}`);
+  if (result.status !== 0) {
+    throw Object.assign(new Error(`${command[0]} exited with ${result.status}`), {
+      exitCode: result.status ?? 1,
+    });
+  }
 }
 
 // The megaphone, after the deploy is proven: announce-tweet.mjs reads the
@@ -1622,34 +2262,117 @@ function announceNews({ deployRequired }) {
   }
 }
 
-// Tell Bing what this release changed. The prerendered set (static routes plus
-// every article in three languages, ~130 URLs) goes out after the smokes, so a
-// page no longer waits for someone to remember `npm run indexnow` — the growth
-// plan asked for this on release and it was never built. Studies are excluded;
-// see the script's header. A failed submission is a warning: the pages are live
-// either way and a re-run costs nothing.
+// Tell Bing which sitemap URLs changed, across pages, studies, players and
+// broadcasts. The local state compares lastmod and refreshes undated URLs
+// after 30 days; unavailable state seeds without a backlog submission.
+// A failed batch stays pending for the next release. Failure is a warning:
+// the pages are live either way.
 function submitIndexNow({ deployRequired }) {
   if (!deployRequired) {
     console.log('skip: indexnow (no deploy)');
     return;
   }
-  const command = ['node', 'scripts/indexnow-submit.mjs', '--prerendered'];
+  const command = ['node', 'scripts/indexnow-submit.mjs', '--changed'];
   console.log(`\n$ ${quoteCommand(command)}`);
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
-    console.error(
-      'warning: indexnow submission failed; re-run `npm run indexnow -- --prerendered`',
-    );
+    console.error('warning: indexnow submission failed; re-run `npm run indexnow -- --changed`');
   }
 }
 
-function cancelUnpublishedDrain() {
-  if (!release.drainCommitted || release.pushCompleted) return;
-  console.error('release stopped before push completed; cancelling production drain');
+// brianhliou.com's home page lists our newest articles from /feed.xml at its
+// build, so every deploying release asks Vercel to rebuild it. Every deploy,
+// not only one that adds an article: a dated article reaches the feed at the
+// first ship after its 09:00, which no diff names, and a rebuild that finds
+// nothing new costs one Jekyll build. A failure is a warning.
+async function rebuildBlog({ deployRequired }) {
+  if (!deployRequired) {
+    console.log('skip: brianhliou.com rebuild (no deploy)');
+    return;
+  }
+  const { ok, message } = await triggerBlogDeployHook({ hookUrl: resolveBlogDeployHook() });
+  (ok || message.startsWith('skip:') ? console.log : console.error)(message);
+}
+
+// A committed drain shows every player "Server restarting now" until the
+// server restarts, the drain is cancelled, or its window lapses. A release that
+// fails after the push may never get that restart (hosted CI red, or the
+// revision wait gave up), so it cancels its own drain on those paths too, not
+// only before the push (2026-10-16 21:46Z: the banner stayed up 11 minutes).
+async function cancelDrainAfterFailure() {
+  const productionRevision =
+    release.drainStarted && release.pushCompleted ? await fetchProductionRevision() : null;
+  const action = postFailureDrainAction({
+    drainStarted: release.drainStarted,
+    drainCommitted: release.drainCommitted,
+    pushCompleted: release.pushCompleted,
+    productionRevision,
+    expectedRevision: release.expectedRevision,
+  });
+  if (action === 'none') return;
+  if (action === 'none-deployed') {
+    console.error('production already serves the pushed revision; its restart ended the drain');
+    return;
+  }
+  console.error(
+    action === 'cancel-before-push'
+      ? 'release stopped before push completed; cancelling production drain'
+      : 'release failed after the push without seeing the deploy land; cancelling production ' +
+          'drain so the restart banner clears (a deploy that lands later still pauses and resumes rooms)',
+  );
   const command = ['node', 'scripts/safe-deploy.mjs', '--cancel', '--yes', ...safeDeployBaseArgs()];
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
     console.error('warning: automatic drain cancellation failed; cancel /admin/drain manually');
+  }
+}
+
+// Production's build revision, or null when it cannot be read.
+async function fetchProductionRevision() {
+  const base = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`${base}/api/server-status`, { signal: controller.signal });
+      if (!response.ok) return null;
+      const body = await response.json();
+      return typeof body?.build?.revision === 'string' ? body.build.revision : null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
+// How long this release kept players from starting games, printed at the end
+// of every run that drained and kept in the release record.
+function reportDrainHold() {
+  const stage = release.stages.find((entry) => entry.label === 'production drain');
+  if (!stage) return;
+  let result = null;
+  try {
+    if (existsSync(release.drainResultFile)) {
+      result = JSON.parse(readFileSync(release.drainResultFile, 'utf8'));
+      rmSync(release.drainResultFile, { force: true });
+    }
+  } catch {
+    result = null;
+  }
+  const hold = heldSummary({
+    drainStageMs: stage.ms,
+    commitWaitMs: result?.commitWaitMs,
+    refusedCreates: result?.refusedCreates,
+  });
+  release.drainHold = {
+    heldMs: hold.heldMs,
+    commitWaitMs: result?.commitWaitMs ?? null,
+    refusedCreates: hold.refusedCreates,
+  };
+  for (const line of formatHeldLines(hold)) {
+    if (line.startsWith('WARN')) console.warn(line);
+    else console.log(line);
   }
 }
 
@@ -1782,8 +2505,10 @@ function parsePositiveInteger(value, flag) {
 function printHelp() {
   console.log(`Usage:
   npm run release:prod -- --push
+  npm run release:prod -- --gate-only
   npm run release:prod -- --push --smoke lite
   npm run release:prod -- --push --changelog "Playing: Flip board in a live game"
+  npm run release:prod -- --rehearse --changelog-file /tmp/release-lines.txt
   node scripts/release-prod.mjs --dry-run --changelog "Fixed: ..." --plan-file CHANGELOG.md
   npm run release:prod -- --skip-local-ci --smoke web
   node scripts/release-prod.mjs --plan
@@ -1791,15 +2516,36 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  release lock -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
+  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> reuse green batch CI or push release/<sha> -> start pending drain -> exact candidate hosted CI when not reused -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+
+Batch preparation:
+  npm run batch:ci -- <worktree> pushes the clean batch HEAD and waits for CI.
+  A completed green run can cover the same HEAD or its direct parent when
+  only CHANGELOG.md differs. All other tree changes require fresh candidate CI.
+
+Branch accounting:
+  Local agent/* work outside both --head and origin/main must be merged or
+  parked: npm run branch:park -- <branch> "<reason>". agent/ship-* is exempt;
+  branches contained in another agent/ship-* tip are listed as in that batch.
+  Marks are local git config, shared across worktrees. branch:unpark removes a
+  mark; branch:parked lists reasons and dates. Dry runs refuse with exit 1 too.
 
 Options:
-  --push                   Push --head to origin/main. Drains production first
-                           only when games are live (needs a drain token then:
+  --push                   Push --head to release/<sha>, wait for green hosted
+                           CI, then fast-forward origin/main to that exact SHA.
+                           Drain during CI only when games are live (token:
                            MISTBOARD_DRAIN_TOKEN, else the keychain); an empty
                            pool deploys token-free. Without this, assume it is
                            already pushed.
   --head <ref>             Commit/ref to release, default HEAD.
+  --rehearse              Run pre-push validation, ship-window checks, deploy/CI
+                           planning, local gate and local production smokes.
+                           Holds the release lock until exit. Tests proposed
+                           changelog lines, then restores the file; no commit,
+                           push, drain, hosted CI wait or release log entry.
+                           If main moved, merge it first; HEAD stays unchanged.
+                           Incompatible with --push, plan, --gate-only and
+                           either skip flag. Gate reuse and --full-ci apply.
   --changelog "<Heading>: <line>"
                            Add a CHANGELOG.md line for HEAD (repeatable): under
                            the current ## YYYY-MM and ### <Heading> (created
@@ -1811,10 +2557,28 @@ Options:
                            Community, Site, Removed, Fixed, Technical. No em
                            dashes, no trailing period, no link of your own.
                            Runs the changelog grammar test before committing.
-                           Needs --push, or --dry-run to preview.
+                           Needs --push, --rehearse, or --dry-run to preview.
+                           Retrying a changelog HEAD requires exactly its added
+                           lines (any order); differing lines print a diff.
+  --changelog-file <path>  Read one "<Heading>: <line>" per nonblank line using
+                           the same validation as --changelog. Repeatable and
+                           combinable with --changelog; expanded in flag order.
   --changelog-summary <t>  The <summary> in that commit message. Default: HEAD's
                            subject without its type(scope): prefix.
-  --lock-timeout-ms <ms>   How long --push queues behind another release on
+  --extra-ship "<reason>"  Bypass the ship window for a production bug. The
+                           reason is required and lands in this run's line of
+                           ~/.local/share/mistboard/releases.jsonl (extraShip).
+  --ship-window-hours <n>  The ship window, default ${DEFAULT_SHIP_WINDOW_HOURS}: a --push that
+                           deploys is refused (exit 3, before the lock, the
+                           catch-up merge or the --changelog commit) while the
+                           last production push is younger than this. The last
+                           push is read from the release log (a push that
+                           succeeded counts even if the release then failed)
+                           and from the remote tip's committer date when no
+                           logged release pushed it. The refusal lists the
+                           parked agent/* branches to batch into the next ship.
+                           --dry-run prints what the guard would decide.
+  --lock-timeout-ms <ms>   How long --push/--rehearse queues behind another release on
                            this machine before failing, default ${DEFAULT_LOCK_TIMEOUT_MS}.
                            Lock file: ~/.local/share/mistboard/release.lock
                            (MISTBOARD_RELEASE_LOCK overrides); a dead holder's
@@ -1832,7 +2596,16 @@ Options:
   --smoke <tier>           Smoke tier: full, web, lite, none. Default ${DEFAULT_SMOKE}.
   --skip-local-ci          Do not run the local gate before push.
   --full-ci                Force ci:quick as the local gate, whatever changed.
-  --skip-ci-wait           Do not wait for hosted GitHub CI.
+  --no-gate-reuse          Run every selected gate stage, ignoring saved green results.
+  --gate-only              Run the same full local gate as --push --full-ci,
+                           including persistence when the diff requires it.
+                           Uses local origin/main..HEAD (honors --remote,
+                           --target-branch and --head); update the local ref
+                           before assembling the batch. Includes uncommitted
+                           and untracked paths when selecting persistence.
+                           No lock, changelog, network planning, release record,
+                           drain, push, hosted CI wait or production smoke.
+  --skip-ci-wait           Skip hosted CI in verification mode; forbidden with --push.
   --ci-workflow <file>     GitHub CI workflow to wait for, default ${DEFAULT_CI_WORKFLOW}.
   --base <url>             Production base URL, default ${DEFAULT_BASE_URL}.
   --timeout-ms <ms>        Timeout for hosted CI and revision wait, default ${DEFAULT_TIMEOUT_MS}.
@@ -1845,12 +2618,14 @@ token is read from MISTBOARD_DRAIN_TOKEN, or from the macOS keychain when that
 is unset, so an unattended release never needs it typed into a shell.
 For docs-only or other non-deploy commits, the planner skips
 the exact-revision wait because production is not expected to serve that SHA,
-but still waits for hosted CI when the diff matches the CI workflow paths. When
-local ci:quick runs, --push uses git push --no-verify to avoid running the same
-broad pre-push gate twice. With --skip-local-ci, the pre-push hook still runs
-normally.
+but every --push still requires green candidate CI. Hooks remain enabled; the
+main pre-push hook recognizes the exact SHA verified by hosted CI, so it does
+not repeat the local gate while production is drained. Failed or timed-out CI
+leaves main untouched and cancels the pending drain. Candidate refs are retained
+for inspection. If main moves during candidate CI, re-run to test a fresh tree.
 
-If another session pushes to main during the hosted CI wait, ci.yml cancels the
+In verification mode (without --push), if another session pushes to main during
+the hosted CI wait, ci.yml cancels the
 run for the pushed commit. When the new tip contains that commit and has a run
 of its own, the release adopts the tip whatever its own run was doing: it waits
 for the tip's run instead, expects production to serve the tip (unless the

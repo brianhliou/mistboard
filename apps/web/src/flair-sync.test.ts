@@ -105,3 +105,20 @@ function memoryStorage(): Storage {
     setItem: (key, value) => values.set(key, value),
   };
 }
+
+it('renders and validates Gomoku and existing Fog Chess and Atomic Xiangqi flair with matching marker art', () => {
+  for (const [id, file] of [
+    ['gomoku', 'gomoku'],
+    ['dark-chess', 'fog-chess'],
+    ['atomic-xiangqi', 'atomic'],
+  ] as const) {
+    const key = `variant-${id}`;
+    expect(serverIsFlairKey(key)).toBe(true);
+    expect(WEB_FLAIR_KEYS).toContain(key);
+    const icon = buildFlairIcon(key, { labelled: true });
+    expect(
+      icon.querySelector<HTMLElement>('.flair-mask')?.style.getPropertyValue('--flair-mask'),
+    ).toBe(`url('/variant-markers/final/${file}.png')`);
+    expect(icon.getAttribute('aria-label')).not.toBe(key);
+  }
+});

@@ -19,7 +19,9 @@
 //   the first flip binds an ink to the red seat).
 // - pool: the unrevealed multiset as <char><count> pairs (red UPPER then black lower),
 //   non-zero only; '-' if empty. Σpool === on-board face-down count.
-// - clock: noProgressClock (0..40). movenum: moveNumber (cosmetic for the engine).
+// - clock: noProgressClock (0 up to the game's no-progress limit). movenum: moveNumber
+//   (cosmetic for the engine). A parsed state carries no limit, so it plays under
+//   the current one (DEFAULT_NO_PROGRESS_PLY_LIMIT).
 //
 // Redaction argument: the board only ever emits 'X' for a face-down tile, never its ink
 // or role, so no hidden identity reaches the engine. The pool carries only PER-(ink,role)
@@ -39,6 +41,7 @@ import {
   BANQI_PIECE_COUNTS,
   BANQI_WIDTH,
   type BanqiBoard,
+  type BanqiColor,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPiece,
@@ -71,6 +74,11 @@ const POOL_ROLES: readonly BanqiPieceRole[] = [
 
 function pieceChar(piece: BanqiPiece): string {
   if (piece.faceDown) return 'X'; // ink hidden too — a single symbol, no colour
+  return banqiPieceLetter(piece);
+}
+
+/** A piece's FEN letter by its identity: upper case red, lower case black. */
+export function banqiPieceLetter(piece: { color: BanqiColor; role: BanqiPieceRole }): string {
   const ch = RED_ROLE_CHAR[piece.role];
   return piece.color === 'red' ? ch : ch.toLowerCase();
 }

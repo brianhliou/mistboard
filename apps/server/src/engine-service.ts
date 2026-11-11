@@ -2,8 +2,14 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { EngineTurnRequest, EngineTurnResponse, Move, Square } from '@mistboard/game';
 import { runDarkChessAnalysisJob } from './dark-chess-analysis-job.js';
+import {
+  classifyKnownEngineFailure,
+  isTimeoutish,
+  knownEngineFailureOf,
+  withKnownEngineFailure,
+} from './engine-known-failures.js';
 import { engineCounters, logger } from './obs.js';
-import { getPythonPool } from './python-pool.js';
+import { getPythonPool, pythonPoolsReady } from './python-pool.js';
 
 const HEALTH_PATH = '/health';
 const CAPACITY_PATH = '/internal/engine/capacity';
@@ -55,20 +61,31 @@ export async function startEngineHttpService(
   const lifecycle = { draining: false };
 
   const server = createServer((req, res) => {
-    void handleRequest(req, res, { handler, limiter, lifecycle, reservations, token }).catch(
-      (err) => {
-        const status = err instanceof HttpError ? err.status : 500;
-        logger.error(
-          {
-            kind: 'engine_http_error',
-            status,
-            error: err instanceof Error ? err.message : String(err),
-          },
-          'engine HTTP request failed',
-        );
-        writeJson(res, status, { error: status === 500 ? 'internal_error' : err.message });
-      },
-    );
+    void handleRequest(req, res, {
+      handler,
+      limiter,
+      lifecycle,
+      reservations,
+      token,
+      ready: options.handler ? () => true : pythonPoolsReady,
+    }).catch((err) => {
+      const status = err instanceof HttpError ? err.status : 500;
+      logger.error(
+        {
+          kind: 'engine_http_error',
+          status,
+          error: err instanceof Error ? err.message : String(err),
+        },
+        'engine HTTP request failed',
+      );
+      // `known_failure` lets the web service tell a known signature from any
+      // other 500 (engine-known-failures.ts); the error text stays internal.
+      const knownFailure = knownEngineFailureOf(err);
+      writeJson(res, status, {
+        error: status === 500 ? 'internal_error' : err.message,
+        ...(knownFailure ? { known_failure: knownFailure } : {}),
+      });
+    });
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -187,12 +204,17 @@ async function handleRequest(
     lifecycle: { draining: boolean };
     reservations: EngineReservationStore;
     token: string | null;
+    ready: () => boolean;
   },
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://engine-worker.internal');
   if (req.method === 'GET' && url.pathname === HEALTH_PATH) {
     if (context.lifecycle.draining) {
       writeJson(res, 503, { ok: false, service: 'engine-worker', draining: true }, { close: true });
+      return;
+    }
+    if (!context.ready()) {
+      writeJson(res, 503, { ok: false, service: 'engine-worker', ready: false });
       return;
     }
     writeJson(res, 200, { ok: true, service: 'engine-worker' });
@@ -401,6 +423,28 @@ async function handleRequest(
     } catch (err) {
       const elapsedMs = Date.now() - startedAt;
       const error = err instanceof Error ? err.message : String(err);
+      // The pool tags a known signature; a watchdog timeout outside the pool is
+      // classified here from the request itself.
+      const knownFailure =
+        knownEngineFailureOf(err) ??
+        classifyKnownEngineFailure({
+          gameSpecId: request.gameSpecId,
+          timedOut: isTimeoutish(error),
+        });
+      if (knownFailure) {
+        engineCounters.recordKnownFailure(knownFailure);
+        logger.warn(
+          {
+            kind: 'engine_known_failure',
+            ...commonLog,
+            elapsed_ms: elapsedMs,
+            error,
+            known_failure: knownFailure,
+          },
+          'engine turn failed (known signature)',
+        );
+        throw err instanceof Error ? withKnownEngineFailure(err, knownFailure) : err;
+      }
       engineCounters.recordTurnFailed({
         elapsedMs,
         error,

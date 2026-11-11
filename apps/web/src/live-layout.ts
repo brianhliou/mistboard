@@ -1,5 +1,7 @@
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { createGameTable } from './game-table.js';
+import { attachAbortCountdownBubble } from './live-abort-bubble.js';
+import { attachRoomInfoSheet } from './live-room-sheet.js';
 import './live-lifecycle-effects.css';
 import type { LiveRefs } from './live-state.js';
 import './seat-disc-ink.css';
@@ -23,10 +25,23 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   target.classList.toggle('live-route--duck-xiangqi', gameSpecId === 'duck-xiangqi');
   target.classList.toggle('live-route--fortress-xiangqi', gameSpecId === 'fortress-xiangqi');
   target.classList.toggle('live-route--jieqi', gameSpecId === 'jieqi');
-  target.classList.toggle('live-route--banqi', gameSpecId === 'banqi');
+  // Three Kingdoms banqi takes banqi's room layout whole (a short horizontal
+  // board, the tally under it, the three columns as one band); its own class
+  // only re-states the board's aspect (live-xiangqi.css). FFQ rotates its
+  // numeric board onto the standard banqi renderer and uses that layout too.
+  target.classList.toggle(
+    'live-route--banqi',
+    gameSpecId === 'banqi' || gameSpecId === 'three-kingdoms-banqi' || gameSpecId === 'ffq-banqi',
+  );
+  target.classList.toggle(
+    'live-route--three-kingdoms-banqi',
+    gameSpecId === 'three-kingdoms-banqi',
+  );
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');
   target.classList.toggle('live-route--jungle-flip', gameSpecId === 'jungle-flip');
   target.classList.toggle('live-route--mahjong', gameSpecId === 'mahjong');
+  target.classList.toggle('live-route--gomoku', gameSpecId === 'gomoku');
+  target.classList.toggle('live-route--xiangqi-mahjong', gameSpecId === 'xiangqi-mahjong');
 }
 
 // Static room chrome only. Live game decisions stay in live-render.ts.
@@ -97,6 +112,10 @@ export function createLiveLayout(
   if (!chatHost) throw new Error('missing live room chat host');
   chatHost.replaceWith(buildLiveRoomChat(options.roomId));
 
+  const cluster = target.querySelector<HTMLElement>('.live-review__cluster');
+  const metaPanel = target.querySelector<HTMLElement>('.meta-panel');
+  if (cluster && metaPanel) attachRoomInfoSheet(cluster, metaPanel, gameTable.refs.gameControls);
+
   // The room rides the shared site nav (brand + Watch/Leaderboard + Learn +
   // account), prepended as an element so its dropdown and mobile toggle wire
   // up; account-nav.ts hydrates it via its body MutationObserver like every
@@ -108,7 +127,11 @@ export function createLiveLayout(
   // the board-stage corner (board-stage width == board width in the room).
   restoreBoardScale();
   const boardStage = target.querySelector<HTMLElement>('.board-stage');
-  if (boardStage) attachBoardResizeGrip(boardStage, boardStage);
+  if (boardStage) {
+    attachBoardResizeGrip(boardStage, boardStage);
+    // Phone room: the abort countdown shows over the board, not as a line.
+    attachAbortCountdownBubble(gameTable.refs.gameControls, boardStage);
+  }
 
   const roomMeta = target.querySelector<HTMLParagraphElement>('[data-room-meta]');
   const gameInfo = target.querySelector<HTMLDivElement>('[data-game-info]');

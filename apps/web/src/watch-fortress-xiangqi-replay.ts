@@ -56,6 +56,11 @@ export function mountFortressXiangqiWatchReplay(
     moveSound: watchFortressXiangqiMoveSound,
     fillCaptures: (host, view, owner) =>
       fillFortressXiangqiReserve(host, view, owner, { allRoles: true }),
+    // The rail shows each seat's hand as the room's pocket: black on top, red below.
+    railMaterial: (slots, view) => {
+      fillFortressXiangqiReserve(slots.top, view, 'black', { pocket: true });
+      fillFortressXiangqiReserve(slots.bottom, view, 'red', { pocket: true });
+    },
     sidedCaptures: true,
     // One-ply steps glide, as on the xiangqi showcase: forward animates the new
     // view's lastMove, a back step reverse-animates the move the previous ply

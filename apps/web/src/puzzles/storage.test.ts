@@ -1,6 +1,17 @@
+import { deriveXiangqiPuzzleDifficulty } from '@mistboard/game';
+import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { puzzleServingRating } from '../../../server/src/puzzle-rating.js';
 import type { PuzzleSummary } from './adapter.js';
-import { loadSeenPuzzles, rotatePuzzleOrder, saveSeenPuzzles } from './storage.js';
+import {
+  loadPuzzleDifficulty,
+  loadSeenPuzzles,
+  parsePuzzleDifficulty,
+  puzzleDifficultyAvailability,
+  rotatePuzzleOrder,
+  savePuzzleDifficulty,
+  saveSeenPuzzles,
+} from './storage.js';
 
 function puzzle(id: string, rating: number, theme: string): PuzzleSummary {
   return {
@@ -40,9 +51,60 @@ describe('adaptive puzzle rotation', () => {
       new Map([['xiangqi', 1500]]),
     );
 
-    expect(ordered[0]?.id).toBe('nearer');
+    // The two unseen puzzles within 100 of the target come first, in either
+    // order; seen puzzles stay last, oldest first.
+    expect(new Set(ordered.slice(0, 2).map(({ id }) => id))).toEqual(new Set(['near', 'nearer']));
+    expect(ordered[2]?.id).toBe('mid');
     expect(ordered.slice(0, 5).map(({ id }) => id)).toContain('explore');
     expect(ordered.slice(-2).map(({ id }) => id)).toEqual(['seen-old', 'seen-new']);
+  });
+
+  // A corpus shaped like prod's around 1500: a few dozen puzzles per 100 points.
+  const corpus = Array.from({ length: 300 }, (_, i) =>
+    puzzle(`p-${i}`, 1200 + ((i * 37) % 600), ['mate', 'fork', 'pin', 'capture'][i % 4]!),
+  );
+  it('opens fresh visits on different first five puzzles', () => {
+    // Puzzles 45 points apart, more than the old 0-30 jitter, and only five
+    // within the explore window: nearest-first served this exact first five on
+    // every visit with nothing seen. A band draw varies it.
+    const sparse = [
+      ...[1500, 1545, 1590, 1635, 1680].map((rating, i) => puzzle(`s-${i}`, rating, `t${i}`)),
+      ...Array.from({ length: 20 }, (_, i) => puzzle(`far-${i}`, 2400 + i, `f${i}`)),
+    ];
+    const visit = (): string =>
+      rotatePuzzleOrder(sparse, new Map(), new Map([['xiangqi', 1500]]))
+        .slice(0, 5)
+        .map(({ id }) => id)
+        .join(',');
+    const firstFives = new Set(Array.from({ length: 10 }, visit));
+    expect(firstFives.size).toBeGreaterThan(1);
+  });
+
+  it('opens on any puzzle in the near band, not only the nearest few', () => {
+    const openers = new Set(
+      Array.from(
+        { length: 40 },
+        () => rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]))[0]!.id,
+      ),
+    );
+    expect(openers.size).toBeGreaterThan(20);
+  });
+
+  it('draws the matched picks inside the band around the target', () => {
+    for (let visit = 0; visit < 20; visit += 1) {
+      const ordered = rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]));
+      for (const [index, { rating }] of ordered.slice(0, 20).entries()) {
+        // Every fifth pick explores within 300; the rest stay within 100.
+        expect(Math.abs(rating - 1500)).toBeLessThanOrEqual(index % 5 === 4 ? 300 : 100);
+      }
+    }
+  });
+
+  it('widens outward once the near band is used up', () => {
+    const ordered = rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]));
+    const meanDistance = (slice: readonly PuzzleSummary[]) =>
+      slice.reduce((sum, { rating }) => sum + Math.abs(rating - 1500), 0) / slice.length;
+    expect(meanDistance(ordered.slice(0, 50))).toBeLessThan(meanDistance(ordered.slice(-50)));
   });
 });
 
@@ -121,5 +183,162 @@ describe('bounded explore', () => {
     const ordered = rotatePuzzleOrder(only, new Map(), new Map([['xiangqi', 1000]]));
     expect(ordered).toHaveLength(10);
     expect(new Set(ordered.map(({ id }) => id)).size).toBe(10);
+  });
+});
+
+describe('#712 serving order and new-player start', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('matches on the serving rating, not the displayed prior', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    // Both show 1800, but players reveal 'revealed-often' far more than its
+    // prior says; its serving rating is 2400. A 1800 player gets the other.
+    const ordered = rotatePuzzleOrder(
+      [
+        { ...puzzle('revealed-often', 1800, 'mate'), servingRating: 2400 },
+        { ...puzzle('as-rated', 1700, 'fork'), servingRating: 1800 },
+      ],
+      new Map(),
+      new Map([['xiangqi', 1800]]),
+    );
+    expect(ordered[0]?.id).toBe('as-rated');
+  });
+
+  it('starts a player with no rating at 1800', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const ordered = rotatePuzzleOrder(
+      [puzzle('easy', 1500, 'fork'), puzzle('harder', 1800, 'mate')],
+      new Map(),
+    );
+    expect(ordered[0]?.id).toBe('harder');
+  });
+});
+
+describe('#717 difficulty levels', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ['easiest', 1200],
+    ['easier', 1500],
+    ['normal', 1800],
+    ['harder', 2100],
+    ['hardest', 2400],
+  ] as const)('matches and explores around the %s target', (level, target) => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const pool = [1200, 1500, 1800, 2100, 2400].flatMap((rating) =>
+      Array.from({ length: 25 }, (_, index) => ({
+        ...puzzle(`${rating}-${index}`, 1500, 'mate'),
+        servingRating: rating,
+      })),
+    );
+    const ordered = rotatePuzzleOrder(pool, new Map(), new Map([['xiangqi', 1800]]), level);
+    expect(ordered.slice(0, 4).map(({ servingRating }) => servingRating)).toEqual(
+      Array(4).fill(target),
+    );
+    expect(Math.abs(ordered[4]!.servingRating! - target)).toBeLessThanOrEqual(300);
+  });
+
+  it('shifts all five levels measurably on the committed seed pool', () => {
+    const pool = loadSeedPuzzleRegistry('xiangqi').map((entry) => {
+      if (entry.variant !== 'xiangqi') throw new Error('Unexpected puzzle variant');
+      const prior = deriveXiangqiPuzzleDifficulty(entry).score;
+      return {
+        ...puzzle(entry.id, prior, entry.themes[0] ?? ''),
+        solutionPlyCount: entry.solution.length,
+        servingRating: puzzleServingRating({ prior, solutionPlyCount: entry.solution.length }),
+      };
+    });
+    const means = (['easiest', 'easier', 'normal', 'harder', 'hardest'] as const).map((level) => {
+      const ratings: number[] = [];
+      for (const draw of [0.1, 0.5, 0.9]) {
+        vi.spyOn(Math, 'random').mockReturnValue(draw);
+        ratings.push(
+          ...rotatePuzzleOrder(pool, new Map(), new Map([['xiangqi', 1800]]), level)
+            // The offline seed is 38 puzzles; longer samples exhaust its
+            // sparse ends. Live mined rows need a separate production read.
+            .slice(0, 5)
+            .map((entry) => entry.servingRating!),
+        );
+      }
+      return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+    });
+    for (let index = 1; index < means.length; index += 1) {
+      expect(means[index]! - means[index - 1]!, JSON.stringify(means)).toBeGreaterThan(100);
+    }
+  }, 120_000);
+
+  it('widens a sparse band through unseen puzzles before recycling old ones', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const pool = [
+      puzzle('old-easy', 1200, 'mate'),
+      puzzle('new-normal', 1800, 'fork'),
+      puzzle('new-easy', 1200, 'mate'),
+      puzzle('new-nearby', 1400, 'pin'),
+    ];
+    const ordered = rotatePuzzleOrder(
+      pool,
+      new Map([['old-easy', 1]]),
+      new Map([['xiangqi', 1800]]),
+      'easiest',
+    );
+    expect(ordered.map(({ id }) => id)).toEqual([
+      'new-easy',
+      'new-nearby',
+      'new-normal',
+      'old-easy',
+    ]);
+    expect(new Set(ordered.map(({ id }) => id)).size).toBe(pool.length);
+  });
+
+  it('counts only unseen puzzles in the active selection against serving ratings', () => {
+    const pool = [
+      { ...puzzle('seen', 1800, 'mate'), servingRating: 2400 },
+      { ...puzzle('near', 1800, 'fork'), servingRating: 2400 },
+      puzzle('far', 1800, 'pin'),
+    ];
+    expect(puzzleDifficultyAvailability(pool, new Map([['seen', 1]]), 1800, 'hardest')).toEqual({
+      nearby: 1,
+      unseen: 2,
+    });
+    expect(
+      puzzleDifficultyAvailability(pool, new Map(pool.map(({ id }) => [id, 1])), 1800, 'hardest'),
+    ).toEqual({
+      nearby: 0,
+      unseen: 0,
+    });
+  });
+});
+
+describe('difficulty preference', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('defaults invalid or absent preferences to normal and saves all five levels', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+      },
+    });
+    expect(loadPuzzleDifficulty()).toBe('normal');
+    for (const value of ['toString', '__proto__', 'HARDER', '']) {
+      store.set('mistboard:puzzles:difficulty', value);
+      expect(loadPuzzleDifficulty()).toBe('normal');
+    }
+    for (const level of ['easiest', 'easier', 'normal', 'harder', 'hardest'] as const) {
+      savePuzzleDifficulty(level);
+      expect(loadPuzzleDifficulty()).toBe(level);
+      expect(parsePuzzleDifficulty(level)).toBe(level);
+    }
+  });
+
+  it('keeps training usable when local storage is blocked', () => {
+    vi.stubGlobal('window', {
+      get localStorage() {
+        throw new Error('blocked');
+      },
+    });
+    expect(loadPuzzleDifficulty()).toBe('normal');
+    expect(() => savePuzzleDifficulty('harder')).not.toThrow();
   });
 });

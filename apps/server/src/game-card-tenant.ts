@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 // Share-card binding for variant tenants: the registry's `card` capability
 // (VariantTenantCard), built over a tenant the same way game-export-tenant.ts
 // builds `export`. The card itself (ply choice, frame, PNG) lives in
@@ -6,7 +7,7 @@
 // concrete State type.
 
 import type { PositionOgVariant } from './og-position.js';
-import type { VariantTenantCard } from './variant-tenant/registry.js';
+import type { VariantTenantBoardCard } from './variant-tenant/registry.js';
 import { guardTenantReplay } from './variant-tenant/replay-guard.js';
 import {
   applyTenantEvent,
@@ -21,7 +22,7 @@ import type {
 
 export type TenantCardOptions<State, C extends string> = {
   variant: PositionOgVariant;
-  analysis: VariantTenantCard['analysis'];
+  analysis: VariantTenantBoardCard['analysis'];
   /** The tenant's PUBLIC position writer: the same FEN its analysis board and
    *  position links carry, never a form with a hidden deal field. */
   fen: (state: State) => string;
@@ -45,11 +46,12 @@ export function tenantCardBinding<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   options: TenantCardOptions<State, C>,
-): VariantTenantCard {
+): VariantTenantBoardCard {
   return {
     variant: options.variant,
     analysis: options.analysis,
     fenAtPly(events, roomId, ply) {
+      if (isInternalEngineTestLog(events)) return null;
       if (!isTenantEventLog(tenant, events, roomId)) return null;
       if (!Number.isInteger(ply) || ply < 0) return null;
       const created = events[0];
@@ -72,6 +74,7 @@ export function tenantCardBinding<
       return options.fen(wanted);
     },
     seatInks(events, roomId) {
+      if (isInternalEngineTestLog(events)) return null;
       if (!isTenantEventLog(tenant, events, roomId)) return null;
       const projection = replayTenantEvents(tenant, events);
       if (projection.state.status.type !== 'finished') return null;

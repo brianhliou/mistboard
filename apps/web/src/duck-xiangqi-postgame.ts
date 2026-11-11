@@ -5,6 +5,7 @@ import type {
   DuckXiangqiTurn,
 } from '@mistboard/game';
 import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from './display-preferences.js';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
@@ -26,8 +27,8 @@ import { mountReviewLayout } from './review/review-layout.js';
 import { underboardPanel } from './review/underboard-tabs.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
-import { LIVE_BOARD_SURFACE } from './xiangqi-board.js';
-import { xiangqiBoardViewBox } from './xiangqi-board-geometry.js';
+import { LIVE_BOARD_GEO } from './xiangqi-board.js';
+import { xiangqiBoardAspect } from './xiangqi-board-aspect.js';
 
 // Postgame review for Duck Xiangqi. Perfect information (9x10 xiangqi plus one
 // shared blocker), so there is a SINGLE board and no per-seat POV split: the
@@ -138,21 +139,17 @@ export function duckXiangqiPostgameApiUrl(roomId: string): string {
   return url.pathname;
 }
 
-// The board draws no coordinate labels, so it reserves no gutter — the same
-// swap `duck-xiangqi-board.ts` makes internally. Reading the viewBox rather than
-// hardcoding 552/612 keeps the host box and the SVG from ever disagreeing (the
-// host clips, so a mismatch eats the outer rank).
-const DUCK_BOARD_VIEWBOX = xiangqiBoardViewBox('intersection', {
-  ...LIVE_BOARD_SURFACE.geo,
-  coordGutter: 0,
-});
-
 function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse): void {
   const boardHost = document.createElement('div');
   boardHost.className = 'duck-xiangqi-postgame__board review-board-host';
   boardHost.setAttribute('aria-label', 'Duck Xiangqi board');
   boardHost.style.width = '100%';
-  boardHost.style.aspectRatio = `${DUCK_BOARD_VIEWBOX.width} / ${DUCK_BOARD_VIEWBOX.height}`;
+  // Derived from the renderer's own geometry, for the reader's layout and
+  // coordinates preference: the board reserves the label gutter exactly as a
+  // xiangqi board does, and the host clips, so a fixed 552/612 ate the outer
+  // rank of every reader with coordinates on (or the square grid).
+  const boardAspect = xiangqiBoardAspect(LIVE_BOARD_GEO);
+  boardHost.style.aspectRatio = `${boardAspect} / 1`;
 
   const entries = moveEntries(postgame);
   const moveList = createMoveList(entries, { title: t('replay.moves') });
@@ -186,7 +183,15 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     underboard,
     underboardOverflows: true,
     boards: [{ key: 'truth', el: boardHost, tier: 'primary' }],
-    boardAspect: DUCK_BOARD_VIEWBOX.width / DUCK_BOARD_VIEWBOX.height,
+    boardAspect,
+    // The coordinates setting adds or removes the label gutter, so a toggle
+    // re-renders and re-fits the board.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
+    resolveBoardAspect: () => {
+      const next = xiangqiBoardAspect(LIVE_BOARD_GEO);
+      boardHost.style.aspectRatio = `${next} / 1`;
+      return next;
+    },
     boardCols: 9,
     maxPly: postgameReplayMaxPly(postgame),
     renderBoards({ ply, flipped }) {

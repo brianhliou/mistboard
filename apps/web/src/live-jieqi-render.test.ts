@@ -1,6 +1,6 @@
 import { createInitialJieqiState, getJieqiPlayerView } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { renderJieqiBoardSvg } from './live-jieqi-render.js';
+import { JIEQI_PIECE_PX, renderJieqiBoardSvg } from './live-jieqi-render.js';
 
 describe('renderJieqiBoardSvg', () => {
   const view = getJieqiPlayerView(createInitialJieqiState('render'), 'red');
@@ -38,6 +38,77 @@ describe('renderJieqiBoardSvg', () => {
     });
     expect(svg).toContain('jieqi-selection');
     expect(svg).toContain('jieqi-hint');
+  });
+
+  it('shades the selected cell on the square grid and rings the point on the traditional board', () => {
+    const select = (layout: 'intersection' | 'cell') =>
+      renderJieqiBoardSvg(view, 'red', {
+        layout,
+        selectedSquare: 'a1',
+        legalMoves: view.legalMoves.filter((move) => move.from === 'a1'),
+      });
+    expect(select('cell')).toMatch(/<rect class="jieqi-selection"/);
+    expect(select('cell')).not.toMatch(/<circle class="jieqi-selection"/);
+    expect(select('intersection')).toMatch(/<circle class="jieqi-selection"/);
+  });
+
+  for (const layout of ['intersection', 'cell'] as const) {
+    for (const perspective of ['red', 'black'] as const) {
+      it.each([false, true])(
+        `keeps layout-specific capture hints below all flat pieces (${layout}, ${perspective}, interactive=%s)`,
+        (interactive) => {
+          // The covered cannon on b3 can take b10 over the covered piece on b8.
+          const moves = view.legalMoves.filter((move) => move.from === 'b3');
+          expect(moves.some((move) => move.to === 'b10')).toBe(true);
+          const svg = renderJieqiBoardSvg(view, perspective, {
+            layout,
+            interactive,
+            tile3d: false,
+            pieceSet: 'traditional',
+            selectedSquare: 'b3',
+            legalMoves: moves,
+          });
+          const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+          const circles = [...doc.querySelectorAll('circle.jieqi-hint-capture')];
+          const fills = [...doc.querySelectorAll('rect.jieqi-hint-capture-fill')];
+          const captureCount = moves.filter((move) => view.board[move.to]).length;
+          expect(captureCount).toBeGreaterThan(0);
+          expect(circles).toHaveLength(layout === 'intersection' ? captureCount : 0);
+          expect(fills).toHaveLength(layout === 'cell' ? captureCount : 0);
+          for (const circle of circles) {
+            expect(Number(circle.getAttribute('r'))).toBeGreaterThan(JIEQI_PIECE_PX / 2);
+          }
+          for (const fill of fills) {
+            // A full cell with no stroke cannot bleed into a neighbour or river.
+            const bounds = ['x', 'y', 'width', 'height'];
+            const cells = [...doc.querySelectorAll('rect.xq-live-cell')];
+            expect(
+              cells.some((cell) =>
+                bounds.every((attr) => cell.getAttribute(attr) === fill.getAttribute(attr)),
+              ),
+            ).toBe(true);
+            expect(fill.getAttribute('style')).toContain('stroke: none');
+          }
+          for (const hint of [...circles, ...fills]) {
+            const index = svg.indexOf(`<${hint.tagName} class="${hint.getAttribute('class')}"`);
+            expect(index).toBeGreaterThan(-1);
+            expect(index).toBeLessThan(svg.indexOf('<g class="jieqi-piece-slot'));
+          }
+        },
+      );
+    }
+  }
+
+  it('keeps a repetition-loss capture marked only by its warning', () => {
+    const svg = renderJieqiBoardSvg(view, 'red', {
+      interactive: true,
+      tile3d: false,
+      selectedSquare: 'b3',
+      legalMoves: [{ from: 'b3', to: 'b10' }],
+      repetitionLossPoints: new Set(['b10']),
+    });
+    expect(svg).toContain('data-repetition-loss="b10"');
+    expect(svg).not.toContain('jieqi-hint-capture');
   });
 
   it('renders target hover highlights inside the interactive hit layer', () => {

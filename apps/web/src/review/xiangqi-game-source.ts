@@ -11,6 +11,8 @@
 // what its own page fetches.
 
 import type { XiangqiMove } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
+import { currentLocale } from '../i18n/locale.js';
 
 export type XiangqiGameSourceKind = 'mistboard' | 'historical' | 'broadcast';
 
@@ -65,7 +67,7 @@ export async function fetchXiangqiGameSource(source: XiangqiGameSource): Promise
         return await fetchBroadcastBoard(source.id);
     }
   } catch {
-    return { ok: false, error: 'That game could not be loaded.' };
+    return { ok: false, error: t('review.gameSource.loadFailed') };
   }
 }
 
@@ -83,14 +85,19 @@ async function fetchPlayedGame(roomId: string): Promise<XiangqiGameFetch> {
   const moves = (body.timeline ?? [])
     .filter((entry) => entry.type === 'move-played' && entry.move)
     .map((entry) => entry.move as XiangqiMove);
-  if (moves.length === 0) return { ok: false, error: 'That game has no moves yet.' };
+  if (moves.length === 0) return { ok: false, error: t('review.gameSource.noMovesYet') };
   // Xiangqi stores its first seat as 'red'; 'white' is the chess-family
   // spelling the shared layer sometimes uses (see jungle_flip_seat_vs_ink_disc).
   const seat = (color: string): string | undefined =>
     body.game?.players?.find((player) => player.color === color)?.name;
   return {
     ok: true,
-    game: { name: pairName(seat('red') ?? seat('white'), seat('black')), moves },
+    game: {
+      name:
+        pairName(seat('red') ?? seat('white'), seat('black')) ??
+        t('review.gameSource.fallbackName'),
+      moves,
+    },
   };
 }
 
@@ -108,7 +115,7 @@ async function fetchArchiveGame(gameId: string): Promise<XiangqiGameFetch> {
     };
   };
   const moves = body.game?.moves ?? [];
-  if (moves.length === 0) return { ok: false, error: 'That game has no moves.' };
+  if (moves.length === 0) return { ok: false, error: t('review.gameSource.noMoves') };
   const players = pairName(
     body.game?.redNameRaw ?? undefined,
     body.game?.blackNameRaw ?? undefined,
@@ -117,7 +124,10 @@ async function fetchArchiveGame(gameId: string): Promise<XiangqiGameFetch> {
   return {
     ok: true,
     game: {
-      name: event && players !== FALLBACK ? `${players} (${event})` : (event ?? players),
+      name:
+        event && players
+          ? t('review.gameSource.eventName', { players, event })
+          : event || players || t('review.gameSource.fallbackName'),
       moves,
     },
   };
@@ -136,30 +146,37 @@ async function fetchBroadcastBoard(boardId: string): Promise<XiangqiGameFetch> {
     };
   };
   const moves = body.board?.moves ?? [];
-  if (moves.length === 0) return { ok: false, error: 'That board has no moves yet.' };
+  if (moves.length === 0) return { ok: false, error: t('review.gameSource.boardNoMovesYet') };
   const red = body.board?.red;
   const black = body.board?.black;
   return {
     ok: true,
-    // Prefer the romanized form on an English-first site, falling back to the
-    // original when there is no cached romanization.
-    game: { name: pairName(red?.nameEn ?? red?.name, black?.nameEn ?? black?.name), moves },
+    game: {
+      name:
+        pairName(broadcastName(red), broadcastName(black)) ?? t('review.gameSource.fallbackName'),
+      moves,
+    },
   };
 }
 
-const FALLBACK = 'Xiangqi game';
+// Choose a recorded name, never transliterate or convert its script ourselves.
+function broadcastName(player: { name?: string; nameEn?: string } | undefined): string | undefined {
+  return currentLocale() === 'en'
+    ? player?.nameEn?.trim() || player?.name
+    : player?.name?.trim() || player?.nameEn;
+}
 
 // "vs", not a dash: engine seats carry their level in the name
 // ("Fairy-Stockfish - Level 4"), so a dash separator produced
 // "Fairy-Stockfish - Level 4 - test1", which reads as three players.
-function pairName(red: string | undefined, black: string | undefined): string {
+function pairName(red: string | undefined, black: string | undefined): string | undefined {
   const left = red?.trim();
   const right = black?.trim();
-  return left && right ? `${left} vs ${right}` : FALLBACK;
+  return left && right ? t('review.gameSource.matchup', { red: left, black: right }) : undefined;
 }
 
 function notFound(status: number): string {
-  if (status === 404) return 'No game found at that link.';
-  if (status === 401 || status === 403) return 'That game is not public.';
-  return 'That game could not be loaded.';
+  if (status === 404) return t('review.gameSource.notFound');
+  if (status === 401 || status === 403) return t('review.gameSource.private');
+  return t('review.gameSource.loadFailed');
 }

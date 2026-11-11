@@ -23,6 +23,9 @@ import {
   CHASE_HERD_ROUTE,
   CHASE_HERD_START_PLY,
   chaseCycleStart,
+  BANQI_CHASE_RULE_STEPS,
+  banqiChaseRuleForbidden,
+  CHASE_RULE_LAST_PLY,
 } from './banqi-chase-diagrams.js';
 import { BANQI_CHASE_DRAW_GAME, BANQI_CHASE_HERD_GAME } from './content/banqi-chase-games.js';
 
@@ -194,5 +197,20 @@ describe('banqi perpetual-chase diagrams', () => {
         expect(slotPiece(step.svg(), move.to)).toBe(before);
       });
     }
+  });
+  it('rules page: under today’s rule the cross is the advisor’s next real move, the fourth chase', () => {
+    const next = BANQI_CHASE_DRAW_GAME.moves.trim().split(/\s+/)[CHASE_RULE_LAST_PLY]!;
+    expect(banqiChaseRuleForbidden()).toEqual([{ from: next.slice(0, 2), to: next.slice(2, 4) }]);
+    const svgs = BANQI_CHASE_RULE_STEPS.map((step) => step.svg());
+    const crosses = (svg: string) => (svg.match(/stroke="rgba\(178, 34, 28/g) ?? []).length;
+    expect(svgs.map(crosses)).toEqual([...svgs.slice(1).map(() => 0), 1]);
+    expect(BANQI_CHASE_RULE_STEPS.at(-1)?.narrative).toContain('chased three times');
+    // Moves show as the live board's cell tint, never an arrow; the last frame
+    // dots the advisor's remaining steps.
+    for (const svg of svgs.slice(1)) {
+      expect(svg).not.toContain('marker-end');
+      expect((svg.match(/<rect [^>]*fill="rgba\((194, 32, 26|22, 40, 58)/g) ?? []).length).toBe(2);
+    }
+    expect((svgs.at(-1)!.match(/<circle[^>]*rgba\(31, 111, 91/g) ?? []).length).toBe(3);
   });
 });

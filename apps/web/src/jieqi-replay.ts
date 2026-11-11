@@ -11,14 +11,15 @@ import {
   createInitialJieqiState,
   getJieqiPlayerView,
   type JieqiColor,
+  type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
-  type JieqiPieceRole,
   type JieqiSquare,
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
@@ -33,8 +34,10 @@ export type JieqiReplaySpec = {
   // Shown on the final ply. The kernel reports the real result; this overrides the
   // narrative text there.
   resultText: string;
-  // Per-side hidden deal in jieqiHomeSquares order — reveals follow it.
-  deal: { red: JieqiPieceRole[]; black: JieqiPieceRole[] };
+  // Per-side deal in jieqiHomeSquares order; reveals follow it. A real site
+  // game passes its PUBLIC deal (jieqiPublicDeal): `undetermined` marks the
+  // pieces nobody may know, and they render as never revealed.
+  deal: JieqiDeal;
   // Space-separated concatenated-square moves (e.g. "b1c3 i7i6 c10e8 ..."), files
   // a-i and ranks 1-10, so each token splits into from/to with the square regex.
   moves: string;
@@ -141,7 +144,18 @@ export function mountJieqiReplay(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = moves[(forward ? index : animateFrom) - 1];
-      if (move) animateJieqiBoardMove(frame, move, perspective, { reverse: !forward });
+      if (move) {
+        animateJieqiBoardMove(frame, move, perspective, { reverse: !forward });
+        if (forward) {
+          animateJieqiStepReveal(
+            frame,
+            move,
+            states[animateFrom]?.board,
+            states[index]!.board,
+            perspective,
+          );
+        }
+      }
     }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;

@@ -14,12 +14,12 @@
 //
 // Pure + rng-injected so it is deterministic under test.
 
-import { ATOMIC_XIANGQI_PLAYABLE_ENGINES } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
-import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
+import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES, jqeEnabled } from './jieqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipNetPath } from './jungle-flip-engine.js';
 import { JUNGLE_PLAYABLE_ENGINE_IDS } from './server-jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
 
@@ -37,18 +37,26 @@ export function xiangqiBotLadder(): string[] {
 // Each variant's ladder, weakest first: the engines its first-party bots play
 // (bot-vs-bot-pairing.test.ts pins every rung to a first-party bot of that
 // variant). A variant missing here has no ladder, and the scheduler skips it;
-// nothing falls back to the xiangqi ladder. Banqi has one rung, so its bot plays
-// itself. Jungle's ladder is the two bots a player can pick, Misty and KataGo on
+// nothing falls back to the xiangqi ladder. Banqi's ladder keeps its historical
+// id misty-banqi at L7. Jungle's ladder is the two bots a player can pick, Misty and KataGo on
 // top (2026-10): its retired Misty levels stay seatable for old rooms but never
 // play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   xiangqi: xiangqiBotLadder,
-  jieqi: () => JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  // jqe (one rung under AB-JChess) plays the jieqi ladder only while
+  // MISTBOARD_JQE_ENABLED is on, so no scheduled game publishes a bot players cannot pick.
+  jieqi: () =>
+    JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id).filter(
+      (id) => id !== JIEQI_JQE_ENGINE_ID || jqeEnabled(),
+    ),
   'fortress-xiangqi': () => FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
-  'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'crazyhouse-xiangqi': () => CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'jungle-flip': () =>
+    JUNGLE_FLIP_PLAYABLE_ENGINES.filter(
+      (tier) => tier.evaluation !== 'nnue' || jungleFlipNetPath() !== null,
+    ).map((tier) => tier.id),
   // JUNGLE_PLAYABLE_ENGINE_IDS runs strongest first.
   jungle: () => [...JUNGLE_PLAYABLE_ENGINE_IDS].reverse(),
 };

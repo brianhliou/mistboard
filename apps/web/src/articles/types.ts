@@ -31,7 +31,10 @@ export type SubHeadingBlock = { kind: 'sub-heading'; text: string };
 // An editorial note set apart from the body: a corrections invitation, a
 // sourcing remark. One short paragraph with the same inline markdown as a
 // paragraph ([text](href), **bold**, `code`), drawn as a quiet bordered aside.
-export type NoteBlock = { kind: 'note'; text: string };
+/** An aside that qualifies the article rather than advancing it: the as-of
+ *  date and versions, a correction, a caveat on the evidence. `label` is a
+ *  two-to-four-word name shown above it ("As of October 24, 2026"). */
+export type NoteBlock = { kind: 'note'; text: string; label?: string };
 
 // Inline SVG composition of 1, 2, or 3 boards. Renderer wraps the composer
 // output in an <svg> with the given canvas dimensions and background.
@@ -145,7 +148,7 @@ export type JungleReplayBlock = {
   caption?: string;
 };
 
-// Flip Jungle (兽棋 / 翻翻棋) analogue of the banqi replay: a 4x4 board stepped
+// Flip Jungle (翻翻兽棋) analogue of the banqi replay: a 4x4 board stepped
 // through a move list + hidden deal, each position replayed through the real
 // flip-jungle kernel; tiles flip to their dealt animal on first turn-over and
 // equal ranks trade off the board.
@@ -254,6 +257,21 @@ export type RawSvgBlock = {
   zoomable?: boolean;
 };
 
+// One SVG whose CSS keyframes play a short sequence (a tile claimed, then a
+// discard). It plays once, when the figure first scrolls into view, then holds
+// its last frame; a Replay button runs it again. The SVG's keyframes must use
+// fill-mode `both` and its un-animated state must be the end frame, so a
+// paused or finished animation reads correctly. Under prefers-reduced-motion
+// the figure shows `reducedSvg` instead (static before and after frames) and
+// no button.
+export type AnimatedSvgBlock = {
+  kind: 'animated-svg';
+  // A thunk is re-run on a piece-set change, like a raw-svg block's.
+  svg: string | (() => string);
+  reducedSvg: string | (() => string);
+  caption?: string;
+};
+
 // Two or three raw-SVG figures on one row (stacking on narrow screens). Rules
 // pages teach by contrast — leap across vs leap along, tiger vs lion from the
 // same square — and a contrast only lands when both cases are on screen at
@@ -340,6 +358,20 @@ export type EmbedBlock = {
   caption?: string;
   /** Frame aspect as [width, height]; defaults to the embed contract's 760x700. */
   aspect?: [number, number];
+  /** A study or line embed opens on the start position with the score sheet,
+   *  its comments and the result covered, so the reader tries the problem
+   *  first; a button or the first step forward reveals them. Rides to the
+   *  frame as `?solution=hidden`. */
+  hideSolution?: boolean;
+};
+
+/** A third-party video player with a watch-page fallback below it. Store the
+ *  Bilibili BV id, not an arbitrary iframe URL. */
+export type BilibiliBlock = {
+  kind: 'bilibili';
+  bvid: string;
+  title: string;
+  caption?: string;
 };
 
 /**
@@ -359,6 +391,28 @@ export type EmbedBlock = {
 export type FaqBlock = {
   kind: 'faq';
   items: { question: string; answer: string }[];
+};
+
+// A dated sequence drawn as a vertical line with one marker per entry. `date`
+// is an ISO day (YYYY-MM-DD) for a fixed date, which the renderer formats and
+// compares with today so a passed entry reads as done; any other string
+// ("Later") is shown as written and stays open. `text` is rich text.
+export type TimelineBlock = {
+  kind: 'timeline';
+  items: { date: string; title: string; text?: string }[];
+};
+
+// A bulleted (or, with `ordered`, numbered) list. Each item is one line of
+// rich text, the same inline markdown as a paragraph.
+export type ListBlock = { kind: 'list'; ordered?: boolean; items: string[] };
+
+// Standalone images shown side by side (stacked on a phone), each with an
+// optional dark-theme twin. For a few small pictures read together, such as
+// two badge cards, where one combined screenshot would carry a background.
+export type ImageRowBlock = {
+  kind: 'image-row';
+  items: { src: string; darkSrc?: string; alt: string; width?: number }[];
+  caption?: string;
 };
 
 export type TableBlock = {
@@ -385,6 +439,14 @@ export type TableBlock = {
    *  accessible name. On a phone the table becomes one card per row: the board
    *  on the left, the cells stacked beside it. */
   rowDiagrams?: TableRowDiagram[];
+  /** Emphasise a column (the hand that decided a match). Zero-indexed into
+   *  `headers` and each row's cells. */
+  highlightColumns?: number[];
+  /** Columns kept on one line in a `wrap` table (a ban length, an amount, an
+   *  event name), so the even split of the width never breaks a short value
+   *  and only the prose columns wrap. Desktop only: on a phone they wrap rather
+   *  than scroll the table sideways. Zero-indexed into `headers`. */
+  nowrapColumns?: number[];
 };
 
 export type TableRowDiagram = { svg: () => string; label: string };
@@ -400,6 +462,10 @@ export type ImageFigureBlock = {
   darkSrc?: string;
   alt: string;
   caption?: string;
+  // A credit that must carry a link (a photo used on condition of a credit
+  // and a link, like the xiangqiqipu.com portraits): rendered after the
+  // caption as "Photo: <a href>text</a>", opening in a new tab.
+  credit?: { text: string; href: string };
   // 'article-figure-full' lets the image fill the column instead of the
   // default 560px cap.
   className?: string;
@@ -410,6 +476,9 @@ export type ArticleBlock =
   | NoteBlock
   | TableBlock
   | FaqBlock
+  | TimelineBlock
+  | ListBlock
+  | ImageRowBlock
   | ImageFigureBlock
   | SubHeadingBlock
   | StaticBoardsBlock
@@ -417,6 +486,7 @@ export type ArticleBlock =
   | LiveBoardsBlock
   | CtaBlock
   | RawSvgBlock
+  | AnimatedSvgBlock
   | SvgRowBlock
   | RawSvgStepperBlock
   | StepGameSetBlock
@@ -432,7 +502,8 @@ export type ArticleBlock =
   | JungleReplayBlock
   | JungleFlipReplayBlock
   | CodeBlock
-  | EmbedBlock;
+  | EmbedBlock
+  | BilibiliBlock;
 
 // `blocks` is the structured body. `paragraphs` is the legacy outline body
 // that still carries `[VISUAL: ...]` markers — sections are migrated to
@@ -532,9 +603,10 @@ type ArticleBase = {
   /**
    * Guest byline. Set when someone other than Mistboard wrote the piece: a
    * verified titled player sends prose, we edit it and publish it under their
-   * name. Absent means the site is the author and no byline renders, which is
-   * every existing article. `handle` links to the player's profile when they
-   * have an account here; `title` renders their verified badge beside the name.
+   * name. Absent on a Mistboard-published article means the site author wrote
+   * it, and the byline names them (SITE_AUTHOR in articles/site-author.ts).
+   * `handle` links to the player's profile when they have an account here;
+   * `title` renders their verified badge beside the name.
    */
   author?: {
     displayName: string;
@@ -559,12 +631,28 @@ type ArticleBase = {
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).
   homeRow?: 'deep-dives';
+  // A page about a person (the player articles): one gray line below the
+  // article panel, "Corrections or rights requests: contact us.", the same
+  // small print the player pages carry, linked to /contact about this article.
+  contactNote?: boolean;
   status: 'outline' | 'draft' | 'published';
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.
   publishedAt?: string;
+  // Set only for a change a returning reader would want to know about: a
+  // corrected number, a new section, a rule change. A move, a reformat, a new
+  // thumbnail or a translation is not an update. `content-fingerprints.json`
+  // catches reader-text edits that forgot to bump it (articles-fingerprint.test.ts).
   updatedAt?: string;
+  // One sentence on what changed on `updatedAt`, shown under the dates. Required
+  // whenever `updatedAt` differs from `publishedAt` (articles.test.ts). Stays
+  // English on translations; the label around it is localized.
+  updateNote?: string;
   tldr?: string[];
+  // How the numbers in a data post were measured, one line per step, rendered
+  // as a "How we measured this" box under the TL;DR. Only restate what the
+  // article's own text already says; this box adds no new numbers.
+  method?: string[];
   intro?: ArticleBlock[];
   // Card art, drawn in the 16:10 card media under a date pill (top left) and a
   // star (top right). Half a xiangqi board goes through xqHalfBoardThumbnailSvg
@@ -580,16 +668,34 @@ type ArticleBase = {
 
 export type Article = ArticleBase &
   (
-    | { kind: 'rules' }
+    | {
+        kind: 'rules';
+        /** One short line under the game's name on /rules. */
+        tagline?: string;
+      }
     | {
         kind: 'article';
         // Explicit so the official-only view stays fail-closed when community
         // authors are introduced later.
         publisher: 'mistboard' | 'community';
         // Author-chosen "Read next" slugs, in order. The footer defaults to a
-        // date ring because the schema has no topic field; a platform page
-        // whose neighbours by date are unrelated variants can name its own.
-        // Missing or unlisted slugs are skipped and the ring fills the rest.
+        // date ring of posts with the same `topic`, which is too coarse to tell
+        // variants apart; a platform page whose neighbours by date are
+        // unrelated variants can name its own. Missing or unlisted slugs are skipped and the ring
+        // fills the rest.
         readNext?: string[];
+        // Who the post is written for. 'engineering' is a post about how the
+        // site, a bot, an engine, a solver or the puzzle miner was built or
+        // measured, or a bug in one; unset is a post for players (how to play,
+        // rules, history, players, results). Drives the /blog?topic= chips
+        // (ARTICLE_TOPICS in articles.ts), so a reader can keep one kind.
+        topic?: 'engineering';
+        // The game a player post is about, when it is standard xiangqi (not a
+        // xiangqi variant such as jieqi, banqi, fog or duck). Read next keeps a
+        // xiangqi deep dive (`homeRow: 'deep-dives'`) among posts marked here,
+        // so an unmarked post never fills one's footer. Every deep dive must
+        // name its game (articles.test.ts); widen the union when a deep dive on
+        // another game needs the same footer.
+        game?: 'xiangqi';
       }
   );

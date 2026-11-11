@@ -9,15 +9,18 @@ import {
   type GameParticipant,
   matchupSeats,
   participantForColor,
+  terminationLabel,
   variantNameKeyForSpecId,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
+import { buildProfileGameBoard } from './profile-game-board.js';
 import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { seatsNamePlayers } from './variant-seat-label.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
 export function buildProfileDashboard(
@@ -165,7 +168,22 @@ export function buildProfileHeaderShell(opts: {
 // subject's seat). Works for a human or an engine seat alike.
 export function buildProfileGameRow(
   game: FeaturedGame,
-  opts: { locale?: Locale; neutral?: boolean; timeOnly?: boolean } = {},
+  opts: {
+    locale?: Locale;
+    neutral?: boolean;
+    timeOnly?: boolean;
+    // How the game ended (Checkmate, Resignation, Timeout) as a pill after the
+    // variant: the /correspondence "Recently finished" list, where it answers
+    // "what happened to my game".
+    ending?: boolean;
+    // A "New" tag beside the opponent: a game that ended since the player
+    // last looked (the same list).
+    isNew?: boolean;
+    // The final-position thumbnail column after the result (#509, the profile's
+    // `?boards=1` view). Every row gets the cell, empty when the game has no
+    // board, so the columns line up.
+    boards?: boolean;
+  } = {},
 ): HTMLElement {
   const locale = opts.locale ?? currentLocale();
   const neutral = opts.neutral === true;
@@ -229,6 +247,7 @@ export function buildProfileGameRow(
       participantProfileTarget(participant),
       'profile-game-opponent-name',
     );
+    nameEl.title = nameEl.textContent ?? '';
     if (participant?.subjectType === 'bot' && participant.subjectId) {
       attachBotCard(nameEl, participant.subjectId);
     }
@@ -248,6 +267,12 @@ export function buildProfileGameRow(
     : formatGameDate(game.endedAt, locale);
 
   topLine.append(opponent);
+  if (opts.isNew) {
+    const tag = document.createElement('span');
+    tag.className = 'profile-game-new';
+    tag.textContent = t('correspondence.finishedNew', {}, locale);
+    topLine.append(tag);
+  }
 
   // Only a head-to-head human (pvp) game can ever be rated; anything vs an
   // engine, EvE, or imported is casual by definition. Gate on mode first so a
@@ -268,12 +293,16 @@ export function buildProfileGameRow(
     variantPill.prepend(thumb);
   }
   details.append(variantPill);
+  const ending = opts.ending ? terminationLabel(game.termination, locale) : '';
+  if (ending) details.append(buildGameDetail(ending, 'profile-game-ending'));
   if (unavailable) {
     const tag = buildGameDetail(unavailable.label, 'profile-game-unavailable');
     tag.title = unavailable.title;
     details.append(tag);
   }
-  if (!neutral)
+  // A player-named variant (xiangqi mahjong) has no side to show: its seat id is
+  // bookkeeping, and the old fallback printed "White" for an east seat.
+  if (!neutral && !seatsNamePlayers(game.variant))
     details.append(buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
   // Only rated games get a badge; casual (the default, and every game while
   // rated is gated off) stays untagged so the feed isn't littered with "Casual".
@@ -291,7 +320,12 @@ export function buildProfileGameRow(
   // The overlay goes in FIRST so it sits under the row content in paint order;
   // the opponent link then only needs a z-index to come back out on top.
   if (open) link.append(open);
-  link.append(outcome, body, date);
+  if (opts.boards) {
+    link.classList.add('profile-game-row-board');
+    link.append(outcome, buildProfileGameBoard(game.finalBoard), body, date);
+  } else {
+    link.append(outcome, body, date);
+  }
   item.append(link);
   return item;
 }
@@ -306,6 +340,7 @@ function matchupNameEl(game: FeaturedGame, seat: GameParticipant['color']): HTML
     participantProfileTarget(participant),
     'profile-game-opponent-name',
   );
+  el.title = el.textContent ?? '';
   if (participant?.subjectType === 'bot' && participant.subjectId) {
     attachBotCard(el, participant.subjectId);
   }
@@ -356,6 +391,9 @@ export function profileResultTone(game: FeaturedGame): 'win' | 'loss' | 'draw' {
   if (game.result === 'draw') return 'draw';
   if (game.playerColor === 'red') return game.result === 'red-wins' ? 'win' : 'loss';
   if (game.playerColor === 'black') return game.result === 'black-wins' ? 'win' : 'loss';
+  if (game.playerColor === 'east' || game.playerColor === 'west') {
+    return game.result === `${game.playerColor}-wins` ? 'win' : 'loss';
+  }
   return game.result === 'white-wins' ? 'win' : 'loss';
 }
 
@@ -399,7 +437,7 @@ function localizedSeatName(name: string, locale: Locale): string {
 function opponentColor(
   game: FeaturedGame,
   color: FeaturedGame['playerColor'],
-): 'white' | 'black' | 'red' {
+): GameParticipant['color'] {
   const [first, second] = matchupSeats(game);
   return color === first ? second : first;
 }
@@ -435,9 +473,5 @@ export function profileGameUnavailableTag(
 }
 
 export function profileGameHref(game: FeaturedGame): string {
-  const tenant = webVariantTenantForRoomId(game.roomId) ?? webVariantTenantForSpecId(game.variant);
-  if (tenant?.gameRouteBase) {
-    return `${tenant.gameRouteBase}/${encodeURIComponent(game.roomId)}`;
-  }
-  return `/game/${encodeURIComponent(game.roomId)}`;
+  return finishedGameHref(game.roomId, game.variant);
 }

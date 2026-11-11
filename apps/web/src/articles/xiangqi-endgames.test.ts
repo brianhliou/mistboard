@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { translateArticle } from '../article-i18n.js';
+import { resolvePracticeChapterHref } from '../practice-chapter-redirect.js';
 import {
   XIANGQI_ENDGAMES_EXERCISE_ID,
   xiangqiEndgamesArticle,
@@ -17,8 +18,6 @@ import { XQ_ALL_SQUARES } from './diagrams.js';
 import {
   ENDGAME_GRADE_GLOSSARY,
   ENDGAME_PAGE_TEXT,
-  ENDGAME_PROD_CHAPTERS,
-  ENDGAME_SET_STUDY_IDS,
   ENDGAME_TABLE,
   ENDGAME_TABLE_EXTRA_CHECKS,
   endgameDiagramLabel,
@@ -30,6 +29,84 @@ import {
 
 // The 象棋残局 page's claims: every result in the table is the database's result
 // for that exact position, and every link lands on that position.
+
+/** The five sets' study ids on prod (GET /api/practice, read 2026-10-14). */
+const PROD_SET_STUDY_IDS: Record<string, string> = {
+  'endgames-soldier': 'DstCTARw',
+  'endgames-chariot': 'hc6LmrOG',
+  'endgames-horse': 'PNqQaTM6',
+  'endgames-cannon': 'rj3D8rMs',
+  'endgames-insufficient': 'feCqSlEw',
+};
+
+/**
+ * Every table row's chapter on prod as [study, chapter, root FEN], read from
+ * GET /api/studies/:id on 2026-10-14. The 22 rows the page linked by id on
+ * 2026-10-07 have the same chapter ids here; the other 13 linked their set
+ * then and are chapters now. The links no longer carry these ids (#521): this
+ * is prod as a fixture, to hold the slug lookup to the chapters prod links
+ * opened.
+ */
+const PROD_CHAPTERS: Record<string, [study: string, chapter: string, rootFen: string]> = {
+  'high-soldier-vs-bare-general': ['DstCTARw', 'oHs6Af2z', '5k3/9/3P5/9/9/9/9/9/9/4K4 r - - 0 1'],
+  'high-soldier-vs-advisor-tricky': ['DstCTARw', 'vGxV0Ejd', '4ka3/9/5P3/9/9/9/9/9/9/3K5 r - - 0 1'],
+  'high-low-soldiers-vs-two-advisors': ['DstCTARw', 'Pp2Y5QX7', '3aka3/6P2/2P6/9/9/9/9/9/9/3K5 r - - 0 1'],
+  'two-soldiers-vs-two-elephants': ['DstCTARw', 'NraxgqiY', '2b1k1b2/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1'],
+  'three-soldiers-vs-horse-and-two-advisors': ['DstCTARw', 'fjcDdHLP', '3aka3/9/4n4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1'],
+  'two-high-soldiers-vs-cannon': ['DstCTARw', 'GBo3Zj7D', '4k4/4c4/9/2P3P2/9/9/9/9/9/4K4 r - - 0 1'],
+  'two-soldiers-vs-two-advisors': ['DstCTARw', 'hjxe7Knl', '3aka3/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1'],
+  'three-soldiers-vs-cannon-and-two-elephants': ['DstCTARw', 'bEx7oNV5', '2b1k1b2/9/9/2P1P1P2/9/4c4/9/9/9/4K4 r - - 0 1'],
+  'three-soldiers-vs-full-defence': ['DstCTARw', 'aRL5w6iC', '2b1ka3/4a4/4b4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1'],
+  'high-soldier-vs-advisor': ['DstCTARw', 'mipS3HQp', '4k4/4a4/9/4P4/9/9/9/9/4K4/9 r - - 0 1'],
+  'two-soldiers-vs-advisor-and-elephant': ['DstCTARw', 'CHi4AJpE', '2b1k4/4a4/9/9/3P1P3/9/9/9/9/4K4 r - - 0 1'],
+  'chariot-cannon-vs-chariot-center': ['hc6LmrOG', 'QeEzHDn2', '5k3/9/9/9/r8/2C1R4/9/9/9/4K4 r - - 0 1'],
+  'chariot-vs-three-defence': ['hc6LmrOG', 'aAF1ooTw', '4ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1'],
+  'chariot-vs-cannon-two-advisors-tricky': ['hc6LmrOG', 'wJl8mN65', '3aka3/9/4c4/9/9/9/7R1/9/9/4K4 r - - 0 1'],
+  'chariot-vs-full-defence-tricky': ['hc6LmrOG', 'CtNXlj6f', '4ka3/4a4/b7b/9/1R7/9/9/9/9/3K5 r - - 0 1'],
+  'chariot-vs-horse-two-advisors': ['hc6LmrOG', 'O93RRzSn', '3aka3/9/2n6/9/9/R8/9/9/9/5K3 r - - 0 1'],
+  'chariot-vs-full-defence': ['hc6LmrOG', 'MyIZ3XSd', '2b1ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1'],
+  'chariot-vs-horse-two-elephants-fortress': ['hc6LmrOG', 'zsSsZLbq', '4k4/9/4n3b/4R4/6b2/9/9/9/4K4/9 r - - 0 1'],
+  'chariot-vs-cannon-two-advisors': ['hc6LmrOG', 'uAuI4PjG', '4ka3/4a4/9/3c5/9/9/9/9/3K5/7R1 r - - 0 1'],
+  'chariot-vs-two-minor-pieces': ['hc6LmrOG', 'hIZwpqop', '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1'],
+  'chariot-cannon-vs-chariot': ['hc6LmrOG', 'GoeeVBgU', '5k3/9/9/9/9/R1C1r4/9/9/9/3K5 r - - 0 1'],
+  'two-chariots-vs-chariot-full-defence': ['hc6LmrOG', 'HJWlVc5G', '2b1ka3/4a4/r3b4/9/9/3R1R3/9/9/9/4K4 r - - 0 1'],
+  'horse-vs-elephant-zugzwang': ['PNqQaTM6', 'jeCJgZEG', '3k5/9/5N3/9/2b6/9/9/9/4K4/9 r - - 0 1'],
+  'horse-and-soldier-vs-three-defence': ['PNqQaTM6', 'mmiG3IsB', '4ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1'],
+  'horse-vs-advisor': ['PNqQaTM6', 'uJQcVSvn', '3ak4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1'],
+  'two-horses-vs-full-defence': ['PNqQaTM6', 'E8vYqhoQ', '2b1ka3/4a4/4b4/9/9/3N1N3/9/9/9/4K4 r - - 0 1'],
+  'horse-vs-elephant': ['PNqQaTM6', 'M5LYB24C', '2b1k4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1'],
+  'horse-vs-crossed-soldier': ['PNqQaTM6', 'zcohFocD', '4k4/9/9/9/N8/9/3p5/9/9/5K3 r - - 0 1'],
+  'horse-and-soldier-vs-full-defence': ['PNqQaTM6', 'HUojqblI', '2b1ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1'],
+  'cannon-and-advisor-vs-two-advisors': ['rj3D8rMs', '8AI7kOXl', '3k5/4a4/3a5/9/9/9/9/3A1K3/9/3C5 r - - 0 1'],
+  'two-cannons-advisor-vs-full-defence': ['rj3D8rMs', 'UTndoCk5', '2b1ka3/4a4/4b4/9/9/1C5C1/9/9/4A4/4K4 r - - 0 1'],
+  'two-cannons-vs-two-elephants': ['rj3D8rMs', '0schi3Bh', '2b1k1b2/9/9/9/9/1C5C1/9/9/9/3K5 r - - 0 1'],
+  'cannon-and-full-defence-vs-full-defence': ['rj3D8rMs', 'hDZE0K9k', '2b1ka3/4a4/4b4/9/9/4C4/9/4B4/4A4/2BAK4 r - - 0 1'],
+  'bottom-soldier-vs-bare-general': ['feCqSlEw', 'ZrpoFvus', '2P6/3k5/9/9/9/9/9/9/9/4K4 r - - 0 1'],
+  'cannon-vs-bare-general': ['feCqSlEw', '3VUGq3dJ', '4k4/9/9/9/9/4C4/9/9/9/4K4 r - - 0 1'],
+};
+
+/** /api/practice and /api/studies/:id as a database holding `chapters` serves them. */
+function fakeApi(
+  sets: Record<string, string>,
+  chapters: Record<string, [string, string, string]>,
+): (url: string) => Promise<unknown> {
+  return async (url) => {
+    if (url === '/api/practice') {
+      return {
+        sections: [
+          { cards: Object.entries(sets).map(([slug, studyId]) => ({ slug, studyId })) },
+        ],
+      };
+    }
+    const studyId = /^\/api\/studies\/([A-Za-z0-9]+)$/.exec(url)?.[1];
+    if (!studyId) throw new Error(`unexpected fetch ${url}`);
+    return {
+      chapters: Object.values(chapters)
+        .filter(([study]) => study === studyId)
+        .map(([, id, rootFen]) => ({ id, root: { rootFen } })),
+    };
+  };
+}
 
 function allTables(lang: 'en' | 'zh-Hans' | 'zh-Hant'): TableBlock[] {
   const article = lang === 'en' ? xiangqiEndgamesArticle : translateArticle(xiangqiEndgamesArticle, lang);
@@ -93,20 +170,57 @@ describe('xiangqi endgames table', () => {
   });
 
   it('holds every recorded prod chapter to the corpus position, in the set that holds it', () => {
-    for (const [id, chapter] of Object.entries(ENDGAME_PROD_CHAPTERS)) {
-      expect(chapter.rootFen, id).toBe(endgameEntryFen(endgameHubEntry(id)));
-      expect(chapter.study, id).toBe(ENDGAME_SET_STUDY_IDS[endgamePracticeSetOf(id)]);
+    expect(Object.keys(PROD_CHAPTERS).sort()).toEqual(ENDGAME_TABLE.map((row) => row.id).sort());
+    for (const [id, [study, , rootFen]] of Object.entries(PROD_CHAPTERS)) {
+      expect(rootFen, id).toBe(endgameEntryFen(endgameHubEntry(id)));
+      expect(study, id).toBe(PROD_SET_STUDY_IDS[endgamePracticeSetOf(id)]);
     }
   });
 
-  it('links each row to its chapter, or to the set that will hold it', () => {
+  it("links each row by set slug and position, never by one database's ids (#521)", () => {
     for (const row of ENDGAME_TABLE) {
-      const set = ENDGAME_SET_STUDY_IDS[endgamePracticeSetOf(row.id)];
-      const chapter = ENDGAME_PROD_CHAPTERS[row.id];
       expect(endgameStudyHref(row.id), row.id).toBe(
-        chapter ? `/study/${set}/${chapter.chapter}` : `/study/${set}`,
+        `/practice/${endgamePracticeSetOf(row.id)}/${row.id}`,
       );
     }
+  });
+
+  it('on prod, every row opens the chapter prod holds for it', async () => {
+    const prod = fakeApi(PROD_SET_STUDY_IDS, PROD_CHAPTERS);
+    for (const row of ENDGAME_TABLE) {
+      const [study, chapter] = PROD_CHAPTERS[row.id] ?? [];
+      expect(await resolvePracticeChapterHref(endgameStudyHref(row.id), prod), row.id).toBe(
+        `/study/${study}/${chapter}`,
+      );
+    }
+  });
+
+  it("on a local pair, every row opens that database's chapter, and a missing one its set", async () => {
+    // The same sets seeded locally under other ids.
+    const sets = Object.fromEntries(
+      Object.keys(PROD_SET_STUDY_IDS).map((slug, index) => [slug, `local${index}`]),
+    );
+    const chapters = Object.fromEntries(
+      Object.entries(PROD_CHAPTERS).map(([id, [, , rootFen]], index) => [
+        id,
+        [sets[endgamePracticeSetOf(id)] ?? '', `ch${index}`, rootFen] as [string, string, string],
+      ]),
+    );
+    const local = fakeApi(sets, chapters);
+    for (const row of ENDGAME_TABLE) {
+      const [study, chapter] = chapters[row.id] ?? [];
+      expect(await resolvePracticeChapterHref(endgameStudyHref(row.id), local), row.id).toBe(
+        `/study/${study}/${chapter}`,
+      );
+    }
+    // A seed that has not added the chapter yet: the link opens its set.
+    const { [XIANGQI_ENDGAMES_EXERCISE_ID]: _dropped, ...rest } = chapters;
+    const exercise = endgameStudyHref(XIANGQI_ENDGAMES_EXERCISE_ID);
+    expect(await resolvePracticeChapterHref(exercise, fakeApi(sets, rest))).toBe(
+      `/study/${sets[endgamePracticeSetOf(XIANGQI_ENDGAMES_EXERCISE_ID)]}`,
+    );
+    // No sets seeded at all: the shelf.
+    expect(await resolvePracticeChapterHref(exercise, fakeApi({}, {}))).toBe('/practice');
   });
 
   it('renders the same rows, with the same links, in all three scripts', () => {
@@ -207,7 +321,7 @@ describe('xiangqi endgames table', () => {
   });
 
   it('sends the exercise to a chapter that already exists on prod', () => {
-    expect(ENDGAME_PROD_CHAPTERS[XIANGQI_ENDGAMES_EXERCISE_ID]).toBeDefined();
+    expect(PROD_CHAPTERS[XIANGQI_ENDGAMES_EXERCISE_ID]).toBeDefined();
     // Red to move, and the database's mate is five Red moves, as the page says.
     const check = XIANGQI_ENDGAME_HUB_CHECKS.find((row) => row.id === XIANGQI_ENDGAMES_EXERCISE_ID);
     expect(check?.result).toBe('win');

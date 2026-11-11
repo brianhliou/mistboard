@@ -27,9 +27,18 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
+import {
+  BANQI_ENGINE_VERSION,
+  BANQI_PLAYABLE_ENGINES,
+  banqiEngineTierFor,
+} from './banqi-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
-import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import {
+  JUNGLE_FLIP_ENGINE_VERSION,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  jungleFlipEngineTierFor,
+} from './jungle-flip-engine.js';
+import { THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS } from './three-kingdoms-banqi-engine.js';
 
 type TierSyncCase = {
   /** Which tier table this expectation was derived from, for the failure message. */
@@ -43,18 +52,50 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
+  ...THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map(
+    (tier): TierSyncCase => ({
+      family: 'three-kingdoms-banqi',
+      engineId: tier.id,
+      config:
+        tier.evaluation === 'random'
+          ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+          : {
+              kind: 'three-kingdoms-banqi-uci',
+              nodes: tier.nodes,
+              movetime_ms: tier.movetimeCapMs,
+              evaluation: tier.evaluation,
+              ...(tier.level === undefined ? {} : { chance: 'mix' as const }),
+              ...(tier.noise === undefined
+                ? {}
+                : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+            },
+    }),
+  ),
   ...BANQI_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'banqi',
       engineId: tier.id,
-      config: { kind: 'banqi-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+      config: {
+        kind: 'banqi-uci',
+        // Preserve the historical config: an omitted evaluation means classical.
+        ...(tier.id === 'misty-banqi' ? {} : { evaluation: tier.evaluation }),
+        nodes: tier.nodes,
+        movetime_ms: tier.movetimeCapMs,
+        ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+      },
     }),
   ),
   ...JUNGLE_FLIP_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'jungle-flip',
       engineId: tier.id,
-      config: { kind: 'jungle-flip-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+      config: {
+        kind: 'jungle-flip-uci',
+        ...(tier.id === 'misty-jungle-flip' ? {} : { evaluation: tier.evaluation }),
+        nodes: tier.nodes,
+        movetime_ms: tier.movetimeCapMs,
+        ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+      },
     }),
   ),
 ];
@@ -85,8 +126,8 @@ test('tier-backed entries sign their config with a single provenance string', ()
   }
 });
 
-test('the two single-bot node-budget engines name their build and budget in the hash', () => {
-  // These are the entries that drifted. Both are ONE versioned bot whose only
+test('the historical full-strength engines name their build and budget in the hash', () => {
+  // These are the entries that drifted. Their full-strength profiles' only
   // strength dial is the node budget, so the hash has to move when either the
   // binary version or the budget moves — otherwise the config can change while
   // the identity stays put, which is exactly the bug this file exists for.
@@ -95,12 +136,12 @@ test('the two single-bot node-budget engines name their build and budget in the 
   const banqi = loadEngine('misty-banqi');
   assert.equal(
     banqi.configHash,
-    `misty-banqi-${BANQI_ENGINE_VERSION}-nodes-${BANQI_PLAYABLE_ENGINES[0].nodes}`,
+    `misty-banqi-${BANQI_ENGINE_VERSION}-nodes-${banqiEngineTierFor('misty-banqi')!.nodes}`,
   );
   const jungleFlip = loadEngine('misty-jungle-flip');
   assert.equal(
     jungleFlip.configHash,
-    `misty-jungle-flip-${JUNGLE_FLIP_ENGINE_VERSION}-nodes-${JUNGLE_FLIP_PLAYABLE_ENGINES[0].nodes}`,
+    `misty-jungle-flip-${JUNGLE_FLIP_ENGINE_VERSION}-nodes-${jungleFlipEngineTierFor('misty-jungle-flip')!.nodes}`,
   );
 });
 
@@ -114,6 +155,7 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'pikafish',
   'pikafish-xiangqi',
   'banqi-uci',
+  'three-kingdoms-banqi-uci',
   'jungle-flip-uci',
   'jungle-uci',
   'katago-gtp',
@@ -134,6 +176,8 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   // slot above it (2026-10), generated from the same table.
   'pikafish-jieqi',
   'ab-jchess',
+  // jqe above AB-JChess (2026-10-16), the same table.
+  'jqe',
   // The jungle Rust tiers (#488), generated from JUNGLE_RUST_TIER_LIST, and the
   // KataGo top seat above them (2026-10), from KATAGO_JUNGLE_TIER_LIST.
   'misty-jungle',
@@ -146,6 +190,10 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
 // to track. They must NOT be refreshed when the surviving bot's tier moves —
 // that would be the in-place edit this whole file is against.
 const RETIRED_NO_LIVE_TIER: ReadonlyMap<string, string> = new Map([
+  [
+    'misty-jungle-flip-level-7',
+    'retired 100K-node classical rung; L7 now uses the historical full-strength id',
+  ],
   ['misty-banqi-amateur', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],
   ['misty-banqi-strong', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],
   ['misty-banqi-strongest', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],

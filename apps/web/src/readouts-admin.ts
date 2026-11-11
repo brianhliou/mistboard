@@ -1,203 +1,272 @@
-// Unlisted admin readout history (/readouts): the scheduled operating readout
-// that used to exist only as a GitHub issue comment. Latest report in full,
-// then one row per stored snapshot so a trend is visible without opening
-// GitHub. Admin-gated by /api/admin/readouts (open in local dev); English-only
-// like the other admin tools.
+// Admin-only weekly decisions and snapshot history. Summary rules are shared
+// with the email on the server; the browser owns only the presentation.
 import './readouts-admin.css';
+import { buildReportingNav } from './admin-reporting-nav.js';
 import { buildNav } from './site-shell.js';
 
 type ReadoutVerdict = 'healthy' | 'watch' | 'action' | 'blocked' | 'unknown';
-
-type ReadoutSummary = {
+type HistoryRow = {
   snapshotId: string;
-  trigger: 'daily' | 'weekly' | 'manual';
+  periodStart: string;
   periodEnd: string;
-  generatedAt: string;
-  verdict: ReadoutVerdict;
-  completedGames: number | null;
-  humanPlayers: number | null;
-  activeAccounts28d?: number | null;
-  actions: number;
 };
-
-type LatestReadout = {
-  report: { verdict: ReadoutVerdict; generatedAt: string; trigger: string };
+type Metric = { label: string; current: number; previous?: number; growth?: boolean };
+// Mirrors buildReadoutSummary on the server, without importing server modules.
+type ReadoutSummary = {
+  title: string;
+  period: string;
+  summary: string;
+  metrics: Metric[];
+  actions: { state: string; title: string; detail: string; url: string; urgent: boolean }[];
+  extraActions: number;
+  breakdown: Metric[];
+  context: string[];
+  deploy: string | null;
+};
+type Readout = {
+  report: {
+    snapshotId: string;
+    verdict: ReadoutVerdict;
+    generatedAt: string;
+    trigger: string;
+    periodStart: string;
+  };
+  summary?: ReadoutSummary;
   markdown: string;
 };
-
 class AdminRequiredError extends Error {}
+const count = (value: number) => value.toLocaleString('en-US');
 
 export async function mountReadoutsAdmin(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('readouts-admin-page');
-
-  const shell = document.createElement('main');
-  shell.className = 'site-section readouts-admin-shell';
-
-  const heading = document.createElement('h1');
-  heading.className = 'site-section-heading';
-  heading.textContent = 'Readouts';
-
-  const sub = document.createElement('p');
-  sub.className = 'readouts-admin-sub';
-  sub.textContent =
-    'Internal · admin only. The scheduled operating readout: weekly on Monday, a silent daily check otherwise. Counts come from the database, so they include visitors who send Do Not Track.';
-
-  const latestBody = document.createElement('section');
-  latestBody.className = 'readouts-admin-latest';
-  latestBody.append(statusLine('Loading…'));
-
-  const historyHeading = document.createElement('h2');
-  historyHeading.className = 'readouts-admin-subheading';
-  historyHeading.textContent = 'History';
-
-  const historyBody = document.createElement('section');
-  historyBody.className = 'readouts-admin-history';
-  historyBody.append(statusLine('Loading…'));
-
-  shell.append(heading, sub, latestBody, historyHeading, historyBody);
+  const shell = element('main', '', 'site-section readouts-admin-shell');
+  shell.append(element('h1', 'Weekly readout', 'site-section-heading'));
+  const toolbar = element('div', '', 'readouts-admin-toolbar');
+  const label = element('label', 'Week ');
+  const weeks = document.createElement('select');
+  weeks.setAttribute('aria-label', 'Readout week');
+  label.append(weeks);
+  toolbar.append(label);
+  toolbar.hidden = true;
+  const body = element('section', 'Loading…', 'readouts-admin-latest');
+  body.setAttribute('aria-live', 'polite');
+  shell.append(toolbar, body);
   root.append(buildNav(), shell);
-
-  // Two independent fetches: a missing latest report should not blank the
-  // history, and an empty history should not hide the report.
-  const [latest, history] = await Promise.allSettled([fetchLatest(), fetchHistory()]);
-
-  if (latest.status === 'fulfilled') {
-    latestBody.replaceChildren(
-      latest.value ? buildLatest(latest.value) : statusLine('No readout stored yet.'),
-    );
-  } else {
-    latestBody.replaceChildren(statusLine(errorText(latest.reason, 'Could not load the readout.')));
+  let requestVersion = 0;
+  let selectedId: string | null = null;
+  const authorizeNav = () => {
+    if (!shell.querySelector('.admin-reporting-nav')) shell.prepend(buildReportingNav('readouts'));
+  };
+  const show = async (id?: string) => {
+    const version = ++requestVersion;
+    body.textContent = 'Loading…';
+    try {
+      const report = await fetchReadout(
+        id ? `/snapshot?id=${encodeURIComponent(id)}` : '/latest?trigger=weekly',
+      );
+      if (version !== requestVersion) return;
+      authorizeNav();
+      selectedId = report?.report.snapshotId ?? null;
+      if (selectedId) weeks.value = selectedId;
+      body.replaceChildren(
+        report ? buildReport(report) : element('p', 'No weekly readout stored yet.'),
+      );
+    } catch (error) {
+      if (version === requestVersion)
+        body.textContent = errorText(error, 'Could not load the readout. Try again shortly.');
+    }
+  };
+  const latest = show();
+  try {
+    const response = (await fetchJson('/history?limit=40&trigger=weekly')) as {
+      readouts: HistoryRow[];
+    };
+    authorizeNav();
+    for (const row of response.readouts) {
+      const option = document.createElement('option');
+      option.value = row.snapshotId;
+      const end = new Date(Date.parse(row.periodEnd) - 1).toISOString().slice(0, 10);
+      option.textContent = `${row.periodStart.slice(0, 10)} to ${end}`;
+      weeks.append(option);
+    }
+    toolbar.hidden = response.readouts.length < 2;
+    if (selectedId) weeks.value = selectedId;
+  } catch {
+    /* The latest report remains usable if its history is unavailable. */
   }
-
-  if (history.status === 'fulfilled') {
-    historyBody.replaceChildren(
-      history.value.length === 0
-        ? statusLine('No snapshots stored yet.')
-        : buildHistoryTable(history.value),
-    );
-  } else {
-    historyBody.replaceChildren(
-      statusLine(errorText(history.reason, 'Could not load the history.')),
-    );
-  }
+  weeks.addEventListener('change', () => {
+    void show(weeks.value);
+  });
+  await latest;
 }
 
-function buildLatest(latest: LatestReadout): HTMLElement {
-  const wrap = document.createElement('div');
-  const meta = document.createElement('p');
-  meta.className = 'readouts-admin-meta';
-  meta.append(verdictBadge(latest.report.verdict));
-  const when = document.createElement('span');
-  when.textContent = `${latest.report.trigger} · ${formatDate(latest.report.generatedAt)}`;
-  meta.append(when);
-
-  // The markdown is the same text the weekly issue comment carries. Rendering
-  // it verbatim keeps one source of truth for the wording instead of a second
-  // renderer that can drift from it.
-  const body = document.createElement('pre');
-  body.className = 'readouts-admin-markdown';
-  body.textContent = latest.markdown.trim();
-
-  wrap.append(meta, body);
+function buildReport(readout: Readout): HTMLElement {
+  const wrap = element('div');
+  const meta = element('p', '', 'readouts-admin-meta');
+  meta.append(
+    verdictBadge(readout.report.verdict),
+    `Checked ${readout.report.generatedAt.slice(0, 10)} UTC`,
+  );
+  wrap.append(meta);
+  const summary = readout.summary;
+  if (!summary) {
+    wrap.append(element('pre', readout.markdown.trim(), 'readouts-admin-markdown'));
+    return wrap;
+  }
+  wrap.append(element('p', summary.period, 'readouts-admin-sub'), element('p', summary.summary));
+  const table = document.createElement('table');
+  table.className = 'readouts-admin-numbers';
+  const head = table.createTHead().insertRow();
+  for (const text of ['This week', 'Total', 'Change']) {
+    const th = element('th', text);
+    th.scope = 'col';
+    head.append(th);
+  }
+  const rows = table.createTBody();
+  for (const metric of summary.metrics) {
+    const row = rows.insertRow();
+    const label = element(
+      'th',
+      metric.label === 'Completed human games' ? 'Games played' : metric.label,
+    );
+    label.scope = 'row';
+    row.append(
+      label,
+      element('td', count(metric.current), 'readouts-admin-number'),
+      element(
+        'td',
+        delta(metric),
+        metric.growth && metric.previous !== undefined && metric.current > metric.previous
+          ? 'is-up'
+          : '',
+      ),
+    );
+  }
+  wrap.append(
+    table,
+    element(
+      'p',
+      'Players are accounts and guest browsers who finished a game. Returning players had played before this week. New accounts are sign-ups.',
+      'readouts-admin-definitions',
+    ),
+  );
+  wrap.append(element('h2', 'Needs attention', 'readouts-admin-subheading'));
+  if (!summary.actions.length) wrap.append(element('p', 'No action needed.'));
+  for (const action of summary.actions) {
+    const article = element(
+      'article',
+      '',
+      `readouts-admin-action ${action.urgent ? 'is-urgent' : action.state === 'Resolved' ? 'is-resolved' : 'is-review'}`,
+    );
+    article.append(
+      element('p', action.urgent ? 'Urgent' : action.state, 'readouts-admin-action-state'),
+      element('h3', action.title),
+      element('p', action.detail),
+      link(action.url.includes('/puzzles/') ? 'Open puzzle →' : 'Review evidence →', action.url),
+    );
+    wrap.append(article);
+  }
+  if (summary.extraActions)
+    wrap.append(
+      element('p', `${summary.extraActions} more actions in the downloadable full report.`),
+    );
+  if (summary.deploy) {
+    wrap.append(
+      element('h2', 'Release follow-up', 'readouts-admin-subheading'),
+      element('p', summary.deploy),
+      link('View release history →', '/ops?tab=operations#deploy-history'),
+    );
+  }
+  if (summary.context.length) {
+    const list = element('ul', '', 'readouts-admin-context');
+    for (const text of summary.context) list.append(element('li', text));
+    wrap.append(element('h2', 'Other changes', 'readouts-admin-subheading'), list);
+  }
+  const footer = element('p', '', 'readouts-admin-footer');
+  footer.append(
+    link('Explore the numbers →', `/ops?tab=play&week=${readout.report.periodStart.slice(0, 10)}`),
+  );
+  const download = element('button', 'Download full report');
+  download.type = 'button';
+  download.addEventListener('click', () => {
+    const url = URL.createObjectURL(
+      new Blob([readout.markdown], { type: 'text/plain;charset=utf-8' }),
+    );
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `mistboard-readout-${readout.report.generatedAt.slice(0, 10)}.txt`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  footer.append(download);
+  wrap.append(footer);
   return wrap;
 }
 
-function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
-  const table = document.createElement('table');
-  table.className = 'readouts-admin-table';
-
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  for (const label of [
-    'Week ending',
-    'Trigger',
-    'Verdict',
-    'Games',
-    'Players',
-    'Active 28d',
-    'Actions',
-  ]) {
-    const th = document.createElement('th');
-    th.textContent = label;
-    headRow.append(th);
-  }
-  thead.append(headRow);
-  table.append(thead);
-
-  const tbody = document.createElement('tbody');
-  for (const row of rows) {
-    const tr = document.createElement('tr');
-    tr.append(cell(formatDate(row.periodEnd)), cell(row.trigger));
-    const verdict = document.createElement('td');
-    verdict.append(verdictBadge(row.verdict));
-    tr.append(
-      verdict,
-      cell(formatCount(row.completedGames)),
-      cell(formatCount(row.humanPlayers)),
-      cell(formatCount(row.activeAccounts28d ?? null)),
-      cell(row.actions === 0 ? '-' : String(row.actions)),
-    );
-    tbody.append(tr);
-  }
-  table.append(tbody);
-  return table;
+function delta(metric: Metric): string {
+  if (metric.previous === undefined) return 'Comparison unavailable';
+  const change = metric.current - metric.previous;
+  const signed = `${change > 0 ? '+' : ''}${count(change)}`;
+  const percent = metric.previous
+    ? ` (${change > 0 ? '+' : ''}${Math.round((change / metric.previous) * 100)}%)`
+    : change
+      ? ' (new)'
+      : ' (flat)';
+  return `${signed}${percent} vs ${count(metric.previous)}`;
 }
-
 function verdictBadge(verdict: ReadoutVerdict): HTMLElement {
-  const badge = document.createElement('span');
-  badge.className = `readouts-admin-verdict is-${verdict}`;
-  badge.textContent = verdict.toUpperCase();
-  return badge;
+  return element(
+    'span',
+    {
+      healthy: 'No action',
+      watch: 'Watch',
+      action: 'Needs review',
+      blocked: 'Blocked',
+      unknown: 'Data unavailable',
+    }[verdict],
+    `readouts-admin-verdict is-${verdict}`,
+  );
 }
-
-// A count is null for snapshots written before that field existed. "-" rather
-// than 0: the number is unknown, not zero.
-function formatCount(value: number | null): string {
-  return value === null ? '-' : String(value);
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  text = '',
+  className = '',
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  node.className = className;
+  return node;
 }
-
-function formatDate(value: string): string {
-  return value.slice(0, 10);
+function link(text: string, href: string): HTMLAnchorElement {
+  const anchor = element('a', text);
+  // The API supplies links, but a stored snapshot must not inject a script URL.
+  const url = new URL(href, window.location.origin);
+  anchor.href =
+    url.protocol === 'https:' ||
+    (url.origin === window.location.origin && url.protocol === window.location.protocol)
+      ? url.href
+      : '/ops';
+  return anchor;
 }
-
-function cell(text: string): HTMLTableCellElement {
-  const td = document.createElement('td');
-  td.textContent = text;
-  return td;
+function errorText(error: unknown, fallback: string): string {
+  return error instanceof AdminRequiredError ? error.message : fallback;
 }
-
-function statusLine(text: string): HTMLElement {
-  const p = document.createElement('p');
-  p.className = 'readouts-admin-status';
-  p.textContent = text;
-  return p;
-}
-
-function errorText(reason: unknown, fallback: string): string {
-  return reason instanceof AdminRequiredError ? reason.message : fallback;
-}
-
-async function fetchLatest(): Promise<LatestReadout | null> {
-  const resp = await fetch('/api/admin/readouts/latest', {
+async function fetchJson(path: string): Promise<unknown> {
+  const response = await fetch(`/api/admin/readouts${path}`, {
     headers: { accept: 'application/json' },
+    credentials: 'same-origin',
   });
-  if (resp.status === 404) return null;
-  if (resp.status === 401 || resp.status === 403) {
+  if (response.status === 401 || response.status === 403)
     throw new AdminRequiredError('Admin access required. Sign in with an admin account.');
-  }
-  if (!resp.ok) throw new Error(`readout_latest_failed_${resp.status}`);
-  return (await resp.json()) as LatestReadout;
+  if (!response.ok) throw new Error(`readout_failed_${response.status}`);
+  return response.json();
 }
-
-async function fetchHistory(): Promise<ReadoutSummary[]> {
-  const resp = await fetch('/api/admin/readouts/history?limit=40', {
-    headers: { accept: 'application/json' },
-  });
-  if (resp.status === 401 || resp.status === 403) {
-    throw new AdminRequiredError('Admin access required. Sign in with an admin account.');
+async function fetchReadout(path: string): Promise<Readout | null> {
+  try {
+    return (await fetchJson(path)) as Readout;
+  } catch (error) {
+    if (error instanceof Error && error.message === 'readout_failed_404') return null;
+    throw error;
   }
-  if (!resp.ok) throw new Error(`readout_history_failed_${resp.status}`);
-  const payload = (await resp.json()) as { readouts?: ReadoutSummary[] };
-  return payload.readouts ?? [];
 }

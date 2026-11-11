@@ -4,8 +4,9 @@ import { playerTitleFor } from './player-title.js';
 import { isBanned, SANCTIONS, sanctionFor, sanctionSentence } from './sanctions.js';
 import { CXA_GRADES, CXA_REVOKED } from './titles.js';
 
-// The article's register: the table whose first header is "Player" and second
-// "Ban from competing". Each row is ["English 中文", penalty, title years].
+// The article's register: the table headed "Player", "Ban", "National titles"
+// (the where-now table shares the first two). Each row is ["English 中文",
+// penalty, title years]; non-breaking spaces bind numbers to units on the page.
 function articleRegister(): Map<string, string> {
   const blocks = JSON.parse(JSON.stringify(xiangqiMatchFixingArticle)) as unknown;
   const tables: { headers: string[]; rows: string[][] }[] = [];
@@ -21,13 +22,14 @@ function articleRegister(): Map<string, string> {
   };
   walk(blocks);
   const register = tables.find(
-    (t) => t.headers[0] === 'Player' && t.headers[1] === 'Ban from competing',
+    (t) =>
+      t.headers[0] === 'Player' && t.headers[1] === 'Ban' && t.headers[2] === 'National titles',
   );
   if (!register) throw new Error('the article has no sanctions table');
   return new Map(
     register.rows.map(([player, penalty]) => [
       (player ?? '').split(' ').at(-1) ?? '',
-      penalty ?? '',
+      (penalty ?? '').replaceAll('\u00a0', ' '),
     ]),
   );
 }

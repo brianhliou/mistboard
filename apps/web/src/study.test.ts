@@ -8,13 +8,9 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-// mountStudy dynamic-imports the whole variant review stack (board renderer,
-// annotation editor, engine glue), so the first paint waits on a lazy chunk, not
-// on a microtask. vi.waitFor's default 1s budget is enough on an idle machine and
-// not enough during a release, where this file competes with the rest of the
-// suite: it failed roughly one run in three. The assertion was never wrong, the
-// deadline was.
-const MOUNTED = { timeout: 5000 };
+// mountStudy resolves once the code-split board stack has mounted, so these
+// tests await it rather than polling. A vi.waitFor around that mount raced the
+// lazy import against a fixed deadline and failed under release load (#299).
 
 describe('study creator workspace', () => {
   it('renders navigation-first owner controls and an under-board authoring dock', async () => {
@@ -53,11 +49,8 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'uXnuObfx');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'uXnuObfx');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     expect(
       root.querySelector<HTMLImageElement>('.study-page__thumbnail img')?.getAttribute('src'),
@@ -78,6 +71,20 @@ describe('study creator workspace', () => {
       'Lesson',
       'Share & export',
     ]);
+
+    // The description reads in full under the board, outside every tab, and
+    // the rail keeps only the title: no clamped copy and no Show more.
+    const description = root.querySelector<HTMLElement>(
+      '.review-underboard-stack .study-description',
+    );
+    expect(description?.textContent).toBe('Attacking patterns on the central file.');
+    expect(description?.closest('.review-underboard-panel')).toBeNull();
+    expect(root.querySelector('.study-page__title-copy .review-info-card__summary')).toBeNull();
+    expect(root.querySelector('.review-info-card__summary')).toBeNull();
+    expect(root.querySelector('.study-page__summary-toggle')).toBeNull();
+    expect(
+      root.querySelector('.study-page__title-copy .review-info-card__title')?.textContent,
+    ).toBe('Cannon manual');
 
     root.querySelector<HTMLButtonElement>('.study-chapters__settings')?.click();
     const studyDialog = document.querySelector<HTMLDialogElement>(
@@ -141,19 +148,22 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     expect(root.querySelector('.study-chapters__settings')).toBeNull();
+    // An admin sees both the heart and the star; the tooltips say they differ:
+    // the heart is the reader's own like (their Favorites), the star curates.
+    const like = root.querySelector<HTMLButtonElement>('.study-actions__like');
+    expect(like?.title).toBe('Like this study and save it to your Favorites');
+    expect(like?.getAttribute('aria-label')).toBe(like?.title);
     const feature = root.querySelector<HTMLButtonElement>('.study-chapters__featured');
-    expect(feature?.getAttribute('aria-label')).toBe('Feature in Staff picks');
+    expect(feature?.getAttribute('aria-label')).toBe('Feature in Staff picks (admins only)');
+    expect(root.querySelector('.study-description')).toBeNull();
     feature?.click();
 
     await vi.waitFor(() => expect(feature?.getAttribute('aria-pressed')).toBe('true'));
-    expect(feature?.getAttribute('aria-label')).toBe('Remove from Staff picks');
+    expect(feature?.getAttribute('aria-label')).toBe('Remove from Staff picks (admins only)');
     const railStatus = root.querySelector<HTMLElement>('.study-chapters__status');
     expect(railStatus?.textContent).toBe('Featured');
     // The admin's readout opens as the hidden viewer one; curating must reveal it.
@@ -196,11 +206,8 @@ describe('study creator workspace', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     // The board takes moves (it is an analysis board) and nothing used to say
     // where they went, so a non-owner read their scratch line as stored on
@@ -222,6 +229,168 @@ describe('study creator workspace', () => {
 });
 
 describe('study chapter permalinks', () => {
+  const chapterSwitchFixture = (
+    opts: { scores?: 'first' | 'both' | 'stale'; owner?: boolean } = {},
+  ) => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url === '/api/studies/study1') {
+        return jsonResponse({
+          study: {
+            id: 'study1',
+            name: 'Two chapters',
+            description: '',
+            visibility: 'public',
+            isOwner: opts.owner ?? false,
+            likeCount: 0,
+            likedByViewer: false,
+          },
+          chapters: ['chapter1', 'chapter2'].map((id, index) => ({
+            id,
+            name: index === 0 ? 'First' : 'Second',
+            variant: 'xiangqi',
+            orientation: 'red',
+            root: {
+              version: 1,
+              root: { children: [{ uci: 'h3e3', children: [] }] },
+            },
+            version: 1,
+            gamebook: false,
+            ...(opts.scores && (index === 0 || opts.scores === 'both')
+              ? {
+                  scoreSeries: {
+                    side: 'red',
+                    series: [
+                      {
+                        name: `Engine A${index + 1}`,
+                        color: 'a',
+                        values: opts.scores === 'stale' ? [0.5, 0.6, 0.7] : [0.5, 0.6],
+                      },
+                      { name: 'Engine B', color: 'b', values: [0.5, 0.4] },
+                    ],
+                  },
+                }
+              : {}),
+          })),
+        });
+      }
+      if (url === '/api/chat/study/study1') return jsonResponse({ lines: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    return { root, fetcher };
+  };
+
+  it('keeps the chapter rail and nav mounted when switching chapters', async () => {
+    const { root, fetcher } = chapterSwitchFixture();
+    await mountStudy(root, 'study1');
+    const rail = root.querySelector('.study-chapters');
+    const nav = root.querySelector('.site-nav');
+    const aside = root.querySelector('.review-shell__left');
+    const chat = root.querySelector('.review-spectator-chat');
+    const board = root.querySelector('.review-shell__center');
+    const rows = [...root.querySelectorAll('.study-chapters__row')];
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')];
+    expect(rail).not.toBeNull();
+    expect(nav).not.toBeNull();
+    expect(chat).not.toBeNull();
+    expect(root.querySelector('.embed-score-chart')).toBeNull();
+    expect(links[0]?.getAttribute('aria-current')).toBe('page');
+
+    links[1]!.click();
+    await vi.waitFor(() => expect(window.location.pathname).toBe('/study/study1/chapter2'));
+    await vi.waitFor(() => expect(root.querySelector('.review-shell__center')).not.toBe(board));
+    expect(root.querySelector('.study-chapters')).toBe(rail);
+    expect(root.querySelector('.site-nav')).toBe(nav);
+    expect(root.querySelector('.review-shell__left')).toBe(aside);
+    expect(root.querySelector('.review-spectator-chat')).toBe(chat);
+    expect(rows[0]?.classList.contains('is-active')).toBe(false);
+    expect(rows[1]?.classList.contains('is-active')).toBe(true);
+    expect(links[0]?.hasAttribute('aria-current')).toBe(false);
+    expect(links[1]?.getAttribute('aria-current')).toBe('page');
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/chat/study/study1')).toHaveLength(1);
+  });
+
+  it('draws scoreSeries in the active Computer analysis tab without stored analysis', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'first' });
+    await mountStudy(root, 'study1');
+    expect(root.querySelector<HTMLButtonElement>('[data-replay="next"]')?.disabled).toBe(false);
+    const chart = root.querySelector<HTMLElement>('.review-underboard .embed-score-chart');
+    expect(chart).not.toBeNull();
+    const body = chart?.closest<HTMLElement>('.review-underboard-panel__body');
+    expect(body?.parentElement?.className).toBe('review-underboard-bodies');
+    expect(body?.hidden).toBe(false);
+    expect(root.querySelector('.review-underboard-tabs')?.nextElementSibling).toBe(
+      body?.parentElement,
+    );
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+    expect(root.querySelector('[data-tab="analysis"]')?.textContent).toBe('Computer analysis');
+    expect(chart?.querySelectorAll('.embed-score-chart__line')).toHaveLength(2);
+    const plot = chart!.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+    vi.spyOn(plot, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      toJSON: () => ({}),
+    });
+    plot.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100 }));
+    expect(root.querySelector<HTMLButtonElement>('[data-replay="next"]')?.disabled).toBe(true);
+    expect(root.querySelector<HTMLButtonElement>('[data-replay="prev"]')?.disabled).toBe(false);
+    expect(chart?.dataset.ply).toBe('1');
+    root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    expect(chart?.dataset.ply).toBe('0');
+
+    root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[1]!.click();
+    await vi.waitFor(() => expect(window.location.pathname).toBe('/study/study1/chapter2'));
+    await vi.waitFor(() => expect(root.querySelector('.embed-score-chart')).toBeNull());
+    expect(root.querySelector('.review-shell__center')).not.toBeNull();
+    expect(root.querySelector('[data-tab="analysis"]')).toBeNull();
+    root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[0]!.click();
+    await vi.waitFor(() => expect(root.querySelectorAll('.embed-score-chart')).toHaveLength(1));
+  });
+
+  it('replaces a scored chapter chart when reusing the shell', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'both' });
+    await mountStudy(root, 'study1');
+    const shell = root.querySelector('.study-review');
+    const firstChart = root.querySelector('.embed-score-chart');
+    root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[1]!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.embed-score-chart__legend')?.textContent).toContain('Engine A2'),
+    );
+    expect(root.querySelector('.study-review')).toBe(shell);
+    expect(firstChart?.isConnected).toBe(false);
+    expect(root.querySelectorAll('.embed-score-chart')).toHaveLength(1);
+    expect(root.querySelector('.review-underboard-panel__body .embed-score-chart')).not.toBeNull();
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+  });
+
+  it('opens a scored chapter on Computer analysis for its owner', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'first', owner: true });
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+  });
+
+  it('omits a stale scoreSeries and its Computer analysis tab', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'stale' });
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.embed-score-chart')).toBeNull();
+    expect(root.querySelector('[data-tab="analysis"]')).toBeNull();
+  });
+
   it('preserves locale prefixes and rejects another study chapter path', () => {
     expect(studyChapterPath('study1', 'chapter2', '/zh-hans/study/study1')).toBe(
       '/zh-hans/study/study1/chapter2',
@@ -277,10 +446,8 @@ describe('study chapter permalinks', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1', 'chapter2');
-    await vi.waitFor(() =>
-      expect(root.querySelector('.study-chapters__row.is-active')?.textContent).toContain('Second'),
-    );
+    await mountStudy(root, 'study1', 'chapter2');
+    expect(root.querySelector('.study-chapters__row.is-active')?.textContent).toContain('Second');
     root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[0]?.click();
     await vi.waitFor(() => expect(window.location.pathname).toBe('/study/study1/chapter1'));
     await vi.waitFor(() =>
@@ -349,11 +516,8 @@ describe('study chapter permalinks', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    mountStudy(root, 'study1', 'chapter1');
-    await vi.waitFor(
-      () => expect(root.querySelector('.review-shell--study')).not.toBeNull(),
-      MOUNTED,
-    );
+    await mountStudy(root, 'study1', 'chapter1');
+    expect(root.querySelector('.review-shell--study')).not.toBeNull();
     expect(root.querySelector('.study-actions__status')?.textContent).toBe('Recovered local draft');
 
     root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[1]?.click();

@@ -148,6 +148,7 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       creatorPreference?: C | 'random';
       rated?: boolean;
       pveBotId?: string;
+      internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
       timeControl?: RoomTimeControl;
       // Server-secret per-game setup (e.g. a jieqi deal). Produced by
       // rules.createSetup at room creation, persisted here as the replay source
@@ -214,12 +215,20 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       roomId: string;
       reason: TenantResumeReason;
       clock: TenantClockState<C>;
-    };
+    }
+  // Draw offers (#530), PvP only. `color` is the seat that acted: the offerer,
+  // the decliner, the accepter. Server-only like the pause pair: the snapshot's
+  // drawOffer field is what a client reads, so a fog client is sent the
+  // offering seat and nothing else.
+  | { type: 'draw-offered'; at: number; roomId: string; color: C }
+  | { type: 'draw-declined'; at: number; roomId: string; color: C }
+  | { type: 'draw-agreed'; at: number; roomId: string; color: C; clock?: TenantClockState<C> };
 
 // 'shutdown': the server was told to stop. 'orphaned': it died without saying
 // so, found on hydration by the gap since the last event.
 export type TenantPauseReason = 'shutdown' | 'orphaned';
-// 'players-returned': every human seat is connected again. 'grace-elapsed':
+// 'players-returned': every human seat, or the human on move, is connected
+// again. 'grace-elapsed':
 // the wait ran out with a seat still empty, and that seat's clock runs.
 export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
 
@@ -228,6 +237,9 @@ export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
 export const TENANT_SERVER_ONLY_EVENT_TYPES: ReadonlySet<string> = new Set([
   'clock-paused',
   'clock-resumed',
+  'draw-offered',
+  'draw-declined',
+  'draw-agreed',
 ]);
 
 // Wire-side event: move-played gains its 1-based ply so clients can sequence.
@@ -252,6 +264,12 @@ export type TenantProjection<
   // on move. Moves are refused and no clock or engine timer runs until a
   // clock-resumed event clears it.
   paused?: { at: number; activeColor: C | null };
+  // The pending draw offer, if any: one at a time. Cleared by an answer, by
+  // the end of the game, or by the offerer's opponent making a move.
+  drawOffer?: { from: C };
+  // After a decline, the offerer's own moves left before it may offer again.
+  // A seat is absent once its count reaches zero.
+  drawCooldown?: Partial<Record<C, number>>;
 };
 
 export type TenantClientRef<C extends string> = {
@@ -328,6 +346,9 @@ export type TenantRuntimeRoom<
   resumeTimer?: ReturnType<typeof setTimeout> | null;
   resumeDeadline?: number | null;
   forfeitSeat: C | null;
+  // Seats a player has connected to since the room was loaded. Memory-only: a
+  // restart forgets it, which errs toward an abort, never toward a loss.
+  seatsSeen?: Partial<Record<C, true>>;
   gameEndRecorded: boolean;
   /**
    * Debug artifacts (per-move engine decisions) an engine loop produced before
@@ -383,6 +404,18 @@ export type VariantTenant<
   // all. Read positions through firstSeat/lastSeat/seatAfter rather than by
   // index, so a tenant with more than two seats cannot be silently mis-read.
   colors: readonly C[];
+  /** A dealt opening may start with a different seat. Its recorded first
+   * mover rotates colors into this game's turn order for seats and clocks. */
+  firstMover?(state: State): C;
+  /**
+   * Mutual-confirm PvP rematch (rematch.ts) is ON by default for every tenant:
+   * a finished two-seat PvP live room carries the offer flags in its snapshot
+   * (tenantRoomOffersRematch) and the ws runtime opens the new room through the
+   * registration's lobby factory (rematch-context.ts). A tenant that cannot
+   * rematch says why here; variant-tenant-rematch.test.ts holds every
+   * registered tenant to one or the other.
+   */
+  rematch?: { optOut: string };
   /**
    * Start the clock on the very first move rather than after the first
    * go-around.
@@ -393,6 +426,24 @@ export type VariantTenant<
    * a go" where one move is one turn. Set this where it is not.
    */
   armsClockOnFirstMove?: boolean;
+  /**
+   * Set false where a player sees hidden information before their first move.
+   *
+   * The default lets the side to move abort until every seat has moved once,
+   * which is free in chess because nobody has seen anything yet. Xiangqi
+   * mahjong deals each seat its tiles first, so an abort was a free redeal of a
+   * bad hand. With false there is no abort from a player, and resigning is open
+   * from the first move instead. The pregame timeout still aborts a no-show.
+   */
+  userAbort?: false;
+  /**
+   * In a rated game, a seat that has opened the game and lets its first-move
+   * window run out loses it, instead of the game aborting. Without this, a
+   * player who dislikes the hand they were dealt could wait out the timer for a
+   * free redeal. A seat that never connected never saw its deal, so it still
+   * aborts; unrated games always abort.
+   */
+  ratedPregameTimeoutForfeits?: true;
   /**
    * Whose clock runs in this state, or null for nobody's.
    *
@@ -420,8 +471,10 @@ export type VariantTenant<
     createInitialState(roomId: string, setup?: unknown): State;
     // Optional: produce the per-game server-secret setup at room creation. The
     // runtime persists the return value in the room-created event and feeds it
-    // back to createInitialState (including on replay).
-    createSetup?(): unknown;
+    // back to createInitialState (including on replay). `timeControl` is the
+    // room's, so a tenant whose rules differ by pace (xiangqi mahjong in
+    // correspondence) can record that in the setup and replay it.
+    createSetup?(options?: { timeControl?: RoomTimeControl }): unknown;
     // Deliberately two parameters. Several tenants pass their kernel's own
     // applyMove straight through, and those already take a third options
     // argument, so a positional `at` here would land in that slot. A tenant
@@ -441,6 +494,10 @@ export type VariantTenant<
     // Optional: end the game as an outside referee declared (the game-adjudicated
     // event, imported games only). A tenant without it rejects that event.
     adjudicate?(state: State, winner: C | null, reason: TenantAdjudicationReason): State;
+    // Optional: end the game drawn by agreement (an accepted draw offer), with
+    // no winner and reason 'agreement'. A tenant without it rejects every draw
+    // event, so a table that cannot be drawn this way is never offered one.
+    finishDraw?(state: State): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;
@@ -471,6 +528,9 @@ export type VariantTenant<
     // move, so the seat has to be stamped onto the move here to survive into
     // the event log and back out on replay.
     canonicalMove?(state: State, move: M, seat: C): M | null;
+    // A tenant with canonical move timestamps uses the same effective time
+    // for the durable event and clock arithmetic. Default: receipt time.
+    moveEventAt?(move: M, receivedAt: number): number;
     // May this seat act right now? Defaults to "it is this seat's turn".
     //
     // Mahjong is why this exists. Every other tenant is strictly alternating:
@@ -493,8 +553,25 @@ export type VariantTenant<
     // new state, so a hook that settles a four-seat window one seat at a time
     // costs four round trips through the event writer.
     pendingAction?(state: State): TenantPendingAction<C, M> | null;
+    /**
+     * Replace a real clock expiry with a legal move for the expired seat.
+     * Called inside the serialized writer against the current state, never
+     * during replay. Null retains the normal timeout loss. The replacement is
+     * persisted as move-played and uses ordinary move clock accounting.
+     */
+    clockExpiryMove?(state: State, color: C, at: number): M | null;
   };
   visibility: {
+    // Optional durable delivery frontier. Events at/after this index remain
+    // private to this recipient. Snapshots, clocks and reconnect history use
+    // the same prefix (plus public non-move bookkeeping); broadcasts release
+    // it in an atomic full-log snapshot.
+    // undefined keeps the ordinary delta transport (e.g. correspondence).
+    clientEventCount?(
+      state: State,
+      events: readonly TenantRoomEvent<C, M, Spec>[],
+      seat: TenantSeat<C>,
+    ): number | undefined;
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and
     // foreign seat assignments; perfect-info tenants pass events through.
     // Returning null drops the event for that seat entirely.
@@ -502,6 +579,9 @@ export type VariantTenant<
       event: TenantRoomEvent<C, M, Spec>,
       seat: TenantSeat<C>,
       ply: number,
+      // The log already restricted to this recipient's delivery frontier.
+      // Allows a formerly private event to be released with a public action.
+      visibleEvents?: readonly TenantRoomEvent<C, M, Spec>[],
     ): TenantClientEvent<C, M, Spec> | null;
     // The seat's redacted view, including the spectator policy. Receives the
     // event log so fog tenants can derive context (e.g. whether the viewer
@@ -544,6 +624,12 @@ export type VariantTenant<
       events: readonly TenantRoomEvent<C, M, Spec>[],
       viewer: TenantSeat<C>,
     ): Array<{ ply: number; view: View }>;
+    // Send liveHistory for a FINISHED room too. For a tenant whose finished
+    // view still cannot rebuild the game (xiangqi mahjong: the walls are never
+    // revealed, only each hand's result), so a reload of a finished match can
+    // step back through it. Each ply is still the view this viewer was served
+    // live, never truth.
+    liveHistoryWhenFinished?: true;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal
@@ -625,6 +711,18 @@ export function firstSeat<C extends string>(tenant: { colors: readonly C[] }): C
   const seat = tenant.colors[0];
   if (seat === undefined) throw new Error('tenant declares no seats');
   return seat;
+}
+
+/** Stable turn order for this recorded deal; never depends on the current turn. */
+export function tenantTurnOrder<C extends string, State>(
+  tenant: { colors: readonly C[]; firstMover?(state: State): C },
+  state: State,
+): readonly C[] {
+  if (!tenant.firstMover) return tenant.colors;
+  const first = tenant.firstMover(state);
+  const index = tenant.colors.indexOf(first);
+  if (index < 0) throw new Error(`first mover ${first} is not one of this tenant's seats`);
+  return [...tenant.colors.slice(index), ...tenant.colors.slice(0, index)];
 }
 
 /** The seat that moves last in a go-around. For two seats this is the second

@@ -43,6 +43,7 @@ export type EngineId =
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
   | 'random-legal-xiangqi'
+  | 'fairy-stockfish-xiangqi-worst'
   // Fairy-Stockfish (Fortress Xiangqi ladder) + its random floor
   | `fairy-stockfish-fortress-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'random-legal-fortress-xiangqi'
@@ -63,6 +64,8 @@ export type EngineId =
   | 'pikafish-jieqi-strongest'
   // AB-JChess (Jieqi): the top slot above level 8
   | 'ab-jchess-jieqi'
+  // jqe (Jieqi): one rung under AB-JChess, held behind MISTBOARD_JQE_ENABLED
+  | 'jqe-jieqi'
   // Pikafish (standard Xiangqi)
   | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'pikafish-xiangqi-amateur'
@@ -70,12 +73,19 @@ export type EngineId =
   | 'pikafish-xiangqi-strongest'
   // MistyBanqi (Banqi)
   | 'misty-banqi'
+  | `misty-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 8}`
+  | 'random-legal-banqi'
   | 'misty-banqi-amateur'
   | 'misty-banqi-strong'
   | 'misty-banqi-strongest'
+  // Three Kingdoms banqi: historical bot and the admin-playtest ladder (L1 random).
+  | 'misty-three-kingdoms-banqi'
+  | `misty-three-kingdoms-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Fairy-Stockfish (Mini Xiangqi)
   // MistyJungleFlip (Flip Jungle)
   | 'misty-jungle-flip'
+  | `misty-jungle-flip-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'random-legal-jungle-flip'
   // MistyJungle Rust tiers (Jungle): level 2 is the one offered bot, 1 and 3 retired
   | `misty-jungle-level-${1 | 2 | 3}`
   // KataGo-AnimalChess (Jungle): the top seat above Misty (jungle-katago-engine.ts)
@@ -146,6 +156,7 @@ export type EngineConfigKind =
   | 'pikafish'
   | 'pikafish-xiangqi'
   | 'banqi-uci'
+  | 'three-kingdoms-banqi-uci'
   | 'jungle-flip-uci'
   | 'jungle-uci'
   | 'katago-gtp';
@@ -208,15 +219,32 @@ export type PikafishXiangqiEngineConfig = {
  */
 export type BanqiUciEngineConfig = {
   kind: 'banqi-uci';
+  /** Absent on retired historical configurations. */
+  evaluation?: 'classical' | 'nnue';
   movetime_ms: number;
   nodes?: number;
+  noise?: number;
+  noiseDepth?: number;
 };
 
 /** MistyJungleFlip standalone Rust αβ+Star1+TT UCI engine. */
 export type JungleFlipUciEngineConfig = {
   kind: 'jungle-flip-uci';
+  /** Absent on historical classical configurations. */
+  evaluation?: 'classical' | 'nnue';
   nodes: number;
   movetime_ms: number;
+  noise?: number;
+  noiseDepth?: number;
+};
+
+/** TK node-budget ladder. NNUE requires EvalFile; Mix requires advertised ChanceMix. */
+export type ThreeKingdomsBanqiUciEngineConfig = {
+  kind: 'three-kingdoms-banqi-uci';
+  nodes: number;
+  movetime_ms: number;
+  evaluation: 'classical' | 'nnue';
+  chance?: 'mix';
 };
 
 /** MistyJungle standalone Rust UCI engine tiers (jungle-engine.ts JUNGLE_RUST_TIER_LIST). */
@@ -241,6 +269,7 @@ export type EngineConfig =
   | PikafishEngineConfig
   | PikafishXiangqiEngineConfig
   | BanqiUciEngineConfig
+  | ThreeKingdomsBanqiUciEngineConfig
   | JungleFlipUciEngineConfig
   | JungleUciEngineConfig
   | KatagoGtpEngineConfig;

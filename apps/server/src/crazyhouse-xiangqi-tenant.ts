@@ -130,6 +130,7 @@ const CRAZYHOUSE_XIANGQI_TERMINATION: Record<string, persistence.GameTermination
   timeout: 'timeout',
   resignation: 'resignation',
   abandonment: 'abandonment',
+  agreement: 'draw',
 };
 
 export const crazyhouseXiangqiTenant: CrazyhouseXiangqiTenantType = {
@@ -144,6 +145,7 @@ export const crazyhouseXiangqiTenant: CrazyhouseXiangqiTenantType = {
     applyMove: applyCrazyhouseXiangqiMove,
     isLegalMove: isCrazyhouseXiangqiLegalMove,
     finish: finishCrazyhouseXiangqiGame,
+    finishDraw: (state) => finishCrazyhouseXiangqiGame(state, null, 'agreement'),
     abort: (state, reason: AbortReason) => abortCrazyhouseXiangqiGame(state, reason),
     isColor: isCrazyhouseXiangqiColor,
     isMove: isCrazyhouseXiangqiMoveShape,

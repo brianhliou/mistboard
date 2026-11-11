@@ -71,6 +71,7 @@ async function mountLiveCard(root: HTMLElement, specId: string) {
   const payload = livePayload();
   return mountShowcaseBoard(root, specId, ROOM_ID, {
     autoplay: false,
+    followEnd: true,
     hideReserve: !liveCardShowsHands(specId),
     live: true,
     loadPostgameOverride: async (roomId) =>
@@ -101,7 +102,6 @@ describe('live Crazyhouse Xiangqi card', () => {
   it('draws the board with both hands from the live payload', async () => {
     const root = document.createElement('div');
     const handle = await mountLiveCard(root, CRAZYHOUSE_XIANGQI_SPEC_ID);
-    handle.jumpToPly?.(handle.plyCount?.() ?? 0);
 
     expect(root.querySelector('.replay-board svg')).not.toBeNull();
     const strips = [...root.querySelectorAll('.showcase-board-row > .showcase-reserve')];

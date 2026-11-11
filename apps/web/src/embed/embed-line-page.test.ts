@@ -4,6 +4,23 @@ import { lineToChapter, mountEmbedLine } from './embed-line-page.js';
 import { embedLineFromSearch } from './embed-route.js';
 
 describe('mountEmbedLine', () => {
+  for (const result of ['', '&result=1-0']) {
+    it(`renders the legal prefix of an illegal xiangqi query line ${result || 'without a result'}`, async () => {
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedLine(
+        root,
+        { variant: 'xiangqi' },
+        embedLineFromSearch(`?moves=h3e3,a1a10,h1g3${result}`),
+        { startPly: 99 },
+      );
+      expect(root.querySelector('.embed-board svg')).not.toBeNull();
+      expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(1);
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('1 / 1');
+      root.remove();
+    });
+  }
+
   it('draws a jungle line on the jungle board with the seats and result from the query', async () => {
     const root = document.createElement('div');
     document.body.append(root);

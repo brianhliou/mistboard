@@ -18,7 +18,11 @@ import {
   moveJudgment,
   moveToAlgebraic,
 } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
 
 /** One ranked alternative, win% mover POV (mirrors the server shape). */
@@ -175,16 +179,24 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedDarkChessDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<DarkChessDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as DarkChessDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<DarkChessDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute (account-gated), then summarize. A cached game answers 200 immediately;
  *  otherwise the server enqueues a job (202) and this polls it (see analysis-job-poll). */
-export async function requestDarkChessDecisions(roomId: string): Promise<DarkChessDecisionSummary> {
+export async function requestDarkChessDecisions(
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<DarkChessDecisionSummary> {
   const body = await postAnalysisJob<DarkChessDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);

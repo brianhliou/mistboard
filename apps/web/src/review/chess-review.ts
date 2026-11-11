@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Standard chess review surface: the study-only chess spec's presentation over
 // the generic tree-review controller. The open-information sibling of
 // dark-chess-review.ts: one interactive board (no fog, no POV triptych), SAN
@@ -9,6 +10,7 @@
 import type { Color, GameState, Move, PlayerView, Square } from '@mistboard/game';
 import { darkChessFen } from '@mistboard/game';
 import type { ChessBoardArrow, ChessBoardMarker } from '../dark-chess-render.js';
+import { animateChessBoardMove } from '../dark-chess-render.js';
 import { createDarkChessInteractiveBoard } from '../dark-chess-tree-board.js';
 import { chessTreeAdapter } from './chess-tree-adapter.js';
 import { formatDarkChessMove } from './dark-chess-review.js';
@@ -57,13 +59,15 @@ const chessPresentation: TreePresentation<
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Chess board',
   boardAspect: 1,
+  // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+  appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
   boardCols: 8,
   perspective: (flipped) => (flipped ? 'black' : 'white'),
   // Review plays both sides: the interactive seat is the side to move.
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
   createBoard: (opts) => createDarkChessInteractiveBoard({ ...opts, fog: false }),
-  // The board re-renders on navigation; no glide animation.
-  animateMove: () => {},
+  // An open board (fog: false), so the glide the chess study embed uses.
+  animateMove: animateChessBoardMove,
   shapeToArrow: (s: NodeShape): ChessBoardArrow => ({
     from: s.orig as Square,
     to: (s.dest ?? s.orig) as Square,

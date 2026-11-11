@@ -23,6 +23,21 @@ describe('server render fallback', () => {
     expect(document.title).toBe('Duck Xiangqi Rules · Mistboard');
   });
 
+  it('shows a restored crawler copy at once instead of after its first-paint delay', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div class="crawler-copy"><main><h1>Xiangqi players</h1></main></div>';
+    const server = captureServerRender(root);
+    root.replaceChildren();
+    server.restore();
+    expect(root.dataset.serverRender).toBe('restored');
+    const css = readFileSync(resolve(__dirname, 'app-base.css'), 'utf-8');
+    // Hidden from the first paint, revealed by an animation, skipped once restored.
+    expect(css).toMatch(/\.crawler-copy \{\s*animation: crawler-copy-reveal 0s \d+s both;/);
+    expect(css).toMatch(
+      /#app\[data-server-render="restored"\] \.crawler-copy \{\s*animation: none;/,
+    );
+  });
+
   it('does nothing for the empty shell, so client-only routes keep their error panel', () => {
     const root = document.createElement('div');
     document.title = 'Mistboard';

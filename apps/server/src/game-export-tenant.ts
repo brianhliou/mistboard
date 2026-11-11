@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 // PGN/JSON export for variant-tenant games (xiangqi, fog xiangqi, jieqi,
 // banqi, fortress xiangqi, jungle, flip jungle): the neutral builders, the
 // per-registration binding helper, and the route dispatch.
@@ -24,9 +25,11 @@
 //                                   board move alone.
 // `san` is null unless the tenant has a real notation for the ply (xiangqi
 // WXF). Clocks-after ride under `<color>_clock_ms_after` for each tenant color.
-// Hidden-piece tenants (jieqi, banqi, jungle-flip) add `revealed` and
-// `captured_hidden` to a ply that turned a piece over or captured a face-down
-// one, and `deal_fen` to a game that had a real deal (#484).
+// Hidden-piece tenants (jieqi, banqi, jungle-flip) add `revealed` to a ply
+// that turned a piece over, and banqi and Flip Jungle add `deal_fen` to a game
+// that had a real deal (#484). Jieqi writes neither a deal nor
+// `captured_hidden`: a piece captured face-down is known only to its capturer,
+// and one never turned over to no one (2026-10-16).
 
 import {
   exportFormatsForVariant,
@@ -34,11 +37,13 @@ import {
   fortressXiangqiMoveToFsfUci,
   type GameEvent,
   type GameExportFormat,
+  type GomokuOpening,
   type HiddenPieceIdentity,
   type HiddenPieceReveal,
   type HiddenPieceVariant,
   maybeGameSpecForId,
   writeHiddenPiecePgn,
+  type XmjMove,
 } from '@mistboard/game';
 import { buildGamePgn, buildGamePublicationJson } from './game-export.js';
 import {
@@ -66,6 +71,7 @@ import {
   type VariantTenantExport,
   type VariantTenantRegistration,
   variantTenantForRoomId,
+  type XmjExportMatch,
 } from './variant-tenant/registry.js';
 import {
   applyTenantEvent,
@@ -116,14 +122,16 @@ export type TenantExportOptions<M, State> = {
   uci: (move: M) => string;
   // Whole-line labeler, so notations that depend on the position (WXF) replay
   // the line once. Omit for tenants with no notation; every `san` is then null.
-  san?: (moves: readonly M[]) => readonly (string | null)[];
+  san?: (moves: readonly M[], state: State) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
+  // Gomoku retains the original opening on its state throughout replay.
+  opening?: (state: State) => GomokuOpening;
   // Hidden-identity variants: squares per color still holding a piece whose
   // identity the game never determined (see TenantExportGame.neverRevealed).
   neverRevealed?: (state: State) => Record<string, string[]> | null;
   // Tenants with an honest movetext notation bind the PGN writer here.
-  writePgn?: (moves: readonly M[]) => NonNullable<TenantExportGame['writePgn']>;
+  writePgn?: (moves: readonly M[], state: State) => NonNullable<TenantExportGame['writePgn']>;
   // Hidden-piece tenants (jieqi, banqi, jungle-flip): how a ply's reveals read
   // off the position before it, and the start as the variant's dealt FEN. The
   // binding then writes the reveals into every ply, the deal when it is real,
@@ -131,8 +139,14 @@ export type TenantExportOptions<M, State> = {
   hiddenPieces?: {
     variant: HiddenPieceVariant;
     reveal: (before: State, move: M) => HiddenPieceReveal;
-    dealFen: (start: State) => string;
+    // Omitted when the deal itself is secret after the game (jieqi: it names
+    // pieces never turned over), so no export carries it.
+    dealFen?: (start: State) => string;
   };
+  // The log as a reader may know it, replayed instead of the stored one (jieqi:
+  // jieqiPublicEvents, so no identity hidden from both seats reaches an export).
+  // Takes and returns the tenant's own validated log.
+  publicEvents?: (events: readonly unknown[]) => unknown[];
 };
 
 // A game's deal is real when the room was dealt by this site: a room-created
@@ -180,8 +194,12 @@ export function tenantExportBinding<
 ): VariantTenantExport {
   return {
     gameRouteBase: options.gameRouteBase,
-    finishedGame(events, roomId) {
-      if (!isTenantEventLog(tenant, events, roomId)) return null;
+    finishedGame(storedEvents, roomId) {
+      if (isInternalEngineTestLog(storedEvents)) return null;
+      if (!isTenantEventLog(tenant, storedEvents, roomId)) return null;
+      const events = options.publicEvents
+        ? (options.publicEvents(storedEvents) as typeof storedEvents)
+        : storedEvents;
       const projection = replayTenantEvents(tenant, events);
       if (projection.state.status.type !== 'finished') return null;
       const moveEvents = events.filter(
@@ -189,7 +207,7 @@ export function tenantExportBinding<
           event.type === 'move-played',
       );
       const moves = moveEvents.map((event) => event.move);
-      const labels = options.san ? options.san(moves) : null;
+      const labels = options.san ? options.san(moves, projection.state) : null;
       // Hidden-piece tenants read each ply's reveals off the position before it,
       // replaying the log exactly as replayTenantEvents does.
       const hidden = options.hiddenPieces;
@@ -204,7 +222,8 @@ export function tenantExportBinding<
         }
       }
       const created = events[0]?.type === 'room-created' ? events[0] : undefined;
-      const dealFen = hidden && start ? exportedDealFen(created, start, hidden.dealFen) : null;
+      const dealFen =
+        hidden?.dealFen && start ? exportedDealFen(created, start, hidden.dealFen) : null;
       const plies: TenantExportPly[] = moveEvents.map((event, index) => ({
         ply: index + 1,
         mover: event.color,
@@ -220,14 +239,17 @@ export function tenantExportBinding<
               tags,
               result,
               dealFen,
-              plies: plies.map((ply) => ({
-                uci: ply.uci,
-                revealed: ply.revealed ?? null,
-                captured_hidden: ply.capturedHidden ?? null,
-              })),
+              plies: plies.map((ply) => {
+                if (ply.uci === undefined) throw new Error('hidden-piece export missing uci');
+                return {
+                  uci: ply.uci,
+                  revealed: ply.revealed ?? null,
+                  captured_hidden: ply.capturedHidden ?? null,
+                };
+              }),
             })
         : undefined;
-      const writePgn = options.writePgn ? options.writePgn(moves) : hiddenPgn;
+      const writePgn = options.writePgn ? options.writePgn(moves, projection.state) : hiddenPgn;
       return {
         colors: tenant.colors,
         plies,
@@ -241,6 +263,7 @@ export function tenantExportBinding<
           ? { neverRevealed: options.neverRevealed(projection.state) }
           : {}),
         ...(dealFen ? { dealFen } : {}),
+        ...(options.opening ? { opening: options.opening(projection.state) } : {}),
         ...(writePgn ? { writePgn } : {}),
       };
     },
@@ -252,13 +275,16 @@ export function tenantExportBinding<
 export type TenantPublicationPly = {
   ply: number;
   mover: string;
-  uci: string;
-  san: string | null;
   // Hidden-piece variants only, and only on a ply that did it: the piece this
   // move turned over, and the face-down piece it captured (jieqi).
   revealed?: HiddenPieceIdentity;
   captured_hidden?: HiddenPieceIdentity;
-} & Record<`${string}_clock_ms_after`, number | null>;
+} & (
+  | { uci: string; san: string | null; move?: never; notation?: never }
+  // Mahjong actions have no UCI/SAN. Automatic draws follow from the setup.
+  | { move: XmjMove; notation: string; uci?: never; san?: never }
+) &
+  Record<`${string}_clock_ms_after`, number | null>;
 
 // Same top-level shape as the chess GamePublication; `players` and the per-ply
 // clock keys are named by the tenant's colors instead of white/black.
@@ -279,10 +305,12 @@ export type TenantGamePublication = {
   // Flip variants only: which ink the first-mover seat played (results are
   // recorded by seat).
   first_mover_ink?: string | null;
-  // Hidden-piece variants only, when the game had a real deal (every site game,
-  // never an imported one): the start as the variant's dealt FEN, the public FEN
+  // Banqi and Flip Jungle only, when the game had a real deal (every site
+  // game, never an imported one): the start as the variant's dealt FEN, the public FEN
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
+  // Gomoku: played plies start AFTER these recorded stones.
+  opening?: GomokuOpening;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):
   //   event: the event it was played in;
   //   credit: the credited work, its authors (as written) and link;
@@ -296,6 +324,7 @@ export type TenantGamePublication = {
     never_revealed?: Record<string, string[]>;
   };
   plies: TenantPublicationPly[];
+  match?: XmjExportMatch;
 };
 
 // Display names by color, through the same private-seat redaction and corpus
@@ -328,8 +357,7 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
     return {
       ply: ply.ply,
       mover: ply.mover,
-      uci: ply.uci,
-      san: ply.san,
+      ...(ply.move ? { move: ply.move, notation: ply.notation } : { uci: ply.uci, san: ply.san }),
       ...(ply.revealed ? { revealed: { ...ply.revealed } } : {}),
       ...(ply.capturedHidden ? { captured_hidden: { ...ply.capturedHidden } } : {}),
       ...clocks,
@@ -383,8 +411,17 @@ export function buildTenantGamePublicationJson(
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
     ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
+    ...(game.opening
+      ? {
+          opening: {
+            stones: game.opening.stones.map((stone) => ({ ...stone })),
+            turn: game.opening.turn,
+          },
+        }
+      : {}),
     ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
+    ...(game.match ? { match: game.match } : {}),
   };
 }
 
@@ -464,6 +501,8 @@ export function resolveGameExport(args: {
   tenantForRoomId?: (roomId: string) => VariantTenantRegistration | null;
 }): GameExportResponse {
   const { roomId, format, summary, events } = args;
+  if (isInternalEngineTestLog(events ?? undefined) || summary?.visibility === 'private')
+    return NOT_PUBLIC;
   if (!summary || !events) return { status: 404, body: { error: 'not_found' } };
 
   // persistence.loadRoom types every room's log as chess GameEvent[]; the

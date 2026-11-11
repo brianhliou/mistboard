@@ -45,6 +45,7 @@ export const MOVE_ENDED_TERMINATIONS: ReadonlySet<string> = new Set([
   'progress-clock',
   'race',
   'chasing',
+  'perpetual-chase',
   'dead-position',
 ]);
 

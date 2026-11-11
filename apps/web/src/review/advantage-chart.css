@@ -31,11 +31,11 @@
    a gradient that fades out from the midline (see advantage-chart.ts): the cue
    survives, the hard seam that made the chart read as two stacked boxes does
    not. Colour comes from the stops, so the zone classes only carry the hue. */
-/* Black's zone is the family's second ink, like its area (Blue in jungle). Red's
+/* Black's zone uses the family's dark ink, like its area (Blue in jungle). Red's
    and White's are softer tints of their own, the same in every family. */
 .advantage-chart__zone,
 .advantage-chart__zone--black {
-  --advantage-zone-ink: var(--seat-second-ink, #34302e);
+  --advantage-zone-ink: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
 .advantage-chart__zone--red {
   --advantage-zone-ink: #c7a06a;
@@ -89,6 +89,12 @@
   pointer-events: none;
   user-select: none;
 }
+
+@media (max-width: 600px) {
+  .advantage-chart__phase-label {
+    font-size: 11px;
+  }
+}
 /* Chinese labels: upright Han in vertical-rl stacks one character per line, so
    these run horizontally on one line. Too wide for the phase's span, the label
    is hidden by advantage-chart.ts, never wrapped. */
@@ -106,7 +112,7 @@
 
    The area classes name INKS, already resolved through `seatColors` in TS, so a
    flip game's areas follow the reveal. The family's two inks come from
-   seat-disc-ink.css: `--red` is its first ink and `--black` its second, which is
+   seat-disc-ink.css: `--red` is its first ink and `--black` its dark ink, which is
    Blue in the jungle family and the grey that separates from White in chess. The
    dark-theme lifts (charcoal Black, #7a716a chess Black, lifted Blue) live there
    too, so there are no theme or family rules left in this file. */
@@ -114,7 +120,7 @@
   fill: var(--seat-first-ink, #c0563f);
 }
 .advantage-chart__area--black {
-  fill: var(--seat-second-ink, #34302e);
+  fill: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
 /* Chess: the first analysis slot is named 'red' but plays White, so it resolves to
    a white ink. Light theme wants a near-white that still reads as a filled AREA

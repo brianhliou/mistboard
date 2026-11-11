@@ -24,6 +24,7 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { type EngineClock, nativeWatchdogMs, uciClockWords } from './engine-time-budget.js';
 import {
   fairyStockfishPath,
   splitFairyStockfishCommands,
@@ -155,6 +156,10 @@ const fsfPool = new UciEnginePool({
   queueTimeoutMessage: 'fairy-stockfish-xiangqi concurrency queue timed out',
 });
 
+// The worst-move bot (xiangqi-worst-engine.ts) runs this binary too, so it
+// shares the cap.
+export const xiangqiFsfLivePool = fsfPool;
+
 // Parked engine processes between moves; the pool above still caps how many
 // searches run at once, so live sessions never exceed its slots.
 const warmSessions = new UciWarmSessionCache({ name: 'xiangqi-fsf' });
@@ -229,7 +234,7 @@ export function xiangqiFsfNetPath(binPath: string): string {
 export async function xiangqiFsfLiveEngineMove(
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number } = {},
+  opts: { movetimeMs?: number; clock?: EngineClock } = {},
 ): Promise<UciEval> {
   const tier = xiangqiFsfEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Fairy-Stockfish Xiangqi engine: ${engineId}`);
@@ -256,8 +261,12 @@ export async function xiangqiFsfLiveEngineMove(
       (session) =>
         session.evalPosition({
           positionCommand: position,
-          goCommand: go,
-          timeoutMs: movetimeMs + 4000,
+          // A clock (MISTBOARD_BOT_TIME_RULE=native) replaces the movetime with the
+          // engine's own time manager; the watchdog still bounds the process.
+          goCommand: opts.clock
+            ? `${go.replace(/ movetime \d+/, '')} ${uciClockWords(opts.clock)}`
+            : go,
+          timeoutMs: opts.clock ? nativeWatchdogMs(opts.clock) : movetimeMs + 4000,
           timeoutMessage: 'fsf move timed out',
         }),
     );

@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
+import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
+import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 
 export const MISTBOARD_READOUT_SCHEMA_VERSION = 2 as const;
 // v1 snapshots are still the comparison baseline the day after a deploy, so
@@ -78,6 +80,18 @@ export type MistboardReadoutTrendPoint = {
   activeAccounts28d?: number | null;
 };
 
+// Exact preceding weekly snapshot, never the most recent daily report. The
+// latter is an alert baseline and usually overlaps six days of this week.
+export type MistboardReadoutComparison = {
+  periodStart: string;
+  periodEnd: string;
+  content?: ContentReadout;
+  product: MistboardReadoutProduct | null;
+  broadcastBoards: number | null;
+  engineFailedTasks: number | null;
+  actionKeys: string[];
+};
+
 export type MistboardReadoutMining = {
   runId: string;
   status: string;
@@ -136,9 +150,87 @@ export type MistboardReadoutFeedback = {
   recentPaths: Array<string | null>;
 };
 
+// Deploy drains, from the 'drain_summary' audit rows (server-drain.ts). A drain
+// refuses new games until the release commits its restart, so a long one is
+// players turned away (Brian, 2026-10-16: deploys must not stop people starting
+// games for 10 to 15 minutes). Optional so older snapshots still parse.
+export type MistboardReadoutDeployDrain = {
+  activatedAt: number;
+  endedAt: number;
+  outcome: string;
+  committed: boolean;
+  // How long new games were refused: up to the commit, or the whole drain when
+  // it never committed (cancelled or lapsed while still pending).
+  heldMs: number;
+  refusedCreates: number;
+  buildRevision: string | null;
+};
+
+export type MistboardReadoutDeploys = {
+  // Drains that ended in the collector's window.
+  windowDays: number;
+  drains: number;
+  // The ones that held creates past DEPLOY_HELD_CREATES_MS or refused any,
+  // oldest first.
+  disruptive: MistboardReadoutDeployDrain[];
+};
+
+export const DEPLOY_HELD_CREATES_MS = 5 * 60 * 1000;
+// Brian's own bound: past this a deploy is the disruption he asked about.
+const DEPLOY_HELD_CREATES_ACTION_MS = 10 * 60 * 1000;
+
+export function isDisruptiveDrain(
+  drain: Pick<MistboardReadoutDeployDrain, 'heldMs' | 'refusedCreates'>,
+): boolean {
+  return drain.heldMs > DEPLOY_HELD_CREATES_MS || drain.refusedCreates > 0;
+}
+
+/** A drain_summary audit payload as the readout reads it; null when malformed. */
+export function deployDrainFromSummary(
+  payload: Record<string, unknown>,
+  buildRevision: string | null,
+): MistboardReadoutDeployDrain | null {
+  const num = (key: string): number | null => {
+    const value = payload[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+  const activatedAt = num('activatedAt');
+  const endedAt = num('endedAt');
+  if (activatedAt === null || endedAt === null) return null;
+  const committed = payload.committed === true;
+  const commitWaitMs = num('commitWaitMs');
+  const heldMs =
+    committed && commitWaitMs !== null
+      ? commitWaitMs
+      : (num('durationMs') ?? endedAt - activatedAt);
+  return {
+    activatedAt,
+    endedAt,
+    outcome: typeof payload.outcome === 'string' ? payload.outcome : 'unknown',
+    committed,
+    heldMs,
+    refusedCreates: num('refusedCreates') ?? 0,
+    buildRevision,
+  };
+}
+
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback';
+  section:
+    | 'product'
+    | 'puzzles'
+    | 'mining'
+    | 'engines'
+    | 'broadcasts'
+    | 'feedback'
+    | 'deploys'
+    | 'loginEmailDelivery';
   code: 'collector_failed';
+};
+
+export type MistboardReadoutLoginEmailDelivery = LoginEmailDeliveryMetrics & {
+  // Lifetime distinct complained-about login messages. A rolling count can
+  // stay flat when an old complaint ages out as a new one arrives.
+  complaintsReceived: number;
 };
 
 export type MistboardReadoutV1 = {
@@ -170,15 +262,22 @@ export type MistboardReadoutV1 = {
     // local CLI) and on snapshots from before 2026-10-06.
     missingEngines?: MistboardReadoutMissingEngine[];
   };
+  content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
   feedback?: MistboardReadoutFeedback | null;
+  deploys?: MistboardReadoutDeploys | null;
+  loginEmailDelivery?: MistboardReadoutLoginEmailDelivery | null;
+  // Last successful complaint observation, carried across failed collectors.
+  // Absent on older snapshots; never turn missing delivery facts into zeros.
+  loginEmailComplaintsSeen?: number;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
+  comparison?: MistboardReadoutComparison | null;
   decisionFingerprint: string;
   // Stable while the same problem persists, so a daily alert can be posted once
   // per distinct problem instead of once per day. decisionFingerprint cannot do
@@ -187,14 +286,18 @@ export type MistboardReadoutV1 = {
 };
 
 export type MistboardReadoutFacts = {
+  content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
   feedback?: MistboardReadoutFeedback | null;
+  deploys?: MistboardReadoutDeploys | null;
+  loginEmailDelivery?: MistboardReadoutLoginEmailDelivery | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
+  comparison?: MistboardReadoutComparison | null;
 };
 
 export type MistboardReadoutRuntime = MistboardReadoutV1['production'];
@@ -251,20 +354,28 @@ export function buildMistboardReadout(input: {
     trigger: input.trigger,
     verdict,
     production: input.runtime,
+    content: input.facts.content,
     product: input.facts.product,
     puzzles: input.facts.puzzles,
     mining: input.facts.mining,
     engines: input.facts.engines,
     broadcasts: input.facts.broadcasts ?? null,
     feedback: input.facts.feedback ?? null,
+    deploys: input.facts.deploys ?? null,
+    loginEmailDelivery: input.facts.loginEmailDelivery ?? null,
+    loginEmailComplaintsSeen:
+      input.facts.loginEmailDelivery?.complaintsReceived ??
+      input.previousReport?.loginEmailComplaintsSeen ??
+      input.previousReport?.loginEmailDelivery?.complaintsReceived,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
+    comparison: input.facts.comparison ?? null,
   };
   return {
     ...reportWithoutFingerprint,
     decisionFingerprint: decisionFingerprint(reportWithoutFingerprint),
-    alertKey: alertKey(verdict, actions),
+    alertKey: alertKey(verdict, actions, reportWithoutFingerprint.loginEmailComplaintsSeen),
   };
 }
 
@@ -278,6 +389,8 @@ function buildActions(
     ...operationsActions(facts, previousReport),
     ...missingEngineActions(runtime, previousReport),
     ...feedbackActions(facts.feedback ?? null, previousReport),
+    ...deployDisruptionActions(facts.deploys ?? null, previousReport),
+    ...loginEmailDeliveryActions(facts.loginEmailDelivery ?? null, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -629,6 +742,86 @@ function feedbackPathLabel(path: string | null): string {
   return /^\/[A-Za-z0-9/_.%-]{0,96}$/.test(bare) ? `\`${bare}\`` : 'an unlisted page';
 }
 
+function loginEmailDeliveryActions(
+  delivery: MistboardReadoutLoginEmailDelivery | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!delivery) return [];
+  const actions: MistboardReadoutAction[] = [];
+  const { sent, bounced, suppressed } = delivery.last7d;
+  const failures = bounced + suppressed;
+  // Integer comparison keeps exactly 5% quiet. This is a rate of delivery
+  // events, independent of the address-blocking rule for permanent bounces.
+  if (sent >= 20 && failures * 20 > sent) {
+    actions.push({
+      code: 'login-email-delivery-rate',
+      severity: 'action',
+      dedupeKey: 'login-email-delivery-rate',
+      ownerIssue: 841,
+      text: `Login email bounces plus suppressions reached ${failures} of ${sent} sends (${((failures / sent) * 100).toFixed(1)}%) in the trailing seven days, above 5%. Check provider delivery health.`,
+    });
+  }
+  const seen =
+    previousReport?.loginEmailComplaintsSeen ??
+    previousReport?.loginEmailDelivery?.complaintsReceived ??
+    0;
+  const fresh = delivery.complaintsReceived - seen;
+  if (fresh > 0) {
+    actions.push({
+      code: 'login-email-complaint-new',
+      severity: 'action',
+      dedupeKey: `login-email-complaint-new:${delivery.complaintsReceived}`,
+      ownerIssue: 841,
+      text: `${fresh} new login email spam complaint${fresh === 1 ? '' : 's'}. Review provider complaints and login sending.`,
+    });
+  }
+  return actions;
+}
+
+// A drain is an event with its own end time, so the edge is the previous
+// readout's generation time: a disruptive drain is reported by the first
+// readout generated after it ended, and never again. With no previous readout,
+// or one whose deploys collector failed (so it reported nothing), every
+// disruptive drain in the window not already listed there is new.
+function deployDisruptionActions(
+  deploys: MistboardReadoutDeploys | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!deploys) return [];
+  const previousMissed =
+    !previousReport || previousReport.collectorErrors.some((error) => error.section === 'deploys');
+  const since = previousMissed ? null : Date.parse(previousReport.generatedAt);
+  const reported = new Set(
+    (previousReport?.deploys?.disruptive ?? []).map((drain) => drain.activatedAt),
+  );
+  const fresh = deploys.disruptive.filter((drain) =>
+    since === null || Number.isNaN(since)
+      ? !reported.has(drain.activatedAt)
+      : drain.endedAt > since,
+  );
+  if (fresh.length === 0) return [];
+  const worst = Math.max(...fresh.map((drain) => drain.heldMs));
+  const list = fresh
+    .map(
+      (drain) =>
+        `${new Date(drain.activatedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC held ` +
+        `${(drain.heldMs / 60_000).toFixed(1)} min, ${drain.refusedCreates} refused (${drain.outcome})`,
+    )
+    .join('; ');
+  const plural = fresh.length === 1 ? '' : 's';
+  return [
+    {
+      code: 'deploy-held-creates',
+      severity: worst > DEPLOY_HELD_CREATES_ACTION_MS ? 'action' : 'watch',
+      dedupeKey: `deploy-held-creates:${fresh.map((drain) => drain.activatedAt).join(',')}`,
+      ownerIssue: null,
+      text:
+        `${fresh.length} deploy drain${plural} turned new games away: ${list}. ` +
+        'See /metrics deploy history and npm run release:profile.',
+    },
+  ];
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -668,18 +861,32 @@ function readoutVerdict(
 // on their dedupeKey. New feedback is one: two days of arrivals are two
 // different messages, and collapsing the second into "same problem" would skip
 // the email and issue comment that are the whole point of the line.
-const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new']);
+// A disruptive deploy is the same: each one is its own incident.
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
+  'feedback-new',
+  'deploy-held-creates',
+  'puzzle-outlier-set-changed',
+  'login-email-complaint-new',
+]);
 
 function alertKey(
   verdict: MistboardReadoutVerdict,
   actions: readonly MistboardReadoutAction[],
+  loginEmailComplaintsSeen?: number,
 ): string {
-  const shape = [
-    verdict,
-    ...actions
-      .map((action) => (ALERT_PER_EVENT_CODES.has(action.code) ? action.dedupeKey : action.code))
-      .sort(),
-  ].join('|');
+  // Keep the complaint arrival token after its one-report action clears.
+  // Otherwise an unchanged rate problem would send again the following day
+  // just because the complaint left the actions list. New arrivals advance
+  // this token; rate recovery and re-crossing still change the verdict/code.
+  const keys = new Set(
+    actions.map((action) =>
+      ALERT_PER_EVENT_CODES.has(action.code) ? action.dedupeKey : action.code,
+    ),
+  );
+  if (loginEmailComplaintsSeen) {
+    keys.add(`login-email-complaint-new:${loginEmailComplaintsSeen}`);
+  }
+  const shape = [verdict, ...[...keys].sort()].join('|');
   return createHash('sha256').update(shape).digest('hex').slice(0, 16);
 }
 
@@ -705,6 +912,7 @@ function decisionFingerprint(
       : null,
     mining: report.mining,
     engines: report.engines,
+    loginEmailDelivery: report.loginEmailDelivery,
     actions: report.actions,
     collectorErrors: report.collectorErrors,
   };
@@ -782,6 +990,14 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   }
 
   lines.push('', '## Operations', '');
+  if (report.loginEmailDelivery) {
+    const delivery = report.loginEmailDelivery.last7d;
+    lines.push(
+      `- Login email, trailing seven days: ${delivery.sent} sent, ${delivery.delivered} delivered, ${delivery.bounced} bounced, ${delivery.suppressed} suppressed, ${delivery.complained} complaints`,
+    );
+  } else if ('loginEmailDelivery' in report) {
+    lines.push('- Login email delivery unavailable.');
+  }
   lines.push(
     `- Production revision: \`${report.production.revision ?? 'unknown'}\`; active games: ${report.production.activeGames}`,
   );
@@ -826,11 +1042,23 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
             : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
     );
   }
+  if (report.deploys) {
+    lines.push(
+      `- Deploys: ${report.deploys.drains} drain${report.deploys.drains === 1 ? '' : 's'} in the last ${report.deploys.windowDays} days, ` +
+        `${report.deploys.disruptive.length} held new games over ${DEPLOY_HELD_CREATES_MS / 60_000} min or refused a create`,
+    );
+  }
   if (report.collectorErrors.length > 0) {
     lines.push(
       `- Unknown sections: ${report.collectorErrors.map((error) => error.section).join(', ')}`,
     );
   }
+  lines.push(
+    '',
+    '## Content',
+    ...contentSummary(report.content),
+    ...CONTENT_CAVEATS.map((line) => `- ${line}`),
+  );
   lines.push('', `<!-- mistboard-readout-snapshot:${report.snapshotId} -->`, '');
   return lines.join('\n');
 }

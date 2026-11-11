@@ -36,6 +36,8 @@ export type TenantReplayController<View> = {
    * ply, and jumpToPly on a missing ply lands on a later one (or on live).
    */
   hasPly(ply: number): boolean;
+  /** The snapshot view held at exactly this ply, or null (see hasPly). */
+  viewAtPly(ply: number): View | null;
   historyLength(): number;
   latestPly(): number;
   isLive(): boolean;
@@ -112,6 +114,10 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
 
   function hasPly(ply: number): boolean {
     return history.some((snapshot) => snapshot.ply === ply);
+  }
+
+  function viewAtPly(ply: number): View | null {
+    return history.find((snapshot) => snapshot.ply === ply)?.view ?? null;
   }
 
   function historyLength(): number {
@@ -227,6 +233,7 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     replaceHistory,
     jumpToPly,
     hasPly,
+    viewAtPly,
     historyLength,
     latestPly,
     isLive,

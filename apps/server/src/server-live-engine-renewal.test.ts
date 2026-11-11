@@ -11,6 +11,7 @@ import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { startEngineHttpService } from './engine-service.js';
 import { requestInternalEngineReservation } from './internal-engine-client.js';
 import {
+  pauseRoomOnShutdown,
   playRandomEngineMoveIfReady,
   type RoomManagerContext,
   scheduleRandomEngineMove,
@@ -21,6 +22,7 @@ import {
 } from './server-dark-xiangqi-engine.js';
 import {
   type LiveEngineReservationHolder,
+  releaseLiveEngineSeatsOnShutdown,
   requestLiveEngineTurnWithRenewal,
 } from './server-live-engine-reservations.js';
 import type { Room } from './server-types.js';
@@ -64,6 +66,8 @@ type StubEngine = {
 async function startStubEngine(
   script: TurnReply[],
   move: { from: string; to: string },
+  // Held before a move reply goes out, so a test can act mid-think.
+  replyGate?: Promise<void>,
 ): Promise<StubEngine> {
   const stub: StubEngine = {
     close: async () => {},
@@ -105,6 +109,7 @@ async function startStubEngine(
       });
     }
     if (reply === 'bad-gateway') return json(res, 502, { error: 'bad gateway' });
+    if (replyGate) await replyGate;
     return json(res, 200, {
       protocolVersion: '1',
       gameId: body.gameId,
@@ -428,6 +433,65 @@ test('fog chess: rejected twice forfeits the engine seat, once', async () => {
 
     assert.equal(stub.turns.length, 2, 'no retry loop after the second rejection');
     assert.equal(room.events.filter((e) => e.type === 'seat-forfeited').length, 1);
+  } finally {
+    await stub.close();
+  }
+});
+
+// ── Restart (#567) ──────────────────────────────────────────────────────────
+
+test('a server stop hands every engine seat back to the worker and forgets it', async () => {
+  const stub = await startStubEngine([], { from: 'e7', to: 'e5' });
+  try {
+    const fog = fogPveRoom('shutdown-fog');
+    fog.engineReservationId = 'seat-fog';
+    const tenantRoom = { id: 'dxq_shutdown', engineReservationId: 'seat-dxq' };
+    const pvp = { id: 'pvp', engineReservationId: null };
+
+    const result = await releaseLiveEngineSeatsOnShutdown([fog, tenantRoom, pvp]);
+
+    assert.deepEqual(result, { released: 2, failed: 0 });
+    assert.deepEqual([...stub.releases].sort(), ['seat-dxq', 'seat-fog']);
+    assert.equal(fog.engineReservationId, null, 'the old id is never presented again');
+    assert.equal(tenantRoom.engineReservationId, null);
+  } finally {
+    await stub.close();
+  }
+});
+
+test('a server stop whose release fails still finishes, and counts the failure', async () => {
+  const restore = pointEngineEnvAt(1); // nothing listens on port 1
+  try {
+    const holder = { id: 'unreachable', engineReservationId: 'seat-x' };
+    const result = await releaseLiveEngineSeatsOnShutdown([holder]);
+    assert.deepEqual(result, { released: 0, failed: 1 });
+    assert.equal(holder.engineReservationId, null);
+  } finally {
+    restore();
+  }
+});
+
+test('fog chess: an engine reply that lands after the shutdown pause is dropped', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stub = await startStubEngine(['move'], { from: 'e7', to: 'e5' }, gate);
+  try {
+    const room = fogPveRoom('late-reply-fog');
+    room.engineReservationId = 'seat-1';
+    const ctx = roomCtx();
+
+    const thinking = playRandomEngineMoveIfReady(ctx, room);
+    await waitFor(async () => stub.turns.length === 1);
+    await pauseRoomOnShutdown(ctx, room, Date.now());
+    release();
+    await thinking;
+
+    const types = room.events.map((event) => event.type);
+    assert.equal(types.at(-1), 'pause', 'no move is played on the frozen clock');
+    assert.equal(room.projection.paused, true);
+    assert.equal(room.projection.state.status.type, 'playing');
   } finally {
     await stub.close();
   }

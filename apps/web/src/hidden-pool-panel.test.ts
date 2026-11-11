@@ -72,7 +72,7 @@ describe('renderHiddenPoolPanel', () => {
     );
   });
 
-  it('marks an exhausted ink as all revealed, and clears the host when both are', () => {
+  it('marks an exhausted ink as all revealed, and keeps the panel when both are', () => {
     const el = host();
     const empty = { entries: [], total: 0, unknownCaptured: 0 };
     renderHiddenPoolPanel(
@@ -98,6 +98,13 @@ describe('renderHiddenPoolPanel', () => {
       ],
       glyph,
     );
+    // The last flip must not remove the panel: its height would leave the rail.
+    expect(el.querySelector('.hidden-pool__caption')?.textContent).toBe('Still face-down');
+    expect([...el.querySelectorAll('.hidden-pool__none')].map((none) => none.textContent)).toEqual([
+      'all revealed',
+      'all revealed',
+    ]);
+    renderHiddenPoolPanel(el, [], glyph);
     expect(el.childElementCount).toBe(0);
   });
 });

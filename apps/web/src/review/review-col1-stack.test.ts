@@ -82,10 +82,11 @@ describe('review scaffold col1 stack', () => {
     expect(moves?.contains(parts.moves)).toBe(true);
   });
 
-  it('leaves a study fused nav inside the moves box, untagged', () => {
-    const { parts } = mount({ reviewSurface: 'study' });
-    expect(parts.navigation.dataset.col1Area).toBeUndefined();
-    expect(parts.navigation.closest('[data-col1-area="moves"]')).not.toBeNull();
+  it('puts a study nav under the moves box, as on the game review', () => {
+    const { root, parts } = mount({ reviewSurface: 'study' });
+    expect(parts.navigation.dataset.col1Area).toBe('nav');
+    expect(parts.navigation.closest('[data-col1-area="moves"]')).toBeNull();
+    expect(root.querySelector('.review-rail-main')?.contains(parts.navigation)).toBe(false);
   });
 
   it('orders the rows board, arrows, moves, then the rest', () => {

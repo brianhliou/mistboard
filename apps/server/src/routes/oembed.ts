@@ -31,6 +31,7 @@ import {
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
 import { postgamePlayers, requirePersistence, writeJson } from './lib.js';
 import { puzzleById } from './puzzles.js';
 
@@ -116,7 +117,9 @@ export async function tryHandle(
       // read cannot apply: private is a 404 here exactly as it is there, with
       // the same shape, so the endpoint cannot be used to probe for private
       // studies.
-      if (!study || study.visibility === 'private') {
+      // An admin-only variant's study (#628) is not embeddable either: the
+      // request is anonymous, so it answers as the study read does a guest.
+      if (!study || study.visibility === 'private' || studyHasAdminOnlyChapter(study)) {
         writeJson(response, 404, { error: 'not_found' });
         return true;
       }

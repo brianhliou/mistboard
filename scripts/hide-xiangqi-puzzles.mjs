@@ -36,8 +36,8 @@
 // nothing else). Under that rule these are traps: a solver who plays the other
 // mate is marked wrong. A second mate on a mate-in-one ply is fine, the grader
 // accepts it, and 661 of 965 mate puzzles have one, mostly on the last ply.
-// The audit's per-ply evidence is the source, not the verify record, because
-// the verify record only covers the first ply.
+// The publish-time mate_speed_only tag (migration 176 backfills historical
+// audits) describes this set without a mining-table join.
 import pg from 'pg';
 import {
   applyStandardXiangqiMove,
@@ -83,21 +83,10 @@ try {
 
   if (runnerUpMates) {
     const { rows } = await client.query(
-      `WITH audit AS (
-         SELECT DISTINCT ON (candidate_id) candidate_id, evidence
-           FROM xiangqi_puzzle_mining_judgments
-          WHERE stage = 'audit' AND verdict = 'pass'
-          ORDER BY candidate_id, id DESC
-       )
-       SELECT p.id, p.hidden_reason, p.solution_plies,
-              (SELECT count(*) FROM jsonb_array_elements(audit.evidence->'plies') ply
-                WHERE (ply->>'secondMate')::int > 0 AND (ply->>'bestMate')::int > 1)::int AS ambiguous_plies
+      `SELECT p.id, p.hidden_reason, p.solution_plies
          FROM puzzles p
-         JOIN audit ON audit.candidate_id = p.mining_candidate_id
         WHERE p.variant = 'xiangqi' AND p.goal_type = 'checkmate'
-          AND EXISTS (
-            SELECT 1 FROM jsonb_array_elements(audit.evidence->'plies') ply
-             WHERE (ply->>'secondMate')::int > 0 AND (ply->>'bestMate')::int > 1)
+          AND p.mate_speed_only IS TRUE
         ORDER BY p.seq`,
     );
     const byLength = {};

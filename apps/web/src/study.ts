@@ -24,14 +24,22 @@ import './review/practice.css';
 import './study.css';
 import './study-index.css';
 import type { XiangqiPieceRole } from '@mistboard/game';
-import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
+import {
+  deepCloneJson,
+  normalizeStartFen,
+  parsePracticeGoal,
+  serializedTreeMainline,
+} from '@mistboard/game';
+import { createEmbedScoreChart, embedScoreSeries } from './embed/embed-score-chart.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
+import { fetchStudyChapterDecisions } from './review/study-decisions.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
 import { mountXiangqiGamebook } from './review/xiangqi-gamebook.js';
 import { downloadStudyPgn } from './review/xiangqi-pgn-chapter.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildNav } from './site-shell.js';
 import {
   createStudyAutosave,
@@ -52,7 +60,6 @@ import {
   buildChapterGameRow,
   chapterEventGroups,
   displayEventName,
-  studyFocusPlayer,
   studyGamesSummary,
 } from './study-chapter-games.js';
 import {
@@ -69,6 +76,7 @@ import {
   type StudyVisibility,
 } from './study-controls.js';
 import { buildGameRowLabel, gameCoachContext, gameRowParts } from './study-game-row.js';
+import { createStudyPhone, type StudyPhoneHandle } from './study-phone.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -111,6 +119,9 @@ type ChapterDto = {
   /** The chapter has a stored engine analysis (study_chapter_analysis): the
    *  page fetches it and the underboard gets the advantage chart. */
   hasAnalysis?: boolean;
+  hasDecisions?: boolean;
+  /** Named engine win-chance lines, validated against the mounted mainline. */
+  scoreSeries?: unknown;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -132,17 +143,29 @@ const EMPTY_TREE: SerializedTree = { version: 1, root: { children: [] } };
 const studyMountTokens = new WeakMap<HTMLElement, object>();
 const studyMountCleanups = new WeakMap<HTMLElement, () => void>();
 
-export function mountStudy(root: HTMLElement, studyId: string, initialChapterId?: string): void {
+/**
+ * Mount a study page into `root`.
+ *
+ * The returned promise settles once the first chapter's board has landed (or
+ * the error page has rendered); it never rejects. The board stacks are
+ * code-split, so the page is not usable until then. The app shell fires and
+ * forgets it; tests await it instead of polling for the board.
+ */
+export function mountStudy(
+  root: HTMLElement,
+  studyId: string,
+  initialChapterId?: string,
+): Promise<void> {
   studyMountCleanups.get(root)?.();
   const token = {};
   studyMountTokens.set(root, token);
   root.classList.add('landing-page', 'xiangqi-postgame-route');
   root.replaceChildren(buildNav(), notice(t('study.loadingOne')));
-  void loadStudy(studyId)
+  return loadStudy(studyId)
     .then((result) => {
       if (studyMountTokens.get(root) !== token) return;
-      if (result.ok) renderStudy(root, result.study, result.chapters, initialChapterId);
-      else renderError(root, result.status);
+      if (result.ok) return renderStudy(root, result.study, result.chapters, initialChapterId);
+      renderError(root, result.status);
     })
     .catch(() => {
       if (studyMountTokens.get(root) === token) renderError(root, 0);
@@ -186,10 +209,10 @@ function renderStudy(
   study: StudyDto,
   chapters: ChapterDto[],
   initialChapterId?: string,
-): void {
+): Promise<void> {
   if (chapters.length === 0) {
     renderError(root, 415);
-    return;
+    return Promise.resolve();
   }
   let activeId = chapters.some((chapter) => chapter.id === initialChapterId)
     ? initialChapterId!
@@ -210,6 +233,9 @@ function renderStudy(
   });
   let activeHandle: TreeReviewHandle | null = null;
   let activeAutosave: StudyAutosave | null = null;
+  // Phone chrome (chapter bar, dock, chapter sheet); rebuilt per chapter.
+  let activePhone: StudyPhoneHandle | null = null;
+  let activeStatusAbort: AbortController | null = null;
 
   const flushActive = async (): Promise<boolean> => {
     if (!activeAutosave) return true;
@@ -219,7 +245,10 @@ function renderStudy(
   const disposeActive = (): void => {
     activeAutosave?.dispose();
     activeAutosave = null;
+    activeHandle?.destroy();
     activeHandle = null;
+    activeStatusAbort?.abort();
+    activeStatusAbort = null;
   };
 
   const updateChapterUrl = (id: string, mode: 'push' | 'replace'): void => {
@@ -244,11 +273,7 @@ function renderStudy(
     disposeActive();
     activeId = id;
     updateChapterUrl(id, historyMode);
-    // renderActive() rebuilds the whole page and the board mounts async, so the
-    // document briefly shrinks and the browser yanks the scroll to the top. Pin
-    // it: hold the current scroll while the new chapter mounts.
-    preserveScroll();
-    renderActive();
+    await renderActive(true);
   };
 
   // Every rendered chapter has a stable permalink, including the first chapter
@@ -280,33 +305,8 @@ function renderStudy(
     window.removeEventListener('popstate', onPopState);
     window.removeEventListener('beforeunload', onBeforeUnload);
     disposeActive();
+    activePhone?.destroy();
   });
-
-  // Keep the page from jumping to the top on a chapter switch. Capture the
-  // scroll now and restore it across the re-render + async board mount, until a
-  // real user scroll releases the pin.
-  const preserveScroll = (): void => {
-    const y = window.scrollY;
-    let released = false;
-    const release = () => {
-      released = true;
-      window.removeEventListener('wheel', release);
-      window.removeEventListener('touchmove', release);
-      window.removeEventListener('keydown', release);
-    };
-    window.addEventListener('wheel', release, { passive: true, once: true });
-    window.addEventListener('touchmove', release, { passive: true, once: true });
-    window.addEventListener('keydown', release, { once: true });
-    let frames = 0;
-    const pin = () => {
-      if (released) return;
-      if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
-      // Re-pin for a few frames — the board chunk lands async and reflows once.
-      if (frames++ < 30) requestAnimationFrame(pin);
-      else release();
-    };
-    requestAnimationFrame(pin);
-  };
 
   // A study is single-variant: chapters inherit the variant chosen at create
   // time, so no chapter request carries one (the server refuses a mismatch).
@@ -663,18 +663,15 @@ function renderStudy(
     });
   };
 
-  function renderActive(): void {
-    // Captured before the rebuild tears the old rail out of the DOM, so a
-    // chapter switch keeps the reader's place in a long chapter list.
-    const previousListScrollTop =
-      root.querySelector<HTMLElement>('.study-chapters__list')?.scrollTop ?? null;
+  /** A chapter switch reuses the document chrome; other edits rebuild the page. */
+  function renderActive(chapterSwitch = false): Promise<void> {
     const chapter = chapters.find((entry) => entry.id === activeId) ?? chapters[0];
     // Fail-closed: a chapter whose variant has no board on this client (an older
     // client, or a variant retired from the study catalog) reports unsupported
     // rather than rendering some other variant's board.
     if (!chapter || !isStudyVariantId(chapter.variant)) {
       renderError(root, 415);
-      return;
+      return Promise.resolve();
     }
     const variant = chapter.variant;
     activeId = chapter.id;
@@ -692,7 +689,35 @@ function renderStudy(
       });
     }
 
+    // Return any blocks borrowed by the phone Info sheet before finding the rail.
+    activePhone?.destroy();
     const gamebookable = studyVariantSupportsGamebook(variant);
+    const playingLesson =
+      gamebookable &&
+      (!study.isOwner || previewMode) &&
+      (chapter.gamebook || (chapter.practice && parsePracticeGoal(chapter.practiceGoal)));
+    // Reuse the chrome only while its rail still lists exactly these chapters:
+    // adding a chapter also switches to it, and a stale rail would never show it.
+    const shell =
+      chapterSwitch && !playingLesson ? root.querySelector<HTMLElement>('.study-review') : null;
+    const railIds = new Set(
+      [...(shell?.querySelectorAll<HTMLElement>('.study-chapters__row') ?? [])].map(
+        (row) => row.dataset.chapterId,
+      ),
+    );
+    const reuseShell =
+      shell && railIds.size === chapters.length && chapters.every((entry) => railIds.has(entry.id))
+        ? shell
+        : undefined;
+    if (reuseShell) {
+      for (const row of reuseShell.querySelectorAll<HTMLElement>('.study-chapters__row')) {
+        const active = row.dataset.chapterId === chapter.id;
+        row.classList.toggle('is-active', active);
+        const link = row.querySelector('.study-chapters__link');
+        if (active) link?.setAttribute('aria-current', 'page');
+        else link?.removeAttribute('aria-current');
+      }
+    }
     /**
      * The rail as a LEARNER sees it: no settings gear, no per-chapter gear, no
      * drag handles, no "add a chapter".
@@ -713,7 +738,6 @@ function renderStudy(
       buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
         ...(chapterLabel ? { chapterLabel } : {}),
         ...(groupHeading ? { groupHeading } : {}),
-        previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
         chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),
@@ -753,7 +777,18 @@ function renderStudy(
           })
         : undefined;
 
-    root.replaceChildren(buildNav());
+    if (!reuseShell) root.replaceChildren(buildNav());
+    const phoneEventGroups = chapterEventGroups(chapters);
+    const phone = createStudyPhone({
+      studyTitle: localizedStudyName(study.name, study.i18n),
+      chapters,
+      activeId: chapter.id,
+      groupHeading: (id) => phoneEventGroups.get(id) ?? null,
+      chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),
+      onSwitch: (id) => void switchTo(id),
+    });
+    activePhone = phone;
+    phone.attach(root);
 
     // A practice chapter is played against the engine. It is checked BEFORE the
     // gamebook branch because the two flags are mutually exclusive in intent and
@@ -807,25 +842,32 @@ function renderStudy(
       const practiceNav = buildNav();
       const practiceIndex = chapters.findIndex((entry) => entry.id === chapter.id);
       const nextChapter = chapters[practiceIndex + 1];
-      void import('./review/study-practice.js').then(({ mountPracticeChapter }) => {
-        mountPracticeChapter(root, {
-          chapter,
-          nav: practiceNav,
-          goal: practiceGoal,
-          // No centred page header: the set's name lives in the rail card, the
-          // exercise's goal lives under the board. A title floating above the
-          // three columns belongs to neither and reads as a stray caption.
-          aside,
-          chapterId: chapter.id,
-          studyId: study.id,
-          progress: { index: practiceIndex + 1, total: chapters.length },
-          // Omitted on the last chapter, so the button is not offered at all
-          // rather than offered and inert.
-          ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
-        });
-      });
+      const practiceMounted = import('./review/study-practice.js').then(
+        ({ mountPracticeChapter }) => {
+          mountPracticeChapter(root, {
+            chapter,
+            nav: practiceNav,
+            goal: practiceGoal,
+            // No centred page header: the set's name lives in the rail card, the
+            // exercise's goal lives under the board. A title floating above the
+            // three columns belongs to neither and reads as a stray caption.
+            aside,
+            chapterId: chapter.id,
+            studyId: study.id,
+            progress: { index: practiceIndex + 1, total: chapters.length },
+            // Omitted on the last chapter, so the button is not offered at all
+            // rather than offered and inert.
+            ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
+          });
+          // The player replaced the root's children; put the phone chrome back.
+          if (activePhone === phone) {
+            phone.attach(root);
+            phone.bindMoveNav(root);
+          }
+        },
+      );
       attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
-      return;
+      return practiceMounted;
     }
 
     // A gamebook chapter is played (guess-the-move) by viewers and by the owner in
@@ -852,8 +894,7 @@ function renderStudy(
       const chapterRail = rail(statusSpan(study.isOwner), false, (model) => {
         const full = chapters.find((entry) => entry.id === model.id);
         const parts = full ? gameRowParts(full) : null;
-        // Players only: event, round and date are read once, in the coach's
-        // game card, rather than on twenty rows.
+        // Event, round and date are read once in the card below the chapter list.
         return parts ? buildGameRowLabel(parts) : null;
       });
       // Like and copy close the card, above the errata line, rather than sitting
@@ -872,6 +913,23 @@ function renderStudy(
       aside.append(railCard);
       const game = gameCoachContext(chapter);
       const players = gameRowParts(chapter);
+      if (players) {
+        const card = document.createElement('section');
+        card.className = 'gamebook__game';
+        for (const side of ['red', 'black'] as const) {
+          const player = document.createElement('p');
+          player.className = `gamebook__game-player gamebook__game-player--${side}`;
+          player.append(seatDiscEl(side, 'review-seat__disc'), players[side]);
+          card.append(player);
+        }
+        if (game?.detail) {
+          const detail = document.createElement('p');
+          detail.className = 'gamebook__game-detail';
+          detail.textContent = game.detail;
+          card.append(detail);
+        }
+        aside.append(card);
+      }
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -879,17 +937,22 @@ function renderStudy(
         // the render above put there; without it this chapter had no top bar.
         nav: buildNav(),
         aside,
-        ...(game ? { game } : {}),
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
-      return;
+      phone.attach(root);
+      phone.bindMoveNav(root);
+      return Promise.resolve();
     }
 
-    const gameFocus = studyFocusPlayer(chapters);
     const eventGroups = chapterEventGroups(chapters);
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
-    const status = statusSpan(study.isOwner);
+    const status = statusSpan(
+      study.isOwner,
+      reuseShell?.querySelector<HTMLElement>('.study-actions__status') ?? undefined,
+    );
+    const statusAbort = new AbortController();
+    activeStatusAbort = statusAbort;
     let autosave: StudyAutosave | null = null;
     if (study.isOwner) {
       const updateStatus = (state: StudyAutosaveState, message: string): void => {
@@ -934,12 +997,16 @@ function renderStudy(
           },
         });
       };
-      status.addEventListener('click', resolveOrRetry);
-      status.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        resolveOrRetry();
-      });
+      status.addEventListener('click', resolveOrRetry, { signal: statusAbort.signal });
+      status.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          resolveOrRetry();
+        },
+        { signal: statusAbort.signal },
+      );
     }
 
     // The board stacks are code-split per variant, so the mount is async: the
@@ -953,21 +1020,40 @@ function renderStudy(
     const storedAnalysis = chapter.hasAnalysis
       ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
       : null;
-    void mountStudyReview(variant, root, {
+    const positions = serializedTreeMainline(mountedTree).length + 1;
+    const series = embedScoreSeries(chapter.scoreSeries, positions);
+    const scoreChart = series
+      ? createEmbedScoreChart(series, {
+          onJump: (ply) => handle?.jumpToPly(ply),
+          moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
+        })
+      : null;
+    return mountStudyReview(variant, root, {
+      reuseShell,
+      onPlyChange: (ply) => scoreChart?.setPly(ply),
+      analysisExtra: scoreChart?.el,
       storedAnalysis,
+      storedDecisions:
+        variant === 'jieqi' && chapter.hasDecisions
+          ? fetchStudyChapterDecisions(study.id, chapter.id, chapter.root, mountedTree)
+          : null,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),
       // Empty eyebrow: the info card leads with the study name itself.
       eyebrow: '',
       title: localizedStudyName(study.name, study.i18n),
-      // The description is STUDY-level and the rail is the study column, so it
-      // belongs here under the study's own name. It spent a while in the
-      // underboard "About" tab, which is per-chapter: that printed the same 745
-      // characters under all 92 chapters of a manual, above the moves, and left
-      // the tab permanently open to hold it. Clamped, because it is reference
-      // rather than reading.
-      summary: localizedStudyDescription(study.description, study.i18n),
+      // The rail keeps only the compact title. The description is read in
+      // full under the board (Brian, 2026-10-16: the clamped copy behind "Show
+      // more" in the rail's top corner went unread). It sits at the foot of the
+      // underboard, after the tabs, rather than in the per-chapter About tab:
+      // that tab printed the same 745 characters above the moves of all 92
+      // chapters of a manual and had to stay open to hold it.
+      summary: '',
+      ...(() => {
+        const note = studyDescriptionBlock(study);
+        return note ? { underboardNote: note } : {};
+      })(),
       boardAriaLabel: `${studyVariantLabel(variant)} board`,
       // A chapter of a real game can now say who had which side. Without this
       // the only place identity could live was the chapter title, which cannot
@@ -986,21 +1072,23 @@ function renderStudy(
         : {}),
       // A chapter that is a whole game is laid out from its tags (players, date,
       // a result chip), grouped under its event when the games span several.
-      actions: rail(
-        status,
-        false,
-        (model) => {
-          const full = chapters.find((entry) => entry.id === model.id);
-          return full ? buildChapterGameRow(full, gameFocus) : null;
-        },
-        (model) => eventGroups.get(model.id) ?? null,
-      ),
+      actions: reuseShell
+        ? undefined
+        : rail(
+            status,
+            false,
+            (model) => {
+              const full = chapters.find((entry) => entry.id === model.id);
+              return full ? buildChapterGameRow(full) : null;
+            },
+            (model) => eventGroups.get(model.id) ?? null,
+          ),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
       // PGN download sits with FEN/Share/Moves rather than in the owner-only
       // settings menu: a study whose work cannot leave it is a trap, so every
       // viewer gets it.
       shareExtra: [...(pgnExportable() ? [pgnExportRow()] : []), cloneRow()],
-      details: buildStudyChat(study.id),
+      details: reuseShell ? undefined : buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
       annotationPracticeControls: practiceDock,
@@ -1012,10 +1100,12 @@ function renderStudy(
       // The way to actually play it is Preview, so that is the action offered
       // here AND the tab the panel opens on. Read-only without a visible way to
       // test would just move the trap somewhere else.
-      // A reader opens on the chart when there is one, as a game review does;
-      // the owner keeps the authoring tabs in front. A chapter whose analysis
-      // covers nothing has no such tab, and the panel falls back to its first.
-      ...(chapter.hasAnalysis && !study.isOwner ? { initialUnderboardTab: 'analysis' } : {}),
+      // Two-engine chapters open on their chart for readers and owners. With
+      // stored analysis alone, owners keep the authoring tabs in front. The
+      // practice chapter's Preview action below still takes precedence.
+      ...(scoreChart || (chapter.hasAnalysis && !study.isOwner)
+        ? { initialUnderboardTab: 'analysis' }
+        : {}),
       ...(chapter.practice && study.isOwner && !previewMode
         ? {
             boardReadOnly: {
@@ -1075,11 +1165,15 @@ function renderStudy(
         );
         handle = mounted;
         activeHandle = mounted;
+        // The review shell landed after the dock; keep the dock last, then
+        // drive Back/Next from the shell's own move band.
+        phone.attach(root);
+        phone.bindMoveNav(root.querySelector('.study-review') ?? root);
       })
       .catch(() => renderError(root, 415));
   }
 
-  renderActive();
+  return renderActive();
 }
 
 /**
@@ -1123,10 +1217,14 @@ function attachStudyTitleRow(
   const thumbnail = buildStudyThumbnail(studyId, 'study-page__thumbnail', 'eager');
 
   const summary = title.nextElementSibling;
-  const hasSummary =
+  const isSummary =
     summary instanceof HTMLElement &&
     (summary.classList.contains('review-info-card__summary') ||
       summary.classList.contains('gamebook__summary'));
+  // The review mount passes no summary (its description is under the board);
+  // the shell still prints the empty paragraph, which would hold a blank line.
+  if (isSummary && !summary.textContent?.trim()) summary.remove();
+  const hasSummary = isSummary && summary.isConnected;
   const copy = document.createElement('div');
   copy.className = 'study-page__title-copy';
   const row = document.createElement('div');
@@ -1228,9 +1326,13 @@ export function chapterIdFromStudyPath(pathname: string, studyId: string): strin
  *  scratch analysis as stored on someone else's study. A viewer now gets a
  *  readout too, held back until their first move: before that there is no
  *  question to answer, and every visitor to a public study is a viewer. */
-function statusSpan(isOwner: boolean): HTMLElement {
-  const status = document.createElement('span');
-  status.className = 'study-actions__status';
+function statusSpan(isOwner: boolean, status = document.createElement('span')): HTMLElement {
+  status.classList.add('study-actions__status');
+  status.classList.remove('is-actionable');
+  status.removeAttribute('role');
+  status.removeAttribute('tabindex');
+  status.removeAttribute('title');
+  status.hidden = false;
   if (!isOwner) {
     status.dataset.state = 'viewer';
     status.textContent = t('study.viewerNotSaved');
@@ -1241,6 +1343,25 @@ function statusSpan(isOwner: boolean): HTMLElement {
   status.dataset.state = 'saved';
   status.textContent = t('study.saved');
   return status;
+}
+
+/**
+ * The study's description, in full, for the foot of the underboard. Null when
+ * the study has none. Line breaks the author wrote are kept, and links are
+ * live, as in the chapter introduction.
+ */
+export function studyDescriptionBlock(
+  study: Pick<StudyDto, 'description' | 'i18n'>,
+): HTMLElement | null {
+  const text = localizedStudyDescription(study.description, study.i18n)?.trim();
+  if (!text) return null;
+  const block = document.createElement('section');
+  block.className = 'study-description';
+  const prose = document.createElement('p');
+  prose.className = 'study-description__text';
+  appendLinkedText(prose, text);
+  block.append(prose);
+  return block;
 }
 
 /** The underboard "About" tab: the study's own description, plus the favorite and
@@ -1284,9 +1405,12 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   // repeating a study-wide control under all 92 chapters and pushing the moves
   // down on every one. They now sit in the chapter rail, which is the
   // study-level block. What stays is the visibility chip, which the owner wants
-  // while editing a chapter.
+  // while editing a chapter. The owner's name sits beside it: the study page
+  // otherwise said nowhere whose study it was, only the list cards did.
   const row = document.createElement('div');
   row.className = 'study-about__row';
+  const byline = studyOwnerByline(study);
+  if (byline) row.append(byline);
   if (study.isOwner) {
     const visibility = document.createElement('span');
     visibility.className = 'study-about__visibility';
@@ -1295,6 +1419,20 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   }
   panel.append(row);
   return panel;
+}
+
+/** "Study by <name>", linked to the owner's profile; null for a study read
+ *  without an owner (a dev fallback or an older payload). */
+export function studyOwnerByline(study: Pick<StudyDto, 'owner'>): HTMLElement | null {
+  const owner = study.owner;
+  if (!owner?.handle) return null;
+  const line = document.createElement('span');
+  line.className = 'study-about__owner';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/@/${encodeURIComponent(owner.handle)}`);
+  link.textContent = owner.displayName || `@${owner.handle}`;
+  line.append(`${t('study.ownedBy')} `, link);
+  return line;
 }
 
 /**
@@ -1386,7 +1524,12 @@ function likeButton(study: StudyDto): HTMLButtonElement {
     button.classList.toggle('is-liked', study.likedByViewer);
     button.textContent = `${study.likedByViewer ? '♥' : '♡'} ${study.likeCount}`;
     button.setAttribute('aria-pressed', String(study.likedByViewer));
-    button.setAttribute('aria-label', study.likedByViewer ? t('study.unlike') : t('study.like'));
+    // The heart is the reader's own like, and liked studies are their
+    // Favorites tab on /study. The star in the rail is a different control
+    // (admin curation into Staff picks); the tooltip says which is which.
+    const label = study.likedByViewer ? t('study.unlike') : t('study.like');
+    button.setAttribute('aria-label', label);
+    button.title = label;
   };
   render();
   button.addEventListener('click', () => {

@@ -15,7 +15,7 @@
 // The key is the study curator's (it already analyses the boards it seeds), so
 // a board it has done is never done twice.
 
-import type { XiangqiMove } from '@mistboard/game';
+import type { XiangqiBroadcastBoard, XiangqiMove } from '@mistboard/game';
 import { enqueueAnalysisJob, pendingAnalysisJobCount } from './game-analysis-jobs.js';
 import * as persistence from './persistence.js';
 import { createGameAnalysisRoutes } from './routes/game-analysis-route.js';
@@ -35,6 +35,18 @@ export function broadcastAnalysisTimeline(moves: readonly XiangqiMove[]) {
 // The route factory's own ply cap; a longer record is not analysed by either path.
 const MAX_ANALYSED_PLIES = 300;
 
+type AnalysableBoard = Pick<XiangqiBroadcastBoard, 'id' | 'moves' | 'recordWithheld'> & {
+  status?: XiangqiBroadcastBoard['status'];
+};
+
+/** Whether a board has a game to analyse: finished, with moves, and not a
+ *  record we withhold (`recordWithheld`, a record that reads two ways). A
+ *  results-only board would be the start position scored as the game. */
+export function isAnalysableBroadcastBoard(board: AnalysableBoard): boolean {
+  if (board.status !== undefined && board.status !== 'complete') return false;
+  return board.moves.length > 0 && board.recordWithheld === undefined;
+}
+
 /** `/api/xiangqi-broadcasts/games/<boardId>/analysis[/jobs/:jobId]`. */
 export const handleXiangqiBroadcastAnalysisRoutes = createGameAnalysisRoutes({
   routeId: 'xiangqi-broadcasts',
@@ -46,7 +58,7 @@ export const handleXiangqiBroadcastAnalysisRoutes = createGameAnalysisRoutes({
     const board = await persistence.getXiangqiBroadcastBoard(boardId);
     // A live board's moves are still arriving; its analysis would be stale on
     // the next poll. The live engine layer covers it until the result is in.
-    if (board?.status !== 'complete') return null;
+    if (board?.status !== 'complete' || !isAnalysableBroadcastBoard(board)) return null;
     return broadcastAnalysisTimeline(board.moves);
   },
   countPlies: (payload) => payload.timeline.length,
@@ -81,7 +93,7 @@ export const SWEEP_CONCURRENCY = (() => {
 
 export type BroadcastAnalysisSweepDeps = {
   pendingJobs(): number;
-  nextBoard(skip: readonly string[]): Promise<{ id: string; moves: XiangqiMove[] } | null>;
+  nextBoard(skip: readonly string[]): Promise<AnalysableBoard | null>;
   /** Enqueue the analysis; resolves when the job finishes, rejects on failure. */
   analyse(board: { id: string; moves: XiangqiMove[] }): Promise<void> | null;
   now(): number;
@@ -153,6 +165,9 @@ export function createBroadcastAnalysisSweep(
   const failed = new Set<string>();
   // Boards being analysed now, so a second slot never takes the same one.
   const running = new Set<string>();
+  // Boards with nothing to analyse (no moves, a withheld record): passed over
+  // for good, so the query's next pick is a real game.
+  const passed = new Set<string>();
   let filling = false;
   let interval: NodeJS.Timeout | null = null;
 
@@ -171,8 +186,12 @@ export function createBroadcastAnalysisSweep(
         if (startedAt.length >= perHour) break;
         // A reader's request goes first: the queue is one process, first in first out.
         if (deps.pendingJobs() > 0) break;
-        const board = await deps.nextBoard([...failed, ...running]);
+        const board = await deps.nextBoard([...failed, ...running, ...passed]);
         if (!board) break;
+        if (!isAnalysableBroadcastBoard(board)) {
+          passed.add(board.id);
+          continue;
+        }
         const job = deps.analyse(board);
         if (!job) break;
         startedAt.push(now);

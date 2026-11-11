@@ -10,8 +10,9 @@
 // pages keep the linear one until the shell spine migrates to paths; the analysis
 // board uses this. Both share the review-move-list CSS vocabulary.
 
+import { t } from '../i18n/catalog.js';
 import type { GameTree, GameTreeNode, TreePath } from './game-tree.js';
-import { revealInScroller } from './move-list.js';
+import { createScrollRevealer, fillLuckBadge } from './move-list.js';
 import './move-list.css';
 import './move-tree.css';
 
@@ -131,6 +132,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
   const rows = document.createElement('ol');
   rows.className = 'review-move-list__rows';
   panel.append(rows);
+  const reveal = createScrollRevealer(rows);
   // When the list's box shrinks (the opening explorer opening below it, or its
   // rows landing and growing it), keep the current move in view; otherwise the
   // highlighted ply sits below the fold until the next step. Shrinks only, so a
@@ -143,7 +145,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       lastHeight = height;
       if (!shrank) return;
       const current = rows.querySelector<HTMLElement>('.review-move-list__move--current');
-      if (current) revealInScroller(current);
+      if (current) reveal(current);
     }).observe(rows);
   }
 
@@ -180,24 +182,27 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // the glyph visible right after the move.
     const suffixEl = document.createElement('span');
     suffixEl.className = 'review-move-list__suffix';
-    const luckEl = document.createElement('span');
-    luckEl.className = 'review-move-list__luck';
     const evalEl = document.createElement('span');
     evalEl.className = 'review-move-list__eval';
     const assessEl = document.createElement('span');
     assessEl.className = 'review-move-list__assessment';
-    button.append(san, suffixEl, luckEl, assessEl, evalEl);
+    button.append(san, suffixEl, assessEl, evalEl);
     const ann = annotations.get(key);
+    // data-grade-path lets the grade card (grade-mark-card.ts) find the move a glyph labels.
     if (ann?.suffix) {
       suffixEl.textContent = ann.suffix;
+      suffixEl.dataset.gradePath = key;
       if (ann.suffixClass) suffixEl.classList.add(`review-move--${ann.suffixClass}`);
     }
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
     // data-luck-path lets the luck card (luck-mark-card.ts) find the move a badge labels.
     if (ann?.luck) {
-      luckEl.textContent = ann.luck;
+      const luckEl = document.createElement('span');
+      luckEl.className = 'review-move-list__luck';
+      fillLuckBadge(luckEl, ann.luck);
       luckEl.dataset.luckPath = key;
       if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
+      assessEl.before(luckEl);
     }
     // Every move carries its eval, reveals included: the three slots read orthogonally — glyph =
     // decision quality, luck badge = the reveal's variance, eval = the objective value of the
@@ -211,7 +216,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     if (ann?.commentMarker) {
       const marker = document.createElement('span');
       marker.className = 'review-move-list__comment-marker';
-      marker.setAttribute('aria-label', 'Has a comment');
+      marker.setAttribute('aria-label', t('review.hasComment'));
       marker.innerHTML =
         '<svg viewBox="0 0 14 14" width="10" height="10" aria-hidden="true" focusable="false">' +
         '<path d="M2 2h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H7l-3 3v-3H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="currentColor"/></svg>';
@@ -224,10 +229,13 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         const path = pathOf(node);
         const items: MenuItem[] = [];
         if (opts.onPromote) {
-          items.push({ label: 'Promote to mainline', onClick: () => opts.onPromote?.(path) });
+          items.push({
+            label: t('review.promoteToMainline'),
+            onClick: () => opts.onPromote?.(path),
+          });
         }
         if (opts.onDelete) {
-          items.push({ label: 'Delete from here', onClick: () => opts.onDelete?.(path) });
+          items.push({ label: t('review.deleteFromHere'), onClick: () => opts.onDelete?.(path) });
         }
         openMoveMenu(event.clientX, event.clientY, items);
       });
@@ -316,7 +324,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       if (candidate.played) {
         const played = document.createElement('span');
         played.className = 'move-tree__candidate-played';
-        played.textContent = 'played';
+        played.textContent = t('review.played');
         row.append(played);
       }
       li.append(row);
@@ -393,6 +401,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
 
   function rebuild(): void {
     cells = new Map();
+    currentCell = undefined;
     rows.replaceChildren();
     const main = tree.root.children[0];
     if (!main) {
@@ -417,15 +426,20 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     }
   }
 
+  // The cell carrying the current class, so a step clears that one cell instead
+  // of toggling every cell in a long game (#608). A rebuild makes fresh cells
+  // without the class, so it resets this; the next setCurrent marks the new one.
+  let currentCell: HTMLButtonElement | undefined;
+
   function setCurrent(path: TreePath): void {
-    const key = pathKey(path);
-    let current: HTMLButtonElement | undefined;
-    for (const [cellKey, cell] of cells) {
-      const isCurrent = cellKey === key;
-      cell.classList.toggle('review-move-list__move--current', isCurrent);
-      if (isCurrent) current = cell;
+    const current = cells.get(pathKey(path));
+    if (currentCell && currentCell !== current) {
+      currentCell.classList.remove('review-move-list__move--current');
     }
-    if (current) revealInScroller(current);
+    currentCell = current;
+    if (!current) return;
+    current.classList.add('review-move-list__move--current');
+    reveal(current);
   }
 
   function annotate(byPathKey: Map<string, MoveTreeAnnotation>): void {

@@ -1,7 +1,11 @@
 import { createInitialXiangqiState } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { articleAnalysisLoader } from './article-replay-analysis.js';
-import type { GameAnalysis, XiangqiGameAnalysisResponse } from './review/game-analysis.js';
+import {
+  computeGameAnalysis,
+  type GameAnalysis,
+  type XiangqiGameAnalysisResponse,
+} from './review/game-analysis.js';
 import {
   EVAL_GRAPH_STORAGE_KEY,
   mountXiangqiReplay,
@@ -483,4 +487,38 @@ describe('eval graph setting (board menu)', () => {
     mount(host, noBoard);
     expect(graphItem()).toBeNull();
   });
+});
+
+it('draws @6 replay percentages on the CC0 curve and preserves @5 chart geometry', () => {
+  const start = createInitialXiangqiState('cc0-chart');
+  const y = (version: number) => {
+    const chart = createReplayAdvantageChart(
+      computeGameAnalysis({
+        engineId: `pikafish-xiangqi-analysis@${version}`,
+        depth: 12,
+        plies: [
+          { ply: 0, cp: 0, mate: null, best: null },
+          { ply: 1, cp: 200, mate: null, best: null },
+        ],
+      }),
+      {
+        states: [start, start],
+        moveLabel: () => null,
+        onJump: () => {},
+        ariaLabel: 'x',
+        phaseLabels: { opening: 'Opening', middlegame: 'Middlegame', endgame: 'Endgame' },
+      },
+    );
+    return Number(
+      chart.el
+        .querySelector('.advantage-chart__line')!
+        .getAttribute('points')!
+        .split(' ')[1]!
+        .split(',')[1],
+    );
+  };
+  expect(y(6)).toBeLessThan(y(5));
+  // 100-unit plot, 4-unit vertical padding: y = 4 + (1 - win/100) * 92.
+  expect(y(6)).toBeCloseTo(4 + 92 / (1 + Math.exp(0.00465696 * 200)), 1);
+  expect(y(5)).toBeCloseTo(4 + 92 / (1 + Math.exp(0.00368208 * 200)), 1);
 });

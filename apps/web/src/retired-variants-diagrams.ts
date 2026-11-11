@@ -32,11 +32,9 @@ import {
 import {
   XQ_BOARD_H,
   XQ_BOARD_W,
+  xqBlastMarks,
   xqBoardSvg,
-  xqCoord,
   xqHalfBoardThumbnailSvg,
-  xqPieceSize,
-  xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
@@ -70,21 +68,6 @@ function emptiedBy(before: XiangqiBoard, after: XiangqiBoard, move: XiangqiMove)
   return (Object.keys(before) as XiangqiSquare[]).filter(
     (square) => square !== move.from && after[square] === undefined,
   );
-}
-
-// xqBoardSvg draws its board at y + 28, under the label.
-const BOARD_Y_OFFSET = 28;
-
-/** Amber rings on cleared points, the mark the Atomic Xiangqi pages use. */
-function blastRings(squares: readonly XiangqiSquare[], x0: number, y0: number): string {
-  const size = xqPieceSize();
-  return squares
-    .map((square) => {
-      const { file, rank } = xqCoord(square);
-      const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
-      return `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.28)" stroke="#d99a1e" stroke-width="3" stroke-opacity="0.55"/>`;
-    })
-    .join('');
 }
 
 // ── Atomic: the shuffle the first rules could not escape ─────────────────────
@@ -248,7 +231,7 @@ export const RETIRED_VARIANTS_THUMBNAIL = () =>
     half: 'bottom',
     perspective: 'red',
     arrows: [SHOT],
-    overlay: blastRings(SHOT_GONE, 0, 0),
+    ...xqBlastMarks(SHOT_GONE, 0, 0),
     ariaLabel: 'Atomic Xiangqi: a cannon threatening to fire over the chariot onto d1',
   });
 

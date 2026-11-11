@@ -22,6 +22,13 @@ function articleSvgSamples(article: Article): SvgSample[] {
   for (const [index, block] of articleBlocks(article).entries()) {
     if (block.kind === 'raw-svg') {
       samples.push({ label: `${article.slug}:raw-svg:${index}`, svg: renderSvg(block.svg) });
+    } else if (block.kind === 'animated-svg') {
+      for (const [frame, svg] of [block.svg, block.reducedSvg].entries()) {
+        samples.push({
+          label: `${article.slug}:animated-svg:${index}:${frame}`,
+          svg: renderSvg(svg),
+        });
+      }
     } else if (block.kind === 'svg-row') {
       for (const [item, entry] of block.items.entries()) {
         samples.push({
@@ -82,9 +89,9 @@ describe('board outer-outline policy', () => {
     // The jieqi and banqi rules pages no longer carry replay blocks (their
     // sample games are study embeds), so the Reveal replay is exercised on the
     // Vietnamese rules article's block and the Banqi replay on the one the
-    // MistyBanqi post holds.
+    // skill-vs-luck post holds (the MistyBanqi post's games are study embeds now).
     const reveal = findArticle('luat-co-up');
-    const flip = findArticle('mistybanqi');
+    const flip = findArticle('skill-vs-luck');
     const revealBlock =
       reveal && articleBlocks(reveal).find((block) => block.kind === 'jieqi-replay');
     const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');

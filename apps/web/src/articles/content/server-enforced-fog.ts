@@ -17,6 +17,7 @@ export const serverEnforcedFogArticle: Article = {
     slug: 'server-enforced-fog',
     kind: 'article',
     publisher: 'mistboard',
+    topic: 'engineering',
     title: 'Programming Fog Chess with Server-Side Truth',
     cardTitle: 'Server-Side Fog Chess',
     summary:

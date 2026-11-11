@@ -1,9 +1,13 @@
 import { JIEQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   abJchessAvailable,
   isJieqiEngineClientId,
   JIEQI_ABJCHESS_ENGINE_ID,
   JIEQI_DEFAULT_ENGINE_ID,
+  JIEQI_JQE_ENGINE_ID,
+  jqeAvailable,
+  jqeEnabled,
 } from './../jieqi-engine.js';
 import {
   createTenantRoomsRoute,
@@ -14,7 +18,7 @@ import {
 // tenant's room factory in (jieqi-registration.ts).
 export type JieqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJieqiRoom(
     timeControl?: RoomTimeControl,
@@ -42,10 +46,14 @@ const jieqiRoute = createTenantRoomsRoute<
     kind: 'seated',
     defaultEngineId: JIEQI_DEFAULT_ENGINE_ID,
     // The AB-JChess slot needs its binary and net (a dev box usually has neither);
-    // refusing here beats a room that aborts at its first engine move.
+    // refusing here beats a room that aborts at its first engine move. jqe also needs
+    // MISTBOARD_JQE_ENABLED, held off until its author's OK.
     isEngineClientId: (engineId) =>
       isJieqiEngineClientId(engineId) &&
-      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()),
+      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()) &&
+      (engineId !== JIEQI_JQE_ENGINE_ID || jqeAvailable()),
+    heldEngineError: (engineId) =>
+      engineId === JIEQI_JQE_ENGINE_ID && !jqeEnabled() ? 'jqe_disabled' : undefined,
     seats: JIEQI_SEATS,
   },
   // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):

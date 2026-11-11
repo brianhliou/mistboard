@@ -7,9 +7,14 @@ import {
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  type GameSpecId,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
@@ -17,9 +22,11 @@ import {
   JUNGLE_SPEC_ID,
   MAHJONG_SPEC_ID,
   RATED_TIME_CONTROLS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -30,14 +37,15 @@ import {
 } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
-import { correspondenceRatedAvailable } from './correspondence-model.js';
+import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
-  LANDING_BOT_GAME_SPEC_IDS,
+  LANDING_HERO_BOT_GAME_SPEC_IDS,
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
@@ -47,21 +55,24 @@ import {
 } from './landing-bot-policy.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
-import { rememberedPveEngine } from './pve-memory.js';
+import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
-import { postThroughRestart } from './room-create-retry.js';
+import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
-import { isLikelySignedIn } from './signed-in-state.js';
+import { isLikelySignedIn, isLikelyStatsExcluded } from './signed-in-state.js';
+import { navPhoneMediaQuery } from './site-shell.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantSupportsPve } from './variant-public-surfaces.js';
 import {
   defaultTimePresetForSpec,
+  webVariantOfferedInMenu,
   webVariantTenantForSpecId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 export type PlayableEngine = {
   id: string;
@@ -77,6 +88,8 @@ type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch
 
 export type LandingPlayChoice = {
   engineId?: string;
+  /** An explicit article/tutorial pick, ahead of the remembered bot for this opening. */
+  initialEngineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
   locale?: Locale;
@@ -109,6 +122,7 @@ export type LandingPlayChoice = {
 };
 export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 export type LandingGameSpecId =
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -120,7 +134,10 @@ export type LandingGameSpecId =
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
-  | typeof MAHJONG_SPEC_ID;
+  | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof FFQ_BANQI_SPEC_ID
+  | typeof THREE_KINGDOMS_BANQI_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
   id: LandingTimePresetId;
@@ -249,7 +266,7 @@ export function allowedTimePresetIds(
 // Dark chess is always offered. Integrated tenant variants join the normal play
 // entry points through their registry landing config.
 export function enabledLandingVariantGameSpecs(
-  _mode: LandingPlayMode,
+  mode: LandingPlayMode,
   locale: Locale,
 ): { gameSpecId: LandingGameSpecId; label: string }[] {
   const specs: { gameSpecId: LandingGameSpecId; label: string }[] = [
@@ -259,6 +276,7 @@ export function enabledLandingVariantGameSpecs(
   // entry points (Dark Xiangqi never does: it has no live room/lobby runtime).
   for (const tenant of webVariantTenants()) {
     if (!tenant.landing?.offerInMenu()) continue;
+    if (!landingModeAllowed(tenant.gameSpecId, mode)) continue;
     specs.push({
       gameSpecId: tenant.gameSpecId as LandingGameSpecId,
       label: variantLabelForGameSpec(tenant.gameSpecId as LandingGameSpecId, locale),
@@ -306,12 +324,17 @@ export function landingPlayDeepLinkAccepts(variant: string): boolean {
 
 function deepLinkInitialVariant(
   variant: string | null,
-  _mode: LandingPlayMode,
+  mode: LandingPlayMode,
 ): LandingGameSpecId | undefined {
   if (variant === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
   const tenant = variant ? webVariantTenantForSpecId(variant) : null;
-  if (tenant?.landing?.acceptsDeepLink()) return tenant.gameSpecId as LandingGameSpecId;
+  if (tenant?.landing?.acceptsDeepLink() && landingModeAllowed(tenant.gameSpecId, mode))
+    return tenant.gameSpecId as LandingGameSpecId;
   return undefined;
+}
+
+function landingModeAllowed(gameSpecId: GameSpecId, mode: LandingPlayMode): boolean {
+  return webVariantTenantForSpecId(gameSpecId)?.landing?.modes?.includes(mode) ?? true;
 }
 const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   firstColor: 'white',
@@ -323,7 +346,6 @@ const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   supportsRated: true,
   supportsTimeControl: true,
 };
-
 // UI-only placeholder shown in the engine picker before /api/engines/playable
 // resolves (or if every retry fails). It is NOT a real, submittable engine: the
 // id is a sentinel the server rejects with 400 invalid_engine, so it can never
@@ -358,6 +380,24 @@ export function closeActiveLandingDialog(): void {
   activeDialogClose?.();
 }
 
+// What had focus when the setup dialog first opened, so closing it hands focus
+// back. A mode switch closes and reopens the dialog; that swap keeps the
+// original opener and the page's scroll lock instead of bouncing either.
+let setupDialogOpener: HTMLElement | null = null;
+let setupDialogReopening = false;
+const SETUP_SCROLL_LOCK_CLASS = 'landing-setup-open';
+
+/** At phone width (the site header's own breakpoint) the setup dialog is a
+ *  bottom sheet: one variant row that opens a list, every choice expanded as a
+ *  compact row, Start pinned in a footer. Tablet and desktop keep the centred
+ *  dialog with the variant grid. */
+function isPhoneSetupViewport(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(navPhoneMediaQuery).matches;
+}
+
+const SETUP_FOCUSABLE_SELECTOR =
+  'button:not([disabled]), select:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
 export function buildLandingPlayPanel(
   engines: PlayableEngine[],
   options: { locale?: Locale; showLobbyRequests?: boolean } = {},
@@ -388,12 +428,54 @@ export function buildLandingPlayPanel(
       source: 'hero',
     });
   });
-  panel.append(playButton);
+  panel.append(playButton, buildLandingPlayQuickRow(availableEngines, defaultEngineId, locale));
 
   if (options.showLobbyRequests) {
     panel.append(buildLobbyRequestsWindow(locale));
   }
   return panel;
+}
+
+// Phone only (landing.css shows it under 600px): the two opponent choices as
+// their own buttons under Play, since the phone home drops the variant rows that
+// carry them on desktop. Each opens the same setup dialog on its mode, with the
+// switcher still there to change mind.
+function buildLandingPlayQuickRow(
+  engines: PlayableEngine[],
+  engineId: string | undefined,
+  locale: Locale,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'landing-play-quick';
+  const quick = (label: string, mode: 'pve' | 'pvp'): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'landing-play-quick-action';
+    button.dataset.playMode = mode;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      openLandingSetupDialog({
+        engineId,
+        engines,
+        locale,
+        mode,
+        modeSwitcher: true,
+        source: 'hero',
+        ...(mode === 'pvp'
+          ? {
+              ratedDisabled:
+                !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
+            }
+          : {}),
+      });
+    });
+    return button;
+  };
+  row.append(
+    quick(t('lobby.panelTabComputer', {}, locale), 'pve'),
+    quick(t('articles.playAFriend', {}, locale), 'pvp'),
+  );
+  return row;
 }
 
 type LandingPlayIcon = 'computer' | 'friend' | 'lobby' | 'play';
@@ -533,7 +615,7 @@ function landingEngineSeeds(locale: Locale, rotationBucket: number): LandingEngi
   const picked = desired.filter(landingSeedVariantOffered);
   // Kill-switched variants drop out without shrinking the table when another
   // supported live variant can backfill the slot.
-  for (const gameSpecId of LANDING_BOT_GAME_SPEC_IDS) {
+  for (const gameSpecId of LANDING_HERO_BOT_GAME_SPEC_IDS) {
     if (picked.length >= LANDING_ENGINE_SEED_VARIANT_COUNT) break;
     if (!picked.includes(gameSpecId) && landingSeedVariantOffered(gameSpecId)) {
       picked.push(gameSpecId);
@@ -1574,7 +1656,10 @@ function formatWaitAge(waitingMs: number): string {
 export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   const locale = currentLocale();
   const params = new URLSearchParams(window.location.search);
-  const play = params.get('play');
+  // A variant-only link opens friend setup on the named game as well.
+  const play =
+    params.get('play') ??
+    (landingPlayDeepLinkAccepts(params.get('variant') ?? '') ? 'friend' : null);
   if (!play) return;
 
   const availableEngines = engines.length > 0 ? engines : fallbackPlayableEngines();
@@ -1593,7 +1678,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         source: 'deep-link',
         mode: 'lobby',
         modeSwitcher: true,
-        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
+        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
       });
       break;
     case 'friend': {
@@ -1610,26 +1695,36 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'pvp',
         modeSwitcher: true,
         // Friend games rate like Find opponent (lichess-style challenges).
-        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
+        ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
         ...(side ? { initialColor: side } : {}),
       });
       break;
     }
     case 'engine':
-    case 'computer':
+    case 'computer': {
+      const initialGameSpecId = deepLinkInitialVariant(
+        params.get('gameSpecId') ?? params.get('variant'),
+        'pve',
+      );
+      const requestedEngine = params.get('engineId');
+      const offeredEngines = initialGameSpecId
+        ? webVariantTenantForSpecId(initialGameSpecId)?.landing?.engineOptions
+        : undefined;
+      // Only a bot offered by the explicitly linked variant can override a
+      // remembered choice. Stale and cross-variant ids leave that choice alone.
+      const initialEngineId = offeredEngines?.find((engine) => engine.id === requestedEngine)?.id;
       openLandingSetupDialog({
         engineId: defaultEngineId,
+        initialEngineId,
         engines: availableEngines,
-        initialGameSpecId: deepLinkInitialVariant(
-          params.get('gameSpecId') ?? params.get('variant'),
-          'pve',
-        ),
+        initialGameSpecId,
         locale,
         source: 'deep-link',
         mode: 'pve',
         modeSwitcher: true,
       });
       break;
+    }
     default:
       return;
   }
@@ -1638,6 +1733,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('gameSpecId');
   params.delete('variant');
   params.delete('side');
+  params.delete('engineId');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1675,8 +1771,26 @@ function defaultLandingGameSpecId(
 
 export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const locale = choice.locale ?? currentLocale();
+  if (!setupDialogReopening) {
+    const active = document.activeElement;
+    setupDialogOpener =
+      active instanceof HTMLElement &&
+      active !== document.body &&
+      !active.closest('.landing-setup-overlay')
+        ? active
+        : null;
+  }
   const existing = document.querySelector('.landing-setup-overlay');
   existing?.remove();
+  const phone = isPhoneSetupViewport();
+  // Tablet and desktop get the phone's every-choice-open rows with a compact
+  // variant grid (default from 2026-11-07); ?setup=accordion keeps the old
+  // one-open accordion reachable for comparison.
+  const openLayout =
+    !phone && new URLSearchParams(window.location.search).get('setup') !== 'accordion';
+  // The sheet covers most of a phone screen; the page behind it must not move
+  // under a swipe (iOS scrolls the document when an inner scroller hits its end).
+  document.documentElement.classList.toggle(SETUP_SCROLL_LOCK_CLASS, phone);
 
   const storedPreference = loadSetupPreference(choice.mode);
   const wantsCorrespondence = choice.initialTimeMode === 'correspondence';
@@ -1689,10 +1803,14 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? choice.initialRated === true
         : (choice.initialRated ?? storedPreference.rated ?? true);
   const publicVariantOptions = enabledLandingVariantGameSpecs(choice.mode, locale);
-  const softLinkedHiddenVariant =
-    choice.initialGameSpecId &&
-    !publicVariantOptions.some((option) => option.gameSpecId === choice.initialGameSpecId)
+  const initialGameSpecId =
+    choice.initialGameSpecId && landingModeAllowed(choice.initialGameSpecId, choice.mode)
       ? choice.initialGameSpecId
+      : undefined;
+  const softLinkedHiddenVariant =
+    initialGameSpecId &&
+    !publicVariantOptions.some((option) => option.gameSpecId === initialGameSpecId)
+      ? initialGameSpecId
       : undefined;
   const variantOptions = softLinkedHiddenVariant
     ? [
@@ -1704,7 +1822,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     : publicVariantOptions;
   const fallbackGameSpecId = defaultLandingGameSpecId(variantOptions, choice.mode);
   let selectedGameSpecId: LandingGameSpecId =
-    choice.initialGameSpecId ?? storedPreference.gameSpecId ?? fallbackGameSpecId;
+    initialGameSpecId ?? storedPreference.gameSpecId ?? fallbackGameSpecId;
   if (!variantOptions.some((option) => option.gameSpecId === selectedGameSpecId)) {
     selectedGameSpecId = fallbackGameSpecId;
   }
@@ -1757,6 +1875,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   if (storedPreference.engineId && !engineByGameSpec.has(selectedGameSpecId)) {
     engineByGameSpec.set(selectedGameSpecId, storedPreference.engineId);
   }
+  if (choice.initialEngineId) {
+    engineByGameSpec.set(selectedGameSpecId, choice.initialEngineId);
+  }
   let selectedEngineId =
     engineByGameSpec.get(selectedGameSpecId) ?? storedPreference.engineId ?? choice.engineId;
   // Same shape as presetIsExplicit above, for the same reason. An untouched side
@@ -1782,7 +1903,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   overlay.setAttribute('role', 'presentation');
 
   const dialog = document.createElement('section');
-  dialog.className = 'landing-setup-dialog';
+  dialog.className = openLayout
+    ? 'landing-setup-dialog landing-setup-dialog--open'
+    : 'landing-setup-dialog';
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-labelledby', 'landing-setup-title');
@@ -1800,7 +1923,21 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   const header = document.createElement('div');
   header.className = 'landing-setup-header';
+  // The sheet's variant list replaces the setup rows in place; its back control
+  // sits where a phone puts one, at the header's leading edge.
+  const sheetBackButton = phone ? document.createElement('button') : null;
+  if (sheetBackButton) {
+    sheetBackButton.type = 'button';
+    sheetBackButton.className = 'landing-setup-sheet-back';
+    sheetBackButton.setAttribute('aria-label', t('setup.back', {}, locale));
+    sheetBackButton.textContent = '‹';
+    sheetBackButton.hidden = true;
+    header.append(sheetBackButton);
+  }
   header.append(heading, closeButton);
+  let variantPicker: HTMLElement | null = null;
+  let setVariantPickerOpen = (_open: boolean) => {};
+  let variantPickerOpen = false;
 
   // Unified-entry opponent picker (Bot / A friend / Lobby). It lives in
   // the setup row sequence near the end, after game type. Each mode renders a
@@ -1837,7 +1974,94 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // option set is mode-aware because PvE can show non-engine variants as
   // disabled cards instead of hiding them entirely.
   const variantSelectable = variantOptions.length > 1;
-  if (variantSelectable) {
+  if (variantSelectable && phone) {
+    // Phone: one row naming the current variant. Tapping it swaps the sheet's
+    // rows for the full list (same order, same Soon rule as the grid), so the
+    // nine-tile grid no longer pushes every other choice below the fold.
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'landing-variant-row';
+    row.setAttribute('aria-haspopup', 'true');
+    row.setAttribute('aria-expanded', 'false');
+    row.setAttribute('aria-controls', 'landing-variant-picker');
+    const rowThumb = document.createElement('span');
+    rowThumb.className = 'landing-variant-row-thumb';
+    rowThumb.setAttribute('aria-hidden', 'true');
+    const rowName = document.createElement('span');
+    rowName.className = 'landing-variant-row-name';
+    const rowChevron = document.createElement('span');
+    rowChevron.className = 'landing-variant-row-chevron';
+    rowChevron.setAttribute('aria-hidden', 'true');
+    rowChevron.textContent = '›';
+    row.append(rowThumb, rowName, rowChevron);
+
+    const picker = document.createElement('div');
+    picker.className = 'landing-variant-picker';
+    picker.id = 'landing-variant-picker';
+    picker.hidden = true;
+    const list = document.createElement('div');
+    list.className = 'landing-variant-options';
+    list.setAttribute('role', 'radiogroup');
+    list.setAttribute('aria-label', t('setup.variant', {}, locale));
+    const options = new Map<LandingGameSpecId, HTMLButtonElement>();
+    for (const { gameSpecId, label } of variantOptions) {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'landing-variant-option';
+      option.setAttribute('role', 'radio');
+      option.dataset.gameSpec = gameSpecId;
+      const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
+      if (pveDisabled) {
+        option.disabled = true;
+        option.classList.add('landing-variant-option-disabled');
+        option.setAttribute('aria-disabled', 'true');
+        option.title = t('setup.noComputerOpponentYet', { variant: label }, locale);
+      }
+      const miniId = variantMiniIdForGameSpec(gameSpecId);
+      const thumb = document.createElement('span');
+      thumb.className = 'landing-variant-option-thumb';
+      if (miniId) {
+        thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+      }
+      const name = document.createElement('span');
+      name.className = 'landing-variant-option-name';
+      name.textContent = label;
+      option.append(thumb, name);
+      if (pveDisabled) {
+        const badge = document.createElement('span');
+        badge.className = 'landing-variant-card-badge';
+        badge.textContent = t('setup.soon', {}, locale);
+        option.append(badge);
+      } else {
+        option.addEventListener('click', () => {
+          selectedGameSpecId = gameSpecId;
+          syncVariantControls();
+          syncGameSpecificSections();
+          setVariantPickerOpen(false);
+        });
+      }
+      options.set(gameSpecId, option);
+      list.append(option);
+    }
+    picker.append(list);
+    variantPicker = picker;
+    row.addEventListener('click', () => setVariantPickerOpen(true));
+    syncVariantControls = () => {
+      for (const [specId, option] of options) {
+        const on = specId === selectedGameSpecId;
+        option.classList.toggle('selected', on);
+        option.setAttribute('aria-checked', on ? 'true' : 'false');
+      }
+      const label = variantLabelForGameSpec(selectedGameSpecId, locale);
+      const miniId = variantMiniIdForGameSpec(selectedGameSpecId);
+      rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 100, label: '' }) : '';
+      rowName.textContent = label;
+      row.setAttribute('aria-label', `${t('setup.variant', {}, locale)}: ${label}`);
+      row.setAttribute('aria-expanded', variantPickerOpen ? 'true' : 'false');
+    };
+    syncVariantControls();
+    variantSection.append(row);
+  } else if (variantSelectable) {
     // A visual radiogroup of variant cards (marker + name) replaces the old
     // native <select>, so the picker doubles as a showcase of what's playable.
     const grid = document.createElement('div');
@@ -1870,7 +2094,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       }
       const name = document.createElement('span');
       name.className = 'landing-variant-card-name';
-      name.textContent = label;
+      // A tile has room for one short line; Three Kingdoms writes its number.
+      name.textContent =
+        gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+          ? t('variant.threeKingdomsBanqi.cardName', {}, locale)
+          : label;
       card.append(name);
       if (pveDisabled) {
         const badge = document.createElement('span');
@@ -1927,6 +2155,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
             openNextSetupSection('engine');
           },
           locale,
+          openLayout,
         )
       : null;
 
@@ -1985,7 +2214,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   correspondenceGroup.setAttribute('role', 'radiogroup');
   correspondenceGroup.setAttribute('aria-label', t('setup.daysPerMove', {}, locale));
   const correspondenceButtons = CORRESPONDENCE_DAY_OPTIONS.map((option) => {
-    const button = startOptionButton(dayOptionLabel(option.days, locale), false);
+    // The open layout names the unit once, under the row label ("days per
+    // move"), the way real time does, so each pill is just the number.
+    const button = startOptionButton(
+      openLayout ? String(option.days) : dayOptionLabel(option.days, locale),
+      false,
+    );
     button.addEventListener('click', () => {
       if (button.hidden) return;
       selectedTimeMode = 'correspondence';
@@ -2010,7 +2244,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
-    (CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).includes(selectedGameSpecId) &&
+    isCorrespondenceSpecFor(selectedGameSpecId, webVariantOfferedInMenu) &&
     (!rated || correspondenceRatedOffered()) &&
     correspondenceEnabled();
   // Assigned once the rated toggle exists (it is built after the time section), so a
@@ -2037,6 +2271,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
     presetGroup.hidden = corrActive;
     correspondenceGroup.hidden = !corrActive;
+    const timeHint = timeSection
+      .closest('.landing-setup-row')
+      ?.querySelector<HTMLSpanElement>('.landing-setup-row-hint');
+    if (timeHint) {
+      timeHint.textContent = t(corrActive ? 'setup.dayUnits' : 'setup.timeUnits', {}, locale);
+    }
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
     // An untouched preset follows the selected variant; a chosen one sticks.
@@ -2130,11 +2370,38 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
     if (activeDialogClose === close) activeDialogClose = null;
+    if (setupDialogReopening) return;
+    document.documentElement.classList.remove(SETUP_SCROLL_LOCK_CLASS);
+    const opener = setupDialogOpener;
+    setupDialogOpener = null;
+    if (opener?.isConnected) opener.focus({ preventScroll: true });
   };
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') {
+      if (variantPickerOpen) setVariantPickerOpen(false);
+      else close();
+      return;
+    }
+    // The sheet is modal on a phone: Tab cycles inside it rather than walking
+    // into the page it covers.
+    if (event.key === 'Tab' && phone) {
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(SETUP_FOCUSABLE_SELECTOR)].filter(
+        (el) => !el.closest('[hidden]'),
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   };
-  closeButton.addEventListener('click', close);
+  closeButton.addEventListener('click', () => close());
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) close();
   });
@@ -2157,6 +2424,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           ? null
           : t('setup.ratedUnavailable', {}, locale);
       }
+      // An account excluded from stats never rates (the server refuses it).
+      if (isRatedModeEnabled() && isLikelySignedIn() && isLikelyStatsExcluded())
+        return t('setup.ratedNotCounted', {}, locale);
       if (choice.ratedDisabled) {
         return isRatedModeEnabled()
           ? t('setup.ratedSignIn', {}, locale)
@@ -2240,12 +2510,14 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       colorSection.style.display = hideColorPicker ? 'none' : '';
     }
     ratingSection.sync();
+    // Bot games never rate, so the open layout drops the Rating row for them.
+    if (openLayout && choice.mode === 'pve') ratingSection.section.hidden = true;
     if (engineSection) {
       engineSection.sync(
         selectedGameSpecId,
         engineByGameSpec.get(selectedGameSpecId) ?? selectedEngineId,
       );
-      engineSection.section.hidden = !engineSection.hasMultipleChoices();
+      engineSection.section.hidden = !openLayout && !engineSection.hasMultipleChoices();
     }
     timeSection.hidden = !capabilities.supportsTimeControl;
     syncTimeControls(); // re-scope the preset picker to the selected variant
@@ -2292,30 +2564,31 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       return localizeSetupLabel(capabilities.secondLabel, locale);
     return t('setup.random', {}, locale);
   };
+  // A phone gets every choice as an open, compact row (there is room once the
+  // variant grid is a single row); larger screens keep the accordion.
+  const buildSetupSection = phone || openLayout ? buildSetupRowSection : buildSetupAccordionPanel;
   const setupSections = [
-    buildSetupAccordionSection(
-      'variant',
-      t('setup.variant', {}, locale),
-      variantSection,
-      variantSummary,
-    ),
-    buildSetupAccordionSection(
-      'time',
-      t('setup.timeControl', {}, locale),
-      timeSection,
-      timeSummary,
-    ),
+    buildSetupSection('variant', t('setup.variant', {}, locale), variantSection, variantSummary),
+    buildSetupSection('time', t('setup.timeControl', {}, locale), timeSection, timeSummary, {
+      hint: openLayout
+        ? t(
+            selectedTimeMode === 'correspondence' ? 'setup.dayUnits' : 'setup.timeUnits',
+            {},
+            locale,
+          )
+        : undefined,
+    }),
     ...(colorSection
       ? [
-          buildSetupAccordionSection(
+          buildSetupSection(
             'side',
-            t('setup.side', {}, locale),
+            t(openLayout ? 'setup.youPlay' : 'setup.side', {}, locale),
             colorSection,
             colorSummary,
           ),
         ]
       : []),
-    buildSetupAccordionSection(
+    buildSetupSection(
       'gameType',
       t('setup.gameType', {}, locale),
       ratingSection.section,
@@ -2323,7 +2596,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ),
     ...(modeSwitcher
       ? [
-          buildSetupAccordionSection(
+          buildSetupSection(
             'opponent',
             t('play.opponentLabel', {}, locale),
             modeSwitcher,
@@ -2333,7 +2606,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       : []),
     ...(engineSection
       ? [
-          buildSetupAccordionSection(
+          buildSetupSection(
             'engine',
             t('setup.engine', {}, locale),
             engineSection.section,
@@ -2342,6 +2615,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ]
       : []),
   ];
+  if (openLayout) {
+    // Decision order: what to play, against whom, then the terms.
+    const order = ['variant', 'opponent', 'engine', 'time', 'side', 'gameType'];
+    setupSections.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  }
   let openSetupSectionId = variantSelectable ? 'variant' : 'time';
   syncSetupAccordion = () => {
     const isSectionHidden = (content: HTMLElement) =>
@@ -2359,6 +2637,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       const hidden = isSectionHidden(section.content);
       const active = section.id === openSetupSectionId && !hidden;
       section.wrapper.hidden = hidden;
+      if (!section.button || !section.panel || !section.value) continue;
       section.wrapper.classList.toggle('active', active);
       section.button.setAttribute('aria-expanded', active ? 'true' : 'false');
       section.panel.hidden = !active;
@@ -2383,7 +2662,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     }
   };
   for (const section of setupSections) {
-    section.button.addEventListener('click', () => openSetupSection(section.id));
+    section.button?.addEventListener('click', () => openSetupSection(section.id));
   }
   syncSetupAccordion();
 
@@ -2393,20 +2672,119 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
   actions.append(startButton);
-  dialog.append(header);
-  if (choice.notice) {
-    const notice = document.createElement('p');
+  const notice = choice.notice ? document.createElement('p') : null;
+  if (notice) {
     notice.className = 'landing-setup-notice';
     notice.setAttribute('role', 'status');
-    notice.textContent = choice.notice;
-    dialog.append(notice);
+    notice.textContent = choice.notice ?? '';
   }
-  dialog.append(accordion);
-  dialog.append(status, actions);
+  if (phone) {
+    assembleSetupSheet({
+      overlay,
+      dialog,
+      header,
+      heading,
+      backButton: sheetBackButton,
+      body: [...(notice ? [notice] : []), accordion],
+      picker: variantPicker,
+      footer: [status, actions],
+      locale,
+      onPickerToggle: (open, setOpen) => {
+        variantPickerOpen = open;
+        setVariantPickerOpen = setOpen;
+        syncVariantControls();
+      },
+    });
+  } else {
+    dialog.append(header);
+    if (notice) dialog.append(notice);
+    dialog.append(accordion);
+    dialog.append(status, actions);
+  }
   overlay.append(dialog);
   document.body.append(overlay);
   activeDialogClose = close;
-  startButton.focus();
+  if (openLayout) {
+    // Focus the panel itself: focusing Start drew a focus ring around it the
+    // moment the panel opened, which read as a stray border.
+    dialog.tabIndex = -1;
+    dialog.focus({ preventScroll: true });
+  } else {
+    startButton.focus();
+  }
+}
+
+/** Lays the setup dialog out as a phone bottom sheet: grabber, header, a
+ *  scroller holding the setup rows, the variant list (hidden until the variant
+ *  row opens it), and a footer with Start that never scrolls away. */
+function assembleSetupSheet(parts: {
+  overlay: HTMLElement;
+  dialog: HTMLElement;
+  header: HTMLElement;
+  heading: HTMLElement;
+  backButton: HTMLButtonElement | null;
+  body: HTMLElement[];
+  picker: HTMLElement | null;
+  footer: HTMLElement[];
+  locale: Locale;
+  onPickerToggle: (open: boolean, setOpen: (open: boolean) => void) => void;
+}): void {
+  const { overlay, dialog, header, heading, backButton, picker, locale } = parts;
+  overlay.classList.add('landing-setup-overlay--sheet');
+  dialog.classList.add('landing-setup-sheet');
+
+  const grabber = document.createElement('div');
+  grabber.className = 'landing-setup-grabber';
+  grabber.setAttribute('aria-hidden', 'true');
+
+  const scroll = document.createElement('div');
+  scroll.className = 'landing-setup-scroll';
+  scroll.append(...parts.body);
+
+  const footer = document.createElement('div');
+  footer.className = 'landing-setup-footer';
+  footer.append(...parts.footer);
+
+  const title = heading.textContent ?? '';
+  const setOpen = (open: boolean) => {
+    if (!picker) return;
+    picker.hidden = !open;
+    scroll.hidden = open;
+    footer.hidden = open;
+    if (backButton) backButton.hidden = !open;
+    heading.textContent = open ? t('setup.variant', {}, locale) : title;
+    parts.onPickerToggle(open, setOpen);
+    if (open) {
+      picker.scrollTop = 0;
+      const selected = picker.querySelector<HTMLElement>('.landing-variant-option.selected');
+      selected?.scrollIntoView?.({ block: 'nearest' });
+      selected?.focus({ preventScroll: true });
+    } else {
+      dialog.querySelector<HTMLElement>('.landing-variant-row')?.focus({ preventScroll: true });
+    }
+  };
+  parts.onPickerToggle(false, setOpen);
+  backButton?.addEventListener('click', () => setOpen(false));
+
+  dialog.append(grabber, header, scroll);
+  if (picker) dialog.append(picker);
+  dialog.append(footer);
+
+  // iOS Safari ignores overflow:hidden on the page for touch scrolling, so a
+  // swipe that starts outside a scroller, or on one with nothing left to
+  // scroll, would drag the page behind the sheet. Cancel those moves; a
+  // scroller with room keeps its native momentum scroll.
+  overlay.addEventListener(
+    'touchmove',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const scroller = target?.closest<HTMLElement>(
+        '.landing-setup-scroll, .landing-variant-picker',
+      );
+      if (!scroller || scroller.scrollHeight <= scroller.clientHeight) event.preventDefault();
+    },
+    { passive: false },
+  );
 }
 
 // Close the open setup dialog and reopen it in another mode, keeping the
@@ -2419,29 +2797,39 @@ function reopenSetupDialogInMode(
   extra: Pick<LandingPlayChoice, 'initialRated' | 'notice'> = {},
 ): void {
   const locale = choice.locale ?? currentLocale();
-  closeActiveLandingDialog();
-  openLandingSetupDialog({
-    engineId: choice.engineId,
-    engines: choice.engines,
-    initialGameSpecId: gameSpecId,
-    locale,
-    mode,
-    modeSwitcher: true,
-    source: 'mode-switch',
-    // Friend and Find opponent rate alike; bot games never do.
-    ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || !isLikelySignedIn(),
-    ...extra,
-  });
+  setupDialogReopening = true;
+  try {
+    closeActiveLandingDialog();
+    openLandingSetupDialog({
+      engineId: choice.engineId,
+      engines: choice.engines,
+      initialGameSpecId: gameSpecId,
+      locale,
+      mode,
+      modeSwitcher: true,
+      source: 'mode-switch',
+      // Friend and Find opponent rate alike; bot games never do.
+      ratedDisabled:
+        mode === 'pve'
+          ? undefined
+          : !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
+      ...extra,
+    });
+  } finally {
+    setupDialogReopening = false;
+  }
 }
 
 // The days-per-move options offered at the long end of the time-control picker
 // (openLandingSetupDialog). Selecting one routes the submit to the correspondence
 // path — a private room (Challenge a friend) or an open seek (Find opponent) —
 // instead of the real-time create.
-const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = [{ days: 1 }, { days: 3 }, { days: 7 }];
+const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = DAYS_PER_MOVE_OPTIONS.map((days) => ({
+  days,
+}));
 // Pre-selected day-chip when the player first flips to the Correspondence segment,
 // so the Start button is immediately valid (mirrors lichess defaulting its slider).
-const DEFAULT_CORRESPONDENCE_DAYS = 3;
+const DEFAULT_CORRESPONDENCE_DAYS: number = DEFAULT_DAYS_PER_MOVE;
 
 function dayOptionLabel(days: number, locale: Locale): string {
   return days === 1 ? t('setup.oneDay', {}, locale) : t('setup.days', { count: days }, locale);
@@ -2511,7 +2899,11 @@ async function createCorrespondenceFromPlay(
     if (failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'server_draining') {
       status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
@@ -2583,7 +2975,11 @@ async function postCorrespondenceSeekFromPlay(
     if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'seek_limit_reached') {
       status.textContent = 'You already have the most open games allowed. Cancel one first.';
     } else if (failure.error === 'server_draining') {
@@ -2617,6 +3013,7 @@ function buildEngineSetupSection(
   selectedEngineId: string | undefined,
   onSelect: (engineId: string, gameSpecId: LandingGameSpecId) => void,
   locale: Locale,
+  showSingle = false,
 ): {
   hasMultipleChoices(): boolean;
   section: HTMLElement;
@@ -2648,8 +3045,18 @@ function buildEngineSetupSection(
     if (selected) onSelect(selected, gameSpecId);
 
     // A single bot is implicit in the opponent choice, so only variants with a
-    // real bot roster need a dedicated selection row.
+    // real bot roster need a dedicated selection row. The open layout names the
+    // single bot instead, so every bot game shows the same rows.
     if (availableEngines.length <= 1) {
+      const only = availableEngines[0];
+      if (showSingle && only) {
+        const name = document.createElement('span');
+        name.className = 'landing-engine-single';
+        // The family name, as the bot is known ("Misty", not "Misty 1.6");
+        // the version lives on the bot's profile.
+        name.textContent = only.familyName ?? only.name;
+        body.append(name);
+      }
       return;
     }
 
@@ -3008,6 +3415,12 @@ function colorGlyphNodes(
     return chessKingGlyphNodes(value);
   }
   const capabilities = landingGameSpecCapabilities(gameSpecId);
+  if (capabilities.glyphClass === 'xiangqi') {
+    return xiangqiGeneralGlyphNodes(value);
+  }
+  if (capabilities.glyphClass === 'stone') {
+    return gomokuStoneGlyphNodes(value);
+  }
   if (value === 'random') {
     const first = document.createElement('span');
     first.className = capabilities.neutralGlyphColor ? '' : capabilities.firstColor;
@@ -3025,15 +3438,49 @@ function colorGlyphNodes(
 }
 
 function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
+  // The tile is the span; the art is zoomed inside it, because the elephant
+  // fills only the middle of its 512px image.
   const elephant = (color: 'red' | 'black') => {
+    const tile = document.createElement('span');
+    tile.className = `landing-color-piece jungle ${color}`;
     const image = document.createElement('img');
-    image.className = `landing-color-piece jungle ${color}`;
-    image.src = `/piece-sets/jungle/dobutsu/${color}-elephant.png`;
+    image.src = jungleDobutsuPieceHref(color, 'elephant');
     image.alt = '';
-    return image;
+    tile.append(image);
+    return tile;
   };
   if (value === 'random') return [elephant('red'), elephant('black')];
   return [elephant(value === 'black' ? 'black' : 'red')];
+}
+
+// The general in the player's own piece set, so an international-set player
+// picks a side by the piece they will see on the board, not by 帥 and 將.
+function xiangqiGeneralGlyphNodes(value: LandingColorPreference): Node[] {
+  const general = (color: 'red' | 'black') => {
+    const piece = document.createElement('span');
+    piece.className = `landing-color-piece xiangqi ${color}`;
+    piece.innerHTML = renderXiangqiPiece(
+      { color, role: 'general' },
+      { ariaLabel: `${color} general` },
+    );
+    return piece;
+  };
+  if (value === 'random') return [general('red'), general('black')];
+  return [general(value === 'black' ? 'black' : 'red')];
+}
+
+// Gomoku sides are stones drawn like the board's own, never text glyphs: a
+// character glyph turns white on the selected fill, so a picked Black read as
+// a white stone (Brian's phone, 2026-11-05).
+function gomokuStoneGlyphNodes(value: LandingColorPreference): Node[] {
+  const stone = (color: 'black' | 'white') => {
+    const piece = document.createElement('span');
+    piece.className = `landing-color-piece stone ${color}`;
+    piece.setAttribute('aria-hidden', 'true');
+    return piece;
+  };
+  if (value === 'random') return [stone('black'), stone('white')];
+  return [stone(value === 'white' ? 'white' : 'black')];
 }
 
 function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
@@ -3063,20 +3510,56 @@ function setupSectionLabel(text: string): HTMLSpanElement {
   return label;
 }
 
-function buildSetupAccordionSection(
+type SetupSectionOptions = {
+  /** Muted line under the row label (open layout only). */
+  hint?: string;
+};
+
+type SetupSection = {
+  button: HTMLButtonElement | null;
+  content: HTMLElement;
+  id: string;
+  panel: HTMLElement | null;
+  value: HTMLElement | null;
+  valueText: () => string;
+  wrapper: HTMLElement;
+};
+
+/** Phone row: the label above its control, always open. */
+function buildSetupRowSection(
   id: string,
   label: string,
   content: HTMLElement,
   valueText: () => string,
-): {
-  button: HTMLButtonElement;
-  content: HTMLElement;
-  id: string;
-  panel: HTMLElement;
-  value: HTMLElement;
-  valueText: () => string;
-  wrapper: HTMLElement;
-} {
+  options: SetupSectionOptions = {},
+): SetupSection {
+  const leadingLabel = content.firstElementChild;
+  if (leadingLabel?.classList.contains('landing-setup-label')) leadingLabel.remove();
+
+  const wrapper = document.createElement('section');
+  wrapper.className = 'landing-setup-row';
+  wrapper.dataset.setupSection = id;
+  const title = document.createElement('span');
+  title.className = 'landing-setup-row-label';
+  title.textContent = label;
+  if (options.hint) {
+    // A muted second line under the label, e.g. what "3 + 2" counts.
+    const hint = document.createElement('span');
+    hint.className = 'landing-setup-row-hint';
+    hint.textContent = options.hint;
+    title.append(hint);
+  }
+  wrapper.append(title, content);
+  return { button: null, content, id, panel: null, value: null, valueText, wrapper };
+}
+
+function buildSetupAccordionPanel(
+  id: string,
+  label: string,
+  content: HTMLElement,
+  valueText: () => string,
+  _options: SetupSectionOptions = {},
+): SetupSection {
   const leadingLabel = content.firstElementChild;
   if (leadingLabel?.classList.contains('landing-setup-label')) leadingLabel.remove();
 
@@ -3187,13 +3670,14 @@ async function createRoomFromPlay(
     // Any game this page starts ends the seeks it has open (lobby-seek-registry).
     const withdrawing = withdrawLobbySeeks();
     if (withdrawing) await withdrawing;
+    const requestBody = roomCreationRequestBody(mode, setup, engineId);
     while (true) {
       const response = await postThroughRestart(
         '/api/rooms',
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
+          body: JSON.stringify(requestBody),
         },
         {
           onRestarting: () => {
@@ -3207,6 +3691,7 @@ async function createRoomFromPlay(
       if (response.ok) {
         const data = (await response.json()) as { url?: string };
         if (!data.url) throw new Error('room creation did not return a URL');
+        rememberBotRoomRequest(requestBody);
         if (status && !status.isConnected) return;
         roomNavigator(data.url);
         return;
@@ -3263,7 +3748,10 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) {
+  if (
+    setup.gameSpecId === JUNGLE_FLIP_SPEC_ID ||
+    setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+  ) {
     // Flip Jungle is symmetric hidden-identity 4×4 flip animal chess; move-order
     // seats (ink binds on the first flip). PvP + in-process-spawned
     // PvE bot (MistyJungleFlip); PvE sends the picked engine id.
@@ -3383,6 +3871,18 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) {
+    // The seats are east and west and the dialog hides the color picker: a
+    // friend room draws the deal, and the bot table keeps the creator east.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated,
+      preferredColor: mode === 'pvp' ? 'random' : 'east',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {
     return {
       // Xiangqi fog engines are defaulted server-side, so no engine id is sent.
@@ -3411,6 +3911,7 @@ export function roomCreationRequestBody(
 export function roomCreationGameSpecId(
   setup: LandingRoomSetup,
 ):
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -3419,11 +3920,16 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
+  | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof FFQ_BANQI_SPEC_ID
+  | typeof THREE_KINGDOMS_BANQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
+  if (setup.gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_SPEC_ID;
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
+  if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) return XIANGQI_MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
@@ -3431,14 +3937,18 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) return CRAZYHOUSE_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
+  // Admin playtest on prod (#684), everyone in a local flag build (#628).
+  if (setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) return THREE_KINGDOMS_BANQI_SPEC_ID;
+  if (setup.gameSpecId === FFQ_BANQI_SPEC_ID) return FFQ_BANQI_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
-  // NOTE: this fallback is why a variant missing from the ladder above does not
-  // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
-  // it, sent the right clock and the right engine, and asked the server for a
-  // fog chess room. Every variant offered in the play menu needs a line here.
-  return DARK_CHESS_SPEC_ID;
+  if (setup.gameSpecId === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
+  // Fail closed: an unlisted variant used to fall through to dark chess, which
+  // asked the server for a fog chess room with the variant's own bot (Mahjong,
+  // then Xiangqi Mahjong). The never check makes a new union member a type error.
+  const unlisted: never = setup.gameSpecId;
+  throw new Error(`room creation has no game spec mapping for ${String(unlisted)}`);
 }
 
 async function readRoomCreationFailure(response: Response): Promise<RoomCreationFailure> {
@@ -3712,7 +4222,7 @@ export function joinLobbyFromPlay(
     if (!active) return;
     // Not aborted on cancel: the server makes the ticket whether or not this
     // tab reads the answer, so the answer is needed to withdraw it.
-    const response = await fetch('/api/lobby', {
+    const response = await postWithBrowserIdentity('/api/lobby', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

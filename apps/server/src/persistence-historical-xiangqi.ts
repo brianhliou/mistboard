@@ -581,6 +581,45 @@ export async function getHistoricalXiangqiGame(id: string): Promise<HistoricalXi
   return rows[0] ? gameFromRow(rows[0]) : null;
 }
 
+/** One sitemap's public records, paged by id without repeated count queries. */
+export async function listHistoricalSitemapGames(
+  afterId: string,
+  limit = 500,
+): Promise<HistoricalXiangqiGame[]> {
+  const { rows } = await getPool().query<GameRow>(
+    `SELECT * FROM historical_xiangqi_games
+     WHERE visibility = 'public' AND id > $1 ORDER BY id LIMIT $2`,
+    [afterId, Math.max(1, Math.min(limit, 500))],
+  );
+  return rows.map(gameFromRow);
+}
+
+// What a puzzle detail needs from its source game (the setup move #664, the
+// moves before it, the players, whether the game page serves it), without
+// pulling the whole row. Null when the game is not stored.
+export async function getHistoricalXiangqiPuzzleSourceGame(id: string): Promise<{
+  moves: XiangqiMove[];
+  redNameRaw: string | null;
+  blackNameRaw: string | null;
+  visibility: HistoricalXiangqiVisibility;
+} | null> {
+  const { rows } = await getPool().query<
+    Pick<GameRow, 'moves' | 'red_name_raw' | 'black_name_raw' | 'visibility'>
+  >(
+    `SELECT moves, red_name_raw, black_name_raw, visibility
+       FROM historical_xiangqi_games WHERE id = $1 LIMIT 1`,
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    moves: row.moves,
+    redNameRaw: row.red_name_raw,
+    blackNameRaw: row.black_name_raw,
+    visibility: row.visibility,
+  };
+}
+
 export async function getHistoricalXiangqiSource(
   id: string,
 ): Promise<HistoricalXiangqiSource | null> {

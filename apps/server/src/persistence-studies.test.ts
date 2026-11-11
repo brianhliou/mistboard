@@ -14,6 +14,7 @@ import {
   listTopPublicStudies,
   renameChapter,
   reorderStudyChapters,
+  STUDY_PAGE_MAX,
   setChapterGamebook,
   setChapterOrientation,
   setChapterTags,
@@ -211,6 +212,19 @@ definePersistenceTests('studies', () => {
       likeCount: 1,
       likedByViewer: false,
     });
+  });
+
+  test('a paged list returns a full page plus the sentinel row (#450)', async () => {
+    const owner = await makeUser('page-sentinel-owner');
+    for (let i = 0; i <= STUDY_PAGE_MAX; i += 1) {
+      const study = await makeStudy(owner.id, `Sentinel study ${i}`);
+      assert.ok(study);
+      await updateStudyMeta(study.id, owner.id, { visibility: 'public' });
+    }
+    // A route asks for limit + 1 to learn whether another page exists; the
+    // extra row must survive the clamp or hasMore reads false at the max page.
+    assert.equal((await listTopPublicStudies(STUDY_PAGE_MAX + 1)).length, STUDY_PAGE_MAX + 1);
+    assert.equal((await listTopPublicStudies(STUDY_PAGE_MAX + 50)).length, STUDY_PAGE_MAX + 1);
   });
 
   test('does not list or accept likes on non-public studies', async () => {

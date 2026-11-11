@@ -12,8 +12,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
   DAY_MS,
+  type DaysPerMove,
   GAME_SPECS,
 } from '@mistboard/game';
 import {
@@ -38,17 +40,21 @@ import {
   createTenantRuntimeRoomFromEvents,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
-import type {
-  TenantGameStateLike,
-  TenantRoomEvent,
-  TenantRuntimeRoom,
+import {
+  type TenantGameStateLike,
+  type TenantRoomEvent,
+  type TenantRuntimeRoom,
+  tenantTurnOrder,
 } from './variant-tenant/tenant.js';
 
 enableCorrespondenceVariantFlags();
 
 type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 
-const VARIANT_SPEC_IDS = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.filter((id) => id !== 'dark-chess');
+const VARIANT_SPEC_IDS = [
+  ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+].filter((id) => id !== 'dark-chess');
 
 function registrationFor(specId: string): VariantTenantRegistration {
   const registration = correspondenceTenantForSpecId(specId);
@@ -61,7 +67,7 @@ function roomMap(registration: VariantTenantRegistration): Map<string, TenantMan
   return registration.rooms as Map<string, TenantManagedRoom>;
 }
 
-async function acceptSeek(specId: string, daysPerMove: 1 | 3 | 7 = 3) {
+async function acceptSeek(specId: string, daysPerMove: DaysPerMove = 3) {
   const registration = registrationFor(specId);
   const create = registration.createCorrespondenceGameForSeek;
   assert.ok(create);
@@ -91,7 +97,9 @@ function overdueCopy(specId: string, room: AnyRoom, plies: number): AnyRoom {
   const at = 1_000 + events.length * 1_000;
   for (let ply = 0; ply < plies; ply += 1) {
     const state = copy.projection.state as never;
-    const turn = (copy.projection.state as { status: { turn: string } }).status.turn;
+    const turn =
+      tenant.clockOwner?.(state) ??
+      (copy.projection.state as { status: { turn: string } }).status.turn;
     const appended = appendTenantRuntimeEvent(
       tenant,
       copy as never,
@@ -123,9 +131,10 @@ for (const specId of VARIANT_SPEC_IDS) {
       assert.equal(created.room.gameSpecId, specId);
       assert.ok(created.room.id.startsWith(registration.roomIdPrefix));
       // Move order, mapped onto the tenant's own colors.
-      assert.deepEqual(created.seats, { first: tenant.colors[0], second: tenant.colors[1] });
-      assert.equal(room.seatTokens[tenant.colors[0]!]?.userId, `first-${specId}`);
-      assert.equal(room.seatTokens[tenant.colors[1]!]?.userId, `second-${specId}`);
+      const [first, second] = tenantTurnOrder(tenant, room.projection.state);
+      assert.deepEqual(created.seats, { first, second });
+      assert.equal(room.seatTokens[first!]?.userId, `first-${specId}`);
+      assert.equal(room.seatTokens[second!]?.userId, `second-${specId}`);
       assert.equal(room.projection.timeControl?.daysPerMove, 3);
       assert.equal(room.rated, false, 'correspondence is casual');
       assert.equal(room.projection.state.status.type, 'playing');
@@ -133,7 +142,7 @@ for (const specId of VARIANT_SPEC_IDS) {
       // room_deadlines row and the sweeper both read.
       const deadline = tenantDurableDeadlineFor(tenant, room as never);
       assert.ok(deadline, `${specId}: an enforceable deadline from the start`);
-      assert.equal(deadline.seat, tenant.colors[0]);
+      assert.equal(deadline.seat, first);
       assert.ok(Math.abs(deadline.dueAt - (Date.now() + 3 * DAY_MS)) < 60_000);
       // A days-per-move room never pins the deploy drain gate.
       assert.equal(registration.activeGameCount(), 0);
@@ -145,10 +154,11 @@ for (const specId of VARIANT_SPEC_IDS) {
   test(`${specId}: the sweeper forfeits the player who let the clock lapse`, async () => {
     const { registration, room } = await acceptSeek(specId, 1);
     try {
-      const overdue = overdueCopy(specId, room, 2);
+      const overdue = overdueCopy(specId, room, entry.firstReplyPlies ?? 2);
       const deadline = tenantDurableDeadlineFor(tenant, overdue as never);
       assert.ok(deadline);
-      assert.equal(deadline.seat, tenant.colors[0], 'back to the first mover after two plies');
+      const [first, second] = tenantTurnOrder(tenant, overdue.projection.state);
+      assert.equal(deadline.seat, first, 'back to the first mover after the reply');
       roomMap(registration).set(overdue.id, overdue as unknown as TenantManagedRoom);
       await registration.sweepDueDeadline?.(overdue.id);
       const status = overdue.projection.state.status as {
@@ -158,7 +168,7 @@ for (const specId of VARIANT_SPEC_IDS) {
       };
       assert.equal(status.type, 'finished');
       assert.equal(status.reason, 'timeout');
-      assert.equal(status.winner, tenant.colors[1]);
+      assert.equal(status.winner, second);
       assert.equal(overdue.events.at(-1)?.type, 'clock-expired');
     } finally {
       registration.clearRooms();
@@ -267,7 +277,7 @@ test('dark-xiangqi: seat A’s inbox board is exactly A’s room view, and never
 
 test('every other new variant serves no seat board: the inbox reads the public card', async () => {
   for (const specId of VARIANT_SPEC_IDS) {
-    if (specId === 'dark-xiangqi') continue;
+    if (specId === 'dark-xiangqi' || CORRESPONDENCE_RESTRICTED_SPEC_IDS.includes(specId)) continue;
     const { tenant } = CORRESPONDENCE_TEST_TENANTS[specId]!;
     const { registration, room } = await acceptSeek(specId);
     try {

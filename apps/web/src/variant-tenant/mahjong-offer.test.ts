@@ -1,11 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The offer follows the seat. Mahjong is allowlisted server-side (139), so the
-// build flag alone must not put it in a play menu: an account is offered the
-// table only when /api/auth/me named it among the variants that account can
-// sit down at. Admins get every allowlisted spec there; players get their
-// grant rows.
-describe('mahjong is offered only to an account the server would seat', () => {
+// Mahjong retired on 2026-11-06, so nobody is offered a table. The grant
+// plumbing below is shared with the other playtest variants.
+describe('mahjong is offered to nobody', () => {
   beforeEach(() => {
     vi.resetModules();
     Object.defineProperty(window, 'localStorage', {
@@ -28,31 +25,18 @@ describe('mahjong is offered only to an account the server would seat', () => {
     expect(landing?.acceptsDeepLink()).toBe(false);
   });
 
-  it('with the flag on, follows the resolved grants and the persisted hint', async () => {
+  it('is not offered once retired, even with the flag on and a grant', async () => {
     vi.stubEnv('VITE_MAHJONG_ENABLED', 'true');
     const { setResolvedVariantGrants, writeVariantGrantsHint } = await import(
       '../signed-in-state.js'
     );
     const { webVariantTenantForSpecId } = await import('./registry.js');
     const landing = webVariantTenantForSpecId('mahjong')?.landing;
-
-    // Nothing resolved, nothing persisted: a visitor sees no door.
-    expect(landing?.offerInMenu()).toBe(false);
-
-    // A prior signed-in load left the hint, so the first paint offers it
-    // before /api/auth/me comes back.
     writeVariantGrantsHint(['mahjong']);
-    expect(landing?.offerInMenu()).toBe(true);
-
-    // Auth settles and says otherwise: the resolved answer wins over the hint.
-    setResolvedVariantGrants([]);
+    expect(landing?.offerInMenu()).toBe(false);
+    setResolvedVariantGrants(['mahjong']);
     expect(landing?.offerInMenu()).toBe(false);
     expect(landing?.acceptsDeepLink()).toBe(false);
-
-    setResolvedVariantGrants(['mahjong']);
-    expect(landing?.offerInMenu()).toBe(true);
-    // Menu and deep link stay on one predicate.
-    expect(landing?.acceptsDeepLink()).toBe(true);
   });
 
   it('account-nav writes the grants through on every auth resolution and clears them on sign-out', async () => {

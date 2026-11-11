@@ -46,7 +46,7 @@ function json(response: Capture): Record<string, unknown> {
 
 const baseCtx: TenantRoomCreateBaseContext = {
   databaseRequired: false,
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
 };
 
@@ -189,6 +189,45 @@ test('factory: rejects an unknown PvE engine id', async () => {
   });
 });
 
+test('factory: a held engine answers <x>_disabled, an unservable one invalid_engine', async () => {
+  await withFlag(BANQI_FLAG, 'true', async () => {
+    const route = (held: boolean) =>
+      createTenantRoomsRoute<
+        TenantRoomCreateBaseContext,
+        'red' | 'black' | 'random',
+        'red' | 'black'
+      >({
+        gameSpecId: BANQI_SPEC_ID,
+        errorPrefix: 'banqi',
+        hasDisabledFlag: true,
+        preferredColors: ['red', 'black', 'random'],
+        engine: {
+          kind: 'seated',
+          defaultEngineId: GOOD_ENGINE,
+          // The held engine is never servable: its flag is off, or its binary is gone.
+          isEngineClientId: (id) => id === GOOD_ENGINE,
+          heldEngineError: (id) => (held && id === 'held-engine' ? 'held_disabled' : undefined),
+          seats: SEATS,
+        },
+        createRoom: () => {
+          throw new Error('a refused engine must not reach createRoom');
+        },
+      });
+    const request = { gameSpecId: BANQI_SPEC_ID, mode: 'pve', engineId: 'held-engine' };
+
+    const held = captureResponse();
+    await route(true).handleCreate(baseCtx, held, request);
+    assert.equal(held.status, 404);
+    assert.deepEqual(json(held), { error: 'held_disabled' });
+
+    // Flag on but nothing to run: the smoke must fail here, not skip.
+    const missing = captureResponse();
+    await route(false).handleCreate(baseCtx, missing, request);
+    assert.equal(missing.status, 400);
+    assert.deepEqual(json(missing), { error: 'invalid_engine' });
+  });
+});
+
 test('factory: rejects an invalid time control before room creation', async () => {
   await withFlag(BANQI_FLAG, 'true', async () => {
     const spy: { params?: TenantRoomCreateParams<'red' | 'black' | 'random', 'red' | 'black'> } =
@@ -253,6 +292,56 @@ test('factory: PvE seats the engine opposite the human seat', async () => {
   });
 });
 
+// #559 step 2: a release drain no longer turns away a bot game on a spec
+// whose PvE survives the restart (banqi is one); a human game still waits.
+test('factory: a pending drain lets a resumable PvE create through and refuses PvP', async () => {
+  await withFlag(BANQI_FLAG, 'true', async () => {
+    let created = 0;
+    const route = createTenantRoomsRoute<
+      TenantRoomCreateBaseContext,
+      'red' | 'black' | 'random',
+      'red' | 'black'
+    >({
+      gameSpecId: BANQI_SPEC_ID,
+      errorPrefix: 'banqi',
+      hasDisabledFlag: true,
+      preferredColors: ['red', 'black', 'random'],
+      engine: {
+        kind: 'seated',
+        defaultEngineId: GOOD_ENGINE,
+        isEngineClientId: (id) => id === GOOD_ENGINE,
+        seats: SEATS,
+      },
+      createRoom: (): Promise<TenantRoomCreateResult> => {
+        created += 1;
+        return Promise.resolve({ ok: true, room: { id: 'bq_drain', gameSpecId: BANQI_SPEC_ID } });
+      },
+    });
+    const asked: unknown[] = [];
+    // A pending drain, as server-drain.ts answers it.
+    const draining: TenantRoomCreateBaseContext = {
+      databaseRequired: false,
+      refusesCreate: (create) => {
+        asked.push(create);
+        return create?.resumablePve !== true;
+      },
+      drainDeadlineMs: () => 123,
+    };
+
+    const pve = captureResponse();
+    await route.handleCreate(draining, pve, { gameSpecId: BANQI_SPEC_ID, mode: 'pve' });
+    assert.equal(pve.status, 201);
+
+    const pvp = captureResponse();
+    await route.handleCreate(draining, pvp, { gameSpecId: BANQI_SPEC_ID, mode: 'pvp' });
+    assert.equal(pvp.status, 503);
+    assert.deepEqual(json(pvp), { error: 'server_draining', restartAt: 123 });
+
+    assert.deepEqual(asked, [{ resumablePve: true }, { resumablePve: false }]);
+    assert.equal(created, 1, 'only the bot game was created');
+  });
+});
+
 test('factory: a rated friend room is gated on the flag, the account and the pace', async () => {
   const route = createTenantRoomsRoute<
     TenantRoomCreateBaseContext,
@@ -313,7 +402,7 @@ test('factory: a rated friend room is gated on the flag, the account and the pac
       assert.equal(guest.status, 401);
       assert.deepEqual(json(guest), { error: 'rated_requires_account' });
 
-      // 10+5 is not a rated pace → 400.
+      // 15+10 is off the menu, so not a rated pace → 400.
       const slow = captureResponse();
       await route.handleCreate(
         baseCtx,
@@ -322,7 +411,7 @@ test('factory: a rated friend room is gated on the flag, the account and the pac
           gameSpecId: BANQI_SPEC_ID,
           mode: 'pvp',
           rated: true,
-          timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+          timeControl: { initialMs: 900_000, incrementMs: 10_000 },
         },
         ACCOUNT,
       );

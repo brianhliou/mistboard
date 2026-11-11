@@ -4,7 +4,7 @@ import {
   coordinateMoveLabel,
   type PlayerView,
 } from '@mistboard/game';
-import { moveListScroller } from './game-table.js';
+import { moveListScroller, scrollMoveListToEnd } from './game-table.js';
 import {
   getFogViewHistory,
   getReplayIndex,
@@ -115,8 +115,7 @@ function syncMoveListScroll(refs: MoveListRefs, nextPlyCount: number): void {
       previousWasLive: lastMoveListWasLive,
     })
   ) {
-    const scroller = moveListScroller(refs.moveList);
-    scroller.scrollTop = scroller.scrollHeight;
+    scrollMoveListToEnd(moveListScroller(refs.moveList));
   }
   lastMoveListPlyCount = nextPlyCount;
   lastMoveListWasLive = nextIsLive;

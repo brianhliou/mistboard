@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { writeAccountPreference } from '../account-preferences.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { lastBotGame } from '../pve-memory.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
   type TenantWebView,
   type WebVariantTenant,
+  withRoomBot,
 } from './room-chrome.js';
 
 // Direct pins for the chrome branches the per-tenant suites do not reach:
@@ -59,13 +62,18 @@ type CtxOverrides = Partial<{
   } | null;
   timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   rated: boolean;
+  paused: boolean;
   isReplayLive: boolean;
   variantDetail: string | null;
   lobbyMatch: boolean;
   abortDeadline: number | null;
   roomMode: string;
   playAgainRequestBody: Record<string, unknown>;
+  pveEngineId: string | null;
   gameSpecId: string;
+  drawOffer: Color | null;
+  drawOfferCooldown: number;
+  sent: unknown[];
 }>;
 
 function chromeHarness(
@@ -92,16 +100,26 @@ function chromeHarness(
     isReplayLive: () => overrides.isReplayLive ?? true,
     orientation: () => 'white',
     playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
+    pveEngineId: () => overrides.pveEngineId ?? null,
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     rated: () => overrides.rated ?? false,
+    paused: () => overrides.paused ?? false,
+    drawOffer: () => overrides.drawOffer ?? null,
+    drawOfferCooldown: () => overrides.drawOfferCooldown ?? 0,
     ...(overrides.variantDetail !== undefined
       ? { variantDetail: () => overrides.variantDetail ?? null }
       : {}),
   };
   const refs = refsFixture();
   const chrome = createTenantRoomChrome(tenantOverride, ctx);
-  chrome.setRenderTarget(refs, { reconnectNow: () => {}, sendSocket: () => true });
+  chrome.setRenderTarget(refs, {
+    reconnectNow: () => {},
+    sendSocket: (payload) => {
+      overrides.sent?.push(payload);
+      return true;
+    },
+  });
   return { chrome, refs };
 }
 
@@ -401,6 +419,52 @@ describe('tenant room chrome player names', () => {
     expect(empty.refs.playerTop.textContent).not.toContain('Guest');
   });
 
+  // Xiangqi mahjong's seat ids only alternate the deal; its table names players.
+  // The meta card read "points • West is victorious" and the move-list result
+  // "Points • West is victorious" beside a table that said "You" and "Bot".
+  it('names seats and the finished line through the tenant player hooks', () => {
+    const playerTenant: WebVariantTenant<Color> = {
+      ...tenant,
+      reasonPhrase: () => 'result.onPoints',
+      seatPlayerName: (seat) => (seat === 'white' ? 'You' : 'Bot'),
+      // A handle leads the line and keeps its own case.
+      finishedLine: (winner) =>
+        winner === 'red' ? 'brianhliou wins on points' : 'You win on points',
+    };
+    const finished: TenantWebView<Color> = {
+      id: 'test_room',
+      status: { type: 'finished', winner: 'red', reason: 'points' },
+      moveNumber: 30,
+    };
+    const { chrome, refs } = chromeHarness({ view: finished }, playerTenant);
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('brianhliou wins on points');
+    expect(refs.gameInfo.textContent).not.toContain('Brianhliou');
+    expect(refs.gameInfo.textContent).toContain('You');
+    expect(refs.gameInfo.textContent).not.toMatch(/Red|White|victorious|\(/);
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const result = document.createElement('div');
+    result.dataset.gameResult = '';
+    result.hidden = true;
+    console.append(refs.actionSection, result);
+    chrome.renderActionStatus();
+    expect(result.textContent).toContain('brianhliou wins on points');
+    expect(result.textContent).not.toMatch(/Red|victorious|Brianhliou/);
+  });
+
+  it('capitalizes the finished line on the meta card like the move-list result', () => {
+    const { chrome, refs } = chromeHarness({
+      view: {
+        id: 'test_room',
+        status: { type: 'finished', winner: 'red', reason: 'points' },
+        moveNumber: 30,
+      },
+    });
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('The game rules • Red is victorious');
+  });
+
   it('names an anonymous opponent Guest on the meta card too', () => {
     const { chrome, refs } = chromeHarness({});
     chrome.renderMeta();
@@ -479,6 +543,27 @@ describe('tenant room chrome player names', () => {
     expect(refs.gameInfo.textContent).not.toContain('4320+0');
   });
 
+  it('puts tenant seat tags after the name, armed and pregame', () => {
+    // Mahjong shows the dealer and the running points here on a phone.
+    const tagged: WebVariantTenant<Color> = {
+      ...tenant,
+      seatTags: (seat) => (seat === 'red' ? ['Dealer', '12 points'] : ['0 points']),
+    };
+    for (const clock of [armedClock, null]) {
+      const { chrome, refs } = chromeHarness(
+        { clock, timeControl, seatDisplayNames: { white: 'brian', red: 'Misty' } },
+        tagged,
+      );
+      chrome.renderClocks();
+      const tags = (row: HTMLElement) =>
+        [...row.querySelectorAll('.clock-seat-tag')].map((el) => el.textContent);
+      expect(tags(refs.playerTop)).toEqual(['Dealer', '12 points']);
+      expect(tags(refs.playerBottom)).toEqual(['0 points']);
+      const top = refs.playerTop.textContent ?? '';
+      expect(top.indexOf('Misty')).toBeLessThan(top.indexOf('Dealer'));
+    }
+  });
+
   it('uses server names in the meta card player rows', () => {
     const { chrome, refs } = chromeHarness({
       seatDisplayNames: { white: 'brian', red: 'Misty DMX' },
@@ -491,6 +576,18 @@ describe('tenant room chrome player names', () => {
 });
 
 describe('tenant room chrome player discs', () => {
+  it.each(['mahjong', 'xiangqi-mahjong'])(
+    'omits live clock name discs for the inkless %s seats',
+    (gameSpecId) => {
+      const { chrome, refs } = chromeHarness({ gameSpecId });
+      chrome.renderClocks();
+      expect(refs.playerTop.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerBottom.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerTop.querySelector('.clock-name')).not.toBeNull();
+      expect(refs.playerBottom.querySelector('.clock-name')).not.toBeNull();
+    },
+  );
+
   function discClasses(refs: LiveRefs): string[] {
     return [...refs.gameInfo.querySelectorAll('.game-meta-card__disc')].map((disc) =>
       [...disc.classList].filter((name) => name.startsWith('seat-disc--')).join(' '),
@@ -611,6 +708,36 @@ describe('tenant room chrome bot rematch', () => {
     moveNumber: 9,
   };
 
+  it('keeps every tenant action in the phone sheet across finished-room snapshots', () => {
+    const media = window.matchMedia('(max-width: 600px)');
+    Object.defineProperty(media, 'matches', { value: true });
+    const spy = vi.spyOn(window, 'matchMedia').mockReturnValue(media);
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const { chrome, refs } = chromeHarness({
+      view: finished,
+      roomMode: 'pve',
+      playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+    });
+    console.append(refs.roomActions);
+    document.body.append(console);
+    try {
+      chrome.renderRoomActions();
+      const sheet = console.querySelector<HTMLDialogElement>('.postgame-sheet');
+      expect(sheet?.open).toBe(true);
+      expect(
+        [...sheet!.querySelectorAll('.postgame-actions > *')].map((el) => el.textContent),
+      ).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+      sheet?.querySelector<HTMLButtonElement>('.postgame-sheet__close')?.click();
+      chrome.renderRoomActions();
+      expect(console.querySelector('dialog')).toBe(sheet);
+      expect(sheet?.open).toBe(false);
+    } finally {
+      spy.mockRestore();
+      console.remove();
+    }
+  });
+
   async function rematchBody(seat: Color): Promise<Record<string, unknown>> {
     const fetchSpy = vi.fn(async () => new Response('{}', { status: 500 }));
     vi.stubGlobal('fetch', fetchSpy);
@@ -641,6 +768,102 @@ describe('tenant room chrome bot rematch', () => {
       preferredColor: 'red',
     });
     expect(await rematchBody('red')).toMatchObject({ preferredColor: 'white' });
+  });
+
+  // Duck Xiangqi, Flip Jungle and both mahjongs sent a rematch body with no
+  // bot: the server picked its default bot, and the home panel's Play again
+  // row (which reads the last bot game this device started) skipped the
+  // rematch and kept naming an older game.
+  it('rematches the same bot and records it for the home Play again row', async () => {
+    localStorage.removeItem('mistboard:last-bot-game');
+    const fetchSpy = vi.fn(
+      async () => new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        pveEngineId: 'fairy-stockfish-duck-level-3',
+        playAgainRequestBody: {
+          mode: 'pve',
+          gameSpecId: 'duck-xiangqi',
+          preferredColor: 'random',
+          timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+        },
+      });
+      chrome.renderRoomActions();
+      refs.roomActions
+        .querySelector<HTMLButtonElement>('button.postgame-actions__rematch')
+        ?.click();
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
+      expect(JSON.parse(String(init.body))).toMatchObject({
+        engineId: 'fairy-stockfish-duck-level-3',
+      });
+      expect(lastBotGame()).toEqual({
+        gameSpecId: 'duck-xiangqi',
+        botId: 'fairy-stockfish-duck-level-3',
+        timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+      });
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
+  // #825: the rematch opened the new game, but Back restored this page (from
+  // the back/forward cache) with the button stuck on a disabled "Creating".
+  it('is Rematch again once the room exists, and a second click reuses that room', async () => {
+    let resolveFetch: (response: Response) => void = () => {};
+    const fetchSpy = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+      });
+      chrome.renderRoomActions();
+      const button = () =>
+        refs.roomActions.querySelector<HTMLButtonElement>('button.postgame-actions__rematch');
+      button()?.click();
+      await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+      expect(button()?.textContent).toBe('Creating');
+      expect(button()?.disabled).toBe(true);
+      // A double click while the request is out makes no second room.
+      button()?.dispatchEvent(new MouseEvent('click'));
+      resolveFetch(new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }));
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      // The page as Back finds it.
+      expect(button()?.textContent).toBe('Rematch');
+      expect(button()?.disabled).toBe(false);
+      button()?.click();
+      expect(assign).toHaveBeenCalledTimes(2);
+      expect(assign).toHaveBeenLastCalledWith('/r/next');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
+  it('keeps a bot the tenant body already names', () => {
+    const body = { mode: 'pve', gameSpecId: 'xiangqi', engineId: 'pikafish-level-4' };
+    expect(withRoomBot(body, 'pikafish-level-8')).toBe(body);
+    expect(withRoomBot({ mode: 'pvp' }, 'pikafish-level-8')).toEqual({ mode: 'pvp' });
+    expect(withRoomBot({ mode: 'pve' }, null)).toEqual({ mode: 'pve' });
   });
 });
 
@@ -713,6 +936,48 @@ describe('tenant room chrome lobby rooms', () => {
     expect(refs.roomActions.textContent).toContain('Copy invite');
   });
 
+  it('offers Resign, never Abort, before the first moves where the tenant has no abort', () => {
+    const noAbort: WebVariantTenant<Color> = { ...tenant, userAbort: false };
+    for (const moveNumber of [0, 1]) {
+      const { chrome, refs } = chromeHarness(
+        { view: playingView({ moveNumber }), abortDeadline: Date.now() + 20_000 },
+        noAbort,
+      );
+      chrome.renderGameControls();
+      const labels = [...refs.gameControls.querySelectorAll('button')].map((b) =>
+        b.getAttribute('aria-label'),
+      );
+      expect(labels).toEqual(['Resign']);
+      // The no-show countdown stays: a first mover who never moves still aborts.
+      expect(refs.gameControls.textContent).toContain('Make your first move, aborting in');
+    }
+    // The default keeps Abort.
+    const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 0 }) });
+    chrome.renderGameControls();
+    expect(
+      [...refs.gameControls.querySelectorAll('button')].map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Abort']);
+  });
+
+  it('warns of a loss, not an abort, on a rated first move where the tenant forfeits it', () => {
+    const forfeits: WebVariantTenant<Color> = {
+      ...tenant,
+      userAbort: false,
+      ratedPregameTimeoutForfeits: true,
+    };
+    const deadline = Date.now() + 20_000;
+    const rated = chromeHarness(
+      { view: playingView(), abortDeadline: deadline, rated: true },
+      forfeits,
+    );
+    rated.chrome.renderGameControls();
+    expect(rated.refs.gameControls.textContent).toContain('Make your first move or lose in');
+    // Casual games keep the abort, and say so.
+    const casual = chromeHarness({ view: playingView(), abortDeadline: deadline }, forfeits);
+    casual.chrome.renderGameControls();
+    expect(casual.refs.gameControls.textContent).toContain('Make your first move, aborting in');
+  });
+
   it('counts a correspondence first-move window in hours, not seconds', () => {
     const { chrome, refs } = chromeHarness({
       timeControl: dayPerMove,
@@ -768,8 +1033,263 @@ describe('tenant room chrome meta card names', () => {
   });
 });
 
+// #530: the lichess action row. Icon buttons (½, the flag), a question in
+// place of the modal, and the opponent's offer on the same line.
+describe('tenant room chrome action row', () => {
+  const afterMoveOne = playingView({ moveNumber: 2 });
+  const labels = (refs: LiveRefs) =>
+    [...refs.gameControls.querySelectorAll('button')].map((button) => ({
+      label: button.getAttribute('aria-label'),
+      disabled: button.disabled,
+    }));
+  const action = (refs: LiveRefs, name: string) => {
+    const el = refs.gameControls.querySelector<HTMLButtonElement>(`[data-game-action="${name}"]`);
+    if (!el) throw new Error(`no ${name} button`);
+    return el;
+  };
+  const question = (refs: LiveRefs) =>
+    refs.gameControls.querySelector<HTMLElement>('.game-controls__question');
+  // Focus needs the row in the document.
+  const mounted = (harness: ReturnType<typeof chromeHarness>) => {
+    document.body.append(harness.refs.gameControls);
+    return harness;
+  };
+
+  afterEach(() => {
+    writeAccountPreference('confirmGameActions', true);
+    document.body.replaceChildren();
+  });
+
+  it('draws ½ and a flag with localized names, not uppercase words', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne });
+    chrome.renderGameControls();
+    expect(labels(refs)).toEqual([
+      { label: 'Offer draw', disabled: false },
+      { label: 'Resign', disabled: false },
+    ]);
+    expect(action(refs, 'draw').title).toBe('Offer draw');
+    expect(action(refs, 'resign').title).toBe('Resign');
+    expect(action(refs, 'resign').querySelector('svg')).not.toBeNull();
+    expect(refs.gameControls.textContent).toBe('½');
+  });
+
+  it('asks before resigning in place, focuses the check, and sends on it', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = mounted(chromeHarness({ view: afterMoveOne, sent }));
+    chrome.renderGameControls();
+    action(refs, 'resign').click();
+    expect(sent).toEqual([]);
+    expect(document.querySelector('dialog')).toBeNull();
+    expect(question(refs)?.textContent).toBe('Resign this game?');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Cancel', 'Resign']);
+    expect(document.activeElement).toBe(action(refs, 'confirm-yes'));
+    // A frame re-renders the row; the question and the focus survive it.
+    chrome.renderGameControls();
+    expect(question(refs)?.textContent).toBe('Resign this game?');
+    expect(document.activeElement).toBe(action(refs, 'confirm-yes'));
+    action(refs, 'confirm-yes').click();
+    expect(sent).toEqual([{ type: 'resign' }]);
+    expect(question(refs)).toBeNull();
+  });
+
+  it('cancels the question with the X or Escape and hands focus back', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = mounted(chromeHarness({ view: afterMoveOne, sent }));
+    chrome.renderGameControls();
+    action(refs, 'resign').click();
+    action(refs, 'confirm-no').click();
+    expect(question(refs)).toBeNull();
+    expect(document.activeElement).toBe(action(refs, 'resign'));
+    action(refs, 'draw').click();
+    question(refs)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(question(refs)).toBeNull();
+    expect(document.activeElement).toBe(action(refs, 'draw'));
+    expect(sent).toEqual([]);
+  });
+
+  it('asks before offering a draw, then sends draw:offer', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, sent });
+    chrome.renderGameControls();
+    action(refs, 'draw').click();
+    expect(sent).toEqual([]);
+    expect(question(refs)?.textContent).toBe('Offer a draw?');
+    action(refs, 'confirm-yes').click();
+    expect(sent).toEqual([{ type: 'draw:offer' }]);
+  });
+
+  it('asks before aborting, for the side to move only', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ sent });
+    chrome.renderGameControls();
+    action(refs, 'abort').click();
+    expect(question(refs)?.textContent).toBe('Abort this game?');
+    action(refs, 'confirm-yes').click();
+    expect(sent).toEqual([{ type: 'abort' }]);
+    const waiting = chromeHarness({ seat: 'red' });
+    waiting.chrome.renderGameControls();
+    expect(labels(waiting.refs)).toEqual([]);
+  });
+
+  it('acts at once when the player turned confirmations off', () => {
+    writeAccountPreference('confirmGameActions', false);
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, sent });
+    chrome.renderGameControls();
+    action(refs, 'draw').click();
+    action(refs, 'resign').click();
+    expect(sent).toEqual([{ type: 'draw:offer' }, { type: 'resign' }]);
+    expect(question(refs)).toBeNull();
+  });
+
+  it('shows no draw button before move one or against a bot', () => {
+    for (const overrides of [{}, { view: afterMoveOne, roomMode: 'pve' }]) {
+      const { chrome, refs } = chromeHarness(overrides);
+      chrome.renderGameControls();
+      expect(refs.gameControls.querySelector('[data-game-action="draw"]')).toBeNull();
+    }
+  });
+
+  it('shows no draw button before move one where Resign replaces Abort', () => {
+    // A tenant with no abort renders Resign from the first move; the server
+    // still refuses an offer until both sides have moved.
+    const noAbort: WebVariantTenant<Color> = { ...tenant, userAbort: false };
+    const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 1 }) }, noAbort);
+    chrome.renderGameControls();
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
+  });
+
+  it('shows no draw button in a tenant that opts out', () => {
+    const optOut: WebVariantTenant<Color> = { ...tenant, drawOffers: false };
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red' }, optOut);
+    chrome.renderGameControls();
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
+    expect(question(refs)).toBeNull();
+  });
+
+  it('shows the offerer a quiet pending line where ½ was, beside the flag', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'white' });
+    chrome.renderGameControls();
+    expect(refs.gameControls.querySelector('[data-draw-pending]')?.textContent).toBe(
+      'Draw offered',
+    );
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
+  });
+
+  it("puts the opponent's offer on one line: decline, the words, accept", () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red', sent });
+    chrome.renderGameControls();
+    expect(question(refs)?.textContent).toBe('Your opponent offers a draw');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Decline draw', 'Accept draw']);
+    action(refs, 'accept').click();
+    action(refs, 'decline').click();
+    expect(sent).toEqual([{ type: 'draw:accept' }, { type: 'draw:decline' }]);
+  });
+
+  it("closes an open draw question when the opponent's offer arrives", () => {
+    const overrides: CtxOverrides = { view: afterMoveOne };
+    const { chrome, refs } = chromeHarness(overrides);
+    chrome.renderGameControls();
+    action(refs, 'draw').click();
+    expect(question(refs)?.dataset.gameQuestion).toBe('draw');
+    overrides.drawOffer = 'red';
+    chrome.renderGameControls();
+    expect(question(refs)?.dataset.gameQuestion).toBe('draw-offer');
+  });
+
+  it('disables ½ while the decline cooldown runs, and says why', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOfferCooldown: 4 });
+    chrome.renderGameControls();
+    expect(action(refs, 'draw').disabled).toBe(true);
+    expect(action(refs, 'draw').title).toBe('You can offer a draw again in 4 moves');
+    const one = chromeHarness({ view: afterMoveOne, drawOfferCooldown: 1 });
+    one.chrome.renderGameControls();
+    expect(action(one.refs, 'draw').title).toBe('You can offer a draw again after your next move');
+  });
+
+  it('names an agreed draw in the finished notice', () => {
+    const { chrome, refs } = chromeHarness({
+      view: {
+        id: 'test_room',
+        status: { type: 'finished', winner: null, reason: 'agreement' },
+        moveNumber: 20,
+      },
+    });
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('agreement');
+  });
+});
+
 // #427: the room was English end to end for zh visitors with every suite green.
 // Render the whole chrome in each zh locale and read it back for Latin words.
+describe('restart clocks and pause', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('freezes immediately on disconnect across ticks and full renders', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    const overrides: CtxOverrides = {
+      connectionState: 'connected',
+      timeControl: { initialMs: 180_000, incrementMs: 0 },
+      clock: {
+        activeColor: 'white',
+        initialMs: 180_000,
+        incrementMs: 0,
+        remainingMs: { white: 180_000, red: 180_000 },
+        runningSince: 10_000,
+      },
+    };
+    const { chrome, refs } = chromeHarness(overrides);
+    chrome.renderClocks();
+    vi.advanceTimersByTime(2_000);
+    overrides.connectionState = 'disconnected';
+    chrome.renderClocks();
+    expect(refs.clockNote.hidden).toBe(false);
+    expect(refs.clockNote.textContent).toBe('Reconnecting…');
+    const faces = () => [refs.clockTop.textContent, refs.clockBottom.textContent];
+    const frozen = faces();
+    expect(frozen).toEqual(['03:00', '02:58']);
+    overrides.connectionState = 'reconnecting';
+    vi.advanceTimersByTime(20_000);
+    chrome.tickClocks();
+    expect(faces()).toEqual(frozen);
+    chrome.renderClocks();
+    expect(faces()).toEqual(frozen);
+    overrides.connectionState = 'connected';
+    overrides.clock = {
+      ...overrides.clock!,
+      runningSince: Date.now(),
+      remainingMs: { white: 178_000, red: 180_000 },
+    };
+    chrome.renderClocks();
+    expect(refs.clockNote.hidden).toBe(true);
+    vi.advanceTimersByTime(1_000);
+    chrome.tickClocks();
+    expect(faces()).toEqual(['03:00', '02:57']);
+  });
+
+  it('shows the shared paused overlay, then clears it on resume and finish', () => {
+    const overrides: CtxOverrides = { paused: true };
+    const { chrome, refs } = chromeHarness(overrides);
+    refs.boardPaused.innerHTML =
+      '<strong data-board-paused-title></strong><span data-board-paused-body></span>';
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(false);
+    expect(refs.boardPaused.textContent).toContain('Game paused');
+    expect(refs.boardPaused.textContent).toContain('Server is restarting');
+    overrides.paused = false;
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(true);
+    overrides.paused = true;
+    overrides.view = playingView({
+      status: { type: 'finished', winner: 'white', reason: 'checkmate' },
+    });
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(true);
+  });
+});
+
 describe('tenant room chrome in Chinese', () => {
   afterEach(() => {
     store.delete('mistboard.locale');
@@ -812,6 +1332,46 @@ describe('tenant room chrome in Chinese', () => {
         resigned.refs.actionStatus.textContent ?? '',
         resigned.refs.roomActions.textContent ?? '',
       );
+
+      for (const draw of [
+        { drawOffer: 'red' as const },
+        { drawOffer: 'white' as const },
+        { drawOfferCooldown: 3 },
+        { drawOfferCooldown: 1 },
+      ]) {
+        const offered = chromeHarness({ view: playingView({ moveNumber: 2 }), ...draw });
+        offered.chrome.renderGameControls();
+        texts.push(
+          offered.refs.gameControls.textContent ?? '',
+          ...[...offered.refs.gameControls.querySelectorAll('button')].flatMap((b) => [
+            b.title,
+            b.getAttribute('aria-label') ?? '',
+          ]),
+        );
+      }
+      // Each in-place question, and the names on its buttons.
+      for (const name of ['draw', 'resign']) {
+        const asking = chromeHarness({ view: playingView({ moveNumber: 2 }) });
+        asking.chrome.renderGameControls();
+        asking.refs.gameControls
+          .querySelector<HTMLButtonElement>(`[data-game-action="${name}"]`)
+          ?.click();
+        texts.push(
+          asking.refs.gameControls.textContent ?? '',
+          ...[...asking.refs.gameControls.querySelectorAll('button')].map(
+            (b) => b.getAttribute('aria-label') ?? '',
+          ),
+        );
+      }
+      const agreed = chromeHarness({
+        view: {
+          id: 'test_room',
+          status: { type: 'finished', winner: null, reason: 'agreement' },
+          moveNumber: 9,
+        },
+      });
+      agreed.chrome.renderMeta();
+      texts.push(agreed.refs.gameInfo.textContent ?? '');
 
       const spectator = chromeHarness({ seat: 'spectator', connectionState: 'reconnecting' });
       spectator.chrome.renderActionStatus();

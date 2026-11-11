@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { UserAccount } from './persistence.js';
 import {
   devSwitches,
   resolveWebSocketLiveRuntime,
@@ -62,6 +63,54 @@ test('WebSocket runtime resolver keeps registry misses on the chess runtime', as
   assert.deepEqual(runtime, { kind: 'chess' });
   assert.equal(harness.loadCalls(), 0);
 });
+
+for (const flag of [undefined, 'false', 'true']) {
+  for (const accountRole of [null, 'player', 'admin'] as const) {
+    test(`FFQ prefix: flag=${flag}, account=${accountRole ?? 'guest'}`, async () => {
+      const before = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+      if (flag === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+      else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
+      try {
+        const account = accountRole ? ({ accountRole } as UserAccount) : null;
+        const admitted = flag === 'true' && accountRole === 'admin';
+        assert.deepEqual(
+          await resolveWebSocketLiveRuntime([], 'ffq_reserved', async () => account),
+          {
+            kind: 'variant-tenant-unavailable',
+            reason: admitted ? 'room unavailable' : 'game spec disabled',
+          },
+        );
+        // The policy also precedes future live-room and hydration routing;
+        // a registration's permissive flag must not bypass the shared gate.
+        for (const live of [false, true]) {
+          const room = roomFixture('ffq_reserved');
+          const harness = resolverHarness({
+            kind: 'ffq-banqi',
+            prefix: 'ffq_',
+            enabled: true,
+            ...(live ? { room } : { loadRoom: room }),
+          });
+          const runtime = await resolveWebSocketLiveRuntime(
+            [harness.registration],
+            room.id,
+            async () => account,
+          );
+          if (admitted) assertTenantRuntime(runtime, harness.registration, room);
+          else {
+            assert.deepEqual(runtime, {
+              kind: 'variant-tenant-unavailable',
+              reason: 'game spec disabled',
+            });
+            assert.equal(harness.loadCalls(), 0);
+          }
+        }
+      } finally {
+        if (before === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+        else process.env.MISTBOARD_FFQ_BANQI_ENABLED = before;
+      }
+    });
+  }
+}
 
 test('WebSocket runtime resolver routes each prefix to its own registration', async () => {
   const dxqRoom = roomFixture('dxq_live');

@@ -14,12 +14,6 @@ export function xiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_XIANGQI_ENABLED === 'true';
 }
 
-// Global friends-online widget (bottom-corner pill → expandable list, lichess
-// parity). On in dev; in prod/staging it stays hidden until the build opts in.
-export function friendsOnlineEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_FRIENDS_ONLINE_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket). Launched: always on (the server
 // MISTBOARD_FORTRESS_XIANGQI_ENABLED flag remains the runtime kill-switch for
 // room creation).
@@ -35,6 +29,32 @@ export function fortressXiangqiEnabled(): boolean {
 // renders the table for people who hold a grant and for nobody else.
 export function mahjongEnabled(): boolean {
   return import.meta.env.VITE_MAHJONG_ENABLED === 'true';
+}
+
+// Xiangqi mahjong (the 32-tile, two-player game). Off by default and gated
+// exactly like Hong Kong mahjong: the server flag, plus the per-account
+// allowlist, so turning this on renders the table only for grant holders.
+export function xiangqiMahjongEnabled(): boolean {
+  return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
+// Three Kingdoms Banqi build-time play gate, off by default. Public content
+// follows publicSurface; coordinate the flag with the launch release.
+export function threeKingdomsBanqiEnabled(): boolean {
+  return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
+// Gomoku build-time play gate, off by default, including in dev. Public
+// listings derive from publicSurface; coordinate this flag with the launch.
+export function gomokuEnabled(): boolean {
+  return import.meta.env.VITE_GOMOKU_ENABLED === 'true';
+}
+
+// jqe, the jieqi bot above AB-JChess. Off by default and never on in dev: the
+// server holds the engine behind MISTBOARD_JQE_ENABLED until its author's OK, and
+// this build flag only adds it to the jieqi picker and the landing ladder.
+export function jqeEnabled(): boolean {
+  return import.meta.env.VITE_JQE_ENABLED === 'true';
 }
 
 // Crazyhouse Xiangqi renderer. Launched: always on, like fortress and atomic
@@ -69,6 +89,12 @@ export function banqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_BANQI_ENABLED === 'true';
 }
 
+// FFQ's admin-only playtest remains off even in dev. The server checks the
+// account independently; this flag only enables its renderer when routed.
+export function ffqBanqiEnabled(): boolean {
+  return import.meta.env.VITE_FFQ_BANQI_ENABLED === 'true';
+}
+
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.
 // Launched: always on (the server MISTBOARD_JUNGLE_ENABLED flag remains the runtime
 // kill-switch for room creation).
@@ -76,7 +102,7 @@ export function jungleEnabled(): boolean {
   return true;
 }
 
-// Flip Jungle (兽棋 / 翻翻棋, 4×4 flip animal chess) play surface. Launched: always on
+// Flip Jungle (翻翻兽棋, 4×4 flip animal chess) play surface. Launched: always on
 // (the server MISTBOARD_JUNGLE_FLIP_ENABLED flag remains the runtime kill-switch).
 export function jungleFlipEnabled(): boolean {
   return true;

@@ -15,6 +15,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { DAY_MS } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
+import {
+  type CorrespondenceEndedNotificationJson,
+  unseenFinishedCorrespondenceGames,
+} from './correspondence-games.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
 export type NotificationCounts = {
@@ -27,6 +31,9 @@ export type NotificationCounts = {
   incomingChallenges: number;
   // Public board seeks of yours that lapsed with no taker, not yet seen (161).
   seekExpiries: number;
+  // Correspondence games that ended since the player last looked, and not by
+  // their own act (167; the /correspondence page's "New" tag, same watermark).
+  correspondenceFinished: number;
 };
 
 // One lapsed board seek, with its terms so the bell can offer to post it again.
@@ -65,11 +72,13 @@ export type NotificationsPayload = NotificationCounts & {
   followedBy: NewFollowerNotificationJson[];
   forumWatched: ForumWatchNotificationJson[];
   seekExpired: SeekExpiryNotificationJson[];
+  correspondenceFinishedGames: CorrespondenceEndedNotificationJson[];
 };
 
 const FORUM_BELL_ROWS = 5;
 const FOLLOWER_BELL_ROWS = 5;
 const SEEK_EXPIRY_BELL_ROWS = 3;
+const FINISHED_BELL_ROWS = 3;
 const SEEK_TTL_DAYS = Math.round(persistence.CORRESPONDENCE_SEEK_TTL_MS / DAY_MS);
 
 // Read receipts the bell can send: the users.*_seen_at watermarks, plus the
@@ -106,6 +115,7 @@ export async function tryHandle(
       forumWatched,
       incomingChallenges,
       seekExpired,
+      correspondenceFinished,
     ] = await Promise.all([
       countOrZero(persistence.countUnreadDmThreads(user.id)),
       countOrZero(
@@ -123,6 +133,10 @@ export async function tryHandle(
       persistence
         .unseenSeekExpiryNotices(user.id, { limit: SEEK_EXPIRY_BELL_ROWS })
         .catch(() => ({ total: 0, notices: [] as persistence.SeekExpiryNotice[] })),
+      unseenFinishedCorrespondenceGames(user.id, { limit: FINISHED_BELL_ROWS }).catch(() => ({
+        total: 0,
+        games: [] as CorrespondenceEndedNotificationJson[],
+      })),
     ]);
 
     const payload: NotificationsPayload = {
@@ -147,6 +161,8 @@ export async function tryHandle(
         expiredAt: notice.expiredAt.toISOString(),
         ttlDays: SEEK_TTL_DAYS,
       })),
+      correspondenceFinished: correspondenceFinished.total,
+      correspondenceFinishedGames: correspondenceFinished.games,
     };
     writeJson(response, 200, payload);
     return true;

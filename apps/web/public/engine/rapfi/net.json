@@ -1,0 +1,9 @@
+{
+  "file": "rapfi-single-simd128.data",
+  "url": "https://github.com/brianhliou/rapfi-wasm/releases/download/v0.1.0/rapfi-single-simd128.data",
+  "sha256": "f61d31b4d98fc53fb43a31a4f0b4357a8b64053bb5762a0967250b873cc9a57e",
+  "bytes": 40382079,
+  "upstream": "https://github.com/dhbloo/rapfi",
+  "engineCommit": "1387d11312",
+  "networksCommit": "7eeb19b"
+}

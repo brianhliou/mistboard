@@ -263,6 +263,17 @@ definePersistenceTests('relations', () => {
     assert.equal(body.count, 1);
     const alice = body.players[0]!;
     assert.equal(alice.playing, true, 'seated in a playing room');
+    // The header Friends menu's Watch link: the room's page, and nothing else
+    // about the game rides on the row.
+    assert.equal((alice as { roomUrl?: unknown }).roomUrl, '/room/room-1');
+    assert.deepEqual(Object.keys(alice).sort(), [
+      'displayName',
+      'handle',
+      'playing',
+      'rating',
+      'roomUrl',
+      'title',
+    ]);
     // Rating is decoration; with no rated games it resolves to null but the
     // field is always present in the enriched shape.
     assert.ok('rating' in alice);

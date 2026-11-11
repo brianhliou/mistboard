@@ -14,10 +14,11 @@ import {
   type JungleFlipMove,
   type JungleFlipSquare,
   jungleFlipLastMoverInk,
+  jungleFlipMoveLabelOnBoard,
   parseJungleFlipFen,
 } from '@mistboard/game';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   type JungleFlipRenderBoard,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
@@ -29,11 +30,6 @@ const TOKEN = /^([a-d][1-4])([a-d][1-4])$/;
 function tokenToMove(token: string): JungleFlipMove | null {
   const m = TOKEN.exec(token);
   return m ? { from: m[1] as JungleFlipSquare, to: m[2] as JungleFlipSquare } : null;
-}
-
-/** The sheet's spelling, the tree adapter's: a flip is its bare square. */
-export function jungleFlipMoveLabel(move: JungleFlipMove): string {
-  return move.from === move.to ? move.from : `${move.from}-${move.to}`;
 }
 
 /**
@@ -94,7 +90,7 @@ export function mountJungleFlipReplayBoard(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = forward ? played[index - 1] : played[animateFrom - 1];
-      if (move) animateJungleFlipBoardMove(frame, move, { reverse: !forward });
+      if (move) animateJungleFlipStep(frame, move, { reverse: !forward });
     }
     hooks.onPlyChange?.(index, total);
   };
@@ -110,7 +106,11 @@ export function mountJungleFlipReplayBoard(
       render(from);
     },
     plyCount: () => total,
-    moveEntries: () => played.map((move, i) => ({ ply: i + 1, label: jungleFlipMoveLabel(move) })),
+    moveEntries: () =>
+      played.map((move, i) => ({
+        ply: i + 1,
+        label: jungleFlipMoveLabelOnBoard(move, states[i + 1]?.board),
+      })),
     // One fixed orientation, first mover's seat row under it.
     bottomSeat: () => 'first',
   };

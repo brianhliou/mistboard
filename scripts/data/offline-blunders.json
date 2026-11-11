@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "scorePov": "red",
+  "games": [
+    {
+      "gameId": "red-blunder",
+      "engineId": "pikafish-xiangqi-analysis@5",
+      "firstMover": "red",
+      "moves": ["h2e2"],
+      "plies": [
+        { "ply": 0, "cp": 100, "mate": null, "best": "b0c2" },
+        { "ply": 1, "cp": -200, "mate": null, "best": null }
+      ]
+    },
+    {
+      "gameId": "black-blunder",
+      "engineId": "pikafish-xiangqi-analysis@5",
+      "firstMover": "red",
+      "moves": ["h2e2", "h7e7"],
+      "plies": [
+        { "ply": 0, "cp": -200, "mate": null, "best": "h2e2" },
+        { "ply": 1, "cp": -200, "mate": null, "best": "b9c7" },
+        { "ply": 2, "cp": 200, "mate": null, "best": null }
+      ]
+    },
+    {
+      "gameId": "already-lost",
+      "engineId": "pikafish-xiangqi-analysis@5",
+      "firstMover": "red",
+      "moves": ["h2e2"],
+      "plies": [
+        { "ply": 0, "cp": -1000, "mate": null, "best": "b0c2" },
+        { "ply": 1, "cp": -2000, "mate": null, "best": null }
+      ]
+    }
+  ]
+}

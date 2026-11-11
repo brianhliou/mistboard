@@ -21,6 +21,8 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
+import { parsePublicBotId } from '../bot-profile-policy.js';
+import { firstPartyBotForId } from '../first-party-bots.js';
 import {
   ALL_VARIANTS_KEY,
   buildDataListing,
@@ -49,6 +51,7 @@ import {
   insertDataFileIfAbsent,
   listCollectionRoomIds,
   listCollectionRows,
+  listPublicDataBots,
   listPublishedRoomIds,
   listStoredDataFiles,
 } from '../persistence-game-data.js';
@@ -80,36 +83,53 @@ export function resetDataDownloadLimiterForTests(): void {
 // The listing is a few GROUP BYs; a minute of staleness is fine for a page whose
 // newest file appears once a month. A build clears it so sizes show at once.
 const LISTING_TTL_MS = 60_000;
-let listingCache: { at: number; monthStart: number; listing: DataListing } | null = null;
+const listingCache = new Map<string, { at: number; monthStart: number; listing: DataListing }>();
 
 export function clearDataListingCache(): void {
-  listingCache = null;
+  listingCache.clear();
 }
 
-export async function loadDataListing(now: Date = new Date()): Promise<DataListing> {
+export async function loadDataListing(
+  now: Date = new Date(),
+  botId?: string,
+): Promise<DataListing> {
   const monthStart = currentMonthStart(now).getTime();
-  if (
-    listingCache &&
-    listingCache.monthStart === monthStart &&
-    now.getTime() - listingCache.at < LISTING_TTL_MS
-  ) {
-    return listingCache.listing;
+  const key = botId ?? '';
+  const bots = await listPublicDataBots(DATA_VARIANTS);
+  const bot = botId ? bots.find((candidate) => candidate.id === botId) : undefined;
+  if (botId && !bot) throw new UnknownDataBotError();
+  const cached = listingCache.get(key);
+  if (cached && cached.monthStart === monthStart && now.getTime() - cached.at < LISTING_TTL_MS) {
+    return cached.listing;
   }
+  const variants = bot?.variants ?? DATA_VARIANTS;
   const [counts, engineCounts, stored, collectionRows] = await Promise.all([
-    countPublishedGamesByMonth(DATA_VARIANTS, new Date(monthStart)),
-    countPublishedGamesByMonth(DATA_VARIANTS, new Date(monthStart), 'engine'),
+    countPublishedGamesByMonth(variants, new Date(monthStart), 'human', botId),
+    countPublishedGamesByMonth(variants, new Date(monthStart), 'engine', botId),
     listStoredDataFiles(),
-    listCollectionRows(),
+    botId ? Promise.resolve([]) : listCollectionRows(),
   ]);
-  const listing = buildDataListing({
-    counts,
-    engineCounts,
-    stored,
-    collections: listableCollections(collectionRows),
-    now,
-  });
-  listingCache = { at: now.getTime(), monthStart, listing };
+  const listing = {
+    ...buildDataListing({
+      counts,
+      engineCounts,
+      stored,
+      collections: listableCollections(collectionRows),
+      now,
+      botId,
+    }),
+    bots,
+  };
+  listingCache.set(key, { at: now.getTime(), monthStart, listing });
   return listing;
+}
+
+class UnknownDataBotError extends Error {}
+
+async function botVariants(botId: string): Promise<readonly string[] | null> {
+  return (
+    (await listPublicDataBots(DATA_VARIANTS)).find((bot) => bot.id === botId)?.variants ?? null
+  );
 }
 
 type ResolvedTarget =
@@ -121,12 +141,16 @@ async function resolveTarget(target: DataFileTarget, now: Date): Promise<Resolve
   if (target.kind !== 'collection') {
     const range = parseMonth(target.month)!;
     if (!isClosedMonth(range, now)) return { status: 404, error: 'month_not_closed' };
-    const variants = target.variant === ALL_VARIANTS_KEY ? DATA_VARIANTS : [target.variant];
+    const supported = target.botId ? await botVariants(target.botId) : DATA_VARIANTS;
+    if (!supported || (target.variant !== ALL_VARIANTS_KEY && !supported.includes(target.variant)))
+      return { status: 404, error: 'not_found' };
+    const variants = target.variant === ALL_VARIANTS_KEY ? supported : [target.variant];
     const roomIds = await listPublishedRoomIds(
       variants,
       range.from,
       range.to,
       target.kind === 'engine-monthly' ? 'engine' : 'human',
+      target.botId,
     );
     if (roomIds.length === 0) return { status: 404, error: 'no_games' };
     return { roomIds: async () => roomIds };
@@ -151,8 +175,20 @@ export async function tryHandle(
   if (pathname === DATA_API_PREFIX) {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
-    const listing = await loadDataListing();
-    writeJson(response, 200, listing, { 'cache-control': 'public, max-age=60' });
+    const requested = parsedUrl?.searchParams.get('bot');
+    const parsedBot = requested ? parsePublicBotId(requested) : null;
+    if (requested && !parsedBot) {
+      writeJson(response, 400, { error: 'invalid_bot_id' }, { 'cache-control': NO_STORE });
+      return true;
+    }
+    const botId = parsedBot ? (firstPartyBotForId(parsedBot)?.id ?? parsedBot) : undefined;
+    try {
+      const listing = await loadDataListing(new Date(), botId);
+      writeJson(response, 200, listing, { 'cache-control': 'public, max-age=60' });
+    } catch (error) {
+      if (!(error instanceof UnknownDataBotError)) throw error;
+      writeJson(response, 404, { error: 'not_found' }, { 'cache-control': NO_STORE });
+    }
     return true;
   }
 
@@ -179,6 +215,14 @@ export async function tryHandle(
   }
 
   const target = parsed.target;
+  // Recheck visibility even for a previously built file, before redirecting or serving it.
+  if (target.kind !== 'collection' && target.botId) {
+    const variants = await botVariants(target.botId);
+    if (!variants || (target.variant !== ALL_VARIANTS_KEY && !variants.includes(target.variant))) {
+      writeJson(response, 404, { error: 'not_found' }, noStore);
+      return true;
+    }
+  }
   if (parsed.hash) {
     await serveHashedFile(request, response, target, parsed.hash);
     return true;

@@ -27,9 +27,11 @@ import {
   LIVE_BOARD_GEO,
   type XiangqiBoardArrow,
   type XiangqiBoardMarker,
+  xiangqiPieceGhostSvg,
 } from '../xiangqi-board.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
+import { capturedBetweenBoards, fillCapturedPoolWith } from './captured-pool.js';
 import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
 import { type HoverArrowTone, hoverArrowStyle } from './hover-arrow.js';
@@ -154,6 +156,15 @@ const xiangqiPresentation: TreePresentation<
     kind: 'circle',
     className: `xq-shape--${s.brush}`,
   }),
+  seatCaptures: (host, view, rootView, owner) => {
+    if (owner !== 'red' && owner !== 'black') return;
+    fillCapturedPoolWith(
+      host,
+      capturedBetweenBoards(rootView.board, view.board),
+      owner,
+      xiangqiPieceGhostSvg,
+    );
+  },
   // The badge rides the square the piece landed on, so it reads as a verdict on
   // the move just played rather than on the point it came from.
   moveGlyphMarker: (move: XiangqiMove, glyph): XiangqiBoardMarker => ({
@@ -165,10 +176,6 @@ const xiangqiPresentation: TreePresentation<
   // Opening/Middlegame/Endgame segmentation for the chart dividers + per-phase
   // accuracy (heuristic; see xiangqi-phases.ts).
   gamePhases: xiangqiGamePhases,
-  // No right-rail material rows for now: the reserved mat-top/mat-bot bands
-  // offset the rail against the board and eval bar. The imbalance renderer
-  // (net pieces won + point lead) lived here until 2026-07-23 and returns with
-  // a layout that keeps the three columns aligned (#166).
 };
 
 export function mountXiangqiReview(

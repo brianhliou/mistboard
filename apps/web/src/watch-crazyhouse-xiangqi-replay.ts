@@ -20,8 +20,8 @@ import {
   postgameViewAtPly,
 } from './crazyhouse-xiangqi-postgame.js';
 import {
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardView,
-  crazyhouseXiangqiLastDrop,
   crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from './crazyhouse-xiangqi-view.js';
@@ -62,8 +62,7 @@ export function mountCrazyhouseXiangqiWatchReplay(
         interactive: false,
         selectedSquare: null,
         draggingFrom: null,
-        coordinates: false,
-        lastDropSquare: crazyhouseXiangqiLastDrop(view),
+        ...crazyhouseXiangqiBoardMarks(view),
       }),
     // The hand IS the position: every droppable role in a fixed slot, ghosted
     // when held none of. allRoles, not the live room's pocket bar: the showcase
@@ -73,6 +72,11 @@ export function mountCrazyhouseXiangqiWatchReplay(
     moveSound: watchCrazyhouseXiangqiMoveSound,
     fillCaptures: (host, view, owner) =>
       fillCrazyhouseXiangqiReserve(host, view, owner, { allRoles: true }),
+    // The rail shows each seat's hand as the room's pocket: black on top, red below.
+    railMaterial: (slots, view) => {
+      fillCrazyhouseXiangqiReserve(slots.top, view, 'black', { pocket: true });
+      fillCrazyhouseXiangqiReserve(slots.bottom, view, 'red', { pocket: true });
+    },
     sidedCaptures: true,
     // Drops have no `from`, so the default from-to label would print
     // "undefined-e5"; the room's own notation spells them `N@e5`.

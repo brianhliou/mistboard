@@ -116,7 +116,7 @@ registerVariantTenant({
   errorPrefix: 'jungle_flip',
   enabled: jungleFlipTenant.enabled,
   rooms: jungleFlipRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jungleFlipRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jungleFlipRooms.values(), jungleFlipTenant),
   getOrLoadRoom: (roomId) => getOrLoadJungleFlipRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJungleFlipWebSocketConnection(

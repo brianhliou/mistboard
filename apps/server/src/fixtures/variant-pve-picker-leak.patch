@@ -1,0 +1,12 @@
+diff --git a/apps/server/src/engines/registry.ts b/apps/server/src/engines/registry.ts
+--- a/apps/server/src/engines/registry.ts
++++ b/apps/server/src/engines/registry.ts
+@@ -114,6 +114,8 @@ const PROD_PLAYABLE_ENGINE_IDS = new Set<EngineId>([
+   // no offer-without-serve window. v1.5 stays KNOWN (replay/provenance); roll
+   // back by restoring 'python-v2-v1.5' + reverting engine.ref to e97009e.
+   'python-v2-v1.6', // Misty 1.6 (net-hang prune floor; supersedes 1.5)
++  'pikafish-jieqi-strongest',
++  'misty-jungle-flip',
+ ]);
+ 
+ // Opt-in extras for load testing / local experimentation. Set

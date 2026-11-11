@@ -5,10 +5,12 @@
 //
 // The main thread (misty-ceval.ts) posts the versioned asset URLs in the `init` message,
 // so cache-busting lives in one place there (ceval's asset-version constant) rather than
-// in bare-path imports here. Message protocol:
+// in bare-path imports here. `noProgressLimit` is the game's no-progress draw limit
+// (60, or 40 for a game created before 2026-10-17); absent keeps the engine's 40.
+// Message protocol:
 //   → { type: 'init', jsUrl, wasmUrl }        ← { type: 'ready' } | { type: 'error', error }
-//   → { type: 'analyze', id, fen, nodes, multipv } ← { type: 'result', id, json }
-//   → { type: 'step', id, sessionId, fen?, nodes, multipv }
+//   → { type: 'analyze', id, fen, nodes, multipv, noProgressLimit? } ← { type: 'result', id, json }
+//   → { type: 'step', id, sessionId, fen?, nodes, multipv, noProgressLimit? }
 //                                                ← { type: 'result', id, json }
 //   → { type: 'cancel', sessionId }
 let mod = null;
@@ -35,7 +37,10 @@ self.onmessage = async (event) => {
     }
     if (msg.type === 'analyze') {
       if (!mod) throw new Error('engine not initialized');
-      const json = mod.analyze(msg.fen, msg.nodes, msg.multipv);
+      const json =
+        typeof msg.noProgressLimit === 'number'
+          ? mod.analyze_with_limit(msg.fen, msg.nodes, msg.multipv, msg.noProgressLimit)
+          : mod.analyze(msg.fen, msg.nodes, msg.multipv);
       self.postMessage({ type: 'result', id: msg.id, json });
       return;
     }
@@ -45,6 +50,7 @@ self.onmessage = async (event) => {
       if (!session) {
         if (typeof msg.fen !== 'string') throw new Error('analysis session requires a FEN');
         session = new mod.AnalysisSession(msg.fen, msg.multipv);
+        if (typeof msg.noProgressLimit === 'number') session.set_no_progress_limit(msg.noProgressLimit);
         sessions.set(msg.sessionId, session);
       }
       const json = session.step(msg.nodes);

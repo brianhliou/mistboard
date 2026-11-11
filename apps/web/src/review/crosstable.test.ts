@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type CrosstablePlayer,
   type CrosstableResponse,
   crosstableConfig,
   formatPoints,
@@ -102,6 +103,58 @@ describe('crosstable rendering', () => {
     const el = renderCrosstable(first, 'r4');
     expect(el.textContent).not.toContain('First game');
     expect(el.querySelector('.review-crosstable__note')).toBeNull();
+  });
+
+  it('links each account-pair score to that account filtered by the opponent handle', () => {
+    const data = record();
+    data.players = [
+      { name: 'Alice Display Name', kind: 'account', handle: 'Alice_01' },
+      { name: 'Bob Display Name', kind: 'account', handle: 'bob-02' },
+    ];
+    const el = renderCrosstable(data, 'r4');
+    const scores = [...el.querySelectorAll('.review-crosstable__score a')];
+    expect(scores.map((score) => score.getAttribute('href'))).toEqual([
+      '/@/Alice_01?vs=bob-02',
+      '/@/bob-02?vs=Alice_01',
+    ]);
+    expect(scores.map((score) => score.textContent)).toEqual(['2½', '1½']);
+    // Names still open the unfiltered profiles; only the totals open the pair's games.
+    expect(
+      [...el.querySelectorAll('.review-crosstable__name a')].map((name) =>
+        name.getAttribute('href'),
+      ),
+    ).toEqual(['/@/Alice_01', '/@/bob-02']);
+  });
+
+  it.each<{ label: string; player: CrosstablePlayer }>([
+    { label: 'a bot', player: { name: 'Misty', kind: 'engine', botId: 'misty' } },
+    {
+      label: 'an engine even if it carries a handle',
+      player: { name: 'Engine', kind: 'engine', handle: 'engine' },
+    },
+    { label: 'an account without a handle', player: { name: 'Bob', kind: 'account' } },
+    {
+      label: 'an account with a null handle',
+      player: { name: 'Bob', kind: 'account', handle: null },
+    },
+    {
+      label: 'an account with an empty handle',
+      player: { name: 'Bob', kind: 'account', handle: '' },
+    },
+  ])('keeps scores as text when either seat is $label', ({ player }) => {
+    const account: CrosstablePlayer = { name: 'Alice', kind: 'account', handle: 'alice' };
+    for (const players of [
+      [account, player],
+      [player, account],
+    ] as const) {
+      const data = record();
+      data.players = [...players];
+      const el = renderCrosstable(data, 'r4');
+      expect(el.querySelector('.review-crosstable__score a')).toBeNull();
+      expect(
+        [...el.querySelectorAll('.review-crosstable__score')].map((score) => score.textContent),
+      ).toEqual(['2½', '1½']);
+    }
   });
 
   it('explains guest and private seats instead of showing a record', () => {

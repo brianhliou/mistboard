@@ -7,7 +7,7 @@ import {
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
 } from '@mistboard/game';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import { createGameTree, ROOT_PATH, type TreePath } from './game-tree.js';
 import { createMoveTree, pathKey } from './move-tree.js';
@@ -83,6 +83,48 @@ describe('createMoveTree', () => {
     expect(pathKey(jumped!)).toBe(pathKey(firstMovePath));
   });
 
+  it('setCurrent moves the current class from the old cell to the new one (#608)', () => {
+    const { tree } = seededTree();
+    const moveTree = createMoveTree(tree, { onJump: () => {} });
+    const currentCells = () => [
+      ...moveTree.el.querySelectorAll('.review-move-list__move--current'),
+    ];
+    const first = tree.root.children[0]!;
+    const second = first.children[0]!;
+    const firstCell = () => moveTree.el.querySelectorAll<HTMLElement>('.move-tree__move')[0];
+
+    moveTree.setCurrent([first.id]);
+    expect(currentCells()).toHaveLength(1);
+    const before = currentCells()[0];
+
+    // A step touches only the old and the new cell, not every cell in the list:
+    // a long game has thousands, and toggling each one was part of the step cost.
+    const tokenList = Object.getPrototypeOf(moveTree.el.classList) as DOMTokenList;
+    const add = vi.spyOn(tokenList, 'add');
+    const remove = vi.spyOn(tokenList, 'remove');
+    const toggle = vi.spyOn(tokenList, 'toggle');
+    moveTree.setCurrent([first.id, second.id]);
+    const calls = add.mock.calls.length + remove.mock.calls.length + toggle.mock.calls.length;
+    add.mockRestore();
+    remove.mockRestore();
+    toggle.mockRestore();
+    expect(calls).toBeLessThanOrEqual(2);
+
+    expect(currentCells()).toHaveLength(1);
+    expect(currentCells()[0]).not.toBe(before);
+    expect(before?.classList.contains('review-move-list__move--current')).toBe(false);
+
+    // A path with no cell clears the mark; a rebuild starts clean and the next
+    // setCurrent marks the fresh cell.
+    moveTree.setCurrent([...ROOT_PATH]);
+    expect(currentCells()).toHaveLength(0);
+    moveTree.setCurrent([first.id]);
+    moveTree.rebuild();
+    expect(currentCells()).toHaveLength(0);
+    moveTree.setCurrent([first.id]);
+    expect(currentCells()).toEqual([firstCell()]);
+  });
+
   it('offers promote/delete on a right-clicked move', () => {
     const { tree, altFirst } = seededTree();
     let promoted: TreePath | null = null;
@@ -132,11 +174,15 @@ describe('createMoveTree', () => {
     expect(cell?.querySelector('.review-move-list__eval')?.textContent).toBe('+2.0');
     // The badge names its move, so the luck card can open for it from any ply.
     expect(cell?.querySelector<HTMLElement>('.review-move-list__luck')?.dataset.luckPath).toBe(key);
-    // A move with no luck leaves its (empty) badge slot unkeyed: nothing to open.
+    // Moves without luck have no empty slot or margin beside their label.
+    expect(moveTree.el.querySelectorAll('.review-move-list__luck')).toHaveLength(1);
     const keyed = [...moveTree.el.querySelectorAll<HTMLElement>('.review-move-list__luck')].filter(
       (badge) => badge.dataset.luckPath !== undefined,
     );
     expect(keyed).toHaveLength(1);
+    moveTree.annotate(new Map([[key, { eval: '+2.0' }]]));
+    expect(moveTree.el.querySelector('.review-move-list__luck')).toBeNull();
+    expect(moveTree.el.querySelector('.review-move-list__eval')?.textContent).toBe('+2.0');
   });
 
   it('renders an annotated advice comment row before the move variations', () => {

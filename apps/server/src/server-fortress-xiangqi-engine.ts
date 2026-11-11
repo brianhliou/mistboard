@@ -31,6 +31,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import {
@@ -188,7 +189,7 @@ export async function playFortressXiangqiEngineMoveIfReady(
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getFortressXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -295,6 +296,10 @@ function bothSeatsFilled(room: FortressXiangqiEngineRoom): boolean {
 
 function engineToMove(room: FortressXiangqiEngineRoom, seat: FortressXiangqiColor): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 

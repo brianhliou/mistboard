@@ -10,12 +10,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
   xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 
 const STANDARD: XiangqiSurfaceConfig = {
   geo: { fileCount: 9, rankCount: 10, cell: 60, margin: 36, riverGap: 12 },
@@ -45,11 +47,27 @@ describe('xiangqi board surface, intersection layout', () => {
     expect(svg).toContain('<line class="xq-live-line" x1="96" y1="336" x2="96" y2="576"/>');
   });
 
-  it('centres the river caption on the middle file', () => {
+  // Real boards set the inscription one character to a square near each edge,
+  // 漢界 turned to face the far player (Brian, 2026-10-29).
+  it('spreads 楚河 漢界 along the river, the far pair turned', () => {
     const svg = xiangqiSurfaceRiver(STANDARD, 'red', 'intersection');
-    // Middle of 9 files is index 4 -> x = 36 + 4*60 = 276; caption baseline y+1.
-    expect(svg).toContain('x="276"');
-    expect(svg).toContain('楚 河   漢 界');
+    const chars = [
+      ...svg.matchAll(
+        /<text class="xq-live-river-label" x="([\d.]+)" y="([\d.]+)"( transform="[^"]*")?>(.)<\/text>/g,
+      ),
+    ];
+    // Centre file x = 36 + 4*60 = 276; characters sit 1.5 and 2.5 cells out.
+    expect(chars.map((m) => [m[4], Number(m[1])])).toEqual([
+      ['楚', 126],
+      ['河', 186],
+      ['界', 366],
+      ['漢', 426],
+    ]);
+    const turned = chars.filter((m) => m[3]).map((m) => m[4]);
+    expect(turned).toEqual(['界', '漢']);
+    for (const m of chars.filter((c) => c[3])) {
+      expect(m[3]).toBe(` transform="rotate(180 ${m[1]} ${m[2]})"`);
+    }
   });
 
   // River text (2026-10-08): both captions are drawn and CSS shows the chosen
@@ -229,5 +247,35 @@ describe('wood grain preview', () => {
     const svg = xiangqiSurfaceGrid(STANDARD, 'intersection');
     expect(svg.startsWith('<image class="xq-live-grain"')).toBe(true);
     expect(xiangqiSurfaceGrid(STANDARD, 'cell')).not.toContain('xq-live-grain');
+  });
+});
+
+describe('square grid coordinate rim (2026-10-29)', () => {
+  const labels = xiangqiCoordLabels('algebraic', 9, 10);
+  const framed = { ...STANDARD, geo: { ...STANDARD.geo, coordGutter: 12 } };
+
+  it('frames the squares and paints only the gutter when coordinates are on', () => {
+    const svg = xiangqiSurfaceCoords(framed, 'red', 'cell', labels);
+    // Outer ring is the viewBox (-6..558 x -6..630); the hole is the squares (6..546 x 6..618).
+    expect(svg).toContain(
+      '<path class="xq-live-cell-rim" fill-rule="evenodd" d="M-6 -6h564v636h-564ZM6 6h540v612h-540Z"/>',
+    );
+    expect(svg).toContain(
+      '<rect class="xq-live-cell-frame" x="6" y="6" width="540" height="612"/>',
+    );
+    // Labels centre on the rim band, not between the frame and the pieces.
+    expect(svg).toMatch(/<text[^>]*y="0"/);
+  });
+
+  it('draws no rim with coordinates off, nor on the intersection board', () => {
+    expect(xiangqiSurfaceCoords(STANDARD, 'red', 'cell', labels)).toBe('');
+    expect(
+      xiangqiSurfaceCoords(
+        { ...STANDARD, geo: { ...STANDARD.geo, coordGutter: 12, riverGap: 0 } },
+        'red',
+        'intersection',
+        labels,
+      ),
+    ).not.toContain('xq-live-cell-rim');
   });
 });

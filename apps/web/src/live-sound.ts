@@ -1,7 +1,7 @@
 // Sound subsystem for the live game UI. Extracted from live-render.ts.
 //
 // Owns the audio context, volume tracking, and the policy that decides which
-// sound (move, capture, captured, king-capture, castle, win, lose) to play
+// sound (move, capture, king-capture, castle, win, lose) to play
 // for a given event sequence. Live-render and replay-of-live consume this
 // via the exported `sound` instance + `maybePlaySnapshotSound` and
 // `soundForOwnMove` helpers.
@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { readAccountPreferences } from './account-preferences.js';
+import { afterBoardSettles } from './board-anim.js';
 import {
   liveState,
   type RoomMode,
@@ -70,6 +71,10 @@ export function playSound(kind: SoundKind): void {
   sound?.play(kind);
 }
 
+export function playSoundWhenUnlocked(kind: SoundKind): void {
+  sound?.playWhenUnlocked(kind);
+}
+
 // Terminal sequencing, shared across game families. A king capture is its own
 // fanfare for the winner (the submit-time arpeggio already played), so the win
 // jingle is suppressed; for the loser it becomes a king-fall sting, then the
@@ -90,14 +95,21 @@ export function terminalSoundPlan(
     : [{ kind: 'lose', delayMs: 0 }];
 }
 
+// The result sounds when the board settles (#825): the move that ended the
+// game glides in the render after the snapshot that carries the result, so the
+// sound is chained on that glide's end (board-anim.ts afterBoardSettles). With
+// nothing moving (reduced motion, a resignation, a flag) it plays at once.
 export function playTerminalPlan(result: 'win' | 'lose' | 'draw', reason: string | null): void {
-  for (const step of terminalSoundPlan(result, reason)) {
-    if (step.delayMs > 0) {
-      window.setTimeout(() => sound?.play(step.kind), step.delayMs);
-    } else {
-      sound?.play(step.kind);
+  const plan = terminalSoundPlan(result, reason);
+  afterBoardSettles(() => {
+    for (const step of plan) {
+      if (step.delayMs > 0) {
+        window.setTimeout(() => sound?.play(step.kind), step.delayMs);
+      } else {
+        sound?.play(step.kind);
+      }
     }
-  }
+  });
 }
 
 // Low-time warning: once per game, when the seated player's clock first dips
@@ -119,9 +131,13 @@ export function maybePlayLowTimeSound(
   sound?.play('low-time');
 }
 
-// Game start: the moment the room flips from "waiting for opponent" (no clock
-// yet) to a running game while you hold a seat. The joiner triggered the flip
-// themselves; this is for the creator who has been waiting.
+// The snapshot where a waiting room flips to a running game (no clock yet ->
+// clock) while you hold a seat. The game-start sound itself is no longer
+// played here: it rides the lifecycle frame in live-render.ts through
+// live-game-start-sound.ts, the one path every live stack shares (PvE
+// included, which starts with its clock running and never made this flip).
+// The transition still claims the snapshot so the join is not read as an
+// opponent move.
 function isGameStartTransition(previous: PlayerView | null, next: PlayerView | null): boolean {
   if (!previous || !next) return false;
   if (!isColor(liveState.seat)) return false;
@@ -153,7 +169,7 @@ export function maybePlaySnapshotSound(nextEvents: GameEvent[], nextView: Player
   }
 
   if (isGameStartTransition(lastSoundView, nextView)) {
-    sound?.play('game-start');
+    // Sounded by the lifecycle frame (live-game-start-sound.ts).
   } else if (shouldUseRevealedEventSounds(nextView)) {
     playRevealedEventSound(nextEvents);
   } else {
@@ -218,7 +234,7 @@ export function soundForOwnMove(view: PlayerView | null, move: Move): SoundKind 
 }
 
 // Exposed for live-render's replay-of-live keyboard handler — it needs the
-// same own-piece-count diff logic to pick 'captured' vs 'move' on a step.
+// same own-piece-count diff logic to pick 'capture' vs 'move' on a step.
 export function ownPieceCount(view: PlayerView, color: Color): number {
   return Object.values(view.board).filter((piece) => piece?.color === color).length;
 }
@@ -249,7 +265,6 @@ function createSoundController(): SoundController {
     for (const kind of [
       'move',
       'capture',
-      'captured',
       'castle',
       'king-capture',
       'win',
@@ -271,7 +286,12 @@ function createSoundController(): SoundController {
     }
   };
 
-  let pendingKind: SoundKind | null = null;
+  // Sounds asked for before the first gesture, played in order once it lands.
+  // More than one can wait: a PvE game whose engine opens queues the
+  // game-start notify and the engine's move together. One of each kind, the
+  // latest few only, so a long locked wait never replays a backlog.
+  const pendingKinds: SoundKind[] = [];
+  const MAX_PENDING = 3;
 
   const unlock = () => {
     const audio = ensureContext();
@@ -280,11 +300,7 @@ function createSoundController(): SoundController {
     void audio.resume();
     window.removeEventListener('pointerdown', unlock);
     window.removeEventListener('keydown', unlock);
-    if (pendingKind) {
-      const kind = pendingKind;
-      pendingKind = null;
-      controller.play(kind);
-    }
+    for (const kind of pendingKinds.splice(0)) controller.play(kind);
   };
 
   window.addEventListener('pointerdown', unlock, { once: true });
@@ -378,7 +394,10 @@ function createSoundController(): SoundController {
         controller.play(kind);
         return;
       }
-      pendingKind = kind;
+      const existing = pendingKinds.indexOf(kind);
+      if (existing >= 0) pendingKinds.splice(existing, 1);
+      pendingKinds.push(kind);
+      if (pendingKinds.length > MAX_PENDING) pendingKinds.shift();
     },
   };
 
@@ -423,8 +442,6 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
   }
   if (kind === 'capture')
     return [{ delay: 0, duration: 0.11, frequency: 180, gain: 0.075, type: 'triangle' }];
-  if (kind === 'captured')
-    return [{ delay: 0, duration: 0.085, frequency: 130, gain: 0.04, type: 'sine' }];
   if (kind === 'king-capture') {
     return [
       { delay: 0, duration: 0.1, frequency: 523.25, gain: 0.065, type: 'triangle' },
@@ -730,21 +747,6 @@ function woodTonesForSound(kind: SoundKind): SoundTone[] | null {
         },
         { delay: 0, duration: 0.09, frequency: 200, gain: 0.07, type: 'triangle', attack: 0.002 },
       ];
-    case 'captured':
-      // Done to you: lower and softer than a capture you make.
-      return [
-        {
-          delay: 0,
-          duration: 0.03,
-          frequency: 1500,
-          gain: 0.075,
-          type: 'sine',
-          noise: true,
-          q: 0.5,
-          attack: 0.001,
-        },
-        { delay: 0, duration: 0.1, frequency: 165, gain: 0.055, type: 'triangle', attack: 0.003 },
-      ];
     case 'cannon-capture':
       // The xiangqi cannon slam: a hard crack over a deep board boom.
       return [
@@ -957,7 +959,7 @@ export function soundForMove(
   const captured = before.board[event.move.to];
   if (!captured) return 'move';
   if (captured.color === event.color) return 'move';
-  if (liveState.seat !== 'spectator' && captured.color === liveState.seat) return 'captured';
+  if (liveState.seat !== 'spectator' && captured.color === liveState.seat) return 'capture';
   if (captured.role === 'king') return 'king-capture';
   return 'capture';
 }
@@ -973,7 +975,7 @@ function playSanitizedOpponentSound(
 
   const kind =
     ownPieceCount(nextView, liveState.seat) < ownPieceCount(previousView, liveState.seat)
-      ? 'captured'
+      ? 'capture'
       : 'move';
   if (
     shouldDeferHiddenPveOpeningSound(previousView, nextView, liveState.seat, liveState.roomMode)

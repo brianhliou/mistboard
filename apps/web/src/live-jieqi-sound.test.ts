@@ -92,27 +92,56 @@ describe('classifyJieqiOpponentSound', () => {
     expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('flip');
   });
 
-  it('plays captured when the opponent takes our revealed piece', () => {
+  it('plays capture when the opponent takes our revealed piece', () => {
     const prev = view({ board: { a1: redChariot, e5: blackSoldier }, status: opponentToMove });
     const next = view({
       board: { a1: blackSoldier },
       status: afterOpponent,
       lastMove: { from: 'e5', to: 'a1' },
     });
-    expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('capture');
+  });
+
+  it.each(['red', 'black'] as const)('uses capture for both players when %s captures', (color) => {
+    const victim = color === 'red' ? 'black' : 'red';
+    const mover = { ...redChariot, color };
+    const target = { ...blackSoldier, color: victim } as const;
+    const board = { a1: mover, a2: target, e5: blackFaceDown };
+    const status = { type: 'playing', turn: color } as const;
+    const ownView = view({ board, status, perspective: color });
+    const prev = view({ board, status, perspective: victim });
+    const next = view({
+      board: { a2: mover, e5: blackFaceDown },
+      status: { type: 'playing', turn: victim },
+      perspective: victim,
+      lastMove: { from: 'a1', to: 'a2' },
+    });
+
+    expect(soundForOwnJieqiMove(ownView, { from: 'a1', to: 'a2' })).toBe('capture');
+    expect(classifyJieqiOpponentSound(prev, next, victim)).toBe('capture');
   });
 
   // The leak guard: when the opponent captures our FACE-DOWN piece, its identity
-  // reveals only to the capturer. To us it is a plain `captured` -- never a flip
+  // reveals only to the capturer. To us it is a plain `capture` -- never a flip
   // or anything role-specific -- so audio cannot leak what we were not shown.
-  it('plays captured (not flip) when the opponent captures our FACE-DOWN piece', () => {
+  it('plays capture (not flip) when the opponent captures our FACE-DOWN piece', () => {
     const prev = view({ board: { a1: redFaceDown, e5: blackSoldier }, status: opponentToMove });
     const next = view({
       board: { a1: blackSoldier },
       status: afterOpponent,
       lastMove: { from: 'e5', to: 'a1' },
     });
-    expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('capture');
+  });
+
+  it('prioritizes capture when a face-down attacker reveals while taking a face-down piece', () => {
+    const prev = view({ board: { a1: redFaceDown, e5: blackFaceDown }, status: opponentToMove });
+    const next = view({
+      board: { a1: blackSoldier },
+      status: afterOpponent,
+      lastMove: { from: 'e5', to: 'a1' },
+    });
+    expect(classifyJieqiOpponentSound(prev, next, 'red')).toBe('capture');
   });
 
   it('returns null for our own move', () => {

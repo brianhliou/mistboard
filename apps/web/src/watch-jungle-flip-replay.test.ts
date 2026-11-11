@@ -23,6 +23,8 @@ describe('Flip Jungle watch replay', () => {
     // Seat 'red' (first mover) bound the navy ink, so 'red-wins' reads "Blue wins".
     expect(root.textContent).toContain('Blue wins');
     expect(root.querySelectorAll('svg.jungle-flip-live-svg')).toHaveLength(1);
+    // The /watch move list names the animal the opening flip turned up, never "a1-a1".
+    expect(handle.moveEntries?.().map((entry) => entry.label)).toEqual(['a1(r)']);
     // Hidden identities → a Reveal control is present.
     const reveal = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
       (el) => el.textContent === 'Reveal',
@@ -38,6 +40,36 @@ describe('Flip Jungle watch replay', () => {
 
     handle.destroy();
     expect(root.childElementCount).toBe(0);
+  });
+
+  // Mistboard TV's rail: the room's material from the masked view the board shows.
+  // The first seat flipped black, so the bottom strip holds what black captured.
+  it('fills the TV rail with the captured animals and the face-down pool at the ply', async () => {
+    const postgame = postgameFixture('jgf_mat');
+    const ply1 = postgame.history?.truth?.[1];
+    if (ply1) ply1.view = { ...ply1.view, captured: [{ owner: 'red', role: 'cat' }] };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgame)),
+    );
+    const root = document.createElement('div');
+    const handle = await mountJungleFlipWatchReplay(root, 'jgf_mat', {
+      autoplay: false,
+      compact: true,
+    });
+    const slots = railSlots();
+
+    expect(handle.fillMaterial).toBeTypeOf('function');
+    handle.jumpToPly?.(0);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.bottom)).toEqual([]);
+    expect(slots.pool.querySelectorAll('.hidden-pool__row')).toHaveLength(2);
+
+    handle.jumpToPly?.(1);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual(['red cat']);
+    handle.destroy();
   });
 });
 
@@ -119,4 +151,18 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     headers: { 'content-type': 'application/json' },
     status: init.status ?? 200,
   });
+}
+
+function railSlots(): { top: HTMLElement; bottom: HTMLElement; pool: HTMLElement } {
+  return {
+    top: document.createElement('div'),
+    bottom: document.createElement('div'),
+    pool: document.createElement('div'),
+  };
+}
+
+function railLabels(slot: HTMLElement): string[] {
+  return [...slot.querySelectorAll('.review-capture-piece')].map(
+    (piece) => piece.getAttribute('aria-label') ?? '',
+  );
 }

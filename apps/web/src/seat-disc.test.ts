@@ -74,6 +74,8 @@ describe('seat disc', () => {
       'xqp-colour-dot',
       'study-game-row__dot',
       'puzzle-source-disc',
+      'current-game-seat-disc',
+      'clock-seat-disc',
     ];
     const offenders: string[] = [];
     const walk = (dir: string): void => {

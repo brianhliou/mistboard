@@ -1,6 +1,8 @@
 import type { ServerResponse } from 'node:http';
 import {
+  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
   DARK_CHESS_SPEC_ID,
   DAY_MS,
@@ -9,6 +11,7 @@ import {
   isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import { correspondenceEnabled } from './../feature-flags.js';
 import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
@@ -45,6 +48,19 @@ export const CORRESPONDENCE_ELIGIBLE_SPECS: ReadonlySet<string> = new Set(
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
 );
 
+// Correspondence-capable specs that only granted accounts may see or play
+// (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS): the seek routes admit one only when
+// every account involved holds the grant, never rated, and hide its seeks from
+// everyone else. Disjoint from CORRESPONDENCE_ELIGIBLE_SPECS by construction
+// (correspondence-eligibility.test.ts).
+export const CORRESPONDENCE_ALLOWLISTED_SPECS: ReadonlySet<string> = new Set(
+  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
+);
+
+export const CORRESPONDENCE_RESTRICTED_SPECS: ReadonlySet<string> = new Set(
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+);
+
 // Dev/test only: accept compressed non-official allowances (fractional
 // daysPerMove, e.g. 0.002 ≈ 3 minutes) so a full deadline cycle is testable
 // without waiting days. Hard-disabled in production-like runtimes, matching
@@ -55,7 +71,7 @@ export function devCorrespondenceTimeControlsEnabled(): boolean {
 
 export type CorrespondenceCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   // Defaults to the real persistence module; injectable for tests.
   isPersistenceInitialized?(): boolean;
@@ -114,7 +130,7 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 503, { error: 'persistence_disabled' });
     return;
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return;
   }

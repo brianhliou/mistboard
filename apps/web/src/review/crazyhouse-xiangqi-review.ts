@@ -30,6 +30,7 @@ import {
   type CrazyhouseXiangqiMove,
   type CrazyhouseXiangqiPlayerView,
   type CrazyhouseXiangqiSquare,
+  crazyhouseXiangqiCheckedGeneral,
   crazyhouseXiangqiFen,
   crazyhouseXiangqiMoveFromUci,
   getCrazyhouseXiangqiPlayerView,
@@ -201,6 +202,7 @@ export function createCrazyhouseXiangqiDropInput() {
         if (view) opts.onMove(move, view);
       },
       lastDropSquare: () => lastDrop,
+      checkSquare: (view) => crazyhouseXiangqiCheckedGeneral(view.board, view.status),
       dropTargets,
       takeSquareClick: (square) => {
         if (!selectedRole) return false;

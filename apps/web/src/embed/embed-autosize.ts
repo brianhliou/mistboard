@@ -38,8 +38,16 @@ function onMessage(event: MessageEvent): void {
     if (frameOrigin(frame) !== event.origin) return;
     const height = data.height;
     if (typeof height === 'number' && Number.isFinite(height) && height > 0) {
+      const next = Math.ceil(height);
+      // A frame one pixel shorter can ask for one pixel more: at a fractional
+      // zoom (110%, 2.2 device pixels a pixel) the card's measured padding moves
+      // by a fraction with the frame and its rounded report flips between two
+      // heights, so host and card resized each other ~30 times a second (Brian,
+      // 2026-10-24: "like it's vibrating"). Keep the taller one: a pixel of
+      // slack under the card, never a clipped card.
+      if (Number.parseFloat(frame.style.height) - next === 1) return;
       frame.style.aspectRatio = 'auto';
-      frame.style.height = `${Math.ceil(height)}px`;
+      frame.style.height = `${next}px`;
     } else {
       frame.style.height = '';
       frame.style.aspectRatio = frame.dataset.aspect ?? '';

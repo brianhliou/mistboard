@@ -1,18 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setPostHogInstance } from './analytics.js';
-import { hasAppTranslation, loadAppI18nDomains, t } from './i18n/catalog.js';
-import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
-  type ActivityEvent,
   appendChatText,
-  appendEventSentence,
   buildLandingChat,
   CHAT_VISIBLE_LINES,
   CHAT_WINDOW_MS,
   type ChatLine,
   chatTokenElement,
   createLandingChatFeed,
-  feedItems,
+  type LobbyChatNotice,
   readStoredChatMuted,
   visibleChatWindow,
 } from './landing-chat.js';
@@ -495,117 +490,288 @@ describe('landing chat mute persistence (live)', () => {
   });
 });
 
-function activity(id: string, ageMs: number, extra: Partial<ActivityEvent> = {}): ActivityEvent {
-  return {
-    id,
-    kind: 'bot-win',
-    createdAt: new Date(T0 - ageMs).toISOString(),
-    href: `/xiangqi/game/${id}`,
-    handle: 'fox',
-    opponent: 'Pikafish Level 6',
-    gameSpecId: 'xiangqi',
-    ...extra,
-  };
-}
-
-describe('activity rows', () => {
-  it('has every bot-win template in en, zh-Hans and zh-Hant', async () => {
-    await loadAppI18nDomains();
-    const keys = ['chat.eventBotWin', 'chat.eventBotWinRepeat', 'chat.eventBotWinMixed'] as const;
-    expect(SUPPORTED_LOCALES).toEqual(['en', 'zh-Hans', 'zh-Hant']);
-    for (const locale of SUPPORTED_LOCALES) {
-      for (const key of keys) {
-        expect(hasAppTranslation(locale, key), `${locale}:${key}`).toBe(true);
-        const template = t(key, {}, locale);
-        expect(template).toContain('{who}');
-        expect(template.includes('{count}')).toBe(key !== 'chat.eventBotWin');
-        expect(template.includes('{bot}')).toBe(key !== 'chat.eventBotWinMixed');
-        expect(template).not.toContain('\u2014');
-      }
-    }
+// The homepage chat shows people only (2026-10-17). A server from before that
+// change still sends derived `events` (bot wins, new studies); the box must
+// render none of them and must not let them hold the room open.
+describe('human lines only', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
   });
 
-  it('writes each kind as a sentence with the bot in bold', () => {
-    const guestWin = document.createElement('a');
-    appendEventSentence(
-      guestWin,
-      activity('g', 0, { handle: null, opponent: 'Fairy-Stockfish Level 8' }),
-      'en',
-    );
-    expect(guestWin.textContent).toBe('A guest beat Fairy-Stockfish Level 8, a top Xiangqi bot');
-    expect([...guestWin.querySelectorAll('strong')].map((el) => el.textContent)).toEqual([
-      'Fairy-Stockfish Level 8',
-    ]);
-
-    const streak = document.createElement('a');
-    appendEventSentence(
-      streak,
-      activity('st', 0, { handle: null, opponent: 'Pikafish', count: 3 }),
-      'en',
-    );
-    expect(streak.textContent).toBe('A guest beat Pikafish, a top Xiangqi bot, 3 times');
-
-    // A day's wins over more than one top bot or variant name neither.
-    const mixed = document.createElement('a');
-    appendEventSentence(mixed, activity('mx', 0, { opponent: undefined, count: 4 }), 'en');
-    expect(mixed.textContent).toBe('fox beat top bots 4 times');
-
-    const study = document.createElement('a');
-    appendEventSentence(
-      study,
-      activity('s', 0, { kind: 'study', title: 'Opening traps', gameSpecId: undefined }),
-      'en',
-    );
-    expect(study.textContent).toBe('New study: Opening traps');
-  });
-
-  it('interleaves activity with human lines by time; activity links to the game, never reportable', () => {
-    const feed = createLandingChatFeed({
-      state: { canReport: true, isAdmin: false, viewerHandle: 'me' },
-      locale: 'en',
-      mode: 'live',
-      now: () => T0,
-    });
-    feed.ingest(
-      feedItems({
-        lines: [line('hello', 30_000)],
-        events: [activity('win1', 60_000), activity('win2', 1000)],
-      }),
-    );
-    const rows = [...feed.element.querySelectorAll<HTMLElement>('.landing-chat-line')];
-    expect(rows.map((row) => row.classList.contains('landing-chat-event'))).toEqual([
-      true,
-      false,
-      true,
-    ]);
-    const eventLink = rows[0]?.querySelector<HTMLAnchorElement>('.landing-chat-event-text');
-    expect(eventLink?.getAttribute('href')).toBe('/xiangqi/game/win1');
-    expect(rows[0]?.querySelector('.landing-chat-report-action')).toBeNull();
-    const capture = vi.fn();
-    setPostHogInstance({ capture } as unknown as Parameters<typeof setPostHogInstance>[0]);
-    eventLink?.addEventListener('click', (e) => e.preventDefault());
-    eventLink?.click();
-    expect(capture).toHaveBeenCalledWith('chat_activity_clicked', {
+  const legacyEvents = (now: number) => [
+    {
+      id: 'act_game_win1',
       kind: 'bot-win',
-      variant: 'xiangqi',
+      createdAt: new Date(now - 30_000).toISOString(),
+      href: '/xiangqi/game/win1',
+      handle: 'fox',
+      opponent: 'Pikafish',
+      gameSpecId: 'xiangqi',
+    },
+    {
+      id: 'act_study_s1',
+      kind: 'study',
+      createdAt: new Date(now - 5000).toISOString(),
+      href: '/study/s1',
+      handle: 'fox',
+      title: 'Opening traps',
+    },
+  ];
+
+  function stubLobby(lines: ChatLine[]): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          lines,
+          events: legacyEvents(Date.now()),
+          canPost: false,
+          canReport: true,
+          viewerHandle: null,
+          isAdmin: false,
+        }),
+      })),
+    );
+  }
+
+  it('renders only the human lines when the payload also carries events', async () => {
+    stubLobby([line('a', 60_000, Date.now()), line('b', 1000, Date.now())]);
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(2);
     });
-    expect(rows[1]?.querySelector('.landing-chat-report-action')).not.toBeNull();
+    const rows = [...mount.querySelectorAll<HTMLElement>('.landing-chat-line')];
+    expect(rows.map((row) => row.querySelector('.landing-chat-handle')?.textContent)).toEqual([
+      'user_a',
+      'user_b',
+    ]);
+    expect(mount.querySelector('.landing-chat-event')).toBeNull();
+    expect(mount.querySelector('a[href="/xiangqi/game/win1"], a[href="/study/s1"]')).toBeNull();
+    expect(mount.textContent).not.toContain('Pikafish');
+    expect(mount.textContent).not.toContain('Opening traps');
   });
 
-  it('keeps activity inside the same seven-day window as chat', () => {
-    expect(
-      visibleChatWindow(
-        feedItems({ lines: [], events: [activity('old', CHAT_WINDOW_MS + 1), activity('new', 1)] }),
-        T0,
-      ).map((item) => item.id),
-    ).toEqual(['new']);
+  it('stays quiet when only events fall inside the window', async () => {
+    stubLobby([line('old', CHAT_WINDOW_MS + 60_000, Date.now())]);
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+    });
+    expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(0);
+  });
+});
+
+// #651: the release drain's restart notice, the one system message the lobby
+// keeps. The server derives it from live drain state; the widget shows it as a
+// single row that a poll updates in place or takes away.
+describe('drain notice', () => {
+  const state = { canReport: true, isAdmin: true, viewerHandle: null };
+  const pending = (restartAt: number): LobbyChatNotice => ({
+    id: `drain-${restartAt}`,
+    kind: 'server_restart',
+    phase: 'pending',
+    restartAt,
   });
 
-  it('drops an activity row whose variant has no catalog name (fail closed)', () => {
-    const items = feedItems({
-      lines: [],
-      events: [activity('known', 1), activity('unknown', 1, { gameSpecId: 'retired-variant' })],
+  function feedWithClock() {
+    let now = T0;
+    const feed = createLandingChatFeed({ state, locale: 'en', mode: 'live', now: () => now });
+    return { feed, advance: (ms: number) => (now += ms) };
+  }
+
+  function noticeRows(root: HTMLElement): HTMLElement[] {
+    return [...root.querySelectorAll<HTMLElement>('.landing-chat-notice')];
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  it('shows one notice row after the lines, with no handle link or moderation controls', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    const rows = noticeRows(feed.element);
+    expect(rows).toHaveLength(1);
+    expect(feed.element.lastElementChild).toBe(rows[0]);
+    expect(rows[0]?.textContent).toContain('Update pending');
+    expect(rows[0]?.getAttribute('role')).toBe('status');
+    expect(rows[0]?.querySelector('a, button')).toBeNull();
+    expect(feed.visibleIds()).toEqual(['a']);
+  });
+
+  it('deduplicates: repeated polls of the same drain keep a single row', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    const notice = pending(T0 + 120_000);
+    feed.setNotice(notice);
+    feed.setNotice({ ...notice });
+    feed.ingest([line('a', 1000), line('b', 0)]);
+    feed.setNotice({ ...notice });
+    expect(noticeRows(feed.element)).toHaveLength(1);
+  });
+
+  it('updates the row in place when the drain commits to restarting', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    const notice = pending(T0 + 120_000);
+    feed.setNotice(notice);
+    feed.setNotice({ ...notice, phase: 'restarting' });
+    const rows = noticeRows(feed.element);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain('Server restarting now');
+    expect(rows[0]?.textContent).not.toContain('Update pending');
+  });
+
+  it('a cancelled drain (no notice on the next poll) removes the row', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    feed.setNotice(null);
+    expect(noticeRows(feed.element)).toHaveLength(0);
+    expect(feed.visibleIds()).toEqual(['a']);
+  });
+
+  it('drops the notice once its deadline passes, even with no poll', () => {
+    const { feed, advance } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    advance(120_001);
+    feed.expireTick();
+    expect(noticeRows(feed.element)).toHaveLength(0);
+  });
+
+  function stubLobby(lines: ChatLine[], notice?: LobbyChatNotice): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          lines,
+          ...(notice ? { notice } : {}),
+          canPost: false,
+          canReport: false,
+          viewerHandle: null,
+          isAdmin: false,
+        }),
+      })),
+    );
+  }
+
+  it('renders the notice from the lobby read in the live room', async () => {
+    stubLobby([line('a', 1000, Date.now())], pending(Date.now() + 120_000));
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(1);
     });
-    expect(items.map((item) => item.id)).toEqual(['known']);
+    expect(noticeRows(mount)).toHaveLength(1);
+  });
+
+  it('shows the notice above the quiet invitation when no line is in the window', async () => {
+    stubLobby([], pending(Date.now() + 120_000));
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+    });
+    expect(noticeRows(mount)).toHaveLength(1);
+  });
+
+  it('shows nothing extra when the lobby read carries no notice', async () => {
+    stubLobby([line('a', 1000, Date.now())]);
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(1);
+    });
+    expect(noticeRows(mount)).toHaveLength(0);
+  });
+
+  describe('quiet lobby polling', () => {
+    let notice: LobbyChatNotice | undefined;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(T0);
+      // Exercise the page-scoped poller, which is disabled in test mode.
+      vi.stubEnv('MODE', 'development');
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      notice = undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          json: async () => ({
+            lines: [],
+            notice,
+            canPost: true,
+            canReport: false,
+            viewerHandle: 'you',
+            isAdmin: false,
+          }),
+        })),
+      );
+    });
+
+    afterEach(() => {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    });
+
+    async function mountQuietLobby(): Promise<HTMLElement> {
+      const mount = buildLandingChat();
+      document.body.append(mount);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+      return mount;
+    }
+
+    it('removes a cancelled notice on the next poll before its deadline', async () => {
+      notice = pending(T0 + 120_000);
+      const mount = await mountQuietLobby();
+      expect(noticeRows(mount)).toHaveLength(1);
+
+      notice = undefined;
+      await vi.advanceTimersByTimeAsync(7000);
+
+      expect(noticeRows(mount)).toHaveLength(0);
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+    });
+
+    it('picks up a new drain and its restarting phase without replacing a draft', async () => {
+      const mount = await mountQuietLobby();
+      expect(noticeRows(mount)).toHaveLength(0);
+      const input = mount.querySelector<HTMLInputElement>('.landing-chat-input');
+      expect(input).toBeTruthy();
+      if (!input) return;
+      input.value = 'unfinished message';
+
+      notice = pending(T0 + 120_000);
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(noticeRows(mount)).toHaveLength(1);
+      expect(noticeRows(mount)[0]?.textContent).toContain('Update pending');
+
+      notice = { ...notice, phase: 'restarting' };
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(noticeRows(mount)).toHaveLength(1);
+      expect(noticeRows(mount)[0]?.textContent).toContain('Server restarting now');
+      expect(mount.querySelector('.landing-chat-input')).toBe(input);
+      expect(input.value).toBe('unfinished message');
+
+      // The new notice still expires locally while polls are suspended.
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      await vi.advanceTimersByTimeAsync(106_000);
+      expect(noticeRows(mount)).toHaveLength(0);
+    });
   });
 });

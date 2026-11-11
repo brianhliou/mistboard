@@ -15,14 +15,23 @@ import {
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
+  applyGomokuRoomMove,
+  createGomokuRoomState,
   createInitialXiangqiState,
   type GameEvent,
+  getGomokuPlayerView,
   getPlayerView as getXiangqiPlayerView,
   initialGameProjection,
   parseStandardXiangqiFen,
+  tileColor,
+  tilePiece,
+  type XmjPiece,
+  type XmjTile,
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
+import { ARTICLE_OG_FITS, isArticleThumbSlug, renderArticleThumbnail } from './article-thumb.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
+import { gomokuEnabled } from './feature-flags.js';
 import {
   CARD_ASPECT_FRAMES,
   type CardAspect,
@@ -30,6 +39,7 @@ import {
   loadCardArt,
   renderBoardAspectCard,
   renderBoardCard,
+  xiangqiFigureSvg,
 } from './og-card-board.js';
 import { type PositionOgBoard, type PositionOgVariant, resolvePositionOg } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
@@ -55,7 +65,9 @@ export {
 };
 // v5 (2026-09-12): the shared board card (one board, seats beside it) in place
 // of the two-fog-view frame.
-export const GAME_OG_IMAGE_VERSION = 5;
+// v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const GAME_OG_IMAGE_VERSION = 7;
 
 // Bounded LRU of rendered per-game PNGs. Each card is rendered once on first
 // scraper fetch, then served from here (and from the scraper/CDN cache, via the
@@ -181,17 +193,20 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'server-enforced-fog': renderServerFogOgSvg,
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
+  'xiangqi-mahjong-32': renderXiangqiMahjongOgSvg,
   misty: renderMistyOgSvg,
   'yin-sheng': playerFaceOgSvg('article-thumbs/yin-sheng-2022-face.jpg'),
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
   'lai-ly-huynh': playerFaceOgSvg('article-thumbs/lai-ly-huynh-2026-face.jpg'),
   'tony-fung-ga-zen': playerFaceOgSvg('article-thumbs/tony-fung-2023-face.jpg'),
+  'tang-dan': playerFaceOgSvg('player-photos/tang-dan.jpg', { width: 300, height: 380 }),
   'zuo-wenjing': playerFaceOgSvg('article-thumbs/zuo-wenjing-2023-face.jpg'),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
   'banqi-statistics': renderBanqiStatsOgSvg,
   'one-thousand-games': renderOneThousandGamesOgSvg,
+  'ten-thousand-games': renderTenThousandGamesOgSvg,
 };
 
 // Banqi's start is 32 face-down tiles, which at thumbnail size reads as a
@@ -290,43 +305,216 @@ export const JUNGLE_CARD_FEN = 't6/5dl/1c1w3/6r/e2p2E/1R5/3W3/1D3CT/L6 r 8 10';
 export const JUNGLE_FLIP_CARD_MOVES = 'b3b3 a3a3 b3a3 d3d3 c3c3 d3c3 d2d2 c2c2 b2b2';
 export const JUNGLE_FLIP_CARD_FEN = 'XXXX/L3/XDre/XXXX b R1C1P1T1E1d1p1t1l1 0 9';
 
+type ArticleCardBoard = Parameters<typeof renderBoardCard>[0];
+
+// The horizontal-five example from /rules/gomoku, replayed through the kernel
+// so the existing card renderer gets the same terminal evidence as the board.
+function gomokuRulesCardBoard(): Extract<ArticleCardBoard, { kind: 'gomoku' }> {
+  let state = createGomokuRoomState('gomoku-rules-card');
+  for (const to of ['e8', 'a1', 'f8', 'c1', 'g8', 'e1', 'h8', 'g1', 'i8'] as const) {
+    state = applyGomokuRoomMove(state, { to });
+  }
+  const { board, lastMove, winningLine } = getGomokuPlayerView(state, 'black');
+  return { kind: 'gomoku', position: { board, lastMove, winningLine } };
+}
+
+// Source: en-passant-under-fog.ts WITH_EP, fogFor(WITH_EP, 'black').
+// Store only Black's visible pieces, never the full FEN behind the fog.
+const EN_PASSANT_ARTICLE_BOARD: ArticleCardBoard = {
+  kind: 'chess',
+  orientation: 'black',
+  pieces: [
+    { file: 5, rank: 3, color: 'black', role: 'pawn' },
+    { file: 6, rank: 3, color: 'white', role: 'pawn' },
+    { file: 4, rank: 5, color: 'black', role: 'pawn' },
+    { file: 7, rank: 6, color: 'black', role: 'pawn' },
+    { file: 5, rank: 7, color: 'black', role: 'king' },
+  ],
+  fogSquares: [
+    'a1',
+    'a2',
+    'a3',
+    'a4',
+    'a5',
+    'a6',
+    'a7',
+    'a8',
+    'b1',
+    'b2',
+    'b3',
+    'b4',
+    'b5',
+    'b6',
+    'b7',
+    'b8',
+    'c1',
+    'c2',
+    'c3',
+    'c4',
+    'c5',
+    'c6',
+    'c7',
+    'c8',
+    'd1',
+    'd2',
+    'd3',
+    'd4',
+    'd5',
+    'd6',
+    'd7',
+    'd8',
+    'e1',
+    'e2',
+    'e3',
+    'e4',
+    'e5',
+    'f1',
+    'f2',
+    'f5',
+    'f6',
+    'g1',
+    'g2',
+    'g5',
+    'g6',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h8',
+  ],
+};
+
 // Pages whose card is a position on the site board (og-card-board.ts), keyed by
 // the ARTICLE_META slug. Mostly rules pages; an article whose subject is a board
 // game gets one too. The fog xiangqi card shows Red's view of its game: the
 // kernel decides what Red can see, never a hand list. These slugs used to be
 // 'dark-*' and the cards silently vanished at the dark->fog rename (2026-09-12
-// audit); the key here MUST be the live slug. `hanzi` marks a xiangqi-family
-// board, whose zh pages get the card in the traditional set with a zh caption
-// (ARTICLE_OG_ZH_SLUGS). `fen` is required: there is no start-position default.
+// audit); the key here MUST be the live slug. `localized` opts into zh captions
+// (ARTICLE_OG_ZH_SLUGS). Xiangqi boards also use the traditional piece set.
+// Every entry supplies a FEN or a board: there is no start-position default.
 const BOARD_POSITION_CARDS: Record<
   string,
-  { variant: PositionOgVariant; fen: string; redFog?: boolean; hanzi?: true }
+  ({ variant: PositionOgVariant; fen: string; redFog?: boolean } | { board: ArticleCardBoard }) & {
+    localized?: true;
+    /** Full article headline, wrapped; existing rules and Pikafish keep their layout. */
+    wrapTitle?: true;
+    orientation?: 'black';
+  }
 > = {
-  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, hanzi: true },
+  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, localized: true },
   'fog-xiangqi': {
     variant: 'dark-xiangqi',
     fen: FOG_XIANGQI_CARD_FEN,
     redFog: true,
-    hanzi: true,
+    localized: true,
   },
-  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, hanzi: true },
-  banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, hanzi: true },
+  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, localized: true },
+  banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, localized: true },
   'fortress-xiangqi': {
     variant: 'fortress-xiangqi',
     fen: FORTRESS_XIANGQI_CARD_FEN,
-    hanzi: true,
+    localized: true,
   },
-  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, hanzi: true },
+  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, localized: true },
   // Unlisted, but a rules link is still shared.
-  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, hanzi: true },
+  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, localized: true },
   'crazyhouse-xiangqi': {
     variant: 'crazyhouse-xiangqi',
     fen: CRAZYHOUSE_XIANGQI_CARD_FEN,
-    hanzi: true,
+    localized: true,
   },
   jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
   'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
-  pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, hanzi: true },
+  pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, localized: true },
+  // Source: shortest-stalemate-xiangqi.ts BLACK_STALEMATE_SVG, final ply 21.
+  'shortest-stalemate-xiangqi': {
+    variant: 'xiangqi',
+    fen: '1Cbakabn1/4r2R1/4c4/4C4/2R6/9/2P1P1P1P/8N/9/1NBAKAB2 b - - 0 11',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: helpmates-in-xiangqi.ts HELPMATE_THUMBNAIL, introMate().
+  'helpmates-in-xiangqi': {
+    variant: 'xiangqi',
+    fen: '1nbakab1r/r3n4/2c2N3/2p5p/9/9/9/9/9/3K5 b - - 4 3',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: jieqi-puzzle-search.ts JIEQI_PUZZLE_THUMBNAIL / lotteryDealt,
+  // public fields only: X/x remain backs, with no sixth-field deal to expose.
+  'jieqi-puzzle-search': {
+    variant: 'jieqi',
+    fen: 'x3k3x/9/5R3/4p4/4bnb1p/5N3/8X/2P2A1P1/4C4/4K3X b R0A0C0P0N0B2r0a0c0p1n1b0 0 28',
+    orientation: 'black',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: xiangqi-endgames.ts THUMBNAIL_STATE, chariot-vs-horse-two-elephants-fortress.
+  'xiangqi-endgames': {
+    variant: 'xiangqi',
+    fen: '4k4/9/4n3b/4R4/6b2/9/9/9/4K4/9 r - - 0 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: duck-xiangqi-tree-diagrams.ts duckTreeThumbnailSvg / h3-e3,
+  // before choosing a duck destination (the thumbnail has no duck on it).
+  'duck-xiangqi-game-tree': {
+    variant: 'duck-xiangqi',
+    fen: 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2C4/9/RNBAKABNR b - - 0 1 -',
+    localized: true,
+    wrapTitle: true,
+  },
+  'en-passant-under-fog': { board: EN_PASSANT_ARTICLE_BOARD, localized: true, wrapTitle: true },
+  // Source: most-played-move.ts KINGS_GAMBIT_D6, White at the bottom.
+  'most-played-move': {
+    variant: 'dark-chess',
+    fen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4PP2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: chess960-starting-positions.ts SP_783, QRKNRNBB. The sole
+  // deliberate start-position exception: the article ranks starting positions.
+  'chess960-starting-positions': {
+    variant: 'dark-chess',
+    fen: 'qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB w - - 0 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: lichess-analysis-accuracy.ts ZHIGALKO_QD7, Black at the bottom.
+  'lichess-analysis-accuracy': {
+    variant: 'dark-chess',
+    fen: '2rr2k1/p1q1bppp/bp2pn2/4B3/1Pp5/6P1/PQ1NPPBP/3RR1K1 b - - 0 20',
+    orientation: 'black',
+    localized: true,
+    wrapTitle: true,
+  },
+  // The jieqi rules card's middlegame: the thumbnail is a shuffled start, and a
+  // card never shows one. Backs carry no role, as on the rules card.
+  'jieqi-openings': { variant: 'jieqi', fen: JIEQI_CARD_FEN, localized: true, wrapTitle: true },
+  'khai-cuoc-co-up': { variant: 'jieqi', fen: JIEQI_CARD_FEN, wrapTitle: true },
+  // Source: riverbank-cannon-diagrams.ts RB_THUMBNAIL / ARRIVED after b3-b5.
+  'riverbank-cannon': {
+    variant: 'xiangqi',
+    fen: 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/1C7/P1P1P1P1P/7C1/9/RNBAKABNR b - - 1 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: dou-shou-qi-engine.ts first example, xzzhAld5/QP3lG9Cf ply 88;
+  // replayed from the public study and visually matched to thumbnail.png.
+  'dou-shou-qi-engine': {
+    variant: 'jungle',
+    fen: '7/3d3/1cep3/t2E3/2R1r2/3T3/L6/2D2l1/4W2 r 14 45',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: jungle-den-term.ts POSITION_FEN, matching its image thumbnail.
+  'jungle-den-term': {
+    variant: 'jungle',
+    fen: '6l/1tc2d1/3ep2/3T3/7/1R2r2/1PL1W2/3DCE1/7 b 0 20',
+    localized: true,
+    wrapTitle: true,
+  },
+  gomoku: { board: gomokuRulesCardBoard(), localized: true },
 };
 
 /** The page languages a card has its own version for, as route prefixes. */
@@ -338,14 +526,14 @@ export function isArticleOgLang(value: string): value is ArticleOgLang {
 }
 
 /** Slugs whose card has a zh version per script (`?lang=zh-hans|zh-hant`):
- *  the same board in the traditional (hanzi) set, captioned with the page's
- *  own zh title. The site gives zh readers hanzi pieces by default (memory
+ *  the board captioned with the page's own zh title. Xiangqi-family cards use
+ *  the traditional (hanzi) set, as the site does by default (memory
  *  piece_set_default_by_locale_settled); one card URL per page language lets
  *  the card follow. Every one has published zh titles (og-image.test.ts).
  *  Mirrored by the web build (apps/web/src/article-og-image.ts); og-image.test.ts
  *  pins the two. */
 export const ARTICLE_OG_ZH_SLUGS: readonly string[] = Object.entries(BOARD_POSITION_CARDS)
-  .filter(([, entry]) => entry.hanzi)
+  .filter(([, entry]) => entry.localized)
   .map(([slug]) => slug);
 
 // ARTICLE_OG_POSITIONS (board-render) is keyed by the chess positions' original
@@ -367,7 +555,10 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 //  mid-title (banqi, jieqi, jungle, flip jungle) no longer gets a second one;
 //  pikafish gets a board card instead of the site card. The ?lang= and
 //  ?aspect= URLs are new with v5, so no older URL ever named them.
-export const ARTICLE_OG_IMAGE_VERSION = 5;
+//  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+//  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+//  v8: articles without a dedicated card use their thumbnail art, centre-cropped.
+export const ARTICLE_OG_IMAGE_VERSION = 8;
 
 /** The page's wide card URL (og:image), as the server-rendered article shell
  *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
@@ -388,9 +579,10 @@ export function articleOgImageUrl(host: string, slug: string, langPrefix?: strin
 export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = Object.keys(CUSTOM_ARTICLE_OG_SVGS);
 
 /** The board a page's position card shows, or null when the slug has none. */
-export function positionCardBoard(slug: string): PositionOgBoard | null {
+export function positionCardBoard(slug: string): ArticleCardBoard | null {
   const entry = BOARD_POSITION_CARDS[slug];
   if (!entry) return null;
+  if ('board' in entry) return entry.board;
   const resolved = resolvePositionOg(entry.variant, entry.fen);
   if (!resolved) return null;
   let board = resolved.board;
@@ -415,6 +607,9 @@ export function positionCardBoard(slug: string): PositionOgBoard | null {
       extras: board.extras.filter(shown),
       fog,
     };
+  }
+  if (entry.orientation && (board.kind === 'intersection' || board.kind === 'chess')) {
+    board = { ...board, orientation: entry.orientation };
   }
   return board;
 }
@@ -442,9 +637,9 @@ export function renderDefaultOgAspectSvg(logoHref: string, aspect: CardAspect): 
   const logo = logoMarkImage(logoHref, (width - logoSize) / 2, top, logoSize);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    logoGlowBackground(width, height, top + logoSize / 2),
+    paperBackground(width, height),
     logo,
-    `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="#f3f4f6" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
+    `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
     `</svg>`,
   ].join('');
 }
@@ -484,10 +679,17 @@ export async function serveArticleOgImage(params: {
   zhTitles?: ArticleZhTitles;
 }): Promise<void> {
   const { slug, kind, response, staticDir, aspect, lang } = params;
+  // Rules remain directly readable for review, but their hidden playtest card
+  // must not be served (including from cache) without the server's opt-in.
+  if (slug === 'gomoku' && !gomokuEnabled()) {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Gomoku rules card is disabled');
+    return;
+  }
   const zhTitle = lang ? params.zhTitles?.[lang] : undefined;
   if (lang && (!ARTICLE_OG_ZH_SLUGS.includes(slug) || !zhTitle)) {
     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    response.end(`no ${lang} card for ${slug}: it has no xiangqi-family board or no ${lang} page`);
+    response.end(`no ${lang} card for ${slug}: it has no localized board or no ${lang} page`);
     return;
   }
   const pieceSet: CardPieceSet = lang ? 'traditional' : 'international';
@@ -513,16 +715,39 @@ export async function serveArticleOgImage(params: {
     return;
   }
   if (!custom && !position && !boardCard) {
-    redirectToDefault(response);
+    let png: Buffer | null = null;
+    try {
+      if (isArticleThumbSlug(slug)) {
+        const source = await fs.readFile(
+          resolve(staticDir, 'thumb', 'article', `${slug}.svg`),
+          'utf8',
+        );
+        png = await renderArticleThumbnail(source, staticDir, 'og', ARTICLE_OG_FITS[slug]);
+      }
+    } catch {
+      // Missing art and failed renders must remain a usable share link.
+      png = null;
+    }
+    if (!png) {
+      redirectToDefault(response);
+      return;
+    }
+    cacheSet(key, png);
+    writePng(response, png, 'MISS');
     return;
   }
-  const title = zhTitle ? articleCardTitleZh(zhTitle) : articleCardTitle(kind, params.title);
+  const wrapTitle = boardCard?.wrapTitle;
+  const title = zhTitle
+    ? wrapTitle
+      ? zhTitle
+      : articleCardTitleZh(zhTitle)
+    : articleCardTitle(kind, params.title);
   const art = await loadCardArt(staticDir);
   const board = positionCardBoard(slug);
   const svg = custom
     ? await custom(title, { staticDir })
     : board
-      ? renderBoardCard(board, art, { title: [title] }, pieceSet)
+      ? renderBoardCard(board, art, { title: [title], wrapTitle }, pieceSet)
       : renderArticleOgSvg(title, position!);
   const png = await svgToPng(svg);
   cacheSet(key, png);
@@ -575,7 +800,9 @@ async function serveArticleAspectImage(params: {
 //  v3 (2026-09-12): the live board and the site's default piece set, board at
 //  full height with the title beside it (og-card-board.ts). */
 //  v4 (2026-09-25): Chinese study and chapter titles render instead of boxes.
-export const STUDY_OG_IMAGE_VERSION = 5;
+//  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+//  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const STUDY_OG_IMAGE_VERSION = 7;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that
@@ -805,6 +1032,88 @@ async function renderShogi4OgSvg(title: string, ctx: ArticleOgContext): Promise<
   ].join('');
 }
 
+// Xiangqi Mahjong's card is a winning hand on the table's tiles (ivory face,
+// jade backing; apps/web/src/xiangqi-mahjong-tile-svg.ts at 4x), drawn as
+// vectors at output size with the piece art picked for that size. The hand is
+// the rules page's worked example (XMJ32_WORKED): red Chariot, Horse, Cannon
+// with the two Generals as the pair; og-image.test.ts runs it through
+// xmjWinShape so the card cannot show a hand the game would not call a win.
+export const XMJ_OG_HAND: readonly (readonly XmjTile[])[] = [
+  ['rR', 'rH', 'rC'],
+  ['rK', 'bK'],
+];
+const XMJ_OG_GROUP_LABELS = ['set', 'pair'] as const;
+const XMJ_OG_ROLES: Readonly<Record<XmjPiece, string>> = {
+  K: 'general',
+  A: 'advisor',
+  E: 'elephant',
+  R: 'chariot',
+  H: 'horse',
+  C: 'cannon',
+  P: 'soldier',
+};
+
+function xmjOgTile(
+  art: Awaited<ReturnType<typeof loadCardArt>>,
+  tile: XmjTile,
+  x: number,
+  y: number,
+  scale: number,
+): string {
+  const w = 44 * scale;
+  const h = 58 * scale;
+  const rx = 6 * scale;
+  const depth = 5 * scale;
+  const pieceSize = 52 * scale;
+  const ink = tileColor(tile) === 'r' ? 'red' : 'black';
+  const role = XMJ_OG_ROLES[tilePiece(tile)];
+  return [
+    `<rect x="${x}" y="${y + depth}" width="${w}" height="${h}" rx="${rx}" fill="#22684f"/>`,
+    `<rect x="${x}" y="${y + depth - scale}" width="${w}" height="${h}" rx="${rx}" fill="#2f8a70"/>`,
+    `<rect x="${x}" y="${y + scale}" width="${w}" height="${h}" rx="${rx}" fill="#ded3b8"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#fbf7ec" stroke="#ded3b8" stroke-width="${scale}"/>`,
+    `<path d="M${x + scale} ${y + h * 0.6}H${x + w - scale}V${y + h - rx}a${rx - scale} ${rx - scale} 0 0 1-${rx - scale} ${rx - scale}H${x + rx}a${rx - scale} ${rx - scale} 0 0 1-${rx - scale}-${rx - scale}Z" fill="#efe7d2" fill-opacity="0.7"/>`,
+    `<path d="M${x + rx} ${y + 1.5 * scale}H${x + w - rx}" stroke="#fff" stroke-opacity="0.9" stroke-width="${scale}"/>`,
+    xiangqiFigureSvg(art, ink, role, x + (w - pieceSize) / 2, y + (h - pieceSize) / 2, pieceSize),
+  ].join('');
+}
+
+async function renderXiangqiMahjongOgSvg(title: string, ctx: ArticleOgContext): Promise<string> {
+  const art = await loadCardArt(ctx.staticDir);
+  const scale = 4;
+  const tileW = 44 * scale;
+  const tileGap = 6 * scale;
+  const groupGap = 22 * scale;
+  const tileY = 132;
+  const tileBottom = tileY + (58 + 5) * scale;
+  const tiles = XMJ_OG_HAND.flat().length;
+  const width =
+    tiles * tileW + (tiles - XMJ_OG_HAND.length) * tileGap + (XMJ_OG_HAND.length - 1) * groupGap;
+  let x = (OG_WIDTH - width) / 2;
+  const parts: string[] = [];
+  XMJ_OG_HAND.forEach((group, index) => {
+    const groupX = x;
+    for (const tile of group) {
+      parts.push(xmjOgTile(art, tile, x, tileY, scale));
+      x += tileW + tileGap;
+    }
+    x += groupGap - tileGap;
+    const groupEnd = x - groupGap;
+    const bracketY = tileBottom + 22;
+    parts.push(
+      `<path d="M${groupX + 4} ${bracketY - 10}V${bracketY}H${groupEnd - 4}V${bracketY - 10}" fill="none" stroke="#5b6470" stroke-width="3"/>`,
+      `<text x="${(groupX + groupEnd) / 2}" y="${bracketY + 38}" text-anchor="middle" font-family="${FONT}" font-size="28" fill="#9ca3af">${XMJ_OG_GROUP_LABELS[index]}</text>`,
+    );
+  });
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    ...parts,
+    ogFooterLine(title, 36 + 500 + 48),
+    `</svg>`,
+  ].join('');
+}
+
 function xqOgCoord(square: string): { file: number; rank: number } {
   return { file: square.charCodeAt(0) - 97, rank: Number(square.slice(1)) };
 }
@@ -830,18 +1139,22 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
 // landscape, title below. Same shape as Misty's card with a wider frame,
 // because a face crop is 3:2 and a square would cut the sides off it. One
 // renderer for every player page; the face crop is the only thing that varies.
-function playerFaceOgSvg(facePath: string) {
+// `whole` is a small portrait with no landscape crop (a 300x380 photo): drawn
+// whole at its own pixel size, centred in the frame, never cropped or upscaled.
+function playerFaceOgSvg(facePath: string, whole?: { width: number; height: number }) {
   return async (title: string, ctx: ArticleOgContext): Promise<string> => {
-    const artW = 660;
+    const artW = whole?.width ?? 660;
     const artH = 420;
     const artY = 36;
     const artX = (OG_WIDTH - artW) / 2;
+    const imgH = whole?.height ?? artH;
+    const imgY = artY + (artH - imgH) / 2;
     const uri = await fileDataUri(ctx.staticDir, facePath, 'image/jpeg');
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
       `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-      `<clipPath id="player-face-art"><rect x="${artX}" y="${artY}" width="${artW}" height="${artH}" rx="10"/></clipPath>`,
-      `<image href="${uri}" x="${artX}" y="${artY}" width="${artW}" height="${artH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#player-face-art)"/>`,
+      `<clipPath id="player-face-art"><rect x="${artX}" y="${imgY}" width="${artW}" height="${imgH}" rx="10"/></clipPath>`,
+      `<image href="${uri}" x="${artX}" y="${imgY}" width="${artW}" height="${imgH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#player-face-art)"/>`,
       ogFooterLine(title, artY + artH + 48),
       `</svg>`,
     ].join('');
@@ -1055,10 +1368,18 @@ function renderBanqiStatsOgSvg(title: string): string {
 // on the default card's ground, so it reads at thumbnail size in any feed.
 // The footer says thanks instead of repeating the title the hero already says.
 function renderOneThousandGamesOgSvg(): string {
+  return renderGamesMilestoneOgSvg('1,000');
+}
+
+function renderTenThousandGamesOgSvg(): string {
+  return renderGamesMilestoneOgSvg('10,000');
+}
+
+function renderGamesMilestoneOgSvg(games: string): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    `<text x="${OG_WIDTH / 2}" y="330" text-anchor="middle" font-family="${FONT}" font-size="230" font-weight="700" letter-spacing="-6" fill="#f3f4f6">1,000</text>`,
+    `<text x="${OG_WIDTH / 2}" y="330" text-anchor="middle" font-family="${FONT}" font-size="230" font-weight="700" letter-spacing="-6" fill="#f3f4f6">${games}</text>`,
     `<text x="${OG_WIDTH / 2}" y="420" text-anchor="middle" font-family="${FONT}" font-size="44" font-weight="600" letter-spacing="6" fill="#5da271">GAMES PLAYED</text>`,
     ogFooterLine('Thank you for playing', OG_HEIGHT - 44),
     `</svg>`,
@@ -1177,9 +1498,8 @@ export async function loadLogoMarkHref(staticDir: string): Promise<string> {
 
 // The raster's greys (frame 53, tiles 65-69 before the 2026-10-14 re-cut) sat
 // too close to the card's blue-black (Brian, 2026-10-11: "a bit too grey and
-// not enough pop"), so a gamma curve darkens them while the whites stay white,
-// and a soft glow behind the mark keeps the darker frame from sinking into the
-// background. The 10-11 fix also eroded the alpha to drop a pale ring left by
+// not enough pop"), so a gamma curve darkens them while the whites stay white.
+// The cards moved to a light background on 2026-10-31 and kept the curve. The 10-11 fix also eroded the alpha to drop a pale ring left by
 // cutting the PNG out of white; the 10-14 re-cut of logo-mark.png cleaned that
 // edge, darkened the greys by gamma 1.25 and drew a deliberate light rim, so
 // the card no longer erodes (it would eat the rim) and applies only the rest
@@ -1198,13 +1518,19 @@ function logoMarkImage(href: string, x: number, y: number, size: number): string
   ].join('');
 }
 
-/** The card's blue-black with a slate glow centred on the mark at `cy`. */
-function logoGlowBackground(width: number, height: number, cy: number): string {
+// The site cards sit on the site's own light background, the dark mark on
+// paper as in the header, with a brand-green bar on the bottom edge. Brian,
+// 2026-10-31, on the dark card with a glow behind the mark: "it does look a
+// bit weird or cheap"; he picked this over a flat dark and a brand-green card.
+const SITE_CARD_PAPER = '#eeeae3';
+const SITE_CARD_INK = '#34322d';
+const SITE_CARD_ACCENT = '#1f6f5b';
+
+function paperBackground(width: number, height: number): string {
+  const bar = Math.round(height * 0.022);
   return [
-    `<radialGradient id="logo-glow" cx="0.5" cy="${cy / height}" r="0.38">`,
-    `<stop offset="0" stop-color="#3a4150"/><stop offset="1" stop-color="#0f1115"/>`,
-    `</radialGradient>`,
-    `<rect width="${width}" height="${height}" fill="url(#logo-glow)"/>`,
+    `<rect width="${width}" height="${height}" fill="${SITE_CARD_PAPER}"/>`,
+    `<rect x="0" y="${height - bar}" width="${width}" height="${bar}" fill="${SITE_CARD_ACCENT}"/>`,
   ].join('');
 }
 //
@@ -1222,30 +1548,29 @@ export function renderDefaultOgSvg(
   logoHref: string,
   copy: { wordmark: string; lines: string[]; note?: string } = {
     wordmark: 'MISTBOARD',
-    lines: ['Chinese chess and original strategy games.'],
-    note: 'Free and open source.',
+    lines: ["Chinese chess and the world's", 'classic strategy games.'],
   },
 ): string {
-  const logoSize = 200;
-  const logoY = 96;
+  const logoSize = 180;
+  const logoY = 92;
   const logo = logoMarkImage(logoHref, (OG_WIDTH - logoSize) / 2, logoY, logoSize);
   const wordmarkY = logoY + logoSize + 84;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    logoGlowBackground(OG_WIDTH, OG_HEIGHT, logoY + logoSize / 2),
+    paperBackground(OG_WIDTH, OG_HEIGHT),
     logo,
-    `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
+    `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
   ];
   let y = wordmarkY + 66;
   for (const line of copy.lines) {
     parts.push(
-      `<text x="${OG_WIDTH / 2}" y="${y}" text-anchor="middle" fill="#e5e9df" font-family="${FONT}" font-size="38" font-weight="600">${escapeXml(line)}</text>`,
+      `<text x="${OG_WIDTH / 2}" y="${y}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${FONT}" font-size="38" font-weight="600">${escapeXml(line)}</text>`,
     );
     y += 50;
   }
   if (copy.note) {
     parts.push(
-      `<text x="${OG_WIDTH / 2}" y="${y + 8}" text-anchor="middle" fill="#8b9289" font-family="${FONT}" font-size="30" font-weight="600">${escapeXml(copy.note)}</text>`,
+      `<text x="${OG_WIDTH / 2}" y="${y + 8}" text-anchor="middle" fill="#7a766c" font-family="${FONT}" font-size="30" font-weight="600">${escapeXml(copy.note)}</text>`,
     );
   }
   parts.push(`</svg>`);

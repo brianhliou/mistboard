@@ -19,7 +19,7 @@ describe('openChallengeDialog', () => {
     // is eligible but is still in the DOM.
     expect(dialog?.querySelectorAll('select')).toHaveLength(4);
     expect(dialog?.textContent).toContain('alice');
-    const variant = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Variant"]');
+    const variant = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Game"]');
     expect([...variant!.options].map((option) => option.value)).toEqual([
       ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
     ]);
@@ -57,13 +57,28 @@ describe('openChallengeDialog', () => {
     expect('rated' in body).toBe(false);
   });
 
+  it.each(['', '   ', ' @ '])('never posts an untargeted seek for handle %j', (handle) => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    openChallengeDialog({ handle });
+    const dialog = document.querySelector('dialog[data-challenge-dialog]');
+    dialog?.querySelector<HTMLButtonElement>('.confirm-dialog-confirm')?.click();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(dialog?.querySelector<HTMLElement>('.challenge-dialog-error')?.hidden).toBe(false);
+    expect(dialog?.querySelector<HTMLButtonElement>('.confirm-dialog-confirm')?.disabled).toBe(
+      false,
+    );
+  });
+
   it('sends rated only when Rated is picked for a variant that can be rated', () => {
     const fetchMock = vi.fn((_url: string, _init: RequestInit) => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetchMock);
     const open = () => {
       openChallengeDialog({ handle: 'kim' });
       const dialog = document.querySelector('dialog[data-challenge-dialog]');
-      const rated = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Game type"]');
+      const rated = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Rating"]');
       return { dialog, rated };
     };
 

@@ -3,41 +3,25 @@ import {
   DARK_XIANGQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
+  isPublicGameSpec,
   isRetiredGameSpec,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
+import { gomokuEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { localizedHref } from './i18n/locale.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
-// One public-surface switch per game spec. This controls discoverable UI:
-// rules rails/tiles, homepage article cards, homepage News, and /feed entries.
-// Direct URLs can stay reachable for review/backcompat; they are not listings.
-const VARIANT_PUBLIC_SURFACE_ENABLED = {
-  'dark-chess': true,
-  // Retired 2026-10-11 (Brian): off the rails, tiles, News and feed;
-  // /rules/fortress-xiangqi stays up by URL, unindexed (the server's
-  // NON_INDEXED_ARTICLE_SLUGS), as /rules/shogi4 does.
-  'fortress-xiangqi': false,
-  xiangqi: true,
-  'dark-xiangqi': true,
-  jieqi: true,
-  banqi: true,
-  jungle: true,
-  'jungle-flip': true,
-  // Hidden until a player has checked the faan table: the hand mathematics is
-  // proven against an independent implementation, the SCORING is not proven at
-  // all, and a listing would invite people to trust numbers nobody has read.
-  mahjong: false,
-  'duck-xiangqi': true,
-  // Unlisted 2026-10-06 while the rules were reworked, retired 2026-10-11: off
-  // the rails, tiles, News and feed; /rules/atomic-xiangqi stays up by URL,
-  // unindexed (the server's NON_INDEXED_ARTICLE_SLUGS). Listed 2026-09-17 to
-  // 2026-10-06.
-  'atomic-xiangqi': false,
-  'crazyhouse-xiangqi': true,
-  // Study-only: no rules page, no tile, no feed entry. Chess studies are
-  // reachable by their own URLs and the study picker, nothing lists the game.
-  chess: false,
-} satisfies Record<GameSpecId, boolean>;
+// One public-surface switch per game spec: its `publicSurface` in GAME_SPECS
+// (packages/game/src/game-specs.ts), read through isPublicGameSpec. This
+// controls discoverable UI: rules rails/tiles, homepage article cards, homepage
+// News, and /feed entries. Direct URLs can stay reachable for review/backcompat;
+// they are not listings. It is the same switch the server's allowlist, rating
+// pools, sitemap and /stats read, so a launch is one edit there
+// (launch-switch.test.ts). Hidden today: Fortress and Atomic Xiangqi (retired
+// 2026-10-11; their rules pages stay up by URL, unindexed), HK mahjong
+// (allowlisted playtest), and study-only chess (no rules page, no tile, no feed
+// entry). Xiangqi Mahjong launched for search on 2026-10-25.
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // Reachable by URL, unlisted and unindexed: /rules/shogi4 is linked from
@@ -45,10 +29,15 @@ const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // NON_INDEXED_ARTICLE_SLUGS carries the same slugs (articles-meta-sync.test.ts
 // holds the two together). /rules/crazyhouse-xiangqi was held here for polish
 // on 2026-10-02 and went public the same day (Brian).
+// The Xiangqi Mahjong rules page follows its spec's launch switch through
+// RULES_GAME_SPEC_BY_SLUG: unlisted and unindexed while the spec is hidden.
 const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
+// Rules pages whose slug is not the spec id. variant-conformance.test.ts holds
+// every variant's rules link to a rules page that exists.
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
+  'xiangqi-mahjong-32': 'xiangqi-mahjong',
 };
 // /rules/chess is the chess primer (hidden from the rail since 2026-07-03,
 // indexed, linked from the Fog Chess page). It documents the game, not the
@@ -61,7 +50,7 @@ export function isGameSpecId(value: string): value is GameSpecId {
 }
 
 export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
-  return VARIANT_PUBLIC_SURFACE_ENABLED[id];
+  return isPublicGameSpec(id);
 }
 
 /** The listed `/rules/<slug>` page for a game spec id off the wire, or null
@@ -69,8 +58,14 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
  *  unknown). The forward direction of RULES_GAME_SPEC_BY_SLUG. */
 export function rulesHrefForGameSpec(id: string): string | null {
   if (!isGameSpecId(id) || !variantPublicSurfaceEnabled(id) || isRetiredGameSpec(id)) return null;
+  return `/rules/${rulesSlugForGameSpec(id)}`;
+}
+
+/** The `/rules/<slug>` slug that documents a game spec, whether or not it is
+ *  listed. Ungated so a test can hold every variant to a page that exists. */
+export function rulesSlugForGameSpec(id: GameSpecId): string {
   const aliased = Object.entries(RULES_GAME_SPEC_BY_SLUG).find(([, specId]) => specId === id);
-  return `/rules/${aliased?.[0] ?? id}`;
+  return aliased?.[0] ?? id;
 }
 
 /** rulesHrefForGameSpec in the page locale, for a meta card's variant link. */
@@ -85,11 +80,24 @@ export function localizedRulesHrefForRoom(roomId: string): string | null {
   return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
+/** Preview a hidden spec in an explicitly enabled build. Launched rules pages
+ * follow publicSurface independently of their build-time play gate. */
+export function variantPlaytestSurfaceEnabled(id: GameSpecId): boolean {
+  return (
+    (id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled()) ||
+    (id === GOMOKU_SPEC_ID && gomokuEnabled())
+  );
+}
+
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
   if (HIDDEN_RULES_SLUGS.has(slug)) return false;
   if (RULES_SLUGS_NOT_A_SPEC.has(slug)) return true;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
-  return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
+  return (
+    !isGameSpecId(gameSpecId) ||
+    variantPublicSurfaceEnabled(gameSpecId) ||
+    variantPlaytestSurfaceEnabled(gameSpecId)
+  );
 }
 
 /** Whether a published page carries `noindex, follow`: a rules page whose

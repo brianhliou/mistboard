@@ -437,7 +437,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -870,7 +871,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -945,7 +947,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           }
         },
@@ -1392,7 +1395,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -1834,7 +1838,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -1918,7 +1923,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -2393,7 +2399,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -2840,7 +2847,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -2929,7 +2937,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -3413,7 +3422,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -3869,7 +3879,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -3967,7 +3978,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -4459,7 +4471,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -4923,7 +4936,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -5029,7 +5043,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -5572,7 +5587,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -6036,7 +6052,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -6142,7 +6159,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -6673,7 +6691,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -7140,7 +7159,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -7246,7 +7266,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -7756,7 +7777,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -8219,7 +8241,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -8325,7 +8348,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -8831,7 +8855,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -9314,7 +9339,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -9420,7 +9446,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -9977,7 +10004,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -10456,7 +10484,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -10562,7 +10591,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -11122,7 +11152,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -11632,7 +11663,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -11738,7 +11770,8 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -12257,7 +12290,15 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -12756,7 +12797,15 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -13255,7 +13304,15 @@
               "timeControl": {
                 "initialMs": 180000,
                 "incrementMs": 2000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -13701,7 +13758,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -14117,7 +14175,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -14175,7 +14234,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             }
           }
         },
@@ -14425,7 +14485,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -14670,7 +14731,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -14734,7 +14796,8 @@
                   "red": [],
                   "black": []
                 }
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -15213,7 +15276,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -15662,7 +15726,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -15753,7 +15818,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             }
           }
         },
@@ -16258,7 +16324,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -16707,7 +16774,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -16798,7 +16866,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -17314,7 +17383,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -17766,7 +17836,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -17857,7 +17928,8 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {
@@ -18327,7 +18399,15 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             },
             "black": {
               "type": "snapshot",
@@ -18777,7 +18857,15 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             },
             "spectator": {
               "type": "snapshot",
@@ -19227,7 +19315,15 @@
               "timeControl": {
                 "initialMs": 60000,
                 "incrementMs": 1000
-              }
+              },
+              "rematch": {
+                "offers": {
+                  "red": false,
+                  "black": false
+                },
+                "finalizedRoomId": null
+              },
+              "roomMode": "pvp"
             }
           },
           "eventForSeat": {

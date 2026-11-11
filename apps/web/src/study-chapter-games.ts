@@ -11,7 +11,7 @@
 import { translateXiangqiEventNameStrict } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
-import { localizedChapterTags } from './study-i18n.js';
+import { localizedChapterTags, localizedStudyName } from './study-i18n.js';
 
 export type GameChapterTags = {
   red?: string;
@@ -25,9 +25,39 @@ export type GameChapterTags = {
 
 export type GameChapter = {
   id: string;
+  name?: string;
   i18n?: unknown;
   tags?: GameChapterTags;
 };
+
+/**
+ * Lessons keep their chapter names. Games keep their rich labels, adding the
+ * chapter name when labels clash so both chapter lists can tell them apart.
+ */
+export function buildChapterRowLabels<T extends GameChapter & { gamebook?: boolean }>(
+  chapters: readonly T[],
+  buildLabel: (chapter: T) => HTMLElement | null,
+): Map<string, HTMLElement> {
+  const labels = new Map<string, HTMLElement>();
+  const counts = new Map<string, number>();
+  for (const chapter of chapters) {
+    if (chapter.gamebook) continue;
+    const label = buildLabel(chapter);
+    if (!label) continue;
+    labels.set(chapter.id, label);
+    const text = label.textContent ?? '';
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  for (const chapter of chapters) {
+    const label = labels.get(chapter.id);
+    if (!label || !chapter.name || counts.get(label.textContent ?? '')! <= 1) continue;
+    const name = document.createElement('span');
+    name.className = 'study-game-line__meta study-game-line__chapter';
+    name.textContent = localizedStudyName(chapter.name, chapter.i18n);
+    label.querySelector('.study-game-line__text')?.append(name);
+  }
+  return labels;
+}
 
 export type GameOutcome = 'red' | 'black' | 'draw';
 
@@ -219,14 +249,27 @@ export function chapterEventGroups(
 }
 
 /**
+ * The tone of a game row's result chip: the winning seat, painted in that
+ * seat's ink (`red` is the tag's first seat and `black` the second, whatever
+ * the family calls them), or `draw`. One rule for every study, a player deep
+ * dive included (Brian, 2026-11-04): a focus player's win/loss green and red
+ * read differently from the same chip in a match study. Null when the result
+ * is unknown.
+ */
+export type ChapterResultTone = 'draw' | 'red' | 'black';
+
+export function chapterResultTone(chapter: GameChapter): ChapterResultTone | null {
+  return gameOutcome(chapter.tags?.result);
+}
+
+/**
  * The rail row for a game chapter: "Red vs Black" with the winner in a
- * stronger weight, the date (and round) under it, and a result chip. With a
- * focus player the chip is coloured from that player's side; otherwise it is
- * neutral. Null for a chapter that is not a game, which keeps its name.
+ * stronger weight, the date (and round) under it, and a result chip coloured
+ * by `chapterResultTone`. Null for a chapter that is not a game, which keeps
+ * its name.
  */
 export function buildChapterGameRow(
   chapter: GameChapter,
-  focus: string | null,
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
   if (!isGameChapter(chapter)) return null;
@@ -272,8 +315,7 @@ export function buildChapterGameRow(
   if (outcome) {
     const chip = document.createElement('span');
     chip.className = 'study-game-line__result';
-    const side = focus ? focusResult(chapter, focus) : null;
-    chip.dataset.outcome = side ?? 'neutral';
+    chip.dataset.outcome = chapterResultTone(chapter) ?? 'neutral';
     chip.textContent = resultLabel(outcome);
     row.append(chip);
   }

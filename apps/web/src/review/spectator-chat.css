@@ -131,9 +131,8 @@
   background: var(--site-bg);
 }
 
-/* Desktop game/review rails: an accessible bottom-edge separator switches the
-   room from automatic flex-fill to a persisted preferred height. Study chat
-   deliberately omits it because study owns its own rail allocation. */
+/* Desktop live/review/study rails: the bottom separator switches the chat
+   from automatic rail fill to a saved preferred height. */
 .review-spectator-chat__resize {
   display: none;
   flex: 0 0 auto;

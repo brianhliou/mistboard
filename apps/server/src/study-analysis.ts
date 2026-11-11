@@ -13,7 +13,7 @@
 // path (#510) only has to change that choice, not anything here.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   fsfUciToXiangqiSquares,
   serializedTreeMainline,
@@ -55,7 +55,7 @@ export type ChapterAnalysisPlan =
 /**
  * The chapter's mainline as the board will play it: decoded from the tree's
  * UCI strings and replayed from the standard start, stopping at the first move
- * the kernel refuses (an illegal move, or any move after the game ended), the
+ * the record helper refuses (an illegal move, or a move after mate/stalemate), the
  * same place the study board's own replay stops. Capped at `maxPlies`.
  */
 export function xiangqiChapterLine(
@@ -69,7 +69,7 @@ export function xiangqiChapterLine(
     if (moves.length >= maxPlies) break;
     const move = fsfUciToXiangqiSquares(uci);
     if (!move) break;
-    const next = applyStandardXiangqiMove(state, move);
+    const next = applyXiangqiRecordMove(state, move);
     if (next === state) break;
     state = next;
     // Store the canonical spelling, which is also what the tree serializer

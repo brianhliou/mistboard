@@ -1,4 +1,5 @@
 import { FORTRESS_XIANGQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   FORTRESS_XIANGQI_DEFAULT_ENGINE_ID,
   isFortressXiangqiEngineClientId,
@@ -10,7 +11,7 @@ import {
 
 export type FortressXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createFortressXiangqiRoom(
     timeControl?: RoomTimeControl,

@@ -11,9 +11,11 @@
 // purpose at most once. Rows with no tenant registration (the chess stack) or
 // no `replays` binding pass through unless already known to fail. Discovery
 // surfaces drop such a game (filterReplayableGames); a person's own lists keep
-// it, marked, so their history stays whole (markUnavailableGames).
+// it, marked, so their history stays whole (markUnavailableGames). FFQ
+// playtests are excluded entirely from both, before any event loading.
 
 import { crosstableReviewUrl } from './crosstable.js';
+import { isFFQBanqiGame } from './ffq-banqi-access.js';
 import * as persistence from './persistence.js';
 import type { GameUnavailableReason } from './persistence-games.js';
 import {
@@ -42,26 +44,29 @@ const liveDeps: ReplayableGameDeps = {
 };
 
 /** The rows whose games still replay, in their original order. */
-export async function filterReplayableGames<T extends { roomId: string }>(
+export async function filterReplayableGames<T extends { roomId: string; variant?: string }>(
   rows: readonly T[],
   deps: ReplayableGameDeps = liveDeps,
 ): Promise<T[]> {
-  const failed = await unreplayableRoomIds(rows, deps);
-  return rows.filter((row) => !failed.has(row.roomId));
+  // Drop playtests before registration lookup or canonical event loading.
+  const discoverable = rows.filter((row) => !isFFQBanqiGame(row));
+  const failed = await unreplayableRoomIds(discoverable, deps);
+  return discoverable.filter((row) => !failed.has(row.roomId));
 }
 
 /**
- * Every row, in order, with `unavailable` set on the ones that cannot be
- * opened: 'unsupported-variant' when no page mounts the variant's games,
+ * Every discoverable row, in order, with `unavailable` set on the ones that
+ * cannot be opened: 'unsupported-variant' when no page mounts the variant's games,
  * else 'old-rules' when the stored log no longer replays. For the lists that
  * belong to a person (their profile, their favorites, a bot's record), where a
  * game that silently vanished would misstate their history; the discovery
- * surfaces keep filterReplayableGames.
+ * surfaces keep filterReplayableGames. FFQ playtests are omitted entirely.
  */
 export async function markUnavailableGames<T extends { roomId: string; variant: string }>(
   rows: readonly T[],
   deps: ReplayableGameDeps = liveDeps,
 ): Promise<Array<T & { unavailable?: GameUnavailableReason }>> {
+  rows = rows.filter((row) => !isFFQBanqiGame(row));
   const gamePageUrl = deps.gamePageUrl ?? liveDeps.gamePageUrl!;
   const unsupported = new Set(
     rows.filter((row) => gamePageUrl(row.roomId, row.variant) === null).map((row) => row.roomId),

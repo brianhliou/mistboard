@@ -7,9 +7,12 @@
 // (xiangqi-broadcast-poll-window.ts): `auto` polls from 12 h before the event
 // to 7 days after its last day, `on` always, `off` never. Past the end date a
 // polling tour slows to one poll per half hour, since only late record
-// uploads are still to come (dpxq's operator, 2026-09-06: 不固定). The window
-// is derived, not written to the tour, so when the dpxq index sweep moves an
-// end date later (a league's next stage) polling resumes with no operator step.
+// uploads are still to come (dpxq's operator, 2026-09-06: 不固定). A tour
+// still holding no boards when that tail ends polls once a day for 30 more
+// days (`auto-late`), so a source that posts the records later is picked up;
+// the first board it imports ends that. The window is derived, not written to
+// the tour, so when the dpxq index sweep moves an end date later (a league's
+// next stage) polling resumes with no operator step.
 
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
@@ -33,6 +36,8 @@ export const XIANGQI_BROADCAST_SCHEDULE_MAX_INTERVAL_MS = 300_000;
 export const XIANGQI_BROADCAST_SCHEDULE_DEFAULT_INTERVAL_MS = 30_000;
 const SCHEDULER_TICK_MS = 5_000;
 export const XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS = 30 * 60_000;
+/** The late tail's cadence: one poll a day for a tour with no boards yet. */
+export const XIANGQI_BROADCAST_LATE_TAIL_INTERVAL_MS = 24 * 60 * 60_000;
 
 // How often the scheduler reads dpxq's tour index to keep end dates in step.
 // dpxq edits a league's row when the next stage is announced, days ahead.
@@ -182,7 +187,7 @@ export function createXiangqiBroadcastScheduler(
               tourSlug: tour.slug,
               severity: 'info',
               kind: 'poll_stopped_after_event',
-              message: 'scheduled polling stopped 7 days after the event ended',
+              message: `scheduled polling stopped: the auto window closed ${state.closesAt}`,
               payload: {
                 endsAt: tour.endsAt ?? null,
                 closesAt: state.closesAt,
@@ -247,9 +252,12 @@ export function createXiangqiBroadcastScheduler(
           }),
         });
         currentDelayMs.set(tour.slug, delayMs);
-        const waitMs = state.afterEvent
-          ? Math.max(delayMs, XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS)
-          : delayMs;
+        const waitMs =
+          state.reason === 'auto-late'
+            ? Math.max(delayMs, XIANGQI_BROADCAST_LATE_TAIL_INTERVAL_MS)
+            : state.afterEvent
+              ? Math.max(delayMs, XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS)
+              : delayMs;
         nextPollAt.set(tour.slug, deps.now() + waitMs);
       }
     } catch (error) {

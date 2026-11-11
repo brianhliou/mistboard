@@ -45,7 +45,7 @@ function responseJson(response: ResponseCapture): Record<string, unknown> {
 function createContext(): JungleCreateContext {
   return {
     databaseRequired: false,
-    isDraining: () => false,
+    refusesCreate: () => false,
     drainDeadlineMs: () => null,
     createJungleRoom,
   };

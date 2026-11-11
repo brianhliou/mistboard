@@ -1,5 +1,7 @@
-// Postgame analysis math (P3): centipawn eval -> win probability -> per-move
+// Postgame analysis math (P3): engine eval -> win probability -> per-move
 // judgment + accuracy. Formulas ported from lichess/lila.
+// The Xiangqi findings below describe @5 and older; CC0 @6 preserves their
+// win% on its new cp scale via PIKAFISH_CC0_WIN_PCT_K below.
 //
 // CALIBRATED AND LEFT ALONE, 2026-08-27. The note here used to say the chess
 // constants "likely want recalibration on real xiangqi games". That was tested
@@ -86,10 +88,32 @@
 
 export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 
+/** Normalize a side-to-move UCI score to Red's POV. `sign` is +1 when Red
+ *  moves next, -1 when Black does. Mate zero means that side is already
+ *  checkmated: encode it as decisive cp because zero cannot carry a POV sign. */
+export function redPovScore(
+  cp: number | null,
+  mate: number | null,
+  sign: 1 | -1,
+): { cp: number | null; mate: number | null } {
+  if (mate === 0) return { cp: sign * -30000, mate: null };
+  return {
+    cp: cp == null ? null : cp * sign,
+    mate: mate == null ? null : mate * sign,
+  };
+}
+
 const WIN_PCT_CLAMP_CP = 1000;
 // lila rawWinningChances constant (chess). Recalibrate for xiangqi if evals feel
 // too flat / too spiky.
 export const WIN_PCT_K = 0.00368208;
+
+// Pikafish CC0 analysis @6: least-squares match to @5 win% on 856 paired
+// positions / 70 games (848 cp pairs), keeping @5's WIN_PCT_K. K = 0.00465696,
+// by-game bootstrap 95% [0.004567, 0.004755] (2,000 replicates, seed 20261109).
+// Regenerate with scripts/fit-win-curve-paired.mjs; scripts/fit-win-curve.mjs
+// cross-checks outcomes. Built-in scale 79, 1M nodes, one thread; @5 stays as-is.
+export const PIKAFISH_CC0_WIN_PCT_K = 0.00465696;
 
 // AB-JChess's centipawns are on their own scale, not Pikafish's: fitted on 400 of
 // its match games (mistboard-engine lab/jieqi-abjchess-2026-09-29), p(win) =
@@ -98,25 +122,69 @@ export const WIN_PCT_K = 0.00368208;
 // from two engines is never comparable; their win% on each engine's own K is.
 export const ABJCHESS_WIN_PCT_K = 0.00985;
 
+// AB-JChess-20261031 (net abjchess-20261030) is a new engine built on jqe's code,
+// and its centipawns sit on jqe's scale, not v0.2b's: refitted on its 600 match
+// games against jqe it014 (mistboard-engine lab/jieqi-match/fit_k.py,
+// jqe-vs-abj-20261031/fit-k.txt), K = 0.00269 [0.00237, 0.00308] over 9,776
+// positions with |cp| <= 1000, the range winPercent reads. +409cp is 75%.
+export const ABJCHESS_20261031_WIN_PCT_K = 0.00269;
+
+// Rapfi (Gomoku) reports EVAL on its own scale: the pinned build's win rate is
+// sigmoid(EVAL / 200) (Rapfi eval/scoretables.h, default ScalingFactor 200), so
+// K = 1/200. On lila's chess K, Rapfi's EVAL 414 read as 82% where Rapfi itself
+// says 89%. Only the curve changes; the 5/10/15 judgment bars stay.
+export const RAPFI_WIN_PCT_K = 1 / 200;
+
+// The AB-JChess nets on the jqe-lineage scale, as the analysis ids carry them
+// (`+<net tag>+`). Older ids (v0.2b/v0.2d nets, or none) keep 0.00985, so a game
+// analysed before the switch is still drawn on the curve its cp was made on. A new
+// net goes here only after its own refit (jieqi-analysis-abjchess.test.ts fails
+// until the served profile's K matches).
+const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
+
 /**
- * The win-curve constant for an analysis stored under `engineId`. Every surface
- * that turns STORED engine cp into win% asks this with the engineId the analysis
- * came back with, so a game analysed by AB-JChess is drawn and graded on AB's
- * curve and an older PikaJieQi analysis on lila's. Unknown or absent ids get
- * lila's constant, which is what every engine but AB-JChess has always used.
+ * The logistic win-curve constant for an analysis stored under `engineId`.
+ * AB-JChess ids pick the curve of the net they name; Rapfi has its own scale.
+ * Unknown or absent ids get lila's constant. For stored scores, pass the id
+ * directly to winPercent instead: not every engine uses a logistic model.
  */
 export function winPercentK(engineId: string | null | undefined): number {
-  return engineId?.startsWith('ab-jchess') ? ABJCHESS_WIN_PCT_K : WIN_PCT_K;
+  if (engineId === 'pikafish-xiangqi-analysis@6') return PIKAFISH_CC0_WIN_PCT_K;
+  if (engineId?.startsWith('rapfi-')) return RAPFI_WIN_PCT_K;
+  if (!engineId?.startsWith('ab-jchess')) return WIN_PCT_K;
+  return ABJCHESS_JQE_SCALE_NETS.some((net) => engineId.includes(`+${net}+`))
+    ? ABJCHESS_20261031_WIN_PCT_K
+    : ABJCHESS_WIN_PCT_K;
 }
 
 /**
- * Centipawns / mate (from ONE side's POV) -> that side's win probability in
- * [0, 100]. A mate maps through lila's mate->cp ladder ((21 - min(10, N)) * 100,
- * so mate-in-1 reads as 2000cp and a distant mate as 1100cp) rather than
+ * Engine score / mate (from ONE side's POV) -> that side's win probability in
+ * [0, 100]. Pass the producing engineId to select its score model. Confirmed
+ * expected-score engines transport a value in [-1, 1] as cp = value * 1000;
+ * their win% is linear, with mates and finished-game ±30000 scores decisive.
+ * Other engines use their logistic curve. A mate maps through lila's mate->cp
+ * ladder ((21 - min(10, N)) * 100, so mate-in-1 reads as 2000cp and a distant
+ * mate as 1100cp) rather than
  * short-circuiting to certainty: swings between mate distances still register.
- * `k` is the engine's curve constant (winPercentK); the default is lila's.
+ * A numeric third argument explicitly selects a logistic curve constant
+ * (winPercentK); the default is lila's. See docs/misty-analysis-win-scale.md.
  */
-export function winPercent(cp: number | null, mate: number | null, k: number = WIN_PCT_K): number {
+export function winPercent(
+  cp: number | null,
+  mate: number | null,
+  engineIdOrK: string | number | null = WIN_PCT_K,
+): number {
+  // Only this family is confirmed to emit expected score * 1000. Other Misty
+  // engines use native scores or a Stockfish eval track; do not match misty-*.
+  if (
+    typeof engineIdOrK === 'string' &&
+    (engineIdOrK === 'misty-three-kingdoms-banqi' ||
+      engineIdOrK.startsWith('misty-three-kingdoms-banqi-'))
+  ) {
+    if (mate != null) return mate > 0 ? 100 : 0;
+    return 50 + 50 * Math.max(-1, Math.min(1, (cp ?? 0) / 1000));
+  }
+  const k = typeof engineIdOrK === 'number' ? engineIdOrK : winPercentK(engineIdOrK);
   if (mate != null) {
     const mateCp = (21 - Math.min(10, Math.abs(mate))) * 100;
     return logisticWinPercent(mate > 0 ? mateCp : -mateCp, k);

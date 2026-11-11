@@ -33,7 +33,7 @@ const arg = (k: string, d: string): string => {
 const GAMES_FILE = resolve(
   arg(
     '--games-file',
-    `${HOME}/projects/brianhliou.com/assets/jungle-games/katago-vs-misty-2026-09-21.jsonl`,
+    resolve(HERE, '../../apps/web/public/jungle-games/katago-vs-misty-2026-09-21.jsonl'),
   ),
 );
 const GAME = Number(arg('--game', '94'));

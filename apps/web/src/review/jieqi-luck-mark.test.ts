@@ -57,10 +57,24 @@ describe('jieqiRevealOdds', () => {
     expect(jieqiRevealOdds(before, { from: 'e5', to: 'e6' })).toBeNull();
   });
 
-  it('has no odds when any identity in the bag was never dealt', () => {
+  it('reads the bag off the public record when an identity in it was never dealt', () => {
+    // A finished game's public deal: b1 is a placeholder. The bag is still the set
+    // minus what was seen face-up, here the whole set.
     const before = start();
     const other = before.board.b1;
     if (other) other.unknown = true;
+    const odds = jieqiRevealOdds(before, { from: 'a1', to: 'a2' });
+    expect(odds?.role).toBe('chariot');
+    expect(odds?.count).toBe(2);
+    expect(odds?.total).toBe(15);
+    // A piece seen face-up leaves the bag.
+    before.captures = [{ owner: 'red', role: 'horse', revealedAtCapture: true }];
+    expect(jieqiRevealOdds(before, { from: 'a1', to: 'a2' })?.total).toBe(14);
+  });
+
+  it('has no odds for a reveal of a piece that was itself never dealt', () => {
+    const before = start();
+    before.board.a1!.unknown = true;
     expect(jieqiRevealOdds(before, { from: 'a1', to: 'a2' })).toBeNull();
   });
 });

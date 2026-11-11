@@ -111,6 +111,12 @@ describe('pollStatusText', () => {
     ).toBe('Polling now, every 30 min while late records land (on: always)');
   });
 
+  it('names the daily late tail for a tour with no games yet', () => {
+    expect(pollStatusText(schedule({ polling: true, reason: 'auto-late', afterEvent: true }))).toBe(
+      'Polling daily for late records (auto: no games yet; stops Oct 15, 2026, 11:59 PM)',
+    );
+  });
+
   it('covers closed, undated, off and sourceless tours', () => {
     expect(pollStatusText(schedule({ reason: 'auto-closed' }))).toBe(
       'Not polling (auto: window closed Oct 15, 2026, 11:59 PM)',

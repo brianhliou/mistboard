@@ -16,17 +16,20 @@ name=${2:?asset name}
 # name -> repo, tag, sha256, mode (exec: an executable; data: a non-empty file)
 case "$name" in
   banqi-engine)
-    repo=brianhliou/misty-banqi tag=v0.2.5 mode=exec
-    sha=ef93e42111d9616c88ea6d48eff81ff61d419bd208f2047b9fcc3da1d80809b0 ;;
+    repo=brianhliou/misty-banqi tag=v0.3.0 mode=exec
+    sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068 ;;
   jungle-flip-engine)
-    repo=brianhliou/misty-flip-jungle tag=v0.5.1 mode=exec
-    sha=56952ea87ee9465a55b70f2159ed83048a6235dd469a757bd1931ddd69d82a44 ;;
+    repo=brianhliou/misty-flip-jungle tag=v0.6.0 mode=exec
+    sha=8f5b97a8c4433034e5763f89d913db2d45946a02f9b0d4ed47a27a241395fe33 ;;
   jungle_flip_tb_4.bin)
     repo=brianhliou/misty-flip-jungle tag=v0.5.1 mode=data
     sha=65b275f494048ec41be1db48836f167e315859e9c3c317ee66d7751a27cc9eba ;;
   jungle-engine)
     repo=brianhliou/misty-jungle tag=v0.0.6 mode=exec
     sha=0e7a4e18418be3a813a2eac5fe04b055af74e1da922d3fa666d99253fbac4423 ;;
+  three-kingdoms-engine)
+    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.3.0 mode=exec
+    sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26 ;;
   *)
     echo "release-asset: unknown asset $name" >&2
     exit 1 ;;

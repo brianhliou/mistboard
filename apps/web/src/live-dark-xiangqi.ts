@@ -26,8 +26,16 @@ import type {
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
-import { type BoardPoint, boardLastMoveMarkersSvg } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { selectionMarkSvg } from './board-capture-target.js';
+import {
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  type BoardPoint,
+  boardLastMoveCellMarksSvg,
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import {
@@ -60,7 +68,10 @@ import {
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  readStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -82,6 +93,7 @@ import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
+import { xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type DarkXiangqiWireBoardEntry =
@@ -109,7 +121,10 @@ const FILE_COUNT = 9;
 const RANK_COUNT = 10;
 const CELL = 60;
 const MARGIN = 36;
-const PIECE_SIZE = tokenPieceSize(CELL);
+// The drawn piece: its outline spans 98% of the point gap (2026-10-14). Marks stay
+// on the layout piece size they were tuned on.
+const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
   'aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;"';
@@ -152,6 +167,11 @@ let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
 let draggingFrom: XiangqiSquare | null = null;
+// Snapshot extras that ride the frame (read by the chrome + play-again body).
+// The room mode tells a bot game from a PvP one: without it every room read as
+// PvP and a finished bot game had no Rematch.
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
@@ -196,15 +216,21 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   defaultRoomId: 'dxq_dev',
   flippable: true,
   boardClass: 'xiangqi-live-board',
-  // Not on the Dark Xiangqi wire (golden-pinned, no snapshot extras): the forfeit
-  // banner and rematch block never arm. Chrome defaults (pvp, no forfeit, no
-  // rematch) match the original, so no chrome overrides are needed.
+  chrome: {
+    roomMode: () => roomMode,
+  },
+  // A bot game's Rematch opens a new bot room; the chrome swaps the colours.
   playAgainRequestBody: (state) => ({
-    mode: 'pvp',
+    mode: roomMode,
     gameSpecId: 'dark-xiangqi',
     preferredColor: 'random',
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   onSnapshotApplied: () => {
     if (core) maybePlayDarkXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
@@ -215,6 +241,8 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
+    roomMode = 'pvp';
+    pveEngineId = null;
   },
   renderBoard,
   renderExtras: renderLiveCaptureStrips,
@@ -343,14 +371,24 @@ function renderLiveCaptureStrips(liveRefs: LiveRefs, view: DarkXiangqiWireView |
   liveRefs.capturesTop.classList.remove('has-captures');
   liveRefs.capturesBottom.classList.remove('has-captures');
   if (!view) return;
-  const bottomColor = core?.orientation() ?? view.perspective;
+  fillDarkXiangqiCaptureStrips(liveRefs, view, core?.orientation() ?? view.perspective);
+}
+
+// The strips' fill, shared with Mistboard TV's rail (watch-dark-xiangqi-replay.ts):
+// top = the bottom side's dead pieces, bottom = the top side's, both read from the
+// view's own ledger, so a strip never shows more than the view carries.
+export function fillDarkXiangqiCaptureStrips(
+  slots: { capturesTop: HTMLElement; capturesBottom: HTMLElement },
+  view: Pick<DarkXiangqiWireView, 'captures'>,
+  bottomColor: XiangqiColor,
+): void {
   const topColor: XiangqiColor = bottomColor === 'red' ? 'black' : 'red';
   const dead = [
-    ...view.captures.red.map((role) => ({ owner: 'red' as XiangqiColor, role })),
-    ...view.captures.black.map((role) => ({ owner: 'black' as XiangqiColor, role })),
+    ...(view.captures?.red ?? []).map((role) => ({ owner: 'red' as XiangqiColor, role })),
+    ...(view.captures?.black ?? []).map((role) => ({ owner: 'black' as XiangqiColor, role })),
   ];
-  fillCapturedPoolWith(liveRefs.capturesTop, dead, bottomColor, renderLiveCapturedGlyph);
-  fillCapturedPoolWith(liveRefs.capturesBottom, dead, topColor, renderLiveCapturedGlyph);
+  fillCapturedPoolWith(slots.capturesTop, dead, bottomColor, renderLiveCapturedGlyph);
+  fillCapturedPoolWith(slots.capturesBottom, dead, topColor, renderLiveCapturedGlyph);
 }
 
 function renderLiveCapturedGlyph(piece: { color: XiangqiColor; role: XiangqiPieceRole }): string {
@@ -417,10 +455,11 @@ function boardSvg(
           ? `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`
           : ''
       }
-      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
+      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, 'under')}</g>
       <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
       <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective, sel)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, drag)}</g>
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveLayer(view, perspective, 'over')}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => darkXiangqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map((arrow) => darkXiangqiArrowSvg(arrow, perspective)).join('')}</g>
       <g class="xq-live-clicks">${options.interactive ? clickLayer(view, perspective, sel) : ''}</g>
@@ -463,7 +502,10 @@ export function fogLayer(
       const x1 = displayFile === FILE_COUNT - 1 ? maxX : center.x + CELL / 2 + FOG_OVERLAP;
       const y0 = displayRank === 0 ? minY : center.y - CELL / 2 - FOG_OVERLAP;
       const y1 = displayRank === RANK_COUNT - 1 ? maxY : center.y + CELL / 2 + FOG_OVERLAP;
-      return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="black"/>`;
+      // Rounded to a hundredth: the square grid's trimmed edge (6.6) leaves float
+      // noise in a clamped width (59.89999999999998).
+      const r = (n: number) => Math.round(n * 100) / 100;
+      return `<rect x="${x0}" y="${y0}" width="${r(x1 - x0)}" height="${r(y1 - y0)}" fill="black"/>`;
     })
     .join('');
   return xiangqiFogRegion(
@@ -500,14 +542,29 @@ export function fogLayer(
 // arises where the reveal widens -- postgame, /watch replay. Draw nothing for a
 // square this view cannot see anyway: a render path that can only ever be fed
 // safe input is one refactor away from being fed unsafe input.
-function lastMoveLayer(view: DarkXiangqiWireView, perspective: XiangqiColor): string {
+function lastMoveLayer(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  layer: BoardLastMoveLayer,
+): string {
   if (!view.lastMove) return '';
+  const ends = {
+    from: visibleLastMoveCenter(view, view.lastMove.from, perspective),
+    to: visibleLastMoveCenter(view, view.lastMove.to, perspective),
+  };
+  // The square grid draws the family's square-grid marks (amber origin cell,
+  // amber ring on the moved piece), from the same visible-only endpoints.
+  if (activeLayout === 'cell') {
+    return boardLastMoveCellMarksSvg(ends, CELL, layer, {
+      size: xiangqiPieceCellBox(PIECE_SIZE),
+      set: readStoredXiangqiPieceSet(),
+    });
+  }
   return boardLastMoveMarkersSvg(
-    {
-      from: visibleLastMoveCenter(view, view.lastMove.from, perspective),
-      to: visibleLastMoveCenter(view, view.lastMove.to, perspective),
-    },
-    PIECE_SIZE,
+    ends,
+    MARK_PIECE_SIZE,
+    layer,
+    boardLastMovePiece(PIECE_SIZE, readStoredXiangqiPieceSet()),
   );
 }
 
@@ -525,7 +582,7 @@ function selectionLayer(square: XiangqiSquare | null, perspective: XiangqiColor)
   if (!square) return '';
   const coord = coordOf(square);
   const center = intersection(coord.file, coord.rank, perspective);
-  return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
+  return selectionMarkSvg('xq-live-selection-cell', center, CELL, activeLayout, 30);
 }
 
 function hintLayer(
@@ -566,6 +623,7 @@ function pieceLayer(
         x: center.x - PIECE_SIZE / 2,
         y: center.y - PIECE_SIZE / 2,
         size: PIECE_SIZE,
+        shape: xiangqiPieceShapeForLayout(activeLayout),
         shrouded: entry.shrouded,
         // A shrouded entry is a soldier-shaped placeholder for an unknown role,
         // so promoting its art would assert a piece the viewer has not seen.
@@ -640,6 +698,7 @@ function darkXiangqiPieceGhostSvg(piece: XiangqiPiece, crossed = false): string 
     ariaLabel: `${piece.color} ${piece.role}`,
     className: 'xq-piece',
     size: PIECE_SIZE,
+    shape: xiangqiPieceShapeForLayout(activeLayout),
     crossed,
   });
 }

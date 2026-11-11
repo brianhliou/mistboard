@@ -408,12 +408,16 @@ test('a judged move is badged on the board, and only on the mainline', () => {
 test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
   // The margin was once sized to clear the piece alone, which cropped the
   // last-move ring on every edge move and cut the top off a badge on any piece
-  // reaching the back rank. A corner move exercises both axes at once.
+  // reaching the back rank. A corner move exercises both axes at once. The piece
+  // shadow is off by default since 2026-10-14; switch it on so its offset disc
+  // is checked too.
+  document.documentElement.dataset.xiangqiPieceShadow = 'on';
   const c = mountXiangqiReplay(el, {
     ...base,
-    // a1-a10: Red's chariot up the edge file to Black's back rank.
-    iccs: 'a0a4 h9g7 a4a9',
-    annotations: { byPly: { 3: { glyph: '?!' } } },
+    // A clear edge file lets Red's chariot legally reach the back-rank corner.
+    startFen: '4k4/9/9/9/4p4/9/9/9/9/R3K4 r - - 0 1',
+    iccs: 'a0a9',
+    annotations: { byPly: { 1: { glyph: '?!' } } },
   });
   const buttons = mainButtons(el);
   (buttons[buttons.length - 1] as HTMLButtonElement | undefined)?.click();
@@ -463,6 +467,7 @@ test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
     expect(cy + r, `${label} crosses the bottom edge`).toBeLessThanOrEqual(vh + 0.5);
   }
   c.destroy();
+  delete document.documentElement.dataset.xiangqiPieceShadow;
 });
 
 // Clicking to the end of a game disables the "next" control, and a browser hands

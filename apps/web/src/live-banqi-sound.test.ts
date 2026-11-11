@@ -10,12 +10,13 @@ type Board = BanqiPlayerView['board'];
 
 function view(opts: {
   board?: Board;
+  perspective?: BanqiPlayerView['perspective'];
   status?: BanqiPlayerView['status'];
   moveNumber?: number;
 }): BanqiPlayerView {
   return {
     id: 'banqi-sound-test',
-    perspective: 'red',
+    perspective: opts.perspective ?? 'red',
     board: opts.board ?? {},
     legalMoves: [],
     captured: [],
@@ -93,10 +94,28 @@ describe('classifyBanqiOpponentSound', () => {
     expect(classifyBanqiOpponentSound(prev, next, 'red')).toBe('move');
   });
 
-  it('plays captured when our revealed-piece count drops', () => {
+  it('plays capture when our revealed-piece count drops', () => {
     const prev = view({ board: { a1: redChariot }, status: opponentToMove });
     const next = view({ board: {}, status: playingAfterOpponent });
-    expect(classifyBanqiOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyBanqiOpponentSound(prev, next, 'red')).toBe('capture');
+  });
+
+  it.each(['red', 'black'] as const)('uses capture for both players when %s captures', (color) => {
+    const victim = color === 'red' ? 'black' : 'red';
+    const mover = { ...redChariot, color };
+    const target = { ...blackSoldier, color: victim } as const;
+    const board = { a1: mover, a2: target, b1: faceDown };
+    const status = { type: 'playing', turn: color } as const;
+    const ownView = view({ board, status, perspective: color });
+    const prev = view({ board, status, perspective: victim });
+    const next = view({
+      board: { a2: mover, b1: faceDown },
+      status: { type: 'playing', turn: victim },
+      perspective: victim,
+    });
+
+    expect(soundForOwnBanqiMove(ownView, { from: 'a1', to: 'a2' })).toBe('capture');
+    expect(classifyBanqiOpponentSound(prev, next, victim)).toBe('capture');
   });
 
   it('plays flip when the opponent turns a face-down tile face-up', () => {

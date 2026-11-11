@@ -148,6 +148,10 @@ export const fortressXiangqiTenant: FortressXiangqiTenant = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -192,7 +196,8 @@ export const fortressXiangqiTenant: FortressXiangqiTenant = {
       if (winner === 'black') return 'black-wins';
       return 'draw';
     },
-    termination: (reason: string) => reason as persistence.GameTermination,
+    termination: (reason: string) =>
+      reason === 'agreement' ? 'draw' : (reason as persistence.GameTermination),
     logKindPrefix: 'fortress_xiangqi',
     logLabel: 'Fortress Xiangqi',
   },

@@ -1,7 +1,7 @@
-// The review URL for a finished room, split out of crosstable.ts so modules
-// on the persistence side (persistence-lobby-activity.ts) can use it without
-// importing crosstable.ts, which imports routes/lib.ts and from there
-// account-session.ts and persistence.ts: a cycle the dependency check refuses.
+// The review URL for a finished room, split out of crosstable.ts so a module
+// on the persistence side can use it without importing crosstable.ts, which
+// imports routes/lib.ts and from there account-session.ts and persistence.ts:
+// a cycle the dependency check refuses.
 import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
 import {
   type VariantTenantRegistration,
@@ -10,8 +10,18 @@ import {
 } from './variant-tenant/registry.js';
 
 export type CrosstableTenantLookup = {
-  forRoomId: (roomId: string) => Pick<VariantTenantRegistration, 'export'> | null;
-  forSpecId: (gameSpecId: string) => Pick<VariantTenantRegistration, 'export'> | null;
+  forRoomId: (
+    roomId: string,
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
+  forSpecId: (
+    gameSpecId: string,
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
 };
 
 export const REGISTRY_LOOKUP: CrosstableTenantLookup = {
@@ -26,9 +36,16 @@ export function crosstableReviewUrl(
   variant: string,
   lookup: CrosstableTenantLookup = REGISTRY_LOOKUP,
 ): string | null {
+  // A table whose room is its finished page links the room even when it also
+  // has an export or review page (Xiangqi Mahjong), as the web's
+  // finishedGameHref does; the two must agree (variant-registry-sync.test.ts).
+  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
+  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   const routeBase =
     lookup.forRoomId(roomId)?.export?.gameRouteBase ??
     lookup.forSpecId(variant)?.export?.gameRouteBase ??
+    lookup.forRoomId(roomId)?.reviewRouteBase ??
+    lookup.forSpecId(variant)?.reviewRouteBase ??
     null;
   if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
   if (CHESS_STACK_VARIANTS.has(variant)) return `/game/${encodeURIComponent(roomId)}`;

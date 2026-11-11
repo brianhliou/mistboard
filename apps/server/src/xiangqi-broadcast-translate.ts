@@ -15,6 +15,7 @@
 // with an overrides map for the established spellings of famous players.
 
 import {
+  FEDERATION_PLAYER_TRADITIONAL_NAMES,
   ordinalEn,
   parseChineseNumeral,
   XIANGQI_EVENT_GLOSSARY,
@@ -137,7 +138,7 @@ function federationRegion(federation: string | undefined): FederationRegion | un
 // equally be a mainland player's; a mainland team keeps pinyin. Every entry
 // is sourced (the event that lists the pair is named); a name with no source
 // stays pinyin rather than a guess.
-const FEDERATION_PLAYER_NAMES = new Map<string, string>([
+export const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   // 2024 20th Asian Xiangqi Individual Championship (Singapore): the AXF's
   // bilingual results sheet, which prints each entrant's Chinese and Latin
   // names side by side (xiangqi.sg, communiqué 43). Where the 2025 WXF world
@@ -197,8 +198,8 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   // 2026 10th North American Championship (Houston): the entry list in the
   // host's special issue (houstonxiangqi.org, 北美锦标赛特刊电子版, p. 32), which
   // prints each player's English and Chinese names side by side. North
-  // American players write the given name first, and so do these. 范志 is
-  // listed as "Klevestakt Makspringer" and stays pinyin until confirmed.
+  // American players write the given name first, and so do these. Later
+  // organiser rosters supersede an entry when they identify its spelling.
   ['NA:王安泰', 'Antai Wang'],
   ['NA:胡全', 'Michael Hu'],
   ['NA:罗健文', 'Kean Mun Loh'],
@@ -207,7 +208,17 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   ['NA:谢文川', 'Richard Tse'],
   ['NA:林年浩', 'Jimmy Lin'],
   ['NA:张文鑫', 'Wenxin Zhang'],
-  ['NA:廖建国', 'Lien Quoc'],
+  // LA organiser's bilingual 2026-10-10 roster, gdchess article 18617,
+  // supersedes the earlier Houston entry spelling for its own president.
+  ['NA:廖建国', 'Lien The Quoc'],
+  ['NA:范志', 'Fan Chi'],
+  ['NA:阮友科', 'Nguyen Huu Khoa'],
+  ['NA:沈浩', 'Shen Hao'],
+  // Qitian Cup organiser report (gdchess 18319) names Van Nguyen's 3/3;
+  // the three winning records identify him as 阮文. The independent
+  // ElephantChess round listing calls the source's 黎日 "NHAT LE".
+  ['NA:阮文', 'Van Nguyen'],
+  ['NA:黎日', 'Nhat Le'],
   ['NA:黎英豪', 'Anh Hao Le'],
   ['NA:彭铂', 'Bo Peng'],
   ['NA:彭佳文', 'Oscar Peng'],
@@ -225,6 +236,34 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
 function federationPlayerName(zh: string, federation: string | undefined): string | undefined {
   const region = federationRegion(federation);
   return region ? FEDERATION_PLAYER_NAMES.get(`${region}:${zh}`) : undefined;
+}
+
+/** The regions whose players write their names in traditional characters. */
+export const TRADITIONAL_SCRIPT_REGIONS: ReadonlySet<string> = new Set<FederationRegion>([
+  'TW',
+  'HK',
+  'MO',
+  'VN',
+]);
+
+// Own-form metadata remains available for pages without a Chinese script.
+export { FEDERATION_PLAYER_TRADITIONAL_NAMES };
+
+// Players entered without a federation as often as with one, as in
+// PLAYER_NAME_OVERRIDES.
+const TRADITIONAL_NAME_OVERRIDES = new Map<string, string>([['赖理兄', '賴理兄']]);
+
+/**
+ * The name in the characters the player writes it in, when that differs from
+ * the source's simplified spelling; undefined for everyone else. Display only:
+ * the source spelling stays the player's identity (boards, CXA lists, slugs).
+ */
+export function xiangqiPlayerOwnScriptName(zh: string, federation?: string): string | undefined {
+  const region = federationRegion(federation);
+  const own =
+    (region ? FEDERATION_PLAYER_TRADITIONAL_NAMES.get(`${region}:${zh}`) : undefined) ??
+    TRADITIONAL_NAME_OVERRIDES.get(zh);
+  return own && own !== zh ? own : undefined;
 }
 
 // The event glossary and the organiser-fixed names live in @mistboard/game
@@ -286,9 +325,9 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   // the Asian and world federations' English results drop it.
   ['中国香港', 'Hong Kong'],
   ['中国澳门', 'Macau'],
-  ['中国台北', 'Chinese Taipei'],
+  ['中国台北', 'Taiwan'],
   ['中国', 'China'],
-  ['中华台北', 'Chinese Taipei'],
+  ['中华台北', 'Taiwan'],
   // Malaysia enters the Asian championships as two federations, 西马 and 东马
   // (both coded MAS); the AXF's English member list names them West Malaysia
   // (Malaysia Xiangqi Federation) and East Malaysia (Sabah and Sarawak).
@@ -597,7 +636,10 @@ function translateGlossaryText(
     .trim()
     .replace(/(\d)年/g, '$1 ')
     .replace(/\s+/g, ' ');
-  if (trimmed.length === 0 || isFullyAscii(trimmed)) return undefined;
+  // Nothing to translate without a Han character. Latin text with diacritics
+  // (a Vietnamese event, "Cup Kim Long Motor lần I") is already readable, and
+  // the pinyin pass would drop each accented letter ("l n I").
+  if (trimmed.length === 0 || !/\p{Script=Han}/u.test(trimmed)) return undefined;
 
   const tokens: string[] = [];
   let residual = '';

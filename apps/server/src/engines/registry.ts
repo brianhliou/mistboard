@@ -7,6 +7,7 @@ import {
   ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION,
   type AtomicXiangqiEngineTier,
 } from '../atomic-xiangqi-fsf-engine.js';
+import { BANQI_PLAYABLE_ENGINES, BANQI_RANDOM_ENGINE_ID } from '../banqi-engine.js';
 import {
   CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
   CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES,
@@ -37,9 +38,23 @@ import {
   JIEQI_RANDOM_ENGINE_VERSION,
   JIEQI_SKILL_MULTIPV,
   type JieqiEngineTier,
+  JQE_JIEQI_ENGINE_VERSION,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
+import {
+  JUNGLE_FLIP_ENGINE_VERSION,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  JUNGLE_FLIP_RANDOM_ENGINE_ID,
+} from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
+import {
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  THREE_KINGDOMS_BANQI_ENGINE_ID,
+  THREE_KINGDOMS_BANQI_ENGINE_NAME,
+  THREE_KINGDOMS_BANQI_ENGINE_VERSION,
+  THREE_KINGDOMS_BANQI_HISTORICAL_ENGINE_VERSION,
+  threeKingdomsBanqiEngineDisplayName,
+} from '../three-kingdoms-banqi-engine.js';
 import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
@@ -47,11 +62,20 @@ import {
   XIANGQI_FSF_PLAYABLE_ENGINES,
   type XiangqiFsfEngineTier,
 } from '../xiangqi-fsf-engine.js';
-import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
+import {
+  PIKAFISH_XIANGQI_VERSION,
+  XIANGQI_ALL_ENGINE_TIERS,
+  XIANGQI_ENGINE_VERSION,
+} from '../xiangqi-pikafish-engine.js';
 import {
   XIANGQI_RANDOM_ENGINE_ID,
   XIANGQI_RANDOM_ENGINE_VERSION,
 } from '../xiangqi-random-engine.js';
+import {
+  XIANGQI_WORST_ENGINE_ID,
+  XIANGQI_WORST_ENGINE_VERSION,
+  xiangqiWorstEngineTierFor,
+} from '../xiangqi-worst-engine.js';
 import { BUILTIN_ENGINES } from './builtin/index.js';
 import type { EngineClientId, EngineDefinition, EngineId } from './types.js';
 
@@ -881,6 +905,33 @@ const XIANGQI_RANDOM_ENGINES: Record<string, EngineDefinition> = {
   } satisfies EngineDefinition,
 };
 
+// The worst-move bot: Fairy-Stockfish on the CC0 net scores every root move and
+// the bot plays the lowest (xiangqi-worst-engine.ts). Player-facing, not a rung.
+const XIANGQI_WORST_TIER = xiangqiWorstEngineTierFor(XIANGQI_WORST_ENGINE_ID)!;
+const XIANGQI_WORST_HASH = `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-${XIANGQI_FSF_ENGINE_REF}-${XIANGQI_WORST_ENGINE_VERSION}-nodes-${XIANGQI_WORST_TIER.nodes}-${XIANGQI_FSF_NNUE_NET.replace(/\.nnue$/, '')}`;
+const XIANGQI_WORST_ENGINES: Record<string, EngineDefinition> = {
+  [XIANGQI_WORST_ENGINE_ID]: {
+    id: XIANGQI_WORST_ENGINE_ID,
+    engineId: 'fairy-stockfish-xiangqi',
+    engineName: 'Fairy-Stockfish',
+    name: XIANGQI_WORST_TIER.name,
+    kind: 'container',
+    gameSpecId: 'xiangqi',
+    configHash: XIANGQI_WORST_HASH,
+    playSignature: XIANGQI_WORST_HASH,
+    config: {
+      kind: 'fairy-stockfish',
+      // Full strength (FSF's default): the weakness is the pick, not the search.
+      skill: 20,
+      movetime_ms: XIANGQI_WORST_TIER.movetimeMs,
+      nodes: XIANGQI_WORST_TIER.nodes,
+      nnue: XIANGQI_FSF_NNUE_NET,
+    },
+    notes:
+      'Fairy-Stockfish on the CC0 xiangqi net over every root move (MultiPV), playing the lowest-scoring one: the worst move it can find. A beginner opponent, not a ladder rung.',
+  } satisfies EngineDefinition,
+};
+
 const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   XIANGQI_FSF_PLAYABLE_ENGINES.map((tier) => [
     tier.id,
@@ -929,6 +980,9 @@ function jieqiConfigHash(tier: JieqiEngineTier): string {
   if (tier.engine === 'ab-jchess') {
     return `ab-jchess-${ABJCHESS_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
   }
+  if (tier.engine === 'jqe') {
+    return `jqe-${JQE_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
+  }
   if (tier.id === 'pikafish-jieqi-strongest') {
     return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`;
   }
@@ -942,8 +996,9 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
       tier.id,
       {
         id: tier.id as EngineId,
-        engineId: tier.engine === 'ab-jchess' ? 'ab-jchess' : 'pikafish-jieqi',
-        engineName: tier.engine === 'ab-jchess' ? 'AB-JChess' : 'PikaJieQi',
+        engineId: tier.engine ?? 'pikafish-jieqi',
+        engineName:
+          tier.engine === 'ab-jchess' ? 'AB-JChess' : tier.engine === 'jqe' ? 'jqe' : 'PikaJieQi',
         name: tier.name,
         kind: 'container',
         gameSpecId: 'jieqi',
@@ -958,10 +1013,12 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
         notes: tier.retired
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
           : tier.engine === 'ab-jchess'
-            ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
-            : tier.skill === undefined
-              ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
-              : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
+            ? "Jieqi top slot: AB-JChess-20261031 (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza), built on jqe's MIT code) on its 20261030 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            : tier.engine === 'jqe'
+              ? "Jieqi, one rung under AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
+              : tier.skill === undefined
+                ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
+                : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
       } satisfies EngineDefinition,
     ]),
   ),
@@ -1001,15 +1058,16 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
         version: XIANGQI_ENGINE_VERSION,
       },
       notes:
-        `Mainline Pikafish ${XIANGQI_ENGINE_VERSION} standard-Xiangqi profile; ` +
+        `Pikafish search, Fairy-Stockfish CC0 net (${PIKAFISH_XIANGQI_VERSION}); ` +
+        `standard-Xiangqi profile ${XIANGQI_ENGINE_VERSION}; ` +
         `${tier.nodes.toLocaleString('en-US')} node budget.`,
     } satisfies EngineDefinition,
   ]),
 );
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
-// ONE versioned bot since 2026-06-18 (was 3 difficulty tiers). configHash carries the
-// engine version, so each game record tells which build played. The route/scheduler key off
+// Historical full-strength bot is classical L7, preserving its id; each build gets a new signature.
+// configHash carries the engine version, so each game record tells which build played. The route/scheduler key off
 // banqi-engine.ts ids, not this registry. The legacy *-amateur/strong/strongest entries are
 // KEPT (not served, not in the picker) so old game records still resolve via isKnownEngineClientId.
 const BANQI_ENGINES: Record<string, EngineDefinition> = {
@@ -1033,15 +1091,60 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     // the hash names what DECIDES play — the build and the strength dial. The movetime
     // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
     // out of the identity while remaining recorded in `config`.
-    configHash: 'misty-banqi-0.2.5-nodes-3500000',
-    playSignature: 'misty-banqi-0.2.5-nodes-3500000',
+    // 2026-11-08: 0.2.7 -> 0.3.0; classical play verified move-identical to 0.2.8 on all 78 fixture positions on linux/amd64
+    configHash: 'misty-banqi-0.3.0-nodes-3500000',
+    playSignature: 'misty-banqi-0.3.0-nodes-3500000',
     config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
+      'MistyBanqi Level 7 — classical at 3.5M nodes. Historical bot: ' +
       'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
       'FEATURES 506 + w_king 28) on top of v0.2.0 cheap-strength. Modal ~385/arm vs hw3: ' +
       'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at ' +
       '3.5M nodes under an 8s latency cap (budget resized from 1.5M on 2026-09-06 to fit the ' +
       'ceiling; not a claimed strength gain).',
+  },
+  ...Object.fromEntries(
+    BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => {
+      const signature = `misty-banqi-${tier.version}-${tier.evaluation}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-banqi',
+          engineName: 'MistyBanqi',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'banqi',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'banqi-uci',
+            evaluation: tier.evaluation,
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes:
+            tier.level === 8
+              ? 'MistyBanqi Level 8 — trained NNUE net at 2M nodes under an 8s cap. ' +
+                'MistyBanqi 0.3.0 supports EvalFile; L8 needs MISTBOARD_BANQI_NET. ' +
+                'Calibrated 2026-11-08 by duplicate-pair self-play: +219 Elo [166, 283] over classical L7.'
+              : `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. MistyBanqi 0.3.0 supports Noise, NoiseDepth and Seed for L1-4.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  [BANQI_RANDOM_ENGINE_ID]: {
+    id: BANQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-banqi',
+    engineName: 'Random legal (Banqi)',
+    name: 'Random legal (Banqi)',
+    kind: 'builtin',
+    gameSpecId: 'banqi',
+    configHash: 'random-legal-banqi-v1',
+    playSignature: 'random-legal-banqi-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
   'misty-banqi-amateur': {
     id: 'misty-banqi-amateur',
@@ -1086,10 +1189,10 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // (amateur ≪ strong ≪ strongest, each step ~90-97%). Weakening is Skill Level
 // (CPU-independent); the budget is a node count (reproducible across the slow
 // prod vCPU) capped by movetime as a wall-clock guard.
-// Flip Jungle (兽棋 / 翻翻棋, 4x4 hidden-identity flip animal chess) plays via our own
+// Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
-// fog engine-worker). One versioned full-strength bot; strength is a node budget capped
-// by movetime.
+// fog engine-worker). The historical full-strength bot is classical L7; the
+// numbered ladder records both its node budget and any root-noise settings.
 const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   'misty-jungle-flip': {
     id: 'misty-jungle-flip',
@@ -1103,15 +1206,70 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
     // 512K -> 2.5M, and `movetime_ms: 2_500` never matched the tier's 5000ms cap even on
     // the first day. Bumped rather than edited in place for the same reason as banqi
     // above — eve_games snapshots the hash per game, so a mutated pair rewrites history.
-    configHash: 'misty-jungle-flip-0.5.1-nodes-2500000',
-    playSignature: 'misty-jungle-flip-0.5.1-nodes-2500000',
+    configHash: 'misty-jungle-flip-0.6.0-nodes-2500000',
+    playSignature: 'misty-jungle-flip-0.6.0-nodes-2500000',
     config: { kind: 'jungle-flip-uci', nodes: 2_500_000, movetime_ms: 5_000 },
     notes:
-      'MistyJungleFlip 0.5.1 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
+      'MistyJungleFlip 0.6.0 Level 7 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
       'jungle-flip FEN, with the <=4-piece exact tablebase (WLD + distance-to-mate) loaded ' +
       'since v0.4.0. Single full-strength bot at 2.5M nodes under a 5s latency cap ' +
       '(budget resized from 512K on 2026-09-06 to fit the ceiling; not a claimed strength ' +
       'gain). Chance-node (flip) search, not fog/belief.',
+  },
+  ...Object.fromEntries(
+    JUNGLE_FLIP_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-jungle-flip').map((tier) => {
+      const signature = `misty-jungle-flip-${tier.version}-${tier.evaluation}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-jungle-flip',
+          engineName: 'MistyJungleFlip',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'jungle-flip',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'jungle-flip-uci',
+            evaluation: tier.evaluation,
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes:
+            tier.level === 8
+              ? 'MistyJungleFlip 0.6.0 Level 8 — private r6 net at 1M nodes under a 5s cap. ' +
+                'Requires EvalFile and MISTBOARD_JUNGLE_FLIP_NET. Self-play: +139 [118, 161] Elo ' +
+                'over classical at equal time, +119 at equal 2.5M nodes; not yet rated on prod.'
+              : `MistyJungleFlip ${JUNGLE_FLIP_ENGINE_VERSION} level ${tier.level}. L1–5 require advertised Noise, NoiseDepth and Seed.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  'misty-jungle-flip-level-7': {
+    id: 'misty-jungle-flip-level-7',
+    engineId: 'misty-jungle-flip',
+    engineName: 'MistyJungleFlip',
+    name: 'MistyJungleFlip Level 7 (retired)',
+    kind: 'container',
+    gameSpecId: 'jungle-flip',
+    configHash: 'misty-jungle-flip-0.5.1-nodes-100000',
+    playSignature: 'misty-jungle-flip-0.5.1-nodes-100000',
+    config: { kind: 'jungle-flip-uci', nodes: 100_000, movetime_ms: 5000 },
+    notes: 'Historical 100K-node classical rung, retired when neural L8 shipped. Never offered.',
+  },
+  [JUNGLE_FLIP_RANDOM_ENGINE_ID]: {
+    id: JUNGLE_FLIP_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-jungle-flip',
+    engineName: 'Random legal (Flip Jungle)',
+    name: 'Random legal (Flip Jungle)',
+    kind: 'builtin',
+    gameSpecId: 'jungle-flip',
+    configHash: 'random-legal-jungle-flip-v1',
+    playSignature: 'random-legal-jungle-flip-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
 };
 
@@ -1171,11 +1329,59 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
   }),
 );
 
+// Includes the historical ID. L1 is both a live random mover and the EvE anchor.
+const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
+    const random = tier.evaluation === 'random';
+    const historical = tier.id === THREE_KINGDOMS_BANQI_ENGINE_ID;
+    // The historical catalog pair and the process-free L1 have not changed.
+    const version =
+      historical || random
+        ? THREE_KINGDOMS_BANQI_HISTORICAL_ENGINE_VERSION
+        : THREE_KINGDOMS_BANQI_ENGINE_VERSION;
+    const noiseSignature =
+      tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`;
+    const signature = `${tier.id}-${version}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}${noiseSignature}`;
+    return [
+      tier.id,
+      {
+        id: tier.id,
+        engineId: THREE_KINGDOMS_BANQI_ENGINE_ID,
+        engineName: THREE_KINGDOMS_BANQI_ENGINE_NAME,
+        name: threeKingdomsBanqiEngineDisplayName(tier.id),
+        kind: random ? 'builtin' : 'container',
+        gameSpecId: 'three-kingdoms-banqi',
+        configHash: signature,
+        playSignature: signature,
+        config:
+          tier.evaluation === 'random'
+            ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+            : {
+                kind: 'three-kingdoms-banqi-uci',
+                nodes: tier.nodes,
+                movetime_ms: tier.movetimeCapMs,
+                evaluation: tier.evaluation,
+                ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+                ...(tier.noise === undefined
+                  ? {}
+                  : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+              },
+        notes: historical
+          ? 'Historical MistyThreeKingdomsBanqi 0.2.0 Rust UCI binary: 2M-node classical Star1 search under a 3000 ms cap, without ChanceMix, Noise or EvalFile.'
+          : random
+            ? 'Process-free uniform random legal mover; no native engine binary.'
+            : `MistyThreeKingdomsBanqi ${THREE_KINGDOMS_BANQI_ENGINE_VERSION}. Admin-only TK playtest with calibrated levels. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2-L8 require advertised ChanceMix support; L2-L4 also require Noise, NoiseDepth and Seed.`,
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
+  ...XIANGQI_WORST_ENGINES,
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
   ...ATOMIC_XIANGQI_FSF_ENGINES,
@@ -1187,6 +1393,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...JUNGLE_FLIP_ENGINES,
   ...JUNGLE_ENGINES,
   ...KATAGO_JUNGLE_ENGINES,
+  ...THREE_KINGDOMS_BANQI_ENGINES,
 };
 
 /**

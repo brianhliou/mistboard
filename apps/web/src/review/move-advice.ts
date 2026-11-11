@@ -4,7 +4,7 @@
 // move (evals[ply-1].best), already in our own square notation from the server.
 import './move-advice.css';
 import type { GameAnalysis } from './game-analysis.js';
-import { ADVICE_LABEL, defaultFormatBestMove } from './move-advice-text.js';
+import { adviceJudgment, bestMoveQuote, defaultFormatBestMove } from './move-advice-text.js';
 
 // The text half (labels + per-variant UCI formatters) lives in move-advice-text.ts so a
 // surface can quote advice without this widget's stylesheet; re-exported for old imports.
@@ -44,9 +44,9 @@ export function createMoveAdvice(
     el.className = `review-advice review-advice--${judgment}`;
     const label = document.createElement('span');
     label.className = 'review-advice__label';
-    label.textContent = `${ADVICE_LABEL[judgment]}.`;
+    label.textContent = adviceJudgment(judgment);
     el.replaceChildren(label);
-    if (best) el.append(document.createTextNode(` ${formatBest(best)} was best.`));
+    if (best) el.append(document.createTextNode(bestMoveQuote(formatBest(best))));
   }
 
   return { el, update };

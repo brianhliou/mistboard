@@ -2,6 +2,7 @@ import type { GameEvent, PlayerView } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   captureFogView,
+  getFogViewHistory,
   handleReplayButtonClick,
   replayMetaLabel,
   resetReplayState,
@@ -146,6 +147,68 @@ describe('live fog replay', () => {
     expect(view?.board.d5).toEqual({ color: 'white', role: 'pawn' });
     expect(view?.board.e4).toBeUndefined();
     expect(view?.board.h8).toBeUndefined();
+  });
+
+  it.each(['white', 'black'] as const)(
+    'replays an opponent capture for %s from only the masked history',
+    (seat) => {
+      liveState.seat = seat;
+      liveState.solo = false;
+      const opponent = seat === 'white' ? 'black' : 'white';
+      // The opponent event and its piece identity are absent from this seat's log.
+      const events = [roomCreated];
+      capture(
+        makeView({
+          perspective: seat,
+          moveNumber: 3,
+          lastMove: { from: 'e2', to: 'e4' },
+          board: { e1: { color: seat, role: 'king' }, e4: { color: seat, role: 'pawn' } },
+          visibleSquares: ['e1', 'e4'],
+          status: { type: 'playing', turn: opponent },
+        }),
+        events,
+      );
+      capture(
+        makeView({
+          perspective: seat,
+          moveNumber: 4,
+          board: { e1: { color: seat, role: 'king' } },
+          visibleSquares: ['e1'],
+          status: { type: 'playing', turn: seat },
+        }),
+        events,
+      );
+      const serialized = JSON.stringify({
+        events: liveState.events,
+        history: [...getFogViewHistory()],
+      });
+
+      handleReplayButtonClick('first');
+      expect(playSound).not.toHaveBeenCalled();
+      handleReplayButtonClick('next');
+      expect(vi.mocked(playSound).mock.calls).toEqual([['capture']]);
+      expect(JSON.stringify({ events: liveState.events, history: [...getFogViewHistory()] })).toBe(
+        serialized,
+      );
+      expect(serialized).not.toMatch(/capturedRole|queen|rook|bishop|knight/);
+    },
+  );
+
+  it('replays a quiet hidden opponent move without a capture cue', () => {
+    liveState.seat = 'white';
+    liveState.solo = false;
+    capture(
+      makeView({
+        moveNumber: 3,
+        lastMove: { from: 'e2', to: 'e4' },
+        status: { type: 'playing', turn: 'black' },
+      }),
+      [roomCreated],
+    );
+    capture(makeView({ moveNumber: 4 }), [roomCreated]);
+    handleReplayButtonClick('first');
+    handleReplayButtonClick('next');
+    expect(vi.mocked(playSound).mock.calls).toEqual([['move']]);
   });
 
   it('replays the king-capture sound for a visible winning capture', () => {

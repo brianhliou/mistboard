@@ -1,0 +1,950 @@
+{
+ "run2:115": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.28,
+    "realizedWin": 66.75
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 33.3,
+    "realizedWin": 31.78
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 68.03,
+    "realizedWin": 83.58
+   },
+   {
+    "ply": 4,
+    "mover": "black",
+    "playedWin": 16.49,
+    "realizedWin": 12.05
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 13.19,
+    "realizedWin": 16.23
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 18.46,
+    "realizedWin": 22.68
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 76.29,
+    "realizedWin": 74.11
+   },
+   {
+    "ply": 12,
+    "mover": "black",
+    "playedWin": 25.33,
+    "realizedWin": 19.8
+   },
+   {
+    "ply": 14,
+    "mover": "black",
+    "playedWin": 20.35,
+    "realizedWin": 32.78
+   },
+   {
+    "ply": 16,
+    "mover": "black",
+    "playedWin": 34.72,
+    "realizedWin": 20.54
+   },
+   {
+    "ply": 17,
+    "mover": "red",
+    "playedWin": 79.26,
+    "realizedWin": 77.46
+   },
+   {
+    "ply": 18,
+    "mover": "black",
+    "playedWin": 22.78,
+    "realizedWin": 44.04
+   },
+   {
+    "ply": 19,
+    "mover": "red",
+    "playedWin": 55.03,
+    "realizedWin": 49.13
+   },
+   {
+    "ply": 23,
+    "mover": "red",
+    "playedWin": 44.54,
+    "realizedWin": 53.36
+   },
+   {
+    "ply": 24,
+    "mover": "black",
+    "playedWin": 44.46,
+    "realizedWin": 56.95
+   },
+   {
+    "ply": 29,
+    "mover": "red",
+    "playedWin": 41.36,
+    "realizedWin": 62.0
+   },
+   {
+    "ply": 32,
+    "mover": "black",
+    "playedWin": 33.76,
+    "realizedWin": 38.57
+   },
+   {
+    "ply": 37,
+    "mover": "red",
+    "playedWin": 59.84,
+    "realizedWin": 62.82
+   },
+   {
+    "ply": 52,
+    "mover": "black",
+    "playedWin": 40.25,
+    "realizedWin": 34.28
+   },
+   {
+    "ply": 54,
+    "mover": "black",
+    "playedWin": 35.9,
+    "realizedWin": 25.68
+   },
+   {
+    "ply": 58,
+    "mover": "black",
+    "playedWin": 21.12,
+    "realizedWin": 13.02
+   },
+   {
+    "ply": 60,
+    "mover": "black",
+    "playedWin": 11.74,
+    "realizedWin": 20.36
+   },
+   {
+    "ply": 70,
+    "mover": "black",
+    "playedWin": 25.02,
+    "realizedWin": 25.02
+   },
+   {
+    "ply": 131,
+    "mover": "red",
+    "playedWin": 71.51,
+    "realizedWin": 62.44
+   },
+   {
+    "ply": 143,
+    "mover": "red",
+    "playedWin": 66.5,
+    "realizedWin": 50.0
+   }
+  ]
+ },
+ "run2:22": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.27,
+    "realizedWin": 50.54
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 50.26,
+    "realizedWin": 48.86
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 52.06,
+    "realizedWin": 52.69
+   },
+   {
+    "ply": 4,
+    "mover": "black",
+    "playedWin": 48.04,
+    "realizedWin": 63.45
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 62.78,
+    "realizedWin": 60.08
+   },
+   {
+    "ply": 7,
+    "mover": "red",
+    "playedWin": 40.36,
+    "realizedWin": 40.82
+   },
+   {
+    "ply": 8,
+    "mover": "black",
+    "playedWin": 60.74,
+    "realizedWin": 57.87
+   },
+   {
+    "ply": 9,
+    "mover": "red",
+    "playedWin": 42.24,
+    "realizedWin": 35.13
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 64.59,
+    "realizedWin": 64.07
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 34.0,
+    "realizedWin": 32.36
+   },
+   {
+    "ply": 14,
+    "mover": "black",
+    "playedWin": 66.83,
+    "realizedWin": 63.63
+   },
+   {
+    "ply": 16,
+    "mover": "black",
+    "playedWin": 64.57,
+    "realizedWin": 65.6
+   },
+   {
+    "ply": 17,
+    "mover": "red",
+    "playedWin": 34.65,
+    "realizedWin": 31.78
+   },
+   {
+    "ply": 18,
+    "mover": "black",
+    "playedWin": 68.68,
+    "realizedWin": 73.75
+   },
+   {
+    "ply": 19,
+    "mover": "red",
+    "playedWin": 26.11,
+    "realizedWin": 29.77
+   },
+   {
+    "ply": 20,
+    "mover": "black",
+    "playedWin": 68.8,
+    "realizedWin": 59.95
+   },
+   {
+    "ply": 21,
+    "mover": "red",
+    "playedWin": 38.92,
+    "realizedWin": 33.31
+   },
+   {
+    "ply": 26,
+    "mover": "black",
+    "playedWin": 64.74,
+    "realizedWin": 55.63
+   },
+   {
+    "ply": 27,
+    "mover": "red",
+    "playedWin": 42.5,
+    "realizedWin": 59.56
+   },
+   {
+    "ply": 30,
+    "mover": "black",
+    "playedWin": 34.97,
+    "realizedWin": 21.56
+   },
+   {
+    "ply": 69,
+    "mover": "red",
+    "playedWin": 77.21,
+    "realizedWin": 69.43
+   },
+   {
+    "ply": 85,
+    "mover": "red",
+    "playedWin": 77.48,
+    "realizedWin": 77.42
+   },
+   {
+    "ply": 92,
+    "mover": "black",
+    "playedWin": 0.5,
+    "realizedWin": 0.04
+   }
+  ]
+ },
+ "run1:8": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.23,
+    "realizedWin": 52.02
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 48.89,
+    "realizedWin": 42.59
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 57.68,
+    "realizedWin": 52.15
+   },
+   {
+    "ply": 4,
+    "mover": "black",
+    "playedWin": 46.96,
+    "realizedWin": 48.79
+   },
+   {
+    "ply": 5,
+    "mover": "red",
+    "playedWin": 51.39,
+    "realizedWin": 52.15
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 47.45,
+    "realizedWin": 41.8
+   },
+   {
+    "ply": 7,
+    "mover": "red",
+    "playedWin": 57.63,
+    "realizedWin": 54.49
+   },
+   {
+    "ply": 9,
+    "mover": "red",
+    "playedWin": 55.14,
+    "realizedWin": 47.31
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 50.12,
+    "realizedWin": 51.75
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 48.66,
+    "realizedWin": 45.44
+   },
+   {
+    "ply": 13,
+    "mover": "red",
+    "playedWin": 46.91,
+    "realizedWin": 49.19
+   },
+   {
+    "ply": 14,
+    "mover": "black",
+    "playedWin": 50.1,
+    "realizedWin": 41.41
+   },
+   {
+    "ply": 15,
+    "mover": "red",
+    "playedWin": 58.51,
+    "realizedWin": 53.36
+   },
+   {
+    "ply": 17,
+    "mover": "red",
+    "playedWin": 53.46,
+    "realizedWin": 61.94
+   },
+   {
+    "ply": 19,
+    "mover": "red",
+    "playedWin": 64.7,
+    "realizedWin": 50.07
+   },
+   {
+    "ply": 20,
+    "mover": "black",
+    "playedWin": 48.74,
+    "realizedWin": 47.45
+   },
+   {
+    "ply": 23,
+    "mover": "red",
+    "playedWin": 54.08,
+    "realizedWin": 47.92
+   },
+   {
+    "ply": 28,
+    "mover": "black",
+    "playedWin": 50.04,
+    "realizedWin": 43.51
+   },
+   {
+    "ply": 40,
+    "mover": "black",
+    "playedWin": 34.18,
+    "realizedWin": 36.37
+   },
+   {
+    "ply": 41,
+    "mover": "red",
+    "playedWin": 63.74,
+    "realizedWin": 64.13
+   },
+   {
+    "ply": 42,
+    "mover": "black",
+    "playedWin": 35.82,
+    "realizedWin": 27.84
+   },
+   {
+    "ply": 46,
+    "mover": "black",
+    "playedWin": 30.32,
+    "realizedWin": 28.39
+   },
+   {
+    "ply": 47,
+    "mover": "red",
+    "playedWin": 66.6,
+    "realizedWin": 49.33
+   },
+   {
+    "ply": 48,
+    "mover": "black",
+    "playedWin": 42.58,
+    "realizedWin": 30.06
+   },
+   {
+    "ply": 54,
+    "mover": "black",
+    "playedWin": 26.47,
+    "realizedWin": 50.0
+   },
+   {
+    "ply": 55,
+    "mover": "red",
+    "playedWin": 50.0,
+    "realizedWin": 50.0
+   },
+   {
+    "ply": 80,
+    "mover": "black",
+    "playedWin": 28.38,
+    "realizedWin": 41.67
+   }
+  ]
+ },
+ "run2:104": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.3,
+    "realizedWin": 53.49
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 46.9,
+    "realizedWin": 44.24
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 56.18,
+    "realizedWin": 50.2
+   },
+   {
+    "ply": 4,
+    "mover": "black",
+    "playedWin": 49.93,
+    "realizedWin": 42.33
+   },
+   {
+    "ply": 5,
+    "mover": "red",
+    "playedWin": 57.53,
+    "realizedWin": 53.89
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 46.4,
+    "realizedWin": 40.37
+   },
+   {
+    "ply": 7,
+    "mover": "red",
+    "playedWin": 59.4,
+    "realizedWin": 56.02
+   },
+   {
+    "ply": 9,
+    "mover": "red",
+    "playedWin": 55.38,
+    "realizedWin": 53.02
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 47.67,
+    "realizedWin": 46.91
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 52.85,
+    "realizedWin": 47.72
+   },
+   {
+    "ply": 12,
+    "mover": "black",
+    "playedWin": 51.57,
+    "realizedWin": 53.42
+   },
+   {
+    "ply": 13,
+    "mover": "red",
+    "playedWin": 46.09,
+    "realizedWin": 40.5
+   },
+   {
+    "ply": 14,
+    "mover": "black",
+    "playedWin": 58.63,
+    "realizedWin": 56.42
+   },
+   {
+    "ply": 15,
+    "mover": "red",
+    "playedWin": 44.19,
+    "realizedWin": 60.4
+   },
+   {
+    "ply": 16,
+    "mover": "black",
+    "playedWin": 38.41,
+    "realizedWin": 39.6
+   },
+   {
+    "ply": 21,
+    "mover": "red",
+    "playedWin": 58.67,
+    "realizedWin": 55.82
+   },
+   {
+    "ply": 22,
+    "mover": "black",
+    "playedWin": 41.52,
+    "realizedWin": 37.18
+   },
+   {
+    "ply": 24,
+    "mover": "black",
+    "playedWin": 39.63,
+    "realizedWin": 33.61
+   },
+   {
+    "ply": 28,
+    "mover": "black",
+    "playedWin": 35.62,
+    "realizedWin": 15.45
+   },
+   {
+    "ply": 30,
+    "mover": "black",
+    "playedWin": 16.24,
+    "realizedWin": 30.91
+   },
+   {
+    "ply": 37,
+    "mover": "red",
+    "playedWin": 65.6,
+    "realizedWin": 51.28
+   },
+   {
+    "ply": 39,
+    "mover": "red",
+    "playedWin": 43.35,
+    "realizedWin": 19.84
+   },
+   {
+    "ply": 41,
+    "mover": "red",
+    "playedWin": 15.37,
+    "realizedWin": 18.75
+   },
+   {
+    "ply": 45,
+    "mover": "red",
+    "playedWin": 8.77,
+    "realizedWin": 5.38
+   },
+   {
+    "ply": 49,
+    "mover": "red",
+    "playedWin": 3.45,
+    "realizedWin": 0.0
+   },
+   {
+    "ply": 53,
+    "mover": "red",
+    "playedWin": 0.0,
+    "realizedWin": 0.0
+   },
+   {
+    "ply": 54,
+    "mover": "black",
+    "playedWin": 100.0,
+    "realizedWin": 100.0
+   }
+  ]
+ },
+ "run1:157": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.1,
+    "realizedWin": 52.08
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 49.03,
+    "realizedWin": 43.98
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 56.59,
+    "realizedWin": 52.75
+   },
+   {
+    "ply": 4,
+    "mover": "black",
+    "playedWin": 48.0,
+    "realizedWin": 43.78
+   },
+   {
+    "ply": 5,
+    "mover": "red",
+    "playedWin": 56.92,
+    "realizedWin": 51.68
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 48.81,
+    "realizedWin": 50.34
+   },
+   {
+    "ply": 7,
+    "mover": "red",
+    "playedWin": 51.07,
+    "realizedWin": 48.66
+   },
+   {
+    "ply": 9,
+    "mover": "red",
+    "playedWin": 50.17,
+    "realizedWin": 49.6
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 49.29,
+    "realizedWin": 48.52
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 49.57,
+    "realizedWin": 54.36
+   },
+   {
+    "ply": 12,
+    "mover": "black",
+    "playedWin": 44.64,
+    "realizedWin": 55.29
+   },
+   {
+    "ply": 13,
+    "mover": "red",
+    "playedWin": 42.07,
+    "realizedWin": 43.51
+   },
+   {
+    "ply": 20,
+    "mover": "black",
+    "playedWin": 56.72,
+    "realizedWin": 54.69
+   },
+   {
+    "ply": 22,
+    "mover": "black",
+    "playedWin": 56.12,
+    "realizedWin": 49.93
+   },
+   {
+    "ply": 25,
+    "mover": "red",
+    "playedWin": 48.42,
+    "realizedWin": 68.63
+   },
+   {
+    "ply": 28,
+    "mover": "black",
+    "playedWin": 35.23,
+    "realizedWin": 39.47
+   },
+   {
+    "ply": 31,
+    "mover": "red",
+    "playedWin": 62.66,
+    "realizedWin": 58.98
+   },
+   {
+    "ply": 32,
+    "mover": "black",
+    "playedWin": 41.74,
+    "realizedWin": 37.62
+   },
+   {
+    "ply": 33,
+    "mover": "red",
+    "playedWin": 55.87,
+    "realizedWin": 57.01
+   },
+   {
+    "ply": 39,
+    "mover": "red",
+    "playedWin": 52.89,
+    "realizedWin": 33.79
+   },
+   {
+    "ply": 41,
+    "mover": "red",
+    "playedWin": 34.06,
+    "realizedWin": 70.73
+   },
+   {
+    "ply": 48,
+    "mover": "black",
+    "playedWin": 30.95,
+    "realizedWin": 13.36
+   },
+   {
+    "ply": 60,
+    "mover": "black",
+    "playedWin": 11.36,
+    "realizedWin": 9.57
+   },
+   {
+    "ply": 66,
+    "mover": "black",
+    "playedWin": 10.72,
+    "realizedWin": 41.67
+   },
+   {
+    "ply": 99,
+    "mover": "red",
+    "playedWin": 65.23,
+    "realizedWin": 46.11
+   }
+  ]
+ },
+ "run1:54": {
+  "engineId": "abjchess-20261031",
+  "source": "offline: AB-JChess 4 s per identity, believed pool (flip_luck.py, 2026-11-01)",
+  "decisions": [
+   {
+    "ply": 1,
+    "mover": "red",
+    "playedWin": 55.28,
+    "realizedWin": 52.22
+   },
+   {
+    "ply": 2,
+    "mover": "black",
+    "playedWin": 48.62,
+    "realizedWin": 58.07
+   },
+   {
+    "ply": 3,
+    "mover": "red",
+    "playedWin": 42.76,
+    "realizedWin": 29.16
+   },
+   {
+    "ply": 5,
+    "mover": "red",
+    "playedWin": 30.51,
+    "realizedWin": 28.77
+   },
+   {
+    "ply": 6,
+    "mover": "black",
+    "playedWin": 71.26,
+    "realizedWin": 67.16
+   },
+   {
+    "ply": 7,
+    "mover": "red",
+    "playedWin": 33.87,
+    "realizedWin": 37.37
+   },
+   {
+    "ply": 8,
+    "mover": "black",
+    "playedWin": 61.42,
+    "realizedWin": 75.23
+   },
+   {
+    "ply": 9,
+    "mover": "red",
+    "playedWin": 24.95,
+    "realizedWin": 42.0
+   },
+   {
+    "ply": 10,
+    "mover": "black",
+    "playedWin": 57.98,
+    "realizedWin": 77.09
+   },
+   {
+    "ply": 11,
+    "mover": "red",
+    "playedWin": 23.13,
+    "realizedWin": 20.27
+   },
+   {
+    "ply": 13,
+    "mover": "red",
+    "playedWin": 21.84,
+    "realizedWin": 44.71
+   },
+   {
+    "ply": 14,
+    "mover": "black",
+    "playedWin": 54.77,
+    "realizedWin": 46.84
+   },
+   {
+    "ply": 19,
+    "mover": "red",
+    "playedWin": 61.91,
+    "realizedWin": 61.62
+   },
+   {
+    "ply": 20,
+    "mover": "black",
+    "playedWin": 36.46,
+    "realizedWin": 49.73
+   },
+   {
+    "ply": 24,
+    "mover": "black",
+    "playedWin": 50.28,
+    "realizedWin": 39.6
+   },
+   {
+    "ply": 32,
+    "mover": "black",
+    "playedWin": 39.8,
+    "realizedWin": 43.84
+   },
+   {
+    "ply": 33,
+    "mover": "red",
+    "playedWin": 55.05,
+    "realizedWin": 58.0
+   },
+   {
+    "ply": 35,
+    "mover": "red",
+    "playedWin": 58.64,
+    "realizedWin": 48.79
+   },
+   {
+    "ply": 39,
+    "mover": "red",
+    "playedWin": 48.74,
+    "realizedWin": 33.91
+   },
+   {
+    "ply": 42,
+    "mover": "black",
+    "playedWin": 66.05,
+    "realizedWin": 46.51
+   },
+   {
+    "ply": 43,
+    "mover": "red",
+    "playedWin": 47.23,
+    "realizedWin": 58.26
+   },
+   {
+    "ply": 44,
+    "mover": "black",
+    "playedWin": 40.89,
+    "realizedWin": 46.71
+   },
+   {
+    "ply": 48,
+    "mover": "black",
+    "playedWin": 45.04,
+    "realizedWin": 62.95
+   },
+   {
+    "ply": 70,
+    "mover": "black",
+    "playedWin": 67.23,
+    "realizedWin": 57.67
+   },
+   {
+    "ply": 82,
+    "mover": "black",
+    "playedWin": 41.55,
+    "realizedWin": 61.05
+   }
+  ]
+ }
+}

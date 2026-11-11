@@ -8,6 +8,11 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
+import {
+  boardCoordinatesEnabled,
+  readDisplayPreferences,
+  writeDisplayPreference,
+} from './display-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
@@ -22,6 +27,12 @@ import {
   type AppearanceMenuOptions,
   type BoardFamily,
   formatVolume,
+  PIECE_ANIMATION_SPEEDS,
+  type PieceSegment,
+  type PieceSegmentValues,
+  pieceSegmentHidden,
+  pieceSegmentValues,
+  type QuickPickerKind,
   readEffectiveSoundVolume,
   readStoredSiteTheme,
   readStoredSoundMuted,
@@ -31,6 +42,10 @@ import {
   readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
   type SiteTheme,
+  setBanqiTile3dPreference,
+  setBoardCoordinatesPreference,
+  setPieceAnimationPreference,
+  setPieceEdgePreference,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
@@ -96,6 +111,30 @@ export function populateThemeControlPanel(
     status.element,
   );
   return status;
+}
+
+// The phone bar's quick pickers (#575, through buildQuickPickerAt in theme.ts):
+// the language list and the piece-set tile grid, built by the same field
+// builders as the drill-in menu so the two never drift apart.
+export function buildQuickPicker(
+  kind: QuickPickerKind,
+  options: { onPick?: () => void } = {},
+): HTMLElement {
+  const locale = currentLocale();
+  if (kind === 'language') return createLanguageField(locale, () => options.onPick?.());
+  return createTileField(
+    'xqpiece',
+    t('prefs.pieces', {}, locale),
+    t('prefs.xiangqiPieceSet', {}, locale),
+    XIANGQI_PIECE_SETS.map((s) => ({ id: s.id, label: t(s.labelKey, {}, locale) })),
+    readStoredXiangqiPieceSet(),
+    (set) => {
+      setXiangqiPieceSetPreference(set);
+      options.onPick?.();
+    },
+    undefined,
+    false,
+  );
 }
 
 // The appearance controls as a lichess-style drill-in menu: a compact list of
@@ -171,6 +210,10 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       createXiangqiPieceShadowField(locale),
     );
   }
+  // Coordinates are every board's, not xiangqi's, so they sit outside the gate.
+  // Until 2026-10-17 they lived only on the account page, out of a guest's reach.
+  boardBody.push(createBoardCoordinatesField(locale));
+  boardBody.push(createTouchConfirmationField(locale));
   addCategory('board', t('prefs.board', {}, locale), boardBody);
 
   // Pieces carries XIANGQI ONLY (2026-07-26). Chess ships one set, so there is no
@@ -192,6 +235,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         undefined,
         false,
       ),
+      createPieceLookGroup(locale),
+      createPieceMotionGroup(locale),
     );
   }
   addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
@@ -506,6 +551,141 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setXiangqiPieceShadowPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.pieceShadow', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// The Pieces panel's two groups, as rows of segmented choices (Brian,
+// 2026-10-29: "Segmented rows"). A row that only means something under another
+// choice hides with it: Edge without 3D pieces, Flip with the animation off.
+// syncThemeControls keeps the selection and the hiding in step after a change.
+function createPieceLookGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupLook', {}, locale), [
+    createSegmentedField(
+      'look',
+      t('prefs.pieceLook', {}, locale),
+      [
+        { id: 'flat', label: t('prefs.optionFlat', {}, locale) },
+        { id: '3d', label: t('prefs.option3d', {}, locale) },
+      ],
+      values.look,
+      (id) => setBanqiTile3dPreference(id === '3d'),
+    ),
+    createSegmentedField(
+      'edge',
+      t('prefs.pieceEdge', {}, locale),
+      [
+        { id: 'standard', label: t('prefs.pieceEdgeStandard', {}, locale) },
+        { id: 'thick', label: t('prefs.pieceEdgeThick', {}, locale) },
+      ],
+      values.edge,
+      (id) => setPieceEdgePreference(id === 'thick'),
+    ),
+  ]);
+}
+
+// Speed is the account page's Piece animation, here so a guest can reach it.
+// The reveal turn has no row: it follows the look (3D pieces spin, flat squash).
+function createPieceMotionGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupMotion', {}, locale), [
+    createSegmentedField(
+      'speed',
+      t('prefs.animationSpeed', {}, locale),
+      PIECE_ANIMATION_SPEEDS.map((id) => ({
+        id,
+        label: t(PIECE_ANIMATION_LABEL_KEYS[id], {}, locale),
+      })),
+      values.speed,
+      setPieceAnimationPreference,
+    ),
+  ]);
+}
+
+const PIECE_ANIMATION_LABEL_KEYS: Record<PieceSegmentValues['speed'], I18nKey> = {
+  none: 'prefs.animationOff',
+  fast: 'prefs.animationFast',
+  normal: 'prefs.animationNormal',
+  slow: 'prefs.animationSlow',
+};
+
+function createControlGroup(label: string, rows: HTMLElement[]): HTMLDivElement {
+  const group = document.createElement('div');
+  group.className = 'theme-control-group';
+  const heading = document.createElement('span');
+  heading.className = 'theme-control-group-label';
+  heading.textContent = label;
+  group.append(heading, ...rows);
+  return group;
+}
+
+// One labelled row: the name on the left, the choices joined on the right.
+function createSegmentedField<S extends PieceSegment>(
+  segment: S,
+  label: string,
+  options: ReadonlyArray<{ id: PieceSegmentValues[S]; label: string }>,
+  value: PieceSegmentValues[S],
+  onChange: (value: PieceSegmentValues[S]) => void,
+): HTMLDivElement {
+  const field = document.createElement('div');
+  field.className = 'theme-segment-field';
+  field.dataset.pieceSegmentField = segment;
+  field.hidden = pieceSegmentHidden(segment, pieceSegmentValues());
+  const name = document.createElement('span');
+  name.className = 'theme-segment-label';
+  name.textContent = label;
+
+  const row = document.createElement('div');
+  row.className = 'theme-segment-row';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', label);
+  for (const option of options) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-mode-option';
+    button.dataset.pieceSegment = segment;
+    button.dataset.value = option.id;
+    button.textContent = option.label;
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(option.id === value));
+    if (option.id === value) button.classList.add('selected');
+    button.addEventListener('click', () => onChange(option.id));
+    row.append(button);
+  }
+
+  field.append(name, row);
+  return field;
+}
+
+// Board coordinates, the same preference the account page sets. The setter
+// stamps the root attribute the board aspect rules read and re-renders boards.
+function createBoardCoordinatesField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field board-coordinates-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.boardCoordinatesToggle = '';
+  input.checked = boardCoordinatesEnabled();
+  input.addEventListener('change', () => setBoardCoordinatesPreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.coordinates', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+function createTouchConfirmationField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.confirmMovesOnTouchToggle = '';
+  input.checked = readDisplayPreferences().confirmMovesOnTouch;
+  input.addEventListener('change', () =>
+    writeDisplayPreference('confirmMovesOnTouch', input.checked),
+  );
+  const text = document.createElement('span');
+  text.textContent = t('account.displayConfirmMovesOnTouch', {}, locale);
   field.append(input, text);
   return field;
 }

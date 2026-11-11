@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import pg from 'pg';
+import { DEFAULT_TEST_DATABASE_URL } from './test-database-url.mjs';
 
-export const DEFAULT_TEST_DATABASE_URL =
-  'postgres://mistboard:mistboard@localhost:5435/mistboard_test';
+export { DEFAULT_TEST_DATABASE_URL } from './test-database-url.mjs';
 
 const DEFAULT_MAINTENANCE_DATABASE_URL = 'postgres://mistboard:mistboard@localhost:5435/mistboard';
 
@@ -13,6 +13,7 @@ export async function ensureTestDatabase({
     DEFAULT_MAINTENANCE_DATABASE_URL,
 } = {}) {
   const target = databaseNameFromUrl(databaseUrl, 'TEST_DATABASE_URL');
+  console.log(`test database ${target}`);
   const maintenance = new pg.Client({ connectionString: maintenanceDatabaseUrl });
   await maintenance.connect();
   try {
@@ -22,8 +23,6 @@ export async function ensureTestDatabase({
     if (existing.rowCount === 0) {
       await maintenance.query(`CREATE DATABASE ${quoteIdentifier(target)}`);
       console.log(`created test database ${target}`);
-    } else {
-      console.log(`test database ${target} is ready`);
     }
   } finally {
     await maintenance.end();

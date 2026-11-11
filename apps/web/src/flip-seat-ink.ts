@@ -1,6 +1,6 @@
 import { maybeGameSpecForId } from '@mistboard/game';
 
-// Flip variants (Banqi, Flip Jungle) seat their players as first/second MOVER under
+// Flip variants (Banqi, Flip Jungle, Three Kingdoms Banqi) seat their players as first/second MOVER under
 // the color ids 'red'/'black'. The ink each seat plays binds on the opening flip and
 // travels as the game state's `firstColor` — it is never a stored column, so the
 // recorded result, the timeline's `color`, and the participant rows are all
@@ -19,7 +19,11 @@ export type FlipSeat = 'red' | 'black';
 // the members are typed union values rather than loose strings. Note that
 // 'jieqi-deal' is NOT here: jieqi deals its pieces face down but its seats own a
 // fixed ink from move one.
-const FLIP_INK_SETUPS: ReadonlySet<string> = new Set(['banqi-deal', 'jungle-flip-deal']);
+const FLIP_INK_SETUPS: ReadonlySet<string> = new Set([
+  'banqi-deal',
+  'jungle-flip-deal',
+  'three-kingdoms-banqi-deal',
+]);
 
 /** True when the variant's seats are move-order slots whose ink binds on a flip. */
 export function isFlipSeatVariant(variant: string | null | undefined): boolean {
@@ -39,6 +43,16 @@ export function flipSeatInk(seat: FlipSeat, firstColor: FlipSeat | null): FlipSe
 }
 
 /**
+ * False when the variant's seats have no colour at all: the mahjong family seats
+ * players by wind (east, west), and a seat disc there is an empty grey circle
+ * that claims a colour the game does not have. Callers draw no disc instead.
+ */
+export function variantSeatsHaveInk(variant: string | null | undefined): boolean {
+  if (!variant) return true;
+  return maybeGameSpecForId(variant)?.family !== 'mahjong';
+}
+
+/**
  * The ink a seat renders as for ANY variant: flip variants translate through
  * `firstColor` (null until the flip binds), and every other variant has seat == ink
  * so the seat passes straight through. Use this wherever a seat id is about to be
@@ -52,4 +66,19 @@ export function seatInkForVariant(
   if (!isFlipSeatVariant(variant)) return seat;
   if (seat !== 'red' && seat !== 'black') return seat;
   return flipSeatInk(seat, firstColor ?? null);
+}
+
+/**
+ * A live flip game's bound ink, read out of a postgame-shaped board payload's
+ * view (the /watch rows and the /games cards both get one). The payload is
+ * `Record<string, unknown>` by contract (the renderers own its shape), so this
+ * narrows defensively: anything unexpected reads as unbound, which renders a
+ * neutral disc rather than a wrong one.
+ */
+export function payloadFirstColor(
+  payload: Record<string, unknown> | null | undefined,
+): FlipSeat | null {
+  const view = (payload as { view?: { firstColor?: unknown } } | null | undefined)?.view;
+  const firstColor = view?.firstColor;
+  return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
 }

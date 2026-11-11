@@ -91,10 +91,12 @@ function cryptoRng(): number {
 }
 
 // The persisted room-created setup is the deal plus the rules the room was created
-// under (BanqiSetup: since the 長捉 rule shipped, 2026-10, new rooms record
-// `chaseRule`). A room created before it stored the bare deal array and replays
-// with the rule off, so its moves and its repetition draw replay as played
-// (readBanqiSetup fails closed: no stamp means the old rules). createInitialBanqiState
+// under (BanqiSetup: since the 長捉 rule shipped, 2026-10-09, new rooms record
+// `chaseRule`; since 2026-10-17 also `noProgressLimit`, 60 plies). A room created
+// before the 長捉 rule stored the bare deal array and replays with the rule off and
+// the 40-ply limit; a room from between the two has no `noProgressLimit` and
+// replays at 40. So its moves and its draws replay as played (readBanqiSetup fails
+// closed: no stamp means the old rules). createInitialBanqiState
 // validates the deal (throws on a corrupt multiset). An absent setup is only the
 // runtime's throwaway seed projection; it gets the standard deal and current rules.
 
@@ -108,9 +110,10 @@ export function banqiClientEventFor(
   ply: number,
 ): TenantClientEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID> | null {
   if (event.type === 'room-created') {
-    if (event.setup === undefined) return event;
+    if (event.setup === undefined && event.internalEngineTest === undefined) return event;
     const redacted = { ...event };
     delete redacted.setup;
+    delete redacted.internalEngineTest;
     return redacted;
   }
   if (event.type === 'move-played') return { ...event, ply };
@@ -134,15 +137,8 @@ export function getBanqiClientView(
   return getBanqiPlayerView(state, client.seat);
 }
 
-// The unredacted board, served to every client once the game is FINISHED
-// (docs-private/spectator-visibility-matrix.md). The runtime owns the WHEN via
-// roomViewPolicy; this only says what truth looks like on the wire.
-//
-// Tiles that were never flipped come back with their dealt identity, which
-// exposes the deal. That is not a new disclosure: the postgame truth history
-// already reveals all 32 tiles once a game ends, and an earlier session
-// reconstructed a whole deal from exactly that public data to build the rules
-// page (commit f2ad3e9). The room was the last surface still withholding it.
+// Explicit postgame truth surfaces only. Ordinary room snapshots stay masked;
+// the final-board endpoint separately verifies persisted finalization.
 export function getBanqiTruthView(state: BanqiGameState): BanqiPlayerView {
   const { forbiddenMoves: _seatOnly, ...base } = getBanqiPlayerView(state, BANQI_SEATS[0]);
   const board: BanqiPlayerView['board'] = {};
@@ -169,6 +165,10 @@ export const banqiTenant: BanqiTenant = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -183,7 +183,9 @@ export const banqiTenant: BanqiTenant = {
   visibility: {
     clientEventFor: banqiClientEventFor,
     viewForClient: (state, client) => getBanqiClientView(state, client),
-    truthView: (state) => getBanqiTruthView(state),
+    // Normal room snapshots stay as played, including at the end. A separate
+    // explicit HTTP request checks persisted finalization before revealing.
+    liveHistoryWhenFinished: true,
     // A live room's per-ply views for a reload: the deal is a server secret, so
     // the client cannot replay the log itself. Each ply is viewForClient's own
     // masked view for this viewer (a spectator's is the public board), so no
@@ -219,13 +221,17 @@ export const banqiTenant: BanqiTenant = {
       if (winner === 'black') return 'black-wins';
       return 'draw';
     },
-    // The kernel spells the 40-ply no-progress draw 'no-progress'; the canonical
+    // The kernel spells the no-progress draw 'no-progress'; the canonical
     // GameTermination value (shared with xiangqi, and the
     // only one the games_termination_check CHECK accepts) is 'progress-clock'.
     // Translate it — a blind cast launders the invalid string past TS and only
     // fails at the DB write, silently dropping every no-progress draw.
     termination: (reason: string): persistence.GameTermination =>
-      reason === 'no-progress' ? 'progress-clock' : (reason as persistence.GameTermination),
+      reason === 'no-progress'
+        ? 'progress-clock'
+        : reason === 'agreement'
+          ? 'draw'
+          : (reason as persistence.GameTermination),
     logKindPrefix: 'banqi',
     logLabel: 'Banqi',
   },

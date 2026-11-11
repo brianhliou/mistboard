@@ -12,8 +12,7 @@
 
 import net from 'node:net';
 
-export const DEFAULT_TEST_DATABASE_URL =
-  'postgres://mistboard:mistboard@localhost:5435/mistboard_test';
+export { DEFAULT_TEST_DATABASE_URL } from './test-database-url.mjs';
 
 // Migrations and the persistence modules themselves. Deliberately narrow: a
 // wider net would run a 90-second suite on most pushes and get skipped by hand.

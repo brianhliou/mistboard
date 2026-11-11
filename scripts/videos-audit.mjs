@@ -47,9 +47,8 @@ const CONCURRENCY = 2;
  *  imported value cannot tell it where the entry was written. The file is a
  *  hand-maintained literal with one flat object per entry, so the shape this
  *  relies on is the shape a human already has to keep. */
-export function parseEntries(source) {
+export function parseEntries(source, arrayNames = ['YOUTUBE_VIDEOS', 'MISTBOARD_CHANNEL_VIDEOS']) {
   const entries = [];
-  const arrayNames = ['YOUTUBE_VIDEOS', 'MISTBOARD_CHANNEL_VIDEOS'];
   for (const name of arrayNames) {
     const declaration = source.indexOf(`const ${name}`);
     if (declaration === -1) throw new Error(`videos-data.ts has no ${name} array`);
@@ -73,6 +72,7 @@ export function parseEntries(source) {
         body,
         source: field(body, 'source'),
         id: field(body, 'id'),
+        bvid: field(body, 'bvid'),
         slug: field(body, 'slug'),
         title: field(body, 'title'),
         author: field(body, 'author'),

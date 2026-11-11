@@ -17,8 +17,7 @@ export type GameStartSource =
   | 'lobby-seek'
   | 'quick-pair'
   | 'setup-dialog'
-  | 'engine-offer'
-  | 'home-correspondence';
+  | 'engine-offer';
 
 const KEY = 'mistboard.gameStartSource';
 // Long enough for a slow room create and a matchmaking wait to land; short
@@ -52,8 +51,8 @@ export function takeGameStartSource(now: number = Date.now()): GameStartSource |
 // A correspondence game starts for its seek's poster days after the click that
 // posted it, usually from an email, so the ten-minute session slot above cannot
 // carry the source. This one lives in localStorage for as long as a public seek
-// can (14 days) and is keyed to the variant, so a seek posted from the homepage
-// button labels the first correspondence game of that variant that starts here.
+// can (14 days) and is keyed to the variant, so a seek posted from an entry point
+// labels the first correspondence game of that variant that starts here.
 const CORRESPONDENCE_KEY = 'mistboard.correspondenceStartSource';
 const CORRESPONDENCE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1_000;
 
@@ -97,31 +96,79 @@ export function takeCorrespondenceStartSource(
   }
 }
 
-// Correspondence games whose game_started already fired in this browser. Kept
-// short: a player has a handful of games going, and an id that falls off the end
-// belongs to a game long since started.
-const STARTED_KEY = 'mistboard.correspondenceStarted';
-const STARTED_CAP = 50;
+// Games whose game_started already fired in this browser, one list per kind.
+// A page load is not a game start: a seated player who refreshes a live room,
+// or comes back to it after a phone app switch, renders `playing` again on a
+// fresh page with a fresh tracker, and until 2026-10-14 (#437) each of those
+// counted as another start. The client cannot tell a reload's snapshot from the
+// first one (a bot or quick-pair room is already `playing` when it first
+// renders), so the server's game id is remembered here instead.
+//
+// Correspondence keeps its own key from 2026-10-02 so the games already marked
+// there are not counted again. Kept short: an id that falls off the end belongs
+// to a game long since started (and a finished room never re-fires a start).
+const CORRESPONDENCE_STARTED_KEY = 'mistboard.correspondenceStarted';
+const CORRESPONDENCE_STARTED_CAP = 50;
+const LIVE_STARTED_KEY = 'mistboard.liveGameStarted';
+const LIVE_STARTED_CAP = 100;
+// Games whose game_first_move already fired in this browser (2026-10-25). Same
+// reason as the starts above: the tracker is per page, the game is not.
+const FIRST_MOVE_KEY = 'mistboard.gameFirstMove';
+const FIRST_MOVE_CAP = 100;
 
-function readStartedIds(): string[] {
+// Storage blocked: still dedupe within the page (a tracker reset re-renders the
+// same room), though a reload may count the start again.
+const startedInMemory = new Set<string>();
+
+function readStartedIds(key: string): string[] {
   try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(STARTED_KEY) ?? '[]');
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(key) ?? '[]');
     return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
   } catch {
     return [];
   }
 }
 
+function markStarted(key: string, cap: number, gameId: string): void {
+  startedInMemory.add(`${key}:${gameId}`);
+  try {
+    const ids = readStartedIds(key).filter((id) => id !== gameId);
+    ids.push(gameId);
+    window.localStorage.setItem(key, JSON.stringify(ids.slice(-cap)));
+  } catch {
+    // Storage blocked: the in-memory set above is all there is.
+  }
+}
+
+function hasStarted(key: string, gameId: string): boolean {
+  return startedInMemory.has(`${key}:${gameId}`) || readStartedIds(key).includes(gameId);
+}
+
 export function hasTrackedCorrespondenceStart(gameId: string): boolean {
-  return readStartedIds().includes(gameId);
+  return hasStarted(CORRESPONDENCE_STARTED_KEY, gameId);
 }
 
 export function markCorrespondenceStartTracked(gameId: string): void {
-  try {
-    const ids = readStartedIds().filter((id) => id !== gameId);
-    ids.push(gameId);
-    window.localStorage.setItem(STARTED_KEY, JSON.stringify(ids.slice(-STARTED_CAP)));
-  } catch {
-    // Storage blocked: a reload may count the start again.
-  }
+  markStarted(CORRESPONDENCE_STARTED_KEY, CORRESPONDENCE_STARTED_CAP, gameId);
+}
+
+export function hasTrackedLiveGameStart(gameId: string): boolean {
+  return hasStarted(LIVE_STARTED_KEY, gameId);
+}
+
+export function markLiveGameStartTracked(gameId: string): void {
+  markStarted(LIVE_STARTED_KEY, LIVE_STARTED_CAP, gameId);
+}
+
+export function hasTrackedGameFirstMove(gameId: string): boolean {
+  return hasStarted(FIRST_MOVE_KEY, gameId);
+}
+
+export function markGameFirstMoveTracked(gameId: string): void {
+  markStarted(FIRST_MOVE_KEY, FIRST_MOVE_CAP, gameId);
+}
+
+// Tests only: forget the in-memory half so each case starts clean.
+export function resetTrackedGameStartsForTests(): void {
+  startedInMemory.clear();
 }

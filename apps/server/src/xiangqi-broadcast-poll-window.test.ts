@@ -70,6 +70,48 @@ test('a tour seeded after its event polls for the tail counted from its creation
   assert.equal(early.closesAt, '2026-10-15T23:59:59+08:00');
 });
 
+test('a tour with no boards past its window polls daily for 30 more days (#493)', () => {
+  // The 2026 women's league: ended 09-27 with 0 records on dpxq; its 7-day
+  // tail closed 10-04 and nothing would ever poll it again.
+  const LEAGUE = {
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12776&tourSlug=2026-womens-xiangqi-league',
+    startsAt: '2026-09-25T00:00:00+08:00',
+    endsAt: '2026-09-27T23:59:59+08:00',
+    createdAt: '2026-09-20T00:00:00Z',
+    pollMode: 'auto' as const,
+  };
+  const state = (now: string, hasBoards?: boolean) =>
+    xiangqiBroadcastPollState({ ...LEAGUE, hasBoards, now: at(now) });
+
+  // Inside the plain window nothing changes.
+  assert.equal(state('2026-10-02T00:00:00+08:00', false).reason, 'auto-open');
+  // Past it, an empty tour keeps a late tail; one with boards, or one whose
+  // board count the caller does not know, closes as before.
+  const late = state('2026-10-14T12:00:00+08:00', false);
+  assert.equal(late.polling, true);
+  assert.equal(late.reason, 'auto-late');
+  assert.equal(late.afterEvent, true);
+  assert.equal(late.closesAt, '2026-11-03T23:59:59+08:00');
+  assert.equal(state('2026-10-14T12:00:00+08:00', true).reason, 'auto-closed');
+  assert.equal(state('2026-10-14T12:00:00+08:00').reason, 'auto-closed');
+  assert.equal(state('2026-10-14T12:00:00+08:00').closesAt, '2026-10-04T23:59:59+08:00');
+  // The late tail ends thirty days after the window.
+  assert.equal(state('2026-11-03T23:59:59+08:00', false).polling, true);
+  const over = state('2026-11-04T00:00:00+08:00', false);
+  assert.equal(over.polling, false);
+  assert.equal(over.reason, 'auto-closed');
+  // Only `auto` earns it: off stays off.
+  assert.equal(
+    xiangqiBroadcastPollState({
+      ...LEAGUE,
+      pollMode: 'off',
+      hasBoards: false,
+      now: at('2026-10-14T12:00:00+08:00'),
+    }).polling,
+    false,
+  );
+});
+
 test('auto with no dates never polls; one missing date reads as a one-day event', () => {
   const undated = xiangqiBroadcastPollState({
     pollMode: 'auto',

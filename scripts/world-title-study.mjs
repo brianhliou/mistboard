@@ -56,10 +56,10 @@ globalThis.document ??= {
 const { parseJudgmentComment } = await import('../packages/game/src/xiangqi-judgment-comment.ts');
 const { judgmentCommentI18n } = await import('../apps/server/src/xiangqi-judgment-comment-i18n.ts');
 
+const { personNameForLocale } = await import('../packages/game/src/person-name-scripts.ts');
 const DATA = 'scripts/data/world-title-annotations';
 
-/** Champion -> his name in Chinese. Every one of these nine is mainland, so the
- *  same string serves both scripts (see chapterI18n). */
+// Champion identity spellings; display follows the page script (2026-11-06).
 const CHAMPION_ZH = {
   'Lü Qin': '吕钦',
   'Zhao Guorong': '赵国荣',
@@ -72,17 +72,7 @@ const CHAMPION_ZH = {
   'Meng Chen': '孟辰',
 };
 
-/**
- * Everyone who appears as Red or Black on these boards, in Chinese.
- *
- * The champions are all mainland, so one string serves both scripts. Their
- * OPPONENTS are not: Wu Guilin is from Chinese Taipei, Lei Kam Fun from Macau,
- * Huang Xueqian from Hong Kong, and the Nguyens and Lai Ly Huynh are
- * Vietnamese. A person's name is written in the script that person uses, which
- * is why those carry two forms and the champions carry one. Same rule as the
- * article's zh-Hant dictionary, and it has to be restated here because a study
- * cannot import the web app's dictionaries.
- */
+// Checked study participant spellings.
 const PERSON_ZH = {
   ...CHAMPION_ZH,
   'Wu Guilin': { hans: '吴贵临', hant: '吳貴臨' },
@@ -94,10 +84,11 @@ const PERSON_ZH = {
   'Lại Lý Huynh': { hans: '赖理兄', hant: '賴理兄' },
 };
 
-const zhName = (name, script) => {
+export const zhName = (name, script) => {
   const entry = PERSON_ZH[name];
   if (!entry) return undefined;
-  return typeof entry === 'string' ? entry : entry[script];
+  const hans = typeof entry === 'string' ? entry : entry.hans;
+  return personNameForLocale({ name: hans }, script === 'hans' ? 'zh-Hans' : 'zh-Hant');
 };
 
 /** "2019 16th World Xiangqi Championship" -> the Chinese name of that edition. */
@@ -126,7 +117,7 @@ function zhEvent(event, script) {
 
 /** Per-locale overrides for the tags that carry language. A date and a result
  *  do not, so neither is translated. */
-function tagsI18nFor(spec) {
+export function tagsI18nFor(spec) {
   const out = {};
   for (const [locale, script] of [
     ['zh-Hans', 'hans'],
@@ -280,24 +271,18 @@ function tagsFor(game, spec) {
   };
 }
 
-/**
- * A chapter's name in both zh scripts.
- *
- * `year · champion`, and the champion is a person, so his name is written in
- * the script he uses. All nine of these are mainland players, which is why
- * Traditional and Simplified are the same string here rather than a conversion
- * of one into the other. If a chapter for a Chinese Taipei, Hong Kong, Macau or
- * Vietnamese champion is ever added, that one's name converts and this stops
- * being a single value: see the article's zh-Hant dictionary note.
- */
-function chapterI18n(game) {
+// Chapter and person tags follow the page script (2026-11-06).
+export function chapterI18n(game) {
   const zh = CHAMPION_ZH[game.champion];
   if (!zh) return undefined;
   const name = `${game.year} · ${zh}`;
   const tags = tagsI18nFor(game.spec);
   return {
     'zh-Hans': { name, ...(tags['zh-Hans'] ? { tags: tags['zh-Hans'] } : {}) },
-    'zh-Hant': { name, ...(tags['zh-Hant'] ? { tags: tags['zh-Hant'] } : {}) },
+    'zh-Hant': {
+      name: `${game.year} · ${personNameForLocale({ name: zh }, 'zh-Hant')}`,
+      ...(tags['zh-Hant'] ? { tags: tags['zh-Hant'] } : {}),
+    },
   };
 }
 
@@ -368,7 +353,7 @@ async function update(studyId, games, cookie) {
     const tags = tagsFor(game, game.spec);
     const i18n = chapterI18n(game);
     const treeStale = stable(chapter.root) !== stable(root);
-    const tagsStale = Object.entries(tags).some(([k, v]) => (chapter.tags ?? {})[k] !== v);
+    const tagsStale = Object.entries(tags).some(([k, v]) => chapter.tags?.[k] !== v);
     const i18nStale = !!i18n && stable(chapter.i18n ?? {}) !== stable(i18n);
     if (!treeStale && !tagsStale && !i18nStale) {
       console.log(`  = ${name}`);
@@ -429,7 +414,7 @@ async function verify(studyId, games) {
       bad.push(`${name}: missing`);
       continue;
     }
-    const missing = ['red', 'black', 'result', 'event'].filter((k) => !(stored.tags ?? {})[k]);
+    const missing = ['red', 'black', 'result', 'event'].filter((k) => !stored.tags?.[k]);
     if (missing.length) bad.push(`${name}: no ${missing.join(', ')}`);
     // Same read-back rule as the tags: the rename path is one where a partly
     // ignored body still returns 200.

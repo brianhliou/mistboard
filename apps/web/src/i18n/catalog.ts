@@ -43,6 +43,7 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       'prefs',
       'homePuzzle',
       'homeForum',
+      'metrics',
     ],
     english: EN_SHELL,
     critical: CRITICAL_SHELL_I18N_KEYS,

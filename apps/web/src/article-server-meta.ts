@@ -12,6 +12,7 @@
 // content module plus that one command; nobody hand-edits the server table.
 
 import { isArticleTranslationPublished, translateArticleText } from './article-i18n.js';
+import { articleGoesLiveAt } from './articles/publish-time.js';
 import type { Article } from './articles/types.js';
 
 /** Repo-relative path of the generated file. */
@@ -38,6 +39,8 @@ export function renderServerArticleMeta(articles: readonly Article[]): string {
       kind: Article['kind'];
       description: string;
       status: Article['status'];
+      publishedAt?: string;
+      liveAt?: number;
       zhTitles?: { 'zh-hans': string; 'zh-hant': string };
     }
   > = {};
@@ -47,6 +50,9 @@ export function renderServerArticleMeta(articles: readonly Article[]): string {
       kind: article.kind,
       description: article.summary,
       status: article.status,
+      ...(article.publishedAt
+        ? { publishedAt: article.publishedAt, liveAt: articleGoesLiveAt(article.publishedAt) }
+        : {}),
       ...(isArticleTranslationPublished(article.slug)
         ? {
             zhTitles: {

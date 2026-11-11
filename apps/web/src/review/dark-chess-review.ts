@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Fog Chess review surface: the dark-chess presentation bundle over the generic
 // tree-review controller. The chess-family sibling of dark-xiangqi-review.ts —
 // project() returns the triptych (truth + each POV), rendered as one interactive
@@ -57,6 +58,8 @@ const darkChessPresentation: TreePresentation<
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Fog Chess board',
   boardAspect: 1,
+  // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+  appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
   boardCols: 8,
   perspective: (flipped) => (flipped ? 'black' : 'white'),
   // Review plays BOTH sides on the truth board: the interactive seat is the side

@@ -84,6 +84,36 @@ describe('fillCapturedPoolWith', () => {
     expect(el.querySelectorAll('[data-piece="black-hidden"]')).toHaveLength(1);
   });
 
+  it('shades a named piece taken face-down, as its own tile beside the plain one', () => {
+    const el = host();
+    fillCapturedPoolWith(
+      el,
+      [
+        { owner: 'black', role: 'cannon', takenFaceDown: true },
+        { owner: 'black', role: 'chariot' },
+        { owner: 'black', role: 'cannon' },
+        { owner: 'black', role: 'cannon', takenFaceDown: true },
+        { owner: 'black', role: null },
+      ],
+      'black',
+      glyph,
+      hidden,
+    );
+    const glyphs = pieces(el);
+    expect(glyphs.map((span) => span.getAttribute('aria-label'))).toEqual([
+      'black cannon',
+      'black cannon, captured face-down x2',
+      'black chariot',
+      'black hidden piece',
+    ]);
+    expect(glyphs.map((span) => span.classList.contains('is-taken-face-down'))).toEqual([
+      false,
+      true,
+      false,
+      false,
+    ]);
+  });
+
   it('skips unknown-identity captures when the caller has no hidden renderer', () => {
     // A variant with no "?" case (banqi, flip jungle) never passes renderHidden;
     // a null it is somehow handed must not throw or draw a wrong glyph.

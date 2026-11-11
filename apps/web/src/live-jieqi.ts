@@ -24,19 +24,27 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { renderJieqiMaterial } from './jieqi-material.js';
+import {
+  jieqiRepetitionWarning,
+  type PublicRepetitionPosition,
+  type RepetitionWarning,
+} from './jieqi-repetition-warning.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
+import { mountJieqiCaptureStrips } from './live-jieqi-capture-strips.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiReveal,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   JIEQI_PIECE_PX,
   jieqiPieceGhostSvg,
+  jieqiRevealSquare,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
-import {
-  rebuildFinishedJieqiHistory,
-  rebuildLiveJieqiHistory,
-} from './live-jieqi-replay-history.js';
+import { createJieqiRepetitionWarningUi } from './live-jieqi-repetition-warning.js';
+import { rebuildLiveJieqiHistory } from './live-jieqi-replay-history.js';
 import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
 import {
   maybePlayJieqiSnapshotSound,
@@ -45,7 +53,6 @@ import {
 } from './live-jieqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -62,7 +69,6 @@ import {
 } from './variant-tenant/live-client.js';
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
-import { createTenantRematch } from './variant-tenant/tenant-rematch.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
@@ -72,7 +78,9 @@ type JieqiWireBoardEntry =
   | { color: JieqiColor; role: JieqiPieceRole; faceDown: false }
   | { color: JieqiColor; faceDown: true };
 
-type JieqiWireCaptured = { owner: JieqiColor; role: JieqiPieceRole | null };
+// `takenFaceDown`: only beside a role this seat holds for a piece it captured
+// while that piece was face-down (JieqiCapturedView).
+type JieqiWireCaptured = { owner: JieqiColor; role: JieqiPieceRole | null; takenFaceDown?: true };
 
 export type JieqiWireView = {
   id: string;
@@ -94,6 +102,9 @@ let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
+// The live board the last animateBoard saw: whether a moving piece was face
+// down before its move (public), for the reveal turn-over (#709 prototype).
+let lastLiveBoard: JieqiWireView['board'] | null = null;
 // The live reveal odds (live-jieqi-reveal-odds.ts), mounted once at setup.
 let revealOdds: RevealOddsMount | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
@@ -105,6 +116,15 @@ let pveEngineId: string | null = null;
 // The server's + / # per ply (jieqi-tenant jieqiLiveCheckMarks). Rides every
 // frame; absent means no move has given check yet.
 let checkMarks: readonly string[] = [];
+let adjudicationRule: unknown;
+let repetitionUi: ReturnType<typeof createJieqiRepetitionWarningUi> | null = null;
+let repetitionCache: {
+  view: JieqiWireView;
+  ply: number;
+  seat: unknown;
+  rule: unknown;
+  warning: RepetitionWarning;
+} | null = null;
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   displayName: 'variant.jieqi.name',
@@ -118,12 +138,6 @@ const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   selectInstruction: 'live.selectPieceThenDestination',
 };
 
-// PvP rematch offers (server: variant-tenant/rematch.ts via jieqi-registration).
-const rematch = createTenantRematch<JieqiColor>(['red', 'black'], () => {
-  const seat = core?.state.seat;
-  return isJieqiColor(seat) ? seat : null;
-});
-
 const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   tenant: jieqiWebTenant,
   gameSpecId: 'jieqi',
@@ -132,9 +146,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   boardClass: 'jieqi-live-board',
   chrome: {
     roomMode: () => roomMode,
-    rematchControls: (sendSocket) => rematch.controls(sendSocket),
   },
-  onRematchState: (message) => rematch.applyState(message),
   playAgainRequestBody: (state) => ({
     mode: roomMode,
     gameSpecId: 'jieqi',
@@ -146,7 +158,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
     checkMarks = jieqiFrameCheckMarks(frame.checkMarks);
-    rematch.applyFrame(frame.rematch);
+    adjudicationRule = frame.adjudicationRule;
   },
   onSnapshotApplied: () => {
     if (core) maybePlayJieqiSnapshotSound(core.state.view, core.state.seat);
@@ -161,7 +173,11 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     roomMode = 'pvp';
     pveEngineId = null;
     checkMarks = [];
-    rematch.reset();
+    lastLiveBoard = null;
+    adjudicationRule = undefined;
+    repetitionCache = null;
+    repetitionUi?.destroy();
+    repetitionUi = null;
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -180,18 +196,39 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
           generalSquare: (color) => generalSquareOn(view.board, color),
         })
       : [],
+  // A live move that reveals its piece turns it over (#709 prototype): during
+  // the glide for a remote move, in place for an own one (which does not glide).
+  // A forward scrub step turns it along its glide; back steps and jumps never do.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
+    const live = core?.replay.isLive() ?? false;
+    const before = lastLiveBoard;
+    lastLiveBoard = live && view ? view.board : null;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     const perspective = orientationFor(view);
     if (pending.kind === 'live') {
-      if (pending.color === core?.state.seat) return;
-      animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const own = pending.color === core?.state.seat;
+      if (!own) animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const revealed = live ? jieqiRevealSquare(pending.move, before, view.board) : null;
+      if (revealed) {
+        animateJieqiReveal(liveRefs.board, revealed, pending.color, perspective, {
+          alongGlide: !own,
+        });
+      }
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJieqiBoardMove(liveRefs.board, view.lastMove, perspective);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      animateJieqiBoardMove(liveRefs.board, stepped, perspective);
+      animateJieqiStepReveal(
+        liveRefs.board,
+        stepped,
+        pending.prevView?.board,
+        view.board,
+        perspective,
+      );
       return;
     }
     const undone = pending.prevView?.lastMove;
@@ -209,6 +246,9 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
+    repetitionUi = createJieqiRepetitionWarningUi(ctx.refs.board, () => {
+      if (core) renderBoard(core.refs, core.displayedView());
+    });
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
     revealOdds = mountRevealOdds(ctx.refs, () => {
@@ -216,6 +256,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       return ({ color, role }) =>
         renderXiangqiPieceGlyphed({ color, role }, pieceSet, { ariaLabel: '' });
     });
+    mountJieqiCaptureStrips(ctx.refs);
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
@@ -223,6 +264,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
       clearSelection: () => {
+        repetitionUi?.cancel();
         selectedSquare = null;
         draggingFrom = null;
         if (core) renderBoard(core.refs, core.displayedView());
@@ -248,17 +290,14 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
         ctx.events.filter(isJieqiMoveEvent).length,
       ),
   },
-  // A cold join or reload gets every ply back (live-jieqi-replay-history). A
-  // FINISHED room recovers the whole deal from its truth view; a LIVE room
-  // rebuilds from this viewer's own masked view, so a role it never saw stays
-  // masked on every ply.
+  // A cold join or reload gets every ply back (live-jieqi-replay-history),
+  // rebuilt from this viewer's own masked view, live or finished, so a role it
+  // never saw stays masked on every ply.
   replayHistory: {
     rebuild: ({ events, view, state }) => {
       const moves = events.filter(isJieqiMoveEvent).map((event) => event.move);
       const seat = isJieqiColor(state.seat) ? state.seat : null;
-      return view.status.type === 'finished'
-        ? rebuildFinishedJieqiHistory(moves, view, seat ?? view.perspective)
-        : rebuildLiveJieqiHistory(moves, view, seat);
+      return rebuildLiveJieqiHistory(moves, view, seat);
     },
   },
 });
@@ -281,7 +320,7 @@ export function jieqiLiveMoveLabels(
   return moves.map((move, index) => `${move.from}-${move.to}${marks[index] ?? ''}`);
 }
 
-function jieqiReasonPhrase(reason: string): TenantReasonKey {
+export function jieqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
       return 'result.checkmate';
@@ -293,6 +332,8 @@ function jieqiReasonPhrase(reason: string): TenantReasonKey {
       return 'result.threefoldRepetition';
     case 'chasing':
       return 'result.perpetualCheck';
+    case 'perpetual-chase':
+      return 'result.perpetualChase';
     case 'timeout':
       return 'result.timeout';
     case 'resignation':
@@ -310,22 +351,65 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   liveRefs.board.className = 'board jieqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Jieqi board');
   if (!view) {
+    repetitionUi?.update(null, { losingMoves: [] }, false);
     liveRefs.board.replaceChildren();
     return;
   }
 
   const perspective = orientationFor(view);
+  if (repetitionUi && core) {
+    const ply = core.replay.latestPly();
+    if (
+      repetitionCache?.view !== view ||
+      repetitionCache.ply !== ply ||
+      repetitionCache.seat !== core.state.seat ||
+      repetitionCache.rule !== adjudicationRule
+    ) {
+      const history: PublicRepetitionPosition[] = [];
+      // Only consecutive snapshots, ending at this live view. A partial cold
+      // history cannot justify a warning, so fail closed until rebuilt.
+      for (let at = 0; at <= ply; at++) {
+        const snapshot = core.replay.viewAtPly(at);
+        if (!snapshot) {
+          history.length = 0;
+          break;
+        }
+        history.push(snapshot);
+      }
+      repetitionCache = {
+        view,
+        ply,
+        seat: core.state.seat,
+        rule: adjudicationRule,
+        warning: jieqiRepetitionWarning(adjudicationRule, history, view, core.state.seat),
+      };
+    }
+    repetitionUi.update(
+      view,
+      repetitionCache.warning,
+      core.replay.isLive() &&
+        core.connection() === 'connected' &&
+        !core.state.paused &&
+        adjudicationRule === 'jqe-v1',
+    );
+  }
   const drawn = drawnBoardOverlays<JieqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderJieqiBoardSvg(view, perspective, {
+  const preview = repetitionUi?.preview(view) ?? view;
+  const pending = preview !== view;
+  liveRefs.board.innerHTML = renderJieqiBoardSvg(preview, perspective, {
     arrows: drawn.arrows,
     markers: drawn.markers,
     interactive: true,
-    selectedSquare,
+    selectedSquare: pending ? null : selectedSquare,
     draggingFrom,
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare)
-      : [],
+    repetitionLossPoints: repetitionUi?.losingDestinations(selectedSquare),
+    legalMoves:
+      !pending && selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare)
+        : [],
   });
+  repetitionUi?.select(selectedSquare, view.legalMoves);
+  repetitionUi?.sync();
   // Click + drag are delegated to the persistent board container once at mount
   // (installJieqiBoardInteraction), so they survive these innerHTML re-renders.
 }
@@ -333,6 +417,7 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
 function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
   if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = jieqiClickResult(view, core.state.seat, selectedSquare, square);
+  if (result.kind !== 'move') repetitionUi?.cancel();
   if (result.kind === 'noop') return;
   if (result.kind === 'select') {
     selectedSquare = result.square;
@@ -342,10 +427,18 @@ function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
     selectedSquare = null;
     return;
   }
-  selectedSquare = null;
-  if (core.send({ type: 'move', from: result.move.from, to: result.move.to })) {
-    playSound(soundForOwnJieqiMove(view, result.move));
-  }
+  requestJieqiMove(view, result.move);
+}
+
+function requestJieqiMove(view: JieqiWireView, move: JieqiMove): void {
+  const play = () => {
+    if (!core?.canActNow()) return;
+    selectedSquare = null;
+    if (core.send({ type: 'move', from: move.from, to: move.to })) {
+      playSound(soundForOwnJieqiMove(view, move));
+    }
+  };
+  if (!repetitionUi || repetitionUi.allowMove(move, play)) play();
 }
 
 // Click + drag, delegated to the persistent board container once at mount so they
@@ -403,12 +496,10 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
   draggingFrom = null;
   const view = core?.state.view;
   const move = to && view ? view.legalMoves.find((m) => m.from === from && m.to === to) : undefined;
-  if (move && view && core) {
-    selectedSquare = null;
-    if (core.send({ type: 'move', from: move.from, to: move.to })) {
-      playSound(soundForOwnJieqiMove(view, move));
-    }
+  if (move && view && core?.canActNow()) {
+    requestJieqiMove(view, move);
   } else {
+    repetitionUi?.cancel();
     selectedSquare = null;
   }
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
@@ -416,20 +507,8 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
 
 // ── Material: captured pools ─────────────────────────────────────────────────
 
-// Lichess convention: a player's captured material sits next to that player.
-// The bottom strip is the viewer's side, so it shows the pieces the viewer has
-// captured (the opponent's lost pieces); the top strip is the opponent's side,
-// so it shows the pieces the opponent has captured (the viewer's lost pieces).
-// A null role (a dark piece the viewer did not capture, so cannot identify)
-// renders as the board's own face-down disc (the brown / green back), not a
-// "?" token: the pool then reads in the board's vocabulary, and the cream "?"
-// disc was the one tile on the rail that matched nothing on the board. Jieqi does NOT render the "still face-down"
-// pool the other flip variants do (hidden-pool-panel.ts): under capturer-only
-// reveal the viewer's own pool cannot be computed (the dark pieces the opponent
-// took are unknown to them), and a row that lists pieces which may already be
-// gone was read as a bug (2026-09-20). The strips carry the same facts; the
-// player does the subtraction. The hiddenPool slot is cleared so a variant
-// switch never leaves a stale panel behind.
+// The captured pools (jieqi-material.ts, shared with Mistboard TV's rail), from the
+// DISPLAYED view: the seat's own PlayerView, or the spectator's public view.
 function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   renderJieqiMaterial(liveRefs, view, orientationFor(view));
 }
@@ -439,37 +518,6 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
 // they stood then and nothing reads past what this viewer was sent.
 function renderRevealOdds(view: JieqiWireView | null): void {
   revealOdds?.render({ view, orientation: orientationFor(view) });
-}
-
-// Exported for unit testing the material data path (revealed identity vs an
-// unidentifiable "?" dark piece) without a live socket — same
-// extraction rationale as live-jieqi-render / live-jieqi-interaction.
-export function renderJieqiMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: JieqiWireView | null,
-  viewer: JieqiColor,
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the public one since 2026-09-20: the same
-  // masked board, and captures with a role only where the piece was face-up
-  // when taken, so the pools below render for a spectator exactly as they do
-  // for the victim of each capture.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const pieceSet = readStoredXiangqiPieceSet();
-  const glyph = (entry: { color: JieqiColor; role: JieqiPieceRole }): string =>
-    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
-  const hidden = (color: JieqiColor): string =>
-    renderXiangqiPieceGlyphed({ color, role: 'soldier' }, pieceSet, {
-      ariaLabel: `${color} hidden piece`,
-      shrouded: true,
-      shroudedStyle: 'back',
-    });
-  const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
-  fillCapturedPoolWith(slots.capturesTop, view.captured, viewer, glyph, hidden);
-  fillCapturedPoolWith(slots.capturesBottom, view.captured, opponent, glyph, hidden);
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────

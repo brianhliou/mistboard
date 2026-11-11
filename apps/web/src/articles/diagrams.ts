@@ -33,7 +33,12 @@ import articleSnapshotFog from '../article-snapshot-fog.json' with { type: 'json
 import articleSnapshotFogBlack from '../article-snapshot-fog-black.json' with { type: 'json' };
 import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
 import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
-import { tokenPieceSize } from '../board-metrics.js';
+import {
+  tokenPieceSize,
+  XIANGQI_PIECE_OUTLINE_SHARE,
+  xiangqiPieceDrawSize,
+} from '../board-metrics.js';
+import { BANQI_PIECE_REACH, banqiPieceDrawSize } from '../live-banqi-render.js';
 import { pieceSlot } from '../board-piece-slot.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
 import {
@@ -47,7 +52,9 @@ import {
   DEFAULT_XIANGQI_PIECE_SET,
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
+  type XiangqiPieceShape,
   type XiangqiShroudedStyle,
+  xiangqiPieceShapeForLayout,
 } from '../xiangqi-piece-sets.js';
 import { xiangqiDiagramRiverText } from '../xiangqi-river-text.js';
 import type { ArticleSection, CtaBlock, CtaButton } from './types.js';
@@ -130,6 +137,7 @@ export function playClosing(opts: {
   playLabel: string;
   playHref: string;
   secondary?: CtaButton[];
+  layout?: 'single-row';
 }): ArticleSection {
   return {
     heading: opts.heading,
@@ -141,6 +149,7 @@ export function playClosing(opts: {
           { label: opts.playLabel, href: opts.playHref, emphasis: 'primary' },
           ...(opts.secondary ?? []),
         ],
+        ...(opts.layout ? { layout: opts.layout } : {}),
       },
     ],
   };
@@ -1167,7 +1176,10 @@ export const XQ_CELL = 31;
 export const XQ_MARGIN = 18;
 export const XQ_BOARD_W = XQ_MARGIN * 2 + 8 * XQ_CELL;
 export const XQ_BOARD_H = XQ_MARGIN * 2 + 9 * XQ_CELL;
+/** The layout piece size the diagram marks (rings, blast circles) are tuned on. */
 export const XQ_PIECE_SIZE = tokenPieceSize(XQ_CELL);
+/** The box a piece is drawn in: its outline spans 98% of the gap (2026-10-14). */
+export const XQ_PIECE_DRAW_SIZE = xiangqiPieceDrawSize(XQ_CELL);
 export const XQ_FOG_OVERLAP = 0.5;
 export const XQ_VIEWBOX_PAD = 4;
 export const XQ_BOARD_RADIUS = 8;
@@ -1200,6 +1212,7 @@ const XQ_CELL_GEO: XiangqiBoardGeometry = {
 const XQ_CELL_PAD_X = (XQ_BOARD_W - XQ_CELL_GEO.fileCount * XQ_CELL_SIZE) / 2;
 const XQ_CELL_PAD_Y = (XQ_BOARD_H - (XQ_CELL_GEO.rankCount * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP)) / 2;
 const XQ_CELL_PIECE_SIZE = tokenPieceSize(XQ_CELL_SIZE);
+const XQ_CELL_PIECE_DRAW_SIZE = xiangqiPieceDrawSize(XQ_CELL_SIZE);
 
 // The layout a diagram render is currently producing. Diagram SVGs come from
 // synchronous render thunks; the geometry helpers read this the same way the
@@ -1225,6 +1238,17 @@ export function withXiangqiBoardLayout(layout: XiangqiBoardLayout, render: () =>
 // number or it drifts from the discs beside it whenever the layout changes.
 export function xqPieceSize(): number {
   return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_SIZE : XQ_PIECE_SIZE;
+}
+
+/** The box a board piece is drawn in for the active layout: its outer edge spans 98% of
+ *  the gap or cell. xqPieceSize stays the size the marks around a piece are tuned on. */
+export function xqPieceDrawSize(): number {
+  return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_DRAW_SIZE : XQ_PIECE_DRAW_SIZE;
+}
+
+/** The piece shape for the active layout: a rounded square on the grid, a disc on lines. */
+export function xqPieceShape(): XiangqiPieceShape {
+  return xiangqiPieceShapeForLayout(activeXiangqiBoardLayout);
 }
 function xqHalfCell(): number {
   return (activeXiangqiBoardLayout === 'cell' ? XQ_CELL_SIZE : XQ_CELL) / 2;
@@ -1318,26 +1342,72 @@ function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): st
   // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
   const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
   const riverX = xqPoint(4, 1, perspective, x0, y0).x;
-  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1));
+  const riverCell = Math.abs(xqPoint(1, 1, perspective, x0, y0).x - xqPoint(0, 1, perspective, x0, y0).x);
+  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1, riverCell));
   return parts.join('');
 }
 
-// Square-grid layout: pieces sit inside cells, so the grid is drawn as one square
-// per point instead of crossing lines. The board box is unchanged.
+// Square-grid layout: pieces sit inside cells, drawn the way the live square grid
+// draws its board (xiangqi-board-surface.ts): alternating light and dark squares,
+// seams only between them, the river a blue band and each palace a tinted block.
+// The intersection board's palace diagonals and river caption are its own cues;
+// on squares they read as a different board (Brian, 2026-10-29). The board ends
+// at its outline: a rounded wood margin round the sharp grid read as two boards
+// stacked (Brian, 2026-10-29), so the box keeps its size and the margin stays bare.
 function xqCellBoardGrid(x0: number, y0: number, perspective: XiangqiColor): string {
   const half = XQ_CELL_SIZE / 2;
-  const parts: string[] = [
-    `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
-  ];
-  for (let file = 0; file < 9; file += 1) {
-    for (let rank = 1; rank <= 10; rank += 1) {
-      const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+  const corner = (file: number, rank: number) => {
+    const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+    return { x: x - half, y: y - half };
+  };
+  const parts: string[] = [];
+  const left = Math.min(corner(0, 1).x, corner(8, 1).x);
+  const right = left + 9 * XQ_CELL_SIZE;
+  const top = Math.min(corner(0, 1).y, corner(0, 10).y);
+  const bottom = top + 10 * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP;
+  const riverTop = top + 5 * XQ_CELL_SIZE;
+  const riverBottom = riverTop + XQ_CELL_RIVER_GAP;
+  parts.push(
+    `<rect x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" class="xq-diagram-bg"/>`,
+  );
+  // Shaded by where a square is drawn, not its name, so the top-left square is
+  // light from either side, as on the live board.
+  for (let row = 0; row < 10; row += 1) {
+    const y = top + row * XQ_CELL_SIZE + (row >= 5 ? XQ_CELL_RIVER_GAP : 0);
+    for (let col = 0; col < 9; col += 1) {
+      const shade = (col + row) % 2 === 0 ? 'light' : 'dark';
       parts.push(
-        `<rect x="${x - half}" y="${y - half}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" class="xq-diagram-line" fill="none" stroke-width="1"/>`,
+        `<rect x="${left + col * XQ_CELL_SIZE}" y="${y}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" class="xq-diagram-cell--${shade}"/>`,
       );
     }
   }
-  parts.push(xqPalaceAndRiver(x0, y0, perspective));
+  for (const palace of [
+    { rankMin: 1, rankMax: 3 },
+    { rankMin: 8, rankMax: 10 },
+  ]) {
+    const a = corner(3, palace.rankMin);
+    const b = corner(5, palace.rankMax);
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const size = 3 * XQ_CELL_SIZE;
+    parts.push(`<rect x="${x}" y="${y}" width="${size}" height="${size}" class="xq-diagram-cell-palace"/>`);
+  }
+  parts.push(
+    `<rect x="${left}" y="${riverTop}" width="${right - left}" height="${XQ_CELL_RIVER_GAP}" class="xq-diagram-cell-river"/>`,
+  );
+  for (let row = 1; row < 10; row += 1) {
+    if (row === 5) continue;
+    const y = top + row * XQ_CELL_SIZE + (row > 5 ? XQ_CELL_RIVER_GAP : 0);
+    parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-cell-line"/>`);
+  }
+  for (let col = 1; col < 9; col += 1) {
+    const x = left + col * XQ_CELL_SIZE;
+    parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-cell-line"/>`);
+    parts.push(`<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-cell-line"/>`);
+  }
+  parts.push(
+    `<rect x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" class="xq-diagram-line" fill="none" stroke-width="1"/>`,
+  );
   return parts.join('');
 }
 
@@ -1449,6 +1519,22 @@ export function xqMoveDots(
     .join('');
 }
 
+/** A gold badge with an upward chevron on the piece's upper right: Horde
+ *  Xiangqi's veteran soldier in the sets that have no crossed-soldier art. */
+export function xqVeteranMark(cx: number, cy: number, size: number): string {
+  const r = size * 0.17;
+  const bx = cx + size * 0.34;
+  const by = cy - size * 0.34;
+  const w = r * 0.55;
+  const h = r * 0.3;
+  return [
+    `<g class="xq-veteran-mark" aria-hidden="true">`,
+    `<circle cx="${bx}" cy="${by}" r="${r}" fill="#e3b341" stroke="#3b2a05" stroke-width="1.25"/>`,
+    `<polyline points="${bx - w},${by + h} ${bx},${by - h} ${bx + w},${by + h}" fill="none" stroke="#3b2a05" stroke-width="${Math.max(1.5, r * 0.28)}" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `</g>`,
+  ].join('');
+}
+
 export function xqPiecesLayer(
   state: XiangqiGameState,
   view: XiangqiPlayerView | null,
@@ -1466,24 +1552,29 @@ export function xqPiecesLayer(
       if (!piece) return '';
       const { file, rank } = xqCoord(sq as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
-      const size = xqPieceSize();
+      const size = xqPieceDrawSize();
+      const veteran =
+        !shrouded && veteranSoldiers && piece.role === 'soldier' && piece.color === 'red';
       const pieceSvg = renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
         x: x - size / 2,
         y: y - size / 2,
         size,
+        shape: xqPieceShape(),
         shrouded,
         shroudedStyle,
         // Horde Xiangqi's veteran soldier has the crossed soldier's move from
         // its first step, so it wears the crossed art from rank 1.
-        crossed:
-          !shrouded &&
-          (drawsCrossedSoldier(piece as XiangqiPiece, rank) ||
-            (veteranSoldiers && piece.role === 'soldier' && piece.color === 'red')),
+        crossed: !shrouded && (drawsCrossedSoldier(piece as XiangqiPiece, rank) || veteran),
       });
+      // Only the International set has crossed art, so in every other set a
+      // veteran on its own bank looked like a standard soldier; the chevron is
+      // what tells them apart there. Inside the slot, so it glides with the piece.
+      const mark =
+        veteran && activeXiangqiPieceSet !== 'international' ? xqVeteranMark(x, y, size) : '';
       // Keyed by square, with its centre, so a stepping widget (the article step
       // card, horde-xiangqi-replay.ts) can find the piece that moved and glide
       // it; a static figure ignores it.
-      return pieceSlot(sq, { x, y }, pieceSvg, 'xq-diagram-piece-slot');
+      return pieceSlot(sq, { x, y }, pieceSvg + mark, 'xq-diagram-piece-slot');
     })
     .join('');
 }
@@ -1567,6 +1658,8 @@ export function xqBoardSvg(opts: {
   // Raw SVG drawn on top of the pieces (a confrontation line, etc.). The
   // caller positions it with xqPoint using the same x and boardY (y + 28).
   overlay?: string;
+  /** Raw SVG drawn under the pieces, positioned like `overlay`. */
+  underlay?: string;
   /** Draw every red soldier with the crossed art (Horde Xiangqi's veterans). */
   veteranSoldiers?: boolean;
   /** Distance from the label row to the board's top edge (default 28). A
@@ -1583,6 +1676,7 @@ export function xqBoardSvg(opts: {
     opts.zones ? xqZoneHighlights(opts.x, boardY, perspective) : '',
     xqFogLayer(view, opts.x, boardY, perspective, clipId),
     xqMoveDots(opts.dots, opts.x, boardY, perspective),
+    opts.underlay ?? '',
     xqPiecesLayer(
       opts.state,
       view,
@@ -1597,6 +1691,29 @@ export function xqBoardSvg(opts: {
   ].join('');
 }
 
+/**
+ * Amber marks on the points a blast cleared, the Atomic Xiangqi aftermath mark.
+ * On lines a ring over the disc; on the square grid the cell itself, under the
+ * tile, since a ring is drawn for a round piece (Brian, 2026-10-29). Spread
+ * into xqBoardSvg's options; x0 and y0 are the board svg's own x and y.
+ */
+export function xqBlastMarks(
+  squares: readonly XiangqiSquare[],
+  x0: number,
+  y0: number,
+): { overlay: string; underlay: string } {
+  const cell = activeXiangqiBoardLayout === 'cell';
+  const size = xqPieceSize();
+  const marks = squares.map((square) => {
+    const { file, rank } = xqCoord(square);
+    const { x, y } = xqPoint(file, rank, 'red', x0, y0 + 28);
+    return cell
+      ? `<rect class="xq-marker--blast-cell" x="${x - XQ_CELL_SIZE / 2}" y="${y - XQ_CELL_SIZE / 2}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" fill="#d99a1e" fill-opacity="0.5"/>`
+      : `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.28)" stroke="#d99a1e" stroke-width="3" stroke-opacity="0.55"/>`;
+  });
+  return cell ? { overlay: '', underlay: marks.join('') } : { overlay: marks.join(''), underlay: '' };
+}
+
 // ── Card art: half a board ────────────────────────────────────────────────
 // One crop for every half-board card (blog index, homepage rows), so none clips
 // a corner piece or shows a sliver of the far bank. The river edge stops inside
@@ -1606,10 +1723,23 @@ export function xqBoardSvg(opts: {
 // back-rank corner pieces clear of the date pill and featured star the index
 // lays over the card's top corners. The river label is hidden on the crop
 // (articles.css .xq-half-thumb): the cut would slice it.
+//
+// The square grid is cut at its outline instead, on the sides and the back edge:
+// wood round the sharp grid read as a second board under it (Brian, 2026-10-29).
+// Nine cells across at 16:10 is a little taller than half the board, so the
+// river runs on to the card's river edge, over the far bank's first sliver.
 
 export const XQ_THUMB_ASPECT = 16 / 10;
 const XQ_HALF_THUMB_SIDE = 0.8; // file spacings beyond the a and i files
 const XQ_HALF_THUMB_RIVER = 0.725; // file spacings from the near bank into the river
+const XQ_CELL_THUMB_EDGE = 0.5; // the outer half of the grid's 1-wide outline
+
+// File spacings from the a and i files to the card's side edges.
+function xqHalfThumbSide(): number {
+  return activeXiangqiBoardLayout === 'cell'
+    ? 0.5 + XQ_CELL_THUMB_EDGE / XQ_CELL_SIZE
+    : XQ_HALF_THUMB_SIDE;
+}
 
 // The corner overlays on the blog index (articles.css .articles-index-card-date,
 // 72x19, and -author, the star, 28x19), plus 2px, at a 260px card media: the
@@ -1637,9 +1767,15 @@ export function xqHalfBoardThumbnailBox(
   const a = xqPoint(0, nearBank, perspective, 0, boardY);
   const i = xqPoint(8, nearBank, perspective, 0, boardY);
   const unit = Math.abs(i.x - a.x) / 8;
-  const w = (8 + 2 * XQ_HALF_THUMB_SIDE) * unit;
+  const side = xqHalfThumbSide();
+  const w = (8 + 2 * side) * unit;
   const h = w / XQ_THUMB_ASPECT;
-  const left = Math.min(a.x, i.x) - XQ_HALF_THUMB_SIDE * unit;
+  const left = Math.min(a.x, i.x) - side * unit;
+  if (activeXiangqiBoardLayout === 'cell') {
+    const back = xqPoint(0, showsBlackHalf ? 10 : 1, perspective, 0, boardY).y;
+    const edge = XQ_CELL_SIZE / 2 + XQ_CELL_THUMB_EDGE;
+    return { left, top: half === 'top' ? back - edge : back + edge - h, w, h };
+  }
   const top =
     half === 'top' ? a.y + XQ_HALF_THUMB_RIVER * unit - h : a.y - XQ_HALF_THUMB_RIVER * unit;
   return { left, top, w, h };
@@ -1653,7 +1789,8 @@ export function xqHalfBoardTagClashes(
   boardY = 28,
 ): XiangqiSquare[] {
   const scale = box.w / XQ_THUMB_TAG_REF_WIDTH;
-  const r = xqPieceSize() / 2;
+  // The piece's visible outer edge, not its drawing box (which has a margin).
+  const r = (xqPieceDrawSize() * XIANGQI_PIECE_OUTLINE_SHARE) / 2;
   return squares.filter((square) => {
     const { file, rank } = xqCoord(square);
     const p = xqPoint(file, rank, perspective, 0, boardY);
@@ -1674,11 +1811,19 @@ export function xqHalfBoardThumbnailSvg(
   opts: Omit<Parameters<typeof xqBoardSvg>[0], 'x' | 'y' | 'label' | 'boardOffset'> & {
     half: 'top' | 'bottom';
     ariaLabel: string;
+    /** The card template with words: one short line (four words at most) on
+     * plain board colour over the river rank, then four ranks of board, the two
+     * centred together in the card. Bottom half only. */
+    headline?: string;
   },
 ): string {
-  const { half, ariaLabel, ...boardOpts } = opts;
+  const { half, ariaLabel, headline, ...boardOpts } = opts;
   const perspective = boardOpts.perspective ?? boardOpts.view?.perspective ?? 'red';
-  const box = xqHalfBoardThumbnailBox(half, perspective);
+  if (headline !== undefined && half !== 'bottom') {
+    throw new Error('xqHalfBoardThumbnailSvg: a headline needs the bottom half');
+  }
+  const box =
+    headline === undefined ? xqHalfBoardThumbnailBox(half, perspective) : xqHeadlineThumbnailBox(perspective);
   // Only the shown half's pieces are drawn: the river is one file spacing wide,
   // too narrow to leave room past the edge for both banks' discs, so a piece on
   // the far bank would show as a sliver along the cut.
@@ -1696,9 +1841,76 @@ export function xqHalfBoardThumbnailSvg(
   const occupied = Object.keys(view?.board ?? state.board) as XiangqiSquare[];
   const clashes = xqHalfBoardTagClashes(occupied, box, perspective);
   const clashAttr = clashes.length > 0 ? ` data-tag-clash="${clashes.join(' ')}"` : '';
-  const board = xqBoardSvg({ ...boardOpts, state, view, perspective, x: 0, y: 0, label: '' });
   const { left, top, w, h } = box;
-  return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
+  const board = xqBoardSvg({
+    ...boardOpts,
+    state,
+    view,
+    perspective,
+    x: 0,
+    y: 0,
+    label: '',
+    underlay: xqCellThumbRiver(box, showsBlackHalf, perspective) + (boardOpts.underlay ?? ''),
+  });
+  const words = headline === undefined ? '' : xqHeadlineBand(headline, box, occupied, showsBlackHalf, perspective);
+  return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}${words}</svg>`;
+}
+
+// The square grid's river carried on to the card's river edge, between the
+// outline's side strokes, so the far bank never shows as a sliver of cells.
+function xqCellThumbRiver(box: XqHalfBoardBox, showsBlackHalf: boolean, perspective: XiangqiColor): string {
+  if (activeXiangqiBoardLayout !== 'cell') return '';
+  const near = xqPoint(0, showsBlackHalf ? 6 : 5, perspective, 0, 28).y;
+  const riverOnTop = box.top < near;
+  const y0 = riverOnTop ? box.top : near + XQ_CELL_SIZE / 2;
+  const y1 = riverOnTop ? near - XQ_CELL_SIZE / 2 : box.top + box.h;
+  const inset = 2 * XQ_CELL_THUMB_EDGE;
+  return `<rect class="xq-diagram-cell-river" x="${box.left + inset}" y="${y0}" width="${box.w - 2 * inset}" height="${y1 - y0}"/>`;
+}
+
+// The headline card's crop: the bottom half's box raised by a quarter file
+// spacing, so the headline and the four ranks under it sit centred in the card.
+function xqHeadlineThumbnailBox(perspective: XiangqiColor): XqHalfBoardBox {
+  const box = xqHalfBoardThumbnailBox('bottom', perspective);
+  // The square grid's box already ends on its back edge; its band takes the slack.
+  if (activeXiangqiBoardLayout === 'cell') return box;
+  const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
+  return { ...box, top: box.top - 0.2556 * unit };
+}
+
+// Plain board colour over everything above the fourth rank (the river and the
+// near bank), with the headline on it. A piece on the near bank would be
+// hidden, so it throws instead.
+function xqHeadlineBand(
+  headline: string,
+  box: XqHalfBoardBox,
+  occupied: readonly XiangqiSquare[],
+  showsBlackHalf: boolean,
+  perspective: XiangqiColor,
+): string {
+  const bankRank = showsBlackHalf ? 6 : 5;
+  const covered = occupied.filter((square) => xqCoord(square).rank === bankRank);
+  if (covered.length > 0) {
+    throw new Error(`xqHalfBoardThumbnailSvg: the headline band covers ${covered.join(' ')}`);
+  }
+  // On squares a rank is a row of cells, so the band also takes an empty fourth
+  // rank and ends on the third row's top edge: three whole rows, as the
+  // intersection board shows three rows of squares. The reader picks the layout,
+  // so a piece there keeps its row rather than throwing on their page.
+  const fourthRank = showsBlackHalf ? 7 : 4;
+  const cell =
+    activeXiangqiBoardLayout === 'cell' && !occupied.some((square) => xqCoord(square).rank === fourthRank);
+  const bank = xqPoint(0, showsBlackHalf ? 6 : 5, perspective, 0, 28);
+  const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
+  // Stops just short of the fourth rank's line (or the third row's top seam),
+  // so that line shows whole.
+  const bandBottom = cell
+    ? xqPoint(0, showsBlackHalf ? 8 : 3, perspective, 0, 28).y - XQ_CELL_SIZE / 2 - 0.7
+    : bank.y + unit - 0.7;
+  return (
+    `<rect class="xq-diagram-bg" x="${box.left}" y="${box.top}" width="${box.w}" height="${bandBottom - box.top}"/>` +
+    `<text class="xq-diagram-ink" x="${box.left + box.w / 2}" y="${bank.y + 13}" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5">${headline}</text>`
+  );
 }
 
 // ── Hands: pieces held off the board, drawn with the board ────────────────
@@ -1757,7 +1969,7 @@ export function xqHandStrip(strip: XqHandStrip, x: number, y: number): string {
     const piece = renderXiangqiPieceGlyphed(
       { color: strip.color, role: entry.role },
       activeXiangqiPieceSet,
-      { x: cx - size / 2, y: top, size },
+      { x: cx - size / 2, y: top, size, shape: xqPieceShape() },
     );
     const badge = entry.count > 1 ? xqHandBadge(entry.count, cx + size / 2, top + size, size) : '';
     parts.push(
@@ -2170,6 +2382,44 @@ export const XQ_PRIMER_SOLDIER_PAIR = () =>
         label: 'ACROSS THE RIVER',
         perspective: 'red',
         dots: xqDots(['e7', 'd6', 'f6']),
+      }),
+    ].join(''),
+  );
+
+// The chess-player comparison on the rules page: the soldier changes how it
+// moves once, at the river, and never promotes. On the last rank it can only
+// step sideways.
+export const XQ_PRIMER_SOLDIER_LAST = xqVisionDemoState('xq-primer-soldier-last', {
+  c10: { color: 'red', role: 'soldier' },
+});
+export const XQ_PRIMER_SOLDIER_TRIO = () =>
+  xqSvg(
+    XQ_BOARD_W * 3 + 56,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_BEFORE,
+        x: 0,
+        y: 0,
+        label: 'BEFORE THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e5']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_AFTER,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'ACROSS THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e7', 'd6', 'f6']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_LAST,
+        x: (XQ_BOARD_W + 28) * 2,
+        y: 0,
+        label: 'ON THE LAST RANK',
+        perspective: 'red',
+        dots: xqDots(['b10', 'd10']),
       }),
     ].join(''),
   );
@@ -2636,9 +2886,6 @@ export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }
     ].join(''),
   );
 
-// What a face-down piece on a cannon point is worth before you spend it, and
-// what you are left holding if it turns out to be a soldier. The black cannon
-// on h8 is the screen that makes the capture on h10 legal.
 export const JIEQI_OPTION_BEFORE_BOARD: XiangqiPlayerView['board'] = {
   h3: { piece: { color: 'red', role: 'cannon' }, shrouded: true },
   h8: { piece: { color: 'black', role: 'cannon' }, shrouded: false },
@@ -2767,7 +3014,11 @@ export const BANQI_CELL = 50;
 export const BANQI_MARGIN = 16;
 export const BANQI_BOARD_W = BANQI_MARGIN * 2 + BANQI_COLS * BANQI_CELL;
 export const BANQI_BOARD_H = BANQI_MARGIN * 2 + BANQI_ROWS * BANQI_CELL;
-export const BANQI_PIECE_SIZE = 42;
+// A disc whose outer edge spans 92% of the cell, the live banqi board's look
+// (live-banqi-render.ts BANQI_PIECE_REACH, Brian 2026-10-14).
+export const BANQI_PIECE_SIZE = banqiPieceDrawSize(BANQI_CELL);
+/** A ring just outside a banqi piece: 2 units past its outer edge. */
+const BANQI_MARK_R = (BANQI_CELL * BANQI_PIECE_REACH) / 2 + 2;
 // Banqi diagrams fill the article column: the board canvas is exactly the board
 // width (no pair-width letterboxing), so every banqi figure renders edge-to-edge
 // instead of centered inside a wider xq-pair frame. Kept as named constants so
@@ -2777,10 +3028,10 @@ export const BANQI_CENTER_X = 0;
 export const BANQI_RIGHT_HALF_W = BANQI_MARGIN * 2 + (BANQI_COLS / 2) * BANQI_CELL;
 export const BANQI_RIGHT_HALF_X0 = -(BANQI_COLS / 2) * BANQI_CELL;
 // The engine-article thumbnail uses the full 8x4 board inside a card canvas
-// close to 16:10. Keep a little extra space above the board so the full board
-// sits slightly low in the image, matching the card's visual weight.
+// close to 16:10, vertically centered. It sat 11 units low while the card's
+// date pill covered the top-left; the date moved under the title (cd25d5fdf).
 export const BANQI_ENGINE_THUMB_H = 270;
-export const BANQI_ENGINE_THUMB_Y = 30;
+export const BANQI_ENGINE_THUMB_Y = (BANQI_ENGINE_THUMB_H - BANQI_BOARD_H) / 2;
 const BANQI_ENGINE_THUMB_PLY = 30;
 
 export type BanqiPieceSpec = {
@@ -2799,6 +3050,35 @@ export function banqiCellCenter(
     x: x0 + BANQI_MARGIN + col * BANQI_CELL + BANQI_CELL / 2,
     y: y0 + BANQI_MARGIN + row * BANQI_CELL + BANQI_CELL / 2,
   };
+}
+
+// The live banqi board's move marks, at article scale (live-banqi-render.ts,
+// live-banqi-board.css): the last move tints its two cells in the mover's ink,
+// lighter on the origin, and a legal step is a green dot. Inline fills, so a
+// page that does not load the live board's stylesheet draws them the same.
+const BANQI_LASTMOVE_FILL = {
+  red: ['rgba(194, 32, 26, 0.19)', 'rgba(194, 32, 26, 0.36)'],
+  black: ['rgba(22, 40, 58, 0.22)', 'rgba(22, 40, 58, 0.44)'],
+} as const;
+export function banqiLastMoveTint(
+  from: { col: number; row: number },
+  to: { col: number; row: number },
+  ink: 'red' | 'black',
+  x0: number,
+  y0: number,
+): string {
+  return [from, to]
+    .map(({ col, row }, k) => {
+      const { x, y } = banqiCellCenter(col, row, x0, y0);
+      const h = BANQI_CELL / 2;
+      return `<rect x="${x - h}" y="${y - h}" width="${BANQI_CELL}" height="${BANQI_CELL}" fill="${BANQI_LASTMOVE_FILL[ink][k]}"/>`;
+    })
+    .join('');
+}
+export function banqiStepDot(cell: { col: number; row: number }, x0: number, y0: number): string {
+  const { x, y } = banqiCellCenter(cell.col, cell.row, x0, y0);
+  // The live dot is r 10 on a 64-unit cell.
+  return `<circle cx="${x}" cy="${y}" r="${(10 * BANQI_CELL) / 64}" fill="rgba(31, 111, 91, 0.72)" opacity="0.7"/>`;
 }
 
 export function banqiBoardGrid(x0: number, y0: number): string {
@@ -2844,6 +3124,7 @@ export function banqiPiece(
     x: x - BANQI_PIECE_SIZE / 2,
     y: y - BANQI_PIECE_SIZE / 2,
     size: BANQI_PIECE_SIZE,
+    shape: 'disc',
     shrouded: spec.shrouded,
     shroudedStyle: spec.shrouded ? 'back' : undefined,
     ariaLabel: spec.shrouded ? 'face-down Banqi piece' : undefined,
@@ -2942,8 +3223,7 @@ export const BANQI_SETUP_BOARD = () =>
   );
 
 export const BANQI_RULES_THUMBNAIL = () =>
-  xqSvg(
-    BANQI_BOARD_W,
+  banqiThumbnailSvg(
     BANQI_BOARD_H,
     [
       banqiBoardGrid(0, 0),
@@ -2955,6 +3235,26 @@ export const BANQI_RULES_THUMBNAIL = () =>
     ].join(''),
   );
 
+// Every banqi card thumbnail is drawn through this. Its viewBox is still the
+// board alone, so the grid and pieces keep their size and place in any card,
+// but a board-coloured rect far larger than the viewBox sits under the board
+// and `overflow="visible"` lets it paint into the letterbox the card's 16:10
+// box leaves around the figure. The card (and the feed PNG's frame) clips it,
+// so the board reads as running edge to edge instead of floating on a
+// panel-coloured margin (Brian, 2026-10-25). The board's own rounded rect lands
+// on the same colour, so its corners leave no seam. 200 units covers the
+// widest letterbox any card box leaves (a square box around the 440x240 stats
+// board: 100 a side) and keeps the feed PNG's grown canvas small
+// (apps/server/src/article-thumb.ts coverBelowFrame refuses art past 8x the
+// frame height, and 2000 units of bleed passed it).
+const BANQI_THUMB_BLEED = 200;
+export function banqiThumbnailSvg(height: number, body: string): string {
+  const w = BANQI_BOARD_W + 2 * BANQI_THUMB_BLEED;
+  const h = height + 2 * BANQI_THUMB_BLEED;
+  const bleed = `<rect x="${-BANQI_THUMB_BLEED}" y="${-BANQI_THUMB_BLEED}" width="${w}" height="${h}" class="xq-diagram-bg" data-banqi-thumb-bleed=""/>`;
+  return xqSvg(BANQI_BOARD_W, height, bleed + body).replace(/^<svg /, '<svg overflow="visible" ');
+}
+
 // Distinct thumbnail for the "How MistyBanqi Plays" engine article: a full real
 // position from the article's conversion game, after enough flips that the card
 // reads as Banqi instead of a wall of backs. Full-board rendering keeps the card
@@ -2965,8 +3265,7 @@ export const BANQI_ENGINE_THUMBNAIL = () => {
     BANQI_CONVERSION_GAME.moves,
     BANQI_ENGINE_THUMB_PLY,
   );
-  return xqSvg(
-    BANQI_BOARD_W,
+  return banqiThumbnailSvg(
     BANQI_ENGINE_THUMB_H,
     [
       `<g data-banqi-thumbnail-layout="engine-full-board">`,
@@ -3053,13 +3352,13 @@ export const BANQI_CANNON_CAPTURE = () =>
         BANQI_CENTER_X,
         28,
         'banqi-cannon-screen-capture',
-        BANQI_PIECE_SIZE / 2 + 4,
+        BANQI_MARK_R,
       ),
       banqiPiece({ color: 'red', role: 'cannon' }, 1, 2, BANQI_CENTER_X, 28),
       banqiPiece({ shrouded: true }, 3, 2, BANQI_CENTER_X, 28),
       banqiPiece({ color: 'black', role: 'general' }, 6, 2, BANQI_CENTER_X, 28),
       // Red ring marks the capture target (the revealed enemy beyond the screen).
-      `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_PIECE_SIZE / 2 + 4}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
+      `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_MARK_R}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
     ].join(''),
   );
 

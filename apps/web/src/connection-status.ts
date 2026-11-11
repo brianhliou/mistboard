@@ -88,8 +88,10 @@ async function pingOnce(url: string): Promise<PingSample> {
 }
 
 export function createConnectionStatus(): ConnectionStatus {
-  const element = document.createElement('div');
+  const element = document.createElement('a');
   element.className = 'account-nav-status';
+  element.href = '/lag';
+  element.title = t('lag.heading');
   element.setAttribute('aria-label', t('connection.status'));
 
   const rows = document.createElement('div');

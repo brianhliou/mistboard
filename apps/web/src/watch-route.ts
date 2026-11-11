@@ -2,7 +2,7 @@ import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
-import { seatInkForVariant } from './flip-seat-ink.js';
+import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -21,18 +21,20 @@ import {
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
+  liveFirstMover,
+  liveMatchupNames,
   matchupLabel,
   matchupSeats,
   namesMatchupLabel,
   participantForColor,
-  terminationLabel,
+  terminationReason,
   variantDisplayLabel,
   watchChannelLabel,
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
 import { initLiveSound } from './live-sound.js';
 import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
-import type { GameMeta, ReplayHandle } from './replay.js';
+import type { GameMeta, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import {
   createGameMetaCard,
@@ -46,6 +48,7 @@ import { createReviewShell } from './review/review-shell.js';
 import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { buildUiIcon } from './ui-icon.js';
 import { localizedRulesHref } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
@@ -150,16 +153,6 @@ type LiveFeatured = {
   }>;
   payload?: Record<string, unknown>;
 };
-
-// A live flip game's bound ink, read out of the postgame-shaped payload's view.
-// The payload is `Record<string, unknown>` by contract (the renderers own its
-// shape), so this narrows defensively: anything unexpected reads as unbound,
-// which renders a neutral disc rather than a wrong one.
-function liveFirstColor(featured: LiveFeatured): 'red' | 'black' | null {
-  const view = (featured.payload as { view?: { firstColor?: unknown } } | undefined)?.view;
-  const firstColor = view?.firstColor;
-  return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
-}
 
 // Ordering guard for user-initiated channel/game switches.
 //
@@ -355,6 +348,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     // The rail was drawn from the live handle; stop its ticker before the
     // completed-feed render seeds the rail again (or nothing does).
     clearMoveList();
+    // The overlay pointed at the live room; the completed-feed render that
+    // follows re-points it at a review page (or leaves it hidden).
+    renderWatchMainReviewLink(watch.reviewLink, null);
     watch.el.classList.remove('watch-live-mode');
   };
 
@@ -537,6 +533,17 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     clockTicker = null;
   };
 
+  // The rail's material at the ply on the board: captured pieces, a drop variant's
+  // hands, a flip variant's face-down pool, the same strips the game page shows.
+  // Each pass resets the slots to their mounted shape first, so a game or variant
+  // switch never inherits the last one's pieces or pocket classes. A handle with
+  // no fillMaterial (or nothing to show) leaves them empty.
+  const { sync: syncMaterial, clear: clearMaterial } = createWatchMaterialRail(
+    { top: watch.capturesTop, bottom: watch.capturesBottom, pool: watch.hiddenPool },
+    railHandle,
+    abortController.signal,
+  );
+
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
   // the handle's onPlyChange on every autoplay tick or manual jump.
   // Silent by design: plies also change on seeds, scrubs, jumps and replay
@@ -549,6 +556,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (moveScrubber.status)
       moveScrubber.status.textContent = maxPly > 0 ? `${ply} / ${maxPly}` : '';
     syncClocks();
+    syncMaterial();
   };
 
   const clearMoveList = (): void => {
@@ -559,6 +567,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     moveScrubber.setBounds(0, 0);
     stopClockTicker();
     clearClocks();
+    clearMaterial();
   };
 
   const clearPovToggle = (): void => {
@@ -571,7 +580,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // channel/game switch always lands on Truth.
   const rebuildPovToggle = (feed: WatchFeed, roomId: string): void => {
     const game = feed.unlocked.find((entry) => entry.roomId === roomId) ?? null;
-    renderWatchPovToggle(watch.povRoot, game, replayHandle);
+    renderWatchPovToggle(watch.povRoot, game, replayHandle, syncMaterial);
   };
 
   // Rebuild the move list inside the shared room table from the freshly loaded
@@ -586,8 +595,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watchMaxPly = handle.plyCount();
     watchPly = clampPly(startPly, watchMaxPly);
     const entries = handle.moveEntries?.() ?? [];
+    const ownLog = handle.moveLog?.() ?? null;
 
-    if (entries.length > 0) {
+    if (ownLog) {
+      moveList = ownLog;
+      watch.movesRoot.append(ownLog.el);
+    } else if (entries.length > 0) {
       moveList = createMoveList(entries);
       watch.movesRoot.append(moveList.el);
     }
@@ -891,17 +904,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // ── Featured live-follow: poll the cross-channel election and drive the board ──
   const registerLiveNames = (featured: LiveFeatured): void => {
-    const players = featured.players ?? [];
-    if (players.length < 2 || namesByRoomId[featured.roomId]) return;
-    const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0]!;
-    const second = players.find((p) => p !== first) ?? players[1]!;
-    namesByRoomId[featured.roomId] = {
-      first: displayLiveName(first.name, t('watch.guest')),
-      second: displayLiveName(second.name, t('watch.guest')),
-    };
+    if (namesByRoomId[featured.roomId]) return;
+    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'));
+    if (names) namesByRoomId[featured.roomId] = names;
   };
 
-  // The featured live game's seats as meta players, first mover (red/white) first
+  // The featured live game's seats as meta players, first mover (red/white/east) first
   // so the rows seat like every other watch board. Live payloads carry no
   // ratings, so the rows are name + BOT only. A flip variant's ink is read off the
   // live payload's view (the same `firstColor` the finished feed rows carry), and
@@ -909,11 +917,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // nobody owns a color yet.
   const liveMetaPlayers = (featured: LiveFeatured): GameMetaPlayer[] => {
     const players = featured.players ?? [];
-    const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0];
+    const first = liveFirstMover(players);
     const ordered = first ? [first, ...players.filter((p) => p !== first)] : players;
-    const firstColor = liveFirstColor(featured);
+    const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
+      noDisc: !variantSeatsHaveInk(featured.gameSpecId),
       name: displayLiveName(p.name, t('watch.guest')),
       rating: null,
       isEngine: p.isEngine,
@@ -927,7 +936,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
-    renderWatchMainReviewLink(watch.reviewLink, null);
+    renderWatchMainLiveLink(watch.reviewLink, {
+      matchup: playersMatchupLabel(players),
+      roomId: featured.roomId,
+    });
     watch.metaRoot.replaceChildren();
     const card = createGameMetaCard({
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
@@ -1136,7 +1148,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   scheduleLivePoll();
 }
 
-async function mountWatchQueuePreview(
+export async function mountWatchQueuePreview(
   root: HTMLElement,
   game: FeaturedGame,
   metadataByRoomId: Record<string, GameMeta>,
@@ -1155,11 +1167,43 @@ async function mountWatchQueuePreview(
       pov: 'white',
       revealOnFinish: true,
       hideReserve: true,
+      seatDiscs: variantSeatsHaveInk(game.variant),
     },
   );
   handle.setPov?.('truth');
   handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
   return handle;
+}
+
+// The rail's material driver: `sync` redraws the slots from the handle at its
+// current ply, `clear` empties them. The slots' mounted classes are captured once,
+// here, so every pass starts from the shape the shared table built. The replay
+// redraws its board on a piece-set or 3D change, and the strips redraw on the
+// same event until `signal` aborts (they kept the old set until a reload).
+export function createWatchMaterialRail(
+  slots: ReplayMaterialSlots,
+  handle: () => Pick<ReplayHandle, 'fillMaterial'> | null | undefined,
+  signal?: AbortSignal,
+): { sync: () => void; clear: () => void } {
+  const mounted = new Map(Object.values(slots).map((slot) => [slot, slot.className] as const));
+  const clear = (): void => {
+    for (const [slot, className] of mounted) resetWatchMaterialSlot(slot, className);
+  };
+  const sync = (): void => {
+    clear();
+    handle()?.fillMaterial?.(slots);
+  };
+  if (signal) window.addEventListener(xiangqiAppearanceChangedEvent, sync, { signal });
+  return { clear, sync };
+}
+
+// Back to the slot as the shared table mounted it: no pieces, no has-captures, and
+// none of the pocket classes, owner tag or slot count a drop variant's fill adds.
+export function resetWatchMaterialSlot(slot: HTMLElement, className: string): void {
+  slot.replaceChildren();
+  slot.className = className;
+  slot.style.removeProperty('--pocket-slots');
+  delete slot.dataset.hand;
 }
 
 function renderWatchQueuePreviewError(root: HTMLElement): void {
@@ -1548,6 +1592,9 @@ function renderWatchPovToggle(
   root: HTMLElement,
   game: FeaturedGame | null,
   handle: ReplayHandle | null,
+  // A perspective switch changes the view the board draws without moving the ply,
+  // so the rail's material (read off that view) is redrawn here.
+  onPovChange?: () => void,
 ): void {
   root.replaceChildren();
   if (!game || !handle?.setPov) return;
@@ -1573,6 +1620,7 @@ function renderWatchPovToggle(
   const buttons: HTMLButtonElement[] = [];
   const select = (kind: 'white' | 'truth' | 'black'): void => {
     handle.setPov?.(kind);
+    onPovChange?.();
     for (const button of buttons) {
       const active = button.dataset.pov === kind;
       button.classList.toggle('active', active);
@@ -1614,6 +1662,12 @@ type WatchSection = {
   // first mover below. Driven per ply from the replay handle's clockAtPly.
   clockTop: HTMLElement;
   clockBottom: HTMLElement;
+  // The table's material slots, seated the same way: the second mover's strip on
+  // top, the first mover's below, and the flip variants' face-down pool. Filled per
+  // ply from the replay handle's fillMaterial.
+  capturesTop: HTMLElement;
+  capturesBottom: HTMLElement;
+  hiddenPool: HTMLElement;
   movesRoot: HTMLElement;
   replayControlsRoot: HTMLElement;
   boardBox: HTMLElement;
@@ -1722,6 +1776,9 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
     playerTop: gameTable.refs.playerTop,
     clockTop: gameTable.refs.clockTop,
     clockBottom: gameTable.refs.clockBottom,
+    capturesTop: gameTable.refs.capturesTop,
+    capturesBottom: gameTable.refs.capturesBottom,
+    hiddenPool: gameTable.refs.hiddenPool,
     movesRoot: gameTable.refs.movesRoot,
     replayControlsRoot: gameTable.refs.replayControlsRoot,
     boardBox,
@@ -1750,6 +1807,7 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
     const participant = participantForColor(game, seat);
     return {
       color: seatInkForVariant(game.variant, seat, game.firstColor ?? null),
+      noDisc: !variantSeatsHaveInk(game.variant),
       name: displayParticipantName(game, seat),
       rating: watchParticipantRating(participant),
       isEngine: participant?.subjectType === 'engine-version' || participant?.subjectType === 'bot',
@@ -1823,6 +1881,30 @@ export function renderWatchMainReviewLink(
   link.hidden = false;
   link.setAttribute('aria-label', label);
   link.title = label;
+  setWatchMainLinkChip(link, t('watch.review'));
+}
+
+// The live board's overlay opens its room, where the visitor watches as a
+// spectator: the room serves a spectator its public view (roomViewPolicy), the
+// same room /games links every in-play card to. Fog never reaches this board
+// (canServeLiveBoard is fail-closed), so no room it links shows a hidden board.
+export function renderWatchMainLiveLink(
+  link: HTMLAnchorElement,
+  live: { roomId: string; matchup: string },
+): void {
+  const label = t('games.watchGame', { matchup: live.matchup });
+  link.href = `/room/${encodeURIComponent(live.roomId)}`;
+  link.hidden = false;
+  link.setAttribute('aria-label', label);
+  link.title = label;
+  setWatchMainLinkChip(link, t('watch.watchLive'));
+}
+
+// Re-labels the hover chip in place: it is built once with the overlay, and a
+// render that rebuilt the anchor's children would drop it.
+function setWatchMainLinkChip(link: HTMLAnchorElement, text: string): void {
+  const chip = link.querySelector<HTMLElement>('.watch-main-review-link__chip');
+  if (chip) chip.textContent = text;
 }
 
 function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void {
@@ -1872,16 +1954,18 @@ function playersMatchupLabel(players: GameMetaPlayer[]): string {
   return namesMatchupLabel(first.name, second.name);
 }
 
-function watchGameStatusLine(game: FeaturedGame): string {
+export function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination);
+  // "On points" is already a phrase; "wins by On points" is not a sentence.
+  if (game.termination === 'points') return t('watch.resultOnPoints', { result });
+  const reason = terminationReason(game.termination);
   return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 
 // Populate the shared room table's board-relative player rows. The second mover
 // sits above the board and the first mover below it, matching every room's
 // default orientation.
-function renderWatchPlayers(
+export function renderWatchPlayers(
   top: HTMLElement,
   bottom: HTMLElement,
   game: FeaturedGame | null,
@@ -1911,8 +1995,9 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   row.className = 'clock-player-line watch-game-table__player';
   // A null color is a flip variant whose opening flip has not bound an ink yet:
   // the disc renders the neutral ring rather than guessing a side.
-  const disc = seatDiscEl(player.color, 'watch-player-disc');
-  row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
+  // A seat with no colour (the mahjong family) draws no disc, as in its room.
+  if (!player.noDisc) row.append(seatDiscEl(player.color, 'watch-player-disc'));
+  row.append(playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');
     bot.className = 'watch-player-bot';

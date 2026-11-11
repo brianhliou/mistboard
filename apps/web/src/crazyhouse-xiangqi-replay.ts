@@ -24,8 +24,8 @@ import {
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import {
+  crazyhouseXiangqiBoardMarks,
   crazyhouseXiangqiBoardView,
-  crazyhouseXiangqiLastDrop,
   crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from './crazyhouse-xiangqi-view.js';
@@ -177,8 +177,7 @@ export function mountCrazyhouseXiangqiReplay(
       interactive: false,
       selectedSquare: null,
       draggingFrom: null,
-      coordinates: false,
-      lastDropSquare: crazyhouseXiangqiLastDrop(view),
+      ...crazyhouseXiangqiBoardMarks(view),
     });
     // One-ply steps glide (the embed board's rule); a jump repaints instantly,
     // and a drop has no origin, so it just appears.

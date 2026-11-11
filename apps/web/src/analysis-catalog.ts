@@ -13,6 +13,8 @@
 // editor/editor-catalog.ts is the editor's own allowlist, derived from this
 // union with `satisfies`. Membership here therefore asserts a tree-review stack
 // and nothing else.
+// Membership is a capability, not an offering: the Gomoku route and picker
+// additionally require gomokuOffered(), even when it is the current variant.
 
 import { type GameSpecId, gameSpecForId } from '@mistboard/game';
 
@@ -26,6 +28,7 @@ export type AnalysisVariantId =
   | 'jieqi'
   | 'dark-xiangqi'
   | 'dark-chess'
+  | 'gomoku'
   | 'duck-xiangqi'
   | 'atomic-xiangqi'
   | 'crazyhouse-xiangqi';
@@ -54,6 +57,7 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),
+  entry('gomoku'),
   // Retired 2026-10-11, off the canonical order so at the tail: kept so
   // /analysis/<slug> still opens a board for a finished game's position.
   entry('fortress-xiangqi'),
@@ -65,9 +69,14 @@ export function analysisVariantLabel(id: AnalysisVariantId): string {
 }
 
 /** Parse an /analysis path: bare /analysis opens the flagship (xiangqi); a known
- *  slug opens that variant; anything else is null (the caller 404s). */
+ *  slug opens that variant; anything else is null (the caller 404s). The
+ *  xiangqi board alone also answers under /zh-hans and /zh-hant (象棋AI分析);
+ *  the prefix sets the locale, as on /zh-hans/bots. */
 export function analysisVariantFromPath(path: string): AnalysisVariantId | null {
   if (path === '/analysis') return 'xiangqi';
+  if (path === '/zh-hans/analysis/xiangqi' || path === '/zh-hant/analysis/xiangqi') {
+    return 'xiangqi';
+  }
   const match = /^\/analysis\/([a-z0-9-]+)$/.exec(path);
   if (!match) return null;
   const slug = match[1];

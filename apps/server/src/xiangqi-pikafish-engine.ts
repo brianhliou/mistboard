@@ -1,9 +1,9 @@
-// Mainline Pikafish move provider for standard (open-information) Xiangqi PvE.
+// Pikafish search with the Fairy-Stockfish CC0 net for open-information Xiangqi.
 //
 // Unlike Jieqi (which needs the `jieqi_old` fork + a redacted FEN) or Fortress
 // (a Fairy-Stockfish custom variant), STANDARD xiangqi is exactly what mainline
-// Pikafish plays natively — no fork, no variants.ini, no FEN redaction. We drive
-// the stock binary as a UCI subprocess (the same Tier-B pattern as Jieqi/FSF),
+// Pikafish plays natively, without variants.ini or FEN redaction. We drive the
+// pinned build with pikafish-cc0-net.patch as a UCI subprocess (like Jieqi/FSF),
 // replaying the game as `position startpos moves ...` in Pikafish UCI coords.
 //
 // Coordinate note: our XiangqiSquare is `${file a-i}${rank 1-10}` (red back rank
@@ -12,14 +12,15 @@
 // lifecycle (spawn/parse/timeout/kill + the concurrency pool) is the shared
 // uci-engine-harness; this file is just the Pikafish config, tiers, and coords.
 //
-// Mainline Pikafish REQUIRES an NNUE net (EvalFile). It defaults to loading
-// `pikafish.nnue` from the process CWD, which the server does not provide, so we
-// always pass an absolute EvalFile resolved next to the binary (or via
-// MISTBOARD_PIKAFISH_XIANGQI_NET). Net licensing: the shipped net is the
-// official Pikafish NNUE (see NNUE-License in the pikafish distribution).
+// The patched evaluator REQUIRES the ~11 MB Fairy-Stockfish CC0 xiangqi net.
+// We always pass an absolute EvalFile resolved next to the binary (or via
+// MISTBOARD_PIKAFISH_XIANGQI_NET). The engine source remains GPLv3; the net is
+// fetched from Fairy-Stockfish's public source, never bundled in our release.
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { redPovScore } from '@mistboard/game';
+import { type EngineClock, nativeWatchdogMs, uciClockWords } from './engine-time-budget.js';
 import {
   runUciEval,
   UciEnginePool,
@@ -40,7 +41,13 @@ export {
 export const XIANGQI_DEFAULT_ENGINE_ID = 'pikafish-xiangqi-level-5';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier).
 // Bump on any engine/net/config change.
-export const XIANGQI_ENGINE_VERSION = '0.3.0';
+export const XIANGQI_ENGINE_VERSION = '0.4.0';
+
+// Source pin, applied patch sha256 prefix and net identity from the engine recipe.
+// bot-engine-versions.test.ts checks them against the actual build inputs.
+const PIKAFISH_XIANGQI_REF = '6a59ee2f';
+export const PIKAFISH_XIANGQI_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
+export const PIKAFISH_XIANGQI_VERSION = `${PIKAFISH_XIANGQI_REF} · cc0-790609318c02 · ${PIKAFISH_XIANGQI_NNUE_NET.replace(/\.nnue$/, '')}`;
 
 export type XiangqiEngineId =
   | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
@@ -177,7 +184,7 @@ const analysisPool = new UciEnginePool({
   queueTimeoutMessage: 'pikafish-xiangqi analysis queue timed out',
 });
 
-// Resolve the mainline Pikafish binary: explicit env override, else the known dev
+// Resolve the patched Pikafish binary: explicit env override, else the known dev
 // location, else the prod (railpack-baked) / system locations. Throws rather than
 // silently falling back to a first-legal move.
 export function pikafishXiangqiPath(): string {
@@ -197,9 +204,9 @@ export function pikafishXiangqiPath(): string {
       home,
       'projects',
       'tools',
-      'pikafish-official-2026-01-02',
-      'MacOS',
-      'pikafish-apple-silicon',
+      `pikafish-${PIKAFISH_XIANGQI_REF}-cc0`,
+      'src',
+      'pikafish',
     );
     if (existsSync(dev)) return dev;
   }
@@ -211,13 +218,12 @@ export function pikafishXiangqiPath(): string {
     if (existsSync(candidate)) return candidate;
   }
   throw new Error(
-    'mainline Pikafish (xiangqi) binary not found. Set MISTBOARD_PIKAFISH_XIANGQI_PATH.',
+    'Patched Pikafish (xiangqi) binary not found. Set MISTBOARD_PIKAFISH_XIANGQI_PATH.',
   );
 }
 
-// Resolve the NNUE net (absolute EvalFile). Explicit env override, else
-// pikafish.nnue next to the binary (dev keeps it one level up from MacOS/, prod
-// bakes it beside the binary), else beside the resolved binary dir.
+// Resolve the CC0 net (absolute EvalFile): explicit override, else the pinned
+// filename beside the binary or one directory up. No upstream-net fallback.
 export function pikafishXiangqiNetPath(binPath: string): string {
   const explicit = process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
   if (explicit) {
@@ -231,13 +237,13 @@ export function pikafishXiangqiNetPath(binPath: string): string {
   }
   const binDir = dirname(binPath);
   for (const candidate of [
-    resolve(binDir, 'pikafish.nnue'),
-    resolve(binDir, '..', 'pikafish.nnue'),
+    resolve(binDir, PIKAFISH_XIANGQI_NNUE_NET),
+    resolve(binDir, '..', PIKAFISH_XIANGQI_NNUE_NET),
   ]) {
     if (existsSync(candidate)) return candidate;
   }
   throw new Error(
-    'Pikafish NNUE net (pikafish.nnue) not found beside the binary. Set MISTBOARD_PIKAFISH_XIANGQI_NET.',
+    `Pikafish CC0 NNUE net (${PIKAFISH_XIANGQI_NNUE_NET}) not found beside the binary. Set MISTBOARD_PIKAFISH_XIANGQI_NET.`,
   );
 }
 
@@ -258,7 +264,7 @@ export function xiangqiEngineVersion(clientId: string | undefined): string | nul
   return isXiangqiEngineClientId(clientId) ? XIANGQI_ENGINE_VERSION : null;
 }
 
-export type XiangqiEngineOptions = { movetimeMs?: number };
+export type XiangqiEngineOptions = { movetimeMs?: number; clock?: EngineClock };
 
 /**
  * Ask mainline Pikafish for a move given the Pikafish-UCI move history since the
@@ -279,6 +285,7 @@ export async function xiangqiLiveEngineMove(
     return await xiangqiEngineMove(moves, {
       nodes: tier.nodes,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
+      ...(opts.clock ? { clock: opts.clock } : {}),
     });
   } finally {
     release();
@@ -287,7 +294,7 @@ export async function xiangqiLiveEngineMove(
 
 export function xiangqiEngineMove(
   moves: string[],
-  opts: { nodes: number; movetimeMs: number },
+  opts: { nodes: number; movetimeMs: number; clock?: EngineClock },
 ): Promise<UciEval> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
@@ -295,9 +302,8 @@ export function xiangqiEngineMove(
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs));
   const position =
     moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
-  // Warm session: mainline Pikafish reloads its ~40 MB net on every spawn
-  // (~2.8 s on prod, measured in the container 2026-09-02), which a
-  // spawn-per-move loop charged to the bot's clock on every ply.
+  // Warm sessions keep the ~11 MB CC0 net loaded between moves, so net loading
+  // and process startup are not charged to the bot's clock on every ply.
   return warmSessions.withSession(
     {
       bin,
@@ -309,8 +315,13 @@ export function xiangqiEngineMove(
         positionCommand: position,
         // `go nodes N movetime T` halts at whichever binds first: the node budget
         // is the reproducible strength anchor; the movetime is the latency ceiling.
-        goCommand: `go nodes ${nodes} movetime ${movetimeMs}`,
-        timeoutMs: movetimeMs + 4000,
+        // With a clock (MISTBOARD_BOT_TIME_RULE=native) the engine's own time
+        // manager replaces the movetime; `movetimeMs` is then the told clock, so the
+        // watchdog below still bounds the process.
+        goCommand: opts.clock
+          ? `go nodes ${nodes} ${uciClockWords(opts.clock)}`
+          : `go nodes ${nodes} movetime ${movetimeMs}`,
+        timeoutMs: opts.clock ? nativeWatchdogMs(opts.clock) : movetimeMs + 4000,
         timeoutMessage: 'pikafish-xiangqi move timed out',
       }),
   );
@@ -390,20 +401,8 @@ export function redPovSign(plyCount: number): 1 | -1 {
   return plyCount % 2 === 0 ? 1 : -1;
 }
 
-/** Flip one side-to-move score pair onto Red's POV. `mate 0` is the side to move
- *  being already checkmated; 0 cannot carry a sign, so encode it as decisive cp.
- *  Shared with the broadcast live eval so both surfaces agree on the sign. */
-export function redPovScore(
-  cp: number | null,
-  mate: number | null,
-  sign: 1 | -1,
-): { cp: number | null; mate: number | null } {
-  if (mate === 0) return { cp: sign * -30000, mate: null };
-  return {
-    cp: cp == null ? null : cp * sign,
-    mate: mate == null ? null : mate * sign,
-  };
-}
+// Preserve the server/broadcast import path; the browser sweep uses the same math.
+export { redPovScore };
 
 function redPovEval(evaluation: UciEval, plyCount: number): XiangqiPositionEval {
   const sign = redPovSign(plyCount);

@@ -1,0 +1,684 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  isXmjPair,
+  meldKindOf,
+  XMJ_MATCH_HANDS,
+  type XmjHandState,
+  type XmjTile,
+  xmjAdvance,
+  xmjCanDiscard,
+  xmjCanSelfDraw,
+  xmjClaim,
+  xmjClaimsOpen,
+  xmjDeal,
+  xmjDeclarationDiscards,
+  xmjDeclareReady,
+  xmjDiscard,
+  xmjLegalClaims,
+  xmjMatchWinner,
+  xmjNewMatch,
+  xmjNextDealer,
+  xmjNextHand,
+  xmjOrderedTiles,
+  xmjPass,
+  xmjScore,
+  xmjSelfDraw,
+  xmjShuffle,
+  xmjWinShape,
+} from './xiangqi-mahjong.js';
+
+/**
+ * A 32-tile wall whose front is the dealer's five, then the other's four, then
+ * `draws` in order, then everything left over.
+ */
+function wallWith(dealer: XmjTile[], other: XmjTile[], draws: XmjTile[] = []): XmjTile[] {
+  const rest = xmjOrderedTiles();
+  for (const tile of [...dealer, ...other, ...draws]) {
+    const at = rest.indexOf(tile);
+    assert.ok(at >= 0, `no ${tile} left in the set`);
+    rest.splice(at, 1);
+  }
+  return [...dealer, ...other, ...draws, ...rest];
+}
+
+function count(tiles: readonly XmjTile[], tile: XmjTile) {
+  return tiles.filter((t) => t === tile).length;
+}
+
+test('table 3 declaration requires a possible wait, with or without an exposed meld', () => {
+  const hand = xmjDeal(wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']), 0, 3);
+  assert.ok(xmjDeclarationDiscards(hand).includes('bH'));
+  const declared = xmjDeclareReady(hand, 'bH');
+  assert.deepEqual(declared.declared, [true, false]);
+  assert.deepEqual(declared.discards[0], ['bH']);
+  assert.equal(declared.phase.type, 'claim');
+  assert.equal(xmjDeclareReady(hand, 'bP'), hand, 'invalid discard is atomic');
+  assert.deepEqual(hand.declared, [false, false], 'the input is unchanged');
+
+  const exposed: XmjHandState = {
+    ...hand,
+    hands: [['rP', 'bH'], hand.hands[1]],
+    melds: [[{ kind: 'sequence', tiles: ['rK', 'rA', 'rE'] }], []],
+    phase: { type: 'discard', mayWin: false, drawn: null },
+  };
+  assert.ok(xmjDeclarationDiscards(exposed).includes('bH'));
+  assert.deepEqual(xmjDeclareReady(exposed, 'bH').hands[0], ['rP']);
+
+  const impossible = xmjDeal(
+    wallWith(['rK', 'rA', 'bE', 'bR', 'rP'], ['bK', 'bA', 'rE', 'rR']),
+    0,
+    3,
+  );
+  assert.deepEqual(xmjDeclarationDiscards(impossible), []);
+  assert.equal(xmjDeclareReady(impossible, 'bR'), impossible);
+  const allCopies = xmjDeal(
+    wallWith(['rP', 'rP', 'rP', 'rP', 'rP'], ['bK', 'bA', 'bE', 'bR']),
+    0,
+    3,
+  );
+  assert.deepEqual(xmjDeclarationDiscards(allCopies), [], 'the thrown fifth copy cannot be drawn');
+});
+
+test('declaration eligibility counts public tiles, never the opponent hand or wall', () => {
+  const hand = xmjDeal(wallWith(['rR', 'rH', 'rC', 'rK', 'bH'], ['bK', 'bA', 'bE', 'bR']), 0, 3);
+  assert.ok(xmjDeclarationDiscards(hand).includes('bH'), 'concealed bK remains a possible wait');
+  const hiddenChanged: XmjHandState = { ...hand, hands: [hand.hands[0], []], wall: [] };
+  assert.deepEqual(xmjDeclarationDiscards(hiddenChanged), xmjDeclarationDiscards(hand));
+  const publicGeneral: XmjHandState = { ...hiddenChanged, discards: [[], ['bK']] };
+  assert.ok(
+    !xmjDeclarationDiscards(publicGeneral).includes('bH'),
+    'rK cannot pair with another rK',
+  );
+  const exposedGeneral: XmjHandState = {
+    ...hiddenChanged,
+    melds: [[], [{ kind: 'sequence', tiles: ['bK', 'bA', 'bE'] }]],
+  };
+  assert.ok(!xmjDeclarationDiscards(exposedGeneral).includes('bH'));
+});
+
+test('declared hands discard only the drawn tile, including when it has a twin', () => {
+  const hand = xmjDeal(
+    wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', 'rA']),
+    0,
+    3,
+  );
+  const declared = xmjDeclareReady(hand, 'bH');
+  const drawn = xmjPass(xmjDiscard(xmjPass(declared), 'bR'));
+  assert.ok(xmjCanDiscard(drawn, 'rA'));
+  assert.ok(!xmjCanDiscard(drawn, 'rK'));
+  assert.ok(!xmjCanDiscard(drawn, 'rA', true));
+  assert.equal(xmjDiscard(drawn, 'rA', true), drawn);
+  assert.equal(xmjDiscard(drawn, 'rK'), drawn);
+  assert.equal(xmjDeclareReady(drawn, 'rA'), drawn, 'cannot redeclare');
+  const discarded = xmjDiscard(drawn, 'rA');
+  assert.deepEqual(discarded.hands[0], ['rK', 'rA', 'rE', 'rP']);
+  assert.deepEqual(discarded.drawnDiscards[0], [false, true]);
+});
+
+test('declared hands refuse both pung and chow while retaining win claims', () => {
+  for (const [dealer, other, thrown, kind, fromHand] of [
+    [['rR', 'rH', 'rP', 'rP', 'bH'], ['rK', 'rA', 'bP', 'rP'], 'rP', 'pung', ['rP', 'rP']],
+    [['rR', 'rH', 'rC', 'rP', 'bH'], ['bK', 'bA', 'bE', 'rR'], 'rR', 'chow', ['rH', 'rC']],
+  ] as const) {
+    const hand = xmjDeal(wallWith([...dealer], [...other], ['bC']), 0, 3);
+    const window = xmjDiscard(xmjPass(xmjDeclareReady(hand, 'bH')), thrown);
+    assert.ok(xmjLegalClaims(window.hands[0], [], thrown).some((claim) => claim.kind === kind));
+    assert.deepEqual(xmjClaimsOpen(window), []);
+    assert.equal(xmjClaim(window, { kind, fromHand }), window);
+  }
+});
+
+test('table 3 adds one declaration tai on either winning path and resets next hand', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['rP', 'rP']);
+  for (const selfDrawn of [false, true]) {
+    const match = xmjNewMatch([wall, wall], 0, 3);
+    let hand = xmjDeclareReady(match.hand, 'bH');
+    hand = xmjPass(hand);
+    hand = xmjDiscard(hand, selfDrawn ? 'bR' : 'rP');
+    const won = selfDrawn
+      ? xmjSelfDraw(xmjPass(hand))
+      : xmjClaim(hand, { kind: 'win', fromHand: [] });
+    assert.equal(won.phase.type, 'won');
+    if (won.phase.type !== 'won') continue;
+    assert.equal(won.phase.selfDrawn, selfDrawn);
+    const score = won.phase.score;
+    assert.ok(score.lines.some((line) => line.key === 'declared-ready' && line.tai === 1));
+    const base = xmjScore({
+      concealed: won.hands[0],
+      melds: [],
+      selfDrawn,
+      winnerIsDealer: true,
+      heavenly: false,
+      earthly: false,
+      lastTile: false,
+      table: 2,
+    });
+    assert.equal(score.total, base.total + 1);
+    const next = xmjNextHand(xmjAdvance(match, won));
+    assert.deepEqual(next.hand.declared, [false, false]);
+    assert.equal(next.hand.taiTable, 3);
+  }
+});
+
+test('heavenly precedence and legacy scoring ignore declaration bonuses', () => {
+  const ctx = {
+    concealed: ['rK', 'rA', 'rE', 'rP', 'rP'] as XmjTile[],
+    melds: [],
+    selfDrawn: true,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: true,
+    declared: true,
+  };
+  for (const firstDraw of ['heavenly', 'earthly'] as const) {
+    const score = xmjScore({ ...ctx, table: 3, [firstDraw]: true });
+    assert.equal(score.total, 6);
+    assert.deepEqual(
+      score.lines.map((line) => line.key),
+      ['heavenly'],
+    );
+  }
+  for (const table of [1, 2] as const) {
+    assert.deepEqual(xmjScore({ ...ctx, table }), xmjScore({ ...ctx, table, declared: false }));
+    const hand = xmjDeal(wallWith(ctx.concealed, ['bK', 'bA', 'bE', 'bR']), 0, table);
+    assert.equal('declared' in hand, false);
+    assert.deepEqual(xmjDeclarationDiscards(hand), []);
+    assert.equal(xmjDeclareReady(hand, 'rP'), hand);
+  }
+});
+
+test('the set is 32 tiles, 16 per colour, with the right copies', () => {
+  const tiles = xmjOrderedTiles();
+  assert.equal(tiles.length, 32);
+  assert.equal(tiles.filter((t) => t[0] === 'r').length, 16);
+  assert.equal(count(tiles, 'rK'), 1);
+  assert.equal(count(tiles, 'bK'), 1);
+  assert.equal(count(tiles, 'rP'), 5);
+  assert.equal(count(tiles, 'bP'), 5);
+  assert.equal(count(tiles, 'bA'), 2);
+  const shuffled = xmjShuffle(() => 0.42);
+  assert.deepEqual([...shuffled].sort(), [...tiles].sort());
+});
+
+test('melds: only same-colour 將士象 / 車馬包 sequences and soldier triplets', () => {
+  assert.equal(meldKindOf(['bK', 'bA', 'bE']), 'sequence');
+  assert.equal(meldKindOf(['bE', 'bK', 'bA']), 'sequence', 'any order');
+  assert.equal(meldKindOf(['rR', 'rH', 'rC']), 'sequence');
+  assert.equal(meldKindOf(['bP', 'bP', 'bP']), 'triplet');
+  assert.equal(meldKindOf(['bK', 'bA', 'rE']), null, 'colours never mix');
+  assert.equal(meldKindOf(['bK', 'bA', 'bR']), null, 'pieces from two sequences');
+  assert.equal(meldKindOf(['bA', 'bA', 'bA']), null, 'only soldiers make triplets');
+  assert.equal(meldKindOf(['rP', 'rP', 'bP']), null);
+});
+
+test('pairs: identical tiles, or 帥 with 將', () => {
+  assert.ok(isXmjPair('bA', 'bA'));
+  assert.ok(isXmjPair('rK', 'bK'));
+  assert.ok(!isXmjPair('rA', 'bA'), 'advisors of two colours are not a pair');
+});
+
+test('(a) 將士象 wins with a pair; mixed sequences and mixed colours do not', () => {
+  assert.ok(xmjWinShape(['bK', 'bA', 'bE', 'rR', 'rR'], []));
+  assert.equal(xmjWinShape(['bK', 'bA', 'rE', 'rR', 'rR'], []), null);
+  assert.equal(xmjWinShape(['bK', 'bA', 'bR', 'rR', 'rR'], []), null);
+});
+
+test('(b) 帥+將 pair with 兵兵兵 wins and scores 將帥聽令', () => {
+  const hand: XmjTile[] = ['rK', 'bK', 'rP', 'rP', 'rP'];
+  assert.ok(xmjWinShape(hand, []));
+  const score = xmjScore({
+    concealed: hand,
+    melds: [],
+    selfDrawn: false,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: false,
+  });
+  assert.deepEqual(
+    score.lines.map((l) => [l.key, l.tai]),
+    [
+      ['win', 1],
+      ['generals-pair', 2],
+    ],
+  );
+  assert.equal(score.total, 3);
+});
+
+test('(c) five soldiers win; four soldiers and a 卒 do not', () => {
+  assert.ok(xmjWinShape(['rP', 'rP', 'rP', 'rP', 'rP'], []));
+  assert.equal(xmjWinShape(['rP', 'rP', 'rP', 'rP', 'bP'], []), null);
+  const score = xmjScore({
+    concealed: ['rP', 'rP', 'rP', 'rP', 'rP'],
+    melds: [],
+    selfDrawn: true,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: false,
+  });
+  // 1 win + 2 self-draw + 1 one-colour + 5 five-soldiers (stacks with 清一色).
+  assert.equal(score.total, 9);
+  assert.ok(score.lines.some((l) => l.key === 'five-soldiers' && l.tai === 5));
+  assert.ok(score.lines.some((l) => l.key === 'one-colour'));
+});
+
+test('five soldiers through an exposed 兵兵兵 meld still scores', () => {
+  const score = xmjScore({
+    concealed: ['bP', 'bP'],
+    melds: [{ kind: 'triplet', tiles: ['bP', 'bP', 'bP'], claimed: 'bP' }],
+    selfDrawn: false,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: false,
+  });
+  assert.ok(score.lines.some((l) => l.key === 'five-soldiers'));
+});
+
+test('(d) 碰 is only on soldiers: 士 has two copies, so no pung', () => {
+  assert.deepEqual(
+    xmjLegalClaims(['bA', 'bA', 'rR', 'rH'], [], 'bA').map((c) => c.kind),
+    [],
+  );
+  assert.deepEqual(
+    xmjLegalClaims(['bP', 'bP', 'rR', 'rH'], [], 'bP').map((c) => c.kind),
+    ['pung'],
+  );
+});
+
+test('(e) 吃 of 象 by a 將士 holder', () => {
+  const claims = xmjLegalClaims(['bK', 'bA', 'rR', 'rH'], [], 'bE');
+  assert.deepEqual(claims, [{ kind: 'chow', fromHand: ['bK', 'bA'] }]);
+  // Wrong colour discard completes nothing.
+  assert.deepEqual(xmjLegalClaims(['bK', 'bA', 'rR', 'rH'], [], 'rE'), []);
+});
+
+test('a discard that completes the hand offers 胡 ahead of the meld claims', () => {
+  const claims = xmjLegalClaims(['bP', 'bP', 'bA', 'bA'], [], 'bP');
+  assert.deepEqual(
+    claims.map((c) => c.kind),
+    ['win', 'pung'],
+  );
+});
+
+test('碰 and 吃 never compete for one tile: soldiers are in no sequence', () => {
+  // Spec 12 asks the UI to offer both when both are legal. In the 32-tile set
+  // that cannot happen (碰 needs a soldier, 吃 never uses one), so this pins it.
+  const claims = xmjLegalClaims(['rP', 'rP', 'rR', 'rH'], [], 'rP');
+  assert.deepEqual(
+    claims.map((c) => c.kind),
+    ['pung'],
+  );
+});
+
+test('deal: dealer 5, other 4, wall 23, dealer to discard first', () => {
+  const hand = xmjDeal(xmjOrderedTiles(), 1);
+  assert.equal(hand.hands[1].length, 5);
+  assert.equal(hand.hands[0].length, 4);
+  assert.equal(hand.wall.length, 23);
+  assert.equal(hand.turn, 1);
+  assert.equal(hand.phase.type, 'discard');
+});
+
+test('(g) 天胡: the dealer wins on the opening five, flat 6', () => {
+  const hand = xmjDeal(wallWith(['bK', 'bA', 'bE', 'rP', 'rP'], ['rR', 'rH', 'bR', 'bH']), 0);
+  assert.ok(xmjCanSelfDraw(hand));
+  const won = xmjSelfDraw(hand);
+  assert.equal(won.phase.type, 'won');
+  if (won.phase.type !== 'won') return;
+  assert.equal(won.phase.winner, 0);
+  assert.deepEqual(
+    won.phase.score.lines.map((l) => l.key),
+    ['heavenly'],
+  );
+  assert.equal(won.phase.score.total, 6);
+});
+
+test('draw/discard cycle: a discard always opens the window, even with no claim in it', () => {
+  const hand = xmjDeal(
+    wallWith(['bK', 'rA', 'rR', 'bH', 'rC'], ['bP', 'bA', 'rE', 'bC'], ['rH']),
+    0,
+  );
+  const window = xmjDiscard(hand, 'rR');
+  // Opening only when a claim existed told the discarder the opponent's hand.
+  assert.equal(window.phase.type, 'claim');
+  assert.deepEqual(xmjClaimsOpen(window), []);
+  const after = xmjPass(window);
+  assert.equal(after.turn, 1);
+  assert.equal(after.phase.type, 'discard');
+  assert.equal(after.hands[1].length, 5);
+  assert.equal(after.hands[0].length, 4);
+  assert.deepEqual(after.discards[0], ['rR']);
+  if (after.phase.type === 'discard') assert.equal(after.phase.drawn, 'rH');
+});
+
+test('claim window opens when the opponent can 吃, and 吃 skips the draw', () => {
+  const hand = xmjDeal(
+    wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rH'], ['rH']),
+    0,
+  );
+  const window = xmjDiscard(hand, 'bE');
+  assert.equal(window.phase.type, 'claim');
+  assert.deepEqual(
+    xmjClaimsOpen(window).map((c) => c.kind),
+    ['chow'],
+  );
+  const claimed = xmjClaim(window, { kind: 'chow', fromHand: ['bA', 'bK'] });
+  assert.equal(claimed.turn, 1);
+  assert.equal(claimed.phase.type, 'discard');
+  if (claimed.phase.type === 'discard') assert.equal(claimed.phase.mayWin, false);
+  assert.equal(claimed.wall.length, window.wall.length, 'no draw after a claim');
+  assert.deepEqual(claimed.hands[1], ['rH', 'rP']);
+  assert.equal(claimed.melds[1].length, 1);
+  assert.deepEqual(claimed.discards[0], [], 'the claimed tile leaves the pile');
+  // Discard one soldier; now one concealed + meld, waiting on rP.
+  const next = xmjDiscard(claimed, 'rP');
+  assert.equal(next.hands[1].length, 1);
+});
+
+test('claiming an illegal set is refused', () => {
+  const hand = xmjDeal(
+    wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['rH']),
+    0,
+  );
+  const window = xmjDiscard(hand, 'bE');
+  assert.equal(xmjClaim(window, { kind: 'pung', fromHand: ['bE', 'bE'] }), window);
+  assert.equal(xmjClaim(window, { kind: 'chow', fromHand: ['bK', 'rP'] }), window);
+});
+
+test('passing a window: the claimant draws', () => {
+  const hand = xmjDeal(
+    wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['rH']),
+    0,
+  );
+  const passed = xmjPass(xmjDiscard(hand, 'bE'));
+  assert.equal(passed.turn, 1);
+  assert.equal(passed.hands[1].length, 5);
+  if (passed.phase.type === 'discard') assert.equal(passed.phase.drawn, 'rH');
+});
+
+test('win on the opponent discard (胡) scores and books the hand', () => {
+  const hand = xmjDeal(
+    wallWith(['bE', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['rH']),
+    0,
+  );
+  const window = xmjDiscard(hand, 'bE');
+  // 將士 + 兵兵 + the discarded 象 is 將士象 + 兵兵.
+  assert.deepEqual(
+    xmjClaimsOpen(window).map((c) => c.kind),
+    ['win', 'chow'],
+  );
+  const won = xmjClaim(window, { kind: 'win', fromHand: [] });
+  assert.equal(won.phase.type, 'won');
+  if (won.phase.type !== 'won') return;
+  assert.equal(won.phase.winner, 1);
+  assert.equal(won.phase.selfDrawn, false);
+  // win 1 + 將之才 1 (將 and no 帥); mixed colours.
+  assert.equal(won.phase.score.total, 2);
+  // The score carries the split it was counted from, for the table to group.
+  assert.deepEqual(won.phase.score.shape, { meld: ['bK', 'bA', 'bE'], pair: ['rP', 'rP'] });
+});
+
+// A discard that completes the pair is claimable only as the win (單吊): there
+// is no claim that makes a pair and nothing else.
+test('a discard completing the pair is a win claim, never a pair claim', () => {
+  assert.deepEqual(xmjLegalClaims(['rK', 'rA', 'rE', 'bH'], [], 'bH'), [
+    { kind: 'win', fromHand: [] },
+  ]);
+  assert.deepEqual(xmjLegalClaims(['rR', 'rH', 'rC', 'rK'], [], 'bK'), [
+    { kind: 'win', fromHand: [] },
+  ]);
+  assert.deepEqual(xmjLegalClaims(['rK', 'bH', 'rR', 'bC'], [], 'bH'), []);
+});
+
+test('table 1 地胡: the non-dealer wins on the first draw, flat 6', () => {
+  const hand = xmjDeal(
+    wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
+    0,
+    1,
+  );
+  const drawn = xmjPass(xmjDiscard(hand, 'rR'));
+  assert.equal(drawn.turn, 1);
+  assert.ok(xmjCanSelfDraw(drawn));
+  const won = xmjSelfDraw(drawn);
+  assert.equal(won.phase.type, 'won');
+  if (won.phase.type === 'won') {
+    assert.deepEqual(
+      won.phase.score.lines.map((l) => l.key),
+      ['earthly'],
+    );
+  }
+});
+
+test('table 1 dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () => {
+  const score = xmjScore({
+    concealed: ['bR', 'bH', 'bC', 'rA', 'rA'],
+    melds: [],
+    selfDrawn: true,
+    winnerIsDealer: true,
+    heavenly: false,
+    earthly: false,
+    lastTile: true,
+    table: 1,
+  });
+  // 1 + 2 + 1 (dealer) + 1 (last tile) = 5, not doubled.
+  assert.equal(score.total, 5);
+  assert.deepEqual(
+    score.lines.map((l) => [l.key, l.tai]),
+    [
+      ['win', 1],
+      ['self-draw', 2],
+      ['dealer', 1],
+      ['last-tile', 1],
+    ],
+  );
+  assert.equal(
+    score.total,
+    score.lines.reduce((sum, l) => sum + l.tai, 0),
+    'the total is the sum of the lines, nothing multiplied',
+  );
+});
+
+/** The lines a concealed winning hand scores on the current table, as [key, 台]. */
+function linesOf(concealed: XmjTile[], over: Partial<Parameters<typeof xmjScore>[0]> = {}) {
+  return xmjScore({
+    concealed,
+    melds: [],
+    selfDrawn: false,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: false,
+    ...over,
+  }).lines.map((l) => [l.key, l.tai]);
+}
+
+test('天胡 is either seat winning on its first draw, flat 6 (地胡 folded in)', () => {
+  const hand = xmjDeal(
+    wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
+    0,
+  );
+  const won = xmjSelfDraw(xmjPass(xmjDiscard(hand, 'rR')));
+  assert.equal(won.phase.type, 'won');
+  if (won.phase.type !== 'won') return;
+  assert.equal(won.phase.winner, 1, 'the non-dealer');
+  assert.deepEqual(
+    won.phase.score.lines.map((l) => [l.key, l.tai]),
+    [['heavenly', 6]],
+  );
+});
+
+test('no dealer line: a dealer self-draw scores 胡牌 + 自摸 + 海底撈月 only', () => {
+  assert.deepEqual(
+    linesOf(['bR', 'bH', 'bC', 'rA', 'rA'], {
+      selfDrawn: true,
+      winnerIsDealer: true,
+      lastTile: true,
+    }),
+    [
+      ['win', 1],
+      ['self-draw', 2],
+      ['last-tile', 1],
+    ],
+  );
+});
+
+test('將之才 / 帥之才: one general in the hand and not the other, +1', () => {
+  assert.deepEqual(linesOf(['bK', 'bA', 'bE', 'rP', 'rP']), [
+    ['win', 1],
+    ['black-general', 1],
+  ]);
+  assert.deepEqual(linesOf(['rK', 'rA', 'rE', 'bH', 'bH']), [
+    ['win', 1],
+    ['red-general', 1],
+  ]);
+  // Both generals can only be the 將帥 pair: that line, and neither 之才.
+  assert.deepEqual(linesOf(['rK', 'bK', 'rP', 'rP', 'rP']), [
+    ['win', 1],
+    ['generals-pair', 2],
+  ]);
+  // Neither general: no line.
+  assert.deepEqual(linesOf(['bR', 'bH', 'bC', 'rP', 'rP']), [['win', 1]]);
+});
+
+test('three of a piece, either colour, +2 each', () => {
+  const three = (pair: XmjTile, meld: XmjTile[]) =>
+    linesOf([pair, pair, ...meld]).filter(([key]) => String(key).startsWith('three-'));
+  assert.deepEqual(three('rA', ['bK', 'bA', 'bE']), [['three-advisors', 2]]);
+  assert.deepEqual(three('rE', ['bK', 'bA', 'bE']), [['three-elephants', 2]]);
+  assert.deepEqual(three('rR', ['bR', 'bH', 'bC']), [['three-chariots', 2]]);
+  assert.deepEqual(three('rH', ['bR', 'bH', 'bC']), [['three-horses', 2]]);
+  assert.deepEqual(three('rC', ['bR', 'bH', 'bC']), [['three-cannons', 2]]);
+  // Two of a piece is not three.
+  assert.deepEqual(three('rA', ['bR', 'bH', 'bC']), []);
+  // The full line set for one hand: 仕仕 + 將士象 is three advisors and 將之才.
+  assert.deepEqual(linesOf(['rA', 'rA', 'bK', 'bA', 'bE']), [
+    ['win', 1],
+    ['black-general', 1],
+    ['three-advisors', 2],
+  ]);
+});
+
+test('鼓角齊鳴: five soldiers of both colours +2; one colour is 五兵 instead', () => {
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bP', 'bP']), [
+    ['win', 1],
+    ['mixed-soldiers', 2],
+  ]);
+  // Five of one colour scores the narrower line and not 鼓角齊鳴 on top.
+  assert.deepEqual(linesOf(['bP', 'bP', 'bP', 'bP', 'bP']), [
+    ['win', 1],
+    ['one-colour', 1],
+    ['five-soldiers', 5],
+  ]);
+  // Three soldiers and a pair of something else is neither.
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bH', 'bH']), [['win', 1]]);
+});
+
+test('table 1 scores none of the table 2 lines', () => {
+  assert.deepEqual(linesOf(['rA', 'rA', 'bK', 'bA', 'bE'], { table: 1 }), [['win', 1]]);
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bP', 'bP'], { table: 1 }), [['win', 1]]);
+});
+
+/** Play a hand out with both seats discarding their first tile and never claiming. */
+function playOut(start: XmjHandState): XmjHandState {
+  let hand = start;
+  for (let guard = 0; guard < 200; guard += 1) {
+    if (hand.phase.type === 'exhausted' || hand.phase.type === 'won') return hand;
+    if (hand.phase.type === 'claim') {
+      hand = xmjPass(hand);
+      continue;
+    }
+    const tile = hand.hands[hand.turn][0] as XmjTile;
+    hand = xmjDiscard(hand, tile);
+  }
+  throw new Error('hand did not end');
+}
+
+test('(f) 流局 when the wall runs out with no winner', () => {
+  // Hands that can never win by discarding the first tile: use a wall where
+  // draws are fed in an order nothing completes. Brute force a seed instead of
+  // hand-building: find a shuffle where play-out ends exhausted.
+  let found: XmjHandState | null = null;
+  for (let seed = 1; seed < 200 && !found; seed += 1) {
+    let s = seed;
+    const random = () => {
+      s = (s * 1103515245 + 12345) % 2 ** 31;
+      return s / 2 ** 31;
+    };
+    const end = playOut(xmjDeal(xmjShuffle(random), 0));
+    if (end.phase.type === 'exhausted') found = end;
+  }
+  assert.ok(found, 'some deal ends in 流局');
+  if (!found) return;
+  assert.equal(found.wall.length, 0);
+  // Every tile is still accounted for: 23 drawn, nothing lost.
+  const total =
+    found.hands[0].length +
+    found.hands[1].length +
+    found.discards[0].length +
+    found.discards[1].length;
+  assert.equal(total, 32);
+});
+
+test('the deal alternates after a dealer win, a non-dealer win and a 流局', () => {
+  // Dealer win: the deal still passes.
+  assert.equal(xmjNextDealer({ dealer: 0, winner: 0, selfDrawn: true, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: 1, selfDrawn: false, score: null }), 0);
+  // Non-dealer win.
+  assert.equal(xmjNextDealer({ dealer: 0, winner: 1, selfDrawn: true, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: 0, selfDrawn: false, score: null }), 0);
+  // 流局.
+  assert.equal(xmjNextDealer({ dealer: 0, winner: null, selfDrawn: false, score: null }), 1);
+  assert.equal(xmjNextDealer({ dealer: 1, winner: null, selfDrawn: false, score: null }), 0);
+});
+
+test('match: six hands, each seat deals three times, the winner banks the points', () => {
+  assert.equal(XMJ_MATCH_HANDS, 6);
+
+  let s = 7;
+  const random = () => {
+    s = (s * 1103515245 + 12345) % 2 ** 31;
+    return s / 2 ** 31;
+  };
+  // More walls than hands: the hand count, not the wall count, ends the match.
+  const walls = Array.from({ length: 8 }, () => xmjShuffle(random));
+  let match = xmjNewMatch(walls, 0);
+  for (let hand = 0; hand < XMJ_MATCH_HANDS; hand += 1) {
+    // Take any win the moment it is offered, else play out.
+    let state = match.hand;
+    for (let guard = 0; guard < 200 && !match.between && !match.over; guard += 1) {
+      if (state.phase.type === 'claim') {
+        const win = xmjClaimsOpen(state).find((c) => c.kind === 'win');
+        state = win ? xmjClaim(state, win) : xmjPass(state);
+      } else if (state.phase.type === 'discard') {
+        state = xmjCanSelfDraw(state)
+          ? xmjSelfDraw(state)
+          : xmjDiscard(state, state.hands[state.turn][0] as XmjTile);
+      }
+      match = xmjAdvance(match, state);
+    }
+    assert.equal(match.results.length, hand + 1);
+    // Positive: a win adds to the winner and takes nothing from the other.
+    for (const seat of [0, 1] as const) {
+      const banked = match.results
+        .filter((r) => r.winner === seat)
+        .reduce((sum, r) => sum + (r.score?.total ?? 0), 0);
+      assert.equal(match.scores[seat], banked);
+    }
+    if (!match.over) match = xmjNextHand(match);
+  }
+  assert.ok(match.over);
+  assert.equal(match.between, false);
+  assert.equal(match.results.length, 6);
+  assert.equal(xmjNextHand(match), match, 'no seventh hand');
+  assert.deepEqual(
+    match.results.map((r) => r.dealer),
+    [0, 1, 0, 1, 0, 1],
+  );
+  const winner = xmjMatchWinner(match);
+  if (match.scores[0] === match.scores[1]) assert.equal(winner, null);
+  else assert.equal(winner, match.scores[0] > match.scores[1] ? 0 : 1);
+});

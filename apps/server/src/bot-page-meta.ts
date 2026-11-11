@@ -10,6 +10,7 @@
 import { maybeGameSpecForId } from '@mistboard/game';
 import type { TenantGamePageMeta } from './og-game-tenant.js';
 import * as persistence from './persistence.js';
+import { botPlayOptions } from './routes/bots.js';
 
 const BOT_PATH = /^\/bot\/([a-z0-9-]+)$/;
 
@@ -47,7 +48,8 @@ export type BotPageSource = {
 
 async function lookupBot(botId: string): Promise<BotPageSource | null> {
   if (!persistence.isInitialized()) return null;
-  return persistence.getPublicBotProfile(botId).catch(() => null);
+  const bot = await persistence.getPublicBotProfile(botId).catch(() => null);
+  return bot && botPlayOptions(bot).some((option) => option.playable) ? bot : null;
 }
 
 export async function botPageMeta(

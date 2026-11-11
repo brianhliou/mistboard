@@ -16,6 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import { clockPolicyKindFor } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
@@ -25,6 +26,7 @@ import {
   canObserveRoom,
   isAdminDebugToken,
   isProductionLikeRuntime,
+  parseNetworkClientId,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
 } from '../server-policy.js';
@@ -37,10 +39,13 @@ import {
   type TenantEventWriterContext,
 } from './events.js';
 import {
+  clearTenantResumeTimer,
   clearTenantRuntimeTimers,
+  resumeTenantRoom,
   scheduleTenantLifecycleTimers,
   type TenantLifecycleContext,
 } from './lifecycle.js';
+import { registerTenantPauseRecovery } from './pause-recovery.js';
 import {
   cancelTenantRematch,
   declineTenantRematch,
@@ -49,12 +54,14 @@ import {
   offerTenantRematch,
   type TenantRematchContext,
 } from './rematch.js';
+import { registeredTenantRematchContext } from './rematch-context.js';
 import {
   expireTenantClock,
   type TenantSnapshotPayload,
   tenantClockRemainingMs,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantRoomOffersRematch,
   tenantSnapshotPayload,
 } from './runtime.js';
 import {
@@ -98,22 +105,15 @@ export type TenantLiveRoom<
   Spec extends string = string,
 > = Omit<TenantRuntimeRoom<Kind, C, M, State, Spec>, 'clients'> & {
   clients: Set<TenantLiveClient<C>>;
+  // The shutdown lifecycle sets this before persisting the pause.
+  stopping?: boolean;
 };
 
-export type TenantWebSocketContext<
-  Kind extends string,
-  C extends string,
-  M,
-  State extends TenantGameStateLike<C>,
-  Spec extends string = string,
-> = {
+export type TenantWebSocketContext = {
   wsMessageLimit: number;
   wsMessageWindowMs: number;
   // Latency-sample observability region tag; 'global' when omitted.
   defaultRoomRegion?: string;
-  // Rematch is a capability: tenants without a rematch flow (Dark Xiangqi)
-  // omit it and rematch:* messages are ignored.
-  rematch?: TenantRematchContext<Kind, C, M, State, Spec, TenantLiveClient<C>>;
 };
 
 export type TenantWsRuntime<
@@ -125,7 +125,7 @@ export type TenantWsRuntime<
   Spec extends string = string,
 > = {
   handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: TenantLiveRoom<Kind, C, M, State, Spec>,
@@ -144,6 +144,30 @@ export type TenantWsRuntime<
   ): TenantSnapshotPayload<C, M, View, Spec>;
   lifecycleCtx: TenantLifecycleContext<C, M, State, Spec, TenantLiveRoom<Kind, C, M, State, Spec>>;
 };
+
+/**
+ * Abort is open to the side to move until every seat has moved once, unless
+ * the tenant has none (userAbort: false: a player saw hidden information, its
+ * deal, before moving, so an abort would be a free redeal).
+ */
+export function tenantSeatMayAbort<C extends string>(
+  tenant: { userAbort?: false },
+  state: { status: { type: string; turn?: C }; moveNumber: number },
+  seat: C,
+): boolean {
+  if (tenant.userAbort === false) return false;
+  const { status } = state;
+  return status.type === 'playing' && state.moveNumber < 2 && status.turn === seat;
+}
+
+/** Resign opens where abort ends: after the first go-around, or from the start without abort. */
+export function tenantSeatMayResign(
+  tenant: { userAbort?: false },
+  state: { status: { type: string }; moveNumber: number },
+): boolean {
+  if (state.status.type !== 'playing') return false;
+  return state.moveNumber >= 2 || tenant.userAbort === false;
+}
 
 export function createTenantWsRuntime<
   Kind extends string,
@@ -167,6 +191,19 @@ export function createTenantWsRuntime<
   type LiveRoom = TenantLiveRoom<Kind, C, M, State, Spec>;
   type LiveClient = TenantLiveClient<C>;
 
+  // Rematch is on by default for every tenant (tenantRoomOffersRematch says
+  // which rooms; tenant.rematch opts a tenant out), built from the registry so
+  // no registration has to forward a context (rematch-context.ts).
+  function rematchContextFor(
+    room: LiveRoom,
+  ): TenantRematchContext<Kind, C, M, State, Spec, LiveClient> | null {
+    if (!tenantRoomOffersRematch(tenant, room)) return null;
+    return registeredTenantRematchContext<Kind, C, M, State, Spec, LiveClient>(
+      room.id,
+      sendPayload,
+    );
+  }
+
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
     scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
@@ -176,6 +213,25 @@ export function createTenantWsRuntime<
     appendEvent: (room, event) => appendTenantEvent(tenant, room, event, eventWriterCtx),
     broadcastEventAppended,
   };
+
+  registerTenantPauseRecovery(tenant.kind, async (managedRoom, at, staleAfterMs) => {
+    const room = managedRoom as unknown as LiveRoom;
+    await room.pendingWrites;
+    // The DB selection can race a reconnect, a move, or another shutdown.
+    // Recheck canonical state and preserve an already-open reconnect grace.
+    if (
+      room.stopping ||
+      !room.projection.paused ||
+      room.projection.paused.at >= at - staleAfterMs ||
+      room.projection.state.status.type !== 'playing' ||
+      clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' ||
+      (room.resumeDeadline != null && room.resumeDeadline > at)
+    )
+      return false;
+    clearTenantResumeTimer(room);
+    await resumeTenantRoom(tenant, room, lifecycleCtx, at, 'grace-elapsed');
+    return true;
+  });
 
   function scheduleLifecycleTimers(room: LiveRoom): void {
     scheduleTenantLifecycleTimers(tenant, room, lifecycleCtx);
@@ -190,13 +246,19 @@ export function createTenantWsRuntime<
   }
 
   async function handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: LiveRoom,
   ): Promise<void> {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-    const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+    // A network id never names an engine, the chess stack's or this tenant's:
+    // an engine seat is authorised by its id alone (see parseNetworkClientId).
+    const requestedClientId = parseNetworkClientId(url.searchParams.get('client'));
+    const clientId =
+      requestedClientId && !tenant.engine?.isEngineClientId(requestedClientId)
+        ? requestedClientId
+        : randomUUID();
     // The browser's durable id; a guest seat is attributed to it at game end.
     const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
@@ -289,6 +351,7 @@ export function createTenantWsRuntime<
       userId: accountUser?.id ?? null,
     };
     room.clients.add(client);
+    room.seatsSeen = { ...room.seatsSeen, [assignment.seat]: true };
     displaceOlderTenantSeatClients(room, client);
     scheduleLifecycleTimers(room);
 
@@ -309,7 +372,8 @@ export function createTenantWsRuntime<
     scheduleEngineMove(room);
     // A player reconnecting after a rematch was finalized (while they were
     // offline) still gets routed to the new swapped-color room.
-    if (ctx.rematch) maybeReplayTenantRematchRedirect(ctx.rematch, room, client);
+    const rematch = rematchContextFor(room);
+    if (rematch) maybeReplayTenantRematchRedirect(rematch, room, client);
 
     socket.on('message', (raw) => {
       if (
@@ -342,7 +406,7 @@ export function createTenantWsRuntime<
   // other or a player), no engine scheduling, no rematch redirect replay. The
   // hello carries no seatToken. handleMessage enforces the read-only contract.
   function joinAsSpectator(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     room: LiveRoom,
     clientId: string,
@@ -396,7 +460,7 @@ export function createTenantWsRuntime<
   }
 
   async function handleMessage(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     room: LiveRoom,
     client: LiveClient,
     raw: string,
@@ -446,7 +510,7 @@ export function createTenantWsRuntime<
     // `color: seat` with no seat validation, so a spectator resign would
     // otherwise append `color:'spectator'` and corrupt the event log. After this
     // guard client.seat narrows to a real color; `seat` threads it downstream.
-    if (client.seat === 'spectator') return;
+    if (client.displaced || client.seat === 'spectator') return;
     const seat: C = client.seat;
     if (message.type === 'resign') {
       await handleResign(room, client, seat);
@@ -457,17 +521,28 @@ export function createTenantWsRuntime<
       return;
     }
     if (message.type === 'rematch:offer') {
-      if (!ctx.rematch) return;
-      offerTenantRematch(tenant, ctx.rematch, room, client);
-      await finalizeTenantRematchIfReady(tenant, ctx.rematch, room);
+      const rematch = rematchContextFor(room);
+      if (!rematch) return;
+      offerTenantRematch(tenant, rematch, room, client);
+      await finalizeTenantRematchIfReady(tenant, rematch, room);
       return;
     }
     if (message.type === 'rematch:cancel') {
-      if (ctx.rematch) cancelTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) cancelTenantRematch(tenant, rematch, room, client);
       return;
     }
     if (message.type === 'rematch:decline') {
-      if (ctx.rematch) declineTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) declineTenantRematch(tenant, rematch, room, client);
+      return;
+    }
+    if (
+      message.type === 'draw:offer' ||
+      message.type === 'draw:accept' ||
+      message.type === 'draw:decline'
+    ) {
+      await handleDraw(room, client, seat, message.type);
       return;
     }
     if (message.type !== 'move') return;
@@ -476,13 +551,26 @@ export function createTenantWsRuntime<
     const status = room.projection.state.status;
     if (status.type !== 'playing') return;
     // Paused by a server stop: the clock is frozen until the players are back.
-    if (room.projection.paused) return;
+    if (room.projection.paused) {
+      sendPayload(client, { type: 'error', reason: 'game_paused' });
+      return;
+    }
     // No moves until both seats are filled (a fresh room starts in `playing`, so
     // a seated player could otherwise move before the opponent/engine joined).
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    if (!tenantSeatMayAct(tenant, room.projection.state, seat)) return;
+    // Network clients can only act for their own human seat. Engine seats
+    // are server-owned, including clients using the retired delegation flag.
+    if (
+      message.browserBot === true ||
+      tenant.engine?.isEngineClientId(client.id) ||
+      tenant.engine?.isEngineClientId(room.projection.seats[seat]) ||
+      room.projection.seats[seat] !== client.id
+    )
+      return;
+    const mover = seat;
+    if (!tenantSeatMayAct(tenant, room.projection.state, mover)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the
     // chess-stack rule; closes the timer race for every tenant). The guard is
@@ -502,22 +590,22 @@ export function createTenantWsRuntime<
     // a chess-family tenant re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
-      ? tenant.rules.canonicalMove(room.projection.state, move, seat)
+      ? tenant.rules.canonicalMove(room.projection.state, move, mover)
       : tenant.rules.isLegalMove(room.projection.state, move)
         ? move
         : null;
     if (canonical === null) {
       // A tenant may turn a rejection into a per-mover signal (a drop bounce).
       // Sent only to this client, so it never leaks to others.
-      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, seat);
+      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, mover);
       if (rejection) sendPayload(client, rejection);
       return;
     }
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'move-played',
-      at: Date.now(),
+      at: tenant.rules.moveEventAt?.(canonical, Date.now()) ?? Date.now(),
       roomId: room.id,
-      color: seat,
+      color: mover,
       move: canonical,
     };
     let seq: number;
@@ -528,9 +616,11 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
+    if (seq < 0) return; // A concurrent duplicate was rejected by the serialized writer.
     broadcastEventAppended(room, event, seq);
-    // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
-    scheduleEngineMove(room);
+    // No engine scheduling here: the event writer already scheduled it. By now
+    // its 0 ms timer has fired, so a second call started a second search of the
+    // same position on every human move.
   }
 
   async function expireActiveClock(
@@ -557,13 +647,17 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
-    broadcastEventAppended(room, event, seq);
+    // The writer may refuse a stale expiry (-1) or store a policy move in its
+    // place (a declared Xiangqi Mahjong draw is discarded), so broadcast what
+    // landed, never the request.
+    if (seq < 0) return;
+    const appended = room.events[seq];
+    if (appended) broadcastEventAppended(room, appended, seq);
   }
 
   // `seat` is the caller's read-only-guarded color (never 'spectator').
   async function handleResign(room: LiveRoom, client: LiveClient, seat: C): Promise<void> {
-    if (room.projection.state.status.type !== 'playing') return;
-    if (room.projection.state.moveNumber < 2) return;
+    if (!tenantSeatMayResign(tenant, room.projection.state)) return;
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'seat-resigned',
       at: Date.now(),
@@ -581,12 +675,48 @@ export function createTenantWsRuntime<
     broadcastEventAppended(room, event, seq);
   }
 
+  // Draw offers (#530): PvP only, after both sides have moved (before that it is
+  // an abort), with both seats taken by people. The reducer holds the rest (one
+  // offer at a time, the decline cooldown, answering only the other side's
+  // offer), so a replayed log is judged by the same rules. Offering while the
+  // opponent's offer is pending is an accept.
+  async function handleDraw(
+    room: LiveRoom,
+    client: LiveClient,
+    seat: C,
+    kind: 'draw:offer' | 'draw:accept' | 'draw:decline',
+  ): Promise<void> {
+    if (!tenant.rules.finishDraw) return;
+    if (room.projection.state.status.type !== 'playing') return;
+    if (room.projection.state.moveNumber < 2) return;
+    for (const color of tenant.colors) {
+      const clientId = room.projection.seats[color];
+      if (!clientId || tenant.engine?.isEngineClientId(clientId)) return;
+    }
+    const pending = room.projection.drawOffer;
+    const crossing = kind === 'draw:offer' && pending !== undefined && pending.from !== seat;
+    const base = { at: Date.now(), roomId: room.id, color: seat };
+    const event: TenantRoomEvent<C, M, Spec> =
+      kind === 'draw:decline'
+        ? { type: 'draw-declined', ...base }
+        : kind === 'draw:accept' || crossing
+          ? { type: 'draw-agreed', ...base }
+          : { type: 'draw-offered', ...base };
+    let seq: number;
+    try {
+      seq = await appendTenantEvent(tenant, room, event, eventWriterCtx);
+    } catch (err) {
+      recordTenantPersistenceError(tenant, room.id, room.events.length, event.type, err as Error);
+      client.socket.close(1011, 'persistence failure');
+      return;
+    }
+    if (seq < 0) return;
+    broadcastEventAppended(room, event, seq);
+  }
+
   // `seat` is the caller's read-only-guarded color (never 'spectator').
   async function handleAbort(room: LiveRoom, client: LiveClient, seat: C): Promise<void> {
-    const status = room.projection.state.status;
-    if (status.type !== 'playing') return;
-    if (room.projection.state.moveNumber >= 2) return;
-    if (status.turn !== seat) return;
+    if (!tenantSeatMayAbort(tenant, room.projection.state, seat)) return;
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'game-aborted',
       at: Date.now(),
@@ -611,6 +741,32 @@ export function createTenantWsRuntime<
   ): void {
     for (const client of room.clients) {
       if (client.displaced) continue;
+      const count = tenant.visibility.clientEventCount?.(
+        room.projection.state,
+        room.events,
+        client.seat,
+      );
+      if (count !== undefined) {
+        // Sending even an empty delta leaks the private event's arrival and
+        // canonical seq. Release the ordered log and views together instead;
+        // snapshots reset the socket client's sequence-gap detector.
+        if (seq >= count && event.type === 'move-played') continue;
+        const snapshot = transportSnapshotPayload(room, client);
+        const clientEvent = TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)
+          ? null
+          : tenant.visibility.clientEventFor(
+              event,
+              client.seat,
+              tenantPlyAtEventIndex(room.events, seq),
+              room.events.slice(0, count),
+            );
+        sendPayload(client, {
+          ...snapshot,
+          ...tenantLiveHistoryExtras(tenant, room, client),
+          ...(clientEvent ? { event: clientEvent } : {}),
+        });
+        continue;
+      }
       if (room.projection.state.status.type !== 'playing') {
         sendPayload(client, transportSnapshotPayload(room, client));
         continue;
@@ -625,6 +781,7 @@ export function createTenantWsRuntime<
             event,
             client.seat,
             tenantPlyAtEventIndex(room.events, seq),
+            room.events,
           );
       sendPayload(client, {
         ...base,

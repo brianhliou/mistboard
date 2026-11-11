@@ -11,10 +11,28 @@ import {
   lockInfo,
   readLock,
   releaseLock,
+  releaseOnExit,
   tryAcquireLock,
 } from './lib/release-lock.mjs';
 
 const MODULE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'release-lock.mjs');
+
+test('a signal cancels the drain before releasing the lock and exiting', async () => {
+  const handlers = new Map();
+  const events = [];
+  const proc = {
+    on: (event, handler) => handlers.set(event, handler),
+    exit: (code) => events.push(code),
+  };
+  releaseOnExit({ release: () => events.push('unlock') }, proc, async () => {
+    await Promise.resolve();
+    events.push('cancel drain');
+  });
+  await handlers.get('SIGINT')();
+  assert.deepEqual(events, ['cancel drain', 'unlock', 130]);
+  handlers.get('exit')();
+  assert.deepEqual(events, ['cancel drain', 'unlock', 130]);
+});
 
 function tempLock(t) {
   const dir = mkdtempSync(path.join(tmpdir(), 'release-lock-'));

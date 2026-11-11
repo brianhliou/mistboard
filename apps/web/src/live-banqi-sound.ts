@@ -89,7 +89,7 @@ export function classifyBanqiOpponentSound(
   if (prev.status.turn === seat) return null; // the seat's own move handles its own sound
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
   if (someTileFlipped(prev, next)) return 'flip';
-  if (ownRevealedCount(next, seat) < ownRevealedCount(prev, seat)) return 'captured';
+  if (ownRevealedCount(next, seat) < ownRevealedCount(prev, seat)) return 'capture';
   return 'move';
 }
 

@@ -1,9 +1,23 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
-import { createClock, expireClock, type GameEvent, replayGameEvents } from '@mistboard/game';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  applyXmjMove,
+  createClock,
+  createXmjRoomState,
+  createXmjSetup,
+  expireClock,
+  type GameEvent,
+  replayGameEvents,
+  XIANGQI_MAHJONG_SPEC_ID,
+  type XmjSeat,
+  xmjPendingAction,
+} from '@mistboard/game';
+import { crawlerFixtureSources } from './crawler-content-fixtures.js';
+import { CRAWLER_CONTENT_MANIFEST } from './crawler-content-manifest.js';
 import {
   adminDebugTokenFromProtocolHeader,
   airsOnDelay,
@@ -20,13 +34,21 @@ import {
   isPrivateOrReservedIp,
   isReviewShellRoute,
   legacyPageRedirect,
+  localePuzzlesRedirect,
   proxyTrustWarningFor,
   type RuntimeEnv,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
   withDelayedAir,
 } from './server-policy.js';
-import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
+import { SITEMAP_STATIC_ROUTES, serveSpaShellWithRoutePreloads } from './server-static-pages.js';
+import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import {
+  sitemapConformanceFailures,
+  sitemapContract,
+  sitemapPathIsTracked,
+} from './sitemap-content.js';
+import type { XmjEvent } from './xiangqi-mahjong-tenant.js';
 
 test('live persisted events are not public replay data', () => {
   const events: GameEvent[] = [
@@ -75,6 +97,42 @@ test('finished Dark Xiangqi event logs stay out of the generic chess replay API'
     status: 403,
     body: { error: 'game_not_public' },
   });
+});
+
+// The generic replay API sends the raw log, and a Xiangqi Mahjong log opens with
+// every wall of the match in its room-created setup. Its own postgame route
+// (routes/xiangqi-mahjong-games.ts) is the only public read; this one stays shut
+// live and finished, so a later chess-shell mapping for the spec cannot open it.
+test('Xiangqi Mahjong logs never reach the generic replay API, live or finished', () => {
+  const roomId = 'xmj_policy';
+  const setup = createXmjSetup(() => 0.5);
+  const log: XmjEvent[] = [
+    { type: 'room-created', at: 1, roomId, gameSpecId: XIANGQI_MAHJONG_SPEC_ID, setup },
+    { type: 'seat-assigned', at: 2, roomId, clientId: 'e', seat: 'east' },
+    { type: 'seat-assigned', at: 3, roomId, clientId: 'w', seat: 'west' },
+  ];
+  const seats: readonly XmjSeat[] = ['east', 'west'];
+  let state = createXmjRoomState(setup, roomId);
+  let now = 10_000;
+  for (let step = 0; step < 4000 && state.status.type === 'playing'; step += 1) {
+    now += 10_000;
+    const move =
+      seats.map((seat) => xmjBotMove(state, seat, now)).find((m) => m !== null) ??
+      xmjPendingAction(state)?.move;
+    assert.ok(move, `stuck at move ${state.moveNumber}`);
+    state = applyXmjMove(state, move);
+    log.push({ type: 'move-played', at: move.at, roomId, color: move.by, move });
+  }
+  assert.equal(state.status.type, 'finished');
+
+  for (const events of [log.slice(0, 3), log.slice(0, 13), log]) {
+    const asGameEvents = events as unknown as GameEvent[];
+    assert.equal(canExposeFullEventReplay(asGameEvents), false);
+    assert.deepEqual(eventReplayResponse(asGameEvents), {
+      status: 403,
+      body: { error: 'game_not_public' },
+    });
+  }
 });
 
 test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
@@ -407,6 +465,7 @@ const PARAMETRIC_ROUTE_SAMPLES: Record<string, readonly string[]> = {
   '^\\/coach(?:\\/([^/]+))?$': ['/coach', '/coach/somehandle'],
   '^\\/players\\/([^/]+)$': ['/players/yin-sheng'],
   '^\\/changelog\\/\\d{4}-\\d{2}$': ['/changelog/2026-09'],
+  '^\\/practice\\/([a-z-]+)\\/([a-z0-9-]+)$': ['/practice/endgames-soldier/soldier-vs-advisor'],
   '^\\/players\\/teams\\/([^/]+)$': ['/players/teams/hebei-team'],
   '^(?:\\/(?:zh-hans|zh-hant))?\\/study\\/([A-Za-z0-9]+)$': [
     '/study/Ab12cd',
@@ -466,6 +525,18 @@ test('isClientRoute covers every parametric route matcher declared in main.ts', 
 // One concrete path per branch of isNoindexRoute, including the parametric
 // prefixes, so the parity check below actually exercises each one.
 const NOINDEX_ROUTE_SAMPLES = [
+  '/ops',
+  '/titles',
+  '/engines',
+  '/engine/pikafish',
+  '/accounts',
+  '/database',
+  '/metrics',
+  '/readouts',
+  '/forum/reports',
+  '/broadcast/xiangqi/ops',
+  '/practice/position',
+  '/play',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -474,6 +545,10 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/following',
   '/correspondence',
   '/challenge/abc123',
+  '/lag',
+  '/verify-title',
+  '/xiangqi/game/abc123',
+  '/jungle-flip/game/abc123',
 ];
 
 // A noindex route that is not a client route never reaches the shell handler
@@ -527,9 +602,58 @@ test('the announcement archive is indexable and answers on one URL', () => {
   assert.equal(isClientRoute('/feed/anything'), false);
 });
 
+// Site-played finished games had no canonical and served indexable until
+// 2026-10-17; the archive's games are real events and stay indexable.
+test('a site-played game page is noindexed; an archive game and the lists are not', () => {
+  for (const route of ['/xiangqi/game/x1', '/jungle-flip/game/x1', '/jieqi/game/x1/']) {
+    assert.equal(isNoindexRoute(route), true, route);
+  }
+  for (const route of ['/historical-xiangqi/game/x1', '/games', '/games/search', '/xiangqi']) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
+});
+
 test('isNoindexRoute ignores a trailing slash', () => {
   assert.equal(isNoindexRoute('/account/'), true);
   assert.equal(isNoindexRoute('/following/'), true);
+  assert.equal(isNoindexRoute('/forum/reports/'), true);
+});
+
+test('admin preview noindex policy matches only admin shells and preserves public routes and assets', () => {
+  for (const route of [
+    '/titles',
+    '/engines',
+    '/engine/pikafish',
+    '/accounts',
+    '/database',
+    '/broadcast/xiangqi/ops',
+    '/forum/reports',
+    '/practice/position',
+    '/play',
+  ]) {
+    assert.equal(isClientRoute(route), true, route);
+    assert.equal(isNoindexRoute(route), true, route);
+    assert.equal(isNoindexRoute(`${route}/`), true, route);
+  }
+  for (const route of ['/verify-title', '/bots', '/games/search']) {
+    // /verify-title is an existing noindex utility, not the private /titles queue.
+    assert.equal(isNoindexRoute(route), route === '/verify-title', route);
+  }
+  for (const route of [
+    '/engine',
+    '/engine/fairy-stockfish/stockfish.js',
+    '/engines-extra',
+    '/accounts-extra',
+    '/database-extra',
+    '/titles-extra',
+    '/broadcast/xiangqi',
+    '/broadcast/xiangqi/ops-extra',
+    '/forum/reports-extra',
+    '/practice/position-extra',
+    '/play-extra',
+  ]) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
 });
 
 // The sitemap must never advertise a route the server 404s: every static route
@@ -540,6 +664,7 @@ test('isNoindexRoute ignores a trailing slash', () => {
 test('sitemap static routes are live client routes, never parked ones', () => {
   assert.ok(SITEMAP_STATIC_ROUTES.length > 0, 'expected sitemap static routes');
   for (const route of SITEMAP_STATIC_ROUTES) {
+    assert.ok(sitemapPathIsTracked(route), `sitemap advertises a missing body: ${route}`);
     if (route === '/') continue;
     assert.equal(
       PARKED_CLIENT_ROUTES.has(route),
@@ -554,6 +679,97 @@ test('sitemap static routes are live client routes, never parked ones', () => {
   }
 });
 
+test('sitemap conformance exempts only current tracked gaps from planted body failures', () => {
+  // A page can lose its knownGap as another #956 child lands. Check the current
+  // contracts rather than assuming a particular route will always be a gap.
+  const bodyFailures = ['body below floor'];
+  for (const path of SITEMAP_STATIC_ROUTES) {
+    const contract = CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === path);
+    assert.ok(contract, path);
+    assert.deepEqual(sitemapConformanceFailures(path, []), [], path);
+    assert.deepEqual(
+      sitemapConformanceFailures(path, bodyFailures),
+      contract.knownGap ? [] : bodyFailures,
+      path,
+    );
+  }
+  // Planted sitemap route: even a passing body needs an independent contract.
+  assert.deepEqual(sitemapConformanceFailures('/planted-unclassified', []), [
+    'sitemap route has no crawler manifest entry: /planted-unclassified',
+  ]);
+});
+
+test('every static sitemap URL passes its crawler floor or has a tracked gap without sockets', async (t) => {
+  const staticDir = resolve(import.meta.dirname, '../../web/dist');
+  const metadataFile = resolve(staticDir, 'prerender-sitemap.json');
+  if (!existsSync(metadataFile)) {
+    t.skip('host build supplies prerender-sitemap.json');
+    return;
+  }
+  const baked = JSON.parse(readFileSync(metadataFile, 'utf8')) as Array<{
+    path: string;
+    file?: string;
+  }>;
+  const { auditCrawlerRoute } = await import(
+    pathToFileURL(resolve(import.meta.dirname, '../../../scripts/crawler-floor.mjs')).href
+  );
+  const sources = crawlerFixtureSources();
+  const fetchImpl = async (url: URL) => {
+    if (url.pathname === '/leaderboard')
+      return {
+        status: 308,
+        headers: new Headers({ location: '/player' }),
+        text: async () => '',
+      };
+    const record = baked.find((entry) => entry.path === url.pathname && entry.file);
+    if (record?.file)
+      return {
+        status: 200,
+        headers: new Headers(),
+        text: async () => readFileSync(resolve(staticDir, record.file!), 'utf8'),
+      };
+    let html = '';
+    let status = 200;
+    const headers = new Headers();
+    const response = {
+      writeHead(code: number, values: Record<string, string> = {}) {
+        status = code;
+        for (const [name, value] of Object.entries(values)) headers.set(name, value);
+      },
+      end(body: string) {
+        html = body;
+      },
+    } as unknown as ServerResponse;
+    await serveSpaShellWithRoutePreloads({
+      ...sources,
+      staticDir,
+      response,
+      pathname: url.pathname,
+      publicHost: url.origin,
+    });
+    return { status, headers, text: async () => html };
+  };
+  // Aliases stay outside the sitemap, but still have crawler redirect contracts.
+  for (const path of [...SITEMAP_STATIC_ROUTES, '/leaderboard']) {
+    const entry = sitemapContract(path)!;
+    const result = await auditCrawlerRoute(entry, {
+      base: 'https://mistboard.test',
+      manifest: CRAWLER_CONTENT_MANIFEST,
+      fetchImpl,
+    });
+    assert.deepEqual(sitemapConformanceFailures(path, result.failures), [], path);
+  }
+  // Planted: the right redirect status cannot compensate for the wrong target.
+  const wrongLocation = await auditCrawlerRoute(sitemapContract('/leaderboard')!, {
+    base: 'https://mistboard.test',
+    fetchImpl: async (url: URL) => ({
+      ...(await fetchImpl(url)),
+      headers: new Headers({ location: '/wrong' }),
+    }),
+  });
+  assert.deepEqual(wrongLocation.failures, ['Location /wrong, expected /player']);
+});
+
 test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/game/abc123'), true);
   assert.equal(isClientRoute('/dark-xiangqi/game/dxq_abc123'), true);
@@ -564,6 +780,7 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/puzzles/mini-xiangqi-red-back-rank-net-1'), true);
   assert.equal(isClientRoute('/account/settings/privacy'), true);
   assert.equal(isClientRoute('/@/brianhliou'), true);
+  assert.equal(isClientRoute('/@/brianhliou/achievements'), true);
   assert.equal(isClientRoute('/blog/dark-chess-concepts'), true);
   assert.equal(isClientRoute('/blog/community'), true);
   assert.equal(isClientRoute('/zh-hans/blog'), true);
@@ -618,6 +835,28 @@ test('legacyPageRedirect sends the old games-database paths to /games/search, on
   assert.equal(legacyPageRedirect('/historical-xiangqi/game/hxq_abc123'), null);
 });
 
+// /zh-hans/puzzles/... served the 404 shell (2026-10-29): puzzles have one URL
+// in every language, so the prefix hops off and the language rides as ?lang=.
+test('localePuzzlesRedirect drops the language prefix from a puzzle URL, once', () => {
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzles', ''), '/puzzles?lang=zh-hans');
+  assert.equal(localePuzzlesRedirect('/zh-hant/puzzles/', ''), '/puzzles?lang=zh-hant');
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/xq-mined-hxq_1-94', '?theme=x'),
+    '/puzzles/xq-mined-hxq_1-94?theme=x&lang=zh-hans',
+  );
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/themes', ''),
+    '/puzzles/themes?lang=zh-hans',
+  );
+  // The target is a client route and is not itself redirected.
+  assert.equal(localePuzzlesRedirect('/puzzles', '?lang=zh-hans'), null);
+  assert.equal(isClientRoute('/puzzles'), true);
+  assert.equal(isClientRoute('/zh-hans/puzzles'), false);
+  // Other zh paths are untouched.
+  assert.equal(localePuzzlesRedirect('/zh-hans/rules', ''), null);
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzlesx', ''), null);
+});
+
 test('legacyPageRedirect sends /challenges to /champions in each language, once', () => {
   assert.equal(legacyPageRedirect('/challenges'), '/champions');
   assert.equal(legacyPageRedirect('/challenges/'), '/champions');
@@ -632,6 +871,13 @@ test('legacyPageRedirect sends /challenges to /champions in each language, once'
   assert.equal(legacyPageRedirect('/challenge/abc123'), null);
   assert.equal(legacyPageRedirect('/challenges/abc123'), null);
   assert.equal(legacyPageRedirect('/en/challenges'), null);
+});
+
+test('legacyPageRedirect sends the Chinese Taipei team page to the one Taiwan team', () => {
+  assert.equal(legacyPageRedirect('/players/teams/chinese-taipei'), '/players/teams/taiwan');
+  assert.equal(legacyPageRedirect('/players/teams/chinese-taipei/'), '/players/teams/taiwan');
+  assert.equal(legacyPageRedirect('/players/teams/taiwan'), null);
+  assert.equal(isClientRoute('/players/teams/taiwan'), true);
 });
 
 test('isClientRoute lets vendored ceval engine assets fall through to static', () => {
@@ -660,6 +906,10 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isReviewShellRoute('/analysis/xiangqi'), true);
   assert.equal(isReviewShellRoute('/analysis/banqi'), true);
   assert.equal(isReviewShellRoute('/analysis'), true);
+  // The Chinese xiangqi board (象棋AI分析) runs the same engine.
+  assert.equal(isReviewShellRoute('/zh-hans/analysis/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/zh-hant/analysis/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/zh-hans/editor/xiangqi'), false);
   // The board editor has no engine: a plain client page, never cross-origin
   // isolated.
   assert.equal(isReviewShellRoute('/editor'), false);
@@ -673,6 +923,12 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isClientRoute('/practice/position/'), true);
   assert.equal(isClientRoute('/practice/position/extra'), false);
   assert.equal(isClientRoute('/practice/positions'), false);
+  // One shelf exercise by slug (#521): a real set/position pair is a plain
+  // client page (it only redirects to the study), anything else 404s.
+  assert.equal(isClientRoute('/practice/endgames-horse/horse-vs-advisor'), true);
+  assert.equal(isReviewShellRoute('/practice/endgames-horse/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-soldier/horse-vs-advisor'), false);
+  assert.equal(isClientRoute('/practice/endgames-horse/no-such-position'), false);
   // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
   // Both the list and a specific puzzle must be isolated, because the isolation
   // is fixed at document load and pushState nav between puzzles never reloads.
@@ -704,6 +960,17 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/historical-xiangqi/games'), false);
   assert.equal(isReviewShellRoute('/blog/dark-chess-concepts'), false);
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
+});
+
+test('Gomoku analysis serves an isolated, indexable shell without an editor or study registration', () => {
+  assert.equal(isClientRoute('/analysis/gomoku'), true);
+  assert.equal(isClientRoute('/analysis/gomoku/'), true);
+  assert.equal(isReviewShellRoute('/analysis/gomoku'), true);
+  assert.equal(isNoindexRoute('/analysis/gomoku'), false);
+  assert.equal(isNoindexRoute('/analysis/gomoku/'), false);
+  assert.equal(SITEMAP_STATIC_ROUTES.includes('/analysis/gomoku'), false);
+  assert.equal(isClientRoute('/analysis/gomoku/extra'), false);
+  assert.equal(isClientRoute('/analysis/unknown-variant'), false);
 });
 
 test('isClientRoute rejects unknown paths', () => {
@@ -753,9 +1020,10 @@ test('isPrivateOrReservedIp treats real public addresses as public', () => {
 
 test('proxyTrustWarningFor warns only in production when the resolved IP is private', () => {
   const prod: RuntimeEnv = { RAILWAY_SERVICE_NAME: 'web' };
-  // prod + private resolved IP → warns, and names the IP + hops in the message
+  // prod + private resolved IP → warns with the hop count, never header values
   const warning = proxyTrustWarningFor('10.0.0.5', 1, prod);
-  assert.ok(warning?.includes('10.0.0.5') && warning.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.ok(warning?.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.equal(warning?.includes('10.0.0.5'), false);
   // prod + public resolved IP → no warning
   assert.equal(proxyTrustWarningFor('203.0.113.7', 1, prod), null);
   // non-production → never warns, even for a private IP
@@ -780,13 +1048,29 @@ test('locale-prefixed study permalinks are client routes AND review-shell routes
   }
 });
 
+test('the study list is a route in all three locales, and not a review shell', () => {
+  for (const path of ['/study', '/zh-hans/study', '/zh-hant/study']) {
+    assert.equal(isClientRoute(path), true, `${path} should serve the SPA shell`);
+    assert.equal(isReviewShellRoute(path), false, `${path} mounts no engine`);
+  }
+});
+
 test('a bogus locale prefix on a study path is not a route', () => {
   for (const path of [
     '/fr/study/Ab12cd',
     '/zh/study/Ab12cd',
-    '/zh-hans/study/',
+    '/fr/study',
+    '/zh/study',
+    '/zh-hans/studies',
     '/study/Ab12cd/Xy34ef/extra',
   ]) {
     assert.equal(isClientRoute(path), false, `${path} should not match`);
+  }
+});
+
+test('unified Ops and the legacy report routes are client shells kept out of search', () => {
+  for (const path of ['/ops', '/ops/', '/metrics', '/readouts']) {
+    assert.equal(isClientRoute(path), true, path);
+    assert.equal(isNoindexRoute(path), true, path);
   }
 });

@@ -1,8 +1,10 @@
 import { fileURLToPath } from 'node:url';
+import { personNameForLocale } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
-import { getPool } from './persistence-db.js';
+import { close, getPool, init, isInitialized } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { importXiangqiBroadcastPack } from './persistence-xiangqi-broadcasts.js';
+import * as playerPersistence from './persistence-xiangqi-players.js';
 import {
   foldPlayers,
   listXiangqiPlayerBoards,
@@ -208,6 +210,79 @@ describe('player pages, derived from the archive', () => {
   });
 });
 
+test('player teaching games resolve canonical slugs and exclude non-A and empty boards', async (t) => {
+  assert.equal(typeof playerPersistence.listXiangqiPlayerGames, 'function');
+  if (!isInitialized()) {
+    init('postgres://unused@127.0.0.1:9/never');
+    t.after(close);
+  }
+  const playerRows = [
+    {
+      ...row({
+        name: 'Fixture Player',
+        nameEn: 'Shared Name',
+        tour: '2026-shanghai-cup',
+        games: 2,
+      }),
+      federation: 'North',
+      federation_en: 'North',
+    },
+    {
+      ...row({ name: 'Other Player', nameEn: 'Shared Name', tour: '2026-shanghai-cup', games: 1 }),
+      federation: 'South',
+      federation_en: 'South',
+    },
+  ];
+  const boards = [
+    { id: 'a-red', tour: '2026-shanghai-cup', colour: 'red', plies: 3 },
+    { id: 'a-black', tour: '2026-xiangqi-league', colour: 'black', plies: 3 },
+    { id: 'b', tour: '2026-world-xiangqi-open', colour: 'red', plies: 3 },
+    { id: 'ungraded', tour: 'ungraded-event', colour: 'red', plies: 3 },
+    { id: 'result-only', tour: '2026-shanghai-cup', colour: 'red', plies: 0 },
+  ];
+  const pack = await readXiangqiBroadcastFixturePack(FIXTURE_DIR, false);
+  const boardReads: string[] = [];
+  t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
+    if (sql.includes('COUNT(*)::text AS games')) return { rows: playerRows };
+    if (sql.includes('FROM sides')) {
+      assert.match(sql, /boards.result <> '\*'/);
+      assert.match(sql, /WHERE sides.me->>'name' = \$1/);
+      assert.deepEqual(values, ['Fixture Player']);
+      return {
+        rows: boards.map((board) => ({
+          board_id: board.id,
+          tour_slug: board.tour,
+          tour_name: board.tour,
+          tour_name_en: null,
+          round_id: 'round',
+          round_name: 'Round',
+          starts_at: null,
+          colour: board.colour,
+          them: {},
+          result: '1-0',
+          outcome: 'win',
+          ply_count: board.plies,
+          source_url: null,
+          opening: null,
+        })),
+      };
+    }
+    assert.match(sql, /SELECT \* FROM xiangqi_broadcast_boards WHERE id = \$1/);
+    boardReads.push(String(values[0]));
+    return { rows: [{ payload: { ...(pack.boards[0] as object), id: values[0] }, ply_count: 3 }] };
+  });
+  for (const slug of ['unknown-player', 'shared-name', 'shared-name-south-missing']) {
+    assert.deepEqual(await playerPersistence.listXiangqiPlayerGames(slug), []);
+  }
+  const games = await playerPersistence.listXiangqiPlayerGames('shared-name-north');
+  assert.deepEqual(
+    games.map((game) => game.id),
+    ['a-red', 'a-black'],
+  );
+  assert.deepEqual(boardReads, ['a-red', 'a-black']);
+  assert.ok(games.every((game) => game.moves.length > 0));
+});
+
 definePersistenceTests('xiangqi players', () => {
   test('lists the fixture pack players from finished boards only, with their boards', async () => {
     await importXiangqiBroadcastPack(await readXiangqiBroadcastFixturePack(FIXTURE_DIR, false));
@@ -244,5 +319,53 @@ definePersistenceTests('xiangqi players', () => {
     );
     const withOpening = await listXiangqiPlayerBoards(red, () => null);
     assert.equal(withOpening[0]?.opening, 'C70 五七炮对屏风马进３卒');
+
+    const pack = await readXiangqiBroadcastFixturePack(FIXTURE_DIR, false);
+    for (const slug of ['2026-world-xiangqi-open', 'ungraded-event']) {
+      await importXiangqiBroadcastPack({
+        tour: { ...(pack.tour as object), slug },
+        rounds: pack.rounds.map((round) => ({
+          ...(round as object),
+          tourSlug: slug,
+          id: `${slug}-round`,
+        })),
+        boards: pack.boards.map((board, index) => ({
+          ...(board as object),
+          tourSlug: slug,
+          roundId: `${slug}-round`,
+          id: `${slug}-${index}`,
+        })),
+      });
+    }
+    const games = await playerPersistence.listXiangqiPlayerGames('red-master');
+    assert.deepEqual(
+      games.map((game) => game.id),
+      boards.map((board) => board.boardId),
+    );
+    assert.ok(games.every((game) => game.result !== '*' && game.moves.length > 0));
+    assert.deepEqual(await playerPersistence.listXiangqiPlayerGames('unknown-player'), []);
   });
+});
+
+test('folded identities and own-script metadata survive page-script display', () => {
+  const players = foldPlayers(
+    [],
+    [
+      { name: '赵奕帆', group: 'men' },
+      { name: '于幼华', group: 'men' },
+      { name: '孙勇征', group: 'men' },
+      { name: '党斐', group: 'men' },
+    ],
+  );
+  assert.deepEqual(
+    players.map((p) => p.name).sort(),
+    ['赵奕帆', '于幼华', '孙勇征', '党斐'].sort(),
+  );
+  for (const p of players) {
+    const before = JSON.stringify(p);
+    personNameForLocale(p, 'zh-Hant');
+    assert.equal(personNameForLocale(p, 'zh-Hans'), p.name);
+    assert.equal(JSON.stringify(p), before);
+    assert.equal(p.slug, playerSlugBase(p.nameEn, p.name));
+  }
 });

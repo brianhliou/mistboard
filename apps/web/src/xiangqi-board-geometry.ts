@@ -73,7 +73,14 @@ export function xiangqiBoardPoint(
 
 /** The board's own viewBox rectangle. 'intersection' spans the outer lines;
  *  'cell' spans full squares (half a cell beyond the outer intersections) plus
- *  the river gap. Mirrors the live renderer's viewBox math exactly. */
+ *  the river gap. Mirrors the live renderer's viewBox math exactly.
+ *
+ *  The squares keep their full size either way. A piece spans
+ *  XIANGQI_PIECE_CELL_REACH of its square, so the board shows round an edge piece
+ *  as it does between two neighbours. (An edge trimmed to the piece's outline was
+ *  tried on 2026-10-29 while pieces filled 98% of the square; at 85% it would cut
+ *  the edge squares short.) With a gutter the squares end at a framed rim
+ *  (xiangqiSurfaceGrid). */
 export function xiangqiBoardViewBox(
   layout: XiangqiBoardLayout,
   geo: XiangqiBoardGeometry,

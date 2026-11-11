@@ -1,4 +1,4 @@
-import { DARK_CHESS_SPEC_ID, darkChessFen, type GameEvent, type Move } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, type GameEvent, type Move } from '@mistboard/game';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import './game-shell.css';
 import './landing.css';
@@ -20,7 +20,6 @@ import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-anal
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { moveClocksFromEvents } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { CHESS_SEAT_COLORS } from './review/review-seat-colors.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -129,8 +128,6 @@ export function mountDarkChessPostgame(
     details,
     moves,
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('dark-chess', darkChessFen(truth)),
-    boardEditorHref: (truth) => editorHref('dark-chess', darkChessFen(truth)),
     // Underboard parity with the xiangqi-family siblings (lichess anatomy):
     // Move times, Crosstable, and Share & export carrying the PGN/JSON downloads.
     moveTimes: moveTimesFromEvents(events, moveEvents),
@@ -159,8 +156,9 @@ export function mountDarkChessPostgame(
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('dark-chess', game.roomId),
-      run: () => requestGameAnalysis('dark-chess', game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('dark-chess', game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('dark-chess', game.roomId, { signal, onStatus }),
     },
     // Ranked alternatives per ply, from Misty's own solve. Under fog a PV is undefined (the move
     // leads to a distribution over the opponent's real position), so the honest alternatives
@@ -169,13 +167,15 @@ export function mountDarkChessPostgame(
     // against the hidden truth. The POST is account-gated, so canRun keeps signed-out viewers
     // off a doomed 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedDarkChessDecisions(game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedDarkChessDecisions(game.roomId, options).then((summary) =>
           summary ? darkChessDecisionOverlay(summary, moves) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () =>
-        requestDarkChessDecisions(game.roomId).then((s) => darkChessDecisionOverlay(s, moves)),
+      run: (options) =>
+        requestDarkChessDecisions(game.roomId, options).then((s) =>
+          darkChessDecisionOverlay(s, moves),
+        ),
     },
   });
 }

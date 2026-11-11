@@ -19,7 +19,7 @@
 // Usage (from the repo root; appends one JSON line per position to --out and
 // skips positions already there, so a run can be resumed):
 //   npx tsx scripts/variant-lab/jungle-katago-evals.ts \
-//     --games-file ~/projects/brianhliou.com/assets/jungle-games/katago-vs-misty-2026-09-21.jsonl \
+//     --games-file apps/web/public/jungle-games/katago-vs-misty-2026-09-21.jsonl \
 //     --games 0,5,10 [--every-game 5] [--stride 4] [--shard 0/3] --out evals.jsonl
 
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
@@ -45,7 +45,7 @@ const arg = (k: string, d: string): string => {
 const GAMES_FILE = resolve(
   arg(
     '--games-file',
-    `${HOME}/projects/brianhliou.com/assets/jungle-games/katago-vs-misty-2026-09-21.jsonl`,
+    resolve(HERE, '../../apps/web/public/jungle-games/katago-vs-misty-2026-09-21.jsonl'),
   ),
 );
 const KATAGO = resolve(

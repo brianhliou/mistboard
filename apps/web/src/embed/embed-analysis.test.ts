@@ -69,6 +69,12 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
 });
 
 describe('loadEmbedAnalysis', () => {
+  it('makes no API request for unavailable FFQ analysis', async () => {
+    const calls = stubApi({});
+    expect(await loadEmbedAnalysis('ffq-banqi', ROOM, noMoves)).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
   it('reads the cache with GETs only, and is null when the game was never analysed', async () => {
     const calls = stubApi({});
     expect(await loadEmbedAnalysis('jieqi', ROOM, noMoves)).toBeNull();
@@ -164,5 +170,51 @@ describe('loadEmbedAnalysis', () => {
     const calls = stubApi({});
     expect(await loadEmbedAnalysis('dark-xiangqi', 'dx_1', noMoves)).toBeNull();
     expect(calls).toEqual([]);
+  });
+
+  it('keeps fog advice playable from cached decisions without quoting hindsight or drawing arrows', async () => {
+    const calls = stubApi({
+      '/api/dark-chess/games/fog/analysis': {
+        engineId: 'cached',
+        depth: 12,
+        plies: [
+          { ply: 0, cp: 250, mate: null, best: 'g1f3' },
+          { ply: 1, cp: -300, mate: null, best: 'g8f6' },
+        ],
+      },
+      '/api/dark-chess/games/fog/decisions': {
+        engineId: 'cached',
+        depth: 12,
+        decisions: [
+          {
+            ply: 1,
+            mover: 'white',
+            bestWin: 90,
+            playedWin: 40,
+            playedRank: 10,
+            candidates: [
+              { move: 'd2d4', win: 90 },
+              { move: 'e2e4', win: 40, played: true },
+            ],
+          },
+        ],
+      },
+    });
+    const loaded = await loadEmbedAnalysis('dark-chess', 'fog', {
+      playedMoves: async () => [{ ply: 1, from: 'e2', to: 'e4' }],
+      events: async () => [
+        {
+          type: 'move-played',
+          at: 1,
+          roomId: 'fog',
+          color: 'white',
+          move: { from: 'e2', to: 'e4' },
+        },
+      ],
+    });
+    expect(loaded?.bestMoves.get(1)).toBe('d2d4');
+    expect(loaded?.overlayAtPly(0).arrows).toEqual([]);
+    expect(loaded?.annotations.get(1)?.note).not.toContain('g1');
+    expect(calls.every((c) => c.method === 'GET')).toBe(true);
   });
 });

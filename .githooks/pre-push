@@ -35,4 +35,13 @@ if [ "${MISTBOARD_RELEASE_PUSH:-}" != "1" ] && [ "${SKIP_PREPUSH:-}" != "1" ]; t
   exit 1
 fi
 
+# release:prod has just observed a completed green hosted CI run for this
+# exact SHA. Keep the hook enabled without repeating the local gate while
+# production is already drained. Other pushes still run the usual gate.
+if [ "${MISTBOARD_RELEASE_PUSH:-}" = "1" ] \
+  && [ "${MISTBOARD_RELEASE_CI_VERIFIED:-}" = "$main_local_sha" ]; then
+  echo "pre-push: release candidate passed hosted CI at $main_local_sha"
+  exit 0
+fi
+
 node scripts/pre-push-check.mjs "$main_local_sha" "$main_remote_sha"

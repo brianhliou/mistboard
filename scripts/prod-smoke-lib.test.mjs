@@ -212,6 +212,7 @@ test('parseJsonResponse: empty -> null, JSON -> value, garbage -> error naming u
 
 test('variant configs: every entry is complete and self-consistent', () => {
   const expected = {
+    gomoku: 'gomoku',
     atomic: 'atomic-xiangqi',
     crazyhouse: 'crazyhouse-xiangqi',
     fortress: 'fortress-xiangqi',
@@ -223,7 +224,9 @@ test('variant configs: every entry is complete and self-consistent', () => {
     'jungle-flip': 'jungle-flip',
     xiangqi: 'xiangqi',
     'xiangqi-pikafish': 'xiangqi',
+    'xiangqi-worst': 'xiangqi',
     'jieqi-abjchess': 'jieqi',
+    'jieqi-jqe': 'jieqi',
     'jungle-katago': 'jungle',
   };
   assert.deepEqual(Object.keys(VARIANT_SMOKE_CONFIGS).sort(), Object.keys(expected).sort());
@@ -355,6 +358,87 @@ test('evaluateSmokeMessage: non-matching engine seat never aborts', () => {
     state: playingState(),
   });
   assert.deepEqual(effects, []);
+});
+
+test('Gomoku smoke requires a Rapfi reply beyond the dealt opening, on the white seat', () => {
+  const config = VARIANT_SMOKE_CONFIGS.gomoku;
+  const opening = { stones: [{}, {}, {}], turn: 'white' };
+  const reply = {
+    seats: { black: 'human', white: 'rapfi-level-8' },
+    state: playingState({ opening, ply: 4, lastMove: { to: 'a1' } }),
+  };
+  assert.equal(evaluateSmokeMessage(config, CONTEXT(), reply)[0].kind, 'abort');
+  for (const state of [
+    { ...reply.state, ply: 3 },
+    { ...reply.state, lastMove: null },
+    { ...reply.state, opening: { ...opening, turn: 'black' } },
+  ]) {
+    assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { ...reply, state }), []);
+  }
+  assert.deepEqual(
+    evaluateSmokeMessage(config, CONTEXT(), {
+      ...reply,
+      seats: { white: 'misty-jungle-level-1' },
+    }),
+    [],
+  );
+});
+
+test('Gomoku human-first deals open with a stone on an empty corner, never abort', () => {
+  const effects = evaluateSmokeMessage(VARIANT_SMOKE_CONFIGS.gomoku, CONTEXT(), {
+    type: 'hello',
+    seat: 'black',
+    seatToken: 'tok',
+    seats: { black: 'human', white: 'rapfi-level-1' },
+    state: playingState({
+      opening: { stones: [{ square: 'a1' }, { square: 'h8' }], turn: 'black' },
+      ply: 2,
+      lastMove: null,
+    }),
+  });
+  assert.deepEqual(effects, [
+    { kind: 'seat-token', seatToken: 'tok' },
+    { kind: 'move', to: 'o15' },
+  ]);
+});
+
+test('Gomoku smoke resigns after the engine replies to its stone, then succeeds on resignation', () => {
+  const config = VARIANT_SMOKE_CONFIGS.gomoku;
+  const opening = { stones: [{ square: 'h8' }, { square: 'h9' }], turn: 'black' };
+  const seats = { black: 'human', white: 'rapfi-level-1' };
+  const context = { ...CONTEXT(), sentMove: true };
+  // Our own stone echoed back (engine still to move) changes nothing.
+  assert.deepEqual(
+    evaluateSmokeMessage(config, context, {
+      seats,
+      state: playingState({
+        opening,
+        ply: 3,
+        status: { type: 'playing', turn: 'white' },
+        lastMove: { to: 'a1' },
+      }),
+    }),
+    [],
+  );
+  const reply = playingState({ opening, ply: 4, moveNumber: 2, lastMove: { to: 'g7' } });
+  assert.deepEqual(evaluateSmokeMessage(config, context, { seats, state: reply }), [
+    {
+      kind: 'resign',
+      engineReplyState: { moveNumber: 2, turn: 'black', lastMove: { to: 'g7' } },
+    },
+  ]);
+  const finalStatus = { type: 'finished', winner: 'white', reason: 'resignation' };
+  assert.deepEqual(
+    evaluateSmokeMessage(
+      config,
+      { ...context, sentResign: true },
+      {
+        seats,
+        state: { ...reply, status: finalStatus },
+      },
+    ),
+    [{ kind: 'success', finalStatus }],
+  );
 });
 
 test('evaluateSmokeMessage: after abort was sent, aborted status finishes ok', () => {

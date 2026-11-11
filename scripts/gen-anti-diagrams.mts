@@ -1177,7 +1177,7 @@ if (BLOG_WRITE || process.argv.includes('--site')) {
     const y = (height - size) / 2;
     const disc = (color: 'red' | 'black', x: number) => {
       const ink = color === 'red' ? '#c30d0d' : '#202427';
-      return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100"><g transform="rotate(180 50 50)"><circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${ink}" stroke-width="2.8"/>${crown(ink)}</g></svg>`;
+      return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100"><g transform="rotate(180 50 50)"><circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="#202427" stroke-width="2.8"/>${crown(ink)}</g></svg>`;
     };
     return [
       `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anti Xiangqi">`,
@@ -1711,7 +1711,7 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
-  const M = 18, C = 31, PIECE = 28;
+  const M = 18, C = 31, PIECE = C * 0.98 / 0.948; // the piece look of 2026-10-14: outline at 98% of the gap, one dark ring
   const STRS = {};
   const T = (k, ...a) => {
     let s = STRS[k];
@@ -1755,12 +1755,12 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
     if (mv) {
       const { from, to } = sq(mv), f = pt(from), t = pt(to);
       parts.push('<circle cx="' + f.x + '" cy="' + f.y + '" r="13.4" fill="rgba(250,204,21,0.22)" stroke="rgba(180,83,9,0.55)" stroke-width="1.05"/>');
-      parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="14.5" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
+      parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="16.4" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
     }
     for (const s in board) {
       const p = board[s], c = pt(s), k = PIECE / 100, fr = FRAME[p.role], x = c.x - PIECE / 2, y = c.y - PIECE / 2;
       const rank = Number(s.slice(1)), crossed = p.role === 'soldier' && (p.color === 'red' ? rank >= 6 : rank <= 5);
-      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
+      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="#202427" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + (crossed ? 'crossed-soldier' : p.role) + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     // Capture hints as arrows (the analysis-board grammar), stopping at the
@@ -1768,7 +1768,7 @@ ${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
     for (const tg of targets || []) {
       const { from, to } = sq(tg.u), f = pt(from), t = pt(to);
       const dx = t.x - f.x, dy = t.y - f.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-      const ex = t.x - ux * 15, ey = t.y - uy * 15, sx = f.x + ux * 6, sy = f.y + uy * 6;
+      const ex = t.x - ux * 16, ey = t.y - uy * 16, sx = f.x + ux * 6, sy = f.y + uy * 6;
       const hx = ex - ux * 9, hy = ey - uy * 9, px = -uy * 5.5, py = ux * 5.5;
       parts.push('<line x1="' + sx + '" y1="' + sy + '" x2="' + hx + '" y2="' + hy + '" stroke="' + tg.col + '" stroke-width="4" opacity=".7" stroke-linecap="round"/>');
       parts.push('<polygon points="' + ex + ',' + ey + ' ' + (hx + px) + ',' + (hy + py) + ' ' + (hx - px) + ',' + (hy - py) + '" fill="' + tg.col + '" opacity=".85"/>');

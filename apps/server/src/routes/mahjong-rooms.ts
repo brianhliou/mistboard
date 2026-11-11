@@ -14,11 +14,12 @@
 
 import { MAHJONG_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
+import type { DrainCreate } from '../deploy-gate.js';
 import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type MahjongCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createMahjongRoom(
     timeControl?: RoomTimeControl,

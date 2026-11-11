@@ -28,5 +28,13 @@ export function mountXiangqiAnalysisPage(root: HTMLElement, picker?: HTMLElement
       ? parseXiangqiCoordinateMoves(raw).moves
       : importXiangqiGame(raw).moves
     : [];
-  mountXiangqiAnalysis(root, moves, { title: 'Xiangqi analysis', picker, startState });
+  // ?ply=0 opens on the line's root instead of its last move: a problem link
+  // (the /x/ short links) must not open on its own solution. Only 0 is read;
+  // the address bar mirrors the line up to the current move, not a ply.
+  mountXiangqiAnalysis(root, moves, {
+    title: 'Xiangqi analysis',
+    picker,
+    startState,
+    initialPosition: params.get('ply') === '0' ? 'start' : undefined,
+  });
 }

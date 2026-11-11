@@ -1,0 +1,146 @@
+.puzzle-history {
+  padding: clamp(16px, 3vw, 32px);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+}
+
+.puzzle-history h1 {
+  margin: 0 0 32px;
+  color: var(--site-heading);
+  font-size: clamp(24px, 3vw, 32px);
+}
+
+.puzzle-history__session + .puzzle-history__session {
+  margin-top: 32px;
+}
+
+.puzzle-history__session header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.puzzle-history h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.puzzle-history time {
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+.puzzle-history__row {
+  display: grid;
+  /* Boards fill the row: two on a phone, four from tablet width up. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+}
+
+@media (min-width: 700px) {
+  .puzzle-history__row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.puzzle-history__attempt {
+  /* Lichess's good and bad colours. */
+  --history-result: #629924;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--site-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.puzzle-history__attempt--incorrect {
+  --history-result: #cc3333;
+}
+
+.puzzle-history__result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--history-result);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.puzzle-history__result::before {
+  content: "\2714" / "";
+  font-size: 15px;
+  line-height: 1;
+}
+
+.puzzle-history__attempt--incorrect .puzzle-history__result::before {
+  content: "\2716" / "";
+}
+
+.puzzle-history__result::after {
+  content: attr(data-puzzle-code);
+  margin-left: auto;
+  color: var(--site-muted);
+  text-transform: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.puzzle-history__attempt:hover .puzzle-history__result::after,
+.puzzle-history__attempt:focus-visible .puzzle-history__result::after {
+  opacity: 1;
+}
+
+.puzzle-history__board {
+  box-sizing: border-box;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 275 / 305;
+  border: 4px solid var(--history-result);
+  /* Rounder than the board image's own corners, so the clip hides them and
+     no panel colour shows between board and outline. */
+  border-radius: 12px;
+  background: var(--history-result);
+}
+
+.puzzle-history__board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.puzzle-history button {
+  display: block;
+  min-height: 44px;
+  margin: 24px auto 0;
+  padding: 8px 24px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.puzzle-history button[hidden] {
+  display: none;
+}
+
+.puzzle-history > div > a {
+  color: var(--site-link);
+}
+
+.puzzle-history :focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 3px;
+}

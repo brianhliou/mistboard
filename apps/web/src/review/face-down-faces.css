@@ -1,0 +1,27 @@
+/* Ghost faces over still-face-down tiles on a finished game's review (#824).
+   Hidden until the reader hovers the tile (desktop) or turns every face up from
+   the review menu; translucent even then, so a ghost never reads as a tile the
+   game actually turned over. */
+.facedown-face {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+
+.facedown-peeking .facedown-face {
+  opacity: 0.96;
+}
+
+.facedown-revealed .facedown-face {
+  opacity: 0.86;
+}
+
+.facedown-revealed.facedown-peeking .facedown-face {
+  opacity: 0.96;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facedown-face {
+    transition: none;
+  }
+}

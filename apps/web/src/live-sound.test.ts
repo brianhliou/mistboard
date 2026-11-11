@@ -1,11 +1,17 @@
-import type { GameEvent, PlayerView } from '@mistboard/game';
+import type { GameEvent, PlayerView, Square } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { holdBoardSettle, resetBoardSettleForTests, trackPieceAnimation } from './board-anim.js';
 import {
   initialOpponentMoveSoundForSnapshot,
+  initLiveSound,
+  playTerminalPlan,
   shouldDeferHiddenPveOpeningSound,
+  soundForMove,
+  soundForOwnMove,
   terminalSoundPlan,
   tonesForSound,
 } from './live-sound.js';
+import { liveState } from './live-state.js';
 
 function makeView(overrides: Partial<PlayerView> = {}): PlayerView {
   return {
@@ -34,6 +40,67 @@ function maxGain(
 ): number {
   return Math.max(...tonesForSound(kind, set).map((tone) => tone.gain));
 }
+
+describe('generic capture routing', () => {
+  afterEach(() => {
+    liveState.seat = 'spectator';
+  });
+
+  const roomId = 'sound-test';
+  const created: GameEvent = { type: 'room-created', at: 0, roomId, variant: 'dark-chess' };
+  const move = (
+    color: 'white' | 'black',
+    from: Square,
+    to: Square,
+  ): Extract<GameEvent, { type: 'move-played' }> => ({
+    type: 'move-played',
+    at: 1,
+    roomId,
+    color,
+    move: { from, to },
+  });
+  const before = [created, move('white', 'e2', 'e4'), move('black', 'd7', 'd5')];
+  const capture = move('white', 'e4', 'd5');
+
+  it.each(['white', 'black', 'spectator'] as const)(
+    'uses the same revealed capture cue for %s',
+    (seat) => {
+      liveState.seat = seat;
+      expect(soundForMove(before, capture)).toBe('capture');
+    },
+  );
+
+  it.each([
+    ['white', 'king-capture'],
+    ['black', 'capture'],
+    ['spectator', 'king-capture'],
+  ] as const)('preserves the revealed king-capture policy for %s', (seat, expected) => {
+    liveState.seat = seat;
+    const kingCaptureHistory = [
+      created,
+      move('white', 'e2', 'e4'),
+      move('black', 'f7', 'f6'),
+      move('white', 'd1', 'h5'),
+      move('black', 'a7', 'a6'),
+    ];
+    expect(soundForMove(kingCaptureHistory, move('white', 'h5', 'e8'))).toBe(expected);
+  });
+
+  it('keeps quiet moves and own visible king captures distinct', () => {
+    expect(soundForMove([created], move('white', 'e2', 'e4'))).toBe('move');
+    expect(
+      soundForOwnMove(
+        makeView({
+          board: {
+            e6: { color: 'white', role: 'queen' },
+            e7: { color: 'black', role: 'king' },
+          },
+        }),
+        { from: 'e6', to: 'e7' },
+      ),
+    ).toBe('king-capture');
+  });
+});
 
 describe('Mist finish sound tone plans', () => {
   it('makes the win tone prominent and ascending', () => {
@@ -174,6 +241,7 @@ describe('opening opponent sound policy', () => {
 // fake AudioContext.
 describe('audio unlock and sticky activation', () => {
   beforeEach(() => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: memoryStorage(),
@@ -184,10 +252,12 @@ describe('audio unlock and sticky activation', () => {
     noiseFilterCount: () => number;
     oscillatorCount: () => number;
     peakGain: () => number;
+    frequencies: number[];
   } {
     let count = 0;
     let noiseFilters = 0;
     const gainTargets: number[] = [];
+    const frequencies: number[] = [];
     class FakeAudioContext {
       currentTime = 0;
       destination = {};
@@ -200,7 +270,11 @@ describe('audio unlock and sticky activation', () => {
         count += 1;
         return {
           type: 'sine',
-          frequency: { setValueAtTime() {} },
+          frequency: {
+            setValueAtTime(value: number) {
+              frequencies.push(value);
+            },
+          },
           connect: (node: unknown) => node,
           start() {},
           stop() {},
@@ -243,6 +317,7 @@ describe('audio unlock and sticky activation', () => {
     }
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
     return {
+      frequencies,
       noiseFilterCount: () => noiseFilters,
       oscillatorCount: () => count,
       peakGain: () => Math.max(0, ...gainTargets),
@@ -257,11 +332,53 @@ describe('audio unlock and sticky activation', () => {
   }
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     Reflect.deleteProperty(window as unknown as Record<string, unknown>, 'AudioContext');
     Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'userActivation');
     Reflect.deleteProperty(window as unknown as Record<string, unknown>, 'localStorage');
     vi.resetModules();
   });
+
+  it.each(['white', 'black'] as const)(
+    'sounds a hidden opponent capture for %s using only redacted snapshots',
+    async (seat) => {
+      const audio = installFakeAudio();
+      setUserActivation(true);
+      window.localStorage.setItem('mistboard.soundSet', 'mist');
+      vi.resetModules();
+      const mod = await import('./live-sound.js');
+      const { liveState: state } = await import('./live-state.js');
+      state.seat = seat;
+      state.roomMode = 'pvp';
+      const opponent = seat === 'white' ? 'black' : 'white';
+      const prev = makeView({
+        perspective: seat,
+        moveNumber: 3,
+        board: { e1: { color: seat, role: 'king' }, e4: { color: seat, role: 'pawn' } },
+        visibleSquares: ['e1', 'e4'],
+        status: { type: 'playing', turn: opponent },
+      });
+      const next = makeView({
+        perspective: seat,
+        moveNumber: 4,
+        board: { e1: { color: seat, role: 'king' } },
+        visibleSquares: ['e1'],
+        status: { type: 'playing', turn: seat },
+      });
+      // No opponent move or hidden identity is added to the payload to classify audio.
+      const payload = { events: [] as GameEvent[], prev, next };
+      const serialized = JSON.stringify(payload);
+      mod.initLiveSound();
+      mod.maybePlaySnapshotSound(payload.events, payload.prev);
+      mod.maybePlaySnapshotSound(payload.events, payload.next);
+      expect(audio.frequencies).toEqual(
+        mod.tonesForSound('capture', 'mist').map((tone) => tone.frequency),
+      );
+      expect(JSON.stringify(payload)).toBe(serialized);
+      expect(serialized).not.toMatch(/capturedRole|lastMove|queen|rook|bishop|knight/);
+      state.seat = 'spectator';
+    },
+  );
 
   it('unlocks immediately and sounds a move when the document already has sticky activation', async () => {
     const audio = installFakeAudio();
@@ -302,6 +419,24 @@ describe('audio unlock and sticky activation', () => {
     window.dispatchEvent(new Event('pointerdown'));
     mod.playSound('move');
     expect(audio.oscillatorCount()).toBeGreaterThan(0);
+  });
+
+  it('plays every sound queued before the first gesture: the start notify and the opening move', async () => {
+    const audio = installFakeAudio();
+    setUserActivation(false);
+    window.localStorage.setItem('mistboard.soundSet', 'mist');
+    vi.resetModules();
+    const mod = await import('./live-sound.js');
+    const oscillators = (kind: Parameters<typeof tonesForSound>[0]) =>
+      mod.tonesForSound(kind, 'mist').filter((tone) => !tone.noise).length;
+
+    mod.initLiveSound();
+    mod.playSoundWhenUnlocked('game-start');
+    mod.playSoundWhenUnlocked('move');
+    expect(audio.oscillatorCount()).toBe(0);
+
+    window.dispatchEvent(new Event('pointerdown'));
+    expect(audio.oscillatorCount()).toBe(oscillators('game-start') + oscillators('move'));
   });
 
   it('switches the running controller from Mist tones to Wood percussion', async () => {
@@ -354,3 +489,85 @@ function memoryStorage(): Storage {
     setItem: (key, value) => values.set(key, value),
   };
 }
+
+// #825: the result sounded as the final move began to glide. It now waits for
+// the board to settle: the frame's render, then the glide that render started.
+describe('playTerminalPlan waits for the final move to land', () => {
+  let started = 0;
+  // Any audio node: every method returns the node, every property is a node.
+  function audioNode(): unknown {
+    const fn = () => node;
+    const node: unknown = new Proxy(fn, {
+      get: (_target, key) => (key === 'then' ? undefined : node),
+      set: () => true,
+      apply: () => node,
+    });
+    return node;
+  }
+  class FakeAudioContext {
+    currentTime = 0;
+    sampleRate = 44100;
+    destination = audioNode();
+    resume() {
+      return Promise.resolve();
+    }
+    createGain() {
+      return audioNode();
+    }
+    createOscillator() {
+      started += 1;
+      return audioNode();
+    }
+    createBufferSource() {
+      started += 1;
+      return audioNode();
+    }
+    createBiquadFilter() {
+      return audioNode();
+    }
+    createBuffer(_channels: number, length: number) {
+      return { getChannelData: () => new Float32Array(length) };
+    }
+    decodeAudioData() {
+      return Promise.reject(new Error('no audio in tests'));
+    }
+  }
+  function fakeGlide(): EventTarget & { finish(): void } {
+    const target = new EventTarget();
+    return Object.assign(target, { finish: () => target.dispatchEvent(new Event('finish')) });
+  }
+  const flush = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  beforeEach(() => {
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    initLiveSound();
+    window.dispatchEvent(new Event('pointerdown'));
+    started = 0;
+  });
+  afterEach(() => {
+    resetBoardSettleForTests();
+    vi.unstubAllGlobals();
+  });
+
+  it('plays at once when nothing is moving (a resignation, reduced motion)', () => {
+    playTerminalPlan('win', 'resignation');
+    expect(started).toBeGreaterThan(0);
+  });
+
+  it('holds the sound through the render and the final glide, then plays it', async () => {
+    // The live core holds the board from the frame until the render that draws it.
+    const release = holdBoardSettle();
+    playTerminalPlan('lose', 'score');
+    expect(started).toBe(0);
+    // The render: the hold goes, and the final move starts gliding.
+    release();
+    const glide = fakeGlide();
+    trackPieceAnimation(glide);
+    await flush();
+    expect(started).toBe(0);
+    glide.finish();
+    await flush();
+    expect(started).toBeGreaterThan(0);
+  });
+});

@@ -19,7 +19,7 @@
 // an English edit surfaces as visible English on the translated page rather than
 // silently vanishing, and `untranslatedStrings` turns it into a check.
 import { hasOwnKey } from '@mistboard/game';
-import { articleCardLabels, articleDiagramLabels, substituteSvgText } from './svg-labels.js';
+import { articleCardLabels, articleDiagramLabels, SVG_FIELDS, substituteSvgText } from './svg-labels.js';
 import type { Article } from './types.js';
 
 // A figure's `svg` is markup or a render thunk, and its labels sit inside <text>
@@ -29,9 +29,9 @@ import type { Article } from './types.js';
 function deepSubstitute<T>(value: T, dict: Record<string, string>, key?: string): T {
   if (typeof value === 'string') {
     if (hasOwnKey(dict, value)) return dict[value] as T;
-    return (key === 'svg' ? substituteSvgText(value, dict) : value) as T;
+    return (key !== undefined && SVG_FIELDS.has(key) ? substituteSvgText(value, dict) : value) as T;
   }
-  if (typeof value === 'function' && key === 'svg') {
+  if (typeof value === 'function' && key !== undefined && SVG_FIELDS.has(key)) {
     const render = value as (...args: unknown[]) => string;
     return ((...args: unknown[]) => substituteSvgText(render(...args), dict)) as T;
   }

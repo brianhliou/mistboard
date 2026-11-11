@@ -1,7 +1,7 @@
 import { getPool } from './persistence-db.js';
 
-// Cached machine translations of forum text (130). Keyed by content, not by
-// row: see the migration header for why.
+// Durable machine translations of forum text (130, 189). Reads use text/plan
+// hash and locale; model and prompt version are provenance, never read gates.
 
 export type ForumTranslationLocale = 'en' | 'zh-Hans' | 'zh-Hant';
 export type ForumTranslationSourceKind = 'topic' | 'post';
@@ -45,13 +45,15 @@ export async function getForumTranslationSource(
 export async function getForumTranslation(key: {
   contentHash: string;
   targetLocale: ForumTranslationLocale;
-  model: string;
+  promptVersion: string;
 }): Promise<StoredForumTranslation | null> {
   const { rows } = await getPool().query<{ translated_text: string; created_at: Date }>(
     `SELECT translated_text, created_at
      FROM forum_translations
-     WHERE content_hash = $1 AND target_locale = $2 AND model = $3`,
-    [key.contentHash, key.targetLocale, key.model],
+     WHERE content_hash = $1 AND target_locale = $2
+     ORDER BY (prompt_version IS NOT DISTINCT FROM $3) DESC, created_at DESC, model
+     LIMIT 1`,
+    [key.contentHash, key.targetLocale, key.promptVersion],
   );
   const row = rows[0];
   if (!row) return null;
@@ -59,13 +61,12 @@ export async function getForumTranslation(key: {
 }
 
 // Batch read for list surfaces: every stored translation of any of `contentHashes`
-// into `targetLocale`, newest row per hash, whatever model wrote it. Reads
-// deliberately ignore the model: a model bump changes what the NEXT miss
-// writes, it should not make every list fall back to the source language until
-// each post is asked for again. Rows the table has none for are simply absent.
+// into `targetLocale`. Prefer the current prompt, then newest, whatever model
+// wrote it. A prompt/model bump must never hide an existing translation.
 export async function listForumTranslations(input: {
   contentHashes: readonly string[];
   targetLocale: ForumTranslationLocale;
+  promptVersion: string;
 }): Promise<Map<string, string>> {
   const found = new Map<string, string>();
   if (input.contentHashes.length === 0) return found;
@@ -73,8 +74,8 @@ export async function listForumTranslations(input: {
     `SELECT DISTINCT ON (content_hash) content_hash, translated_text
      FROM forum_translations
      WHERE content_hash = ANY($1::text[]) AND target_locale = $2
-     ORDER BY content_hash, created_at DESC`,
-    [Array.from(new Set(input.contentHashes)), input.targetLocale],
+     ORDER BY content_hash, (prompt_version IS NOT DISTINCT FROM $3) DESC, created_at DESC, model`,
+    [Array.from(new Set(input.contentHashes)), input.targetLocale, input.promptVersion],
   );
   for (const row of rows) found.set(row.content_hash, row.translated_text);
   return found;
@@ -87,6 +88,7 @@ export async function putForumTranslation(input: {
   contentHash: string;
   targetLocale: ForumTranslationLocale;
   model: string;
+  promptVersion: string;
   translatedText: string;
   source: { kind: ForumTranslationSourceKind; id: string };
   inputTokens: number;
@@ -95,8 +97,8 @@ export async function putForumTranslation(input: {
   await getPool().query(
     `INSERT INTO forum_translations
        (content_hash, target_locale, model, translated_text, source_kind, source_id,
-        input_tokens, output_tokens)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        input_tokens, output_tokens, prompt_version)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (content_hash, target_locale, model) DO NOTHING`,
     [
       input.contentHash,
@@ -107,6 +109,7 @@ export async function putForumTranslation(input: {
       input.source.id,
       input.inputTokens,
       input.outputTokens,
+      input.promptVersion,
     ],
   );
 }

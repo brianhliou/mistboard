@@ -422,6 +422,11 @@ export function settledStatedRounds(stored: readonly StoredBoardRef[]): Set<numb
   const settled = new Set<number>();
   for (const [roundNumber, rows] of byRound) {
     if (!rows.every((row) => row.status === 'complete')) continue;
+    // A round of results only, none of them dated, was stored before its
+    // page's 比赛时间 was read (the 2026 leagues from round 10): one more read
+    // dates it, and then it settles.
+    const undated = rows.every((row) => row.plies === 0 && !row.details?.playedAt);
+    if (undated) continue;
     const collided =
       tourByMatch &&
       rows.some((row) => row.plies === 0 && /^r\d+t\d+(?:g\d+)?$/.test(row.sourceBoardId ?? ''));
@@ -463,7 +468,8 @@ function pairingUnchanged(stored: StoredBoardRef, board: XiangqiBroadcastBoard):
     stored.result === board.result &&
     (stored.details?.table ?? null) === (board.details?.table ?? null) &&
     (stored.details?.game ?? null) === (board.details?.game ?? null) &&
-    (stored.details?.kind ?? null) === (board.details?.kind ?? null)
+    (stored.details?.kind ?? null) === (board.details?.kind ?? null) &&
+    (stored.details?.playedAt ?? null) === (board.details?.playedAt ?? null)
   );
 }
 

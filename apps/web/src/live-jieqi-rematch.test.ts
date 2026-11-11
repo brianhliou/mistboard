@@ -1,5 +1,5 @@
 // A finished jieqi PvP room offers both seats a mutual rematch (server:
-// variant-tenant/rematch.ts through jieqi-registration). Before this, a seated
+// variant-tenant/rematch.ts, on by default for every tenant). Before this, a seated
 // player got only New opponent and Review (docs-private/jieqi-loop-qa-2026-10.md,
 // issue 1). Drives the real room module (live-jieqi.ts) through a stubbed socket.
 
@@ -7,11 +7,10 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiPlayerView,
+  getJieqiPublicView,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
-  jieqiTruthBoard,
-  jieqiTruthCaptures,
 } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
@@ -66,13 +65,12 @@ function finishedState(): JieqiGameState {
   return { ...state, status: { type: 'finished', winner: 'red', reason: 'resignation' } };
 }
 
-function truthView(state: JieqiGameState): JieqiWireView {
-  return {
-    ...getJieqiPlayerView(state, 'red'),
-    board: jieqiTruthBoard(state),
-    captured: jieqiTruthCaptures(state),
-    legalMoves: [],
-  } as JieqiWireView;
+// What a finished room serves: the seat's own view, or the public one for a
+// spectator, never the deal.
+function servedView(state: JieqiGameState, seat: JieqiColor | 'spectator'): JieqiWireView {
+  return (
+    seat === 'spectator' ? getJieqiPublicView(state) : getJieqiPlayerView(state, seat)
+  ) as JieqiWireView;
 }
 
 const EVENTS: TenantLiveEvent[] = [
@@ -106,7 +104,7 @@ async function mountFinished(
     seat,
     seats: { red: 'c-red', black: 'c-black' },
     roomMode: 'pvp',
-    state: truthView(finishedState()),
+    state: servedView(finishedState(), seat),
     events: EVENTS,
     rematch: { offers: { red: false, black: false }, finalizedRoomId: null },
     ...extra,
@@ -222,5 +220,25 @@ describe('jieqi PvP rematch', () => {
     const buttons = [...(rematchBlock()?.querySelectorAll('button') ?? [])];
     expect(buttons).toHaveLength(1);
     expect(buttons[0]?.disabled).toBe(true);
+  });
+});
+
+describe('jieqi game-over reason rendering', () => {
+  it('distinguishes new perpetual chase from legacy perpetual check', async () => {
+    for (const [reason, phrase] of [
+      ['perpetual-chase', 'perpetual chase'],
+      ['chasing', 'perpetual check'],
+    ] as const) {
+      const view = servedView(finishedState(), 'red');
+      await mountFinished('red', {
+        state: { ...view, status: { type: 'finished', winner: 'black', reason } },
+        events: EVENTS.map((event) =>
+          event.type === 'game-finished' ? { ...event, winner: 'black', reason } : event,
+        ),
+      });
+      expect(document.body.textContent).toContain(
+        `${phrase[0].toUpperCase()}${phrase.slice(1)} • Black is victorious`,
+      );
+    }
   });
 });

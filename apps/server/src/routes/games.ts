@@ -12,10 +12,12 @@ import {
   devArtifactPayloads,
   devArtifactSummaries,
 } from './../dev-decision-log-artifacts.js';
+import { isFFQBanqiGame } from '../ffq-banqi-access.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
 import { internalEngineAnalysisConfigured } from './../internal-engine-client.js';
+import { INTERNAL_BANQI_CORPUS_ID } from '../internal-engine-test.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
@@ -354,7 +356,15 @@ export async function tryHandle(
           variants: candidate.legacyVariants,
         }),
       ]);
-      return { channel: candidate, sealedCount, topPlayer: channelTopPlayer(unlocked), unlocked };
+      // Also protect rail metadata (including top-player names) before it is
+      // cached or serialized. Active replay validation happens below.
+      const discoverable = unlocked.filter((game) => !isFFQBanqiGame(game));
+      return {
+        channel: candidate,
+        sealedCount,
+        topPlayer: channelTopPlayer(discoverable),
+        unlocked: discoverable,
+      };
     };
     const railRow = (result: Awaited<ReturnType<typeof loadChannel>>): WatchRailRow => ({
       family: result.channel.family,
@@ -582,7 +592,7 @@ export async function tryHandle(
     if (!requirePersistence(response)) return true;
     const roomId = decodeURIComponent(crosstableMatch[1]!);
     const game = await persistence.getGameSummary(roomId);
-    if (!game) {
+    if (!game || game.corpusId === INTERNAL_BANQI_CORPUS_ID) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
@@ -709,6 +719,7 @@ async function gameSummaryForApi(
   roomId: string,
 ): Promise<persistence.RecentEveGameRecord | null> {
   const persisted = persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null;
+  if (persisted?.corpusId === INTERNAL_BANQI_CORPUS_ID) return null;
   return persisted ?? ctx.inMemoryGameSummary(roomId);
 }
 

@@ -12,6 +12,7 @@
 //
 //   npm run release:profile                    medians per stage, last 14 days
 //   npm run release:profile -- --since 30d     wider window
+//   npm run release:profile -- --since 2026-11-01   from a UTC date
 //   npm run release:profile -- --html          write the chart page and print its path
 //   npm run release:profile -- --html --open   ...and open it
 //   npm run release:profile -- --import-transcripts   backfill from ~/.claude transcripts
@@ -33,6 +34,7 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { HELD_WARN_MS } from './lib/release-drain.mjs';
 
 export const DEFAULT_LOG = path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
 const TRANSCRIPT_DIR = path.join(
@@ -50,9 +52,9 @@ function main(args) {
     console.log(`imported ${added} release record(s) from transcripts into ${logPath}`);
   }
   const records = readRecords(logPath);
-  const since = Date.now() - options.sinceMs;
+  const since = options.sinceAt ?? Date.now() - options.sinceMs;
   const window = records.filter((record) => Date.parse(record.startedAt) >= since);
-  printSummary(window, options);
+  printSummary(window, options, summarizeShips(records, { since }));
   if (options.html || options.svgPath) {
     const html = renderChart(records);
     if (options.html) {
@@ -74,6 +76,7 @@ export function parseArgs(args) {
   const options = {
     log: process.env.MISTBOARD_RELEASE_LOG || DEFAULT_LOG,
     sinceMs: 14 * 86_400_000,
+    sinceAt: null,
     html: false,
     htmlPath: null,
     svgPath: null,
@@ -83,8 +86,20 @@ export function parseArgs(args) {
   };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (arg === '--since') options.sinceMs = parseWindow(args[++i]);
-    else if (arg === '--html') {
+    if (arg === '--since') {
+      const value = args[++i];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) {
+        const at = Date.parse(`${value}T00:00:00Z`);
+        if (!Number.isFinite(at) || new Date(at).toISOString().slice(0, 10) !== value) {
+          throw new Error(`--since wants a valid UTC date, got ${value}`);
+        }
+        options.sinceAt = at;
+        options.sinceMs = Date.now() - at;
+      } else {
+        options.sinceAt = null;
+        options.sinceMs = parseWindow(value);
+      }
+    } else if (arg === '--html') {
       options.html = true;
       if (args[i + 1] && !args[i + 1].startsWith('--')) options.htmlPath = args[++i];
     } else if (arg === '--open') options.open = true;
@@ -127,9 +142,43 @@ export function readRecords(logPath) {
 
 // --- summary -----------------------------------------------------------------
 
+// A slot is one ship's chain of attempts: each retry must start within three
+// hours after the preceding failure ends. Queue refusals do not start or
+// extend a ship. A ship with no ok attempt did not ship in that slot.
+export function summarizeShips(records, { since = -Infinity } = {}) {
+  const ships = [];
+  for (const record of [...records].sort(
+    (a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt),
+  )) {
+    if (/ship queue is in use/.test(record.error ?? '')) continue;
+    const started = Date.parse(record.startedAt);
+    if (!Number.isFinite(started)) continue;
+    const ship = ships.at(-1);
+    const previous = ship?.at(-1);
+    const recordedEnd = Date.parse(previous?.endedAt);
+    const ended = Number.isFinite(recordedEnd)
+      ? recordedEnd
+      : Date.parse(previous?.startedAt) + (previous?.elapsedMs ?? 0);
+    if (previous?.outcome === 'failed' && started - ended <= 3 * 3_600_000) ship.push(record);
+    else ships.push([record]);
+  }
+  const window = ships.filter((ship) => Date.parse(ship[0].startedAt) >= since);
+  const firstTryOk = window.filter((ship) => ship[0].outcome === 'ok').length;
+  return {
+    ships: window.length,
+    firstTryOk,
+    firstTryPercent: window.length ? Math.round((100 * firstTryOk) / window.length) : 0,
+    notShipped: window.filter((ship) => !ship.some((record) => record.outcome === 'ok')).length,
+  };
+}
+
 export function summarize(records) {
   const ok = records.filter((r) => r.outcome === 'ok');
-  const failed = records.filter((r) => r.outcome !== 'ok');
+  const notOk = records.filter((r) => r.outcome !== 'ok');
+  // A refusal ran nothing (no stage, milliseconds): it costs no time, so it is
+  // counted beside the attempts rather than as a failed one.
+  const refused = notOk.filter(isRefusal);
+  const failed = notOk.filter((r) => !isRefusal(r));
   const stages = new Map();
   for (const record of records) {
     for (const stage of record.stages ?? []) {
@@ -139,9 +188,10 @@ export function summarize(records) {
   }
   const deploys = ok.map(deployMs).filter((ms) => ms !== null);
   return {
-    count: records.length,
+    count: records.length - refused.length,
     ok: ok.length,
     failed: failed.length,
+    refused: countBy(refused.map((r) => failureClass(r))),
     total: quantiles(ok.map((r) => r.elapsedMs)),
     deploy: quantiles(deploys),
     stages: [...stages.entries()]
@@ -164,6 +214,32 @@ export function deployMs(record) {
   return liveAt > pushEnd ? liveAt - pushEnd : null;
 }
 
+// How long a release kept players from starting new games: the server's
+// commit wait when the release recorded it, else the drain stage's wall time
+// (creates are refused for all of it, passed or failed). Null: no drain ran.
+export function heldMs(record) {
+  const recorded = record.drain?.heldMs;
+  if (typeof recorded === 'number' && Number.isFinite(recorded)) return recorded;
+  const stage = (record.stages ?? []).find((s) => s.label === 'production drain');
+  return stage && Number.isFinite(stage.ms) ? stage.ms : null;
+}
+
+// One row per release that drained, oldest first, with a WARN line for each
+// that held new games past the threshold.
+export function holdRows(records) {
+  return records
+    .map((record) => ({ record, held: heldMs(record) }))
+    .filter(({ held }) => held !== null)
+    .map(({ record, held }) => ({
+      startedAt: record.startedAt,
+      outcome: record.outcome,
+      heldMs: held,
+      refusedCreates:
+        typeof record.drain?.refusedCreates === 'number' ? record.drain.refusedCreates : null,
+      warn: held > HELD_WARN_MS,
+    }));
+}
+
 // One name per way a release attempt dies, so the failure table reads as a
 // list of causes rather than of stage labels.
 export function failureClass(record) {
@@ -182,7 +258,27 @@ export function failureClass(record) {
   if (stage === 'hosted CI wait') return 'hosted CI red';
   if (stage && /^prod /.test(stage)) return 'prod smoke failed';
   if (stage) return `local gate: ${stage}`;
+  // Under 10 s with no stage: the guard said no before anything ran.
+  if (text && (record.stages ?? []).length === 0 && (record.elapsedMs ?? Infinity) < 10_000) {
+    return `refused: ${refusalReason(text)}`;
+  }
   return 'unknown (output cut short)';
+}
+
+// The release script refused before its first stage (an argument check, a
+// lock or window guard). Its error says why; nothing ran.
+export function isRefusal(record) {
+  return record.outcome !== 'ok' && failureClass(record).startsWith('refused: ');
+}
+
+function refusalReason(text) {
+  if (/ship queue is in use/.test(text)) return 'ship queue in use';
+  if (/CHANGELOG\.md already has/.test(text)) return 'changelog line already present';
+  if (/ship window|within 4h/i.test(text)) return 'inside the ship window';
+  return text
+    .split(/[;:\n]/)[0]
+    .trim()
+    .slice(0, 60);
 }
 
 export function quantiles(values) {
@@ -198,10 +294,14 @@ function countBy(values) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-function printSummary(records, options) {
+function printSummary(records, options, ships) {
   const s = summarize(records);
   const days = Math.round(options.sinceMs / 86_400_000);
   console.log(`# releases, last ${days} day(s): ${s.count} (${s.ok} ok, ${s.failed} failed)`);
+  console.log(
+    `ships: ${ships.ships}; first-try ok: ${ships.firstTryOk} (${ships.firstTryPercent}%); ` +
+      `ships not shipped in their slot: ${ships.notShipped}`,
+  );
   if (s.count === 0) {
     console.log('no records in the window; run a release, or --import-transcripts for history');
     return;
@@ -216,7 +316,40 @@ function printSummary(records, options) {
       console.log(`  ${String(n).padStart(3)}  ${pct(n, s.count).padStart(4)}  ${name}`);
     }
   }
+  if (s.refused.length) {
+    const n = s.refused.reduce((sum, [, k]) => sum + k, 0);
+    console.log(`\nrefused before running (not attempts, no time spent): ${n}`);
+    for (const [name, k] of s.refused) console.log(`  ${String(k).padStart(3)}  ${name}`);
+  }
   console.log(`\nattempts per day: ${(s.count / Math.max(1, days)).toFixed(1)}`);
+  printHolds(records);
+}
+
+function printHolds(records) {
+  const rows = holdRows(records);
+  console.log(
+    `\nnew games held, per release that drained (${rows.length} of ${records.length}; ` +
+      `the others held nothing):`,
+  );
+  if (rows.length === 0) return;
+  console.log(
+    `  ${'started (UTC)'.padEnd(20)} ${'outcome'.padEnd(8)} ${'held min'.padStart(8)}  refused`,
+  );
+  for (const row of rows) {
+    console.log(
+      `  ${row.startedAt.slice(0, 16).replace('T', ' ').padEnd(20)} ${String(row.outcome).padEnd(8)} ${(
+        row.heldMs / 60_000
+      )
+        .toFixed(1)
+        .padStart(8)}  ${row.refusedCreates ?? '?'}`,
+    );
+  }
+  for (const row of rows.filter((r) => r.warn)) {
+    console.log(
+      `WARN: release ${row.startedAt} held new games ${(row.heldMs / 60_000).toFixed(1)} min ` +
+        `(over ${HELD_WARN_MS / 60_000} min)`,
+    );
+  }
 }
 
 function fmtQ(q) {

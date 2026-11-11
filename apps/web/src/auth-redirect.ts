@@ -3,7 +3,16 @@ import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 const AUTH_REFERRER_PARAM = 'referrer';
 
 export function loginHrefForCurrentPage(locale: Locale = currentLocale()): string {
-  const params = new URLSearchParams({ tab: 'login' });
+  return authHrefForCurrentPage('login', locale);
+}
+
+// Register with the same way back: account creation redirects to the referrer.
+export function registerHrefForCurrentPage(locale: Locale = currentLocale()): string {
+  return authHrefForCurrentPage('register', locale);
+}
+
+function authHrefForCurrentPage(tab: 'login' | 'register', locale: Locale): string {
+  const params = new URLSearchParams({ tab });
   const referrer = safeLocalPath(
     `${window.location.pathname}${window.location.search}${window.location.hash}`,
   );

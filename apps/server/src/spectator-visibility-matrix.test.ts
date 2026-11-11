@@ -112,3 +112,12 @@ test('a live dark room serves a spectator no board at all', () => {
   // cosmetic bug. Asserted on its own so it can never be lost in a table edit.
   assert.equal(roomViewPolicy('dark', false, 'spectator'), 'nothing');
 });
+
+test('banqi playtests retain the mask for players and spectators after completion', () => {
+  for (const spec of ['ffq-banqi', 'three-kingdoms-banqi']) {
+    for (const finished of [false, true]) {
+      assert.equal(roomViewPolicy('hidden-identity', finished, 'player', spec), 'own-view');
+      assert.equal(roomViewPolicy('hidden-identity', finished, 'spectator', spec), 'public-view');
+    }
+  }
+});

@@ -23,6 +23,9 @@ export type CompositionOptions = {
   labelLetterSpacing?: number;
   palette?: BoardPalette;
   fogStyle?: FogStyle;
+  // Board corner radius in user units; defaults to the shared 1.9% base radius.
+  // 0 for a board that runs to the edge of its frame.
+  cornerRadius?: number;
 };
 
 const DEFAULT_GAP = 144;
@@ -83,6 +86,7 @@ export function renderBoardComposition(opts: CompositionOptions): string {
           palette,
           fogStyle,
           clipId: `mb-og-board-clip-${Math.round(xs[i]!)}-${Math.round(boardY)}`,
+          ...(opts.cornerRadius === undefined ? {} : { cornerRadius: opts.cornerRadius }),
         },
       ),
     );

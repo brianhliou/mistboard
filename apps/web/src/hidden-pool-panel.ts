@@ -17,7 +17,10 @@ import { countBadge } from './review/captured-pool.js';
 //
 // Rendered from the masked player view only (never the truth): see
 // packages/game/src/hidden-pool.ts. The caller clears nothing; this replaces the
-// host's children on every call, and an empty host collapses via CSS.
+// host's children on every call, and an empty host (no rows) collapses via CSS.
+// Once every piece is revealed the panel stays, each row reading "all
+// revealed": dropping it at the last flip shortened the right rail and jolted
+// everything centred beside the board (Flip Jungle on /watch, 2026-10-17).
 
 export type HiddenPoolRow<Color extends string, Role extends string> = {
   color: Color;
@@ -44,7 +47,7 @@ export function renderHiddenPoolPanel<Color extends string, Role extends string>
   options: HiddenPoolPanelOptions = {},
 ): void {
   host.replaceChildren();
-  if (rows.every((row) => row.side.total === 0)) return;
+  if (rows.length === 0) return;
   const odds = options.odds && options.odds.total > 0 ? options.odds : null;
   host.classList.toggle('hidden-pool--odds', odds !== null);
   const caption = document.createElement('div');

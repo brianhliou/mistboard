@@ -19,16 +19,26 @@ import { banqiTenant } from '../banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
+import { gomokuTenant } from '../gomoku-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
-import { createUser, recordGameEnd, type UserAccount } from '../persistence.js';
+import {
+  createUser,
+  getLeaderboardSummary,
+  getUserProfileByHandle,
+  recordGameEnd,
+  type UserAccount,
+} from '../persistence.js';
 import {
   definePersistenceTests,
   test as persistenceTest,
   pg,
   TEST_DATABASE_URL,
 } from '../persistence-test-support.js';
+import { XMJ_BOT_CLIENT_ID } from '../server-xiangqi-mahjong-bots.js';
+import { createXiangqiMahjongRoom } from '../xiangqi-mahjong-registration.js';
+import { xiangqiMahjongTenant } from '../xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { buildTenantGameSummary } from './events.js';
 import './register-tenants.js';
@@ -152,7 +162,7 @@ const ACCOUNT = { id: 'user-friend', handle: 'friend', displayName: 'Friend' } a
 
 const createCtx: TenantCreateHttpContext = {
   databaseRequired: false,
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
   reserveLiveEngineSeat: () => Promise.resolve(null),
   releaseLiveEngineReservation: () => undefined,
@@ -182,7 +192,7 @@ async function createFriendRoom(
   accountUser: UserAccount | null,
 ): Promise<{ status: number | null; json: Record<string, unknown> }> {
   const response = captureResponse();
-  const request = {} as IncomingMessage;
+  const request = { headers: {} } as IncomingMessage;
   const fullBody = { gameSpecId: registration.gameSpecId, ...body };
   assert.ok(
     registration.http.matchesCreateRequest(fullBody),
@@ -272,9 +282,11 @@ test('friend rooms: rated needs a signed-in creator, a rated pace and a human op
         assert.equal(guest.status, 401, registration.kind);
         assert.deepEqual(guest.json, { error: 'rated_requires_account' }, registration.kind);
 
+        // Every preset rates since 10+5 joined on 2026-11-06, so an off-menu
+        // pace stands in for an unrated one.
         const slow = await createFriendRoom(
           registration,
-          { mode: 'pvp', rated: true, timeControl: { initialMs: 600_000, incrementMs: 5_000 } },
+          { mode: 'pvp', rated: true, timeControl: { initialMs: 900_000, incrementMs: 10_000 } },
           ACCOUNT,
         );
         assert.equal(slow.status, 400, registration.kind);
@@ -353,6 +365,97 @@ test('friend rooms: a guest is refused either seat of a rated Jieqi friend room'
   );
 });
 
+// ── Stats-excluded accounts never rate (2026-10-26) ─────────────────────────
+//
+// An operator or QA account (users.stats_excluded_at) is not counted, so a game
+// it plays must not move a counted player's rating: a rated XMJ friend game on
+// 10-26 took an opponent from 1500 to 1338. Casual play is untouched.
+
+const EXCLUDED = {
+  ...ACCOUNT,
+  id: 'user-excluded',
+  handle: 'excluded',
+  statsExcludedAt: new Date('2026-09-25T00:00:00Z'),
+} as UserAccount;
+
+test('friend rooms: a stats-excluded creator is refused a rated friend room on every rated variant', async () => {
+  const rated = routingTenants().filter((registration) => registration.lobby?.supportsRated);
+  assert.ok(
+    rated.some((registration) => registration.gameSpecId === xiangqiMahjongTenant.gameSpecId),
+    'xiangqi mahjong is a rated friend-room variant',
+  );
+  await withRatedOn(async () => {
+    for (const registration of rated) {
+      await withTenantEnabled(registration, async () => {
+        const refused = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(refused.status, 403, `${registration.kind}: ${JSON.stringify(refused.json)}`);
+        assert.deepEqual(
+          refused.json,
+          { error: 'rated_requires_counted_account' },
+          registration.kind,
+        );
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(casual.status, 201, `${registration.kind}: casual stays open`);
+        assert.equal(casual.json.rated, false, registration.kind);
+      });
+    }
+  });
+});
+
+test('friend rooms: a stats-excluded account is refused either seat of a rated room, not a casual one', async () => {
+  for (const tenant of [jieqiTenant, xiangqiMahjongTenant] as unknown as AnyTenant[]) {
+    const registration = routingTenants().find(
+      (candidate) => candidate.gameSpecId === tenant.gameSpecId,
+    );
+    assert.ok(registration, `${tenant.kind} is registered`);
+    await withRatedOn(() =>
+      withTenantEnabled(registration, async () => {
+        const created = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        assert.equal(created.status, 201, tenant.kind);
+        const room = registration.rooms.get(
+          created.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        // First seat: the excluded account arrives before the creator.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-first', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+        assert.ok(assignTenantSeat(tenant, room, 'creator', undefined, ACCOUNT).ok, tenant.kind);
+        // Second seat: the excluded account accepts the creator's rated link.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-second', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        const casualRoom = registration.rooms.get(
+          casual.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        assert.ok(
+          assignTenantSeat(tenant, casualRoom, 'excluded-casual', undefined, EXCLUDED).ok,
+          `${tenant.kind}: a casual seat stays open to an excluded account`,
+        );
+      }),
+    );
+  }
+});
+
 type AnyTenant = VariantTenant<
   string,
   string,
@@ -365,6 +468,7 @@ type AnyTenant = VariantTenant<
 // The tenant objects behind every rated lobby; the first assertion below fails
 // when a new rated lobby is missing here, so the summary check cannot go stale.
 const RATED_LOBBY_TENANTS = [
+  gomokuTenant,
   xiangqiTenant,
   crazyhouseXiangqiTenant,
   duckXiangqiTenant,
@@ -373,6 +477,7 @@ const RATED_LOBBY_TENANTS = [
   jungleTenant,
   jungleFlipTenant,
   darkXiangqiTenant,
+  xiangqiMahjongTenant,
 ] as unknown as readonly AnyTenant[];
 
 function userSeatToken(color: string, userId: string): TenantSeatTokenState<string> {
@@ -617,6 +722,144 @@ definePersistenceTests('lobby rated', () => {
       assert.ok(red && black, `both seats got a jieqi rating row: ${JSON.stringify(rows)}`);
       assert.ok(red.elo_rating > 1500, `winner ${red.elo_rating}`);
       assert.ok(black.elo_rating < 1500, `loser ${black.elo_rating}`);
+    } finally {
+      await client.end();
+    }
+  });
+
+  // Xiangqi mahjong rates the whole four-hand match (the room finishes when the
+  // match does) at 5+5, the one rated pace its lobby offers. Seats are east and
+  // west, so this is the write that needs the east->white slot mapping. Launched
+  // (no grant), so the pool is public: a rapid ladder and a profile row.
+  persistenceTest(
+    'a rated Xiangqi Mahjong match moves both ratings onto the public rapid ladder',
+    async () => {
+      const registration = registeredVariantTenants().find(
+        (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
+      );
+      assert.ok(registration?.lobby?.supportsRated, 'xiangqi mahjong lobby must offer rated seeks');
+      const now = new Date();
+      for (const id of ['user_xmj_east', 'user_xmj_west']) {
+        await createUser({
+          id,
+          email: `${id}@example.com`,
+          emailVerifiedAt: now,
+          handle: id.replace(/_/g, ''),
+          displayName: id,
+          now,
+        });
+      }
+      const pace = { initialMs: 300_000, incrementMs: 5_000 };
+      await withTenantEnabled(registration, async () => {
+        const created = await registration.lobby!.createRoom(pace, true);
+        const room = registration.rooms.get(created.id) as unknown as
+          | (ReturnType<typeof createTenantRuntimeRoom> & { ok: true })['room']
+          | undefined;
+        assert.ok(room, 'the lobby room is live');
+        assert.equal(room.rated, true);
+        room.seatTokens = {
+          east: userSeatToken('east', 'user_xmj_east'),
+          west: userSeatToken('west', 'user_xmj_west'),
+        };
+        const tenant = xiangqiMahjongTenant as unknown as AnyTenant;
+        room.projection.state = tenant.rules.finish(room.projection.state, 'west', 'resignation');
+        const summary =
+          tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+        assert.equal(summary.rated, true);
+        assert.equal(summary.result, 'west-wins');
+        await recordGameEnd(created.id, summary);
+      });
+
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        const { rows } = await client.query<{ user_id: string; elo_rating: number }>(
+          `SELECT user_id, elo_rating FROM user_ratings WHERE variant = 'xiangqi_mahjong'`,
+        );
+        const east = rows.find((row) => row.user_id === 'user_xmj_east');
+        const west = rows.find((row) => row.user_id === 'user_xmj_west');
+        assert.ok(east && west, `both seats got a xiangqi_mahjong rating: ${JSON.stringify(rows)}`);
+        assert.ok(west.elo_rating > 1500, `winner ${west.elo_rating}`);
+        assert.ok(east.elo_rating < 1500, `loser ${east.elo_rating}`);
+        const { rows: participants } = await client.query<{ color: string; elo_after: number }>(
+          `SELECT color, elo_after FROM game_participants
+         WHERE game_id IN (SELECT room_id FROM games WHERE variant = 'xiangqi-mahjong')
+         ORDER BY color`,
+        );
+        assert.deepEqual(
+          participants.map((row) => row.color),
+          ['east', 'west'],
+        );
+        assert.ok(
+          participants.every((row) => row.elo_after !== null),
+          'per-game ratings recorded',
+        );
+      } finally {
+        await client.end();
+      }
+
+      // Public pool: a rapid ladder (5+5 is rapid) and a profile row.
+      for (const timeClass of ['bullet', 'blitz', 'rapid'] as const) {
+        const ladders = await getLeaderboardSummary({ timeClass });
+        assert.equal(
+          ladders.some((ladder) => ladder.variant === 'xiangqi_mahjong'),
+          timeClass === 'rapid',
+          `xiangqi_mahjong ladder on the ${timeClass} leaderboard`,
+        );
+      }
+      const profile = await getUserProfileByHandle('userxmjwest', null);
+      assert.ok(profile, 'the profile loads');
+      assert.ok(
+        profile.ratings.some((rating) => rating.variant === 'xiangqi_mahjong'),
+        'xiangqi_mahjong on the winner profile',
+      );
+    },
+  );
+
+  persistenceTest('a Xiangqi Mahjong bot match never rates', async () => {
+    const now = new Date();
+    await createUser({
+      id: 'user_xmj_pve',
+      email: 'user_xmj_pve@example.com',
+      emailVerifiedAt: now,
+      handle: 'userxmjpve',
+      displayName: 'user_xmj_pve',
+      now,
+    });
+    const registration = registeredVariantTenants().find(
+      (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
+    );
+    assert.ok(registration);
+    await withTenantEnabled(registration, async () => {
+      // Asked for rated: the factory drops it for a bot seat.
+      const created = await createXiangqiMahjongRoom(
+        { initialMs: 300_000, incrementMs: 5_000 },
+        'east',
+        { engineId: XMJ_BOT_CLIENT_ID, seat: 'west' },
+        true,
+      );
+      assert.ok(created.ok);
+      if (!created.ok) return;
+      const room = created.room as unknown as (ReturnType<typeof createTenantRuntimeRoom> & {
+        ok: true;
+      })['room'];
+      assert.equal(room.rated, false, 'a bot room is casual');
+      room.seatTokens = { east: userSeatToken('east', 'user_xmj_pve') };
+      const tenant = xiangqiMahjongTenant as unknown as AnyTenant;
+      room.projection.state = tenant.rules.finish(room.projection.state, 'east', 'resignation');
+      const summary =
+        tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+      assert.equal(summary.mode, 'pve');
+      assert.equal(summary.rated, false);
+      await recordGameEnd(room.id, summary);
+    });
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const { rows } = await client.query(
+        `SELECT 1 FROM user_ratings WHERE user_id = 'user_xmj_pve'`,
+      );
+      assert.equal(rows.length, 0, 'a bot match wrote a rating');
     } finally {
       await client.end();
     }

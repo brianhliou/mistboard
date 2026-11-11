@@ -41,6 +41,7 @@ import type { JieqiEvent, JieqiRuntimeRoom } from '../jieqi-runtime.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import type { XiangqiEvent } from '../xiangqi-runtime.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
+import { clearTenantRuntimeTimers } from './lifecycle.js';
 import { createTenantRuntimeRoomFromEvents, tenantSnapshotPayload } from './runtime.js';
 import { createTenantWsRuntime, TENANT_LIVE_GAME_NO_SEAT_REASON } from './ws.js';
 
@@ -157,6 +158,52 @@ function fullXiangqiRoom(roomId: string): XiangqiLiveRoom {
   assert.ok(created.ok, 'fixture event log must hydrate');
   return created.room as unknown as XiangqiLiveRoom;
 }
+
+test('a seated tenant move during pause gets an error reason and appends nothing', async () => {
+  const room = fullXiangqiRoom('xq_paused_move');
+  // Leave the first seat open so this socket can claim it without a token.
+  delete room.projection.seats.red;
+  const socket = new FakeSocket();
+  try {
+    await xiangqiWs.handleConnection(
+      WS_CTX,
+      socket.asWebSocket(),
+      fakeRequest('paused-client'),
+      room,
+    );
+    assert.equal((socket.sent[0] as { seat: string }).seat, 'red');
+    room.projection.paused = { at: Date.now(), activeColor: 'red' };
+    const eventCount = room.events.length;
+    const sentBefore = socket.sent.length;
+    socket.receive({ type: 'move', from: 'a4', to: 'a5' });
+    await Promise.resolve();
+    assert.equal(room.events.length, eventCount);
+    assert.deepEqual(socket.sent.slice(sentBefore), [{ type: 'error', reason: 'game_paused' }]);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a paused hidden-info snapshot adds only the public pause flag to the entire payload', () => {
+  const room = fullJieqiRoom('jq_paused_hidden');
+  for (const seat of ['red', 'black', 'spectator'] as const) {
+    const client = { id: 'pause-viewer', seat, solo: false };
+    room.projection.paused = undefined;
+    const before = JSON.parse(JSON.stringify(tenantSnapshotPayload(jieqiTenant, room, client)));
+    room.projection.paused = { at: 4_000, activeColor: 'red' };
+    const after = JSON.parse(JSON.stringify(tenantSnapshotPayload(jieqiTenant, room, client)));
+    assert.equal(after.paused, true);
+    assert.deepEqual(after, { ...before, serverAt: after.serverAt, paused: true });
+    // Every face-down piece remains role-free even after serializing the whole frame.
+    for (const piece of Object.values(after.state.board) as Array<{
+      faceDown: boolean;
+      role?: string;
+    }>) {
+      if (piece.faceDown) assert.equal('role' in piece, false);
+    }
+    assert.ok(after.events.every((event: Record<string, unknown>) => !('setup' in event)));
+  }
+});
 
 test('an OPEN spec admits a live spectator in production with no admin token', async () => {
   // The room gate now consults liveObservePolicy, the same predicate Mistboard TV

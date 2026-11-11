@@ -14,7 +14,7 @@ import {
 } from './game-display.js';
 import { buildNav } from './site-shell.js';
 import { brandsBlackAsBlue, seatColorWord } from './variant-seat-label.js';
-import { webVariantTenantForRoomId } from './variant-tenant/registry.js';
+import { finishedGameHref } from './variant-tenant/registry.js';
 
 type GameRow = FeaturedGame & {
   initialMs?: number | null;
@@ -500,15 +500,11 @@ function buildResults(data: QueryResponse, onApply: (next: Filters) => void): HT
 // Review-link target for a database row. Variant-tenant games (xiangqi / jungle
 // / ... families) replay only under their own postgame route: the
 // legacy /game/:id review shell knows only the chess-shell event union and 403s
-// on their event log (`game_not_public`). Resolve the tenant by room-id prefix
-// and link to its postgame mount (gameRouteBase). Chess-family games and tenants
-// without a postgame surface keep the legacy /game/:id.
+// on their event log (`game_not_public`). finishedGameHref resolves the tenant
+// by room-id prefix: its postgame mount, its own room for a tile table, else
+// the legacy /game/:id for chess-family games.
 export function databaseReviewHref(roomId: string): string {
-  const tenant = webVariantTenantForRoomId(roomId);
-  const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
-  return routeBase
-    ? `${routeBase}/${encodeURIComponent(roomId)}`
-    : `/game/${encodeURIComponent(roomId)}`;
+  return finishedGameHref(roomId, null);
 }
 
 function buildGameRow(game: GameRow): HTMLElement {

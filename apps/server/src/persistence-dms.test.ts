@@ -175,6 +175,10 @@ definePersistenceTests('dms', () => {
       now,
     });
 
+    // Before anyone reports the thread, the admin reader sees nothing: staff read
+    // reported threads only, never an arbitrary thread id.
+    assert.equal(await getDmThreadForAdmin(dmThreadId('dm_user_jo', 'dm_user_kim')), null);
+
     const missing = await createDmReport({
       id: 'dmrpt_missing',
       reporterId: 'dm_user_jo',
@@ -228,6 +232,11 @@ definePersistenceTests('dms', () => {
     assert.equal(
       (await listDmReports({ limit: 10 })).some((r) => r.id === 'dmrpt_1'),
       false,
+    );
+    // A resolved report still lets staff re-read the thread it was about.
+    assert.equal(
+      (await getDmThreadForAdmin(dmThreadId('dm_user_jo', 'dm_user_kim')))?.messages.length,
+      1,
     );
 
     // After resolution the same reporter can file a fresh report.

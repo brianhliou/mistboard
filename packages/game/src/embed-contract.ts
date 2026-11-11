@@ -164,8 +164,10 @@ export type EmbedTarget =
 const ID = '([A-Za-z0-9_-]{1,64})';
 // `/black` after the id is lichess's spelling for "seen from Black's side", kept
 // so a habit formed there works here; `?pov=` is ours and wins when both appear.
+// `/room/:id` is the address bar during play, so it is what a player pastes
+// after a game; oEmbed answers it only once the game is finished.
 const GAME_TARGET = new RegExp(
-  `^/(?:embed/game|game|[a-z0-9-]{1,40}/game)/${ID}(?:/(white|black))?/?$`,
+  `^/(?:embed/game|game|room|[a-z0-9-]{1,40}/(?:game|room))/${ID}(?:/(white|black))?/?$`,
 );
 const STUDY_TARGET = new RegExp(`^/(?:embed/)?study/${ID}/${ID}/?$`);
 const PUZZLE_PERMALINK = new RegExp(`^/puzzles/${ID}/?$`);

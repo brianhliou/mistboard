@@ -119,4 +119,31 @@ describe('board judgment badge', () => {
       expect(empty()).toBe('');
     });
   }
+
+  // Puzzles mark a found move ✓ and a miss ✗ (lichess): an icon in the disc
+  // instead of glyph text, so it reads the same at every board size and font.
+  it.each([
+    [
+      'xiangqi',
+      (icon: 'check' | 'cross') =>
+        xiangqiMarkerSvg(
+          { square: 'e4', kind: 'glyph', icon, className: 'xq-marker--good' },
+          'red',
+        ),
+    ],
+    [
+      'jungle',
+      (icon: 'check' | 'cross') =>
+        jungleMarkerSvg({ square: 'c3', kind: 'glyph', icon, className: 'xq-marker--good' }, GEOM),
+    ],
+  ])('%s draws a check or cross icon in the badge disc', (_name, render) => {
+    for (const icon of ['check', 'cross'] as const) {
+      const svg = render(icon);
+      expect(svg).toContain('xq-marker--glyph');
+      expect(svg).toContain('class="xq-marker__disc"');
+      expect(svg).toMatch(/<path class="xq-marker__icon" d="[^"]+"/);
+      expect(svg).not.toContain('xq-marker__label');
+    }
+    expect(render('check')).not.toBe(render('cross'));
+  });
 });

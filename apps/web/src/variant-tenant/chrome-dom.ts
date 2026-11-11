@@ -3,7 +3,7 @@
  * no variant or live-state knowledge.
  */
 
-import { moveListScroller } from '../game-table.js';
+import { centeredScrollOffsets, moveListScroller, scrollMoveListToEnd } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
 
 export function infoItem(label: string, value: string): HTMLDivElement {
@@ -87,14 +87,15 @@ export function syncMoveListScroll(
     const scroller = moveListScroller(list);
     const active = list.querySelector<HTMLElement>('.active');
     if (active) {
-      const scrollerRect = scroller.getBoundingClientRect();
-      const activeRect = active.getBoundingClientRect();
-      const centeredDelta =
-        activeRect.top - scrollerRect.top - (scroller.clientHeight - activeRect.height) / 2;
-      scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + centeredDelta), behavior: 'auto' });
+      const offsets = centeredScrollOffsets(
+        scroller,
+        scroller.getBoundingClientRect(),
+        active.getBoundingClientRect(),
+      );
+      scroller.scrollTo({ ...offsets, behavior: 'auto' });
       return;
     }
-    if (follow) scroller.scrollTop = scroller.scrollHeight;
+    if (follow) scrollMoveListToEnd(scroller);
   });
 }
 

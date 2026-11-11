@@ -41,26 +41,36 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
 export const JIEQI_ENGINE_VERSION = '0.3.3';
 
-// AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): the
-// top jieqi slot since 2026-10, a Pikafish-derived engine with its own NNUE. The slot is
-// not a numbered level: it holds the strongest engine we know of and names it, so a later
-// swap never redefines a level (docs-private/engine-track/jieqi-strength-ceiling-2026-09-30.md).
-// ab-jchess.ref pins the binary; railpack.json fetches the net from the author's release
-// and checks its sha256 (his terms: never re-hosted). The version names the source
-// release and the net, since either one changes its play.
+// AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): a
+// jieqi engine with its own NNUE, the top jieqi slot again from AB-JChess-20261031 (a new
+// engine built on jqe's MIT code), which beat jqe by +46 Elo over 600 games at 4 s/move
+// (ab-jchess.ref). The slot is not a numbered level: it holds the strongest engine we
+// know of and names it, so a later swap never redefines a level
+// (docs-private/engine-track/jieqi-strength-ceiling-2026-09-30.md). ab-jchess.ref pins
+// the binary; railpack.json fetches the net from the author's release and checks its
+// sha256 (his terms: never re-hosted). The version names the source release and the
+// net, since either one changes its play.
 export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
-export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2b-net-20260911';
-export const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
+export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-20261031-net-20261030';
+export const ABJCHESS_NET_FILE = 'abjchess-20261030.nnue';
+// jqe (github.com/devinokeefe/jieqi, MIT, by Devin O'Keefe): a UCI jieqi engine with
+// its own NNUE, one rung under AB-JChess (top from 10-21, when it beat AB-JChess 0.2d by
+// +67 over 300 games; AB-JChess-20261031 took the top back, jqe.ref). Its net is MIT
+// too, so it ships in our engines release beside the binary (engine-assets.sh). The
+// slot is behind MISTBOARD_JQE_ENABLED: off, nothing offers, seats or schedules it
+// (jqeAvailable).
+export const JIEQI_JQE_ENGINE_ID = 'jqe-jieqi';
+export const JQE_JIEQI_ENGINE_VERSION = 'jqe-331a6e61-net-it014';
+export const JQE_NET_FILE = 'it014.jqn';
 // Short form of ab-jchess.ref, the AB-JChess commit the prod image builds. Part of the
 // AB analysis cache keys for the same reason PIKAFISH_JIEQI_ENGINE_REF is part of the
 // PikaJieQi ones (see below); jieqi-engine-ref.test.ts keeps the two in step.
-export const ABJCHESS_ENGINE_REF = '1ae95ca6';
+export const ABJCHESS_ENGINE_REF = 'efc83867';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
-// when the binary or the analysis search config itself changes. Analysis now runs a fixed
-// depth (JIEQI_ANALYSIS_DEPTH_SEARCH), single-threaded, on its OWN fixed Hash — see
-// jieqiAnalysisResourceOptions; it is no longer "default hash", and depth is no longer 12.
+// when the binary or the analysis search config itself changes. New analysis uses fixed
+// nodes, one thread and Hash=256; the Level 8 budget/rules contract is also in its cache ids.
 // 0.2.0 (2026-08-27): jieqi analysis runs `go depth N movetime T` and halts on
 // whichever binds first. When movetime wins, the final iteration is aborted and
 // the last `info` line is a bound with a one-move pv — which the UCI reader used
@@ -104,8 +114,11 @@ export type JieqiEngineTier = {
   // offered or rated.
   retired?: boolean;
   // The binary behind the tier; omitted = PikaJieQi.
-  engine?: 'ab-jchess';
+  engine?: JieqiLiveEngine;
 };
+
+/** The non-PikaJieQi binaries a live tier can run. */
+export type JieqiLiveEngine = 'ab-jchess' | 'jqe';
 
 // The ladder (2026-09-29): Lichess's Stockfish level table, the same one the xiangqi
 // Fairy-Stockfish ladder copies (xiangqi-fsf-engine.ts): skill -9..16, depth 5/5/5/5/5/8/13,
@@ -134,13 +147,23 @@ const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
     // Level 8: no depth cap, no skill, and the movetime matches mainline Pikafish's top
     // xiangqi rung (level-8, 4000ms). Measured at the jieqi start position on an 8-core
     // dev box: this config reaches depth 32.
+    // Named like the rungs below it (migration 173 renames stored games).
     id: JIEQI_DEFAULT_ENGINE_ID,
-    name: 'PikaJieQi - Strongest',
+    name: 'Pikafish Level 8',
     movetimeMs: 4_000,
   },
   {
-    // The top slot: AB-JChess on level 8's budget (4000ms, Hash 256, the same threads).
-    // Full strength, so no depth cap and no skill.
+    // jqe above level 8, on level 8's budget (4000ms, Hash 256, the same threads): the
+    // settings its matches against AB-JChess ran. Full strength.
+    id: JIEQI_JQE_ENGINE_ID,
+    name: 'jqe',
+    movetimeMs: 4_000,
+    engine: 'jqe',
+  },
+  {
+    // The top slot: AB-JChess on the same budget (4000ms, Hash 256, the same threads),
+    // the settings of its 600-game match against jqe. Full strength, so no depth cap
+    // and no skill.
     id: JIEQI_ABJCHESS_ENGINE_ID,
     name: 'AB-JChess',
     movetimeMs: 4_000,
@@ -199,7 +222,9 @@ export const JIEQI_RANDOM_ENGINE_ID = 'random-legal-jieqi';
 export const JIEQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
 
 /** Everything offered, weakest first: levels 1-7, level 8 (JIEQI_DEFAULT_ENGINE_ID),
- *  then the AB-JChess top slot. */
+ *  jqe, then the AB-JChess slot on top. jqe is listed whether or not its flag is on
+ *  (the catalog resolves it for history); every surface that offers or schedules a
+ *  bot asks jqeAvailable() or jqeEnabled() first. */
 export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS.filter(
   (tier) => !tier.retired,
 );
@@ -220,10 +245,11 @@ const enginePool = new UciEnginePool({
 // Level 1 move queued behind two 4 s AB searches waits ~4 s against the 5 s queue
 // timeout, and any slower AB move (a longer budget, a stalled process) sheds it (a shed
 // move retries once, then resigns the bot). Two slots keep the parked-process ceiling
-// where the shared pool had it (at most two AB processes, each holding its 133 MB net
-// and its hash). The queue timeout covers a full AB move plus its process deadline, so
-// a third concurrent AB game waits one move rather than being shed; that wait is taken
-// off its own budget (`budgetAfterWait` in jieqiLiveEngineMove).
+// where the shared pool had it (at most two AB processes, each holding its net, 133 MB
+// through v0.2d and 0.6 MB from AB-JChess-20261031, and its hash). The queue timeout
+// covers a full AB move plus its process deadline, so a third concurrent AB game waits
+// one move rather than being shed; that wait is taken off its own budget
+// (`budgetAfterWait` in jieqiLiveEngineMove).
 export const ABJCHESS_LIVE_QUEUE_TIMEOUT_MS = 20_000;
 const abJchessLivePool = new UciEnginePool({
   name: 'abjchess-live',
@@ -234,9 +260,23 @@ const abJchessLivePool = new UciEnginePool({
   queueTimeoutMessage: 'ab-jchess concurrency queue timed out',
 });
 
+// jqe gets its own two slots for the same reason AB-JChess does: a 4 s search must
+// never queue a ladder move, nor an AB one.
+export const JQE_LIVE_QUEUE_TIMEOUT_MS = 20_000;
+const jqeLivePool = new UciEnginePool({
+  name: 'jqe-live',
+  maxProcessesEnvVar: 'MISTBOARD_JQE_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_JQE_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: JQE_LIVE_QUEUE_TIMEOUT_MS,
+  queueTimeoutMessage: 'jqe concurrency queue timed out',
+});
+
 /** The live-move pool a tier's binary runs in. */
-export function jieqiLivePool(engine?: 'ab-jchess'): UciEnginePool {
-  return engine === 'ab-jchess' ? abJchessLivePool : enginePool;
+export function jieqiLivePool(engine?: JieqiLiveEngine): UciEnginePool {
+  if (engine === 'ab-jchess') return abJchessLivePool;
+  if (engine === 'jqe') return jqeLivePool;
+  return enginePool;
 }
 
 // Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
@@ -253,11 +293,11 @@ const analysisPool = new UciEnginePool({
   queueTimeoutMessage: 'pikafish-jieqi analysis queue timed out',
 });
 
-// AB-JChess analysis gets its own pool, ONE slot by default: each process holds the
-// 133 MB net besides its hash, on the same `web` box as the WS server and the live AB
-// sessions. A sweep or a decisions run holds its one session for the whole run, and
-// the analysis job lane already runs one jieqi job at a time, so one slot costs no
-// throughput. The live-play pool above is separate and unchanged.
+// AB-JChess analysis gets its own pool, ONE slot by default: each process holds its
+// net besides its hash (133 MB through v0.2d; 0.6 MB from AB-JChess-20261031), on the
+// same `web` box as the WS server and the live AB sessions. A sweep or a decisions run
+// holds its one session for the whole run, and the analysis job lane already runs one
+// jieqi job at a time, so one slot costs no throughput. The live-play pool above is separate and unchanged.
 const abJchessAnalysisPool = new UciEnginePool({
   name: 'abjchess-analysis',
   maxProcessesEnvVar: 'MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES',
@@ -302,8 +342,8 @@ export function pikaJieqiPath(): string {
 }
 
 // AB-JChess and its net. No dev fallback under ~/projects/tools: the checkout there is
-// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2b
-// (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
+// 0.1b, which searches the start position on an empty pool field. Locally, build
+// AB-JChess-20261031 (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
 export function abJchessPath(): string {
   const explicit = process.env.MISTBOARD_ABJCHESS_PATH;
   if (explicit) {
@@ -342,6 +382,66 @@ export function abJchessNetPath(): string {
   return found;
 }
 
+function abJchessStartupOptions(): string[] {
+  // Site kernel uses jqe's chase rule since 2026-11-08; AB-JChess-20261031 defaults to skyrule.
+  return [
+    `setoption name EvalFile value ${abJchessNetPath()}`,
+    'setoption name ChaseRule value default',
+  ];
+}
+
+// jqe and its net: the engines release puts both in /app/bin. No dev fallback; jqe
+// builds on x86-64 only, so locally point MISTBOARD_JQE_PATH at a wrapper that runs the
+// released binary (docker --platform linux/amd64) and MISTBOARD_JQE_NET at the net.
+export function jqePath(): string {
+  const explicit = process.env.MISTBOARD_JQE_PATH;
+  if (explicit) {
+    const resolved = resolve(explicit);
+    if (!existsSync(resolved)) {
+      throw new Error(`MISTBOARD_JQE_PATH points at ${resolved} but the binary does not exist`);
+    }
+    return resolved;
+  }
+  for (const candidate of [resolve(process.cwd(), 'bin', 'jqe'), '/app/bin/jqe']) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error('jqe binary not found. Set MISTBOARD_JQE_PATH.');
+}
+
+export function jqeNetPath(): string {
+  const explicit = process.env.MISTBOARD_JQE_NET;
+  const candidates = explicit
+    ? [resolve(explicit)]
+    : [resolve(process.cwd(), 'bin', JQE_NET_FILE), `/app/bin/${JQE_NET_FILE}`];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error(
+      `jqe net ${JQE_NET_FILE} not found (${candidates.join(', ')}). Set MISTBOARD_JQE_NET.`,
+    );
+  }
+  return found;
+}
+
+/** The jqe slot's flag, read on every call (off unless MISTBOARD_JQE_ENABLED is 1 or
+ *  true): held off until the author's OK. */
+export function jqeEnabled(): boolean {
+  const flag = process.env.MISTBOARD_JQE_ENABLED?.trim().toLowerCase();
+  return flag === '1' || flag === 'true';
+}
+
+/** True when the flag is on and both the jqe binary and its net resolve; the slot is
+ *  offered and seated only then. */
+export function jqeAvailable(): boolean {
+  if (!jqeEnabled()) return false;
+  try {
+    jqePath();
+    jqeNetPath();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** True when both the AB-JChess binary and its net resolve; the top slot is offered only then. */
 export function abJchessAvailable(): boolean {
   try {
@@ -372,8 +472,7 @@ export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTie
 }
 
 // Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
-// prewarm). The analysis route gates on jieqiAnalysisEngineAvailable() below instead,
-// which also accepts AB-JChess.
+// prewarm). Review grading prefers AB-JChess when its binary and net resolve.
 export function jieqiEngineBinaryAvailable(): boolean {
   try {
     pikaJieqiPath();
@@ -387,16 +486,15 @@ export function jieqiEngineBinaryAvailable(): boolean {
 export type JieqiAnalysisEngine = 'ab-jchess' | 'pikafish-jieqi';
 
 /**
- * Which engine computes NEW jieqi analysis: AB-JChess whenever its binary and net
- * resolve (prod), else PikaJieQi, so a dev box or CI without the net still analyses.
- * Each engine files under its own cache ids and the client reads the curve off the
- * stored id, so the two never mix inside one series (jieqi-analysis.ts).
+ * AB-JChess grades new reviews when its binary and net resolve (prod): it is the
+ * strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi is the dev
+ * fallback. Stored analyses retain their own engine ids and win curves.
  */
 export function jieqiAnalysisEngine(): JieqiAnalysisEngine {
   return abJchessAvailable() ? 'ab-jchess' : 'pikafish-jieqi';
 }
 
-/** The analysis route's fail-closed gate: either engine can serve it. */
+/** Fail closed unless either grading engine resolves. */
 export function jieqiAnalysisEngineAvailable(): boolean {
   return abJchessAvailable() || jieqiEngineBinaryAvailable();
 }
@@ -418,8 +516,9 @@ export function jieqiAnalysisEngineAvailable(): boolean {
 // write these rows. scripts/backfill-jieqi-analysis.mjs enforces that at runtime.
 //
 // AB-JChess analysis runs a 64 MB table. Its budgets are tens of thousands of nodes
-// (it searches ~30-70k nps single-threaded, ~50x slower per node than PikaJieQi), so
-// even a 200k-node re-search touches a few percent of 64 MB; the remaining 192 MB would
+// (sized for v0.2d, which searched ~30-70k nps single-threaded; AB-JChess-20261031 is
+// about 65x faster per node, so the same budgets now cost milliseconds), so even a
+// 200k-node re-search touches a few percent of 64 MB; the remaining 192 MB would
 // buy nothing but resident memory on the web box. Same reproducibility argument: fixed.
 export function jieqiAnalysisResourceOptions(
   engine: JieqiAnalysisEngine = 'pikafish-jieqi',
@@ -432,17 +531,22 @@ export function jieqiAnalysisResourceOptions(
  *  net (AB-JChess always loads its own; PikaJieQi only when MISTBOARD_PIKAFISH_NET is
  *  set), then the fixed analysis Hash/Threads. */
 export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): string[] {
-  const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
-  return ['uci', ...net, ...jieqiAnalysisResourceOptions(engine), 'ucinewgame', 'isready'];
+  const startupOptions = engine === 'ab-jchess' ? abJchessStartupOptions() : netOption();
+  return [
+    'uci',
+    ...startupOptions,
+    ...jieqiAnalysisResourceOptions(engine),
+    'ucinewgame',
+    'isready',
+  ];
 }
 
 /**
  * The search budget for ONE analysis eval, as a union so a call site must pick exactly one
  * dial and cannot silently set both.
  *
- * NODES is the Layer-1 (whole-game sweep) dial; DEPTH is the Layer-2 (decisions) dial. The
- * difference matters and is not cosmetic: a fixed DEPTH is not a fixed amount of search.
+ * New sweeps and decisions both use NODES; DEPTH remains for historical tooling. A
+ * fixed DEPTH is not a fixed amount of search.
  * Measured over one 64-ply jieqi game at depth 16, per-ply cost ranged from 94k to 7.8M nodes
  * (median 173k, mean 845k) because check extensions and singular extensions spend the budget
  * for you. That makes NEIGHBOURING plies incomparable: a position one ply before a discovered
@@ -452,28 +556,28 @@ export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): str
  * same everywhere, so the series is internally comparable. (This is also what lichess/fishnet
  * budget on, for the same reason.)
  *
- * The movetime cap on the nodes arm is a BACKSTOP that must never bind: 500k nodes is ~200ms
- * at the 2-3M nps this binary runs at, against a 6s cap, so binding it would take a box under
- * ~84k nps. If it ever binds, the result stops being reproducible for that ply.
+ * Movetime on the nodes arm is a safety BACKSTOP. The calibrated Level 8 budget and
+ * its 4x consistency re-search fit inside 30s; if the cap binds, that ply is no longer
+ * reproducible at the promised node count.
  */
 export type JieqiEvalBudget =
   | { nodes: number; movetimeMs: number; depth?: undefined }
   | { depth: number; movetimeMs: number; nodes?: undefined };
 
-function jieqiGoCommand(opts: JieqiEvalBudget): string {
-  return opts.nodes != null
-    ? `go nodes ${Math.max(1, Math.floor(opts.nodes))} movetime ${opts.movetimeMs}`
-    : `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`;
+function jieqiGoCommand(opts: JieqiEvalBudget & { searchMoves?: readonly string[] }): string {
+  const go =
+    opts.nodes != null
+      ? `go nodes ${Math.max(1, Math.floor(opts.nodes))} movetime ${opts.movetimeMs}`
+      : `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`;
+  // The parser consumes every token after searchmoves as a move.
+  return opts.searchMoves?.length ? `${go} searchmoves ${opts.searchMoves.join(' ')}` : go;
 }
 
 /** The exact UCI block a fixed-budget analysis eval sends. Exported so the analysis
  *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
  *  by (room, engine, depth) and promises a CPU-independent result, which a second
  *  search thread would not preserve. */
-export function buildJieqiAnalysisCommands(
-  fen: string,
-  opts: JieqiEvalBudget & { moves?: readonly string[] },
-): string[] {
+export function buildJieqiAnalysisCommands(fen: string, opts: JieqiAnalysisRequest): string[] {
   return [
     'uci',
     ...netOption(),
@@ -488,15 +592,12 @@ export function buildJieqiAnalysisCommands(
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read PikaJieQi's
 // `info … score` for a redacted current-position FEN, side-to-move POV. Unlike the 3 custom
 // engines, Pikafish ALREADY emits `info score` — no engine change was needed here, so this just
-// reads what the binary already prints. The dial is a fixed search DEPTH (CPU-independent
-// result, so the cached analysis stays stable) with a movetime cap bounding latency. Gated
+// reads what the binary already prints. Fixed nodes bound search effort, with a movetime
+// backstop bounding pathological latency. Gated
 // through the dedicated ANALYSIS pool so a sweep can never occupy a live bot-move slot. Caller
 // owns POV normalization; the redacted (as-played info-state) FEN is sent as-is — the engine
 // never sees a hidden id.
-export async function evaluateJieqiFen(
-  fen: string,
-  opts: JieqiEvalBudget & { moves?: readonly string[] },
-): Promise<UciEval> {
+export async function evaluateJieqiFen(fen: string, opts: JieqiAnalysisRequest): Promise<UciEval> {
   const commands = buildJieqiAnalysisCommands(fen, opts);
   const release = await analysisPool.acquire();
   try {
@@ -515,6 +616,8 @@ export async function evaluateJieqiFen(
  *  per-request switches a shared session needs because it outlives any one search. */
 export type JieqiAnalysisRequest = JieqiEvalBudget & {
   moves?: readonly string[];
+  /** Kernel-legal nonterminal roots. Terminal moves are scored by the kernel. */
+  searchMoves?: readonly string[];
   /** Clear the hash (`ucinewgame`) before this search, so its result depends only on
    *  (fen, moves, budget) and not on what the session searched before. The decisions
    *  pass sets it: its evals used to run one process each, and keep that contract. */
@@ -551,9 +654,9 @@ function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
  * pattern): binary spawn + option setup + net load happen once for the whole run, then
  * each position is a `position fen …` + `go` round-trip built by the SAME
  * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
- * picks the binary (jieqiAnalysisEngine() by default: AB-JChess when it resolves). The
+ * picks the binary (jieqiAnalysisEngine() prefers AB-JChess when it resolves). The
  * sweep and the decisions pass both run here: decisions used to spawn a process per
- * eval, several hundred per game, which for AB-JChess would mean reloading a 133 MB net
+ * eval, several hundred per game, which for AB-JChess v0.2d meant reloading a 133 MB net
  * each time. Scores are side-to-move POV; the caller owns normalization, and the
  * redacted FEN is sent as-is (the engine never sees a hidden id). Holds one slot of the
  * engine's analysis pool for the duration, so a run never occupies a live bot-move
@@ -636,7 +739,9 @@ export function isJieqiEngineClientId(clientId: string | undefined): boolean {
 export function jieqiEngineVersion(clientId: string | undefined): string | null {
   const tier = jieqiEngineTierFor(clientId);
   if (!tier) return null;
-  return tier.engine === 'ab-jchess' ? ABJCHESS_JIEQI_ENGINE_VERSION : JIEQI_ENGINE_VERSION;
+  if (tier.engine === 'ab-jchess') return ABJCHESS_JIEQI_ENGINE_VERSION;
+  if (tier.engine === 'jqe') return JQE_JIEQI_ENGINE_VERSION;
+  return JIEQI_ENGINE_VERSION;
 }
 
 // `moves`: the quiet plies since the last irreversible move (capture OR reveal), with `fen`
@@ -657,7 +762,7 @@ export type JieqiEngineOptions = {
   /** Uniform [0,1) source for the skill pick; injectable for deterministic tests. */
   rng?: () => number;
   /** The binary (JieqiEngineTier.engine); omitted = PikaJieQi. */
-  engine?: 'ab-jchess';
+  engine?: JieqiLiveEngine;
   /** Restrict the root to these moves (UCI `go … searchmoves`); the draw guard's
    *  re-search (jieqi-draw-guard.ts). Omitted or empty = every legal move. */
   searchMoves?: readonly string[];
@@ -760,11 +865,15 @@ export async function jieqiLiveEngineMove(
 }
 
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
- *  set here, once per process lifetime; AB-JChess loads its net here too. */
-export function buildJieqiLiveInitCommands(engine?: 'ab-jchess'): string[] {
-  const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
-  return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+ *  set here, once per process lifetime; AB-JChess and jqe load their nets here too. */
+export function buildJieqiLiveInitCommands(engine?: JieqiLiveEngine): string[] {
+  const startupOptions =
+    engine === 'ab-jchess'
+      ? abJchessStartupOptions()
+      : engine === 'jqe'
+        ? [`setoption name EvalFile value ${jqeNetPath()}`]
+        : netOption();
+  return ['uci', ...startupOptions, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the
@@ -793,16 +902,40 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 
 // Parked live-move processes, keyed by binary + handshake, so PikaJieQi and AB-JChess
 // park separately. Each binary's live pool (jieqiLivePool) still caps how many run at
-// once, so at most that many of each are ever parked; an AB-JChess one holds its 133 MB
-// net besides the hash. The idle TTL is long on purpose: a reaped session
+// once, so at most that many of each are ever parked; an AB-JChess one holds its net
+// besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
-// exact cost this cache exists to keep off the move path.
-const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
+// exact cost this cache exists to keep off the move path (prod, 2026-10-23: a cold
+// first move ran 0.5-5.8 s past its movetime, against ~0.1 s locally).
+// The long TTL covers ONE session per binary, the most recently used. Copies a
+// burst of overlapping games spawned close after 10 idle minutes: each holds
+// ~600 MB (256 MB hash, 4 threads' tables, AB-JChess's net), and parked behind
+// round-robin reuse they stayed resident all day (the web box went from 0.2 to
+// 1.4-2 GB). Replayed on the 17 h of prod moves to 10-23: average parked
+// sessions 2.29 -> 1.68, and the only added cold spawns were three moves of a
+// second concurrent PikaJieQi game (a lone game always reuses the warm copy).
+const warmSessions = new UciWarmSessionCache({
+  name: 'pikafish-jieqi',
+  idleTtlMs: 60 * 60_000,
+  extraIdleTtlMs: 10 * 60_000,
+});
 
-function jieqiLiveSessionSpec(engine?: 'ab-jchess') {
-  return engine === 'ab-jchess'
-    ? { bin: abJchessPath(), initCommands: buildJieqiLiveInitCommands(engine), name: 'ab-jchess' }
-    : { bin: pikaJieqiPath(), initCommands: buildJieqiLiveInitCommands(), name: 'pikafish-jieqi' };
+function jieqiLiveSessionSpec(engine?: JieqiLiveEngine) {
+  if (engine === 'ab-jchess') {
+    return {
+      bin: abJchessPath(),
+      initCommands: buildJieqiLiveInitCommands(engine),
+      name: 'ab-jchess',
+    };
+  }
+  if (engine === 'jqe') {
+    return { bin: jqePath(), initCommands: buildJieqiLiveInitCommands(engine), name: 'jqe' };
+  }
+  return {
+    bin: pikaJieqiPath(),
+    initCommands: buildJieqiLiveInitCommands(),
+    name: 'pikafish-jieqi',
+  };
 }
 
 export async function jieqiEngineMove(

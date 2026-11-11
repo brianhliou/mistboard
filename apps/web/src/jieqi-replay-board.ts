@@ -23,18 +23,27 @@ import {
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
+  type JieqiPieceRole,
   type JieqiSquare,
   jieqiMoveLabel,
   parseJieqiFen,
 } from '@mistboard/game';
 import {
   animateJieqiBoardMove,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   type JieqiBoardArrow,
   type JieqiBoardMarker,
+  jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { BEST_STYLE } from './review/engine/engine-arrows.js';
+import { jieqiRevealOdds } from './review/jieqi-luck-mark.js';
+import {
+  attachLuckBadgeCard,
+  attachLuckMarkCard,
+  type LuckCardDetail,
+} from './review/luck-mark-card.js';
 import { moveGlyphTone } from './review/move-glyph.js';
 import {
   type ChapterShape,
@@ -49,6 +58,7 @@ export type JieqiReplayLine = { states: JieqiGameState[]; played: JieqiMove[] };
 
 /** The chapter's annotations, keyed as chapterAnnotations returns them. */
 export type JieqiReplayAnnotations = {
+  luck?: ReadonlyMap<number, { luck?: number }>;
   /** Judgment glyph per 1-based mainline ply. */
   glyphs?: Record<number, string>;
   /** The chapter's comment on a mainline move, by ply. */
@@ -87,6 +97,8 @@ function replayFrom(start: JieqiGameState, tokens: readonly string[]): JieqiRepl
     const move = tokenToMove(token);
     if (!move) break;
     const before = states[states.length - 1]!;
+    // Moving an unknown piece would turn over a sampled identity.
+    if (before.board[move.from]?.unknown) break;
     const next = applyJieqiMove(before, move);
     if (next === before) break;
     states.push(next);
@@ -100,14 +112,16 @@ function replayFrom(start: JieqiGameState, tokens: readonly string[]): JieqiRepl
  * it; a token it refuses ends the line there. Null when the root is missing,
  * does not parse, or carries no deal: a public five-field FEN would have the
  * parser sample one, and a sampled deal draws identities that never happened.
+ * A deal with `?` slots is still a deal: an imported game names every piece
+ * that turned over and marks the rest unknown, and those stay face down.
  */
 export function replayJieqiLine(
   rootFen: string | undefined,
   tokens: readonly string[],
 ): JieqiReplayLine | null {
-  if (!rootFen) return null;
+  if (!rootFen || rootFen.trim().split(/\s+/).length < 6) return null;
   const parsed = parseJieqiFen(rootFen, { gameId: 'study-embed' });
-  if (!parsed.ok || parsed.sampled) return null;
+  if (!parsed.ok) return null;
   return replayFrom(parsed.state, tokens);
 }
 
@@ -178,6 +192,7 @@ export function mountJieqiReplayBoard(
     suffixClass?: string;
     note?: string;
     assessment?: string;
+    luck?: number;
     line?: { moves: string[]; verdict?: string; note?: string };
   }>;
   bottomSeat: () => 'first' | 'second';
@@ -203,6 +218,29 @@ export function mountJieqiReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
+  const luckDetail = (ply: number): LuckCardDetail | null => {
+    const luck = options.luck?.get(ply)?.luck;
+    const move = played[ply - 1];
+    const before = states[ply - 1];
+    const piece = move && before?.board[move.from];
+    if (luck === undefined || !move || !before || !piece?.faceDown) return null;
+    return {
+      square: move.to,
+      color: piece.color,
+      luck,
+      kind: 'reveal',
+      odds: jieqiRevealOdds(before, move),
+      capture: null,
+    };
+  };
+  const pieceArt = (role: JieqiPieceRole, color: JieqiColor) =>
+    jieqiPieceGhostSvg({ role, color, faceDown: false });
+  const detachMark = attachLuckMarkCard(frame, () => (inLine ? null : luckDetail(index)), pieceArt);
+  const detachBadge = attachLuckBadgeCard(
+    host.closest<HTMLElement>('.embed-card') ?? host,
+    (badge) => luckDetail(Number(badge.dataset.luckPath)),
+    pieceArt,
+  );
   const paint = (): void => {
     if (inLine) {
       const side = lines.get(inLine.atPly)!;
@@ -222,24 +260,54 @@ export function mountJieqiReplayBoard(
         : undefined;
     if (next) drawn.arrows.push(nextMoveArrow(next));
     const last = index > 0 ? (played[index - 1] ?? null) : null;
+    const luck = luckDetail(index);
     frame.innerHTML = renderJieqiBoardSvg(
       getJieqiPlayerView(states[index]!, perspective),
       perspective,
       {
         arrows: drawn.arrows,
-        markers: [...drawn.markers, ...(last ? glyphMarker(last, options.glyphs?.[index]) : [])],
+        markers: [
+          ...drawn.markers,
+          ...(last ? glyphMarker(last, options.glyphs?.[index]) : []),
+          ...(last && luck
+            ? [
+                {
+                  square: last.to,
+                  kind: 'luck' as const,
+                  luck: { luck: luck.luck },
+                },
+              ]
+            : []),
+        ],
       },
     );
   };
-  const render = (glide?: { move: JieqiMove; reverse: boolean }): void => {
+  const shownState = (): JieqiGameState =>
+    inLine ? lines.get(inLine.atPly)!.states[inLine.cursor]! : states[index]!;
+  // `before` is the position a forward step left: a move that turned its piece
+  // face up turns it over on the way.
+  const render = (glide?: { move: JieqiMove; reverse: boolean; before?: JieqiGameState }): void => {
     paint();
-    if (glide) animateJieqiBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+    if (glide) {
+      animateJieqiBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+      if (!glide.reverse && glide.before) {
+        animateJieqiStepReveal(
+          frame,
+          glide.move,
+          glide.before.board,
+          shownState().board,
+          perspective,
+        );
+      }
+    }
     if (!inLine) hooks.onPlyChange?.(index, total);
   };
   render();
 
   return {
     destroy: () => {
+      detachMark();
+      detachBadge();
       host.replaceChildren();
     },
     jumpToPly: (ply: number) => {
@@ -251,7 +319,7 @@ export function mountJieqiReplayBoard(
       if (wasInLine || Math.abs(index - from) !== 1) return render();
       const forward = index > from;
       const move = forward ? played[index - 1] : played[from - 1];
-      render(move ? { move, reverse: !forward } : undefined);
+      render(move ? { move, reverse: !forward, before: states[from] } : undefined);
     },
     jumpToLine: (atPly: number, cursor: number) => {
       const side = lines.get(atPly);
@@ -263,7 +331,7 @@ export function mountJieqiReplayBoard(
       }
       const forward = inLine.cursor > prev.cursor;
       const move = side.played[Math.max(inLine.cursor, prev.cursor) - 1];
-      render(move ? { move, reverse: !forward } : undefined);
+      render(move ? { move, reverse: !forward, before: side.states[prev.cursor] } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>
@@ -274,12 +342,14 @@ export function mountJieqiReplayBoard(
         const side = lines.get(ply);
         const meta = options.lines?.[ply];
         const assessment = options.assessments?.[ply];
+        const luck = luckDetail(ply);
         return {
           ply,
           label: label(line, i),
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
           ...(assessment ? { assessment } : {}),
+          ...(luck ? { luck: Math.round(luck.luck) } : {}),
           ...(side
             ? {
                 line: {

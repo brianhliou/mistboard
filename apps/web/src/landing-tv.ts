@@ -28,7 +28,7 @@
 
 import type { GameEvent } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
-import { displayLiveName } from './game-display.js';
+import { liveMatchupNames } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplayFailure } from './replay-skeleton.js';
@@ -203,7 +203,9 @@ export async function mountLandingTv(
       await handle.loadGame(entry.roomId);
       return;
     }
-    const priorHeight = handle ? root.offsetHeight : 0;
+    // Pin whatever holds the slot now (the last board, or the first-paint
+    // skeleton) so the mount never paints a frame of an empty, zero-height slot.
+    const priorHeight = root.offsetHeight;
     destroyHandle();
     if (priorHeight > 0) root.style.minHeight = `${priorHeight}px`;
     // The seat discs' dark ink is blue for the Jungle family (seat-disc-ink.css).
@@ -215,6 +217,7 @@ export async function mountLandingTv(
       const next = await mountShowcaseBoard(root, entry.specId, entry.roomId, {
         metadataByRoomId: options.metadataByRoomId,
         seatDiscs: true,
+        reservesInSeats: true,
         namesByRoomId: options.namesByRoomId,
         loaderForId: options.loaderForId,
         pov: entry.pov,
@@ -260,19 +263,14 @@ export async function mountLandingTv(
     handle.jumpToPly(end);
   };
 
-  // First/second seat names from the featured players (red is the first mover
-  // for every live-capable tenant today; fall back to seat order). A null name is
+  // First/second seat names from the featured players (first mover by seat
+  // colour, else seat order: liveMatchupNames). A null name is
   // a guest seat (live frames carry no privacy redaction), so it reads "Guest",
   // matching what the finished record will say.
   const registerLiveNames = (featured: LiveFeatured): void => {
-    const players = featured.players ?? [];
-    if (players.length < 2 || options.namesByRoomId[featured.roomId]) return;
-    const first = players.find((player) => player.color === 'red') ?? players[0]!;
-    const second = players.find((player) => player !== first)!;
-    options.namesByRoomId[featured.roomId] = {
-      first: displayLiveName(first.name, t('watch.guest')),
-      second: displayLiveName(second.name, t('watch.guest')),
-    };
+    if (options.namesByRoomId[featured.roomId]) return;
+    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'));
+    if (names) options.namesByRoomId[featured.roomId] = names;
   };
 
   const showLive = async (featured: LiveFeatured): Promise<void> => {

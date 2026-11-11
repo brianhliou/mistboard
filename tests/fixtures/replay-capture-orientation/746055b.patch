@@ -1,0 +1,13 @@
+--- a/apps/web/src/replay.ts
++++ b/apps/web/src/replay.ts
+@@ -770,8 +770,8 @@
+     blackPane.el.classList.toggle('revealed', showRevealLabels);
+     if (captures) {
+       if (splitCaptures) {
+-        renderSplitPaneCaptures(whitePane, captures, boardOrientation);
+-        renderSplitPaneCaptures(blackPane, captures, boardOrientation);
++        renderSplitPaneCaptures(whitePane, captures, 'white');
++        renderSplitPaneCaptures(blackPane, captures, 'black');
+         renderSplitPaneCaptures(truthPane, captures, boardOrientation);
+       } else {
+         renderPaneCaptures(whitePane.capturesEl, captures.white, 'black');

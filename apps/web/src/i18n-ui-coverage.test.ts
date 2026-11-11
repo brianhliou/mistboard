@@ -31,6 +31,7 @@ const ALLOWED: Record<string, Reason> = {
   // admin / ops / labs
   'accounts-admin.ts': 'admin',
   'belief-panel.ts': 'admin',
+  'content-readout.ts': 'admin',
   'database.ts': 'admin',
   'engine-profile.ts': 'admin',
   'engines.ts': 'admin',
@@ -41,19 +42,15 @@ const ALLOWED: Record<string, Reason> = {
   'xiangqi-broadcast-ops.ts': 'admin',
   // content with its own gate, or English by design
   'announcements.ts': 'content', // announcement-i18n.coverage.test.ts
+  'landing-bot-policy.ts': 'content', // bot and engine names (Fairy-Stockfish, General Blunder), English in every locale like Pikafish
   'anti-xiangqi-article-diagrams.ts': 'content', // generated step notes; article-i18n.coverage.test.ts
   'horde-xiangqi-article-diagrams.ts': 'content', // generated table cells and step notes; article-i18n.coverage.test.ts
   'players/ecco-english.ts': 'content', // the English opening-name table itself
   'study-thumbnails.ts': 'content', // archive cover credits
   'videos-data.ts': 'content', // third-party video titles
+  'xiangqi-mahjong-32-rules-diagrams.ts': 'content', // rules-page tile alt text; article-i18n.coverage.test.ts
   // visitor-facing debt
-  'replay-board.ts': '#464',
-  'review/move-tree.ts': '#464',
-  'review/opening-explorer.ts': '#464',
-  'review/xiangqi-gamebook.ts': '#464',
-  'review/xiangqi-game-source.ts': '#464',
   'variant-mini-boards.ts': '#464',
-  'xiangqi-import-page.ts': '#464',
 };
 
 // A capitalised English phrase of two or more words: 'Game aborted',
@@ -94,7 +91,12 @@ function unlocalizedFiles(): Map<string, string[]> {
   const flagged = new Map<string, string[]>();
   for (const path of sourceFiles(SRC)) {
     const rel = relative(SRC, path);
-    if (/\.test\.ts$|\.d\.ts$|^i18n\/|^articles\/content\/|^article-i18n\.ts$/.test(rel)) continue;
+    if (
+      /\.test\.ts$|\.d\.ts$|^i18n\/|^articles\/content\/|^article-i18n(-moved-posts)?\.ts$/.test(
+        rel,
+      )
+    )
+      continue;
     const source = readFileSync(path, 'utf8');
     if (LOCALIZED.test(source)) continue;
     const phrases = englishPhrases(source);

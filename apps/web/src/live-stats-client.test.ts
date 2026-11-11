@@ -66,4 +66,24 @@ describe('fetchLiveStats', () => {
     expect((await fetchLiveStats({ now: clock }))?.playing).toBe(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('adopts the read index.html started, once', async () => {
+    window.__mistboardLiveStats = Promise.resolve({ playing: 7, totalCompletedGames: 4_888 });
+    let now = 1_000;
+    const clock = () => now;
+    expect((await fetchLiveStats({ now: clock }))?.totalCompletedGames).toBe(4_888);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.__mistboardLiveStats).toBeUndefined();
+    now += LIVE_STATS_MAX_AGE_MS;
+    expect((await fetchLiveStats({ now: clock }))?.playing).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to its own request when the early read failed', async () => {
+    window.__mistboardLiveStats = Promise.resolve(null);
+    const clock = () => 1_000;
+    expect(await fetchLiveStats({ now: clock })).toBeNull();
+    expect((await fetchLiveStats({ now: clock }))?.playing).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

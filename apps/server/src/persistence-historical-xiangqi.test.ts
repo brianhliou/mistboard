@@ -387,6 +387,18 @@ definePersistenceTests('historical xiangqi', () => {
       const jieqi = await search('variant=jieqi');
       assert.deepEqual(ids(jieqi.body.games), ['search-jq']);
 
+      // Played here, narrowed by opponent (#533): vs people, vs bots, or both.
+      const vsPeople = await search('source=mistboard-pvp');
+      assert.deepEqual(ids(vsPeople.body.games), ['search-fog', 'search-xq']);
+      assert.equal(vsPeople.body.total, 2);
+      const vsBots = await search('source=mistboard-pve');
+      assert.deepEqual(ids(vsBots.body.games), ['search-jq']);
+      assert.equal(vsBots.body.total, 1);
+      const vsBotsJieqi = await search('source=mistboard-pve&variant=jieqi');
+      assert.deepEqual(ids(vsBotsJieqi.body.games), ['search-jq']);
+      const playedHere = await search('source=mistboard');
+      assert.deepEqual(ids(playedHere.body.games), ['search-fog', 'search-jq', 'search-xq']);
+
       // White's win in Fog Chess answers the seat-keyed "first player wins".
       const fogWins = await search('variant=dark-chess&result=1-0');
       assert.deepEqual(ids(fogWins.body.games), ['search-fog']);

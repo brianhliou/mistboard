@@ -1,3 +1,8 @@
+import {
+  createInitialStandardXiangqiState,
+  createInitialXiangqiState,
+  type XiangqiGameState,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   buildXiangqiReplayFromMoves,
@@ -66,5 +71,37 @@ describe('buildXiangqiReplayFromMoves', () => {
     const replay = buildXiangqiReplayFromMoves([...opening]);
     expect(xiangqiReplayViewAtPly(replay, -5)).toBe(replay.views[0]);
     expect(xiangqiReplayViewAtPly(replay, 99)).toBe(replay.views[3]);
+  });
+});
+
+describe('stored standard xiangqi progress rules', () => {
+  it('keeps a new game playing at ply 60 and preserves its stamp in review', () => {
+    const start = { ...createInitialStandardXiangqiState('new-review'), progressClock: 59 };
+    const replay = buildXiangqiReplayFromMoves([{ from: 'a1', to: 'a2' }], start);
+    expect(replay.views[1]?.status.type).toBe('playing');
+    expect(replay.views[1]?.progressClockLimit).toBe(120);
+    const boundary = buildXiangqiReplayFromMoves([{ from: 'a1', to: 'a2' }], {
+      ...start,
+      progressClock: 119,
+    });
+    expect(boundary.views[1]?.status).toEqual({
+      type: 'finished',
+      winner: null,
+      reason: 'progress-clock',
+    });
+  });
+
+  it('keeps an unstamped stored game on its 60-ply rule', () => {
+    const start: XiangqiGameState = {
+      ...createInitialXiangqiState('old-review'),
+      progressClock: 59,
+    };
+    const replay = buildXiangqiReplayFromMoves([{ from: 'a1', to: 'a2' }], start);
+    expect(replay.views[1]?.progressClockLimit).toBe(60);
+    expect(replay.views[1]?.status).toEqual({
+      type: 'finished',
+      winner: null,
+      reason: 'progress-clock',
+    });
   });
 });

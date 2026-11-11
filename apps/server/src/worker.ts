@@ -23,6 +23,7 @@ import { runMigrations } from './migrate.js';
 import { startObservability } from './obs.js';
 import { disposeAllPythonPools, getPythonPool } from './python-pool.js';
 import { eveWorkerCapabilities } from './variant-eve-registry.js';
+import { createWorkerPool, isWorkerDbConnectionError } from './worker-db.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -60,7 +61,7 @@ const engineHttpHost = process.env.MISTBOARD_ENGINE_SERVICE_HOST ?? '::';
 // serve a move" (#477).
 const railwayHealthPort = parsePositiveInteger(process.env.PORT);
 
-const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
+const pool = createWorkerPool({ connectionString: databaseUrl });
 let engineHttpService: EngineHttpService | null = null;
 let engineHttpClosing: Promise<void> | null = null;
 let healthServer: Server | null = null;
@@ -104,12 +105,13 @@ try {
   await cleanupStaleTasks();
   let nextCleanupAt = Date.now() + cleanupIntervalMs;
 
-  const workerRun = await registerWorkerRun(pool, {
+  const workerRunOptions = {
     provider,
     providerRunId,
     capabilities: workerCapabilities,
     resourceLimits: workerResourceLimits,
-  });
+  };
+  let workerRun = await registerWorkerRun(pool, workerRunOptions);
   activeWorkerRunId = workerRun.id;
 
   log('worker_started', {
@@ -133,20 +135,50 @@ try {
 
   let processedTasks = 0;
   while (!shuttingDown && processedTasks < maxTasks) {
-    await heartbeatWorkerRun(pool, workerRun.id);
+    let task: EngineGameTask | null;
+    try {
+      try {
+        await heartbeatWorkerRun(pool, workerRun.id);
+      } catch (err) {
+        if (
+          !loop ||
+          !(err instanceof Error) ||
+          err.message !== `worker run ${workerRun.id} is not active`
+        ) {
+          throw err;
+        }
+        // Cleanup (ours or a peer's) may fence this run after an outage or
+        // an unacknowledged claim expires. Keep the live service up and use
+        // a fresh run for subsequent claims; never revive the fenced run.
+        const previousWorkerRunId = workerRun.id;
+        workerRun = await registerWorkerRun(pool, workerRunOptions);
+        activeWorkerRunId = workerRun.id;
+        log('worker_run_reregistered', { previousWorkerRunId, workerRunId: workerRun.id });
+      }
 
-    if (Date.now() >= nextCleanupAt) {
-      await cleanupStaleTasks();
-      nextCleanupAt = Date.now() + cleanupIntervalMs;
+      // Refresh our heartbeat first so cleanup cannot fence us after a long game.
+      if (Date.now() >= nextCleanupAt) {
+        await cleanupStaleTasks();
+        nextCleanupAt = Date.now() + cleanupIntervalMs;
+      }
+
+      task = await claimNextEngineGameTask(pool, {
+        workerRunId: workerRun.id,
+        workerId,
+        provider,
+        providerRunId,
+        capabilities: workerCapabilities,
+      });
+    } catch (err) {
+      if (!loop || !isWorkerDbConnectionError(err)) throw err;
+      log('worker_db_poll_retry', {
+        workerRunId: workerRun.id,
+        error: (err as Error).message,
+        retryMs: idleSleepMs,
+      });
+      await sleep(idleSleepMs);
+      continue;
     }
-
-    const task = await claimNextEngineGameTask(pool, {
-      workerRunId: workerRun.id,
-      workerId,
-      provider,
-      providerRunId,
-      capabilities: workerCapabilities,
-    });
     activeTask = task;
 
     if (!task) {

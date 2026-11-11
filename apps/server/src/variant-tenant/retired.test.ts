@@ -77,7 +77,7 @@ function captureResponse(): ServerResponse & { body: string; status: number | nu
 
 const createCtx: TenantCreateHttpContext = {
   databaseRequired: false,
-  isDraining: () => false,
+  refusesCreate: () => false,
   drainDeadlineMs: () => null,
   reserveLiveEngineSeat: () => Promise.resolve(null),
   releaseLiveEngineReservation: () => undefined,
@@ -149,7 +149,7 @@ async function postSeek(gameSpecId: string): Promise<{ status: number | null; bo
     lobbyQueue: [],
     lobbyTickets: new Map(),
     rooms: new Map<string, Room>(),
-    isDraining: () => false,
+    refusesCreate: () => false,
     databaseRequired: false,
   } as unknown as HttpApiContext;
   const json = JSON.stringify({ gameSpecId, timeControl: BLITZ });

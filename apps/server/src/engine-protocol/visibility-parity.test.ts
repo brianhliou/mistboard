@@ -14,13 +14,15 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { type Color, darkChessVariant, type GameState, type Square } from '@mistboard/game';
 import { squareIndex } from './build.js';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
+// The fixture is JSON beside the source, and tsc does not copy it into dist, so the
+// compiled run (`npm test`, `test:persistent`) reads it from src as well.
+const HERE = dirname(fileURLToPath(import.meta.url)).replace(`${sep}dist${sep}`, `${sep}src${sep}`);
 
 type GoldenCase = {
   id: string;

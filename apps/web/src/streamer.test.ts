@@ -72,7 +72,7 @@ describe('streamer directory with nobody listed', () => {
 
     expect(root.querySelector('.streamer-list')).toBeNull();
     expect(root.querySelector('.streamer-empty')?.textContent).toBe(
-      'No streamers are listed yet. Check back soon.',
+      'No streamers are listed yet. You could be one of the first.',
     );
   });
 });

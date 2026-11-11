@@ -8,10 +8,12 @@ import {
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
   firstPartyBotForId,
-  isTopOfLadderBot,
-  topOfLadderBotIds,
+  liveSeatEngineName,
+  liveSeatProfileIdentity,
+  persistedSeatDisplayName,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
+import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
 test('the merged Misty identity fronts every house variant', () => {
@@ -23,6 +25,7 @@ test('the merged Misty identity fronts every house variant', () => {
   assert.equal(firstPartyBotEngineFor('misty', 'banqi'), 'misty-banqi');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle'), 'misty-jungle-level-2');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle-flip'), 'misty-jungle-flip');
+  assert.equal(firstPartyBotEngineFor('misty', 'xiangqi-mahjong'), 'misty-xiangqi-mahjong');
   // A variant Misty does not play resolves to null, never a guess.
   assert.equal(firstPartyBotEngineFor('misty', 'xiangqi'), null);
 
@@ -67,6 +70,165 @@ test('the merged Pikafish identity fronts xiangqi and jieqi', () => {
     'pikafish-xiangqi-strongest',
   ]) {
     assert.equal(firstPartyBotForEngine(engineId)?.id, 'pikafish', engineId);
+  }
+});
+
+test('live Jieqi seats keep every ladder label while linking to the bot identity', () => {
+  for (const tier of JIEQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, tier.id);
+    for (const pveBotId of [undefined, bot.id, ...(bot.legacyBotIds ?? [])]) {
+      assert.equal(
+        liveSeatEngineName(tier.id, pveBotId, () => tier.name),
+        tier.name,
+      );
+      assert.deepEqual(liveSeatProfileIdentity(tier.id, null, pveBotId), { botId: bot.id });
+    }
+  }
+});
+
+test('live seat labels preserve other bot brands, historical tiers and unknown engines', () => {
+  assert.equal(
+    liveSeatEngineName('pikafish-xiangqi-level-8', 'pikafish', () => 'Tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('pikafish-jieqi-amateur', 'pikafish', () => 'Old tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('python-v2-v1.6', 'misty', () => 'Misty 1.6'),
+    'Misty',
+  );
+  assert.equal(
+    liveSeatEngineName('unregistered', undefined, () => 'Custom engine'),
+    'Custom engine',
+  );
+});
+
+test('a finished bot seat stored with the bare bot name reads back with its rung', () => {
+  // jq_597a12a4-0994-4e09-b2b0-3c3331c1ce0e stored black as "Pikafish" with
+  // engine pikafish-jieqi-strongest; the room had shown "Pikafish Level 8".
+  const stored = {
+    displayName: 'Pikafish',
+    subjectType: 'bot',
+    subjectId: 'pikafish',
+    engineId: 'pikafish-jieqi-strongest',
+  };
+  assert.equal(persistedSeatDisplayName(stored), 'Pikafish Level 8');
+  // A xiangqi seat stored as "Pikafish Level 8" (10-23 to this fix) reads plain.
+  assert.equal(
+    persistedSeatDisplayName({
+      ...stored,
+      displayName: 'Pikafish Level 8',
+      engineId: 'pikafish-xiangqi-level-8',
+    }),
+    'Pikafish',
+  );
+  // A legacy bot id still resolves to the merged profile.
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, subjectId: 'pika-jieqi-strongest' }),
+    'Pikafish Level 8',
+  );
+  // No rung recorded (pre-migration-148 seat) or no rung label: the stored name.
+  assert.equal(persistedSeatDisplayName({ ...stored, engineId: null }), 'Pikafish');
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, engineId: 'pikafish-jieqi-amateur' }),
+    'Pikafish',
+  );
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'Misty',
+      subjectType: 'bot',
+      subjectId: 'misty',
+      engineId: 'python-v2-v1.6',
+    }),
+    'Misty',
+  );
+  // Only bot seats are renamed: a human called "Pikafish" stays as typed.
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, subjectType: 'user', subjectId: 'user-1' }),
+    'Pikafish',
+  );
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'Pikafish',
+      subjectType: 'engine-version',
+      subjectId: 'pikafish-jieqi-strongest',
+    }),
+    'Pikafish',
+  );
+});
+
+test('old Three Kingdoms engine seats read short names without changing their identity', () => {
+  const cases = [
+    ['misty-three-kingdoms-banqi', 'MistyThreeKingdomsBanqi', 'Misty'],
+    ...Array.from({ length: 8 }, (_, index) => {
+      const level = index + 1;
+      return [
+        `misty-three-kingdoms-banqi-level-${level}`,
+        `MistyThreeKingdomsBanqi level ${level}`,
+        `Misty level ${level}`,
+      ];
+    }),
+  ];
+  for (const [subjectId, displayName, expected] of cases) {
+    const stored = { subjectType: 'engine-version', subjectId, displayName };
+    const before = { ...stored };
+    assert.equal(persistedSeatDisplayName(stored), expected);
+    // Recognized engine identity is enough even if its recorded name differs.
+    assert.equal(persistedSeatDisplayName({ ...stored, displayName: 'Old build' }), expected);
+    // The exact old name also works when its engine id is no longer recognized.
+    assert.equal(persistedSeatDisplayName({ ...stored, subjectId: null }), expected);
+    assert.deepEqual(stored, before);
+    for (const subjectType of ['user', 'guest', 'manual', 'imported', 'bot']) {
+      assert.equal(persistedSeatDisplayName({ ...stored, subjectType }), displayName);
+    }
+  }
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'MistyThreeKingdomsBanqi fan',
+      subjectType: 'engine-version',
+      subjectId: 'unknown-engine',
+    }),
+    'MistyThreeKingdomsBanqi fan',
+  );
+});
+
+test('old Banqi engine and bot seats read the short ladder names', () => {
+  const cases = [
+    ...Array.from({ length: 8 }, (_, index) => {
+      const level = index + 1;
+      return [
+        level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`,
+        `MistyBanqi Level ${level}`,
+        `Misty Level ${level}`,
+      ];
+    }),
+    ...['amateur', 'strong', 'strongest'].map((alias) => [
+      `misty-banqi-${alias}`,
+      'MistyBanqi Level 7',
+      'Misty Level 7',
+    ]),
+  ];
+  for (const [engineId, displayName, expected] of cases) {
+    for (const subjectType of ['bot', 'engine-version']) {
+      const stored = {
+        subjectType,
+        subjectId: subjectType === 'bot' ? 'misty' : engineId,
+        engineId,
+        displayName,
+      };
+      assert.equal(persistedSeatDisplayName(stored), expected);
+      assert.equal(
+        persistedSeatDisplayName({ ...stored, subjectId: null, engineId: null }),
+        expected,
+      );
+      assert.equal(
+        persistedSeatDisplayName({ ...stored, subjectType: 'user', subjectId: 'human-1' }),
+        displayName,
+      );
+    }
   }
 });
 
@@ -163,23 +325,4 @@ test('bot seats without an engine id attribute by (bot, variant) through the cur
   // No (bot, variant) pair maps to two engines.
   const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
   assert.equal(new Set(keys).size, keys.length);
-});
-
-test('the top of each ladder is a named slot or the highest numbered level', () => {
-  assert.deepEqual(topOfLadderBotIds().sort(), [
-    'ab-jchess',
-    'fairy-stockfish-level-8',
-    'katago',
-    'misty',
-    'pikafish',
-  ]);
-  // Lower rungs never count, and neither does the jieqi ladder's Level 7: its
-  // Level 8 is Pikafish itself.
-  for (const id of ['fairy-stockfish-level-7', 'fairy-stockfish-level-4', 'pikafish-level-7']) {
-    assert.equal(isTopOfLadderBot(id), false, id);
-  }
-  // A pre-consolidation id names an old tier, and an unknown id is no bot.
-  assert.equal(isTopOfLadderBot('pikafish-xiangqi-level-1'), false);
-  assert.equal(isTopOfLadderBot('fairy-stockfish-xiangqi-level-8'), false);
-  assert.equal(isTopOfLadderBot('not-a-bot'), false);
 });

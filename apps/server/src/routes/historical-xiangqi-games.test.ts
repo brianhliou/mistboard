@@ -15,6 +15,7 @@ import {
   mistboardResults,
   pageAcrossLanes,
   parseHistoricalXiangqiGameQuery,
+  playedLaneModes,
   playedPlyFloor,
   playedPlyMin,
   publicTags,
@@ -207,6 +208,7 @@ test('searchable variants are the launched channels in the canonical shelf order
     'XIANGQI',
     'JIEQI',
     'BANQI',
+    'THREE_KINGDOMS_BANQI',
     'ATOMIC_XIANGQI',
     'DARK_XIANGQI',
     'DUCK_XIANGQI',
@@ -214,7 +216,9 @@ test('searchable variants are the launched channels in the canonical shelf order
     'CRAZYHOUSE_XIANGQI',
     'JUNGLE',
     'JUNGLE_FLIP',
+    'XIANGQI_MAHJONG',
     'MAHJONG',
+    'GOMOKU',
   ];
   const saved = flags.map((flag) => process.env[`MISTBOARD_${flag}_ENABLED`]);
   try {
@@ -255,6 +259,21 @@ test('lanes per variant: broadcasts and the archive are xiangqi only', () => {
   assert.deepEqual(lanes({ sourceSlug: 'archive' }), ['archive']);
   assert.deepEqual(lanes({ sourceSlug: 'xqbase' }), ['archive']);
   assert.deepEqual(lanes({ sourceSlug: 'xqbase', variant: 'jieqi' }), []);
+});
+
+test('the played-here lane narrows by opponent: vs people or vs bots (#533)', () => {
+  // Both read the played lane, in any variant, and never the archive as a slug.
+  assert.deepEqual(searchLanes({ sourceSlug: 'mistboard-pvp' }), ['played']);
+  assert.deepEqual(searchLanes({ sourceSlug: 'mistboard-pve' }), ['played']);
+  assert.deepEqual(searchLanes({ sourceSlug: 'mistboard-pvp', variant: 'jieqi' }), ['played']);
+  assert.deepEqual(searchLanes({ sourceSlug: 'mistboard-pve', variant: 'jieqi' }), ['played']);
+  // The lane reads one mode for each, both for 'mistboard' and the open feed.
+  assert.deepEqual(playedLaneModes('mistboard-pvp'), ['pvp']);
+  assert.deepEqual(playedLaneModes('mistboard-pve'), ['pve']);
+  assert.deepEqual(playedLaneModes('mistboard'), ['pvp', 'pve']);
+  assert.deepEqual(playedLaneModes(undefined), ['pvp', 'pve']);
+  // Still the played lane, so the default length floor still applies.
+  assert.equal(playedPlyFloor({ sourceSlug: 'mistboard-pve' }), GAMES_SEARCH_DEFAULT_MIN_PLIES);
 });
 
 test('engine matches stay out of the feed until a search asks for them', () => {

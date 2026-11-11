@@ -8,16 +8,25 @@
 //         Decline; the bell's challenge row lands here, #incoming), then
 //         "Waiting for an opponent" (your own seeks, Copy link / Cancel),
 //         "Your move" cards (board, seats, time left on the seat to move, a
-//         deadline bar, Play your move), "Waiting on opponent" cards, and
-//         "Open seeks" (other players', with Accept).
+//         deadline bar, Play your move), "Waiting on opponent" cards,
+//         "Recently finished" (your games that ended in the last 14 days, as
+//         profile game rows: result, opponent, variant, how it ended, when,
+//         a "New" tag on one that ended since you last looked, and a link
+//         to your profile's full history), and "Open seeks" (other players',
+//         with Accept).
 // Every list is a grid of the site's game cards (current-games.css).
 // Signed out: one line on what correspondence is, the open seeks read-only
 // (Accept goes through sign-in to the seek's /challenge page), and sign in /
 // create an account. Correspondence needs an account; that stays.
+// "Play the host" (2026-10-23): a card under Start a game, shown only while
+// GET /api/correspondence/host says the host is on. Signed in it is a variant,
+// a side and one button that starts a casual game against the site owner at
+// once; signed out it is the same offer with a sign-in link.
 //
 // Data: GET /api/correspondence/games (the inbox), GET /api/correspondence/seeks
 // (the public board), GET /api/correspondence/seeks/mine (your challenges),
-// GET /api/correspondence/seeks/incoming (challenges to you), and
+// GET /api/correspondence/seeks/incoming (challenges to you),
+// GET /api/correspondence/games/finished (recently finished), and
 // GET /api/games/current for the boards. That feed is public and already lists
 // every correspondence game in play; it carries a board payload only for games
 // it calls 'open', so this page draws exactly what any spectator of an
@@ -31,11 +40,13 @@
 // Correspondence tab; this page shows the same feed.
 
 import './current-games.css';
+import './account-profile.css';
 import './correspondence.css';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   createInitialXiangqiState,
   DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
@@ -45,6 +56,7 @@ import {
   type CorrespondenceGamesResponse,
   correspondenceInProgress,
   correspondenceRatedAvailable,
+  correspondenceSpecIdsFor,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -74,6 +86,7 @@ import {
   liveCardShowsHands,
 } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
+import type { FeaturedGame } from './game-display.js';
 import {
   displayLiveName,
   firstMoverColorName,
@@ -86,11 +99,14 @@ import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { refreshNotifications } from './notification-nav.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
+import { buildProfileGameRow } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
+import { isLikelyStatsExcluded } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
@@ -112,9 +128,10 @@ export async function mountCorrespondence(root: HTMLElement): Promise<void> {
   root.classList.add('landing-page', 'correspondence-page');
   root.append(buildNav(), buildLoadingState(t('correspondence.loadingGames')));
 
-  const [gamesResp, seeksFeed] = await Promise.all([
+  const [gamesResp, seeksFeed, hostInfo] = await Promise.all([
     fetch('/api/correspondence/games').catch(() => null),
     fetchOpenSeeks(),
+    fetchHostInfo(),
   ]);
 
   const ctx: PageContext = {
@@ -126,7 +143,7 @@ export async function mountCorrespondence(root: HTMLElement): Promise<void> {
 
   if (gamesResp?.status === 401) {
     const inPlay = correspondenceInProgress(await fetchCurrentList());
-    root.replaceChildren(buildNav(), buildSignedOut(ctx, seeksFeed, inPlay));
+    root.replaceChildren(buildNav(), buildSignedOut(ctx, seeksFeed, inPlay, hostInfo));
     startTicking(ctx);
     return;
   }
@@ -142,7 +159,7 @@ export async function mountCorrespondence(root: HTMLElement): Promise<void> {
   // a game to draw, and a failure just leaves the variant placeholder.
   const current = data.games.length > 0 ? await fetchCurrentGames() : new Map();
 
-  root.replaceChildren(buildNav(), buildSignedIn(ctx, data, current, seeksFeed));
+  root.replaceChildren(buildNav(), buildSignedIn(ctx, data, current, seeksFeed, hostInfo));
   startTicking(ctx);
 }
 
@@ -155,6 +172,7 @@ function buildSignedIn(
   data: CorrespondenceGamesResponse,
   current: Map<string, CurrentGame>,
   seeksFeed: OpenSeeksFeed,
+  hostInfo: HostInfo | null,
 ): HTMLElement {
   const shell = buildShell(t('correspondence.subtitle'));
   // Start a game is a full-width bar under the header, and the card grids below
@@ -218,13 +236,26 @@ function buildSignedIn(
     }
   }
 
-  // "No games yet" says nothing new under a seek that is waiting or a challenge
-  // to answer.
+  // Games that ended leave the lists above the moment they end; this says how
+  // they ended (Brian, 2026-10-14: a lost game simply vanished from the page).
+  // Hidden while there are none.
+  const finished = document.createElement('section');
+  finished.className = 'correspondence-section correspondence-finished';
+  finished.hidden = true;
+  main.append(finished);
+
+  // "No games yet" says nothing new under a seek that is waiting, a challenge
+  // to answer or a game that just finished.
   let ownCount = 0;
   let incomingCount = 0;
+  let finishedCount = 0;
   const syncEmpty = (): void => {
-    if (empty) empty.hidden = ownCount + incomingCount > 0;
+    if (empty) empty.hidden = ownCount + incomingCount + finishedCount > 0;
   };
+  void renderFinishedGames(finished, (count) => {
+    finishedCount = count;
+    syncEmpty();
+  });
   const refreshChallenges = (): void => {
     void renderChallenges(challenges, (count) => {
       ownCount = count;
@@ -252,16 +283,38 @@ function buildSignedIn(
     top.append(soon);
   } else {
     // A link can carry the form's terms (the bell's "post it again" row for a
-    // lapsed seek); the form opens set to them and scrolls into view.
-    const prefill = parseStartFormPrefill(location.search);
-    const startForm = buildStartForm(refreshChallenges, prefill);
-    top.append(startForm);
+    // lapsed seek); the form opens in its dialog, set to them.
+    const prefill = parseStartFormPrefill(location.search, webVariantOfferedInMenu);
+    let seekLauncher: Launcher | null = null;
+    // A posted seek closes the dialog: it shows up in your seeks at the top of
+    // the page, which is the confirmation.
+    const startForm = buildStartForm(() => {
+      refreshChallenges();
+      seekLauncher?.close();
+    }, prefill);
+    const formHeading = startForm.querySelector('h2');
+    if (formHeading) formHeading.textContent = t('correspondence.seekTileTitle');
+    const formStatus = startForm.querySelector<HTMLElement>('.correspondence-form-status');
+    seekLauncher = buildLauncher({
+      title: t('correspondence.seekTileTitle'),
+      body: t('correspondence.seekTileBody'),
+      buttonLabel: t('correspondence.seekTileButton'),
+      panel: startForm,
+      onOpen: () => {
+        if (formStatus) formStatus.hidden = true;
+      },
+    });
+    const tiles = document.createElement('div');
+    tiles.className = 'correspondence-launchers';
+    tiles.append(seekLauncher.tile);
+    if (hostInfo) tiles.append(buildHostLauncher(hostInfo).tile);
+    top.append(tiles);
     // Open seeks follow your own games.
     main.append(seekHost);
     refreshChallenges();
     if (prefill) {
       requestAnimationFrame(() => {
-        if (startForm.isConnected) startForm.scrollIntoView({ block: 'start' });
+        if (seekLauncher?.tile.isConnected) seekLauncher.open();
       });
     }
   }
@@ -740,10 +793,12 @@ export function buildStartForm(
   form.className = 'correspondence-start-form';
   form.noValidate = true;
 
-  const defaultVariant = prefill?.gameSpecId ?? CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0] ?? 'xiangqi';
+  // Public specs, plus a playtest variant for an account the menu offers it to.
+  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
+  const defaultVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
   const variant = buildSelect(
     t('correspondence.variantLabel'),
-    CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => ({
+    specIds.map((specId) => ({
       value: specId,
       label: variantDisplayLabel(specId),
     })),
@@ -753,12 +808,12 @@ export function buildStartForm(
       syncRated();
     },
   );
-  variant.root.hidden = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length < 2;
+  variant.root.hidden = specIds.length < 2;
 
   const days = buildSegmented<string>(
     t('correspondence.daysPerMoveLabel'),
     DAYS_PER_MOVE_OPTIONS.map((option) => ({ value: String(option), label: String(option) })),
-    String(prefill?.daysPerMove ?? DAYS_PER_MOVE_OPTIONS[1] ?? DAYS_PER_MOVE_OPTIONS[0]),
+    String(prefill?.daysPerMove ?? DEFAULT_DAYS_PER_MOVE),
   );
 
   // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
@@ -775,10 +830,10 @@ export function buildStartForm(
   const syncRated = (): void => {
     // The whole control is absent while rated correspondence is held (flag off).
     rated.root.hidden = !isCorrespondenceRatedModeEnabled();
-    const available = correspondenceRatedAvailable(
-      variant.value(),
-      isCorrespondenceRatedModeEnabled(),
-    );
+    // An account excluded from stats never rates (the server refuses it).
+    const available =
+      !isLikelyStatsExcluded() &&
+      correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled());
     rated.setDisabled('rated', !available);
     if (!available) rated.select('casual');
   };
@@ -918,6 +973,188 @@ function postErrorText(code: string | undefined, limit: number | undefined): str
 }
 
 // ---------------------------------------------------------------------------
+// Play the host
+// ---------------------------------------------------------------------------
+
+export type HostInfo = {
+  host: { handle: string; displayName: string };
+  daysPerMove: number;
+  gameSpecIds: string[];
+  limits: { perPlayer: number; total: number };
+  signedIn: boolean;
+  isHost?: boolean;
+  canPlay?: boolean;
+  reason?: 'player_limit_reached' | 'host_full' | null;
+};
+
+// The offer is Brian by name: the card reads his full name and photo, not
+// whatever the host account's display name says.
+const HOST_NAME = 'Brian H. Liou';
+const HOST_PHOTO = '/brand/brian-h-liou.jpg';
+
+/** The host offer, or null while it is off (404) or unreachable. */
+export async function fetchHostInfo(): Promise<HostInfo | null> {
+  try {
+    const res = await fetch('/api/correspondence/host');
+    if (!res.ok) return null;
+    const body = (await res.json()) as Partial<HostInfo> & { enabled?: boolean };
+    if (body.enabled !== true || !body.host || !Array.isArray(body.gameSpecIds)) return null;
+    return body as HostInfo;
+  } catch {
+    return null;
+  }
+}
+
+function hostRefusalText(
+  code: string | undefined,
+  info: HostInfo,
+  limit: number | undefined,
+): string {
+  const name = HOST_NAME;
+  switch (code) {
+    case 'player_limit_reached':
+      return t('correspondence.hostPlayerLimit', { name, limit: limit ?? info.limits.perPlayer });
+    case 'host_full':
+      return t('correspondence.hostFull', { name, limit: limit ?? info.limits.total });
+    case 'server_draining':
+      return t('setup.serverRestartTimeout');
+    default:
+      return t('correspondence.hostCouldNotStart');
+  }
+}
+
+export type HostCardOptions = {
+  // Test seam; defaults to a full navigation.
+  navigate?: (url: string) => void;
+};
+
+export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HTMLElement {
+  const navigate =
+    options.navigate ??
+    ((url: string) => {
+      window.location.href = url;
+    });
+  const name = HOST_NAME;
+  const panel = document.createElement('section');
+  panel.className = 'correspondence-panel correspondence-start correspondence-host';
+  const heading = document.createElement('h2');
+  heading.textContent = t('correspondence.hostTitle', { name });
+  const body = document.createElement('p');
+  body.className = 'correspondence-hint';
+  body.textContent = t('correspondence.hostBody', { days: info.daysPerMove });
+  const text = document.createElement('div');
+  text.className = 'correspondence-host-text';
+  text.append(heading, body);
+  const intro = document.createElement('div');
+  intro.className = 'correspondence-host-intro';
+  intro.append(buildHostPhoto(), text);
+  panel.append(intro);
+
+  if (!info.signedIn) {
+    const signIn = document.createElement('a');
+    signIn.className = 'correspondence-btn correspondence-host-signin';
+    signIn.href = loginHrefForCurrentPage();
+    signIn.textContent = t('correspondence.hostSignIn');
+    panel.append(signIn);
+    return panel;
+  }
+  if (info.isHost) {
+    const note = document.createElement('p');
+    note.className = 'correspondence-quiet';
+    note.textContent = t('correspondence.hostIsYou');
+    panel.append(note);
+    return panel;
+  }
+
+  // The server's list is what the host plays; keep the client's order and
+  // drop anything this build does not offer.
+  const offered = new Set(info.gameSpecIds);
+  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu).filter((id) => offered.has(id));
+  const status = document.createElement('p');
+  status.className = 'correspondence-form-status';
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+  const showStatus = (text: string, isError: boolean): void => {
+    status.textContent = text;
+    status.classList.toggle('is-error', isError);
+    status.hidden = false;
+  };
+  if (specIds.length === 0) return panel;
+
+  const form = document.createElement('form');
+  form.className = 'correspondence-start-form';
+  form.noValidate = true;
+  const defaultVariant = specIds[0] ?? 'xiangqi';
+  const variant = buildSelect(
+    t('correspondence.variantLabel'),
+    specIds.map((specId) => ({ value: specId, label: variantDisplayLabel(specId) })),
+    defaultVariant,
+    () =>
+      side.relabel({
+        first: firstMoverColorName(variant.value()),
+        second: secondMoverColorName(variant.value()),
+      }),
+  );
+  variant.root.hidden = specIds.length < 2;
+  const side = buildSegmented<SeekPreferredColor>(
+    t('correspondence.yourSideLabel'),
+    [
+      { value: 'random', label: t('correspondence.sideRandom') },
+      { value: 'first', label: firstMoverColorName(defaultVariant) },
+      { value: 'second', label: secondMoverColorName(defaultVariant) },
+    ],
+    'random',
+  );
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'correspondence-btn';
+  submit.textContent = t('correspondence.hostPlay', { name });
+  if (info.canPlay === false) {
+    submit.disabled = true;
+    showStatus(hostRefusalText(info.reason ?? undefined, info, undefined), false);
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (submit.disabled) return;
+    submit.disabled = true;
+    status.hidden = true;
+    void fetch('/api/correspondence/host', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gameSpecId: variant.value(), side: side.value() }),
+    })
+      .then(async (res) => {
+        const result = (await res.json().catch(() => null)) as {
+          url?: string;
+          error?: string;
+          limit?: number;
+        } | null;
+        if (res.ok && result?.url) {
+          navigate(result.url);
+          return;
+        }
+        if (res.status === 401) {
+          navigate(loginHrefForCurrentPage());
+          return;
+        }
+        // A cap refusal stays refused until a game ends; anything else may pass on retry.
+        const capped = result?.error === 'player_limit_reached' || result?.error === 'host_full';
+        submit.disabled = capped;
+        showStatus(hostRefusalText(result?.error, info, result?.limit), true);
+      })
+      .catch(() => {
+        submit.disabled = false;
+        showStatus(t('correspondence.hostCouldNotStart'), true);
+      });
+  });
+
+  form.append(variant.root, side.root, submit, status);
+  panel.append(form);
+  return panel;
+}
+
+// ---------------------------------------------------------------------------
 // Open seeks
 // ---------------------------------------------------------------------------
 
@@ -1054,6 +1291,68 @@ export async function renderChallenges(
     }
   }
   host.replaceChildren(...children);
+}
+
+// ---------------------------------------------------------------------------
+// Recently finished
+// ---------------------------------------------------------------------------
+
+export type FinishedCorrespondenceGame = FeaturedGame & { isNew?: boolean };
+
+export type FinishedCorrespondenceResponse = {
+  games: FinishedCorrespondenceGame[];
+  windowDays: number;
+  historyHref: string;
+};
+
+// Your correspondence games that ended in the last two weeks, newest first
+// (server: routes/correspondence-games.ts, at most 10), drawn as the profile's
+// own game rows plus how each ended. A finished room reveals everything, so a
+// fog game's row says only what its finished replay already shows. A game that
+// ended since you last opened the page (and not by your own resignation or
+// winning move) carries a "New" tag; the page then marks the list seen, so the
+// tag shows once. Hidden when there are none, and when the read fails.
+export async function renderFinishedGames(
+  host: HTMLElement,
+  onCount?: (count: number) => void,
+): Promise<void> {
+  const resp = await fetch('/api/correspondence/games/finished').catch(() => null);
+  const body = resp?.ok
+    ? ((await resp.json().catch(() => null)) as FinishedCorrespondenceResponse | null)
+    : null;
+  const games = Array.isArray(body?.games) ? body.games : [];
+  onCount?.(games.length);
+  host.hidden = games.length === 0;
+  if (!body || games.length === 0) {
+    host.replaceChildren();
+    return;
+  }
+  const section = buildSection(t('correspondence.recentlyFinished'), games.length);
+  const list = document.createElement('ol');
+  list.className = 'profile-game-list correspondence-finished-list';
+  for (const game of games) {
+    list.append(buildProfileGameRow(game, { ending: true, isNew: game.isNew === true }));
+  }
+  const foot = document.createElement('p');
+  foot.className = 'correspondence-quiet correspondence-finished-foot';
+  const all = document.createElement('a');
+  all.href = localizedHref(body.historyHref);
+  all.textContent = t('correspondence.finishedAllGames');
+  foot.append(
+    document.createTextNode(`${t('correspondence.finishedWindow', { days: body.windowDays })} `),
+    all,
+  );
+  host.replaceChildren(...section.childNodes, list, foot);
+  if (games.some((game) => game.isNew === true)) {
+    void fetch('/api/notifications/seen', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'correspondence-finished' }),
+    })
+      // The bell's "game ended" rows read the same watermark: drop them now.
+      .then(() => refreshNotifications())
+      .catch(() => undefined);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1310,6 +1609,100 @@ function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {
   return t('correspondence.eitherColor');
 }
 
+function buildHostPhoto(): HTMLImageElement {
+  const photo = document.createElement('img');
+  photo.className = 'correspondence-host-photo';
+  photo.src = HOST_PHOTO;
+  photo.alt = '';
+  photo.width = 56;
+  photo.height = 56;
+  return photo;
+}
+
+// ---------------------------------------------------------------------------
+// Start tiles
+// ---------------------------------------------------------------------------
+
+// Two ways to start a game, each a small tile whose form opens in a dialog: as
+// two full-width forms they filled the first screen and pushed your games below
+// it (Brian, 2026-10-23).
+export type Launcher = { tile: HTMLElement; open: () => void; close: () => void };
+
+function buildLauncher(opts: {
+  title: string;
+  body: string;
+  buttonLabel: string;
+  panel: HTMLElement;
+  photo?: boolean;
+  disabled?: boolean;
+  onOpen?: () => void;
+}): Launcher {
+  const tile = document.createElement('section');
+  tile.className = 'correspondence-panel correspondence-launcher';
+  if (opts.photo) tile.append(buildHostPhoto());
+  const text = document.createElement('div');
+  text.className = 'correspondence-launcher-text';
+  const heading = document.createElement('h2');
+  heading.textContent = opts.title;
+  const body = document.createElement('p');
+  body.className = 'correspondence-hint';
+  body.textContent = opts.body;
+  text.append(heading, body);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'correspondence-btn';
+  button.textContent = opts.buttonLabel;
+  button.disabled = opts.disabled === true;
+
+  // The dialog lives inside the tile, so it goes when the page re-renders, and
+  // closing it keeps the form's choices for the next open.
+  const dialog = document.createElement('dialog');
+  dialog.className = 'correspondence-dialog';
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'correspondence-dialog-close';
+  closeButton.setAttribute('aria-label', t('correspondence.dialogClose'));
+  closeButton.textContent = '\u00d7';
+  const close = (): void => {
+    if (dialog.open) dialog.close();
+  };
+  closeButton.addEventListener('click', close);
+  // The dialog has no padding of its own, so a click on it is a click on the backdrop.
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close();
+  });
+  dialog.append(closeButton, opts.panel);
+
+  const open = (): void => {
+    opts.onOpen?.();
+    if (dialog.open) return;
+    // showModal is missing in some test environments; an open dialog still shows the form.
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  };
+  button.addEventListener('click', open);
+  tile.append(text, button, dialog);
+  return { tile, open, close };
+}
+
+// The host tile says why it cannot start a game (caps, or you are the host)
+// on the tile itself, with its button off, rather than inside the dialog.
+export function buildHostLauncher(info: HostInfo): Launcher {
+  const name = HOST_NAME;
+  let body = t('correspondence.hostTileBody', { days: info.daysPerMove });
+  if (info.isHost) body = t('correspondence.hostIsYou');
+  else if (info.canPlay === false)
+    body = hostRefusalText(info.reason ?? undefined, info, undefined);
+  return buildLauncher({
+    title: t('correspondence.hostPlay', { name }),
+    body,
+    buttonLabel: t('correspondence.hostTileButton'),
+    panel: buildHostCard(info),
+    photo: true,
+    disabled: info.isHost === true || info.canPlay === false,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Signed out
 // ---------------------------------------------------------------------------
@@ -1324,10 +1717,12 @@ function buildSignedOut(
   ctx: PageContext,
   seeksFeed: OpenSeeksFeed,
   inPlay: CurrentGame[],
+  hostInfo: HostInfo | null,
 ): HTMLElement {
   const shell = document.createElement('main');
   shell.className = 'correspondence-shell is-signed-out';
   shell.append(buildHero(ctx, inPlay));
+  if (hostInfo) shell.append(buildHostCard(hostInfo));
 
   const seeks = seeksFeed.status === 'ok' ? othersSeeks(seeksFeed.seeks) : [];
   if (inPlay.length > 0) shell.append(buildInPlaySection(ctx, inPlay));

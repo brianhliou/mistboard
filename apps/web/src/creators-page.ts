@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 // /creators: "Work with us", the public offer to titled players and coaches,
 // creators and streamers, event organizers, writers and composers, and engine
 // authors. Each section leads with what we do for them, and every offer links to
@@ -102,4 +103,8 @@ function buildCreators(locale: Locale = currentLocale()): HTMLElement {
     ]),
   );
   return section;
+}
+
+export function renderCreatorsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountCreators);
 }

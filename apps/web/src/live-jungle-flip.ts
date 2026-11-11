@@ -1,4 +1,4 @@
-// Live multiplayer room client for Flip Jungle (兽棋 / 翻翻棋) — a SYMMETRIC-information
+// Live multiplayer room client for Flip Jungle (翻翻兽棋) — a SYMMETRIC-information
 // tenant on the generic live-client core (variant-tenant/live-client.ts owns
 // bootstrap, frame application, the renderAll skeleton, replay capture, and the
 // two-column move list). Modeled on live-banqi.ts (symmetric hidden identity,
@@ -22,14 +22,19 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
-import { jungleFlipHiddenPool, jungleFlipLastMoverInk } from '@mistboard/game';
+import {
+  jungleFlipLastMoverInk,
+  jungleFlipMoveLabel,
+  jungleFlipMoveLabelOnBoard,
+} from '@mistboard/game';
 import './live-xiangqi.css';
+import { pieceFlipDurationMs } from './board-anim.js';
 import { jungleFlipEnabled } from './feature-flags.js';
-import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
-import { t } from './i18n/catalog.js';
+import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
   animateJungleFlipBoardMove,
+  animateJungleFlipReveal,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipRenderBoard,
   jungleFlipPieceGhostSvg,
@@ -44,7 +49,6 @@ import {
 } from './live-jungle-flip-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -180,18 +184,28 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
   // move already re-rendered synchronously at input time, so animating the server
   // echo would double-play it. Scrubs glide the stepped-into move forward and
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
-  // drag ghost, and a no-op for flips, which travel nowhere.
+  // drag ghost. A flip turns the tile over, the player's own included: its face
+  // is unknown until the server answers, so nothing played it at input (Brian,
+  // 2026-10-30: the flip never animated live).
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      if (pending.move.from === pending.move.to) {
+        animateJungleFlipReveal(liveRefs.board, pending.move.to);
+        // Held for the core: the bot's instant reply waits for the turn-over.
+        return pieceFlipDurationMs();
+      }
       if (pending.color === core?.state.seat) return;
       animateJungleFlipBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJungleFlipBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      if (stepped.from === stepped.to) animateJungleFlipReveal(liveRefs.board, stepped.to);
+      else animateJungleFlipBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
@@ -221,8 +235,11 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    // A flip (self-move) shows as the flipped square; a board move as from-to.
-    notate: jungleFlipMoveLabel,
+    // The site's one Flip Jungle label (flip-move-label.ts): "a1-b1", and a
+    // flip names the animal it turned up, read off this viewer's board after
+    // it ("a1(E)").
+    notate: (move) => jungleFlipMoveLabel(move, null),
+    notateWithView: (move, viewAfter) => jungleFlipMoveLabelOnBoard(move, viewAfter?.board),
     isMoveEvent: isJungleFlipMoveEvent,
   },
   replayCapture: {
@@ -281,48 +298,9 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JungleFlipWireView | null
   renderJungleFlipMaterial(liveRefs, view, jungleFlipSeatInk(viewerSeat, view));
 }
 
-// Exported for unit testing the material data path without a live socket.
-// `viewerInk` is null before the opening flip binds it: nothing can have been
-// captured yet, and the pool rows fall back to red-then-blue since no seat owns
-// an ink.
-export function renderJungleFlipMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: JungleFlipWireView | null,
-  viewerInk: JungleFlipColor | null,
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the shared masked board since 2026-09-20
-  // (Flip Jungle is symmetric), so the pools below render for a spectator too.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const glyph = (entry: { color: JungleFlipColor; role: JungleFlipPieceRole }): string =>
-    jungleFlipPieceGhostSvg(entry);
-  if (viewerInk !== null) {
-    const opponentInk: JungleFlipColor = viewerInk === 'red' ? 'black' : 'red';
-    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
-    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
-  }
-  // Rows follow the board: the opponent's ink on top, the viewer's below.
-  const top: JungleFlipColor =
-    viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
-  const bottom: JungleFlipColor = top === 'red' ? 'black' : 'red';
-  const pool = jungleFlipHiddenPool(view);
-  renderHiddenPoolPanel(
-    slots.hiddenPool,
-    [
-      { color: top, label: jungleFlipInkLabel(top), side: pool[top] },
-      { color: bottom, label: jungleFlipInkLabel(bottom), side: pool[bottom] },
-    ],
-    glyph,
-  );
-}
-
-// The Jungle family brands its navy ink "Blue" (internal ink id stays 'black').
-function jungleFlipInkLabel(ink: JungleFlipColor): string {
-  return t(ink === 'red' ? 'setup.red' : 'setup.blue');
-}
+// The material renderer lives in jungle-flip-material.ts so the TV rail can draw
+// the same strips without pulling in the live room; re-exported for the room's tests.
+export { renderJungleFlipMaterial };
 
 function jungleFlipReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
@@ -482,11 +460,6 @@ function handleSquareClick(view: JungleFlipWireView, square: JungleFlipSquare): 
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// A flip (self-move) is shown as the flipped square; a board move as from-to.
-function jungleFlipMoveLabel(move: JungleFlipMove): string {
-  return move.from === move.to ? `${move.from}↑` : `${move.from}-${move.to}`;
-}
 
 function isJungleFlipMoveEvent(event: TenantLiveEvent): event is JungleFlipMoveEvent {
   const move = (event as { move?: unknown }).move;

@@ -146,6 +146,67 @@ describe('Jieqi watch replay', () => {
     handle.destroy();
   });
 
+  // Mistboard TV's rail: the captured pools at the board's ply, read from the
+  // as-played track (the server's public view). Red, the first mover, sits at
+  // the bottom, so its strip holds the black pieces it took.
+  it('fills the TV rail with face-up captures by piece and dark ones as a counted back', async () => {
+    const postgame = postgameFixture('jq_mat');
+    const maskedPly1 = postgame.history?.masked?.[1];
+    const truthPly1 = postgame.history?.truth?.[1];
+    if (!maskedPly1 || !truthPly1) throw new Error('fixture has no ply 1');
+    maskedPly1.view = {
+      ...maskedPly1.view,
+      captured: [
+        { owner: 'black', role: null },
+        { owner: 'black', role: 'horse' },
+        { owner: 'black', role: null },
+        { owner: 'red', role: 'cannon' },
+      ],
+    };
+    // The server's Reveal track never names a dark capture either; this one does,
+    // to prove the rail reads the track the board draws and nothing else.
+    truthPly1.view = {
+      ...truthPly1.view,
+      captured: [
+        { owner: 'black', role: 'elephant' },
+        { owner: 'black', role: 'horse' },
+        { owner: 'black', role: 'elephant' },
+        { owner: 'red', role: 'cannon' },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgame)),
+    );
+    const root = document.createElement('div');
+    const handle = await mountJieqiWatchReplay(root, 'jq_mat', { autoplay: false, compact: true });
+    const slots = {
+      top: document.createElement('div'),
+      bottom: document.createElement('div'),
+      pool: document.createElement('div'),
+    };
+    slots.pool.textContent = 'stale';
+
+    expect(handle.fillMaterial).toBeTypeOf('function');
+    handle.jumpToPly?.(0);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual([]);
+    // Jieqi has no face-down pool panel; the slot is cleared, not left stale.
+    expect(slots.pool.childNodes).toHaveLength(0);
+
+    handle.jumpToPly?.(1);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual(['red cannon']);
+    expect(railLabels(slots.bottom)).toEqual(['black hidden piece x2', 'black horse']);
+    expect(slots.bottom.classList.contains('has-captures')).toBe(true);
+    const back = slots.bottom.querySelector('[aria-label="black hidden piece x2"]');
+    expect(back?.querySelector('.xq-piece-back-mark')).not.toBeNull();
+    expect(back?.querySelector('.captures-count-badge')?.textContent).toBe('2');
+    expect(slots.bottom.innerHTML).not.toContain('elephant');
+    handle.destroy();
+  });
+
   it('encodes room ids in the dedicated finished-game watch endpoint', () => {
     expect(jieqiWatchPostgameApiUrl('jq room')).toBe('/api/jieqi/games/jq%20room/watch');
   });
@@ -308,6 +369,12 @@ function view(
     moveNumber: 1,
     ...(lastMove ? { lastMove } : {}),
   };
+}
+
+function railLabels(slot: HTMLElement): string[] {
+  return [...slot.querySelectorAll('.review-capture-piece')].map(
+    (piece) => piece.getAttribute('aria-label') ?? '',
+  );
 }
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

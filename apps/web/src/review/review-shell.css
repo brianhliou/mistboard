@@ -276,6 +276,14 @@
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }
+  /* A reserved gauge track with no bar in it (an engine-less page) keeps the
+     rail's rounded corners: there is nothing for the table to butt against. */
+  .review-shell__cluster--gauge:has(.review-shell__gauge-spacer)
+    .review-shell__right
+    .review-rail-main {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
 }
 
 @media (min-width: 1260px) {
@@ -310,11 +318,12 @@
   border-bottom: 1px solid var(--site-border);
   background: transparent;
 }
-/* Tabs share the strip equally (lichess): each takes the same width, label
-   centered, so the active underline cells are evenly spaced across the bar. */
+/* Tabs share the strip by label length, each on one line: equal shares put
+   "Computer analysis" on two lines below a ~500px strip. */
 .review-underboard-tab {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   padding: 7px 6px;
   border: none;
   background: transparent;
@@ -487,7 +496,7 @@
   color: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__clock--black {
-  color: var(--seat-second-ink, #34302e);
+  color: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
 /* White ink on the light panel is invisible at a wash's opacity, so the white
    clock takes the white bar's outline tone. */
@@ -500,7 +509,16 @@
   background: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__bar--black {
-  background: var(--seat-second-ink, #34302e);
+  background: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
+}
+/* Gomoku's stone ink stays near-black in both themes, so Black's bar keeps the
+   stone fill with the same light edge the advantage chart uses, and its time
+   label takes the readable muted tone. */
+[data-seat-ink-family="gomoku"] .review-move-times__bar--black {
+  box-shadow: inset 0 0 0 1px var(--seat-dark-ink-border);
+}
+[data-seat-ink-family="gomoku"] .review-move-times__clock--black {
+  color: var(--site-muted);
 }
 /* Chess: the first seat plays White. This used to be a `.dark-chess-review
    .review-move-times__bar--red` override -- the bar was still CALLED red and a page
@@ -813,10 +831,16 @@
   }
 }
 @media (min-width: 1260px) {
+  /* Clip, with room for the chat's drop shadow (0 8px 18px, spectator-chat.css):
+     the chat fills to the rail's edges, and a hard clip there cut its shadow
+     flat while the wedges outside its rounded corners kept theirs, so the
+     corners read as square. A browser without overflow-clip-margin clips at
+     the edge as before. */
   .review-shell__left {
     align-self: stretch;
     min-height: 0;
-    overflow: hidden;
+    overflow: clip;
+    overflow-clip-margin: 26px;
   }
 }
 
@@ -840,7 +864,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  /* The bottom seat bar already spaces the board from the tabs; a full 12px on
+     top of it read as a dead band (Brian, 2026-11-04). */
+  gap: 4px;
   min-width: 0;
   /* Fill the board track. The track is a flex row that centres its child, so
      without this the column shrinks to its content: a narrow underboard (a
@@ -931,13 +957,6 @@
 }
 .review-rail-main > .review-scrubber {
   border-top: 1px solid var(--site-border);
-}
-/* Playback controls fused into the box as its last strip (study surface, see
-   review-layout.ts): the box's own hairline divides them from the move list,
-   and the box edge closes them, so the band drops its bottom rule. */
-.review-rail-main > .review-controls {
-  border-top-color: var(--site-border);
-  border-bottom: 0;
 }
 /* Detached controls (game review, analysis): the bar sits below the analyse
    table, as on lichess, so it closes itself as a small card with the panel's
@@ -1032,10 +1051,10 @@
      stretched group, which would render a ~600px empty panel beside a 308px
      board. Size the CHAT, never the group: chat-resize.ts derives the drag
      handle's ceiling from the panel's PARENT, so a group that is content-sized
-     around the panel makes that ceiling track the panel itself. The handle then
-     ratchets shut, one-way: every shrink lowers the ceiling to the new height
-     and the panel can never grow back. Whatever sizes this chat, the group it
-     sits in has to keep a height of its own. */
+     around the panel makes that ceiling track the panel itself. Left alone that
+     ratchets the handle shut (every shrink lowers the ceiling to the new
+     height); chat-resize now probes for it and climbs to the rail (#298), but
+     the group keeping a height of its own is still the cheap, exact case. */
   .banqi-review .review-shell__left {
     height: auto;
   }
@@ -1665,12 +1684,15 @@
    each other across a gap. The board keeps its rounded LEFT (page) edge and the
    pockets keep their rounded RIGHT (page) edge; only the facing corners change.
 
-   Scoped with :has() to surfaces that actually mount a pocket. Every review
-   surface now squares its right edge on the shared perimeter above, so this rule
-   is a belt-and-braces for any surface that mounts a pocket without picking up
-   one of those three classes. */
-.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child,
-.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child > svg {
+   Scoped by .review-shell--pocket, which the scaffold sets on the shell when it
+   mounts a pocket box (review-layout.ts). Not :has(): a :has() whose subject is the
+   shell re-matched every descendant on each board rebuild, about 21 ms a move step
+   on a long game (#608; review-css-has-guard.test.ts). Every review surface now
+   squares its right edge on the shared perimeter above, so this rule is a
+   belt-and-braces for any surface that mounts a pocket without picking up one of
+   those three classes. */
+.review-shell--pocket .review-stage__slot--primary > :first-child,
+.review-shell--pocket .review-stage__slot--primary > :first-child > svg {
   border-start-end-radius: 0;
   border-end-end-radius: 0;
 }
@@ -1854,12 +1876,15 @@
     .review-move-list__rows {
     max-height: 140px;
   }
-  /* A study fuses its arrows into the moves box as the last strip (see
-     review-layout.ts). On the stack they lead the box instead, so they still
-     sit right under the board. */
-  .review-shell--embedded .review-shell__cluster--col1-stack .review-rail-main > .review-controls {
-    order: -1;
-    border-top: 0;
-    border-bottom: 1px solid var(--site-border);
+}
+
+/* A panel below the rail box (review-layout.ts railBelow): it takes its own
+   height and the rail box keeps the board's. */
+.review-shell__right > .review-rail-below {
+  flex: none;
+}
+@media (min-width: 800px) {
+  .review-shell__right:has(> .review-rail-below:not([hidden])) > .review-rail-group {
+    flex: none;
   }
 }

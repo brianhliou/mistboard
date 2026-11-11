@@ -361,6 +361,8 @@ describe('games search variant picker', () => {
     expect([...(source?.options ?? [])].map((option) => option.value)).toEqual([
       '',
       'mistboard',
+      'mistboard-pvp',
+      'mistboard-pve',
       'engine-match',
       'engine-game',
     ]);
@@ -368,6 +370,32 @@ describe('games search variant picker', () => {
     expect(
       [...(source?.options ?? [])].find((option) => option.value === 'engine-game')?.textContent,
     ).toBe('Engine games');
+  });
+
+  it('keeps a played-here opponent source across a variant change (#533)', async () => {
+    window.history.replaceState(null, '', '/games/search?source=mistboard-pve');
+    stubSearch();
+    const root = document.createElement('div');
+    await mountHistoricalXiangqiSearch(root);
+    const sourceSelect = () =>
+      [...root.querySelectorAll<HTMLSelectElement>('select')].find((el) =>
+        [...el.options].some((option) => option.value === 'engine-match'),
+      );
+    // A lane, not an archive slug: one option, under its own label.
+    const pve = () =>
+      [...(sourceSelect()?.options ?? [])].filter((option) => option.value === 'mistboard-pve');
+    expect(sourceSelect()?.value).toBe('mistboard-pve');
+    expect(pve().map((option) => option.textContent)).toEqual(['Played on Mistboard: vs bots']);
+    expect(
+      [...(sourceSelect()?.options ?? [])].find((option) => option.value === 'mistboard-pvp')
+        ?.textContent,
+    ).toBe('Played on Mistboard: vs people');
+
+    railLink(root, 'jieqi').click();
+    await settle();
+    expect(window.location.search).toBe('?variant=jieqi&source=mistboard-pve');
+    expect(sourceSelect()?.value).toBe('mistboard-pve');
+    expect(pve()).toHaveLength(1);
   });
 
   it('names the result options in the picked variant colours', async () => {

@@ -3,13 +3,14 @@
  * walking into a draw (or a loss) that only the rules impose.
  *
  * The engines search under Pikafish's xiangqi repetition rules, which the
- * repetition window (server-jieqi-engine.ts) switches on: there a perpetual
- * CHASE loses, so a bot facing a repeating chase scores the repetition as a win
- * for itself and steps back into it. Our rules (variants-jieqi.ts,
- * jieqiPerpetualCheckLoser through the tenant) adjudicate only perpetual CHECK;
- * any other threefold is a draw, as is the 120-ply no-capture clock. On
- * 2026-10-06 and 10-07 AB-JChess drew four games it scored as mate in 1 or
- * +300 this way, each one completed by the human's reply.
+ * repetition window (server-jieqi-engine.ts) switches on. Games stamped
+ * jqe-v1 (variants-jieqi.ts) also lose a sole perpetual chase and draw at 80
+ * capture-free plies, close to the engines' view. Unstamped games adjudicate
+ * only perpetual CHECK, so there a bot facing a repeating chase scores the
+ * repetition as a win and steps back into a draw; any other threefold is a
+ * draw, as is the 120-ply no-capture clock. On 2026-10-06 and 10-07 AB-JChess
+ * drew four games it scored as mate in 1 or +300 this way, each one completed
+ * by the human's reply.
  *
  * So before a bot's move is played, the guard asks the server's own rules
  * (jieqiTenant.rules.applyMove) whether the move, or any reply to it, ends the
@@ -17,8 +18,7 @@
  * rule LOSS, or a DRAW while the bot's own score says it is winning, the engine
  * searches again with `searchmoves` limited to the moves that do neither, and
  * the guard plays its answer unless that answer is clearly worse than the draw.
- * The alternative to all this is a chase rule in the game rules, a rules change
- * this guard deliberately does not make.
+ * The guard reads the stamp, so each game is guarded under its own rule.
  *
  * Hidden information: the guard runs on the true state, but reads only what the
  * bot could know. A face-down piece never leaves its home square without
@@ -29,13 +29,13 @@
  */
 
 import {
-  DEFAULT_NO_CAPTURE_PLY_LIMIT,
   getJieqiLegalMoves,
   isJieqiLegalMove,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
-  jieqiPositionKey,
+  jieqiNoCapturePlyLimit,
+  jieqiRepetitionPositionKey,
   oppositeJieqiColor,
   PRACTICE_DRAW_CP,
 } from '@mistboard/game';
@@ -44,7 +44,12 @@ import { jieqiTenant } from './jieqi-tenant.js';
 import type { UciEval } from './uci-engine-harness.js';
 
 /** Endings the rules impose. Checkmate and stalemate are the engine's own business. */
-const RULE_ENDINGS: ReadonlySet<string> = new Set(['repetition', 'chasing', 'no-capture-clock']);
+const RULE_ENDINGS: ReadonlySet<string> = new Set([
+  'repetition',
+  'chasing',
+  'perpetual-chase',
+  'no-capture-clock',
+]);
 
 /**
  * The drawing band: a score inside ±150 cp reads as level (PRACTICE_DRAW_CP, the
@@ -56,7 +61,7 @@ export const JIEQI_DRAW_GUARD_BAND_CP = PRACTICE_DRAW_CP;
 export type JieqiRuleEnding = {
   /** From the side that played the move being judged. */
   outcome: 'draw' | 'loss';
-  reason: 'repetition' | 'chasing' | 'no-capture-clock';
+  reason: 'repetition' | 'chasing' | 'perpetual-chase' | 'no-capture-clock';
   /** The move itself ends the game, or the opponent can end it with a reply. */
   via: 'move' | 'reply';
 };
@@ -78,7 +83,7 @@ function ruleStep(
     // The identity is hidden from the bot; the clock is not. A reveal opens a new
     // repetition window, so the clock is the only rule ending it can cause.
     const ending: Ending =
-      after.noCaptureClock >= DEFAULT_NO_CAPTURE_PLY_LIMIT
+      after.noCaptureClock >= jieqiNoCapturePlyLimit(state)
         ? { winner: null, reason: 'no-capture-clock' }
         : null;
     return { ending, next: null, clock: after.noCaptureClock };
@@ -108,12 +113,20 @@ function ruleStep(
 function replyMayEndByRule(state: JieqiGameState, move: JieqiMove): boolean {
   const piece = state.board[move.from];
   if (!piece || state.board[move.to] !== undefined) return false;
-  if (state.noCaptureClock + 1 >= DEFAULT_NO_CAPTURE_PLY_LIMIT) return true;
+  if (state.noCaptureClock + 1 >= jieqiNoCapturePlyLimit(state)) return true;
   const counts = state.positionCounts;
   if (!counts || piece.faceDown || state.status.type !== 'playing') return false;
   const board = { ...state.board, [move.to]: piece };
   delete board[move.from];
-  return (counts[jieqiPositionKey(board, oppositeJieqiColor(state.status.turn))] ?? 0) >= 2;
+  return (
+    (counts[
+      jieqiRepetitionPositionKey(
+        board,
+        oppositeJieqiColor(state.status.turn),
+        state.adjudicationRule,
+      )
+    ] ?? 0) >= 2
+  );
 }
 
 /**
@@ -135,7 +148,7 @@ export function jieqiRuleEndingRisk(
   if (own.next === null) {
     // After the bot's own reveal the replies are not public, but the clock is: any
     // quiet reply that takes it to the limit draws.
-    return isReveal(state, move) && own.clock + 1 >= DEFAULT_NO_CAPTURE_PLY_LIMIT
+    return isReveal(state, move) && own.clock + 1 >= jieqiNoCapturePlyLimit(state)
       ? { outcome: 'draw', reason: 'no-capture-clock', via: 'reply' }
       : null;
   }

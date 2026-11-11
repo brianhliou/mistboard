@@ -1,21 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
+import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
-import { t } from './i18n/catalog.js';
+import { mountCreators } from './creators-page.js';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import {
+  ARTICLE_ROUTE_CLASS,
   articlesIndexPrerenderHead,
   mountAbout,
+  mountArticle,
+  mountArticlesIndex,
   mountContact,
   mountFaq,
   mountNews,
   mountNotFound,
+  mountPatron,
   mountPrivacy,
+  mountRulesIndex,
   mountSource,
   mountTerms,
   PIECE_SET_SOURCE_URLS,
+  renderArticlePageShellForPrerender,
   renderArticlesIndexShellForPrerender,
   renderRulesIndexShellForPrerender,
+  rulesArticleRoute,
   rulesIndexPrerenderHead,
+  scrollToLocationHash,
 } from './pages-static.js';
 
 async function flushPromises(): Promise<void> {
@@ -30,6 +40,7 @@ describe('static pages', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
@@ -62,10 +73,11 @@ describe('static pages', () => {
       'Changelog',
       'FAQ',
       'Contact',
+      'Is Mistboard lagging?',
+      'Title verification',
       'Mistboard Patron',
       'Terms of Use',
       'Privacy',
-      'Title verification',
       'Source code',
       'Contribute',
       'Work with us',
@@ -74,7 +86,35 @@ describe('static pages', () => {
       'Game data',
       'API',
       'Thank you',
-      'Is Mistboard lagging?',
+    ]);
+    expect(
+      [...root.querySelectorAll('.static-page-rail-group')].map((group) =>
+        [...group.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+      ),
+    ).toEqual([
+      [
+        '/about',
+        '/stats',
+        '/feed',
+        '/changelog',
+        '/faq',
+        '/contact',
+        '/lag',
+        '/verify-title',
+        '/patron',
+        '/terms',
+        '/privacy',
+      ],
+      [
+        '/source',
+        '/contribute',
+        '/creators',
+        '/champions',
+        '/developers',
+        '/data',
+        '/api-docs',
+        '/thanks',
+      ],
     ]);
     // Game totals live only on /stats (linked from the rail above); About
     // neither fetches nor shows them.
@@ -82,6 +122,39 @@ describe('static pages', () => {
     expect(fetchMock).not.toHaveBeenCalledWith('/api/stats/public', expect.anything());
     expect(root.querySelector('.platform-activity')).toBeNull();
     expect(root.textContent).not.toContain('Player game activity');
+  });
+
+  it('says who builds Mistboard and how articles are made, with an anchor the byline links to', () => {
+    const root = document.createElement('main');
+    document.body.append(root);
+    mountAbout(root);
+
+    const who = root.querySelector('#who');
+    expect(who?.tagName).toBe('H2');
+    expect(who?.textContent).toBe('Who builds Mistboard');
+    expect(who?.nextElementSibling?.textContent).toContain(
+      'Brian H. Liou designs, builds and runs Mistboard',
+    );
+    const site = who?.nextElementSibling?.querySelector<HTMLAnchorElement>(
+      'a[href="https://brianhliou.com"]',
+    );
+    expect(site?.textContent).toBe('brianhliou.com');
+    expect(site?.getAttribute('rel')).toContain('noopener');
+    const articlesHeading = root.querySelector('#articles');
+    expect(articlesHeading?.textContent).toBe('How articles are made');
+    expect(articlesHeading?.nextElementSibling?.textContent).toContain('drafted with Claude');
+  });
+
+  it('localizes the who and articles sections on a zh page', () => {
+    window.history.replaceState(null, '', '/zh-hans/about');
+    const root = document.createElement('main');
+    document.body.append(root);
+    mountAbout(root);
+
+    const who = root.querySelector('#who');
+    expect(who?.textContent).toBe('谁在打造 Mistboard');
+    expect(who?.hasAttribute('lang')).toBe(false);
+    expect(root.querySelector('#articles')?.nextElementSibling?.textContent).toContain('机器翻译');
   });
 
   it('localizes Traditional Chinese about copy', () => {
@@ -92,7 +165,7 @@ describe('static pages', () => {
     mountAbout(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('關於 Mistboard');
-    expect(root.textContent).toContain('以設計建立信任');
+    expect(root.textContent).toContain('公平對弈，規則公開');
     expect(root.textContent).not.toContain('玩家對局活動');
   });
 
@@ -109,6 +182,37 @@ describe('static pages', () => {
     expect(root.textContent).toContain('GitHub 儲存庫');
     expect(root.textContent).toContain('第三方元件');
     expect(root.textContent).toContain('專案身份');
+  });
+
+  it.each([
+    ['/source', ['Contribute', 'Developers', 'Game data', 'API', 'Thank you']],
+    ['/zh-hans/source', ['参与贡献', '开发者', '对局数据', 'API 文档', '致谢']],
+    ['/zh-hant/source', ['參與貢獻', '開發者', '對局資料', 'API 文件', '致謝']],
+  ] as const)('preserves resource links in the source page content at %s', (path, labels) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountSource(root);
+
+    const destinations = ['/contribute', '/developers', '/data', '/api-docs', '/thanks'];
+    for (const [index, href] of destinations.entries()) {
+      expect(root.querySelector(`.source-section a[href="${href}"]`)?.textContent).toBe(
+        labels[index],
+      );
+    }
+  });
+
+  it.each([
+    ['/creators', 'title verification'],
+    ['/zh-hans/creators', '称号认证'],
+    ['/zh-hant/creators', '稱號認證'],
+  ])('keeps title verification in the creators page content at %s', (path, label) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountCreators(root);
+
+    expect(root.querySelector('.creators-section a[href="/verify-title"]')?.textContent).toBe(
+      label,
+    );
   });
 
   it('credits Pikafish on the source page with its site, weights license and repository', () => {
@@ -134,6 +238,51 @@ describe('static pages', () => {
       ]);
       expect(line?.textContent).not.toContain('\u2014');
       root.remove();
+    }
+  });
+
+  it.each([
+    ['/source', 'en', 'Gomoku', 'neural networks', 'browser build', 'eight'],
+    ['/zh-hans/source', 'zh-Hans', '五子棋', '神经网络', '浏览器构建', '八个'],
+    ['/zh-hant/source', 'zh-Hant', '五子棋', '神經網路', '瀏覽器建置', '八個'],
+  ] as const)(
+    'credits Rapfi code, networks and build on %s when enabled',
+    async (path, locale, game, networks, build, levels) => {
+      await ensureLocaleCatalog(locale);
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      window.history.replaceState(null, '', path);
+      const root = document.createElement('main');
+      mountSource(root);
+      const engine = root.querySelector('a[href="https://github.com/dhbloo/rapfi"]');
+      expect(engine?.textContent).toContain('dhbloo');
+      expect(engine?.textContent).toContain(game);
+      expect(engine?.textContent).toContain(levels);
+      expect(engine?.textContent).toContain('GPL-3.0');
+      const weights = root.querySelector('a[href="/engine/rapfi/NETWORKS-CC0.txt"]');
+      expect(weights?.textContent).toContain(networks);
+      expect(weights?.textContent).toContain('CC0 1.0');
+      const wasm = root.querySelector('a[href="https://github.com/brianhliou/rapfi-wasm"]');
+      expect(wasm?.textContent).toContain(build);
+      expect(wasm?.textContent).toContain('Brian H. Liou');
+      for (const link of [engine, weights, wasm]) {
+        expect(link).not.toBeNull();
+        expect(link?.getAttribute('rel')).toContain('noopener');
+        expect(link?.textContent).not.toContain('—');
+      }
+    },
+  );
+
+  it.each([false, true])('omits every Rapfi source credit with the flag off (DEV=%s)', (dev) => {
+    vi.stubEnv('DEV', dev);
+    for (const flag of [undefined, 'false']) {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+      for (const path of ['/source', '/zh-hans/source', '/zh-hant/source']) {
+        window.history.replaceState(null, '', path);
+        const root = document.createElement('main');
+        mountSource(root);
+        expect(root.outerHTML).not.toMatch(/rapfi|gomoku|五子棋/i);
+        expect(root.querySelector('.source-credit-pikafish')).not.toBeNull();
+      }
     }
   });
 
@@ -210,7 +359,7 @@ describe('static pages', () => {
     expect(root.textContent).toContain('Mistboard 上可以玩什麼？');
     expect(root.textContent).toContain('規則參考列出了目前遊戲。');
     expect(root.textContent).toContain('我需要帳號嗎？');
-    expect(root.textContent).toContain('如何回報 bug 或聯絡？');
+    expect(root.textContent).toContain('如何回報錯誤或聯絡我們？');
     expect(root.textContent).toContain('Mistboard 引擎會看到完整棋盤嗎？');
     expect(root.textContent).toContain('計分對局如何運作？');
   });
@@ -272,6 +421,18 @@ describe('static pages', () => {
     );
     expect(root.textContent).toContain('我們承諾什麼，以及不承諾什麼');
   });
+
+  it.each(['en', 'zh-hans', 'zh-hant'])(
+    'links 404 quick Play directly to the lobby in %s',
+    (locale) => {
+      window.history.replaceState(null, '', locale === 'en' ? '/missing' : `/${locale}/missing`);
+      const root = document.createElement('main');
+      mountNotFound(root);
+
+      expect(root.querySelector('.not-found-links a')?.getAttribute('href')).toBe('/');
+      expect(root.querySelector('.not-found-links a[href="/play"]')).toBeNull();
+    },
+  );
 
   it('localizes Traditional Chinese not-found page chrome', () => {
     window.history.replaceState(null, '', '/zh-hant/missing');
@@ -338,7 +499,92 @@ describe('prerendered blog index', () => {
     ]) {
       expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
     }
-    expect(heads[1]?.title).toBe('文章 | Mistboard');
+    expect(heads[1]?.title).toBe('象棋与变体文章 | Mistboard');
+  });
+});
+
+// Issue #557: a baked article (/rules/<slug>, /blog/<slug>) painted a bare
+// <main> in a classless root, then mountArticle put the nav above it and the
+// route classes on the root, shifting the whole page down (rules p75 layout
+// shift 0.40). The baked frame must be the frame the client mounts.
+describe('prerendered article page', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    window.history.replaceState(null, '', '/');
+  });
+
+  const frameOf = (root: HTMLElement) => ({
+    rootClass: [...root.classList].sort(),
+    children: [...root.children].map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
+  });
+
+  const published = articles.filter((a) => a.status === 'published');
+  const cases = [
+    published.find((a) => a.kind === 'rules'),
+    published.find((a) => a.kind === 'article'),
+  ];
+
+  it.each(cases.map((a) => [a?.kind, a?.slug ?? '']))(
+    'bakes the frame mountArticle builds (%s %s)',
+    async (_kind, slug) => {
+      expect(slug).not.toBe('');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+      );
+      const base = cases.find((a) => a?.slug === slug)?.kind === 'rules' ? 'rules' : 'blog';
+      window.history.replaceState(null, '', `/${base}/${slug}`);
+      const root = document.createElement('div');
+      root.id = 'app';
+      document.body.append(root);
+      root.className = ARTICLE_ROUTE_CLASS;
+      root.innerHTML = await renderArticlePageShellForPrerender(slug);
+      const baked = frameOf(root);
+
+      await mountArticle(root, slug);
+      const mounted = frameOf(root);
+
+      expect(mounted.children[0]).toMatch(/^nav\./);
+      expect(baked).toEqual(mounted);
+    },
+  );
+
+  it('bakes the byline and the drafted note into the prerendered HTML, English and zh', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const slug = articles.find(
+      (a) => a.status === 'published' && hasSiteByline(a) && isArticleTranslationPublished(a.slug),
+    )?.slug as string;
+    const en = await renderArticlePageShellForPrerender(slug);
+    expect(en).toContain('href="/about#who"');
+    expect(en).toContain('Brian H. Liou');
+    expect(en).toContain('Drafted with Claude');
+    const hans = await renderArticlePageShellForPrerender(slug, 'zh-Hans');
+    expect(hans).toContain('与 Claude 合写 · 由英文机器翻译');
+  });
+
+  // The prerender ships a Vietnamese page as <html lang="vi">; locale init then
+  // resets <html lang> to the UI locale ("en"), and until 2026-10-21 the mount
+  // left it there, so the rendered page said it was English.
+  it('keeps <html lang="vi"> on a Vietnamese article and gives the next article the UI locale back', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const root = document.createElement('div');
+    root.id = 'app';
+    document.body.append(root);
+    document.documentElement.lang = 'en';
+    window.history.replaceState(null, '', '/blog/lai-ly-huynh-co-tuong');
+    await mountArticle(root, 'lai-ly-huynh-co-tuong');
+    expect(document.documentElement.lang).toBe('vi');
+
+    window.history.replaceState(null, '', '/blog/lai-ly-huynh');
+    await mountArticle(root, 'lai-ly-huynh');
+    expect(document.documentElement.lang).toBe('en');
   });
 });
 
@@ -399,9 +645,199 @@ describe('prerendered rules index', () => {
       expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
     }
     expect(heads.map((h) => h.title)).toEqual([
-      'Rules | Mistboard',
-      '规则 | Mistboard',
-      '規則 | Mistboard',
+      'Xiangqi and Variant Rules | Mistboard',
+      '象棋与变体规则 | Mistboard',
+      '象棋與變體規則 | Mistboard',
     ]);
   });
+});
+
+// A rules-rail click was a full document load: the baked page painted before
+// its article CSS arrived, then the client rebuilt everything, rail included.
+// Between rules pages of one locale the rail now stays mounted and only the
+// content columns swap.
+describe('rules rail navigation', () => {
+  const bakedHead = (path: string) =>
+    `<!doctype html><html><head><link rel="canonical" href="https://mistboard.com${path}" />` +
+    `<meta name="description" content="baked ${path}" /></head><body></body></html>`;
+
+  async function mountRules(path: string): Promise<HTMLElement> {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input);
+        if (url.startsWith('/') && url.includes('/rules/')) {
+          return { ok: true, text: async () => bakedHead(url), json: async () => ({}) };
+        }
+        return { ok: false, text: async () => '', json: async () => ({}) };
+      }),
+    );
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('div');
+    root.id = 'app';
+    document.body.append(root);
+    const route = rulesArticleRoute(path.split('#')[0]!);
+    await mountArticle(root, route!.slug, route!.lang);
+    return root;
+  }
+
+  const railLinks = (root: HTMLElement) => [
+    ...root.querySelectorAll<HTMLAnchorElement>('.article-variant-sidebar a.article-variant-link'),
+  ];
+
+  const click = (el: Element, init: MouseEventInit = {}) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ...init });
+    el.dispatchEvent(event);
+    return event;
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    document.head
+      .querySelectorAll('link[rel="canonical"], meta[name="description"]')
+      .forEach((el) => {
+        el.remove();
+      });
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('scrolls to the #fragment once the client has built the page', async () => {
+    const scrolled: string[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
+      scrolled.push(this.id);
+    });
+    // The page is built after the load event, so the browser never finds the
+    // heading itself (rules/xiangqi-mahjong-32#adding-it-up opened at the top).
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    await mountArticle(probe, 'banqi');
+    const id = probe.querySelector('main.article-page h2[id], main.article-page h3[id]')?.id;
+    probe.remove();
+    expect(id).toBeTruthy();
+    scrolled.length = 0;
+    const root = await mountRules(`/rules/banqi#${id}`);
+    expect(scrolled).toEqual([id]);
+    expect(root.querySelector(`#${id}`)).not.toBeNull();
+    // No fragment, or one naming nothing: no scroll.
+    scrolled.length = 0;
+    window.history.replaceState(null, '', '/rules/banqi#no-such-heading');
+    expect(scrollToLocationHash()).toBe(false);
+    window.history.replaceState(null, '', '/rules/banqi');
+    expect(scrollToLocationHash()).toBe(false);
+    expect(scrolled).toEqual([]);
+    vi.restoreAllMocks();
+  });
+
+  it('parses rules article paths with their locale', () => {
+    expect(rulesArticleRoute('/rules/banqi')).toEqual({ prefix: '', slug: 'banqi', lang: null });
+    expect(rulesArticleRoute('/zh-hant/rules/jieqi')).toEqual({
+      prefix: '/zh-hant',
+      slug: 'jieqi',
+      lang: 'zh-Hant',
+    });
+    expect(rulesArticleRoute('/rules')).toBeNull();
+    expect(rulesArticleRoute('/blog/banqi')).toBeNull();
+  });
+
+  it('keeps the rail and swaps the content in place, then back on popstate', async () => {
+    const root = await mountRules('/rules/banqi');
+    const nav = root.querySelector('.site-nav');
+    const main = root.querySelector('main.article-page');
+    const rail = root.querySelector('.article-variant-sidebar');
+    expect(rail).not.toBeNull();
+    const target = railLinks(root).find((a) => !a.classList.contains('active'))!;
+    const targetPath = new URL(target.href).pathname;
+    const targetSlug = rulesArticleRoute(targetPath)!.slug;
+    const before = root.querySelector('h1')!.textContent;
+
+    const event = click(target);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(window.location.pathname).toBe(targetPath);
+    expect(root.querySelector('.site-nav')).toBe(nav);
+    expect(root.querySelector('main.article-page')).toBe(main);
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelectorAll('.article-variant-sidebar')).toHaveLength(1);
+    expect((main as HTMLElement).dataset.articleSlug).toBe(targetSlug);
+    expect(root.querySelector('h1')!.textContent).not.toBe(before);
+    const active = railLinks(root).filter((a) => a.classList.contains('active'));
+    expect(active).toEqual([target]);
+    expect(target.getAttribute('aria-current')).toBe('page');
+    const article = articles.find((a) => a.slug === targetSlug)!;
+    expect(document.title).toBe(`${article.seoTitle ?? article.title} | Mistboard`);
+    await vi.waitFor(() =>
+      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        `https://mistboard.com${targetPath}`,
+      ),
+    );
+
+    window.history.replaceState(null, '', '/rules/banqi');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect((main as HTMLElement).dataset.articleSlug).toBe('banqi');
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelector('h1')!.textContent).toBe(before);
+  });
+
+  it('leaves modified clicks to the browser', async () => {
+    const root = await mountRules('/rules/banqi');
+    const target = railLinks(root).find((a) => !a.classList.contains('active'))!;
+    let prevented: boolean | null = null;
+    const record = (event: Event) => {
+      prevented = event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener('click', record);
+    click(target, { metaKey: true });
+    document.removeEventListener('click', record);
+    expect(prevented).toBe(false);
+    expect(window.location.pathname).toBe('/rules/banqi');
+  });
+
+  it('swaps in place between zh rules pages of one locale', async () => {
+    const translated = articles.filter(
+      (a) =>
+        a.kind === 'rules' && a.status === 'published' && isArticleTranslationPublished(a.slug),
+    );
+    expect(translated.length).toBeGreaterThan(1);
+    const root = await mountRules(`/zh-hans/rules/${translated[0]!.slug}`);
+    const rail = root.querySelector('.article-variant-sidebar');
+    const target = railLinks(root).find(
+      (a) => !a.classList.contains('active') && new URL(a.href).pathname.startsWith('/zh-hans/'),
+    )!;
+    const targetPath = new URL(target.href).pathname;
+    expect(click(target).defaultPrevented).toBe(true);
+    expect(window.location.pathname).toBe(targetPath);
+    expect(root.querySelector('.article-variant-sidebar')).toBe(rail);
+    expect(root.querySelector('main.article-page')?.getAttribute('data-article-lang')).toBe(
+      'zh-Hans',
+    );
+  });
+});
+
+// The async mounts used to empty the root and then wait for their page chunk,
+// so a prerendered page went blank for the whole download (7 s on /rules at
+// Fast 3G). The server render must stay until the client page replaces it.
+describe('async mounts keep the server render until the page is built', () => {
+  const cases: [string, string, (root: HTMLElement) => Promise<void>][] = [
+    ['/rules', 'rules-route', (root) => mountRulesIndex(root)],
+    ['/zh-hans/rules', 'rules-route', (root) => mountRulesIndex(root, 'zh-Hans')],
+    ['/blog', 'articles-route', (root) => mountArticlesIndex(root)],
+    ['/feed', 'news-route', (root) => mountNews(root)],
+    ['/patron', 'patron-route', (root) => mountPatron(root)],
+  ];
+  for (const [path, routeClass, mount] of cases) {
+    it(`${path}: the baked page stays until one swap`, async () => {
+      window.history.replaceState(null, '', path);
+      document.body.innerHTML = '<div id="app"><main id="baked">server render</main></div>';
+      const root = document.getElementById('app') as HTMLElement;
+      const pending = mount(root);
+      expect(root.querySelector('#baked')).not.toBeNull();
+      expect(root.classList.contains(routeClass)).toBe(false);
+      await pending;
+      expect(root.querySelector('#baked')).toBeNull();
+      expect(root.classList.contains(routeClass)).toBe(true);
+      expect(root.firstElementChild?.tagName).toBe('NAV');
+    });
+  }
 });

@@ -24,6 +24,9 @@ export type ShowcaseBoardOptions = {
   // Autoplay through the game (default). false = mount paused at the start
   // position, used by the dev sheet to show each variant's opening.
   autoplay?: boolean;
+  // Static cards start at the latest position. Tenant reloads then glide only
+  // a new single move; the homepage leaves this off to replay from the opening.
+  followEnd?: boolean;
   // Tenant path only: suppress the flanking reserve strips for drop/reserve
   // variants (fortress-xiangqi) so the compact board renders bare. Used by the
   // /watch queue thumbnails, where hands are unreadable at preview scale.
@@ -62,6 +65,9 @@ export type ShowcaseBoardOptions = {
   // renderer paths. Off by default: the other compact hosts hide or restyle the
   // seat rows.
   seatDiscs?: boolean;
+  // Tenant path only: a drop variant's reserves ride the seat rows instead of
+  // strips above and below the board (watch-tenant-replay.ts `reservesInSeats`).
+  reservesInSeats?: boolean;
 };
 
 export async function mountShowcaseBoard(
@@ -81,12 +87,14 @@ export async function mountShowcaseBoard(
       namesByRoomId: options.namesByRoomId,
       ...(options.hideReserve ? { hideReserve: true } : {}),
       ...(options.live ? { live: true } : {}),
+      ...(options.followEnd ? { followEnd: true } : {}),
       ...(options.loadPostgameOverride
         ? { loadPostgameOverride: options.loadPostgameOverride }
         : {}),
       ...(options.onLoadError ? { onLoadError: options.onLoadError } : {}),
       ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
       ...(options.seatDiscs ? { seatDiscs: true } : {}),
+      ...(options.reservesInSeats ? { reservesInSeats: true } : {}),
       ...(options.tenantPov ? { pov: options.tenantPov } : {}),
     });
   }
@@ -97,6 +105,8 @@ export async function mountShowcaseBoard(
   // which CSS then styles into the shared `.showcase-seat` look.
   return mountReplay(root, roomId, {
     autoplay: options.autoplay ?? true,
+    // The chess renderer clamps initialPly to the loaded game's move count.
+    ...(options.followEnd ? { initialPly: Number.MAX_SAFE_INTEGER } : {}),
     showControls: false,
     keyboardNav: false,
     revealOnFinish: options.revealOnFinish ?? false,

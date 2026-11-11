@@ -92,7 +92,10 @@ export function renderXiangqiOgBoardSvg(opts: XiangqiOgBoardOptions): string {
   // Ratios from the web diagrams (cell 31, margin 18, piece 28).
   const cell = opts.height / (ranks - 1 + 2 * 0.58);
   const margin = 0.58 * cell;
-  const pieceSize = 0.9 * cell;
+  // The piece look of 2026-10-14 (apps/web/src/board-metrics.ts
+  // xiangqiPieceDrawSize): the piece's outer edge spans 98% of the point gap,
+  // and its outline ends at 94.8 of the 100-unit box it is drawn in.
+  const pieceSize = (0.98 / 0.948) * cell;
   const width = 2 * margin + (files - 1) * cell;
   const px = (file: number) => margin + file * cell;
   const py = (rank: number) => margin + (ranks - rank) * cell;

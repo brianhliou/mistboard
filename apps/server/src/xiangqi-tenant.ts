@@ -16,7 +16,8 @@
 import {
   type AbortReason,
   applyStandardXiangqiMove,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
+  DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT,
   getStandardXiangqiPlayerView,
   isStandardXiangqiLegalMove,
   type StandardXiangqiPlayerView,
@@ -110,7 +111,8 @@ export const xiangqiTenant: XiangqiTenant = {
   enabled: xiangqiEnabled,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   rules: {
-    createInitialState: createInitialXiangqiState,
+    createSetup: () => ({ progressClockLimit: DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT }),
+    createInitialState: createStandardXiangqiStateFromSetup,
     // Apply the move, then enforce the chasing rule: a three-fold repetition
     // reached by one side's perpetual check is a LOSS for that side, not a draw.
     // Real xiangqi (AXF/WXF/CXA) has never scored it as a draw, and without this
@@ -121,7 +123,10 @@ export const xiangqiTenant: XiangqiTenant = {
     applyMove: (state, move) => {
       const next = applyStandardXiangqiMove(state, move);
       if (next.status.type === 'finished' && next.status.reason === 'repetition') {
-        const loser = xiangqiPerpetualCheckLoser(next.moveLog ?? []);
+        const loser = xiangqiPerpetualCheckLoser(
+          next.moveLog ?? [],
+          createStandardXiangqiStateFromSetup(state.id, state),
+        );
         if (loser) {
           return {
             ...next,
@@ -139,6 +144,10 @@ export const xiangqiTenant: XiangqiTenant = {
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
+    }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
     abort: (state, reason: AbortReason) => ({
       ...state,
@@ -179,7 +188,8 @@ export const xiangqiTenant: XiangqiTenant = {
   },
   persistence: {
     resultForWinner: xiangqiResult,
-    termination: (reason: string) => reason as persistence.GameTermination,
+    termination: (reason: string) =>
+      reason === 'agreement' ? 'draw' : (reason as persistence.GameTermination),
     logKindPrefix: 'xiangqi',
     logLabel: 'Xiangqi',
   },

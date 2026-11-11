@@ -4,6 +4,7 @@ export const SUPPORTED_LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant']
 
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_STORAGE_KEY = 'mistboard.locale';
+export const FIRST_LOCALE_STORAGE_KEY = 'mistboard.firstLocale';
 
 export type LocaleMeta = {
   dateLocale: string;
@@ -48,6 +49,32 @@ export function localeFromPath(pathname = currentPathname()): Locale | null {
   if (lower === '/zh-hans' || lower.startsWith('/zh-hans/')) return 'zh-Hans';
   if (lower === '/zh-hant' || lower.startsWith('/zh-hant/')) return 'zh-Hant';
   return null;
+}
+
+// /puzzles has no locale prefix; the server sends /zh-hans/puzzles/... to
+// /puzzles/...?lang=zh-hans. Store that language and drop the parameter, so a
+// later switch from the language menu is not undone by the same URL reloading.
+export function puzzlesQueryLocale(): Locale | null {
+  if (typeof window === 'undefined') return null;
+  const { pathname, search, hash } = window.location;
+  if (pathname !== '/puzzles' && !pathname.startsWith('/puzzles/')) return null;
+  const params = new URLSearchParams(search);
+  const raw = params.get('lang')?.toLowerCase();
+  const locale =
+    raw === 'zh-hans' ? 'zh-Hans' : raw === 'zh-hant' ? 'zh-Hant' : raw === 'en' ? 'en' : null;
+  if (!locale) return null;
+  params.delete('lang');
+  const query = params.toString();
+  try {
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${pathname}${query ? `?${query}` : ''}${hash}`,
+    );
+  } catch {
+    // A sandboxed frame can refuse replaceState; the stored locale still holds.
+  }
+  return locale;
 }
 
 export function storedLocale(): Locale | null {
@@ -167,8 +194,27 @@ export function applyAccountLocalePreference(locale: string | null | undefined):
   return previous !== supportedLocale;
 }
 
+// The locale this browser was first served, kept for good. Board defaults (piece
+// set, river text, move notation) read it instead of the current locale, so a
+// reader who switches the interface language keeps the board they started on
+// (Brian, 2026-10-29: switching to Chinese should not switch the notation). Only
+// the guess is kept; what the board defaults to for it can still change.
+export function firstLocale(): Locale {
+  try {
+    const stored = window.localStorage.getItem(FIRST_LOCALE_STORAGE_KEY);
+    if (isLocale(stored)) return stored;
+    const locale = currentLocale();
+    window.localStorage.setItem(FIRST_LOCALE_STORAGE_KEY, locale);
+    return locale;
+  } catch {
+    return currentLocale();
+  }
+}
+
 export function initializeLocaleFromCurrentUrl(): Locale {
-  const pathLocale = localeFromPath();
+  // Before the path is stored, so a first visit records the page it landed on.
+  firstLocale();
+  const pathLocale = localeFromPath() ?? puzzlesQueryLocale();
   if (pathLocale) setStoredLocale(pathLocale);
   const locale = currentLocale();
   applyDocumentLocale(locale);
@@ -191,9 +237,10 @@ export function localizedHref(path: string, locale = currentLocale()): string {
 export type LocaleSwitchNavigation = { kind: 'navigate'; href: string } | { kind: 'reload' };
 
 // How the language switcher should leave the page once the new locale is
-// stored. Only the home page, /rules, /blog, /learn/xiangqi and /practice carry a locale
-// prefix, so on every other route localizedHref hands back the current URL
-// unchanged. Assigning an identical
+// stored. Only the routes isContentPath lists (home, /rules, /blog,
+// /learn/xiangqi, /practice, /bots, /champions, /videos, the study list and its
+// permalinks, the xiangqi analysis board and editor) carry a locale prefix, so on every
+// other route localizedHref hands back the current URL unchanged. Assigning an identical
 // URL to location.href normally reloads, but when the URL carries a fragment
 // (/feed#id, /learn#/stage, /api-docs#tag) the browser treats it as a
 // same-document fragment navigation and reloads nothing, leaving the page in
@@ -243,7 +290,16 @@ function isContentPath(pathname: string): boolean {
     // language switcher on it lands a Chinese reader on /zh-hans/bots.
     pathname === '/bots' ||
     // Engine champions, moved from brianhliou.com with its zh pages.
-    pathname === '/champions'
+    pathname === '/champions' ||
+    pathname === '/washington-xiangqi' ||
+    pathname === '/videos' ||
+    // The study list and its permalinks (/zh-hans/study, /zh-hans/study/:id).
+    pathname === '/study' ||
+    pathname.startsWith('/study/') ||
+    // 象棋AI分析 and 摆残局: the xiangqi board and editor have zh URLs; the
+    // other variants' boards and the bare /analysis alias do not.
+    pathname === '/analysis/xiangqi' ||
+    pathname === '/editor/xiangqi'
   );
 }
 

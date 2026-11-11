@@ -11,6 +11,7 @@ import type { VariantMiniId } from './variant-mini-boards.js';
 // missed duck-xiangqi until the launch audit (aa91538e).
 // variant-registry-sync.test.ts fails for a server watch channel with no entry.
 export const WATCH_CHANNEL_MINI_IDS: Readonly<Record<string, VariantMiniId>> = {
+  gomoku: 'gomoku',
   'dark-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'dark-xiangqi': 'dark-xiangqi',
@@ -20,6 +21,8 @@ export const WATCH_CHANNEL_MINI_IDS: Readonly<Record<string, VariantMiniId>> = {
   'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
+  'xiangqi-mahjong': 'xiangqi-mahjong',
 };

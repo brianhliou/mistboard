@@ -16,16 +16,39 @@ export {
   DEFAULT_ACCOUNT_PREFERENCES,
   DM_POLICIES,
   findUserByEmail,
+  findUserByHandle,
   isAccountLocale,
   isClockTenthsPreference,
   isDmPolicy,
   isPieceAnimationPreference,
   isPlayDisabled,
   isProfileVisibility,
+  isStatsExcluded,
   isUserIdPlayDisabled,
+  isUserIdStatsExcluded,
   userExists,
   userIdForHandle,
 } from './persistence-accounts.js';
+export type {
+  AchievementCatalog,
+  AchievementCatalogEntry,
+  AchievementEvaluation,
+  AchievementFamilyCatalogEntry,
+  EvaluateAchievementsInput,
+  NewAchievementAward,
+  UserAchievement,
+  UserAchievementsPage,
+} from './persistence-achievements.js';
+export {
+  awardAchievements,
+  deriveAchievementCounts,
+  deriveAchievementFacts,
+  evaluateAchievements,
+  getAchievementCatalog,
+  getUserAchievementProgress,
+  getUserAchievements,
+  getUserAchievementsByHandle,
+} from './persistence-achievements.js';
 export type {
   AdminAccountRow,
   AdminAccountSort,
@@ -81,7 +104,12 @@ export type {
   BotRatingSnapshot,
   BotRatingSource,
 } from './persistence-bots.js';
-export { getPublicBotForPlay, getPublicBotProfile, listPublicBots } from './persistence-bots.js';
+export {
+  getBotGamesPage,
+  getPublicBotForPlay,
+  getPublicBotProfile,
+  listPublicBots,
+} from './persistence-bots.js';
 export type { ChatLineRecord, ChatModerationStatus, ChatReportRecord } from './persistence-chat.js';
 export {
   activeChatTimeout,
@@ -127,10 +155,10 @@ export {
   deleteCorrespondenceSeek,
   deleteExpiredCorrespondenceSeeks,
   findOpenDuplicatePublicSeek,
+  getClosedCorrespondenceSeekSpecId,
   getCorrespondenceSeek,
   getCorrespondenceSeekListing,
   getCorrespondenceSeekOutcome,
-  hasSeekExpiryNotice,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
@@ -164,6 +192,15 @@ export {
   resolveDmReport,
   sendDmMessage,
 } from './persistence-dms.js';
+export type { EmailDeliveryAddress, LoginEmailRequest } from './persistence-email-delivery.js';
+export {
+  completeLoginEmailRequest,
+  correlateLoginEmailRequest,
+  getEmailDeliveryAddress,
+  getLoginEmailRequest,
+  recordEmailDeliveryEvent,
+  recordLoginEmailRequest,
+} from './persistence-email-delivery.js';
 export type { FeedbackSubmissionInput } from './persistence-feedback.js';
 export {
   countAnonFeedbackSubmissionsSince,
@@ -273,6 +310,7 @@ export {
   listGameDebugArtifactSummaries,
   listRoomLifecycleAudit,
   listRoomLifecycleAuditByKinds,
+  listStalePausedTenantRoomIds,
   loadRoom,
   loadRoomEvents,
   loadRoomsEvents,
@@ -361,6 +399,8 @@ export {
   upsertHistoricalXiangqiSource,
   XIANGQI_GAME_SORTS,
 } from './persistence-historical-xiangqi.js';
+export type { InboxEmailCandidate, InboxEmailQuery } from './persistence-inbox-email.js';
+export { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbox-email.js';
 export type {
   ActivePlayerEntry,
   BestRatingEntry,
@@ -376,12 +416,6 @@ export {
   getLeaderboardSummary,
   getMostActivePlayers,
 } from './persistence-leaderboards.js';
-export type { LobbyActivityEvent } from './persistence-lobby-activity.js';
-export {
-  cachedLobbyActivity,
-  listLobbyActivity,
-  resetLobbyActivityCacheForTests,
-} from './persistence-lobby-activity.js';
 export type {
   ForumWatchNotification,
   NewFollowerNotification,
@@ -395,6 +429,7 @@ export {
   FORUM_UNREAD_WINDOW_DAYS,
   isNotificationWatermarkKind,
   markNotificationsSeen,
+  notificationsSeenAt,
   unreadWatchedForumTopics,
   unseenNewFollowers,
 } from './persistence-notifications.js';
@@ -433,8 +468,10 @@ export {
   getUserDmPolicy,
   getUserGamesPage,
   getUserProfileByHandle,
+  getUserPuzzleRatingHistory,
   getUserRatingHistory,
   isProfileGameResultFilter,
+  listRecentFinishedCorrespondenceGames,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,
@@ -477,6 +514,7 @@ export type {
   RoomDeadlineRecord,
 } from './persistence-room-deadlines.js';
 export {
+  countHostCorrespondenceGames,
   deleteRoomDeadline,
   listActiveCorrespondenceRoomIds,
   listActiveRoomDeadlines,
@@ -547,6 +585,7 @@ export {
   getPracticeStudiesBySlug,
   getStudyById,
   getStudyBySlug,
+  getStudyChapterVariants,
   getStudyLikeState,
   isStudyVisibility,
   listFavoriteStudies,
@@ -573,6 +612,12 @@ export {
   getStudyChapterAnalysisForRead,
   saveStudyChapterAnalysis,
 } from './persistence-study-analysis.js';
+export {
+  decidedStudyChapterIds,
+  getStudyChapterDecisions,
+  getStudyChapterDecisionsForRead,
+  saveStudyChapterDecisions,
+} from './persistence-study-decisions.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,
@@ -580,6 +625,7 @@ export {
   isAllowlistedGameSpec,
   listVariantGrants,
   mayPlayVariant,
+  mayPlayVariantByUserId,
   playableAllowlistedSpecs,
   revokeVariantAccess,
 } from './persistence-variant-access.js';
@@ -638,6 +684,7 @@ export {
 export {
   getXiangqiPlayer,
   listXiangqiPlayerBoards,
+  listXiangqiPlayerGames,
   listXiangqiPlayers,
   type XiangqiPlayerBoardRecord,
   type XiangqiPlayerEventRecord,

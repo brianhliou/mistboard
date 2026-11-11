@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 // /contribute: how to help Mistboard, lichess's /help/contribute equivalent.
 // Play + feedback, bug reports, code, zh page reviews, and support. Renders inside
 // the shared /about rail + panel shell.
@@ -93,13 +94,16 @@ function buildContribute(locale: Locale = currentLocale()): HTMLElement {
 
 const CONTACT_EMAIL = 'contact@mistboard.com';
 
-// Anchored so the zh rules pages' "see a translation problem?" line can land
-// the reader on this section rather than the top of the page (articles.ts
-// links to `/contribute#translate`; keep the two in step).
+// Anchored so a link to `/contribute#translate` lands the reader on this
+// section rather than the top of the page.
 const CONTRIBUTE_TRANSLATE_ANCHOR = 'translate';
 
 function translateHeading(locale: Locale): HTMLElement {
   const heading = proseSubheading(t('contribute.translateHeading', {}, locale));
   heading.id = CONTRIBUTE_TRANSLATE_ANCHOR;
   return heading;
+}
+
+export function renderContributeShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountContribute);
 }

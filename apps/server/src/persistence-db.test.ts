@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import type pg from 'pg';
 import { close, getPool, init } from './persistence-db.js';
+import { testDatabaseUrlFromEnv } from './test-database-url.js';
 
 // node-postgres re-emits an idle client's socket error on the Pool; with no
 // 'error' listener, EventEmitter throws it and Node exits, taking the live
@@ -45,4 +46,71 @@ test('a pool error from a dropped idle client is logged, never thrown', async (t
   } finally {
     await close();
   }
+});
+
+// JIT compile time dwarfed the counted-game queries (5.3s against 0.65s for
+// public stats on prod, 2026-10-25), so every pool starts its sessions with it
+// off, guarded or not.
+test('every pool session starts with JIT off, beside any guards', async () => {
+  for (const guards of [undefined, { statementTimeoutMs: 1000 }]) {
+    init('postgres://mistboard@127.0.0.1:9/never', guards);
+    try {
+      const options = String(
+        (getPool() as unknown as { options: { options?: string } }).options.options,
+      );
+      assert.match(options, /(^| )-c jit=off( |$)/);
+      if (guards) assert.match(options, /-c statement_timeout=1000/);
+    } finally {
+      await close();
+    }
+  }
+});
+
+// `npm run prod:db -- --read-only` asks for a read-only session through
+// PGOPTIONS. pg reads PGOPTIONS only when no `options` is passed, and init()
+// always passes one, so the flag was silently dropped: a script told it was
+// read-only got a read-write session.
+function withPgOptions(value: string | undefined, fn: () => Promise<void>): Promise<void> {
+  const previous = process.env.PGOPTIONS;
+  if (value === undefined) delete process.env.PGOPTIONS;
+  else process.env.PGOPTIONS = value;
+  return fn().finally(() => {
+    if (previous === undefined) delete process.env.PGOPTIONS;
+    else process.env.PGOPTIONS = previous;
+  });
+}
+
+test('PGOPTIONS from the environment reaches every pool session, ahead of JIT off', async () => {
+  await withPgOptions('-c default_transaction_read_only=on', async () => {
+    init('postgres://mistboard@127.0.0.1:9/never');
+    try {
+      const options = String(
+        (getPool() as unknown as { options: { options?: string } }).options.options,
+      );
+      assert.match(options, /-c default_transaction_read_only=on/);
+      assert.match(options, /(^| )-c jit=off( |$)/);
+    } finally {
+      await close();
+    }
+  });
+});
+
+const databaseUrl = testDatabaseUrlFromEnv();
+test('persistence: a read-only PGOPTIONS session refuses writes', {
+  skip: databaseUrl ? false : 'set TEST_DATABASE_URL to enable',
+}, async () => {
+  await withPgOptions('-c default_transaction_read_only=on', async () => {
+    init(databaseUrl as string);
+    try {
+      const pool = getPool();
+      const { rows } = await pool.query('SHOW default_transaction_read_only');
+      assert.equal(rows[0]?.default_transaction_read_only, 'on');
+      await assert.rejects(
+        pool.query('CREATE TEMP TABLE read_only_probe (id int)'),
+        (error: { code?: string }) => error.code === '25006',
+      );
+    } finally {
+      await close();
+    }
+  });
 });

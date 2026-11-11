@@ -10,6 +10,10 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import {
+  mayPlayCorrespondence,
+  mayPlayCorrespondenceByUserId,
+} from './../correspondence-access.js';
+import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
@@ -23,9 +27,14 @@ import type {
 } from './../persistence.js';
 import * as persistence from './../persistence.js';
 import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
-import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
 import {
+  correspondenceTenantForSpecId,
+  variantTenantForRoomId,
+} from './../variant-tenant/registry.js';
+import {
+  CORRESPONDENCE_ALLOWLISTED_SPECS,
   CORRESPONDENCE_ELIGIBLE_SPECS,
+  CORRESPONDENCE_RESTRICTED_SPECS,
   parseCorrespondenceTimeControl,
 } from './correspondence-rooms.js';
 import {
@@ -109,6 +118,43 @@ export function challengeAcceptError(
   if (seek.creatorUserId === userId) return 'cannot_accept_own_seek';
   if (seek.targetUserId !== null && seek.targetUserId !== userId) return 'not_your_challenge';
   return null;
+}
+
+/**
+ * Seeks this reader may see, admitting a hidden variant only through its
+ * existing room access policy. An anonymous reader sees none of them. Costs a
+ * query only when the list holds such a seek.
+ */
+export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUserId?: string }>(
+  seeks: readonly T[],
+  user: UserAccount | null,
+  playableSpecs: (user: UserAccount) => Promise<readonly string[]> = (reader) =>
+    persistence.playableAllowlistedSpecs(reader),
+): Promise<T[]> {
+  // A formerly granted playtest can launch with correspondence held off.
+  // Such stored seeks must not become public when its grant gate disappears.
+  const supported = seeks.filter(
+    (seek) =>
+      CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) ||
+      CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId),
+  );
+  if (!supported.some((seek) => CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId))) {
+    return supported;
+  }
+  const needsGrants = supported.some((seek) =>
+    CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId),
+  );
+  const playable = new Set(user && needsGrants ? await playableSpecs(user) : []);
+  const visible = await Promise.all(
+    supported.map(async (seek) => {
+      if (!CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId)) return true;
+      if (CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId)) {
+        return playable.has(seek.gameSpecId);
+      }
+      return mayPlayCorrespondence(user, seek.gameSpecId);
+    }),
+  );
+  return supported.filter((_, index) => visible[index]);
 }
 
 // Pure view model for the challenge landing page, shared by the view route and
@@ -342,7 +388,7 @@ export function openSeekPayload(
 }
 
 async function listOpenSeeks(user: UserAccount | null, response: ServerResponse): Promise<boolean> {
-  const seeks = await persistence.listOpenCorrespondenceSeeks();
+  const seeks = await seeksVisibleTo(await persistence.listOpenCorrespondenceSeeks(), user);
   writeJson(response, 200, {
     seeks: seeks.map((seek) => openSeekPayload(seek, user?.id ?? null)),
   });
@@ -353,7 +399,7 @@ async function listIncomingChallenges(
   user: UserAccount,
   response: ServerResponse,
 ): Promise<boolean> {
-  const challenges = await persistence.listChallengesForUser(user.id);
+  const challenges = await seeksVisibleTo(await persistence.listChallengesForUser(user.id), user);
   writeJson(response, 200, {
     challenges: challenges.map((seek) => ({
       id: seek.id,
@@ -418,11 +464,20 @@ async function createSeek(
   return true;
 }
 
-async function createSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+/** Options for a seek posted on a player's behalf rather than by them. */
+export type CreateSeekOptions = {
+  // The correspondence host route posts a private seek as the host and accepts it
+  // in the same request, so it never stands; the host's own open seeks must not
+  // block it.
+  skipOpenSeekCap?: boolean;
+};
+
+export async function createSeekResult(
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   body: Record<string, unknown>,
   source: SeekAlertNotice['source'],
+  options: CreateSeekOptions = {},
 ): Promise<SeekRouteResult> {
   // Per-account play lock (126). Correspondence never reaches seat assignment
   // through a socket the way a live room does, so posting a seek and accepting
@@ -436,13 +491,18 @@ async function createSeekResult(
   if (isRetiredGameSpec(gameSpecId)) {
     return { status: 410, body: { error: 'retired_game_spec' } };
   }
-  // Fork-6 fail-closed allowlist — the same set the create route enforces.
-  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId)) {
+  // Fork-6 fail-closed allowlist — the same set the create route enforces — plus
+  // the allowlisted playtest specs, for an account that holds the grant.
+  const allowlisted = CORRESPONDENCE_RESTRICTED_SPECS.has(gameSpecId);
+  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  if (allowlisted && !(await mayPlayCorrespondence(user, gameSpecId))) {
+    return { status: 403, body: { error: 'variant_not_granted' } };
   }
   // A variant whose server flag is off cannot back a game: refuse the seek now,
   // not at accept time after the row is gone.
-  if (correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
+  if (!allowlisted && correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
     return { status: 404, body: { error: 'variant_disabled' } };
   }
   const timeControl = parseCorrespondenceTimeControl(body.daysPerMove);
@@ -458,6 +518,10 @@ async function createSeekResult(
     const ratedError = ratedSeekError(gameSpecId, timeControl);
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
+    }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
     }
   }
 
@@ -491,9 +555,18 @@ async function createSeekResult(
     if (await persistence.hasBlock(targetUserId, user.id)) {
       return { status: 403, body: { error: 'challenge_blocked' } };
     }
+    // An allowlisted variant is offered only to granted accounts: a challenge to
+    // anyone else could never be accepted, and would show them the variant.
+    if (allowlisted && !(await mayPlayCorrespondenceByUserId(targetUserId, gameSpecId))) {
+      return { status: 403, body: { error: 'target_variant_not_granted' } };
+    }
+    // A rated challenge to an uncounted account could never become a rated game.
+    if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
+      return { status: 403, body: { error: 'target_rated_requires_counted_account' } };
+    }
   }
 
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   // The same board offer posted twice returns the live one instead of stacking a
@@ -530,7 +603,7 @@ async function createSeekResult(
   }
   // Cap is best-effort under concurrency (no unique constraint); a racing pair of
   // creates could both pass at exactly the limit. Acceptable for a spam bound.
-  const open = await persistence.countOpenSeeksForUser(user.id);
+  const open = options.skipOpenSeekCap ? 0 : await persistence.countOpenSeeksForUser(user.id);
   if (open >= MAX_OPEN_SEEKS_PER_USER) {
     return { status: 409, body: { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER } };
   }
@@ -621,15 +694,15 @@ async function acceptSeek(
   return true;
 }
 
-async function acceptSeekResult(
-  ctx: Pick<HttpApiContext, 'isDraining' | 'drainDeadlineMs'>,
+export async function acceptSeekResult(
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
 ): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
-  if (ctx.isDraining()) {
+  if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   const seek = await persistence.getCorrespondenceSeek(seekId);
@@ -653,8 +726,19 @@ async function acceptSeekResult(
   if (isRetiredGameSpec(seek.gameSpecId)) {
     return { status: 410, body: { error: 'retired_game_spec' } };
   }
-  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId)) {
+  const allowlisted = CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId);
+  if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  // Both seats of a restricted variant need access, checked before the race
+  // consumes the row: a refused accepter leaves the seek standing.
+  if (allowlisted) {
+    if (!(await mayPlayCorrespondence(user, seek.gameSpecId))) {
+      return { status: 403, body: { error: 'variant_not_granted' } };
+    }
+    if (!(await mayPlayCorrespondenceByUserId(seek.creatorUserId, seek.gameSpecId))) {
+      return { status: 409, body: { error: 'opponent_variant_not_granted' } };
+    }
   }
   const timeControl = parseCorrespondenceTimeControl(seek.daysPerMove);
   if (!timeControl) {
@@ -662,7 +746,7 @@ async function acceptSeekResult(
   }
   // Variant switched off since the seek was posted: keep the row (it accepts
   // again once the flag is back) instead of consuming it for a 404.
-  if (correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
+  if (!allowlisted && correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
     return { status: 404, body: { error: 'variant_disabled' } };
   }
   // A rated seek re-passes the rated gate at accept (the terms may have stopped
@@ -676,13 +760,13 @@ async function acceptSeekResult(
     if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
       return { status: 409, body: { error: 'opponent_play_disabled' } };
     }
-  }
-  // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
-  // exactly one of two simultaneous accepters proceeds to create the game; the
-  // loser gets 409 and the row is already gone.
-  const won = await persistence.deleteCorrespondenceSeek(seekId);
-  if (!won) {
-    return { status: 409, body: { error: 'seek_taken' } };
+    // Neither side of a rated game may be a stats-excluded (uncounted) account.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
+    }
+    if (await persistence.isUserIdStatsExcluded(seek.creatorUserId)) {
+      return { status: 409, body: { error: 'opponent_rated_requires_counted_account' } };
+    }
   }
   // Which tenant backs this spec's correspondence rooms. Fail-closed twice over: the spec
   // already passed CORRESPONDENCE_ELIGIBLE_SPECS above, and a spec whose tenant offers no
@@ -691,6 +775,13 @@ async function acceptSeekResult(
   const createGame = tenant?.createCorrespondenceGameForSeek ?? null;
   if (!createGame) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
+  // exactly one of two simultaneous accepters proceeds to create the game; the
+  // loser gets 409 and the row is already gone.
+  const won = await persistence.deleteCorrespondenceSeek(seekId);
+  if (!won) {
+    return { status: 409, body: { error: 'seek_taken' } };
   }
   // Creator's side is honored; the accepter takes the other (random → coin flip). Move
   // order, not color: the tenant maps first/second onto its own colors, so this path stays
@@ -908,13 +999,15 @@ async function viewSeek(
   const seek = await persistence.getCorrespondenceSeekListing(seekId);
   if (!seek) {
     // Gone: say why when this viewer may know (#527), else the plain 404.
-    const gone = await seekGoneFor(seekId, user.id);
+    const gone = await seekGoneFor(seekId, user);
     if (gone) writeJson(response, 410, { error: 'seek_gone', ...gone });
     else writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
-  if (!view.visible) {
+  // Creators retain management access; every other reader must pass the room door.
+  const hidden = !view.isMine && (await seeksVisibleTo([seek], user)).length === 0;
+  if (!view.visible || hidden) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
@@ -938,11 +1031,21 @@ async function viewSeek(
 
 // A closed seek's outcome row first (migration 165); then the 161 expiry notice,
 // which only a public board seek ever has, for seeks swept before outcomes existed.
-async function seekGoneFor(seekId: string, viewerUserId: string): Promise<SeekGoneView | null> {
+async function seekGoneFor(seekId: string, user: UserAccount): Promise<SeekGoneView | null> {
   const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
-  if (outcome) return seekGoneView(outcome, viewerUserId);
-  if (await persistence.hasSeekExpiryNotice(seekId)) return { reason: 'expired' };
-  return null;
+  // New outcomes retain the spec; legacy rows may still identify it through
+  // the accepted room or public expiry notice.
+  const specId =
+    outcome?.gameSpecId ??
+    (outcome?.roomId ? variantTenantForRoomId(outcome.roomId)?.gameSpecId : null) ??
+    (await persistence.getClosedCorrespondenceSeekSpecId(seekId));
+  const knowsChallenge = outcome?.creatorUserId === user.id || outcome?.targetUserId === user.id;
+  if (
+    !knowsChallenge &&
+    (!specId || (await seeksVisibleTo([{ gameSpecId: specId }], user)).length === 0)
+  )
+    return null;
+  return outcome ? seekGoneView(outcome, user.id) : { reason: 'expired' };
 }
 
 // The named target rejecting a directed challenge: deletes the seek. A link

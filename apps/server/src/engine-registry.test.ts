@@ -54,9 +54,13 @@ test('standard Xiangqi Pikafish tiers are first-class reproducible engine versio
     kind: 'pikafish-xiangqi',
     nodes: 10_000,
     movetime_ms: 500,
-    version: '0.3.0',
+    version: '0.4.0',
   });
-  assert.match(engine.playSignature, /0\.3\.0-nodes-10000$/);
+  assert.match(engine.playSignature, /0\.4\.0-nodes-10000$/);
+  assert.equal(engine.configHash, engine.playSignature);
+  assert.equal(engine.engineName, 'Pikafish');
+  assert.match(engine.notes ?? '', /Pikafish search, Fairy-Stockfish CC0 net/);
+  assert.match(engine.notes ?? '', /6a59ee2f.*cc0-790609318c02.*xiangqi-c07e94a5c7cb/);
   assert.equal(isPlayableLiveEngineClientId(engine.id), false);
 });
 

@@ -38,6 +38,35 @@ function game(overrides: Partial<FeaturedGame> = {}): FeaturedGame {
 }
 
 describe('profile game rows', () => {
+  it('puts full names on opponent and neutral pairing name elements', () => {
+    const fullName = 'MistyThreeKingdomsBanqi level 7';
+    const fixture = game({
+      participants: [
+        {
+          color: 'white',
+          displayName: 'Ann',
+          subjectType: 'user',
+          subjectId: 'ann',
+          visibility: 'public',
+        },
+        {
+          color: 'black',
+          displayName: fullName,
+          subjectType: 'engine-version',
+          subjectId: 'misty-three-kingdoms-banqi-level-7',
+          visibility: 'public',
+        },
+      ],
+    });
+    const opponent = buildProfileGameRow(fixture).querySelector<HTMLElement>(
+      '.profile-game-opponent-name',
+    );
+    expect(opponent?.title).toBe(fullName);
+    const names = buildProfileGameRow(fixture, { neutral: true }).querySelectorAll<HTMLElement>(
+      '.profile-game-opponent-name',
+    );
+    expect([...names].map((name) => name.title)).toEqual(['Ann', fullName]);
+  });
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -213,6 +242,47 @@ describe('profile game rows', () => {
     expect(row.textContent).toContain('White');
   });
 
+  // Xiangqi mahjong seats are east/west, which only alternate the deal. The row
+  // scored an east win as a loss (it compared against 'white-wins'), named the
+  // opponent "White" and showed a "White" side pill.
+  it('scores and names a xiangqi mahjong row by player, never by seat', () => {
+    const seats = (result: string, playerColor: 'east' | 'west') =>
+      buildProfileGameRow(
+        game({
+          roomId: 'xmj_profile',
+          variant: 'xiangqi-mahjong',
+          result,
+          termination: 'checkmate',
+          playerColor,
+          participants: [
+            {
+              color: 'east',
+              displayName: 'brianhliou',
+              subjectType: 'user',
+              subjectId: 'u_brian',
+              visibility: 'public',
+            },
+            {
+              color: 'west',
+              displayName: 'Misty',
+              subjectType: 'bot',
+              subjectId: null,
+              visibility: 'public',
+            },
+          ],
+        }),
+      );
+    const won = seats('east-wins', 'east');
+    expect(won.querySelector('.profile-game-outcome')?.textContent).toBe('Win');
+    expect(won.textContent).toContain('vs Misty');
+    expect(won.querySelector('.profile-game-side')).toBeNull();
+    expect(won.textContent).not.toMatch(/White|Black|East|West/);
+    expect(seats('west-wins', 'east').querySelector('.profile-game-outcome')?.textContent).toBe(
+      'Loss',
+    );
+    expect(seats('west-wins', 'west').textContent).toContain('vs brianhliou');
+  });
+
   it('draws a game played under earlier rules as a tagged row with no link', () => {
     const base = game();
     const row = buildProfileGameRow(
@@ -262,7 +332,17 @@ describe('profile game rows', () => {
   // /game/:id (whose chess-family replay reducer 403s on a non-chess event
   // log). This is the lock that a hand-maintained switch lacked, so a newly
   // launched variant can't silently regress to "vs White" / a 403 postgame.
-  const tenantsWithPostgame = webVariantTenants().filter((tenant) => tenant.gameRouteBase);
+  // A tenant whose finished room is its page (Xiangqi Mahjong) links the room
+  // even with a review page, which its room opens.
+  const tenantsWithPostgame = webVariantTenants().filter(
+    (tenant) => tenant.gameRouteBase && !tenant.finishedGameOpensRoom,
+  );
+  it('links a xiangqi mahjong row to its room, not its review page', () => {
+    const row = buildProfileGameRow(game({ roomId: 'xmj_done', variant: 'xiangqi-mahjong' }));
+    expect(row.querySelector('.profile-game-row-open')?.getAttribute('href')).toBe(
+      '/room/xmj_done',
+    );
+  });
   it.each(tenantsWithPostgame.map((tenant) => [tenant.gameSpecId, tenant] as const))(
     'routes %s profile rows to its own postgame surface',
     (_specId, tenant) => {

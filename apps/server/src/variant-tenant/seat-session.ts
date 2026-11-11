@@ -9,7 +9,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { clockPolicyKindFor } from '@mistboard/game';
-import { isPlayDisabled, type UserAccount } from '../persistence.js';
+import { isPlayDisabled, isStatsExcluded, type UserAccount } from '../persistence.js';
 import { hashSeatToken } from '../server-seat-session.js';
 import type { TenantSeat, TenantSeatTokenState } from './tenant.js';
 
@@ -54,6 +54,7 @@ export type TenantSeatAssignment<C extends string> =
       reason:
         | 'private room'
         | 'rated requires account'
+        | 'rated requires counted account'
         | 'correspondence requires account'
         | 'play disabled'
         | 'variant not granted';
@@ -147,6 +148,11 @@ export function assignTenantSeat<
   // throws somebody out of a hand they are in the middle of playing.
   if (!variantAccessGranted) return { ok: false, reason: 'variant not granted' };
   if (room.rated && !accountUser) return { ok: false, reason: 'rated requires account' };
+  // A stats-excluded account is not counted, so it takes no seat in a rated
+  // room: the backstop for a stale client that skipped the create/lobby gate.
+  if (room.rated && isStatsExcluded(accountUser)) {
+    return { ok: false, reason: 'rated requires counted account' };
+  }
   // Correspondence (days-per-move) seats are account-required on BOTH sides:
   // notifications, deadline rows, and cross-device reseat all key off the seat's
   // user id. The create route gates the creator; this gates the invitee. Keyed

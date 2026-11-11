@@ -36,6 +36,9 @@ export function captureServerRender(root: HTMLElement, doc: Document = document)
       if (!present) return;
       root.replaceChildren(...nodes);
       root.className = className;
+      // A crawler copy put back after a failed mount shows at once rather
+      // than waiting out its first-paint delay (app-base.css .crawler-copy).
+      root.dataset.serverRender = 'restored';
     },
     // A visitor reading in another locale than the page was rendered in keeps
     // the client's localized title; crawlers carry no locale preference.

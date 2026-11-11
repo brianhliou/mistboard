@@ -1,0 +1,44 @@
+name: Start Postgres
+description: >-
+  Start the PostgreSQL server the Ubuntu runner image already carries, with a
+  role and database for the tests. Replaces a postgres service container, whose
+  image pull failed whole jobs under registry limits (Docker Hub on 2026-10-09,
+  the ECR public mirror on 2026-10-17) before any test ran. Nothing is
+  downloaded here.
+inputs:
+  user:
+    required: true
+  password:
+    required: true
+  database:
+    required: true
+  port:
+    required: false
+    default: "5432"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PG_USER: ${{ inputs.user }}
+        PG_PASSWORD: ${{ inputs.password }}
+        PG_DATABASE: ${{ inputs.database }}
+        PG_PORT: ${{ inputs.port }}
+      run: |
+        set -euo pipefail
+        conf=$(ls /etc/postgresql/*/main/postgresql.conf | sort -V | tail -1)
+        echo "runner Postgres: $(dirname "$(dirname "$conf")" | xargs basename) ($conf)"
+        sudo sed -i -E "s/^#?port = [0-9]+/port = ${PG_PORT}/" "$conf"
+        sudo systemctl start postgresql.service
+        for _ in $(seq 1 30); do
+          pg_isready -h localhost -p "$PG_PORT" -q && break
+          sleep 1
+        done
+        pg_isready -h localhost -p "$PG_PORT"
+        # Same shape as the official image: the role owns the database and is
+        # a superuser. Collation C matches the alpine image the suite ran on.
+        sudo -u postgres psql -p "$PG_PORT" -v ON_ERROR_STOP=1 -q \
+          -c "CREATE ROLE \"${PG_USER}\" LOGIN SUPERUSER PASSWORD '${PG_PASSWORD}'"
+        sudo -u postgres createdb -p "$PG_PORT" -O "$PG_USER" -T template0 \
+          -E UTF8 --lc-collate=C --lc-ctype=C.UTF-8 "$PG_DATABASE"
+        PGPASSWORD="$PG_PASSWORD" psql -h localhost -p "$PG_PORT" -U "$PG_USER" "$PG_DATABASE" -tAc 'select version()'

@@ -1,12 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import type pg from 'pg';
+import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
   buildMistboardReadout,
+  deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
+  isDisruptiveDrain,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
+  type MistboardReadoutComparison,
+  type MistboardReadoutDeploys,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
   type MistboardReadoutFeedback,
@@ -27,6 +32,7 @@ import {
   countedPlayerSeat,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
+import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
@@ -38,7 +44,7 @@ import {
 } from './persistence-xiangqi-puzzle-mining.js';
 import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-index.js';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
-import { xiangqiBroadcastBoardServes } from './xiangqi-broadcast-serving.js';
+import { findUnservableXiangqiBroadcastBoards } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
 
 type Queryable = Pick<pg.Pool, 'query'>;
@@ -60,17 +66,51 @@ export async function generateMistboardReadout(input: {
    *  the CLI pass the real fetch; left out (the tests), the line is not
    *  collected, so no test reaches dpxq. */
   dpxqIndexFetch?: XiangqiBroadcastSourceFetch;
+  contentCollect?: (now: Date) => Promise<ContentReadout>;
 }): Promise<{ report: MistboardReadoutV1; reused: boolean; previousAlertKey: string | null }> {
   const db = input.db ?? getPool();
   const now = input.now ?? new Date();
   const snapshotKey = readoutSnapshotKey(input.trigger, now);
+
+  // Scheduled retries return before any external collector. The transaction
+  // still checks again to make insertion idempotent across concurrent callers.
+  if (snapshotKey && !input.dryRun) {
+    const existing = await db.query<{ payload: unknown }>(
+      'SELECT payload FROM ops_readout_snapshots WHERE snapshot_key = $1',
+      [snapshotKey],
+    );
+    if (existing.rows[0])
+      return {
+        report: parseStoredReadout(existing.rows[0].payload),
+        reused: true,
+        previousAlertKey: null,
+      };
+  }
+  // Context is fetched outside the advisory lock, and ordinary dailies retain
+  // the last successful source window/as-of timestamp. The first deployment
+  // bootstraps without waiting until Monday. Missing credentials never retry
+  // the provider; a failed configured bootstrap may retry on the next day.
+  const previousContent = await db.query<{ payload: { content?: ContentReadout } }>(
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE payload->'content'->>'status' = 'available'
+       AND payload->'content'->>'version' = '1'
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+  );
+  const storedContent = previousContent.rows[0]?.payload.content;
+  const content =
+    input.trigger === 'weekly' || !storedContent
+      ? await (input.contentCollect ?? collectContentReadout)(now)
+      : storedContent;
 
   // Read dpxq before taking the generation lock: a slow source must not hold
   // the transaction open.
   const untrackedEvents = input.dpxqIndexFetch
     ? await collectUntrackedDpxqEvents(db, now, input.dpxqIndexFetch)
     : undefined;
-  const collect = () => collectMistboardReadoutFacts(db, now, { untrackedEvents });
+  const collect = async () => ({
+    ...(await collectMistboardReadoutFacts(db, now, { untrackedEvents })),
+    content,
+  });
 
   if (input.dryRun) {
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
@@ -207,9 +247,24 @@ export async function listMistboardReadoutSummaries(
 
 export async function latestMistboardReadout(
   db: Queryable = getPool(),
+  options: { trigger?: MistboardReadoutTrigger } = {},
 ): Promise<MistboardReadoutV1 | null> {
   const result = await db.query<{ payload: unknown }>(
-    `SELECT payload FROM ops_readout_snapshots ORDER BY created_at DESC, id DESC LIMIT 1`,
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE ($1::text IS NULL OR trigger = $1)
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [options.trigger ?? null],
+  );
+  return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
+}
+
+export async function mistboardReadoutById(
+  id: string,
+  db: Queryable = getPool(),
+): Promise<MistboardReadoutV1 | null> {
+  const result = await db.query<{ payload: unknown }>(
+    'SELECT payload FROM ops_readout_snapshots WHERE id = $1',
+    [id],
   );
   return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
 }
@@ -251,7 +306,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend] = await Promise.all([
+  const [collectors, trend, comparison] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -259,10 +314,13 @@ export async function collectMistboardReadoutFacts(
       collectEngines(db, now),
       collectBroadcasts(db, extra.untrackedEvents),
       collectFeedback(db),
+      collectDeploys(db, now),
+      collectLoginEmailDelivery(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
+    collectReadoutComparison(db, now).catch(() => null),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -271,6 +329,8 @@ export async function collectMistboardReadoutFacts(
     'engines',
     'broadcasts',
     'feedback',
+    'deploys',
+    'loginEmailDelivery',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -284,9 +344,60 @@ export async function collectMistboardReadoutFacts(
     engines: settledValue(collectors[3]),
     broadcasts: settledValue(collectors[4]),
     feedback: settledValue(collectors[5]),
+    deploys: settledValue(collectors[6]),
+    loginEmailDelivery: settledValue(collectors[7]),
     collectorErrors,
     trend,
+    comparison,
   };
+}
+
+export async function collectReadoutComparison(
+  db: Queryable,
+  now: Date,
+): Promise<MistboardReadoutComparison | null> {
+  const { previousPeriodStart, periodStart } = readoutPeriods(now);
+  const result = await db.query<{ payload: unknown }>(
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE trigger = 'weekly' AND period_start = $1 AND period_end = $2
+     ORDER BY created_at DESC LIMIT 1`,
+    [previousPeriodStart, periodStart],
+  );
+  if (!result.rows[0]) return null;
+  const previous = parseStoredReadout(result.rows[0].payload);
+  if (
+    previous.trigger !== 'weekly' ||
+    previous.periodStart !== previousPeriodStart.toISOString() ||
+    previous.periodEnd !== periodStart.toISOString()
+  )
+    return null;
+  return {
+    periodStart: previous.periodStart,
+    periodEnd: previous.periodEnd,
+    product: previous.product,
+    broadcastBoards: previous.broadcasts?.boards ?? null,
+    engineFailedTasks: previous.engines?.failedTasks ?? null,
+    actionKeys: previous.actions.map((action) => action.dedupeKey),
+  };
+}
+
+async function collectLoginEmailDelivery(db: Queryable, now: Date) {
+  const [metrics, complaints] = await Promise.all([
+    getLoginEmailDeliveryMetrics(now, db),
+    // Count messages rather than webhook retries, correlated by provider id.
+    // No time window: delayed arrivals and complaints aging out must not hide
+    // the next complaint. Only the count enters the stored readout.
+    Promise.resolve().then(() =>
+      db.query<{ received: number }>(
+        `SELECT count(DISTINCT e.provider_email_id)::int AS received
+       FROM email_delivery_events e
+       JOIN login_email_requests r USING (provider_email_id)
+       WHERE e.event_type = 'email.complained' AND e.occurred_at < $1`,
+        [now],
+      ),
+    ),
+  ]);
+  return { ...metrics, complaintsReceived: complaints.rows[0]!.received };
 }
 
 async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadoutProduct> {
@@ -504,7 +615,7 @@ async function collectBroadcasts(
   untrackedEvents: MistboardReadoutBroadcasts['untrackedEvents'],
 ): Promise<MistboardReadoutBroadcasts> {
   const boards = await listAllXiangqiBroadcastBoardsOn(db);
-  const unservable = boards.filter((board) => !xiangqiBroadcastBoardServes(board));
+  const unservable = await findUnservableXiangqiBroadcastBoards(boards);
   return {
     boards: boards.length,
     unservableBoards: unservable.length,
@@ -552,6 +663,33 @@ async function collectFeedback(db: Queryable): Promise<MistboardReadoutFeedback>
   return {
     received: counts.rows[0]?.received ?? 0,
     recentPaths: recent.rows.map((row) => row.path),
+  };
+}
+
+// Drains that ended in the last week, from their one summary row each
+// (server-drain.ts writes it at shutdown, cancel or lapse).
+const DEPLOY_WINDOW_DAYS = 7;
+
+export async function collectDeploys(db: Queryable, now: Date): Promise<MistboardReadoutDeploys> {
+  const since = new Date(now.getTime() - DEPLOY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const { rows } = await db.query<{
+    payload: Record<string, unknown>;
+    build_revision: string | null;
+  }>(
+    `SELECT payload, build_revision
+     FROM room_lifecycle_audit
+     WHERE kind = 'drain_summary' AND occurred_at >= $1 AND occurred_at <= $2
+     ORDER BY occurred_at ASC, id ASC`,
+    [since, now],
+  );
+  const drains = rows.flatMap((row) => {
+    const drain = deployDrainFromSummary(row.payload ?? {}, row.build_revision);
+    return drain ? [drain] : [];
+  });
+  return {
+    windowDays: DEPLOY_WINDOW_DAYS,
+    drains: drains.length,
+    disruptive: drains.filter(isDisruptiveDrain),
   };
 }
 

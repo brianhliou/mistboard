@@ -3,6 +3,8 @@
 // are treated as translatable. Labels baked into generated SVG are not prose
 // fields; articles/svg-labels.ts extracts those and the coverage test gates them
 // separately. Code-block payloads stay excluded.
+
+import { SVG_FIELDS } from './articles/svg-labels.js';
 import type { Article, ArticleBlock, ArticleSection } from './articles-data.js';
 
 export type Prose = { path: string; text: string };
@@ -25,14 +27,22 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
   const collect = (value: unknown, key?: string): void => {
     if (typeof value === 'string') {
       strings.add(value);
-      for (const match of value.matchAll(/<(text|title|desc)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
-        const visible = decodeSvgText(match[2].replace(/<[^>]+>/g, '')).trim();
+      for (const match of value.matchAll(/<(text|title|desc)\b([^>]*)>([\s\S]*?)<\/\1>/gi)) {
+        const visible = decodeSvgText(match[3].replace(/<[^>]+>/g, '')).trim();
         if (visible) strings.add(visible);
+        const keyed = match[2].match(/\bdata-i18n-key="([^"]*)"/);
+        if (keyed) strings.add(decodeSvgText(keyed[1]));
+      }
+      // The SVG renderer also translates accessible labels independently of
+      // text nodes, so a chart's aria-label is a live dictionary key too.
+      for (const match of value.matchAll(/<svg\b[^>]*\baria-label="([^"]*)"/gi)) {
+        const label = decodeSvgText(match[1]).trim();
+        if (label) strings.add(label);
       }
       return;
     }
     if (typeof value === 'function') {
-      if (key === 'svg') collect((value as () => string)(), key);
+      if (key !== undefined && SVG_FIELDS.has(key)) collect((value as () => string)(), key);
       return;
     }
     if (Array.isArray(value)) {
@@ -40,6 +50,9 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
       return;
     }
     if (value && typeof value === 'object') {
+      // The animated figure's Replay button is renderer chrome, translated
+      // through the same dictionary (renderAnimatedSvgBlock).
+      if ((value as { kind?: unknown }).kind === 'animated-svg') strings.add('Replay');
       for (const [childKey, item] of Object.entries(value)) collect(item, childKey);
     }
   };
@@ -106,8 +119,9 @@ const BLOCK_PROSE: {
   'static-boards': caption,
   interactive: caption,
   'live-boards': caption,
-  'image-figure': (b) => [...caption(b), b.alt],
+  'image-figure': (b) => [...caption(b), b.alt, ...(b.credit ? [b.credit.text] : [])],
   'raw-svg': caption,
+  'animated-svg': caption,
   'svg-row': (b) => [...caption(b), ...b.items.flatMap(caption)],
   'raw-svg-stepper': (b) => [
     ...caption(b),
@@ -138,6 +152,7 @@ const BLOCK_PROSE: {
   'jungle-flip-replay': replay,
   code: caption,
   embed: (b) => [...caption(b), b.title],
+  bilibili: (b) => [...caption(b), b.title],
   // Headers, caption, and any cell carrying Latin script. Cells were once treated as
   // data because most of them are numbers, and the match-fixing article then
   // shipped three tables of English prose that the gate read as fully covered:
@@ -149,7 +164,9 @@ const BLOCK_PROSE: {
       // reached the coverage gate as a string with no translation, which no
       // dictionary can satisfy, and would have blocked the first locked article
       // whose table has one.
-      ...(b.headers ?? []).filter((header) => header.trim().length > 0),
+      // A header with no Latin script (a hand number on a scoreboard) is data,
+      // like a numeric cell.
+      ...(b.headers ?? []).filter((header) => /\p{Script=Latin}/u.test(header)),
       ...(b.rows ?? []).flat().filter((cell) => /\p{Script=Latin}/u.test(cell)),
       ...caption(block),
     ];
@@ -161,6 +178,20 @@ const BLOCK_PROSE: {
       item.question,
       item.answer,
     ]),
+  list: (block) => [...((block as { items?: string[] }).items ?? [])],
+  'image-row': (block) => {
+    const b = block as { items?: { alt: string }[]; caption?: string };
+    return [...(b.items ?? []).map((item) => item.alt), ...caption(b)];
+  },
+  // An ISO day is data, not copy; a written date ("Later") is copy.
+  timeline: (block) =>
+    ((block as { items?: { date: string; title: string; text?: string }[] }).items ?? []).flatMap(
+      (item) => [
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(item.date) ? [] : [item.date]),
+        item.title,
+        ...(item.text ? [item.text] : []),
+      ],
+    ),
 };
 
 function blockProse(block: ArticleBlock, path: string): Prose[] {
@@ -180,7 +211,10 @@ function sectionProse(section: ArticleSection, path: string): Prose[] {
 }
 
 // Every natural-language string an article contributes, each with a dotted path
-// for diagnostics. Order is stable: title, summary, tldr, intro, then sections.
+// for diagnostics. Order is stable: title, summary, tldr, method, intro, then
+// sections. `updateNote` stays out: it is a note about the text, not the text,
+// so it does not move the content fingerprint (its translation is checked on
+// its own in article-i18n.coverage.test.ts).
 export function articleProse(article: Article): Prose[] {
   const out: Prose[] = [
     { path: 'title', text: article.title },
@@ -188,6 +222,9 @@ export function articleProse(article: Article): Prose[] {
   ];
   (article.tldr ?? []).forEach((t, i) => {
     out.push({ path: `tldr[${i}]`, text: t });
+  });
+  (article.method ?? []).forEach((m, i) => {
+    out.push({ path: `method[${i}]`, text: m });
   });
   (article.intro ?? []).forEach((b, i) => {
     out.push(...blockProse(b, `intro[${i}]`));

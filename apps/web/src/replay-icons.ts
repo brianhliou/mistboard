@@ -30,7 +30,13 @@ export const REPLAY_ICON_MENU =
 export const REPLAY_ICON_ANALYSIS =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" stroke-width="2.6"/><path d="M15 15l5 5" stroke-width="3.2"/></svg>';
 
+export const REPLAY_ICON_REVEAL =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+
 // Flip board: two solid arrows, one up and one down.
+export const REPLAY_ICON_INFO =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5h16v10H11l-4.5 3.5v-3.5H4z"/></g><g fill="currentColor"><circle cx="8.5" cy="10.5" r="1.2"/><circle cx="12" cy="10.5" r="1.2"/><circle cx="15.5" cy="10.5" r="1.2"/></g></svg>';
+
 export const REPLAY_ICON_FLIP =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M7.5 3.5 3 9h3.2v11.5h2.6V9H12z"/><path d="M16.5 20.5 21 15h-3.2V3.5h-2.6V15H12z"/></g></svg>';
 

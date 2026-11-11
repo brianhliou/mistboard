@@ -1,7 +1,15 @@
 6a59ee2f7b105bff64d9efc2692591107787e2b1
-# ^ The official-pikafish/Pikafish commit the live xiangqi Pikafish bot runs
+# ^ The official-pikafish/Pikafish source commit for the xiangqi Pikafish bot
 # (scripts/engine-assets.sh reads the first line; this comment is ignored).
 # `Pikafish dev-20260919-6a59ee2f`, upstream master.
+# Applied unedited: pikafish-cc0-net.patch (sha256
+# 790609318c020e3aeeb71a76ee7e987ee346d66005bb5eb26675544b2182d10b).
+# The patch replaces the upstream evaluator with a reader for the public CC0
+# Fairy-Stockfish net xiangqi-c07e94a5c7cb.nnue and disables net downloads.
+# engine-assets.sh fetches that net from its pinned public source, checks its
+# sha256, requires its NNUE info line, and gates bench 16 1 13 default depth on
+# 1650882 nodes. The release ships the patch beside COPYING, never the net.
+# The source pin stays unchanged; this patched evaluator changes behaviour.
 #
 # Pinned 2026-09-23. Until then the image did `git clone --depth 1` of upstream
 # master on every deploy, so the bot was whatever Pikafish had merged that day

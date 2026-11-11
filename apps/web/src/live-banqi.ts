@@ -25,11 +25,16 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
+import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
-import { banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
+import { createBanqiFinalReveal } from './banqi-final-reveal.js';
+import './banqi-final-reveal.css';
+import { renderBanqiMaterial } from './banqi-material.js';
+import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
+import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
-import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
+import { setReplayRevealControl } from './game-table.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -40,8 +45,10 @@ import {
 import { banqiClickResult, banqiForbiddenMove } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
+  banqiRevealFlipSquare,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
@@ -53,7 +60,6 @@ import {
 } from './live-banqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -75,8 +81,6 @@ import type {
   WebVariantTenant,
 } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
-import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
-import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 // ── Wire shapes (mirror BanqiPlayerView; board entries are faceDown-tagged) ──
 
@@ -99,6 +103,9 @@ export type BanqiWireView = {
   lastMove?: BanqiMove;
   // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
   chaseRule?: BanqiChaseRule;
+  // The no-progress limit (plies without a capture or flip) the game draws at:
+  // 60 since 2026-10-17; absent or 40 on an older game.
+  noProgressLimit?: number;
   // The seat to move's board moves the 長捉 rule forbids right now; absent when
   // none, on the other seat's view, and for spectators.
   forbiddenMoves?: BanqiMove[];
@@ -109,6 +116,9 @@ type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;
 // ── Banqi-owned interaction/render state ─────────────────────────────────────
 
 let core: TenantLiveClientContext<BanqiSeat, BanqiWireView> | null = null;
+let finalReveal: ReturnType<typeof createBanqiFinalReveal> | null = null;
+let revealUnmount: (() => void) | null = null;
+let revealStatus: HTMLParagraphElement | null = null;
 let selectedSquare: BanqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
@@ -194,6 +204,11 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   },
   resetSounds: resetBanqiSoundState,
   resetState: () => {
+    finalReveal?.dispose();
+    finalReveal = null;
+    revealUnmount?.();
+    revealUnmount = null;
+    revealStatus = null;
     selectedSquare = null;
     draggingFrom = null;
     clearChaseNotice();
@@ -205,25 +220,39 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   // move already re-rendered synchronously at input time, so animating the server
   // echo would double-play it. Scrubs glide the stepped-into move forward and
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
-  // drag ghost, and a no-op for flips, which travel nowhere.
+  // drag ghost. A live flip turns the tile over instead (#709), own flips
+  // included: the face exists only from the server's echo, so the echo is the
+  // first time anyone sees it.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      const flipped = banqiRevealFlipSquare(pending, view.board);
+      if (flipped) {
+        animateBanqiReveal(liveRefs.board, flipped);
+        // Held for the core: the bot's instant reply waits for the turn-over.
+        return pieceFlipDurationMs();
+      }
       if (pending.color === core?.state.seat) return;
       animateBanqiBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateBanqiBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      // A scrub onto a flip turns the tile over, as it did live.
+      if (stepped.from === stepped.to) animateBanqiReveal(liveRefs.board, stepped.to);
+      else animateBanqiBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
-    if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    if (undone && undone.from !== undone.to) {
+      animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    }
   },
   renderExtras: (refs, view) => {
-    renderCapturedPools(refs, view);
+    renderCapturedPools(refs, finalReveal?.state().view ?? view);
   },
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
@@ -233,6 +262,29 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
+    const reveal = createBanqiFinalReveal({
+      changed: ctx.renderAll,
+      mounted: () => core === ctx && ctx.refs.board.isConnected,
+    });
+    finalReveal = reveal;
+    revealStatus = document.createElement('p');
+    revealStatus.className = 'banqi-reveal-status';
+    revealStatus.dataset.banqiRevealStatus = '';
+    revealStatus.setAttribute('role', 'status');
+    revealStatus.setAttribute('aria-live', 'polite');
+    revealStatus.hidden = true;
+    ctx.refs.board.parentElement?.append(revealStatus);
+    const unmount = () => {
+      reveal.dispose();
+      observer.disconnect();
+      window.removeEventListener('pagehide', unmount);
+    };
+    const observer = new MutationObserver(() => {
+      if (!ctx.refs.board.isConnected) unmount();
+    });
+    observer.observe(document.getElementById('app') ?? document.body, { childList: true });
+    window.addEventListener('pagehide', unmount);
+    revealUnmount = unmount;
     chaseBubble = createBanqiChaseBubble(ctx.refs.board);
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
@@ -258,21 +310,21 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    // A flip (self-move) shows as the flipped square; a board move as from-to.
-    // The notation is per-move (never per-seat), so it rides the standard
-    // two-column move list keyed by seat.
-    notate: banqiMoveLabel,
+    // The site's one banqi label (flip-move-label.ts): "b1-b2", and a flip
+    // names the piece it turned up, read off this viewer's board after it
+    // ("f2(C)"). Per-move, never per-seat, so it rides the standard two-column
+    // move list keyed by seat.
+    notate: (move) => banqiMoveLabel(move, null),
+    notateWithView: (move, viewAfter) => banqiMoveLabelOnBoard(move, viewAfter?.board),
     isMoveEvent: isBanqiMoveEvent,
   },
   replayCapture: {
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
   },
-  // A FINISHED room: its truth view plus the public move log recover the deal,
-  // so a cold join or reload gets every ply back (live-banqi-replay-history).
-  // A LIVE room cannot replay its log (the deal is a server secret), so it
-  // adopts the per-ply masked views the server sent in this viewer's hello
-  // (variant-tenant/live-history); face-down tiles stay masked in every ply.
+  // Live and finished reconnects adopt masked per-ply views. Legacy completed
+  // truth snapshots can still rebuild their history without affecting the
+  // explicit final-board overlay.
   replayHistory: {
     rebuild: ({ events, view, state, frame }) => {
       const moves = events.filter(isBanqiMoveEvent).map((event) => event.move);
@@ -284,7 +336,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
         ) ??
         // A LIVE room: the hello carries this viewer's own per-ply masked views
         // (server-built; a spectator's are the public board), installed as sent.
-        adoptLiveHistory(frame.liveHistory, view, moves.length)
+        adoptLiveHistory(frame.liveHistory, view, moves.length, { finished: true })
       );
     },
   },
@@ -316,6 +368,34 @@ function banqiReasonPhrase(reason: string): TenantReasonKey {
 // ── Rendering ────────────────────────────────────────────────────────────────
 
 function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
+  finalReveal?.sync(
+    core?.state.room ?? '',
+    core?.state.view ?? null,
+    core?.replay.isLive() ?? false,
+  );
+  const reveal = finalReveal?.state();
+  if (revealStatus) {
+    revealStatus.textContent = reveal?.failed ? t('review.revealFailed') : '';
+    revealStatus.hidden = !reveal?.failed;
+  }
+  setReplayRevealControl(
+    liveRefs.moveList,
+    reveal?.visible
+      ? {
+          label: reveal.loading
+            ? t('review.revealLoading')
+            : reveal.wanted
+              ? t('review.hideRevealedPieces')
+              : t('review.revealAllPieces'),
+          disabled: !reveal.ready,
+          pressed: reveal.wanted,
+          onClick: () => {
+            core?.replay.jumpToPly(core.replay.latestPly());
+            void finalReveal?.toggle();
+          },
+        }
+      : null,
+  );
   liveRefs.board.className = 'board banqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Banqi board');
   if (!view) {
@@ -325,20 +405,25 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
 
   const perspective = orientationFor(view);
   const drawn = drawnBoardOverlays<BanqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderBanqiBoardSvg(view, perspective, {
-    arrows: drawn.arrows,
-    markers: drawn.markers,
-    interactive: true,
-    selectedSquare,
-    draggingFrom,
-    coordinates: boardCoordinatesEnabled(),
-    // A face-down tile is clicked directly to flip, so the renderer wants only
-    // the selected piece's board moves (it already excludes self-move flips).
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
-      : [],
-    forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
-  });
+  // A finished room keeps the tiles nobody turned over face down.
+  liveRefs.board.innerHTML = renderBanqiBoardSvg(
+    reveal?.view ?? banqiBoardAsPlayed(view, playedMoves()),
+    perspective,
+    {
+      arrows: drawn.arrows,
+      markers: drawn.markers,
+      interactive: true,
+      selectedSquare,
+      draggingFrom,
+      coordinates: boardCoordinatesEnabled(),
+      // A face-down tile is clicked directly to flip, so the renderer wants only
+      // the selected piece's board moves (it already excludes self-move flips).
+      legalMoves: selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
+        : [],
+      forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
+    },
+  );
   // Click + drag are delegated to the persistent board container once at mount
   // (installBanqiBoardInteraction), so they survive these innerHTML re-renders.
   syncChaseNotice(view);
@@ -490,8 +575,11 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  const moves = (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
-  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, moves);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, playedMoves());
+}
+
+function playedMoves() {
+  return (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to
@@ -502,62 +590,9 @@ function viewerInkFor(view: BanqiWireView): BanqiColor | null {
   return seat === 'red' ? view.firstColor : view.firstColor === 'red' ? 'black' : 'red';
 }
 
-// Exported for unit testing the material data path without a live socket — same
-// extraction rationale as live-banqi-render / live-banqi-interaction. `viewerInk`
-// is null before the opening flip binds it: nothing can have been captured yet,
-// and the pool rows fall back to red-then-black since no seat owns an ink.
-//
-// `moves` is the room's move log. A finished room's truth view has every tile
-// face up, which would empty the tally (#544); the log recovers which tiles were
-// still face-down when play ended, and the tally keeps showing those.
-export function renderBanqiMaterial(
-  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
-  view: BanqiWireView | null,
-  viewerInk: BanqiColor | null,
-  moves: readonly BanqiMove[] = [],
-): void {
-  slots.capturesTop.replaceChildren();
-  slots.capturesBottom.replaceChildren();
-  slots.hiddenPool.replaceChildren();
-  // No view yet (or an empty board) must not read as "everything still
-  // face-down". A spectator's view is the shared masked board since 2026-09-20
-  // (banqi is symmetric), so the pools below render for a spectator too.
-  if (!view || Object.keys(view.board).length === 0) return;
-  const pieceSet = readStoredXiangqiPieceSet();
-  const glyph = (entry: { color: BanqiColor; role: BanqiPieceRole }): string =>
-    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
-  if (viewerInk !== null) {
-    const opponentInk: BanqiColor = viewerInk === 'red' ? 'black' : 'red';
-    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
-    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
-  }
-  // Rows follow the board: the opponent's ink on top, the viewer's below.
-  const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
-  const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
-  const finished = view.status.type === 'finished';
-  const poolView = finished ? banqiFaceDownAtEnd(view, moves) : view;
-  if (!poolView) return;
-  const odds = banqiRevealOdds(poolView);
-  renderHiddenPoolPanel(
-    slots.hiddenPool,
-    [
-      { color: top, label: banqiInkLabel(top), side: odds.pool[top] },
-      { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
-    ],
-    glyph,
-    // While the game is on, each disc carries its reveal odds (#542); a finished
-    // game's tally is a record of what stayed hidden, so it carries none.
-    finished
-      ? { caption: t('live.faceDownAtEnd') }
-      : view.status.type === 'playing'
-        ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
-        : {},
-  );
-}
-
-function banqiInkLabel(ink: BanqiColor): string {
-  return t(ink === 'red' ? 'setup.red' : 'setup.black');
-}
+// The material renderer lives in banqi-material.ts so the TV rail can draw the
+// same strips without pulling in the live room; re-exported for the room's tests.
+export { renderBanqiMaterial };
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
 
@@ -592,11 +627,6 @@ function replayPositionKey(view: BanqiWireView): string {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// A flip (self-move) is shown as the flipped square; a board move as from-to.
-function banqiMoveLabel(move: BanqiMove): string {
-  return move.from === move.to ? `${move.from}↑` : `${move.from}-${move.to}`;
-}
 
 function isBanqiMoveEvent(event: TenantLiveEvent): event is BanqiMoveEvent {
   const move = (event as { move?: unknown }).move;

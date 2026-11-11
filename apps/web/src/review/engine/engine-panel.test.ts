@@ -3,7 +3,7 @@ import { createEnginePanel } from './engine-panel.js';
 import { createEvalBar } from './eval-bar.js';
 
 // happy-dom is not cross-origin isolated, so cevalSupported() is false here:
-// the panel mounts disabled and never touches the WASM engine. That still pins
+// the panel mounts hidden and disabled and never touches the WASM engine. That still pins
 // the arrow-feed contract on the clear path — onLines(null) fires whenever the
 // output clears, starting with the initial clearOutput() at construction.
 
@@ -16,7 +16,17 @@ describe('createEnginePanel onLines', () => {
     panel.dispose();
   });
 
-  it('does not tell an unsupported browser to reload', () => {
+  it('hides the whole engine row where the engine cannot run', () => {
+    // #576: a disabled switch with an explanation is a control the reader can
+    // never use, so an unsupported browser gets no engine row at all.
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    expect(panel.supported).toBe(false);
+    expect(panel.el.hidden).toBe(true);
+    expect(panel.el.dataset.engineSupported).toBe('false');
+    panel.dispose();
+  });
+
+  it('does not tell an unsupported browser to reload, even on the hidden row', () => {
     // happy-dom is not cross-origin isolated, so this exercises the unsupported
     // branch. The old copy ("needs a cross-origin-isolated reload") was a dead
     // end: a browser that cannot isolate does not start isolating on reload.
@@ -92,6 +102,55 @@ describe('createEnginePanel onLines', () => {
 
       expect(panel.el.querySelector('.engine-panel__sub')?.textContent).toBe('Depth 24');
       expect(panel.el.querySelector('.engine-panel__eval')?.textContent).toBe('+1.00');
+      expect(panel.el.querySelectorAll('.engine-panel__line')).toHaveLength(1);
+      panel.dispose();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('createEnginePanel at a position the caller did not mark terminal', () => {
+  it('says Game over when the finished search found no move, not thinking… for good', async () => {
+    // #619: xiangqi's review presentation has no canEvaluatePosition, so its
+    // checkmate reached the engine as searchable; the engine answered with no
+    // line and the panel (and the phone bar mirroring it) read "thinking…"
+    // forever. A search that ends with no line means no legal move.
+    vi.useFakeTimers();
+    let lines: Array<{ uci: string; cp: number; depth: number }> = [];
+    class FakeWorker extends EventTarget {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: ErrorEvent) => void) | null = null;
+      postMessage(message: { type: string; id?: number }): void {
+        const data =
+          message.type === 'init'
+            ? { type: 'ready' }
+            : { type: 'result', id: message.id, json: JSON.stringify({ lines }) };
+        queueMicrotask(() => {
+          const event = new MessageEvent('message', { data });
+          this.onmessage?.(event);
+          this.dispatchEvent(event);
+        });
+      }
+      terminate(): void {}
+    }
+    vi.stubGlobal('Worker', FakeWorker);
+    try {
+      const panel = createEnginePanel({ variant: 'banqi' });
+      const sub = () => panel.el.querySelector('.engine-panel__sub')?.textContent;
+      panel.setPosition([], 'mated w - - 0 1', true);
+      panel.el.querySelector<HTMLButtonElement>('.engine-panel__switch')?.click();
+      await vi.advanceTimersByTimeAsync(151);
+
+      expect(sub()).toBe('Game over');
+      expect(panel.el.querySelectorAll('.engine-panel__line')).toHaveLength(0);
+
+      // A playable position afterwards searches and shows its line as usual.
+      lines = [{ uci: 'a0a0', cp: 50, depth: 12 }];
+      panel.setPosition([], 'playable w - - 0 1', true);
+      await vi.advanceTimersByTimeAsync(151);
+      expect(sub()).toBe('Depth 12');
       expect(panel.el.querySelectorAll('.engine-panel__line')).toHaveLength(1);
       panel.dispose();
     } finally {

@@ -1,8 +1,8 @@
 /**
- * Flip-variant firstColor derivation for list surfaces (the watch feed). Banqi and
- * Flip Jungle record their result by SEAT, but seats are decoupled from ink;
+ * Flip-variant firstColor derivation for list surfaces (the watch feed). Banqi,
+ * Flip Jungle and Three Kingdoms Banqi record results by SEAT, decoupled from ink;
  * firstColor (the first-mover seat's bound ink) is NOT a stored column, so it is
- * recovered by replaying the event log. These pins cover the derivation for BOTH
+ * recovered by replaying the event log. These pins cover the derivation for all
  * flip tenants, the variant filter, and the cache.
  */
 
@@ -18,11 +18,14 @@ import {
   createInitialBanqiState,
   createInitialJungleFlipState,
   createJungleFlipDeal,
+  createThreeKingdomsBanqiSetup,
   getBanqiLegalMoves,
   getJungleFlipLegalMoves,
   JUNGLE_FLIP_SPEC_ID,
   type JungleFlipMove,
   type JungleFlipSeat,
+  THREE_KINGDOMS_BANQI_SETUP_SQUARES,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import type { BanqiEvent } from './banqi-runtime.js';
 import {
@@ -32,6 +35,7 @@ import {
   isFlipInkVariant,
 } from './flip-first-color.js';
 import type { JungleFlipEvent } from './jungle-flip-runtime.js';
+import type { ThreeKingdomsBanqiEvent } from './three-kingdoms-banqi-tenant.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 process.env.MISTBOARD_BANQI_ENABLED = 'true';
@@ -124,6 +128,38 @@ test('derives Flip Jungle ink from its own tenant replay', async () => {
   assert.equal(await flipFirstColorForRoom('jgf_fc_1', JUNGLE_FLIP_SPEC_ID, deps), firstColor);
 });
 
+for (const firstColor of ['red', 'black', null] as const) {
+  test(`TK list rows expose only the public firstColor (${firstColor})`, async () => {
+    const roomId = `tkb_fc_${firstColor}`;
+    const setup = createThreeKingdomsBanqiSetup(seeded(7));
+    const events: ThreeKingdomsBanqiEvent[] = [
+      { type: 'room-created', at: 1, roomId, gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, setup },
+    ];
+    if (firstColor) {
+      const square =
+        THREE_KINGDOMS_BANQI_SETUP_SQUARES[
+          setup.deal.findIndex((piece) => piece.color === firstColor)
+        ]!;
+      events.push({
+        type: 'move-played',
+        at: 2,
+        roomId,
+        color: 'red',
+        move: { from: square, to: square },
+      });
+    }
+    events.push({ type: 'seat-resigned', at: 3, roomId, color: 'black' });
+    const { deps } = depsFor({ [roomId]: events });
+    const rows = [{ roomId, variant: THREE_KINGDOMS_BANQI_SPEC_ID }];
+    await attachFlipFirstColors(rows, deps);
+    // Whole serialized list payload: no deal, state, board or hidden identity
+    // can hitchhike out of the replay used to recover this one public scalar.
+    assert.deepEqual(JSON.parse(JSON.stringify(rows)), [
+      { roomId, variant: THREE_KINGDOMS_BANQI_SPEC_ID, firstColor },
+    ]);
+  });
+}
+
 test('a flip log replayed under the WRONG tenant derives nothing rather than guessing', async () => {
   // Fail-closed: the two flip tenants share a seat vocabulary, so a mismatched
   // spec id must be rejected by the event-log guard, not silently replayed.
@@ -176,9 +212,10 @@ test('attaches firstColor only to flip rows and leaves others untouched', async 
   );
 });
 
-test('the flip-variant predicate covers both flip tenants and nothing else', () => {
+test('the flip-variant predicate covers all three flip tenants and nothing else', () => {
   assert.equal(isFlipInkVariant(BANQI_SPEC_ID), true);
   assert.equal(isFlipInkVariant(JUNGLE_FLIP_SPEC_ID), true);
+  assert.equal(isFlipInkVariant(THREE_KINGDOMS_BANQI_SPEC_ID), true);
   // Jieqi deals face down but its seats own a fixed ink from move one.
   assert.equal(isFlipInkVariant('jieqi'), false);
   assert.equal(isFlipInkVariant('xiangqi'), false);

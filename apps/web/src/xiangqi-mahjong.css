@@ -1,0 +1,1781 @@
+/*
+ * The xiangqi mahjong table (recomposed 2026-10-15): one centred column, the
+ * opponent at the top, the discards and the wall in the middle band, the
+ * viewer's hand at the bottom. Tiles are ivory on a jade backing in any light,
+ * so the red and black inks mean the same thing on a light page and a dark
+ * one. Copied, not shared, with the Hong Kong table, so either can go alone.
+ *
+ * Nothing moves on its own: the claim countdown ticks, and a discard flies
+ * once from the hand it left (live-xiangqi-mahjong.ts, skipped under reduced
+ * motion). The middle band keeps one height for the whole match and the
+ * result between hands lies over it, so the table never reflows.
+ *
+ * Every shadow here is an offset with no blur: a tile's depth is drawn as
+ * solid layers, which paint once and cost nothing to scroll.
+ *
+ * `?felt=wood|slate|site` swaps the cloth; `?tiles=bamboo` swaps the backing.
+ */
+
+/* The table's tiles scale with its width but its type and padding do not:
+   measured, its height is about 0.69 x width + 302px. So the board width is
+   the height budget x 1.45, with 389px reserved (that 302px plus the points
+   table under the board), which fills a short laptop screen exactly and
+   grows on a tall one, where one fixed ratio overflowed the first and wasted
+   the second (Brian, 2026-10-16). The move list gets a
+   wider rail than a board game's, so a row like "<name> draws, discards"
+   stays on one line. */
+.live-route--xiangqi-mahjong {
+  --uni-board-aspect: 1.45;
+  --uni-board-chrome-h: 389px;
+  /* The height budget is the real bound (and the cluster's second one,
+     below); 1040px only stops a very wide, very tall screen from drawing
+     tiles past the point of use. 680px left a 4K full screen with small
+     tiles and a lot of empty page (Brian, 2026-10-16). */
+  --uni-board-max: 1040px;
+  --uni-table-min: 300px;
+  --uni-table-max: 360px;
+}
+
+/* The side columns size themselves to width / aspect, which is the board's
+   height only for a board drawn at a fixed ratio. The table is not one, so
+   both rails take its measured height instead and still line up with it. */
+@media (min-width: 800px) {
+  .live-route--xiangqi-mahjong .live-review__cluster .moves-panel {
+    min-height: max(
+      calc(var(--uni-board-width) * 0.69 + 302px),
+      calc(var(--uni-board-width) * 0.957 + 154px)
+    );
+  }
+}
+
+@media (min-width: 1260px) {
+  .live-route--xiangqi-mahjong .live-review__cluster .meta-panel {
+    max-height: max(
+      calc(var(--uni-board-width) * 0.69 + 302px),
+      calc(var(--uni-board-width) * 0.957 + 154px)
+    );
+  }
+}
+
+/* Past about 560px wide the type and the wall grow with the tiles (below),
+   so the table measures about 0.957 x width + 154px and the 1.45 ratio
+   would overflow a tall screen; this second bound keeps the same page under
+   it. Declared here because the height budget lives on the cluster. */
+.live-route--xiangqi-mahjong .live-review__cluster {
+  --uni-board-max: min(1040px, calc((var(--uni-board-h-budget) + 148px) / 0.957));
+}
+
+.live-route--xiangqi-mahjong .live-review__cluster .board-stage,
+.live-route--xiangqi-mahjong .live-review__cluster .board-status {
+  aspect-ratio: auto;
+}
+
+/* The grip scales the column like any board's; the tiles follow the column's
+   width (below), so the whole table grows and shrinks with the drag. */
+.live-route--xiangqi-mahjong .board-shell {
+  --board-resize-ink: #f1f5f2;
+}
+
+/* On a phone the tiles keep fixed sizes (max-width 520px, below), so the
+   table is the same height at any width and the 1.45 ratio means nothing:
+   at 360x780 the phone room's height budget squeezed the column to 231px,
+   under the 294px the hand needs, and the table ran past the right edge and
+   39px into the bottom seat line. Here the table takes the screen's width
+   and its block takes the table's height, which the phone rules below keep
+   inside the slot a xiangqi board gets, so the room fits one screen. */
+@media (max-width: 600px) {
+  .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
+    --phone-room-slack: 0px;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster .board-shell {
+    width: 100%;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster > .review-shell__center {
+    height: auto;
+  }
+}
+
+@media (min-width: 800px) {
+  .live-route--xiangqi-mahjong .xiangqi-mahjong-live-board {
+    container-type: inline-size;
+  }
+
+  /* One unit per design pixel of a 560px table: tiles, discards and their
+     depth scale with the column; padding stays put, and type grows only
+     once the table is wider than 560px (below). */
+  .live-route--xiangqi-mahjong .xmj-table {
+    --xmj-u: calc(100cqw / 560);
+    --xmj-tile-w: calc(52 * var(--xmj-u));
+    --xmj-tile-h: calc(68 * var(--xmj-u));
+    --xmj-depth: calc(5 * var(--xmj-u));
+    --xmj-pond-w: calc(44 * var(--xmj-u));
+    --xmj-pond-h: calc(58 * var(--xmj-u));
+    --xmj-pond-gap: calc(5 * var(--xmj-u));
+    max-width: none;
+  }
+
+  /* Your own hand reads largest: the opponent's backs and the discards keep
+     the base size, so the table's height barely moves. */
+  .live-route--xiangqi-mahjong .xmj-seat--self {
+    --xmj-tile-w: calc(64 * var(--xmj-u));
+    --xmj-tile-h: calc(84 * var(--xmj-u));
+    --xmj-depth: calc(6 * var(--xmj-u));
+  }
+
+  /* The centre band and the wall grow with the table too, never below their
+     laptop size: on a big screen they were the smallest things on it. */
+  .live-route--xiangqi-mahjong .xmj-centre {
+    font-size: max(13px, calc(13 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-hand-line,
+  .live-route--xiangqi-mahjong .xmj-wall__count {
+    font-size: max(16px, calc(17 * var(--xmj-u)));
+    font-weight: 600;
+    opacity: 1;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message {
+    font-size: max(15px, calc(15 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message .xmj-tile--xs {
+    width: max(20px, calc(20 * var(--xmj-u)));
+    height: max(26px, calc(26 * var(--xmj-u)));
+    font-size: max(12px, calc(12 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message__strut {
+    height: max(26px, calc(26 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-centre {
+    min-height: max(118px, calc(118 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-wall__stacks {
+    gap: calc(3 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack {
+    width: calc(24 * var(--xmj-u));
+    height: calc(42 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack i {
+    height: calc(31 * var(--xmj-u));
+    border-radius: calc(4 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack i + i {
+    bottom: calc(12 * var(--xmj-u));
+  }
+
+  /* The result between hands lies over the same band and grows with it. */
+  .live-route--xiangqi-mahjong .xmj-result,
+  .live-route--xiangqi-mahjong .xmj-result__sub,
+  .live-route--xiangqi-mahjong .xmj-result__foot {
+    font-size: max(13px, calc(13 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__title {
+    font-size: max(22px, calc(22 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__head > .xmj-result__title:only-child {
+    font-size: max(16px, calc(16 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__total b {
+    font-size: max(40px, calc(40 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__total span,
+  .live-route--xiangqi-mahjong .xmj-group__cap {
+    font-size: max(11px, calc(11 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-lines,
+  .live-route--xiangqi-mahjong .xmj-result__how {
+    font-size: max(12px, calc(12 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__how {
+    width: max(20px, calc(20 * var(--xmj-u)));
+    height: max(20px, calc(20 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__head {
+    max-width: max(420px, calc(420 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-scoring {
+    max-width: max(440px, calc(440 * var(--xmj-u)));
+  }
+}
+
+/* The tiles, wherever they are drawn: on the table and in the move list. */
+.live-route--xiangqi-mahjong,
+.xiangqi-mahjong-live-board,
+.xmj-log {
+  --xmj-face: #fbf7ec;
+  --xmj-face-low: #efe7d2;
+  --xmj-face-edge: #ded3b8;
+  --xmj-red: #a8231b;
+  --xmj-black: #1d1d1b;
+  --xmj-jade: #2f8a70;
+  --xmj-jade-low: #22684f;
+  --xmj-jade-high: #45a587;
+  --xmj-accent: #f2c14e;
+  --xmj-accent-ink: #1f1f1f;
+}
+
+.xiangqi-mahjong-live-board {
+  --xmj-tile-w: 52px;
+  --xmj-tile-h: 68px;
+  --xmj-tile-r: 7px;
+  --xmj-depth: 5px;
+  --xmj-pond-w: 36px;
+  --xmj-pond-h: 47px;
+  --xmj-pond-gap: 4px;
+  --xmj-felt: #1f5c45;
+  --xmj-felt-edge: #164634;
+  --xmj-felt-deep: #184b38;
+  --xmj-on-felt: #f1f5f2;
+  --xmj-line: rgb(255 255 255 / 0.16);
+  --xmj-chip: rgb(255 255 255 / 0.14);
+  --xmj-button-edge: rgb(255 255 255 / 0.45);
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* A bamboo backing, the older tiles' look. */
+.xiangqi-mahjong-live-board.xmj-tiles--bamboo,
+.xmj-log.xmj-tiles--bamboo {
+  --xmj-jade: #c39a3e;
+  --xmj-jade-low: #92702a;
+  --xmj-jade-high: #d9b65e;
+}
+
+/* A xiangqi board's wood, and its ink. */
+.xiangqi-mahjong-live-board.xmj-felt--wood {
+  --xmj-felt: #d9bd82;
+  --xmj-felt-edge: #b89a5e;
+  --xmj-felt-deep: #ccab6c;
+  --xmj-on-felt: #3b2e1f;
+  --xmj-line: rgb(75 60 42 / 0.25);
+  --xmj-chip: rgb(75 60 42 / 0.12);
+  --xmj-button-edge: rgb(75 60 42 / 0.5);
+  --xmj-accent: #9a3412;
+  --xmj-accent-ink: #fff8ee;
+}
+
+/* A dark neutral. */
+.xiangqi-mahjong-live-board.xmj-felt--slate {
+  --xmj-felt: #2b3036;
+  --xmj-felt-edge: #1f2328;
+  --xmj-felt-deep: #24292e;
+  --xmj-on-felt: #eef1f4;
+}
+
+/* The site's own surfaces, following its light and dark themes. */
+.xiangqi-mahjong-live-board.xmj-felt--site {
+  --xmj-felt: var(--site-panel-soft);
+  --xmj-felt-edge: var(--site-border);
+  --xmj-felt-deep: var(--site-panel);
+  --xmj-on-felt: var(--site-text);
+  --xmj-line: var(--site-border);
+  --xmj-chip: var(--site-hover);
+  --xmj-button-edge: var(--site-border);
+  --xmj-accent: var(--site-accent);
+  --xmj-accent-ink: var(--site-on-accent);
+}
+
+.xmj-table {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--xmj-felt);
+  border: 1px solid var(--xmj-felt-edge);
+  border-radius: 18px;
+  padding: 14px 16px;
+  color: var(--xmj-on-felt);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  contain: layout paint;
+}
+
+/* ── Seats ─────────────────────────────────────────────────────────────────── */
+
+.xmj-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.xmj-badge {
+  font-size: 12px;
+  line-height: 1.3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--xmj-chip);
+  white-space: nowrap;
+}
+
+.xmj-badge--dealer {
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--xmj-accent);
+}
+
+.xmj-badge--turn {
+  background: var(--xmj-accent);
+  color: var(--xmj-accent-ink);
+  font-weight: 600;
+}
+
+/* A rack holds one height all match: with no tiles, with a claimed set's
+   tray (the 8px), and whichever badges it carries. The hand sits in the
+   middle, the dealer badge to its left and the seat to discard to its right,
+   so a badge coming or going never moves the tiles. A claimed set stands well
+   apart from the hand, as at a mahjong table. */
+.xmj-rack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: calc(var(--xmj-tile-h) + var(--xmj-depth) + 8px);
+  padding-bottom: var(--xmj-depth);
+  box-sizing: border-box;
+}
+
+.xmj-rack__hand {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.xmj-rack__tag {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.xmj-rack__tag--start {
+  align-items: flex-end;
+}
+
+.xmj-rack__tag--end {
+  align-items: flex-start;
+}
+
+.xmj-concealed {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.xmj-melds {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* A claimed set is face up for both players: it sits on a pale tray, its
+   caption set into the tray's top edge so it takes no height of its own,
+   apart from the hand that only its owner sees. The claimed tile lies
+   sideways on the tray's bottom edge. */
+.xmj-meld {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  border: 1px dashed rgb(255 255 255 / 0.32);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.xmj-meld__tiles {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.xmj-meld__cap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--xmj-felt);
+  white-space: nowrap;
+  color: rgb(255 255 255 / 0.75);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+/* ── Tiles ─────────────────────────────────────────────────────────────────── */
+
+/* An ivory face on a jade backing: the face bevels in at the top, the jade
+   shows as a band along the bottom edge, and the piece is cut into the face. */
+.xmj-tile {
+  box-sizing: border-box;
+  position: relative;
+  flex: none;
+  width: var(--xmj-tile-w);
+  height: var(--xmj-tile-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    180deg,
+    var(--xmj-face) 0%,
+    var(--xmj-face) 55%,
+    var(--xmj-face-low) 100%
+  );
+  border: 1px solid var(--xmj-face-edge);
+  border-radius: var(--xmj-tile-r, 7px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -2px 0 rgb(120 100 60 / 0.08),
+    0 1px 0 var(--xmj-face-edge),
+    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-jade),
+    0 var(--xmj-depth, 5px) 0 var(--xmj-jade-low);
+  font-family: "PingFang TC", "Hiragino Sans CNS", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-size: calc(var(--xmj-tile-h) * 0.46);
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  color: var(--xmj-black);
+}
+
+/* The piece's 100-unit box is drawn a little wider than the tile; the figure
+   or character inside it sits well within the face. A one-pixel light edge
+   under the ink reads as a cut in the ivory. */
+.xmj-tile-art {
+  flex: none;
+  width: 112%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.85));
+}
+
+.xmj-tile--red {
+  color: var(--xmj-red);
+}
+
+.xmj-tile--black {
+  color: var(--xmj-black);
+}
+
+/* A third-party piece set's disc surface (lacquer, grain, paper) as the whole
+   face, set inline as the background image; the depth edge and the back stay
+   the look's own, so every set shares them. */
+.xmj-tile--faced {
+  background-color: var(--xmj-face);
+  background-size: cover;
+  background-position: center;
+}
+
+.xmj-tile--faced .xmj-tile-art {
+  filter: none;
+}
+
+/* ?tiles=card: a thin printed card, a ruled border in the piece's ink, no
+   depth; the back a red lattice. */
+.xmj-tiles--card .xmj-tile {
+  --xmj-tile-r: 4px;
+  background: #fffdf7;
+  border: 1px solid #cfc6b0;
+  box-shadow:
+    inset 0 0 0 2px #fffdf7,
+    inset 0 0 0 3px color-mix(in srgb, currentColor 55%, transparent),
+    0 1px 2px rgb(0 0 0 / 0.28);
+}
+
+.xmj-tiles--card .xmj-tile-art {
+  filter: none;
+}
+
+.xmj-tiles--card .xmj-tile--back {
+  background: repeating-linear-gradient(45deg, #9e2a22 0 3px, #b8392f 3px 6px);
+  border-color: #cfc6b0;
+  box-shadow:
+    inset 0 0 0 2px #fffdf7,
+    inset 0 0 0 3px #9e2a22,
+    0 1px 2px rgb(0 0 0 / 0.28);
+}
+
+.xmj-tiles--card .xmj-tile--xs,
+.xmj-tiles--card .xmj-tile--xs.xmj-tile--back {
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.25);
+}
+
+/* A set's own surface on a card runs to the edge: no ivory margin or ink
+   rule inside it, only a hairline to part it from the felt. */
+.xmj-tiles--card .xmj-tile--faced {
+  background-size: cover;
+  background-position: center;
+  border-color: rgb(0 0 0 / 0.3);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.28);
+}
+
+/* A tile turned over: jade on top, the ivory face showing along the edge. */
+.xmj-tile--back {
+  background: linear-gradient(
+    160deg,
+    var(--xmj-jade-high) 0%,
+    var(--xmj-jade) 45%,
+    var(--xmj-jade-low) 100%
+  );
+  border-color: var(--xmj-jade-low);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 calc(var(--xmj-depth, 5px) - 1px) 0 var(--xmj-face-low),
+    0 var(--xmj-depth, 5px) 0 var(--xmj-face-edge);
+}
+
+.xmj-tile--sm {
+  --xmj-tile-r: 5px;
+  --xmj-depth: 4px;
+  width: var(--xmj-pond-w, 36px);
+  height: var(--xmj-pond-h, 47px);
+  font-size: calc(var(--xmj-pond-h, 47px) * 0.46);
+}
+
+.xmj-tile--xs {
+  --xmj-tile-r: 3px;
+  --xmj-depth: 2px;
+  width: 20px;
+  height: 26px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.xmj-tile--xs .xmj-tile-art {
+  filter: none;
+}
+
+.xmj-tile--button {
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+
+.xmj-tile--button:hover,
+.xmj-tile--button:focus-visible {
+  transform: translateY(-6px);
+}
+
+.xmj-tile--button:focus-visible {
+  outline: 2px solid var(--xmj-accent);
+  outline-offset: 2px;
+}
+
+/* A discard waiting for its second tap while a win is on offer. */
+.xmj-tile--armed,
+.xmj-tile--armed:hover {
+  transform: translateY(-12px);
+  outline: 2px solid var(--xmj-accent);
+  outline-offset: 2px;
+}
+
+.xmj-actions__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* The tile just drawn stands apart at the right of the rack. */
+.xmj-tile--drawn {
+  margin-left: 12px;
+}
+
+/* The claimed tile in a laid-down set lies sideways, as at a mahjong table:
+   the tile's box turned a quarter, the piece turned with it. */
+.xmj-tile--sideways {
+  width: var(--xmj-tile-h);
+  height: var(--xmj-tile-w);
+}
+
+.xmj-tile--sideways .xmj-tile-art {
+  width: calc(var(--xmj-tile-w) * 1.12);
+  transform: rotate(-90deg);
+}
+
+.xmj-tile--xs.xmj-tile--sideways {
+  width: 26px;
+  height: 20px;
+}
+
+.xmj-tile--xs.xmj-tile--sideways .xmj-tile-art {
+  width: 22.4px;
+}
+
+/* The winning tile: an outline hugging the whole tile, depth included. */
+.xmj-tile--win::after {
+  content: "";
+  position: absolute;
+  inset: -2.5px -2.5px calc(-2.5px - var(--xmj-depth, 5px)) -2.5px;
+  border: 2.5px solid var(--xmj-accent);
+  border-radius: calc(var(--xmj-tile-r, 7px) + 2.5px);
+  pointer-events: none;
+}
+
+/* The latest discard: a notch above the tile. Static. */
+.xmj-tile--last::before {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--xmj-accent);
+}
+
+/* Discarded straight after drawing it: dimmed, the Tenhou convention, so a
+   pond reads which tiles the player chose to let go of. The tile's title says
+   it in words. */
+.xmj-tile--fromdraw {
+  filter: brightness(0.7) saturate(0.6);
+}
+
+/* ── The middle band ───────────────────────────────────────────────────────── */
+
+/* Two pond rows, the centre, two pond rows: one height all match long. */
+.xmj-middle {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.xmj-pond-wrap {
+  position: relative;
+  width: calc(var(--xmj-pond-w) * 8 + var(--xmj-pond-gap) * 7);
+  max-width: 100%;
+}
+
+.xmj-pond {
+  display: grid;
+  grid-template-columns: repeat(8, var(--xmj-pond-w));
+  grid-auto-rows: calc(var(--xmj-pond-h) + 4px);
+  gap: 6px var(--xmj-pond-gap);
+  align-content: start;
+  box-sizing: border-box;
+  /* Two rows of eight hold a hand's discards: the 23-tile wall splits between two players. */
+  min-height: calc((var(--xmj-pond-h) + 4px) * 2 + 6px + 6px);
+  padding-top: 6px;
+}
+
+/* A board notice (live-banqi-chase-bubble.css): anchored under the latest
+   discard, never takes a click, gone with the window. */
+.xmj-bubble {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 230px;
+  max-width: calc(100% - 4px);
+  box-sizing: border-box;
+  padding: 6px 11px;
+  border-radius: 9px;
+  border-left: 3px solid rgb(232 110 98);
+  color: #fbf6ec;
+  background: rgb(28 24 20 / 92%);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 18%);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.xmj-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: calc(var(--xmj-col, 0) * (var(--xmj-pond-w) + var(--xmj-pond-gap)) + var(--xmj-pond-w) / 2);
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: rgb(28 24 20 / 92%);
+}
+
+.xmj-centre {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 118px;
+  background: var(--xmj-felt-deep);
+  border-radius: 12px;
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.xmj-centre__facts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xmj-hand-line {
+  font-size: 13px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.xmj-centre__status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* The wall: two-high stacks of backs, taken from the left end. */
+.xmj-wall {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The labels either side keep their size, so on a narrow table the stacks
+   give up width (never height) rather than push "Wall N" out of the band.
+   Each stack's tiles take its width, so a width rule sets one property. */
+.xmj-wall__stacks {
+  display: inline-flex;
+  gap: 2px;
+  min-width: 0;
+}
+
+.xmj-stack {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 5px;
+  width: 12px;
+  height: 21px;
+}
+
+.xmj-stack i {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 15px;
+  border-radius: 2px;
+  background: linear-gradient(160deg, var(--xmj-jade-high), var(--xmj-jade-low));
+  border: 1px solid var(--xmj-jade-low);
+  box-shadow: 0 2px 0 var(--xmj-face-low);
+}
+
+.xmj-stack i + i {
+  bottom: 6px;
+}
+
+.xmj-wall__count {
+  font-size: 13px;
+  opacity: 0.85;
+  white-space: nowrap;
+  min-width: 6ch;
+  text-align: right;
+}
+
+/* Plain inline text: a flex gap would also open a space before the period. */
+.xmj-message {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.9;
+  text-align: center;
+}
+
+.xmj-message .xmj-tile--xs {
+  margin: 0 1px;
+}
+
+.xmj-message--held {
+  visibility: hidden;
+}
+
+/* The height of a message tile, with no tile: a face-down one here would
+   read as a hidden hand to anything counting backs. */
+.xmj-message__strut {
+  display: inline-block;
+  width: 0;
+  height: 26px;
+  vertical-align: middle;
+}
+
+.xmj-note {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.xmj-note--strong {
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.xmj-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xmj-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.xmj-action {
+  font: inherit;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--xmj-button-edge);
+  background: transparent;
+  color: var(--xmj-on-felt);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.xmj-action:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.xmj-action--primary {
+  background: var(--xmj-accent);
+  border-color: var(--xmj-accent);
+  color: var(--xmj-accent-ink);
+  font-weight: 600;
+}
+
+.xmj-action--wide {
+  min-width: 120px;
+}
+
+.xmj-chips {
+  display: inline-flex;
+  gap: 2px;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+/* ── The result, over the middle band ──────────────────────────────────────── */
+
+/* A card over the middle band: who won and the points up top, the winning
+   hand at the hand's own size, its lines as one sum, then the match as a
+   scoreboard. Sized to fit the band without scrolling; it scrolls only as a
+   fallback. */
+.xmj-result {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: auto;
+  box-sizing: border-box;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(255 255 255 / 0.07), transparent 70%),
+    var(--xmj-felt-deep);
+  border: 1px solid color-mix(in srgb, var(--xmj-accent) 55%, transparent);
+  border-radius: 14px;
+  box-shadow:
+    0 12px 28px rgb(0 0 0 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  text-align: center;
+  animation: xmj-result-in 240ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* Grouped in the middle when it fits; from the top, scrolling, when it does
+   not (justify-content: center would clip the head and the foot). */
+.xmj-result > :first-child {
+  margin-top: auto;
+}
+
+.xmj-result > :last-child {
+  margin-bottom: auto;
+}
+
+/* A hand nobody won: a card the size of its sentence over the centre band,
+   the discards above and below left in view. `translate` rather than
+   `transform`, so the entrance's scale still applies. */
+.xmj-result--brief {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: max-content;
+  max-width: 100%;
+  overflow: visible;
+  padding: 12px 20px;
+  gap: 6px;
+}
+
+.xmj-middle--brief > .xmj-centre {
+  visibility: hidden;
+}
+
+.xmj-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.xmj-result__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+  text-align: left;
+}
+
+.xmj-result__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+/* A hand nobody won is one sentence, centred. */
+.xmj-result__head > .xmj-result__title:only-child {
+  flex: 1;
+  font-size: 16px;
+  text-align: center;
+}
+
+.xmj-result__sub {
+  margin: 3px 0 0;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.xmj-result__total {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  color: var(--xmj-accent);
+}
+
+.xmj-result__total b {
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.xmj-result__total span {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* A match score is one figure ("9–7"); it never breaks at the dash. */
+.xmj-result__total--match,
+.xmj-result__total--match b {
+  white-space: nowrap;
+}
+
+.xmj-result__head > div {
+  min-width: 0;
+}
+
+/* Points that went to the other player: the number, without the gold. */
+.xmj-result--theirs .xmj-result__total {
+  color: var(--xmj-on-felt);
+}
+
+/* The winning hand at the hand's size, the set and the pair apart. */
+.xmj-won {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.xmj-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xmj-group__tiles {
+  display: flex;
+  gap: 3px;
+  padding-top: 8px;
+  padding-bottom: var(--xmj-depth);
+}
+
+.xmj-group__cap {
+  border-top: 2px solid var(--xmj-line);
+  padding-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* The won tile stands raised. `translate`, so the entrance's transform adds to it. */
+.xmj-won .xmj-tile--win {
+  translate: 0 -8px;
+}
+
+/* The tiles come up one after another as the result opens. */
+.xmj-won .xmj-tile {
+  animation: xmj-tile-in 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: calc(90ms + var(--xmj-c, 0) * 55ms);
+}
+
+.xmj-group__tiles > :nth-child(2) {
+  --xmj-c: 1;
+}
+
+.xmj-group__tiles > :nth-child(3) {
+  --xmj-c: 2;
+}
+
+.xmj-group__tiles > :nth-child(4) {
+  --xmj-c: 3;
+}
+
+.xmj-group__tiles > :nth-child(5) {
+  --xmj-c: 4;
+}
+
+.xmj-group + .xmj-group .xmj-group__tiles > :nth-child(1) {
+  --xmj-c: 3;
+}
+
+.xmj-group + .xmj-group .xmj-group__tiles > :nth-child(2) {
+  --xmj-c: 4;
+}
+
+/* A re-render of a result already on screen (a ready click, a reload of the
+   page's state) does not play the entrance again. */
+.xmj-result--settled,
+.xmj-result--settled .xmj-tile {
+  animation: none;
+}
+
+@keyframes xmj-result-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes xmj-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xmj-result,
+  .xmj-won .xmj-tile {
+    animation: none;
+  }
+}
+
+/* The rules page's scoring table, every line, read down two columns in the
+   page's order; the lines this hand scored are lit, the rest stay dim. The "?"
+   in its corner opens the page at that table. */
+.xmj-scoring {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.xmj-lines {
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  gap: 2px 14px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.xmj-lines li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  opacity: 0.45;
+}
+
+.xmj-lines b {
+  font-variant-numeric: tabular-nums;
+}
+
+.xmj-lines li.xmj-line--on {
+  opacity: 1;
+  font-weight: 600;
+  color: var(--xmj-accent);
+  background: color-mix(in srgb, var(--xmj-accent) 16%, transparent);
+}
+
+.xmj-result__how {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid var(--xmj-button-edge);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  opacity: 0.8;
+}
+
+.xmj-result__how:hover,
+.xmj-result__how:focus-visible {
+  opacity: 1;
+  color: var(--xmj-accent);
+  border-color: var(--xmj-accent);
+}
+
+/* With a mouse the result's button need not be a 44px touch target, and the
+   height it gives back keeps the panel inside the band. */
+@media (pointer: fine) {
+  .xmj-result__foot .xmj-action {
+    min-height: 34px;
+  }
+}
+
+.xmj-result__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+/* ── The move list, one hand at a time ─────────────────────────────────────── */
+
+/* No ply-number gutter here (game-shell.css paints one behind every move
+   list): the rows have no numbers, so the stripe was a bare shaded band. */
+.round-table__box ol.xmj-log,
+ol.xmj-log {
+  display: block;
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
+  background: none;
+}
+
+.xmj-log__hand {
+  display: block;
+  padding: 0 0 6px;
+}
+
+/* A hand log is taller than a chess move list, so beside a tall table the
+   window grows past the shared 170px (game-shell.css): it takes the table's
+   height (see the rails above) less the ~490px of clocks, names and buttons
+   around it, so the rail ends where the table does. */
+.live-route--xiangqi-mahjong .round-table__box .game-table-moves {
+  max-height: max(170px, calc(var(--uni-board-width) * 0.625 + 323px - 490px));
+}
+
+/* Each hand's heading is one line: the hand, who won and how, the points
+   flush right. No separator dots and no wrap (Brian, 2026-10-16: the dots
+   and a wrapped "· 5 points" read badly); a long name gives way first. */
+.xmj-log .xmj-log__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 8px 3px 18px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+}
+
+.xmj-log__head > span:first-child {
+  flex: none;
+  font-weight: 600;
+}
+
+.xmj-log__head > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--site-muted);
+}
+
+.xmj-log__head > span:nth-child(3) {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* The open hand: its heading ruled off from its moves, not filled. */
+.xmj-log .xmj-log__hand--open > .xmj-log__head {
+  border-bottom: 1px solid var(--site-border);
+  border-radius: 0;
+}
+
+.xmj-log .xmj-log__toggle {
+  position: relative;
+  cursor: pointer;
+  background: none;
+}
+
+.xmj-log .xmj-log__toggle:hover {
+  background: var(--site-hover);
+}
+
+.xmj-log__toggle::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: calc(50% - 4px);
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+  border-left: 5px solid currentcolor;
+  border-right: 0;
+  opacity: 0.7;
+  transition: transform 120ms ease;
+}
+
+.xmj-log__toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.xmj-log__rows {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+}
+
+/* Higher than the site's .move-jump, which otherwise resets the padding on
+   the rows that are buttons and leaves them out of line with the rest. */
+.xmj-log .xmj-log__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 6px 2px 10px;
+  min-height: 30px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+}
+
+/* Words left, tile right in a cell of fixed width, on every row, so the tiles
+   form one column that reads down the hand (an empty cell keeps the column
+   for a self-draw or an empty wall). */
+.xmj-log__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The move number, on the dealer's turn only; the column stays on every row. */
+.xmj-log__num {
+  flex: none;
+  min-width: 1.8em;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xmj-log__tile {
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 26px;
+}
+
+.xmj-log .xmj-log__row--theirs {
+  color: color-mix(in srgb, currentcolor 72%, transparent);
+}
+
+.xmj-log button.xmj-log__row {
+  cursor: pointer;
+}
+
+.xmj-log button.xmj-log__row:hover {
+  background: var(--site-hover);
+}
+
+.xmj-log .xmj-log__row.active {
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+  font-weight: 600;
+}
+
+/* How the hand ended: the hand's last line, in the accent, with no box. */
+.xmj-log .xmj-log__row--end {
+  margin-top: 2px;
+  font-weight: 600;
+  color: var(--site-accent);
+}
+
+/* ── Phones ────────────────────────────────────────────────────────────────── */
+
+/* The phone room fits one screen, as a xiangqi room does (Brian, 2026-10-25:
+   "ideally we should make the room page not vertically scroll on mobile").
+   A xiangqi board gets 426px between the player rows at 390x664; the table
+   was 539px with the points table under it. So, on a phone only:
+   - each pond is one row of twelve: over 400 bot matches no hand passed 12
+     discards (the median hand ends at 3), so the second row was empty felt;
+   - the badges and the points table leave the felt for the player rows
+     (`seatTags` in live-xiangqi-mahjong.ts): at six tiles a badge column
+     beside the hand is 20px wide and clipped "To discard";
+   - the hand's result lies over the whole table, not the shorter middle band.
+   The centre keeps its 118px, the height of a claim prompt and its buttons,
+   so the table still never changes height. */
+@media (max-width: 520px) {
+  .live-route--xiangqi-mahjong .xmj-table {
+    width: 100%;
+    container-type: inline-size;
+    padding: 8px;
+    gap: 6px;
+    --xmj-pond-gap: 2px;
+    --xmj-pond-w: min(28px, calc((100cqw - 22px) / 12));
+    --xmj-pond-h: calc(var(--xmj-pond-w) * 1.32);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-middle {
+    position: static;
+    gap: 8px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond-wrap {
+    width: calc(var(--xmj-pond-w) * 12 + var(--xmj-pond-gap) * 11);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond {
+    grid-template-columns: repeat(12, var(--xmj-pond-w));
+    row-gap: 4px;
+    min-height: calc(var(--xmj-pond-h) + 8px);
+    padding-top: 4px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-bubble::after {
+    left: calc(
+      mod(var(--xmj-i, 0), 12) *
+      (var(--xmj-pond-w) + var(--xmj-pond-gap)) +
+      var(--xmj-pond-w) /
+      2
+    );
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack__tag,
+  .live-route--xiangqi-mahjong .xmj-hands-under {
+    display: none;
+  }
+}
+
+/* The player rows carry the dealer and the points only where the table
+   dropped them. */
+@media (min-width: 521px) {
+  .live-route--xiangqi-mahjong .clock-seat-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .xiangqi-mahjong-live-board {
+    --xmj-tile-w: 44px;
+    --xmj-tile-h: 58px;
+    --xmj-tile-r: 6px;
+    --xmj-depth: 4px;
+    --xmj-pond-w: 32px;
+    --xmj-pond-h: 42px;
+    --xmj-pond-gap: 3px;
+  }
+
+  .xiangqi-mahjong-live-board .xmj-seat--self {
+    --xmj-tile-w: 52px;
+    --xmj-tile-h: 68px;
+    --xmj-depth: 5px;
+  }
+
+  .xmj-table {
+    padding: 10px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+
+  .xmj-rack__hand {
+    gap: 14px;
+  }
+
+  .xmj-concealed {
+    gap: 3px;
+  }
+
+  .xmj-tile--drawn {
+    margin-left: 8px;
+  }
+
+  .xmj-stack {
+    width: 9px;
+  }
+
+  .xmj-wall__stacks {
+    gap: 1px;
+  }
+
+  .xmj-buttons {
+    flex-wrap: nowrap;
+  }
+
+  .xmj-action {
+    padding: 6px 10px;
+  }
+
+  .xmj-action--wide {
+    min-width: 0;
+  }
+
+  .xmj-result {
+    padding: 10px;
+    gap: 9px;
+  }
+
+  .xmj-result__title {
+    font-size: 18px;
+  }
+
+  .xmj-result__total b {
+    font-size: 32px;
+  }
+
+  .xmj-won {
+    gap: 10px;
+  }
+
+  .xmj-lines {
+    gap: 2px 8px;
+  }
+
+  .xmj-lines li {
+    padding: 1px 6px;
+  }
+}
+
+/* ── Spike: bigger discards and wall (`?size=big`) ─────────────────────────── */
+
+.xiangqi-mahjong-live-board.xmj-size--big {
+  --xmj-pond-w: 46px;
+  --xmj-pond-h: 60px;
+  --xmj-pond-gap: 5px;
+}
+
+.xmj-size--big .xmj-wall__stacks {
+  gap: 3px;
+}
+
+.xmj-size--big .xmj-stack {
+  width: 18px;
+  height: 31px;
+}
+
+.xmj-size--big .xmj-stack i {
+  height: 23px;
+  border-radius: 3px;
+}
+
+.xmj-size--big .xmj-stack i + i {
+  bottom: 9px;
+}
+
+@media (max-width: 520px) {
+  .xiangqi-mahjong-live-board.xmj-size--big {
+    --xmj-pond-w: 39px;
+    --xmj-pond-h: 51px;
+    --xmj-pond-gap: 3px;
+  }
+
+  .xmj-size--big .xmj-wall__stacks {
+    gap: 1px;
+  }
+
+  .xmj-size--big .xmj-stack {
+    width: 12px;
+  }
+}
+
+/* Points by hand, under the table in the centre column: a column per hand
+   grows with the match, and the left card is too narrow to hold it. */
+.live-route--xiangqi-mahjong .live-review__cluster .review-shell__center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.xmj-hands-under {
+  box-sizing: border-box;
+  width: var(--uni-board-width, 100%);
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel, var(--site-surface));
+}
+
+.xmj-hands-under[hidden] {
+  display: none;
+}
+
+/* The TV rail's copy, under the clocks: the rail's width, and the card's own
+   border in place of the pool slot's rule. */
+.xmj-hands-under--rail {
+  width: 100%;
+}
+
+.hidden-pool:has(> .xmj-hands-under) {
+  padding: 0;
+  border-top: 0;
+}
+
+.xmj-hands {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+
+.xmj-hands th,
+.xmj-hands td {
+  padding: 2px 4px;
+  text-align: center;
+  font-weight: 400;
+}
+
+.xmj-hands thead th {
+  color: var(--site-muted);
+}
+
+/* A fixed table takes its column widths from the first row, so the name
+   column's width sits on the header's empty corner cell: wide enough for a
+   whole handle beside six hands, ellipsized only on a phone. */
+.xmj-hands .xmj-hands__corner {
+  width: 28%;
+}
+
+@media (max-width: 480px) {
+  .xmj-hands .xmj-hands__corner {
+    width: 22%;
+  }
+
+  .xmj-hands th,
+  .xmj-hands td {
+    padding-inline: 2px;
+  }
+}
+
+.xmj-hands tbody th {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xmj-hands td {
+  color: var(--site-muted);
+}
+
+.xmj-hands .xmj-hands__win {
+  color: var(--site-text);
+  font-weight: 700;
+}
+
+/* The hand being played is one band down its column: only the header's top
+   corners and the last row's bottom corners are rounded. */
+.xmj-hands .xmj-hands__now {
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xmj-hands thead .xmj-hands__now {
+  border-radius: 4px 4px 0 0;
+}
+
+.xmj-hands tbody tr:last-child .xmj-hands__now {
+  border-radius: 0 0 4px 4px;
+}
+
+.xmj-hands .xmj-hands__total {
+  border-left: 1px solid var(--site-border);
+  color: var(--site-text);
+  font-weight: 700;
+}
+
+/* ── Compact watch board ───────────────────────────────────────────────────── */
+
+/* The homepage viewer and feed cards: the table keeps to a xiangqi board's
+   footprint beside it. Small tiles throughout (your own hand is not larger,
+   there is no "you" here), and a finished hand shows who won, the points and
+   the winning tiles, without the scoring lines or the next-hand row. */
+.xmj-watch-board--compact,
+.xmj-watch-board--compact .xmj-seat--self {
+  --xmj-tile-w: 28px;
+  --xmj-tile-h: 37px;
+  --xmj-tile-r: 4px;
+  --xmj-depth: 3px;
+  --xmj-pond-w: 20px;
+  --xmj-pond-h: 26px;
+  --xmj-pond-gap: 2px;
+}
+
+/* The showcase widget hugs its board, and every variant's board takes the
+   widget's one size so a swap to this table neither shrinks nor jumps it. */
+.xmj-watch-board--compact {
+  width: var(--showcase-widget-size, 100%);
+  max-width: 100%;
+}
+
+.xmj-watch-board--compact .xmj-table {
+  width: 100%;
+  padding: 10px;
+  gap: 8px;
+  font-size: 12px;
+  justify-content: space-between;
+}
+
+.xmj-watch-board--compact .xmj-scoring,
+.xmj-watch-board--compact .xmj-result__foot {
+  display: none;
+}
+
+/* A hand's result covers the discards and the centre rather than replacing
+   them, so the table keeps its height from one hand to the next. A hand
+   nobody won keeps its discards and its one line of how the match ended. */
+.xmj-watch-board--compact .xmj-middle--result:not(.xmj-middle--brief) > :not(.xmj-result) {
+  visibility: hidden;
+}
+
+.xmj-watch-board--compact .xmj-result--brief .xmj-result__foot {
+  display: flex;
+}
+
+/* One line on a queue card, so the note stays clear of the discards. */
+.watch-queue-preview .xmj-result--brief .xmj-result__title {
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+/* A queue card's finished match: the score sized to sit beside the line. */
+.watch-queue-preview .xmj-result__head {
+  gap: 10px;
+}
+
+.watch-queue-preview .xmj-result__total--match b {
+  font-size: 28px;
+}
+
+.watch-queue-preview .xmj-result__head--match .xmj-result__title {
+  font-size: 15px;
+  white-space: normal;
+}
+
+.watch-queue-preview .xmj-result__head--match .xmj-result__sub {
+  font-size: 12px;
+}
+
+/* The foot is hidden, so the winning hand closes the group. */
+.xmj-watch-board--compact .xmj-result:not(.xmj-result--brief) > .xmj-won {
+  margin-bottom: auto;
+}
+
+.xmj-watch-board--compact .xmj-middle {
+  gap: 6px;
+}
+
+.xmj-watch-board--compact .xmj-centre {
+  min-height: 0;
+  padding: 6px 10px;
+  gap: 4px;
+}
+
+.xmj-watch-board--compact .xmj-centre__status {
+  min-height: 0;
+}
+
+.xmj-watch-board--compact .xmj-pond {
+  gap: 3px var(--xmj-pond-gap);
+  min-height: calc((var(--xmj-pond-h) + 4px) * 2 + 3px);
+  padding-top: 0;
+}

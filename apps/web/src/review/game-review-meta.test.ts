@@ -11,8 +11,11 @@ import {
 
 describe('reviewTimeControlLabel', () => {
   it('formats a clock+increment like the xiangqi reference', () => {
-    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0 })).toBe('5:00+0');
-    expect(reviewTimeControlLabel({ initialMs: 180_000, incrementMs: 2000 })).toBe('3:00+2');
+    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0 })).toBe('5+0');
+    expect(reviewTimeControlLabel({ initialMs: 180_000, incrementMs: 2000 })).toBe('3+2');
+    // Whole minutes match the room's "10+5"; an odd start keeps its seconds.
+    expect(reviewTimeControlLabel({ initialMs: 600_000, incrementMs: 5000 })).toBe('10+5');
+    expect(reviewTimeControlLabel({ initialMs: 30_000, incrementMs: 0 })).toBe('0:30+0');
   });
 
   it('reports untimed when both fields are absent', () => {
@@ -27,7 +30,7 @@ describe('reviewTimeControlLabel', () => {
     );
     expect(reviewTimeControlLabel({ origin: { movetimeMs: 1500 } })).toBe('1.5 s a move');
     // A clock, where there is one, still wins; no movetime is still untimed.
-    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0, origin })).toBe('5:00+0');
+    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0, origin })).toBe('5+0');
     expect(reviewTimeControlLabel({ origin: { event: 'x' } as { movetimeMs?: number } })).toBe(
       'Untimed',
     );
@@ -46,7 +49,7 @@ describe('reviewTimeControlLabel', () => {
 
   it('falls back to a nested timeControl object when the flat fields are absent', () => {
     expect(reviewTimeControlLabel({ timeControl: { initialMs: 300_000, incrementMs: 3000 } })).toBe(
-      '5:00+3',
+      '5+3',
     );
   });
 });
@@ -262,7 +265,7 @@ describe('buildReviewMeta', () => {
       },
     });
     expect(metaCard.classList.contains('game-meta-card')).toBe(true);
-    expect(metaCard.textContent).toContain('5:00+0');
+    expect(metaCard.textContent).toContain('5+0');
     expect(metaCard.textContent).toContain('Rated');
     expect(metaCard.textContent).toContain('Xiangqi');
     expect(metaCard.textContent).toContain('Alice');
@@ -332,6 +335,29 @@ describe('buildReviewMeta', () => {
       true,
       false,
     ]);
+  });
+
+  it('draws no seat disc for a wind-seated variant, and one per row elsewhere', () => {
+    const card = (gameSpecId: 'xiangqi-mahjong' | 'xiangqi', colors: [string, string]) =>
+      buildReviewMeta({
+        gameSpecId,
+        variantName: 'Test',
+        status: 'Done',
+        game: {
+          roomId: 'room_test',
+          result: `${colors[0]}-wins`,
+          players: [
+            { color: colors[0], name: 'brianhliou', kind: 'account' },
+            { color: colors[1], name: 'Misty', kind: 'account' },
+          ],
+        },
+      }).metaCard;
+    const mahjong = card('xiangqi-mahjong', ['east', 'west']);
+    expect(mahjong.querySelectorAll('.game-meta-card__player')).toHaveLength(2);
+    expect(mahjong.querySelectorAll('.game-meta-card__disc')).toHaveLength(0);
+    expect(
+      card('xiangqi', ['red', 'black']).querySelectorAll('.game-meta-card__disc'),
+    ).toHaveLength(2);
   });
 
   it('scores a draw on both rows and marks neither as the winner', () => {

@@ -59,6 +59,9 @@ export type XiangqiBroadcastTourSchedule = {
   endsAt: string | null;
   /** When the tour was seeded: a backfill's poll tail runs from here. */
   createdAt?: string;
+  /** Whether the tour holds any board; set by the scheduler's listing, where
+   *  `false` earns the daily late tail past the window. */
+  hasBoards?: boolean;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -689,7 +692,7 @@ async function dropBroadcastAnalysis(client: Queryable, boardId: string): Promis
 
 type BoardTags = Pick<
   XiangqiBroadcastBoard,
-  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details'
+  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details' | 'recordWithheld'
 >;
 
 function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
@@ -701,7 +704,9 @@ function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
     a.sourceUrl === b.sourceUrl &&
     // The game's details arrive on a re-read of a board stored before they
     // existed; same moves, new details is an update, not a duplicate.
-    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null)
+    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null) &&
+    // A held record resolved later, or one newly held, is an update too.
+    a.recordWithheld === b.recordWithheld
   );
 }
 
@@ -1327,12 +1332,16 @@ export async function listXiangqiBroadcastScheduledTours(): Promise<
 > {
   // Every tour that could poll; the scheduler applies each one's window
   // (xiangqiBroadcastPollState), so the rule lives in one place.
-  const { rows } = await getPool().query<TourRow>(
-    `SELECT * FROM xiangqi_broadcast_tours
-      WHERE poll_mode <> 'off' AND source_url IS NOT NULL
-      ORDER BY slug`,
+  const { rows } = await getPool().query<TourRow & { has_boards: boolean }>(
+    `SELECT tour.*,
+            EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS board WHERE board.tour_slug = tour.slug
+            ) AS has_boards
+       FROM xiangqi_broadcast_tours AS tour
+      WHERE tour.poll_mode <> 'off' AND tour.source_url IS NOT NULL
+      ORDER BY tour.slug`,
   );
-  return rows.map(scheduleFromRow);
+  return rows.map((row) => ({ ...scheduleFromRow(row), hasBoards: row.has_boards }));
 }
 
 export type XiangqiBroadcastTranslationBackfillChange = {

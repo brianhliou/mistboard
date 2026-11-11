@@ -2,13 +2,20 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
 import { maxHandleLength, normalizeProfileHandle } from './account-identity.js';
-import {
+
+process.env.RESEND_API_KEY = 're_placeholder_for_tests';
+process.env.MISTBOARD_AUTH_EMAIL_FROM = 'Mistboard <play@example.com>';
+
+const {
   accountSessionCookie,
   accountSessionsFromRequest,
   expiredAccountSessionCookie,
   handleCollisionAttempt,
   legacyHostOnlyAccountSessionEviction,
-} from './account-session.js';
+  sendEmailLoginCode,
+  sendEmailChangeCode,
+  sendAccountClosureCode,
+} = await import('./account-session.js');
 
 function requestWithCookie(cookie: string | undefined): IncomingMessage {
   return { headers: cookie === undefined ? {} : { cookie } } as unknown as IncomingMessage;
@@ -112,4 +119,35 @@ test('legacy host-only eviction targets the no-Domain duplicate when a Domain is
 test('legacy host-only eviction is a no-op when no Domain is configured', () => {
   const cookie = withCookieDomain(undefined, () => legacyHostOnlyAccountSessionEviction());
   assert.equal(cookie, null);
+});
+
+test('account code senders preserve Resend IDs for each purpose without conflating templates', async (t) => {
+  const subjects: string[] = [];
+  t.mock.method(globalThis, 'fetch', async (_url: unknown, init?: RequestInit) => {
+    subjects.push(JSON.parse(String(init?.body)).subject);
+    return Response.json({ id: `provider-${subjects.length}` });
+  });
+  for (const [index, send] of [
+    sendEmailLoginCode,
+    sendEmailChangeCode,
+    sendAccountClosureCode,
+  ].entries()) {
+    assert.deepEqual(await send('player@example.com', '12345678'), {
+      ok: true,
+      providerEmailId: `provider-${index + 1}`,
+    });
+  }
+  assert.equal(new Set(subjects).size, 3);
+});
+
+test('login code sender propagates failure without a provider ID', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  t.mock.method(globalThis, 'fetch', async () =>
+    Response.json({ id: 'rejected' }, { status: 503 }),
+  );
+  assert.deepEqual(await sendEmailLoginCode('player@example.com', '12345678'), { ok: false });
+  t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('network_failure');
+  });
+  assert.deepEqual(await sendEmailLoginCode('player@example.com', '12345678'), { ok: false });
 });

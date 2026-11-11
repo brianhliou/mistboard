@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // The site's game database (/games/search, lichess: "Advanced search"). The
 // module name predates the variant picker: it was a xiangqi-only database until
 // 2026-09, and the API still lives at /api/historical-xiangqi/games because
@@ -115,6 +117,10 @@ const STRING_FILTER_KEYS = [
 
 // Source values the server reads as a lane rather than an archive slug.
 const SOURCE_MISTBOARD = 'mistboard';
+// The games played here, narrowed by opponent (#533): people against people,
+// or a person against a bot.
+const SOURCE_PLAYED_PVP = 'mistboard-pvp';
+const SOURCE_PLAYED_PVE = 'mistboard-pve';
 const SOURCE_ENGINE_MATCH = 'engine-match';
 // The games the site's own bots play each other on a schedule (#488). Like
 // engine matches, off in the mixed feed until asked for.
@@ -123,6 +129,8 @@ const SOURCE_BROADCAST = 'broadcast';
 const SOURCE_ARCHIVE = 'archive';
 const LANE_SOURCES: ReadonlySet<string> = new Set([
   SOURCE_MISTBOARD,
+  SOURCE_PLAYED_PVP,
+  SOURCE_PLAYED_PVE,
   SOURCE_ENGINE_MATCH,
   SOURCE_ENGINE_GAME,
   SOURCE_BROADCAST,
@@ -340,6 +348,8 @@ function sourceFitsVariant(source: string, variant: string): boolean {
   return (
     source === '' ||
     source === SOURCE_MISTBOARD ||
+    source === SOURCE_PLAYED_PVP ||
+    source === SOURCE_PLAYED_PVE ||
     source === SOURCE_ENGINE_MATCH ||
     source === SOURCE_ENGINE_GAME
   );
@@ -539,6 +549,8 @@ function sourceOptions(variant: string, current: string): { value: string; label
   const options = [
     { value: '', label: t('historical.anySource') },
     { value: SOURCE_MISTBOARD, label: t('historical.sourcePlayedHere') },
+    { value: SOURCE_PLAYED_PVP, label: t('historical.sourcePlayedVsPeople') },
+    { value: SOURCE_PLAYED_PVE, label: t('historical.sourcePlayedVsBots') },
     { value: SOURCE_ENGINE_MATCH, label: t('historical.sourceEngineMatches') },
     { value: SOURCE_ENGINE_GAME, label: t('historical.sourceEngineGames') },
   ];
@@ -910,5 +922,21 @@ function formatDate(value: string | null): string {
   if (!value) return t('historical.unknownDate');
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export function renderGamesSearchShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const heading = document.createElement('h1');
+    heading.textContent = t('historical.heading');
+    root.append(
+      heading,
+      buildFilterForm(readFilters(), () => {}),
+    );
+  });
 }

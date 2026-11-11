@@ -1,7 +1,13 @@
 import { type Color, TIME_CONTROLS, type TimeClass, type XiangqiColor } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
+import { emitAchievementTrigger } from './achievement-triggers.js';
 import { engineVersionDisplayName } from './engine-registry.js';
-import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
+import {
+  botEngineAttributions,
+  firstPartyBotForEngine,
+  persistedSeatDisplayName,
+} from './first-party-bots.js';
+import { notFFQBanqiGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { scheduledEngineGame } from './persistence-game-data.js';
 import type {
@@ -609,6 +615,8 @@ export async function listRecentEveGames(limit = 12): Promise<RecentEveGameRecor
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE games.mode = 'eve'
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
+       AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
      ORDER BY games.ended_at DESC, games.room_id DESC
     LIMIT $2`,
@@ -628,6 +636,8 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
        -- historical corpus, an off-site engine match) is dated when it was
        -- played elsewhere, and a 400-game match import would fill this list.
        AND games.mode <> 'imported'
+       AND games.termination IS DISTINCT FROM 'truncated'
+       AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
        AND NOT (games.mode = 'pvp' AND games.ply_count < $3)
        AND NOT (games.mode = 'pve' AND games.ply_count < 2)
@@ -783,6 +793,7 @@ async function queryShowcasePvp(
      WHERE games.status = 'completed'
        AND games.visibility = 'public'
        AND games.variant = ANY($3::text[])
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pvp'
        AND games.ply_count >= $1
        AND EXISTS (
@@ -810,6 +821,7 @@ async function queryShowcasePve(
      WHERE games.status = 'completed'
        AND games.visibility <> 'private'
        AND games.variant = ANY($3::text[])
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pve'
        AND games.ply_count >= $1
        AND EXISTS (
@@ -874,9 +886,15 @@ export async function listWatchUnlockedGames(
        LIMIT 1
      ) last_events ON true
      WHERE games.status = 'completed'
+       -- A ply cap completes the worker task, not the game's replay.
+       AND games.termination IS DISTINCT FROM 'truncated'
        ${variantClause}
+       AND ${notFFQBanqiGame()}
        ${modeClause}
        ${curatedClause}
+       -- Watch is a live TV surface; a days-per-move game replays as frozen
+       -- 00:00 clocks there (Brian, 2026-10-14), so it stays in its room.
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND games.ended_at <= $2
        AND (
          -- A move-decided ending always closes on a move-played event, whatever the
@@ -927,8 +945,10 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
      ) last_events ON true
      WHERE games.status = 'running'
        ${variantClause}
+       AND ${notFFQBanqiGame()}
        ${modeClause}
        AND games.visibility <> 'private'
+       AND ${NOT_CORRESPONDENCE_SQL}
        AND last_events.type IN ('clock-started', 'move-played', 'resume')
        AND (last_events.payload->>'at')::bigint >= $1
        AND (last_events.payload->>'at')::bigint <= $2`,
@@ -1047,6 +1067,8 @@ const HEAD_TO_HEAD_FROM_SQL = `FROM games
       AND b.color <> a.color
      WHERE games.variant = $1
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
+       AND ${notFFQBanqiGame()}
        AND games.visibility <> 'private'
        AND a.visibility <> 'private'
        AND b.visibility <> 'private'`;
@@ -1111,6 +1133,8 @@ export async function tallyHeadToHeadGames(
 // as a participant. Keeping this predicate beside every favorite query prevents
 // a later visibility flip from leaking a stale bookmark through the saved list.
 const FAVORITE_ACCESS_SQL = `games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
+       AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
          OR EXISTS (
@@ -1180,6 +1204,8 @@ export async function listFavoriteGames(
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE favorite.user_id = $1
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
+       AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
          OR EXISTS (
@@ -1326,7 +1352,9 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
       ))`,
     );
   }
-  if (filters.scheduledEngine) conditions.push(scheduledEngineGame('games'));
+  if (filters.scheduledEngine) {
+    conditions.push(scheduledEngineGame('games'), `games.termination IS DISTINCT FROM 'truncated'`);
+  }
   if (filters.result) conditions.push(`games.result = ${bind(filters.result)}`);
   if (filters.results) {
     conditions.push(
@@ -1496,7 +1524,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
   // abandonment the kernel used to end the room.
   const result = summary.abortedAs ? null : summary.result;
   const termination = summary.abortedAs?.termination ?? summary.termination;
-  await withTransaction(async (client) => {
+  const participants = await withTransaction(async (client) => {
     const rated = summary.rated ?? false;
     await client.query(
       `INSERT INTO games
@@ -1608,7 +1636,16 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         );
       }
     }
+    return participants;
   });
+  // After commit, off the caller's path: the evaluator re-derives from the rows
+  // just written (playedHumanGame decides what counts).
+  if ((mode === 'pvp' || mode === 'pve') && !summary.abortedAs) {
+    emitAchievementTrigger({
+      trigger: 'game_end',
+      userIds: participants.map((p) => (p.subjectType === 'user' ? p.subjectId : null)),
+    });
+  }
 }
 
 function ratedParticipantColors(participants: readonly { color: GameParticipantColor }[]): {
@@ -1624,11 +1661,16 @@ function ratedParticipantColors(participants: readonly { color: GameParticipantC
   // (xiangqi at the #151 flip, then atomic, duck, dark xiangqi and both jungles).
   if (participants.some((participant) => participant.color === 'red'))
     return { white: 'red', black: 'black' };
+  // Xiangqi mahjong seats east and west; east, the first dealer, takes the
+  // white slot (east-wins -> white-wins, west-wins -> black-wins below).
+  if (participants.some((participant) => participant.color === 'east'))
+    return { white: 'east', black: 'west' };
   return { white: 'white', black: 'black' };
 }
 
 function ratedResultForGame(result: GameResult): RatedResult {
-  if (result === 'red-wins') return 'white-wins';
+  if (result === 'red-wins' || result === 'east-wins') return 'white-wins';
+  if (result === 'west-wins') return 'black-wins';
   if (result === 'white-wins' || result === 'black-wins' || result === 'draw') return result;
   return 'draw';
 }
@@ -1656,6 +1698,7 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     subject_id: string | null;
     display_name: string;
     visibility: GameVisibility;
+    engine_id: string | null;
     engine_version: string | null;
     elo_before: number | null;
     elo_after: number | null;
@@ -1667,6 +1710,7 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     `SELECT game_participants.game_id, game_participants.color,
             game_participants.subject_type, game_participants.subject_id,
             game_participants.display_name, game_participants.visibility,
+            game_participants.engine_id,
             game_participants.engine_version, game_participants.elo_before,
             game_participants.elo_after, users.handle
      FROM game_participants
@@ -1684,7 +1728,15 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
   for (const row of rows) {
     const participant: GameParticipant = {
       color: row.color,
-      displayName: row.display_name,
+      // A bot seat stored with its bare profile name before the writers named the
+      // rung gets the live seat name back from its engine id. The engine id itself
+      // stays server-side: it is not added to the participant shape.
+      displayName: persistedSeatDisplayName({
+        displayName: row.display_name,
+        subjectType: row.subject_type,
+        subjectId: row.subject_id,
+        engineId: row.engine_id,
+      }),
       subjectType: row.subject_type,
       // A guest's subject id is the browser's device id (migration 137): an
       // aggregate key, never something to hand back to a browser, where it

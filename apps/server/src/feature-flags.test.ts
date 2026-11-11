@@ -1,6 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { darkXiangqiEnabled, ratedEnabled } from './feature-flags.js';
+import { jieqiLuckAllowed } from './jieqi-luck.js';
+
+test('Jieqi luck defaults on for every viewer and can be switched off', (t) => {
+  const key = 'MISTBOARD_JIEQI_LUCK_ENABLED';
+  const previous = process.env[key];
+  t.after(() => restoreEnv(key, previous));
+  for (const value of [undefined, 'true', 'false']) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+    for (const viewer of [null, { id: 'member' }]) {
+      assert.equal(jieqiLuckAllowed(viewer), value !== 'false');
+    }
+  }
+});
 
 const ratedKey = 'MISTBOARD_RATED_ENABLED';
 const darkXiangqiKey = 'MISTBOARD_DARK_XIANGQI_ENABLED';

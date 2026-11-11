@@ -7,7 +7,9 @@
  */
 
 import { browserTimeZone } from '../browser-time-zone.js';
+import { deviceIdForBrowser } from '../live-state.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
+import type { PuzzleThemeCount, PuzzleThemeOptions } from './themes.js';
 
 export type PuzzleAttempt =
   | {
@@ -71,18 +73,33 @@ export async function fetchPuzzleList(): Promise<PuzzleSummary[]> {
 // The localStorage seen-set does not survive a cleared browser, a second
 // device, or a reinstall, so without this a signed-in visitor restarts the
 // rotation from the top of the pool. Empty for anonymous visitors.
-export async function fetchPuzzleListWithAttempts(): Promise<{
+export async function fetchPuzzleListWithAttempts(player: string | null = null): Promise<{
   puzzles: PuzzleSummary[];
   attemptedIds: string[];
+  themes: PuzzleThemeCount[];
+  tagCounts: PuzzleThemeOptions['tagCounts'];
 }> {
-  const response = await fetch('/api/puzzles');
+  const response = await fetch(
+    `/api/puzzles${player ? `?player=${encodeURIComponent(player)}` : ''}`,
+  );
   if (!response.ok) throw new Error(`Puzzle list failed: ${response.status}`);
   const body = (await response.json()) as {
     puzzles?: PuzzleSummary[];
     attemptedIds?: unknown;
+    themes?: PuzzleThemeCount[];
+    tagCounts?: unknown;
   };
   return {
-    puzzles: Array.isArray(body.puzzles) ? body.puzzles : [],
+    puzzles: Array.isArray(body.puzzles)
+      ? body.puzzles.filter((puzzle) => !player || puzzle.tags?.includes(`player:${player}`))
+      : [],
+    themes: Array.isArray(body.themes) ? body.themes : [],
+    // Absent from a server older than the tag filter; the themes then fall
+    // back to the motif counts alone.
+    tagCounts:
+      body.tagCounts && typeof body.tagCounts === 'object' && !Array.isArray(body.tagCounts)
+        ? (body.tagCounts as PuzzleThemeOptions['tagCounts'])
+        : {},
     attemptedIds: Array.isArray(body.attemptedIds)
       ? body.attemptedIds.filter((id): id is string => typeof id === 'string')
       : [],
@@ -206,10 +223,19 @@ export async function sendPuzzleQualityEvent(
   event: 'view' | 'start' | 'abandon' | 'vote',
   vote?: PuzzleQualityVote,
 ): Promise<void> {
+  // The browser's device id, the one live rooms already send (migration 137),
+  // so /metrics can count puzzle players, not puzzles (server migration 177).
+  // Null when storage is blocked; the row then counts as no one.
+  const deviceId = deviceIdForBrowser();
   const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/quality`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sessionId, event, ...(event === 'vote' ? { vote } : {}) }),
+    body: JSON.stringify({
+      sessionId,
+      event,
+      ...(event === 'vote' ? { vote } : {}),
+      ...(deviceId ? { deviceId } : {}),
+    }),
     keepalive: true,
   });
   if (!response.ok) throw new Error(`Puzzle quality event failed: ${response.status}`);

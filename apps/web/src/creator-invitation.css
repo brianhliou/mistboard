@@ -1,0 +1,78 @@
+.creator-invitation {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--site-border);
+  max-width: 52em;
+}
+
+.creator-invitation h2 {
+  margin: 0 0 12px;
+  color: var(--site-heading);
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.2;
+}
+
+.creator-invitation p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--site-text);
+}
+
+.creator-invitation-lede {
+  font-size: 18px;
+  max-width: 44em;
+}
+
+.creator-invitation-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.creator-invitation-features > div {
+  padding: 18px 20px;
+  border-left: 3px solid var(--site-accent);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+}
+
+.creator-invitation h3 {
+  margin: 0 0 8px;
+  color: var(--site-heading);
+  font-size: 16px;
+}
+
+.creator-invitation-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 20px;
+}
+
+.creator-invitation-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--site-accent);
+  font-weight: 600;
+}
+
+.creator-invitation-actions .creator-invitation-contact {
+  padding: 10px 18px;
+  border-radius: var(--site-radius-sm);
+  background: var(--site-accent);
+  color: #fff;
+  text-decoration: none;
+}
+
+.creator-invitation-contact:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .creator-invitation-features {
+    grid-template-columns: 1fr;
+  }
+}

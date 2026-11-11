@@ -158,8 +158,7 @@ function maybeAutoDraw(view: MahjongPlayerView | null): void {
  * Four things are worth distinguishing and nothing else is. A draw happens every
  * single turn, so it is silent: a sound that frequent stops carrying meaning and
  * starts being a reason to mute the tab. A discard is the signature tile-on-mat
- * click, pitched differently for yours and somebody else's so you can follow the
- * table without watching it. A claim is sharper, because a claim INTERRUPTS: it
+ * click for every seat. A claim is sharper, because a claim INTERRUPTS: it
  * is the sound that should make you look up. A win is the only one allowed to
  * last longer than a blip.
  *
@@ -167,29 +166,30 @@ function maybeAutoDraw(view: MahjongPlayerView | null): void {
  * The discard already carries that moment, and a second noise on top would make
  * every discard a two-note event.
  */
-function soundForEvent(event: unknown, seat: unknown): void {
+function soundForEvent(event: unknown): void {
   const played = event as { type?: string; color?: string; move?: { action?: string } } | undefined;
   if (played?.type !== 'move-played') return;
   const action = played.move?.action;
-  const mine = played.color === seat;
   if (action === 'draw' || action === 'pass' || action === 'timeout') return;
   if (action === 'discard') {
-    // 'captured' is the wood set's quieter, lower cousin of a move: somebody
-    // else's tile landing rather than your own.
-    playSound(mine ? 'move' : 'captured');
+    playSound('move');
     return;
   }
   if (action === 'claim') playSound('capture');
 }
 
+// The win/lose/draw sting plays once, on the live playing -> finished
+// transition, never on a load or reconnect into an already-finished room,
+// and only for a seated player (a spectator has no result to hear).
 let lastStatusType: string | null = null;
 function maybePlayTerminalSound(): void {
   const status = core?.state.view?.status;
   if (!status) return;
-  if (status.type === lastStatusType) return;
+  const previous = lastStatusType;
   lastStatusType = status.type;
-  if (status.type !== 'finished') return;
+  if (status.type !== 'finished' || previous !== 'playing') return;
   const seat = core?.state.seat;
+  if (!isMahjongSeat(seat)) return;
   const result = status.winner === null ? 'draw' : status.winner === seat ? 'win' : 'lose';
   playTerminalPlan(result, status.reason ?? null);
 }
@@ -222,7 +222,7 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
-    soundForEvent(frame.event, frame.seat);
+    soundForEvent(frame.event);
     maybePlayTerminalSound();
   },
   resetState: () => {
@@ -245,6 +245,10 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
     masked: false,
     notate,
     isMoveEvent: isMahjongMoveEvent,
+    // game_first_move: only a tile choice counts. The draw (sent automatically
+    // on the seat's turn), a pass and the runtime's timeout are left out.
+    playedByPlayer: (move) =>
+      move.action === 'discard' || move.action === 'claim' || move.action === 'self-draw',
   },
   replayCapture: {
     positionKey: replayPositionKey,

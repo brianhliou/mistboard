@@ -78,6 +78,7 @@ describe('reveal odds pool row', () => {
     expect(head?.querySelector('.reveal-odds-row__lead')?.textContent).toBe(
       '13 face-down could be:',
     );
+    expect(head?.querySelector('.reveal-odds-row__lead--short')?.textContent).toBe('13 face-down');
     expect(head?.querySelector('.reveal-odds-row__note')?.textContent).toBe('2 taken unseen');
     expect(host.getAttribute('aria-label')).toBe('Face-down odds: Red, 13 face-down');
     expect(host.textContent).not.toContain('—');
@@ -175,5 +176,40 @@ describe('reveal odds visibility', () => {
     expect(phone).toMatch(
       /\.live-review__cluster \.game-console > \.reveal-odds-row\[data-over\]\s*\{\s*display:\s*none;/,
     );
+  });
+
+  // Phone room (600px and under, #576): the two stacked rows (about 143px)
+  // pushed the move strip and the action bar 159px below a 390x664 fold. Each
+  // side gets one fixed-height full-width line instead (two halves sharing a
+  // line clipped the last chip at 390px), keeping every chip and its
+  // percentage, and the board's height budget gives up exactly those two lines.
+  it('gives each side one compact line that the phone board budget accounts for', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(__dirname, 'live-jieqi-reveal-odds.css'), 'utf-8');
+    const start = css.indexOf('@media (max-width: 600px)');
+    expect(start).toBeGreaterThan(0);
+    const phone = css.slice(start);
+    const rowRule = phone.slice(
+      phone.indexOf(
+        '.review-shell__cluster.live-review__cluster .game-console > .reveal-odds-row {',
+      ),
+    );
+    const row = rowRule.slice(0, rowRule.indexOf('}'));
+    expect(row).toContain('display: flex;');
+    expect(row).toContain('flex: 1 1 100%;');
+    expect(row).toContain('flex-wrap: nowrap;');
+    expect(row).toContain('height: var(--phone-room-odds);');
+    expect(row).toContain('overflow-x: auto;');
+    expect(row).toContain('contain: inline-size;');
+    // While the odds show, the line's height comes off the board's budget.
+    expect(phone).toMatch(
+      /:has\(\.reveal-odds-row:not\(\[data-over\]\)\) \{\s*--phone-room-extra: calc\(2 \* var\(--phone-room-odds\)\);/,
+    );
+    const room = readFileSync(resolve(__dirname, 'live-review.css'), 'utf-8');
+    const budget = room.slice(
+      room.indexOf('--uni-board-h-budget: calc(', room.indexOf('@media (max-width: 600px)')),
+    );
+    expect(budget.slice(0, budget.indexOf(');'))).toContain('var(--phone-room-extra, 0px)');
   });
 });

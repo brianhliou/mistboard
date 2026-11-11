@@ -1,0 +1,31 @@
+.ffq-banqi-progress {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  font-size: 0.875rem;
+  grid-column: 1 / -1;
+}
+
+.ffq-banqi-hp {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ffq-banqi-hp progress {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent, #1f6f5b);
+}
+
+.ffq-banqi-counters,
+.ffq-banqi-captures {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.ffq-banqi-captures {
+  margin: 0;
+  padding-left: 1.25rem;
+}

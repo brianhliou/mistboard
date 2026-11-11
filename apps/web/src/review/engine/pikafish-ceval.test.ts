@@ -43,8 +43,8 @@ class FakeWorker {
     if (message.type === 'init') {
       this.init = message;
       queueMicrotask(() => {
-        this.emit({ type: 'net-progress', loaded: 10_000_000, total: 50_706_378 });
-        this.emit({ type: 'net-progress', loaded: 50_706_378, total: 50_706_378 });
+        this.emit({ type: 'net-progress', loaded: 10_000_000, total: 11_261_932 });
+        this.emit({ type: 'net-progress', loaded: 11_261_932, total: 11_261_932 });
         this.emit({ type: 'net-written' });
         this.emit({ type: 'ready' });
       });
@@ -60,7 +60,7 @@ class FakeWorker {
       queueMicrotask(() => {
         this.emit({
           type: 'line',
-          line: 'info string NNUE evaluation using pikafish.nnue (64MiB, (62083, 1024, 32, 32, 1))',
+          line: 'info string NNUE evaluation using xiangqi-c07e94a5c7cb.nnue (10MiB, (10530, 1024, 16, 32, 1))',
         });
         this.emit({
           type: 'line',
@@ -151,10 +151,12 @@ describe('Pikafish ceval session', () => {
     const handle = new PikafishCeval('xiangqi');
     const progress: Array<[number, number]> = [];
     await handle.preload((p) => progress.push([p.loaded, p.total]));
-    expect(FakeWorker.latest?.init?.netUrl).toMatch(/\/engine\/pikafish\/pikafish\.nnue\?v=/);
+    expect(FakeWorker.latest?.init?.netUrl).toMatch(
+      /\/engine\/pikafish\/xiangqi-c07e94a5c7cb\.nnue\?v=/,
+    );
     expect(progress).toEqual([
-      [10_000_000, 50_706_378],
-      [50_706_378, 50_706_378],
+      [10_000_000, 11_261_932],
+      [11_261_932, 11_261_932],
     ]);
     expect(FakeWorker.latest?.commands).toEqual([
       'uci',

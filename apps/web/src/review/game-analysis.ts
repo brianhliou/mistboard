@@ -8,9 +8,12 @@ import {
   type MoveJudgment,
   moveJudgment,
   winPercent,
-  winPercentK,
 } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 
 /** One eval point from the server: position AFTER `ply` plies, from Red's POV. */
 export type PlyEval = {
@@ -63,6 +66,9 @@ export type MoveAnalysis = {
   judgment: MoveJudgment;
   /** This move's accuracy in [0, 100]. */
   accuracy: number;
+  /** Win-chance points the mover gave up, on a judged move only (the drop the judgment was
+   *  graded on). Feeds the grade card ("lost 12 points"). */
+  winLoss?: number;
   praise?: MovePraise;
 };
 
@@ -165,10 +171,9 @@ export function computeGameAnalysis(
   const firstMover = opts?.firstMover ?? 'red';
   const evals = [...response.plies].sort((a, b) => a.ply - b.ply);
   const moves: MoveAnalysis[] = [];
-  // Stored cp are on the analysing engine's own scale (AB-JChess's are steeper than
-  // PikaJieQi's), so they become win% on that engine's curve, named by the stored engineId.
-  const winK = winPercentK(response.engineId);
-  const redWinPercents = evals.map((entry) => winPercent(entry.cp, entry.mate, winK));
+  // Stored scores use the analysing engine's own units: centipawns on an engine
+  // curve, or expected score * 1000. The stored engineId selects the model.
+  const redWinPercents = evals.map((entry) => winPercent(entry.cp, entry.mate, response.engineId));
   // A move that IS the engine's best move for the position before it can never be an error
   // BY THAT ENGINE, whatever the realized swing says. The swing can still be negative: the
   // pre-move eval and the post-move eval come from two INDEPENDENT searches, so a horizon
@@ -217,7 +222,13 @@ export function computeGameAnalysis(
     const judgment =
       isChance || isUnstable || isBestPlayed ? null : moveJudgment(winBefore, winAfter);
     const accuracy = isBestPlayed ? 100 : accuracyPercent(winBefore, winAfter);
-    moves.push({ ply, mover, judgment, accuracy });
+    moves.push({
+      ply,
+      mover,
+      judgment,
+      accuracy,
+      ...(judgment ? { winLoss: Math.max(0, winBefore - winAfter) } : {}),
+    });
 
     // A chance move doesn't contribute to a player's mistake counts or ACPL — we can't say the
     // swing was their fault (or credit).
@@ -249,7 +260,9 @@ export function computeGameAnalysis(
     ...[...bestPlayed].map((ply): [number, number | null] => [ply, 100]),
   ]);
   const accuracies = gameAccuracy(
-    redWinPercents,
+    // gameAccuracy owns transitions by move order and expects the FIRST MOVER's
+    // POV, while stored evals and individual move grades stay seat-keyed.
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
     accuracyOverride.size ? accuracyOverride : undefined,
   );
 
@@ -335,8 +348,8 @@ export function playerPhaseAccuracies(
 
 /** A reveal ply's luck-free decision grade, from the decomposition (see review/jieqi-decisions). */
 export type PlyDecision = {
-  /** Accuracy in [0, 100] of the CHOICE (best-vs-played pool means), luck stripped. */
-  accuracy: number;
+  /** Accuracy of the choice; absent on a luck-only reveal, which stays ungraded. */
+  accuracy?: number;
   /** Judgment of the choice (?!/?/??), already deadband-guarded. null = a fine choice. */
   judgment: MoveJudgment;
 };
@@ -353,9 +366,8 @@ export function mergeDecisionAnalysis(
   analysis: GameAnalysis,
   decisionByPly: ReadonlyMap<number, PlyDecision>,
 ): { red: PlayerAnalysis; black: PlayerAnalysis } {
-  const winK = winPercentK(analysis.engineId);
-  const redWinPercents = analysis.evals.map((e) => winPercent(e.cp, e.mate, winK));
-  const chance = new Set(analysis.chancePlies);
+  const redWinPercents = analysis.evals.map((e) => winPercent(e.cp, e.mate, analysis.engineId));
+  const chance = new Set([...analysis.chancePlies, ...decisionByPly.keys()]);
   const override = new Map<number, number | null>();
   const counts: Record<'red' | 'black', { i: number; m: number; b: number }> = {
     red: { i: 0, m: 0, b: 0 },
@@ -369,7 +381,7 @@ export function mergeDecisionAnalysis(
   for (const move of analysis.moves) {
     if (chance.has(move.ply)) {
       const decision = decisionByPly.get(move.ply);
-      if (!decision) {
+      if (decision?.accuracy === undefined) {
         override.set(move.ply, null); // a reveal we couldn't decompose — leave it ungraded
         continue;
       }
@@ -380,7 +392,11 @@ export function mergeDecisionAnalysis(
       bump(move.mover, move.judgment);
     }
   }
-  const accuracies = gameAccuracy(redWinPercents, override);
+  const firstMover = analysis.moves[0]?.mover ?? 'red';
+  const accuracies = gameAccuracy(
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
+    override,
+  );
   const build = (side: 'red' | 'black', accuracy: number): PlayerAnalysis => ({
     accuracy,
     inaccuracies: counts[side].i,
@@ -388,7 +404,10 @@ export function mergeDecisionAnalysis(
     blunders: counts[side].b,
     acpl: 0, // not shown for chance variants (see AnalysisSummaryOptions.hideAcpl)
   });
-  return { red: build('red', accuracies.first), black: build('black', accuracies.second) };
+  return {
+    red: build('red', firstMover === 'red' ? accuracies.first : accuracies.second),
+    black: build('black', firstMover === 'black' ? accuracies.first : accuracies.second),
+  };
 }
 
 function mean(values: number[]): number {
@@ -409,8 +428,15 @@ function analysisUrl(variant: string, roomId: string): string {
 /** POST the analysis request for a finished game and compute the derived view.
  *  A cached game answers immediately (200); otherwise the server enqueues a
  *  background job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestGameAnalysis(variant: string, roomId: string): Promise<GameAnalysis> {
-  const body = await postAnalysisJob<XiangqiGameAnalysisResponse>(analysisUrl(variant, roomId));
+export async function requestGameAnalysis(
+  variant: string,
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<GameAnalysis> {
+  const body = await postAnalysisJob<XiangqiGameAnalysisResponse>(
+    analysisUrl(variant, roomId),
+    options,
+  );
   return computeGameAnalysis(body);
 }
 
@@ -419,8 +445,11 @@ export async function requestGameAnalysis(variant: string, roomId: string): Prom
 export async function fetchCachedGameAnalysis(
   variant: string,
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<GameAnalysis | null> {
-  const response = await fetch(analysisUrl(variant, roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return computeGameAnalysis((await response.json()) as XiangqiGameAnalysisResponse);
+  const body = await fetchAnalysisJob<XiangqiGameAnalysisResponse>(
+    analysisUrl(variant, roomId),
+    options,
+  );
+  return body ? computeGameAnalysis(body) : null;
 }

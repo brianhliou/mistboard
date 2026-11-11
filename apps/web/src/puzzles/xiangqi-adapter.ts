@@ -15,6 +15,8 @@
 import {
   applyStandardXiangqiMove,
   coordOf,
+  createInitialXiangqiState,
+  formatXiangqiMove,
   formatXiangqiMoveFromAfter,
   formatXiangqiMoves,
   fsfUciToXiangqiSquares,
@@ -25,7 +27,10 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiPuzzleSetupMove,
   type XiangqiSquare,
+  xiangqiPieceLetter,
+  xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import '../live-xiangqi.css';
 import { t } from '../i18n/catalog.js';
@@ -36,6 +41,7 @@ import {
   animateXiangqiBoardMove,
   XIANGQI_PIECE_SIZE,
   type XiangqiBoardArrow,
+  type XiangqiBoardMarker,
   xiangqiArrowSvg,
   xiangqiBoardSvg,
   xiangqiClickResult,
@@ -68,6 +74,14 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     // the selection while scrubbing history instead of painting stale targets.
     selectedSquare: isReplayLive(session) ? (session.selectedSquare as XiangqiSquare | null) : null,
     draggingFrom: session.draggingFrom as XiangqiSquare | null,
+    markers: ctx.moveMarks.map(
+      (mark): XiangqiBoardMarker => ({
+        square: mark.square as XiangqiSquare,
+        kind: 'glyph',
+        icon: mark.verdict === 'right' ? 'check' : 'cross',
+        className: mark.verdict === 'right' ? 'xq-marker--good' : 'xq-marker--blunder',
+      }),
+    ),
   });
   board.append(host);
   installBoardDrag({
@@ -249,7 +263,7 @@ function createPuzzleAnalysis(): PuzzleAnalysisController {
 
   return {
     // The engine bar and the jump-out link live in different spots on the puzzle
-    // column (engine at the top of the move list, link below the scrub controls),
+    // column (engine at the top of the move list, link beside the vote prompt),
     // so they are handed back as two elements rather than one bundled section.
     engineEl: panel.el,
     openLinkEl: openLink,
@@ -321,17 +335,55 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
     applyStandardXiangqiMove(state as XiangqiGameState, move as XiangqiMove),
   moveLabel: (move: PuzzleMove) => ('drop' in move ? `@${move.to}` : `${move.from}-${move.to}`),
   // The reader's notation, replayed from the puzzle position. The setup move
-  // is labeled from the board after it, the only board the client has for it.
+  // reads in the same style as the line after it: formatted from the board
+  // before it when the server's capture record rebuilds that board, else
+  // from the board after it, where algebraic drops to the piece and its
+  // destination (Rg6) rather than the long from-to form (Rc6-g6).
   moveLabels: (puzzle: PuzzleDetail, played: readonly PuzzleMove[]) => {
     const style = currentXiangqiNotationStyle();
     const initial = puzzle.initial as XiangqiGameState;
     const setup = initial.lastMove as XiangqiMove | undefined;
     return {
-      setup: setup ? formatXiangqiMoveFromAfter(initial, setup, style) : null,
+      setup: setup ? xiangqiSetupLabel(puzzle, initial, setup, style) : null,
       played: formatXiangqiMoves(played as XiangqiMove[], style, initial),
     };
   },
+  // Open information, so the pre-setup board (the captured piece back on its
+  // square) is what both players saw. Rebuilt only from the server's capture
+  // record and re-verified against `initial`; anything else stays null.
+  preSetupState: (puzzle: PuzzleDetail) =>
+    xiangqiPuzzlePreSetupState(
+      puzzle.initial as XiangqiGameState,
+      puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
+    ),
+  // Every standard game opens from the standard array, red to move.
+  historyStart: (puzzle: PuzzleDetail) =>
+    puzzle.history && puzzle.history.length > 0
+      ? createInitialXiangqiState(`${puzzle.id}:history`)
+      : null,
+  historyLabels: (puzzle: PuzzleDetail, history: readonly PuzzleMove[]) =>
+    formatXiangqiMoves(
+      history as XiangqiMove[],
+      currentXiangqiNotationStyle(),
+      createInitialXiangqiState(`${puzzle.id}:history`),
+    ),
   sideIconSvg: (puzzle: PuzzleDetail) =>
     xiangqiPieceGhostSvg({ color: puzzle.sideToMove ?? 'red', role: 'general' }),
   createAnalysis: createPuzzleAnalysis,
 };
+
+function xiangqiSetupLabel(
+  puzzle: PuzzleDetail,
+  initial: XiangqiGameState,
+  setup: XiangqiMove,
+  style: ReturnType<typeof currentXiangqiNotationStyle>,
+): string {
+  const before = xiangqiPuzzlePreSetupState(
+    initial,
+    puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
+  );
+  if (before) return formatXiangqiMove(before, setup, style);
+  const piece = initial.board[setup.to];
+  if (style === 'algebraic' && piece) return `${xiangqiPieceLetter(piece.role)}${setup.to}`;
+  return formatXiangqiMoveFromAfter(initial, setup, style);
+}

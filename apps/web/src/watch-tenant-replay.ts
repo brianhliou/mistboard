@@ -20,7 +20,7 @@ import {
   offsetsFromTimestamps,
   positionAt,
 } from './recorded-playback.js';
-import type { GameMeta, ReplayBoardOverlay, ReplayHandle } from './replay.js';
+import type { GameMeta, ReplayBoardOverlay, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import { createPane, type ReplayPaneHandle } from './replay-board.js';
 import { createGameHeaderStrip } from './replay-meta.js';
 import type { MoveListEntry } from './review/move-list.js';
@@ -113,6 +113,13 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
     overlay: ReplayBoardOverlay,
   ): string;
   fillCaptures(host: HTMLElement, view: View, owner: 'red' | 'black'): void;
+  // OPTIONAL: the material the game page's rail shows (captured pieces, a drop
+  // variant's hands, a flip variant's face-down pool), drawn from the view the
+  // board is showing at the current ply. `slots.top` is the second mover's and
+  // `slots.bottom` the first mover's, the /watch rail's fixed seating. The view
+  // is the one the board draws, so this can only show what the board's track
+  // already carries. Tenants that omit it leave the rail strips empty.
+  railMaterial?(slots: ReplayMaterialSlots, view: View, postgame: Postgame, ply: number): void;
   // Label one ply for the move list. The default writes `${from}-${to}`, which
   // is every tenant whose move IS a from/to pair. A tenant whose move carries
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
@@ -166,6 +173,12 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
 
 export type TenantWatchReplayOptions = {
   autoplay?: boolean;
+  /**
+   * Paint the latest ply immediately, without an opening glide. Reloading the
+   * same room follows new moves, gliding only a single-ply update. Off by
+   * default so TV replay callers keep starting at the opening position.
+   */
+  followEnd?: boolean;
   locale?: Locale;
   metadataByRoomId?: Record<string, GameMeta>;
   /**
@@ -192,6 +205,13 @@ export type TenantWatchReplayOptions = {
    * the preview shows the board alone. The featured board and full TV keep them.
    */
   hideReserve?: boolean;
+  /**
+   * Compact only: put each player's reserve inside their seat row, between the
+   * name and the clock, instead of in a strip above or below the board. The
+   * homepage viewer opts in so a drop variant's viewer is no taller than a bare
+   * board's (two strips added ~84px and grew the whole first band).
+   */
+  reservesInSeats?: boolean;
   /**
    * Compact only: lead each seat row with a disc in the ink that seat plays (the
    * /watch seat-row disc). The homepage TV opts in; flip variants (Banqi, Flip
@@ -318,11 +338,11 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
   return label;
 }
 
-// English keeps the Title Case token this strip always showed; the zh locales
-// go through the shared, total termination map (the old four-case switch here
-// let "General Captured" and "No Legal Moves" through untranslated).
+// English reads the token mid-sentence ("by resignation"); the zh locales go
+// through the shared, total termination map (the old four-case switch here let
+// "General Captured" and "No Legal Moves" through untranslated).
 function terminationLabel(reason: string, locale: Locale): string {
-  if (locale === 'en') return labelize(reason);
+  if (locale === 'en') return labelize(reason).toLowerCase();
   return sharedTerminationLabel(reason, locale);
 }
 
@@ -372,6 +392,26 @@ function buildTenantMoveEntries(
     });
   }
   return entries;
+}
+
+// moveLabels from the board after each move, for a variant whose move means more than
+// its squares (a flip names what it turned up). Walks the timeline with the same skips
+// and ply numbering as buildTenantMoveEntries, so label i is entry i; viewAfter(ply) is
+// the replay's own view at that ply, so a label never says more than the board shows.
+export function tenantMoveLabelsFromViews<M, View>(
+  timeline: readonly { move?: M; ply?: number }[],
+  viewAfter: (ply: number) => View | null,
+  label: (move: M, viewAfter: View | null) => string,
+): string[] {
+  const labels: string[] = [];
+  for (const event of timeline) {
+    const move = event.move as { from?: unknown; to?: unknown } | undefined;
+    if (!move) continue;
+    if (typeof move.from !== 'string' && typeof move.to !== 'string') continue;
+    const ply = typeof event.ply === 'number' ? event.ply : labels.length + 1;
+    labels.push(label(event.move as M, viewAfter(ply)));
+  }
+  return labels;
 }
 
 // The played moves as board squares, numbered exactly as buildTenantMoveEntries numbers
@@ -460,8 +500,8 @@ export async function mountTenantWatchReplay<
   let maxPly = 0;
   let currentPly = 0;
   // The ply the previous sync rendered; a one-ply delta animates the step
-  // (adapter.animateMove). Null right after a (re)load so the first paint of a
-  // game never glides.
+  // (adapter.animateMove). Null on a new game; followEnd keeps it across reloads
+  // of the same room so only a newly arrived single move glides.
   let lastSyncedPly: number | null = null;
   let boardOrientation: 'red' | 'black' = 'red';
   let activePostgame: Postgame | null = null;
@@ -897,8 +937,8 @@ export async function mountTenantWatchReplay<
   const buildGame = (postgame: Postgame): void => {
     activePostgame = postgame;
     maxPly = adapter.maxPly(postgame);
-    currentPly = 0;
-    lastSyncedPly = null;
+    currentPly = options.followEnd ? maxPly : 0;
+    if (!options.followEnd) lastSyncedPly = null;
     lastNotifiedPly = null;
     paused = !autoplay;
     boardOrientation = 'red';
@@ -985,9 +1025,18 @@ export async function mountTenantWatchReplay<
         const right = document.createElement('div');
         right.className = 'showcase-reserve showcase-reserve-right';
         compactSideStrips = { left, right };
-        boardRow = document.createElement('div');
-        boardRow.className = 'showcase-board-row';
-        boardRow.append(left, pane.el, right);
+        if (options.reservesInSeats === true) {
+          // The opponent's hand rides the top seat row, the oriented side's the
+          // bottom one, each just before that seat's clock.
+          left.classList.add('showcase-reserve--in-seat');
+          right.classList.add('showcase-reserve--in-seat');
+          topSeat.row.insertBefore(left, topSeat.clockEl);
+          bottomSeat.row.insertBefore(right, bottomSeat.clockEl);
+        } else {
+          boardRow = document.createElement('div');
+          boardRow.className = 'showcase-board-row';
+          boardRow.append(left, pane.el, right);
+        }
       } else {
         compactSideStrips = null;
       }
@@ -1126,6 +1175,7 @@ export async function mountTenantWatchReplay<
   const load = async (nextId: string): Promise<void> => {
     clearTimer();
     stopPlayback();
+    if (nextId !== activeId) lastSyncedPly = null;
     activeId = nextId;
     let result: Awaited<ReturnType<typeof adapter.loadPostgame>>;
     if (options.loadPostgameOverride) {
@@ -1297,6 +1347,25 @@ export async function mountTenantWatchReplay<
       return adapter.moveSound(prev, next);
     },
     gameResult: () => activePostgame?.game.result ?? null,
+    // The rail's material at the current ply, from the view the board draws (the
+    // reveal toggle's choice, else the pane's own key), so the strips agree with
+    // the board and never carry more than its track.
+    ...(adapter.railMaterial
+      ? {
+          fillMaterial: (slots: ReplayMaterialSlots) => {
+            const target = boardTargets[0];
+            if (!activePostgame || !target) return;
+            const key = adapter.reveal
+              ? ((revealed ? adapter.reveal.truthKey : adapter.reveal.hiddenKey) as ViewKey)
+              : target.key;
+            const view =
+              adapter.viewAtPly(activePostgame, key, currentPly) ??
+              adapter.viewAtPly(activePostgame, target.key, currentPly);
+            if (!view) return;
+            adapter.railMaterial?.(slots, view, activePostgame, currentPly);
+          },
+        }
+      : {}),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

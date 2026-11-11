@@ -2,10 +2,8 @@
 // renderer (watch-tenant-replay.ts). Banqi is symmetric-information: the board is
 // public and only the deal is hidden, so the postgame ships a SINGLE truth
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
-import type { BanqiPlayerView } from '@mistboard/game';
-import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
-import { boardCoordinatesEnabled } from './display-preferences.js';
-import { flipSeatInk } from './flip-seat-ink.js';
+import { type BanqiMove, type BanqiPlayerView, banqiMoveLabelOnBoard } from '@mistboard/game';
+import { renderBanqiMaterial } from './banqi-material.js';
 import {
   type BanqiPostgameResponse,
   type BanqiPostgameViewKey,
@@ -13,9 +11,13 @@ import {
   postgameReplayMaxPly,
   postgameViewAtPly,
   postgameViewEntries,
-} from './live-banqi-postgame.js';
+} from './banqi-postgame-data.js';
+import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   type BanqiBoardArrow,
   type BanqiBoardMarker,
   installBanqiBoardStyles,
@@ -25,7 +27,11 @@ import type { ReplayHandle } from './replay.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { watchBanqiMoveSound } from './watch-move-sound.js';
-import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
+import {
+  mountTenantWatchReplay,
+  type TenantWatchReplayOptions,
+  tenantMoveLabelsFromViews,
+} from './watch-tenant-replay.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
@@ -56,6 +62,14 @@ export function mountBanqiWatchReplay(
       viewEntries: (postgame) =>
         postgameViewEntries(postgame).map((entry) => ({ key: entry.key, label: entry.label })),
       viewAtPly: postgameViewAtPly,
+      // The site's one banqi label (flip-move-label.ts): a flip names what it turned up,
+      // read off the replay's own view after it ("f2(C)"), never the generic "f2-f2".
+      moveLabels: (postgame) =>
+        tenantMoveLabelsFromViews(
+          postgame.timeline,
+          (ply) => postgameViewAtPly(postgame, 'truth', ply),
+          (move: BanqiMove, view) => banqiMoveLabelOnBoard(move, view?.board),
+        ),
       paneKind,
       // Symmetric board: no fog/perspective to apply.
       renderBoard: (view, orientation, _key, overlay) =>
@@ -65,10 +79,16 @@ export function mountBanqiWatchReplay(
           coordinates: boardCoordinatesEnabled(),
         }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
-      // a back step reverse-animates the move the previous ply carried.
+      // a back step reverse-animates the move the previous ply carried. A step
+      // forward onto a flip turns the tile over as it did live (#709); a step
+      // back over one just shows the back again.
       animateMove: (boardEl, view, prevView, direction) => {
         const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
         if (!move) return;
+        if (move.from === move.to) {
+          if (direction === 'forward') animateBanqiReveal(boardEl, move.to);
+          return;
+        }
         animateBanqiBoardMove(boardEl, move, { reverse: direction === 'back' });
       },
       // The same grouped pool the live room draws (review/captured-pool.ts); every
@@ -81,6 +101,18 @@ export function mountBanqiWatchReplay(
           renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: ` ` }),
         );
       },
+      // The rail draws the room's material from the ply's masked view: each seat's
+      // captured pool and the face-down pool (public arithmetic over that view).
+      // The first mover sits at the bottom, so the viewer ink is the ink the
+      // opening flip bound to the first seat (null before it, as in the room).
+      // The move log lets a finished game's tally keep what stayed face-down.
+      railMaterial: (slots, view, postgame, ply) =>
+        renderBanqiMaterial(
+          { capturesTop: slots.top, capturesBottom: slots.bottom, hiddenPool: slots.pool },
+          view,
+          view.firstColor,
+          postgame.timeline.flatMap((event) => (event.move ? [event.move] : [])).slice(0, ply),
+        ),
       // Banqi seats (first/second mover) are decoupled from ink; the recorded
       // result is seat-keyed, so translate it to the bound ink for display.
       resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),

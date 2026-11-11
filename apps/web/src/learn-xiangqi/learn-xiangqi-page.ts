@@ -9,7 +9,9 @@ import './learn-xiangqi.css';
 
 import type { XiangqiPieceRole, XiangqiSquare } from '@mistboard/game';
 import { loadCachedCurrentUser } from '../account-nav.js';
+import type { Locale } from '../i18n/locale.js';
 import { initLiveSound, playSound } from '../live-sound.js';
+import { prerenderMount } from '../prerender-copy.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import { buildNav } from '../site-shell.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
@@ -687,13 +689,15 @@ function buildLearnWhatNextSection(signedIn: boolean): HTMLElement {
 // Crawlers and no-JS clients get the real course outline instead of an empty
 // shell; the client mount replaces it on takeover. Progress is always empty
 // here (it lives in localStorage), which is also what a first-time visitor sees.
-export function renderLearnXiangqiShellForPrerender(): string {
-  const emptyProgress: LearnProgress = { stages: {} };
-  const page = document.createElement('div');
-  page.className = 'learn-xq learn-xq--map';
-  // Signed-out, always: this HTML is built once and served to every visitor, so
-  // it cannot carry one visitor's auth state. The client mount restyles the
-  // Register tile on takeover, the same way it fills in real progress.
-  page.append(buildLearnMapSidebar(emptyProgress), buildLearnMapMain(emptyProgress, false));
-  return `${buildNav().outerHTML}${page.outerHTML}`;
+export function renderLearnXiangqiShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const emptyProgress: LearnProgress = { stages: {} };
+    const page = document.createElement('div');
+    page.className = 'learn-xq learn-xq--map';
+    // Signed-out, always: this HTML is built once and served to every visitor, so
+    // it cannot carry one visitor's auth state. The client mount restyles the
+    // Register tile on takeover, the same way it fills in real progress.
+    page.append(buildLearnMapSidebar(emptyProgress), buildLearnMapMain(emptyProgress, false));
+    root.append(buildNav(locale), page);
+  });
 }

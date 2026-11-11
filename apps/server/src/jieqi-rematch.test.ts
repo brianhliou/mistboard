@@ -18,7 +18,7 @@ import {
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import type { WebSocket } from 'ws';
-import { createJieqiRoom, jieqiRematchContext, jieqiRooms } from './jieqi-registration.js';
+import { createJieqiRoom, jieqiRooms } from './jieqi-registration.js';
 import type { JieqiEvent, JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { handleJieqiWebSocketConnection, type JieqiLiveRoom } from './server-ws-jieqi.js';
@@ -26,6 +26,7 @@ import {
   finalizeTenantRematchIfReady,
   type TenantRematchContext,
 } from './variant-tenant/rematch.js';
+import { registeredTenantRematchContext } from './variant-tenant/rematch-context.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 
@@ -36,7 +37,6 @@ const WS_CTX = {
   defaultRoomRegion: 'test',
   wsMessageLimit: 1_000,
   wsMessageWindowMs: 1_000,
-  rematch: jieqiRematchContext,
 };
 
 class FakeSocket {
@@ -292,6 +292,16 @@ test('jieqi rematch: a rated game rematches rated only between two accounts', as
 
 test('jieqi rematch context: rated carries over only while the rated switch and pace allow it', async () => {
   const prior = process.env.MISTBOARD_RATED_ENABLED;
+  // The default context every tenant gets (rematch-context.ts), found by room id.
+  const jieqiRematchContext = registeredTenantRematchContext<
+    'jieqi',
+    JieqiColor,
+    JieqiMove,
+    JieqiGameState,
+    string,
+    JieqiLiveRoom['clients'] extends Set<infer Client> ? Client : never
+  >(`${jieqiTenant.roomIdPrefix}probe`, () => {});
+  assert.ok(jieqiRematchContext, 'jieqi resolves the registry rematch context');
   try {
     process.env.MISTBOARD_RATED_ENABLED = 'true';
     const rated = await jieqiRematchContext.createRoom(
@@ -300,7 +310,14 @@ test('jieqi rematch context: rated carries over only while the rated switch and 
     );
     assert.ok(rated.ok);
     assert.equal(rated.room.rated, true, 'rated 1+1 stays rated');
-    const offPace = await jieqiRematchContext.createRoom(TEN_PLUS_FIVE, true);
+    // 10+5 rates since 2026-11-06 (the rapid pool, with 5+5).
+    const tenPlusFive = await jieqiRematchContext.createRoom(TEN_PLUS_FIVE, true);
+    assert.ok(tenPlusFive.ok);
+    assert.equal(tenPlusFive.room.rated, true, 'rated 10+5 stays rated');
+    const offPace = await jieqiRematchContext.createRoom(
+      { initialMs: 900_000, incrementMs: 10_000 },
+      true,
+    );
     assert.ok(offPace.ok);
     assert.equal(offPace.room.rated, false, 'a pace with no rated pool rematches casual');
     process.env.MISTBOARD_RATED_ENABLED = 'false';
@@ -314,6 +331,14 @@ test('jieqi rematch context: rated carries over only while the rated switch and 
     if (prior === undefined) delete process.env.MISTBOARD_RATED_ENABLED;
     else process.env.MISTBOARD_RATED_ENABLED = prior;
   }
+});
+
+test('jieqi rematch: a rated game with a stats-excluded seat rematches casual', async () => {
+  const room = finishedHydratedRoom(true, { red: 'u-red', black: 'u-excluded' });
+  const { ctx, calls } = stubContext({ accountMayRate: async (userId) => userId !== 'u-excluded' });
+  const result = await finalizeTenantRematchIfReady(jieqiTenant, ctx, room);
+  assert.ok(result, 'the rematch still opens');
+  assert.deepEqual(calls, [{ rated: false }], 'an uncounted account never rates');
 });
 
 test('jieqi rematch: a play-locked account cancels the rematch', async () => {

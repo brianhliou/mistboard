@@ -328,7 +328,7 @@ test('jieqi golden wire: per-seat payloads match the recorded fixture', () => {
 
 type WireEvent = { type: string; color?: string; seat?: string; setup?: unknown; move?: unknown };
 type WireBoardEntry = { color?: string; role?: string; faceDown: boolean };
-type WireCapture = { owner: 'red' | 'black'; role: string | null };
+type WireCapture = { owner: 'red' | 'black'; role: string | null; takenFaceDown?: true };
 type WireSnapshot = {
   events: WireEvent[];
   roomMode?: string;
@@ -422,14 +422,14 @@ function isFinishedStep(step: GoldenStep): boolean {
   return state?.status?.type === 'finished';
 }
 
-test('jieqi golden wire: capture reveal is capturer-only while the game is live', () => {
+test('jieqi golden wire: capture reveal is capturer-only, live and after the game', () => {
   let hiddenCaptureSeen = false;
+  let finishedHiddenCaptureSeen = false;
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
-      // A finished room reveals every captured role to everyone, so the
-      // capturer-only rule is a LIVE invariant. Asserted for finished steps by
-      // 'a finished room opens fully to a spectator' below.
-      if (isFinishedStep(step)) continue;
+      // Not scoped to live steps (Brian, 2026-10-16): a piece captured
+      // face-down is known only to its capturer after the game too.
+      const finished = isFinishedStep(step);
       const snapshots = wireSnapshots(step);
       const red = snapshots.red!.state.captured;
       const black = snapshots.black!.state.captured;
@@ -452,6 +452,22 @@ test('jieqi golden wire: capture reveal is capturer-only while the game is live'
           `${script.id}/${step.label}: the victim learned a hidden capture (${victimRole})`,
         );
         if (victimRole === null) hiddenCaptureSeen = true;
+        if (victimRole === null && finished) finishedHiddenCaptureSeen = true;
+        // The face-down mark (Brian, 2026-10-26: the pool shades it) rides only
+        // beside the capturer's own role for a hidden capture. The victim's
+        // entry is exactly as before: no mark, so nothing beside a null role.
+        const capturerEntry = owner === 'red' ? black[i]! : red[i]!;
+        const victimEntry = owner === 'red' ? red[i]! : black[i]!;
+        assert.equal(
+          capturerEntry.takenFaceDown === true,
+          victimRole === null,
+          `${script.id}/${step.label}: the capturer marks exactly its hidden captures`,
+        );
+        assert.equal(
+          'takenFaceDown' in victimEntry,
+          false,
+          `${script.id}/${step.label}: the victim's entry carries no face-down mark`,
+        );
         // A spectator holds the VICTIM's knowledge of each capture: the owner
         // (public: the piece left the board) and a role only where the piece
         // was face-up when taken. Never the capturer's private reveal.
@@ -464,11 +480,22 @@ test('jieqi golden wire: capture reveal is capturer-only while the game is live'
         );
       }
       assert.equal(snapshots.spectator!.state.captured.length, red.length);
+      // The spectator never captures, so nothing it receives names a hidden
+      // capture or carries the mark that goes beside one.
+      assert.equal(
+        JSON.stringify(snapshots.spectator).includes('takenFaceDown'),
+        false,
+        `${script.id}/${step.label}: the spectator payload carries a face-down mark`,
+      );
     }
   }
   assert.ok(
     hiddenCaptureSeen,
     'the scripted game must actually capture a face-down piece, or this test is vacuous',
+  );
+  assert.ok(
+    finishedHiddenCaptureSeen,
+    'a finished scripted game must hold a face-down capture, or the post-game half is vacuous',
   );
 });
 
@@ -528,32 +555,34 @@ test('jieqi golden wire: spectators get the public view while the game is live',
   assert.ok(liveSteps > 0, 'no live step in the scripts: this test asserted nothing');
 });
 
-test('jieqi golden wire: a finished room opens fully to a spectator', () => {
+test('jieqi golden wire: a finished room serves the public view, never the deal', () => {
   // The other half of the matrix row above. Split so the live invariant cannot
   // be silently widened: weakening either test leaves the other failing.
+  // Since 2026-10-16 (Brian) a finished room is no more open than a live one:
+  // a never-moved piece stays face-down for everyone, and a seat keeps only
+  // what it saw while playing (the spectator, only what both seats saw).
   let finishedSteps = 0;
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       if (!isFinishedStep(step)) continue;
       finishedSteps += 1;
-      const spectator = wireSnapshots(step).spectator!;
-      assert.ok(
-        Object.keys(spectator.state.board).length > 0,
-        `${script.id}/${step.label}: finished board must not be empty`,
-      );
-      assert.ok(spectator.events.length > 0, `${script.id}/${step.label}: log must be delivered`);
-      // Face-down identities open up, which is what truth means here and is
-      // already public via the postgame truth history (see f2ad3e9).
-      for (const [square, entry] of Object.entries(spectator.state.board)) {
-        assert.equal(
-          entry.faceDown,
-          false,
-          `${script.id}/${step.label}: ${square} still face-down`,
+      const snapshots = wireSnapshots(step);
+      const spectator = snapshots.spectator!;
+      const label = `${script.id}/${step.label}`;
+      assert.ok(Object.keys(spectator.state.board).length > 0, `${label}: board must not be empty`);
+      assert.ok(spectator.events.length > 0, `${label}: log must be delivered`);
+      assert.deepStrictEqual(spectator.state.legalMoves, []);
+      for (const seat of [...SEATS, 'spectator'] as const) {
+        assert.deepStrictEqual(
+          snapshots[seat]!.state.board,
+          spectator.state.board,
+          `${label}: ${seat} board is the shared masked board`,
         );
       }
-      // And every captured role is known, not just the capturer's.
-      for (const captured of spectator.state.captured) {
-        assert.notEqual(captured.role, null, `${script.id}/${step.label}: captured role withheld`);
+      for (const [square, entry] of Object.entries(spectator.state.board)) {
+        if (entry.faceDown) {
+          assert.ok(!('role' in entry), `${label}: spectator sees a role on face-down ${square}`);
+        }
       }
     }
   }

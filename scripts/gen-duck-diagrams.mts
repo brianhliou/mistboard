@@ -179,10 +179,12 @@ figure(
 // The house general art is a 1024px raster whose strokes are soft at any size,
 // so the tile draws the crown as the paths gen-anti-diagrams.mts traced from it
 // (2.9-unit strokes in the 100-unit disc frame) and stays sharp at 1920.
+// One dark ring, as on every international piece since 2026-10-14; the ink
+// colours only the crown.
 function crownDisc(ink: string): string {
   const st = `fill="none" stroke="${ink}" stroke-width="2.9" stroke-linejoin="round" stroke-linecap="round"`;
   return [
-    `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${ink}" stroke-width="2.8"/>`,
+    `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="#202427" stroke-width="2.8"/>`,
     `<rect x="31.5" y="68.6" width="37" height="6.2" rx="2.2" ${st}/>`,
     `<path d="M45.1 68.6 V44.2 A5 5 0 0 1 55.2 44.2 V68.6" ${st}/>`,
     `<path d="M32.6 68.6 C22.8 55 23.8 39.4 36 39.4 C40.6 39.4 43.6 41.4 45.1 45.4" ${st}/>`,

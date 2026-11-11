@@ -75,6 +75,60 @@ describe('historical xiangqi review page', () => {
     // The raw acquisition move-encoding ("wxf") is internal jargon, not surfaced.
     expect(root.textContent).not.toContain('wxf');
   });
+
+  it("keeps an online game's platform and pseudonyms to the Game info tab", async () => {
+    const game = {
+      ...historicalGameFixture(),
+      eventName: 'ElephantChess PvP',
+      site: null,
+      round: null,
+      redNameRaw: 'ElephantChess:cqM1Apb2GWRD',
+      blackNameRaw: 'ElephantChess:H8Zr42oigB9S',
+      onlinePlatform: true,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.startsWith('/api/chat/game/')) return jsonResponse(chatFixture());
+        return jsonResponse({ game });
+      }),
+    );
+    const root = document.createElement('div');
+    mountHistoricalXiangqiPostgame(root, 'hxq_1');
+    await flushPromises();
+
+    const info = root.querySelector<HTMLElement>('.review-provenance');
+    expect(info?.textContent).toContain('ElephantChess PvP');
+    expect(info?.textContent).toContain('ElephantChess:cqM1Apb2GWRD');
+    expect(info?.textContent).toContain('ElephantChess:H8Zr42oigB9S');
+    // Everywhere else on the page: no platform, no pseudonym.
+    info!.remove();
+    expect(root.textContent).toContain('Online game');
+    expect(root.textContent).not.toMatch(/ElephantChess/);
+  });
+
+  it('shows the game date as played, for a viewer west of UTC', async () => {
+    const tz = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          if (url.startsWith('/api/chat/game/')) return jsonResponse(chatFixture());
+          return jsonResponse({ game: historicalGameFixture() });
+        }),
+      );
+      const root = document.createElement('div');
+      mountHistoricalXiangqiPostgame(root, 'hxq_1');
+      await flushPromises();
+      expect(root.textContent).toContain('Jan 4, 1982');
+      expect(root.textContent).not.toContain('Jan 3, 1982');
+    } finally {
+      process.env.TZ = tz;
+    }
+  });
 });
 
 function historicalGameFixture() {

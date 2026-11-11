@@ -6,7 +6,7 @@
 import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderAsync } from '@resvg/resvg-js';
+import { Resvg, renderAsync } from '@resvg/resvg-js';
 
 export type PngCache = {
   get(key: string): Buffer | undefined;
@@ -71,8 +71,64 @@ const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf', 'NotoSansSC-Bol
   (file) => resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
 );
 
+/** resvg's font options for every card: the bundled fonts and nothing else. */
+export const OG_FONT_OPTIONS = {
+  loadSystemFonts: false,
+  fontFiles: FONT_FILES,
+  defaultFontFamily: 'Noto Sans',
+};
+
 /** The zoom every OG card is rasterised at (svgToPng's default). */
 export const OG_CARD_ZOOM = 2;
+
+type RasterCrop = { left?: number; top?: number; right: number; bottom: number };
+
+/**
+ * Grow a card's canvas to cover its art before resvg renders it. resvg 2.6
+ * aborts the process in geom.rs:27 when a layer (opacity, clip, mask, filter
+ * or nested SVG) lies wholly below the canvas, even with renderAsync.
+ * getBBox parses without rendering, so it is safe to measure first.
+ *
+ * Cards use pixel dimensions with a matching zero-origin viewBox (or none).
+ * Reject other frames and art beyond eight frame heights rather than render
+ * unchecked or allocate an unbounded canvas. The caller crops back to the
+ * original frame; the margin covers approximate stroke bounds.
+ */
+export function coverSvgBelowFrame(
+  svg: string,
+): { svg: string; width: number; height: number } | null {
+  const root = /^<svg\b[^>]*>/.exec(svg)?.[0];
+  if (!root) return null;
+  const width = Number(/\swidth=["']([\d.]+)["']/.exec(root)?.[1]);
+  const height = Number(/\sheight=["']([\d.]+)["']/.exec(root)?.[1]);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return null;
+  }
+  const viewBox = /\sviewBox=["']([^"']+)["']/.exec(root);
+  if (viewBox) {
+    const values = viewBox[1]!
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (values.length !== 4 || values.some((value, i) => value !== [0, 0, width, height][i])) {
+      return null;
+    }
+  }
+  let artBottom: number;
+  try {
+    const box = new Resvg(svg, { font: OG_FONT_OPTIONS, logLevel: 'off' }).getBBox();
+    artBottom = box ? Math.ceil(box.y + box.height) : 0;
+  } catch {
+    return null;
+  }
+  if (!Number.isFinite(artBottom)) return null;
+  if (artBottom <= height) return { svg, width, height };
+  const bottom = artBottom + 16;
+  if (bottom > height * 8) return null;
+  let tall = root.replace(/\sheight=["'][\d.]+["']/, ` height="${bottom}"`);
+  if (viewBox) tall = tall.replace(viewBox[0], ` viewBox="0 0 ${width} ${bottom}"`);
+  return { svg: tall + svg.slice(root.length), width, height };
+}
 
 // Render at 2x the SVG's nominal dimensions so the resulting PNG stays crisp
 // on retina displays and survives scraper recompression.
@@ -82,29 +138,51 @@ export const OG_CARD_ZOOM = 2;
  * already authored at twice its display width. Oversampling past ~2x the display
  * size is not free quality — it thins hairlines below a pixel on the way down.
  *
- * The raster runs on a libuv worker thread (`renderAsync`), never on the event
- * loop. A full-board card is ~750 KB of SVG with 32 inlined piece images and
- * takes ~1 s of CPU in the prod container; the synchronous `Resvg#render` this
+ * After the canvas safety check, the raster runs on a libuv worker thread
+ * (`renderAsync`). A full-board card is ~750 KB of SVG with 32 inlined piece
+ * images and takes ~1 s of CPU in the prod container; the synchronous `Resvg#render` this
  * used until 2026-09-16 stalled every WebSocket frame and every request for
  * that long, and a crawler walking the 470 chapter cards of the classical
  * manuals (each its own cache key) paged loop-lag warnings for a minute at a
- * time. Only the PNG encode (`asPng`, ~30 ms) still runs on the loop.
+ * time. The safety parse and PNG encode (`asPng`, ~30 ms) run on the loop.
+ *
+ * `crop` keeps the rectangle between left/top (default 0) and right/bottom
+ * in output pixels (article-thumb.ts draws on a taller canvas than it serves).
  */
 export async function svgToPng(
   svg: string,
   background = '#0f1115',
   zoom = OG_CARD_ZOOM,
+  crop?: RasterCrop,
 ): Promise<Buffer> {
-  const image = await renderAsync(svg, {
+  return (await renderSvg(svg, background, zoom, crop)).asPng();
+}
+
+/** svgToPng's render as raw RGBA, for a caller that encodes it itself. */
+export async function svgToRgba(
+  svg: string,
+  background: string,
+  zoom: number,
+  crop?: RasterCrop,
+): Promise<{ pixels: Buffer; width: number; height: number }> {
+  const image = await renderSvg(svg, background, zoom, crop);
+  return { pixels: image.pixels, width: image.width, height: image.height };
+}
+
+function renderSvg(svg: string, background: string, zoom: number, crop?: RasterCrop) {
+  const covered = coverSvgBelowFrame(svg);
+  if (!covered) throw new Error('Cannot safely rasterize SVG below its frame');
+  const frameCrop =
+    crop ??
+    (covered.svg !== svg
+      ? { right: Math.round(covered.width * zoom), bottom: Math.round(covered.height * zoom) }
+      : undefined);
+  return renderAsync(covered.svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },
-    font: {
-      loadSystemFonts: false,
-      fontFiles: FONT_FILES,
-      defaultFontFamily: 'Noto Sans',
-    },
+    font: OG_FONT_OPTIONS,
+    ...(frameCrop ? { crop: { left: 0, top: 0, ...frameCrop } } : {}),
   });
-  return image.asPng();
 }
 
 /** A PNG's pixel size, read from its IHDR chunk (bytes 16-23). */
@@ -120,10 +198,18 @@ export function pngSize(png: Buffer): { width: number; height: number } {
  * chained, the halvings are the mip levels a raster must be drawn from.
  */
 export async function halvePng(png: Buffer): Promise<Buffer> {
-  const { width, height } = pngSize(png);
+  return halveImage(png, 'image/png', pngSize(png));
+}
+
+/** halvePng for any raster resvg reads (a JPEG photo too), as a PNG. */
+export async function halveImage(
+  data: Buffer,
+  mime: string,
+  { width, height }: { width: number; height: number },
+): Promise<Buffer> {
   const w = Math.max(1, Math.round(width / 2));
   const h = Math.max(1, Math.round(height / 2));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:image/png;base64,${png.toString('base64')}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:${mime};base64,${data.toString('base64')}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;
   const image = await renderAsync(svg, { font: { loadSystemFonts: false } });
   return image.asPng();
 }

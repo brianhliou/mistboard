@@ -82,15 +82,15 @@ describe('Flip Jungle postgame page', () => {
     expect(root.querySelector('.review-shell__right .captures-strip')).toBeNull();
 
     // The opening action was a flip (self-move): the move list reads it as the bare square
-    // "a1" (no dash = a flip; board moves are "a1-b2"), in the left cell (first ply, `firstMover: 'a'`).
+    // "a1(r)" (a flip names the animal it turned up; board moves are "a1-b2"), in the left cell (first ply, `firstMover: 'a'`).
     const firstMove = root.querySelector<HTMLButtonElement>(
       '.review-move-list__row .review-move-list__move',
     );
-    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1(r)');
     // Opens at the final ply (the flip is the mainline tip): the highlighted current
     // cell is that flip move. (The tree move list highlights via --current.)
     const current = root.querySelector('.review-move-list__move--current');
-    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1(r)');
     // Server-side computer analysis underboard is wired: a signed-out visitor sees the
     // sign-in CTA (the account-gated compute button) rather than nothing.
     const analyseButton = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse');

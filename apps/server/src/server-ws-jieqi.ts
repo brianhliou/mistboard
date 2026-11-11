@@ -8,13 +8,12 @@
  */
 
 import type { IncomingMessage } from 'node:http';
-import type { JieqiColor, JieqiGameState, JieqiMove } from '@mistboard/game';
+import type { JieqiColor } from '@mistboard/game';
 import type { WebSocket } from 'ws';
-import type { JieqiRuntimeRoom, JieqiSpecId } from './jieqi-runtime.js';
+import type { JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { scheduleJieqiEngineMove } from './server-jieqi-engine.js';
 import { clearTenantRuntimeTimers } from './variant-tenant/lifecycle.js';
-import type { TenantRematchContext } from './variant-tenant/rematch.js';
 import { createTenantWsRuntime, type TenantLiveClient } from './variant-tenant/ws.js';
 
 export type JieqiLiveClient = TenantLiveClient<JieqiColor>;
@@ -23,22 +22,10 @@ export type JieqiLiveRoom = Omit<JieqiRuntimeRoom, 'clients'> & {
   clients: Set<JieqiLiveClient>;
 };
 
-export type JieqiRematchContext = TenantRematchContext<
-  'jieqi',
-  JieqiColor,
-  JieqiMove,
-  JieqiGameState,
-  JieqiSpecId,
-  JieqiLiveClient
->;
-
 export type JieqiWebSocketContext = {
   defaultRoomRegion: string;
   wsMessageLimit: number;
   wsMessageWindowMs: number;
-  // Mutual-confirm PvP rematch (variant-tenant/rematch.ts); built in
-  // jieqi-registration.ts, which owns room creation.
-  rematch?: JieqiRematchContext;
 };
 
 export const jieqiWs = createTenantWsRuntime(jieqiTenant, {
@@ -56,7 +43,6 @@ export async function handleJieqiWebSocketConnection(
       wsMessageLimit: ctx.wsMessageLimit,
       wsMessageWindowMs: ctx.wsMessageWindowMs,
       defaultRoomRegion: ctx.defaultRoomRegion,
-      ...(ctx.rematch ? { rematch: ctx.rematch } : {}),
     },
     socket,
     request,

@@ -4,6 +4,7 @@
 // append them to `body`.
 import { t } from './i18n/catalog.js';
 import './site-box.css';
+import './hover-grammar.css';
 
 export type SiteBoxOptions = {
   title: string;
@@ -28,10 +29,10 @@ export function buildSiteBox(options: SiteBoxOptions): SiteBox {
 
   if (options.href) {
     const top = document.createElement('a');
-    top.className = 'site-box-top';
+    top.className = 'site-box-top hover-link-host';
     top.href = options.href;
     const more = document.createElement('span');
-    more.className = 'site-box-more';
+    more.className = 'site-box-more hover-link-text';
     more.textContent = options.moreLabel ?? t('site.more');
     top.append(title, more);
     box.append(top);

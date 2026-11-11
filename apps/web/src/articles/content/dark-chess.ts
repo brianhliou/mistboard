@@ -51,11 +51,14 @@ export const darkChessArticle: Article = {
     // The page ranked 8th for the first and 26th for the second, so the document
     // title carries theirs while the h1 keeps ours.
     seoTitle: 'Fog of War Chess Rules',
+    tagline: 'Chess where you see only the squares your pieces can reach.',
     summary:
       "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
     status: 'published',
     publishedAt: '2026-05-22',
-    updatedAt: '2026-07-12',
+    updatedAt: '2026-06-04',
+    updateNote:
+      'Replaced the sample game with a game played against the engine on the site.',
     audience:
       'Any chess player who has heard of fog chess, dark chess, or Fog of War and wants to understand it from scratch.',
     thumbnail: ARTICLE_OG_POSITIONS['dark-chess'],

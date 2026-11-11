@@ -65,6 +65,10 @@ export type TenantRematchContext<
   // pre-issued rematch tokens skip; a tenant that persists accounts checks it
   // here. False for either account seat cancels the rematch.
   accountMayPlay?: (userId: string) => Promise<boolean>;
+  // Whether an account may play rated (a stats-excluded account may not). The
+  // pre-issued tokens skip the seat gate that refuses it, so a rated game with
+  // such a seat rematches casual instead.
+  accountMayRate?: (userId: string) => Promise<boolean>;
 };
 
 // Rooms with a finalize in flight. Finalize awaits room creation before it
@@ -271,7 +275,12 @@ async function createRematchRoom<
   // seat rule: 'rated requires account'). The pre-issued tokens below skip the
   // new-seat path where that rule normally runs, so it is applied here. The
   // tenant's createRoom applies the rest (the rated switch, a rated pace).
-  const rated = room.rated && firstToken.userId !== null && secondToken.userId !== null;
+  let rated = room.rated && firstToken.userId !== null && secondToken.userId !== null;
+  if (rated && ctx.accountMayRate) {
+    for (const token of [firstToken, secondToken]) {
+      if (token.userId !== null && !(await ctx.accountMayRate(token.userId))) rated = false;
+    }
+  }
   const created = await ctx.createRoom(room.projection.timeControl, rated);
   if (!created.ok) return null;
   const newRoom = created.room;

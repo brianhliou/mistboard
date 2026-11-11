@@ -16,7 +16,7 @@ const CASES = [
   // Crazyhouse Xiangqi (stock options): the start (advisors and elephants in
   // hand), and a game position where a soldier drop gives check and the river
   // stops an elephant and an advisor; counts from
-  // packages/game/src/fixtures/crazyhouse-xiangqi-parity.json.
+  // packages/game/fixtures/crazyhouse-xiangqi-parity.json.
   ['crazyhousexiangqi', 'startpos', 108],
   [
     'crazyhousexiangqi',

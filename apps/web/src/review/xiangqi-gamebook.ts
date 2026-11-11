@@ -2,7 +2,7 @@
 // the guess-the-move session (gamebook-play.ts). Moves are hidden — the learner must
 // find the solution move on their side; the opponent's replies auto-play. A wrong
 // (legal) move shows the coach's "why not" and lets them try again. This is a
-// standalone surface (no move list / engine / variations) — the study page mounts it
+// standalone surface (played moves only, no engine or variations) — the study page mounts it
 // for a gamebook chapter, and /learn will mount the same player later.
 
 import {
@@ -11,13 +11,16 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
+import { pieceAnimationDurationMs } from '../board-anim.js';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
+import { t } from '../i18n/catalog.js';
 import { initLiveSound, playSound } from '../live-sound.js';
-import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
+import { classifyXiangqiOpponentSound, soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { displayComment } from '../study-i18n.js';
-import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
+import { animateXiangqiBoardMove, createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { fitGamebookToViewport } from './gamebook-fit.js';
 import { createGamebookSession, type GamebookFeedback } from './gamebook-play.js';
+import { createMoveList, type MoveListEntry } from './move-list.js';
 import { deserializeTree, type SerializedTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 import './gamebook.css';
@@ -36,9 +39,6 @@ export interface XiangqiGamebookOptions {
   nav?: HTMLElement;
   /** Optional left-rail element (chapter tabs, "edit lesson", etc.). */
   aside?: HTMLElement;
-  /** The game this position came from, shown under the prompt: where it was
-   *  played. Absent for a lesson that is not a game position. */
-  game?: { detail: string };
   /** Who had each side, drawn as the review page's seat strips above and below
    *  the board (the learner's side at the bottom). */
   seats?: { red: string; black: string };
@@ -67,8 +67,11 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     deviation: (node) => node.annotations?.gamebook?.deviation,
   });
 
-  const currentView = (): StandardXiangqiPlayerView =>
-    xiangqiTreeAdapter.project(session.node().truth)[0]!.view;
+  // The session settles synchronously; the board presents those moves one at a time.
+  let displayed = tree.root;
+  let playing = false;
+  let playback = 0;
+  const currentView = (): StandardXiangqiPlayerView => tree.project(displayed)[0]!.view;
 
   // ── Layout ──
   const wrap = document.createElement('section');
@@ -86,7 +89,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   boardFrame.className = 'gamebook__board-frame';
   const boardEl = document.createElement('div');
   boardEl.className = 'gamebook__board xiangqi-live-board';
-  boardEl.setAttribute('aria-label', 'Xiangqi lesson board');
+  boardEl.setAttribute('aria-label', t('study.gamebook.boardLabel'));
   boardFrame.append(boardEl);
   // The same strips the review and game pages hang on their boards, so a game
   // position reads the same everywhere: names beside the board, not in a panel.
@@ -106,10 +109,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   restoreBoardScale();
   attachBoardResizeGrip(boardFrame, boardFrame);
 
-  // Coach column, top to bottom: what to do (the side to play, in that side's
-  // ink), which game this is, then the lesson's own text and the feedback on the
-  // last attempt. The prompt used to be a bold line at the END of the comment,
-  // so the one instruction on the page was the last thing read.
+  // Coach: prompt, played moves, lesson text and feedback. Game details live in the rail.
   const coach = document.createElement('aside');
   coach.className = 'gamebook__coach';
   const prompt = document.createElement('header');
@@ -119,18 +119,18 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   const promptDot = document.createElement('span');
   promptDot.className = 'gamebook__prompt-dot';
   promptDot.setAttribute('aria-hidden', 'true');
-  promptSide.append(promptDot, opts.orientation === 'black' ? 'Black to play' : 'Red to play');
+  promptSide.append(
+    promptDot,
+    t(opts.orientation === 'black' ? 'study.gamebook.blackToPlay' : 'study.gamebook.redToPlay'),
+  );
   const promptTask = document.createElement('p');
   promptTask.className = 'gamebook__prompt-task';
-  promptTask.textContent = 'Find the best move.';
+  promptTask.textContent = t('study.gamebook.findBestMove');
   prompt.append(promptSide, promptTask);
   coach.append(prompt);
-  if (opts.game?.detail) {
-    const game = document.createElement('p');
-    game.className = 'gamebook__game';
-    game.textContent = opts.game.detail;
-    coach.append(game);
-  }
+  const history = document.createElement('div');
+  history.className = 'gamebook__moves';
+  coach.append(history);
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble';
   const comment = document.createElement('p');
@@ -142,8 +142,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   bubble.append(comment, feedback, hintText);
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
-  const hintBtn = button('Hint', 'gamebook__btn');
-  const restartBtn = button('Restart lesson', 'gamebook__btn');
+  const hintBtn = button(t('study.gamebook.hint'), 'gamebook__btn');
+  const restartBtn = button(t('study.gamebook.restart'), 'gamebook__btn');
   controls.append(hintBtn, restartBtn);
   coach.append(bubble, controls);
   wrap.append(coach);
@@ -153,22 +153,28 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     getInteractionView: () => currentView(),
     getPerspective: () => opts.orientation,
     // Only the learner's side is draggable, and only while awaiting their move.
-    seatFor: () => (session.view().awaitingMove ? opts.orientation : null),
-    enabled: () => session.view().awaitingMove,
+    seatFor: () => (!playing && session.view().awaitingMove ? opts.orientation : null),
+    enabled: () => !playing && session.view().awaitingMove,
     onMove: (move) => {
       // Captured before the attempt: a correct move advances the cursor past the
       // opponent's reply too, so afterwards the position it was played from is
       // already two plies behind.
-      const parent = session.node().truth;
+      if (playing) return;
+      const parent = session.node();
       const result = session.attempt(move);
       if (result === 'invalid') return;
       if (result === 'good') {
-        playSound(soundForOwnXiangqiMove(xiangqiTreeAdapter.project(parent)[0]!.view, move));
+        playSound(soundForOwnXiangqiMove(tree.project(parent)[0]!.view, move));
       } else {
         // The lesson's own "not that one", never the ranked defeat sting.
         playSound('learn-failure');
       }
-      render(result);
+      if (result === 'good') {
+        // Paint the learner's move before presenting the auto reply.
+        playFrom(parent.children[0]!, result);
+      } else {
+        render(result);
+      }
     },
   });
 
@@ -176,46 +182,121 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   // the authored text: a sentence alone left a long retreat unfindable, and the
   // square is known from the mainline without any extra authoring.
   hintBtn.addEventListener('click', () => {
+    if (playing) return;
     const next = session.node().children[0]?.move;
     if (next) {
       interactive.setMarkers([
         { square: next.from, kind: 'circle', className: 'xq-marker--gamebook-hint' },
       ]);
     }
-    hintText.textContent = session.view().hint ?? (next ? 'Look at the circled piece.' : '');
+    hintText.textContent = session.view().hint ?? (next ? t('study.gamebook.hintPiece') : '');
   });
   restartBtn.addEventListener('click', () => {
     session.reset();
-    render();
+    playFrom(tree.root);
   });
 
   // Transition bookkeeping, so completing the lesson chimes once and a retry or
   // a re-render of the finished position does not chime again.
   let lastFeedback: GamebookFeedback | null = null;
 
+  function renderHistory(): void {
+    const entries: MoveListEntry[] = [];
+    for (let node = displayed; node.parent; node = node.parent) {
+      entries.unshift({ ply: node.ply, label: node.label });
+    }
+    history.replaceChildren();
+    if (!entries.length) return;
+    const list = createMoveList(entries, {
+      firstMover:
+        tree.root.truth.status.type === 'playing' && tree.root.truth.status.turn === 'black'
+          ? 'b'
+          : 'a',
+      firstNumber: tree.root.truth.moveNumber,
+    });
+    // A record of the lesson so far, with no navigation into the solution.
+    for (const cell of list.el.querySelectorAll<HTMLButtonElement>('button')) cell.disabled = true;
+    history.append(list.el);
+    list.update(displayed.ply, () => {});
+  }
+
+  function playFrom(start: typeof tree.root, justAttempted?: 'good'): void {
+    const run = ++playback;
+    const target = session.node();
+    displayed = start;
+    playing = displayed !== target;
+    interactive.clearSelection();
+    render(justAttempted);
+    if (!playing) return;
+
+    function advance(): void {
+      // A chapter change or a restart invalidates pending paints and sounds.
+      if (run !== playback || !root.contains(wrap)) return;
+      const before = currentView();
+      const next = displayed.children[0];
+      if (!next?.move) return;
+      displayed = next;
+      interactive.render(currentView(), opts.orientation);
+      renderHistory();
+      renderCoach(justAttempted);
+      const sound = classifyXiangqiOpponentSound(before, currentView(), opts.orientation);
+      if (sound) playSound(sound);
+      animateXiangqiBoardMove(boardEl, next.move, opts.orientation);
+      const finish = (): void => {
+        if (run !== playback || !root.contains(wrap)) return;
+        if (displayed !== target) {
+          window.setTimeout(advance, 500);
+        } else {
+          playing = false;
+          // Keep the painted SVG: repainting here would erase its arrival marks.
+          renderCoach(justAttempted);
+        }
+      };
+      const duration = pieceAnimationDurationMs();
+      if (duration > 0) window.setTimeout(finish, duration);
+      else finish();
+    }
+    window.setTimeout(advance, 500);
+  }
+
   function render(justAttempted?: 'good' | 'bad'): void {
     const view = session.view();
     // A hint ring belongs to the position it was asked in.
     if (justAttempted === 'good' || view.feedback !== 'bad') interactive.setMarkers([]);
     interactive.render(currentView(), opts.orientation);
+    renderHistory();
+    renderCoach(justAttempted);
+  }
+
+  function renderCoach(justAttempted?: 'good' | 'bad'): void {
+    // Coach text follows the board too; completion waits for the last reply to land.
+    const view = playing
+      ? {
+          ...session.view(),
+          feedback: 'play' as const,
+          comment: displayComment(displayed.annotations?.comments?.[0]),
+        }
+      : session.view();
+    boardEl.setAttribute('aria-busy', String(playing));
+    hintBtn.disabled = playing;
     coach.dataset.state = view.feedback;
     hintText.textContent = '';
-    if (view.feedback === 'end' && lastFeedback !== 'end') playSound('level-end');
-    lastFeedback = view.feedback;
+    if (!playing && view.feedback === 'end' && lastFeedback !== 'end') playSound('level-end');
+    if (!playing) lastFeedback = view.feedback;
 
     if (view.feedback === 'bad') {
       // The lesson text stays; the note under it says what was wrong, and the
       // board is still live, so the next move is the retry.
       comment.textContent = view.comment ?? '';
-      feedback.textContent = view.deviation ?? 'Not that one. Try another move.';
+      feedback.textContent = view.deviation ?? t('study.gamebook.wrongMove');
     } else if (view.feedback === 'end') {
       comment.textContent = view.comment ?? '';
-      feedback.textContent = 'Lesson complete! 🎉';
+      feedback.textContent = t('study.gamebook.complete');
     } else {
       comment.textContent = view.comment ?? '';
       // The prompt above already says whose move it is; this line reports only
       // on an attempt.
-      feedback.textContent = justAttempted === 'good' ? 'Correct! Keep going.' : '';
+      feedback.textContent = justAttempted === 'good' ? t('study.gamebook.correctMove') : '';
     }
 
     hintBtn.hidden = view.feedback === 'end' || !session.node().children[0];
@@ -246,7 +327,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
 
   root.replaceChildren(...chrome, wrap);
   fitGamebookToViewport(wrap);
-  render();
+  playFrom(tree.root);
 }
 
 function seatStrip(name: string, ink: XiangqiColor, slot: 'top' | 'bottom'): HTMLElement {

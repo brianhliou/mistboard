@@ -4,6 +4,7 @@ import { type AccountPreferences, replaceAccountPreferences } from './account-pr
 import { identify, markInternalBrowser, resetIdentity } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
+import { clearFriendsNavs, decorateSiteMenuFriends, mountFriendsNav } from './friends-nav.js';
 import { t } from './i18n/catalog.js';
 import {
   applyAccountLocalePreference,
@@ -17,12 +18,18 @@ import {
   readSignedInHint,
   setResolvedAdmin,
   setResolvedSignedIn,
+  setResolvedStatsExcluded,
   setResolvedVariantGrants,
   writeAdminHint,
   writeSignedInHint,
+  writeStatsExcludedHint,
   writeVariantGrantsHint,
 } from './signed-in-state.js';
-import { syncAdminNavMenus } from './site-shell.js';
+import {
+  registerMenuLocaleSelectHandler,
+  registerSiteMenuOpenHandler,
+  syncAdminNavMenus,
+} from './site-shell.js';
 import {
   buildAppearanceMenu,
   gearIconSvg,
@@ -77,6 +84,15 @@ let userPromise: Promise<AuthUser | null> | null = null;
 let navObserver: MutationObserver | null = null;
 
 export function initializeAccountNav(): void {
+  // A language picked in the phone site menu persists to the account, as the
+  // profile dropdown's picker does; signed out, the menu's own redirect is all.
+  registerMenuLocaleSelectHandler((next) => {
+    if (cachedUser) void saveAccountLocalePreference(next);
+  });
+  // The phone menu's Community > Friends item shows how many are online.
+  registerSiteMenuOpenHandler((panel, locale) => {
+    if (cachedUser) void decorateSiteMenuFriends(panel, locale);
+  });
   applyPendingSlots();
   void primeAccountNav();
   watchForNavChanges();
@@ -86,6 +102,7 @@ async function primeAccountNav(): Promise<void> {
   const user = await loadCurrentUser();
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
+  writeStatsExcludedHint(user?.statsExcluded === true);
   writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
   if (user) mountAccountNavs();
@@ -102,9 +119,11 @@ export function setAccountNavUser(user: AuthUser | null): void {
   userPromise = Promise.resolve(user);
   setResolvedSignedIn(user !== null);
   setResolvedAdmin(user?.accountRole === 'admin');
+  setResolvedStatsExcluded(user?.statsExcluded === true);
   setResolvedVariantGrants(user?.variantGrants ?? []);
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
+  writeStatsExcludedHint(user?.statsExcluded === true);
   writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
 
@@ -188,8 +207,10 @@ function applyPendingSlots(): void {
 }
 
 function revealSignedOutSlots(): void {
-  // The bell is signed-in-only; drop it when we resolve to signed-out.
+  // The bell and Friends are signed-in-only; drop them when we resolve to
+  // signed-out.
   clearNotificationBells();
+  clearFriendsNavs();
   applySignedInOnlyNav(false);
   document
     .querySelectorAll<HTMLElement>('[data-account-slot][data-account-pending="1"]')
@@ -253,6 +274,9 @@ function mountAccountNav(nav: HTMLElement, user: AuthUser): void {
   // menu). Mounted here so it inherits the same signed-in timing + observer;
   // a no-op when no notification sources are registered.
   mountNotificationBell(nav);
+  // Friends sits just left of the bell (lichess parity); desktop and tablet
+  // only, friends-nav.css hides it on phones.
+  mountFriendsNav(nav);
 
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const wasActive = path === '/account' || path.startsWith('/account/');
@@ -470,6 +494,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       cachedUser = user;
       setResolvedSignedIn(user !== null);
       setResolvedAdmin(user?.accountRole === 'admin');
+      setResolvedStatsExcluded(user?.statsExcluded === true);
       setResolvedVariantGrants(user?.variantGrants ?? []);
       // Canonical per-load auth resolution: identify so PostHog persons map to
       // DB accounts. Idempotent for returning users.
@@ -487,6 +512,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       cachedUser = null;
       setResolvedSignedIn(false);
       setResolvedAdmin(false);
+      setResolvedStatsExcluded(false);
       setResolvedVariantGrants([]);
       return null;
     });
@@ -510,6 +536,7 @@ function invalidateAccountCache(): void {
   cachedUser = undefined;
   setResolvedSignedIn(undefined);
   setResolvedAdmin(undefined);
+  setResolvedStatsExcluded(undefined);
   setResolvedVariantGrants(undefined);
   userPromise = null;
 }

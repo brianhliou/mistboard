@@ -8,40 +8,28 @@
 // post can never resurrect lines older than the window. Quiet-collapse: when
 // the window is empty the box renders as a one-line invitation instead of an
 // empty scrollback, so a low-traffic homepage never wears a dead chat room.
-// Activity lines: the server also sends `events` (a human beat a bot, a new
-// study), derived from finished games and studies. They share the
-// feed, the window and the cap with human lines, so the room shows what is
-// happening on the site even when nobody is typing; human lines keep the
-// handle styling and stand out against the muted activity rows.
+// Human lines only (2026-10-17, Brian): the derived activity rows (bot wins,
+// new studies) are gone, and the feed reads `lines` alone, so a server that
+// still sends an `events` field renders nothing extra.
 
 import './landing-chat.css';
-import { track } from './analytics.js';
-import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildSiteBox } from './site-box.js';
 
 export type ChatLine = { id: string; handle: string | null; text: string; createdAt: string };
-// One server-derived activity row. `handle` is the winner (null: a guest) or
-// the study owner; `opponent` is the bot. PvP results never appear: a PvP win
-// would name the person who lost.
-export type ActivityEvent = {
+// The release drain's restart notice (#651), the one system message the lobby
+// keeps. The server derives it from live drain state on every read and never
+// stores it as a line, so it is absent once the drain is cancelled or lapses.
+export type LobbyChatNotice = {
   id: string;
-  kind: 'bot-win' | 'study';
-  createdAt: string;
-  href: string;
-  handle: string | null;
-  opponent?: string;
-  gameSpecId?: string;
-  title?: string;
-  /** The winner's top-bot wins that day this row stands for; absent = 1.
-   *  `opponent` is absent when they span more than one bot or variant. */
-  count?: number;
+  kind: 'server_restart';
+  phase: 'pending' | 'restarting';
+  restartAt: number;
 };
-export type FeedItem = ChatLine | ActivityEvent;
 type ChatState = {
   lines: ChatLine[];
-  events?: ActivityEvent[];
+  notice?: LobbyChatNotice;
   canPost: boolean;
   canReport: boolean;
   viewerHandle: string | null;
@@ -94,19 +82,6 @@ export function visibleChatWindow<T extends { createdAt: string }>(lines: T[], n
     return Number.isFinite(at) && at > cutoff;
   });
   return fresh.slice(-CHAT_VISIBLE_LINES);
-}
-
-function isActivityEvent(item: FeedItem): item is ActivityEvent {
-  return 'kind' in item;
-}
-
-// Human lines plus the activity rows this client can label. An event whose
-// variant has no catalog name is dropped (fail closed), never shown raw.
-export function feedItems(state: Pick<ChatState, 'lines' | 'events'>): FeedItem[] {
-  const events = (state.events ?? []).filter(
-    (event) => !event.gameSpecId || variantNameKeyForSpecId(event.gameSpecId) !== null,
-  );
-  return [...state.lines, ...events];
 }
 
 export function buildLandingChat(
@@ -163,7 +138,7 @@ async function hydrateChat(mount: HTMLElement, mode: LandingChatMode): Promise<v
 
   // Quiet when the visibility window is empty, not merely when the latest
   // line is old: the same predicate that decides what the room renders.
-  if (visibleChatWindow(feedItems(state), Date.now()).length === 0) {
+  if (visibleChatWindow(state.lines, Date.now()).length === 0) {
     renderQuiet(body, state, locale, mount, mode);
   } else {
     renderRoom(body, state, locale, mode, mount);
@@ -206,6 +181,31 @@ function renderQuiet(
   mode: LandingChatMode,
 ): void {
   body.replaceChildren();
+  let notice: LobbyChatNotice | null = null;
+  let noticeRow: HTMLElement | null = null;
+  function updateNotice(next: LobbyChatNotice | undefined): void {
+    const active = activeNotice(next, Date.now());
+    if (
+      active?.id === notice?.id &&
+      active?.phase === notice?.phase &&
+      active?.restartAt === notice?.restartAt
+    ) {
+      return;
+    }
+    notice = active;
+    noticeRow?.remove();
+    noticeRow = null;
+    if (!notice) return;
+    const row = buildNoticeRow(notice, locale);
+    noticeRow = row;
+    body.prepend(row);
+    // Expire locally even if a later poll fails or the tab is hidden.
+    registerMountTimer(
+      mount,
+      window.setTimeout(() => row.remove(), notice.restartAt - Date.now()),
+    );
+  }
+  updateNotice(state.notice);
   const row = document.createElement('p');
   row.className = 'landing-chat-quiet';
   row.textContent = t('chat.quiet', {}, locale);
@@ -226,11 +226,24 @@ function renderQuiet(
   } else {
     body.append(buildSignInRow(locale));
   }
+
+  // Quiet rooms still need live drain updates. Only replace the notice so a
+  // poll leaves the invitation and any unfinished composer text intact.
+  if (mode === 'mock' || import.meta.env.MODE === 'test') return;
+  const pollTimer = window.setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    const fresh = await fetchChat();
+    if (!fresh || !mountTimers.get(mount)?.includes(pollTimer)) return;
+    updateNotice(fresh.notice);
+  }, POLL_MS);
+  registerMountTimer(mount, pollTimer);
 }
 
 type LandingChatFeed = {
   element: HTMLElement;
-  ingest(items: FeedItem[]): void;
+  ingest(lines: ChatLine[]): void;
+  // Replaces, never appends: each lobby read carries the whole notice state.
+  setNotice(notice: LobbyChatNotice | null): void;
   expireTick(): void;
   remove(lineId: string): void;
   visibleIds(): string[];
@@ -254,17 +267,22 @@ export function createLandingChatFeed(options: {
   feed.className = 'landing-chat-feed';
   // Lines the viewer reported this page-life: re-renders keep the mark.
   const reported = new Set<string>();
-  let store: FeedItem[] = [];
+  let store: ChatLine[] = [];
+  let notice: LobbyChatNotice | null = null;
   let renderedKey: string | null = null;
 
   const handle: LandingChatFeed = {
     element: feed,
-    ingest(items: FeedItem[]): void {
-      const byId = new Map(store.map((item) => [item.id, item]));
-      for (const item of items) {
-        if (!byId.has(item.id)) byId.set(item.id, item);
+    ingest(lines: ChatLine[]): void {
+      const byId = new Map(store.map((line) => [line.id, line]));
+      for (const line of lines) {
+        if (!byId.has(line.id)) byId.set(line.id, line);
       }
       store = [...byId.values()].sort(byCreatedAtThenId);
+      render();
+    },
+    setNotice(next: LobbyChatNotice | null): void {
+      notice = next;
       render();
     },
     expireTick(): void {
@@ -282,17 +300,20 @@ export function createLandingChatFeed(options: {
   function render(): void {
     const now = clock();
     store = visibleChatWindow(store, now);
-    const key = store.map((line) => line.id).join('\n');
+    notice = activeNotice(notice, now);
+    const key = [
+      ...store.map((line) => line.id),
+      ...(notice ? [`notice:${notice.id}:${notice.phase}`] : []),
+    ].join('\n');
     if (key === renderedKey) return;
     renderedKey = key;
     feed.replaceChildren();
-    for (const item of store) {
+    for (const line of store) {
       feed.append(
-        isActivityEvent(item)
-          ? buildEventRow(item, options.locale, now)
-          : buildLineRow(item, options.state, options.locale, options.mode, reported, handle, now),
+        buildLineRow(line, options.state, options.locale, options.mode, reported, handle, now),
       );
     }
+    if (notice) feed.append(buildNoticeRow(notice, options.locale));
     feed.scrollTop = feed.scrollHeight;
     if (store.length === 0) options.onEmpty?.();
   }
@@ -312,7 +333,7 @@ export function createLandingChatFeed(options: {
   return handle;
 }
 
-function byCreatedAtThenId(a: FeedItem, b: FeedItem): number {
+function byCreatedAtThenId(a: ChatLine, b: ChatLine): number {
   if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
   if (a.id !== b.id) return a.id < b.id ? -1 : 1;
   return 0;
@@ -339,7 +360,8 @@ function renderRoom(
       renderQuiet(body, latestState, locale, mount, mode);
     },
   });
-  feed.ingest(feedItems(state));
+  feed.ingest(state.lines);
+  feed.setNotice(state.notice ?? null);
   body.append(feed.element);
 
   if (state.canPost) {
@@ -372,7 +394,8 @@ function renderRoom(
       const fresh = await fetchChat();
       if (!fresh) return;
       latestState = fresh;
-      feed.ingest(feedItems(fresh));
+      feed.ingest(fresh.lines);
+      feed.setNotice(fresh.notice ?? null);
     }, POLL_MS),
   );
   registerMountTimer(
@@ -412,67 +435,34 @@ function buildLineRow(
   return row;
 }
 
-// An activity row: muted, no handle column, no report control. The whole
-// sentence is one link to the game or study; names inside it are bold text,
-// because a second link per row would nest anchors.
-function buildEventRow(event: ActivityEvent, locale: Locale, now: number): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'landing-chat-line landing-chat-event';
-  row.dataset.kind = event.kind;
-  const link = document.createElement('a');
-  link.className = 'landing-chat-text landing-chat-event-text';
-  link.href = event.href;
-  // The read on this feature (2026-10-03): if nobody clicks these rows in four
-  // weeks they are decoration, and the box is a candidate to remove.
-  link.addEventListener('click', () => {
-    track('chat_activity_clicked', { kind: event.kind, variant: event.gameSpecId ?? null });
-  });
-  appendEventSentence(link, event, locale);
-  row.append(buildChatTimestamp(event.createdAt, locale, now), link);
-  return row;
+// A notice past its deadline is a drain that lapsed or a restart that already
+// happened: drop it without waiting for the next read.
+function activeNotice(
+  notice: LobbyChatNotice | null | undefined,
+  now: number,
+): LobbyChatNotice | null {
+  return notice && notice.restartAt > now ? notice : null;
 }
 
-const EVENT_TEMPLATE_KEYS: Record<ActivityEvent['kind'], I18nKey> = {
-  'bot-win': 'chat.eventBotWin',
-  study: 'chat.eventStudy',
-};
-
-export function appendEventSentence(
-  container: HTMLElement,
-  event: ActivityEvent,
-  locale: Locale,
-): void {
-  const variantKey = event.gameSpecId ? variantNameKeyForSpecId(event.gameSpecId) : null;
-  const values: Record<string, { text: string; strong: boolean }> = {
-    who: { text: event.handle ?? t('chat.eventGuest', {}, locale), strong: !!event.handle },
-    bot: { text: event.opponent ?? '', strong: true },
-    variant: { text: variantKey ? t(variantKey, {}, locale) : '', strong: false },
-    title: { text: event.title ?? '', strong: false },
-  };
-  // The template is read raw (no params) so each placeholder can become its
-  // own node; translations reorder them freely.
-  const count = event.count ?? 1;
-  const repeated = event.kind === 'bot-win' && count > 1;
-  const template = !repeated
-    ? t(EVENT_TEMPLATE_KEYS[event.kind], {}, locale)
-    : event.opponent
-      ? t('chat.eventBotWinRepeat', { count }, locale)
-      : t('chat.eventBotWinMixed', { count }, locale);
-  let cursor = 0;
-  for (const match of template.matchAll(/\{([a-z]+)\}/g)) {
-    const index = match.index ?? cursor;
-    if (index > cursor) container.append(document.createTextNode(template.slice(cursor, index)));
-    const value = values[match[1] ?? ''];
-    if (value?.strong) {
-      const strong = document.createElement('strong');
-      strong.textContent = value.text;
-      container.append(strong);
-    } else {
-      container.append(document.createTextNode(value?.text ?? ''));
-    }
-    cursor = index + match[0].length;
+// Same words as the site-wide restart banner (restart-banner.ts). Not a chat
+// line: no author, no timestamp, nothing to report or hide.
+function buildNoticeRow(notice: LobbyChatNotice, locale: Locale): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'landing-chat-notice';
+  row.setAttribute('role', 'status');
+  const label = document.createElement('strong');
+  label.className = 'landing-chat-notice-label';
+  const hint = document.createElement('span');
+  hint.className = 'landing-chat-notice-hint';
+  if (notice.phase === 'pending') {
+    label.textContent = t('connection.restartPending', {}, locale);
+    hint.textContent = t('connection.restartPendingHint', {}, locale);
+  } else {
+    label.textContent = t('connection.restartNow', {}, locale);
+    hint.textContent = t('connection.restartNowHint', {}, locale);
   }
-  if (cursor < template.length) container.append(document.createTextNode(template.slice(cursor)));
+  row.append(label, hint);
+  return row;
 }
 
 function buildChatTimestamp(createdAt: string, locale: Locale, now: number): HTMLTimeElement {
@@ -791,43 +781,6 @@ function mockChatState(): ChatState {
         handle: 'brianhliou-dev',
         text: 'Congrats on the Pikafish win @rebirthfox333, not easy',
         createdAt: ago(9),
-      },
-    ],
-    events: [
-      {
-        id: 'act_mock_1',
-        kind: 'study',
-        createdAt: ago(300),
-        href: '/study/mock',
-        handle: 'mistboard',
-        title: 'Cao Yanlei: 75 games, January to September 2026',
-      },
-      {
-        id: 'act_mock_2',
-        kind: 'bot-win',
-        createdAt: ago(220),
-        href: '/jungle/game/mock',
-        handle: 'kaoru',
-        opponent: 'Misty',
-        gameSpecId: 'jungle',
-      },
-      {
-        id: 'act_mock_4',
-        kind: 'bot-win',
-        createdAt: ago(41),
-        href: '/xiangqi/game/mock',
-        handle: null,
-        opponent: 'Fairy-Stockfish L4',
-        gameSpecId: 'xiangqi',
-      },
-      {
-        id: 'act_mock_5',
-        kind: 'bot-win',
-        createdAt: ago(12),
-        href: '/jieqi/game/mock',
-        handle: 'rebirthfox333',
-        opponent: 'Pikafish L6',
-        gameSpecId: 'jieqi',
       },
     ],
   };

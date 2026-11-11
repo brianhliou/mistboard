@@ -1,6 +1,7 @@
 import type { GameEvent } from '@mistboard/game';
 import './landing-play.css';
 import './landing.css';
+import './hover-grammar.css';
 import './game-route.css';
 import {
   buildHomeArticleCards,
@@ -16,6 +17,7 @@ import {
   variantDisplayLabel,
 } from './game-display.js';
 import { gameMetaForGame } from './game-meta.js';
+import { updateHomeDescription } from './home-meta.js';
 import {
   cachedHomeDailyPuzzle,
   loadHomeDailyPuzzle,
@@ -27,9 +29,19 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
-import { buildLandingCorrespondenceCard } from './landing-correspondence.js';
-import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
+import {
+  BROADCAST_SLOT_PENDING_CLASS,
+  buildLandingEventBanners,
+  loadBroadcastBanners,
+} from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
+import {
+  buildLandingPhoneMission,
+  buildLandingPhoneTiles,
+  buildLandingTvStrip,
+  isPhoneHome,
+  type LandingTvStrip,
+} from './landing-phone.js';
 import {
   buildLandingPlayPanel,
   buildLobbyPanel,
@@ -50,7 +62,12 @@ import { roomIdFromPath } from './room-url.js';
 import { type ShowcaseEntry, showcaseAirFields } from './showcase-cycler.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
-import { type WebVariantTenant, webVariantTenantForRoomId } from './variant-tenant/registry.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
+import {
+  setJungleFlipEngineOptions,
+  type WebVariantTenant,
+  webVariantTenantForRoomId,
+} from './variant-tenant/registry.js';
 
 // Adaptive hero-pool refresh. Poll faster while games are being played (they
 // unlock on completion, soon), slower when idle. Pool is capped. These three are
@@ -84,6 +101,7 @@ function showcaseCaptionText(variant: string | undefined, endedAt: string | unde
 }
 
 export async function mountLanding(root: HTMLElement): Promise<void> {
+  updateHomeDescription();
   // Kick the showcase fetch off before any DOM work. Measured on prod: waiting
   // for the first refresh tick serialized it behind a /api/live-stats round-trip
   // and it didn't start until ~900ms in, so the static demo always painted first
@@ -203,6 +221,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     isConnected: () => stage.el.isConnected,
     onGameChange: ({ roomId, specId, mode }) => {
       stage.viewerLink.href = localizedHref(watchHrefForTvGame(mode, roomId), currentLocale());
+      stage.tvStrip.update({
+        mode,
+        variantLabel: variantDisplayLabel(variantByRoomId[roomId] ?? specId),
+      });
       stage.caption.textContent =
         mode === 'live'
           ? `${variantDisplayLabel(variantByRoomId[roomId] ?? specId)} · live`
@@ -503,10 +525,18 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
 // success, or null if the API is unreachable, errors, or (defensively) returns
 // an empty list — callers keep the placeholder and may retry. Never throws.
 export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | null> {
+  setThreeKingdomsBanqiEngineOptions([]);
+  setJungleFlipEngineOptions([]);
   try {
     const resp = await fetch('/api/engines/playable');
     if (!resp.ok) return null;
-    const data = (await resp.json()) as { engines: PlayableEngine[] };
+    const data = (await resp.json()) as {
+      engines: PlayableEngine[];
+      threeKingdomsBanqiEngines?: PlayableEngine[];
+      jungleFlipEngines?: PlayableEngine[];
+    };
+    setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+    setJungleFlipEngineOptions(data.jungleFlipEngines ?? []);
     return data.engines.length > 0 ? data.engines : null;
   } catch {
     return null;
@@ -591,19 +621,32 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
   return `/watch?channel=top&game=${encodeURIComponent(roomId)}`;
 }
 
-function buildLandingStage(
+// `phone` builds the phone home (mobile pass #576): the TV board, Play with its
+// two opponent buttons and the games-played line under them (back 2026-10-23),
+// the shortcut tiles, the blog strip and the chat room, then the footer. The
+// lobby panel, correspondence card, event banners (until the broadcast pages
+// work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
+// are not built at all there, so none of them fetches, polls or opens
+// a socket on a phone. The tagline and the three newest News entries came back
+// to the phone home 2026-11-08. The prerender always bakes the full desktop shell.
+export const PHONE_NEWS_ROWS = 3;
+
+export function buildLandingStage(
   engines: PlayableEngine[],
-  opts: { skipLiveWidgets?: boolean } = {},
+  opts: { skipLiveWidgets?: boolean; phone?: boolean } = {},
 ): {
   el: HTMLElement;
   replayRoot: HTMLElement;
   caption: HTMLElement;
   viewerLink: HTMLAnchorElement;
+  tvStrip: LandingTvStrip;
   applyEngines: (engines: PlayableEngine[]) => void;
 } {
   const locale = currentLocale();
+  const phone = opts.phone ?? isPhoneHome();
   const stage = document.createElement('main');
   stage.className = 'landing-stage';
+  if (phone) stage.classList.add('landing-stage-phone');
 
   const section = document.createElement('section');
   section.className = 'landing-demo';
@@ -631,6 +674,10 @@ function buildLandingStage(
   // Widget styling (compact board + name/clock seats) is keyed on this class,
   // shared with the dev variant sheet's cells.
   replayRoot.classList.add('showcase-widget');
+  // The board's placeholder is part of the shell, prerender included, so first
+  // paint already holds the viewer's room instead of an empty slot that the
+  // skeleton, then the board, grow into.
+  renderWatchReplaySkeleton(replayRoot);
   viewerLink.append(replayRoot);
   boardColumn.append(viewerLink);
   // Honest "recent · 2h ago" caption: kept wired (the cycler's onGameChange still
@@ -639,7 +686,10 @@ function buildLandingStage(
   const caption = document.createElement('div');
   caption.className = 'showcase-caption';
   viewerColumn.append(boardColumn);
-  leftColumn.append(viewerColumn);
+  // Phone only (hidden above 600px): one line over the board saying what it is
+  // (the board under it is the link), which the desktop rail never needed.
+  const tvStrip = buildLandingTvStrip(locale);
+  leftColumn.append(tvStrip.el, viewerColumn);
 
   // ── Center panel (grid-area: panel, band 1): the tabbed lobby board — Lobby
   // (engine seeds + live player seeks) / Quick pairing / Correspondence
@@ -649,11 +699,13 @@ function buildLandingStage(
   lobbyPanel.className = 'landing-lobby-panel';
   // The bot-first play panel (#491) is the default; `?hero=lobby` brings the
   // lichess-shaped tabs back on a device (playPanelEnabled).
-  lobbyPanel.append(
-    playPanelEnabled()
-      ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
-      : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
-  );
+  if (!phone) {
+    lobbyPanel.append(
+      playPanelEnabled()
+        ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
+        : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
+    );
+  }
 
   // ── Play column (grid-area: play, band 1 right): the small h1 tagline, then
   // the single unified Play button (the setup dialog owns the opponent choice)
@@ -665,19 +717,14 @@ function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  // The correspondence card (2026-10-03 jieqi test) sits under the stats as the
-  // secondary entry: same tile family as the Play button, two fixed lines in
-  // every state, so the prerendered offer reserves the space a signed-in
-  // "Your move" or "Waiting" swaps into.
-  playStack.append(
-    playPanel,
-    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
-    buildLandingCorrespondenceCard({ hydrate: !opts.skipLiveWidgets, locale }),
-  );
+  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
   // The page's single (small) h1: the about tagline at the top of the right rail.
-  const about = document.createElement('h1');
+  const about = document.createElement('div');
   about.className = 'landing-about';
-  appendLinkedTagline(about, t('home.tagline', {}, locale), localizedHref('/about', locale));
+  const heading = document.createElement('h1');
+  heading.className = 'landing-about-heading';
+  heading.textContent = t('home.tagline', {}, locale);
+  about.append(heading);
   // The tagline, button and stats centre against the lobby panel as before
   // (inside .landing-play-center, which takes the column's free height); the
   // event spotlight sits at the column's bottom edge, level with the panel's
@@ -716,49 +763,70 @@ function buildLandingStage(
   // button below.
   const playIntro = document.createElement('div');
   playIntro.className = 'landing-play-intro';
-  playIntro.append(about, playSummary);
+  const aboutLink = document.createElement('a');
+  aboutLink.className = 'hover-link landing-about-more';
+  aboutLink.href = localizedHref('/about', locale);
+  aboutLink.textContent = t('home.missionAbout', {}, locale);
+  playIntro.append(about, playSummary, aboutLink);
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
   playCenter.append(playIntro, playStack);
-  const eventBanners = buildLandingEventBanners();
-  void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
   playColumn.className = 'landing-play-column';
-  playColumn.append(playCenter, eventBanners);
+  playColumn.append(playCenter);
+  if (!phone) {
+    const eventBanners = buildLandingEventBanners();
+    // Pending in the prerendered shell too, so first paint already holds the
+    // cards' room.
+    eventBanners.classList.add(BROADCAST_SLOT_PENDING_CLASS);
+    if (!opts.skipLiveWidgets) void loadBroadcastBanners(eventBanners, locale);
+    playColumn.append(eventBanners);
+  }
 
-  // ── Band 2: forum topics (center) and Top studies (right) beside the daily
-  // puzzle. Studies took this slot back from the chat 2026-09-26 (it held it
-  // until 2026-07-21): the one side slot above a desktop fold goes to something
-  // new to open, not a chat that is often quiet. ──
+  // ── Band 3 center: forum topics, beside the chat (Brian, 2026-10-25: the
+  // articles took its band-2 slot, and the two community boxes read as one
+  // strip). Band 3 left: Top studies, which held the band-2 right rail from
+  // 2026-09-26 until News took it 2026-10-26 (Brian: News matters more). ──
   const forumColumn = document.createElement('div');
   forumColumn.className = 'landing-forum-column';
-  forumColumn.append(buildLandingForumPreview({ hydrate: !opts.skipLiveWidgets }));
   const studiesColumn = document.createElement('div');
   studiesColumn.className = 'landing-studies-column';
-  studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
+  if (!phone) {
+    forumColumn.append(buildLandingForumPreview({ hydrate: !opts.skipLiveWidgets }));
+    studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
+  }
 
-  // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
-  // cards, an announcement can take a slot, newest first. Every article with no
-  // homeRow lands here on publish. ──
+  // ── Band 2 center, second row (grid-area: blogs): the blog row between the
+  // daily puzzle and Top studies, "From the blog": compact article cards, newest
+  // first, articles only (announcements stay in the News box, Brian 2026-10-26). Every article with no homeRow lands here on publish. It took
+  // the forum's slot 2026-10-25 (Brian: the articles are the work we are proud
+  // of; the forum gets little use). ──
   const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
   articleCards?.classList.add('landing-articles-row');
 
-  // ── Band 4 (grid-area: dives): the deep-dives row beneath it, the same
-  // carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
-  // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
+  // ── Band 2 center, top row (grid-area: dives; on top since 2026-10-26): the
+  // deep-dives row above it, the same carousel filled with articles tagged
+  // homeRow: 'deep-dives' (player pages, game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
   // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
-  // visitors. ──
+  // visitors. Phones build it too (Brian, 2026-10-17): the articles are bundled,
+  // so it costs no fetch. ──
   const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
   deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
 
-  // ── Bands 3-4 side rails: the News feed on the left (its full history stays at
-  // /feed) and the lobby chat on the right. Both span the blog AND learn rows,
-  // so each box top-aligns with the blog row and bottom-aligns with the learn
-  // row. The chat box is server-driven (the empty mount paints nothing until
-  // the chat flag is confirmed). ──
+  // ── Band 2 right rail: the News feed (its full history stays at /feed),
+  // beside the article rows. Band 3 right: the lobby chat at the forum's height. The
+  // chat box is server-driven (the empty mount paints nothing until the chat
+  // flag is confirmed). ──
   const newsColumn = document.createElement('div');
   newsColumn.className = 'landing-news-column';
-  newsColumn.append(buildLandingAnnouncements(locale));
+  // The phone home shows the three newest entries; the rest stay at /feed.
+  newsColumn.append(
+    buildLandingAnnouncements(locale, phone ? { maxRows: PHONE_NEWS_ROWS, moreRow: false } : {}),
+  );
+  // Phone only: the mission closes the page, under the chat, so the TV board and
+  // the Play buttons keep the first screen (2026-11-08). The h1 tagline stays in
+  // the DOM for search and screen readers.
+  const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
   const chatColumn = document.createElement('div');
   chatColumn.className = 'landing-chat-column';
   chatColumn.append(
@@ -771,7 +839,7 @@ function buildLandingStage(
   // ── Puzzle column (grid-area: puzzle, band 2 left): the daily puzzle. ──
   const puzzleColumn = document.createElement('div');
   puzzleColumn.className = 'landing-puzzle-column';
-  if (!opts.skipLiveWidgets) {
+  if (!opts.skipLiveWidgets && !phone) {
     // Daily puzzle: render instantly from the cached copy (exact real footprint,
     // no pop-in) and swap in place if the day rolled over; only a first-ever visit
     // still appends on load.
@@ -800,21 +868,28 @@ function buildLandingStage(
   };
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
-  // play button+activity], band 2 = [puzzle · forum · top studies], bands 3-4 =
-  // [news · blog row then learn row · chat], with the two side rails spanning
-  // both rows. Append order is irrelevant (grid-area governs).
+  // play button+activity], band 2 = [puzzle · deep-dives row then blog row ·
+  // news], with the two side rails spanning both rows, band 3 = [top studies ·
+  // forum · chat]. Append order is irrelevant (grid-area governs).
   section.append(
-    leftColumn,
-    lobbyPanel,
-    playColumn,
-    puzzleColumn,
-    forumColumn,
-    chatColumn,
-    newsColumn,
-    studiesColumn,
+    ...(phone
+      ? [leftColumn, playColumn, ...(missionBlock ? [missionBlock] : []), newsColumn, chatColumn]
+      : [
+          leftColumn,
+          lobbyPanel,
+          playColumn,
+          puzzleColumn,
+          forumColumn,
+          chatColumn,
+          newsColumn,
+          studiesColumn,
+        ]),
   );
   if (articleCards) section.append(articleCards);
   if (deepDives) section.append(deepDives);
+  // Phone only (hidden above 600px, so it takes no grid cell there): the
+  // shortcut tiles under the Play buttons, placed by `order` in landing.css.
+  section.append(buildLandingPhoneTiles(locale));
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against
@@ -842,7 +917,7 @@ function buildLandingStage(
   // The footer lives only on the homepage now (stripped from interior routes),
   // blended into the bottom of the stage rather than rendered as a separate bar.
   stage.append(section, buildHomeFooter(locale));
-  return { el: stage, replayRoot, caption, viewerLink, applyEngines };
+  return { el: stage, replayRoot, caption, viewerLink, tvStrip, applyEngines };
 }
 
 // Build-time static render of the homepage (nav + stage), baked by the prerender
@@ -852,32 +927,17 @@ function buildLandingStage(
 // because it fetches on construction. Returns the inner HTML for `#app`.
 export function renderLandingShellForPrerender(): string {
   const nav = buildNav();
-  const stage = buildLandingStage(fallbackPlayableEngines(), { skipLiveWidgets: true });
+  const stage = buildLandingStage(fallbackPlayableEngines(), {
+    skipLiveWidgets: true,
+    phone: false,
+  });
   return `${nav.outerHTML}${stage.el.outerHTML}`;
 }
 
-function appendLinkedTagline(target: HTMLElement, tagline: string, href: string): void {
-  const mistboardIndex = tagline.indexOf('Mistboard');
-  const dotBoundary = mistboardIndex >= 0 ? tagline.lastIndexOf('. ', mistboardIndex) : -1;
-  const fullStopBoundary = mistboardIndex >= 0 ? tagline.lastIndexOf('。', mistboardIndex) : -1;
-  const useDot = dotBoundary > fullStopBoundary;
-  const boundary = useDot ? dotBoundary : fullStopBoundary;
-  if (boundary < 0) {
-    const fallback = document.createElement('a');
-    fallback.href = href;
-    fallback.textContent = tagline;
-    target.append(fallback);
-    return;
-  }
-
-  const linkStart = boundary + (useDot ? 2 : 1);
-  const lead = tagline.slice(0, linkStart);
-  const linkedText = tagline.slice(linkStart);
-  target.append(document.createTextNode(useDot ? lead : `${lead} `));
-  const link = document.createElement('a');
-  link.href = href;
-  link.textContent = linkedText;
-  target.append(link);
+export function renderLandingPageForPrerender(shell: string, htmlLang: string): string {
+  return shell
+    .replace('<html lang="en">', `<html lang="${htmlLang}">`)
+    .replace('<div id="app"></div>', `<div id="app">${renderLandingShellForPrerender()}</div>`);
 }
 
 function buildGameExportLinks(roomId: string): HTMLElement | null {

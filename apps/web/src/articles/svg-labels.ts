@@ -7,6 +7,10 @@
 // Both paths look a label up by its trimmed visible text, which is what this
 // module extracts, so the coverage gates check the exact key the render uses.
 //
+// A node carrying data-i18n-key="…" is looked up by that key instead of its
+// text: the visible English word is shared by labels that translate apart (the
+// xiangqi mahjong tiles name a red and a black General both "General").
+//
 // A node carrying translate="no" is deliberate source-language text (an engine name
 // on a zh card, a title abbreviation) and is neither swapped nor counted.
 // Card thumbnails render per locale, so articleCardLabels reads them separately.
@@ -18,6 +22,19 @@ const SVG_TEXT_NODE = /<(text|title|desc)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
 function keepsSourceText(attrs: string): boolean {
   return /\btranslate="no"/.test(attrs);
 }
+
+const I18N_KEY = /\bdata-i18n-key="([^"]*)"/;
+
+/** The dictionary key a text node is looked up by: its data-i18n-key, else its
+ *  trimmed, decoded visible text. */
+export function svgLabelKey(attrs: string, inner: string): string {
+  const keyed = attrs.match(I18N_KEY);
+  return keyed ? decode(keyed[1]) : decode(inner.replace(/<[^>]+>/g, '')).trim();
+}
+
+/** Figure fields that hold SVG markup or a render thunk: the figure, and an
+ *  animated figure's reduced-motion frames. */
+export const SVG_FIELDS: ReadonlySet<string> = new Set(['svg', 'reducedSvg']);
 
 function decode(text: string): string {
   return text
@@ -37,8 +54,8 @@ export function svgTextLabels(markup: string): string[] {
   const out: string[] = [];
   for (const match of markup.matchAll(SVG_TEXT_NODE)) {
     if (keepsSourceText(match[2])) continue;
-    const visible = decode(match[3].replace(/<[^>]+>/g, '')).trim();
-    if (visible) out.push(visible);
+    const key = svgLabelKey(match[2], match[3]);
+    if (key) out.push(key);
   }
   return out;
 }
@@ -48,7 +65,7 @@ export function svgTextLabels(markup: string): string[] {
 export function substituteSvgText(markup: string, dict: Record<string, string>): string {
   return markup.replace(SVG_TEXT_NODE, (whole, tag: string, attrs: string, inner: string) => {
     if (keepsSourceText(attrs)) return whole;
-    const key = decode(inner.replace(/<[^>]+>/g, "")).trim();
+    const key = svgLabelKey(attrs, inner);
     if (!hasOwnKey(dict, key)) return whole;
     return `<${tag}${attrs}>${encode(dict[key])}</${tag}>`;
   });
@@ -88,7 +105,7 @@ export function articleDiagramLabels(article: object): DiagramLabel[] {
       return;
     }
     if (typeof value === 'function') {
-      if (key === 'svg') add((value as () => string)(), path);
+      if (key !== undefined && SVG_FIELDS.has(key)) add((value as () => string)(), path);
       return;
     }
     if (Array.isArray(value)) {

@@ -48,21 +48,27 @@ describe('banqi rules diagrams', () => {
 describe('banqi replay board (the study embed)', () => {
   it('keeps unflipped tiles face-down instead of showing the deal', async () => {
     const { mountBanqiReplayBoard } = await import('./banqi-replay-board.js');
-    const { createBanqiDeal, createInitialBanqiState, banqiStateToDealtFen } = await import(
-      '@mistboard/game'
-    );
+    const { banqiPieceLetter, createBanqiDeal, createInitialBanqiState, banqiStateToDealtFen } =
+      await import('@mistboard/game');
     let n = 0.37;
     const deal = createBanqiDeal(() => {
       n = (n * 9301 + 49297) % 233280;
       return n / 233280;
     });
-    const rootFen = banqiStateToDealtFen(createInitialBanqiState('t', deal));
+    const start = createInitialBanqiState('t', deal);
+    const rootFen = banqiStateToDealtFen(start);
     const host = document.createElement('div');
     const board = mountBanqiReplayBoard(host, { rootFen, moves: ['b2b2', 'c2c2'] }, {});
     // At the start every tile is face-down: no piece glyph, thirty-two discs.
     expect(host.querySelectorAll('.banqi-back').length).toBe(32);
     board.jumpToPly(2);
     expect(host.querySelectorAll('.banqi-back').length).toBe(30);
+    // Each flip is labelled with the piece the deal put under it.
+    const dealt = (sq: 'b2' | 'c2') => banqiPieceLetter(start.board[sq]!);
+    expect(board.moveEntries().map((entry) => entry.label)).toEqual([
+      `b2(${dealt('b2')})`,
+      `c2(${dealt('c2')})`,
+    ]);
     board.destroy();
   });
 });

@@ -81,10 +81,10 @@ describe('classifyJungleOpponentSound', () => {
     expect(classifyJungleOpponentSound(prev, next, 'red')).toBe('move');
   });
 
-  it('plays captured when our piece count drops (covers mutual-destruction trades)', () => {
+  it('plays capture when our piece count drops (covers mutual-destruction trades)', () => {
     const prev = view({ board: { a1: myPiece }, status: playingBlack });
     const next = view({ board: {}, status: playingRed });
-    expect(classifyJungleOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyJungleOpponentSound(prev, next, 'red')).toBe('capture');
   });
 
   it('returns null for our own move (it was our turn before)', () => {

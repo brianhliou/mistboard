@@ -1,7 +1,9 @@
 // The profile Games list's result and opponent filters: the owner's seat
 // decides the result, and a private account is never matchable.
 
+import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { parseGamePageCursor } from './game-page-cursor.js';
 import { createUser, getUserGamesPage } from './persistence.js';
 import {
   assert,
@@ -148,7 +150,80 @@ type MarkedRow = { roomId: string; unavailable?: string };
 const marks = (rows: MarkedRow[]) =>
   Object.fromEntries(rows.map((row) => [row.roomId, row.unavailable ?? null]));
 
+test('game page cursors accept only a timestamp and id tuple (#630)', () => {
+  const endedAt = '2026-10-23T12:00:00.000Z';
+  assert.equal(parseGamePageCursor(null), null);
+  assert.deepEqual(parseGamePageCursor(JSON.stringify([endedAt, 'room-1'])), {
+    endedAt,
+    roomId: 'room-1',
+  });
+  for (const raw of [
+    '',
+    'bad',
+    'null',
+    '{}',
+    '[]',
+    '[1,2]',
+    JSON.stringify(['not-a-date', 'room-1']),
+    JSON.stringify(['2026-02-30T00:00:00.000Z', 'room-1']),
+    JSON.stringify([endedAt, '']),
+    JSON.stringify([endedAt, 'room-1', 'extra']),
+    JSON.stringify([endedAt, 'x'.repeat(257)]),
+  ]) {
+    assert.equal(parseGamePageCursor(raw), undefined, raw);
+  }
+});
+
 definePersistenceTests('profile games filters', () => {
+  test('profile cursor survives a newer finish with filters and timestamp ties (#630)', async () => {
+    await seedUsers();
+    for (const id of ['03', '02', '01', '00']) {
+      await seedRow(
+        `cursor-${id}`,
+        'xiangqi',
+        'red-wins',
+        id === '00' ? '2026-08-01T00:00:00Z' : '2026-08-01T01:00:00Z',
+        [alice('red'), user('u_bob', 'black')],
+      );
+    }
+    await seedRow('cursor-loss', 'xiangqi', 'black-wins', '2026-08-01T01:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    await seedRow('cursor-private', 'xiangqi', 'red-wins', '2026-08-01T01:00:00Z', [
+      alice('red', 'private'),
+      user('u_bob', 'black'),
+    ]);
+    const query = 'variant=xiangqi&result=win&vs=bob&limit=2';
+    const first = JSON.parse(
+      (await callUsersRoute('/api/users/alice/games', query)).body.toString(),
+    ).games as Array<{ roomId: string; endedAt: string }>;
+    assert.deepEqual(
+      first.map((game) => game.roomId),
+      ['cursor-03', 'cursor-02'],
+    );
+    await seedRow('cursor-04', 'xiangqi', 'red-wins', '2026-08-01T02:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    const last = first[first.length - 1];
+    const before = encodeURIComponent(JSON.stringify([last.endedAt, last.roomId]));
+    const second = JSON.parse(
+      (
+        await callUsersRoute('/api/users/alice/games', `${query}&offset=99&before=${before}`)
+      ).body.toString(),
+    );
+    assert.deepEqual(
+      [...first, ...second.games].map((game) => game.roomId),
+      ['cursor-03', 'cursor-02', 'cursor-01', 'cursor-00'],
+    );
+    assert.equal(second.total, 5);
+    assert.equal(
+      (await callUsersRoute('/api/users/alice/games', `${query}&before=bad`)).status,
+      400,
+    );
+  });
+
   test('the result filter reads the owner seat, as the row paints it', async () => {
     await seedList();
     assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'win' })), [
@@ -165,6 +240,54 @@ definePersistenceTests('profile games filters', () => {
     const own = await getUserGamesPage('alice', 'u_alice', 0, 50, { result: 'win' });
     assert.deepEqual(ids(own), ['pg_win_bob', 'pg_win_carol', 'pg_win_private']);
     assert.equal(own?.total, 3, 'total is the filtered count');
+  });
+
+  test('an east or west seat (Xiangqi Mahjong) wins on its own result, not white-wins', async () => {
+    await seedUsers();
+    await seedRow('pg_xmj_east_win', 'xiangqi-mahjong', 'east-wins', '2026-08-06T10:00:00Z', [
+      alice('east'),
+      user('u_bob', 'west'),
+    ]);
+    await seedRow('pg_xmj_west_loss', 'xiangqi-mahjong', 'east-wins', '2026-08-07T10:00:00Z', [
+      user('u_bob', 'east'),
+      alice('west'),
+    ]);
+    await seedRow('pg_xmj_west_win', 'xiangqi-mahjong', 'west-wins', '2026-08-08T10:00:00Z', [
+      user('u_bob', 'east'),
+      alice('west'),
+    ]);
+    assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'win' })), [
+      'pg_xmj_east_win',
+      'pg_xmj_west_win',
+    ]);
+    assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'loss' })), [
+      'pg_xmj_west_loss',
+    ]);
+  });
+
+  // Migration 169: a points win was stored as 'checkmate' and every profile row
+  // said so. The CHECK now takes 'points', and the migration relabels old rows.
+  test('a Xiangqi Mahjong points win is stored and listed as points, old rows relabelled', async () => {
+    await seedUsers();
+    await seedRow('pg_xmj_points', 'xiangqi-mahjong', 'east-wins', '2026-08-06T10:00:00Z', [
+      alice('east'),
+      user('u_bob', 'west'),
+    ]);
+    await seedRow('pg_xq_mate', 'xiangqi', 'red-wins', '2026-08-07T10:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    await sql(`UPDATE games SET termination = 'checkmate'`);
+    const migration = readFileSync(
+      new URL('../migrations/169_add_points_termination.sql', import.meta.url),
+      'utf8',
+    );
+    await sql(migration.slice(migration.indexOf('UPDATE games')));
+    const page = await getUserGamesPage('alice', null, 0, 50, {});
+    const termination = (roomId: string) =>
+      page?.games.find((game) => game.roomId === roomId)?.termination;
+    assert.equal(termination('pg_xmj_points'), 'points');
+    assert.equal(termination('pg_xq_mate'), 'checkmate');
   });
 
   test('the opponent filter matches a public handle in any case, never a private account', async () => {

@@ -57,6 +57,14 @@ export type MoveNavBarOptions = {
   /** Accent header strip over the menu rows. */
   menuTitle?: string;
   menuItems?: MoveNavMenuItem[];
+  /** A block of the page's own controls shown under the rows (the puzzle page
+   *  lends its details, rating and engine panel here on the phone). Counts as
+   *  content, so ☰ stays enabled with no rows. */
+  menuContent?: HTMLElement;
+  /** Fires when the menu opens or closes, by any route (☰, Escape, outside
+   *  click, a row). A surface that lends blocks into `menuContent` puts them
+   *  back here. */
+  onMenuToggle?(open: boolean): void;
   /** False drops the ☰ column (a surface with no extras at all, e.g. TV): four
    *  columns rather than a menu button that could never open. */
   menu?: boolean;
@@ -157,6 +165,10 @@ export function createMoveNavBar(opts: MoveNavBarOptions = {}): MoveNavBar {
   const grid = document.createElement('div');
   grid.className = 'move-nav-menu__grid';
   menu.append(grid);
+  if (opts.menuContent) {
+    opts.menuContent.classList.add('move-nav-menu__content');
+    menu.append(opts.menuContent);
+  }
   el.append(menu);
 
   const rows: MenuRow[] = [];
@@ -175,20 +187,25 @@ export function createMoveNavBar(opts: MoveNavBarOptions = {}): MoveNavBar {
         row.el.classList.toggle('move-nav-menu__item--on', on);
       }
     }
-    const anyVisible = [...grid.children].some((child) => !(child as HTMLElement).hidden);
+    const anyVisible =
+      opts.menuContent !== undefined ||
+      [...grid.children].some((child) => !(child as HTMLElement).hidden);
     menuButton.disabled = !anyVisible;
     if (!anyVisible) closeMenu();
   }
 
   function openMenu(): void {
     refreshMenu();
-    if (menuButton.disabled) return;
+    if (menuButton.disabled || !menu.hidden) return;
     menu.hidden = false;
     menuButton.setAttribute('aria-expanded', 'true');
+    opts.onMenuToggle?.(true);
   }
   function closeMenu(): void {
+    if (menu.hidden) return;
     menu.hidden = true;
     menuButton.setAttribute('aria-expanded', 'false');
+    opts.onMenuToggle?.(false);
   }
   menuButton.addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu()));
   const listen = opts.signal ? { signal: opts.signal } : undefined;

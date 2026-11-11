@@ -1,6 +1,44 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AuthCounters, EngineCounters, engineAlertFields, infraAlertFields } from './obs.js';
+import { alertThrottleKey } from './engine-alert-email.js';
+import {
+  AuthCounters,
+  EngineCounters,
+  engineAlertFields,
+  infraAlertFields,
+  knownFailureSpikeAlert,
+  wsCounters,
+} from './obs.js';
+
+test('daily RTT retains raw samples across metrics ticks and weights regions by sample count', () => {
+  const at = Date.parse('2026-10-23T12:00:00Z');
+  for (let i = 0; i < 19; i += 1) wsCounters.recordLatencySample('asia', 20, at);
+  const firstTick = wsCounters.snapshot();
+  assert.equal(firstTick.latencySamples, 19);
+  assert.equal(firstTick.latencyP95, 20);
+  wsCounters.recordLatencySample('us-west', 1_000, at);
+  const secondTick = wsCounters.snapshot();
+  assert.equal(secondTick.latencySamples, 1);
+  assert.equal(secondTick.latencyP95, 1_000);
+
+  const daily = wsCounters.snapshotDailyLatency(at, [20, 500]);
+  assert.equal(daily.day, '2026-10-23');
+  assert.deepEqual(daily.global, {
+    samples: 20,
+    p50: 20,
+    p95: 20,
+    p99: 1_000,
+    max: 1_000,
+    aboveThreshold: [
+      { thresholdMs: 20, samples: 1, share: 0.05 },
+      { thresholdMs: 500, samples: 1, share: 0.05 },
+    ],
+  });
+  assert.equal(daily.byRegion.asia?.samples, 19);
+  assert.equal(daily.byRegion['us-west']?.p95, 1_000);
+  assert.deepEqual(wsCounters.snapshotDailyLatency(at, [20, 500]), daily);
+  assert.equal(wsCounters.snapshot().latencySamples, 0);
+});
 
 test('auth counters expose aggregate deltas without identity fields', () => {
   const counters = new AuthCounters();
@@ -207,4 +245,57 @@ test('infra alert fields page on memory and loop-lag breaches', () => {
     ),
     null,
   );
+});
+
+test('known engine failures are counted per signature and never raise an engine alert', () => {
+  const counters = new EngineCounters();
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout');
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout');
+  const snapshot = counters.snapshot();
+  assert.equal(snapshot.knownFailures, 2);
+  assert.equal(snapshot.knownFailuresDelta, 2);
+  assert.deepEqual(snapshot.knownFailuresBySignatureTick, { 'fog-xiangqi-belief-timeout': 2 });
+  assert.equal(engineAlertFields(snapshot), null);
+
+  const next = counters.snapshot();
+  assert.equal(next.knownFailures, 2, 'the total keeps counting');
+  assert.equal(next.knownFailuresDelta, 0);
+  assert.deepEqual(next.knownFailuresBySignatureTick, {});
+});
+
+test('a spike of known engine failures warns once, then re-arms after the hour clears', () => {
+  const counters = new EngineCounters();
+  const t0 = Date.parse('2026-10-17T10:00:00.000Z');
+  const minute = 60_000;
+  const alertAt = (nowMs: number) => {
+    const snapshot = counters.snapshot(nowMs);
+    assert.equal(engineAlertFields(snapshot), null, 'never the general engine alert');
+    return knownFailureSpikeAlert(snapshot);
+  };
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout', t0);
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout', t0 + minute);
+  assert.equal(alertAt(t0 + minute), null, 'two in an hour is data');
+
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout', t0 + 2 * minute);
+  assert.deepEqual(alertAt(t0 + 2 * minute), {
+    severity: 'warning',
+    alert_kind: 'engine_known_failure_spike',
+    engine_known_failures_last_hour: 3,
+    threshold_per_hour: 3,
+  });
+
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout', t0 + 3 * minute);
+  assert.equal(alertAt(t0 + 3 * minute), null, 'one warning per spike, not one per failure');
+
+  // All four age out, then a fresh burst of three warns again.
+  const later = t0 + 70 * minute;
+  assert.equal(alertAt(later), null);
+  for (let i = 0; i < 3; i += 1)
+    counters.recordKnownFailure('fog-xiangqi-belief-timeout', later + i);
+  assert.equal(alertAt(later + 3)?.engine_known_failures_last_hour, 3);
+});
+
+test('the spike email has its own throttle bucket, apart from other engine warnings', () => {
+  const spike = { severity: 'warning', alert_kind: 'engine_known_failure_spike' } as const;
+  assert.notEqual(alertThrottleKey(spike), alertThrottleKey({ severity: 'warning' }));
 });

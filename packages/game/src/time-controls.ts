@@ -12,6 +12,8 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 
@@ -81,14 +83,16 @@ export const TIME_CONTROLS: readonly TimeControlSpec[] = [
     // 15.0, so a guest on a full xiangqi board cannot finish one — they flagged
     // in 32% of jieqi and 36% of xiangqi games, against 0 of 159 for signed-in
     // players at the same pace. 10+5 affords 25.0s/move, the first rung clear
-    // of the measured need. Casual-only for now: it shares the rapid bucket
-    // with 5+5, so flipping `rated` later adds no rating pool.
+    // of the measured need. Rated since 2026-11-06 (Brian: "yes, ok"): it
+    // shares the rapid rating with 5+5, as Lichess classes both, so it adds
+    // no rating pool, and a variant whose default is 10+5 no longer drops to
+    // 1+1 when the player picks Rated.
     id: '10m5',
     label: '10 + 5',
     initialMs: 600_000,
     incrementMs: 5_000,
     timeClass: 'rapid',
-    rated: false,
+    rated: true,
   },
 ];
 
@@ -155,6 +159,15 @@ export const ENGINE_FLOORED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 // both.
 export const BOT_DEFAULT_TIME_CONTROL_ID: TimeControlId = '10m5';
 
+// Variants whose bot games start somewhere other than BOT_DEFAULT_TIME_CONTROL_ID.
+// Xiangqi mahjong: a turn is one discard, and the clock runs only for the seat
+// to discard, so 10+5 left a four-hand match mostly unspent clock (Brian,
+// 2026-10-15: "way too much time"). 5+5, its human default, so a bot game and a
+// human game start at one pace.
+const BOT_TIME_CONTROL_OVERRIDES: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
+  [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
+};
+
 // The pace a variant PRESELECTS for human games, for variants that want
 // something other than the house 3+2. Bot games ignore this and start at
 // BOT_DEFAULT_TIME_CONTROL_ID. A preference, not a constraint: every pace the variant offers
@@ -177,7 +190,7 @@ export const BOT_DEFAULT_TIME_CONTROL_ID: TimeControlId = '10m5';
 const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
   [XIANGQI_SPEC_ID]: '10m5',
   [JIEQI_SPEC_ID]: '10m5',
-  // Duck offers 3+2, 5+5 and 10+5 (registry.ts). This entry is a PREFERENCE,
+  // Duck offers all four paces (registry.ts). This entry is a PREFERENCE,
   // not a guard: a turn is a move plus a duck placement, so 3+2 buys 1.8s per
   // decision at the long end and 5+5 buys 3.8s. Both are playable, so 3+2 is
   // selectable, but the pace a first-time player is dropped into should be the
@@ -192,6 +205,12 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   [ATOMIC_XIANGQI_SPEC_ID]: '10m5',
   // Xiangqi's pace, and every capture hands the opponent a piece to place.
   [CRAZYHOUSE_XIANGQI_SPEC_ID]: '10m5',
+  // A PREFERENCE: the table offers every preset (no clock runs while a claim
+  // is open), but a first-time player starts where a claim can be read.
+  [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
+  // A PREFERENCE: the table offers every preset (Brian, 2026-10-31), and a
+  // first-time player starts where it started before 1+1 and 3+2 were added.
+  [THREE_KINGDOMS_BANQI_SPEC_ID]: '5m5',
 };
 
 /** The house pace, for every variant that does not name its own. */
@@ -218,10 +237,10 @@ export function variantDefaultTimeControl(gameSpecId: GameSpecId | string): Time
  * drift into advertising one clock and starting another. Takes the spec so a
  * future per-variant bot pace has one place to go.
  */
-export function defaultEngineTimeControl(_gameSpecId: GameSpecId | string): TimeControlSpec {
-  const spec = TIME_CONTROLS.find((tc) => tc.id === BOT_DEFAULT_TIME_CONTROL_ID);
-  if (!spec)
-    throw new Error(`bot default ${BOT_DEFAULT_TIME_CONTROL_ID} is not a known time control`);
+export function defaultEngineTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
+  const id = BOT_TIME_CONTROL_OVERRIDES[gameSpecId as GameSpecId] ?? BOT_DEFAULT_TIME_CONTROL_ID;
+  const spec = TIME_CONTROLS.find((tc) => tc.id === id);
+  if (!spec) throw new Error(`bot default ${id} is not a known time control`);
   return spec;
 }
 
@@ -304,8 +323,11 @@ export function isOfficialTimeControl(tc: RoomTimeControl): boolean {
 // in its own 'correspondence' pool (officialCorrespondenceDays below), never a
 // live one.
 export const DAY_MS = 24 * 60 * 60 * 1000;
-export const DAYS_PER_MOVE_OPTIONS = [1, 3, 7] as const;
+export const DAYS_PER_MOVE_OPTIONS = [1, 2, 3, 7] as const;
 export type DaysPerMove = (typeof DAYS_PER_MOVE_OPTIONS)[number];
+// The pace a picker opens on. Named rather than read as an index so a new
+// option (2 days, added 2026-10-23) does not move every default with it.
+export const DEFAULT_DAYS_PER_MOVE: DaysPerMove = 3;
 
 export function correspondenceTimeControl(daysPerMove: DaysPerMove): RoomTimeControl {
   return { initialMs: daysPerMove * DAY_MS, incrementMs: 0, daysPerMove };

@@ -1,3 +1,5 @@
+import { internalBanqiMoveProvider } from './banqi-internal-provider.js';
+import { internalEngineTestFor } from './internal-engine-test.js';
 /**
  * Server-side MistyBanqi loop for Banqi (半棋) PvE.
  *
@@ -13,10 +15,12 @@
  * Mirrors server-jieqi-engine.ts.
  */
 
+import { randomUUID } from 'node:crypto';
 import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
+  banqiNoProgressLimitOf,
   getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
   isBanqiLegalMove,
@@ -25,9 +29,11 @@ import {
   BANQI_ENGINE_VERSION,
   banqiEngineTierFor,
   banqiLiveEngineMove,
+  banqiNoiseSeed,
   isBanqiEngineClientId,
 } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen, engineUciToBanqiMove } from './banqi-fen.js';
+import { type BanqiProviderRequest, buildBanqiProviderRequest } from './banqi-provider-protocol.js';
 import type { BanqiEvent, BanqiSpecId } from './banqi-runtime.js';
 import { banqiTenant } from './banqi-tenant.js';
 import {
@@ -35,6 +41,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
@@ -76,6 +83,10 @@ function bothSeatsFilled(room: BanqiEngineRoom): boolean {
 
 function engineToMove(room: BanqiEngineRoom, seat: BanqiSeat): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 
@@ -132,7 +143,7 @@ export function scheduleBanqiEngineMove(ctx: BanqiEngineContext, room: BanqiEngi
  * The move provider returns the whole search summary, not just the move, so the
  * decision artifact can record what the engine actually did. Tests inject a stub.
  */
-export type BanqiEngineMoveProvider = (
+export type BanqiEngineMoveProvider = ((
   engineId: string,
   fen: string,
   opts: {
@@ -140,8 +151,11 @@ export type BanqiEngineMoveProvider = (
     movetimeCapMs?: number;
     moves?: readonly string[];
     searchMoves?: readonly string[];
+    noProgressLimit: number;
+    seed?: string;
   },
-) => Promise<UciEval>;
+  request?: BanqiProviderRequest,
+) => Promise<UciEval>) & { failurePolicy?: 'fail-closed'; engineVersion?: string };
 
 // Capture preference for the chase fallback below (most valuable target first).
 const FALLBACK_CAPTURE_ORDER = [
@@ -175,12 +189,18 @@ export function banqiChaseFallbackMove(state: BanqiGameState): BanqiMove | null 
 export async function playBanqiEngineMoveIfReady(
   ctx: BanqiEngineContext,
   room: BanqiEngineRoom,
-  moveProvider: BanqiEngineMoveProvider = banqiLiveEngineMove,
+  moveProvider?: BanqiEngineMoveProvider,
 ): Promise<void> {
   const seat = banqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
-  const tier = banqiEngineTierFor(engineId);
+  const internal = internalEngineTestFor(room.events);
+  moveProvider = internal
+    ? internalBanqiMoveProvider(internal)
+    : (moveProvider ?? banqiLiveEngineMove);
+  const tier = internal
+    ? { nodes: internal.nodes, movetimeCapMs: internal.budgetMs }
+    : banqiEngineTierFor(engineId);
   if (!tier) return;
 
   const now = ctx.now?.() ?? Date.now();
@@ -214,20 +234,57 @@ export async function playBanqiEngineMoveIfReady(
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
   // than silently substituting a threat-blind legal move.
   const startedAt = Date.now();
+  const strictProvider = moveProvider.failurePolicy === 'fail-closed';
+  const engineVersion = strictProvider
+    ? (moveProvider.engineVersion ?? 'unversioned-external')
+    : BANQI_ENGINE_VERSION;
+  const turnPly = state.ply;
+  const currentSearch = searchStillCurrent(room, () => engineToMove(room, seat));
+  const stillOnTurn = (): boolean => {
+    if (!currentSearch()) return false;
+    if (!strictProvider) return true;
+    const currentClock = room.projection.clock;
+    return (
+      room.projection.state.ply === turnPly &&
+      (!currentClock || tenantClockRemainingMs(currentClock, seat, ctx.now?.() ?? Date.now()) > 0)
+    );
+  };
+  const providerRequest = strictProvider
+    ? buildBanqiProviderRequest({
+        state,
+        requestId: randomUUID(),
+        engineId,
+        nowMs: startedAt,
+        budgetMs: movetimeCapMs,
+        remainingMs,
+        incrementMs,
+        nodes: tier.nodes,
+        repetitionWindow: { fen, moves },
+      })
+    : undefined;
   let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<BanqiMove>({
-    maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
+    maxAttempts: strictProvider ? 1 : ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, fen, {
-        nodes: tier.nodes,
-        movetimeCapMs,
-        moves,
-        searchMoves,
-      });
+      const search = await moveProvider(
+        engineId,
+        fen,
+        {
+          nodes: tier.nodes,
+          movetimeCapMs,
+          moves,
+          searchMoves,
+          // The game's own draw limit (60, or 40 for a room created before 2026-10-17):
+          // without it the engine assumes 40 and plays the last 20 plies as already drawn.
+          noProgressLimit: banqiNoProgressLimitOf(state),
+          seed: banqiNoiseSeed(room.id),
+        },
+        providerRequest,
+      );
       lastSearch = search;
       return search.best;
     },
@@ -235,7 +292,7 @@ export async function playBanqiEngineMoveIfReady(
       const parsed = engineUciToBanqiMove(uci);
       return parsed && isBanqiLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn,
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -251,10 +308,10 @@ export async function playBanqiEngineMoveIfReady(
         'Banqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !stillOnTurn()) return;
 
   let chosen = validated;
-  if (chosen === null && forbidden.length > 0) {
+  if (chosen === null && forbidden.length > 0 && !strictProvider) {
     const forbiddenUci = new Set(forbidden.map(banqiMoveToEngineUci));
     if (attempts.length > 0 && attempts.every((a) => a.uci !== null && forbiddenUci.has(a.uci))) {
       chosen = banqiChaseFallbackMove(state);
@@ -279,7 +336,7 @@ export async function playBanqiEngineMoveIfReady(
       variant: 'banqi',
       roomId: room.id,
       engineId,
-      engineVersion: BANQI_ENGINE_VERSION,
+      engineVersion,
       movetimeMs: movetimeCapMs,
       tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
       ply: gameMoves.length,
@@ -320,7 +377,7 @@ export async function playBanqiEngineMoveIfReady(
       variant: 'banqi',
       roomId: room.id,
       engineId,
-      engineVersion: BANQI_ENGINE_VERSION,
+      engineVersion,
       seat,
       ply: gameMoves.length,
       budgetMs: movetimeCapMs,

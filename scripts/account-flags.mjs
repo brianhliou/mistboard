@@ -33,12 +33,10 @@
 // the cost of not having this: a game and a puzzle attempt landed on the
 // official account because a browser was signed in as the wrong identity.
 //
-// Against production, hand the connection to Railway rather than putting it in
-// your shell. The connection string is referenced by name inside the child and
-// never enters this process or the terminal:
+// Against production, run it through the tunnel wrapper, which hands the
+// connection to the child without putting it in your shell or the terminal:
 //
-//   railway run -s Postgres -- sh -c \
-//     'DATABASE_URL="$DATABASE_PUBLIC_URL" node scripts/account-flags.mjs <email> --disable-play'
+//   npm run prod:db -- node scripts/account-flags.mjs <email> --disable-play
 //
 // The account must already exist. Signing in creates it, and this script will
 // not invent a row for an address nobody has proved they can receive mail at.
@@ -92,9 +90,8 @@ if (values.note && !values['grant-variant']) {
 }
 if (!process.env.DATABASE_URL) {
   fail(
-    'DATABASE_URL is not set. For production, run this through Railway:\n' +
-      '  railway run -s Postgres -- sh -c \'DATABASE_URL="$DATABASE_PUBLIC_URL" ' +
-      `node scripts/account-flags.mjs ${email}'`,
+    'DATABASE_URL is not set. For production, run this through the tunnel:\n' +
+      `  npm run prod:db -- node scripts/account-flags.mjs ${email}`,
   );
 }
 

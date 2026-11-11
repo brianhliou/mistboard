@@ -145,6 +145,26 @@ describe('mountEmbedGame', () => {
     expect(root.textContent).toContain('not available');
   });
 
+  it('says a variant with no embeddable board cannot be embedded, never mounting chess', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      urls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          game: { roomId: 'xmj_abc', variant: 'xiangqi-mahjong', result: 'white-wins' },
+        }),
+      };
+    });
+    replayMounts.length = 0;
+    const root = document.createElement('div');
+    await mountEmbedGame(root, { roomId: 'xmj_abc' });
+    expect(root.textContent).toContain('cannot be embedded');
+    expect(replayMounts).toHaveLength(0);
+    expect(urls).toEqual(['/api/games/xmj_abc']);
+  });
+
   it('does not throw when the network fails', async () => {
     vi.stubGlobal('fetch', async () => {
       throw new Error('offline');

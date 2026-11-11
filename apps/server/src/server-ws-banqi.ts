@@ -1,3 +1,5 @@
+import { currentAccountUser } from './account-session.js';
+import { internalEngineTestFor, isInternalEngineTestLog } from './internal-engine-test.js';
 /**
  * Banqi WebSocket handler — thin adapter over the generic tenant ws runtime
  * (variant-tenant/ws.ts). Banqi positions are public, so the generic host needs
@@ -38,6 +40,14 @@ export async function handleBanqiWebSocketConnection(
   request: IncomingMessage,
   room: BanqiLiveRoom,
 ): Promise<void> {
+  if (isInternalEngineTestLog(room.events)) {
+    const stamp = internalEngineTestFor(room.events);
+    const user = await currentAccountUser(request);
+    if (!stamp || user?.accountRole !== 'admin' || user.id !== stamp.ownerUserId) {
+      socket.close(1008, 'private test room');
+      return;
+    }
+  }
   return banqiWs.handleConnection(
     {
       wsMessageLimit: ctx.wsMessageLimit,

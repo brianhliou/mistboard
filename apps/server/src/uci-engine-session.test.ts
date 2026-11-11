@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { UciEngineSession } from './uci-engine-harness.js';
+import { runUciEval, UciEngineSession } from './uci-engine-harness.js';
 
 // Persistent-session tests against a fake UCI binary (same fixture pattern as
 // uci-engine-harness.test.ts): no real engine needed. The fake advertises an
@@ -313,3 +313,182 @@ test('evalPosition falls back to a bounded score when no iteration completed', a
     session.close();
   }
 });
+
+// Both live paths return the same ranked search context. Include interleaved
+// ranks and an unfinished iteration, as real MultiPV searches report them.
+const liveEvalCases = [
+  {
+    name: 'interleaved ranks with exact rows and bounded fallbacks',
+    info: [
+      'info depth 7 multipv 3 score cp -50 lowerbound pv e0e1',
+      'info depth 7 multipv 2 score cp 10 pv c0c1',
+      'info depth 7 multipv 1 score cp 40 pv a0a1',
+      'info depth 8 multipv 1 score cp 47 nodes 400 time 80 pv a0a1 b0b1',
+      'info depth 8 multipv 2 score mate -3 nodes 500 time 90 pv c0c1 d0d1',
+      'info depth 9 multipv 1 score cp 80 lowerbound pv a0a2',
+      'info depth 9 multipv 3 score cp -45 upperbound pv e0e2',
+      'info depth 9 multipv 2 score cp -100 upperbound pv c0c2',
+    ],
+    best: 'a0a1',
+    expected: {
+      cp: 47,
+      mate: null,
+      depth: 8,
+      pv: ['a0a1', 'b0b1'],
+      nodes: 400,
+      timeMs: 80,
+      lines: [
+        { index: 1, move: 'a0a1', cp: 47, mate: null, depth: 8, pv: ['a0a1', 'b0b1'], bound: null },
+        { index: 2, move: 'c0c1', cp: null, mate: -3, depth: 8, pv: ['c0c1', 'd0d1'], bound: null },
+        { index: 3, move: 'e0e2', cp: -45, mate: null, depth: 9, pv: ['e0e2'], bound: 'upper' },
+      ],
+    },
+  },
+  {
+    name: 'an unranked single PV with a bounded tail',
+    info: [
+      'info depth 8 score cp 47 nodes 400 time 80 pv a0a1 b0b1',
+      'info depth 9 score cp 80 lowerbound pv a0a2',
+    ],
+    best: 'a0a1',
+    expected: {
+      cp: 47,
+      mate: null,
+      depth: 8,
+      pv: ['a0a1', 'b0b1'],
+      nodes: 400,
+      timeMs: 80,
+      lines: [
+        { index: 1, move: 'a0a1', cp: 47, mate: null, depth: 8, pv: ['a0a1', 'b0b1'], bound: null },
+      ],
+    },
+  },
+  {
+    name: 'a bounded rank 1 even when rank 2 is exact',
+    info: [
+      'info depth 1 multipv 2 score cp -20 pv c0c1',
+      'info depth 1 multipv 1 score cp 8 upperbound nodes 12 pv a0a1',
+    ],
+    best: 'a0a1',
+    expected: {
+      cp: 8,
+      mate: null,
+      depth: 1,
+      pv: ['a0a1'],
+      nodes: 12,
+      lines: [
+        { index: 1, move: 'a0a1', cp: 8, mate: null, depth: 1, pv: ['a0a1'], bound: 'upper' },
+        { index: 2, move: 'c0c1', cp: -20, mate: null, depth: 1, pv: ['c0c1'], bound: null },
+      ],
+    },
+  },
+  {
+    name: 'rank 2 without inventing a rank-1 score',
+    info: ['info depth 8 multipv 2 score cp -20 pv c0c1'],
+    best: 'a0a1',
+    expected: {
+      cp: null,
+      mate: null,
+      depth: 0,
+      lines: [{ index: 2, move: 'c0c1', cp: -20, mate: null, depth: 8, pv: ['c0c1'], bound: null }],
+    },
+  },
+  {
+    name: 'a terminal score without inventing a candidate move',
+    info: ['info depth 0 score mate 0 nodes 0 time 0'],
+    best: null,
+    expected: { cp: null, mate: 0, depth: 0, pv: [], nodes: 0, timeMs: 0, lines: [] },
+  },
+  {
+    name: 'an empty search',
+    info: ['info depth 0 nodes 0', 'info string diagnostic score cp 999 pv a0a1'],
+    best: null,
+    expected: { cp: null, mate: null, depth: 0, lines: [] },
+  },
+  {
+    name: 'a rank-1 score without a PV alongside an alternative',
+    info: ['info depth 4 multipv 1 score cp 12', 'info depth 4 multipv 2 score cp -20 pv c0c1'],
+    best: 'a0a1',
+    expected: {
+      cp: 12,
+      mate: null,
+      depth: 4,
+      pv: [],
+      lines: [{ index: 2, move: 'c0c1', cp: -20, mate: null, depth: 4, pv: ['c0c1'], bound: null }],
+    },
+  },
+];
+
+const liveEvalReplies = Object.fromEntries(
+  liveEvalCases.map((scenario, index) => [
+    `go nodes ${index + 1}`,
+    `${[...scenario.info, `bestmove ${scenario.best ?? '(none)'}`].join('\n')}\n`,
+  ]),
+);
+const liveMultiPvBin = writeFakeEngine(
+  'live-multipv.mjs',
+  `const replies = ${JSON.stringify(liveEvalReplies)};
+let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') process.stdout.write('uciok\\n');
+    else if (line === 'isready') process.stdout.write('readyok\\n');
+    else if (replies[line]) process.stdout.write(replies[line]);
+  }
+});`,
+);
+
+for (const [index, scenario] of liveEvalCases.entries()) {
+  for (const mode of ['spawn', 'session']) {
+    test(`live UciEval (${mode}) retains MultiPV: ${scenario.name}`, async () => {
+      const request = {
+        positionCommand: 'position startpos',
+        goCommand: `go nodes ${index + 1}`,
+        timeoutMs: 5000,
+        timeoutMessage: 'live MultiPV eval timed out',
+      };
+      const session =
+        mode === 'session'
+          ? new UciEngineSession({ bin: liveMultiPvBin, initCommands: ['uci', 'isready'] })
+          : null;
+      try {
+        const result = session
+          ? await session.evalPosition(request)
+          : await runUciEval({
+              bin: liveMultiPvBin,
+              commands: ['uci', 'isready', request.positionCommand, request.goCommand],
+              timeoutMs: request.timeoutMs,
+              timeoutMessage: request.timeoutMessage,
+            });
+        assert.deepEqual(result, {
+          best: scenario.best,
+          pv: undefined,
+          nodes: undefined,
+          timeMs: undefined,
+          ...scenario.expected,
+        });
+        if (session && index === 0) {
+          const empty = await session.evalPosition({ ...request, goCommand: 'go nodes 6' });
+          assert.deepEqual(empty, {
+            best: null,
+            cp: null,
+            mate: null,
+            depth: 0,
+            pv: undefined,
+            nodes: undefined,
+            timeMs: undefined,
+            lines: [],
+          });
+          // A later request must not mutate the prior result's table.
+          assert.deepEqual(result.lines, scenario.expected.lines);
+        }
+      } finally {
+        session?.close();
+      }
+    });
+  }
+}

@@ -37,6 +37,7 @@ export type AccountPreferenceKey =
   | 'premoves'
   | 'confirmGameActions'
   | 'inboxBell'
+  | 'inboxEmail'
   | 'correspondenceBell'
   | 'challengesBell'
   | 'forumBell'
@@ -51,6 +52,7 @@ export type AccountPreferences = {
   premoves: boolean;
   confirmGameActions: boolean;
   inboxBell: boolean;
+  inboxEmail: boolean;
   correspondenceBell: boolean;
   // Bell mutes for the sources that arrived after the first two: pending
   // challenges, forum replies/quotes, new followers. All default on.
@@ -76,6 +78,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   premoves: true,
   confirmGameActions: true,
   inboxBell: true,
+  inboxEmail: true,
   correspondenceBell: true,
   challengesBell: true,
   forumBell: true,
@@ -168,6 +171,15 @@ export function isPlayDisabled(user: Pick<UserAccount, 'playDisabledAt'> | null)
   return user?.playDisabledAt != null;
 }
 
+// Stats exclusion as a rated gate (2026-10-26). An account flagged
+// stats_excluded_at is operating or testing the site, so its games are not
+// counted, and an uncounted account must never move a counted player's rating.
+// Every rated entry point (lobby, friend rooms, seats, rematch, correspondence)
+// refuses it; casual play is untouched.
+export function isStatsExcluded(user: Pick<UserAccount, 'statsExcludedAt'> | null): boolean {
+  return user?.statsExcludedAt != null;
+}
+
 // Canonical users-table column list for reads. Keep in lockstep with UserRow
 // and userFromRow below: every SELECT/RETURNING of a full user row derives from
 // this, so a column can't be silently dropped from one query (which once
@@ -215,6 +227,21 @@ export async function findUserByEmail(email: string): Promise<UserAccount | null
        AND closed_at IS NULL
      LIMIT 1`,
     [email],
+  );
+  return rows[0] ? userFromRow(rows[0]) : null;
+}
+
+// The whole account for a handle (case-insensitive), or null for none or a
+// closed one. The correspondence host route loads the host this way so the seek
+// it posts on the host's behalf goes through the same gates as one he posted.
+export async function findUserByHandle(handle: string): Promise<UserAccount | null> {
+  const { rows } = await getPool().query<UserRow>(
+    `SELECT ${USER_COLUMNS}
+     FROM users
+     WHERE lower(handle) = lower($1)
+       AND closed_at IS NULL
+     LIMIT 1`,
+    [handle],
   );
   return rows[0] ? userFromRow(rows[0]) : null;
 }
@@ -269,6 +296,17 @@ export async function isUserIdPlayDisabled(userId: string): Promise<boolean> {
     [userId],
   );
   return rows[0]?.locked ?? true;
+}
+
+// Stats exclusion for an account other than the requester's (a seek creator, a
+// rematch opponent, a challenge target). Missing or closed fails closed: true.
+export async function isUserIdStatsExcluded(userId: string): Promise<boolean> {
+  const { rows } = await getPool().query<{ excluded: boolean }>(
+    `SELECT (stats_excluded_at IS NOT NULL OR closed_at IS NOT NULL) AS excluded
+       FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0]?.excluded ?? true;
 }
 
 export async function userExists(userId: string): Promise<boolean> {
@@ -372,6 +410,7 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,
     ),
     inboxBell: booleanOrDefault(parsed.inboxBell, DEFAULT_ACCOUNT_PREFERENCES.inboxBell),
+    inboxEmail: booleanOrDefault(parsed.inboxEmail, DEFAULT_ACCOUNT_PREFERENCES.inboxEmail),
     correspondenceBell: booleanOrDefault(
       parsed.correspondenceBell,
       DEFAULT_ACCOUNT_PREFERENCES.correspondenceBell,

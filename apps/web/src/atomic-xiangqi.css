@@ -14,8 +14,10 @@
 
 /* The board's own last-move ring would sit on the capture point on top of the
    aftermath disc and read as a second mark; under a blast the destination
-   holds no piece, so the ring says nothing the disc does not. */
-.xq-has-blast .xq-live-lastmove-ring {
+   holds no piece, so the ring says nothing the disc does not. The square
+   grid's ring on the piece outline goes for the same reason. */
+.xq-has-blast .xq-live-lastmove-ring,
+.xq-has-blast .xq-live-lastmove-piece-ring {
   display: none;
 }
 

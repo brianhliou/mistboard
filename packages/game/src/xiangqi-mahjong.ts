@@ -1,0 +1,857 @@
+/**
+ * Xiangqi mahjong (象棋麻將), the 32-tile Taiwan form, for exactly two players.
+ *
+ * The rules are the "Spec for a 2-player implementation" in the life-os
+ * research note `research/xiangqi-mahjong-rules-2026-10.md`; item numbers in
+ * the comments below (spec 5, spec 11, ...) refer to it.
+ *
+ * Deliberately standalone. Hong Kong mahjong (`@mistboard/mahjong`) shares the
+ * vocabulary (draw, discard, claim) and nothing else that matters: 34 tile
+ * kinds against 14, four seats against two, 14-tile hands against 5, a faan
+ * table against a 台 count. Nothing here imports it, so either can be deleted
+ * without touching the other.
+ *
+ * Pure: every function returns a new value and nothing reads a clock or a
+ * random source. The deal comes in as a wall, already shuffled by the caller.
+ */
+
+export type XmjColor = 'r' | 'b';
+/** General, Advisor, Elephant, Chariot (Rook), Horse, Cannon, Soldier (Pawn). */
+export type XmjPiece = 'K' | 'A' | 'E' | 'R' | 'H' | 'C' | 'P';
+/** A tile kind: colour then piece, e.g. 'rK' is 帥, 'bP' is 卒. */
+export type XmjTile = `${XmjColor}${XmjPiece}`;
+export type XmjSeatIndex = 0 | 1;
+
+export const XMJ_PIECES: readonly XmjPiece[] = ['K', 'A', 'E', 'R', 'H', 'C', 'P'];
+export const XMJ_TILE_KINDS: readonly XmjTile[] = [
+  'rK',
+  'rA',
+  'rE',
+  'rR',
+  'rH',
+  'rC',
+  'rP',
+  'bK',
+  'bA',
+  'bE',
+  'bR',
+  'bH',
+  'bC',
+  'bP',
+];
+
+/** Copies of each kind in one xiangqi set (spec 1). */
+export const XMJ_COPIES: Readonly<Record<XmjPiece, number>> = {
+  K: 1,
+  A: 2,
+  E: 2,
+  R: 2,
+  H: 2,
+  C: 2,
+  P: 5,
+};
+
+/** Characters as printed on the pieces (spec 14). */
+export const XMJ_GLYPHS: Readonly<Record<XmjTile, string>> = {
+  rK: '帥',
+  rA: '仕',
+  rE: '相',
+  rR: '俥',
+  rH: '傌',
+  rC: '炮',
+  rP: '兵',
+  bK: '將',
+  bA: '士',
+  bE: '象',
+  bR: '車',
+  bH: '馬',
+  bC: '包',
+  bP: '卒',
+};
+
+export const XMJ_PIECE_NAMES: Readonly<Record<XmjPiece, string>> = {
+  K: 'General',
+  A: 'Advisor',
+  E: 'Elephant',
+  R: 'Chariot',
+  H: 'Horse',
+  C: 'Cannon',
+  P: 'Soldier',
+};
+
+/** The two sequences per colour (spec 7). Any order, one colour. */
+const SEQUENCE_PIECES: readonly (readonly XmjPiece[])[] = [
+  ['K', 'A', 'E'],
+  ['R', 'H', 'C'],
+];
+
+export const XMJ_HAND_SIZE = 5;
+export const XMJ_DEALER_TILES = 5;
+export const XMJ_OTHER_TILES = 4;
+
+export function isXmjTile(value: unknown): value is XmjTile {
+  return typeof value === 'string' && (XMJ_TILE_KINDS as readonly string[]).includes(value);
+}
+
+export function tileColor(tile: XmjTile): XmjColor {
+  return tile[0] as XmjColor;
+}
+export function tilePiece(tile: XmjTile): XmjPiece {
+  return tile[1] as XmjPiece;
+}
+
+/** The full 32-tile set, unshuffled, in kind order. */
+export function xmjOrderedTiles(): XmjTile[] {
+  const tiles: XmjTile[] = [];
+  for (const kind of XMJ_TILE_KINDS) {
+    for (let i = 0; i < XMJ_COPIES[tilePiece(kind)]; i += 1) tiles.push(kind);
+  }
+  return tiles;
+}
+
+/** Fisher-Yates over a caller-supplied [0,1) source, so the caller owns randomness. */
+export function xmjShuffle(random: () => number, tiles: readonly XmjTile[] = xmjOrderedTiles()) {
+  const out = [...tiles];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    const a = out[i] as XmjTile;
+    out[i] = out[j] as XmjTile;
+    out[j] = a;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- shapes
+
+export type XmjMeldKind = 'sequence' | 'triplet';
+export interface XmjMeld {
+  readonly kind: XmjMeldKind;
+  readonly tiles: readonly XmjTile[];
+  /** The claimed discard, when the meld was made by a claim. */
+  readonly claimed?: XmjTile;
+}
+
+/** Tiles in kind order (red before black, K A E R H C P). */
+export function xmjSortTiles(tiles: readonly XmjTile[]): XmjTile[] {
+  return [...tiles].sort((a, b) => XMJ_TILE_KINDS.indexOf(a) - XMJ_TILE_KINDS.indexOf(b));
+}
+
+/** Three tiles that form a legal meld, or null. Spec 7. */
+export function meldKindOf(tiles: readonly XmjTile[]): XmjMeldKind | null {
+  if (tiles.length !== 3) return null;
+  const [a, b, c] = tiles as [XmjTile, XmjTile, XmjTile];
+  if (a === b && b === c) return tilePiece(a) === 'P' ? 'triplet' : null;
+  const color = tileColor(a);
+  if (tileColor(b) !== color || tileColor(c) !== color) return null;
+  const pieces = new Set(tiles.map(tilePiece));
+  if (pieces.size !== 3) return null;
+  for (const seq of SEQUENCE_PIECES) {
+    if (seq.every((piece) => pieces.has(piece))) return 'sequence';
+  }
+  return null;
+}
+
+/** Two identical tiles, or 帥 with 將 (spec 7 [CHOICE]: allowed). */
+export function isXmjPair(a: XmjTile, b: XmjTile): boolean {
+  if (a === b) return true;
+  return tilePiece(a) === 'K' && tilePiece(b) === 'K';
+}
+
+export interface XmjWinShape {
+  readonly meld: readonly XmjTile[];
+  readonly pair: readonly [XmjTile, XmjTile];
+}
+
+/**
+ * How five tiles (concealed plus any exposed meld) make a winning hand, or null.
+ *
+ * With a meld already exposed the concealed two must be the pair; otherwise any
+ * 3+2 split of the five. Five same-colour soldiers is always also 兵兵兵+兵兵,
+ * so it needs no shape of its own here; scoring recognises it.
+ */
+export function xmjWinShape(
+  concealed: readonly XmjTile[],
+  melds: readonly XmjMeld[],
+): XmjWinShape | null {
+  const total = concealed.length + melds.length * 3;
+  if (total !== XMJ_HAND_SIZE) return null;
+  if (melds.length === 1) {
+    const [a, b] = concealed as [XmjTile, XmjTile];
+    const meld = melds[0] as XmjMeld;
+    return isXmjPair(a, b) ? { meld: meld.tiles, pair: [a, b] } : null;
+  }
+  if (melds.length !== 0) return null;
+  for (let i = 0; i < 5; i += 1) {
+    for (let j = i + 1; j < 5; j += 1) {
+      const a = concealed[i] as XmjTile;
+      const b = concealed[j] as XmjTile;
+      if (!isXmjPair(a, b)) continue;
+      const rest = concealed.filter((_, k) => k !== i && k !== j);
+      if (meldKindOf(rest)) return { meld: rest, pair: [a, b] };
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------- claims
+
+export type XmjClaimKind = 'win' | 'pung' | 'chow';
+export interface XmjClaim {
+  readonly kind: XmjClaimKind;
+  /** The hand tiles that join the discard (empty for a win). */
+  readonly fromHand: readonly XmjTile[];
+}
+
+function removeTiles(hand: readonly XmjTile[], tiles: readonly XmjTile[]): XmjTile[] | null {
+  const out = [...hand];
+  for (const tile of tiles) {
+    const at = out.indexOf(tile);
+    if (at < 0) return null;
+    out.splice(at, 1);
+  }
+  return out;
+}
+
+/**
+ * Every claim a seat may make on the opponent's discard (spec 5, 12).
+ *
+ * Win first; then 碰 on two matching soldiers; then each distinct 吃. With two
+ * players the discarder is always the claimant's 上家, so 吃 is always open.
+ */
+export function xmjLegalClaims(
+  concealed: readonly XmjTile[],
+  melds: readonly XmjMeld[],
+  discard: XmjTile,
+): XmjClaim[] {
+  const claims: XmjClaim[] = [];
+  if (xmjWinShape([...concealed, discard], melds)) claims.push({ kind: 'win', fromHand: [] });
+  // A meld claim needs two tiles from hand and must leave a legal hand size.
+  if (melds.length > 0 || concealed.length < 4) return claims;
+  if (tilePiece(discard) === 'P' && concealed.filter((t) => t === discard).length >= 2) {
+    claims.push({ kind: 'pung', fromHand: [discard, discard] });
+  }
+  const color = tileColor(discard);
+  const piece = tilePiece(discard);
+  for (const seq of SEQUENCE_PIECES) {
+    if (!seq.includes(piece)) continue;
+    const need = seq.filter((p) => p !== piece).map((p) => `${color}${p}` as XmjTile);
+    if (need.every((tile) => concealed.includes(tile))) {
+      claims.push({ kind: 'chow', fromHand: need });
+    }
+  }
+  return claims;
+}
+
+// ---------------------------------------------------------------- scoring
+
+/**
+ * Which 台 table scores a hand. Table 1 is the one played to 2026-10-25, with a
+ * 莊家 line and a separate 地胡. Table 2 is the Gamesofa app's in-app table
+ * (`docs-private/research/gamesofa-app-rules-2026-10/`): no dealer line, 天胡
+ * on either seat's first draw, and the 將之才 / 帥之才, three-of-a-piece and
+ * 鼓角齊鳴 lines. A stored game replays under the table it was played with, and
+ * a setup with no stamp is table 1 (`XmjRoomSetup.taiTable`).
+ *
+ * Table 3 adds 聽牌 (1) with an atomic declaration and discard. It is accepted
+ * only by explicit setup: new rooms remain on table 2. 雙龍搶珠 / 雙龍再戰
+ * remain outside these tables.
+ */
+export type XmjTaiTable = 1 | 2 | 3;
+export const XMJ_TAI_TABLE: XmjTaiTable = 2;
+
+export type XmjTaiKey =
+  | 'win'
+  | 'self-draw'
+  | 'dealer'
+  | 'one-colour'
+  | 'black-general'
+  | 'red-general'
+  | 'generals-pair'
+  | 'three-advisors'
+  | 'three-elephants'
+  | 'three-chariots'
+  | 'three-horses'
+  | 'three-cannons'
+  | 'mixed-soldiers'
+  | 'five-soldiers'
+  | 'last-tile'
+  | 'declared-ready'
+  | 'heavenly'
+  | 'earthly';
+
+export interface XmjTaiLine {
+  readonly key: XmjTaiKey;
+  readonly label: string;
+  readonly tai: number;
+}
+
+export interface XmjScore {
+  readonly lines: readonly XmjTaiLine[];
+  readonly total: number;
+  /**
+   * The set and pair this score was counted from. Where a hand splits more
+   * than one way, this is the split the lines above were read off, so a table
+   * that groups the winning hand shows the hand that was scored.
+   */
+  readonly shape: XmjWinShape;
+}
+
+export const XMJ_TAI_LABELS: Readonly<Record<XmjTaiKey, string>> = {
+  win: '胡牌 Win',
+  'self-draw': '自摸 Self-draw',
+  dealer: '莊家 Dealer',
+  'one-colour': '清一色 One colour',
+  'black-general': '將之才 Black general',
+  'red-general': '帥之才 Red general',
+  'generals-pair': '將帥聽令 Generals pair',
+  'three-advisors': '三千禁軍 Three advisors',
+  'three-elephants': '金戈鐵象 Three elephants',
+  'three-chariots': '千乘戰車 Three chariots',
+  'three-horses': '千軍萬馬 Three horses',
+  'three-cannons': '炮火連天 Three cannons',
+  'mixed-soldiers': '鼓角齊鳴 Five soldiers, mixed',
+  'five-soldiers': '五兵合縱 / 五卒連橫 Five soldiers, one colour',
+  'last-tile': '海底撈月 Last tile',
+  'declared-ready': '聽牌 Declared ready',
+  heavenly: '天胡 Heavenly hand',
+  earthly: '地胡 Earthly hand',
+};
+
+export interface XmjWinContext {
+  readonly concealed: readonly XmjTile[];
+  readonly melds: readonly XmjMeld[];
+  readonly selfDrawn: boolean;
+  readonly winnerIsDealer: boolean;
+  /** The dealer's opening five, before any discard. */
+  readonly heavenly: boolean;
+  /** The non-dealer's first draw, with nothing claimed before it. */
+  readonly earthly: boolean;
+  /** Self-drawn off the last wall tile. */
+  readonly lastTile: boolean;
+  /** The table to score with; the current one when absent. */
+  readonly table?: XmjTaiTable;
+  /** A table-3 declaration made before winning; distinct from next-hand readiness. */
+  readonly declared?: boolean;
+}
+
+/** What each line is worth: the one table the scorer and the result panel read. */
+export const XMJ_TAI_POINTS: Readonly<Record<XmjTaiKey, number>> = {
+  win: 1,
+  'one-colour': 1,
+  'black-general': 1,
+  'red-general': 1,
+  'generals-pair': 2,
+  'three-advisors': 2,
+  'three-elephants': 2,
+  'three-chariots': 2,
+  'three-horses': 2,
+  'three-cannons': 2,
+  'mixed-soldiers': 2,
+  'five-soldiers': 5,
+  'self-draw': 2,
+  dealer: 1,
+  'last-tile': 1,
+  'declared-ready': 1,
+  heavenly: 6,
+  earthly: 6,
+};
+
+/**
+ * The current table's lines in the rules page's order ("Adding it up"), for a
+ * table of all of them. `dealer` and `earthly` are table 1 only.
+ */
+export const XMJ_TAI_ORDER: readonly XmjTaiKey[] = [
+  'win',
+  'one-colour',
+  'black-general',
+  'red-general',
+  'generals-pair',
+  'three-advisors',
+  'three-elephants',
+  'three-chariots',
+  'three-horses',
+  'three-cannons',
+  'mixed-soldiers',
+  'five-soldiers',
+  'self-draw',
+  'last-tile',
+  'heavenly',
+];
+
+/** The three-of-a-piece lines: any three of the piece, either colour. */
+const THREE_OF: readonly (readonly [XmjPiece, XmjTaiKey])[] = [
+  ['A', 'three-advisors'],
+  ['E', 'three-elephants'],
+  ['R', 'three-chariots'],
+  ['H', 'three-horses'],
+  ['C', 'three-cannons'],
+];
+
+function line(key: XmjTaiKey): XmjTaiLine {
+  return { key, label: XMJ_TAI_LABELS[key], tai: XMJ_TAI_POINTS[key] };
+}
+
+/**
+ * The 台 count for a winning hand, on the context's table.
+ *
+ * Table 2 (current): 天胡, a win on either seat's first draw, is flat 6 and
+ * replaces everything else; otherwise the lines sum. Five soldiers of one
+ * colour score 五兵合縱 / 五卒連橫 and not 鼓角齊鳴 too: the app's table does
+ * not say, and the narrower line replacing the wider one is the usual reading.
+ * No 連莊 and no dealer line: the deal alternates every hand
+ * (`xmjNextDealer`), and the app has neither.
+ */
+export function xmjScore(ctx: XmjWinContext): XmjScore {
+  const shape = xmjWinShape(ctx.concealed, ctx.melds);
+  if (!shape) throw new Error('xmjScore: not a winning hand');
+  if ((ctx.table ?? XMJ_TAI_TABLE) === 1) return scoreTable1(ctx, shape);
+  if (ctx.heavenly || ctx.earthly) {
+    return { lines: [line('heavenly')], total: XMJ_TAI_POINTS.heavenly, shape };
+  }
+  const all = [...ctx.concealed, ...ctx.melds.flatMap((m) => m.tiles)];
+  const pieces = all.map(tilePiece);
+  const hit = new Set<XmjTaiKey>(['win']);
+  if (ctx.selfDrawn) hit.add('self-draw');
+  if (new Set(all.map(tileColor)).size === 1) hit.add('one-colour');
+  const black = all.includes('bK');
+  const red = all.includes('rK');
+  if (black && !red) hit.add('black-general');
+  if (red && !black) hit.add('red-general');
+  const [p, q] = shape.pair;
+  if (p !== q) hit.add('generals-pair');
+  for (const [piece, key] of THREE_OF) {
+    if (pieces.filter((x) => x === piece).length >= 3) hit.add(key);
+  }
+  if (pieces.every((x) => x === 'P')) {
+    hit.add(all.every((tile) => tile === all[0]) ? 'five-soldiers' : 'mixed-soldiers');
+  }
+  if (ctx.lastTile) hit.add('last-tile');
+  const lines = XMJ_TAI_ORDER.filter((key) => hit.has(key)).map(line);
+  if (ctx.table === 3 && ctx.declared) lines.push(line('declared-ready'));
+  const total = lines.reduce((sum, l) => sum + l.tai, 0);
+  return { lines, total, shape };
+}
+
+/**
+ * Table 1, kept so games played before 2026-10-26 replay to the score they
+ * had. 天胡 and 地胡 are flat 6 and replace everything else; otherwise the lines
+ * sum, with a flat +1 莊家 line for a dealer win and no 連莊 doubling.
+ */
+function scoreTable1(ctx: XmjWinContext, shape: XmjWinShape): XmjScore {
+  if (ctx.heavenly) return { lines: [line('heavenly')], total: XMJ_TAI_POINTS.heavenly, shape };
+  if (ctx.earthly) return { lines: [line('earthly')], total: XMJ_TAI_POINTS.earthly, shape };
+  const all = [...ctx.concealed, ...ctx.melds.flatMap((m) => m.tiles)];
+  const lines: XmjTaiLine[] = [line('win')];
+  if (ctx.selfDrawn) lines.push(line('self-draw'));
+  if (ctx.winnerIsDealer) lines.push(line('dealer'));
+  const colors = new Set(all.map(tileColor));
+  if (colors.size === 1) lines.push(line('one-colour'));
+  const [p, q] = shape.pair;
+  if (p !== q) lines.push(line('generals-pair'));
+  if (all.every((tile) => tile === all[0]) && tilePiece(all[0] as XmjTile) === 'P') {
+    lines.push(line('five-soldiers'));
+  }
+  if (ctx.lastTile) lines.push(line('last-tile'));
+  const total = lines.reduce((sum, l) => sum + l.tai, 0);
+  return { lines, total, shape };
+}
+
+// ---------------------------------------------------------------- one hand
+
+export type XmjPhase =
+  /** The seat to move holds five and must discard (or declare 自摸). */
+  | {
+      readonly type: 'discard';
+      /** May declare a self-drawn win now (just drew, or the dealer's opening five). */
+      readonly mayWin: boolean;
+      /** The tile just drawn, so the client can mark it. Null after a claim. */
+      readonly drawn: XmjTile | null;
+    }
+  /** The opponent of the discarder may claim the discard or pass. */
+  | { readonly type: 'claim'; readonly discard: XmjTile; readonly discarder: XmjSeatIndex }
+  | {
+      readonly type: 'won';
+      readonly winner: XmjSeatIndex;
+      readonly selfDrawn: boolean;
+      readonly winningTile: XmjTile;
+      readonly score: XmjScore;
+    }
+  | { readonly type: 'exhausted' };
+
+export interface XmjHandState {
+  readonly dealer: XmjSeatIndex;
+  readonly wall: readonly XmjTile[];
+  readonly hands: readonly [readonly XmjTile[], readonly XmjTile[]];
+  readonly melds: readonly [readonly XmjMeld[], readonly XmjMeld[]];
+  readonly discards: readonly [readonly XmjTile[], readonly XmjTile[]];
+  /**
+   * Beside each discard: whether it was the tile just drawn, thrown straight
+   * back. At a real table everyone sees which slot a tile leaves, so this is
+   * public; the tile's place in a concealed hand is not.
+   */
+  readonly drawnDiscards: readonly [readonly boolean[], readonly boolean[]];
+  readonly turn: XmjSeatIndex;
+  readonly phase: XmjPhase;
+  /** Wall draws each seat has made this hand (地胡 is the non-dealer's first). */
+  readonly draws: readonly [number, number];
+  /** Any claim made this hand (a claim before it spoils 地胡). */
+  readonly claimed: boolean;
+  /** The 台 table this hand scores on. Absent on a hand built before the stamp: table 1. */
+  readonly taiTable?: XmjTaiTable;
+  /** Table 3 only. Public flags; the waiting tiles themselves stay concealed. */
+  readonly declared?: readonly [boolean, boolean];
+}
+
+export function xmjOtherSeat(seat: XmjSeatIndex): XmjSeatIndex {
+  return seat === 0 ? 1 : 0;
+}
+
+/** Deal from the front of the wall: dealer five, the other four (spec 3). */
+export function xmjDeal(
+  wall: readonly XmjTile[],
+  dealer: XmjSeatIndex,
+  taiTable: XmjTaiTable = XMJ_TAI_TABLE,
+): XmjHandState {
+  if (wall.length !== 32) throw new Error(`xmjDeal: wall has ${wall.length} tiles, expected 32`);
+  const dealerHand = xmjSortTiles(wall.slice(0, XMJ_DEALER_TILES));
+  const otherHand = xmjSortTiles(wall.slice(XMJ_DEALER_TILES, XMJ_DEALER_TILES + XMJ_OTHER_TILES));
+  const hands: [XmjTile[], XmjTile[]] =
+    dealer === 0 ? [dealerHand, otherHand] : [otherHand, dealerHand];
+  return {
+    dealer,
+    wall: wall.slice(XMJ_DEALER_TILES + XMJ_OTHER_TILES),
+    hands,
+    melds: [[], []],
+    discards: [[], []],
+    drawnDiscards: [[], []],
+    turn: dealer,
+    // Dealer discards first, without drawing; 天胡 is declared from here.
+    phase: { type: 'discard', mayWin: true, drawn: null },
+    draws: [0, 0],
+    claimed: false,
+    taiTable,
+    ...(taiTable === 3 ? { declared: [false, false] as const } : {}),
+  };
+}
+
+function setSeat<T>(pair: readonly [T, T], seat: XmjSeatIndex, value: T): [T, T] {
+  return seat === 0 ? [value, pair[1]] : [pair[0], value];
+}
+
+/** Draw for `seat` off the wall, or end the hand as 流局 when it is empty (spec 10). */
+function drawFor(state: XmjHandState, seat: XmjSeatIndex): XmjHandState {
+  const [tile, ...wall] = state.wall;
+  if (tile === undefined) return { ...state, turn: seat, phase: { type: 'exhausted' } };
+  return {
+    ...state,
+    wall,
+    turn: seat,
+    hands: setSeat(state.hands, seat, xmjSortTiles([...(state.hands[seat] ?? []), tile])),
+    draws: setSeat(state.draws, seat, (state.draws[seat] ?? 0) + 1),
+    phase: { type: 'discard', mayWin: true, drawn: tile },
+  };
+}
+
+export function xmjIsDeclared(state: XmjHandState, seat: XmjSeatIndex): boolean {
+  return state.taiTable === 3 && state.declared?.[seat] === true;
+}
+
+export function xmjCanDiscard(state: XmjHandState, tile: XmjTile, handCopy = false): boolean {
+  if (state.phase.type !== 'discard' || !state.hands[state.turn].includes(tile)) return false;
+  // Even when the draw has a twin, the locked hand cannot exchange its copy.
+  return !xmjIsDeclared(state, state.turn) || (state.phase.drawn === tile && !handCopy);
+}
+
+/**
+ * Discards leaving at least one physically possible wait. Only this seat's
+ * tiles and the public table count as seen, including the proposed discard:
+ * consulting the wall or the opponent's hand would leak their contents through
+ * eligibility. Exposed melds count both toward the shape and the available set.
+ */
+export function xmjDeclarationDiscards(state: XmjHandState): XmjTile[] {
+  if (state.taiTable !== 3 || state.phase.type !== 'discard' || xmjIsDeclared(state, state.turn)) {
+    return [];
+  }
+  const seat = state.turn;
+  const seen = [
+    ...state.hands[seat],
+    ...state.melds.flatMap((melds) => melds.flatMap((meld) => meld.tiles)),
+    ...state.discards.flat(),
+  ];
+  return [...new Set(state.hands[seat])].filter((discard) => {
+    const kept = removeTiles(state.hands[seat], [discard]) as XmjTile[];
+    return XMJ_TILE_KINDS.some(
+      (tile) =>
+        seen.filter((known) => known === tile).length < XMJ_COPIES[tilePiece(tile)] &&
+        xmjWinShape([...kept, tile], state.melds[seat]) !== null,
+    );
+  });
+}
+
+/** Declare and discard as one transition; an invalid declaration changes nothing. */
+export function xmjDeclareReady(
+  state: XmjHandState,
+  tile: XmjTile,
+  handCopy = false,
+): XmjHandState {
+  if (!xmjDeclarationDiscards(state).includes(tile)) return state;
+  const discarded = xmjDiscard(state, tile, handCopy);
+  return {
+    ...discarded,
+    declared: setSeat(state.declared ?? [false, false], state.turn, true),
+  };
+}
+
+/**
+ * Discard a tile. Always opens the claim window, whether or not the opponent
+ * holds a claim: a window that opened only when a claim existed would tell the
+ * discarder the opponent's hand fits the tile. The room settles a window with
+ * no claim in it as a pass (see `xmjPendingAction`).
+ *
+ * A discard of the drawn tile's face counts as the drawn tile itself unless
+ * `handCopy` says the player threw an identical tile from the hand instead.
+ * Either way the hand left behind is the same; only the table sees which slot
+ * the tile left.
+ */
+export function xmjDiscard(state: XmjHandState, tile: XmjTile, handCopy = false): XmjHandState {
+  if (!xmjCanDiscard(state, tile, handCopy)) return state;
+  const seat = state.turn;
+  const hand = removeTiles(state.hands[seat], [tile]) as XmjTile[];
+  // A hand copy needs a second tile of that face in the hand; otherwise the
+  // flag is ignored, so a client cannot misreport where a tile came from.
+  const copies = state.hands[seat].filter((t) => t === tile).length;
+  const fromDraw =
+    state.phase.type === 'discard' && state.phase.drawn === tile && !(handCopy && copies > 1);
+  const next: XmjHandState = {
+    ...state,
+    hands: setSeat(state.hands, seat, hand),
+    discards: setSeat(state.discards, seat, [...state.discards[seat], tile]),
+    drawnDiscards: setSeat(state.drawnDiscards, seat, [...state.drawnDiscards[seat], fromDraw]),
+    phase: { type: 'claim', discard: tile, discarder: seat },
+  };
+  return next;
+}
+
+/** Claims open to the non-discarder in the current window (empty outside one). */
+export function xmjClaimsOpen(state: XmjHandState): XmjClaim[] {
+  if (state.phase.type !== 'claim') return [];
+  const claimant = xmjOtherSeat(state.phase.discarder);
+  const claims = xmjLegalClaims(state.hands[claimant], state.melds[claimant], state.phase.discard);
+  return xmjIsDeclared(state, claimant) ? claims.filter((claim) => claim.kind === 'win') : claims;
+}
+
+/** Decline the discard: the claimant draws (or the hand is a 流局). */
+export function xmjPass(state: XmjHandState): XmjHandState {
+  if (state.phase.type !== 'claim') return state;
+  return drawFor(state, xmjOtherSeat(state.phase.discarder));
+}
+
+function sameTiles(a: readonly XmjTile[], b: readonly XmjTile[]): boolean {
+  return xmjSortTiles(a).join() === xmjSortTiles(b).join();
+}
+
+/** Make a claim. Returns the state unchanged if the claim is not legal. */
+export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
+  if (state.phase.type !== 'claim') return state;
+  const legal = xmjClaimsOpen(state).find(
+    (c) => c.kind === claim.kind && sameTiles(c.fromHand, claim.fromHand),
+  );
+  if (!legal) return state;
+  const { discard, discarder } = state.phase;
+  const seat = xmjOtherSeat(discarder);
+  // The claimed tile leaves the discarder's pile: it lives in the meld now.
+  const pile = state.discards[discarder].slice(0, -1);
+  const discards = setSeat(state.discards, discarder, pile);
+  const drawnDiscards = setSeat(
+    state.drawnDiscards,
+    discarder,
+    state.drawnDiscards[discarder].slice(0, -1),
+  );
+  if (legal.kind === 'win') {
+    const concealed = xmjSortTiles([...state.hands[seat], discard]);
+    const score = xmjScore({
+      concealed,
+      melds: state.melds[seat],
+      selfDrawn: false,
+      winnerIsDealer: seat === state.dealer,
+      heavenly: false,
+      earthly: false,
+      lastTile: false,
+      table: state.taiTable ?? 1,
+      declared: xmjIsDeclared(state, seat),
+    });
+    return {
+      ...state,
+      discards,
+      drawnDiscards,
+      hands: setSeat(state.hands, seat, concealed),
+      turn: seat,
+      phase: { type: 'won', winner: seat, selfDrawn: false, winningTile: discard, score },
+    };
+  }
+  const hand = removeTiles(state.hands[seat], legal.fromHand) as XmjTile[];
+  const meld: XmjMeld = {
+    kind: legal.kind === 'pung' ? 'triplet' : 'sequence',
+    tiles: xmjSortTiles([...legal.fromHand, discard]),
+    claimed: discard,
+  };
+  return {
+    ...state,
+    discards,
+    drawnDiscards,
+    hands: setSeat(state.hands, seat, hand),
+    melds: setSeat(state.melds, seat, [...state.melds[seat], meld]),
+    turn: seat,
+    claimed: true,
+    // No draw after a claim, and no self-drawn win either: discard now.
+    phase: { type: 'discard', mayWin: false, drawn: null },
+  };
+}
+
+/** Whether the seat to move may declare 自摸 now. */
+export function xmjCanSelfDraw(state: XmjHandState): boolean {
+  if (state.phase.type !== 'discard' || !state.phase.mayWin) return false;
+  return xmjWinShape(state.hands[state.turn], state.melds[state.turn]) !== null;
+}
+
+/** Declare a self-drawn win (自摸, 天胡, 地胡, 海底撈月). */
+export function xmjSelfDraw(state: XmjHandState): XmjHandState {
+  if (!xmjCanSelfDraw(state) || state.phase.type !== 'discard') return state;
+  const seat = state.turn;
+  const isDealer = seat === state.dealer;
+  const noDiscardYet = state.discards[0].length === 0 && state.discards[1].length === 0;
+  const heavenly = isDealer && state.draws[seat] === 0 && noDiscardYet;
+  const earthly = !isDealer && state.draws[seat] === 1 && !state.claimed;
+  const score = xmjScore({
+    concealed: state.hands[seat],
+    melds: state.melds[seat],
+    selfDrawn: true,
+    winnerIsDealer: isDealer,
+    heavenly,
+    earthly,
+    lastTile: state.wall.length === 0 && state.phase.drawn !== null,
+    table: state.taiTable ?? 1,
+    declared: xmjIsDeclared(state, seat),
+  });
+  const winningTile = state.phase.drawn ?? (state.hands[seat][0] as XmjTile);
+  return {
+    ...state,
+    phase: { type: 'won', winner: seat, selfDrawn: true, winningTile, score },
+  };
+}
+
+export function xmjHandOver(state: XmjHandState): boolean {
+  return state.phase.type === 'won' || state.phase.type === 'exhausted';
+}
+
+// ---------------------------------------------------------------- the match
+
+/**
+ * Hands in a match, 流局 included. Deliberate 2-player change from spec 3,
+ * which suggested eight: six, so each seat deals three times (was four until
+ * 2026-10-15; Brian found four too short to come back from one big hand). The
+ * one constant every match-length check reads, so eight can return as an option.
+ */
+export const XMJ_MATCH_HANDS = 6;
+
+export interface XmjHandResult {
+  readonly dealer: XmjSeatIndex;
+  readonly winner: XmjSeatIndex | null;
+  readonly selfDrawn: boolean;
+  readonly score: XmjScore | null;
+  /** The tile the hand was won on; public once the hand is over. */
+  readonly winningTile?: XmjTile;
+}
+
+export interface XmjMatchState {
+  /** One shuffled wall per hand, fixed at room creation. Server-secret. */
+  readonly walls: readonly (readonly XmjTile[])[];
+  readonly handIndex: number;
+  readonly scores: readonly [number, number];
+  readonly hand: XmjHandState;
+  readonly results: readonly XmjHandResult[];
+  /** True between hands: the last hand is over and the next is not dealt. */
+  readonly between: boolean;
+  readonly over: boolean;
+}
+
+export function xmjNewMatch(
+  walls: readonly (readonly XmjTile[])[],
+  firstDealer: XmjSeatIndex,
+  taiTable: XmjTaiTable = XMJ_TAI_TABLE,
+): XmjMatchState {
+  if (walls.length < 1) throw new Error('xmjNewMatch: no walls');
+  return {
+    walls,
+    handIndex: 0,
+    scores: [0, 0],
+    hand: xmjDeal(walls[0] as XmjTile[], firstDealer, taiTable),
+    results: [],
+    between: false,
+    over: false,
+  };
+}
+
+/**
+ * Apply a hand-level transition and, if it ended the hand, book the result:
+ * the winner banks the hand's 台 total (1 point per 台); the other player
+ * loses nothing. Two players make this the same race as the zero-sum count
+ * (the gap is identical, so is the winner), and a total that only grows reads
+ * at a glance: "Misty 8, You 5" rather than "+3 to −3".
+ */
+export function xmjAdvance(match: XmjMatchState, hand: XmjHandState): XmjMatchState {
+  if (hand === match.hand) return match;
+  if (!xmjHandOver(hand)) return { ...match, hand };
+  const phase = hand.phase;
+  let scores = match.scores;
+  let result: XmjHandResult = { dealer: hand.dealer, winner: null, selfDrawn: false, score: null };
+  if (phase.type === 'won') {
+    const points = phase.score.total;
+    scores = setSeat(scores, phase.winner, scores[phase.winner] + points);
+    result = {
+      dealer: hand.dealer,
+      winner: phase.winner,
+      selfDrawn: phase.selfDrawn,
+      score: phase.score,
+      winningTile: phase.winningTile,
+    };
+  }
+  const results = [...match.results, result];
+  const over = results.length >= Math.min(XMJ_MATCH_HANDS, match.walls.length);
+  return { ...match, hand, scores, results, between: !over, over };
+}
+
+/**
+ * Dealer for the next hand: the deal alternates every hand, whoever won and
+ * after a 流局, so each seat deals the same number of times. Deliberate
+ * 2-player change from spec 3 and 10, where the dealer kept the deal on a win
+ * or a 流局: the dealer's fifth tile and first discard made a kept deal snowball.
+ */
+export function xmjNextDealer(result: XmjHandResult): XmjSeatIndex {
+  return xmjOtherSeat(result.dealer);
+}
+
+/** Deal the next hand. Only between hands. */
+export function xmjNextHand(match: XmjMatchState): XmjMatchState {
+  if (!match.between || match.over) return match;
+  const last = match.results[match.results.length - 1] as XmjHandResult;
+  const handIndex = match.handIndex + 1;
+  return {
+    ...match,
+    handIndex,
+    hand: xmjDeal(
+      match.walls[handIndex] as XmjTile[],
+      xmjNextDealer(last),
+      match.hand.taiTable ?? 1,
+    ),
+    between: false,
+  };
+}
+
+/** Match winner by points; null on a tie or while the match runs. */
+export function xmjMatchWinner(match: XmjMatchState): XmjSeatIndex | null {
+  if (!match.over) return null;
+  const [a, b] = match.scores;
+  if (a === b) return null;
+  return a > b ? 0 : 1;
+}

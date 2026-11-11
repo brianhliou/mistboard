@@ -15,6 +15,9 @@
   --pp-pad: 14px;
   /* The variant marker fills most of a row's height (Brian, 2026-10-03). */
   --pp-icon: 40px;
+  /* Rows size off the panel, not the window: the three-column homepage band
+     squeezes the panel to ~480px on a laptop. */
+  container: pp-board / inline-size;
 }
 
 :root[data-effective-theme="dark"] .pp-board {
@@ -232,6 +235,32 @@
   visibility: hidden;
 }
 
+/* Touch floor (#576) without moving the row (#573 owns its design): the drawn
+   box stays 20-22 x 24px, a transparent border (8px top and bottom, 10px at the
+   sides) makes the target at least 40px square, a negative margin hands the
+   space back, and the rim moves to an inset shadow, which paints inside the
+   padding box. The radius is elliptical so the drawn corner stays 4px. */
+@media (pointer: coarse) {
+  .pp-step-btn {
+    box-sizing: content-box;
+    margin: -8px -10px;
+    border-width: 8px 10px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 14px / 12px;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--site-border-soft);
+  }
+
+  .pp-step-btn:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--site-accent);
+  }
+
+  .pp-tab {
+    min-height: 40px;
+  }
+}
+
 .pp-step-value {
   display: flex;
   flex: 1;
@@ -304,6 +333,14 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* Touch floor (#576); after the base rule so it wins. The act cell spans both
+   lines of the row, so the taller button does not grow the row. */
+@media (pointer: coarse) {
+  .pp-act {
+    height: 40px;
+  }
 }
 
 .pp-row:hover .pp-act,
@@ -417,6 +454,11 @@
   color: var(--site-text);
 }
 
+.pp-mode-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .pp-note {
   text-align: right;
 }
@@ -484,6 +526,123 @@
   color: var(--site-text);
   font: inherit;
   cursor: pointer;
+}
+
+/* Narrow panel on a wide window (homepage three-column band, 1241-1410px):
+   the full columns left the variant name 29px ("Xi…"). Tighter columns keep
+   one line per row, and a name that still does not fit wraps instead of
+   ellipsizing. Phones keep their own two-line layout below. */
+@media (min-width: 641px) {
+  @container pp-board (max-width: 640px) {
+    .pp-row {
+      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 144px 86px 62px;
+      column-gap: 8px;
+    }
+
+    .pp-row-person {
+      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 62px;
+    }
+
+    .pp-name-label {
+      white-space: normal;
+    }
+
+    .pp-act {
+      padding: 0 10px;
+    }
+  }
+}
+
+/* Three-column hero: preserve the ten-row footprint when fewer games are
+   listed (#1016). The shared card's floor plus the in-flow tab strip sets the
+   grid row's minimum, which the side rails stretch to (landing.css). Both tabs
+   share this card; rows keep their natural height and spare room stays below
+   them. Longer lists still grow the band without an internal scrollbar. */
+@media (min-width: 1241px) {
+  .landing-demo .pp-board {
+    --pp-icon: 34px;
+    --pp-row-height: 40px;
+    --pp-min-rows: 10;
+    --pp-card-border-width: 1px;
+  }
+
+  .landing-demo .pp-card {
+    min-height: calc(var(--pp-min-rows) * var(--pp-row-height) + 2 * var(--pp-card-border-width));
+    border-width: var(--pp-card-border-width);
+  }
+
+  .landing-demo .pp-view-computer .pp-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .landing-demo .pp-view-computer .pp-row {
+    flex: 0 0 auto;
+    min-height: var(--pp-row-height);
+  }
+
+  .landing-demo .pp-feature {
+    padding-block: 4px;
+  }
+}
+
+/* Play a person never scrolls (Brian, 2026-10-27), like the computer tab: its
+   rows drop to a 32px floor with a 32px marker and the Casual/Rated bar to
+   2px padding, so the ten variants plus room for two more fit the height the
+   computer tab sets (11 bot rows at their 40px floor), and they share whatever
+   is left over
+   instead of leaving dead panel under the last one. The scroll stays only as
+   the fallback for a long list of open seeks above the rows. */
+@media (min-width: 641px) {
+  .pp-board .pp-view-person {
+    --pp-icon: 32px;
+  }
+
+  /* The Casual/Rated bar is one line at any note length (Brian, 2026-10-27:
+     "account for that spacing"): 2px padding, a slimmer switch, and a note
+     that ellipsizes instead of wrapping the bar to two lines. */
+  .pp-view-person .pp-control {
+    padding-block: 2px;
+  }
+
+  .pp-view-person .pp-mode-btn {
+    padding: 2px 12px;
+    line-height: 1.35;
+  }
+
+  .pp-view-person .pp-note {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pp-view-person .pp-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pp-person-rows {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+  }
+
+  .pp-view-person .pp-row-person {
+    flex: 1 0 auto;
+    min-height: 32px;
+    max-height: 46px;
+  }
+}
+
+/* Three-column band: a person row tops out at the bot rows' 40px floor, so
+   the two tabs share one row rhythm (Brian, 2026-10-27: "compress it even a
+   tiny bit more"). Spare height stays under the last row. */
+@media (min-width: 1241px) {
+  .landing-demo .pp-view-person .pp-row-person {
+    flex: 0 0 auto;
+    max-height: var(--pp-row-height);
+  }
 }
 
 /* Phone width: name and action on the first line, steppers under them. */

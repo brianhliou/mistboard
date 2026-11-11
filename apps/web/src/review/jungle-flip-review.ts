@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Flip Jungle (jungle-flip) review surface: the jungle-flip presentation bundle over
 // the generic tree-review controller (mountTreeReview). It drives the in-browser
 // MistyJungleFlip wasm client engine (positionMode 'fen', per-node redacted FEN), mirroring
@@ -9,26 +10,34 @@ import {
   type JungleFlipDeal,
   type JungleFlipGameState,
   type JungleFlipMove,
+  type JungleFlipPieceRole,
   type JungleFlipPlayerView,
   type JungleFlipSeat,
+  jungleFlipMoveLabel,
   jungleFlipStateToEngineFen,
 } from '@mistboard/game';
+
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleFlipInteractiveBoard } from '../jungle-flip-board.js';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
+  jungleFlipPieceGhostSvg,
 } from '../jungle-flip-render.js';
+import { fillCapturedPoolWith } from './captured-pool.js';
 import {
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
+import { jungleFlipLuckDetail, jungleFlipLuckPieceSvg } from './flip-luck.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { makeJungleFlipTreeAdapter } from './jungle-flip-tree-adapter.js';
+import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -45,17 +54,11 @@ export type JungleFlipReviewConfig = TreeReviewConfig<JungleFlipMove, JungleFlip
 /** Handle returned by mountJungleFlipReview: snapshot the current tree to persist it. */
 export type JungleFlipReviewHandle = TreeReviewHandle;
 
-// Engine UCI uses 0-indexed ranks (a0..d3) with a flip as from===to; render it in board
-// coords for the MultiPV panel — a bare coord ("b3") for a flip, "b3-c3" for a move.
+// Engine UCI uses 0-indexed ranks (a0..d3) with a flip as from===to; the MultiPV panel shows
+// the move-list label (flip-move-label.ts). A flip in a line has not happened: "b3(?)".
 function formatJungleFlipEngineMove(uci: string): string {
-  if (uci.length < 4) return uci;
-  const toDisplay = (sq: string): string => {
-    const rank = Number(sq[1]);
-    return Number.isNaN(rank) ? sq : `${sq[0]}${rank + 1}`;
-  };
-  const from = toDisplay(uci.slice(0, 2));
-  const to = toDisplay(uci.slice(2, 4));
-  return from === to ? from : `${from}-${to}`;
+  const move = engineUciToJungleFlipMove(uci);
+  return move ? jungleFlipMoveLabel(move, null) : uci;
 }
 
 // No board-overlay layer, so the engine presentation omits that capability and the
@@ -72,6 +75,7 @@ function makeJungleFlipPresentation(
   JungleFlipBoardArrow,
   JungleFlipBoardMarker
 > {
+  let luckDetail: LuckCardDetail<JungleFlipPieceRole> | null = null;
   return {
     adapter,
     // Client engine: the in-browser MistyJungleFlip wasm (single-shot MultiPV), fed the
@@ -98,6 +102,8 @@ function makeJungleFlipPresentation(
     boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
     defaultBoardAriaLabel: 'Flip Jungle board',
     boardAspect: rectangularGridAspect(JUNGLE_FLIP_BOARD_VIEW),
+    // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     // 4×4 board: keep capture tiles compact so the board grows to fill the box.
     boardCols: 8,
     // Cap the width so four cells don't balloon to fill a large square area (the
@@ -105,11 +111,16 @@ function makeJungleFlipPresentation(
     boardMaxPx: 560,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
-    createBoard: (opts) => createJungleFlipInteractiveBoard(opts),
-    // No glide animation (a flip has no travel; board re-renders on nav).
+    createBoard: (opts) => {
+      const board = createJungleFlipInteractiveBoard(opts);
+      const detach = attachLuckMarkCard(opts.board, () => luckDetail, jungleFlipLuckPieceSvg);
+      opts.signal?.addEventListener('abort', detach, { once: true });
+      return board;
+    },
+    // A step forward onto a flip turns the tile over; other moves glide.
     // The board never flips (the deal has no sides), so the glide ignores the
     // review's perspective too.
-    animateMove: (host, move, _perspective, opts) => animateJungleFlipBoardMove(host, move, opts),
+    animateMove: (host, move, _perspective, opts) => animateJungleFlipStep(host, move, opts),
     shapeToArrow: (s: NodeShape): JungleFlipBoardArrow => ({
       from: s.orig as JungleFlipBoardArrow['from'],
       to: (s.dest ?? s.orig) as JungleFlipBoardArrow['to'],
@@ -120,6 +131,10 @@ function makeJungleFlipPresentation(
       kind: 'circle',
       className: `xq-shape--${s.brush}`,
     }),
+    seatCaptures: (host, view, _rootView, owner) => {
+      if (owner !== 'red' && owner !== 'black') return;
+      fillCapturedPoolWith(host, view.captured, owner, jungleFlipPieceGhostSvg);
+    },
     // Judgment badge on the square the move landed on, so the board states the
     // same verdict the move list does (lila pins its glyphs the same way).
     moveGlyphMarker: (move: JungleFlipMove, glyph): JungleFlipBoardMarker => ({
@@ -128,6 +143,21 @@ function makeJungleFlipPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
+    moveLuckMarker: (move, info) => {
+      luckDetail = jungleFlipLuckDetail(move, info);
+      return luckDetail ? { square: move.to, kind: 'luck', luck: { luck: info.luck } } : null;
+    },
+    moveListLuck: ({ list, luckAt, signal }) => {
+      const detach = attachLuckBadgeCard(
+        list,
+        (badge) => {
+          const at = luckAt(badge.dataset.luckPath ?? '');
+          return at ? jungleFlipLuckDetail(at.move, at) : null;
+        },
+        jungleFlipLuckPieceSvg,
+      );
+      signal.addEventListener('abort', detach, { once: true });
+    },
   };
 }
 
@@ -140,6 +170,6 @@ export function mountJungleFlipReview(
   deal: JungleFlipDeal | null,
   config: JungleFlipReviewConfig,
 ): JungleFlipReviewHandle {
-  const adapter = makeJungleFlipTreeAdapter(gameId, deal);
-  return mountTreeReview(root, makeJungleFlipPresentation(adapter), config);
+  const faceDown = withFaceDownReview(makeJungleFlipTreeAdapter(gameId, deal), config);
+  return mountTreeReview(root, makeJungleFlipPresentation(faceDown.adapter), faceDown.config);
 }

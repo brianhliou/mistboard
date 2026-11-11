@@ -4,8 +4,13 @@
 // those into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per
 // move, never graded). Mirrors review/jieqi-decisions.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
+import { formatFlipVariantBestMove } from './move-advice-text.js';
 
 /** One flip ply's decomposition, all win% from the MOVER's (seat's) POV (mirrors the server shape). */
 export type BanqiDecision = {
@@ -19,6 +24,8 @@ export type BanqiDecision = {
   realizedWin: number;
   /** Rank of the played move among candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
+  /** Absent on rows cached before ranked alternatives. */
+  candidates?: { move: string; win: number; played?: boolean }[];
 };
 
 export type BanqiDecisionsResponse = {
@@ -54,6 +61,7 @@ export type DecisionView = {
   /** Per-decision accuracy in [0, 100] (lila's win%-drop curve, best -> played). */
   accuracy: number;
   playedRank: number | null;
+  candidates?: BanqiDecision['candidates'];
 };
 
 export function decisionView(d: BanqiDecision): DecisionView {
@@ -67,6 +75,7 @@ export function decisionView(d: BanqiDecision): DecisionView {
     luck: d.realizedWin - d.playedWin,
     accuracy: accuracyPercent(d.bestWin, d.playedWin),
     playedRank: d.playedRank,
+    ...(d.candidates?.length ? { candidates: d.candidates } : {}),
   };
 }
 
@@ -112,25 +121,32 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedBanqiDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<BanqiDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as BanqiDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<BanqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute the decomposition (account-gated on the server), then summarize it.
  *  A cached game answers immediately (200); otherwise the server enqueues a background
  *  job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestBanqiDecisions(roomId: string): Promise<BanqiDecisionSummary> {
+export async function requestBanqiDecisions(
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<BanqiDecisionSummary> {
   const body = await postAnalysisJob<BanqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);
 }
 
 /** Adapt the banqi decomposition summary to the review's variant-agnostic overlay shape.
- *  Shared by the postgame review and the game embed. No candidates: the server keeps only
- *  the played flip's rank, so a judged flip says the word and points at nothing. */
+ *  Shared by the postgame review and the game embed. Older cached rows keep rank-only advice. */
 export function banqiDecisionOverlay(summary: BanqiDecisionSummary): DecisionOverlay {
   return {
     byPly: new Map(
@@ -141,6 +157,17 @@ export function banqiDecisionOverlay(summary: BanqiDecisionSummary): DecisionOve
           accuracy: view.accuracy,
           luck: view.luck,
           playedRank: view.playedRank,
+          ...(view.candidates?.length
+            ? {
+                candidates: view.candidates.map((candidate, index) => ({
+                  label: formatFlipVariantBestMove(candidate.move),
+                  win: candidate.win,
+                  rank: candidate.played ? (view.playedRank ?? index + 1) : index + 1,
+                  uci: candidate.move,
+                  ...(candidate.played ? { played: true } : {}),
+                })),
+              }
+            : {}),
         },
       ]),
     ),

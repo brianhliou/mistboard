@@ -51,7 +51,6 @@ export type XiangqiPuzzleAuditOptions = {
   winHi: number;
   winLo: number;
   minGapCp: number;
-  materialGapCp: number;
   limit: number;
   ids: Set<string> | null;
   out: string | null;
@@ -71,10 +70,6 @@ function parseOptions(): XiangqiPuzzleAuditOptions {
         type: 'string',
         default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
       },
-      'material-gap-cp': {
-        type: 'string',
-        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp),
-      },
       limit: { type: 'string', default: '0' },
       ids: { type: 'string' },
       out: { type: 'string' },
@@ -86,10 +81,6 @@ function parseOptions(): XiangqiPuzzleAuditOptions {
     winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
     winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
     minGapCp: parsePositiveInt(values['min-gap-cp'], XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
-    materialGapCp: parsePositiveInt(
-      values['material-gap-cp'],
-      XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp,
-    ),
     limit: parsePositiveInt(values.limit, 0),
     ids: values.ids
       ? new Set(
@@ -146,7 +137,6 @@ export async function auditXiangqiPuzzle(
     winHi: opts.winHi,
     winLo: opts.winLo,
     minGapCp: opts.minGapCp,
-    materialGapCp: opts.materialGapCp,
   };
   const limits = { depth: opts.depth, ...(opts.nodes ? { nodes: opts.nodes } : {}) };
   const plies: XiangqiPuzzleAuditPlyReport[] = [];
@@ -243,7 +233,7 @@ async function main(opts: XiangqiPuzzleAuditOptions): Promise<void> {
   }
 
   process.stdout.write(
-    `\n=== audit summary (depth=${opts.depth} win-hi=${opts.winHi} win-lo=${opts.winLo} min-gap-cp=${opts.minGapCp} material-gap-cp=${opts.materialGapCp}) ===\n` +
+    `\n=== audit summary (depth=${opts.depth} win-hi=${opts.winHi} win-lo=${opts.winLo} min-gap-cp=${opts.minGapCp}) ===\n` +
       `puzzles:            ${reports.length}\n` +
       `  single solver move: ${summary.singleMove}\n` +
       `  multi solver move:  ${summary.multiMove}\n` +

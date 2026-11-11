@@ -169,6 +169,16 @@ function controlButton(action: string): HTMLButtonElement {
   return button;
 }
 
+// #264: a cold join to a finished room once rendered |< < > disabled with only
+// >| live, because the history held the single served snapshot.
+function scrubberDisabled(): Record<string, boolean> {
+  const state: Record<string, boolean> = {};
+  for (const action of ['first', 'prev', 'next', 'latest']) {
+    state[action] = controlButton(action).disabled;
+  }
+  return state;
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.stubGlobal(
@@ -200,6 +210,97 @@ describe('banqi deal recovery from a finished room', () => {
 });
 
 describe('cold join to a finished banqi room', () => {
+  it('announces a reveal failure without replacing the result and permits retry', async () => {
+    const finished = resigned(STATES[MID]!);
+    let fail = true;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (!url.endsWith('/reveal')) return new Response('{}', { status: 404 });
+        if (init?.method === 'HEAD') return new Response(null, { status: 204 });
+        if (fail) return new Response('{}', { status: 503 });
+        return new Response(
+          JSON.stringify({
+            roomId: ROOM,
+            finalizedAt: new Date(999).toISOString(),
+            view: truthView(finished),
+          }),
+        );
+      }),
+    );
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: seatView(finished, 'red'),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+      }),
+    );
+    options.render();
+    const button = document.querySelector<HTMLButtonElement>('[data-replay-reveal]')!;
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    const result = document.querySelector('[data-game-result]')!.textContent;
+    button.click();
+    const status = document.querySelector<HTMLElement>('[data-banqi-reveal-status]')!;
+    await vi.waitFor(() => expect(status.hidden).toBe(false));
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.textContent).toContain('Could not reveal pieces');
+    expect(document.querySelector('[data-game-result]')!.textContent).toBe(result);
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    fail = false;
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    expect(status.hidden).toBe(true);
+  });
+  it('uses masked finished history and reveals only through the opt-in menu, then restores it', async () => {
+    const finished = resigned(STATES[MID]!);
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith('/reveal')) return new Response('{}', { status: 404 });
+      if (init?.method === 'HEAD') return new Response(null, { status: 204 });
+      return new Response(
+        JSON.stringify({
+          roomId: ROOM,
+          finalizedAt: new Date(999).toISOString(),
+          view: truthView(finished),
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: seatView(finished, 'red'),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+        liveHistory: STATES.slice(0, MID + 1).map((state, ply) => ({
+          ply,
+          view: { ...seatView(state, 'red'), legalMoves: [] },
+        })),
+      }),
+    );
+    options.render();
+    const button = document.querySelector<HTMLButtonElement>('[data-replay-reveal]')!;
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    expect(button.hidden).toBe(false);
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    expect(controlButton('first').disabled).toBe(false);
+    expect(
+      fetcher.mock.calls.filter(
+        ([url, init]) => url.endsWith('/reveal') && init?.method !== 'HEAD',
+      ),
+    ).toHaveLength(0);
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    button.click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    controlButton('first').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
   it('lists every move, links review at the final ply, and steps to any ply', async () => {
     const options = await mount();
     options.applyHello(
@@ -214,7 +315,7 @@ describe('cold join to a finished banqi room', () => {
     expect(moveCells()).toHaveLength(PLIES);
     expect(document.querySelectorAll('li.xiangqi-move-row')).toHaveLength(Math.ceil(PLIES / 2));
     expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
-    // The live tip is the server's fully revealed board.
+    // The live tip: this game turned every tile over before it ended.
     expect(Object.values(boardOnScreen())).not.toContain('');
 
     moveCells()[MID - 1]!.click();
@@ -223,6 +324,42 @@ describe('cold join to a finished banqi room', () => {
 
     controlButton('first').click();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+  });
+
+  // The server serves a finished room every tile face up; the room turns the
+  // ones nobody flipped back over (Brian, 2026-10-30).
+  it('keeps the tiles still face down at the end face down on the board', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: truthView(resigned(STATES[MID]!)),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+      }),
+    );
+    options.render();
+    expect(Object.values(expectedMasked(STATES[MID]!))).toContain('');
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+  });
+
+  it('enables the scrubber controls (#264)', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: truthView(resigned(STATES[PLIES]!)),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    options.render();
+    expect(scrubberDisabled()).toEqual({ first: false, prev: false, next: true, latest: true });
+
+    controlButton('first').click();
+    expect(scrubberDisabled()).toEqual({ first: true, prev: true, next: false, latest: false });
+    controlButton('next').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[1]!));
+    controlButton('latest').click();
+    expect(Object.values(boardOnScreen())).not.toContain('');
   });
 
   it('a seated player reloading a finished room gets the same history', async () => {
@@ -276,26 +413,37 @@ describe('cold join to a LIVE banqi room is unchanged (hidden-info regression)',
 describe('a banqi room that finishes live, without a reload', () => {
   it('keeps the captured plies and links review at the last move', async () => {
     const options = await mount();
-    options.applyHello(
-      frame('hello', { seat: 'red', state: seatView(STATES[0]!, 'red'), events: [CREATED] }),
-    );
-    options.render();
-    const events = moveEvents(PLIES);
-    for (let ply = 1; ply <= PLIES; ply += 1) {
-      options.applyEvent(
-        frame('event-appended', { state: seatView(STATES[ply]!, 'red'), event: events[ply - 1] }),
+    // A socket render waits out the flip it lands on (live-client
+    // renderFromSocket), so let a move's worth of time pass between moves.
+    vi.useFakeTimers();
+    try {
+      const settle = (): void => {
+        options.render();
+        vi.advanceTimersByTime(2_000);
+      };
+      options.applyHello(
+        frame('hello', { seat: 'red', state: seatView(STATES[0]!, 'red'), events: [CREATED] }),
       );
-      options.render();
-    }
-    options.applyEvent(
-      frame('event-appended', { state: truthView(resigned(STATES[PLIES]!)), event: FINISHED }),
-    );
-    options.render();
+      settle();
+      const events = moveEvents(PLIES);
+      for (let ply = 1; ply <= PLIES; ply += 1) {
+        options.applyEvent(
+          frame('event-appended', { state: seatView(STATES[ply]!, 'red'), event: events[ply - 1] }),
+        );
+        settle();
+      }
+      options.applyEvent(
+        frame('event-appended', { state: truthView(resigned(STATES[PLIES]!)), event: FINISHED }),
+      );
+      settle();
 
-    expect(moveCells()).toHaveLength(PLIES);
-    expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
-    moveCells()[MID - 1]!.click();
-    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+      expect(moveCells()).toHaveLength(PLIES);
+      expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
+      moveCells()[MID - 1]!.click();
+      expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

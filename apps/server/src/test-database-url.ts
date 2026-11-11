@@ -21,7 +21,7 @@ export function assertSafePersistentTestDatabaseUrl(
   throw new Error(
     [
       'Refusing to run persistent tests against the local dev database.',
-      'Use `npm run test:persistent`, which defaults to mistboard_test,',
+      'Use `npm run test:persistent`, which defaults to a per-worktree mistboard_test_<hash> database,',
       'or set MISTBOARD_ALLOW_DEV_DB_TESTS=1 if you intentionally want to truncate mistboard.',
     ].join(' '),
   );

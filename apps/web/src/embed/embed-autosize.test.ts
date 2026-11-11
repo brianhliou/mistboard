@@ -9,8 +9,12 @@ import { EMBED_HEIGHT_MESSAGE } from './embed-card.js';
 function frame(aspect = '702 / 780'): HTMLIFrameElement {
   const el = document.createElement('iframe');
   el.src = '/embed/study/abc/def';
+  // Create a distinct browsing context without loading the embed over HTTP.
+  // happy-dom 21 leaves contentWindow null when iframe page loading is disabled.
+  el.srcdoc = '';
   el.style.aspectRatio = aspect;
   document.body.append(el);
+  expect(el.contentWindow).not.toBeNull();
   autosizeEmbedFrame(el);
   return el;
 }
@@ -35,6 +39,18 @@ describe('autosizeEmbedFrame', () => {
     post(el.contentWindow, 661.4);
     expect(el.style.height).toBe('662px');
     expect(el.style.aspectRatio).toBe('auto');
+  });
+
+  it('settles on the taller of two heights a card flips between, and still shrinks for real', () => {
+    const el = frame();
+    post(el.contentWindow, 662);
+    post(el.contentWindow, 663);
+    post(el.contentWindow, 662);
+    post(el.contentWindow, 663);
+    post(el.contentWindow, 662);
+    expect(el.style.height).toBe('663px');
+    post(el.contentWindow, 640);
+    expect(el.style.height).toBe('640px');
   });
 
   it("hands the height back to the host's CSS when the embed reports none", () => {

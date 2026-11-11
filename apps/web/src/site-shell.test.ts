@@ -1,19 +1,96 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
   buildNav,
+  closeQuickPicker,
+  closeSiteMenu,
   fitNavBrand,
+  isQuickPickerOpen,
+  isSiteMenuOpen,
+  navPhoneMediaQuery,
   navTabletMediaQuery,
+  openSiteMenu,
   placeNavAccount,
   syncAdminNavMenus,
 } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
+import {
+  readStoredXiangqiPieceSet,
+  setSiteThemePreference,
+  setXiangqiPieceSetPreference,
+} from './theme.js';
+import { xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
+
+type Viewport = 'desktop' | 'tablet' | 'phone';
+const PUZZLE_NAV_CASES = [
+  ['/puzzles', '/puzzles'],
+  ['/puzzles?theme=matein1', '/puzzles'],
+  ['/puzzles?mode=unknown', '/puzzles'],
+  ['/puzzles?mode=streak', '/puzzles?mode=streak'],
+  ['/puzzles?mode=storm', '/puzzles?mode=storm'],
+  ['/puzzles?mode=storm&review=some-puzzle', '/puzzles?mode=storm'],
+  ['/puzzles?review=some-puzzle&mode=storm', '/puzzles?mode=storm'],
+] as const;
+const STORM_LABELS = [
+  ['en', 'Puzzle Storm'],
+  ['zh-Hans', '限时解题'],
+  ['zh-Hant', '限時解題'],
+] as const;
+const originalMatchMedia = window.matchMedia;
+function stubViewport(viewport: Viewport): void {
+  window.matchMedia = ((query: string) =>
+    ({
+      matches:
+        (query === navTabletMediaQuery && viewport === 'tablet') ||
+        (query === navPhoneMediaQuery && viewport === 'phone'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+}
 
 describe('site shell nav', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     window.history.replaceState(null, '', '/');
   });
+
+  it.each(PUZZLE_NAV_CASES)('marks only the puzzle destination current on %s', (path, href) => {
+    window.history.replaceState(null, '', path);
+    const nav = buildNav();
+    document.body.append(nav);
+    const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
+    expect(current.map((a) => a.getAttribute('href'))).toEqual([href]);
+    expect(
+      nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
+    ).toBe(true);
+  });
+
+  it.each(STORM_LABELS)('exposes Puzzle Storm in the desktop menu in %s', (locale, label) => {
+    const nav = buildNav(locale);
+    expect(
+      nav.querySelector('.site-nav-menu-panel a[href="/puzzles?mode=storm"]')?.textContent,
+    ).toBe(label);
+  });
+
+  it.each(['/puzzles/themes', '/puzzles/dashboard'])(
+    'marks only the destination current on %s',
+    (path) => {
+      window.history.replaceState(null, '', path);
+      const nav = buildNav();
+      document.body.append(nav);
+      const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
+      expect(current.map((a) => a.getAttribute('href'))).toEqual([path]);
+      expect(
+        nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
+      ).toBe(true);
+    },
+  );
 
   it('links to Puzzles from the primary nav and marks puzzle detail routes active', () => {
     window.history.replaceState(null, '', '/puzzles/xq-mined-hxq_4a41e15e9d8a17414cf249ee-41');
@@ -35,6 +112,13 @@ describe('site shell nav', () => {
       'Tools',
       'Support',
     ]);
+    expect(
+      [
+        ...nav.querySelectorAll(
+          '.site-nav-links > .site-nav-menu > .site-nav-menu-toggle, .site-nav-links > .site-nav-link-donate',
+        ),
+      ].map((link) => link.getAttribute('href')),
+    ).toEqual(['/', '/puzzles', '/rules', '/watch', '/player', '/analysis/xiangqi', '/patron']);
     const donate = nav.querySelector<HTMLAnchorElement>('.site-nav-link-donate');
     expect(donate?.getAttribute('href')).toBe('/patron');
     expect(donate?.querySelector('.site-nav-donate-icon')?.getAttribute('aria-hidden')).toBe(
@@ -45,8 +129,27 @@ describe('site shell nav', () => {
     // all: a hidden menu still put its labels in the prerendered HTML.
     expect(nav.querySelector('[data-admin-only]')).toBeNull();
 
-    const puzzleLink = nav.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
-    expect(puzzleLink?.textContent).toBe('Puzzles');
+    // Puzzles is a split menu (lichess parity): the title goes to the trainer,
+    // the panel repeats it and adds the puzzle destinations.
+    const puzzleToggle = nav.querySelector<HTMLAnchorElement>(
+      '.site-nav-menu-toggle[href="/puzzles"]',
+    );
+    expect(puzzleToggle?.textContent).toBe('Puzzles');
+    expect(puzzleToggle?.classList.contains('active')).toBe(true);
+    const puzzlePanel = puzzleToggle?.parentElement?.querySelector('.site-nav-menu-panel');
+    expect(
+      [...(puzzlePanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
+        a.getAttribute('href'),
+        a.textContent,
+      ]),
+    ).toEqual([
+      ['/puzzles', 'Puzzles'],
+      ['/puzzles/themes', 'Puzzle Themes'],
+      ['/puzzles?mode=streak', 'Puzzle Streak'],
+      ['/puzzles?mode=storm', 'Puzzle Storm'],
+      ['/puzzles/dashboard', 'Puzzle Dashboard'],
+    ]);
+    const puzzleLink = puzzlePanel?.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
     expect(puzzleLink?.classList.contains('active')).toBe(true);
     expect(puzzleLink?.getAttribute('aria-current')).toBe('page');
     // Identify the Learn toggle by its href, not by being the first toggle in
@@ -64,7 +167,7 @@ describe('site shell nav', () => {
     expect(correspondence?.textContent).toBe('Correspondence');
     expect(correspondence?.hidden).toBe(false);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
-    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum, Blog.
+    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum.
     // The title also links to /player, so scope item lookups to the panel.
     const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
@@ -82,7 +185,6 @@ describe('site shell nav', () => {
       ['/bots', 'Bots'],
       ['/following', 'Friends'],
       ['/forum', 'Forum'],
-      ['/blog', 'Blog'],
     ]);
     // The Discord invite was pulled from this dropdown on 2026-08-28. It is
     // still in the footer, so the assertion moves rather than disappearing.
@@ -143,7 +245,7 @@ describe('site shell nav', () => {
       [...(learnMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Rules', 'Xiangqi Basics', 'Practice', 'Study', 'Coaches']);
+    ).toEqual(['Rules', 'Xiangqi Basics', 'Practice', 'Study', 'Coaches', 'Blog']);
     expect(
       learnMenu?.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle')?.getAttribute('href'),
     ).toBe('/rules');
@@ -210,15 +312,7 @@ describe('site shell nav', () => {
         [...(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
           (link) => link.textContent,
         ),
-      ).toEqual([
-        'Database',
-        'Engines',
-        'Accounts',
-        'Titles',
-        'Readouts',
-        'Metrics',
-        'Broadcast ops',
-      ]);
+      ).toEqual(['Database', 'Engines', 'Accounts', 'Titles', 'Ops', 'Broadcast ops']);
       // Last on the bar, right after Donate.
       expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
         true,
@@ -242,7 +336,15 @@ describe('site shell nav', () => {
     const nav = buildNav('zh-Hans');
     document.body.append(nav);
     const html = nav.outerHTML;
-    for (const label of ['管理', '数据库', '运营简报', '转播运维', '/database', '/readouts']) {
+    for (const label of [
+      '管理',
+      '数据库',
+      '运营简报',
+      '转播运维',
+      '/database',
+      '/readouts',
+      '/ops',
+    ]) {
       expect(html, label).not.toContain(label);
     }
   });
@@ -279,7 +381,7 @@ describe('site shell nav', () => {
     );
     expect(learnToggle?.textContent).toBe('學習');
     expect(learnToggle?.classList.contains('active')).toBe(true);
-    // Articles now surface as "Blog" (網誌) in the Community dropdown.
+    // Articles surface as "Blog" (網誌) in the Learn dropdown.
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')?.textContent).toBe(
       '網誌',
     );
@@ -297,15 +399,92 @@ describe('site shell nav', () => {
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/rules"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
-    // The announcement archive joined the footer 2026-08-27, when it stopped
-    // being a noindexed dead end. It is not a content path, so it keeps its
-    // bare href under a zh locale.
-    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     // The Discord invite left the footer on 2026-08-31 (see nav-items.ts): the
     // room is not ready to be promoted.
     expect(footer.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
+  });
+});
+
+// The stylesheet is not applied under jsdom, so phone rules are asserted as CSS text.
+const siteShellCss = readFileSync(
+  ['src/site-shell.css', 'apps/web/src/site-shell.css']
+    .map((candidate) => resolve(process.cwd(), candidate))
+    .find((candidate) => existsSync(candidate)) as string,
+  'utf8',
+);
+
+describe('site shell nav dropdowns open one at a time', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const withProp = <E extends Event>(event: E, key: string, value: unknown): E => {
+    Object.defineProperty(event, key, { value });
+    return event;
+  };
+  const setup = () => {
+    const nav = buildNav();
+    document.body.append(nav);
+    const menus = [...nav.querySelectorAll<HTMLElement>('.site-nav-links > .site-nav-menu')];
+    const [first, second] = menus;
+    const item = first!.querySelector<HTMLAnchorElement>('.site-nav-menu-panel a')!;
+    item.focus();
+    expect(document.activeElement).toBe(item);
+    return { first: first!, second: second!, item };
+  };
+
+  it('closes a menu left open by a focused item when the page comes back from the cache', () => {
+    const { first } = setup();
+    first.classList.add('site-nav-menu-open');
+    window.dispatchEvent(withProp(new Event('pageshow'), 'persisted', true));
+    expect(first.contains(document.activeElement)).toBe(false);
+    expect(document.querySelectorAll('.site-nav-menu-open')).toHaveLength(0);
+  });
+
+  it('leaves focus alone on a fresh page load', () => {
+    const { item } = setup();
+    window.dispatchEvent(withProp(new Event('pageshow'), 'persisted', false));
+    expect(document.activeElement).toBe(item);
+  });
+
+  it('moving the mouse into another menu closes the one holding focus', () => {
+    const { first, second } = setup();
+    first.classList.add('site-nav-menu-open');
+    second.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'mouse'));
+    expect(first.contains(document.activeElement)).toBe(false);
+    expect(first.classList.contains('site-nav-menu-open')).toBe(false);
+  });
+
+  it('a touch entering another menu does not drop keyboard focus', () => {
+    const { second, item } = setup();
+    second.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'touch'));
+    expect(document.activeElement).toBe(item);
+  });
+
+  it('the mouse entering the focused menu keeps its focus', () => {
+    const { first, item } = setup();
+    first.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'mouse'));
+    expect(document.activeElement).toBe(item);
+  });
+});
+
+describe('site shell footer', () => {
+  // The footer is the way into the /about rail: four links and the identity
+  // line, the same on every width, so no phone-only hide rule.
+  it('carries About, Contact, Terms, Privacy and the identity line on every width', () => {
+    const footer = buildHomeFooter();
+    expect([...footer.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
+      '/about',
+      '/contact',
+      '/terms',
+      '/privacy',
+    ]);
+    expect(footer.querySelector('.landing-footer-identity')?.textContent).toBe(
+      '© 2026 Mistboard · AGPL-3.0',
+    );
+    expect(siteShellCss).not.toContain('[data-phone-menu]');
   });
 });
 
@@ -329,24 +508,13 @@ describe('site shell geo-blocked links', () => {
 });
 
 describe('site shell nav account placement', () => {
-  const originalMatchMedia = window.matchMedia;
   afterEach(() => {
     document.body.innerHTML = '';
     window.matchMedia = originalMatchMedia;
   });
 
-  function stubViewport(tablet: boolean): void {
-    window.matchMedia = ((query: string) =>
-      ({
-        matches: query === navTabletMediaQuery && tablet,
-        media: query,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      }) as unknown as MediaQueryList) as typeof window.matchMedia;
-  }
-
-  it('keeps the account slot inside the utilities on desktop and phones', () => {
-    stubViewport(false);
+  it('keeps the account slot inside the utilities on desktop', () => {
+    stubViewport('desktop');
     const nav = buildNav();
     const account = nav.querySelector<HTMLElement>('.site-nav-account');
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
@@ -354,7 +522,7 @@ describe('site shell nav account placement', () => {
   });
 
   it('moves the account slot onto the bar beside the hamburger on tablets, and back', () => {
-    stubViewport(true);
+    stubViewport('tablet');
     const nav = buildNav();
     const account = nav.querySelector<HTMLElement>('.site-nav-account');
     expect(account?.parentElement).toBe(nav);
@@ -363,10 +531,394 @@ describe('site shell nav account placement', () => {
     // opening the menu.
     expect(nav.querySelector('.site-nav-collapse .site-nav-auth')).toBeNull();
 
-    stubViewport(false);
+    stubViewport('desktop');
     placeNavAccount(nav);
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
     expect(nav.querySelector('.site-nav-utilities')?.firstElementChild).toBe(account);
+  });
+
+  it('puts the account slot last on the phone bar, out of the folded links, and back', () => {
+    stubViewport('phone');
+    const nav = buildNav();
+    const account = nav.querySelector<HTMLElement>('.site-nav-account');
+    expect(account?.parentElement).toBe(nav);
+    expect(nav.lastElementChild).toBe(account);
+    expect(nav.querySelector('.site-nav-collapse .site-nav-auth')).toBeNull();
+    expect(account?.querySelector('.site-nav-link-signin')).not.toBeNull();
+
+    stubViewport('desktop');
+    placeNavAccount(nav);
+    expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
+  });
+});
+
+describe('site shell phone menu', () => {
+  afterEach(() => {
+    closeQuickPicker({ restoreFocus: false });
+    closeSiteMenu({ restoreFocus: false });
+    document.body.innerHTML = '';
+    window.matchMedia = originalMatchMedia;
+    window.history.replaceState(null, '', '/');
+    try {
+      window.localStorage.clear();
+    } catch {}
+  });
+
+  function phoneNav(): { nav: HTMLElement; toggle: HTMLButtonElement } {
+    stubViewport('phone');
+    const nav = buildNav();
+    document.body.append(nav);
+    const toggle = nav.querySelector<HTMLButtonElement>('.site-nav-toggle');
+    if (!toggle) throw new Error('missing toggle');
+    return { nav, toggle };
+  }
+
+  const menuPanel = () => document.querySelector<HTMLElement>('.site-menu');
+
+  it('opens and closes from the menu button, with aria-expanded, focus and scroll lock', () => {
+    const { nav, toggle } = phoneNav();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(menuPanel()).toBeNull();
+
+    toggle.click();
+    const panel = menuPanel();
+    expect(panel).not.toBeNull();
+    expect(isSiteMenuOpen()).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-controls')).toBe(panel?.id);
+    expect(panel?.getAttribute('role')).toBe('dialog');
+    expect(panel?.getAttribute('aria-modal')).toBe('true');
+    // Outside the bar, so the bar's auto-hide transform never moves it.
+    expect(panel?.parentElement).toBe(document.body);
+    expect(nav.contains(panel)).toBe(false);
+    // Phones never use the drawer.
+    expect(nav.classList.contains('nav-open')).toBe(false);
+    expect(document.activeElement).toBe(panel?.querySelector('.site-menu-close'));
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(true);
+
+    panel?.querySelector<HTMLButtonElement>('.site-menu-close')?.click();
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(false);
+
+    // The button itself toggles too.
+    toggle.click();
+    expect(menuPanel()).not.toBeNull();
+    toggle.click();
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('closes on Escape and returns focus to the menu button', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    expect(menuPanel()).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(false);
+  });
+
+  it('keeps the tablet drawer on tablets', () => {
+    stubViewport('tablet');
+    const nav = buildNav();
+    document.body.append(nav);
+    nav.querySelector<HTMLButtonElement>('.site-nav-toggle')?.click();
+    expect(nav.classList.contains('nav-open')).toBe(true);
+    expect(menuPanel()).toBeNull();
+  });
+
+  // The source of truth is the desktop bar itself: every href it renders (menu
+  // titles, panel items, Puzzles, Support, and the admin menu for an admin)
+  // must be reachable from the phone menu.
+  it('carries every destination on the desktop bar, admin included', () => {
+    setResolvedAdmin(true);
+    try {
+      stubViewport('desktop');
+      const desktop = buildNav();
+      const barHrefs = new Set(
+        [...desktop.querySelectorAll<HTMLAnchorElement>('.site-nav-links a[href]')].map((a) =>
+          a.getAttribute('href'),
+        ),
+      );
+      expect(barHrefs.size).toBeGreaterThan(20);
+      expect(barHrefs.has('/database')).toBe(true);
+
+      const { toggle } = phoneNav();
+      toggle.click();
+      const menuHrefs = new Set(
+        [...(menuPanel()?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
+          a.getAttribute('href'),
+        ),
+      );
+      const missing = [...barHrefs].filter((href) => !menuHrefs.has(href));
+      expect(missing).toEqual([]);
+    } finally {
+      setResolvedAdmin(undefined);
+    }
+  });
+
+  it('groups destinations into Play, Puzzles, Learn, Watch, Community, Tools and Mistboard', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    const headings = [
+      ...(menuPanel()?.querySelectorAll<HTMLElement>('.site-menu-heading') ?? []),
+    ].map((h) => h.textContent);
+    expect(headings).toEqual([
+      'Play',
+      'Puzzles',
+      'Learn',
+      'Watch',
+      'Community',
+      'Tools',
+      'Mistboard',
+    ]);
+    const sections = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])];
+    const play = sections[0];
+    expect(
+      [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
+        a.getAttribute('href'),
+      ),
+    ).toEqual(['/', '/correspondence']);
+    expect(
+      [...(sections[1]?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href')),
+    ).toEqual([
+      '/puzzles',
+      '/puzzles/themes',
+      '/puzzles?mode=streak',
+      '/puzzles?mode=storm',
+      '/puzzles/dashboard',
+    ]);
+    expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
+    expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
+  });
+
+  // The phone and rail must keep the same localized destinations and labels.
+  // Admin slots in before Mistboard, which always closes the menu.
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'ends with the About rail destinations and labels in %s',
+    (locale) => {
+      for (const admin of [false, true]) {
+        setResolvedAdmin(admin);
+        try {
+          const { toggle } = phoneNav();
+          openSiteMenu(toggle, locale);
+          const sections = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])];
+          if (admin) {
+            expect(sections.at(-2)?.querySelector('.site-menu-heading')?.textContent).toBe(
+              locale === 'en' ? 'Admin' : '管理',
+            );
+          }
+          const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
+          expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
+          const rail = buildStaticPageLayout('about', document.createElement('div'), locale);
+          expect(
+            [...(last?.querySelectorAll('.site-menu-link') ?? [])].map((link) => [
+              link.getAttribute('href'),
+              link.textContent,
+            ]),
+          ).toEqual(
+            [...rail.querySelectorAll('.static-page-rail-link')].map((link) => [
+              link.getAttribute('href'),
+              link.textContent,
+            ]),
+          );
+          expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
+          if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
+          closeSiteMenu({ restoreFocus: false });
+          document.body.innerHTML = '';
+        } finally {
+          setResolvedAdmin(undefined);
+        }
+      }
+    },
+  );
+
+  it('marks the current page bold with a dot', () => {
+    window.history.replaceState(null, '', '/puzzles/some-puzzle');
+    const { toggle } = phoneNav();
+    toggle.click();
+    const current = menuPanel()?.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]');
+    expect([...(current ?? [])].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
+    expect(current?.[0]?.classList.contains('active')).toBe(true);
+    expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
+  });
+
+  it.each(PUZZLE_NAV_CASES)(
+    'marks only the phone puzzle destination current on %s',
+    (path, href) => {
+      window.history.replaceState(null, '', path);
+      const { toggle } = phoneNav();
+      toggle.click();
+      const current = menuPanel()?.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]');
+      expect([...(current ?? [])].map((link) => link.getAttribute('href'))).toEqual([href]);
+      expect(current?.[0]?.classList.contains('active')).toBe(true);
+      expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
+    },
+  );
+
+  it.each(STORM_LABELS)('exposes Puzzle Storm in the phone menu in %s', (locale, label) => {
+    window.history.replaceState(null, '', '/puzzles?mode=storm');
+    const { toggle } = phoneNav();
+    openSiteMenu(toggle, locale);
+    const link = menuPanel()?.querySelector<HTMLAnchorElement>('a[href="/puzzles?mode=storm"]');
+    expect(link?.textContent).toBe(label);
+    expect(link?.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('ends with the link sections: no settings chip row at the bottom of the menu', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    expect(menuPanel()?.querySelector('.site-menu-footer')).toBeNull();
+    expect(menuPanel()?.querySelector('[data-site-menu-chip]')).toBeNull();
+    expect(menuPanel()?.lastElementChild?.classList.contains('site-menu-body')).toBe(true);
+  });
+
+  it('puts language, pieces and dark mode between the brand and the menu button', () => {
+    const { nav } = phoneNav();
+    const quick = nav.querySelector<HTMLElement>(':scope > .site-nav-quick');
+    expect(quick?.previousElementSibling?.classList.contains('site-nav-brand')).toBe(true);
+    const buttons = [...(quick?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    expect(buttons.map((b) => b.dataset.siteNavQuick)).toEqual(['language', 'pieces', 'dark']);
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Language: English',
+      'Pieces',
+      'Dark mode',
+    ]);
+    // The account slot still ends the phone bar.
+    expect(nav.lastElementChild?.classList.contains('site-nav-account')).toBe(true);
+  });
+
+  it('localizes the quick control labels from the existing strings', () => {
+    stubViewport('phone');
+    const nav = buildNav('zh-Hant');
+    document.body.append(nav);
+    const labels = [...nav.querySelectorAll<HTMLButtonElement>('.site-nav-quick button')].map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    expect(labels[0]?.startsWith('語言: ')).toBe(true);
+    expect(labels.slice(1)).toEqual(['棋子', '深色模式']);
+    expect(labels.join(' ')).not.toContain('\u2014');
+  });
+
+  it('opens the language list straight away in a dropdown under the bar; Escape closes it', async () => {
+    const { nav } = phoneNav();
+    const language = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="language"]');
+    language?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    expect(panel?.dataset.siteNavQuickPanel).toBe('language');
+    expect(panel?.getAttribute('role')).toBe('dialog');
+    expect(language?.getAttribute('aria-expanded')).toBe('true');
+    expect(language?.getAttribute('aria-controls')).toBe(panel?.id);
+    // No settings list and no site menu: the options themselves.
+    expect(isSiteMenuOpen()).toBe(false);
+    await vi.waitFor(() =>
+      expect(panel?.querySelectorAll('.appearance-language-option').length).toBeGreaterThan(1),
+    );
+    expect(panel?.querySelector('.appearance-menu-root')).toBeNull();
+    expect(document.activeElement?.getAttribute('aria-checked')).toBe('true');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(nav.querySelector('.site-nav-quick-panel')).toBeNull();
+    expect(language?.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(language);
+  });
+
+  it('closes the dropdown on an outside tap and on a second tap of its button', async () => {
+    const { nav } = phoneNav();
+    const language = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="language"]');
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(true);
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(isQuickPickerOpen()).toBe(false);
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(true);
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(false);
+    // One dropdown at a time: opening Pieces replaces Language.
+    language?.click();
+    nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]')?.click();
+    expect(nav.querySelectorAll('.site-nav-quick-panel').length).toBe(1);
+    expect(nav.querySelector<HTMLElement>('.site-nav-quick-panel')?.dataset.siteNavQuickPanel).toBe(
+      'pieces',
+    );
+    expect(language?.getAttribute('aria-expanded')).toBe('false');
+    closeQuickPicker({ restoreFocus: false });
+  });
+
+  it('shows the piece-set tiles from the pieces button; a pick applies, closes and redraws the icon', async () => {
+    stubMemoryStorage();
+    setXiangqiPieceSetPreference('international');
+    const { nav } = phoneNav();
+    const pieces = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]');
+    pieces?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    await vi.waitFor(() =>
+      expect(panel?.querySelectorAll('[data-theme-tile="xqpiece"]').length).toBeGreaterThan(1),
+    );
+    expect(isSiteMenuOpen()).toBe(false);
+    expect(panel?.querySelector('.appearance-menu-root')).toBeNull();
+    expect(
+      panel
+        ?.querySelector('[data-theme-tile="xqpiece"][aria-checked="true"]')
+        ?.getAttribute('data-id'),
+    ).toBe('international');
+    panel
+      ?.querySelector<HTMLButtonElement>('[data-theme-tile="xqpiece"][data-id="traditional"]')
+      ?.click();
+    expect(readStoredXiangqiPieceSet()).toBe('traditional');
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(nav.querySelector<HTMLElement>('.site-nav-quick-piece')?.dataset.pieceSet).toBe(
+      'traditional',
+    );
+    expect(document.activeElement).toBe(pieces);
+  });
+
+  it('reaches the rest of the settings from the pieces dropdown', async () => {
+    const { nav } = phoneNav();
+    nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]')?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    await vi.waitFor(() => expect(panel?.querySelector('.site-nav-quick-more')).not.toBeNull());
+    expect(panel?.querySelector('.site-nav-quick-more')?.textContent).toBe('Settings');
+    panel?.querySelector<HTMLButtonElement>('.site-nav-quick-more')?.click();
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(isSiteMenuOpen()).toBe(true);
+    expect(menuPanel()?.querySelector<HTMLElement>('.site-menu-sections')?.hidden).toBe(true);
+    expect(menuPanel()?.querySelector<HTMLElement>('.site-menu-settings')?.hidden).toBe(false);
+  });
+
+  it("draws the reader's red general on the pieces button and follows a set change", () => {
+    // Serialized through the DOM so both sides close their tags the same way.
+    const tileMark = (set: 'international' | 'traditional') => {
+      const holder = document.createElement('span');
+      holder.innerHTML = xiangqiPieceTilePreview(set).markup;
+      return holder.innerHTML;
+    };
+    stubMemoryStorage();
+    setXiangqiPieceSetPreference('international');
+    const { nav } = phoneNav();
+    const slot = nav.querySelector<HTMLElement>('.site-nav-quick-piece');
+    expect(slot?.dataset.pieceSet).toBe('international');
+    expect(slot?.innerHTML).toBe(tileMark('international'));
+    setXiangqiPieceSetPreference('traditional');
+    expect(slot?.dataset.pieceSet).toBe('traditional');
+    expect(slot?.innerHTML).toBe(tileMark('traditional'));
+  });
+
+  it('toggles dark mode from the moon and shows the state', () => {
+    setSiteThemePreference('light');
+    const { nav } = phoneNav();
+    const dark = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="dark"]');
+    expect(dark?.getAttribute('aria-pressed')).toBe('false');
+    dark?.click();
+    expect(document.documentElement.dataset.effectiveTheme).toBe('dark');
+    expect(dark?.getAttribute('aria-pressed')).toBe('true');
+    // A theme set elsewhere (the settings view) re-syncs the bar's moon.
+    setSiteThemePreference('light');
+    expect(dark?.getAttribute('aria-pressed')).toBe('false');
+    expect(isSiteMenuOpen()).toBe(false);
   });
 });
 
@@ -412,3 +964,21 @@ describe('site shell nav wordmark fit', () => {
     expect(nav.dataset.brand).toBeUndefined();
   });
 });
+
+// The test DOM has no working localStorage; the stored piece set needs one.
+function stubMemoryStorage(): void {
+  const values = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      get length() {
+        return values.size;
+      },
+      clear: () => values.clear(),
+      getItem: (key: string) => values.get(key) ?? null,
+      key: (index: number) => [...values.keys()][index] ?? null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value),
+    } satisfies Storage,
+  });
+}

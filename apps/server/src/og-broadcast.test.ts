@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { XiangqiMove } from '@mistboard/game';
 import {
   BROADCAST_FALLBACK_IMAGE_PATH,
+  broadcastBoardDescription,
   broadcastEventFallbackMeta,
   broadcastFinalFen,
   broadcastOutcome,
@@ -48,6 +49,22 @@ test('a result with no published moves says who won, not how long it took', () =
   assert.equal(broadcastOutcome(board('0-1')), 'Wu Zonghan beat Zheng Yanlong with Black');
   assert.equal(broadcastOutcome(board('1/2-1/2')), 'Drawn');
   assert.equal(broadcastOutcome(board('*')), 'Not played yet');
+});
+
+test('a withheld record shares as a result with the reason, never as a replay', () => {
+  const board = {
+    red: { name: 'Quách Trung Cơ' },
+    black: { name: 'Phan Nguyễn Công Minh' },
+    result: '1-0',
+    moves: [],
+    recordWithheld: 'ambiguous',
+  };
+  const text = broadcastBoardDescription(board);
+  assert.match(text, /^Quách Trung Cơ beat Phan Nguyễn Công Minh with Red\./);
+  assert.match(text, /can be read two ways, so it isn't replayed/);
+  assert.doesNotMatch(text, /move by move|not published/);
+  // The start position is a valid card board, so the image route still draws.
+  assert.ok(broadcastFinalFen(board.moves).startsWith(OPENING));
 });
 
 test("event dates read in the event's own calendar", () => {

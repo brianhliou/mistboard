@@ -151,6 +151,7 @@ const JUNGLE_FLIP_TERMINATIONS: Record<JungleFlipGameEndReason, persistence.Game
   timeout: 'timeout',
   resignation: 'resignation',
   abandonment: 'abandonment',
+  agreement: 'draw',
 };
 
 export const jungleFlipTenant: JungleFlipTenant = {
@@ -169,6 +170,10 @@ export const jungleFlipTenant: JungleFlipTenant = {
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
+    }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
     abort: (state, reason: AbortReason) => ({
       ...state,

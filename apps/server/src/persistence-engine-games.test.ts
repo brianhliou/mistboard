@@ -26,6 +26,7 @@ import {
 } from './engine-experiments.js';
 import { upsertBuiltinEngineVersions } from './engine-registry.js';
 import { runRandomLegalEngineGame } from './engine-runner.js';
+import { loadEngine } from './engines/registry.js';
 import { JIEQI_RANDOM_ENGINE_ID } from './jieqi-engine.js';
 import { seededUnitRng } from './jieqi-eve-adapter.js';
 import { getPool } from './persistence-db.js';
@@ -225,6 +226,62 @@ async function withJieqiLaunched<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 definePersistenceTests('scheduled engine games as public data', () => {
+  test('bot data filters attribute explicit engine IDs and exclude public lab imports', async () => {
+    await scheduleOne();
+    const gameId = await playNextTask();
+    await insertBakeoffGame();
+    await getPool().query(`INSERT INTO bot_profiles
+      (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
+       supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
+      VALUES ('jqe', 'Renamed jqe', '', 'system', 'jqe-jieqi', 'jieqi', ARRAY['jieqi'], 300000, 3000, 'public'),
+       ('ab-jchess', 'Renamed AB-JChess', '', 'system', 'ab-jchess-jieqi', 'jieqi', ARRAY['jieqi'], 300000, 3000, 'public')`);
+    // Use the participant shape engine-runner writes. Both seats belonging to
+    // the same engine must still select the game just once.
+    await getPool().query(
+      `UPDATE game_participants SET subject_id = 'jqe-jieqi', display_name = 'Old title'
+      WHERE game_id = $1`,
+      [gameId],
+    );
+    await getPool().query(`INSERT INTO game_participants
+      (game_id, color, subject_type, subject_id, display_name, visibility)
+      VALUES ('jq_bakeoff_public','red','engine-version','jqe-jieqi','jqe','public')`);
+    clearDataListingCache();
+    resetDataDownloadLimiterForTests();
+    const listing = await loadDataListing(new Date('2026-09-15'), 'jqe');
+    assert.deepEqual(listing.months, []);
+    assert.equal(listing.engineMonths[0]?.games, 1);
+    const first = await download('/api/data/bots/jqe/engine-monthly/2026-08/jieqi.jsonl.gz');
+    const lines = gunzipSync(first.body).toString('utf8').trimEnd().split('\n');
+    assert.deepEqual(
+      lines.map((line) => JSON.parse(line).game_id),
+      [gameId],
+    );
+    assert.equal(
+      (await request(dataRoute, '/api/data/bots/jqe/monthly/2026-08/jieqi.jsonl.gz')).status,
+      404,
+    );
+    // The other explicitly attributed engine works in either seat too.
+    await getPool().query(
+      `UPDATE game_participants SET subject_id = 'ab-jchess-jieqi' WHERE game_id = $1 AND color = 'black'`,
+      [gameId],
+    );
+    clearDataListingCache();
+    const ab = await loadDataListing(new Date('2026-09-15'), 'ab-jchess');
+    assert.equal(ab.engineMonths[0]?.games, 1);
+    const second = await download('/api/data/bots/ab-jchess/engine-monthly/2026-08/jieqi.jsonl.gz');
+    assert.equal(second.status, 200);
+    const stored = await getPool().query<{ file_key: string }>(
+      `SELECT file_key FROM game_data_files ORDER BY file_key`,
+    );
+    assert.deepEqual(
+      stored.rows.map((row) => row.file_key),
+      [
+        'bots/ab-jchess/engine-monthly/2026-08/jieqi.jsonl.gz',
+        'bots/jqe/engine-monthly/2026-08/jieqi.jsonl.gz',
+      ],
+    );
+  });
+
   test('a scheduled game is public, dealt, and paces its own variant only', async () => {
     await scheduleOne();
     const gameId = await playNextTask();
@@ -341,7 +398,9 @@ definePersistenceTests('scheduled engine games as public data', () => {
     };
     assert.equal(record.game_id, gameId);
     assert.equal(record.mode, 'eve');
-    assert.ok(record.deal_fen, 'a server deal is exported');
+    // No jieqi export carries its deal: it names pieces captured face-down and never
+    // turned over (Brian, 2026-10-16). The record still replays from its moves.
+    assert.equal(record.deal_fen, undefined);
     assert.equal(replayHiddenPieceRecord(record).ok, true);
 
     const all = await download('/api/data/engine-monthly/2026-08/all.jsonl.gz');
@@ -417,11 +476,19 @@ definePersistenceTests('scheduled engine games as public data', () => {
             ['jungle', 'public', false],
           ],
         );
-        // Banqi is MistyBanqi against itself.
-        assert.deepEqual([rows[0]!.white_name, rows[0]!.black_name], ['MistyBanqi', 'MistyBanqi']);
-        // No job of either carries a rating_policy: nothing reaches the Elo report.
+        // Banqi seats two of its ladder rungs or its random anchor, under their registry
+        // names (L7 keeps the historical "MistyBanqi"). The pairing is random, so every seat counts.
+        const banqiPlan = defaultPlan('banqi');
+        const banqiNames = new Set(
+          [...banqiPlan.ladder, banqiPlan.anchorEngineId ?? ''].map((id) => loadEngine(id).name),
+        );
+        for (const name of [rows[0]!.white_name, rows[0]!.black_name]) {
+          assert.ok(banqiNames.has(name), `banqi seat ${name}`);
+        }
+        // Jungle has no anchor, so no jungle job carries a rating_policy.
         const { rows: jobs } = await getPool().query<{ n: number }>(
-          `SELECT count(*)::int AS n FROM eve_jobs WHERE config ? 'rating_policy'`,
+          `SELECT count(*)::int AS n FROM eve_jobs
+           WHERE config ? 'rating_policy' AND config->>'variant' = 'jungle'`,
         );
         assert.equal(jobs[0]?.n, 0);
       }),

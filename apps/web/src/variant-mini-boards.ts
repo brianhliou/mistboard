@@ -9,6 +9,7 @@
 // this path.
 
 export type VariantMiniId =
+  | 'gomoku'
   | 'dark-chess'
   | 'xiangqi'
   | 'dark-xiangqi'
@@ -18,10 +19,13 @@ export type VariantMiniId =
   | 'crazyhouse-xiangqi'
   | 'jieqi'
   | 'banqi'
+  | 'three-kingdoms-banqi'
+  | 'ffq-banqi'
   | 'jungle'
-  | 'jungle-flip';
+  | 'jungle-flip'
+  | 'xiangqi-mahjong';
 
-export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle';
+export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle' | 'mahjong' | 'gomoku';
 
 export interface VariantMiniDef {
   id: VariantMiniId;
@@ -34,6 +38,14 @@ export interface VariantMiniDef {
 }
 
 export const VARIANT_MINIS: readonly VariantMiniDef[] = [
+  {
+    id: 'gomoku',
+    label: 'Gomoku',
+    shortLabel: 'GMK',
+    accent: '#8b5a24',
+    blurb: 'Five stones in a row on the intersections of a 15x15 board.',
+    family: 'gomoku',
+  },
   {
     id: 'dark-chess',
     label: 'Fog Chess',
@@ -108,6 +120,22 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     family: 'xiangqi',
   },
   {
+    id: 'three-kingdoms-banqi',
+    label: 'Three Kingdoms Banqi',
+    shortLabel: 'TKB',
+    accent: '#2563a6',
+    blurb: 'Flip pieces on a 9x5 grid of points and capture to score 100 points.',
+    family: 'xiangqi',
+  },
+  {
+    id: 'ffq-banqi',
+    label: 'FFQ Banqi',
+    shortLabel: 'FFQ',
+    accent: '#2563a6',
+    blurb: 'Banqi played for HP: each capture drains the opponent, and empty HP loses.',
+    family: 'xiangqi',
+  },
+  {
     id: 'jungle',
     label: 'Jungle Chess',
     shortLabel: 'JG',
@@ -122,6 +150,15 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     accent: '#1f7a5e',
     blurb: 'Animals shuffled face-down on a 4x4 grid; flip to reveal, equal ranks trade.',
     family: 'jungle',
+  },
+  {
+    id: 'xiangqi-mahjong',
+    label: 'Xiangqi Mahjong',
+    shortLabel: 'XMJ',
+    accent: '#a8642a',
+    blurb:
+      'The 32 xiangqi pieces as tiles: draw, discard and claim to a hand of one set and a pair.',
+    family: 'mahjong',
   },
 ];
 

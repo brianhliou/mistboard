@@ -206,8 +206,10 @@ export function crazyhouseXiangqiReviewConfig(
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId, { signal, onStatus }),
     },
   };
 }

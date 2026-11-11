@@ -15,6 +15,12 @@ import {
 import type { DarkXiangqiEvent } from './dark-xiangqi-runtime.js';
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
+  classifyKnownEngineFailure,
+  isTimeoutish,
+  type KnownEngineFailure,
+  knownEngineFailureOf,
+} from './engine-known-failures.js';
+import {
   buildEngineDecisionRecord,
   reportEngineMoveOk,
   reportObservedFallback,
@@ -151,17 +157,34 @@ export async function playDarkXiangqiEngineMoveIfReady(
       stillNeeded: () => room.projection.state.status.type === 'playing',
     });
   } catch (err) {
-    logger.error(
-      {
-        kind: 'dxq_engine_request_failed',
-        room_id: room.id,
-        engine_id: engineId,
-        error: (err as Error).message,
-      },
-      'dxq engine request failed',
-    );
-    engineCounters.recordMove(true);
-    await forfeitDarkXiangqiEngine(ctx, room, seat, (err as Error).message);
+    const error = (err as Error).message;
+    // The worker names a known signature in its 500 body; a web-side transport
+    // timeout on a fog turn is the same belief blow-up seen from this side.
+    const knownFailure =
+      knownEngineFailureOf(err) ??
+      classifyKnownEngineFailure({ gameSpecId: request.gameSpecId, timedOut: isTimeoutish(error) });
+    if (knownFailure) {
+      // Data, not a page (engine-known-failures.ts): the fallback counter would
+      // fire the critical engine alert.
+      engineCounters.recordKnownFailure(knownFailure);
+      logger.warn(
+        {
+          kind: 'dxq_engine_request_failed',
+          room_id: room.id,
+          engine_id: engineId,
+          error,
+          known_failure: knownFailure,
+        },
+        'dxq engine request failed (known signature)',
+      );
+    } else {
+      logger.error(
+        { kind: 'dxq_engine_request_failed', room_id: room.id, engine_id: engineId, error },
+        'dxq engine request failed',
+      );
+      engineCounters.recordMove(true);
+    }
+    await forfeitDarkXiangqiEngine(ctx, room, seat, error, knownFailure);
     return;
   }
 
@@ -247,6 +270,7 @@ async function forfeitDarkXiangqiEngine(
   room: DarkXiangqiLiveRoom,
   seat: XiangqiColor,
   reason?: string,
+  knownFailure: KnownEngineFailure | null = null,
 ): Promise<void> {
   if (room.projection.state.status.type !== 'playing') return;
   const event: DarkXiangqiEvent = {
@@ -259,17 +283,22 @@ async function forfeitDarkXiangqiEngine(
     const seq = await ctx.appendEvent(room, event);
     ctx.broadcastEventAppended(room, event, seq);
     // Page, don't just count: the forfeit's cause was previously only
-    // reconstructible by joining adjacent log lines by timestamp.
-    logger.error(
+    // reconstructible by joining adjacent log lines by timestamp. A known
+    // signature is the exception: logged with its tag, counted by the caller.
+    const logForfeit = knownFailure ? logger.warn : logger.error;
+    logForfeit.call(
+      logger,
       {
         kind: 'engine_seat_forfeited',
         variant: 'dark-xiangqi',
         room_id: room.id,
         color: seat,
         reason: reason ?? null,
+        known_failure: knownFailure,
       },
       'engine seat forfeited',
     );
+    if (knownFailure) return;
     void sendEngineAlertNotification({
       severity: 'critical',
       alert_kind: 'engine_seat_forfeited',

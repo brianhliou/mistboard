@@ -52,15 +52,9 @@ export const WORLD_CHAMPIONS: readonly ChampionRecord[] = [
   { name: 'Meng Chen', zh: '孟辰', years: [2023], sanction: 'six-month ban, 2025' },
   {
     name: 'Lại Lý Huynh',
-    // The case the ChampionRecord comment anticipated, and it does not fit
-    // cleanly. His name is Vietnamese and written in Latin script; 赖理兄 is the
-    // Chinese-language rendering the federation and the Chinese press use, not
-    // a name he holds in Chinese. It is recorded because the table's second
-    // column is a Chinese-language column, and marked simplified because the
-    // rendering is simplified, which is a fact about the rendering rather than
-    // about him.
+    // His name is Vietnamese and written in Latin script; 赖理兄 is the
+    // Chinese-language rendering the federation and the Chinese press use.
     zh: '赖理兄',
-    zhScript: 'simplified',
     years: [2025],
   },
 ];

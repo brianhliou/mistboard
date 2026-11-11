@@ -5,10 +5,12 @@ export type ConfirmOptions = {
   cancelLabel?: string;
   confirmTone?: 'danger' | 'default';
   onConfirm: () => void;
+  onCancel?: () => void;
 };
 
-export function openConfirmDialog(opts: ConfirmOptions): void {
+export function openConfirmDialog(opts: ConfirmOptions): HTMLDialogElement {
   const existing = document.querySelector<HTMLDialogElement>('dialog[data-confirm-dialog]');
+  existing?.close('cancel');
   existing?.remove();
 
   const dialog = document.createElement('dialog');
@@ -51,10 +53,12 @@ export function openConfirmDialog(opts: ConfirmOptions): void {
   });
   dialog.addEventListener('close', () => {
     if (dialog.returnValue === 'confirm') opts.onConfirm();
+    else opts.onCancel?.();
     dialog.remove();
   });
 
   document.body.append(dialog);
   dialog.showModal();
   cancel.focus();
+  return dialog;
 }

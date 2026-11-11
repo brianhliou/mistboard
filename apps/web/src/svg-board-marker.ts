@@ -15,7 +15,50 @@ export type SvgBoardMarkerStyle = {
 
 /** Judgment badge pinned to a square's top-right corner (lila's glyph badge).
  *  `text` is the same symbol the move list shows ('??', '?', '?!', a user NAG). */
-export type SvgBoardGlyphStyle = SvgBoardMarkerStyle & { text?: string };
+export type SvgBoardGlyphStyle = SvgBoardMarkerStyle & { text?: string; icon?: SvgBoardGlyphIcon };
+
+/** A drawn mark in place of a text label: the puzzle verdicts (lichess's green
+ *  check and red cross). Drawn as strokes, not as ✓/✗ text, because those code
+ *  points fall back to different fonts (and on some systems to emoji). */
+export type SvgBoardGlyphIcon = 'check' | 'cross';
+
+// Stroke paths in units of the disc radius, centred on the disc.
+const GLYPH_ICON_PATHS: Record<SvgBoardGlyphIcon, readonly (readonly [number, number])[][]> = {
+  check: [
+    [
+      [-0.46, 0.02],
+      [-0.14, 0.34],
+      [0.48, -0.3],
+    ],
+  ],
+  cross: [
+    [
+      [-0.34, -0.34],
+      [0.34, 0.34],
+    ],
+    [
+      [0.34, -0.34],
+      [-0.34, 0.34],
+    ],
+  ],
+};
+
+/** The icon's strokes for a disc at (cx, cy) of radius r. */
+export function svgBoardGlyphIcon(
+  icon: SvgBoardGlyphIcon,
+  cx: number,
+  cy: number,
+  r: number,
+): string {
+  const d = GLYPH_ICON_PATHS[icon]
+    .map((stroke) =>
+      stroke
+        .map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${fmt(cx + x * r)} ${fmt(cy + y * r)}`)
+        .join(' '),
+    )
+    .join(' ');
+  return `<path class="xq-marker__icon" d="${d}" stroke-width="${fmt(r * 0.24)}"/>`;
+}
 
 /** Badge geometry as fractions of a board's cell (or point spacing), so every
  *  variant gets a proportionally identical badge from its own units. Matches the
@@ -51,7 +94,7 @@ export function svgBoardCircleMarker(
  * SCREEN space, so the badge stays in the same corner whichever way the board is
  * flipped (callers pass an already-perspective-mapped centre).
  *
- * Empty text draws nothing rather than an unlabelled disc: a bare coloured dot
+ * No text and no icon draws nothing rather than an unlabelled disc: a bare coloured dot
  * next to a piece would read as a target hint, which is a different vocabulary.
  */
 export function svgBoardGlyphMarker(
@@ -61,7 +104,7 @@ export function svgBoardGlyphMarker(
   offset: number,
   options: SvgBoardMarkerOptions = {},
 ): string {
-  if (!marker.text) return '';
+  if (!marker.text && !marker.icon) return '';
   const baseClassName = options.baseClassName ?? 'board-marker';
   const className = marker.className ? `${baseClassName} ${marker.className}` : baseClassName;
   const cx = fmt(center.x + offset);
@@ -70,7 +113,9 @@ export function svgBoardGlyphMarker(
   return (
     `<g class="${className} xq-marker--glyph">` +
     `<circle class="xq-marker__disc" cx="${cx}" cy="${cy}" r="${fmt(radius)}"/>` +
-    `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}">${escapeHtml(marker.text)}</text>` +
+    (marker.icon
+      ? svgBoardGlyphIcon(marker.icon, cx, cy, radius)
+      : `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}">${escapeHtml(marker.text ?? '')}</text>`) +
     `</g>`
   );
 }

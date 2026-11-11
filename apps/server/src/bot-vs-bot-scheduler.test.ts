@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -332,13 +333,13 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
     config.plans.map((plan) => [plan.variant, plan.dailyMax]),
     [
       ['crazyhouse-xiangqi', 1],
+      ['jungle-flip', 1],
       ['jieqi', 2],
     ],
   );
   assert.deepEqual(config.skipped, [
-    // Built, but hidden (publicSurface 'hidden'): never scheduled.
-    { variant: 'mahjong', reason: 'not-public' },
-    { variant: 'jungle-flip', reason: 'no-eve-adapter' },
+    // Retired 2026-11-06, and it never went public.
+    { variant: 'mahjong', reason: 'not-live' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
     // Retired 2026-10-11: skipped even when a stale env names them, though
@@ -368,14 +369,30 @@ test('crazyhouse xiangqi, when named, plays its own FSF ladder anchored on its o
   assert.equal(plan.targetActive, 1);
 });
 
-test('banqi plays itself for data, jungle pairs its tiers, and neither can be rated', () => {
+test('banqi schedules its eight-level ladder with a random anchor; jungle stays data-only', () => {
   const config = botVsBotConfigFromEnv({} as NodeJS.ProcessEnv);
   const banqi = config.plans.find((plan) => plan.variant === 'banqi')!;
-  // One bot: the content lane only, a mirror every game, no anchor.
-  assert.deepEqual(banqi.ladder, ['misty-banqi']);
-  assert.equal(banqi.calibrationRatio, 0);
-  assert.equal(banqi.anchorEngineId, null);
+  assert.deepEqual(banqi.ladder, [
+    ...Array.from({ length: 6 }, (_, index) => `misty-banqi-level-${index + 1}`),
+    'misty-banqi',
+    'misty-banqi-level-8',
+  ]);
+  assert.ok(banqi.calibrationRatio > 0);
+  assert.equal(banqi.anchorEngineId, 'random-legal-banqi');
   assert.equal(banqi.requiredCapability, 'banqi_engine');
+  for (const lane of ['content', 'calibration'] as const) {
+    const job = botVsBotJobConfig({
+      variant: banqi.variant,
+      lane,
+      pairing: { redEngineId: banqi.ladder[0]!, blackEngineId: banqi.ladder.at(-1)! },
+      anchorEngineId: banqi.anchorEngineId,
+    });
+    const policy = job.rating_policy as Record<string, unknown> | undefined;
+    if (lane === 'calibration') {
+      assert.equal(policy?.rated, true);
+      assert.equal(policy?.anchor_engine_id, 'random-legal-banqi');
+    } else assert.equal(policy, undefined);
+  }
   const jungle = config.plans.find((plan) => plan.variant === 'jungle')!;
   // Weakest first, the bots a player can pick: Misty, then the KataGo top seat.
   // The retired Misty levels never play scheduled games.
@@ -385,16 +402,14 @@ test('banqi plays itself for data, jungle pairs its tiers, and neither can be ra
 
   // Whatever lane a tick picks, a job without an anchor carries no rating_policy,
   // which is the only thing the Elo report (and so bot-rating-import) selects on.
-  for (const plan of [banqi, jungle]) {
-    for (const lane of ['content', 'calibration'] as const) {
-      const job = botVsBotJobConfig({
-        variant: plan.variant,
-        lane,
-        pairing: { redEngineId: plan.ladder[0]!, blackEngineId: plan.ladder.at(-1)! },
-        anchorEngineId: plan.anchorEngineId,
-      });
-      assert.equal(job.rating_policy, undefined, `${plan.variant} ${lane}`);
-    }
+  for (const lane of ['content', 'calibration'] as const) {
+    const job = botVsBotJobConfig({
+      variant: jungle.variant,
+      lane,
+      pairing: { redEngineId: jungle.ladder[0]!, blackEngineId: jungle.ladder.at(-1)! },
+      anchorEngineId: jungle.anchorEngineId,
+    });
+    assert.equal(job.rating_policy, undefined, `jungle ${lane}`);
   }
 });
 
@@ -595,5 +610,33 @@ test('nothing on the engine-game path can send to PostHog', () => {
   ]) {
     const source = readFileSync(join(dir, file), 'utf8');
     assert.doesNotMatch(source, /analytics-server|posthog/i, file);
+  }
+});
+
+test('Flip Jungle schedules L1-7 without a net and includes neural L8 only with a readable file', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'jgf-scheduler-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const net = join(dir, 'net.jfnn');
+  writeFileSync(net, 'fixture net');
+  const saved = process.env.MISTBOARD_JUNGLE_FLIP_NET;
+  t.after(() => {
+    if (saved === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_NET;
+    else process.env.MISTBOARD_JUNGLE_FLIP_NET = saved;
+  });
+  const classical = [
+    ...Array.from({ length: 6 }, (_, index) => `misty-jungle-flip-level-${index + 1}`),
+    'misty-jungle-flip',
+  ];
+  for (const path of [undefined, `${net}.missing`, dir, net]) {
+    if (path === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_NET;
+    else process.env.MISTBOARD_JUNGLE_FLIP_NET = path;
+    const config = botVsBotConfigFromEnv({ MISTBOARD_BOT_VS_BOT_VARIANTS: 'jungle-flip' });
+    assert.deepEqual(config.skipped, []);
+    assert.equal(config.plans[0]!.anchorEngineId, 'random-legal-jungle-flip');
+    assert.equal(config.plans[0]!.requiredCapability, 'jungle_flip_engine');
+    assert.deepEqual(
+      config.plans[0]!.ladder,
+      path === net ? [...classical, 'misty-jungle-flip-level-8'] : classical,
+    );
   }
 });

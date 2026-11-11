@@ -12,7 +12,7 @@
 
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import pg from 'pg';
@@ -22,6 +22,7 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
@@ -43,6 +44,7 @@ const TENANTS: any[] = [
   crazyhouseXiangqiTenant,
   darkXiangqiTenant,
   xiangqiTenant,
+  gomokuTenant,
 ];
 
 // biome-ignore lint/suspicious/noExplicitAny: opaque tenant type, keyed by spec id.
@@ -58,6 +60,20 @@ async function seedFile(dir: string, file: string): Promise<string> {
     .split('\n')
     .filter((line) => line.trim().length > 0)
     .map((line) => JSON.parse(line) as { type: string; roomId: string; gameSpecId?: string });
+  return seedVariantFixture(events, file);
+}
+
+type FixtureEvent = { type: string; roomId: string; gameSpecId?: string };
+type FixtureStore = {
+  appendRoomEvent: typeof appendRoomEvent;
+  recordGameEnd: typeof recordGameEnd;
+};
+
+export async function seedVariantFixture(
+  events: FixtureEvent[],
+  file: string,
+  store: FixtureStore = { appendRoomEvent, recordGameEnd },
+): Promise<string> {
   if (events.length === 0) throw new Error(`empty fixture: ${file}`);
 
   const first = events[0]!;
@@ -77,7 +93,7 @@ async function seedFile(dir: string, file: string): Promise<string> {
 
   for (let seq = 0; seq < events.length; seq++) {
     try {
-      await appendRoomEvent(roomId, seq, events[seq] as never);
+      await store.appendRoomEvent(roomId, seq, events[seq] as never);
     } catch (err) {
       if (!isDuplicateKey(err)) throw err;
     }
@@ -97,11 +113,15 @@ async function seedFile(dir: string, file: string): Promise<string> {
     rated: false,
     startedAt: now,
     endedAt: now,
-    whiteName: base.whiteName ?? `Random self-play (${tenant.colors[0]})`,
-    blackName: base.blackName ?? `Random self-play (${tenant.colors[1]})`,
+    whiteName:
+      base.whiteName ??
+      `Random self-play (${tenant.colors.includes('white') ? 'white' : tenant.colors[0]})`,
+    blackName:
+      base.blackName ??
+      `Random self-play (${tenant.colors.includes('white') ? 'black' : tenant.colors[1]})`,
     corpusId: 'variant-postgame-fixture',
   };
-  await recordGameEnd(roomId, summary);
+  await store.recordGameEnd(roomId, summary);
 
   const status = room.projection.state.status;
   return `${roomId} plies=${summary.plyCount} ${summary.result} / ${status.reason}`;
@@ -190,4 +210,6 @@ async function pruneRetiredProductFixtures(
   }
 }
 
-void main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void main();
+}

@@ -14,7 +14,7 @@ import './flair.css';
 // which is the piece's name in Chinese and needs no translation; English adds
 // the role word alongside it.
 
-import { isRetiredGameSpec, type XiangqiColor, type XiangqiPieceRole } from '@mistboard/game';
+import { isPublicGameSpec, type XiangqiColor, type XiangqiPieceRole } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
 import { variantDisplayLabel } from './game-display.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -44,6 +44,7 @@ const VARIANT_FLAIR_IDS = [
   'jungle-flip',
   'dark-xiangqi',
   'dark-chess',
+  'gomoku',
 ] as const satisfies readonly VariantMiniId[];
 const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = Object.fromEntries(
   VARIANT_FLAIR_IDS.map((id) => [
@@ -110,11 +111,11 @@ export function isFlairKey(value: unknown): value is FlairKey {
   return typeof value === 'string' && FLAIR_KEY_SET.has(value);
 }
 
-// A retired variant's flair stays valid, so a player who already wears it
-// keeps it, but the picker stops offering it to anyone else.
+// Existing wearers keep valid, renderable flair. The picker offers variant
+// flair only once its spec is public, and removes it again on retirement.
 export function flairOfferedInPicker(key: FlairKey): boolean {
   const variant = VARIANT_FLAIR[key];
-  return !variant || !isRetiredGameSpec(variant.specId);
+  return !variant || isPublicGameSpec(variant.specId);
 }
 
 export function flairLabel(key: FlairKey, locale: Locale = currentLocale()): string {

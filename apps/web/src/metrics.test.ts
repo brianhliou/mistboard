@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type DeployHistoryEntry, deployRowCells, mountMetrics } from './metrics.js';
 
 const publicStats = {
@@ -95,6 +97,8 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   puzzleSessions: 3,
   puzzleSolves: 2,
   puzzleAttempts: 1,
+  puzzlePlayers: 2,
+  returningPuzzlePlayers: 1,
   studiesCreated: 0,
   studyChaptersCreated: 0,
   practiceSolves: 0,
@@ -116,6 +120,7 @@ const adminMetrics = {
   accountsLast30d: 11,
   humanGames: 682,
   humanGamesLast7d: 30,
+  gamePace: { thisWeekSoFar: 30, lastWeekSamePoint: 20, lastWeekTotal: 70 },
   publicHumanGames: 540,
   activePlayers28d: 12,
   previousActivePlayers28d: 9,
@@ -124,6 +129,45 @@ const adminMetrics = {
   // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
   humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
+  loginEmailDelivery: {
+    last7d: {
+      requested: 21,
+      sent: 20,
+      delivered: 19,
+      bounced: 3,
+      suppressed: 2,
+      complained: 1,
+      completed: 12,
+    },
+    last30d: {
+      requested: 90,
+      sent: 87,
+      delivered: 85,
+      bounced: 5,
+      suppressed: 4,
+      complained: 2,
+      completed: 70,
+    },
+  },
+  retentionCohorts: [
+    {
+      weekStart: '2026-06-15',
+      segment: 'all',
+      players: 8,
+      returns: [
+        { week: 1, returned: 2, percentage: 25 },
+        { week: 2, returned: 0, percentage: 0 },
+        { week: 3, returned: 1, percentage: 12.5 },
+        { week: 4, returned: 1, percentage: 12.5 },
+      ],
+    },
+    {
+      weekStart: '2026-07-13',
+      segment: 'all',
+      players: 3,
+      returns: [1, 2, 3, 4].map((week) => ({ week, returned: null, percentage: null })),
+    },
+  ],
   engines: {
     eveGames: 900,
     eveGamesLast7d: 90,
@@ -154,10 +198,319 @@ function stubFetch(overrides: Record<string, () => Response> = {}): void {
 }
 
 describe('metrics page', () => {
+  it('renders login delivery counts for both windows only with admin data', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=operations');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const section = root.querySelector('.metrics-login-email');
+    expect(section?.querySelector('h2')?.textContent).toBe('Login email delivery');
+    expect([...section!.querySelectorAll('thead th')].map((cell) => cell.textContent)).toEqual([
+      'Status',
+      'Last 7 days',
+      'Last 30 days',
+    ]);
+    expect(
+      [...section!.querySelectorAll('tbody tr')].map((row) =>
+        [...row.querySelectorAll('th, td')].map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ['Requested', '21', '90'],
+      ['Sent', '20', '87'],
+      ['Delivered', '19', '85'],
+      ['Bounced', '3', '5'],
+      ['Suppressed', '2', '4'],
+      ['Complained', '1', '2'],
+      ['Completed code sign-ins', '12', '70'],
+    ]);
+    expect(section?.textContent).toContain('Each activity is counted at its own timestamp');
+    expect(section?.textContent).toContain('provider message');
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.metrics-login-email')).toBeNull();
+    stubFetch({ '/api/stats/admin': () => json({}, 401) });
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-login-email')).toBeNull();
+  });
+
+  it('renders empty login delivery windows as zeroes', async () => {
+    const zero = {
+      requested: 0,
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      suppressed: 0,
+      complained: 0,
+      completed: 0,
+    };
+    stubFetch({
+      '/api/stats/admin': () =>
+        json({ ...adminMetrics, loginEmailDelivery: { last7d: zero, last30d: zero } }),
+    });
+    window.history.replaceState(null, '', '/metrics?tab=operations');
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const values = [...root.querySelectorAll('.metrics-login-email tbody td')].map(
+      (cell) => cell.textContent,
+    );
+    expect(values).toEqual(Array(14).fill('0'));
+  });
+
+  it.each([
+    [
+      'zh-Hans',
+      '/zh-hans/metrics?tab=operations',
+      '登录邮件投递',
+      ['状态', '最近7天', '最近30天'],
+      ['已请求', '已发送', '已送达', '已退信', '已抑制', '已投诉', '已完成验证码登录'],
+    ],
+    [
+      'zh-Hant',
+      '/zh-hant/metrics?tab=operations',
+      '登入郵件投遞',
+      ['狀態', '最近7天', '最近30天'],
+      ['已請求', '已傳送', '已送達', '已退信', '已抑制', '已投訴', '已完成驗證碼登入'],
+    ],
+  ] as const)(
+    'translates the login delivery block in %s',
+    async (locale, path, heading, columns, labels) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', path);
+      stubFetch();
+      const root = mountRoot();
+      await mountMetrics(root, { admin: true });
+      const section = root.querySelector('.metrics-login-email');
+      expect(section?.querySelector('h2')?.textContent).toBe(heading);
+      expect([...section!.querySelectorAll('thead th')].map((cell) => cell.textContent)).toEqual(
+        columns,
+      );
+      expect([...section!.querySelectorAll('tbody th')].map((cell) => cell.textContent)).toEqual(
+        labels,
+      );
+      expect(section?.textContent).not.toContain('Each activity');
+      expect(section?.textContent).not.toContain('—');
+    },
+  );
+
   afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    window.history.replaceState(null, '', '/metrics');
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     document.body.className = '';
+    window.history.replaceState(null, '', '/metrics');
+  });
+
+  it.each([
+    ['en', '/stats', 'Updated just now', 'Updated 1 min ago', 'Updated 4 min ago'],
+    ['zh-Hans', '/zh-hans/stats', '刚刚更新', '1 分钟前更新', '4 分钟前更新'],
+    ['zh-Hant', '/zh-hant/stats', '剛剛更新', '1 分鐘前更新', '4 分鐘前更新'],
+  ] as const)(
+    'keeps the payload age current in %s while /stats stays open',
+    async (locale, path, justNow, minuteAgo, minutesAgo) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', path);
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.parse(publicStats.generatedAt) + 59_999);
+      stubFetch();
+      const root = mountRoot();
+      await mountMetrics(root, { admin: false });
+      const label = root.querySelector<HTMLTimeElement>('.stats-updated')!;
+      expect(label.textContent).toBe(justNow);
+      expect(label.dateTime).toBe(publicStats.generatedAt);
+      expect(label.previousElementSibling?.className).toBe('site-section-heading');
+      expect(
+        label.compareDocumentPosition(root.querySelector('.metrics-cards')!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(label.textContent).toBe(minuteAgo);
+      await vi.advanceTimersByTimeAsync(3 * 60_000);
+      expect(label.textContent).toBe(minutesAgo);
+      expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+      root.remove();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each([
+    [30, 20, '+50.0%'],
+    [10, 20, '-50.0%'],
+    [20, 20, '+0.0%'],
+    [0, 0, '0%'],
+    [10, 0, 'no games at this point last week'],
+  ])(
+    'renders admin-only Pacific pace for %i games versus %i',
+    async (thisWeekSoFar, lastWeekSamePoint, change) => {
+      window.history.replaceState(null, '', '/metrics');
+      stubFetch({
+        '/api/stats/admin': () =>
+          json({
+            ...adminMetrics,
+            gamePace: { thisWeekSoFar, lastWeekSamePoint, lastWeekTotal: 70 },
+          }),
+      });
+      const root = mountRoot();
+      await mountMetrics(root, { admin: true });
+      expect(root.querySelector('.metrics-game-pace')?.textContent).toBe(
+        `This week so far: ${thisWeekSoFar}, last week at the same point: ${lastWeekSamePoint} (${change}), last week total: 70. Pacific weeks.`,
+      );
+      await mountMetrics(root, { admin: false });
+      expect(root.querySelector('.metrics-game-pace')).toBeNull();
+      stubFetch({ '/api/stats/admin': () => json({}, 403) });
+      await mountMetrics(root, { admin: true });
+      expect(root.querySelector('.metrics-game-pace')).toBeNull();
+    },
+  );
+
+  it('explains return visits with fixed next-week and fourth-week columns', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=retention');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const section = root.querySelector('.metrics-retention')!;
+    expect(section.textContent).toContain('Retention means coming back to play');
+    expect(section.textContent).toContain('2 came back the next week (25.0%)');
+    expect([...section.querySelectorAll('thead th')].map((node) => node.textContent)).toEqual([
+      'First played',
+      'New players',
+      'Next week',
+      '4 weeks later',
+    ]);
+    const rows = [...section.querySelectorAll('tbody tr')];
+    expect(rows[0].textContent).toContain('Not ready');
+    expect(rows[1].textContent).toContain('25.0%2 of 8');
+    expect(rows[1].textContent).toContain('12.5%1 of 8');
+    expect(section.textContent).toContain('Monday to Sunday UTC');
+    expect(section.textContent).toContain('any variant');
+    expect(root.querySelector('.admin-reporting-nav [aria-current="page"]')?.textContent).toBe(
+      'Returning players',
+    );
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.metrics-retention')).toBeNull();
+    expect(root.querySelector('.admin-reporting-nav')).toBeNull();
+  });
+
+  it('requires admin access instead of silently displaying public statistics', async () => {
+    for (const status of [401, 403, 500]) {
+      stubFetch({ '/api/stats/admin': () => json({}, status) });
+      const root = mountRoot();
+      await mountMetrics(root, { admin: true });
+      expect(root.textContent).toContain(
+        status === 500 ? 'Metrics unavailable' : 'Admin access required',
+      );
+      expect(root.querySelector('.metrics-cards')).toBeNull();
+      expect(root.querySelector('.admin-reporting-nav')).toBeNull();
+    }
+  });
+
+  it('defaults to the last complete UTC week and keeps rolling counts labelled', async () => {
+    stubFetch({
+      '/api/stats/admin': () =>
+        json({
+          ...adminMetrics,
+          weekly: [
+            week('2026-07-06', { humanGames: 10, players: 5, returningPlayers: 2, newAccounts: 0 }),
+            week('2026-07-13', { humanGames: 25, players: 7, returningPlayers: 4, newAccounts: 3 }),
+            week('2026-07-20', { humanGames: 2 }),
+          ],
+        }),
+    });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector<HTMLSelectElement>('[aria-label="Review week"]')?.value).toBe(
+      '2026-07-13',
+    );
+    const summary = root.querySelector('.metrics-week-summary');
+    expect(summary?.textContent).toContain('+15 (+150%) vs 10');
+    expect(summary?.textContent).toContain('+2 (+100%) vs 2');
+    expect(summary?.textContent).toContain('+3 (new) vs 0');
+    expect(root.textContent).toContain('+30 in the last 7 days');
+    expect(root.textContent).not.toContain('+30 this week');
+  });
+
+  it('selects historical weeks and refuses to compare a partial week or a missing baseline', async () => {
+    window.history.replaceState(null, '', '/metrics?week=2026-07-20');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const picker = root.querySelector<HTMLSelectElement>('[aria-label="Review week"]')!;
+    expect(root.querySelector('.metrics-week-summary')?.textContent).toContain('Week in progress');
+    expect(root.querySelector('.metrics-week-summary')?.textContent).toContain(
+      'Comparison unavailable',
+    );
+    picker.value = '2026-07-06';
+    picker.dispatchEvent(new Event('change'));
+    expect(window.location.search).toBe('?week=2026-07-06');
+    expect(root.querySelector('.metrics-week-summary')?.textContent).toContain(
+      'previous week unavailable',
+    );
+    expect(root.querySelector('.metrics-week-summary')?.textContent).toContain(
+      'Comparison unavailable',
+    );
+  });
+
+  it('explains a historical link outside the available metrics window', async () => {
+    window.history.replaceState(null, '', '/metrics?week=2025-01-06');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-week-review')?.textContent).toContain(
+      'outside the available history',
+    );
+    expect(root.querySelector<HTMLSelectElement>('[aria-label="Review week"]')?.value).toBe(
+      '2026-07-13',
+    );
+  });
+
+  it('bounds retention to 12 rows and two return periods, with separate first-variant groups', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=retention');
+    const cohorts = Array.from({ length: 20 }, (_, index) => ({
+      weekStart: new Date(Date.UTC(2026, 0, 5 + index * 7)).toISOString().slice(0, 10),
+      segment: 'all',
+      players: 10,
+      returns: Array.from({ length: 25 }, (_, offset) => ({
+        week: offset + 1,
+        returned: 2,
+        percentage: 20,
+      })),
+    }));
+    stubFetch({
+      '/api/stats/admin': () =>
+        json({
+          ...adminMetrics,
+          retentionCohorts: [
+            ...cohorts,
+            {
+              ...cohorts[0],
+              segment: 'jieqi',
+              players: 8,
+              returns: [{ week: 1, returned: 1, percentage: 12.5 }],
+            },
+          ],
+        }),
+    });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelectorAll('.metrics-return-table tbody tr')).toHaveLength(12);
+    expect(root.querySelectorAll('.metrics-return-table thead th')).toHaveLength(4);
+    const picker = root.querySelector<HTMLSelectElement>('[aria-label="First game variant"]')!;
+    picker.value = 'jieqi';
+    picker.dispatchEvent(new Event('change'));
+    expect(root.querySelectorAll('.metrics-return-table tbody tr')).toHaveLength(1);
+    expect(root.querySelector('.metrics-return-table')?.textContent).toContain('12.5%1 of 8');
+    expect(root.querySelector('.metrics-return-table')?.textContent).toContain('Unavailable');
+  });
+
+  it('explains an empty retention window', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=retention');
+    stubFetch({ '/api/stats/admin': () => json({ ...adminMetrics, retentionCohorts: [] }) });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-retention')?.textContent).toContain(
+      'No first-game players in this window.',
+    );
   });
 
   it('public /stats is a translated rail page: games per week, totals, variants, modes', async () => {
@@ -170,6 +523,7 @@ describe('metrics page', () => {
     expect(root.querySelector('.static-page-rail-link.active')?.textContent).toBe('Statistics');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
     expect(cardLabels).toEqual(['Games played', 'Registered players', 'In play now']);
+    expect(root.querySelectorAll('.stats-cards > .metrics-card')).toHaveLength(3);
     const gamesCard = [...root.querySelectorAll('.metrics-card')].find(
       (c) => c.querySelector('.metrics-card-label')?.textContent === 'Games played',
     );
@@ -207,18 +561,9 @@ describe('metrics page', () => {
     expect(root.textContent).toContain('Player vs player');
     expect(root.textContent).not.toContain('Bot vs bot');
 
-    // The variant chips sit on the weekly chart and swap its series in place.
-    const chipLabels = [...root.querySelectorAll('.stats-chart-chip')].map((n) => n.textContent);
-    expect(chipLabels).toEqual(['All games', 'Xiangqi', 'Fog Xiangqi']);
-    const fogChip = [...root.querySelectorAll<HTMLButtonElement>('.stats-chart-chip')].find(
-      (chip) => chip.textContent === 'Fog Xiangqi',
-    );
-    fogChip?.click();
-    expect(weekly?.querySelector('.weekly-chart-line')?.getAttribute('points')).not.toBe(
-      allGamesLine,
-    );
-    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
-    expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('1 so far this week');
+    // One line, all games: no variant chips (the breakdown below carries the split).
+    expect(weekly?.querySelector('.stats-chart-filter')).toBeNull();
+    expect(root.querySelector('.stats-chart-chip')).toBeNull();
 
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
       s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),
@@ -233,6 +578,29 @@ describe('metrics page', () => {
     expect(variantSection?.textContent).not.toContain('retired');
 
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('/api/stats/admin', expect.anything());
+  });
+
+  it('keeps two public cards in equal columns when live stats are unavailable', async () => {
+    stubFetch({ '/api/live-stats': () => json({}, 503) });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: false });
+    const cards = root.querySelector('.stats-cards');
+    expect(cards?.children).toHaveLength(2);
+    expect(cards?.classList.contains('stats-cards-two')).toBe(true);
+  });
+
+  it('uses three shrinkable public columns at every width, including phones', () => {
+    const css = readFileSync('src/metrics.css', 'utf8');
+    expect(css).toMatch(
+      /\.stats-cards \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+    expect(css).toMatch(
+      /\.stats-cards-two \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
+    );
+    // The admin grid keeps its existing minimum card width and wrapping.
+    expect(css).toMatch(
+      /\.metrics-cards \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(130px, 1fr\)\)/,
+    );
   });
 
   it('public /stats renders in Traditional Chinese', async () => {
@@ -253,7 +621,7 @@ describe('metrics page', () => {
     const root = mountRoot();
     await mountMetrics(root, { admin: true });
 
-    expect(root.querySelector('.site-section-heading')?.textContent).toBe('Metrics');
+    expect(root.querySelector('.site-section-heading')?.textContent).toBe('Games and players');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
     expect(cardLabels).toContain('Active players');
     expect(cardLabels).toContain('Accounts');
@@ -271,7 +639,9 @@ describe('metrics page', () => {
       c.querySelector('.metrics-card-label')?.textContent?.includes('Accounts'),
     );
     expect(accountsCard?.querySelector('.metrics-card-value')?.textContent).toBe('42');
-    expect(accountsCard?.querySelector('.metrics-card-note')?.textContent).toBe('+11 this month');
+    expect(accountsCard?.querySelector('.metrics-card-note')?.textContent).toBe(
+      '+11 in the last 30 days',
+    );
     // The headline games card is the human total from the admin endpoint, not
     // the all-modes count.
     const gamesCard = [...root.querySelectorAll('.metrics-card')].find((c) =>
@@ -283,24 +653,22 @@ describe('metrics page', () => {
       (n) => n.textContent,
     );
     expect(sectionTitles).toEqual([
+      'Games per week',
       'Players per week',
       'Active players, rolling 28 days',
-      'Games per week',
-      'Accounts per week',
-      'Puzzles per week',
-      'Study and practice per week',
-      'Community per week',
-      'Games over time',
+      'Lifetime totals and live status',
       'Games by variant',
       'Games by mode',
       'Games by result',
-      'Not counted above',
     ]);
+    expect(root.querySelector('.metrics-details')).toBeNull();
     expect(root.textContent).toContain('Red win');
 
     // Weekly charts: one legend entry per series, the table carries the same
     // numbers newest first, and the current week is drawn as a partial segment.
-    const playersSection = root.querySelector('.metrics-weekly-section');
+    const playersSection = [...root.querySelectorAll('.metrics-weekly-section')].find(
+      (section) => section.querySelector('h2')?.textContent === 'Players per week',
+    );
     const legend = [...(playersSection?.querySelectorAll('.weekly-chart-legend li') ?? [])].map(
       (n) => n.textContent,
     );
@@ -321,6 +689,42 @@ describe('metrics page', () => {
       s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by mode'),
     );
     expect(modeSection?.textContent).not.toContain('Bot vs bot');
+    // The "Games by variant" breakdown honors the live shelf on admin too, so a
+    // retired id in humanGamesByVariant is dropped.
+    const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
+      s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),
+    );
+    const variantLabels = [
+      ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
+    ].map((n) => n.textContent);
+    expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
+    expect(variantLabels).not.toContain('Dark Draft960');
+  });
+
+  it('puts activity and operations in explicit admin destinations instead of folds', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=activity');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-week-review')).toBeNull();
+    expect(root.querySelector('.metrics-engines-section')).toBeNull();
+    // Puzzles: people beside the puzzles-started line, which says what it counts.
+    const legendOf = (title: string) =>
+      [
+        ...([...root.querySelectorAll('.metrics-weekly-section')]
+          .find((s) => s.querySelector('.metrics-section-heading')?.textContent === title)
+          ?.querySelectorAll('.weekly-chart-legend li') ?? []),
+      ].map((n) => n.textContent);
+    expect(legendOf('Puzzle players per week')).toEqual(['Puzzle players', 'Returning']);
+    expect(legendOf('Puzzles per week')).toEqual([
+      'Puzzles started',
+      'Solves',
+      'Signed-in attempts',
+    ]);
+
+    window.history.replaceState(null, '', '/metrics?tab=operations');
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-week-review')).toBeNull();
     const engines = root.querySelector('.metrics-engines-section');
     expect(engines?.textContent).toContain('Bot vs bot');
     expect(engines?.textContent).toContain('900');
@@ -337,16 +741,9 @@ describe('metrics page', () => {
     );
     expect(engineVariants).toEqual(['Fog Chess', 'Xiangqi']);
 
-    // The "Games by variant" breakdown honors the live shelf on admin too, so a
-    // retired id in humanGamesByVariant is dropped.
-    const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
-      s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),
+    expect(root.querySelector('.admin-reporting-nav [aria-current="page"]')?.textContent).toBe(
+      'System',
     );
-    const variantLabels = [
-      ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
-    ].map((n) => n.textContent);
-    expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
-    expect(variantLabels).not.toContain('Dark Draft960');
   });
 
   it('falls back to a notice when statistics are unavailable', async () => {
@@ -358,7 +755,7 @@ describe('metrics page', () => {
     const root = mountRoot();
     await mountMetrics(root, { admin: true });
 
-    expect(root.textContent).toContain('Could not load statistics');
+    expect(root.textContent).toContain('Could not load admin metrics');
     expect(root.querySelector('.metrics-card')).toBeNull();
   });
 });

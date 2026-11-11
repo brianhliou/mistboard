@@ -37,7 +37,7 @@ const GAMES_DIR =
   process.env.MISTBOARD_DROP_LAB_GAMES ??
   '/Users/brianliou/projects/mistboard/docs-private/drop-game-lab/fullboard/games';
 const INI = join(ROOT, 'apps/server/src/crazyhouse-xiangqi.ini');
-const OUT = join(ROOT, 'packages/game/src/fixtures/crazyhouse-xiangqi-parity.json');
+const OUT = join(ROOT, 'packages/game/fixtures/crazyhouse-xiangqi-parity.json');
 const VARIANT = 'crazyhousexiangqi';
 // Siblings, used only to name moves: no drop may check; advisors and elephants cross.
 const VARIANT_NO_DROP_CHECKS = 'crazyhousexiangqinodropchecks';

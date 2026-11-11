@@ -323,12 +323,12 @@ async function insertGames(client) {
          (room_id, variant, result, termination, ply_count, started_at, ended_at,
           white_client, black_client, white_name, black_name, corpus_id, mode, status,
           review_status, visibility, published_at, rated, initial_ms, increment_ms,
-          hidden_draft960, region)
+          region)
        VALUES
          ($1, 'dark-chess', $2, $3, $4, $5, $6,
           $7, $8, $9, $10, NULL, $11, 'completed',
           'reviewed', 'public', $6, $12, $13, $14,
-          false, 'local-fixture')`,
+          'local-fixture')`,
       [
         game.roomId,
         game.result,

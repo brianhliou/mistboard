@@ -24,6 +24,10 @@ export const oneThousandGamesArticle: Article = {
     'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'A game counts once both sides have moved and it ends, against a person or a bot.',
+    'Engine matches and our test accounts are left out; counting started on June 1.',
+  ],
   publishedAt: '2026-09-30',
   thumbnail: { kind: 'svg', svg: ONE_THOUSAND_GAMES_THUMBNAIL },
   audience: 'Everyone who plays on Mistboard.',

@@ -2,14 +2,20 @@
 // watch renderer (watch-tenant-replay.ts). Flip Jungle is SYMMETRIC hidden-identity
 // (the banqi pattern): one board, defaulting to the as-played masked replay with a
 // Reveal/Hide control (and the `h` key) that swaps in the full-reveal overlay. The
-// deal has no sides, so orientation is ignored. The compact TV product draws no
-// captures; the live room does (live-jungle-flip.ts renderJungleFlipMaterial).
+// deal has no sides, so orientation is ignored. The board pane draws no captures;
+// the rail draws the room's material (jungle-flip-material.ts) via railMaterial.
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
-import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
-import { flipSeatInk } from './flip-seat-ink.js';
 import {
-  animateJungleFlipBoardMove,
+  type JungleFlipMove,
+  type JungleFlipPlayerView,
+  jungleFlipLastMoverInk,
+  jungleFlipMoveLabelOnBoard,
+} from '@mistboard/game';
+import { flipSeatInk } from './flip-seat-ink.js';
+import { renderJungleFlipMaterial } from './jungle-flip-material.js';
+import {
+  animateJungleFlipStep,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
   type JungleFlipRenderBoard,
@@ -24,7 +30,11 @@ import {
 } from './live-jungle-flip-postgame.js';
 import type { ReplayHandle } from './replay.js';
 import { watchJungleFlipMoveSound } from './watch-move-sound.js';
-import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
+import {
+  mountTenantWatchReplay,
+  type TenantWatchReplayOptions,
+  tenantMoveLabelsFromViews,
+} from './watch-tenant-replay.js';
 
 export type JungleFlipWatchReplayOptions = TenantWatchReplayOptions;
 
@@ -48,6 +58,14 @@ export function mountJungleFlipWatchReplay(
     maxPly: replayMaxPly,
     viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
     viewAtPly,
+    // The site's one Flip Jungle label (flip-move-label.ts): a flip names the animal it
+    // turned up, read off the replay's own view after it ("a1(E)"), never "a1-a1".
+    moveLabels: (postgame) =>
+      tenantMoveLabelsFromViews(
+        postgame.timeline,
+        (ply) => viewAtPly(postgame, 'truth', ply),
+        (move: JungleFlipMove, view) => jungleFlipMoveLabelOnBoard(move, view?.board),
+      ),
     paneKind: () => 'truth',
     renderBoard: (view, _orientation, _key, overlay) =>
       renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
@@ -58,15 +76,24 @@ export function mountJungleFlipWatchReplay(
       }),
     // One-ply steps glide: forward animates the newly rendered view's lastMove,
     // a back step reverse-animates the move the previous ply carried. A flip is a
-    // self-move and animateJungleFlipBoardMove no-ops on it.
+    // self-move: a step forward turns the tile over, a step back shows the back.
     animateMove: (boardEl, view, prevView, direction) => {
       const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
       if (!move) return;
-      animateJungleFlipBoardMove(boardEl, move, { reverse: direction === 'back' });
+      animateJungleFlipStep(boardEl, move, { reverse: direction === 'back' });
     },
     // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
     moveSound: watchJungleFlipMoveSound,
     fillCaptures: () => {},
+    // The rail draws the room's material from the view the board shows (the
+    // as-played mask on TV): each seat's captured animals and the face-down pool,
+    // public arithmetic over that mask. The first mover sits at the bottom.
+    railMaterial: (slots, view) =>
+      renderJungleFlipMaterial(
+        { capturesTop: slots.top, capturesBottom: slots.bottom, hiddenPool: slots.pool },
+        view,
+        flipSeatInk('red', view.firstColor ?? null),
+      ),
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => jungleFlipSeatInkLabel(seat, postgame.view.firstColor),

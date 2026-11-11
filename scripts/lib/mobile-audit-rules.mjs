@@ -244,7 +244,9 @@ export function measurePage(options) {
     if (!isShown(el)) continue;
     const r = el.getBoundingClientRect();
     const ratio = r.width / r.height;
-    if (r.width < 200 || ratio < 0.6 || ratio > 1.6) continue;
+    // Up to 2:1, not 1.6: the banqi board is 568x312 (1.82) and the old cap
+    // reported a mounted banqi board as missing (#618).
+    if (r.width < 200 || ratio < 0.6 || ratio > 2) continue;
     if (r.width * r.height > boardArea) {
       boardArea = r.width * r.height;
       board = el;

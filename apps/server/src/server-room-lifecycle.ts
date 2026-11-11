@@ -8,6 +8,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import * as persistence from './persistence.js';
+import { hydrateRoomOnce } from './room-hydration.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
 import {
   appendEvent,
@@ -30,6 +31,7 @@ import {
 import { modeForProjection } from './server-policy.js';
 import { verifySeatToken } from './server-seat-session.js';
 import type { Client, Room } from './server-types.js';
+import { resumeStalePausedTenantRooms } from './variant-tenant/pause-recovery.js';
 
 type CreateRoomOptions = {
   randomSeating?: boolean;
@@ -156,6 +158,10 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     const existing = config.rooms.get(roomId);
     if (existing) return existing;
 
+    return hydrateRoomOnce(config.rooms, roomId, () => hydrateRoom(roomId, variant));
+  }
+
+  async function hydrateRoom(roomId: string, variant: VariantId): Promise<Room> {
     let events: GameEvent[] | null = null;
     let createdNewPersistentRoom = false;
     if (persistence.isInitialized()) {
@@ -522,8 +528,37 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     }, config.stalePausedSweepMs);
   }
 
+  let tenantStaleResumeRunning = false;
+
   async function runStalePausedSweep(): Promise<void> {
     const now = new Date();
+    // Tenant resumes are spaced and can take minutes on a backlog, and their
+    // failure must not stop the chess-stack finalize: run them after it, on
+    // their own, one sweep at a time.
+    try {
+      await finalizeStaleChessStackPauses(now);
+    } finally {
+      if (!tenantStaleResumeRunning) {
+        tenantStaleResumeRunning = true;
+        try {
+          await resumeStalePausedTenantRooms(now, config.stalePauseMs);
+        } catch (err) {
+          console.error(
+            JSON.stringify({
+              level: 'error',
+              kind: 'stale_paused_tenant_sweep_failure',
+              message: err instanceof Error ? err.message : String(err),
+              at: Date.now(),
+            }),
+          );
+        } finally {
+          tenantStaleResumeRunning = false;
+        }
+      }
+    }
+  }
+
+  async function finalizeStaleChessStackPauses(now: Date): Promise<void> {
     try {
       const result = await persistence.finalizeStalePausedRooms(now, config.stalePauseMs);
       if (result.finalized === 0) return;

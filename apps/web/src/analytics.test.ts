@@ -15,7 +15,11 @@ import {
   roomModeAnalyticsProps,
   setPostHogInstance,
 } from './analytics.js';
-import { rememberCorrespondenceStartSource, rememberGameStartSource } from './game-start-source.js';
+import {
+  rememberCorrespondenceStartSource,
+  rememberGameStartSource,
+  resetTrackedGameStartsForTests,
+} from './game-start-source.js';
 
 describe('classifyTimeControl', () => {
   it('classifies bullet (1+0)', () => {
@@ -66,6 +70,8 @@ describe('createGameLifecycleTracker', () => {
 
   beforeEach(() => {
     capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
     // track() routes through the posthog instance; install a spy so emissions
     // are observable even outside PROD (enqueue runs the action immediately).
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
@@ -109,12 +115,47 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_finished')).toHaveLength(0);
   });
 
-  it('re-arms the start transition after reset', () => {
+  it('re-arms the start transition after reset, for the next game', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });
     t.reset();
-    t.update({ statusType: 'playing', baseProps: base });
+    t.update({ statusType: 'playing', baseProps: { ...base, gameId: 'g2' } });
     expect(named('game_started')).toHaveLength(2);
+  });
+
+  // #437: every reload of a seated live room is a fresh page with a fresh
+  // tracker whose first render is `playing`; each one counted as a start.
+  it('fires once per live game across page reloads and reconnects', () => {
+    const live = { ...base, time_class: 'blitz', rated: true };
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Reload: a fresh page, a fresh tracker, the same game.
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: live });
+    // Same page re-initialised (initRender resets the tracker).
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'playing', baseProps: live });
+    t.reset();
+    t.update({ statusType: 'playing', baseProps: live });
+    expect(named('game_started')).toHaveLength(1);
+    // Properties unchanged, so the dashboard series stays comparable.
+    expect(named('game_started')[0][1]).toMatchObject({ ...live, entry_source: 'none' });
+    // The next game (a rematch is a new room and a new id) still counts.
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: { ...live, gameId: 'g2' },
+    });
+    expect(named('game_started')).toHaveLength(2);
+  });
+
+  it('still dedupes within the page when storage is blocked', () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    createGameLifecycleTracker().update({ statusType: 'playing', baseProps: base });
+    expect(named('game_started')).toHaveLength(1);
   });
 
   it('keeps separate trackers from bleeding transitions into each other', () => {
@@ -125,6 +166,93 @@ describe('createGameLifecycleTracker', () => {
     // Both fire independently; one tracker reaching 'playing' must not suppress
     // the other's game_started.
     expect(named('game_started')).toHaveLength(2);
+  });
+});
+
+// game_started fires when a room's status becomes 'playing', before anyone
+// moves, so a room the player opened and left counts as a start (about 9% of
+// counted PvE starts, 2026-10-25). game_first_move is the count of games the
+// human actually played: the seat's own first move, accepted by the server.
+describe('game_first_move', () => {
+  const capture = vi.fn();
+  const named = (name: string) =>
+    (capture.mock.calls as Array<[string, Record<string, unknown>]>).filter(([n]) => n === name);
+  const base = { gameId: 'g1', game_spec: 'xiangqi', roomMode: 'pve', bot_name: 'Misty' };
+  const playing = (ownMoveCount: number, moveNumber: number) =>
+    ({ statusType: 'playing', baseProps: base, ownMoveCount, moveNumber }) as const;
+
+  beforeEach(() => {
+    capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+  });
+
+  it('fires once, after the seat has a move accepted, with the start props and moveNumber', () => {
+    rememberGameStartSource('panel-bot');
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    // Opening the room is a start, not a first move.
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_first_move')).toHaveLength(0);
+    t.update(playing(1, 1));
+    t.update(playing(1, 2));
+    t.update(playing(2, 3));
+    expect(named('game_first_move')).toHaveLength(1);
+    expect(named('game_first_move')[0][1]).toEqual({
+      ...base,
+      entry_source: 'panel-bot',
+      moveNumber: 1,
+    });
+  });
+
+  it('does not fire while only the opponent or bot has moved', () => {
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    t.update(playing(0, 1));
+    t.update({ ...playing(0, 2), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('does not fire for a room first seen with the move already made', () => {
+    // A reload mid-game, or a finished game opened later: this page never saw
+    // the empty board, so nothing it watched was a first move.
+    createGameLifecycleTracker().update(playing(3, 6));
+    createGameLifecycleTracker().update({ ...playing(3, 6), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('fires once across a reconnect, a reset and a reload of the same game', () => {
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    // initRender resets the tracker; the move lands in the next snapshot.
+    t.reset();
+    t.update(playing(1, 1));
+    expect(named('game_first_move')).toHaveLength(1);
+    t.reset();
+    t.update(playing(1, 1));
+    // A takeback to an empty board and a fresh page cannot count it again.
+    t.update(playing(0, 0));
+    t.update(playing(1, 1));
+    const reload = createGameLifecycleTracker();
+    reload.update(playing(0, 0));
+    reload.update(playing(1, 1));
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
+  it('carries a null entry source when the start fired on an earlier page load', () => {
+    createGameLifecycleTracker().update(playing(0, 0));
+    const reload = createGameLifecycleTracker();
+    reload.update(playing(0, 0));
+    reload.update(playing(1, 2));
+    expect(named('game_first_move')[0][1]).toMatchObject({ entry_source: null, moveNumber: 2 });
+  });
+
+  it('stays silent for callers that pass no move count', () => {
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'playing', baseProps: base });
+    t.update({ statusType: 'playing', baseProps: base, moveNumber: 4 });
+    expect(named('game_first_move')).toHaveLength(0);
   });
 });
 
@@ -161,6 +289,7 @@ describe('correspondence game_started', () => {
     capture.mockReset();
     Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
     sessionStorage.clear();
+    resetTrackedGameStartsForTests();
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   });
 
@@ -177,17 +306,17 @@ describe('correspondence game_started', () => {
   });
 
   it('labels the accepter from the session source and the poster from the long-lived one', () => {
-    rememberGameStartSource('home-correspondence');
+    rememberGameStartSource('lobby-seek');
     createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
-    expect(started()[0]?.[1].entry_source).toBe('home-correspondence');
+    expect(started()[0]?.[1].entry_source).toBe('lobby-seek');
 
     // The poster: no session source (they came from an email days later).
-    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    rememberCorrespondenceStartSource('lobby-seek', 'jieqi');
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { ...corr, gameId: 'jq_3' },
     });
-    expect(started()[1]?.[1].entry_source).toBe('home-correspondence');
+    expect(started()[1]?.[1].entry_source).toBe('lobby-seek');
     // Consumed: a later correspondence game is unlabeled.
     createGameLifecycleTracker().update({
       statusType: 'playing',
@@ -197,7 +326,7 @@ describe('correspondence game_started', () => {
   });
 
   it('does not hand the long-lived source to another variant or to a live game', () => {
-    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    rememberCorrespondenceStartSource('lobby-seek', 'jieqi');
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { ...corr, gameId: 'xq_1', game_spec: 'xiangqi' },
@@ -207,12 +336,12 @@ describe('correspondence game_started', () => {
       baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
     });
     expect(started().map(([, props]) => props.entry_source)).toEqual(['none', 'none']);
-    // Live games still fire on every fresh tracker, as before.
+    // A reload of the live game is not another start (#437).
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { gameId: 'live_1', game_spec: 'jieqi', time_class: 'blitz' },
     });
-    expect(started()).toHaveLength(3);
+    expect(started()).toHaveLength(2);
   });
 });
 
@@ -275,6 +404,19 @@ describe('reviewOpenedProps', () => {
 });
 
 describe('puzzleAttemptedProps', () => {
+  it('keeps Storm attempts unrated even if a shared preference changed', () => {
+    expect(
+      puzzleAttemptedProps({
+        puzzleId: 'storm-p1',
+        variant: 'xiangqi',
+        rated: true,
+        mode: 'storm',
+        outcome: 'solved',
+        clean: true,
+      }),
+    ).toMatchObject({ mode: 'storm', rated: false, outcome: 'solved', clean: true });
+  });
+
   it('carries the spec identity, themes, and the clean-solve flag', () => {
     expect(
       puzzleAttemptedProps({

@@ -43,6 +43,26 @@
   height: 56%;
 }
 
+/* Checkmate: no disc and no corner grow. The slash fills the disc box and its
+   two halves draw outward from the general's centre. */
+.finish-badge--mated .finish-badge__disc {
+  background: none;
+  box-shadow: none;
+  animation: none;
+}
+
+.finish-badge--mated .finish-badge__disc svg {
+  width: 100%;
+  height: 100%;
+}
+
+.finish-badge__slash {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: finish-badge-slash 1000ms var(--finish-badge-delay) cubic-bezier(0.25, 0.8, 0.3, 1)
+    both;
+}
+
 .finish-badge__pill {
   position: absolute;
   left: 50%;
@@ -96,9 +116,28 @@
   }
 }
 
+@keyframes finish-badge-slash {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 1;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .finish-badge__disc,
-  .finish-badge__pill {
+  .finish-badge__pill,
+  .finish-badge__slash {
     animation: none;
+  }
+
+  .finish-badge__slash {
+    stroke-dashoffset: 0;
   }
 }

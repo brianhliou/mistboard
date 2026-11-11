@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { nextShowcaseIndex, specIdForShowcaseVariant } from './showcase-dispatch';
+import {
+  embedRendererKindForVariant,
+  nextShowcaseIndex,
+  specIdForShowcaseVariant,
+} from './showcase-dispatch';
 
 describe('specIdForShowcaseVariant', () => {
   it('maps the legacy dark-chess "fog" value to the dark-chess spec', () => {
@@ -32,5 +36,23 @@ describe('nextShowcaseIndex', () => {
 
   it('returns -1 for an empty pool', () => {
     expect(nextShowcaseIndex(0, -1)).toBe(-1);
+  });
+});
+
+describe('embedRendererKindForVariant', () => {
+  it('draws a tenant with a watch renderer on its own board', () => {
+    expect(embedRendererKindForVariant('jieqi')).toBe('jieqi');
+    expect(embedRendererKindForVariant('xiangqi')).toBe('xiangqi');
+  });
+
+  it('keeps the chessground board for the chess stack only', () => {
+    expect(embedRendererKindForVariant('fog')).toBe('chess');
+    expect(embedRendererKindForVariant('dark-chess')).toBe('chess');
+  });
+
+  it('fails closed for a tenant with no watch renderer and for unknown variants', () => {
+    expect(embedRendererKindForVariant('xiangqi-mahjong')).toBeNull();
+    expect(embedRendererKindForVariant('mahjong')).toBeNull();
+    expect(embedRendererKindForVariant('totally-unknown')).toBeNull();
   });
 });

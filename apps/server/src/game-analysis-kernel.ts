@@ -10,6 +10,7 @@
 // math (position reconstruction, POV normalization, pool-mean decomposition)
 // and their cache/engine-id constants — this kernel is plumbing, not math.
 
+import { reportAnalysisJobProgress } from './analysis-job-progress.js';
 import * as persistence from './persistence.js';
 
 export type GameAnalysisCacheOps<T> = {
@@ -45,8 +46,19 @@ export function liveAnalysisProgressStore<T>(
   depth: number,
 ): AnalysisProgressStore<T> & { clear(): Promise<void> } {
   return {
-    load: () => persistence.getGameAnalysisProgress<AnalysisProgress<T>>(roomId, engineId, depth),
-    save: (progress) => persistence.saveGameAnalysisProgress(roomId, engineId, depth, progress),
+    load: async () => {
+      const progress = await persistence.getGameAnalysisProgress<AnalysisProgress<T>>(
+        roomId,
+        engineId,
+        depth,
+      );
+      if (progress) reportAnalysisJobProgress({ completed: progress.nextIndex });
+      return progress;
+    },
+    save: async (progress) => {
+      await persistence.saveGameAnalysisProgress(roomId, engineId, depth, progress);
+      reportAnalysisJobProgress({ completed: progress.nextIndex });
+    },
     clear: () => persistence.deleteGameAnalysisProgress(roomId, engineId, depth),
   };
 }

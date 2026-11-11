@@ -25,6 +25,7 @@ import {
   endgameRowText,
   XIANGQI_ENDGAME_HUB,
   XIANGQI_ENDGAME_PRACTICE_SET_IDS,
+  xiangqiEndgamePracticePath,
 } from '@mistboard/game';
 
 export type { EndgameText };
@@ -58,8 +59,8 @@ export const ENDGAME_PAGE_TEXT = {
   ),
   introPractice: tri(
     'All 35 positions in the table below are on the Practice page against the computer, in the set for their piece. In the wins you play Red and give mate; in the draws you play Black and hold for 15 moves.',
-    '下表全部35个局面都在练习页，按子力分在各自的练习集里，和电脑对下。胜局你执红将死对方；和局你执黑守住15回合。',
-    '下表全部35個局面都在練習頁，按子力分在各自的練習集裡，和電腦對下。勝局你執紅將死對方；和局你執黑守住15回合。',
+    '下表全部35个局面都在练习页，按子力分在各自的练习集里，和电脑对弈。胜局你执红将死对方；和局你执黑守住15回合。',
+    '下表全部35個局面都在練習頁，按子力分在各自的練習集裡，和電腦對弈。勝局你執紅將死對方；和局你執黑守住15回合。',
   ),
   practiceButton: tri('Practice these endgames', '练习这些残局', '練習這些殘局'),
   tableHeading: tri(
@@ -96,7 +97,7 @@ export const ENDGAME_PAGE_TEXT = {
   groupMixed: tri('Horse and soldier, chariot and cannon', '马兵与车炮残局', '馬兵與車砲殘局'),
   introSource: tri(
     'The results follow the Chinese Wikipedia list of standard results (象棋勝和定式), which cites 金启昌 and 杨典, 象棋残局胜和定式 (2008). Rows it does not grade follow English Wikipedia. The positions are ours, and every result was checked against the exact results of [chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database, for that exact position.',
-    '结果依据中文维基百科的“象棋勝和定式”条目，该条目引用金启昌、杨典《象棋残局胜和定式》（2008）。该条目没有给出等级的几行依据英文维基百科。局面由我们摆出，每一个结果都经[象棋云库 chessdb.cn](https://www.chessdb.cn/)对该局面的确切结果核对。',
+    '结果依据中文维基百科的“象棋胜和定式”条目，该条目引用金启昌、杨典《象棋残局胜和定式》（2008）。该条目没有给出等级的几行依据英文维基百科。局面由我们摆出，每一个结果都经[象棋云库 chessdb.cn](https://www.chessdb.cn/)对该局面的确切结果核对。',
     '結果依據中文維基百科的「象棋勝和定式」條目，該條目引用金啟昌、楊典《象棋殘局勝和定式》（2008）。該條目沒有給出等級的幾行依據英文維基百科。局面由我們擺出，每一個結果都經[象棋雲庫 chessdb.cn](https://www.chessdb.cn/)對該局面的確切結果核對。',
   ),
   exerciseHeading: tri(
@@ -106,8 +107,8 @@ export const ENDGAME_PAGE_TEXT = {
   ),
   exerciseText: tri(
     'A horse against a lone elephant is a draw as a rule: the elephant switches flanks faster than the horse can cut it off. In this position the elephant is stuck on one side and Red moves first, and that is enough. The tablebase gives Red mate in five moves. The first move decides it: find the point that keeps the elephant from getting back across.',
-    '单马对单象通常是和棋：象换翼的速度比马切断它的速度更快。这个局面里象被困在一侧，又轮到红方先走，这就够了。残局库给出红方五步杀。关键在第一步：找到那个让象回不到另一侧的位置。',
-    '單馬對單象通常是和棋：象換翼的速度比馬切斷它的速度更快。這個局面裡象被困在一側，又輪到紅方先走，這就夠了。殘局庫給出紅方五步殺。關鍵在第一步：找到那個讓象回不到另一側的位置。',
+    '单马对单象通常是和棋：象换翼的速度比马切断其退路的速度更快。这个局面里象被困在一侧，又轮到红方先走，这就够了。残局库给出红方五步杀。关键在第一步：找到那个让象回不到另一侧的位置。',
+    '單馬對單象通常是和棋：象換翼的速度比馬切斷其退路的速度更快。這個局面裡象被困在一側，又輪到紅方先走，這就夠了。殘局庫給出紅方五步殺。關鍵在第一步：找到那個讓象回不到另一側的位置。',
   ),
   exerciseCaption: tri('Red to move and mate in five.', '红先，五步杀。', '紅先，五步殺。'),
   exerciseButton: tri('Play it out', '和电脑下', '和電腦下'),
@@ -602,138 +603,6 @@ export function endgameTableIdea(row: EndgameTableRow): EndgameText {
 
 // ── Links ──
 
-/** The prod study id of each practice set (GET /api/studies, read 2026-10-07). */
-export const ENDGAME_SET_STUDY_IDS: Record<EndgamePracticeSetSlug, string> = {
-  'endgames-soldier': 'DstCTARw',
-  'endgames-chariot': 'hc6LmrOG',
-  'endgames-horse': 'PNqQaTM6',
-  'endgames-cannon': 'rj3D8rMs',
-  'endgames-insufficient': 'feCqSlEw',
-};
-
-/**
- * Positions that are already a chapter on prod, with that chapter's root FEN as
- * read 2026-10-07. The seeder matches chapters by name and keeps their ids, so
- * these deep links survive the reseed; the test holds each FEN to the corpus
- * position. Table rows not listed are chapters the next seed adds, and link to
- * their set.
- */
-export const ENDGAME_PROD_CHAPTERS: Record<
-  string,
-  { study: string; chapter: string; rootFen: string }
-> = {
-  'three-soldiers-vs-full-defence': {
-    study: 'DstCTARw',
-    chapter: 'aRL5w6iC',
-    rootFen: '2b1ka3/4a4/4b4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1',
-  },
-  'two-soldiers-vs-two-advisors': {
-    study: 'DstCTARw',
-    chapter: 'hjxe7Knl',
-    rootFen: '3aka3/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1',
-  },
-  'two-soldiers-vs-two-elephants': {
-    study: 'DstCTARw',
-    chapter: 'NraxgqiY',
-    rootFen: '2b1k1b2/9/9/9/3P1P3/9/9/9/9/3K5 r - - 0 1',
-  },
-  'two-soldiers-vs-advisor-and-elephant': {
-    study: 'DstCTARw',
-    chapter: 'CHi4AJpE',
-    rootFen: '2b1k4/4a4/9/9/3P1P3/9/9/9/9/4K4 r - - 0 1',
-  },
-  'three-soldiers-vs-horse-and-two-advisors': {
-    study: 'DstCTARw',
-    chapter: 'fjcDdHLP',
-    rootFen: '3aka3/9/4n4/2P1P1P2/9/9/9/9/9/4K4 r - - 0 1',
-  },
-  'three-soldiers-vs-cannon-and-two-elephants': {
-    study: 'DstCTARw',
-    chapter: 'bEx7oNV5',
-    rootFen: '2b1k1b2/9/9/2P1P1P2/9/4c4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-advisor': {
-    study: 'PNqQaTM6',
-    chapter: 'uJQcVSvn',
-    rootFen: '3ak4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-elephant': {
-    study: 'PNqQaTM6',
-    chapter: 'M5LYB24C',
-    rootFen: '2b1k4/9/9/9/9/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-vs-elephant-zugzwang': {
-    study: 'PNqQaTM6',
-    chapter: 'jeCJgZEG',
-    rootFen: '3k5/9/5N3/9/2b6/9/9/9/4K4/9 r - - 0 1',
-  },
-  'horse-and-soldier-vs-three-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'mmiG3IsB',
-    rootFen: '4ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'horse-and-soldier-vs-full-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'HUojqblI',
-    rootFen: '2b1ka3/4a4/4b4/9/4P4/4N4/9/9/9/4K4 r - - 0 1',
-  },
-  'two-horses-vs-full-defence': {
-    study: 'PNqQaTM6',
-    chapter: 'E8vYqhoQ',
-    rootFen: '2b1ka3/4a4/4b4/9/9/3N1N3/9/9/9/4K4 r - - 0 1',
-  },
-  'cannon-and-advisor-vs-two-advisors': {
-    study: 'rj3D8rMs',
-    chapter: '8AI7kOXl',
-    rootFen: '3k5/4a4/3a5/9/9/9/9/3A1K3/9/3C5 r - - 0 1',
-  },
-  'cannon-and-full-defence-vs-full-defence': {
-    study: 'rj3D8rMs',
-    chapter: 'hDZE0K9k',
-    rootFen: '2b1ka3/4a4/4b4/9/9/4C4/9/4B4/4A4/2BAK4 r - - 0 1',
-  },
-  'cannon-vs-bare-general': {
-    study: 'feCqSlEw',
-    chapter: '3VUGq3dJ',
-    rootFen: '4k4/9/9/9/9/4C4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-full-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'MyIZ3XSd',
-    rootFen: '2b1ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-three-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'aAF1ooTw',
-    rootFen: '4ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-horse-two-elephants-fortress': {
-    study: 'hc6LmrOG',
-    chapter: 'zsSsZLbq',
-    rootFen: '4k4/9/4n3b/4R4/6b2/9/9/9/4K4/9 r - - 0 1',
-  },
-  'chariot-vs-horse-two-elephants-broken': {
-    study: 'hc6LmrOG',
-    chapter: 'N0sRR1n9',
-    rootFen: '4k1b2/9/4n3b/4R4/9/9/9/9/4K4/9 r - - 0 1',
-  },
-  'two-chariots-vs-chariot-full-defence': {
-    study: 'hc6LmrOG',
-    chapter: 'HJWlVc5G',
-    rootFen: '2b1ka3/4a4/r3b4/9/9/3R1R3/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-vs-two-minor-pieces': {
-    study: 'hc6LmrOG',
-    chapter: 'hIZwpqop',
-    rootFen: '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1',
-  },
-  'chariot-cannon-vs-chariot': {
-    study: 'hc6LmrOG',
-    chapter: 'GoeeVBgU',
-    rootFen: '5k3/9/9/9/9/R1C1r4/9/9/9/3K5 r - - 0 1',
-  },
-};
-
 /** The practice set a corpus position sits in. */
 export function endgamePracticeSetOf(id: string): EndgamePracticeSetSlug {
   for (const [slug, ids] of Object.entries(XIANGQI_ENDGAME_PRACTICE_SET_IDS)) {
@@ -742,11 +611,14 @@ export function endgamePracticeSetOf(id: string): EndgamePracticeSetSlug {
   throw new Error(`xiangqi endgames: ${id} is in no practice set`);
 }
 
-/** Where a position links: its prod chapter, else its practice set. */
+/**
+ * Where a position links: /practice/<set slug>/<id>, which opens its chapter in
+ * whatever database serves the page. Study and chapter ids differ between prod
+ * and a local pair, so the page carries neither (#521); the test holds the
+ * lookup to the chapters prod links opened.
+ */
 export function endgameStudyHref(id: string): string {
-  const chapter = ENDGAME_PROD_CHAPTERS[id];
-  if (chapter) return `/study/${chapter.study}/${chapter.chapter}`;
-  return `/study/${ENDGAME_SET_STUDY_IDS[endgamePracticeSetOf(id)]}`;
+  return xiangqiEndgamePracticePath(id);
 }
 
 function materialCell(row: EndgameTableRow, lang: keyof EndgameText): string {

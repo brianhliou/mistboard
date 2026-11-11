@@ -1,0 +1,67 @@
+{
+  "protocol": "mistboard-banqi/1",
+  "requestId": "example-turn",
+  "gameId": "example-game",
+  "engineId": "example-engine",
+  "ply": 0,
+  "seat": "first",
+  "ink": null,
+  "position": {
+    "fen": "XXXXXXXX/XXXXXXXX/XXXXXXXX/XXXXXXXX - G1A2E2R2H2C2S5g1a2e2r2h2c2s5 0 1",
+    "lastMove": null,
+    "chasedSquare": null
+  },
+  "rules": {
+    "noProgressPlies": 60,
+    "chase": "repetition",
+    "repetitionCount": 3
+  },
+  "repetition": {
+    "fen": "XXXXXXXX/XXXXXXXX/XXXXXXXX/XXXXXXXX - G1A2E2R2H2C2S5g1a2e2r2h2c2s5 0 1",
+    "moves": [],
+    "positions": {}
+  },
+  "legalMoves": [
+    "a0a0",
+    "b0b0",
+    "c0c0",
+    "d0d0",
+    "e0e0",
+    "f0f0",
+    "g0g0",
+    "h0h0",
+    "a1a1",
+    "b1b1",
+    "c1c1",
+    "d1d1",
+    "e1e1",
+    "f1f1",
+    "g1g1",
+    "h1h1",
+    "a2a2",
+    "b2b2",
+    "c2c2",
+    "d2d2",
+    "e2e2",
+    "f2f2",
+    "g2g2",
+    "h2h2",
+    "a3a3",
+    "b3b3",
+    "c3c3",
+    "d3d3",
+    "e3e3",
+    "f3f3",
+    "g3g3",
+    "h3h3"
+  ],
+  "clock": {
+    "remainingMs": 300000,
+    "incrementMs": 5000
+  },
+  "limits": {
+    "requestedAtUnixMs": 0,
+    "deadlineUnixMs": 1000,
+    "nodes": 64
+  }
+}

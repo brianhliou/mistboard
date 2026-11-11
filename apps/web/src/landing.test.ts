@@ -1,12 +1,20 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
+import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
+  buildLandingStage,
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
+  renderLandingPageForPrerender,
   renderLandingShellForPrerender,
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
 } from './landing.js';
+import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
+import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
@@ -55,6 +63,24 @@ describe('playable engines loading', () => {
       vi.fn(async () => jsonResponse({ engines: ROSTER })),
     );
     expect(await fetchPlayableEnginesOnce()).toEqual(ROSTER);
+  });
+
+  it('offers neural Flip Jungle L8 only after the server confirms it and clears it on failure', async () => {
+    const roster = jungleFlipEngineOptions(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ engines: ROSTER, jungleFlipEngines: roster })),
+    );
+    await fetchPlayableEnginesOnce();
+    expect(jungleFlipEngineOptions()[0]!.id).toBe('misty-jungle-flip-level-8');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 503 })),
+    );
+    await fetchPlayableEnginesOnce();
+    expect(jungleFlipEngineOptions().map((engine) => engine.id)).not.toContain(
+      'misty-jungle-flip-level-8',
+    );
   });
 
   it('retries transient failures and resolves once the roster is available', async () => {
@@ -109,11 +135,61 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    setThreeKingdomsBanqiEngineOptions([]);
+  });
+  it('prerenders the exact English home description and Open Graph description', () => {
+    const shell = readFileSync('index.html', 'utf8');
+    const html = renderLandingPageForPrerender(shell, 'en');
+    // Template contents stay inert, including the real shell's stylesheet.
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const parsed = template.content;
+    const description =
+      'Bringing people together across cultures through Chinese chess. Play xiangqi, jieqi and banqi online for free, against a bot or a friend, no sign-up.';
+    for (const selector of ['meta[name="description"]', 'meta[property="og:description"]']) {
+      expect(parsed.querySelectorAll(selector)).toHaveLength(1);
+      expect(parsed.querySelector(selector)?.getAttribute('content')).toBe(description);
+    }
+    expect(parsed.querySelector('#app h1')?.textContent).toBe(
+      'Bringing people together across cultures through Chinese chess.',
+    );
+  });
+
   it('uses bundled showcase games only when a demo is explicitly requested', () => {
     expect(shouldUseBundledShowcaseDemos('')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?only=xiangqi')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
   });
+
+  it.each(['true', 'false'])(
+    'prerenders offered TK rows (%s), Gomoku last and Fog absent on both tabs',
+    (flag) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+      setThreeKingdomsBanqiEngineOptions([
+        {
+          id: 'misty-three-kingdoms-banqi-level-1',
+          name: 'Misty Level 1',
+          familyName: 'Misty',
+          kind: 'container',
+        },
+      ]);
+      const shell = document.createElement('div');
+      shell.innerHTML = renderLandingShellForPrerender();
+      for (const kind of ['bot', 'person']) {
+        const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+          (el) => el.dataset.gameSpec,
+        );
+        expect(specs.at(-1)).toBe('gomoku');
+        expect(specs.includes('three-kingdoms-banqi')).toBe(flag === 'true');
+        for (const spec of ['dark-xiangqi', 'dark-chess', 'ffq-banqi']) {
+          expect(specs).not.toContain(spec);
+        }
+      }
+    },
+  );
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
     // The prerender is what crawlers index; a hidden admin menu still put
@@ -137,6 +213,7 @@ describe('landing shell', () => {
           '轉播運維',
           'href="/database"',
           'href="/readouts"',
+          'href="/ops"',
           'href="/broadcast/xiangqi/ops"',
         ]) {
           expect(html, `${path}: ${label}`).not.toContain(label);
@@ -145,6 +222,17 @@ describe('landing shell', () => {
     } finally {
       window.history.replaceState(null, '', '/');
     }
+  });
+
+  it('prerenders the viewer and broadcast slots at their size, so nothing pops in', () => {
+    // The viewer slot used to ship empty and the broadcast slot collapsed until
+    // the index answered (~1s); both then grew and pushed band 1 around.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+    expect(wrap.querySelector('#landing-replay > .watch-replay-skeleton')).not.toBeNull();
+    expect(
+      wrap.querySelector('.landing-event-banners.landing-event-banners--pending'),
+    ).not.toBeNull();
   });
 
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
@@ -164,11 +252,12 @@ describe('landing shell', () => {
     expect(demo?.querySelector(':scope > .landing-forum-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-chat-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-articles-row')).not.toBeNull();
-    // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
+    // Side rails: News (band 2 right) and Top studies (band 3 left).
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
-    // Band 4: the deep-dives row sits in its own grid-area beneath the blog row,
-    // and the player pages are in it, not in the blog row above.
+    // Band 4: the deep-dives row sits in its own grid-area above the blog row
+    // (on top since 2026-10-26), and the player pages are in it, not in the
+    // blog row below.
     const deepDives = demo?.querySelector(':scope > .landing-dives-row');
     expect(deepDives).not.toBeNull();
     expect(
@@ -180,13 +269,17 @@ describe('landing shell', () => {
       ),
     ).toBeNull();
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
-    // The first row is labelled too, and its label line links to the blog index.
+    // The other row is labelled too, and its label line links to the blog index.
     const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
-    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('Latest');
+    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('From the blog');
     expect(
       latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
     ).toBe('/blog');
-    expect(deepDives?.querySelector('.landing-row-more')).toBeNull();
+    // The deep-dives row links on only while it holds posts back, which depends on
+    // the live corpus (blog-topic-filter.test.ts pins when it shows); when it
+    // does, it opens the filtered blog, not the whole index.
+    const divesMore = deepDives?.querySelector('.landing-row-more');
+    if (divesMore) expect(divesMore.getAttribute('href')).toBe('/blog?topic=deep-dives');
     expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).
@@ -198,7 +291,14 @@ describe('landing shell', () => {
     wrap.innerHTML = renderLandingShellForPrerender();
 
     const leftColumn = wrap.querySelector('.landing-left-column');
-    expect(leftColumn?.firstElementChild?.classList.contains('landing-viewer-column')).toBe(true);
+    // The phone-only TV strip (display: none above 600px) heads the rail; the
+    // viewer is the first thing tablet and desktop paint.
+    expect(leftColumn?.firstElementChild?.classList.contains('landing-tv-strip')).toBe(true);
+    expect(
+      leftColumn?.firstElementChild?.nextElementSibling?.classList.contains(
+        'landing-viewer-column',
+      ),
+    ).toBe(true);
     expect(leftColumn?.querySelector('.landing-event-banners')).toBeNull();
     // The event-banner slot (collapses via CSS when empty) is the play column's
     // last child, after the centred tagline/button/stats group, so it sits at
@@ -221,32 +321,55 @@ describe('landing shell', () => {
     expect(wrap.querySelector('.landing-forum-column .landing-forum')).not.toBeNull();
     // Top studies moved down to the bands-3/4 right rail; chat took its band-2 slot.
     expect(wrap.querySelector('.landing-studies-column .landing-study-widget')).not.toBeNull();
-    // One primary action, the unified Play button; the only other tile is the
-    // correspondence card (2026-10-03), which the prerendered shell carries in
-    // its offer state so the rail reserves its space before hydration.
+    // One action, the unified Play button (the 2026-10-03 correspondence card
+    // was removed 2026-10-20).
     const actions = wrap.querySelectorAll('.landing-play-column .landing-play-action');
-    expect(actions.length).toBe(2);
+    expect(actions.length).toBe(1);
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
-    const card = wrap.querySelector('.landing-play-stack > .landing-corr-card');
-    expect(card).toBe(actions[1]);
-    expect(card?.getAttribute('data-state')).toBe('start');
-    expect(card?.previousElementSibling?.classList.contains('landing-activity')).toBe(true);
   });
 
-  it('links only the About Mistboard tagline tail', () => {
-    const wrap = document.createElement('div');
-    wrap.innerHTML = renderLandingShellForPrerender();
+  describe.each(SUPPORTED_LOCALES)('%s intro', (locale) => {
+    it.each(['client', 'prerender'])('renders the same three-line %s structure', async (mode) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', localizedHref('/', locale));
+      try {
+        const wrap = document.createElement('div');
+        if (mode === 'prerender') {
+          wrap.innerHTML = renderLandingShellForPrerender();
+        } else {
+          wrap.append(
+            buildLandingStage(fallbackPlayableEngines(), {
+              skipLiveWidgets: true,
+              phone: false,
+            }).el,
+          );
+        }
+        const intro = wrap.querySelector('.landing-play-intro');
+        const about = intro?.querySelector('.landing-about');
+        const heading = about?.querySelector('h1');
+        const summary = about?.nextElementSibling;
+        const link = summary?.nextElementSibling;
 
-    const about = wrap.querySelector('.landing-about');
-    const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
-
-    expect(about?.textContent).toBe(
-      'Chinese chess and original strategy games. Free and open source. About Mistboard...',
-    );
-    expect(link?.textContent).toBe('About Mistboard...');
-    expect(about?.childNodes[0]?.textContent).toBe(
-      'Chinese chess and original strategy games. Free and open source. ',
-    );
+        expect(wrap.querySelectorAll('h1')).toHaveLength(1);
+        expect(heading?.textContent).toBe(t('home.tagline', {}, locale));
+        expect(about?.textContent).toBe(heading?.textContent);
+        expect(heading?.querySelector('a')).toBeNull();
+        expect(summary?.className).toBe('landing-play-summary');
+        const phrases = Array.from(
+          summary?.querySelectorAll('.landing-play-summary-phrase') ?? [],
+          (phrase) => phrase.textContent,
+        );
+        expect(phrases).toHaveLength(3);
+        expect(phrases).toEqual(t('home.playSummary', {}, locale).split(' · '));
+        expect(link?.matches('a.hover-link.landing-about-more')).toBe(true);
+        expect(link?.parentElement).toBe(intro);
+        expect(link?.getAttribute('href')).toBe(localizedHref('/about', locale));
+        expect(link?.textContent).toBe(t('home.missionAbout', {}, locale));
+        expect(link?.nextElementSibling).toBeNull();
+      } finally {
+        window.history.replaceState(null, '', '/');
+      }
+    });
   });
 });
 
@@ -256,3 +379,117 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     status: init.status ?? 200,
   });
 }
+
+describe('homepage band layout (CSS)', () => {
+  const css = readFileSync('src/landing.css', 'utf8');
+
+  it('makes band 3 five compact forum topics, flatter than band 2', () => {
+    // Brian, 2026-10-27: the forum showed three or four two-line-excerpt
+    // topics in a box as tall as the puzzle band.
+    const forum = readFileSync('src/landing-forum-preview.css', 'utf8');
+    expect(css).toMatch(/--landing-forum-height: calc\(42px \+ 5 \* 65px\);/);
+    expect(forum).toMatch(
+      /height: var\(--landing-forum-height, var\(--landing-lower-widget-height/,
+    );
+    expect(forum).toMatch(/\.landing-forum-topic-excerpt \{[^}]*-webkit-line-clamp: 1;/);
+  });
+
+  it('fits Play a person without a scrollbar, with room for two more variants', () => {
+    // Brian, 2026-10-27: the person tab scrolled at 46px rows. A 32px floor
+    // and 4px bar padding fit 12 rows in the 11-bot-row computer tab height.
+    const panel = readFileSync('src/landing-play-panel.css', 'utf8');
+    expect(panel).toMatch(
+      /\.pp-view-person \.pp-row-person \{\s*flex: 1 0 auto;\s*min-height: 32px;\s*max-height: 46px;/,
+    );
+    // Brian, 2026-10-27: "compress it even a tiny bit more" and account for
+    // the Casual/Rated bar: a 2px bar that never wraps, and 40px rows in the
+    // three-column band, the bot rows' floor.
+    expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
+    expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
+    expect(panel).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
+  });
+
+  it('puts the deep-dives row above the blog row at every width', () => {
+    // Brian, 2026-10-26: deep dives go above the laptop fold. The three grid
+    // layouts and the phone flex order must all agree.
+    const areas = [...css.matchAll(/grid-template-areas:([^;]*);/g)].map((m) => m[1] ?? '');
+    const withRows = areas.filter((a) => a.includes('dives') && a.includes('blogs'));
+    expect(withRows).toHaveLength(3);
+    for (const a of withRows) expect(a.indexOf('dives')).toBeLessThan(a.indexOf('blogs'));
+    const order = (selector: string) =>
+      Number(
+        css.match(new RegExp(`${selector.replace(/[.()]/g, '\\$&')} \\{\\s*order: (\\d+);`))?.[1],
+      );
+    expect(order('.landing-demo .landing-dives-row')).toBeLessThan(
+      order('.landing-demo .landing-articles-row:not(.landing-dives-row)'),
+    );
+  });
+
+  it('reads News before Top studies at every width', () => {
+    // Brian, 2026-10-26: News matters more than Top studies, so it takes the
+    // band-2 right rail (under the play column) and studies drops to band 3.
+    const areas = [...css.matchAll(/grid-template-areas:([^;]*);/g)].map((m) => m[1] ?? '');
+    const withBoth = areas.filter((a) => /\bnews\b/.test(a) && /\bstudies\b/.test(a));
+    expect(withBoth).toHaveLength(3);
+    for (const a of withBoth) expect(a.search(/\bnews\b/)).toBeLessThan(a.search(/\bstudies\b/));
+    const desktop = withBoth[0] ?? '';
+    expect(desktop).toMatch(/"puzzle\s+dives\s+news"/);
+    expect(desktop).toMatch(/"studies\s+forum\s+chat"/);
+  });
+
+  it('keeps the "more broadcasts" link out of the cards\' equal-height rows', () => {
+    // .landing-event-banners is grid-auto-rows: 1fr, so the link in flow took a
+    // card-tall row: a ~70px gap under the cards that also stretched band 1.
+    expect(css).toMatch(
+      /^\.landing-play-column > \.landing-event-banners > \.landing-event-banners-more \{[^}]*position: absolute;/m,
+    );
+    // The cards sit right on the link (Brian, 2026-10-27): bottom-aligned in
+    // the column, with only the link's own room below them.
+    expect(css).toMatch(
+      /^\.landing-play-column > \.landing-event-banners \{\s*margin-top: auto;\s*\}/m,
+    );
+    expect(css).not.toMatch(/landing-event-banners[^{]*\{[^}]*margin-block: auto;/);
+    expect(css).toMatch(
+      /^\.landing-play-column:has\(> \.landing-event-banners > \.landing-event-banners-more\),[^{]*\{[^}]*padding-bottom: calc\(var\(--landing-event-more-height\) \+ var\(--landing-event-more-gap\)\);/m,
+    );
+  });
+
+  it('sizes the broadcast card for one line of name and keeps the square icon slot', () => {
+    // 2026-10-26: 84px two-line cards made the play column the band's tallest
+    // column. The name is one line at 13px; the icon slot stays 34px square
+    // for the illustrated card art.
+    const banners = readFileSync('src/landing-event-banners.css', 'utf8');
+    const rule = (selector: string) =>
+      banners.match(new RegExp(`^${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
+      '';
+    expect(rule('.landing-event-banner')).toMatch(/padding: 8px 12px;/);
+    expect(rule('.landing-event-banner-title')).toMatch(/font-size: 13px;/);
+    expect(rule('.landing-event-banner-title')).toMatch(/-webkit-line-clamp: 2;/);
+    expect(rule('.landing-event-banner-icon')).toMatch(/width: 34px;\s*height: 34px;/);
+  });
+
+  it('sizes the phone shortcut tiles for their drawings, one 6px gutter with the Play pair', () => {
+    // Brian, 2026-10-27: bigger tiles with less gap between them, and the
+    // Play the computer / Play a friend pair as close as the tiles. Then less
+    // empty space inside each tile: a shorter tile, a larger drawing and label.
+    const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
+    const rule = (selector: string) =>
+      phone.match(new RegExp(`^  ${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
+      '';
+    expect(rule('.landing-phone-tiles')).toMatch(/gap: 6px;/);
+    expect(rule('.landing-play-quick')).toMatch(/gap: 6px;/);
+    expect(rule('.landing-phone-tile')).toMatch(/height: 84px;/);
+    expect(rule('.landing-phone-tile')).toMatch(/font-size: 15px;/);
+    expect(rule('.landing-phone-tile-art')).toMatch(/width: 52px;\s*height: 52px;/);
+  });
+
+  it('runs the Play a game label a couple of px above the old clamp, same height', () => {
+    const play = readFileSync('src/landing-play.css', 'utf8');
+    const rule =
+      play.match(/^\.landing-play-action\.landing-play-action-primary \{([^}]*)\}/m)?.[1] ?? '';
+    expect(rule).toMatch(/font-size: clamp\(19px, 1\.35vw, 22px\);/);
+    expect(rule).toMatch(/min-height: 76px;/);
+  });
+});

@@ -15,6 +15,7 @@ export type ServerRuntimeConfig = {
   drainWindowDefaultMs: number;
   drainWindowMaxMs: number;
   guestPrestartAbortMs: number;
+  host: string | undefined;
   liveEngineTimeoutMs: number;
   orphanThresholdMs: number;
   pauseGraceMs: number;
@@ -51,6 +52,7 @@ export function loadServerRuntimeConfig(env: NodeJS.ProcessEnv = process.env): S
     drainWindowMaxMs: parsePositiveInteger(env.MISTBOARD_DRAIN_WINDOW_MAX_MS) ?? 60 * 60 * 1000,
     guestPrestartAbortMs:
       parseNonNegativeInteger(env.MISTBOARD_GUEST_PRESTART_ABORT_MS) ?? 15 * 60 * 1000,
+    host: env.MISTBOARD_BIND_HOST?.trim() || undefined,
     liveEngineTimeoutMs: parsePositiveInteger(env.MISTBOARD_LIVE_ENGINE_TIMEOUT_MS) ?? 3_000,
     orphanThresholdMs: parsePositiveInteger(env.MISTBOARD_ORPHAN_THRESHOLD_MS) ?? 300_000,
     pauseGraceMs: parsePositiveInteger(env.MISTBOARD_RESUME_GRACE_MS) ?? 90_000,

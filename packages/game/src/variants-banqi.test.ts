@@ -14,17 +14,23 @@ import {
   banqiInkForSeat,
   banqiLastMoverInk,
   banqiMoverInk,
+  banqiNoProgressLimitOf,
+  banqiRulesFromView,
   banqiSeatToMove,
   banqiSquareFromIndex,
   banqiTruthView,
   createBanqiDeal,
+  createBanqiSetup,
   createInitialBanqiState,
   DEFAULT_NO_PROGRESS_PLY_LIMIT,
   getBanqiLegalMoves,
   getBanqiLegalMovesFrom,
   getBanqiPlayerView,
   isBanqiLegalMove,
+  LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
+  LEGACY_BANQI_RULES,
   oppositeBanqiColor,
+  readBanqiSetup,
   STANDARD_BANQI_DEAL,
 } from './variants-banqi.js';
 
@@ -202,9 +208,80 @@ test('applyBanqiMove rejects an illegal move by returning the same state', () =>
   assert.equal(next, state);
 });
 
-// ── Draw: no-progress clock (40 plies, resets on capture OR flip) ───────────────
+// ── Draw: no-progress clock (60 plies, 40 before 2026-10-17; resets on capture OR flip)
 
-test('no-progress clock draws at the 40-ply limit', () => {
+test('a new game is not drawn at 40 quiet plies and is drawn at 60', () => {
+  const board: BanqiBoard = { a1: up('red', 'chariot'), h4: up('black', 'chariot') };
+  assert.equal(DEFAULT_NO_PROGRESS_PLY_LIMIT, 60);
+  const fresh = createInitialBanqiState('fresh', STANDARD_BANQI_DEAL);
+  assert.equal(banqiNoProgressLimitOf(fresh), 60);
+  assert.equal(createBanqiSetup(() => 0.5).noProgressLimit, 60);
+  const at40 = applyBanqiMove(
+    { ...playingFor(board, 'red'), noProgressClock: 39 },
+    {
+      from: 'a1',
+      to: 'b1',
+    },
+  );
+  assert.equal(at40.noProgressClock, 40);
+  assert.equal(at40.status.type, 'playing');
+  const at60 = applyBanqiMove(
+    { ...playingFor(board, 'red'), noProgressClock: 59 },
+    {
+      from: 'a1',
+      to: 'b1',
+    },
+  );
+  assert.equal(at60.noProgressClock, 60);
+  assert.equal(at60.status.type === 'finished' && at60.status.reason, 'no-progress');
+});
+
+test('a game created under the old rules still draws at 40', () => {
+  const board: BanqiBoard = { a1: up('red', 'chariot'), h4: up('black', 'chariot') };
+  const legacy = createInitialBanqiState('old', STANDARD_BANQI_DEAL, LEGACY_BANQI_RULES);
+  assert.equal(banqiNoProgressLimitOf(legacy), LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT);
+  const next = applyBanqiMove(
+    { ...playingFor(board, 'red'), noProgressLimit: legacy.noProgressLimit, noProgressClock: 39 },
+    { from: 'a1', to: 'b1' },
+  );
+  assert.equal(next.noProgressClock, 40);
+  assert.equal(next.status.type === 'finished' && next.status.reason, 'no-progress');
+  // The view carries the limit, so a client replays the game under it.
+  assert.equal(getBanqiPlayerView(legacy, 'red').noProgressLimit, 40);
+  assert.equal(getBanqiPlayerView(fresh60(), 'red').noProgressLimit, 60);
+});
+
+test('stored setups read their limit fail-closed: only the current limit reads as 60', () => {
+  const deal = STANDARD_BANQI_DEAL;
+  // A bare deal (before the 長捉 rule) and a 10-09 setup without the field: 40.
+  assert.equal(readBanqiSetup([...deal]).rules.noProgressLimit, 40);
+  assert.equal(
+    readBanqiSetup({ deal: [...deal], chaseRule: 'repetition' }).rules.noProgressLimit,
+    40,
+  );
+  // An unknown value never reads as the current limit.
+  assert.equal(
+    readBanqiSetup({ deal: [...deal], chaseRule: 'repetition', noProgressLimit: 80 }).rules
+      .noProgressLimit,
+    40,
+  );
+  assert.equal(
+    readBanqiSetup({ deal: [...deal], chaseRule: 'repetition', noProgressLimit: 60 }).rules
+      .noProgressLimit,
+    60,
+  );
+  // No stored setup (tests, the seed projection): the current defaults.
+  assert.deepEqual(readBanqiSetup(undefined).rules, {});
+  // A view without the field (a client of an older server) replays at 40.
+  assert.equal(banqiRulesFromView({}).noProgressLimit, 40);
+  assert.equal(banqiRulesFromView({ noProgressLimit: 60 }).noProgressLimit, 60);
+});
+
+function fresh60(): BanqiGameState {
+  return createInitialBanqiState('fresh', STANDARD_BANQI_DEAL);
+}
+
+test('no-progress clock draws at the limit', () => {
   const board: BanqiBoard = { a1: up('red', 'chariot'), h4: up('black', 'chariot') };
   const state: BanqiGameState = {
     ...playingFor(board, 'red'),

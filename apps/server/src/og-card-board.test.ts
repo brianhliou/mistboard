@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { Resvg } from '@resvg/resvg-js';
+import { ARTICLE_META } from './article-meta.js';
 import {
   artHref,
   boardSize,
@@ -8,12 +10,14 @@ import {
   CARD_BOARD_MAX_WIDTH,
   CARD_BOARD_X,
   cardArtPaths,
+  intersectionLayout,
   loadCardArt,
   renderBoardCard,
   resetCardArt,
 } from './og-card-board.js';
+import { positionCardBoard } from './og-image.js';
 import { resolvePositionOg, startPositionFen } from './og-position.js';
-import { OG_CARD_ZOOM, pngSize } from './og-raster.js';
+import { OG_CARD_ZOOM, OG_FONT_OPTIONS, pngSize } from './og-raster.js';
 
 // The web's public/ dir carries the same piece art dist does (Vite copies it),
 // so the tests can load the real files without a build.
@@ -77,7 +81,11 @@ test('with the site art loaded, the international set draws; without it, the gly
   assert.equal(art.size, cardArtPaths().length, 'every art file the cards need is in web/public');
   const withArt = renderBoardCard(board('xiangqi'), art, { title: ['Xiangqi'] });
   assert.ok(withArt.includes('data:image/png;base64,'), 'PNG art embedded');
-  assert.ok(withArt.includes('fill="#fef0d7" stroke="#c30d0d"'), 'international red disc');
+  assert.ok(
+    withArt.includes('fill="#fef0d7" stroke="#202427"'),
+    'international disc: one dark ring on both sides',
+  );
+  assert.ok(!withArt.includes('stroke="#c30d0d"'), 'no red ring on the international set');
   const glyphs = renderBoardCard(board('xiangqi'), new Map(), { title: ['Xiangqi'] });
   assert.ok(!glyphs.includes('data:image/png'), 'no art, no image');
   assert.ok(glyphs.includes('<path d='), 'baked glyph paths instead');
@@ -230,8 +238,13 @@ test('an inset board outline rounds concentric with the fill under it', () => {
   ];
   let outlines = 0;
   for (const [variant, fen] of cases) {
-    const svg = renderBoardCard(board(variant, fen), new Map(), { title: ['Card'] });
-    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)].map((m) => m[1]!);
+    const b = board(variant, fen);
+    const svg = renderBoardCard(b, new Map(), { title: ['Card'] });
+    // Board-sized rects only: jungle tokens are rounded squares with a ring too.
+    const half = boardSize(b).width / 2;
+    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)]
+      .map((m) => m[1]!)
+      .filter((r) => (num(r, 'width') ?? 0) > half);
     const fill = rects.find((r) => !r.includes('fill="none"') && num(r, 'rx') !== undefined);
     assert.ok(fill, `${variant}: rounded board fill`);
     const fillRx = num(fill, 'rx')!;
@@ -272,4 +285,71 @@ test('the traditional card draws character discs and no international art', asyn
     assert.match(traditional, /r="38" fill="none" stroke="#b91c1c"/);
     assert.match(traditional, /r="38" fill="none" stroke="#1f2937"/);
   }
+});
+
+test('long article titles wrap in the right column, readable at 300px, including Vietnamese and zh', () => {
+  const longest = 'dou-shou-qi-engine';
+  const slugs = [
+    longest,
+    'lichess-analysis-accuracy',
+    'chess960-starting-positions',
+    'khai-cuoc-co-up',
+    'jungle-den-term',
+  ];
+  assert.ok(ARTICLE_META[longest]!.title.length > 70, 'the longest headline is covered');
+  for (const slug of slugs) {
+    const meta = ARTICLE_META[slug]!;
+    const board = positionCardBoard(slug)!;
+    const columnX = CARD_BOARD_X + boardSize(board).width + 56;
+    for (const title of [meta.title, ...Object.values(meta.zhTitles ?? {})]) {
+      const svg = renderBoardCard(board, new Map(), { title: [title], wrapTitle: true });
+      const texts = [
+        ...svg.matchAll(/<text[^>]*font-size="(\d+)" font-weight="700">([^<]*)<\/text>/g),
+      ];
+      assert.ok(texts.length > 1, `${slug}: wraps`);
+      assert.equal(
+        texts
+          .map((m) => m[2])
+          .join('')
+          .replace(/\s/g, ''),
+        title.replace(/\s/g, ''),
+      );
+      for (const [element, size, line] of texts) {
+        assert.doesNotMatch(
+          line!,
+          /^[，。、：；！？）」』】]/u,
+          `${slug}: punctuation opens a line`,
+        );
+        assert.ok((Number(size) * 300) / 1200 >= 12, `${slug}: readable at 300px`);
+        // Shape the actual bundled Latin/Vietnamese/CJK font. A generous canvas
+        // makes any overflow measurable rather than clipping it in the test.
+        const shaped = new Resvg(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000">${element}</svg>`,
+          { font: OG_FONT_OPTIONS },
+        );
+        const bounds = shaped.getBBox();
+        assert.ok(bounds, `${slug}: the title has real glyphs`);
+        // A J's tail overhangs its origin by about 4 units; the board is 56 away.
+        assert.ok(bounds.x >= columnX - 6, `${slug}: left edge inside caption`);
+        assert.ok(bounds.x + bounds.width <= 1152, `${slug}: right edge inside caption`);
+        assert.ok(bounds.y >= 24 && bounds.y + bounds.height < 550, `${slug}: above the footer`);
+      }
+    }
+  }
+});
+
+test('Black-bottom intersection cards reverse both axes while figures stay upright', () => {
+  const source = positionCardBoard('jieqi-puzzle-search');
+  assert.ok(source?.kind === 'intersection');
+  assert.equal(source.orientation, 'black');
+  const pc = { file: 1, rank: 9, color: 'black', role: 'horse' } as const;
+  const one = { ...source, pieces: [pc], extras: [] };
+  const g = intersectionLayout(9, 10, CARD_BOARD_HEIGHT);
+  const svg = renderBoardCard(one, new Map(), {});
+  const x = g.px(8 - pc.file) - g.pieceSize / 2;
+  const y = g.py(11 - pc.rank) - g.pieceSize / 2;
+  assert.ok(svg.includes(`transform="translate(${x} ${y}) scale(${g.pieceSize / 100})"`));
+  assert.doesNotMatch(svg, /rotate\(180|scale\(-/);
+  const unflipped = renderBoardCard({ ...one, orientation: 'red' }, new Map(), {});
+  assert.notEqual(svg, unflipped);
 });

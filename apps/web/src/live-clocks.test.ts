@@ -1,6 +1,6 @@
 import { createClock, type PlayerView } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderClocks } from './live-clocks.js';
+import { renderClocks, resetClockState, tickClockTimers } from './live-clocks.js';
 import { liveState } from './live-state.js';
 
 type Refs = {
@@ -42,9 +42,54 @@ function dot(slot: HTMLElement): HTMLElement | null {
 }
 
 beforeEach(() => {
+  resetClockState();
   liveState.connectionState = 'connected';
   liveState.connectionNoticeTier = 'none';
   liveState.connectedSeats = { white: true, black: true };
+});
+
+describe('disconnected clocks', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('freezes both faces immediately through ticks and rerenders, then resumes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    liveState.seat = 'white';
+    const refs = makeRefs();
+    const view = playingView();
+    view.clock = {
+      ...createClock(180_000),
+      activeColor: 'white',
+      runningSince: 10_000,
+      remainingMs: { white: 180_000, black: 180_000 },
+    };
+    renderClocks(refs, view);
+    vi.advanceTimersByTime(2_000);
+    liveState.connectionState = 'disconnected';
+    renderClocks(refs, view);
+    expect(refs.clockNote.hidden).toBe(false);
+    expect(refs.clockNote.textContent).toBe('Reconnecting…');
+    const faces = () => [refs.clockTop.textContent, refs.clockBottom.textContent];
+    const frozen = faces();
+    expect(frozen).toEqual(['03:00', '02:58']);
+    liveState.connectionState = 'reconnecting';
+    vi.advanceTimersByTime(20_000);
+    tickClockTimers(refs, view);
+    expect(faces()).toEqual(frozen);
+    renderClocks(refs, view);
+    expect(faces()).toEqual(frozen);
+    liveState.connectionState = 'connected';
+    view.clock = {
+      ...view.clock,
+      runningSince: Date.now(),
+      remainingMs: { white: 178_000, black: 180_000 },
+    };
+    renderClocks(refs, view);
+    expect(refs.clockNote.hidden).toBe(true);
+    vi.advanceTimersByTime(1_000);
+    tickClockTimers(refs, view);
+    expect(faces()).toEqual(['03:00', '02:57']);
+  });
 });
 
 afterEach(() => {
@@ -53,6 +98,29 @@ afterEach(() => {
   liveState.seat = 'spectator';
   liveState.roomMode = 'pvp';
   liveState.connectedSeats = { white: false, black: false };
+});
+
+describe('shared seat discs on chess clock name rows', () => {
+  it.each(['white', 'black', 'spectator'] as const)(
+    'shows White and Black before each name for %s, with and without a clock',
+    (seat) => {
+      liveState.seat = seat;
+      for (const clock of [undefined, createClock(180_000)]) {
+        const refs = makeRefs();
+        renderClocks(refs, { ...playingView(), clock });
+        const rows = [refs.playerTop, refs.playerBottom];
+        const discs = rows.map((row) => row.querySelector('.clock-seat-disc'));
+        expect(discs).toHaveLength(2);
+        expect(discs.every((disc) => disc?.classList.contains('seat-disc'))).toBe(true);
+        expect(discs.map((disc) => disc?.className).join(' ')).toContain('seat-disc--white');
+        expect(discs.map((disc) => disc?.className).join(' ')).toContain('seat-disc--black');
+        for (const disc of discs) {
+          expect(disc?.nextElementSibling?.classList).toContain('clock-name');
+          expect(disc?.getAttribute('aria-hidden')).toBe('true');
+        }
+      }
+    },
+  );
 });
 
 describe('presence dots — PvP', () => {

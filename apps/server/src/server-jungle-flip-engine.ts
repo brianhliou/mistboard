@@ -1,5 +1,5 @@
 /**
- * Server-side MistyJungleFlip loop for Flip Jungle (兽棋 / 翻翻棋) PvE.
+ * Server-side MistyJungleFlip loop for Flip Jungle (翻翻兽棋) PvE.
  *
  * Tier-B: Flip Jungle is driven by our `jungle-flip-engine` UCI subprocess
  * (jungle-flip-engine.ts), the same shape as banqi/jieqi/xiangqi — NOT the
@@ -28,6 +28,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import {
@@ -89,6 +90,10 @@ function bothSeatsFilled(room: JungleFlipEngineRoom): boolean {
 
 function engineToMove(room: JungleFlipEngineRoom, seat: JungleFlipSeat): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 
@@ -218,7 +223,7 @@ export async function playJungleFlipEngineMoveIfReady(
       const parsed = engineUciToJungleFlipMove(uci);
       return parsed && isJungleFlipLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

@@ -67,7 +67,7 @@ test('the sweeper routes due rows to their registration and survives failures', 
   assert.deepEqual(swept, ['sweeptest_a', 'sweeptest_b']);
 });
 
-test('the sweeper digests turns and reaps expired challenges after the warning pass', async () => {
+test('the sweeper sends inbox notices on the same tick after turn digests', async () => {
   const calls: string[] = [];
   const sweeper = startTenantDeadlineSweeper({
     intervalMs: 3_600_000,
@@ -80,6 +80,11 @@ test('the sweeper digests turns and reaps expired challenges after the warning p
     digestTurns: async () => {
       calls.push('digest');
     },
+    emailInbox: async (at) => {
+      assert.equal(at.getTime(), 123456);
+      calls.push('inbox');
+    },
+    now: () => 123456,
     sweepExpiredSeeks: async () => {
       calls.push('sweep');
       return 3;
@@ -92,7 +97,37 @@ test('the sweeper digests turns and reaps expired challenges after the warning p
   }
 
   // The digest sees this tick's warnings; reclaim runs last.
-  assert.deepEqual(calls, ['warn', 'digest', 'sweep']);
+  assert.deepEqual(calls, ['warn', 'digest', 'inbox', 'sweep']);
+});
+
+test('inbox failures do not delay reclaim or future ticks, and digest failures do not skip inbox', async () => {
+  let inboxCalls = 0;
+  let reclaimCalls = 0;
+  const sweeper = startTenantDeadlineSweeper({
+    intervalMs: 3_600_000,
+    isPersistenceInitialized: () => true,
+    listDue: async () => [],
+    warnDeadlines: async () => {},
+    digestTurns: async () => {
+      throw new Error('digest unavailable');
+    },
+    emailInbox: async () => {
+      inboxCalls++;
+      throw new Error('inbox unavailable');
+    },
+    sweepExpiredSeeks: async () => {
+      reclaimCalls++;
+      return 0;
+    },
+  });
+  try {
+    await sweeper.tick();
+    await sweeper.tick();
+  } finally {
+    sweeper.stop();
+  }
+  assert.equal(inboxCalls, 2);
+  assert.equal(reclaimCalls, 2);
 });
 
 test('a failing expired-seek sweep is swallowed, not propagated', async () => {
@@ -120,6 +155,7 @@ test('a failing expired-seek sweep is swallowed, not propagated', async () => {
 
 test('the sweeper does nothing while persistence is uninitialized', async () => {
   let listed = 0;
+  let emailed = 0;
   const sweeper = startTenantDeadlineSweeper({
     intervalMs: 3_600_000,
     isPersistenceInitialized: () => false,
@@ -128,6 +164,9 @@ test('the sweeper does nothing while persistence is uninitialized', async () => 
       return [];
     },
     registrationFor: () => null,
+    emailInbox: async () => {
+      emailed++;
+    },
   });
   try {
     await sweeper.tick();
@@ -136,4 +175,5 @@ test('the sweeper does nothing while persistence is uninitialized', async () => 
   }
 
   assert.equal(listed, 0);
+  assert.equal(emailed, 0);
 });

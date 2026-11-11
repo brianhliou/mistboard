@@ -556,6 +556,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'The Xiangqi World Championship',
   seoTitle: 'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title',
@@ -567,6 +568,9 @@ export const xiangqiWorldChampionshipArticle: Article = {
   // argument landing the same day read as a dump rather than as a pair. The
   // date is what the reader and the feed see, so it carries the stagger.
   publishedAt: '2026-08-30',
+  updatedAt: '2026-11-06',
+  updateNote:
+    'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.',
   audience:
     'Readers who have met the national champions and want to know what the international title is worth.',
   thumbnail: { kind: 'svg', svg: WORLD_TITLE_THUMBNAIL },
@@ -648,7 +652,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.',
+          text: 'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Taiwan was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.',
         },
         {
           kind: 'xq-replay',
@@ -714,7 +718,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.',
+          text: 'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.',
         },
         {
           kind: 'paragraph',
@@ -876,7 +880,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.',
+          text: 'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won the championship itself. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.',
         },
       ],
     },

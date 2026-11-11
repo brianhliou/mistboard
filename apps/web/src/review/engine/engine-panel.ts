@@ -2,7 +2,7 @@
 // slot). Owns a ceval handle, a lichess-style head (on/off switch, headline eval,
 // engine name + status), and up to MultiPV principal-variation lines. Position is
 // pushed in via setPosition() from the postgame's ply navigation; scores are
-// normalised to Red's POV so the eval reads the same regardless of whose turn it is.
+// normalised to the first ink's POV (Red, or Black in Gomoku), regardless of turn.
 // Before a flip game binds ink ownership, the same seat is labelled P1 instead.
 import { t } from '../../i18n/catalog.js';
 import { gearIconSvg } from '../../theme.js';
@@ -24,15 +24,23 @@ import './engine-panel.css';
 import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';
+import { formatGomokuEval } from './gomoku-eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
+import { rapfiCevalPosition } from './rapfi-ceval.js';
 
 export interface EnginePanel {
   el: HTMLElement;
   /** Push the current position. Without `initialFen` the moves replay from the
    *  standard start position; pass `initialFen` to analyse a mid-game base
    *  position (e.g. a puzzle) with `movesUci` applied on top. `searchable`
-   *  is false for a terminal position whose engine has no move to search. */
-  setPosition(movesUci: string[], initialFen?: string, searchable?: boolean): void;
+   *  is false for a terminal position whose engine has no move to search.
+   *  `noProgressLimit` is the game's no-progress draw limit, for engines that score it. */
+  setPosition(
+    movesUci: string[],
+    initialFen?: string,
+    searchable?: boolean,
+    noProgressLimit?: number,
+  ): void;
   /** Drive the arrow toggle from outside the popover (the `a` shortcut), keeping
    *  the checkbox in sync. Fires onShowArrowsChange like a click would. */
   setShowArrows(next: boolean): void;
@@ -40,7 +48,8 @@ export interface EnginePanel {
    *  search to grade a try). Fires onToggle like a click would; a no-op when
    *  the engine is unsupported in this browser or already in that state. */
   setOn(next: boolean): void;
-  /** Whether this browser can run the local engine at all (WebKit cannot: #276). */
+  /** Whether this browser can run the local engine at all (#276). When false
+   *  the panel's `el` is hidden: there is no engine row to show. */
   supported: boolean;
   dispose(): void;
 }
@@ -100,6 +109,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   const el = document.createElement('section');
   el.className = 'engine-panel';
   el.dataset.engineSupported = supported ? 'true' : 'false';
+  if (opts.variant === 'gomoku') {
+    el.dataset.seatInkFamily = 'gomoku';
+    if (opts.evalBar) opts.evalBar.el.dataset.seatInkFamily = 'gomoku';
+  }
 
   // Lichess ceval head anatomy: [switch] [big eval] [name / status] … [gear].
   const head = document.createElement('div');
@@ -219,6 +232,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let currentMoves: string[] = [];
   let currentFen: string | undefined;
   let currentSearchable = true;
+  let currentNoProgressLimit: number | undefined;
   // Side to move at the base position: startpos is Red, but an initialFen (a
   // mid-game puzzle position) may hand the engine a Black-to-move base. Read it
   // from the FEN's turn token so the eval normalises scores to the right POV.
@@ -226,6 +240,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let currentBaseSide: Side = 'red';
   let currentPerspective: ScorePerspective = 'bound';
   let debounceId: ReturnType<typeof setTimeout> | undefined;
+  // Bumped by every new search and every stop, so a finished search reports
+  // only while it is still the one on screen.
+  let searchGeneration = 0;
 
   function sideToMove(moves: string[]): Side {
     const flipped = moves.length % 2 === 1;
@@ -257,13 +274,19 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       const display = formatScore(opts.variant, cp, mate);
       evalLabel.textContent = firstPlayer ? `P1 ${display}` : display;
       if (firstPlayer) evalLabel.title = t('engine.firstPlayerPerspective');
+      else if (opts.variant === 'gomoku') evalLabel.title = formatGomokuEval(cp, mate);
       else evalLabel.removeAttribute('title');
       opts.evalBar?.setEval(cp, mate);
     }
     const status = update.depth
-      ? `Depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
-      : 'thinking…';
-    const activeStatus = effort === 'infinite' ? `${status} · analyzing` : status;
+      ? `${t('engine.depth', { depth: update.depth })}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
+      : t('engine.thinking');
+    const nodes =
+      opts.variant === 'gomoku' && update.nodes
+        ? ` · ${t('engine.nodes', { nodes: update.nodes })}`
+        : '';
+    const activeStatus =
+      effort === 'infinite' ? `${status}${nodes} · ${t('engine.analyzing')}` : status + nodes;
     sub.textContent = topFlipsTied(update.lines)
       ? `${activeStatus} · Top flips tied`
       : activeStatus;
@@ -278,35 +301,72 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     if (!handle) handle = createCeval(opts.variant);
     const moves = currentMoves;
     const side = sideToMove(moves);
-    sub.textContent = 'loading…';
+    const generation = ++searchGeneration;
+    sub.textContent = t('engine.loading');
     opts.evalBar?.setLoading();
     void handle!
       .evaluate({
         movesUci: moves,
         initialFen: currentFen,
+        ...(currentNoProgressLimit !== undefined
+          ? { noProgressLimit: currentNoProgressLimit }
+          : {}),
         multiPv,
         effort,
-        onUpdate: (update) => render(update, side),
+        onUpdate: (update) => {
+          if (generation === searchGeneration && on) render(update, side);
+        },
+      })
+      .then((final) => {
+        // A search that finished with no line at all had no legal move to
+        // search: the position is over, though the caller did not say so (a
+        // variant without canEvaluatePosition, a mate the rules see only as
+        // "no moves"). Say so instead of leaving "thinking…" up for good.
+        if (generation !== searchGeneration || !on) return;
+        if (final.lines.some((line) => line.pvUci.length > 0)) return;
+        clearOutput();
+        opts.evalBar?.setIdle(true);
+        sub.textContent = t('engine.gameOver');
       })
       .catch((err: unknown) => {
-        sub.textContent = `Engine error: ${(err as Error).message ?? 'failed'}`;
+        if (generation === searchGeneration && on)
+          sub.textContent = t('engine.error', {
+            error: (err as Error).message ?? t('engine.failed'),
+          });
       });
   }
 
-  function setPosition(movesUci: string[], initialFen?: string, searchable: boolean = true): void {
-    currentMoves = movesUci;
+  function setPosition(
+    movesUci: string[],
+    initialFen?: string,
+    searchable: boolean = true,
+    noProgressLimit?: number,
+  ): void {
+    currentMoves = [...movesUci];
     currentFen = initialFen;
+    currentNoProgressLimit = noProgressLimit;
     currentSearchable = searchable;
-    currentBaseSide = initialFen?.split(' ')[1] === 'b' ? 'black' : 'red';
+    // The shared score axis is the first seat: Black in Gomoku, Red in xiangqi.
+    currentBaseSide =
+      opts.variant === 'gomoku' && searchable
+        ? rapfiCevalPosition({ initialFen, movesUci: [] }).turn === 2
+          ? 'black'
+          : 'red'
+        : initialFen?.split(' ')[1] === 'b'
+          ? 'black'
+          : 'red';
     currentPerspective = isUnboundFlipPosition(opts.variant, initialFen) ? 'first-player' : 'bound';
     opts.evalBar?.setNeutral(currentPerspective === 'first-player');
     if (!on || !supported) return;
+    searchGeneration += 1;
+    handle?.stop();
     // The panel keeps its last PV text until fresh results stream in, but
     // on-board arrows for a position we already left would be misleading —
     // clear them immediately and let the next update redraw.
     opts.onLines?.(null);
     clearTimeout(debounceId);
     if (!currentSearchable) {
+      searchGeneration += 1;
       handle?.stop();
       clearOutput();
       opts.evalBar?.setIdle(true);
@@ -329,18 +389,23 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       return;
     }
     opts.evalBar?.setIdle(false);
-    sub.textContent = 'loading…';
+    sub.textContent = t('engine.loading');
+    const generation = ++searchGeneration;
     void handle
       .preload((progress) => {
-        // Pikafish's net is 51 MB; the first open of a xiangqi board is a real
+        // Pikafish's CC0 net is about 11 MB; the first open of a xiangqi board is a real
         // download, and a bare "loading…" for ten seconds reads as a hang.
-        if (on) sub.textContent = formatLoadProgress(engineName, progress);
+        if (on && generation === searchGeneration)
+          sub.textContent = formatLoadProgress(engineName, progress);
       })
       .then(() => {
-        if (on) evaluateNow();
+        if (on && generation === searchGeneration) evaluateNow();
       })
       .catch((err: unknown) => {
-        sub.textContent = `Engine unavailable: ${(err as Error).message ?? 'failed'}`;
+        if (on && generation === searchGeneration)
+          sub.textContent = t('engine.unavailable', {
+            error: (err as Error).message ?? t('engine.failed'),
+          });
       });
   }
 
@@ -348,6 +413,8 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     on = false;
     opts.onToggle?.(false);
     syncToggle();
+    searchGeneration += 1;
+    clearTimeout(debounceId);
     handle?.stop();
     clearOutput();
     opts.evalBar?.setIdle(true);
@@ -356,6 +423,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   function onVisibilityChange(): void {
     if (!on || effort !== 'infinite') return;
     if (document.hidden) {
+      searchGeneration += 1;
       handle?.stop();
       sub.textContent = t('engine.pausedInactive');
       return;
@@ -365,6 +433,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
 
   if (!supported) {
     toggle.disabled = true;
+    // Hide the whole row where the engine cannot run (#576): a disabled switch
+    // with an apology is a control the reader can never use. The copy below
+    // stays on the hidden node for anyone inspecting why it is absent.
+    el.hidden = true;
     // Do NOT promise a reload. The threaded engine needs cross-origin isolation,
     // which these routes request with COEP: require-corp (#276). Until
     // 2026-10-14 it was credentialless, which WebKit ignores, so no iPhone,
@@ -402,6 +474,8 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     },
     supported,
     dispose() {
+      on = false;
+      searchGeneration += 1;
       clearTimeout(debounceId);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       handle?.dispose();
@@ -425,7 +499,7 @@ function effortLabel(effort: CevalEffort): string {
     case 'deep':
       return t('engine.effortDeep');
     case 'max':
-      return 'Max';
+      return t('engine.effortMax');
     case 'infinite':
       return '∞';
   }
@@ -523,6 +597,9 @@ function evalTone(cp: number | null, mate: number | null, variant: CevalVariant)
 }
 
 function formatScore(variant: CevalVariant, cp: number | null, mate: number | null): string {
+  // Gomoku's short form ("W in 7") keeps the headline one width as a lead
+  // turns into a forced win; the words go in the headline's tooltip.
+  if (variant === 'gomoku') return formatGomokuEval(cp, mate, { compact: true });
   return isMistyCevalVariant(variant) ? formatMistyEval(cp, mate) : formatEval(cp, mate);
 }
 
@@ -556,7 +633,7 @@ function formatKnps(nps: number): string {
   return nps >= 1000 ? `${Math.round(nps / 1000)}k nps` : `${nps} nps`;
 }
 
-/** `loading Pikafish · 23 / 51 MB` while a large engine asset downloads. */
+/** `loading Pikafish · 6 / 11 MB` while a large engine asset downloads. */
 export function formatLoadProgress(engineName: string, progress: CevalLoadProgress): string {
   const mb = (bytes: number) => `${Math.round(bytes / 1_000_000)}`;
   const amount =

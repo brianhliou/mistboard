@@ -13,6 +13,14 @@ describe('svg diagram labels', () => {
     );
   });
 
+  it('looks a node carrying data-i18n-key up by that key, not its text', () => {
+    const svg = '<svg><text data-i18n-key="red General">General</text><text>General</text></svg>';
+    expect(svgTextLabels(svg)).toEqual(['red General', 'General']);
+    expect(substituteSvgText(svg, { 'red General': '帥', General: '將' })).toBe(
+      '<svg><text data-i18n-key="red General">帥</text><text>將</text></svg>',
+    );
+  });
+
   it('treats coordinates, sample sizes, identifiers and the domain as language-neutral', () => {
     for (const t of ['a', 'n=33', 'only-mate', 'mistboard.com', '车吃马']) {
       expect(isLanguageNeutralLabel(t), t).toBe(true);
@@ -29,16 +37,41 @@ describe('rendered figures carry translated labels', () => {
 
   it('zh-Hans jieqi rules page', () => {
     const labels = figureText(buildArticlePage('jieqi', 'zh-Hans'));
-    expect(labels).toContain('洗混后的开局');
-    expect(labels).toContain('翻子前：马位');
-    expect(labels).not.toContain('SHUFFLED START');
+    expect(labels).toContain('开局：红方在下');
+    expect(labels).toContain('翻前：b1 马位');
+    expect(labels).not.toContain('START: RED AT THE BOTTOM');
+    expect(labels).not.toContain('BEFORE: HORSE POINT b1');
     expect(labels).not.toContain('CAPTURE');
+  });
+
+  it('zh-Hant xiangqi mahjong page names each tile by its colour', () => {
+    const page = buildArticlePage('xiangqi-mahjong-32', 'zh-Hant');
+    const tileNames = [...page.querySelectorAll('.article-figure svg .xmj-kind-label')].map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(tileNames).toEqual(['帥', '仕', '相', '俥', '傌', '炮', '兵', '將', '士', '象', '車', '馬', '砲', '卒']);
+    expect(figureText(page)).not.toContain('General');
+    const tiles = page.querySelector('.article-figure svg.xmj-article-tiles');
+    expect(tiles?.getAttribute('aria-label')).toBe('全部 32 張牌：上排十六張紅牌，下排十六張黑牌');
   });
 
   it('Vietnamese jieqi openings page', () => {
     const labels = figureText(buildArticlePage('khai-cuoc-co-up'));
     expect(labels).toContain('THẾ BAN ĐẦU ĐÃ XÁO');
     expect(labels).not.toContain('FOUR OPENINGS, ONE MOVE EACH');
+  });
+
+  it.each([
+    ['jieqi-platform', 'en', 'Very unlucky', 'No warning'],
+    ['jieqi-platform', 'zh-Hans', '非常不幸', '无警示'],
+    ['jieqi-platform', 'zh-Hant', '非常不幸', '無警示'],
+    ['co-up', 'en', 'Rất không may', 'Không cảnh báo'],
+    ['co-up', 'zh-Hant', 'Rất không may', 'Không cảnh báo'],
+  ] as const)('keeps %s close-up labels in their article language under %s', (slug, lang, luck, grade) => {
+    const page = buildArticlePage(slug, lang === 'en' ? undefined : lang);
+    const titles = [...page.querySelectorAll('.article-piece-marks svg title')].map((n) => n.textContent);
+    expect(titles).toContain(luck);
+    expect(titles).toContain(grade);
   });
 });
 
@@ -63,7 +96,7 @@ describe('index cards carry translated words', () => {
     // Whatever interface the reader saved: a zh one must not flip the layout.
     for (const locale of ['en', 'zh-Hant'] as const) {
       const markup = typeof svg === 'function' ? svg(locale) : svg;
-      expect(svgTextLabels(markup), locale).toEqual(['CỜ TƯỚNG', 'CỜ ÚP', 'MỌI QUÂN ĐỀU ÚP']);
+      expect(svgTextLabels(markup), locale).toEqual(['CỜ TƯỚNG', 'CỜ ÚP', 'QUÂN ÚP, BÀN CỜ MỞ']);
     }
   });
 });

@@ -5,6 +5,8 @@ import {
   parsePracticeGoal,
   parseStandardXiangqiFen,
   XIANGQI_ENDGAME_HUB,
+  xiangqiEndgamePracticePath,
+  xiangqiEndgamePracticeRouteFromPath,
   xiangqiEndgamePracticeSets,
 } from './index.js';
 
@@ -92,5 +94,35 @@ test('a written brief is filled in every script', () => {
     for (const lang of ['en', 'zh-Hans', 'zh-Hant'] as const) {
       assert.ok(chapter.brief[lang].trim(), `${chapter.id} ${lang} brief`);
     }
+  }
+});
+
+test('every shelf position has a /practice/<slug>/<id> link that names it back', () => {
+  for (const set of sets) {
+    for (const chapter of set.chapters) {
+      const path = xiangqiEndgamePracticePath(chapter.id);
+      assert.equal(path, `/practice/${set.slug}/${chapter.id}`);
+      const route = xiangqiEndgamePracticeRouteFromPath(path);
+      assert.equal(route?.slug, set.slug, path);
+      assert.equal(route?.chapter.fen, chapter.fen, path);
+      assert.equal(xiangqiEndgamePracticeRouteFromPath(`${path}/`)?.chapter.id, chapter.id);
+    }
+  }
+  assert.throws(() => xiangqiEndgamePracticePath('no-such-position'));
+});
+
+test('a practice link that names no set, or a position outside its set, is no route', () => {
+  for (const path of [
+    '/practice',
+    '/practice/position',
+    '/practice/endgames-soldier',
+    '/practice/endgames-soldier/no-such-position',
+    // In the corpus, but in the horse set.
+    '/practice/endgames-soldier/horse-vs-advisor',
+    '/practice/constructor/horse-vs-advisor',
+    '/practice/hasOwnProperty/horse-vs-advisor',
+    '/practice/endgames-horse/horse-vs-advisor/extra',
+  ]) {
+    assert.equal(xiangqiEndgamePracticeRouteFromPath(path), null, path);
   }
 });

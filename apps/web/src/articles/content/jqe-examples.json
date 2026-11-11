@@ -1,0 +1,1340 @@
+{
+  "source": "mistboard-engine lab/jieqi-match/jqe-vs-abj-0.2d/run1-4s-4thr.jsonl",
+  "games": [
+    {
+      "game": 46,
+      "jqeColor": "black",
+      "winner": "black",
+      "moves": [
+        {
+          "by": "ab",
+          "move": "b0c2",
+          "cp": 3,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i6i5",
+          "cp": -19,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "a3a4",
+          "cp": 6,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b9a7",
+          "cp": -249,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "a4e4",
+          "cp": 14,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g9e7",
+          "cp": -238,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i3i4",
+          "cp": 10,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g6g5",
+          "cp": -117,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c3c4",
+          "cp": 9,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "d9e8",
+          "cp": -110,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d0e1",
+          "cp": 10,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e8g6",
+          "cp": -145,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e1d3",
+          "cp": 16,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i5h4",
+          "cp": -133,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h2h7",
+          "cp": 17,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b7h7",
+          "cp": 534,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f0e1",
+          "cp": -24,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f9e8",
+          "cp": 389,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i4i5",
+          "cp": -23,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h4g3",
+          "cp": 544,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i5i6",
+          "cp": -36,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h7h3",
+          "cp": 673,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i6i7",
+          "cp": -44,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h3e3",
+          "cp": 785,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g0e2",
+          "cp": -35,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e3f3",
+          "cp": 574,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e4e7",
+          "cp": -35,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c9e7",
+          "cp": 729,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i7i8",
+          "cp": -39,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g6i8",
+          "cp": 677,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b2b8",
+          "cp": -56,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f3f7",
+          "cp": 471,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b8b5",
+          "cp": -16,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h9g7",
+          "cp": 375,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h0g2",
+          "cp": -165,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i8g6",
+          "cp": 1102,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i0i9",
+          "cp": -184,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g7h7",
+          "cp": 1440,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e1b1",
+          "cp": -255,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g3f2",
+          "cp": 1787,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d3f2",
+          "cp": -332,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e6e5",
+          "cp": 1825,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e0d0",
+          "cp": -412,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h7h0",
+          "cp": 2492,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d0d1",
+          "cp": -456,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h0f0",
+          "cp": 2545,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b1b3",
+          "cp": -455,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e5c4",
+          "cp": 2649,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f2g4",
+          "cp": -492,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g5g4",
+          "cp": 2921,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b3c3",
+          "cp": -634,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f0e0",
+          "cp": 3272,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c0a2",
+          "cp": -736,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c4a3",
+          "cp": 3224,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b5h5",
+          "cp": -776,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e0e2",
+          "cp": 3280,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c3b3",
+          "cp": -1046,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e2e1",
+          "cp": 4079,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d1d2",
+          "cp": -1748,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e8d8",
+          "cp": 4522,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h5h8",
+          "cp": -9999,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "d8d9",
+          "cp": 4987,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h8h9",
+          "cp": -9999,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e7f9",
+          "cp": 29996,
+          "mate": true
+        },
+        {
+          "by": "ab",
+          "move": "h9h8",
+          "cp": -29997,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "f9h8",
+          "cp": 29997,
+          "mate": true
+        },
+        {
+          "by": "ab",
+          "move": "b3b9",
+          "cp": -29998,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "d9d8",
+          "cp": 29998,
+          "mate": true
+        },
+        {
+          "by": "ab",
+          "move": "b9d9",
+          "cp": -29999,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "f7d7",
+          "cp": 29999,
+          "mate": true
+        }
+      ]
+    },
+    {
+      "game": 152,
+      "jqeColor": "black",
+      "winner": "black",
+      "moves": [
+        {
+          "by": "ab",
+          "move": "h0i2",
+          "cp": 5,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a6a5",
+          "cp": 45,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b0c2",
+          "cp": -11,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a5a0",
+          "cp": 145,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g3g4",
+          "cp": 0,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i6i5",
+          "cp": -185,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c2a0",
+          "cp": -1,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i5g5",
+          "cp": 24,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g4f4",
+          "cp": 0,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h9g7",
+          "cp": 25,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g0e2",
+          "cp": 0,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "d9e8",
+          "cp": -111,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d0e1",
+          "cp": 25,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e8e7",
+          "cp": 8,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e3e4",
+          "cp": 5,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f9e8",
+          "cp": -435,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b2b9",
+          "cp": 56,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c9a7",
+          "cp": -613,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e4c4",
+          "cp": 35,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g5b5",
+          "cp": -236,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c4c6",
+          "cp": 38,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b7c7",
+          "cp": -270,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c6d6",
+          "cp": 40,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a7a3",
+          "cp": -246,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b9c8",
+          "cp": 33,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b5b0",
+          "cp": -144,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e2d2",
+          "cp": 39,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e6e5",
+          "cp": -203,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f4d4",
+          "cp": 111,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b0c0",
+          "cp": -656,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d2d0",
+          "cp": 134,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e9f9",
+          "cp": -589,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d6g6",
+          "cp": 143,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e5e4",
+          "cp": -520,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d4d8",
+          "cp": 151,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g7f8",
+          "cp": -544,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c8b9",
+          "cp": 205,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a3a6",
+          "cp": -994,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d8d9",
+          "cp": 214,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f8e9",
+          "cp": -1045,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g6g8",
+          "cp": 268,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h7f7",
+          "cp": -1046,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d9e9",
+          "cp": 4211,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f9e9",
+          "cp": 595,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h2h9",
+          "cp": 323,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e9d9",
+          "cp": 3844,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b9c8",
+          "cp": -261,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "d9d8",
+          "cp": 3935,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g8e8",
+          "cp": -328,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "d8e8",
+          "cp": 3935,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c8d7",
+          "cp": -29991,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "e8e9",
+          "cp": 3949,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e1e2",
+          "cp": -450,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a6a0",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e0e1",
+          "cp": -29993,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "c0d0",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e1f1",
+          "cp": -29994,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "a0a1",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f0e1",
+          "cp": -29995,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "d0i0",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h9g9",
+          "cp": -29994,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "i0i1",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i2h1",
+          "cp": -29996,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "i1h1",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f1f2",
+          "cp": -29997,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "h1e1",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g9f9",
+          "cp": -29998,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "e9f9",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d7e8",
+          "cp": -29998,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "f9f8",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e2e3",
+          "cp": -29999,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "a1a2",
+          "cp": 29999,
+          "mate": true
+        }
+      ]
+    },
+    {
+      "game": 239,
+      "jqeColor": "red",
+      "winner": "red",
+      "moves": [
+        {
+          "by": "jqe",
+          "move": "a3a4",
+          "cp": 77,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e6e5",
+          "cp": 2,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i3i4",
+          "cp": 91,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h9i7",
+          "cp": -13,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c3c4",
+          "cp": 150,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g6g5",
+          "cp": -1,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b0c2",
+          "cp": 92,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b9c7",
+          "cp": -15,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c4b5",
+          "cp": 458,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i6i5",
+          "cp": -23,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i4e4",
+          "cp": 589,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e5e4",
+          "cp": -38,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i0i5",
+          "cp": 615,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e4e3",
+          "cp": -33,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "b2b7",
+          "cp": 626,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h7b7",
+          "cp": -40,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c2c6",
+          "cp": 606,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g9e7",
+          "cp": -56,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f0e1",
+          "cp": 336,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c7e6",
+          "cp": -7,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e1e2",
+          "cp": 177,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e6d4",
+          "cp": -5,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c6c1",
+          "cp": 91,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e7h7",
+          "cp": 1,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h2h5",
+          "cp": 176,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h7f7",
+          "cp": -73,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e2e3",
+          "cp": 661,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f9e8",
+          "cp": -75,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g0e2",
+          "cp": 813,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d4b5",
+          "cp": -89,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i5i6",
+          "cp": 762,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c9e7",
+          "cp": -120,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c1c5",
+          "cp": 803,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b5a7",
+          "cp": -125,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "i6i7",
+          "cp": 837,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e7i7",
+          "cp": -134,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c5g5",
+          "cp": 879,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i7i0",
+          "cp": -140,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h0g2",
+          "cp": 890,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f7f3",
+          "cp": -147,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g3g4",
+          "cp": 1036,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "a7b9",
+          "cp": -182,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g5f5",
+          "cp": 1125,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f3g3",
+          "cp": -189,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h5h2",
+          "cp": 1152,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "b9c7",
+          "cp": -198,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a0a3",
+          "cp": 1193,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "g3g2",
+          "cp": -381,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h2g2",
+          "cp": 2400,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i0i7",
+          "cp": -388,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a4a5",
+          "cp": 2466,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c7d5",
+          "cp": -472,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g2g3",
+          "cp": 2482,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "a9b9",
+          "cp": -468,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a3a6",
+          "cp": 2753,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i7c7",
+          "cp": -564,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e3e4",
+          "cp": 2918,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e8d7",
+          "cp": -598,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "f5e5",
+          "cp": 3049,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d7e8",
+          "cp": -601,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a5b5",
+          "cp": 3214,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "c7h7",
+          "cp": -788,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "a6c6",
+          "cp": 3598,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "d5c7",
+          "cp": -1002,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e5e7",
+          "cp": 3811,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h7h6",
+          "cp": -1124,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "e7c7",
+          "cp": 4218,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "h6f6",
+          "cp": -1334,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c7e7",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "e9f9",
+          "cp": -1740,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "c6c9",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "f9f8",
+          "cp": -2492,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "g3h3",
+          "cp": 10000,
+          "mate": false
+        },
+        {
+          "by": "ab",
+          "move": "i9g9",
+          "cp": -5852,
+          "mate": false
+        },
+        {
+          "by": "jqe",
+          "move": "h3h8",
+          "cp": 29998,
+          "mate": true
+        },
+        {
+          "by": "ab",
+          "move": "g9g8",
+          "cp": -29999,
+          "mate": true
+        },
+        {
+          "by": "jqe",
+          "move": "h8g8",
+          "cp": 29999,
+          "mate": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,17 +1,17 @@
 /**
- * Full Dark Xiangqi engine request builder — the 9x10 sibling of the chess and
+ * Full Dark Xiangqi engine request builder: the 9x10 sibling of the chess and
  * DMX builders.
  *
- * By default every occupied square in the visible set is fully identified (the
- * historical behavior). With `MISTBOARD_XIANGQI_SHROUD_BLOCKERS=1`, cannon
- * screens and blocked horse-legs / elephant-eyes are sent COLOR-ONLY (shrouded),
- * matching the human player view and closing the info asymmetry.
+ * The engine gets exactly the bot seat's view, the same one the human wire
+ * carries (`getDarkXiangqiClientView`): cannon screens and blocked horse-legs /
+ * elephant-eyes go out COLOR-ONLY in `shrouded`, every other visible occupied
+ * square with its full identity, off-vision squares not at all (#420).
  *
- * ⚠ This flag MUST be flipped in lockstep with the engine's
- * `FOW_XIANGQI_SHROUD_BLOCKERS`: if the server sends shrouded squares while the
- * engine still expects full identity, the engine's belief-consistency check
- * rejects every world and the belief empties. Default off keeps the served bot
- * byte-identical (and off-vision pieces are excluded in both modes).
+ * The engine must run with `FOW_XIANGQI_SHROUD_BLOCKERS=1`: an engine that still
+ * expects full identity on those squares rejects every world and its belief
+ * empties (the bot then forfeits). `MISTBOARD_XIANGQI_SHROUD_BLOCKERS=0` is the
+ * rollback lever: it restores the legacy request, which names the shrouded
+ * pieces to the engine, for an engine still running with its flag off.
  */
 
 import {
@@ -38,12 +38,13 @@ import { buildSessionId, deriveEngineSeed } from './build.js';
 
 /**
  * Whether to redact cannon-screen / horse-leg / elephant-eye identity to
- * color-only for the engine (matching the human view). Must be flipped in
- * lockstep with the engine's FOW_XIANGQI_SHROUD_BLOCKERS — see the module header.
+ * color-only for the engine (matching the human view). On unless explicitly
+ * turned off; see the module header for the engine flag it pairs with.
  */
 function shroudBlockersEnabled(): boolean {
   const v = process.env.MISTBOARD_XIANGQI_SHROUD_BLOCKERS;
-  return v !== undefined && v !== '' && v !== '0' && v !== 'false' && v !== 'False';
+  if (v === undefined || v === '') return true;
+  return v !== '0' && v !== 'false' && v !== 'False';
 }
 
 const ROLE_TO_LETTER: Record<XiangqiPieceRole, 'K' | 'A' | 'B' | 'N' | 'R' | 'C' | 'P'> = {
@@ -117,8 +118,8 @@ export function buildXiangqiObservationForPly(args: {
       }
     }
   } else {
-    // Legacy: every visible occupied square fully identified (byte-identical to
-    // pre-shroud behavior — kept default until rollout).
+    // Legacy (rollback only): every visible occupied square fully identified,
+    // shrouded ones included. Leaks blocker identity to the engine (#420).
     for (const sq of view.visibleSquares) {
       const piece = nextState.board[sq];
       if (!piece) continue;
@@ -163,7 +164,7 @@ export function buildXiangqiObservationForPly(args: {
     opp_capture_landing_square,
     game_over,
   };
-  // Emit shrouded only when non-empty ⇒ wire byte-identical to pre-shroud when off.
+  // Emit shrouded only when non-empty, so the legacy request stays byte-identical.
   if (shrouded.length > 0) obs.shrouded = shrouded;
   return obs;
 }

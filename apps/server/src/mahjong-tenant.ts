@@ -169,10 +169,19 @@ export function mahjongClientEventFor(
     delete redacted.setup;
     return redacted;
   }
-  // A move is safe to broadcast as-is: a draw names no tile (the tile comes off
-  // the wall, which lives in state), and a discard or a claim is face up on the
-  // mat the moment it happens.
-  if (event.type === 'move-played') return { ...event, ply };
+  // A draw names no tile (the tile comes off the wall, which lives in state) and
+  // a discard is face up the moment it happens. A claim's `fromHand` is not: a
+  // claim that is still pending, or loses to a higher one, would tell every
+  // seat which concealed tiles the claimant holds. It goes out empty to every
+  // recipient (the shape a win claim already has); a claim that wins puts its
+  // tiles face up through the view's melds, and no client reads `fromHand` off
+  // the event.
+  if (event.type === 'move-played') {
+    if (event.move.action === 'claim' && event.move.fromHand.length > 0) {
+      return { ...event, move: { ...event.move, fromHand: [] }, ply };
+    }
+    return { ...event, ply };
+  }
   return event;
 }
 
@@ -219,6 +228,8 @@ export const mahjongTenant: MahjongTenantType = {
   roomIdPrefix: MAHJONG_ROOM_ID_PREFIX,
   // Turn order, which is also the seating order: play passes to the right.
   colors: MAHJONG_SEATS,
+  // The two-seat rematch swaps colours; a table of four has no such swap.
+  rematch: { optOut: 'four seats' },
   // A move here is an action, not a turn: one go-around is a dozen of them, so
   // the default "arms after move 1" never fires and the clock sits frozen for
   // the whole hand. At a real table the clock runs from the opening discard.

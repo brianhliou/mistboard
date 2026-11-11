@@ -23,6 +23,8 @@
 import { hasOwnKey } from '@mistboard/game';
 
 const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
+  // Gomoku: 15 x 15 intersections (gomoku-board.ts).
+  gomoku: 1,
   // Xiangqi family: 9 files x 10 ranks.
   xiangqi: 9 / 10,
   jieqi: 9 / 10,
@@ -35,12 +37,16 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   'mini-open-xiangqi': 1,
   // Banqi: 8 x 4, the one wide board on the rail (live-banqi-render.ts).
   banqi: 8 / 4,
+  'three-kingdoms-banqi': 9 / 5,
   // Chess-geometry boards: 8 x 8 (dark-chess-render.ts).
   'dark-chess': 1,
   chess: 1,
   // Jungle: 7 x 9 (jungle-render.ts). Flip jungle: 4 x 4 (jungle-flip-render.ts).
   jungle: 7 / 9,
   'jungle-flip': 1,
+  // Xiangqi mahjong: the 560px table (xiangqi-mahjong.css), a little taller
+  // than wide.
+  'xiangqi-mahjong': 7 / 8,
 };
 
 // A neutral square, used when a spec has no entry. Never another variant's ratio.

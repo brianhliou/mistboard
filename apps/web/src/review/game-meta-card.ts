@@ -37,6 +37,8 @@ export type GameMetaPlayer = {
    * yet" (pre-flip) and renders a neutral disc.
    */
   color: string | null;
+  /** A game whose seats play no colour (Xiangqi Mahjong): no disc at all. */
+  noDisc?: boolean;
   name: string;
   rating?: number | null;
   /** Engine/bot seats get a small BOT tag (playstrategy-style). */
@@ -190,14 +192,16 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
       row.className = 'game-meta-card__player';
       // A null color is a flip variant before its opening flip: the shared disc
       // draws the unbound ring rather than guessing.
-      row.append(seatDiscEl(player.color, 'game-meta-card__disc'));
+      if (!player.noDisc) row.append(seatDiscEl(player.color, 'game-meta-card__disc'));
       if (player.isEngine) {
         const bot = document.createElement('span');
         bot.className = 'game-meta-card__bot';
         bot.textContent = t('watch.botBadge');
         row.append(bot);
       }
-      row.append(playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name'));
+      const name = playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name');
+      name.title = player.name;
+      row.append(name);
       if (player.rating !== null && player.rating !== undefined) {
         const rating = document.createElement('span');
         rating.className = 'game-meta-card__rating';

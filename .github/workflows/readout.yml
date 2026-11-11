@@ -53,7 +53,8 @@ jobs:
                 trigger: process.env.REQUESTED_TRIGGER,
                 dryRun: process.env.DRY_RUN === 'true',
               }),
-              signal: AbortSignal.timeout(60_000),
+              // Includes the bounded 90s weekly content collector before DB work.
+              signal: AbortSignal.timeout(180_000),
             });
             if (!response.ok) {
               throw new Error(`readout endpoint failed with HTTP ${response.status}`);
@@ -89,6 +90,13 @@ jobs:
             core.setOutput('snapshot_id', report.snapshotId);
 
             if (process.env.DRY_RUN === 'true') return;
+
+            // Direct email is the notification owner. Posting the same report
+            // to an issue also emails subscribers, producing two copies.
+            // Keep GitHub as the fallback when mail is disabled/rejected. Do
+            // not trust the old `emailed` flag, which predates provider receipt
+            // checks. A reused snapshot is an idempotent retry, not a new event.
+            if (payload.emailDelivery?.accepted === true || payload.reused === true) return;
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;

@@ -4,8 +4,10 @@
 # The authors allowed site use on the terms that we fetch the net from their
 # release and never re-host it (lxsgx23/AB-JChess#1), so it is not in our
 # engines tarball (scripts/engine-assets.sh builds the binary only). This
-# downloads their v0.2b zip, checks the zip's and the net's sha256, extracts the
-# net, and loads it in the fetched binary before the image is kept.
+# downloads their AB-JChess-20261031 zip, checks the zip's and the net's sha256,
+# extracts the net, loads it in the fetched binary and checks the binary's bench
+# signature (43125 nodes, the author's figure for every build tier) before the
+# image is kept.
 #
 # Soft-fail on the upstream (2026-10-06): a failed download or a checksum
 # mismatch warns and exits 0, so the image builds WITHOUT the net and the site
@@ -25,10 +27,11 @@
 set -eu
 
 bin=${1:?bindir}
-url=https://github.com/lxsgx23/AB-JChess/releases/download/v0.2b/0.2b_bmi2.zip
-zip_sha=6cb9cfe44946e5e4494643d32ae6352f7240c7e43d0ecbb4a437b04d7c388b03
-net=abjchess-20260911.nnue
-net_sha=7a229d324e50d2b0acf3e5878a8f876b96a24b75d16c8492a3c3bf8e1418d944
+url=https://github.com/lxsgx23/AB-JChess/releases/download/AB-JChess-20261031/AB-JChess-20261031.zip
+zip_sha=f62831437df87b6878f07e6dcbe54c30456502248353adca7503f033a0edc974
+net=abjchess-20261030.nnue
+net_sha=fdb6245b868bb204cf2b64fc4f8440d7a1e22b73abdd2a13dce180b65b01619e
+bench_nodes=43125
 
 log() { echo "abjchess-net: $*"; }
 die() { echo "abjchess-net: $*" >&2; exit 1; }
@@ -72,6 +75,12 @@ out="$tmp/uci.out"
   until grep -q '^bestmove' "$out" 2>/dev/null || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
   echo quit
 } | "$bin/ab-jchess" > "$out"
-grep -q 'ABJNNUE model loaded' "$out" || die "ab-jchess did not load $net: $(tail -3 "$out")"
+grep -q 'EvalFile loaded' "$out" || die "ab-jchess did not load $net: $(tail -3 "$out")"
 grep -q '^bestmove' "$out" || die "ab-jchess did not answer a search with $net"
-log "installed $net into $bin, loaded by ab-jchess"
+
+# The bench signature: a fixed-depth search over the author's positions, so a
+# miscompile or a wrong net shows as a different node count. The binary finds
+# the net beside itself, where it now is.
+nodes=$("$bin/ab-jchess" bench | sed -n 's/^Nodes searched: *//p')
+[ "$nodes" = "$bench_nodes" ] || die "ab-jchess bench searched ${nodes:-nothing}, want $bench_nodes"
+log "installed $net into $bin, loaded by ab-jchess, bench $nodes"

@@ -9,9 +9,43 @@ import {
   banqiCoordOf,
   banqiLastMoverInk,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  drawMarkerOnArrival,
+  flipSvgPiece,
+  glideSvgPiece,
+  type PieceFlipEdge,
+  type PieceFlipStyle,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+  pieceFlipStyle,
+} from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
-import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
+import {
+  boardCornerRadius,
+  roundPieceBox,
+  tokenPieceSize,
+  XIANGQI_PIECE_OUTLINE_SHARE,
+} from './board-metrics.js';
+import {
+  BANQI_PIECE_3D,
+  PIECE_3D_SHADOW_SHARE,
+  type Piece3dLook,
+  piece3dBox,
+  piece3dDiscCenter,
+  piece3dEdge,
+  piece3dEnabled,
+  piece3dLineWidth,
+  piece3dLook,
+  piece3dRim,
+  round2,
+} from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -20,11 +54,13 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
-  xiangqiNeutralBackMarks,
+  type XiangqiPieceShape,
+  xiangqiBanqiBackMarks,
   xiangqiPieceShadowEnabled,
   xiangqiPieceShadowMarks,
 } from './xiangqi-piece-sets.js';
@@ -47,14 +83,29 @@ const FILES = 8; // cells across (9 vertical lines / files a..i)
 const RANKS = 4; // cells down (5 horizontal lines / ranks 1..5, river at the top)
 const CELL = 64;
 const MARGIN = 28;
-const PIECE_SIZE = tokenPieceSize(CELL);
+// Banqi's piece look (Brian, 2026-10-14): a disc on every banqi board, never the
+// grid boards' rounded square, its outer edge at 92% of the cell (not the 98% of
+// the xiangqi family: banqi pieces sit in cells side by side, so they keep a gap).
+// The box a piece is drawn in is cell x 0.92 / 0.948, since the outline ends at
+// 94.8 of its 100-unit box. Face-down backs match the faces' outer size and shape.
+export const BANQI_PIECE_SHAPE: XiangqiPieceShape = 'disc';
+export const BANQI_PIECE_REACH = 0.92;
+/** The box a banqi piece is drawn in on a board of this cell. */
+export function banqiPieceDrawSize(cell: number): number {
+  return roundPieceBox((cell * BANQI_PIECE_REACH) / XIANGQI_PIECE_OUTLINE_SHARE);
+}
+const PIECE_SIZE = banqiPieceDrawSize(CELL);
+/** Half the piece's outer edge, the radius a mark ON the piece's edge uses. */
+const PIECE_EDGE_R = (CELL * BANQI_PIECE_REACH) / 2;
+/** The layout piece size the engine marker was tuned on. */
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
 // Engine candidate marker. Was sharing the last-move ring's radius, which tied an
 // unrelated mark to that ring's geometry; the other boards size it from the piece
 // like their selection ring, so do the same here.
-const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
+const ENGINE_MARKER_RADIUS = MARK_PIECE_SIZE / 2 + 6;
 // Last move: banqi TINTS THE CELL instead of ringing the piece, and this is the
 // one board on which that is the right call.
 //
@@ -77,11 +128,6 @@ const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
 // lit. Two adjacent marks therefore share an edge and paint over the grid line
 // between them -- accepted, because the origin/destination opacity step still
 // separates them and the pair reads as the path the piece took.
-const LAST_MOVE_FLIP_STROKE = 2.5;
-// A stroke straddles its rect's edge, so the flip's border needs half of itself
-// back inside or it paints into the next cell -- the whole failure this
-// treatment exists to end.
-const LAST_MOVE_FLIP_INSET = LAST_MOVE_FLIP_STROKE / 2;
 
 export const BANQI_PIECE_PX = PIECE_SIZE;
 
@@ -103,6 +149,11 @@ export type BanqiBoardRenderOptions = {
   // Coordinate labels (the site-wide Board coordinates setting, #308): callers
   // pass boardCoordinatesEnabled(); authored diagrams leave it off.
   coordinates?: boolean;
+  // Tiles with a visible rim. Unset reads the reader's setting (banqiTile3dEnabled).
+  tile3d?: boolean;
+  // A finished game's review only: what each face-down tile was, drawn as a
+  // ghost face over its back (review/face-down-faces.ts, #824).
+  faceDownFaces?: FaceDownFaces;
 };
 
 export interface BanqiBoardArrow extends SvgBoardArrowStyle {
@@ -112,7 +163,8 @@ export interface BanqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface BanqiBoardMarker extends SvgBoardMarkerStyle {
   square: BanqiSquare;
-  kind: 'circle' | 'glyph';
+  kind: 'circle' | 'glyph' | 'luck';
+  luck?: LuckMarkSpec;
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
 }
@@ -131,8 +183,16 @@ export function banqiPieceGhostSvg(
     x: 0,
     y: 0,
     size: PIECE_SIZE,
+    shape: BANQI_PIECE_SHAPE,
   });
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+}
+
+// The editor's ghost for a face-down tile: the same back the board draws.
+export function banqiFaceDownGhostSvg(pieceSet?: XiangqiPieceSet): string {
+  const set = pieceSet ?? readStoredXiangqiPieceSet();
+  const c = PIECE_SIZE / 2;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${faceDownDisc(c, c, set)}</svg>`;
 }
 
 // A line intersection. `fileLine` 0..8 runs left→right (file a at the left);
@@ -163,6 +223,16 @@ export function banqiArrowSvg(arrow: BanqiBoardArrow): string {
 
 export function banqiMarkerSvg(marker: BanqiBoardMarker): string {
   const center = cellCenter(marker.square);
+  if (marker.kind === 'luck')
+    return marker.luck
+      ? svgBoardLuckMark(
+          marker.luck,
+          center,
+          { piece: CELL * BANQI_PIECE_REACH, cell: CELL },
+          marker.square,
+          { minX: MARGIN, minY: MARGIN, maxX: WIDTH - MARGIN, maxY: HEIGHT - MARGIN },
+        )
+      : '';
   if (marker.kind === 'glyph') {
     return svgBoardGlyphMarker(
       marker,
@@ -194,35 +264,60 @@ function gridLines(): string {
   return parts.join('');
 }
 
+/** The jade back's radius in a piece box of `size`: its outer edge (r plus half its
+ *  2-unit stroke, .banqi-back > circle) lands where a face's outline ends, 47.4 of
+ *  the 100-unit box. */
+export function banqiFaceDownRadius(size: number): number {
+  return Math.round((size * 0.474 - 1) * 100) / 100;
+}
+
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
-// hidden from both). A flat disc with no inner ring keeps the back clean. A
-// piece set whose own back is the same for both sides (wood, brush, clerical)
-// draws that back instead; a set whose backs differ by colour keeps the disc,
-// since a banqi tile must not tell its colour.
+// hidden from both). A flat disc with no inner ring keeps the back clean. The
+// photo and printed sets draw the back their Xiangqi Mahjong tiles show
+// (xiangqiBanqiBackMarks), one look for both sides since a banqi tile must not
+// tell its colour; Mistboard's own sets keep this jade disc, as Mahjong does.
 function faceDownDisc(
   cx: number,
   cy: number,
   pieceSet: XiangqiPieceSet,
   className = 'banqi-back',
+  tile3d = false,
 ): string {
-  const marks = xiangqiNeutralBackMarks(pieceSet);
-  // The same disc shadow as the revealed pieces (xiangqiPieceShadowMarks).
-  const shadowOn = xiangqiPieceShadowEnabled();
+  if (tile3d) {
+    return banqiTile3dMarkup({ x: cx, y: cy }, null, pieceSet, {
+      dragSource: className.includes('banqi-drag-source'),
+    });
+  }
+  return faceDownDiscFlat(cx, cy, pieceSet, className, xiangqiPieceShadowEnabled());
+}
+
+function faceDownDiscFlat(
+  cx: number,
+  cy: number,
+  pieceSet: XiangqiPieceSet,
+  className: string,
+  shadowOn: boolean,
+  box = PIECE_SIZE,
+  line?: number,
+): string {
+  const marks = xiangqiBanqiBackMarks(pieceSet);
   if (marks) {
-    const x = cx - PIECE_SIZE / 2;
-    const y = cy - PIECE_SIZE / 2;
+    const x = cx - box / 2;
+    const y = cy - box / 2;
     // The asset backs are normalised to a radius-45 disc, like the faces.
     const shadow = shadowOn ? xiangqiPieceShadowMarks(45) : '';
     const overflowAttr = shadow ? ' overflow="visible"' : '';
-    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
+    return `<g class="${className}"><svg x="${x}" y="${y}" width="${box}" height="${box}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
   }
-  const r = PIECE_SIZE * 0.46;
-  // The disc's outer edge includes its 2-unit stroke (.banqi-back > circle).
-  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, PIECE_SIZE) : '';
+  // The disc's outer edge includes its stroke: 2 units (.banqi-back > circle),
+  // or a 3D tile's line (piece3dLineWidth), whose outer edge stays put.
+  const r = line === undefined ? banqiFaceDownRadius(box) : round2(box * 0.474 - line / 2);
+  const width = line === undefined ? '' : ` style="stroke-width:${line}"`;
+  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + (line ?? 2) / 2, cx, cy, box) : '';
   return [
     `<g class="${className}">`,
     shadow,
-    `<circle cx="${cx}" cy="${cy}" r="${r}"/>`,
+    `<circle cx="${cx}" cy="${cy}" r="${r}"${width}/>`,
     `</g>`,
   ].join('');
 }
@@ -231,11 +326,28 @@ function pieceLayer(
   view: BanqiPlayerView,
   pieceSet: XiangqiPieceSet,
   draggingFrom: BanqiSquare | null,
+  tile3d = false,
+  faces?: FaceDownFaces,
 ): string {
   return ALL_BANQI_SQUARES.map((square) => {
     const entry = view.board[square];
     if (!entry) return '';
     const dragSource = square === draggingFrom;
+    const slotClass = `banqi-piece-slot${entry.faceDown ? faceDownSlotClass(faces, square) : ''}`;
+    if (tile3d) {
+      const tile = entry.faceDown ? null : { color: entry.color, role: entry.role };
+      const markup = banqiTile3dMarkup(cellCenter(square), tile, pieceSet, { dragSource });
+      const ghost = entry.faceDown
+        ? faceDownFaceSvg(faces, square, (id) =>
+            banqiTile3dMarkup(
+              cellCenter(square),
+              id as { color: BanqiColor; role: BanqiPieceRole },
+              pieceSet,
+            ),
+          )
+        : '';
+      return `<g class="${slotClass}" data-piece-square="${square}">${markup}${ghost}</g>`;
+    }
     const { x, y } = cellCenter(square);
     const pieceSvg = entry.faceDown
       ? faceDownDisc(x, y, pieceSet, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
@@ -246,8 +358,22 @@ function pieceLayer(
           x: x - PIECE_SIZE / 2,
           y: y - PIECE_SIZE / 2,
           size: PIECE_SIZE,
+          shape: BANQI_PIECE_SHAPE,
         });
-    return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
+    const ghost = entry.faceDown
+      ? faceDownFaceSvg(faces, square, (id) =>
+          renderXiangqiPieceGlyphed(id as { color: BanqiColor; role: BanqiPieceRole }, pieceSet, {
+            ariaLabel: `${id.color} ${id.role}`,
+            className: 'banqi-piece',
+            shrouded: false,
+            x: x - PIECE_SIZE / 2,
+            y: y - PIECE_SIZE / 2,
+            size: PIECE_SIZE,
+            shape: BANQI_PIECE_SHAPE,
+          }),
+        )
+      : '';
+    return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
   }).join('');
 }
 
@@ -276,6 +402,7 @@ export function animateBanqiBoardMove(
   const from = cellCenter(originSquare);
   const to = cellCenter(settleSquare);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // A reverse step renders the prior move's marker at a different square, so
   // fading it in would not track the reverse glide.
   if (!opts.reverse) {
@@ -294,10 +421,10 @@ function selectionRing(selection: BanqiSquare | null): string {
 }
 
 // A capturable piece is outlined in the hint green: the ring sits ON the
-// piece's own edge (PIECE_SIZE/2), wide enough to replace its outline. A ring
+// piece's own edge (PIECE_EDGE_R), wide enough to replace its outline. A ring
 // outside the piece would cross into the neighbouring cell, since a piece
-// fills 90% of its cell. Same radius in the static and interactive layers.
-const CAPTURE_RING_R = PIECE_SIZE / 2;
+// fills 92% of its cell. Same radius in the static and interactive layers.
+const CAPTURE_RING_R = PIECE_EDGE_R;
 const HINT_DOT_R = 10;
 // Half the arm span of the 長捉 cross: a little wider than the dot it replaces, so
 // it reads as a mark rather than a smudge, still well inside the empty cell.
@@ -327,16 +454,10 @@ function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
     .join('');
 }
 
-function lastMoveCell(
-  square: BanqiSquare,
-  modifier: string,
-  ink: BanqiColor | null,
-  inset = 0,
-): string {
+function lastMoveCell(square: BanqiSquare, modifier: string, ink: BanqiColor | null): string {
   const { x, y } = cellCenter(square);
-  const span = CELL - inset * 2;
   const inkClass = ink ? ` banqi-lastmove--${ink}` : '';
-  return `<rect class="banqi-lastmove ${modifier}${inkClass}" x="${x - span / 2}" y="${y - span / 2}" width="${span}" height="${span}"/>`;
+  return `<rect class="banqi-lastmove ${modifier}${inkClass}" x="${x - CELL / 2}" y="${y - CELL / 2}" width="${CELL}" height="${CELL}"/>`;
 }
 
 function lastMoveMarkers(view: BanqiPlayerView): string {
@@ -345,16 +466,12 @@ function lastMoveMarkers(view: BanqiPlayerView): string {
   // a flip reveals a random tile, so the two disagree about half the time and
   // reading the mark off the board would be wrong exactly where it is needed.
   const ink = banqiLastMoverInk(view);
-  // A flip is a self-move: one cell, never an invented origin to wash. One
-  // tinted cell already reads as a flip against a move's two, and the border
-  // says so without depending on the viewer seeing both cells at once.
+  // A flip is a self-move: one cell, never an invented origin to wash. It takes
+  // a move's destination tint and nothing else: one tinted cell already reads
+  // as a flip against a move's two. A darker border once said so too (Brian,
+  // 2026-10-28: "I prefer it when it's a single shade").
   if (view.lastMove.from === view.lastMove.to) {
-    return lastMoveCell(
-      view.lastMove.to,
-      'banqi-lastmove-to banqi-lastmove-flip',
-      ink,
-      LAST_MOVE_FLIP_INSET,
-    );
+    return lastMoveCell(view.lastMove.to, 'banqi-lastmove-to banqi-lastmove-flip', ink);
   }
   return (
     lastMoveCell(view.lastMove.from, 'banqi-lastmove-from', ink) +
@@ -442,7 +559,7 @@ export function renderBanqiBoardSvg(
       ${options.coordinates ? banqiCoordinateLabels() : ''}
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
-      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null)}
+      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dEnabled(), options.faceDownFaces)}
       ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
@@ -537,20 +654,12 @@ export const BANQI_BOARD_CSS = `
     .banqi-lastmove--red.banqi-lastmove-to { fill: rgba(194, 32, 26, 0.36); }
     .banqi-lastmove--black.banqi-lastmove-from { fill: rgba(22, 40, 58, 0.22); }
     .banqi-lastmove--black.banqi-lastmove-to { fill: rgba(22, 40, 58, 0.44); }
-    /* One tinted cell already reads as a flip against a move's two; the border
-       says so on a glance that catches only the one cell. */
-    .banqi-lastmove-flip {
-      stroke: rgba(214, 175, 78, 0.4);
-      stroke-width: ${LAST_MOVE_FLIP_STROKE};
-    }
-    .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
-    .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
     /* The disc shadow is drawn into each piece and back (xiangqiPieceShadowMarks). */
     .banqi-piece { pointer-events: none; }
     .banqi-back { pointer-events: none; }
     .banqi-drag-source { opacity: 0.34; }
     /* The disc only: the shadow's circles sit inside a group of their own. */
-    .banqi-back > circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
+    .banqi-back > circle { fill: #2f8f6b; stroke: #202427; stroke-width: 2; }
     .banqi-hit rect { fill: transparent; cursor: pointer; }
   `;
 
@@ -560,4 +669,240 @@ export function installBanqiBoardStyles(): void {
   const style = document.createElement('style');
   style.textContent = BANQI_BOARD_CSS;
   document.head.append(style);
+}
+
+// ── Turn-over on a live reveal (#709) ────────────────────────────────────────
+
+/**
+ * The square a live flip just turned face up, or null: the banqi family's
+ * turn-over trigger. Only a LIVE move event that is a flip (a self-move) and
+ * whose square the rendered board now shows face up qualifies. The first
+ * render, a reconnect, a scrub and a replay jump carry no live event, so they
+ * never turn a tile; a live flip that lands while the viewer is scrubbed back
+ * finds that square still face down on the board shown, so it does not either.
+ * Reads only the wire move and the board already rendered, never a diff.
+ */
+export function banqiRevealFlipSquare<S extends string>(
+  pending: { kind: 'live'; move: { from: S; to: S } } | { kind: 'scrub' } | null,
+  board: Partial<Record<S, { faceDown: boolean }>>,
+): S | null {
+  if (pending?.kind !== 'live') return null;
+  const { from, to } = pending.move;
+  if (from !== to) return null;
+  const entry = board[to];
+  return entry && !entry.faceDown ? to : null;
+}
+
+/**
+ * Turn the tile on `square` over for any banqi-family board whose slots are
+ * `[data-piece-square]`: `center` maps a square to its viewBox point and `back`
+ * draws the board's own face-down tile there (identity-free by construction).
+ * Call after the render that drew the face. No-op under reduced motion or the
+ * 'none' animation pref (the face just appears).
+ */
+export function flipBanqiFamilyReveal<S extends string>(
+  host: HTMLElement,
+  square: S,
+  center: (square: S) => { x: number; y: number },
+  back: (cx: number, cy: number) => string,
+  style?: PieceFlipStyle,
+  faceMark?: Element | null,
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  if (!slot) return false;
+  animateMoveGlyphs(host, pieceAnimationDurationMs(), 0);
+  const point = center(square);
+  return flipSvgPiece(slot, point, back(point.x, point.y), pieceFlipDurationMs(), {
+    ...(style ? { style } : {}),
+    faceMark,
+  });
+}
+
+/** Banqi's turn-over: the jade (or the set's printed) back turns to the face. */
+export function animateBanqiReveal(
+  host: HTMLElement,
+  square: BanqiSquare,
+  opts: { tile3d?: boolean; style?: PieceFlipStyle } = {},
+): boolean {
+  const pieceSet = readStoredXiangqiPieceSet();
+  // The flip's cell in the flipper's ink turns up with the face, never first.
+  const faceMark = host.querySelector('.banqi-lastmove-flip');
+  if (opts.tile3d ?? banqiTile3dEnabled()) {
+    return flipBanqiTile3dReveal(host, square, cellCenter, pieceSet, {
+      style: opts.style,
+      faceMark,
+    });
+  }
+  return flipBanqiFamilyReveal(
+    host,
+    square,
+    cellCenter,
+    (cx, cy) => faceDownDisc(cx, cy, pieceSet),
+    opts.style,
+    faceMark,
+  );
+}
+
+// ── 3D tiles: a Pieces-menu setting, flat by default ─────────────────────────
+//
+// A banqi tile is a short cylinder seen a little from above (piece-3d.ts):
+// under each disc a band of its body shows along the bottom edge. The rim
+// tells nothing a back does not, and a turn-over never changes it.
+// The Pieces menu's "3D pieces" switch turns it off (theme.ts).
+
+/** Whether banqi draws 3D tiles: the board-wide setting (piece3dEnabled). */
+export function banqiTile3dEnabled(): boolean {
+  return piece3dEnabled();
+}
+
+// Sizes and rim drawing are shared with the xiangqi and jieqi boards'
+// opt-in 3D pieces (piece-3d.ts). The tile's height is the disc (to its
+// outline) and the rim below it; the shadow, off by default, hangs past it as
+// a flat disc's does. Reserving room for it left the tile small and high in
+// its cell (Brian, 2026-10-28: "closer to the top edge than it is to the
+// bottom edge"). The tile's disc comes out about 5% narrower than a flat
+// banqi disc, its rim taking the rest, and neighbours keep a few pixels
+// between them.
+
+/**
+ * The box a 3D tile is drawn in at this pitch (cell, or the gap between
+ * points): disc and rim together span BANQI_PIECE_3D.reach of it. 58.75 at
+ * banqi's 64.
+ */
+export function banqiTile3dBox(pitch: number): number {
+  return piece3dBox(pitch, BANQI_PIECE_3D);
+}
+
+// Read per draw: the reader's edge depth changes the box (piece3dDepthShare).
+function tileBox(): number {
+  return banqiTile3dBox(CELL);
+}
+
+/**
+ * Where a 3D tile's disc sits for a tile anchored at `anchor` (a cell centre,
+ * or a point on the Three Kingdoms board): raised by half the rim, so disc
+ * and rim together, not just the disc, are centred on the anchor.
+ */
+export function banqiTile3dDiscCenter(anchor: { x: number; y: number }): {
+  x: number;
+  y: number;
+} {
+  return piece3dDiscCenter(anchor, tileBox(), BANQI_PIECE_3D);
+}
+
+/**
+ * One 3D tile centred on `anchor`: its rim (and shadow), then the back when
+ * `entry` is null, else the face. A face-down tile takes no identity, so every
+ * back draws the same.
+ */
+export function banqiTile3dMarkup(
+  anchor: { x: number; y: number },
+  entry: { color: BanqiColor; role: BanqiPieceRole } | null,
+  pieceSet: XiangqiPieceSet,
+  opts: { dragSource?: boolean } = {},
+): string {
+  const dragSource = opts.dragSource ?? false;
+  const disc = banqiTile3dDiscCenter(anchor);
+  const rim = tileRim(disc.x, disc.y, pieceSet, dragSource);
+  if (!entry) {
+    const cls = dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back';
+    return (
+      rim + faceDownDiscFlat(disc.x, disc.y, pieceSet, cls, false, tileBox(), tileLine(pieceSet))
+    );
+  }
+  return (
+    rim +
+    renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
+      ariaLabel: `${entry.color} ${entry.role}`,
+      className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
+      shrouded: false,
+      x: disc.x - tileBox() / 2,
+      y: disc.y - tileBox() / 2,
+      size: tileBox(),
+      shape: BANQI_PIECE_SHAPE,
+      shadow: false,
+    })
+  );
+}
+
+/**
+ * Turn a 3D tile over after the render that drew its face. Lift and Spin turn
+ * a coin with real perspective over the board (tile-flip-3d.ts); Flat, or a
+ * page where the coin cannot go up, falls back to the SVG turn with the edge.
+ * The back is the identity-free back the board drew before the reveal.
+ * `durationMs` overrides the setting's length (a review sheet's slow motion).
+ */
+export function flipBanqiTile3dReveal<S extends string>(
+  host: HTMLElement,
+  square: S,
+  anchorOf: (square: S) => { x: number; y: number },
+  pieceSet: XiangqiPieceSet,
+  opts: { style?: PieceFlipStyle; durationMs?: number; faceMark?: Element | null } = {},
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  const face = slot?.querySelector(':scope > .banqi-piece');
+  if (!slot || !face) return false;
+  const style = opts.style ?? pieceFlipStyle();
+  const durationMs = opts.durationMs ?? pieceFlipDurationMs();
+  if (durationMs <= 0) return false;
+  animateMoveGlyphs(host, pieceAnimationDurationMs(), 0);
+  const anchor = anchorOf(square);
+  const disc = banqiTile3dDiscCenter(anchor);
+  if (style !== 'flat') {
+    const look = tileLook(pieceSet);
+    const shadow = tileBox() * PIECE_3D_SHADOW_SHARE;
+    const turned = flipTileOverlay({
+      slot,
+      center: disc,
+      radius: look.radius,
+      depth: look.depth,
+      reach: look.radius + look.depth + shadow + 2,
+      front: {
+        band: slot.querySelector(':scope > .banqi-rim')?.outerHTML ?? '',
+        face: face.outerHTML,
+      },
+      back: {
+        band: tileRim(disc.x, disc.y, pieceSet, false),
+        face: faceDownDiscFlat(
+          disc.x,
+          disc.y,
+          pieceSet,
+          'banqi-back',
+          false,
+          tileBox(),
+          tileLine(pieceSet),
+        ),
+      },
+      // One body: the wall is the rim's colour on both halves.
+      wall: { front: look.body[0], back: look.body[0] },
+      durationMs,
+      style,
+      faceMark: opts.faceMark,
+    });
+    if (turned) return true;
+  }
+  return flipSvgPiece(slot, disc, banqiTile3dMarkup(anchor, null, pieceSet), durationMs, {
+    style,
+    edge: banqiTileEdge(pieceSet),
+    faceMark: opts.faceMark,
+  });
+}
+
+function tileLine(pieceSet: XiangqiPieceSet): number {
+  return piece3dLineWidth(pieceSet, tileBox());
+}
+
+function tileLook(pieceSet: XiangqiPieceSet): Piece3dLook {
+  return piece3dLook(pieceSet, tileBox(), BANQI_PIECE_3D);
+}
+
+/** The rim under one tile, drawn before its face or back in the same slot. */
+function tileRim(cx: number, cy: number, pieceSet: XiangqiPieceSet, dragSource: boolean): string {
+  const cls = dragSource ? 'banqi-rim banqi-drag-source' : 'banqi-rim';
+  return piece3dRim(cx, cy, pieceSet, tileBox(), BANQI_PIECE_3D, cls);
+}
+
+/** The tile's edge for the turn-over: its thickness and the two bands it shows. */
+export function banqiTileEdge(pieceSet: XiangqiPieceSet): PieceFlipEdge {
+  return piece3dEdge(pieceSet, tileBox(), BANQI_PIECE_3D);
 }

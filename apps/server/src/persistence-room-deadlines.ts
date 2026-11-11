@@ -114,6 +114,29 @@ export async function listCorrespondenceGamesForUser(
   }));
 }
 
+// How many correspondence games the host has in play: all of them, and those
+// against one player. Same join as listCorrespondenceGamesForUser (an active
+// room has a room_deadlines row; a finished one has none), so a game counts
+// from the moment it is seated until it ends. The caps on the "play the host"
+// card read this (routes/correspondence-host.ts).
+export async function countHostCorrespondenceGames(
+  hostUserId: string,
+  playerUserId: string,
+): Promise<{ total: number; withPlayer: number }> {
+  const { rows } = await getPool().query<{ total: number; with_player: number }>(
+    `SELECT count(DISTINCT host.room_id)::int AS total,
+            (count(DISTINCT host.room_id) FILTER (WHERE player.room_id IS NOT NULL))::int AS with_player
+     FROM room_seat_tokens host
+     JOIN room_deadlines rd ON rd.room_id = host.room_id
+     LEFT JOIN room_seat_tokens player
+       ON player.room_id = host.room_id AND player.seat <> host.seat
+      AND player.user_id = $2 AND player.revoked_at IS NULL
+     WHERE host.user_id = $1 AND host.revoked_at IS NULL`,
+    [hostUserId, playerUserId],
+  );
+  return { total: rows[0]?.total ?? 0, withPlayer: rows[0]?.with_player ?? 0 };
+}
+
 // Room ids of every active correspondence game. room_deadlines holds exactly one
 // row per in-flight days-per-move room (upserted while active, deleted on
 // terminal), so this is the durable "correspondence games in play" set —

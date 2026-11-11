@@ -57,6 +57,11 @@ describe('best-played move', () => {
   it('never advises the move that was played, and carries no judgment glyph', async () => {
     const root = mount(ANALYSIS);
     await settle();
+    expect(
+      [...root.querySelectorAll('.analysis-summary__stat-label')].filter(
+        (el) => el.textContent === 'Average centipawn loss',
+      ),
+    ).toHaveLength(2);
 
     const comments = [...root.querySelectorAll('.move-tree__comment')]
       .map((el) => el.textContent ?? '')

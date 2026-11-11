@@ -19,6 +19,7 @@ import {
   getDuckXiangqiPlayerView,
 } from '@mistboard/game';
 import {
+  animateDuckXiangqiTurn,
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
@@ -59,6 +60,7 @@ import {
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type DuckMoveEvent = TenantMovePlayed<DuckXiangqiColor, DuckXiangqiTurn>;
 
@@ -162,6 +164,21 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     reconcileInteractionState(core?.state.view ?? null);
     renderBoard(refs, view);
   },
+  // Scrubbing the room's replay glides the turn stepped over, the piece and the
+  // duck together. Live turns keep the landing plop (renderBoard) and no glide.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view) return;
+    const pending = takePendingAnimation();
+    if (pending?.kind !== 'scrub') return;
+    const perspective = orientationFor(view);
+    if (pending.direction === 'forward') {
+      animateDuckXiangqiTurn(liveRefs.board, pending.prevView, view, perspective);
+    } else if (pending.prevView) {
+      animateDuckXiangqiTurn(liveRefs.board, view, pending.prevView, perspective, {
+        reverse: true,
+      });
+    }
+  },
   renderExtras: (refs, view) => renderPhaseNotice(refs, view),
   onDisabled: (refs) => {
     phase = { kind: 'piece', selected: null };
@@ -172,6 +189,9 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     setBoardFamily('xiangqi');
     installBoardInteraction(ctx.refs);
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
+    // The board draws coordinates in the reader's notation style when they are
+    // on, and the theme gear changes it mid-game, as the standard room handles.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => {

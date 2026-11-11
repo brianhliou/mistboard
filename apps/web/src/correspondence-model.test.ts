@@ -1,10 +1,15 @@
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, GAME_SPECS } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  GAME_SPECS,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { liveObservePolicy } from '../../server/src/server-policy.js';
 import {
   type CorrespondenceGame,
   correspondenceInProgress,
   correspondenceRatedAvailable,
+  correspondenceSpecIdsFor,
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
@@ -332,11 +337,42 @@ describe('start form prefill (the bell\'s "post it again" link)', () => {
 
   it('drops anything the form does not offer', () => {
     expect(parseStartFormPrefill('')).toBeNull();
-    expect(parseStartFormPrefill('?gameSpecId=not-a-game&days=2&side=white')).toBeNull();
+    expect(parseStartFormPrefill('?gameSpecId=not-a-game&days=5&side=white')).toBeNull();
     expect(
       parseStartFormPrefill(`?gameSpecId=${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}&days=5`),
     ).toEqual({
       gameSpecId: CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0],
     });
+  });
+});
+
+// Held out of correspondence at launch (Brian, 2026-10-25), with or without a grant.
+describe('xiangqi mahjong is not offered by correspondence', () => {
+  const granted = (specId: string) => specId === XIANGQI_MAHJONG_SPEC_ID;
+
+  it('is in no picker, granted or not', () => {
+    expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(correspondenceSpecIdsFor()).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(correspondenceSpecIdsFor(granted)).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+  });
+
+  it('never prefills it as the start form variant', () => {
+    const search = `?gameSpecId=${XIANGQI_MAHJONG_SPEC_ID}&days=3`;
+    expect(parseStartFormPrefill(search)).toEqual({ daysPerMove: 3 });
+    expect(parseStartFormPrefill(search, granted)).toEqual({ daysPerMove: 3 });
+  });
+});
+
+describe('restricted banqi correspondence picker', () => {
+  it('offers each hidden variant only through its own room gate and keeps it casual', () => {
+    for (const specId of ['ffq-banqi']) {
+      expect(correspondenceSpecIdsFor()).not.toContain(specId);
+      expect(correspondenceSpecIdsFor((id) => id === specId)).toContain(specId);
+      expect(correspondenceRatedAvailable(specId, true)).toBe(false);
+    }
+    // Three Kingdoms launched: offered to everyone, still casual only.
+    expect(correspondenceSpecIdsFor()).toContain('three-kingdoms-banqi');
+    expect(correspondenceRatedAvailable('three-kingdoms-banqi', true)).toBe(false);
+    expect(correspondenceSpecIdsFor(() => true)).not.toContain('unknown-banqi');
   });
 });

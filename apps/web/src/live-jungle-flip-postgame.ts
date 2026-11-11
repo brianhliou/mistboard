@@ -4,8 +4,6 @@ import {
   type JungleFlipMove,
   type JungleFlipPlayerView,
   type JungleFlipSeat,
-  jungleFlipStateToDealtFen,
-  jungleFlipStateToEngineFen,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { variantDisplayLabel } from './game-display.js';
@@ -28,7 +26,6 @@ import {
 import { mountJungleFlipReview } from './review/jungle-flip-review.js';
 import { recoverJungleFlipDeal } from './review/jungle-flip-tree-adapter.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -187,6 +184,9 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
 
   root.replaceChildren(buildNav());
   mountJungleFlipReview(root, postgame.game.roomId, deal, {
+    // A finished game: what the still-face-down pieces were, on hover and
+    // from the menu (#824). The payload already carries the whole deal.
+    showFaceDown: true,
     pageClassName: 'jungle-flip-review',
     ariaLabel: 'Flip Jungle postgame',
     title: 'Flip Jungle',
@@ -209,8 +209,6 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the
     // public fen (it edits what is visible).
-    analyseFromHere: (truth) => analysisHref('jungle-flip', jungleFlipStateToDealtFen(truth)),
-    boardEditorHref: (truth) => editorHref('jungle-flip', jungleFlipStateToEngineFen(truth)),
     ...gameExportShareExtra('jungle-flip', postgame.game.roomId),
     // Server-side MistyJungleFlip whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh
@@ -221,8 +219,10 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('jungle-flip', postgame.game.roomId),
-      run: () => requestGameAnalysis('jungle-flip', postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis('jungle-flip', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('jungle-flip', postgame.game.roomId, { signal, onStatus }),
     },
     // Decision-vs-luck decomposition: flip plies get a decision-quality glyph + per-move luck
     // readout + a two-number summary. Computed on top of the basic analysis (heavier, so it runs
@@ -230,12 +230,13 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     // game analysed before the decomposition shipped). The POST is account-gated, so canRun keeps
     // signed-out viewers on the base summary instead of a 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedJungleFlipDecisions(postgame.game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedJungleFlipDecisions(postgame.game.roomId, options).then((summary) =>
           summary ? jungleFlipDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestJungleFlipDecisions(postgame.game.roomId).then(jungleFlipDecisionOverlay),
+      run: (options) =>
+        requestJungleFlipDecisions(postgame.game.roomId, options).then(jungleFlipDecisionOverlay),
     },
   });
 }

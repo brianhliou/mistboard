@@ -3,9 +3,21 @@
 import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
+import { track } from './analytics.js';
+import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
+import {
+  PIKAFISH_REPO_URL,
+  PIKAFISH_SITE_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_NETWORKS_LICENSE_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
+import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { prerenderCopy, prerenderMount } from './prerender-copy.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -14,6 +26,9 @@ export function mountAbout(root: HTMLElement): void {
   root.replaceChildren();
   root.classList.add('landing-page', 'about-route');
   root.append(buildNav(locale), buildStaticPageLayout('about', buildAbout(locale), locale));
+  // The page mounts after a lazy import, so the browser's own jump to /about#who
+  // found no target; make it again now the section exists.
+  scrollToLocationHash();
 }
 
 export function mountSource(root: HTMLElement): void {
@@ -51,10 +66,18 @@ export function mountNotFound(root: HTMLElement): void {
   root.append(buildNav(locale), buildNotFound(locale));
 }
 
+/* The async mounts below fetch their page module, build the page, and only
+ * then swap it in. Emptying the root before the import left a prerendered
+ * page blank for as long as the chunk took to download: 7 s on /rules at
+ * Fast 3G with a 4x CPU. The server render stays on screen until the client
+ * page replaces it in one step, and a failed import never touches it. */
+function swapIn(root: HTMLElement, classes: string[], ...nodes: Node[]): void {
+  root.replaceChildren(...nodes);
+  root.classList.add(...classes);
+}
+
 export async function mountNews(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
-  root.replaceChildren();
-  root.classList.add('landing-page', 'news-route');
   const { buildNewsPage, newsArchiveHrefForHash, newsMonthExists, newsMonthFromPath } =
     await import('./news-page.js');
   let monthId = newsMonthFromPath(globalThis.location?.pathname ?? '');
@@ -70,7 +93,9 @@ export async function mountNews(root: HTMLElement): Promise<void> {
     globalThis.history.replaceState(null, '', '/feed');
     monthId = null;
   }
-  root.append(
+  swapIn(
+    root,
+    ['landing-page', 'news-route'],
     buildNav(locale),
     buildStaticPageLayout('news', buildNewsPage(locale, monthId), locale),
   );
@@ -78,13 +103,11 @@ export async function mountNews(root: HTMLElement): Promise<void> {
 
 export async function mountPatron(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
-  root.replaceChildren();
-  root.classList.add('landing-page', 'patron-route');
   document.title = `${t('patron.heading', {}, locale)} · Mistboard`;
   const { buildPatronPage } = await import('./patron-page.js');
   // Focused, hero-led layout (no static side rail) to match the donate page
   // shape; the footer + other pages' rails still link here.
-  root.append(buildNav(locale), buildPatronPage(locale));
+  swapIn(root, ['landing-page', 'patron-route'], buildNav(locale), buildPatronPage(locale));
 }
 
 export function mountContact(root: HTMLElement): void {
@@ -104,26 +127,28 @@ export async function mountArticlesIndex(
   lang?: import('./article-i18n.js').ArticleLang | null,
   view: import('./articles.js').ArticleIndexView = 'mistboard',
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
-  const { buildArticlesIndex, mountArticleThumbnails } = await import('./articles.js');
-  const index = buildArticlesIndex(lang ?? undefined, view);
-  root.append(buildNav(), index);
+  const { articleTopicFromSearch, buildArticlesIndex, mountArticleThumbnails } = await import(
+    './articles.js'
+  );
+  // ?topic= narrows the list here, on the client: the prerendered /blog is the
+  // whole list whatever the query, and its canonical stays /blog.
+  const topic = articleTopicFromSearch(window.location.search);
+  const index = buildArticlesIndex(lang ?? undefined, view, topic);
+  swapIn(root, ['landing-page', 'articles-route'], buildNav(), index);
   mountArticleThumbnails(index);
 }
 
-/* /blog, /zh-hans/blog and /zh-hant/blog, baked at build time. The index is
- * authored data with no live or per-account content, so the prerendered DOM is
- * exactly the page a reader gets. The "By Mistboard" view only: the (currently
- * empty) community view stays on the client-rendered shell. The two Chinese
- * indexes served a 4.7KB shell with no canonical or hreflang until 2026-10-02
- * while sitting in the sitemap. */
+/* Both blog views use the client renderer in every locale. The community
+ * copy replaces an empty shell without adding a first-paint UI (#964). */
 export async function renderArticlesIndexShellForPrerender(
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): Promise<string> {
   const { buildArticlesIndex } = await import('./articles.js');
   const locale: Locale = lang ?? 'en';
-  return `${buildNav(locale).outerHTML}${buildArticlesIndex(lang ?? undefined, 'mistboard').outerHTML}`;
+  const nav = buildNav(locale);
+  const index = buildArticlesIndex(lang ?? undefined, view);
+  return view === 'community' ? prerenderCopy(nav, index) : `${nav.outerHTML}${index.outerHTML}`;
 }
 
 // Meta and head links for each baked index (blog, rules). The three indexes of
@@ -142,31 +167,37 @@ const INDEX_PATH_PREFIX: Record<Locale, string> = {
 
 const ARTICLES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   en: {
-    title: 'Articles | Mistboard',
-    description: 'Long-form writing on original strategy games, rules, and engine research.',
+    title: 'Xiangqi and Variant Articles | Mistboard',
+    description:
+      'Long-form articles on xiangqi (Chinese chess) and its variants: rules explained, champions and players, engine research, puzzles, and how Mistboard is built.',
   },
   'zh-Hans': {
-    title: '文章 | Mistboard',
-    description: '原创策略游戏的文章、规则说明与引擎工作。',
+    title: '象棋与变体文章 | Mistboard',
+    description:
+      '关于象棋（中国象棋）及其变体的长文：规则详解、历届冠军与棋手、引擎研究、残局题目，以及 Mistboard 是怎样做出来的。',
   },
   'zh-Hant': {
-    title: '文章 | Mistboard',
-    description: '原創策略遊戲的文章、規則說明與引擎工作。',
+    title: '象棋與變體文章 | Mistboard',
+    description:
+      '關於象棋（中國象棋）及其變體的長文：規則詳解、歷屆冠軍與棋手、引擎研究、殘局題目，以及 Mistboard 是怎樣做出來的。',
   },
 };
 
 const RULES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   en: {
-    title: 'Rules | Mistboard',
-    description: 'Reference rules for Mistboard games, classic bases, and Fog of War variants.',
+    title: 'Xiangqi and Variant Rules | Mistboard',
+    description:
+      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, Duck Xiangqi and other xiangqi variants.',
   },
   'zh-Hans': {
-    title: '规则 | Mistboard',
-    description: 'Mistboard 游戏、经典基础规则与战争迷雾变体的规则参考。',
+    title: '象棋与变体规则 | Mistboard',
+    description:
+      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、鸭子等各种象棋变体。',
   },
   'zh-Hant': {
-    title: '規則 | Mistboard',
-    description: 'Mistboard 遊戲、經典基礎規則與戰爭迷霧變體的規則參考。',
+    title: '象棋與變體規則 | Mistboard',
+    description:
+      'Mistboard 上每一種棋類的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和西洋棋，以及迷霧、鴨子等各種象棋變體。',
   },
 };
 
@@ -180,7 +211,7 @@ type IndexPrerenderHead = {
 
 function indexPrerenderHead(
   host: string,
-  section: 'blog' | 'rules',
+  section: 'blog' | 'blog/community' | 'rules',
   table: IndexPrerenderMeta,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): IndexPrerenderHead {
@@ -203,8 +234,14 @@ function indexPrerenderHead(
 export function articlesIndexPrerenderHead(
   host: string,
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): IndexPrerenderHead {
-  return indexPrerenderHead(host, 'blog', ARTICLES_INDEX_PRERENDER_META, lang);
+  return indexPrerenderHead(
+    host,
+    view === 'community' ? 'blog/community' : 'blog',
+    ARTICLES_INDEX_PRERENDER_META,
+    lang,
+  );
 }
 
 export function rulesIndexPrerenderHead(
@@ -223,56 +260,280 @@ export async function renderRulesIndexShellForPrerender(
 ): Promise<string> {
   const { buildRulesIndex } = await import('./articles.js');
   const locale: Locale = lang ?? 'en';
-  return `${buildNav(locale).outerHTML}${buildRulesIndex(lang ?? undefined).outerHTML}`;
+  return prerenderCopy(buildNav(locale), buildRulesIndex(lang ?? undefined));
 }
 
 export async function mountRulesIndex(
   root: HTMLElement,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route', 'rules-route');
   const { buildRulesIndex, mountArticleThumbnails } = await import('./articles.js');
   const index = buildRulesIndex(lang ?? undefined);
-  root.append(buildNav(), index);
+  swapIn(root, ['landing-page', 'articles-route', 'rules-route'], buildNav(), index);
   mountArticleThumbnails(index);
 }
+
+/* /blog/<slug>, /rules/<slug> and their zh copies, baked at build time into a
+ * root carrying ARTICLE_ROUTE_CLASS: the same frame mountArticle builds, nav
+ * first. Until #557 the bake was the bare <main> in a classless root, so the
+ * client mount put the nav above it and restyled the root, and the whole page
+ * jumped (rules p75 layout shift 0.40, blog 0.26). */
+export const ARTICLE_ROUTE_CLASS = 'landing-page articles-route';
+
+export async function renderArticlePageShellForPrerender(
+  slug: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
+  const { buildArticlePage } = await import('./articles.js');
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildArticlePage(slug, lang ?? undefined).outerHTML}`;
+}
+
+type ArticleLangOrNull = import('./article-i18n.js').ArticleLang | null;
+
+type ArticleModules = {
+  articles: typeof import('./articles.js');
+  findArticle: typeof import('./articles-data.js').findArticle;
+  translateArticle: typeof import('./article-i18n.js').translateArticle;
+  theme: typeof import('./theme.js');
+};
+
+// The article on screen, kept so a rules-rail click can swap its content in
+// place. `teardown` releases what the content (not the rail) mounted.
+let mountedArticle: {
+  root: HTMLElement;
+  slug: string;
+  modules: ArticleModules;
+  teardown: () => void;
+} | null = null;
 
 export async function mountArticle(
   root: HTMLElement,
   slug: string,
-  lang?: import('./article-i18n.js').ArticleLang | null,
+  lang?: ArticleLangOrNull,
 ): Promise<void> {
   // Load everything before clearing the root: a failed import then leaves the
   // prerendered article on screen instead of an empty page.
-  const {
-    buildArticlePage,
-    mountPendingWidgets,
-    mountArticleEnhancements,
-    mountArticleLightbox,
-    mountArticleThumbnails,
-  } = await import('./articles.js');
-  const { findArticle } = await import('./articles-data.js');
-  const { translateArticle } = await import('./article-i18n.js');
-  const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
+  const modules: ArticleModules = {
+    articles: await import('./articles.js'),
+    findArticle: (await import('./articles-data.js')).findArticle,
+    translateArticle: (await import('./article-i18n.js')).translateArticle,
+    theme: await import('./theme.js'),
+  };
+  mountedArticle?.teardown();
   root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
-  const base = findArticle(slug);
+  root.classList.add(...ARTICLE_ROUTE_CLASS.split(' '));
+  applyArticleChrome(modules, slug, lang);
+  const articlePage = modules.articles.buildArticlePage(slug, lang ?? undefined);
+  root.append(buildNav(), articlePage);
+  // Delegated from the page, so it covers content swapped in later.
+  modules.articles.mountArticleLightbox(articlePage);
+  const rail = articlePage.querySelector<HTMLElement>(':scope > .article-variant-sidebar');
+  // The variant rail carries board-kind thumbnails that mount like index cards.
+  // It outlives a rail swap, so they mount once, outside the content teardown.
+  if (rail) modules.articles.mountArticleThumbnails(rail);
+  mountedArticle = {
+    root,
+    slug,
+    modules,
+    teardown: mountArticleContent(modules, articlePage),
+  };
+  if (rail) installRulesRailNavigation();
+  // The client builds the page after the load event, when the browser has
+  // already given up looking for the #fragment, so the mount scrolls to it.
+  scrollToLocationHash();
+}
+
+/** Scrolls the element the address's #fragment names into view; false when
+ *  there is no fragment or nothing on the page carries that id. */
+export function scrollToLocationHash(): boolean {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return false;
+  let id = raw;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    // A malformed escape: look the id up as written.
+  }
+  const target = document.getElementById(id);
+  if (!target) return false;
+  target.scrollIntoView();
+  return true;
+}
+
+function applyArticleChrome(modules: ArticleModules, slug: string, lang?: ArticleLangOrNull): void {
+  const base = modules.findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
   const family = base?.boardFamily;
-  setBoardFamily(family === 'xiangqi' && xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess');
-  const article = base && lang ? translateArticle(base, lang) : base;
+  modules.theme.setBoardFamily(
+    family === 'xiangqi' && modules.theme.xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess',
+  );
+  const article = base && lang ? modules.translateArticle(base, lang) : base;
   // seoTitle, as the prerender uses: the display title here would replace the
   // search title Google indexes the moment the client mounts.
-  if (article) document.title = `${article.seoTitle ?? article.title} · Mistboard`;
-  const articlePage = buildArticlePage(slug, lang ?? undefined);
-  root.append(buildNav(), articlePage);
-  mountPendingWidgets(articlePage);
-  mountArticleEnhancements(articlePage);
-  mountArticleLightbox(articlePage);
-  // The variant rail carries board-kind thumbnails that mount like index cards.
-  mountArticleThumbnails(articlePage);
+  if (article) document.title = `${article.seoTitle ?? article.title} | Mistboard`;
+  // A Vietnamese page is its own article, and the prerender ships it as
+  // <html lang="vi">. Locale init had already reset that to the UI locale
+  // ("en": the interface does not speak Vietnamese), so the rendered page told
+  // Google it was English (2026-10-21). Any other article takes the UI locale
+  // back, which an in-place rules swap away from a vi page needs.
+  if (article?.sourceLang) document.documentElement.lang = article.sourceLang;
+  else applyDocumentLocale(currentLocale());
+}
+
+/** Mounts the widgets, TOC tracking and thumbnails of everything in the page
+ *  except the variant rail; returns their teardown. */
+function mountArticleContent(modules: ArticleModules, page: HTMLElement): () => void {
+  const content = [...page.children].filter(
+    (el): el is HTMLElement =>
+      el instanceof HTMLElement && !el.classList.contains('article-variant-sidebar'),
+  );
+  const controllers = content.flatMap((el) => [
+    ...modules.articles.mountPendingWidgets(el),
+    ...modules.articles.mountArticleThumbnails(el),
+  ]);
+  const stopEnhancements = modules.articles.mountArticleEnhancements(page);
+  return () => {
+    stopEnhancements();
+    for (const controller of controllers) controller.destroy();
+  };
+}
+
+// --- in-place rules navigation ----------------------------------------------
+// A rules page was a full document load per rail click: the prerendered HTML
+// painted, then the client rebuilt the whole page, and the rail jumped back to
+// its top. Rail clicks between rules pages of one locale now swap the centre
+// and TOC columns in place, so the rail (its scroll and its thumbnails) stays.
+// Anything else (a modified click, a cross-locale link, a page with no rail)
+// keeps the browser's own navigation.
+
+const RULES_ARTICLE_PATH = /^(\/zh-han[st])?\/rules\/([^/]+)$/;
+
+/** The rules article a path names, with its locale prefix; null for any other
+ *  path. Mirrors main.ts's articleSlugFromPath/articleLangFromPath for rules. */
+export function rulesArticleRoute(
+  pathname: string,
+): { prefix: string; slug: string; lang: ArticleLangOrNull } | null {
+  const match = pathname.match(RULES_ARTICLE_PATH);
+  if (!match) return null;
+  const prefix = match[1] ?? '';
+  const lang = prefix === '/zh-hans' ? 'zh-Hans' : prefix === '/zh-hant' ? 'zh-Hant' : null;
+  return { prefix, slug: decodeURIComponent(match[2]!), lang };
+}
+
+let rulesNavInstalled = false;
+let rulesNavPushed = false;
+
+function installRulesRailNavigation(): void {
+  if (rulesNavInstalled) return;
+  rulesNavInstalled = true;
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as Element | null)?.closest?.('a.article-variant-link[href]');
+    if (!(link instanceof HTMLAnchorElement) || !link.closest('.article-variant-sidebar')) return;
+    if ((link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    const target = rulesArticleRoute(url.pathname);
+    const here = rulesArticleRoute(window.location.pathname);
+    if (!target || !here || target.prefix !== here.prefix) return;
+    event.preventDefault();
+    if (target.slug === here.slug) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (!swapRulesArticle(target.slug, target.lang)) {
+      window.location.assign(url.href);
+      return;
+    }
+    window.history.pushState({ rulesArticle: true }, '', `${url.pathname}${url.search}${url.hash}`);
+    rulesNavPushed = true;
+    window.scrollTo(0, 0);
+    afterRulesSwap();
+  });
+  window.addEventListener('popstate', () => {
+    const here = rulesArticleRoute(window.location.pathname);
+    // A hash step within the page on screen: the browser scrolls it.
+    if (here && here.slug === mountedArticle?.slug) return;
+    if (here && swapRulesArticle(here.slug, here.lang)) {
+      afterRulesSwap();
+    } else if (rulesNavPushed) {
+      window.location.reload();
+    }
+  });
+}
+
+/** Replaces the mounted rules page's content columns with `slug`'s, keeping the
+ *  rail element. False when there is no rail to keep or the target has none
+ *  (not found, not a rules page): the caller then loads the page instead. */
+export function swapRulesArticle(slug: string, lang?: ArticleLangOrNull): boolean {
+  const current = mountedArticle;
+  if (!current) return false;
+  const main = current.root.querySelector<HTMLElement>(':scope > main.article-page');
+  const rail = main?.querySelector<HTMLElement>(':scope > .article-variant-sidebar');
+  if (!main || !rail) return false;
+  const { modules } = current;
+  const next = modules.articles.buildArticlePage(slug, lang ?? undefined);
+  const nextRail = next.querySelector(':scope > .article-variant-sidebar');
+  if (!nextRail) return false;
+  nextRail.remove();
+
+  current.teardown();
+  applyArticleChrome(modules, slug, lang);
+  main.className = next.className;
+  for (const key of Object.keys(main.dataset)) delete main.dataset[key];
+  Object.assign(main.dataset, next.dataset);
+  main.replaceChildren(rail, ...next.children);
+  for (const link of rail.querySelectorAll<HTMLAnchorElement>('a.article-variant-link')) {
+    const active =
+      rulesArticleRoute(new URL(link.href, window.location.href).pathname)?.slug === slug;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  current.slug = slug;
+  current.teardown = mountArticleContent(modules, main);
+  return true;
+}
+
+function afterRulesSwap(): void {
+  const path = window.location.pathname;
+  // A page load counts one pageview (main.ts); a swap is a page too.
+  track('$pageview', { path });
+  scrollToLocationHash();
+  void syncHeadFromPrerender(path);
+}
+
+// Canonical, hreflang, description, Open Graph and structured data are baked
+// per page by the prerender and nowhere else, so the swap copies them from the
+// target's own baked HTML rather than re-deriving them. A response with no
+// canonical (the dev server's client shell) is not a baked page and is skipped,
+// as is one that lands after the reader has moved on.
+const SYNCED_HEAD_SELECTOR = [
+  'meta[name="description"]',
+  'meta[property^="og:"]',
+  'meta[name^="twitter:"]',
+  'link[rel="canonical"]',
+  'link[rel="alternate"][hreflang]',
+  'script[type="application/ld+json"]',
+].join(', ');
+
+export async function syncHeadFromPrerender(path: string): Promise<void> {
+  try {
+    const response = await fetch(path, { headers: { accept: 'text/html' } });
+    if (!response.ok) return;
+    const baked = new DOMParser().parseFromString(await response.text(), 'text/html');
+    if (window.location.pathname !== path) return;
+    if (!baked.head.querySelector('link[rel="canonical"]')) return;
+    for (const el of document.head.querySelectorAll(SYNCED_HEAD_SELECTOR)) el.remove();
+    for (const el of baked.head.querySelectorAll(SYNCED_HEAD_SELECTOR)) {
+      document.head.append(document.importNode(el, true));
+    }
+  } catch {
+    // The swap already showed the page; stale meta is all a failure costs.
+  }
 }
 
 function buildAbout(locale: Locale = currentLocale()): HTMLElement {
@@ -283,6 +544,9 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
   heading.textContent = t('about.heading', {}, locale);
+
+  const mission = aboutParagraph([t('about.mission', {}, locale)]);
+  mission.className = 'about-mission';
 
   const lede = aboutParagraph([t('about.lede', {}, locale)]);
 
@@ -300,6 +564,17 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   const engineHeading = aboutSubheading(t('about.enginesHeading', {}, locale));
   const engineP = aboutParagraph([t('about.enginesBody', {}, locale)]);
+  engineP.append(
+    ' ',
+    aboutLink(t('champions.heading', {}, locale), localizedHref('/champions', locale)),
+  );
+
+  const communityHeading = aboutSubheading(t('about.communityHeading', {}, locale));
+  const communityP = aboutParagraph([t('about.communityBody', {}, locale)]);
+  communityP.append(
+    ' ',
+    aboutLink(t('creators.heading', {}, locale), localizedHref('/creators', locale)),
+  );
 
   const oss1Heading = aboutSubheading(t('about.openSourceHeading', {}, locale));
   const oss1P = aboutParagraph([
@@ -310,8 +585,25 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
+  const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
+  whoHeading.id = 'who';
+  const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+  // Chinese runs on without spaces after 。 and ：.
+  const gap = locale === 'en' ? ' ' : '';
+  whoP.append(
+    gap,
+    t('about.whoSitePrefix', {}, locale),
+    gap,
+    aboutExternalLink('brianhliou.com', SITE_AUTHOR.sameAs),
+  );
+
+  const articlesHeading = aboutSubheading(t('about.articlesHeading', {}, locale));
+  articlesHeading.id = 'articles';
+  const articlesP = aboutParagraph([t('about.articlesBody', {}, locale)]);
+
   section.append(
     heading,
+    mission,
     lede,
     whyHeading,
     whyP,
@@ -323,8 +615,14 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     fairnessP,
     engineHeading,
     engineP,
+    communityHeading,
+    communityP,
     oss1Heading,
     oss1P,
+    whoHeading,
+    whoP,
+    articlesHeading,
+    articlesP,
   );
   return section;
 }
@@ -373,14 +671,30 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
     textLine(t('source.stockfish', {}, locale)),
+    // The xiangqi ladder below Pikafish and the Duck Xiangqi bot run upstream
+    // Fairy-Stockfish builds (fairy-stockfish-*.ref); uncredited until 2026-10-17.
+    linkLine(
+      t('source.fairyStockfish', {}, locale),
+      'https://github.com/fairy-stockfish/Fairy-Stockfish',
+    ),
     // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
     linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // jqe (MIT, devinokeefe/jieqi), credited with a link like AB-JChess, in the same
+    // VITE_JQE_ENABLED build that offers it.
+    ...(jqeEnabled()
+      ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
+      : []),
     // The top jungle bot (#434): engine, the engine it is built on, and the net's
     // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
     linkLine(
@@ -389,6 +703,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
+    ...(gomokuEnabled()
+      ? [
+          linkLine(t('source.rapfi', {}, locale), RAPFI_REPO_URL),
+          linkLine(t('source.rapfiNetworks', {}, locale), RAPFI_NETWORKS_LICENSE_URL),
+          linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
+        ]
+      : []),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
@@ -396,6 +718,12 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     // its home page and the NNUE weights license (no commercial use without
     // permission), in the reader's language where pikafish.com has one.
     pikafishCreditLine(locale),
+    // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
+    // fork that carries our patches.
+    linkLine(
+      t('source.pikafishJieqi', {}, locale),
+      'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi_old-mistboard',
+    ),
     // The five third-party xiangqi piece sets (2026-10-08); sources and licences
     // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
     // CC BY 4.0, so its credit names the author and links the licence.
@@ -404,6 +732,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
     linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
     linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
+    // Chess pieces, sounds and fonts were credited only in public/*/CREDITS.md,
+    // which nothing links to (2026-10-17).
+    linkLine(
+      t('source.chessPieceSets', {}, locale),
+      'https://github.com/lichess-org/lila/tree/master/public/piece',
+    ),
+    linkLine(t('source.sounds', {}, locale), 'https://github.com/lichess-org/lila'),
+    textLine(t('source.fonts', {}, locale)),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [
@@ -663,18 +999,6 @@ function textLine(value: string): HTMLSpanElement {
   return span;
 }
 
-export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
-export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
-const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
-  en: 'https://www.pikafish.com/en/list.html',
-  'zh-Hans': 'https://www.pikafish.com/list.html',
-  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
-};
-
-export function pikafishWeightsLicenseUrl(locale: Locale): string {
-  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
-}
-
 function pikafishCreditLine(locale: Locale): HTMLSpanElement {
   const line = document.createElement('span');
   line.className = 'source-credit-pikafish';
@@ -745,7 +1069,7 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   quick.className = 'not-found-links';
   quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
   for (const [labelKey, href] of [
-    ['nav.play', '/play'],
+    ['nav.play', '/'],
     ['nav.rules', '/rules'],
     ['nav.watch', '/watch'],
     ['nav.puzzles', '/puzzles'],
@@ -763,4 +1087,40 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(code, heading, lede, home, quick, contact);
   return section;
+}
+
+export function renderAboutShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountAbout);
+}
+
+export function renderSourceShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountSource);
+}
+
+export function renderFaqShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountFaq);
+}
+
+export function renderTermsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountTerms);
+}
+
+export function renderPrivacyShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountPrivacy);
+}
+
+export function renderContactShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const contact = buildContact(null, false, locale).el;
+    // Inert crawler copy includes the hints a visitor sees in empty fields.
+    // Attribute-only placeholders contribute no text to a no-JS reader.
+    for (const field of contact.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input[placeholder],textarea[placeholder]',
+    ))
+      field.replaceWith(document.createTextNode(field.placeholder));
+    // The anti-spam field is deliberately absent from the visible page.
+    contact.querySelector('label[aria-hidden="true"]')?.remove();
+    root.classList.add('landing-page', 'contact-route');
+    root.append(buildNav(locale), buildStaticPageLayout('contact', contact, locale));
+  });
 }

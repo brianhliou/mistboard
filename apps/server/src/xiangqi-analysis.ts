@@ -8,11 +8,12 @@
 // per position, and several-fold faster than the old spawn-per-ply depth sweep.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   classifyXiangqiMove,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
   pikafishUciToXiangqiSquares,
   winPercent,
+  type XiangqiGameState,
   type XiangqiMove,
   xiangqiMoveToPikafishUci,
 } from '@mistboard/game';
@@ -50,7 +51,11 @@ import {
 // declined `!!` stayed silent. Rank-1 scores are also very slightly different at
 // the same node budget, because two lines share the budget — so @4 rows are not
 // mixable and this bump orphans them.
-export const XIANGQI_ANALYSIS_ENGINE_VERSION = 5;
+// @6 (2026-11-09, #993): Pikafish 6a59ee2f + pikafish-cc0-net.patch uses
+// the Fairy-Stockfish CC0 net and built-in scale 79. The paired win-curve refit
+// lives in game/analysis.ts. Keep @5 rows intact; the new cache id recomputes
+// on demand instead of mixing the two evaluation scales.
+export const XIANGQI_ANALYSIS_ENGINE_VERSION = 6;
 
 // Cache engine id, version-suffixed so an engine/config change invalidates stored
 // evals (the sibling pattern: JIEQI/BANQI/JUNGLE_ANALYSIS_ENGINE_ID). Xiangqi
@@ -111,6 +116,7 @@ export type AnalyzeXiangqiGameOptions = {
    * minus the declined-sacrifice half of `!!`.
    */
   moves?: readonly XiangqiMove[];
+  initialState?: XiangqiGameState;
 };
 
 /**
@@ -137,7 +143,13 @@ export async function analyzeXiangqiGame(
     // sweep's own output, and keeping it behind the real-engine branch would leave
     // it untestable — which is how a code path ships having never run.
     if (opts.moves?.length) {
-      await attachOfferLines(evals, movesUci, opts.moves, (moves) => injected(moves, { depth }));
+      await attachOfferLines(
+        evals,
+        movesUci,
+        opts.moves,
+        (moves) => injected(moves, { depth }),
+        opts.initialState,
+      );
     }
     return evals;
   }
@@ -147,7 +159,7 @@ export async function analyzeXiangqiGame(
     async (evaluate) => {
       const evals = await sweepPlyEvals(movesUci, (moves) => evaluate(moves), 0, opts.progress);
       if (opts.moves?.length) {
-        await attachOfferLines(evals, movesUci, opts.moves, evaluate);
+        await attachOfferLines(evals, movesUci, opts.moves, evaluate, opts.initialState);
       }
       return evals;
     },
@@ -175,16 +187,15 @@ async function attachOfferLines(
   movesUci: readonly string[],
   moves: readonly XiangqiMove[],
   evaluate: (moves: string[]) => Promise<XiangqiPositionEval>,
+  initialState?: XiangqiGameState,
 ): Promise<void> {
   const byPly = new Map(evals.map((entry) => [entry.ply, entry]));
-  let state = createInitialXiangqiState('analysis');
+  let state = initialState ?? createStandardXiangqiStateFromSetup('analysis');
   for (let ply = 1; ply <= moves.length; ply += 1) {
     const move = moves[ply - 1];
     const before = state;
     if (!move || before.status.type !== 'playing') return;
-    const next = applyStandardXiangqiMove(before, move);
-    // The kernel may adjudicate an end (repetition, no-progress) before the record
-    // does; nothing past that point is a position worth classifying.
+    const next = applyXiangqiRecordMove(before, move);
     if (next === before) return;
     state = next;
 
@@ -193,8 +204,8 @@ async function attachOfferLines(
     if (!beforeEval || !afterEval) continue;
     // Red moves first, so odd plies are Red's.
     const moverIsRed = ply % 2 === 1;
-    const redBefore = winPercent(beforeEval.cp, beforeEval.mate);
-    const redAfter = winPercent(afterEval.cp, afterEval.mate);
+    const redBefore = winPercent(beforeEval.cp, beforeEval.mate, XIANGQI_ANALYSIS_ENGINE_ID);
+    const redAfter = winPercent(afterEval.cp, afterEval.mate, XIANGQI_ANALYSIS_ENGINE_ID);
     const pvAfter: XiangqiMove[] = [];
     for (const uci of afterEval.pv ?? []) {
       const decoded = pikafishUciToXiangqiSquares(uci);

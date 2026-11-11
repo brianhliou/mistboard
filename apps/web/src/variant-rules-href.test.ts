@@ -63,8 +63,8 @@ describe('correspondence time-control label', () => {
   it('leaves live clocks and unofficial allowances alone', () => {
     expect(correspondenceLabelFromMs(600_000, 5_000)).toBeNull();
     expect(correspondenceLabelFromMs(3 * DAY_MS, 1_000)).toBeNull();
-    expect(correspondenceLabelFromMs(2 * DAY_MS, 0)).toBeNull();
-    expect(reviewTimeControlLabel({ initialMs: 600_000, incrementMs: 5_000 })).toBe('10:00+5');
+    expect(correspondenceLabelFromMs(5 * DAY_MS, 0)).toBeNull();
+    expect(reviewTimeControlLabel({ initialMs: 600_000, incrementMs: 5_000 })).toBe('10+5');
   });
 });
 

@@ -31,7 +31,7 @@
 // Sweeps 9-11); it replaced "one-sentence C" (standard start, palace-bound
 // advisors, no drop check) on 2026-10-02. The engine is stock Fairy-Stockfish
 // with apps/server/src/crazyhouse-xiangqi.ini;
-// packages/game/src/fixtures/crazyhouse-xiangqi-parity.json holds its legal
+// packages/game/fixtures/crazyhouse-xiangqi-parity.json holds its legal
 // moves and perft-2 counts over real game positions, and the test beside this
 // file requires this kernel to agree at every one of them.
 //
@@ -42,10 +42,12 @@
 // production shape: an abortable status, the end reasons persistence knows,
 // a player view.
 
+import { checkSubjectColor } from './check-subject.js';
 import type { AbortReason } from './types.js';
 import type {
   XiangqiBoard,
   XiangqiColor,
+  XiangqiGameStatus,
   XiangqiMove,
   XiangqiPiece,
   XiangqiPieceRole,
@@ -108,7 +110,9 @@ export type CrazyhouseXiangqiGameEndReason =
   | 'progress-clock'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type CrazyhouseXiangqiGameStatus =
   | { type: 'playing'; turn: CrazyhouseXiangqiColor }
@@ -601,6 +605,24 @@ export function isCrazyhouseXiangqiGeneralInCheck(
 ): boolean {
   const general = generalSquares(board)[color];
   return general !== undefined && attackedBy(board, oppositeCrazyhouseXiangqiColor(color), general);
+}
+
+/**
+ * The general the board should show in check, or null: the side facing the
+ * move (checkSubjectColor) when isCrazyhouseXiangqiGeneralInCheck holds for it,
+ * the same test the perpetual-check history records. Reads only the board,
+ * so a client view is enough, or the xiangqi-shaped board view the shared
+ * board renders (whose status type is xiangqi's, a superset of this one).
+ */
+export function crazyhouseXiangqiCheckedGeneral(
+  board: CrazyhouseXiangqiBoard,
+  status: CrazyhouseXiangqiGameStatus | XiangqiGameStatus,
+): CrazyhouseXiangqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const general = generalSquares(board)[color];
+  if (general === undefined) return null;
+  return isCrazyhouseXiangqiGeneralInCheck(board, color) ? general : null;
 }
 
 // ── Legal moves ────────────────────────────────────────────────────────────

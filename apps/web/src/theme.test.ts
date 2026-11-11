@@ -420,6 +420,90 @@ describe('appearance family gating', () => {
     }
   });
 
+  it('offers board coordinates in the gear, off by default, for a guest too', async () => {
+    // They were only on the account page, so a signed-out reader could not
+    // turn them on at all (2026-10-17).
+    await rebuildThemePanel();
+    const toggle = document.querySelector<HTMLInputElement>(
+      '[data-theme-control] .appearance-submenu[data-key="board"] [data-board-coordinates-toggle]',
+    );
+    expect(toggle?.checked).toBe(false);
+    toggle?.click();
+    expect(document.documentElement.dataset.boardCoordinates).toBe('on');
+    expect(
+      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').boardCoordinates,
+    ).toBe(true);
+  });
+
+  it('offers touch move confirmation to guests and stores the disabled preference', async () => {
+    await rebuildThemePanel();
+    const toggle = document.querySelector<HTMLInputElement>(
+      '[data-theme-control] .appearance-submenu[data-key="board"] [data-confirm-moves-on-touch-toggle]',
+    );
+    expect(toggle).not.toBeNull();
+    expect(toggle?.checked).toBe(true);
+    expect(toggle?.closest('label')?.textContent).toBe('Confirm moves on touch screens');
+    toggle!.click();
+    expect(
+      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}')
+        .confirmMovesOnTouch,
+    ).toBe(false);
+    await rebuildThemePanel();
+    expect(
+      document.querySelector<HTMLInputElement>('[data-confirm-moves-on-touch-toggle]')?.checked,
+    ).toBe(false);
+  });
+
+  it('has no Flip row: the reveal turn follows the 3D look', async () => {
+    // Brian, 2026-10-29: the flip is "tied to 3d".
+    await rebuildThemePanel();
+    const pieces = '[data-theme-control] .appearance-submenu[data-key="pieces"]';
+    expect(document.querySelector(`${pieces} [data-piece-segment="flip"]`)).toBeNull();
+    expect(document.querySelector(`${pieces} [data-piece-segment="speed"]`)).not.toBeNull();
+  });
+  it('shows Edge only with 3D pieces', async () => {
+    await rebuildThemePanel();
+    const pieces = '[data-theme-control] .appearance-submenu[data-key="pieces"]';
+    const row = (segment: string) =>
+      document.querySelector<HTMLElement>(`${pieces} [data-piece-segment-field="${segment}"]`);
+    const click = (segment: string, value: string) =>
+      document
+        .querySelector<HTMLButtonElement>(
+          `${pieces} [data-piece-segment="${segment}"][data-value="${value}"]`,
+        )
+        ?.click();
+
+    expect(row('edge')?.hidden).toBe(true);
+    click('look', '3d');
+    expect(row('edge')?.hidden).toBe(false);
+    click('look', 'flat');
+    expect(row('edge')?.hidden).toBe(true);
+  });
+
+  it('lets a guest set the animation speed without an account save', async () => {
+    // The speed was on the account page only, out of a guest's reach (Brian,
+    // 2026-10-29).
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}')));
+    vi.stubGlobal('fetch', fetchSpy);
+    try {
+      await rebuildThemePanel();
+      document
+        .querySelector<HTMLButtonElement>(
+          '[data-theme-control] .appearance-submenu[data-key="pieces"] [data-piece-segment="speed"][data-value="fast"]',
+        )
+        ?.click();
+      expect(
+        JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').pieceAnimation,
+      ).toBe('fast');
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        '/api/account/display-preferences',
+        expect.anything(),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('swaps the real appearance menu into the buildAppearanceMenu facade placeholder', async () => {
     // account-nav embeds the menu synchronously; the facade returns an empty
     // .appearance-menu holder and replaces it once the lazy settings chunk

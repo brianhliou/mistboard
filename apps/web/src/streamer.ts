@@ -4,13 +4,14 @@
 // no live-status polling. The page says who streams xiangqi here, not who is
 // live right now.
 //
-// The empty state still renders when the list is empty, which is what a direct
-// visit hits before the first streamer is seeded. The nav hides the link until
-// then, so nobody arrives here from the site chrome to find nothing.
+// With no listings, a direct visit invites creators to work with us. The nav
+// still waits for the first real streamer before promoting the directory.
 
 import './streamer.css';
+import { buildCreatorInvitation } from './creator-invitation.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 import { buildNav } from './site-shell.js';
 import { STREAMERS, type StreamerEntry } from './streamers-data.js';
 
@@ -18,6 +19,10 @@ const PLATFORM_LABELS: Record<StreamerEntry['platform'], string> = {
   twitch: 'Twitch',
   youtube: 'YouTube',
 };
+
+export function renderStreamerShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountStreamer);
+}
 
 export function mountStreamer(root: HTMLElement): void {
   const locale = currentLocale();
@@ -38,6 +43,7 @@ export function mountStreamer(root: HTMLElement): void {
   shell.append(heading, intro);
 
   if (STREAMERS.length === 0) {
+    shell.append(buildCreatorInvitation('streamer', locale));
     const empty = document.createElement('p');
     empty.className = 'streamer-empty';
     empty.textContent = t('streamer.empty', {}, locale);
@@ -47,6 +53,7 @@ export function mountStreamer(root: HTMLElement): void {
     list.className = 'streamer-list';
     for (const streamer of STREAMERS) list.append(buildStreamerCard(streamer, locale));
     shell.append(list);
+    shell.append(buildCreatorInvitation('streamer', locale));
   }
 
   root.append(buildNav(locale), shell);

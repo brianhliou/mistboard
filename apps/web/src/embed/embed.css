@@ -448,6 +448,14 @@ body.embed-body {
   color: var(--site-heading, inherit);
 }
 
+/* Touch floor (#620); the result bar under the sheet follows, so its rule and
+   the controls' rule stay one line across the card. */
+@media (pointer: coarse) {
+  .embed-card-control {
+    min-height: 40px;
+  }
+}
+
 .embed-card-control-icon {
   display: block;
   flex: none;
@@ -509,12 +517,15 @@ body.embed-body {
   flex: 1;
   max-height: none;
   gap: 1px;
+  /* Panning the score sheet, including at its ends, must not move the host
+     article and carry the board out of view. The page scrolls outside it. */
+  overscroll-behavior-y: contain;
 }
 
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
    moves line up down the column instead of drifting with label length. */
 .embed-card-moves .review-move-list__row {
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
   gap: 2px;
   background: transparent;
@@ -532,11 +543,48 @@ body.embed-body {
 }
 
 .embed-card-moves .review-move-list__move {
-  padding: 3px 5px;
+  padding: 3px;
   font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--site-heading, inherit);
+  gap: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.embed-card-moves .review-move-list__san {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* Advice splits a move pair into separate rows. Give a standalone move the
+   remaining row, keeping its quality and reveal luck beside the notation.
+   A resumed second move retains the ellipsis that identifies its side. */
+.embed-card-moves .review-move-list__row > button:nth-child(2):last-child {
+  grid-column: 2 / -1;
+}
+.embed-card-moves .review-move-list__row:has(> .review-move-list__move--gap) {
+  grid-template-columns: 20px 20px minmax(0, 1fr);
+}
+
+.embed-card-moves .review-move-list__luck {
+  margin-left: 2px;
+  font-size: 10px;
+  letter-spacing: -0.2px;
+  word-spacing: -0.2em;
+}
+.embed-card-moves .review-move-list__luck-die {
+  font-size: 8.5px;
+}
+
+/* Touch floor (#620): 26px rows for a mouse. The sheet scrolls inside the rail,
+   so taller rows do not grow the card. */
+@media (pointer: coarse) {
+  .embed-card-moves .review-move-list__move {
+    min-height: 40px;
+    align-items: center;
+  }
 }
 
 .embed-card-moves .review-move-list__move:hover {
@@ -567,24 +615,78 @@ body.embed-body {
   text-align: center;
 }
 
-@media (max-width: 479px) {
-  /* Stacked, the card takes the whole frame again: the sheet is under the
-     board, so whatever height the board does not need is the sheet's. */
-  .embed-card {
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
+@media (pointer: coarse) {
+  .embed-card-result {
+    min-height: 41px;
   }
-  .embed-card-board {
-    width: 100%;
-  }
-  .embed-card-rail {
-    width: 100%;
-    flex: 1;
-    min-height: 112px;
-    border-left: 0;
-    border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
-  }
+}
+
+/* A problem shown without its answer (hideSolution): the sheet stays laid out
+   underneath, invisible and inert, and the cover holds the rail's place with a
+   prompt and one button. Stepping forward lifts it too (embed-card.ts). */
+.embed-card-rail--solution-hidden .embed-card-rail-inner {
+  visibility: hidden;
+}
+
+.embed-card-solution-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.embed-card-solution-prompt {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.embed-card-solution-show {
+  padding: 7px 14px;
+  border: 1px solid var(--site-accent);
+  border-radius: 6px;
+  background: var(--site-accent-soft, transparent);
+  color: var(--site-accent-strong, var(--site-heading));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.embed-card-solution-show:hover {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.embed-card-solution-show:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+/* Use the card's measured frame decision, shared with board sizing. A viewport
+   just above 480px can still have a frame below it because of outer padding. */
+.embed-card--stacked {
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+.embed-card--stacked .embed-card-board {
+  width: 100%;
+}
+.embed-card--stacked .embed-card-rail {
+  width: 100%;
+  flex: 1;
+  min-height: 112px;
+  border-left: 0;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
 }
 
 /* ── Shared board column (.embed-board: game and TV) ─────────────────────────
@@ -1171,4 +1273,41 @@ body.embed-body {
 .embed-card .embed-board .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"],
 .embed-card .embed-board .article-figure-xq > .xq-article-svg[data-xq-layout="single"] {
   width: 100%;
+}
+
+/* A banqi chapter's endgame table under the card (?tablebase=1,
+   embed-study-page.ts). ONE height whatever the position shows: the card fits
+   the board to the room left over (embed-card.ts belowCard), so a pane that
+   grew with its rows would shrink the board on every step. Rows past the box
+   scroll inside it. */
+.embed-tablebase {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  height: 240px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  background: var(--site-panel, transparent);
+  overflow: hidden;
+}
+.embed-tablebase .bq-tablebase {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+/* One box, the card's: the panel's own border inside it read as cards within
+   cards. Above the panel's border rule (0,2,0) whatever the bundle order. */
+.embed-frame .embed-tablebase .bq-tablebase {
+  border: 0;
+  border-radius: 0;
+}
+/* The study page carries the footnote; here it would cost three rows. */
+.embed-tablebase .bq-tablebase__foot {
+  display: none;
+}
+@container embed-frame (min-width: 520px) {
+  .embed-tablebase .bq-tablebase__table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+  }
 }

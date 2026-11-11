@@ -243,6 +243,56 @@ test('an archive page filed with no round does not take its opening as the round
   assert.equal(withRound.ok && withRound.snapshot.rounds[0]!.name, '第02轮');
 });
 
+test('a match game filed with no round is its own round, named by its game number', () => {
+  // The 2026 春丘大叶杯 ten-game match, game 8: no round tag, [DhtmlXQ_other]
+  // empty, the game number only in the table tag (第08台). Game 1's page says
+  // 第1局 in [DhtmlXQ_other] as well. Without a round every game fell into one
+  // round named after the event.
+  const page = readFileSync(
+    fileURLToPath(
+      new URL('../fixtures/dpxq/view_m_139842-ten-game-match-g08.html', import.meta.url),
+    ),
+    'utf-8',
+  );
+  const convert = (html: string) => {
+    const normalized = normalizeDpxqPageToFrameHtml(html);
+    assert.ok(normalized.ok);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+      tourSlug: '2026-chunqiu-dayie-ten-game-match',
+    });
+    assert.ok(converted.ok);
+    if (!converted.ok) throw new Error('dpxq conversion failed');
+    return translateXiangqiBroadcastSnapshot(converted.snapshot);
+  };
+
+  const game8 = convert(page);
+  assert.equal(game8.rounds[0]!.id, '2026-chunqiu-dayie-ten-game-match-g08');
+  assert.equal(game8.rounds[0]!.name, '第08局');
+  assert.equal(game8.rounds[0]!.nameEn, 'Game 8');
+  assert.equal(game8.boards[0]!.roundId, '2026-chunqiu-dayie-ten-game-match-g08');
+  assert.equal(game8.boards[0]!.moves.length, 36);
+
+  // Game 1 states its number in [DhtmlXQ_other]; that wins over the table.
+  const game1 = convert(
+    page
+      .replace('[DhtmlXQ_other][/DhtmlXQ_other]', '[DhtmlXQ_other]第1局[/DhtmlXQ_other]')
+      .replace('[DhtmlXQ_table]第08台[/DhtmlXQ_table]', '[DhtmlXQ_table]第03台[/DhtmlXQ_table]'),
+  );
+  assert.equal(game1.rounds[0]!.id, '2026-chunqiu-dayie-ten-game-match-g01');
+  assert.equal(game1.rounds[0]!.nameEn, 'Game 1');
+
+  // An event that is not a match keeps the event-named fallback: a table
+  // there is a table, not a game of a series.
+  const notMatch = convert(page.replaceAll('象棋大师十番棋战', '象棋大师邀请赛'));
+  assert.equal(notMatch.rounds[0]!.id, '2026-chunqiu-dayie-ten-game-match-round');
+
+  // A stated round still wins.
+  const stated = convert(
+    page.replace('[DhtmlXQ_round][/DhtmlXQ_round]', '[DhtmlXQ_round]第02轮[/DhtmlXQ_round]'),
+  );
+  assert.equal(stated.rounds[0]!.id, '2026-chunqiu-dayie-ten-game-match-r02');
+});
+
 test('interpret routes a raw dpxq page through the dpxq adapter', () => {
   const body = interpretXiangqiBroadcastSourceBody(ARCHIVE_HTML);
   assert.equal(body.kind, 'wxf-dhtmlxq');

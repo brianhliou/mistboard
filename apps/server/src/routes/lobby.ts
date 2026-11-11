@@ -7,6 +7,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { ratedEnabled } from './../feature-flags.js';
+import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import * as persistence from './../persistence.js';
 import type { LobbyTicket, Room } from './../server-types.js';
@@ -56,11 +57,22 @@ export async function tryHandle(
   if (pathname === '/api/lobby') {
     if (method === 'GET') {
       pruneLobbyTickets(ctx, lobbyNow(ctx));
-      writeJson(response, 200, { requests: lobbyOpenRequests(ctx) });
+      writeJson(response, 200, { requests: await lobbyOpenRequests(ctx, request) });
       return true;
     }
     if (!requireMethod(request, response, 'POST')) return true;
     const body = await readJsonBody(request);
+    if (isFFQBanqiRequest(body)) {
+      const gate = gateGameSpecRequest(body, await currentAccountUser(request));
+      if (gate.type === 'reject') {
+        writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+      // Admission opens the private room playtest; FFQ has no lobby. Claim
+      // conflicting selectors here before another tenant can match them.
+      writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
+      return true;
+    }
     // Variant tenants join the lobby on their own path; the chess gate would
     // 501 them as not-integrated, so the registry is consulted before it.
     const registration =
@@ -80,6 +92,16 @@ export async function tryHandle(
         // chess gate used to give for an enabled-but-unrouted spec.
         writeJson(response, 501, { error: `${registration.errorPrefix}_not_integrated` });
         return true;
+      }
+      // An allowlisted variant (139) seeks only for an account holding the
+      // grant. Without this a stranger's seek could pair a granted player into
+      // a room whose other seat nobody is allowed to take.
+      if (persistence.isAllowlistedGameSpec(registration.gameSpecId)) {
+        const seeker = await currentAccountUser(request);
+        if (!(await persistence.mayPlayVariant(seeker, registration.gameSpecId))) {
+          writeJson(response, 403, { error: 'variant_not_granted' });
+          return true;
+        }
       }
     } else {
       const gameSpecGate = gateGameSpecRequest({
@@ -110,6 +132,13 @@ export async function tryHandle(
       writeJson(response, 401, { error: 'rated_requires_account' });
       return true;
     }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates:
+    // refused before a ticket exists, so it can neither post nor accept a rated
+    // seek, and the rated room's seat gate refuses it again for a stale client.
+    if (body.rated === true && persistence.isStatsExcluded(accountUser)) {
+      writeJson(response, 403, { error: 'rated_requires_counted_account' });
+      return true;
+    }
     const lobbyRated = body.rated === true && accountUser !== null;
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });
@@ -138,7 +167,7 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'persistence_disabled' }));
       return true;
     }
-    if (ctx.isDraining()) {
+    if (ctx.refusesCreate()) {
       response.writeHead(503, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'server_draining', restartAt: ctx.drainDeadlineMs() }));
       return true;
@@ -314,10 +343,34 @@ function lobbyTicketResponse(ticket: LobbyTicket): Record<string, unknown> {
   };
 }
 
-function lobbyOpenRequests(ctx: HttpApiContext): Array<Record<string, unknown>> {
+// The public seek list. A seek on an allowlisted variant (139) is listed only to
+// a reader who may play it: to everyone else the variant does not exist yet, so
+// its name must not reach them through the lobby either.
+async function lobbyOpenRequests(
+  ctx: HttpApiContext,
+  request: IncomingMessage,
+): Promise<Array<Record<string, unknown>>> {
   const now = lobbyNow(ctx);
-  return ctx.lobbyQueue
-    .filter((ticket) => isLiveSeek(ticket, now))
+  const live = ctx.lobbyQueue.filter((ticket) => isLiveSeek(ticket, now));
+  const gated = [
+    ...new Set(
+      live
+        .map((ticket) => ticket.gameSpecId as string)
+        .filter((specId) => persistence.isAllowlistedGameSpec(specId)),
+    ),
+  ];
+  const visible = new Set<string>();
+  if (gated.length > 0) {
+    const reader = await currentAccountUser(request);
+    for (const specId of gated) {
+      if (await persistence.mayPlayVariant(reader, specId)) visible.add(specId);
+    }
+  }
+  return live
+    .filter(
+      (ticket) =>
+        !persistence.isAllowlistedGameSpec(ticket.gameSpecId) || visible.has(ticket.gameSpecId),
+    )
     .slice(0, 20)
     .map((ticket) => ({
       gameSpecId: ticket.gameSpecId,

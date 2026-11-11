@@ -74,7 +74,7 @@ const {
   xqPoint,
   XQ_BOARD_W,
   XQ_BOARD_H,
-  XQ_PIECE_SIZE,
+  XQ_PIECE_DRAW_SIZE,
   XQ_VIEWBOX_PAD,
 } = await import('../apps/web/src/articles/diagrams.js');
 const {
@@ -473,8 +473,8 @@ for (let f = 0; f < 9; f++) {
   for (let r = 1; r <= 10; r++) {
     const { x, y } = xqPoint(f, r, 'red', 0, 28);
     points[`${'abcdefghi'[f]}${r}`] = {
-      x: +(x - XQ_PIECE_SIZE / 2).toFixed(2),
-      y: +(y - XQ_PIECE_SIZE / 2).toFixed(2),
+      x: +(x - XQ_PIECE_DRAW_SIZE / 2).toFixed(2),
+      y: +(y - XQ_PIECE_DRAW_SIZE / 2).toFixed(2),
     };
   }
 }
@@ -558,7 +558,7 @@ const browser = [
   '    <button type="button" data-step="1" aria-label="Forward one move">&#9654;</button>',
   '    <button type="button" data-jump="end" aria-label="Last position">&#9654;&#124;</button>',
   '  </div>',
-  `  <script type="application/json" class="xq-browser-data">${JSON.stringify({ points, size: XQ_PIECE_SIZE, sprites, games: games.games })}</script>`,
+  `  <script type="application/json" class="xq-browser-data">${JSON.stringify({ points, size: XQ_PIECE_DRAW_SIZE, sprites, games: games.games })}</script>`,
   '</div>',
 ].join('\n');
 
@@ -619,7 +619,7 @@ if (!SITE) {
     '    <button type="button" data-play="reset">Reset</button>',
     '  </div>',
     '  <p class="xq-play-note"></p>',
-    `  <script type="application/json" class="xq-play-data">${JSON.stringify({ points, size: XQ_PIECE_SIZE, sprites })}</script>`,
+    `  <script type="application/json" class="xq-play-data">${JSON.stringify({ points, size: XQ_PIECE_DRAW_SIZE, sprites })}</script>`,
     '</div>',
   ].join('\n');
   writeFileSync(path.join(INCLUDES, 'benedict-xq-play.html'), play + '\n');

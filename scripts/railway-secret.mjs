@@ -55,6 +55,12 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import {
+  compareDrainTokenFingerprints,
+  DRAIN_TOKEN_KEYCHAIN_SERVICE,
+  fingerprintDrainToken,
+  listDrainTokenFingerprints,
+} from './lib/drain-token.mjs';
 
 /** The prod Railway project. Matches deploy-engine-worker.mjs. */
 const PROJECT_ID = 'edd519d3-638e-40da-81b4-a8a70eb7eb94';
@@ -65,6 +71,8 @@ Usage:
 
 At least one --var or --set is required. All of them are applied in a single
 Railway call, so the service restarts once no matter how many you pass.
+After a drain token write, compare the active release token with the value
+just pushed; exit nonzero if a stale local source would still win.
 
 Options:
   --service <svc>     Railway service to set variables on (required)
@@ -75,6 +83,8 @@ Options:
   --account <acct>    Keychain account (default: $USER)
   --dry-run           Resolve every value and check the project link; write
                       nothing
+  --skip-deploys      Stage the change without restarting the service; it
+                      takes effect at the next deploy (use before a release)
   --fingerprint       Print a short one-way hash of each value
 
 To store a secret in the Keychain first (do this in your OWN terminal — it
@@ -92,7 +102,7 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const opts = { vars: [], sets: [], dryRun: false, fingerprint: false };
+  const opts = { vars: [], sets: [], dryRun: false, fingerprint: false, skipDeploys: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = () => {
@@ -111,6 +121,7 @@ function parseArgs(argv) {
     } else if (arg === '--account') opts.account = next();
     else if (arg === '--dry-run') opts.dryRun = true;
     else if (arg === '--fingerprint') opts.fingerprint = true;
+    else if (arg === '--skip-deploys') opts.skipDeploys = true;
     else if (arg === '--help' || arg === '-h') {
       console.log(USAGE.trim());
       process.exit(0);
@@ -217,9 +228,10 @@ function assertLinkedToProdProject() {
   process.exit(1);
 }
 
-function setVariables({ service, entries }) {
+function setVariables({ service, entries, skipDeploys = false }) {
   const args = ['variables', '--service', service];
   for (const { name, value } of entries) args.push('--set', `${name}=${value}`);
+  if (skipDeploys) args.push('--skip-deploys');
 
   // spawnSync with an argv array and no shell: values are never parsed by a
   // shell, so they cannot land in shell history or be mangled by quoting.
@@ -240,6 +252,30 @@ function setVariables({ service, entries }) {
     if (stderr) console.error(stderr.split('\n').slice(0, 6).join('\n'));
     process.exit(1);
   }
+}
+
+function verifyDrainToken(entries) {
+  const pushed = entries.find((entry) => entry.name === 'MISTBOARD_DRAIN_TOKEN');
+  if (!pushed) return;
+
+  // Compare against the value Railway just accepted. Checking the running
+  // container now can race its restart and report the previous token instead.
+  // The same lookup order as a release catches stale environment overrides,
+  // unreadable canonical items, and legacy copies without printing a value.
+  const result = compareDrainTokenFingerprints(listDrainTokenFingerprints(), {
+    unset: false,
+    ...fingerprintDrainToken(pushed.value),
+  });
+  if (result.verdict !== 'match') {
+    fail(
+      `drain token ${result.verdict.toUpperCase()}: Railway already set MISTBOARD_DRAIN_TOKEN, ` +
+        `but the active release source "${result.active?.item ?? 'none'}" does not match the ` +
+        `value pushed. Clear a stale MISTBOARD_DRAIN_TOKEN environment override or update ` +
+        `Keychain item "${DRAIN_TOKEN_KEYCHAIN_SERVICE}". After the service restarts, run ` +
+        '`npm run drain:token-check` to compare with the live container.',
+    );
+  }
+  console.log(`ok: drain token from "${result.active.item}" matches the value just pushed.`);
 }
 
 function main() {
@@ -271,9 +307,14 @@ function main() {
     return;
   }
 
-  setVariables({ service: opts.service, entries });
+  setVariables({ service: opts.service, entries, skipDeploys: opts.skipDeploys });
   console.log(`ok: set ${entries.length} variable(s) on service "${opts.service}"`);
-  console.log('     Railway restarts the service once for this change.');
+  verifyDrainToken(entries);
+  console.log(
+    opts.skipDeploys
+      ? '     No restart now; the value takes effect at the next deploy.'
+      : '     Railway restarts the service once for this change.',
+  );
   console.log('     Verify behaviourally — never by reading the values back.');
 }
 

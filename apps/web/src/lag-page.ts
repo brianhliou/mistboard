@@ -63,8 +63,6 @@ function buildLag(locale: Locale = currentLocale()): LagView {
     proseParagraph([t('lag.longAnswer', {}, locale)]),
     server.block,
     network.block,
-    proseSubheading(t('lag.compensationHeading', {}, locale)),
-    proseParagraph([t('lag.compensationBody', {}, locale)]),
   );
 
   return {

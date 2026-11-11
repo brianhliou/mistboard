@@ -6,8 +6,8 @@ describe('/contribute translate section', () => {
     document.body.replaceChildren();
   });
 
-  // The zh rules pages link to /contribute#translate, so the heading must carry
-  // that id, and the section must say how to start: the email and the credit.
+  // A link to /contribute#translate lands on the heading, so it must carry that
+  // id, and the section must say how to start: the email and the credit.
   it('anchors the review role and links the contact email and the thanks page', () => {
     const root = document.createElement('div');
     document.body.append(root);

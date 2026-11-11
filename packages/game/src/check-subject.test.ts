@@ -6,6 +6,10 @@ import {
   atomicXiangqiStateFromFen,
 } from './variants-atomic-xiangqi.js';
 import {
+  type CrazyhouseXiangqiBoard,
+  crazyhouseXiangqiCheckedGeneral,
+} from './variants-crazyhouse-xiangqi.js';
+import {
   type FortressXiangqiBoard,
   fortressXiangqiCheckedGeneral,
 } from './variants-fortress-xiangqi.js';
@@ -78,6 +82,31 @@ test('fortress: an attacked general on its own board', () => {
   };
   assert.equal(fortressXiangqiCheckedGeneral(board, { type: 'playing', turn: 'black' }), 'f8');
   assert.equal(fortressXiangqiCheckedGeneral(board, { type: 'playing', turn: 'red' }), null);
+});
+
+test('crazyhouse xiangqi: the side to move in check, and the mated general after the game', () => {
+  // A horse dropped on d8 checks the black general on e10 (leg d9 empty).
+  const board: CrazyhouseXiangqiBoard = {
+    e10: { color: 'black', role: 'general' },
+    d8: { color: 'red', role: 'horse' },
+    d1: { color: 'red', role: 'general' },
+  };
+  assert.equal(crazyhouseXiangqiCheckedGeneral(board, { type: 'playing', turn: 'black' }), 'e10');
+  assert.equal(crazyhouseXiangqiCheckedGeneral(board, { type: 'playing', turn: 'red' }), null);
+  assert.equal(
+    crazyhouseXiangqiCheckedGeneral(board, {
+      type: 'finished',
+      winner: 'red',
+      reason: 'checkmate',
+    }),
+    'e10',
+  );
+  assert.equal(
+    crazyhouseXiangqiCheckedGeneral(board, { type: 'finished', winner: null, reason: 'stalemate' }),
+    null,
+  );
+  const quiet: CrazyhouseXiangqiBoard = { ...board, d9: { color: 'black', role: 'advisor' } };
+  assert.equal(crazyhouseXiangqiCheckedGeneral(quiet, { type: 'playing', turn: 'black' }), null);
 });
 
 test('jieqi: check reads the same from the masked board as from the truth', () => {

@@ -13,7 +13,7 @@ import './study-index.css';
 import { initialStartFen, normalizeStartFen } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
-import { currentLocale, LOCALE_META } from './i18n/locale.js';
+import { currentLocale, LOCALE_META, localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   buildStudyVariantSelect,
@@ -152,7 +152,7 @@ function renderList(
 
 // Switching tabs starts a fresh browse (drops any active search query).
 function tabHref(tab: StudyTab): string {
-  return tab === 'all' ? '/study' : `/study?tab=${tab}`;
+  return localizedHref(tab === 'all' ? '/study' : `/study?tab=${tab}`);
 }
 
 function buildRail(active: StudyTab): HTMLElement {
@@ -307,7 +307,7 @@ function searchForm(tab: StudyTab, q: string): HTMLElement {
     const term = input.value.trim();
     if (term) params.set('q', term);
     const query = params.toString();
-    window.location.href = query ? `/study?${query}` : '/study';
+    window.location.href = localizedHref(query ? `/study?${query}` : '/study');
   });
   return form;
 }
@@ -473,10 +473,11 @@ async function createStudy(
   // rootFen rides inside the serialized tree blob (SerializedTree.rootFen), so a
   // composition chapter needs no dedicated column or route change.
   //
-  // A dealt variant (banqi, jieqi, flip jungle) has no standard start, so an
-  // author who leaves the position box empty still needs a deal: without one the
-  // chapter would have nothing to replay from and would not open at all. Mint a
-  // fresh one, exactly as visiting /analysis/<variant> with no fen does.
+  // A dealt variant (banqi, jieqi, flip jungle, three kingdoms banqi) has no
+  // standard start, so an author who leaves the position box empty still needs
+  // a deal: without one the chapter would have nothing to replay from and would
+  // not open at all. Mint a fresh one, exactly as visiting /analysis/<variant>
+  // with no fen does.
   const effectiveRootFen = rootFen || initialStartFen(variant) || undefined;
   const root = effectiveRootFen ? { ...EMPTY_TREE, rootFen: effectiveRootFen } : EMPTY_TREE;
   const response = await fetch('/api/studies', {
@@ -490,7 +491,7 @@ async function createStudy(
   });
   if (!response.ok) throw new Error(`create failed: ${response.status}`);
   const body = (await response.json()) as { study: { id: string } };
-  window.location.href = `/study/${body.study.id}`;
+  window.location.href = localizedHref(`/study/${body.study.id}`);
 }
 
 // Cards mirror the lichess /study anatomy: a header (title + meta) over a
@@ -509,7 +510,7 @@ function studyCard(study: StudySummary): HTMLElement {
   const item = document.createElement('li');
   const link = document.createElement('a');
   link.className = 'study-index__card';
-  link.href = `/study/${study.id}`;
+  link.href = localizedHref(`/study/${study.id}`);
 
   link.append(cardHead(study), chapterPreview(study));
   item.append(link);

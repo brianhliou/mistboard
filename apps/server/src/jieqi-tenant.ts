@@ -25,9 +25,12 @@ import {
   getJieqiPlayerView,
   getJieqiPublicView,
   isJieqiLegalMove,
+  JIEQI_ADJUDICATION_RULE,
   JIEQI_SPEC_ID,
+  type JieqiAdjudicationRule,
   type JieqiColor,
   type JieqiDeal,
+  type JieqiGameEndReason,
   type JieqiGameState,
   type JieqiMove,
   type JieqiPieceRole,
@@ -35,9 +38,12 @@ import {
   type JieqiSquare,
   jieqiCheckMark,
   jieqiPerpetualCheckLoser,
+  jieqiPublicDeal,
   jieqiTruthBoard,
   jieqiTruthCaptures,
   oppositeJieqiColor,
+  parseJieqiAdjudicationRule,
+  STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import { jieqiEnabled } from './feature-flags.js';
 import {
@@ -51,7 +57,6 @@ import {
   applyTenantEvent,
   replayTenantEvents,
   tenantPveEngineId,
-  tenantRematchOfferFlags,
 } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
@@ -147,12 +152,49 @@ function asJieqiDeal(setup: unknown): JieqiDeal | undefined {
 // (or an imported lab game, whose referee adjudicated repetition itself) has no
 // marker and replays under the rules it was played under, so a position that
 // recurred three times mid-game does not cut an old game short. A missing setup
-// (tests, the standard deal) gets the current rule.
-export type JieqiSetup = JieqiDeal & { repetition?: true };
+// (tests, the standard deal) keeps the original check-only repetition rule.
+// Only createSetup stamps jqe-v1; absence never enables chase or the 80-ply clock.
+export type JieqiSetup = JieqiDeal & {
+  repetition?: true;
+  adjudicationRule?: JieqiAdjudicationRule;
+};
+
+export function jieqiSetupAdjudicationRule(setup: unknown): JieqiAdjudicationRule | undefined {
+  return parseJieqiAdjudicationRule(
+    setup !== null && typeof setup === 'object'
+      ? (setup as { adjudicationRule?: unknown }).adjudicationRule
+      : undefined,
+  );
+}
 
 export function enforcesRepetition(setup: unknown): boolean {
   if (setup === undefined || setup === null) return true;
   return typeof setup === 'object' && (setup as { repetition?: unknown }).repetition === true;
+}
+
+type JieqiEvent = TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>;
+
+// A finished game's log as every reader may know it (jieqiPublicDeal in
+// @mistboard/game): the room-created deal keeps only the identities of pieces
+// that moved, so nothing replayed from it can name a piece captured face-down
+// or one never turned over. Every surface that serves a finished jieqi game
+// outside its live room (review API, watch replay, exports, analysis) replays
+// this log, never the stored one. Legality and the result do not depend on a
+// face-down piece's identity (it moves as its home square's role), so the
+// replay finishes exactly as the game did.
+export function jieqiPublicEvents<E extends JieqiEvent>(events: readonly E[]): E[] {
+  const moves = events.flatMap((event) => (event.type === 'move-played' ? [event.move] : []));
+  return events.map((event) => {
+    if (event.type !== 'room-created') return event;
+    const deal = asJieqiDeal(event.setup) ?? STANDARD_JIEQI_DEAL;
+    const rule = jieqiSetupAdjudicationRule(event.setup);
+    const setup: JieqiSetup = {
+      ...jieqiPublicDeal(deal, moves),
+      ...(rule ? { adjudicationRule: rule } : {}),
+      ...(enforcesRepetition(event.setup) ? { repetition: true as const } : {}),
+    };
+    return { ...event, setup };
+  });
 }
 
 // Identity is hidden, position is not: moves are public to both seats and to a
@@ -241,6 +283,19 @@ export function jieqiLiveCheckMarks(room: {
   return cache.marks;
 }
 
+const JIEQI_TERMINATIONS = {
+  checkmate: 'checkmate',
+  stalemate: 'stalemate',
+  'no-capture-clock': 'progress-clock',
+  timeout: 'timeout',
+  resignation: 'resignation',
+  abandonment: 'abandonment',
+  agreement: 'draw',
+  repetition: 'repetition',
+  chasing: 'chasing',
+  'perpetual-chase': 'perpetual-chase',
+} as const satisfies Record<JieqiGameEndReason, persistence.GameTermination>;
+
 export const jieqiTenant: JieqiTenant = {
   kind: 'jieqi',
   gameSpecId: JIEQI_SPEC_ID,
@@ -252,12 +307,15 @@ export const jieqiTenant: JieqiTenant = {
     createInitialState: (roomId, setup) =>
       createInitialJieqiState(roomId, asJieqiDeal(setup), {
         repetition: enforcesRepetition(setup),
+        adjudicationRule: jieqiSetupAdjudicationRule(setup),
       }),
-    createSetup: (): JieqiSetup => ({ ...createJieqiDeal(jieqiDealRng()), repetition: true }),
-    // Apply the move, then the xiangqi chasing rule: a threefold repetition one
-    // side reached by checking on every one of its moves is a LOSS for that
-    // side, not a draw (jieqi wins and losses follow xiangqi). The history the
-    // verdict needs rides on the state, so event replay reruns it identically.
+    createSetup: (): JieqiSetup => ({
+      ...createJieqiDeal(jieqiDealRng()),
+      repetition: true,
+      adjudicationRule: JIEQI_ADJUDICATION_RULE,
+    }),
+    // The stamped kernel adjudicates check/chase itself. Legacy games retain
+    // this check-only upgrade of a repetition draw, including the old reason.
     applyMove: (state, move) => {
       const next = applyJieqiMove(state, move);
       if (next.status.type === 'finished' && next.status.reason === 'repetition') {
@@ -275,6 +333,10 @@ export const jieqiTenant: JieqiTenant = {
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
+    }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
     // Imported lab games only (engine-match-import.ts): the lab referee draws a
     // threefold repetition, which this kernel deliberately does not adjudicate.
@@ -296,7 +358,9 @@ export const jieqiTenant: JieqiTenant = {
   visibility: {
     clientEventFor: jieqiClientEventFor,
     viewForClient: (state, client) => getJieqiClientView(state, client),
-    truthView: (state) => getJieqiTruthView(state),
+    // No truthView: a finished room keeps serving each seat its own view and a
+    // spectator the public one. A piece captured face-down stays known only to
+    // its capturer, after the game too (Brian, 2026-10-16).
   },
   engine: {
     terminalContext: 'repetition-window',
@@ -307,26 +371,20 @@ export const jieqiTenant: JieqiTenant = {
   },
   // Emit the room mode + engine id so the client knows a finished PvE game was
   // PvE and "Play again" re-creates a PvE game vs the same engine (not a PvP
-  // invite), check marks, and a finished PvP room's rematch offers.
+  // invite), and check marks. A finished PvP room's rematch offers ride the
+  // shared snapshot (tenantSnapshotPayload), as for every tenant.
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);
       const marks = jieqiLiveCheckMarks(room);
       return {
         ...(pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId }),
+        // Public rules metadata only. No deal, pool or repetition history.
+        ...(room.projection.state.adjudicationRule
+          ? { adjudicationRule: room.projection.state.adjudicationRule }
+          : {}),
         // Only when a move gave check, so a check-free room's wire is unchanged.
         ...(marks.some((mark) => mark !== '') ? { checkMarks: marks } : {}),
-        // PvP rematch state (variant-tenant/rematch.ts), only once the game is
-        // over, so a reload shows a pending offer and a live room's wire is
-        // unchanged. The flags say which colour offered, nothing else.
-        ...(pveEngineId === null && room.projection.state.status.type === 'finished'
-          ? {
-              rematch: {
-                offers: tenantRematchOfferFlags(jieqiTenant, room),
-                finalizedRoomId: room.rematch.finalizedRoomId ?? null,
-              },
-            }
-          : {}),
       };
     },
   },
@@ -340,8 +398,11 @@ export const jieqiTenant: JieqiTenant = {
     // GameTermination value (the only no-progress reason the games_termination_check
     // CHECK accepts) is 'progress-clock'. Translate it — a blind cast launders the
     // invalid string past TS and only fails at the DB write, silently dropping the game.
-    termination: (reason: string): persistence.GameTermination =>
-      reason === 'no-capture-clock' ? 'progress-clock' : (reason as persistence.GameTermination),
+    termination: (reason: string): persistence.GameTermination => {
+      if (!Object.hasOwn(JIEQI_TERMINATIONS, reason))
+        throw new Error(`unknown jieqi termination: ${reason}`);
+      return JIEQI_TERMINATIONS[reason as JieqiGameEndReason];
+    },
     logKindPrefix: 'jieqi',
     logLabel: 'Jieqi',
   },

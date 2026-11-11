@@ -4,10 +4,21 @@ import https from 'node:https';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin, type ResolvedConfig } from 'vitest/config';
+import { posthogSourcemaps } from './scripts/posthog-sourcemaps.mjs';
+import {
+  DEV_PUBLIC_STUDIES_ORIGIN,
+  localStudyMissing,
+  PUBLIC_STUDY_REQUEST_HEADERS,
+  publicStudiesEnabled,
+  publicStudyFallbackUrl,
+} from './src/dev-study-fallback';
 import { INCLUDE_DEV_PUBLIC_ARTIFACTS_ENV, shouldCopyPublicAsset } from './src/public-assets';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://localhost:3001';
+const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://127.0.0.1:3001';
+const DEV_PUBLIC_STUDIES = publicStudiesEnabled(process.env);
+const DEV_PUBLIC_STUDIES_FROM =
+  process.env.MISTBOARD_DEV_PUBLIC_STUDIES_ORIGIN ?? DEV_PUBLIC_STUDIES_ORIGIN;
 const FEEDBACK_FILE = resolve(
   __dirname,
   '..',
@@ -36,8 +47,10 @@ function devWebSocketUrlForApiUrl(apiUrl: string): string | null {
 // SharedArrayBuffer. require-corp, the same COEP prod sends: WebKit ignores
 // credentialless, so a credentialless dev server can never show the engine on
 // iPhone/iPad or Safari (#276). In prod the server scopes these headers to the
-// review routes (server-http.ts); here they cover every response, which is
-// stricter.
+// review routes (server-http.ts). In dev they cover every response except
+// article documents: third-party Bilibili frames cannot opt into our COEP,
+// so those documents must stay non-isolated to preview them as in production.
+// Scripts and engine assets keep isolation even when loaded by an article.
 //
 // A middleware, not `server.headers`: Vite's static handler answers a
 // revalidation with a bare 304 that drops `server.headers`, and WebKit judges a
@@ -51,7 +64,16 @@ function crossOriginIsolationPlugin(): Plugin {
   return {
     name: 'mistboard-cross-origin-isolation',
     configureServer(server) {
-      server.middlewares.use((_req, res, next) => {
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0];
+        const articleDocument =
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          req.headers.accept?.includes('text/html') &&
+          /^\/(?:zh-han[st]\/)?(?:blog|rules)\/[a-z0-9-]+\/?$/.test(pathname);
+        if (articleDocument) {
+          next();
+          return;
+        }
         res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
         res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         next();
@@ -136,8 +158,13 @@ function devApiProxyPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         // /og/ too: the per-game images the Share & export tab downloads are
-        // drawn by the server, which owns that path in production.
-        if (!req.url?.startsWith('/api/') && !req.url?.startsWith('/og/')) {
+        // drawn by the server, which owns that path in production. /x/ is the
+        // server's short-link redirect (x-short-links.ts), same reason.
+        if (
+          !req.url?.startsWith('/api/') &&
+          !req.url?.startsWith('/og/') &&
+          !req.url?.startsWith('/x/')
+        ) {
           next();
           return;
         }
@@ -157,6 +184,17 @@ function devApiProxyPlugin(): Plugin {
             },
           },
           (proxyRes) => {
+            // A study the local server lacks is read from the public site, so
+            // an article's study embeds preview locally (dev-study-fallback.ts:
+            // anonymous GET of public studies only; a local study always wins).
+            const publicUrl = DEV_PUBLIC_STUDIES
+              ? publicStudyFallbackUrl(req.method, req.url, DEV_PUBLIC_STUDIES_FROM)
+              : null;
+            if (publicUrl && localStudyMissing(proxyRes.statusCode ?? 502)) {
+              proxyRes.resume();
+              void servePublicStudy(publicUrl, res);
+              return;
+            }
             res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
             proxyRes.pipe(res);
           },
@@ -169,6 +207,24 @@ function devApiProxyPlugin(): Plugin {
       });
     },
   };
+}
+
+/** Answer a local study read with the public site's copy, headers trimmed to
+ *  the body's type and marked so a reader of the network tab can tell. */
+async function servePublicStudy(url: string, res: http.ServerResponse) {
+  try {
+    const upstream = await fetch(url, { headers: { ...PUBLIC_STUDY_REQUEST_HEADERS } });
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.writeHead(upstream.status, {
+      'content-type': upstream.headers.get('content-type') ?? 'application/json',
+      'cache-control': 'no-store',
+      'x-mistboard-dev-source': new URL(url).origin,
+    });
+    res.end(body);
+  } catch {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'dev_public_study_failed' }));
+  }
 }
 
 function copyFilteredPublicDirPlugin(): Plugin {
@@ -205,13 +261,19 @@ export default defineConfig(({ command }) => {
       : null;
 
   return {
+    server: {
+      host: process.env.MISTBOARD_DEV_LAN === '1' ? '0.0.0.0' : '127.0.0.1',
+      strictPort: true,
+    },
     plugins: [
       crossOriginIsolationPlugin(),
       annotationsApiPlugin(),
       devApiProxyPlugin(),
       copyFilteredPublicDirPlugin(),
+      ...posthogSourcemaps({ command, cwd: __dirname }),
     ],
     build: {
+      sourcemap: 'hidden',
       copyPublicDir: false,
       // Emitted to dist/.vite/manifest.json; the prerender step reads it to bake
       // route-chunk CSS + modulepreload links into the prerendered pages, so
@@ -227,6 +289,7 @@ export default defineConfig(({ command }) => {
       : {}),
     test: {
       environment: 'happy-dom',
+      setupFiles: ['./src/test-setup.ts'],
       // Above vitest's 5s default. A test that opens with `await import()` is
       // charged the whole cold module graph, and the heavy ones cost ~850ms on
       // an idle machine; across 260+ files on parallel workers that blew the

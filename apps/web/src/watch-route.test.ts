@@ -16,6 +16,7 @@ import {
   loadWatchMainBeforePreviews,
   renderWatchChannelList,
   renderWatchHeadline,
+  renderWatchMainLiveLink,
   renderWatchMainReviewLink,
   renderWatchQueue,
   renderWatchReplaySkeleton,
@@ -27,6 +28,7 @@ import {
   watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
+  watchGameStatusLine,
   watchKeyboardHandlers,
   watchPovToggleApplies,
   watchQueueMatchupLabel,
@@ -186,6 +188,62 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
   });
 
+  // Xiangqi mahjong's east/west are bookkeeping: the label read "Draw" for every
+  // decided match (no branch matched 'east-wins'). It names the winning player.
+  it('names the winning player of a xiangqi mahjong match, never the seat', () => {
+    const base: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 60,
+      result: 'west-wins',
+      roomId: 'xmj_watch',
+      termination: 'checkmate',
+      variant: 'xiangqi-mahjong',
+      whiteName: null,
+      participants: [
+        {
+          color: 'east',
+          displayName: 'brianhliou',
+          subjectType: 'user',
+          subjectId: 'u_brian',
+          visibility: 'public',
+        },
+        {
+          color: 'west',
+          displayName: 'Misty',
+          subjectType: 'bot',
+          subjectId: null,
+          visibility: 'public',
+        },
+      ],
+    };
+    expect(watchQueueResultLabel(base)).toBe('Misty wins');
+    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
+    expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
+    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
+  });
+
+  // The meta line read "Guest wins by On points": "On points" is a phrase, not a reason noun.
+  it('says a match decided on points wins on points', () => {
+    const game: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 60,
+      result: 'east-wins',
+      roomId: 'xmj_points',
+      termination: 'points',
+      variant: 'xiangqi-mahjong',
+      whiteName: null,
+      participants: [],
+    };
+    expect(watchGameStatusLine(game)).toBe('Guest wins on points');
+    expect(watchGameStatusLine({ ...game, termination: 'resignation' })).toBe(
+      'Guest wins by resignation',
+    );
+  });
+
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {
     const base: FeaturedGame = {
       blackName: null,
@@ -250,6 +308,18 @@ describe('watchGamePlayers', () => {
   it('leaves a flip game unbound rather than guessing when firstColor is missing', () => {
     const rows = watchGamePlayers(flipGame('jungle-flip', null));
     expect(rows.map((row) => row.color)).toEqual([null, null]);
+  });
+
+  it('draws no seat disc for a variant whose seats have no colour', () => {
+    // Regression: Xiangqi Mahjong's rail showed two grey discs; its room shows none.
+    expect(watchGamePlayers(flipGame('xiangqi-mahjong', null)).map((row) => row.noDisc)).toEqual([
+      true,
+      true,
+    ]);
+    expect(watchGamePlayers(flipGame('xiangqi', null)).map((row) => row.noDisc)).toEqual([
+      false,
+      false,
+    ]);
   });
 
   it('passes the seat straight through for variants where seat == ink', () => {
@@ -853,6 +923,63 @@ describe('renderWatchMainReviewLink', () => {
     renderWatchMainReviewLink(link, { ...finishedGame, roomId: 'other' });
 
     expect(link.querySelector('.watch-main-review-link__chip')).toBe(chip);
+  });
+});
+
+// A finished board opens its review page; a LIVE board opens its room, where a
+// visitor watches as a spectator (the server serves a spectator the room's
+// public view: roomViewPolicy). Until 2026-10-28 live mode cleared the overlay,
+// so the board you were watching on /watch was the one thing you could not click.
+describe('renderWatchMainLiveLink', () => {
+  const makeLink = () => {
+    const link = document.createElement('a');
+    const chip = document.createElement('span');
+    chip.className = 'watch-main-review-link__chip';
+    link.append(chip);
+    return { chip, link };
+  };
+
+  it('links the live board to its room as a spectator', () => {
+    const { chip, link } = makeLink();
+
+    renderWatchMainLiveLink(link, {
+      matchup: 'Guest vs Misty',
+      roomId: 'jgl_08d3d49f-3b17-44ee-9465-6cb27925d031',
+    });
+
+    expect(link.hidden).toBe(false);
+    expect(link.getAttribute('href')).toBe('/room/jgl_08d3d49f-3b17-44ee-9465-6cb27925d031');
+    expect(link.getAttribute('aria-label')).toBe('Watch Guest vs Misty');
+    expect(link.title).toBe('Watch Guest vs Misty');
+    expect(chip.textContent).toBe('Watch');
+    expect(link.querySelector('.watch-main-review-link__chip')).toBe(chip);
+  });
+
+  it('hands the overlay back to the review link when the game finishes', () => {
+    const { chip, link } = makeLink();
+    renderWatchMainLiveLink(link, { matchup: 'Guest vs Misty', roomId: 'jgl_1' });
+
+    renderWatchMainReviewLink(link, {
+      blackName: 'Misty',
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 90,
+      result: 'black-wins',
+      roomId: 'jgl_1',
+      termination: 'checkmate',
+      variant: 'jungle',
+      whiteName: 'Guest',
+    });
+
+    expect(link.getAttribute('href')).not.toBe('/room/jgl_1');
+    expect(link.getAttribute('aria-label')).toMatch(/^Review /);
+    expect(chip.textContent).toBe('Review');
+  });
+
+  it('encodes the room id', () => {
+    const { link } = makeLink();
+    renderWatchMainLiveLink(link, { matchup: 'A vs B', roomId: 'a/b c' });
+    expect(link.getAttribute('href')).toBe('/room/a%2Fb%20c');
   });
 });
 

@@ -151,7 +151,8 @@ registerVariantTenant({
     legacyVariants: ['crazyhouse-xiangqi'],
   },
   rooms: crazyhouseXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(crazyhouseXiangqiRooms.values()),
+  activeGameCount: () =>
+    countActiveTenantGames(crazyhouseXiangqiRooms.values(), crazyhouseXiangqiTenant),
   getOrLoadRoom: (roomId) =>
     getOrLoadCrazyhouseXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>

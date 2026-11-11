@@ -37,6 +37,8 @@ export interface MoveTimesChart {
 
 export type MoveTimesChartOptions = {
   seatColors?: ReviewSeatColors;
+  /** Slot playing ply 1; clocks stay keyed to the two analysis slots. */
+  firstMover?: 'red' | 'black';
   /** Remaining clocks per ply (series[0] = the start, series[p] = after ply p).
    *  Absent = an untimed game: the bars draw alone. */
   clocks?: readonly ShowcaseClockPair[];
@@ -51,8 +53,12 @@ export function createMoveTimesChart(
   opts: MoveTimesChartOptions = {},
 ): MoveTimesChart {
   const plies = times.length;
-  const firstInk = reviewColorForSeat('red', opts.seatColors);
-  const secondInk = reviewColorForSeat('black', opts.seatColors);
+  const secondStarts = opts.firstMover === 'black';
+  const firstInk = reviewColorForSeat(secondStarts ? 'black' : 'red', opts.seatColors);
+  const secondInk = reviewColorForSeat(secondStarts ? 'red' : 'black', opts.seatColors);
+  const clocks = secondStarts
+    ? opts.clocks?.map(({ first, second }) => ({ first: second, second: first }))
+    : opts.clocks;
   const inkOf = (ply: number): ReviewInk => (ply % 2 === 1 ? firstInk : secondInk);
 
   const el = document.createElement('div');
@@ -60,7 +66,7 @@ export function createMoveTimesChart(
   const chart = document.createElement('div');
   chart.className = 'review-move-times';
 
-  const overlay = opts.clocks ? clockOverlay(opts.clocks, plies, firstInk, secondInk) : null;
+  const overlay = clocks ? clockOverlay(clocks, plies, firstInk, secondInk) : null;
   if (overlay) chart.append(overlay);
 
   const max = Math.max(1, ...times);
@@ -119,7 +125,7 @@ export function createMoveTimesChart(
   }
 
   function showTip(ply: number): void {
-    const clock = opts.clocks?.[ply];
+    const clock = clocks?.[ply];
     showChartTip(tip, {
       move: opts.moveLabel?.(ply) ?? fallbackMoveLabel(ply),
       value: formatDuration(times[ply - 1] ?? 0),

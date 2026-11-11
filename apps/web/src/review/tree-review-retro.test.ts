@@ -6,7 +6,7 @@ import type { XiangqiMove } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import type { GameAnalysis } from './game-analysis.js';
-import { mountXiangqiReview } from './xiangqi-review.js';
+import { mountXiangqiReview, type XiangqiReviewConfig } from './xiangqi-review.js';
 
 // Red opens with the rook (a1-a2); the engine wanted the cannon (b3-e3) and
 // grades a1-a2 a mistake.
@@ -27,10 +27,11 @@ const ANALYSIS: GameAnalysis = {
   black: { accuracy: 100, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },
 };
 
-function mount(): HTMLElement {
+function mount(config: Partial<XiangqiReviewConfig> = {}): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
   mountXiangqiReview(root, {
+    reviewSurface: 'analysis',
     ariaLabel: 'Review',
     title: 'Review',
     summary: '',
@@ -41,6 +42,7 @@ function mount(): HTMLElement {
       fetchCached: async () => ANALYSIS,
       run: async () => ANALYSIS,
     },
+    ...config,
   });
   return root;
 }
@@ -67,8 +69,82 @@ afterEach(() => pinXiangqiNotation(null));
 
 describe('learn from your mistakes (mounted)', () => {
   afterEach(() => {
+    window.dispatchEvent(new Event('pagehide'));
     document.body.replaceChildren();
   });
+
+  it.each([null, undefined])('hides Learn on a game with retroSide %s', async (retroSide) => {
+    const root = mount({ reviewSurface: 'game', retroSide });
+    await settle();
+    expect(root.querySelector('.analysis-summary')).not.toBeNull();
+    expect(root.querySelector('.analysis-summary__learn')).toBeNull();
+  });
+
+  it('also fails closed when the surface defaults to game', async () => {
+    const root = mount({ reviewSurface: undefined });
+    await settle();
+    expect(root.querySelector('.analysis-summary__learn')).toBeNull();
+  });
+
+  it('keeps studies without Learn even with a player side', async () => {
+    const root = mount({ reviewSurface: 'study', retroSide: 'red' });
+    await settle();
+    expect(root.querySelector('.analysis-summary__learn')).toBeNull();
+  });
+
+  it.each([false, true])(
+    'practises the game player’s Black side with initialFlipped %s',
+    async (initialFlipped) => {
+      const analysis: GameAnalysis = {
+        ...ANALYSIS,
+        evals: [...ANALYSIS.evals, { ply: 2, cp: 120, mate: null, best: 'b3e3', pv: ['b3e3'] }],
+        moves: [...ANALYSIS.moves, { ply: 2, mover: 'black', judgment: 'mistake', accuracy: 60 }],
+      };
+      const root = mount({
+        reviewSurface: 'game',
+        retroSide: 'black',
+        initialFlipped,
+        moves: [...PLAYED, { from: 'a10', to: 'a9' }],
+        analysis: {
+          requestLabel: 'Analyse',
+          fetchCached: async () => analysis,
+          run: async () => analysis,
+        },
+      });
+      await settle();
+      const learn = () => root.querySelector<HTMLButtonElement>('.analysis-summary__learn')!;
+      expect(learn()).not.toBeNull();
+      learn().click();
+      expect(box(root)?.textContent).toContain('Find a better move for Black');
+      expect(box(root)?.textContent).toContain('a10-a9 was played');
+
+      // A normal board flip neither changes an active session nor the next one.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' }));
+      expect(box(root)?.textContent).toContain('Find a better move for Black');
+      box(root)!.querySelector<HTMLButtonElement>('.retro-box__close')!.click();
+      learn().click();
+      expect(box(root)?.textContent).toContain('Find a better move for Black');
+
+      box(root)!.querySelectorAll<HTMLButtonElement>('.retro-box__choice')[1]!.click();
+      expect(box(root)?.textContent).toContain("Done reviewing Black's mistakes");
+      expect(box(root)?.textContent).not.toContain("Review Red's mistakes");
+    },
+  );
+
+  it.each([false, true])(
+    'keeps analysis retro on the bottom side with initialFlipped %s',
+    async (initialFlipped) => {
+      // An analysis line belongs to its reader, regardless of a supplied game side.
+      const root = mount({ initialFlipped, retroSide: initialFlipped ? 'red' : 'black' });
+      await settle();
+      const learn = root.querySelector<HTMLButtonElement>('.analysis-summary__learn');
+      expect(learn).not.toBeNull();
+      learn!.click();
+      expect(box(root)?.textContent).toContain(
+        initialFlipped ? 'No mistakes found for Black' : 'Find a better move for Red',
+      );
+    },
+  );
 
   it('opens on the position before the mistake, hides its refutation, and restores it on close', async () => {
     const root = mount();

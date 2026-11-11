@@ -2,25 +2,31 @@
 // turned out to be (the mover's own on a reveal, the opponent's on a face-down capture), the
 // odds of that, the swing, and the bag it came out of.
 //
-// The board's hit layer sits above the marker layer and owns every click (piece selection,
-// drags), so the card does not listen on the mark itself. It watches pointer positions on
-// the board host and tests them against the mark: the piece's hit disc and the die on its
-// corner. That keeps the board's own input untouched: a tap on the revealed piece still
-// selects it, and also opens the card. The move list's luck badge opens the same card for
-// its own move (attachLuckBadgeCard).
+// The card and its triggers are mark-card.ts's, shared with the move-grade card; this file
+// says what the luck card shows and where its mark is: the piece's hit disc and the die on
+// its corner. The move list's luck badge opens the same card for its own move
+// (attachLuckBadgeCard).
 
-import type { JieqiPieceRole } from '@mistboard/game';
+import type { JieqiPieceRole, JungleFlipPieceRole } from '@mistboard/game';
 import { luckDieIconSvg } from '../board-luck-mark.js';
 import { t } from '../i18n/catalog.js';
-import {
-  type JieqiChanceKind,
-  luckPoints,
-  luckSize,
-  luckSizeTone,
-  type RevealOdds,
-} from './jieqi-luck-mark.js';
+import { overGradeBadge } from './grade-mark-card.js';
+import { type JieqiChanceKind, luckPoints, luckSize, luckSizeTone } from './jieqi-luck-mark.js';
+import { attachBoardMarkCard, attachListBadgeCard, type MarkCardContent } from './mark-card.js';
 
-export type LuckCardDetail = {
+type LuckRole = JieqiPieceRole | JungleFlipPieceRole;
+type Color = 'red' | 'black';
+
+/** A public draw, optionally distinguishing inks in a mixed-colour pool. */
+export type LuckRevealOdds<Role extends LuckRole = JieqiPieceRole> = {
+  role: Role;
+  color?: Color;
+  count: number;
+  total: number;
+  pool: { role: Role; color?: Color; count: number }[];
+};
+
+export type LuckCardDetail<Role extends LuckRole = JieqiPieceRole> = {
   /** The square the mark is drawn on; the card only opens over a mark on this square. */
   square: string;
   color: 'red' | 'black';
@@ -29,9 +35,12 @@ export type LuckCardDetail = {
   kind?: JieqiChanceKind;
   /** The reveal's odds (the mover's pool). Null when unknown, or when nothing was revealed:
    *  the card then states only the swing. */
-  odds: RevealOdds | null;
+  odds: LuckRevealOdds<Role> | null;
   /** The face-down capture's odds (the victim's pool as the capturer knew it). */
-  capture?: RevealOdds | null;
+  capture?: LuckRevealOdds<Role> | null;
+  /** Ink word for variants whose second ink is Blue. */
+  sideLabel?: string;
+  secondColorLabel?: string;
 };
 
 type RoleKey =
@@ -43,30 +52,49 @@ type RoleKey =
   | 'review.luckCard.role.soldier'
   | 'review.luckCard.role.general';
 
-function roleName(role: JieqiPieceRole): string {
+function roleName(role: LuckRole): string {
+  if (
+    role === 'rat' ||
+    role === 'cat' ||
+    role === 'dog' ||
+    role === 'wolf' ||
+    role === 'leopard' ||
+    role === 'tiger' ||
+    role === 'lion'
+  )
+    return t(`editor.role.${role}`);
   return t(`review.luckCard.role.${role}` as RoleKey);
 }
 
 /** The tone the card paints in: the die's, so a one-pip reveal is grey on both. */
-export function luckCardTone(detail: LuckCardDetail): 'lucky' | 'unlucky' | 'even' {
+export function luckCardTone<Role extends LuckRole>(
+  detail: LuckCardDetail<Role>,
+): 'lucky' | 'unlucky' | 'even' {
   return luckSizeTone(detail.luck);
 }
 
-type PieceSvg = (role: JieqiPieceRole, color: 'red' | 'black') => string;
+type PieceSvg<Role extends LuckRole> = (role: Role, color: Color) => string;
 
-function poolHtml(
+function drawName(role: LuckRole, color?: Color, secondColorLabel?: string): string {
+  return color
+    ? `${color === 'black' && secondColorLabel ? secondColorLabel : t(color === 'red' ? 'setup.red' : 'setup.black')} ${roleName(role)}`
+    : roleName(role);
+}
+
+function poolHtml<Role extends LuckRole>(
   color: 'red' | 'black',
-  odds: RevealOdds,
+  odds: LuckRevealOdds<Role>,
   label: string,
-  pieceSvg: PieceSvg,
+  pieceSvg: PieceSvg<Role>,
+  secondColorLabel?: string,
 ): string {
   return (
     `<div class="luck-card__pool-label">${label}</div>` +
     `<div class="luck-card__pool">${odds.pool
       .map(
         (entry) =>
-          `<span class="luck-card__chip${entry.role === odds.role ? ' luck-card__chip--drawn' : ''}" title="${roleName(entry.role)}">` +
-          `${pieceSvg(entry.role, color)}<span class="luck-card__count">×${entry.count}</span></span>`,
+          `<span class="luck-card__chip${entry.role === odds.role && entry.color === odds.color ? ' luck-card__chip--drawn' : ''}" title="${drawName(entry.role, entry.color, secondColorLabel)}">` +
+          `${pieceSvg(entry.role, entry.color ?? color)}<span class="luck-card__count">×${entry.count}</span></span>`,
       )
       .join('')}</div>`
   );
@@ -88,11 +116,14 @@ function headHtml(piece: string, text: string): string {
  * both bags at once), so its card names both draws with their odds under one luck line and
  * leaves the bags out. Pure: piece art comes in through `pieceSvg` so tests need no board.
  */
-export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string {
+export function luckCardHtml<Role extends LuckRole>(
+  detail: LuckCardDetail<Role>,
+  pieceSvg: PieceSvg<Role>,
+): string {
   const tone = luckSizeTone(detail.luck);
   const kind = detail.kind ?? 'reveal';
   const victim = detail.color === 'red' ? 'black' : 'red';
-  const side = t(detail.color === 'red' ? 'summary.red' : 'summary.black');
+  const side = detail.sideLabel ?? t(detail.color === 'red' ? 'summary.red' : 'summary.black');
   const points = luckPoints(detail.luck);
   const swing = (text: string) =>
     `<div class="luck-card__swing luck-card__swing--${tone}">${text}</div>`;
@@ -101,14 +132,18 @@ export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string
     `<span>${t(`review.luckCard.size.${luckSize(detail.luck)}`)}</span></div>`;
   if (kind === 'both') {
     const draw = (
-      odds: RevealOdds | null | undefined,
+      odds: LuckRevealOdds<Role> | null | undefined,
       key: 'review.luckCard.drawRevealed' | 'review.luckCard.drawCaptured',
       color: 'red' | 'black',
     ): string =>
       odds
         ? `<div class="luck-card__draw">${headHtml(
             pieceSvg(odds.role, color),
-            t(key, { piece: roleName(odds.role), count: odds.count, total: odds.total }),
+            t(key, {
+              piece: drawName(odds.role, odds.color, detail.secondColorLabel),
+              count: odds.count,
+              total: odds.total,
+            }),
           )}</div>`
         : '';
     return (
@@ -124,7 +159,7 @@ export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string
   const pieceColor = capture ? victim : detail.color;
   const lead = odds
     ? t(capture ? `review.luckCard.captureLead.${tone}` : `review.luckCard.lead.${tone}`, {
-        piece: roleName(odds.role),
+        piece: drawName(odds.role, odds.color, detail.secondColorLabel),
         count: odds.count,
         total: odds.total,
       })
@@ -137,54 +172,24 @@ export function luckCardHtml(detail: LuckCardDetail, pieceSvg: PieceSvg): string
     capture ? 'review.luckCard.couldHaveBeenCaptured' : 'review.luckCard.couldHaveBeen',
   );
   return (
-    headHtml(odds ? pieceSvg(odds.role, pieceColor) : '', lead) +
+    headHtml(odds ? pieceSvg(odds.role, odds.color ?? pieceColor) : '', lead) +
     swing(effect) +
     size +
-    (odds ? poolHtml(pieceColor, odds, poolLabel, pieceSvg) : '')
+    (odds ? poolHtml(pieceColor, odds, poolLabel, pieceSvg, detail.secondColorLabel) : '')
   );
 }
 
-/** The card element and its placement, shared by the board mark and the move-list badge. */
-function createLuckCard(pieceSvg: PieceSvg) {
-  const card = document.createElement('div');
-  card.className = 'luck-card';
-  card.setAttribute('role', 'tooltip');
-  card.hidden = true;
-  document.body.append(card);
-  let shownFor: string | null = null;
-
-  /** Open the card for `detail`, centred over `rect` (the piece, or the badge); below it
-   *  when the top is tight. */
-  function show(rect: DOMRect, detail: LuckCardDetail): void {
-    const key = `${detail.square}:${detail.kind ?? 'reveal'}:${detail.luck}`;
-    if (shownFor !== key) {
-      card.innerHTML = luckCardHtml(detail, pieceSvg);
-      card.dataset.tone = luckCardTone(detail);
-      shownFor = key;
-    }
-    card.hidden = false;
-    // Measure after unhiding, then place above the anchor; below when the top is tight.
-    const cw = card.offsetWidth;
-    const ch = card.offsetHeight;
-    const gap = 10;
-    const margin = 8;
-    let left = rect.left + rect.width / 2 - cw / 2;
-    left = Math.max(margin, Math.min(left, window.innerWidth - cw - margin));
-    const above = rect.top - ch - gap;
-    const below = rect.bottom + gap;
-    const top = above >= margin ? above : below;
-    card.dataset.side = above >= margin ? 'above' : 'below';
-    card.style.left = `${Math.round(left)}px`;
-    card.style.top = `${Math.round(top)}px`;
-    card.classList.add('luck-card--open');
-  }
-
-  function hide(): void {
-    card.classList.remove('luck-card--open');
-    card.hidden = true;
-  }
-
-  return { el: card, show, hide };
+/** The card's content for `detail`, keyed so an unchanged card is not redrawn. One builder
+ *  for the board mark and the move-list badge. */
+function luckCardContent<Role extends LuckRole>(
+  detail: LuckCardDetail<Role>,
+  pieceSvg: PieceSvg<Role>,
+): MarkCardContent {
+  return {
+    key: JSON.stringify(detail),
+    html: luckCardHtml(detail, pieceSvg),
+    tone: luckCardTone(detail),
+  };
 }
 
 /** Slack around the die's square, in px: its white edge (stroke) is drawn outside the
@@ -217,15 +222,12 @@ export function luckMarkContains(
  * drawn (or null); the card opens only while a `.luck-mark` for that square is in the DOM,
  * so navigating away closes it without the caller having to. Returns a detach function.
  */
-export function attachLuckMarkCard(
+export function attachLuckMarkCard<Role extends LuckRole>(
   boardHost: HTMLElement,
-  getDetail: () => LuckCardDetail | null,
-  pieceSvg: PieceSvg,
+  getDetail: () => LuckCardDetail<Role> | null,
+  pieceSvg: PieceSvg<Role>,
 ): () => void {
-  const card = createLuckCard(pieceSvg);
-  let pinned = false;
-
-  function markHit(): { rect: DOMRect; die: DOMRect | null; detail: LuckCardDetail } | null {
+  return attachBoardMarkCard(boardHost, () => {
     const detail = getDetail();
     if (!detail) return null;
     const mark = boardHost.querySelector(
@@ -233,73 +235,15 @@ export function attachLuckMarkCard(
     );
     const hit = mark?.querySelector('.luck-mark__hit');
     if (!mark || !hit) return null;
-    const die = mark.querySelector('.luck-mark__cube');
+    const rect = hit.getBoundingClientRect();
+    const cube = mark.querySelector('.luck-mark__cube');
+    const die = cube ? cube.getBoundingClientRect() : null;
     return {
-      rect: hit.getBoundingClientRect(),
-      die: die ? die.getBoundingClientRect() : null,
-      detail,
+      rect,
+      contains: (x, y) => luckMarkContains(rect, die, x, y) && !overGradeBadge(boardHost, x, y),
+      content: luckCardContent(detail, pieceSvg),
     };
-  }
-
-  function over(x: number, y: number): { rect: DOMRect; detail: LuckCardDetail } | null {
-    const hit = markHit();
-    return hit && luckMarkContains(hit.rect, hit.die, x, y) ? hit : null;
-  }
-
-  function hide(): void {
-    pinned = false;
-    card.hide();
-  }
-
-  const onMove = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned) return;
-    const hit = over(event.clientX, event.clientY);
-    if (hit) card.show(hit.rect, hit.detail);
-    else if (!card.el.hidden) hide();
-  };
-  const onLeave = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse' && !pinned) hide();
-  };
-  // Touch and pen: a tap on the revealed piece or its die pins the card open; any other
-  // tap closes it.
-  const onDown = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse') return;
-    const hit = over(event.clientX, event.clientY);
-    if (hit) {
-      if (pinned) hide();
-      else {
-        card.show(hit.rect, hit.detail);
-        pinned = true;
-      }
-    } else hide();
-  };
-  const onDocDown = (event: PointerEvent): void => {
-    if (!boardHost.contains(event.target as Node)) hide();
-  };
-  // Navigation re-renders the board: re-place the card over the new mark, or close it.
-  const observer = new MutationObserver(() => {
-    if (card.el.hidden) return;
-    const hit = markHit();
-    if (hit) card.show(hit.rect, hit.detail);
-    else hide();
   });
-  boardHost.addEventListener('pointermove', onMove);
-  boardHost.addEventListener('pointerleave', onLeave);
-  boardHost.addEventListener('pointerdown', onDown);
-  document.addEventListener('pointerdown', onDocDown, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
-  observer.observe(boardHost, { childList: true, subtree: true });
-  return () => {
-    observer.disconnect();
-    boardHost.removeEventListener('pointermove', onMove);
-    boardHost.removeEventListener('pointerleave', onLeave);
-    boardHost.removeEventListener('pointerdown', onDown);
-    document.removeEventListener('pointerdown', onDocDown, true);
-    window.removeEventListener('scroll', hide, true);
-    window.removeEventListener('resize', hide);
-    card.el.remove();
-  };
 }
 
 /** The attribute move-tree.ts puts on a luck badge: the path key of the move it labels. */
@@ -313,80 +257,17 @@ export const LUCK_BADGE_SELECTOR = '.review-move-list__luck[data-luck-path]';
  * move button untouched, so the list keeps one tap behaviour); a second tap on the same
  * badge, or a tap anywhere else, closes it. Returns a detach function.
  */
-export function attachLuckBadgeCard(
+export function attachLuckBadgeCard<Role extends LuckRole>(
   list: HTMLElement,
-  getDetail: (badge: HTMLElement) => LuckCardDetail | null,
-  pieceSvg: PieceSvg,
+  getDetail: (badge: HTMLElement) => LuckCardDetail<Role> | null,
+  pieceSvg: PieceSvg<Role>,
 ): () => void {
-  const card = createLuckCard(pieceSvg);
-  let anchor: HTMLElement | null = null;
-  let pinned = false;
-
-  const badgeAt = (target: EventTarget | null): HTMLElement | null =>
-    target instanceof Element ? (target.closest(LUCK_BADGE_SELECTOR) as HTMLElement | null) : null;
-
-  function open(badge: HTMLElement): boolean {
-    const detail = getDetail(badge);
-    if (!detail) return false;
-    anchor = badge;
-    card.show(badge.getBoundingClientRect(), detail);
-    return true;
-  }
-
-  function hide(): void {
-    pinned = false;
-    anchor = null;
-    card.hide();
-  }
-
-  const onOver = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned) return;
-    const badge = badgeAt(event.target);
-    if (badge && badge !== anchor) open(badge);
-  };
-  const onOut = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || pinned || !anchor) return;
-    if (!(event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))) hide();
-  };
-  const onDown = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse') return;
-    const badge = badgeAt(event.target);
-    if (!badge) return;
-    if (pinned && anchor === badge) hide();
-    else if (open(badge)) pinned = true;
-  };
-  const onDocDown = (event: PointerEvent): void => {
-    if (!anchor) return;
-    const badge = badgeAt(event.target);
-    if (!badge || !list.contains(badge)) hide();
-  };
-  // A rebuild (analysis landing, a relabel) replaces the badges: follow the open card to the
-  // badge for the same move, or close it.
-  const observer = new MutationObserver(() => {
-    if (!anchor || anchor.isConnected) return;
-    const path = anchor.dataset.luckPath ?? '';
-    const next = list.querySelector<HTMLElement>(
-      `${LUCK_BADGE_SELECTOR}[data-luck-path="${CSS.escape(path)}"]`,
-    );
-    const keepPinned = pinned;
-    if (next && open(next)) pinned = keepPinned;
-    else hide();
+  return attachListBadgeCard(list, {
+    selector: LUCK_BADGE_SELECTOR,
+    pathAttr: 'luckPath',
+    content: (badge) => {
+      const detail = getDetail(badge);
+      return detail ? luckCardContent(detail, pieceSvg) : null;
+    },
   });
-  list.addEventListener('pointerover', onOver);
-  list.addEventListener('pointerout', onOut);
-  list.addEventListener('pointerdown', onDown);
-  document.addEventListener('pointerdown', onDocDown, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
-  observer.observe(list, { childList: true, subtree: true });
-  return () => {
-    observer.disconnect();
-    list.removeEventListener('pointerover', onOver);
-    list.removeEventListener('pointerout', onOut);
-    list.removeEventListener('pointerdown', onDown);
-    document.removeEventListener('pointerdown', onDocDown, true);
-    window.removeEventListener('scroll', hide, true);
-    window.removeEventListener('resize', hide);
-    card.el.remove();
-  };
 }

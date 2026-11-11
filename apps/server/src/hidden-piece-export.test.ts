@@ -90,7 +90,9 @@ const KERNELS = {
     moves: getJieqiLegalMoves,
     apply: (state, move) => applyJieqiMove(state, move as Parameters<typeof applyJieqiMove>[1]),
     playing: (state) => state.status.type === 'playing',
-    fen: jieqiStateToPikafishFen,
+    // The public FEN: the export never names a piece captured face-down, so its replay
+    // ends with those pieces still in their owners' pools.
+    fen: (state) => jieqiStateToPikafishFen(state, { public: true }),
     dealtFen: jieqiStateToDealtFen,
   } satisfies Kernel<JieqiGameState>,
   banqi: {
@@ -197,7 +199,10 @@ for (const kernel of Object.values(KERNELS) as Kernel<unknown>[]) {
       if (json.status !== 200) return;
       const record = JSON.parse(json.body);
       assert.equal(record.schema_version, '1.1');
-      assert.equal(record.deal_fen, played.dealFen, 'a site game carries its deal');
+      // A jieqi export carries no deal: it would name pieces captured face-down or never
+      // turned over (Brian, 2026-10-16). Banqi and Flip Jungle still carry theirs.
+      const carriesDeal = kernel.variant !== 'jieqi';
+      assert.equal(record.deal_fen, carriesDeal ? played.dealFen : undefined, 'deal_fen');
       reveals += record.plies.filter((p: { revealed?: unknown }) => p.revealed).length;
 
       // Against the deal: every reveal and capture must agree with it.
@@ -214,7 +219,7 @@ for (const kernel of Object.values(KERNELS) as Kernel<unknown>[]) {
       if (pgn.status !== 200) return;
       const parsed = parseHiddenPiecePgn(pgn.body);
       assert.ok(parsed.ok, JSON.stringify(parsed));
-      assert.equal(parsed.tags.DealFEN, played.dealFen);
+      assert.equal(parsed.tags.DealFEN, carriesDeal ? played.dealFen : undefined);
       assert.equal(parsed.tags.SetUp, '1');
       assert.equal(parsed.tags.MistboardVariant, kernel.variant);
       assert.equal(parsed.record.plies.length, record.plies.length);
@@ -260,7 +265,7 @@ for (const variant of ['jieqi', 'banqi', 'jungle-flip'] as const) {
     assert.equal(json.status, 200);
     if (json.status !== 200) return;
     const record = JSON.parse(json.body);
-    assert.ok(record.deal_fen);
+    assert.equal(Boolean(record.deal_fen), variant !== 'jieqi');
     const pinned = replayHiddenPieceRecord(record);
     assert.ok(pinned.ok, JSON.stringify(pinned));
     const alone = replayHiddenPieceRecord({ ...record, deal_fen: undefined });

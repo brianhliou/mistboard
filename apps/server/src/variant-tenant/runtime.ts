@@ -1,3 +1,4 @@
+import { internalEngineTestFor, isInternalEngineTest } from '../internal-engine-test.js';
 /**
  * Generic event-sourced live-room runtime over a VariantTenant.
  *
@@ -20,7 +21,7 @@ import {
   isRetiredGameSpec,
   maybeGameSpecForId,
 } from '@mistboard/game';
-import { countDeployGatingRooms } from '../deploy-gate.js';
+import { countDeployGatingRooms, resumablePveRoomPredicate } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
   firstPartyBotForId,
@@ -57,6 +58,7 @@ import {
   lastSeat,
   TENANT_SERVER_ONLY_EVENT_TYPES,
   tenantSeatMayAct,
+  tenantTurnOrder,
 } from './tenant.js';
 
 export type TenantRoomCreation<
@@ -240,6 +242,42 @@ export function expireTenantClock<C extends string>(
   };
 }
 
+/** Resolve an expiry request only once it reaches the serialized event writer. */
+export function tenantClockExpiryEventFor<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  projection: TenantProjection<C, State, Spec>,
+  expiry: Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-expired' }>,
+): TenantRoomEvent<C, M, Spec> | null {
+  const clock = projection.clock;
+  if (
+    expiry.roomId !== projection.roomId ||
+    projection.state.status.type !== 'playing' ||
+    projection.paused ||
+    !clock ||
+    clock.activeColor !== expiry.color ||
+    clock.runningSince === null ||
+    expiry.at < clock.runningSince ||
+    tenantClockRemainingMs(clock, expiry.color, expiry.at) > 0
+  )
+    return null;
+  const move = tenant.rules.clockExpiryMove?.(projection.state, expiry.color, expiry.at);
+  if (
+    move != null &&
+    tenantSeatMayAct(tenant, projection.state, expiry.color) &&
+    tenant.rules.isLegalMove(projection.state, move)
+  ) {
+    return { type: 'move-played', at: expiry.at, roomId: expiry.roomId, color: expiry.color, move };
+  }
+  return { ...expiry, clock: expireTenantClock(clock, expiry.at, expiry.color)! };
+}
+
 export function freezeTenantClock<C extends string>(
   clock: TenantClockState<C> | undefined,
   at: number,
@@ -280,6 +318,7 @@ export function createTenantRuntimeRoom<
   options: {
     creatorPreference?: C | 'random';
     now?: number;
+    internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
     pveBotId?: string;
     rated?: boolean;
     timeControl?: RoomTimeControl;
@@ -298,7 +337,7 @@ export function createTenantRuntimeRoom<
   if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
-  const setup = tenant.rules.createSetup?.();
+  const setup = tenant.rules.createSetup?.({ timeControl: options.timeControl });
   const events: TenantRoomEvent<C, M, Spec>[] = [
     {
       type: 'room-created',
@@ -306,6 +345,7 @@ export function createTenantRuntimeRoom<
       roomId,
       gameSpecId: tenant.gameSpecId,
       ...(options.creatorPreference ? { creatorPreference: options.creatorPreference } : {}),
+      ...(options.internalEngineTest ? { internalEngineTest: options.internalEngineTest } : {}),
       ...(options.pveBotId ? { pveBotId: options.pveBotId } : {}),
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
@@ -403,7 +443,14 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'game-adjudicated',
   'clock-paused',
   'clock-resumed',
+  'draw-offered',
+  'draw-declined',
+  'draw-agreed',
 ]);
+
+// After a declined draw offer, the offerer's own moves before it may offer
+// again (#530). Lichess counts 20 plies, which is ten of your own moves.
+export const DRAW_OFFER_COOLDOWN_MOVES = 10;
 
 /**
  * Did the projection accept this event? Only meaningful for the types above.
@@ -466,23 +513,26 @@ export function replayTenantEvents<
   // therefore dealt a whole throwaway game before the event carrying the real
   // one was applied a line later. Harmless where a tenant tolerates a missing
   // setup, fatal where it refuses one, and wasted work in both cases.
-  const seed =
-    first?.type === 'room-created'
-      ? initialTenantProjection(
-          tenant,
-          first.roomId,
-          first.timeControl,
-          first.creatorPreference,
-          first.rated === true,
-          first.setup,
-        )
-      : initialTenantProjection(tenant, firstRoomId);
   // The replay boundary: a stored log the current rules refuse (a variant's
   // rules changed under an old game) becomes UnreplayableTenantGameError, which
-  // every read surface treats as "no such game" (replay-guard.ts).
-  return guardTenantReplay(tenant.kind, first?.roomId, () =>
-    events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed),
-  );
+  // every read surface treats as "no such game" (replay-guard.ts). The seed is
+  // inside it too: a setup the current rules refuse (an 8-hand mahjong wall
+  // after the match became 6) is the same kind of old game, and outside the
+  // guard its throw 500'd the whole /watch feed.
+  return guardTenantReplay(tenant.kind, first?.roomId, () => {
+    const seed =
+      first?.type === 'room-created'
+        ? initialTenantProjection(
+            tenant,
+            first.roomId,
+            first.timeControl,
+            first.creatorPreference,
+            first.rated === true,
+            first.setup,
+          )
+        : initialTenantProjection(tenant, firstRoomId);
+    return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+  });
 }
 
 /**
@@ -606,11 +656,13 @@ export function applyTenantEvent<
     const prevMoveNumber = projection.state.moveNumber;
     const nextState = tenant.rules.applyMove(projection.state, event.move);
     return {
-      ...projection,
+      ...drawStateAfterMove(projection, event.color),
       clock:
         event.clock ??
         nextTenantClockForMove(
-          tenant,
+          tenant.firstMover
+            ? { ...tenant, colors: tenantTurnOrder(tenant, projection.state) }
+            : tenant,
           projection.clock,
           event.at,
           event.color,
@@ -640,7 +692,10 @@ export function applyTenantEvent<
   }
   if (event.type === 'game-aborted') {
     if (status.type !== 'playing') return projection;
-    if (projection.state.moveNumber !== 1) return projection;
+    // The same window tenantAbortPhaseFor opens (lifecycle.ts): before either
+    // seat's first move. A tenant counting from 0 (xiangqi mahjong) is at 0
+    // here; `!== 1` refused its abort and left the room playing for good.
+    if (projection.state.moveNumber >= 2) return projection;
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
@@ -676,7 +731,58 @@ export function applyTenantEvent<
     const { paused: _paused, ...rest } = projection;
     return { ...rest, clock: event.clock };
   }
+  if (
+    event.type === 'draw-offered' ||
+    event.type === 'draw-declined' ||
+    event.type === 'draw-agreed'
+  ) {
+    const finishDraw = tenant.rules.finishDraw;
+    if (status.type !== 'playing' || projection.paused || !finishDraw) return projection;
+    const pending = projection.drawOffer;
+    const { drawOffer: _offer, ...rest } = projection;
+    if (event.type === 'draw-offered') {
+      if (pending) return projection;
+      if ((projection.drawCooldown?.[event.color] ?? 0) > 0) return projection;
+      return { ...projection, drawOffer: { from: event.color } };
+    }
+    // Answering takes an offer from the other side; your own is not yours to answer.
+    if (!pending || pending.from === event.color) return projection;
+    if (event.type === 'draw-declined') {
+      return {
+        ...rest,
+        drawCooldown: { ...projection.drawCooldown, [pending.from]: DRAW_OFFER_COOLDOWN_MOVES },
+      };
+    }
+    return {
+      ...rest,
+      clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
+      state: finishDraw(projection.state),
+    };
+  }
   return projection;
+}
+
+// The draw fields after `mover` plays: an offer from the other side lapses (a
+// move is the answer), the mover's own offer stands, and the mover's cooldown
+// counts down one. Fields with nothing in them are left off, so a game that
+// never sees an offer keeps the projection shape it always had.
+function drawStateAfterMove<
+  C extends string,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(projection: TenantProjection<C, State, Spec>, mover: C): TenantProjection<C, State, Spec> {
+  if (!projection.drawOffer && !projection.drawCooldown) return projection;
+  const { drawOffer, drawCooldown, ...rest } = projection;
+  const keptOffer = drawOffer?.from === mover ? drawOffer : undefined;
+  const cooldown: Partial<Record<C, number>> = { ...drawCooldown };
+  const left = (cooldown[mover] ?? 0) - 1;
+  if (left > 0) cooldown[mover] = left;
+  else delete cooldown[mover];
+  return {
+    ...rest,
+    ...(keptOffer ? { drawOffer: keptOffer } : {}),
+    ...(Object.keys(cooldown).length > 0 ? { drawCooldown: cooldown } : {}),
+  };
 }
 
 /**
@@ -760,6 +866,7 @@ export type TenantSnapshotPayload<C extends string, M, View, Spec extends string
   solo: boolean;
   abortDeadline: number | null;
   clock: TenantClockState<C> | undefined;
+  paused?: true;
   connectedSeats: Record<C, boolean>;
   events: TenantClientEvent<C, M, Spec>[];
   seats: Partial<Record<C, string>>;
@@ -793,6 +900,11 @@ export function tenantSeatDisplayNames<
     const clientId = room.projection.seats[color];
     if (clientId && tenant.engine?.isEngineClientId(clientId)) {
       const engine = tenant.engine;
+      const internal = internalEngineTestFor(room.events);
+      if (internal?.engineId === clientId) {
+        names[color] = internal.displayName;
+        continue;
+      }
       names[color] = liveSeatEngineName(clientId, room.pveBotId, () =>
         engine.displayName(clientId),
       );
@@ -837,9 +949,48 @@ export function tenantSeatProfiles<
   return profiles;
 }
 
-// The board a client is shown: the `state` half of its snapshot. One function
-// so every surface that shows a seat its board (the room snapshot, the
-// /correspondence inbox card) runs the same redaction for that seat.
+// Project the recipient's durable delivery frontier. Keeping the clock and
+// event prefix with the state prevents snapshots and reconnects leaking a
+// private action that the live event channel is holding.
+export function tenantVisibleRoom<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): TenantRuntimeRoom<Kind, C, M, State, Spec> {
+  const count = tenant.visibility.clientEventCount?.(
+    room.projection.state,
+    room.events,
+    client.seat,
+  );
+  if (count === undefined || count === room.events.length) return room;
+  const events = room.events.slice(0, count);
+  let projection = replayTenantEvents(tenant, events);
+  // Presence and shutdown bookkeeping remain public while a move is held.
+  // Re-derive pause/resume clocks from the visible projection so even their
+  // stored clock anchors cannot expose a private action's timestamp/owner.
+  for (const event of room.events.slice(count)) {
+    if (event.type === 'move-played') continue;
+    const visible =
+      event.type === 'clock-paused'
+        ? tenantPauseEventFor<C, M, Spec>(projection, event.at, event.reason)
+        : event.type === 'clock-resumed'
+          ? tenantResumeEventFor<C, M, Spec>(projection, event.at, event.reason)
+          : event;
+    if (!visible) continue;
+    events.push(visible);
+    projection = applyTenantEvent(tenant, projection, visible);
+  }
+  return { ...room, events, projection };
+}
+
+// The board half of a snapshot and the correspondence inbox card.
 export function tenantSeatStateView<
   Kind extends string,
   C extends string,
@@ -852,6 +1003,7 @@ export function tenantSeatStateView<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): View {
+  room = tenantVisibleRoom(tenant, room, client);
   // Board half of the finished-game reveal, paired with the event half in
   // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
   // can never hand out a full move list beside an empty board, which is what a
@@ -874,6 +1026,7 @@ export function tenantSnapshotPayload<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantSnapshotPayload<C, M, View, Spec> & Record<string, unknown> {
+  room = tenantVisibleRoom(tenant, room, client);
   const state = tenantSeatStateView(tenant, room, client);
   return {
     type: 'snapshot' as const,
@@ -892,6 +1045,7 @@ export function tenantSnapshotPayload<
     seatProfiles: tenantSeatProfiles(tenant, room),
     state,
     timeControl: room.projection.timeControl,
+    ...(room.projection.paused ? { paused: true } : {}),
     // Only on lobby rooms, so every invite room's wire (and golden fixture) is
     // unchanged. Tells the client there is no invite link to share.
     ...(tenantRoomIsLobbyMatch(room) ? { lobbyMatch: true } : {}),
@@ -901,8 +1055,52 @@ export function tenantSnapshotPayload<
     // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
     // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
     ...(room.rated ? { rated: true } : {}),
+    // PvP rematch offers (rematch.ts), for every tenant that rematches, only
+    // once the game is over: a reload shows a pending offer, and a live room's
+    // wire is unchanged. The flags say which seat offered, nothing else.
+    ...(room.projection.state.status.type === 'finished' && tenantRoomOffersRematch(tenant, room)
+      ? {
+          rematch: {
+            offers: tenantRematchOfferFlags(tenant, room),
+            finalizedRoomId: room.rematch.finalizedRoomId ?? null,
+          },
+        }
+      : {}),
+    // A pending draw offer (#530): which seat offered, nothing else, and only
+    // while the game is on, so every other room's wire is unchanged. The draw
+    // events themselves never ship (TENANT_SERVER_ONLY_EVENT_TYPES).
+    ...(room.projection.state.status.type === 'playing' && room.projection.drawOffer
+      ? { drawOffer: { from: room.projection.drawOffer.from } }
+      : {}),
+    // The seat's own moves left before it may offer again, to that seat only.
+    ...tenantDrawCooldownFor(room.projection, client.seat),
+    // The plies at which a draw was offered, for the move list's "½?" mark
+    // (lichess). Ply counts only, which every viewer already saw live; only
+    // when there was an offer, so every other room's wire is unchanged.
+    ...tenantDrawOfferPlies(room.events),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
+}
+
+export function tenantDrawOfferPlies(events: readonly { type: string }[]): {
+  drawOfferPlies?: number[];
+} {
+  const plies: number[] = [];
+  let ply = 0;
+  for (const event of events) {
+    if (event.type === 'move-played') ply += 1;
+    else if (event.type === 'draw-offered' && ply > 0 && plies.at(-1) !== ply) plies.push(ply);
+  }
+  return plies.length > 0 ? { drawOfferPlies: plies } : {};
+}
+
+function tenantDrawCooldownFor<C extends string>(
+  projection: { drawCooldown?: Partial<Record<C, number>>; state: { status: { type: string } } },
+  seat: TenantSeat<C>,
+): { drawOfferCooldown?: number } {
+  if (seat === 'spectator' || projection.state.status.type !== 'playing') return {};
+  const left = projection.drawCooldown?.[seat] ?? 0;
+  return left > 0 ? { drawOfferCooldown: left } : {};
 }
 
 /**
@@ -919,9 +1117,11 @@ export function tenantSnapshotPayload<
  *     whatever the hook would return,
  *   - the room is still playing: a finished room reveals truth through the
  *     snapshot (and the client rebuilds from it), an aborted one has nothing
- *     to replay.
- * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
+ *     to replay. A tenant that sets liveHistoryWhenFinished (its finished view
+ *     cannot rebuild the game either) gets it for a finished room too.
+ * Normally hello only: broadcastEventAppended builds a snapshot per
  * client per move, and the history is O(plies) views.
+ * A tenant with a delivery frontier also includes it in atomic release frames.
  */
 export function tenantLiveHistoryExtras<
   Kind extends string,
@@ -935,14 +1135,17 @@ export function tenantLiveHistoryExtras<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): { liveHistory?: Array<{ ply: number; view: View }> } {
+  room = tenantVisibleRoom(tenant, room, client);
   const liveHistory = tenant.visibility.liveHistory;
   if (!liveHistory) return {};
-  if (room.projection.state.status.type !== 'playing') return {};
+  const status = room.projection.state.status.type;
+  const finishedToo = tenant.visibility.liveHistoryWhenFinished === true && status === 'finished';
+  if (status !== 'playing' && !finishedToo) return {};
   const viewer = client.seat;
   if (viewer === 'spectator') {
     const spec = maybeGameSpecForId(tenant.gameSpecId);
     if (!spec) return {};
-    if (roomViewPolicy(spec.visibility, false, 'spectator') === 'nothing') return {};
+    if (roomViewPolicy(spec.visibility, finishedToo, 'spectator', spec.id) === 'nothing') return {};
   } else if (!tenant.colors.includes(viewer)) {
     return {};
   }
@@ -1007,6 +1210,33 @@ export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }
   return first?.type === 'room-created' && first.lobbyMatch === true;
 }
 
+/**
+ * Does this room offer the mutual-confirm rematch (rematch.ts)? Every tenant
+ * does by default. The exceptions are structural, so a new tenant inherits them:
+ * a tenant that opts out (mahjong's table of four, correspondence-only dark
+ * chess), a table of more than two (the rematch swaps two seats), a bot game
+ * (the engine never offers: the web Rematch button opens a new bot room
+ * instead), a correspondence room (#531), and a retired variant, which opens no
+ * new rooms (createTenantRuntimeRoom), so its Rematch could only fail.
+ */
+export function tenantRoomOffersRematch<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+): boolean {
+  if (tenant.rematch) return false;
+  if (tenant.colors.length !== 2) return false;
+  if (isRetiredGameSpec(tenant.gameSpecId)) return false;
+  if (room.projection.timeControl?.daysPerMove !== undefined) return false;
+  return tenantPveEngineId(tenant, room) === null;
+}
+
 export function tenantRematchOfferFlags<C extends string>(
   tenant: { colors: readonly C[] },
   room: { rematch: { offers: Partial<Record<C, unknown>> } },
@@ -1064,6 +1294,7 @@ export function tenantEventsForClient<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantClientEvent<C, M, Spec>[] {
+  room = tenantVisibleRoom(tenant, room, client);
   const out: TenantClientEvent<C, M, Spec>[] = [];
   // A finished game hands every client the whole log, unredacted. This is the
   // event half of the same matrix row that opens the board (see
@@ -1085,7 +1316,7 @@ export function tenantEventsForClient<
       ? ((event.type === 'move-played'
           ? { ...event, ply }
           : revealedNonMoveEvent(event)) as TenantClientEvent<C, M, Spec>)
-      : tenant.visibility.clientEventFor(event, client.seat, ply);
+      : tenant.visibility.clientEventFor(event, client.seat, ply, room.events);
     if (visible) out.push(visible);
   }
   return out;
@@ -1118,6 +1349,7 @@ function tenantRoomRevealsTruth<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): boolean {
+  if (internalEngineTestFor(room.events)) return false;
   const spec = maybeGameSpecForId(tenant.gameSpecId);
   if (!spec) return false;
   // A tenant reveals as a unit or not at all. Requiring truthView here is what
@@ -1135,6 +1367,7 @@ function tenantRoomRevealsTruth<
       spec.visibility,
       room.projection.state.status.type === 'finished',
       client.seat === 'spectator' ? 'spectator' : 'player',
+      spec.id,
     ) === 'truth'
   );
 }
@@ -1200,6 +1433,11 @@ export function isTenantEvent<
         event.creatorPreference === 'random' ||
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
+      (event.internalEngineTest === undefined ||
+        (tenant.gameSpecId === 'banqi' &&
+          isInternalEngineTest(event.internalEngineTest) &&
+          event.rated !== true &&
+          event.pveBotId === undefined)) &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
       (event.origin === undefined || isTenantGameOrigin(event.origin)) &&
@@ -1265,6 +1503,16 @@ export function isTenantEvent<
     return (
       (event.reason === 'players-returned' || event.reason === 'grace-elapsed') &&
       isTenantClockState(tenant, event.clock)
+    );
+  }
+  if (event.type === 'draw-offered' || event.type === 'draw-declined') {
+    return tenant.rules.finishDraw !== undefined && tenant.rules.isColor(event.color);
+  }
+  if (event.type === 'draw-agreed') {
+    return (
+      tenant.rules.finishDraw !== undefined &&
+      tenant.rules.isColor(event.color) &&
+      (event.clock === undefined || isTenantClockState(tenant, event.clock))
     );
   }
   return false;
@@ -1350,13 +1598,26 @@ export function isTenantClockState<C extends string>(
 // chess map agree on what "live" means. They used to disagree: this side
 // dropped correspondence and the chess side didn't, so a single chess
 // correspondence room could block every deploy forever.
+//
+// Pass the tenant to stop counting its resumable PvE games (#559): a spec in
+// RESUMABLE_PVE_GAME_SPECS whose room has an engine in a seat. Same predicate
+// as the registry's census, so the gate and its explanation agree.
 export function countActiveTenantGames(
   rooms: Iterable<{
     events?: readonly { at?: number }[];
-    projection: { state: { status: { type: string } }; timeControl?: RoomTimeControl };
+    projection: {
+      state: { status: { type: string } };
+      timeControl?: RoomTimeControl;
+      seats?: object;
+    };
   }>,
+  tenant?: Parameters<typeof resumablePveRoomPredicate>[0],
 ): number {
-  return countDeployGatingRooms(rooms);
+  return countDeployGatingRooms(
+    rooms,
+    Date.now(),
+    tenant ? resumablePveRoomPredicate(tenant) : undefined,
+  );
 }
 
 export function computeTenantConnectedSeats<C extends string>(

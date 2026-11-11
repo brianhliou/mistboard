@@ -7,12 +7,15 @@ import {
   isAllowedEngineTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
 import { ratedEnabled } from './../feature-flags.js';
+import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
@@ -36,6 +39,23 @@ export async function tryHandle(
   if (pathname === '/api/rooms') {
     if (!requireMethod(request, response, 'POST')) return true;
     const rawBody = await readJsonBody(request);
+    // Claim either FFQ selector before bot resolution or another tenant.
+    // A missing registration must retain the fallback gate's rejection.
+    if (isFFQBanqiRequest(rawBody)) {
+      const account = await currentAccountUser(request);
+      const gate = gateGameSpecRequest(rawBody, account);
+      const registration = registeredVariantTenants().find(
+        (entry) => entry.gameSpecId === 'ffq-banqi',
+      );
+      if (gate.type === 'reject') {
+        writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+      if (registration) {
+        await registration.http.handleCreate(ctx, request, response, rawBody, account);
+        return true;
+      }
+    }
     const body = await resolveBotRoomRequest(response, rawBody);
     if (!body) return true;
     // Variant tenants claim their create requests via the registry; each
@@ -126,8 +146,18 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'rated_requires_account' }));
       return true;
     }
+    // A stats-excluded account never rates: an explicit rated request is
+    // refused, and the signed-in default (rated unless asked casual) is casual.
+    const statsExcluded = persistence.isStatsExcluded(accountUser);
+    if (body.rated === true && statsExcluded) {
+      response.writeHead(403, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'rated_requires_counted_account' }));
+      return true;
+    }
     const rated =
-      mode === 'pve' ? false : ratedEnabled() && body.rated !== false && accountUser !== null;
+      mode === 'pve'
+        ? false
+        : ratedEnabled() && body.rated !== false && accountUser !== null && !statsExcluded;
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'invalid_time_control' }));
@@ -186,7 +216,7 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'persistence_disabled' }));
       return true;
     }
-    if (ctx.isDraining()) {
+    if (ctx.refusesCreate()) {
       response.writeHead(503, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'server_draining', restartAt: ctx.drainDeadlineMs() }));
       return true;
@@ -292,10 +322,6 @@ export async function resolveBotRoomRequest(
     writeJson(response, 400, { error: 'bot_requires_pve' });
     return null;
   }
-  if (body.engineId !== undefined) {
-    writeJson(response, 400, { error: 'bot_engine_conflict' });
-    return null;
-  }
   // Pre-consolidation bot ids keep working: canonicalize before the DB lookup
   // (the merged profile is the public row; legacy rows are unlisted).
   const botId = firstPartyBotForId(requestedBotId)?.id ?? requestedBotId;
@@ -319,12 +345,39 @@ export async function resolveBotRoomRequest(
     writeJson(response, 404, { error: 'bot_not_found' });
     return null;
   }
-  const engineId =
+  let engineId =
     firstPartyBotEngineFor(botId, gameSpecId) ??
     (gameSpecId === bot.play.gameSpecId ? bot.play.engineId : null);
   if (!engineId) {
     writeJson(response, 400, { error: 'bot_game_spec_conflict' });
     return null;
+  }
+  if (body.engineId !== undefined) {
+    // Only Misty's two numbered flip-game ladders accept a tier override.
+    // Match the playable table exactly: historical aliases, random anchors,
+    // unknown ids and other variants' engines must never fall back to L7.
+    const tiers =
+      botId !== 'misty'
+        ? []
+        : gameSpecId === 'banqi'
+          ? BANQI_PLAYABLE_ENGINES
+          : gameSpecId === 'jungle-flip'
+            ? JUNGLE_FLIP_PLAYABLE_ENGINES
+            : [];
+    const tier = tiers.find((candidate) => candidate.id === body.engineId);
+    if (!tier) {
+      writeJson(response, 400, { error: 'bot_engine_conflict' });
+      return null;
+    }
+    const available =
+      gameSpecId === 'banqi'
+        ? banqiEngineAvailable(tier.id)
+        : gameSpecId === 'jungle-flip' && jungleFlipEngineAvailable(tier.id);
+    if (!available) {
+      writeJson(response, 400, { error: 'invalid_engine' });
+      return null;
+    }
+    engineId = tier.id;
   }
   // The caller may pick any pace the target surface allows (the tenant/chess
   // time-control gates downstream stay authoritative); omitted resolves to
@@ -338,7 +391,7 @@ export async function resolveBotRoomRequest(
   // profile is not the authority on what pace to start, and migrating the rows
   // would only re-create this drift the next time a default moves.
   //
-  // defaultEngineTimeControl is the one bot pace, 10+5 in every variant, which
+  // defaultEngineTimeControl is the one bot pace (10+5 unless a variant names its own), which
   // also clears the fog engines' increment floor (#283). An EXPLICIT request
   // below that floor still falls through to the create gate and is refused
   // there.

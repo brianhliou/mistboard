@@ -15,12 +15,51 @@ describe('finishBadgesForResult', () => {
     const badges = finishBadgesForResult({
       colors: COLORS,
       winner: 'red',
-      reason: 'checkmate',
+      reason: 'resignation',
       generalSquare: (color) => GENERALS[color],
     });
     expect(badges).toEqual([
       { square: 'e1', kind: 'winner', icon: 'crown', label: 'Winner' },
-      { square: 'd10', kind: 'loser', icon: 'mate', label: 'Checkmate' },
+      { square: 'd10', kind: 'loser', icon: 'resign', label: 'Resignation' },
+    ]);
+  });
+
+  it('slashes only the mated general on a checkmate: no crown, no pill', () => {
+    for (const winner of COLORS) {
+      const badges = finishBadgesForResult({
+        colors: COLORS,
+        winner,
+        reason: 'checkmate',
+        generalSquare: (color) => GENERALS[color],
+      });
+      const mated = winner === 'red' ? 'd10' : 'e1';
+      expect(badges).toEqual([{ square: mated, kind: 'mated', icon: 'slash', label: '' }]);
+    }
+  });
+
+  it('keeps both badges on a timeout', () => {
+    const badges = finishBadgesForResult({
+      colors: COLORS,
+      winner: 'black',
+      reason: 'timeout',
+      generalSquare: (color) => GENERALS[color],
+    });
+    expect(badges).toEqual([
+      { square: 'e1', kind: 'loser', icon: 'timeout', label: 'Timeout' },
+      { square: 'd10', kind: 'winner', icon: 'crown', label: 'Winner' },
+    ]);
+  });
+
+  it('keeps the badges for a captured general (duck, atomic)', () => {
+    const badges = finishBadgesForResult({
+      colors: COLORS,
+      winner: 'red',
+      reason: 'general-captured',
+      generalSquare: (color) => GENERALS[color],
+    });
+    expect(badges.map((badge) => [badge.kind, badge.icon])).toEqual([
+      ['winner', 'crown'],
+      ['loser', 'loss'],
     ]);
   });
 
@@ -45,9 +84,9 @@ describe('finishBadgesForResult', () => {
       reason: 'repetition',
       generalSquare: (color) => GENERALS[color],
     });
-    expect(badges.map((badge) => [badge.kind, badge.icon])).toEqual([
-      ['draw', 'draw'],
-      ['draw', 'draw'],
+    expect(badges).toEqual([
+      { square: 'e1', kind: 'draw', icon: 'draw', label: 'Repetition' },
+      { square: 'd10', kind: 'draw', icon: 'draw', label: 'Repetition' },
     ]);
   });
 
@@ -230,6 +269,49 @@ describe('createLiveFinishBadges', () => {
     badges.play('game-1', played, { delayMs: 650 });
     const layer = stage.querySelector<HTMLElement>('.finish-badges');
     expect(layer?.style.getPropertyValue('--finish-badge-delay')).toBe('650ms');
+  });
+
+  const mated = finishBadgesForResult({
+    colors: COLORS,
+    winner: 'red',
+    reason: 'checkmate',
+    generalSquare: (color) => GENERALS[color],
+  });
+
+  it('draws the checkmate slash alone: one mark on the mated general, no disc fill, no pill', () => {
+    const { stage, badges } = setup();
+    badges.play('game-1', mated);
+    const els = [...stage.querySelectorAll<HTMLElement>('.finish-badge')];
+    expect(els.map((el) => el.dataset.finishSquare)).toEqual(['d10']);
+    expect(els[0]?.classList.contains('finish-badge--mated')).toBe(true);
+    expect(els[0]?.getAttribute('aria-hidden')).toBe('true');
+    expect(stage.querySelector('.finish-badge__pill')).toBeNull();
+    // Two half-strokes from the centre, each with a light under-stroke.
+    const halves = [...stage.querySelectorAll('.finish-badge__slash')];
+    expect(halves.map((path) => path.getAttribute('d'))).toEqual([
+      'M12 12 19 5',
+      'M12 12 5 19',
+      'M12 12 19 5',
+      'M12 12 5 19',
+    ]);
+    expect(halves.every((path) => path.getAttribute('pathLength') === '1')).toBe(true);
+  });
+
+  it('replays the slash from the start each time the viewer steps back onto the final position', () => {
+    const { stage, badges, layer } = setup();
+    badges.play('game-1', mated);
+    const first = layer();
+    for (let i = 0; i < 10; i += 1) {
+      badges.sync('game-1', false);
+      expect(layer()).toBeNull();
+      badges.sync('game-1', true);
+    }
+    expect(layer()).not.toBe(first);
+    expect(stage.querySelectorAll('.finish-badges')).toHaveLength(1);
+    const els = [...stage.querySelectorAll<HTMLElement>('.finish-badge')];
+    expect(els.map((el) => [el.dataset.finishSquare, el.className])).toEqual([
+      ['d10', 'finish-badge finish-badge--mated'],
+    ]);
   });
 
   it('draws nothing until played', () => {

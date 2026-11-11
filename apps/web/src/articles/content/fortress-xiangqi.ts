@@ -26,6 +26,8 @@ export const fortressXiangqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-07-01',
   updatedAt: '2026-09-03',
+  updateNote:
+    'The Treasure figure now shows the five moves the rules allow, not eight.',
   audience: 'Xiangqi and crazyhouse players who want a compact, decisive drop variant.',
   thumbnail: { kind: 'svg', svg: FORTRESS_XIANGQI_START_BOARD },
   intro: [

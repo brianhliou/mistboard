@@ -32,6 +32,22 @@ if [ -n "$unstaged_paths" ] || [ -n "$untracked_paths" ]; then
     exit 1
   fi
 
+  # git stash mid-merge drops MERGE_HEAD (and the cherry-pick, revert and
+  # rebase state), so the commit lands silently as a single-parent commit and
+  # the merged branch is no longer an ancestor (#330). Refuse loudly instead.
+  if [ -e "$(git rev-parse --git-path MERGE_HEAD)" ] \
+    || [ -e "$(git rev-parse --git-path CHERRY_PICK_HEAD)" ] \
+    || [ -e "$(git rev-parse --git-path REVERT_HEAD)" ] \
+    || [ -d "$(git rev-parse --git-path rebase-merge)" ] \
+    || [ -d "$(git rev-parse --git-path rebase-apply)" ]; then
+    echo "pre-commit: a merge, rebase, cherry-pick or revert is in progress; not stashing." >&2
+    echo "pre-commit: git stash would drop MERGE_HEAD and record this as an ordinary commit." >&2
+    print_paths "unstaged" "$unstaged_paths"
+    print_paths "untracked" "$untracked_paths"
+    echo "Stage what belongs in this commit (git add <paths>) or move the rest out of the tree, then commit again." >&2
+    exit 1
+  fi
+
   stash_created=0
   restore_stash() {
     if [ "$stash_created" = "1" ]; then

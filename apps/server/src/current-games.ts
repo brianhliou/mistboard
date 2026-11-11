@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 /**
  * Current games (/games): every game in progress right now, across the legacy
  * chess map and every registered variant tenant, live AND correspondence.
@@ -6,12 +7,24 @@
  * featured game per channel for the TV hero. The two share the room walk and
  * the visibility policy but differ on purpose:
  *
- * - No freshness window and no "has a board renderer" gate. A dormant
- *   correspondence game is still a game in progress; a variant without a live
- *   board renderer is still listed, as a card with no board.
+ * - No "has a board renderer" gate: a variant without a live board renderer is
+ *   still listed, as a card with no board.
+ * - Correspondence has no freshness window: a dormant days-per-move game is
+ *   still a game in progress. A LIVE game whose last move is older than its
+ *   time class's window (LIVE_STALE_AFTER_MS) is hidden, the way lichess TV and
+ *   current games drop a game on secondsSinceLastMove (#469): a player who
+ *   starts a new bot game without resigning the old one left the old one listed
+ *   until its clock flagged, up to ~10 min at 10+5, and the list ran ~3x real
+ *   activity. Hidden, not ended: the result is untouched and the game is listed
+ *   again on its next move. The deploy gate's 10-minute idle cutoff below still
+ *   applies on top; it is the drain's notion of "nobody is here", too long for
+ *   a list a visitor picks a game from.
  * - Correspondence rooms are hydrated from the durable room_deadlines index
  *   first, so a days-per-move game with nobody connected (and therefore no
  *   in-memory room) is still on the page.
+ * - A variant that waits on its public surface (Xiangqi Mahjong) is not
+ *   listed while its spec is 'hidden', the same gate its TV channel uses
+ *   (listedOnSurface).
  * - "In play" is the deploy gate's own classification (isGameInPlay): paused
  *   rooms and rooms idle past the abandonment window are not listed. One
  *   definition of "is this game real" (see deploy-gate.ts).
@@ -39,8 +52,12 @@ import {
   type VariantTenantRegistration,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { listWatchChannels } from './watch-channels.js';
-import { hasLiveWatchPayloadBuilder, liveWatchPayloadForFeatured } from './watch-live.js';
+import { listedOnSurface, listWatchChannels } from './watch-channels.js';
+import {
+  hasLiveWatchPayloadBuilder,
+  lastMoveAt,
+  liveWatchPayloadForFeatured,
+} from './watch-live.js';
 
 export type CurrentGameObserve = 'open' | 'masked' | 'sealed';
 
@@ -89,6 +106,54 @@ export type CurrentGame = {
   url: string;
 };
 
+// How long a live game may go without a move before /games stops listing it,
+// by time class. Lichess's TV freshness windows (Tv.scala): 2 min for blitz, 5
+// for rapid, 8 for classical; bullet gets 1 min rather than lichess's 35 s
+// because our only bullet pace carries a 1 s increment (1+1) and the list is
+// polled, not pushed. An unclassified live game (no time control) gets the
+// classical window: nothing flags it, so the deploy gate's idle cutoff is the
+// only other bound.
+export const LIVE_STALE_AFTER_MS: Record<
+  Exclude<CurrentGameTimeClass, 'correspondence'>,
+  number
+> = {
+  bullet: 60_000,
+  blitz: 2 * 60_000,
+  rapid: 5 * 60_000,
+  classical: 8 * 60_000,
+};
+
+// A live game nobody has moved in for its class's window: the player has
+// almost certainly left (or opened another game) and the clock is running
+// down to a flag. Correspondence is never stale here.
+export function isStaleLiveGame(
+  timeClass: CurrentGameTimeClass | null,
+  lastMoveTime: number | null,
+  now: number,
+): boolean {
+  if (timeClass === 'correspondence') return false;
+  if (lastMoveTime === null) return false;
+  return now - lastMoveTime > LIVE_STALE_AFTER_MS[timeClass ?? 'classical'];
+}
+
+// The same check from a room's raw fields. The homepage "N games in play"
+// (live-room-stats.ts) calls it too, so the count drops exactly the rooms this
+// page drops and the number matches the list it links to.
+export function isStaleLiveRoom(
+  timeControl:
+    | { initialMs?: number; incrementMs?: number; daysPerMove?: number }
+    | null
+    | undefined,
+  events: readonly { type: string; at?: number }[],
+  now: number,
+): boolean {
+  return isStaleLiveGame(
+    timeClassFor(normalizeTimeControl(timeControl ?? null)),
+    lastMoveAt(events),
+    now,
+  );
+}
+
 type EngineSeatPredicate = (clientId: string | undefined) => boolean;
 
 type DeadlineByRoom = ReadonlyMap<string, { seat: string; dueAt: Date }>;
@@ -120,6 +185,7 @@ export async function hydrateCorrespondenceRooms(ctx: HttpApiContext): Promise<D
       if (liveIds.has(row.roomId)) return;
       const registration = variantTenantForRoomId(row.roomId);
       if (!registration?.enabled()) return;
+      if (!listedOnSurface(registration.gameSpecId)) return;
       try {
         await registration.getOrLoadRoom(row.roomId);
       } catch (err) {
@@ -153,6 +219,9 @@ export function collectCurrentGames(
   }
   for (const registration of registeredVariantTenants()) {
     if (!registration.enabled()) continue;
+    // A variant gated on its public surface is listed only once it is public;
+    // until then its room is spectatable by URL, never advertised here.
+    if (!listedOnSurface(registration.gameSpecId)) continue;
     const channelId = registration.watch?.channelId ?? channelForSpec(registration.gameSpecId);
     const isEngine = registration.isEngineClientId ?? isServerEngineClient;
     for (const room of registration.rooms.values()) {
@@ -183,8 +252,15 @@ function gameFromChessRoom(
       handle: null,
       botId: null,
       isEngine,
-      name: token?.userDisplayName ?? token?.userHandle ?? (isEngine ? clientId : null),
-      ...liveSeatProfileIdentity(isEngine ? clientId : null, token?.userHandle ?? null),
+      name:
+        token?.userDisplayName ??
+        token?.userHandle ??
+        (isEngine ? liveSeatEngineName(clientId, room.pveBotId, () => clientId) : null),
+      ...liveSeatProfileIdentity(
+        isEngine ? clientId : null,
+        token?.userHandle ?? null,
+        room.pveBotId,
+      ),
     });
   }
   return finishGame({
@@ -210,6 +286,8 @@ function gameFromTenantRoom(
   now: number,
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
+  if (isInternalEngineTestLog(room.events)) return null;
+  room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;
   if (!isGameInPlay(room as Parameters<typeof isGameInPlay>[0], now)) return null;
@@ -276,6 +354,8 @@ function finishGame(args: {
   if (!spec) return null;
   const observe = liveObservePolicy(spec.visibility, spec.id);
   const timeControl = normalizeTimeControl(args.timeControl);
+  const timeClass = timeClassFor(timeControl);
+  if (isStaleLiveRoom(args.timeControl, args.events, args.now)) return null;
   const deadline = args.deadlines.get(args.roomId) ?? null;
   return {
     channelId: args.channelId,
@@ -290,7 +370,7 @@ function finishGame(args: {
     rated: args.rated,
     roomId: args.roomId,
     startedAt: firstEventAt(args.events),
-    timeClass: timeClassFor(timeControl),
+    timeClass,
     timeControl,
     url: `/room/${encodeURIComponent(args.roomId)}`,
   };

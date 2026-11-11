@@ -3,14 +3,17 @@ import { createServer } from 'node:http';
 import type { GameEvent } from '@mistboard/game';
 import pg from 'pg';
 import { WebSocketServer } from 'ws';
+import { closeBanqiAnalysisQueries, openBanqiAnalysisQueries } from './banqi-analysis-runner.js';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
+import { drainAchievementTriggers, installAchievementEvaluator } from './achievement-triggers.js';
 import { type BotVsBotScheduler, startBotVsBotScheduler } from './bot-vs-bot-scheduler.js';
 import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { runMigrations } from './migrate.js';
+import { logger } from './obs.js';
 import { type PatronExpirySweeper, startPatronExpirySweeper } from './patron-expiry-sweeper.js';
 import * as persistence from './persistence.js';
 import type { RematchOrchestrator } from './rematch.js';
@@ -25,7 +28,7 @@ import {
 } from './room-manager.js';
 import { loadServerRuntimeConfig, serverConfig } from './server-config.js';
 import { createDrainController } from './server-drain.js';
-import { createHttpRequestHandler } from './server-http.js';
+import { type CrawlerPageSources, createHttpRequestHandler } from './server-http.js';
 import {
   clearRoomRuntimeTimers,
   closeHttpServer,
@@ -36,6 +39,7 @@ import {
 } from './server-lifecycle.js';
 import {
   releaseLiveEngineReservation,
+  releaseLiveEngineSeatsOnShutdown,
   reserveHydratedLiveEngineSeat,
   reserveLiveEngineSeat,
 } from './server-live-engine-reservations.js';
@@ -159,6 +163,8 @@ const rematchOrch: RematchOrchestrator = {
   ctx: roomMgrCtx,
   send,
   buildRoomUrl: (roomId) => `/?room=${encodeURIComponent(roomId)}`,
+  accountMayRate: async (userId) =>
+    !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
   createRoom: (spec) =>
     roomLifecycle.createRoom(
       spec.mode,
@@ -226,7 +232,9 @@ let shuttingDown = false;
 let seatVacateGraceMsOverride: number | null = null;
 
 export type StartServerOptions = {
+  crawlerSources?: CrawlerPageSources;
   port?: number;
+  host?: string;
   seatVacateGraceMs?: number;
 };
 
@@ -241,6 +249,7 @@ export type StartedServer = {
 export async function startServer(options: StartServerOptions = {}): Promise<StartedServer> {
   if (server) throw new Error('startServer: already running');
   shuttingDown = false;
+  openBanqiAnalysisQueries();
   if (typeof options.seatVacateGraceMs === 'number') {
     seatVacateGraceMsOverride = options.seatVacateGraceMs;
   } else {
@@ -263,6 +272,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
 
   const httpServer = createServer(
     createHttpRequestHandler({
+      crawlerSources: options.crawlerSources,
       rooms,
       lobbyTickets,
       lobbyQueue,
@@ -309,8 +319,18 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   });
 
   const port = options.port ?? serverConfig.port;
-  await new Promise<void>((resolve) => {
-    httpServer.listen(port, () => resolve());
+  const host = options.host ?? serverConfig.host;
+  await new Promise<void>((resolve, reject) => {
+    // ws forwards the HTTP server's bind error synchronously. Handle it until
+    // listen completes so callers can report a strict-port conflict instead
+    // of crashing on an unhandled WebSocketServer error first.
+    wsServer.once('error', reject);
+    httpServer.once('error', reject);
+    httpServer.listen({ port, host }, () => {
+      wsServer.off('error', reject);
+      httpServer.off('error', reject);
+      resolve();
+    });
   });
   const address = httpServer.address();
   const boundPort = typeof address === 'object' && address ? address.port : port;
@@ -362,6 +382,27 @@ async function pauseTenantRoomsForShutdown(at: number): Promise<void> {
   }
 }
 
+// Every room is paused and its timers cleared, so no engine turn starts after
+// this; hand the engine-worker seats back so the next server can reserve its
+// own (#567). Never throws: a failed release is logged and the TTL frees it.
+async function releaseEngineSeatsForShutdown(): Promise<void> {
+  const holders: Array<{ id: string; engineReservationId?: string | null }> = [...rooms.values()];
+  for (const registration of registeredVariantTenants()) {
+    holders.push(...registration.rooms.values());
+  }
+  const { released, failed } = await releaseLiveEngineSeatsOnShutdown(holders);
+  if (released + failed === 0) return;
+  console.log(
+    JSON.stringify({
+      level: failed > 0 ? 'warn' : 'info',
+      kind: 'shutdown_engine_seats_released',
+      released,
+      failed,
+      at: Date.now(),
+    }),
+  );
+}
+
 // Tear down for tests / hot restart. Mirrors shutdown() but does NOT call
 // process.exit, so the runner stays alive across tests.
 export async function stopServer(): Promise<void> {
@@ -376,6 +417,8 @@ export async function stopServer(): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  closeBanqiAnalysisQueries();
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
@@ -399,6 +442,8 @@ export async function stopServer(): Promise<void> {
   }
   await closeWebSocketServer(wss);
   await closeHttpServer(server);
+  await drainAchievementTriggers();
+  installAchievementEvaluator(null);
   await persistence.close();
   rooms.clear();
   for (const registration of registeredVariantTenants()) {
@@ -435,6 +480,22 @@ async function initPersistence(): Promise<void> {
     await client.end();
   }
   persistence.init(databaseUrl);
+  // Achievements follow game ends, puzzle attempts and forum posts; the
+  // writers emit after commit and the evaluation runs off their path.
+  installAchievementEvaluator(
+    ({ trigger, userIds }) => persistence.evaluateAchievements({ trigger, userIds }),
+    {
+      onError: (error, event) =>
+        logger.error(
+          {
+            kind: 'achievement_evaluation_failure',
+            trigger: event.trigger,
+            error: (error as Error)?.message ?? String(error),
+          },
+          'achievement evaluation failure',
+        ),
+    },
+  );
   console.log('persistence: enabled');
 }
 
@@ -592,6 +653,8 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  closeBanqiAnalysisQueries();
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;

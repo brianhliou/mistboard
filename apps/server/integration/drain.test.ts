@@ -78,6 +78,12 @@ test('drain: restart commit is exposed through the status endpoint', async () =>
 });
 
 test('drain: matchmaking blocked while drain is active', async () => {
+  // The test above committed the restart, and a committed drain lets creates
+  // through (#559 step 1). Re-arm a pending drain, the phase that refuses them.
+  await postJson('/admin/drain/cancel');
+  const pending = await postJson('/admin/drain', { windowMs: 60_000 });
+  assert.equal(pending.body.phase, 'pending');
+
   const rooms = await postJson('/api/rooms', { mode: 'pvp', variant: 'dark-chess' });
   assert.equal(rooms.status, 503);
   assert.equal(rooms.body.error, 'server_draining');

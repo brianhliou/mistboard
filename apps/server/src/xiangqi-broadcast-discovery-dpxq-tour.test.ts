@@ -316,6 +316,7 @@ test('a finished round of table-keyed boards stays unsettled once the tour is ke
     status: 'complete',
     result: '1-0',
     plies,
+    details: { table: 1, playedAt: '2026-03-28T13:00:00+08:00' },
   });
   // Round 1 as stored before fb2cbd84: six table-keyed rows, all complete.
   const roundOne = [1, 2, 3, 4, 5, 6].map((table) => board(1, `r01t0${table}`));
@@ -545,4 +546,28 @@ test('a source that stays down still fails after the one retry', async () => {
   assert.match(result.message, /unreachable/);
   assert.equal(fetched.filter((url) => url === tourGameListUrl('9503')).length, 2);
   assert.equal(fetched.filter((url) => url === roundPageUrl('9503')).length, 2);
+});
+
+test('a finished round of undated results is read once more for its date, then settles', () => {
+  const board = (sourceBoardId: string, playedAt?: string, plies = 0): StoredBoardRef => ({
+    id: `b-${sourceBoardId}`,
+    sourceBoardId,
+    roundNumber: Number(sourceBoardId.slice(1, 3)),
+    red: { name: 'a' },
+    black: { name: 'b' },
+    status: 'complete',
+    result: '1-0',
+    plies,
+    details: { table: 1, ...(playedAt ? { playedAt } : {}) },
+  });
+  // The 2026 league's round 12 as stored before the page's 比赛时间 was read.
+  const undated = [board('r12m01t01'), board('r12m01t02')];
+  assert.deepEqual([...settledStatedRounds(undated)], []);
+  const dated = undated.map((row) => ({
+    ...row,
+    details: { ...row.details, playedAt: '2026-10-28T13:00:00+08:00' },
+  }));
+  assert.deepEqual([...settledStatedRounds(dated)], [12]);
+  // A round with records has their dates; it settles as before.
+  assert.deepEqual([...settledStatedRounds([board('r09m01t01', undefined, 90)])], [9]);
 });

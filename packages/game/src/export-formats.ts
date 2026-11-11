@@ -13,7 +13,8 @@
 // the JSON publication only.
 //
 // Deliberately an explicit map with no fallback: a variant absent here exports
-// nothing, and adding one is a conscious decision about its notation.
+// nothing. An empty entry explicitly reserves an unavailable capability; only
+// nonempty entries export, and adding a format is a decision about its notation.
 
 import { hasOwnKey } from './js-compat.js';
 
@@ -25,6 +26,12 @@ export const GAME_EXPORT_FORMATS = {
   'dark-xiangqi': ['pgn', 'json'],
   jieqi: ['pgn', 'json'],
   banqi: ['pgn', 'json'],
+  // Covered identities stay masked after the game (#1002); an export would
+  // carry the deal, which names pieces nobody turned over.
+  'three-kingdoms-banqi': [],
+  // The FFQ FEN is a masked observer snapshot, not a replay/import format.
+  // No tenant or export adapter exists; never expose the canonical hidden deal.
+  'ffq-banqi': [],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
   // AND a duck placement, and neither WXF nor ICCS has anything to say about the
@@ -40,6 +47,11 @@ export const GAME_EXPORT_FORMATS = {
   'crazyhouse-xiangqi': ['json'],
   jungle: ['json'],
   'jungle-flip': ['pgn', 'json'],
+  // JSON preserves the dealt opening separately from the played placements.
+  // No PGN: Gomoku does not use chess movetext.
+  gomoku: ['json'],
+  // JSON only, mahjong has no PGN movetext.
+  'xiangqi-mahjong': ['json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;
 
 export type GameExportVariant = keyof typeof GAME_EXPORT_FORMATS;
@@ -59,5 +71,6 @@ export function exportFormatsForVariant(variant: string): readonly GameExportFor
  *  card's LOOK changes: the PNG is served immutable for a year, so the scraper
  *  and the CDN (which keys on the query) re-fetch only under a new `?v=`. The
  *  content is fixed per game (finished, immutable), so nothing else needs one.
- *  2: piece art drawn from a halving within 2x of its output size (it aliased). */
-export const GAME_IMAGE_VERSION = 2;
+ *  2: piece art drawn from a halving within 2x of its output size (it aliased).
+ *  3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares. */
+export const GAME_IMAGE_VERSION = 3;

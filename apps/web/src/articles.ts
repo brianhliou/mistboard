@@ -12,15 +12,19 @@ import {
   canonicalVariantOrderIndex,
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
+  type GameSpecId,
+  isRetiredGameSpec,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { articleListable } from './articles/blog-listing.js';
+import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
+import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
-import { localizeAnnouncementString } from './announcement-i18n.js';
-import { type Announcement, announcements } from './announcements.js';
+import './hover-grammar.css';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -31,6 +35,7 @@ import {
 } from './article-i18n.js';
 import { createStepCard } from './article-step-card.js';
 import {
+  type AnimatedSvgBlock,
   type Article,
   type ArticleBlock,
   type ArticleSection,
@@ -38,6 +43,7 @@ import {
   type AtomicXiangqiReplayBlock,
   articles,
   type BanqiReplayBlock,
+  type BilibiliBlock,
   type ChessReplayBlock,
   type CodeBlock,
   type CrazyhouseXiangqiReplayBlock,
@@ -49,10 +55,12 @@ import {
   findArticle,
   type HordeXiangqiReplayBlock,
   type ImageFigureBlock,
+  type ImageRowBlock,
   type InteractiveBlock,
   type JieqiReplayBlock,
   type JungleFlipReplayBlock,
   type JungleReplayBlock,
+  type ListBlock,
   type LiveBoardsBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
@@ -63,6 +71,7 @@ import {
   type SvgRowBlock,
   type TableBlock,
   type TableRowDiagram,
+  type TimelineBlock,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -80,6 +89,7 @@ import {
 } from './crazyhouse-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import { autosizeEmbedFrame } from './embed/embed-autosize.js';
+import { embedPathWithSolutionHidden } from './embed/embed-route.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -94,19 +104,23 @@ import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js'
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { prependTitleBadge } from './player-titles.js';
+import { hasLikelyVariantGrant, variantGrantsResolvedEvent } from './signed-in-state.js';
 import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
-import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
-import { renderVariantMarker } from './variant-markers.js';
+import {
+  loadThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiOffered,
+} from './three-kingdoms-banqi-access.js';
+import { renderPlaceholderVariantMarker, renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
   isGameSpecId,
-  rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
+  variantPlaytestSurfaceEnabled,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -135,17 +149,16 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false || article.noindex === true) return false;
-  // A page written in a language the interface does not speak never lists here.
-  // The index is one reader's shelf, and a Vietnamese card in an English list is
-  // noise to everyone: an English reader cannot read it, and a Vietnamese reader
-  // never sees the list, because they arrive from a search for `luật cờ úp`
-  // straight onto the page. Search and the sitemap are the discovery path for
-  // these, plus a link from the English original; the index is not.
-  //
-  // Structural rather than per-file (`showInIndex: false` on each) so the next
-  // translated page cannot forget it.
-  if (article.sourceLang) return false;
+  // Shared with the feeds (articles/blog-listing.ts), so /feed.xml carries
+  // exactly what /blog lists. It also drops a page written in a language the
+  // interface does not speak: the index is one reader's shelf, and a Vietnamese
+  // card in an English list is noise to everyone: an English reader cannot
+  // read it, and a Vietnamese reader never sees the list, because they arrive
+  // from a search for `luật cờ úp` straight onto the page. Search and the
+  // sitemap are the discovery path for these, plus a link from the English
+  // original; the index is not. Structural rather than per-file
+  // (`showInIndex: false` on each) so the next translated page cannot forget it.
+  if (!articleListable(article)) return false;
   if (
     article.kind === 'rules' &&
     !rulesSlugPublicSurfaceEnabled(article.gameSpecId ?? article.slug)
@@ -173,8 +186,127 @@ export type ArticleIndexView = 'community' | 'mistboard';
 export function buildArticlesIndex(
   lang?: ArticleLang,
   view: ArticleIndexView = 'mistboard',
+  topic?: string | null,
 ): HTMLElement {
-  return buildContentIndex('article', lang, view);
+  return buildContentIndex('article', lang, view, topic);
+}
+
+/**
+ * Topic filters on the blog index: `/blog?topic=<id>` narrows the one list in
+ * place, so a topic is data (an id, its chip label, which posts it holds), never
+ * a page of its own, and the canonical /blog stays the only URL search sees.
+ * Add a topic by adding an entry here; chips render in this order. Engineering
+ * holds the posts tagged `topic: 'engineering'` (unset is a post for players). Deep dives reuses the homepage row tag, so a post tagged
+ * for the deep-dives row is in the deep-dives topic with no second edit.
+ */
+export type ArticleTopic = {
+  id: string;
+  labelKey: I18nKey;
+  matches: (article: Article) => boolean;
+};
+
+const isEngineeringArticle = (article: Article): boolean =>
+  article.kind === 'article' && article.topic === 'engineering';
+
+export const ARTICLE_TOPICS: readonly ArticleTopic[] = [
+  {
+    id: 'deep-dives',
+    labelKey: 'articles.deepDives',
+    matches: (article) => article.homeRow === 'deep-dives',
+  },
+  {
+    id: 'engineering',
+    labelKey: 'articles.topicEngineering',
+    matches: isEngineeringArticle,
+  },
+];
+
+export function articleTopicHref(topicId: string, locale: Locale = currentLocale()): string {
+  return localizedHref(`/blog?topic=${encodeURIComponent(topicId)}`, locale);
+}
+
+/** The `?topic=` value of a search string, or null when it has none. */
+export function articleTopicFromSearch(search: string): string | null {
+  return new URLSearchParams(search).get('topic');
+}
+
+// The topics that narrow these posts: at least one post, and not every one. A
+// topic with nothing in it gets no chip, and a link to it falls back to All: a
+// filter must never open on an empty list while the posts exist one click away.
+// A topic holding every post is All under another name, so it gets no chip
+// either.
+function articleTopicsWithPosts(entries: readonly Article[]): ArticleTopic[] {
+  return ARTICLE_TOPICS.filter(
+    (topic) =>
+      entries.some((article) => topic.matches(article)) &&
+      !entries.every((article) => topic.matches(article)),
+  );
+}
+
+function buildArticleTopicChips(
+  topics: readonly ArticleTopic[],
+  list: HTMLElement,
+  locale: Locale,
+  activeTopicId: string | null,
+): HTMLElement {
+  const nav = document.createElement('nav');
+  nav.className = 'articles-topic-chips';
+  nav.setAttribute('aria-label', t('articles.topicsLabel', {}, locale));
+
+  const chips: Array<{ topicId: string | null; link: HTMLAnchorElement }> = [
+    {
+      topicId: null,
+      label: t('articles.topicAll', {}, locale),
+      href: localizedHref('/blog', locale),
+    },
+    ...topics.map((topic) => ({
+      topicId: topic.id,
+      label: t(topic.labelKey, {}, locale),
+      href: articleTopicHref(topic.id, locale),
+    })),
+  ].map(({ topicId, label, href }) => {
+    const link = document.createElement('a');
+    link.className = 'articles-topic-chip';
+    link.href = href;
+    link.textContent = label;
+    link.dataset.topic = topicId ?? '';
+    return { topicId, link };
+  });
+
+  const select = (topicId: string | null): void => {
+    applyArticleTopicFilter(list, topicId);
+    for (const chip of chips) {
+      if (chip.topicId === topicId) chip.link.setAttribute('aria-current', 'true');
+      else chip.link.removeAttribute('aria-current');
+    }
+  };
+
+  for (const chip of chips) {
+    // The chip is a real link, so a new tab or a shared URL lands on the same
+    // filtered list; a plain click narrows the list in place without a reload.
+    chip.link.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      select(chip.topicId);
+      try {
+        window.history.replaceState(window.history.state, '', chip.link.getAttribute('href'));
+      } catch {
+        // A sandboxed frame may refuse; the list is filtered either way.
+      }
+      track('blog_topic_selected', { topic: chip.topicId ?? 'all' });
+    });
+    nav.append(chip.link);
+  }
+  select(activeTopicId);
+  return nav;
+}
+
+function applyArticleTopicFilter(list: HTMLElement, topicId: string | null): void {
+  for (const item of list.querySelectorAll<HTMLLIElement>(':scope > li')) {
+    const topics = (item.dataset.topics ?? '').split(' ').filter(Boolean);
+    item.hidden = topicId !== null && !topics.includes(topicId);
+  }
 }
 
 export function buildRulesIndex(lang?: ArticleLang): HTMLElement {
@@ -185,6 +317,7 @@ function buildContentIndex(
   kind: Article['kind'],
   lang?: ArticleLang,
   articleView: ArticleIndexView = 'community',
+  topic?: string | null,
 ): HTMLElement {
   const locale = articleLocale(lang);
   const main = document.createElement('main');
@@ -221,7 +354,20 @@ function buildContentIndex(
     })
     .sort(compareArticlesNewestFirst);
   for (const article of entries) {
-    list.append(articleCard(article, lang));
+    const card = articleCard(article, lang);
+    const topicIds = ARTICLE_TOPICS.filter((entry) => entry.matches(article)).map(
+      (entry) => entry.id,
+    );
+    if (topicIds.length > 0) card.dataset.topics = topicIds.join(' ');
+    list.append(card);
+  }
+
+  // Chips only when they choose between something: All plus at least one topic
+  // with posts in this view. An unknown or empty topic falls back to All.
+  const topics = kind === 'article' ? articleTopicsWithPosts(entries) : [];
+  if (topics.length > 0) {
+    const activeTopicId = topics.some((entry) => entry.id === topic) ? (topic ?? null) : null;
+    headingBlock.append(buildArticleTopicChips(topics, list, locale, activeTopicId));
   }
 
   sheet.append(headingBlock);
@@ -234,10 +380,10 @@ function buildContentIndex(
   if (entries.length > 0) {
     sheet.append(list);
   } else if (kind === 'article') {
-    const empty = document.createElement('p');
-    empty.className = 'articles-index-empty';
-    empty.textContent = 'No community posts yet.';
-    sheet.append(empty);
+    // An empty list read as a broken page, so with no posts this view asks for
+    // writers instead; the first community post replaces it.
+    heading.textContent = t(COMMUNITY_WRITER_HEADING, {}, locale);
+    sheet.append(buildCommunityWriterPitch(locale));
   }
   if (kind === 'article') {
     layout.append(sheet);
@@ -248,20 +394,201 @@ function buildContentIndex(
   return main;
 }
 
+const COMMUNITY_WRITER_HEADING = 'articles.writer.heading';
+
+const COMMUNITY_WRITER_LEDE = 'articles.writer.lede';
+
+const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: I18nKey; body: I18nKey }> = [
+  {
+    title: 'articles.writer.languagesTitle',
+    body: 'articles.writer.languagesBody',
+  },
+  {
+    title: 'articles.writer.boardsTitle',
+    body: 'articles.writer.boardsBody',
+  },
+  {
+    title: 'articles.writer.homepageTitle',
+    body: 'articles.writer.homepageBody',
+  },
+  {
+    title: 'articles.writer.bylineTitle',
+    body: 'articles.writer.bylineBody',
+  },
+];
+
+// Each column idea points at one of our own posts of that shape, shown with
+// that post's own card thumbnail, so the page shows what a finished post looks
+// like instead of an empty list.
+const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{ title: I18nKey; body: I18nKey; example: string }> = [
+  {
+    title: 'articles.writer.gameTitle',
+    body: 'articles.writer.gameBody',
+    example: 'jieqi-bot-wins',
+  },
+  {
+    title: 'articles.writer.openingTitle',
+    body: 'articles.writer.openingBody',
+    example: 'jieqi-openings',
+  },
+  {
+    title: 'articles.writer.playerTitle',
+    body: 'articles.writer.playerBody',
+    example: 'yin-sheng',
+  },
+  {
+    title: 'articles.writer.variantTitle',
+    body: 'articles.writer.variantBody',
+    example: 'duck-xiangqi-strategy',
+  },
+];
+
+const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: I18nKey; body: I18nKey }> = [
+  {
+    title: 'articles.writer.sampleTitle',
+    body: 'articles.writer.sampleBody',
+  },
+  { title: 'articles.writer.firstPostTitle', body: 'articles.writer.firstPostBody' },
+  { title: 'articles.writer.continueTitle', body: 'articles.writer.continueBody' },
+];
+
+function communityPitchSection(title: string, list: HTMLElement): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'articles-community-pitch-section';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  section.append(heading, list);
+  return section;
+}
+
+function communityPitchTextCard(
+  item: HTMLElement,
+  entry: { title: I18nKey; body: I18nKey },
+  locale: Locale,
+): HTMLElement {
+  const title = document.createElement('h3');
+  title.textContent = t(entry.title, {}, locale);
+  const body = document.createElement('p');
+  body.textContent = t(entry.body, {}, locale);
+  item.append(title, body);
+  return item;
+}
+
+function buildCommunityWriterPitch(locale: Locale): HTMLElement {
+  const pitch = document.createElement('div');
+  pitch.className = 'articles-community-pitch';
+
+  const lede = document.createElement('p');
+  lede.className = 'articles-community-pitch-lede';
+  lede.textContent = t(COMMUNITY_WRITER_LEDE, {}, locale);
+
+  const benefits = document.createElement('ul');
+  benefits.className = 'articles-community-pitch-benefits';
+  for (const benefit of COMMUNITY_WRITER_BENEFITS) {
+    benefits.append(communityPitchTextCard(document.createElement('li'), benefit, locale));
+  }
+
+  const ideas = document.createElement('ul');
+  ideas.className = 'articles-community-pitch-ideas';
+  for (const idea of COMMUNITY_WRITER_IDEAS) {
+    const example = articles.find(
+      (article) => article.slug === idea.example && isArticleListedInThisEnv(article),
+    );
+    const item = document.createElement('li');
+    // The whole card links to the example post; with no listed example it is
+    // plain text, so a retired slug never leaves a dead link or a blank frame.
+    const card = document.createElement(example ? 'a' : 'div');
+    card.className = 'articles-community-pitch-idea';
+    if (example && card instanceof HTMLAnchorElement) {
+      card.href = localizedArticleHref(example, locale);
+      if (example.thumbnail) {
+        const media = document.createElement('div');
+        media.className = 'articles-index-card-media';
+        media.append(renderArticleThumbnail(example.thumbnail, locale));
+        card.append(media);
+      }
+    }
+    const body = communityPitchTextCard(document.createElement('div'), idea, locale);
+    body.className = 'articles-community-pitch-idea-body';
+    if (example) {
+      const exampleLine = document.createElement('span');
+      exampleLine.className = 'articles-community-pitch-example';
+      const exampleLang = publishedArticleLang(example.slug, locale === 'en' ? undefined : locale);
+      const localized = exampleLang ? translateArticle(example, exampleLang) : example;
+      exampleLine.textContent = t('articles.writer.example', { title: localized.title }, locale);
+      body.append(exampleLine);
+    }
+    card.append(body);
+    item.append(card);
+    ideas.append(item);
+  }
+
+  const steps = document.createElement('ol');
+  steps.className = 'articles-community-pitch-steps';
+  for (const step of COMMUNITY_WRITER_STEPS) {
+    steps.append(communityPitchTextCard(document.createElement('li'), step, locale));
+  }
+
+  const row = document.createElement('div');
+  row.className = 'article-cta-row articles-community-pitch-cta';
+  const buttons = [
+    {
+      label: t('articles.writer.apply', {}, locale),
+      href: '/contact?about=/blog/community',
+      emphasis: 'primary',
+    },
+    { label: t('articles.writer.readBlog', {}, locale), href: '/blog', emphasis: 'secondary' },
+  ];
+  for (const button of buttons) {
+    const link = document.createElement('a');
+    link.className = `article-cta article-cta-${button.emphasis}`;
+    link.href = button.href;
+    link.textContent = button.label;
+    row.append(link);
+  }
+  pitch.append(
+    lede,
+    communityPitchSection(t('articles.writer.benefits', {}, locale), benefits),
+    communityPitchSection(t('articles.writer.ideas', {}, locale), ideas),
+    communityPitchSection(t('articles.writer.steps', {}, locale), steps),
+    row,
+  );
+  return pitch;
+}
+
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
   const rail = document.createElement('aside');
   rail.className = 'community-rail articles-community-rail';
-  rail.setAttribute('aria-label', 'Blog navigation');
+  rail.setAttribute('aria-label', t('articles.navigation', {}, locale));
 
   const links: Array<{ label: string; href: string; view: ArticleIndexView }> = [
-    { label: 'By Mistboard', href: localizedHref('/blog', locale), view: 'mistboard' },
-    { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
+    {
+      label: t('articles.byMistboard', {}, locale),
+      href: localizedHref('/blog', locale),
+      view: 'mistboard',
+    },
+    {
+      label: t('articles.communityPosts', {}, locale),
+      href: localizedHref('/blog/community', locale),
+      view: 'community',
+    },
   ];
+
+  // A view with no posts is marked so the phone tab row can drop it (the
+  // desktop rail keeps both links); the view being shown always stays.
+  const viewHasPosts = (view: ArticleIndexView): boolean =>
+    articles.some(
+      (article) =>
+        article.kind === 'article' &&
+        article.publisher === view &&
+        isArticleListedInThisEnv(article),
+    );
 
   for (const item of links) {
     const link = document.createElement('a');
     link.href = item.href;
     link.textContent = item.label;
+    if (!viewHasPosts(item.view)) link.dataset.empty = 'true';
     if (item.view === activeView) {
       link.className = 'community-rail-active';
       link.setAttribute('aria-current', 'page');
@@ -319,13 +646,17 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     const tile = document.createElement('a');
     tile.className = 'rules-landing-tile';
     tile.href = localizedArticleHref(article, locale);
-    const miniTile = renderVariantMiniThumb(article.slug);
-    if (miniTile) tile.append(miniTile);
-    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail, locale));
+    tile.append(renderRulesMarkerThumb(article.slug));
     const label = document.createElement('span');
     label.className = 'rules-landing-tile-label';
     label.textContent = variantNavLabel(localized.title);
     tile.append(label);
+    if (localized.kind === 'rules' && localized.tagline) {
+      const tagline = document.createElement('span');
+      tagline.className = 'rules-landing-tile-tagline';
+      tagline.textContent = localized.tagline;
+      tile.append(tagline);
+    }
     li.append(tile);
     grid.append(li);
   }
@@ -355,19 +686,10 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // leads it, to put a new variant in front of people while it is new.
 export const HOME_ARTICLE_LEAD_ON_TIE = ['duck-xiangqi-strategy'] as const;
 
-type HomeCardItem =
-  | {
-      kind: 'announcement';
-      date: string;
-      order: number;
-      announcement: Announcement;
-    }
-  | {
-      kind: 'article';
-      date: string;
-      order: number;
-      article: Article;
-    };
+type HomeCardItem = {
+  date: string;
+  article: Article;
+};
 
 /**
  * How far back the homepage row reaches, and how short it is allowed to get.
@@ -394,16 +716,19 @@ export type HomeArticleCardOptions = {
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
   /**
-   * Which homepage row to build. 'latest' (the default) is every article with no
-   * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
+   * Which homepage row to build. 'latest' (the default, "From the blog") is
+   * every article with no homeRow, articles only: announcements live in the
+   * News box (Brian, 2026-10-26); 'deep-dives' is the articles tagged
    * for it, with no age cut, since a player page does not go stale in 60 days.
+   * Engineering posts are in neither row: the homepage is for players, and those
+   * posts live under the blog's Engineering chip (Brian, 2026-10-21).
    */
   row?: HomeArticleRow;
 };
 
 export type HomeArticleRow = 'latest' | 'deep-dives';
 
-/** Cards the homepage row shows at once (landing.ts), announcement included. */
+/** Cards the homepage row shows at once (landing.ts). */
 export const HOME_ARTICLE_ROW_SIZE = 6;
 
 export function buildHomeArticleCards(
@@ -419,26 +744,19 @@ export function buildHomeArticleCards(
   const row = options.row ?? 'latest';
   const articleItems = articles
     .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
+    .filter((article) => !isEngineeringArticle(article))
     .filter((article) => (article.homeRow ?? 'latest') === row)
-    .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
-    .map<HomeCardItem>((article, index) => ({
-      kind: 'article',
-      date: articleDateKey(article),
-      order: index + 1,
-      article,
-    }));
-  const latestAnnouncement = row === 'latest' ? latestVisibleAnnouncement() : undefined;
-  const announcementItems: HomeCardItem[] = latestAnnouncement
-    ? [
-        {
-          kind: 'announcement',
-          date: latestAnnouncement.date,
-          order: 0,
-          announcement: latestAnnouncement,
-        },
-      ]
-    : [];
-  const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
+    // Newest first; on a shared publish date a HOME_ARTICLE_LEAD_ON_TIE slug leads.
+    .sort(
+      (a, b) =>
+        articleDateKey(b).localeCompare(articleDateKey(a)) ||
+        tieRank(a) - tieRank(b) ||
+        a.title.localeCompare(b.title),
+    )
+    .map<HomeCardItem>((article) => ({ date: articleDateKey(article), article }));
+  // Articles only: the row used to slot in the newest announcement, which the
+  // News box already shows (Brian, 2026-10-26).
+  const ordered = articleItems;
 
   const maxAgeDays =
     options.maxAgeDays ??
@@ -454,13 +772,7 @@ export function buildHomeArticleCards(
   });
   const kept = fresh.length >= minCards ? fresh : ordered.slice(0, minCards);
 
-  const cards = kept
-    .map((item) =>
-      item.kind === 'announcement'
-        ? landingAnnouncementCard(item.announcement, locale)
-        : landingArticleCard(item.article, locale),
-    )
-    .slice(0, limit);
+  const cards = kept.map((item) => landingArticleCard(item.article, locale)).slice(0, limit);
   if (cards.length === 0) return null;
 
   const section = document.createElement('section');
@@ -470,9 +782,11 @@ export function buildHomeArticleCards(
     t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest', {}, locale),
   );
 
-  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled first
-  // row read as nothing next to "Xiangqi deep dives"), and the first row's
-  // label line links to the blog index, which the strip had no way to reach.
+  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled row read
+  // as nothing next to "Xiangqi deep dives"; "Latest" became "From the blog"
+  // 2026-10-26, when it moved under the deep dives and dropped announcements),
+  // and its label line links to the blog index, which the strip had no way to
+  // reach.
   const header = document.createElement('div');
   header.className = 'landing-row-header';
   const label = document.createElement('h2');
@@ -483,13 +797,21 @@ export function buildHomeArticleCards(
     locale,
   );
   header.append(label);
-  if (row === 'latest') {
+  // The deep-dives row links on only when it is holding posts back: with every
+  // tagged post already on screen, "More" would open a list of the same cards.
+  const moreHref =
+    row === 'latest'
+      ? localizedHref('/blog', locale)
+      : articleItems.length > cards.length
+        ? articleTopicHref(row, locale)
+        : null;
+  if (moreHref) {
     const more = document.createElement('a');
-    more.className = 'landing-row-more';
-    more.href = localizedHref('/blog', locale);
+    more.className = 'landing-row-more hover-link';
+    more.href = moreHref;
     more.textContent = t('site.more', {}, locale);
     // Autocapture is off, so a homepage link with no track() call is invisible
-    // in PostHog: this is the only way off the homepage into the blog index.
+    // in PostHog: these are the only ways off the homepage into the blog index.
     more.addEventListener('click', () => {
       track('landing_row_more_clicked', { row, href: more.getAttribute('href') });
     });
@@ -521,19 +843,6 @@ function compareArticlesNewestFirst(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-function compareHomeCardItems(a: HomeCardItem, b: HomeCardItem): number {
-  const dateCompare = b.date.localeCompare(a.date);
-  if (dateCompare !== 0) return dateCompare;
-  return a.order - b.order;
-}
-
-function latestVisibleAnnouncement(): Announcement | undefined {
-  return [...announcements()]
-    .filter((announcement) => announcement.showInHomeArticleWidget === true)
-    .filter((announcement) => rulesHrefPublicSurfaceEnabled(announcement.href))
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-}
-
 function carouselNavButton(dir: 'prev' | 'next', glyph: string, locale: Locale): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -552,7 +861,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   const articleLang = publishedArticleLang(article.slug, requestedLang);
   const localized = articleLang ? translateArticle(article, articleLang) : article;
   const link = document.createElement('a');
-  link.className = 'landing-article-card';
+  link.className = 'landing-article-card hover-card';
   link.dataset.cardKind = 'article';
   link.href = localizedArticleHref(article, locale);
 
@@ -564,68 +873,48 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale, { imageAsBackground: true }));
   } else {
     thumb.classList.add('is-empty');
   }
 
-  // Date pill overlaid on the thumbnail, lichess blog-card style.
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'landing-article-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-  thumb.append(articleCardStarBadge('landing-article-card-star'));
-
   const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
-  title.textContent = localized.cardTitle ?? localized.title;
+  title.className = 'landing-article-card-title hover-title';
+  appendCardTitle(title, localized.cardTitle ?? localized.title);
 
   link.append(thumb, title);
+  // The date sits under the title as muted text, never over the art, so a
+  // thumbnail needs no empty corner for it.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) link.append(landingCardDate(dateIso, locale));
   return link;
 }
 
-function articleCardStarBadge(className: string): HTMLSpanElement {
-  const star = document.createElement('span');
-  star.className = className;
-  star.setAttribute('aria-hidden', 'true');
-  star.textContent = '★';
-  return star;
+// A romanized name followed by its Chinese ("Zuo Wenjing 左文静").
+const TRAILING_HAN_NAME = /^([^\p{Script=Han}]*\p{L}[^\p{Script=Han}]*?)\s+(\p{Script=Han}+)$/u;
+
+/** A title ending in a Chinese name breaks before the name, so the name never
+ *  splits across lines; where titles hold to one line the break is hidden and
+ *  the trailing space keeps the two apart. */
+export function appendCardTitle(title: HTMLElement, text: string): void {
+  const match = TRAILING_HAN_NAME.exec(text);
+  if (!match) {
+    title.textContent = text;
+    return;
+  }
+  const brk = document.createElement('br');
+  brk.className = 'landing-article-card-title-break';
+  const name = document.createElement('span');
+  name.className = 'landing-article-card-title-han';
+  name.textContent = match[2];
+  title.append(`${match[1]} `, brk, name);
 }
 
-function landingAnnouncementCard(announcement: Announcement, locale: Locale): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'landing-article-card landing-announcement-card';
-  link.dataset.cardKind = 'announcement';
-  const href = announcement.href ?? '/feed';
-  link.href = /^https?:/.test(href) ? href : localizedHref(href, locale);
-  if (/^https?:/.test(href)) {
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-  }
-
-  const thumb = document.createElement('div');
-  thumb.className = 'landing-article-card-thumb landing-announcement-thumb';
-
-  const icon = document.createElement('span');
-  icon.className = 'landing-announcement-thumb-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.append(buildUiIcon(uiIconForAnnouncementKind(announcement.kind)));
-  thumb.append(icon);
-
+function landingCardDate(iso: string, locale: Locale): HTMLElement {
   const date = document.createElement('span');
   date.className = 'landing-article-card-date';
-  date.textContent = formatCardDate(announcement.date, locale);
-  thumb.append(date);
-
-  const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
-  title.textContent = localizeAnnouncementString(announcement.headline, locale);
-
-  link.append(thumb, title);
-  return link;
+  date.textContent = formatCardDate(iso, locale);
+  return date;
 }
 
 function formatCardDate(iso: string, locale: Locale): string {
@@ -682,11 +971,13 @@ function initSingleCarousel(carousel: HTMLElement): void {
     if (cards.length < 2) return 0;
     return cards[1]!.getBoundingClientRect().left - cards[0]!.getBoundingClientRect().left;
   };
+  const overflow = (): number => Math.max(0, track.scrollWidth - carousel.clientWidth);
   const maxIndex = (): number => {
     const step = stepPx();
     if (step <= 0) return 0;
-    const overflow = Math.max(0, track.scrollWidth - carousel.clientWidth);
-    return Math.round(overflow / step);
+    // Ceil, not round: with a part card in view (the desktop band-2 rows) the
+    // last stop must reach the end; apply() clamps it there.
+    return Math.ceil(overflow() / step - 0.05);
   };
 
   const apply = () => {
@@ -700,7 +991,7 @@ function initSingleCarousel(carousel: HTMLElement): void {
       return;
     }
     index = Math.max(0, Math.min(index, mi));
-    track.style.transform = `translateX(${-(index * stepPx())}px)`;
+    track.style.transform = `translateX(${-Math.min(index * stepPx(), overflow())}px)`;
   };
 
   const tick = () => {
@@ -762,8 +1053,9 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (articleLang) main.dataset.articleLang = articleLang;
   // The chrome follows the UI language (articleLocale), so <html lang> can say
   // zh-Hant over an English article. The article's own text says what it is,
-  // for screen readers, browser translate and hyphenation.
-  const contentLang: Locale = articleLang ?? 'en';
+  // for screen readers, browser translate and hyphenation. A Vietnamese page
+  // is its own article (sourceLang), not a rendering, and says so.
+  const contentLang: string = articleLang ?? article.sourceLang ?? 'en';
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
@@ -789,6 +1081,17 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     badge.textContent = t(ARTICLE_STATUS_KEYS[article.status], {}, locale);
     metaRow.append(badge);
   }
+  // An engineering post says so first on the row, linking to the blog's
+  // Engineering chip, so a player who lands on a build story knows it is one
+  // (Brian, 2026-10-28: "make sure it's labeled engineering").
+  if (isEngineeringArticle(base)) {
+    const topic = document.createElement('a');
+    topic.className = 'articles-topic-chip article-topic-label';
+    topic.href = articleTopicHref('engineering', locale);
+    topic.dataset.topic = 'engineering';
+    topic.textContent = t('articles.topicEngineering', {}, locale);
+    metaRow.append(topic);
+  }
   // Guest byline leads the meta row, before the dates: who wrote it matters
   // more to a reader than when. Absent on everything Mistboard wrote itself.
   if (article.author) {
@@ -809,23 +1112,96 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     nameEl.append(name);
     byline.append(nameEl);
     metaRow.append(byline);
+  } else if (hasSiteByline(article)) {
+    // Everything Mistboard publishes as an article has a person behind it; the
+    // name links to the About section that says who he is and how the pages
+    // are made. Rules pages are reference documents and stay unsigned.
+    const byline = document.createElement('span');
+    byline.className = 'article-meta-byline';
+    byline.append(`${t('articles.by', {}, locale)} `);
+    const nameEl = document.createElement('a');
+    nameEl.href = localizedHref(SITE_AUTHOR.href, locale);
+    nameEl.className = 'article-meta-author';
+    const name = document.createElement('span');
+    name.className = 'article-meta-author-name';
+    name.textContent = SITE_AUTHOR.name;
+    nameEl.append(name);
+    byline.append(nameEl);
+    // How the text was made sits with who made it (the brianhliou.com
+    // post-drafted note). A zh rendering also says it is a machine translation.
+    const madeWith = articleMadeWithNote(base, articleLang);
+    if (madeWith) {
+      const note = document.createElement('span');
+      note.className = 'article-meta-drafted';
+      note.textContent = t(
+        madeWith === 'drafted' ? 'articles.draftedWithClaude' : 'articles.draftedTranslated',
+        {},
+        locale,
+      );
+      byline.append(' · ', note);
+    }
+    metaRow.append(byline);
   }
   if (article.publishedAt) {
     const dates = document.createElement('span');
     dates.className = 'article-meta-dates';
-    dates.textContent = `${t('articles.published', {}, locale)} ${formatArticleDate(
+    const published = document.createElement('span');
+    published.className = 'article-meta-date';
+    published.textContent = `${t('articles.published', {}, locale)} ${formatArticleDate(
       article.publishedAt,
       locale,
     )}`;
+    dates.append(published);
     if (article.updatedAt && article.updatedAt !== article.publishedAt) {
-      dates.textContent += ` · ${t('articles.updated', {}, locale)} ${formatArticleDate(
+      const updated = document.createElement('span');
+      updated.className = 'article-meta-date';
+      updated.textContent = `${t('articles.updated', {}, locale)} ${formatArticleDate(
         article.updatedAt,
         locale,
       )}`;
+      dates.append(updated);
     }
     metaRow.append(dates);
   }
+  // Vietnamese readers can return to the English page from the byline.
+  // The sitemap and hreflang alternates cover discovery in both directions.
+  for (const partner of languagePartnersOf(base.slug)) {
+    if (base.sourceLang !== 'vi' || partner.lang !== 'en') continue;
+    const target = findArticle(partner.slug);
+    if (!target || !isArticleVisibleInThisEnv(target)) continue;
+    const link = document.createElement('a');
+    link.className = 'article-meta-language';
+    link.href = `/${target.kind === 'rules' ? 'rules' : 'blog'}/${encodeURIComponent(target.slug)}`;
+    link.hreflang = partner.lang;
+    link.lang = partner.lang;
+    link.textContent = LANGUAGE_ENDONYMS[partner.lang];
+    let byline = metaRow.querySelector('.article-meta-byline');
+    if (!byline) {
+      byline = document.createElement('span');
+      byline.className = 'article-meta-byline';
+      metaRow.prepend(byline);
+    }
+    if (byline.hasChildNodes()) byline.append(' · ');
+    byline.append(link);
+  }
   if (metaRow.childElementCount > 0) header.append(metaRow);
+
+  // What the update on the meta row's "Updated" date changed. The note text is
+  // authored in English and stays English on a translation unless the
+  // dictionary carries it; the label is chrome and follows the locale.
+  if (article.updateNote && article.updatedAt && article.updatedAt !== article.publishedAt) {
+    const updateNote = document.createElement('p');
+    updateNote.className = 'article-update-note';
+    const label = document.createElement('span');
+    label.className = 'article-update-note-label';
+    label.textContent = t('articles.updateNote', {}, locale);
+    const text = document.createElement('span');
+    text.className = 'article-update-note-text';
+    if (articleLang) text.lang = article.updateNote === base.updateNote ? 'en' : articleLang;
+    text.textContent = article.updateNote;
+    updateNote.append(label, ' ', text);
+    header.append(updateNote);
+  }
 
   const showSummaryOnPage = article.showSummaryOnPage ?? true;
   if (showSummaryOnPage) {
@@ -873,6 +1249,27 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     sheet.append(tldr);
   }
 
+  // A data post's method, restated from its own text, so a reader can judge
+  // the numbers before reading them.
+  if (article.method && article.method.length > 0) {
+    const method = document.createElement('aside');
+    method.className = 'article-method';
+    const methodHeading = document.createElement('strong');
+    methodHeading.className = 'article-method-heading';
+    methodHeading.textContent = t('articles.method', {}, locale);
+    const methodList = document.createElement('ul');
+    methodList.className = 'article-method-list';
+    article.method.forEach((line, index) => {
+      const li = document.createElement('li');
+      // A line the zh dictionary does not carry yet renders in English.
+      li.lang = articleLang && line === base.method?.[index] ? 'en' : contentLang;
+      appendRichText(li, line);
+      methodList.append(li);
+    });
+    method.append(methodHeading, methodList);
+    sheet.append(method);
+  }
+
   if (article.intro && article.intro.length > 0) {
     const intro = document.createElement('div');
     intro.className = 'article-intro';
@@ -893,6 +1290,16 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     h2.id = uniqueId(section.heading, usedIds, headingIndex++);
     body.append(h2);
     for (const node of renderSectionBody(section, articleLang)) {
+      // These closing play rows use the header's labels, locale and links, so
+      // a bot button appears only where the variant really offers a bot.
+      if (
+        (base.slug === 'gomoku' || base.slug === 'three-kingdoms-banqi') &&
+        node.classList.contains('article-cta-row')
+      ) {
+        const playCta = buildRulesPlayCta(base.slug, article.title, locale);
+        if (playCta) body.append(playCta);
+        continue;
+      }
       if (node instanceof HTMLHeadingElement && node.tagName === 'H3') {
         node.id = uniqueId(node.textContent ?? '', usedIds, headingIndex++);
       }
@@ -910,6 +1317,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   main.append(sheet);
   const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
+  if (article.contactNote) main.append(articleContactNote(article.slug, locale));
 
   return main;
 }
@@ -924,8 +1332,8 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // their current shape and only /blog gets this. The one exception is the zh
 // rules pages, which end in a single line inviting a reader to review the
 // machine translation (buildRulesTranslateNote).
-function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
-  if (article.kind === 'rules') return buildRulesTranslateNote(lang);
+export function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+  if (article.kind === 'rules') return buildRulesTranslateNote(article, lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
   if (related.length === 0) return null;
@@ -944,25 +1352,28 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang));
   }
 
   footer.append(heading, list);
   return footer;
 }
 
-// zh rules pages ship on machine translation; this line points a native reader
-// at the volunteer review role on /contribute. English pages have nothing to
-// review, so they get no line. The anchor is the id contribute-page.ts sets on
-// its translate heading.
-function buildRulesTranslateNote(lang?: ArticleLang): HTMLElement | null {
+// zh rules pages ship on machine translation; this line lets a reader who
+// spots a bad term report it from the contact form, which arrives labelled with
+// the page (`?about=`). The volunteer review role stays on /contribute.
+// English pages have nothing to review, so they get no line. nofollow keeps
+// crawlers from filing the ?about= copy as another URL for /contact.
+function buildRulesTranslateNote(article: Article, lang?: ArticleLang): HTMLElement | null {
   if (!lang) return null;
   const locale = articleLocale(lang);
   const footer = document.createElement('footer');
   footer.className = 'article-translate-note';
   const line = document.createElement('p');
   const link = document.createElement('a');
-  link.href = '/contribute#translate';
+  const path = localizedHref(`/rules/${article.slug}`, locale);
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`, locale);
+  link.rel = 'nofollow';
   link.textContent = t('rules.translateIssueLink', {}, locale);
   line.append(t('rules.translateIssue', {}, locale), link);
   footer.append(line);
@@ -982,12 +1393,19 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // current post: every post gets a distinct trio and it reads as "the posts
 // either side of this one".
 //
-// No topic weighting, deliberately. `boardFamily` is the obvious candidate and
-// it is the wrong field: it selects which appearance pickers an article shows,
-// so it is set on the banqi engine write-up and unset on the xiangqi champions
-// list. Ranking by it demoted a xiangqi article below a banqi one on a xiangqi
-// page. A real topic signal needs a field that means topic; until the schema has
-// one, recency is the honest answer.
+// The ring keeps to the post's own kind first: an engineering post's footer
+// offers engineering posts and a player post's offers player posts, and the
+// other kind fills only when one runs short. `topic` is that field.
+// `boardFamily` is not a topic signal: it selects which appearance pickers an
+// article shows, so it is set on the banqi engine write-up and unset on the
+// xiangqi champions list, and ranking by it demoted a xiangqi article below a
+// banqi one on a xiangqi page.
+//
+// A xiangqi deep dive (a player page or game deep dive marked `game: 'xiangqi'`)
+// is stricter: its footer offers only xiangqi player posts, other deep dives
+// first, then the rest, and never another variant or an engineering post, even
+// when that leaves fewer than three cards (Brian, 2026-10-28: a player page
+// ended on a fortress/atomic post and a jieqi post).
 function relatedArticles(article: BlogArticle): BlogArticle[] {
   // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
   // rejects everything with `sourceLang` set, so an unqualified pool leaves a
@@ -999,13 +1417,15 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     article.sourceLang
       ? candidate.sourceLang === article.sourceLang && isArticleVisibleInThisEnv(candidate)
       : isArticleListedInThisEnv(candidate);
+  const xiangqiDeepDive = isXiangqiDeepDive(article);
   const pool = articles
     .filter(
       (candidate): candidate is BlogArticle =>
         candidate.kind === 'article' &&
         candidate.slug !== article.slug &&
         candidate.publisher === article.publisher &&
-        sameLanguage(candidate),
+        sameLanguage(candidate) &&
+        (!xiangqiDeepDive || isXiangqiPlayerPost(candidate)),
     )
     .sort(compareArticlesNewestFirst);
   if (pool.length === 0) return [];
@@ -1025,7 +1445,22 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
   ).filter((candidate) => !chosenSlugs.has(candidate.slug));
-  return [...chosen, ...ring].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  if (xiangqiDeepDive) {
+    const deepDives = ring.filter(isXiangqiDeepDive);
+    const rest = ring.filter((candidate) => !isXiangqiDeepDive(candidate));
+    return [...chosen, ...deepDives, ...rest].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  }
+  const sameTopic = ring.filter((candidate) => candidate.topic === article.topic);
+  const otherTopic = ring.filter((candidate) => candidate.topic !== article.topic);
+  return [...chosen, ...sameTopic, ...otherTopic].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+}
+
+function isXiangqiPlayerPost(article: BlogArticle): boolean {
+  return article.game === 'xiangqi' && article.topic !== 'engineering';
+}
+
+function isXiangqiDeepDive(article: BlogArticle): boolean {
+  return article.homeRow === 'deep-dives' && isXiangqiPlayerPost(article);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed
@@ -1064,9 +1499,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
     const link = document.createElement('a');
     link.className = 'article-variant-link';
     link.href = localizedArticleHref(entry, locale);
-    const miniRail = renderVariantMiniThumb(entry.slug);
-    if (miniRail) link.append(miniRail);
-    else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail, locale));
+    link.append(renderRulesMarkerThumb(entry.slug));
     const localized = entryLang ? translateArticle(entry, entryLang) : entry;
     const label = document.createElement('span');
     label.className = 'article-variant-label';
@@ -1091,7 +1524,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
 // Dark Chess)") or a zh subtitle after a fullwidth colon ("暗棋规则：玩法详解…")
 // would otherwise render in full and widen the rail enough to push the article
 // column off centre. Strip the search freight first, then the "Rules" suffix.
-function variantNavLabel(title: string): string {
+export function variantNavLabel(title: string): string {
   return title
     .replace(/：.*$/u, '')
     .replace(/\s*\([^)]*\)\s*$/u, '')
@@ -1100,7 +1533,7 @@ function variantNavLabel(title: string): string {
     .trim();
 }
 
-function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
+export function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
   return [...entries].sort(compareRulesArticleRailEntries);
 }
 
@@ -1110,9 +1543,19 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
+// Explicit placement for rules pages outside the canonical public shelf:
+// related playtests follow their base game; Gomoku follows the shelf's end.
+const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
+  'three-kingdoms-banqi': 'banqi',
+  // A separate board-game family follows the public shelf in local playtests.
+  gomoku: 'xiangqi-mahjong',
+};
+
 function rulesArticleRailSortIndex(article: Article): number {
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
+  const after = RULES_RAIL_AFTER_SPEC[article.slug];
+  if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
+  const gameSpecId = article.gameSpecId ?? gameSpecIdFromRulesSlug(article.slug);
+  if (gameSpecId && isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -1355,19 +1798,24 @@ function rememberPendingMount(figure: HTMLElement, block: PendingBlock, lang?: A
 /** One body block as DOM. Exported for tests. */
 export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'paragraph') return paragraphNode(block.text);
-  if (block.kind === 'note') return noteNode(block.text);
+  if (block.kind === 'note') return noteNode(block.text, block.label);
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
   if (block.kind === 'image-figure') return renderImageFigureBlock(block);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
+  if (block.kind === 'animated-svg') return renderAnimatedSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
   if (block.kind === 'step-game-set') return renderStepGameSetBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'embed') return renderEmbedBlock(block);
+  if (block.kind === 'bilibili') return renderBilibiliBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'faq') return renderFaqBlock(block);
+  if (block.kind === 'timeline') return renderTimelineBlock(block, lang);
+  if (block.kind === 'list') return renderListBlock(block);
+  if (block.kind === 'image-row') return renderImageRowBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
@@ -1750,8 +2198,41 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     .forEach((node) => {
       const text = node.textContent;
       if (!text || node.getAttribute('translate') === 'no') return;
-      node.textContent = translateArticleText(lang, text.trim());
+      // data-i18n-key names the dictionary key when the visible English word
+      // is shared by labels that translate differently (a red and a black
+      // General are both "General", but 帥 and 將). Untranslated, it keeps the
+      // English text rather than showing the key.
+      const keyed = node.getAttribute('data-i18n-key');
+      const out = translateArticleText(lang, keyed ?? text.trim());
+      if (keyed && out === keyed) return;
+      node.textContent = out;
     });
+  // A figure's aria-label usually repeats its <title>; a screen reader reads
+  // the label, so it follows the title into the page language when the
+  // dictionary has it.
+  root.querySelectorAll<SVGSVGElement>('svg[aria-label]').forEach((svg) => {
+    const label = svg.getAttribute('aria-label')?.trim();
+    if (!label || svg.getAttribute('translate') === 'no') return;
+    const out = translateArticleText(lang, label);
+    if (out !== label) svg.setAttribute('aria-label', out);
+  });
+}
+
+// The player pages' small print (rightsContactNote), written here so an
+// article does not pull in the broadcast module.
+function articleContactNote(slug: string, locale: Locale): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'article-contact-note';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(`/blog/${slug}`)}`, locale);
+  link.rel = 'nofollow';
+  link.textContent = t('contact.correctionsLink', {}, locale);
+  note.append(
+    t('contact.correctionsPrefix', {}, locale),
+    link,
+    t('contact.correctionsSuffix', {}, locale),
+  );
+  return note;
 }
 
 function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
@@ -1782,10 +2263,18 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   zoom.append(img);
   if (darkImg) zoom.append(darkImg);
   figure.append(zoom);
-  if (block.caption) {
+  if (block.caption || block.credit) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
+    cap.textContent = block.caption ?? '';
+    if (block.credit) {
+      const link = document.createElement('a');
+      link.href = block.credit.href;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = block.credit.text;
+      cap.append(`${block.caption ? ' ' : ''}Photo: `, link);
+    }
     figure.append(cap);
   }
   return figure;
@@ -1819,10 +2308,76 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
+    appendRichText(cap, block.caption);
+    figure.append(cap);
+  }
+  return figure;
+}
+
+// An SVG that plays its keyframes once (AnimatedSvgBlock). The <svg> sits in a
+// stage div that is the repaint holder, so a piece-set repaint keeps the
+// Replay button and the caption. data-anim-state is 'idle' (CSS holds the
+// keyframes paused on their first frame) until the figure is half in view,
+// then 'playing'; Replay swaps in a fresh copy of the <svg>, which restarts
+// every keyframe. Reduced motion gets the static frames and no button.
+function renderAnimatedSvgBlock(block: AnimatedSvgBlock, lang?: ArticleLang): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-static article-anim';
+  const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const source = reduced ? block.reducedSvg : block.svg;
+  const stage = document.createElement('div');
+  stage.className = 'article-anim-stage';
+  figure.append(stage);
+  if (typeof source === 'function') {
+    const thunk = () => localizeSvgMarkup(source(), lang);
+    stage.innerHTML = thunk();
+    trackXqDiagram(stage, thunk);
+    paintXqDiagram(stage, readStoredXiangqiPieceSet());
+  } else {
+    stage.innerHTML = localizeSvgMarkup(source, lang);
+  }
+  if (reduced) {
+    figure.dataset.animState = 'static';
+  } else {
+    figure.dataset.animState = 'idle';
+    const replay = document.createElement('button');
+    replay.type = 'button';
+    replay.className = 'article-anim-replay';
+    replay.textContent = translateArticleText(lang, 'Replay');
+    replay.addEventListener('click', () => {
+      for (const svg of Array.from(stage.querySelectorAll('svg'))) {
+        svg.replaceWith(svg.cloneNode(true));
+      }
+      figure.dataset.animState = 'playing';
+    });
+    figure.append(replay);
+    playWhenSeen(figure);
+  }
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
     cap.textContent = block.caption;
     figure.append(cap);
   }
   return figure;
+}
+
+// Start an animated figure the first time half of it is on screen, once.
+// Without IntersectionObserver it plays straight away.
+function playWhenSeen(figure: HTMLElement): void {
+  if (typeof IntersectionObserver === 'undefined') {
+    figure.dataset.animState = 'playing';
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      if (figure.dataset.animState === 'idle') figure.dataset.animState = 'playing';
+      observer.disconnect();
+    },
+    { threshold: 0.5 },
+  );
+  observer.observe(figure);
 }
 
 // A row of raw-SVG figures. Each item goes through renderRawSvgBlock, so the
@@ -1977,12 +2532,102 @@ function renderFaqBlock(block: FaqBlock): HTMLElement {
   return list;
 }
 
+const TIMELINE_ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A dated sequence: entries whose day has passed get a filled marker. */
+function renderTimelineBlock(block: TimelineBlock, lang?: ArticleLang): HTMLElement {
+  const list = document.createElement('ol');
+  list.className = 'article-timeline';
+  const today = new Date().toISOString().slice(0, 10);
+  const locale = lang === 'zh-Hans' ? 'zh-CN' : lang === 'zh-Hant' ? 'zh-TW' : 'en-US';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    li.className = 'article-timeline-item';
+    const date = document.createElement('p');
+    date.className = 'article-timeline-date';
+    if (TIMELINE_ISO_DAY.test(item.date)) {
+      const time = document.createElement('time');
+      time.dateTime = item.date;
+      time.textContent = new Date(`${item.date}T12:00:00Z`).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      });
+      date.append(time);
+      if (item.date <= today) li.classList.add('is-past');
+    } else {
+      date.textContent = item.date;
+      li.classList.add('is-open');
+    }
+    const title = document.createElement('p');
+    title.className = 'article-timeline-title';
+    appendRichText(title, item.title);
+    li.append(date, title);
+    if (item.text) {
+      const text = document.createElement('p');
+      text.className = 'article-timeline-text';
+      appendRichText(text, item.text);
+      li.append(text);
+    }
+    list.append(li);
+  }
+  return list;
+}
+
+function renderListBlock(block: ListBlock): HTMLElement {
+  const list = document.createElement(block.ordered ? 'ol' : 'ul');
+  list.className = 'article-list';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    appendRichText(li, item);
+    list.append(li);
+  }
+  return list;
+}
+
+/** Standalone images side by side; each shows its dark twin under the dark theme. */
+function renderImageRowBlock(block: ImageRowBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-image-row';
+  const row = document.createElement('div');
+  row.className = 'article-image-row-items';
+  for (const item of block.items) {
+    const cell = document.createElement('div');
+    cell.className = 'article-image-row-item';
+    if (item.width) cell.style.maxWidth = `${item.width}px`;
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.alt;
+    img.loading = 'lazy';
+    cell.append(img);
+    if (item.darkSrc) {
+      img.classList.add('article-figure-light');
+      const dark = document.createElement('img');
+      dark.src = item.darkSrc;
+      dark.alt = item.alt;
+      dark.loading = 'lazy';
+      dark.className = 'article-figure-dark';
+      cell.append(dark);
+    }
+    row.append(cell);
+  }
+  figure.append(row);
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    appendRichText(cap, block.caption);
+    figure.append(cap);
+  }
+  return figure;
+}
+
 function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-embed';
   const iframe = document.createElement('iframe');
   iframe.className = 'article-embed-frame';
-  iframe.src = block.path;
+  iframe.src = block.hideSolution ? embedPathWithSolutionHidden(block.path) : block.path;
   iframe.title = block.title;
   iframe.setAttribute('loading', 'lazy');
   const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];
@@ -1999,6 +2644,33 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   return figure;
 }
 
+function renderBilibiliBlock(block: BilibiliBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-bilibili';
+  const bvid = encodeURIComponent(block.bvid);
+  const iframe = document.createElement('iframe');
+  iframe.className = 'article-bilibili-frame';
+  iframe.src = `https://player.bilibili.com/player.html?bvid=${bvid}&autoplay=0`;
+  iframe.title = block.title;
+  iframe.setAttribute('loading', 'lazy');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.width = '560';
+  iframe.height = '315';
+  iframe.style.aspectRatio = '16 / 9';
+  figure.append(iframe);
+
+  const caption = document.createElement('figcaption');
+  if (block.caption) caption.append(`${block.caption} `);
+  const link = document.createElement('a');
+  link.href = `https://www.bilibili.com/video/${bvid}`;
+  link.textContent = 'Watch on Bilibili';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  caption.append(link);
+  figure.append(caption);
+  return figure;
+}
+
 function renderTableBlock(block: TableBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-table';
@@ -2012,11 +2684,15 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   if (diagrams) headRow.append(document.createElement('th'));
-  for (const h of block.headers) {
+  const highlightCols = new Set(block.highlightColumns ?? []);
+  const nowrapCols = new Set(block.nowrapColumns ?? []);
+  block.headers.forEach((h, col) => {
     const th = document.createElement('th');
+    if (highlightCols.has(col)) th.classList.add('article-table-col-emphasis');
+    if (nowrapCols.has(col)) th.classList.add('article-table-nowrap');
     appendRichText(th, h);
     headRow.append(th);
-  }
+  });
   thead.append(headRow);
   const tbody = document.createElement('tbody');
   const highlight = new Set(block.highlightRows ?? []);
@@ -2024,14 +2700,16 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     const tr = document.createElement('tr');
     if (highlight.has(i)) tr.className = 'article-table-row-emphasis';
     if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
-    for (const cell of row) {
+    row.forEach((cell, col) => {
       const td = document.createElement('td');
+      if (highlightCols.has(col)) td.classList.add('article-table-col-emphasis');
+      if (nowrapCols.has(col)) td.classList.add('article-table-nowrap');
       // Cells take the same inline markdown as paragraphs. They rendered as raw
       // textContent until 2026-08-27, so a [label](/href) in a cell showed its
       // own brackets.
       appendRichText(td, cell);
       tr.append(td);
-    }
+    });
     tbody.append(tr);
   });
   table.append(thead, tbody);
@@ -2125,7 +2803,9 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   // The variant's switch, not the page's: an unlisted rules page for a public
   // variant (crazyhouse-xiangqi's, while it was held back for polish) still
   // offers the board, and a hidden variant (mahjong) still does not.
-  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
+  if (!variantPublicSurfaceEnabled(gameSpecId) && !variantPlaytestSurfaceEnabled(gameSpecId)) {
+    return null;
+  }
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2169,15 +2849,70 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
     });
     row.append(a);
   }
+  // TK's bots come from the server's playable roster, which only the landing
+  // page loads; fetch it here and redraw the row once a bot is there.
+  if (
+    gameSpecId === 'three-kingdoms-banqi' &&
+    !variantSupportsPve(gameSpecId) &&
+    threeKingdomsBanqiOffered()
+  ) {
+    void loadThreeKingdomsBanqiEngineOptions().then(() => {
+      if (!variantSupportsPve(gameSpecId) || !row.isConnected) return;
+      const fresh = buildRulesPlayCta(slug, title, locale);
+      if (fresh) row.replaceWith(fresh);
+    });
+  }
   return row;
+}
+
+/** The variant a play CTA opens (`/?play=…&gameSpecId=…`), or null. */
+function playCtaGameSpecId(href: string): GameSpecId | null {
+  if (ctaKindForHref(href) !== 'play') return null;
+  const id = new URLSearchParams(href.split('?')[1] ?? '').get('gameSpecId');
+  return id && isGameSpecId(id) ? id : null;
+}
+
+/** Whether this viewer can sit down at the variant a play CTA opens: a public
+ *  variant, or a playtest one the account is granted. Otherwise the play
+ *  dialog would silently fall back to xiangqi. Cosmetic: the server's seat
+ *  check is the gate. */
+function playCtaOpenToViewer(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return (
+    id === null ||
+    variantPublicSurfaceEnabled(id) ||
+    variantPlaytestSurfaceEnabled(id) ||
+    hasLikelyVariantGrant(id)
+  );
+}
+
+/** A retired variant is closed to everyone, grant or not, so its rules page
+ *  shows neither the buttons nor the note about asking to join a playtest. */
+function playCtaIsRetired(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id !== null && isRetiredGameSpec(id);
 }
 
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
-  for (const btn of block.buttons) {
+  const buttons = block.buttons.filter((btn) => !playCtaIsRetired(btn.href));
+  const gated = buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  if (gated.length > 0) {
+    // A playtest variant's rules page: redraw once the account's real grants
+    // are in, so a player granted since their last visit gets the buttons.
+    window.addEventListener(
+      variantGrantsResolvedEvent,
+      () => {
+        if (row.isConnected) row.replaceWith(renderCtaBlock(block));
+      },
+      { once: true },
+    );
+  }
+  for (const btn of buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
+    if (gated.includes(btn)) continue;
     const a = document.createElement('a');
     a.className = `article-cta article-cta-${btn.emphasis ?? 'primary'}`;
     a.href = btn.href;
@@ -2206,6 +2941,17 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
     });
     row.append(a);
   }
+  if (gated.length > 0 && row.childElementCount === 0) {
+    row.classList.add('article-cta-row-playtest');
+    const note = document.createElement('p');
+    note.className = 'article-cta-playtest-note';
+    note.append(`${t('articles.playtestOnly', {}, currentLocale())} `);
+    const link = document.createElement('a');
+    link.href = localizedHref('/forum/feedback');
+    link.textContent = t('articles.playtestAsk', {}, currentLocale());
+    note.append(link);
+    row.append(note);
+  }
   return row;
 }
 
@@ -2224,9 +2970,15 @@ function paragraphNode(text: string): HTMLParagraphElement {
 }
 
 /** An editorial note: one paragraph of rich text in a bordered aside. */
-function noteNode(text: string): HTMLElement {
+function noteNode(text: string, label?: string): HTMLElement {
   const aside = document.createElement('aside');
   aside.className = 'article-note';
+  if (label) {
+    const name = document.createElement('p');
+    name.className = 'article-note-label';
+    name.textContent = label;
+    aside.append(name);
+  }
   const p = document.createElement('p');
   p.className = 'article-note-text';
   appendRichText(p, text);
@@ -2235,10 +2987,12 @@ function noteNode(text: string): HTMLElement {
 }
 
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
-// links, and **text** for bold. External link hrefs (http/https) open in a new
+// links, **text** for bold and *text* for italics (a lone asterisk, as in
+// "5 * 3", stays literal). External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
 // token is appended as a plain text node.
-const INLINE_REGEX = /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+const INLINE_REGEX =
+  /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)|(?<![*\w])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?![*\w])/g;
 function appendRichText(el: HTMLElement, text: string): void {
   let lastIndex = 0;
   for (const match of text.matchAll(INLINE_REGEX)) {
@@ -2252,6 +3006,10 @@ function appendRichText(el: HTMLElement, text: string): void {
       const strong = document.createElement('strong');
       strong.textContent = match[2];
       el.append(strong);
+    } else if (match[5] !== undefined) {
+      const em = document.createElement('em');
+      em.textContent = match[5];
+      el.append(em);
     } else {
       const linkText = match[3]!;
       const href = match[4]!;
@@ -2404,15 +3162,7 @@ function renderStaticBoardsBlock(block: StaticBoardsBlock): HTMLElement {
 // spec on each pending wrap and consume it in mountArticleThumbnails.
 const pendingThumbnails = new WeakMap<HTMLElement, ArticleThumbnail>();
 
-function articleCard(
-  baseArticle: Article,
-  lang?: ArticleLang,
-  // The star is an index affordance: one per card in a long grid, repeating
-  // often enough that it reads as texture. Three of them in a row at the foot
-  // of an article read as a rating or a "featured" mark instead, and they are
-  // neither, so the footer opts out rather than hiding them in CSS.
-  options: { showStarBadge?: boolean } = {},
-): HTMLLIElement {
+function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   const locale = articleLocale(lang);
   const articleLang = publishedArticleLang(baseArticle.slug, lang);
   const article = articleLang ? translateArticle(baseArticle, articleLang) : baseArticle;
@@ -2434,18 +3184,6 @@ function articleCard(
     thumb.classList.add('is-empty');
   }
 
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'articles-index-card-over-image articles-index-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-
-  if (options.showStarBadge ?? true) {
-    thumb.append(articleCardStarBadge('articles-index-card-over-image articles-index-card-author'));
-  }
-
   if (isArticleStatusBadge(article.status)) {
     const badge = document.createElement('span');
     badge.className = `article-status-badge article-status-${article.status} articles-index-card-status`;
@@ -2465,6 +3203,14 @@ function articleCard(
   summary.textContent = article.summary;
 
   body.append(title, summary);
+  // Under the summary, not over the thumbnail, so the art keeps its corner.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) {
+    const date = document.createElement('span');
+    date.className = 'articles-index-card-date';
+    date.textContent = formatCardDate(dateIso, locale);
+    body.append(date);
+  }
 
   link.append(thumb, body);
   item.append(link);
@@ -2474,6 +3220,7 @@ function articleCard(
 export function renderArticleThumbnail(
   thumb: ArticleThumbnail,
   locale: Locale = currentLocale(),
+  options: { imageAsBackground?: boolean } = {},
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb';
@@ -2514,6 +3261,20 @@ export function renderArticleThumbnail(
     return wrap;
   }
   if (thumb.kind === 'image') {
+    // Only the homepage opts in: keep article photos out of its indexable
+    // images, in both the prerender and the client render. Other listings keep
+    // lazy img elements. The existing wrapper still reserves the same box.
+    if (options.imageAsBackground) {
+      wrap.style.backgroundImage = `url(${JSON.stringify(thumb.src)})`;
+      wrap.style.backgroundSize = 'cover';
+      wrap.style.backgroundPosition = thumb.position ?? '50% 50%';
+      if (thumb.alt) {
+        wrap.removeAttribute('aria-hidden');
+        wrap.setAttribute('role', 'img');
+        wrap.setAttribute('aria-label', thumb.alt);
+      }
+      return wrap;
+    }
     const img = document.createElement('img');
     img.src = thumb.src;
     img.alt = thumb.alt ?? '';
@@ -2537,8 +3298,9 @@ export function renderArticleThumbnail(
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
 // reads in one visual language. Chess is study-only, not a variant, and has no
-// marker: its rules page keeps its own board thumbnail.
+// marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
+  gomoku: 'gomoku',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
@@ -2548,8 +3310,10 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
+  'xiangqi-mahjong-32': 'xiangqi-mahjong',
 };
 
 // A rail/landing thumbnail rendered as the variant's marker, or null if the
@@ -2557,11 +3321,25 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
 function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
+  return variantMarkerThumb(renderVariantMarker(miniId, { size: 100 }));
+}
+
+// The rules rail and landing tiles always show a marker: the variant's own, or
+// the question-mark placeholder until it has art. Never the article's board
+// thumbnail, which reads as a different visual language in a marker column.
+function renderRulesMarkerThumb(slug: string): HTMLElement {
+  return (
+    renderVariantMiniThumb(slug) ??
+    variantMarkerThumb(renderPlaceholderVariantMarker({ size: 100 }))
+  );
+}
+
+function variantMarkerThumb(markerHtml: string): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
-  wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });
+  wrap.innerHTML = markerHtml;
   const marker = wrap.firstElementChild;
   if (marker instanceof HTMLElement) {
     marker.style.display = 'block';

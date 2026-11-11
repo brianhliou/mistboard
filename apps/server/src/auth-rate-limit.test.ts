@@ -101,3 +101,91 @@ test('clientIpForRateLimit returns a stable key when no address is available', (
   } as unknown as IncomingMessage;
   assert.equal(clientIpForRateLimit(request), 'unknown');
 });
+
+function proxyRequest(
+  forwarded: string | undefined,
+  visitor: string | string[] | undefined,
+  remoteAddress = '10.0.0.1',
+): IncomingMessage {
+  return {
+    headers: { 'x-forwarded-for': forwarded, 'cf-connecting-ip': visitor },
+    socket: { remoteAddress },
+  } as unknown as IncomingMessage;
+}
+
+test('Cloudflare visitors through the same edge have independent auth rate-limit keys', () => {
+  const limiter = createAuthRateLimiter(1, 60_000);
+  const first = clientIpForRateLimit(proxyRequest('203.0.113.7, 172.70.100.1', '198.51.100.4'), {});
+  const second = clientIpForRateLimit(
+    proxyRequest('203.0.113.7, 172.70.100.1', '198.51.100.5'),
+    {},
+  );
+  assert.equal(first, '198.51.100.4');
+  assert.equal(second, '198.51.100.5');
+  assert.notEqual(first, second);
+  assert.equal(limiter.check(first, 1_000), true);
+  assert.equal(limiter.check(first, 1_000), false);
+  assert.equal(limiter.check(second, 1_000), true);
+});
+
+test('clientIpForRateLimit rejects forged Cloudflare headers outside the trusted Cloudflare hop', () => {
+  for (const hop of ['198.51.100.4', '::ffff:198.51.100.4', '2001:db8::1', 'not-an-ip']) {
+    // Even a Cloudflare address in the spoofable prefix must not grant trust.
+    assert.equal(
+      clientIpForRateLimit(proxyRequest(`172.70.100.1, ${hop}`, '203.0.113.7'), {}),
+      hop,
+    );
+  }
+});
+
+test('clientIpForRateLimit requires a single valid Cloudflare visitor address', () => {
+  for (const visitor of [
+    undefined,
+    '',
+    'garbage',
+    '999.1.2.3',
+    '198.51.100.4, 198.51.100.5',
+    ['198.51.100.4', '198.51.100.5'],
+    ['198.51.100.4'],
+  ]) {
+    assert.equal(clientIpForRateLimit(proxyRequest('172.70.100.1', visitor), {}), '172.70.100.1');
+  }
+});
+
+test('clientIpForRateLimit recognizes IPv6 and IPv4-mapped Cloudflare hops', () => {
+  for (const hop of [
+    '2606:4700::1',
+    '2a06:98c7:ffff::1',
+    '::ffff:172.70.100.1',
+    '::ffff:ac46:6401',
+  ]) {
+    for (const visitor of ['198.51.100.4', '2001:db8::42', '::ffff:198.51.100.4']) {
+      assert.equal(clientIpForRateLimit(proxyRequest(hop, visitor), {}), visitor);
+    }
+  }
+});
+
+test('clientIpForRateLimit checks Cloudflare membership only at the configured trusted hop', () => {
+  const request = proxyRequest('203.0.113.7, 172.70.100.1, 10.0.0.2', '198.51.100.4');
+  assert.equal(
+    clientIpForRateLimit(request, { MISTBOARD_TRUSTED_PROXY_HOPS: '2' }),
+    '198.51.100.4',
+  );
+});
+
+test('clientIpForRateLimit checks a fallback socket before trusting a Cloudflare visitor header', () => {
+  assert.equal(
+    clientIpForRateLimit(proxyRequest(undefined, '198.51.100.4', '172.70.100.1'), {}),
+    '198.51.100.4',
+  );
+  assert.equal(
+    clientIpForRateLimit(proxyRequest(undefined, '198.51.100.4', '203.0.113.7'), {}),
+    '203.0.113.7',
+  );
+  assert.equal(
+    clientIpForRateLimit(proxyRequest('172.70.100.1', '198.51.100.4'), {
+      MISTBOARD_TRUSTED_PROXY_HOPS: '0',
+    }),
+    '10.0.0.1',
+  );
+});

@@ -99,7 +99,7 @@ test('banqi: an accepted engine move queues a decision with the budget and the s
   assert.equal(payload.movetime_ms, 8_000, 'untimed game gets the tier ceiling');
   // Pinned deliberately, not read from the tier: the point of this row is that the artifact
   // records the budget the tier was CONFIGURED with, so reading the tier here would make the
-  // assertion tautological. Updated 1.5M -> 3.5M with the 2026-09-06 budget resize.
+  // assertion tautological. The historical bot remains classical L7 at 3.5M nodes.
   assert.equal(payload.tier_nodes, 3_500_000);
   assert.deepEqual(payload.search, {
     depth: 17,

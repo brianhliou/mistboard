@@ -23,7 +23,7 @@ import {
   type XiangqiSquare,
 } from './variants-xiangqi.js';
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   getStandardXiangqiLegalMoves,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
@@ -371,7 +371,7 @@ function replayWithCodec(
     if (!move || state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) {
       return { moves, error: `Move ${index + 1} ("${token}") is not legal as ${codec.format}.` };
     }
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
     moves.push(move);
   }
   return { moves };

@@ -43,6 +43,7 @@ import {
   jungleCoverImage,
   jungleLastMoveCellSvg,
   jungleShadowFilterDef,
+  jungleTokenSize,
 } from './jungle-art.js';
 import {
   characterTokenSvg,
@@ -52,10 +53,12 @@ import {
   jungleBareDenSvg,
   jungleBareTrapSvg,
 } from './jungle-skins.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
   GLYPH_RADIUS_RATIO,
+  type SvgBoardGlyphIcon,
   type SvgBoardMarkerStyle,
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
@@ -124,8 +127,8 @@ export type JungleRenderOptions = {
   draggingFrom?: JungleSquare | null;
   interactive?: boolean;
   idSuffix?: string;
-  // Drop the per-token shadow filter (markers don't need it, and it avoids duplicate
-  // filter ids when several cropped boards render on one page).
+  // Opt in to the per-token drop shadow (off by default since 2026-10-14; with it on,
+  // pass an idSuffix when several boards render on one page).
   shadow?: boolean;
   // Pin the look instead of resolving it — for surfaces that must render
   // deterministically (variant markers, rules diagrams, OG cards).
@@ -157,6 +160,8 @@ export interface JungleBoardMarker extends SvgBoardMarkerStyle {
   kind: 'circle' | 'glyph';
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
+  /** A drawn mark for kind 'glyph' in place of the label (puzzle ✓ / ✗). */
+  icon?: SvgBoardGlyphIcon;
 }
 
 function cellRef(square: JungleSquare): GridCellRef {
@@ -267,8 +272,11 @@ function furniture(
   return parts.join('');
 }
 
-// Each piece: the shared framed dobutsu token (cream disc + cutout + colour ring + shadow).
-// Sized to sit INSIDE the last-move ring (its inner clear is ~0.83·cell).
+// Each piece: the shared framed dobutsu token (cream rounded square + cutout + ring),
+// its outer edge on the cell edge (JUNGLE_TOKEN_REACH, 2026-10-15), so a tile in an
+// edge cell meets the board edge. The last move is a cell tint, so
+// nothing has to fit inside it. The river badge keeps its size from the 0.9-of-a-cell
+// token it was tuned on, so it lands inside the tile's corner.
 function pieces(
   board: JungleBoard,
   geom: GridGeometry,
@@ -280,7 +288,8 @@ function pieces(
   cueBadgeOverrides: Partial<JungleCueBadgeSpec> | undefined,
 ): string {
   const parts: string[] = [];
-  const s = geom.cell * TOKEN_PIECE_RATIO;
+  const s = jungleTokenSize(geom.cell);
+  const badgeSize = geom.cell * TOKEN_PIECE_RATIO;
   const tokenSvg = pieceSkin === 'characters' ? characterTokenSvg : framedTokenSvg;
   for (const square of ALL_JUNGLE_SQUARES) {
     const piece = board[square];
@@ -296,6 +305,7 @@ function pieces(
       filterId: shadow ? `${gid}-shadow` : undefined,
       cueBadge,
       cueBadgeOverrides,
+      badgeSize,
     });
     // While this piece is being dragged, dim its on-board token so only the ghost
     // reads. The keyed outer slot lets a post-render glide find the token
@@ -330,6 +340,7 @@ export function animateJungleBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // Fade the destination tint in as the piece lands, the way the banqi and
   // xiangqi boards do. A reverse step renders the PRIOR move's mark on a
   // different cell, so fading it would not track the reverse glide.
@@ -345,7 +356,7 @@ export function junglePieceGhostSvg(entry: { color: JungleColor; role: JunglePie
   const inner = tokenSvg({
     cx: CELL / 2,
     cy: CELL / 2,
-    size: CELL * TOKEN_PIECE_RATIO,
+    size: jungleTokenSize(CELL),
     ink: entry.color,
     role: entry.role,
   });
@@ -357,7 +368,8 @@ export function renderJungleBoardSvg(
   options: JungleRenderOptions = {},
 ): string {
   const gid = `jungle${options.idSuffix ?? ''}`;
-  const shadow = options.shadow ?? true;
+  // Off by default since 2026-10-14 (no shadow on the new tokens); still opt-in.
+  const shadow = options.shadow ?? false;
   // Resolved once per render; a caller may pin either axis (markers, diagrams).
   const boardSkin = options.boardSkin ?? currentJungleBoardSkin();
   const pieceSkin = options.pieceSkin ?? currentJunglePieceSkin();

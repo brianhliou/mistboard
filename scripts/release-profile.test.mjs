@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
   deployMs,
   failureClass,
+  heldMs,
+  holdRows,
   importTranscripts,
+  isRefusal,
+  parseArgs,
   parseDuration,
   parseTranscriptRelease,
   parseWindow,
@@ -14,6 +19,7 @@ import {
   readRecords,
   renderChart,
   summarize,
+  summarizeShips,
 } from './release-profile.mjs';
 
 // The console text of a release, as release-prod.mjs and time-command.mjs
@@ -45,6 +51,74 @@ prod lite smoke: ok in 827ms
 == prod DXQ smoke: ok in 9.8s
 release: ok in 6m 12s
 `;
+
+test('ships group retries within three hours of a failure and ignore queue refusals', () => {
+  const attempt = (hour, outcome, extra = {}) => ({
+    startedAt: new Date(Date.UTC(2026, 10, 1, hour)).toISOString(),
+    outcome,
+    elapsedMs: 0,
+    ...extra,
+  });
+  const records = [
+    attempt(0, 'ok'),
+    attempt(1, 'failed'),
+    attempt(3, 'failed'),
+    attempt(6, 'ok'),
+    attempt(7, 'failed'),
+    attempt(9, 'failed', { error: 'ship queue is in use (1 entries); use --train' }),
+    attempt(11, 'ok'),
+    attempt(12, 'failed'),
+  ];
+  const summary = summarizeShips([...records].reverse());
+  assert.equal(summary.ships, 5);
+  assert.equal(summary.firstTryOk, 2);
+  assert.equal(summary.firstTryPercent, 40);
+  assert.equal(summary.notShipped, 2);
+  // Group before filtering: a retry after the cutoff is not a new first try.
+  assert.equal(summarizeShips(records, { since: Date.UTC(2026, 10, 1, 2) }).ships, 3);
+  assert.deepEqual(summarizeShips([]), {
+    ships: 0,
+    firstTryOk: 0,
+    firstTryPercent: 0,
+    notShipped: 0,
+  });
+});
+
+test('profile prints ship reliability for --since dates and defaults to fourteen days', (t) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'release-profile-ships-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const log = path.join(dir, 'releases.jsonl');
+  writeFileSync(
+    log,
+    [
+      { startedAt: '2026-10-30T16:00:00Z', outcome: 'failed' },
+      { startedAt: '2026-11-01T16:00:00Z', outcome: 'failed' },
+      { startedAt: '2026-11-01T16:10:00Z', outcome: 'ok' },
+      { startedAt: '2026-11-02T16:00:00Z', outcome: 'ok' },
+      { startedAt: '2026-11-03T16:00:00Z', outcome: 'failed' },
+    ]
+      .map((r) => JSON.stringify({ elapsedMs: 10, stages: [], ...r }))
+      .join('\n'),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      new URL('./release-profile.mjs', import.meta.url).pathname,
+      '--log',
+      log,
+      '--since',
+      '2026-11-01',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /ships: 3; first-try ok: 1 \(33%\); ships not shipped in their slot: 1/,
+  );
+  assert.equal(parseArgs([]).sinceMs, 14 * 86_400_000);
+  assert.throws(() => parseArgs(['--since', '2026-02-30']), /--since/);
+});
 
 test('parseDuration reads the time-command formats', () => {
   assert.equal(parseDuration('827ms'), 827);
@@ -150,6 +224,46 @@ test('quantiles and summarize', () => {
   assert.deepEqual(s.failures, [['superseded by a later push', 1]]);
 });
 
+test('a guard refusal that ran nothing is counted apart from failed attempts', () => {
+  const queue = {
+    outcome: 'failed',
+    elapsedMs: 13,
+    stages: [],
+    error: 'ship queue is in use (1 entries); use --train',
+  };
+  const dupe = {
+    outcome: 'failed',
+    elapsedMs: 68,
+    stages: [],
+    error: '--changelog: CHANGELOG.md already has these lines:',
+  };
+  const gate = {
+    outcome: 'failed',
+    elapsedMs: 200_000,
+    stages: [{ label: 'local ci:quick', ms: 190_000, ok: false }],
+  };
+  // Planted: a long run with no stage recorded is not a refusal; it stays unknown.
+  const cut = { outcome: 'failed', elapsedMs: 600_000, stages: [], error: 'node exited with 1' };
+  assert.equal(failureClass(queue), 'refused: ship queue in use');
+  assert.equal(failureClass(dupe), 'refused: changelog line already present');
+  assert.equal(isRefusal(cut), false);
+  assert.equal(failureClass(cut), 'unknown (output cut short)');
+  const s = summarize([
+    { outcome: 'ok', elapsedMs: 300_000, stages: [] },
+    queue,
+    queue,
+    dupe,
+    gate,
+    cut,
+  ]);
+  assert.equal(s.count, 3);
+  assert.equal(s.failed, 2);
+  assert.deepEqual(s.refused, [
+    ['refused: ship queue in use', 2],
+    ['refused: changelog line already present', 1],
+  ]);
+});
+
 test('import dedupes by text hash and prefers the fuller copy of one release', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'release-profile-'));
   const transcriptDir = path.join(dir, 'transcripts');
@@ -198,4 +312,39 @@ test('the chart is one HTML page with a mark per release', () => {
   assert.equal((html.match(/<circle/g) ?? []).length, 1);
   assert.equal((html.match(/stroke="#b8443a"/g) ?? []).length, 1);
   assert.match(renderChart([]), /No records yet/);
+});
+
+// Brian, 2026-10-16: deploys must not leave players unable to start games for
+// 10 to 15 minutes. The profile shows each release's hold and flags long ones.
+test('heldMs reads the recorded hold, else the drain stage, else null', () => {
+  assert.equal(
+    heldMs({ drain: { heldMs: 239_000 }, stages: [{ label: 'production drain', ms: 241_268 }] }),
+    239_000,
+  );
+  assert.equal(heldMs({ stages: [{ label: 'production drain', ms: 241_268, ok: true }] }), 241_268);
+  assert.equal(heldMs({ stages: [{ label: 'git push release head', ms: 2000 }] }), null);
+});
+
+test('holdRows lists releases that drained and warns past five minutes', () => {
+  const rows = holdRows([
+    {
+      startedAt: '2026-10-16T21:34:00.000Z',
+      outcome: 'failed',
+      stages: [{ label: 'production drain', ms: 241_268 }],
+    },
+    { startedAt: '2026-10-16T23:34:00.000Z', outcome: 'ok', stages: [] },
+    {
+      startedAt: '2026-10-17T03:00:00.000Z',
+      outcome: 'ok',
+      drain: { heldMs: 6 * 60_000, refusedCreates: 2 },
+      stages: [{ label: 'production drain', ms: 6 * 60_000 }],
+    },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => [row.startedAt.slice(11, 16), row.heldMs, row.refusedCreates, row.warn]),
+    [
+      ['21:34', 241_268, null, false],
+      ['03:00', 360_000, 2, true],
+    ],
+  );
 });

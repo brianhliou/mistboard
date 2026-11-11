@@ -134,3 +134,34 @@ test('the AB-JChess probe reports a binary without its net as missing', (t) => {
   process.env.MISTBOARD_ABJCHESS_NET = process.execPath;
   assert.ok(!missingEngineBinaries().some(isAbJchess));
 });
+
+// jqe (held behind MISTBOARD_JQE_ENABLED): the probe asks for it only with the flag on,
+// and like AB-JChess a binary without its net is missing.
+test('the jqe probe runs only with its flag on, and needs the binary and its net', (t) => {
+  const keys = [
+    'MISTBOARD_JIEQI_ENABLED',
+    'MISTBOARD_JQE_ENABLED',
+    'MISTBOARD_JQE_PATH',
+    'MISTBOARD_JQE_NET',
+  ];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  t.after(() => {
+    for (const key of keys) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  });
+  const isJqe = (entry: { binary: string }) => entry.binary === 'jqe';
+  process.env.MISTBOARD_JIEQI_ENABLED = 'true';
+  process.env.MISTBOARD_JQE_PATH = '/nonexistent/jqe';
+  process.env.MISTBOARD_JQE_NET = '/nonexistent/it014.jqn';
+  delete process.env.MISTBOARD_JQE_ENABLED;
+  assert.ok(!missingEngineBinaries().some(isJqe), 'flag off: not probed, so never reported');
+
+  process.env.MISTBOARD_JQE_ENABLED = '1';
+  assert.ok(missingEngineBinaries().some(isJqe));
+  process.env.MISTBOARD_JQE_PATH = process.execPath;
+  assert.ok(missingEngineBinaries().some(isJqe), 'a binary without its net is missing');
+  process.env.MISTBOARD_JQE_NET = process.execPath;
+  assert.ok(!missingEngineBinaries().some(isJqe));
+});

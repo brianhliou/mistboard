@@ -1,0 +1,112 @@
+/* A study chapter's win-chance graph in the board column, under the bottom seat
+   row (embed-score-chart.ts; embed-card.ts underBoard), where the article
+   replay draws its chart. ONE height for the tablebase's reason: the card fits
+   the board to the room the pane leaves, so 140px is what it costs the board.
+   It sits on the card, so no border of its own. The inks are the article's
+   two-engine pair, lifted on dark. */
+.embed-score-chart {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 3px;
+  box-sizing: border-box;
+  height: 140px;
+  padding: 2px 14px 6px;
+  color: var(--site-text);
+}
+:root[data-effective-theme="dark"] .embed-score-chart {
+  --eval-compare-a: #4fb3c8;
+  --eval-compare-b: #f0a25a;
+}
+.embed-score-chart__legend {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.embed-score-chart__key {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: 600;
+}
+.embed-score-chart__swatch {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+.embed-score-chart__side {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--site-muted);
+  text-overflow: ellipsis;
+}
+.embed-score-chart__plot {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.embed-score-chart__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.embed-score-chart__mid {
+  stroke: var(--site-border, rgba(0, 0, 0, 0.2));
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.embed-score-chart__mid-label {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  padding-left: 3px;
+  transform: translateY(-50%);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* The readout: the move and "Win chance for Red" on top, then one row per
+   engine, its name in its line's ink. Two classes: the shared
+   .review-chart-tip is a flex row of equal weight, and bundle order between
+   the two sheets is not fixed. */
+.review-chart-tip.embed-score-chart__tip {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  row-gap: 1px;
+}
+.embed-score-chart__tip-row {
+  display: contents;
+}
+.embed-score-chart__tip-name {
+  font-weight: 600;
+}
+.embed-score-chart__tip-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.embed-score-chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.embed-score-chart__cursor {
+  stroke: var(--site-text, #222);
+  stroke-width: 1.5;
+  opacity: 0.7;
+  vector-effect: non-scaling-stroke;
+}

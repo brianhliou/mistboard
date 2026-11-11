@@ -11,6 +11,11 @@ export class AnalysisSession {
     free(): void;
     [Symbol.dispose](): void;
     constructor(fen: string, multipv: number);
+    /**
+     * Set the game's no-capture-no-flip draw limit in plies (default 40). Call it before
+     * the first `step`.
+     */
+    set_no_progress_limit(limit: number): void;
     step(nodes: number): string;
     readonly depth: number;
 }
@@ -25,6 +30,12 @@ export class AnalysisSession {
  */
 export function analyze(fen: string, nodes: number, multipv: number): string;
 
+/**
+ * `analyze` under the game's no-capture-no-flip draw limit in plies (`analyze` uses 40).
+ * Mistboard games created from 2026-10-17 draw at 60, older ones at 40.
+ */
+export function analyze_with_limit(fen: string, nodes: number, multipv: number, no_progress_limit: number): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -32,8 +43,10 @@ export interface InitOutput {
     readonly __wbg_analysissession_free: (a: number, b: number) => void;
     readonly analysissession_depth: (a: number) => number;
     readonly analysissession_new: (a: number, b: number, c: number) => [number, number, number];
+    readonly analysissession_set_no_progress_limit: (a: number, b: number) => void;
     readonly analysissession_step: (a: number, b: number) => [number, number];
     readonly analyze: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly analyze_with_limit: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

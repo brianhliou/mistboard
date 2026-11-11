@@ -30,6 +30,20 @@ vi.mock('./feature-flags.js', async (importOriginal) => {
   return { ...actual, mahjongEnabled: () => true };
 });
 
+const sound = vi.hoisted(() => ({ terminal: [] as unknown[][], moves: [] as string[] }));
+vi.mock('./live-sound.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./live-sound.js')>();
+  return {
+    ...actual,
+    playSound: (kind: string) => {
+      sound.moves.push(kind);
+    },
+    playTerminalPlan: (...args: unknown[]) => {
+      sound.terminal.push(args);
+    },
+  };
+});
+
 vi.mock('./variant-tenant/socket-client.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./variant-tenant/socket-client.js')>();
   return {
@@ -140,6 +154,8 @@ function playedCells(): HTMLElement[] {
 }
 
 beforeEach(() => {
+  sound.terminal = [];
+  sound.moves = [];
   document.body.innerHTML = '';
   vi.stubGlobal(
     'fetch',
@@ -191,5 +207,95 @@ describe('cold join to a LIVE mahjong room is unchanged', () => {
     expect(playedCells()).toHaveLength(1);
     const prev = document.querySelector<HTMLButtonElement>('[data-replay="prev"]');
     expect(prev?.disabled).toBe(true);
+  });
+});
+
+// The game-over sting marks the moment a game ends, so a reload of a finished
+// room (or the dev server's reload on every edit) must stay silent.
+describe('game-over sound', () => {
+  it('stays silent when the room is already finished on load', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'east',
+        state: mahjongRevealedView(FINAL, 'east'),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    expect(sound.terminal).toHaveLength(0);
+  });
+
+  it('plays once when a live game finishes', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'east',
+        state: mahjongViewFor(GAME.states[PLIES]!, 'east'),
+        events: [CREATED, ...moveEvents(PLIES)],
+      }),
+    );
+    const finished = frame('snapshot', {
+      seat: 'east',
+      state: mahjongRevealedView(FINAL, 'east'),
+      events: [CREATED, ...moveEvents(PLIES), FINISHED],
+    });
+    options.applySnapshot(finished);
+    options.applySnapshot(finished);
+    expect(sound.terminal).toEqual([['win', 'resignation']]);
+  });
+
+  it('stays silent for a spectator when a live game finishes', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: mahjongViewFor(GAME.states[PLIES]!, 'spectator'),
+        events: [CREATED, ...moveEvents(PLIES)],
+      }),
+    );
+    options.applySnapshot(
+      frame('snapshot', {
+        seat: 'spectator',
+        state: mahjongRevealedView(FINAL, 'spectator'),
+        events: [CREATED, ...moveEvents(PLIES), FINISHED],
+      }),
+    );
+    expect(sound.terminal).toHaveLength(0);
+  });
+});
+
+describe('mahjong move audio', () => {
+  it.each(['east', 'south', 'spectator'] as const)(
+    'uses a move click for every discard heard by %s',
+    async (seat) => {
+      const options = await mount();
+      const view = mahjongViewFor(GAME.states[0]!, seat);
+      options.applyHello(frame('hello', { seat, state: view, events: [CREATED] }));
+      for (const color of ['east', 'south']) {
+        options.applySnapshot(
+          frame('snapshot', {
+            seat,
+            state: view,
+            event: { type: 'move-played', color, move: { action: 'discard', tile: 0 } },
+          }),
+        );
+      }
+      expect(sound.moves).toEqual(['move', 'move']);
+    },
+  );
+
+  it('keeps claims sharp and draws, passes and timeouts silent', async () => {
+    const options = await mount();
+    const view = mahjongViewFor(GAME.states[0]!, 'east');
+    options.applyHello(frame('hello', { state: view, events: [CREATED] }));
+    for (const action of ['draw', 'pass', 'timeout', 'claim']) {
+      options.applySnapshot(
+        frame('snapshot', {
+          state: view,
+          event: { type: 'move-played', color: 'south', move: { action } },
+        }),
+      );
+    }
+    expect(sound.moves).toEqual(['capture']);
   });
 });

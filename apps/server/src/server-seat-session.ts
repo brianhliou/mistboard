@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Color } from '@mistboard/game';
-import { isPlayDisabled, type UserAccount } from './persistence.js';
+import { isPlayDisabled, isStatsExcluded, type UserAccount } from './persistence.js';
 import {
   appendEvent,
   persistSeatToken,
@@ -57,6 +57,12 @@ export async function assignSeat(
   // turns this denial into a clear close so the client can prompt sign-in.
   if (room.rated && !accountUser && !isServerEngineClient(clientId)) {
     return { seat: 'spectator', deniedReason: 'rated-requires-account' };
+  }
+  // A stats-excluded account (operator, QA) is not counted, so it never takes a
+  // seat in a rated room; the create and lobby routes refuse it first, this
+  // catches a stale client.
+  if (room.rated && isStatsExcluded(accountUser) && !isServerEngineClient(clientId)) {
+    return { seat: 'spectator', deniedReason: 'rated-requires-counted-account' };
   }
   // Per-account play lock (126). Placed on the fallthrough path on purpose: the
   // grant/reclaim branches above have already returned, so locking an account

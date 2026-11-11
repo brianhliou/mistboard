@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
 import test from 'node:test';
 import { GAME_SPECS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { gomokuRooms } from './gomoku-registration.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle } from './routes/rooms.js';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module), so the registry-driven test below sees
 // the same tenant set the server boots with.
 import './variant-tenant/register-tenants.js';
-import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { registeredVariantTenants, variantTenantForSpecId } from './variant-tenant/registry.js';
 
 test('game spec gate passes current chess requests', () => {
   assert.deepEqual(gateGameSpecRequest({ variant: 'dark-chess' }), { type: 'pass' });
@@ -15,6 +21,109 @@ test('game spec gate passes current chess requests', () => {
   // The WS dispatch passes url.searchParams.get('gameSpecId'), so an absent
   // query param arrives as null: treat it like undefined.
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: null }), { type: 'pass' });
+});
+
+test('the chess-stack gate still rejects Gomoku; only its registered tenant serves it', () => {
+  for (const enabled of [false, true]) {
+    withFlag('MISTBOARD_GOMOKU_ENABLED', enabled, () => {
+      assert.equal(gomokuEnabled(), enabled);
+      assert.equal(
+        registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'gomoku'),
+        true,
+      );
+      for (const input of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+        assert.deepEqual(gateGameSpecRequest(input), {
+          type: 'reject',
+          error: enabled ? 'gomoku_not_integrated' : 'gomoku_disabled',
+          httpStatus: enabled ? 501 : 404,
+          wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+        });
+      }
+    });
+  }
+});
+
+test('POST /api/rooms admits only flag-enabled Gomoku PvP and PvE; legacy selectors stay closed', async () => {
+  const name = 'MISTBOARD_GOMOKU_ENABLED';
+  const before = process.env[name];
+  try {
+    for (const value of [undefined, 'false', '1', 'true']) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+      assert.equal(gomokuEnabled(), value === 'true');
+      for (const mode of ['pvp', 'pve']) {
+        for (const selector of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+          const request = Readable.from([
+            Buffer.from(JSON.stringify({ ...selector, mode })),
+          ]) as unknown as IncomingMessage;
+          request.method = 'POST';
+          request.headers = {};
+          let status = 0;
+          let payload = '';
+          const response = {
+            writeHead(code: number) {
+              status = code;
+            },
+            end(body: string) {
+              payload = body;
+            },
+          } as unknown as ServerResponse;
+          // No chess room factory: a fallback into chess must fail.
+          assert.equal(
+            await tryHandle(
+              {
+                databaseRequired: false,
+                refusesCreate: () => false,
+                drainDeadlineMs: () => null,
+              } as unknown as HttpApiContext,
+              request,
+              response,
+              '/api/rooms',
+            ),
+            true,
+          );
+          const enabled = value === 'true';
+          if (enabled && 'gameSpecId' in selector && mode === 'pve') {
+            // The bot runs in the human's browser (#768 build 3); the room still
+            // opens unrated through the same gate.
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            assert.equal(data.mode, 'pve');
+            assert.equal(data.gameSpecId, 'gomoku');
+            assert.equal(data.rated, false);
+          } else if (enabled && 'gameSpecId' in selector && mode === 'pvp') {
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            // Every field read by room navigation and the setup/lobby handoff.
+            assert.deepEqual(data, {
+              roomId: data.roomId,
+              url: `/room/${data.roomId}`,
+              mode: 'pvp',
+              gameSpecId: 'gomoku',
+              rated: false,
+              region: 'global',
+              timeControl: { initialMs: 300_000, incrementMs: 0 },
+            });
+          } else {
+            assert.equal(status, enabled ? 501 : 404);
+            assert.deepEqual(JSON.parse(payload), {
+              error: !enabled
+                ? 'gomoku_disabled'
+                : 'gameSpecId' in selector
+                  ? 'gomoku_unsupported_surface'
+                  : 'gomoku_not_integrated',
+            });
+          }
+        }
+      }
+    }
+  } finally {
+    gomokuRooms.clear();
+    if (before === undefined) delete process.env[name];
+    else process.env[name] = before;
+  }
 });
 
 test('game spec gate leaves free-string variants to parseVariantId', () => {
@@ -71,8 +180,13 @@ test('game spec gate refuses every retired spec, by id and by legacy variant, wh
   // Retirement is decided in packages/game (runtimeStatus 'retired'); the
   // gate reads it and never consults a launch flag for a retired id. Fortress
   // and Atomic Xiangqi retired on 2026-10-11 with their tenants kept, so their
-  // finished games replay while every create path answers 410.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), ['atomic-xiangqi', 'fortress-xiangqi']);
+  // finished games replay while every create path answers 410. Hong Kong
+  // mahjong followed on 2026-11-06.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), [
+    'atomic-xiangqi',
+    'fortress-xiangqi',
+    'mahjong',
+  ]);
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.deepEqual(gateGameSpecRequest({ gameSpecId: id }), RETIRED, `gameSpecId ${id}`);
     assert.deepEqual(gateGameSpecRequest({ variant: id }), RETIRED, `variant ${id}`);
@@ -94,21 +208,76 @@ test('game spec gate keeps rejecting legacy variant spellings for tenant specs',
   }
 });
 
-test('game spec gate rejects every runtimeStatus future spec, of which there are none today', () => {
-  // The five reserved ids (dark-antichess, sun-tzu, lao-tzu, dark-seirawan,
-  // dark-omega) left with the retirement sweep (#396). Should one come back,
-  // known-but-unrouted must stay distinguishable from unknown_game_spec.
-  for (const spec of GAME_SPECS.filter((s) => s.runtimeStatus === 'future')) {
-    assert.deepEqual(
-      gateGameSpecRequest({ gameSpecId: spec.id }),
-      {
-        type: 'reject',
-        error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
-        httpStatus: 501,
-        wsCloseReason: 'game spec not integrated',
-      },
-      spec.id,
-    );
+const FFQ_SELECTORS = [
+  { gameSpecId: 'ffq-banqi' },
+  { variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'ffq-banqi' },
+  { gameSpecId: 'dark-chess', variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'dark-chess' },
+  { gameSpecId: 'banqi', variant: 'ffq-banqi' },
+  { gameSpecId: 'unknown', variant: 'ffq-banqi' },
+];
+
+for (const registered of [false, true]) {
+  for (const flag of [undefined, false, true]) {
+    for (const accountRole of [null, 'player', 'admin'] as const) {
+      test(`FFQ selectors: registered=${registered}, flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
+        const registration = variantTenantForSpecId('ffq-banqi');
+        assert.ok(registration);
+        const original = registration.gameSpecId;
+        if (!registered) registration.gameSpecId = 'test-missing-ffq';
+        try {
+          withFlag('MISTBOARD_FFQ_BANQI_ENABLED', flag, () => {
+            const enabled = flag === true && accountRole === 'admin';
+            for (const input of FFQ_SELECTORS) {
+              assert.deepEqual(
+                gateGameSpecRequest(input, accountRole ? { accountRole } : null),
+                enabled && registered
+                  ? { type: 'pass' }
+                  : {
+                      type: 'reject',
+                      error: enabled ? 'ffq_banqi_not_integrated' : 'ffq_banqi_disabled',
+                      httpStatus: enabled ? 501 : 404,
+                      wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+                    },
+                JSON.stringify(input),
+              );
+            }
+          });
+        } finally {
+          registration.gameSpecId = original;
+        }
+      });
+    }
+  }
+}
+
+test('FFQ registers its own tenant for enabled admin requests', () => {
+  assert.equal(
+    registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'ffq-banqi'),
+    true,
+  );
+});
+
+test('game spec gate rejects every runtimeStatus future spec by canonical and legacy selectors', () => {
+  // A kernel may exist before a tenant does. Known-but-unrouted must stay
+  // distinguishable from unknown_game_spec, and neither selector may fall
+  // through into a Fog Chess room. FFQ has its own flag/account matrix above.
+  for (const spec of GAME_SPECS.filter(
+    (s) => s.runtimeStatus === 'future' && s.id !== 'ffq-banqi',
+  )) {
+    for (const input of [{ gameSpecId: spec.id }, { variant: spec.id }]) {
+      assert.deepEqual(
+        gateGameSpecRequest(input),
+        {
+          type: 'reject',
+          error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
+          httpStatus: 501,
+          wsCloseReason: 'game spec not integrated',
+        },
+        JSON.stringify(input),
+      );
+    }
   }
 });
 
@@ -137,10 +306,10 @@ test('game spec gate fails closed for every registered tenant spec', () => {
   }
 });
 
-function withFlag(name: string, enabled: boolean, fn: () => void): void {
+function withFlag(name: string, enabled: boolean | undefined, fn: () => void): void {
   const before = process.env[name];
-  if (enabled) process.env[name] = 'true';
-  else delete process.env[name];
+  if (enabled === undefined) delete process.env[name];
+  else process.env[name] = String(enabled);
   try {
     fn();
   } finally {

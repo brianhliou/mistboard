@@ -52,6 +52,25 @@ test('parseEntries is not fooled by the array type annotation', () => {
   assert.equal(entries[0].title, 'One');
 });
 
+test('parseEntries can read the Bilibili shelf without adding it to the YouTube audit', () => {
+  const source = `const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
+    { source: 'youtube', id: 'aaaaaaaaaaa', title: 'Xiangqi lesson', author: 'Teacher' },
+  ];
+  const MISTBOARD_CHANNEL_VIDEOS: readonly YoutubeVideo[] = [];
+  const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
+    { source: 'bilibili', bvid: 'BV1xx411c7mD', title: '揭棋教学', author: '老师' },
+  ];`;
+  const youtube = parseEntries(source);
+  assert.equal(youtube.length, 1);
+  assert.equal(youtube[0].source, 'youtube');
+  assert.equal(youtube[0].id, 'aaaaaaaaaaa');
+  const entries = parseEntries(source, ['BILIBILI_VIDEOS']);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].bvid, 'BV1xx411c7mD');
+  assert.equal(entries[0].title, '揭棋教学');
+  assert.equal(source.slice(entries[0].start, entries[0].end), entries[0].body);
+});
+
 test('field reads both quote styles', () => {
   assert.equal(field("  title: 'Plain',", 'title'), 'Plain');
   assert.equal(field('  title: "Men\'s Final",', 'title'), "Men's Final");

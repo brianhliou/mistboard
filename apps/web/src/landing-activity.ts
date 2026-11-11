@@ -12,13 +12,14 @@
 // Rows render only for data we actually have; a failed poll keeps the last
 // values, and the block removes itself when the first read has nothing to show.
 
+import './hover-grammar.css';
 import { t } from './i18n/catalog.js';
 import { fetchLiveStats } from './live-stats-client.js';
 
 // "N games in play" links to the current-games page (lichess does the same).
 // The two agree by construction: /api/live-stats counts rooms by the deploy
-// gate's in-play rule plus the active correspondence index, and /games lists
-// exactly that set.
+// gate's in-play rule and /games's stale-move window (isStaleLiveRoom), plus
+// the active correspondence index, and /games lists that set.
 const CURRENT_GAMES_HREF = '/games';
 
 export const ACTIVITY_POLL_MS = 15_000;
@@ -46,9 +47,9 @@ export function buildLandingActivity(
 }
 
 // The durable total is the headline; the month count rides along in a
-// parenthetical rather than as its own stat line. "this month" is the server's
-// rolling 30-day window (persistence-site-stats.ts), so the label carries a
-// title tooltip spelling that out.
+// parenthetical rather than as its own stat line. The count is the server's
+// rolling 30-day window (persistence-site-stats.ts), and the label says so:
+// "this month" read as the calendar month.
 function gamesPlayedLabel(monthCount: number): string {
   return t('home.gamesPlayedMonth', { count: formatCount(monthCount) });
 }
@@ -163,7 +164,7 @@ function activityMetric(
 ): HTMLElement {
   const row = href ? document.createElement('a') : document.createElement('div');
   row.className = href
-    ? 'landing-activity-metric landing-activity-link'
+    ? 'landing-activity-metric landing-activity-link hover-link'
     : 'landing-activity-metric';
   if (href) row.setAttribute('href', href);
   const valueEl = document.createElement('strong');
@@ -186,7 +187,9 @@ function activityLiveLine(stats: HTMLElement[]): HTMLElement {
 
 function activityInlineStat(value: string, label: string, href?: string): HTMLElement {
   const stat = href ? document.createElement('a') : document.createElement('span');
-  stat.className = 'landing-activity-inline-stat';
+  stat.className = href
+    ? 'landing-activity-inline-stat hover-link'
+    : 'landing-activity-inline-stat';
   if (href) stat.setAttribute('href', href);
   const valueEl = document.createElement('strong');
   valueEl.textContent = value;

@@ -16,6 +16,8 @@ export const mistyArticle: Article = {
     status: 'published',
     publishedAt: '2026-06-21',
     updatedAt: '2026-10-07',
+    updateNote:
+      'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.',
     audience:
       'Dark chess players and chess-engine builders curious about how the Mistboard engine works.',
     intro: [

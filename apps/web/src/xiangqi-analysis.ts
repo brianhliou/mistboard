@@ -19,7 +19,7 @@ import {
 import {
   type GameOutcome,
   outcomeLabel,
-  terminationLabel,
+  terminationReason,
   variantDisplayLabel,
 } from './game-display.js';
 import { seatColorWord } from './variant-seat-label.js';
@@ -59,7 +59,7 @@ function finishedStatusLine(status: Extract<XiangqiGameStatus, { type: 'finished
     : { draw: true };
   return t('watch.resultByReason', {
     result: outcomeLabel(outcome),
-    reason: terminationLabel(status.reason),
+    reason: terminationReason(status.reason),
   });
 }
 
@@ -74,6 +74,10 @@ export interface XiangqiAnalysisOptions {
   /** Render the site nav above the board (default). The embed passes false:
    *  it runs inside someone else's page and shows the board alone. */
   nav?: boolean;
+  /** Where the board opens on a seeded line: its last move (default) or its
+   *  root. A problem link opens on the root so the solution is not the first
+   *  thing the reader sees. */
+  initialPosition?: 'start' | 'end';
 }
 
 /** Mount the interactive analysis board for a standard-xiangqi move list. An empty
@@ -84,7 +88,7 @@ export function mountXiangqiAnalysis(
   moves: XiangqiMove[],
   opts: XiangqiAnalysisOptions = {},
 ): void {
-  const replay = buildXiangqiReplayFromMoves(moves, opts.startState);
+  const replay = buildXiangqiReplayFromMoves(moves, opts.startState, { record: true });
 
   const finalStatus = xiangqiReplayViewAtPly(replay, replay.maxPly).status;
   // With a variant picker (the /analysis route), the dropdown is the ENTIRE
@@ -106,7 +110,13 @@ export function mountXiangqiAnalysis(
 
   root.replaceChildren(...(opts.nav === false ? [] : [buildNav()]));
   mountXiangqiReview(root, {
+    record: true,
     reviewSurface: 'analysis',
+    // The embed (nav: false) keeps the plain stack: it lives in someone
+    // else's page, which owns the screen's foot.
+    ...(opts.nav === false
+      ? {}
+      : { phoneAnalysisBar: { variantName: variantDisplayLabel(XIANGQI_SPEC_ID) } }),
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Xiangqi analysis',
     eyebrow: 'Analysis',
@@ -121,6 +131,7 @@ export function mountXiangqiAnalysis(
     // current line as a study, and wipe the moves back to the root position.
     studyExport: { variant: DEFAULT_STUDY_VARIANT, name: opts.title ?? 'Xiangqi analysis' },
     allowClearMoves: true,
+    initialPosition: opts.initialPosition,
     // Hand the current position to the board editor (/editor/xiangqi?fen=).
     boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     // A hand-set start roots the tree + engine at the composition's position.

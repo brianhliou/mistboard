@@ -1,4 +1,4 @@
-import { COUNTED_USER, countedPublicGame, notRetiredVariant } from './persistence-counted-games.js';
+import { COUNTED_USER, countedPublicGame, publicVariant } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -31,7 +31,7 @@ export interface PublicVariantSeries {
 }
 
 export interface PublicStatsWeek {
-  // Monday of the week, ISO date.
+  // Monday of the week in SITE_STATS_TIME_ZONE (Pacific), ISO date.
   weekStart: string;
   completedGames: number;
 }
@@ -119,13 +119,22 @@ export async function getSiteStats(): Promise<SiteStats> {
 }
 
 // Every query below is over `games g` with the shared public filter:
-// completed pvp/pve, no stats-excluded seat, and not in a retired variant
-// (countedPublicGame), so no public number counts a variant a visitor can no
-// longer play. The by-mode split keeps its eve row (an admin-only figure the
-// client hides on the public page) but applies the same seat exclusion to the
-// human rows and the retired-variant exclusion to every row.
+// completed pvp/pve, no stats-excluded seat, and not in a retired or hidden
+// playtest variant (countedPublicGame), so no public number counts a variant a
+// visitor cannot play. The by-mode split keeps its eve row (an admin-only figure
+// the client hides on the public page) but applies the same seat exclusion to the
+// human rows and the variant exclusion to every row.
 const COUNTED = countedPublicGame('g');
-const NOT_RETIRED = notRetiredVariant('g');
+const PUBLIC_VARIANT = publicVariant('g');
+
+// Days and weeks on /stats are cut in Pacific time, the site's working day
+// (ship times, the article clock), so a week ends at Sunday midnight Pacific
+// rather than Sunday 16:00 (UTC Monday). Bounds are converted back to
+// timestamptz before they meet `ended_at`, so the range filter keeps its index.
+export const SITE_STATS_TIME_ZONE = 'America/Los_Angeles';
+const TZ = `'${SITE_STATS_TIME_ZONE}'`;
+const LOCAL_ENDED = `(g.ended_at AT TIME ZONE ${TZ})`;
+const LOCAL_NOW = `($1::timestamptz AT TIME ZONE ${TZ})`;
 
 export interface SiteGameTotals {
   totalCompletedGames: number;
@@ -183,7 +192,7 @@ export async function getPublicSiteStats(
   const byMode = await pool.query<{ mode: PublicStatsMode; n: number }>(
     `SELECT g.mode, count(*)::int AS n
      FROM games g
-     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve' AND ${NOT_RETIRED})
+     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve' AND ${PUBLIC_VARIANT})
      GROUP BY g.mode`,
   );
 
@@ -202,8 +211,8 @@ export async function getPublicSiteStats(
   const daily = await pool.query<{ day: Date | string; n: number }>(
     `WITH bounds AS (
        SELECT
-         date_trunc('week', min(g.ended_at))::date AS first_day,
-         $1::timestamptz::date AS today
+         date_trunc('week', min(${LOCAL_ENDED}))::date AS first_day,
+         ${LOCAL_NOW}::date AS today
        FROM games g
        WHERE ${COUNTED}
      ),
@@ -213,7 +222,7 @@ export async function getPublicSiteStats(
        WHERE bounds.first_day IS NOT NULL
      ),
      completed AS (
-       SELECT g.ended_at::date AS day, count(*)::int AS n
+       SELECT ${LOCAL_ENDED}::date AS day, count(*)::int AS n
        FROM games g
        WHERE ${COUNTED}
        GROUP BY day
@@ -226,22 +235,23 @@ export async function getPublicSiteStats(
   );
 
   // Weekly axis from generate_series so a quiet week is a zero, not a gap;
-  // week keys cast to text in SQL so a non-UTC dev process cannot shift them.
+  // week keys are Pacific Mondays (SITE_STATS_TIME_ZONE), cast to text in SQL
+  // so the process time zone cannot shift them.
   // Starts on the first counted game's week (the daily series' origin) and
   // never earlier than PUBLIC_STATS_WEEKS back.
   const weekly = await pool.query<{ week: string; n: number }>(
     `WITH bounds AS (
-       SELECT date_trunc('week', min(g.ended_at)) AS first_week
+       SELECT date_trunc('week', min(${LOCAL_ENDED})) AS first_week
        FROM games g
        WHERE ${COUNTED}
      ),
      weeks AS (
        SELECT generate_series(
          GREATEST(
-           COALESCE(bounds.first_week, date_trunc('week', $1::timestamptz)),
-           date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week'
+           COALESCE(bounds.first_week, date_trunc('week', ${LOCAL_NOW})),
+           date_trunc('week', ${LOCAL_NOW}) - ($2::int - 1) * INTERVAL '1 week'
          ),
-         date_trunc('week', $1::timestamptz),
+         date_trunc('week', ${LOCAL_NOW}),
          INTERVAL '1 week'
        ) AS week_start
        FROM bounds
@@ -249,8 +259,8 @@ export async function getPublicSiteStats(
      SELECT weeks.week_start::date::text AS week,
        (SELECT count(*) FROM games g
           WHERE ${COUNTED}
-            AND g.ended_at >= weeks.week_start
-            AND g.ended_at < LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz))::int AS n
+            AND g.ended_at >= (weeks.week_start AT TIME ZONE ${TZ})
+            AND g.ended_at < LEAST((weeks.week_start + INTERVAL '1 week') AT TIME ZONE ${TZ}, $1::timestamptz))::int AS n
      FROM weeks
      ORDER BY weeks.week_start`,
     [now, PUBLIC_STATS_WEEKS],
@@ -264,7 +274,7 @@ export async function getPublicSiteStats(
   // key is truncated and cast in SQL exactly as the axis is, so the two agree
   // whatever the process time zone.
   const weeklyByVariantRows = await pool.query<{ week: string; variant: string; n: number }>(
-    `SELECT date_trunc('week', g.ended_at)::date::text AS week, g.variant, count(*)::int AS n
+    `SELECT date_trunc('week', ${LOCAL_ENDED})::date::text AS week, g.variant, count(*)::int AS n
      FROM games g
      WHERE ${COUNTED}
      GROUP BY week, g.variant`,
@@ -303,7 +313,7 @@ export async function getPublicSiteStats(
   // Per-(day, variant) completed counts, projected onto the same date axis as
   // dailyCompletedGames so each variant series is directly comparable.
   const dailyByVariant = await pool.query<{ day: Date | string; variant: string; n: number }>(
-    `SELECT g.ended_at::date AS day, g.variant, count(*)::int AS n
+    `SELECT ${LOCAL_ENDED}::date AS day, g.variant, count(*)::int AS n
      FROM games g
      WHERE ${COUNTED}
      GROUP BY day, g.variant`,

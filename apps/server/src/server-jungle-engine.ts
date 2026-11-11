@@ -31,6 +31,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import {
@@ -453,7 +454,7 @@ async function playJungleSearchedEngineMove(
       const parsed = engineUciToJungleMove(uci);
       return parsed && isJungleLegalMove(state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -667,6 +668,10 @@ function bothSeatsFilled(room: JungleEngineRoom): boolean {
 
 function engineToMove(room: JungleEngineRoom, seat: JungleColor): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 

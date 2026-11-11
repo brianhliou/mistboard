@@ -11,6 +11,25 @@ export type TenantWebClock<C extends string> = {
   runningSince: number | null;
 };
 
+export function isClockReconnecting(connection: string): boolean {
+  return connection === 'disconnected' || connection === 'reconnecting';
+}
+
+// Both live shells render synchronously when the socket drops. Hold that
+// instant across ticks, full renders and reconnect attempts; the server's next
+// snapshot remains authoritative when the connection comes back.
+export function createClockDisplayTime(): (connection: string) => number {
+  let frozenAt: number | null = null;
+  return (connection) => {
+    if (connection === 'connected') {
+      frozenAt = null;
+      return Date.now();
+    }
+    frozenAt ??= Date.now();
+    return frozenAt;
+  };
+}
+
 export function clockRemainingMs<C extends string>(
   clock: TenantWebClock<C>,
   color: C,

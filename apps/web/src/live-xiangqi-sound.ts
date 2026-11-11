@@ -106,7 +106,7 @@ export function classifyXiangqiOpponentSound(
   if (prev.status.type !== 'playing') return null;
   if (prev.status.turn === seat) return null;
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
-  return ownPieceCount(next, seat) < ownPieceCount(prev, seat) ? 'captured' : 'move';
+  return ownPieceCount(next, seat) < ownPieceCount(prev, seat) ? 'capture' : 'move';
 }
 
 function ownPieceCount(view: XiangqiSoundView, color: XiangqiColor): number {

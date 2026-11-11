@@ -1,4 +1,6 @@
+import { importXiangqiGame } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import continuedRecords from '../../../packages/game/fixtures/xiangqi-notation/adjudicated-records.json';
 import { mountXiangqiAnalysis } from './xiangqi-analysis.js';
 import { mountXiangqiAnalysisPage } from './xiangqi-analysis-page.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
@@ -19,12 +21,58 @@ function freshRoot(): HTMLElement {
   return root;
 }
 
+// This happy-dom build ships no window.localStorage; back it with memory so the
+// opening-book preference (#534) can be remembered across mounts.
+const storageValues = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    get length() {
+      return storageValues.size;
+    },
+    clear: () => storageValues.clear(),
+    getItem: (key: string) => storageValues.get(key) ?? null,
+    key: (index: number) => [...storageValues.keys()][index] ?? null,
+    removeItem: (key: string) => void storageValues.delete(key),
+    setItem: (key: string, value: string) => void storageValues.set(key, value),
+  } satisfies Storage,
+});
+
 // These tests locate cells by from-to text; pin coordinate labels so the
 // reader's notation default (algebraic) does not become the subject.
-beforeEach(() => pinXiangqiNotation('coordinate'));
+beforeEach(() => {
+  storageValues.clear();
+  pinXiangqiNotation('coordinate');
+});
 afterEach(() => pinXiangqiNotation(null));
 
 describe('mountXiangqiAnalysis', () => {
+  for (const record of continuedRecords.cases) {
+    for (const nav of [true, false]) {
+      it(`keeps all plies past ${record.reason} on the ${nav ? 'page' : 'embed'}`, () => {
+        const imported = importXiangqiGame(record.iccs);
+        expect(imported.error).toBeUndefined();
+        expect(imported.moves).toHaveLength(record.plies);
+        const root = freshRoot();
+        mountXiangqiAnalysis(root, imported.moves, { nav });
+        // The metadata is driven by the replay used for the client analysis sweep.
+        expect(root.querySelector('.game-meta-card')?.textContent).toContain(
+          `${record.plies} plies`,
+        );
+        expect(root.textContent).not.toMatch(/Truncated import/i);
+        const last = imported.moves.at(-1)!;
+        expect(root.querySelector('.review-move-list__move--current')?.textContent).toContain(
+          `${last.from}-${last.to}`,
+        );
+        // Mounting publishes the tree's mainline, independently of the replay.
+        expect(new URLSearchParams(window.location.search).get('moves')?.split(' ')).toHaveLength(
+          record.plies,
+        );
+        root.remove();
+      });
+    }
+  }
+
   it('renders the board, engine panel, move tree, and navigation from a move list', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
@@ -150,6 +198,27 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
+  // A problem link (the /x/ short links) carries ply=0 so the reader lands on
+  // the problem, not on the solution's final move; without it the line's end
+  // is where the board opens.
+  it('opens at the root of a ?fen= + ?moves= line on ?ply=0', () => {
+    const fen = encodeURIComponent('3k5/4P4/9/9/9/9/9/4C4/9/4K4 r - - 0 1');
+    window.history.pushState({}, '', `/analysis/xiangqi?fen=${fen}&moves=e9e10`);
+    const atEnd = freshRoot();
+    mountXiangqiAnalysisPage(atEnd);
+    expect(atEnd.querySelector('.review-move-list__move--current')?.textContent).toContain(
+      'e9-e10',
+    );
+    atEnd.remove();
+
+    window.history.pushState({}, '', `/analysis/xiangqi?fen=${fen}&moves=e9e10&ply=0`);
+    const atStart = freshRoot();
+    mountXiangqiAnalysisPage(atStart);
+    expect(atStart.querySelector('.move-tree')?.textContent).toContain('e9-e10');
+    expect(atStart.querySelector('.review-move-list__move--current')).toBeNull();
+    atStart.remove();
+  });
+
   it('degrades an invalid ?fen= to the standard start', () => {
     window.history.pushState({}, '', '/analysis/xiangqi?fen=not-a-fen');
     const root = freshRoot();
@@ -177,6 +246,43 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
+  it('mounts the phone bar on the page and not in the embed (#576)', () => {
+    const root = freshRoot();
+    mountXiangqiAnalysis(root, [...OPENING]);
+    const bar = root.querySelector('.analysis-phone-bar');
+    expect(
+      [...(bar?.querySelectorAll<HTMLButtonElement>('[data-analysis-bar]') ?? [])].map(
+        (b) => b.dataset.analysisBar,
+      ),
+    ).toEqual(['tools', 'engine', 'flip', 'back', 'next']);
+    // happy-dom cannot run the engine, so the Engine button is hidden, as the
+    // engine card is.
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="engine"]')?.hidden).toBe(
+      true,
+    );
+    // The last seeded move is current: Next is at the end, Back is live.
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="next"]')?.disabled).toBe(
+      true,
+    );
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="back"]')?.disabled).toBe(
+      false,
+    );
+    expect(root.querySelector('.analysis-phone-info')?.textContent).toContain('Black to move');
+    // Tools carries every menu item but Flip, which has its own button.
+    root.querySelector<HTMLButtonElement>('[data-analysis-bar="tools"]')?.click();
+    expect(
+      [...root.querySelectorAll('.analysis-tools-sheet__item')].map((b) => b.textContent?.trim()),
+    ).toEqual(['Opening explorer', 'Study', 'Clear moves', 'Board editor']);
+    // The FEN and moves boxes ride in the sheet while it is open.
+    expect(root.querySelector('.analysis-tools-sheet .review-import')).not.toBeNull();
+    root.remove();
+
+    const embed = freshRoot();
+    mountXiangqiAnalysis(embed, [...OPENING], { nav: false });
+    expect(embed.querySelector('.analysis-phone-bar')).toBeNull();
+    embed.remove();
+  });
+
   it('Board editor hands the current position to /editor/xiangqi', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
@@ -195,10 +301,11 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
-  it('carries no dead toolbar buttons, and the book starts open', () => {
+  it('carries no dead toolbar buttons, and the book starts closed', () => {
     // The rule: a control bar never shows a button with nothing behind it. The
     // bar is the five move-nav columns; the opening book is a menu row (#523),
-    // open by default, and toggling it closes and reopens the pane.
+    // closed by default for a first-time reader (#534), and toggling it opens
+    // and closes the pane.
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
     const bar = root.querySelector('.review-controls.move-nav-bar');
@@ -214,16 +321,49 @@ describe('mountXiangqiAnalysisPage', () => {
     expect(bar?.hasAttribute('data-live-glow')).toBe(false);
     const book = root.querySelector<HTMLButtonElement>('[data-review-explorer]');
     const pane = root.querySelector<HTMLElement>('.opening-explorer');
-    expect(pane?.hidden).toBe(false);
-    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
-    expect(book?.getAttribute('aria-pressed')).toBe('true');
-    book?.click();
     expect(pane?.hidden).toBe(true);
     root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
     expect(book?.getAttribute('aria-pressed')).toBe('false');
     book?.click();
     expect(pane?.hidden).toBe(false);
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+    expect(book?.getAttribute('aria-pressed')).toBe('true');
+    book?.click();
+    expect(pane?.hidden).toBe(true);
     root.remove();
+  });
+
+  it('remembers the book choice across boards (#534)', () => {
+    // Every review surface shares the one bar, so the reader's last choice is
+    // the next board's starting state: opened stays open, closed stays closed.
+    const mount = () => {
+      const root = freshRoot();
+      mountXiangqiAnalysis(root, [...OPENING]);
+      const pane = root.querySelector<HTMLElement>('.opening-explorer');
+      const book = root.querySelector<HTMLButtonElement>('[data-review-explorer]');
+      const openMenu = () =>
+        root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+      return { root, pane, book, openMenu };
+    };
+
+    const first = mount();
+    expect(first.pane?.hidden).toBe(true);
+    first.openMenu();
+    first.book?.click();
+    expect(first.pane?.hidden).toBe(false);
+    first.root.remove();
+
+    const second = mount();
+    expect(second.pane?.hidden).toBe(false);
+    second.openMenu();
+    expect(second.book?.getAttribute('aria-pressed')).toBe('true');
+    second.book?.click();
+    expect(second.pane?.hidden).toBe(true);
+    second.root.remove();
+
+    const third = mount();
+    expect(third.pane?.hidden).toBe(true);
+    third.root.remove();
   });
 
   it('Clear moves wipes the tree back to the start position', () => {

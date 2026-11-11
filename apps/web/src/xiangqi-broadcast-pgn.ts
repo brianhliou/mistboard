@@ -9,7 +9,7 @@
 // (apps/server/src/xiangqi-game-export.ts).
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isStandardXiangqiLegalMove,
   writeXiangqiPgn,
@@ -17,6 +17,7 @@ import {
   type XiangqiBroadcastResult,
   type XiangqiMove,
   type XiangqiPgnNode,
+  xiangqiBroadcastRoundStart,
 } from '@mistboard/game';
 
 export type BroadcastPgnInput = {
@@ -27,6 +28,8 @@ export type BroadcastPgnInput = {
   moves: readonly XiangqiMove[];
   tour?: { name: string; nameEn?: string; location?: string } | null;
   round?: { name: string; nameEn?: string; startsAt?: string } | null;
+  /** The game's own date, which wins over the round's seeded start. */
+  playedAt?: string;
   /** Page origin for the Source tag; mistboard.com when unset. */
   origin?: string;
 };
@@ -43,7 +46,7 @@ function lineReplays(moves: readonly XiangqiMove[]): boolean {
   let state = createInitialXiangqiState('broadcast-pgn');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) return false;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return true;
 }
@@ -58,7 +61,7 @@ export function broadcastGamePgn(input: BroadcastPgnInput): string {
   const tags: Record<string, string> = {};
   if (input.tour) tags.Event = english(input.tour);
   if (input.tour?.location) tags.Site = input.tour.location;
-  const date = pgnDate(input.round?.startsAt);
+  const date = pgnDate(xiangqiBroadcastRoundStart([input.playedAt], input.round?.startsAt));
   if (date) tags.Date = date;
   if (input.round) tags.Round = english(input.round);
   tags.Red = english(input.red);

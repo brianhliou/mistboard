@@ -32,18 +32,22 @@ import {
   type JunglePieceRole,
 } from './variants-jungle.js';
 
-export type JunglePuzzleTheme =
-  | 'den-race'
-  | 'capture-all'
-  | 'stalemate'
-  | 'trap'
-  | 'water-leap'
-  | 'rank-up'
-  | 'rat'
-  | 'elephant'
-  | 'lion'
-  | 'tiger'
-  | 'winning';
+/** Every theme a Jungle puzzle can carry. */
+export const JUNGLE_PUZZLE_THEMES = [
+  'den-race',
+  'capture-all',
+  'stalemate',
+  'trap',
+  'water-leap',
+  'rank-up',
+  'rat',
+  'elephant',
+  'lion',
+  'tiger',
+  'winning',
+] as const;
+
+export type JunglePuzzleTheme = (typeof JUNGLE_PUZZLE_THEMES)[number];
 
 export type JunglePuzzleGoal =
   | {

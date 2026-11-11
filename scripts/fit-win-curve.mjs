@@ -207,7 +207,7 @@ writeFileSync(
       lossChess,
       lossBest,
       ci: [lo, hi],
-      containsChessK: contains,
+      chessKPercentile: rank,
     },
     null,
     2,

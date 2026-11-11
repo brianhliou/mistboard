@@ -97,6 +97,7 @@ function client(seat: 'white' | 'black', tokenHash: string): Client {
 type Spy = {
   sent: Array<{ client: Client; payload: unknown }>;
   createCalls: number;
+  createRated?: boolean;
   issueCalls: number;
 };
 
@@ -118,8 +119,9 @@ function makeOrch(): { orch: RematchOrchestrator; spy: Spy; newRoom: Room } {
     ctx,
     send: (c, payload) => sent.push({ client: c, payload }),
     buildRoomUrl: (id) => `/?room=${id}`,
-    createRoom: async () => {
+    createRoom: async (input) => {
       spy.createCalls += 1;
+      spy.createRated = input.rated;
       return newRoom;
     },
     issueSeatToken: async (room, seat, identity) => {
@@ -195,6 +197,26 @@ test('mutual offer finalizes: new room created, colors swapped, per-client redir
   assert.equal((whiteRedirect!.payload as { seatToken: string }).seatToken, 'new-black-token');
   assert.equal((blackRedirect!.payload as { seatToken: string }).seatToken, 'new-white-token');
   assert.equal(room.rematch.finalizedRoomId, newRoom.id);
+});
+
+test('a rated rematch with a stats-excluded seat is created casual', async () => {
+  const room = makeFinishedRoom('r-excluded');
+  room.rated = true;
+  room.seatTokens.white = seatToken({ seat: 'white', hash: 'wh', userId: 'user-w' });
+  room.seatTokens.black = seatToken({ seat: 'black', hash: 'bh', userId: 'user-excluded' });
+  const whiteClient = client('white', 'wh');
+  const blackClient = client('black', 'bh');
+  room.clients.add(whiteClient);
+  room.clients.add(blackClient);
+
+  const { orch, spy } = makeOrch();
+  orch.accountMayRate = async (userId) => userId !== 'user-excluded';
+  offerRematch(orch, room, whiteClient);
+  offerRematch(orch, room, blackClient);
+  await finalizeRematchIfReady(orch, room);
+
+  assert.equal(spy.createCalls, 1);
+  assert.equal(spy.createRated, false, 'an uncounted account never rates');
 });
 
 test('cancelRematch: clears own offer only', () => {

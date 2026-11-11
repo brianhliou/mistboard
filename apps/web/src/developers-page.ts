@@ -1,3 +1,4 @@
+import { prerenderCopy } from './prerender-copy.js';
 // /developers: how to put a Mistboard board in someone else's page.
 //
 // Five things are frameable, and the page documents each with a snippet a
@@ -22,9 +23,12 @@ import {
   embedPuzzlePath,
   embedStudyPath,
   embedTvPath,
+  isPublicGameSpec,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { gomokuEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   proseExternalLink,
@@ -56,6 +60,7 @@ const TV_CHANNELS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   'engines',
 ] as const;
 
@@ -354,7 +359,11 @@ function sizingTable(): HTMLElement {
   return table;
 }
 
-function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
+function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLElement {
+  // Playtest access does not advertise an unlaunched TV channel.
+  const tvChannels = TV_CHANNELS.filter(
+    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
+  );
   const section = proseSection('developers-section');
   const origin = siteOrigin();
   const gameExample = liveFrame(
@@ -363,7 +372,7 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
     'A finished game on Mistboard',
   );
   const gameBlock = codeBlock(gameSnippet(origin));
-  void pointGameExampleAtLocalGame(origin, gameExample.figure, gameBlock);
+  if (live) void pointGameExampleAtLocalGame(origin, gameExample.figure, gameBlock);
   const studyExample = liveFrame(
     embedStudyPath(EXAMPLE_STUDY, EXAMPLE_CHAPTER),
     { width: EMBED_DEFAULT_WIDTH, height: EMBED_DEFAULT_HEIGHT },
@@ -375,16 +384,27 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
     notation: codeBlock(`${exampleEmbedUrl(origin)}?theme=light&notation=wxf`),
     oembed: codeBlock(oembedRequestUrl(origin)),
   };
-  void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
+  if (live) void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
 
   section.append(
-    proseHeading('Developers'),
+    proseHeading(t('developers.heading', {}, locale)),
     proseParagraph([
       'Five things on Mistboard can run inside your page, with nothing to install and ' +
         'no API key: a study chapter, a finished game, Mistboard TV, a puzzle, and the ' +
         'analysis board. Each is an iframe. The page inside the frame carries no ' +
         'navigation, no footer, and no sign-in state; it renders the board and nothing ' +
         'else. The study widget is the same one the articles on this site use.',
+    ]),
+    proseParagraph([
+      proseLink(t('source.heading', {}, locale), localizedHref('/source', locale)),
+      ' · ',
+      proseLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+      ' · ',
+      proseLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+      ' · ',
+      proseLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+      ' · ',
+      proseLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
     ]),
 
     studyExample.figure,
@@ -423,7 +443,7 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
     codeBlock(tvSnippet(origin)),
     proseParagraph([
       'The snippet follows the xiangqi channel. Set channel= to any of ' +
-        `${TV_CHANNELS.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
+        `${tvChannels.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
     ]),
     codeBlock(`${origin}${embedTvPath()}`),
 
@@ -591,4 +611,14 @@ export function mountDevelopers(root: HTMLElement): void {
     buildNav(locale),
     buildStaticPageLayout('developers', buildDevelopers(locale), locale),
   );
+}
+
+export function renderDevelopersShellForPrerender(locale: Locale): string {
+  const content = buildDevelopers(locale, false);
+  // Demo documents and their network activity belong to the interactive page.
+  for (const frame of content.querySelectorAll('iframe')) frame.remove();
+  const root = document.createElement('div');
+  root.className = 'landing-page developers-route';
+  root.append(buildNav(locale), buildStaticPageLayout('developers', content, locale));
+  return prerenderCopy(root);
 }

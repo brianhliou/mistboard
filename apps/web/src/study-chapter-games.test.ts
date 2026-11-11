@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import tonyFungChapters from './study-chapter-games.fixture.json' with { type: 'json' };
 import {
   buildChapterGameRow,
+  buildChapterRowLabels,
   chapterEventGroups,
+  chapterResultTone,
   displayEventName,
   focusScore,
   type GameChapter,
@@ -171,10 +173,9 @@ describe('shortGameDate', () => {
 });
 
 describe('buildChapterGameRow', () => {
-  it('bolds the winner and colours the chip from the focus player’s side', () => {
+  it('bolds the winner and colours the chip by the winning seat', () => {
     const row = buildChapterGameRow(
       game('a', 'Lee', 'Tony', '1-0', { date: '2025-07-02', round: '3' }),
-      'Tony',
       'en',
     )!;
     expect(row.querySelector('.study-game-line__players')?.textContent).toBe('Lee vs Tony');
@@ -182,15 +183,99 @@ describe('buildChapterGameRow', () => {
     expect(row.querySelector('.study-game-line__meta')?.textContent).toBe('Jul 2, 2025 · Round 3');
     const chip = row.querySelector<HTMLElement>('.study-game-line__result')!;
     expect(chip.textContent).toBe('1-0');
-    expect(chip.dataset.outcome).toBe('loss');
+    expect(chip.dataset.outcome).toBe('red');
   });
 
-  it('is neutral without a focus player and null for a chapter that is not a game', () => {
-    const row = buildChapterGameRow(game('a', 'A', 'B', '1/2-1/2'), null, 'en')!;
-    expect(row.querySelector<HTMLElement>('.study-game-line__result')!.dataset.outcome).toBe(
-      'neutral',
+  it('prints a run and game round as written beside the date', () => {
+    const row = buildChapterGameRow(
+      game('a', 'AB-JChess-20261031', 'jqe', '1-0', {
+        date: '2026-10-31',
+        round: 'Run 2, game 22',
+      }),
+      'en',
+    )!;
+    expect(row.querySelector('.study-game-line__meta')?.textContent).toBe(
+      'Oct 31, 2026 · Run 2, game 22',
     );
+  });
+
+  // R612nAlt: two engines in all 100 games, so no focus player. The chips were
+  // all one neutral outline and the list could not be scanned for who won.
+  it('colours the chip by the winning seat without a focus player', () => {
+    const tone = (result: string) =>
+      buildChapterGameRow(game('a', 'jqe', 'AB-JChess', result), 'en')!.querySelector<HTMLElement>(
+        '.study-game-line__result',
+      )!.dataset.outcome;
+    expect(tone('1-0')).toBe('red');
+    expect(tone('0-1')).toBe('black');
+    expect(tone('1/2-1/2')).toBe('draw');
+  });
+
+  it('is neutral for an unknown result and null for a chapter that is not a game', () => {
+    const row = buildChapterGameRow(game('a', 'A', 'B', '1/2-1/2'), 'en')!;
     expect(row.querySelector('.is-winner')).toBeNull();
-    expect(buildChapterGameRow({ id: 'intro', tags: { event: 'x' } }, null, 'en')).toBeNull();
+    expect(
+      buildChapterGameRow(game('a', 'A', 'B', '*'), 'en')!.querySelector(
+        '.study-game-line__result',
+      ),
+    ).toBeNull();
+    expect(buildChapterGameRow({ id: 'intro', tags: { event: 'x' } }, 'en')).toBeNull();
+  });
+});
+
+describe('buildChapterRowLabels', () => {
+  const buildLabel = (chapter: GameChapter) => buildChapterGameRow(chapter, 'en');
+
+  it('keeps a normal game pairing even when a lesson has the same tags', () => {
+    const chapters = [
+      { ...game('lesson', 'Lien Quoc', 'Stephen Cho'), gamebook: true },
+      game('normal', 'Lien Quoc', 'Stephen Cho'),
+    ];
+    const labels = buildChapterRowLabels(chapters, buildLabel);
+    expect([...labels.keys()]).toEqual(['normal']);
+    expect(labels.get('normal')?.textContent).toContain('Lien Quoc vs Stephen Cho');
+  });
+
+  it('keeps repeated rich labels and adds localized chapter names', () => {
+    const chapters = [
+      { ...game('one', 'Lien Quoc', 'Stephen Cho'), name: 'Game 1' },
+      { ...game('two', 'Lien Quoc', 'Stephen Cho'), name: 'Game 2' },
+      {
+        ...game('three', 'Original red name', 'Original black name'),
+        name: 'Original chapter name',
+        i18n: { en: { name: 'Game 3', tags: { red: 'Lien Quoc', black: 'Stephen Cho' } } },
+      },
+      { ...game('unique', 'Zuo Wenjing', 'Tang Dan'), name: 'Full game' },
+    ];
+    const labels = buildChapterRowLabels(chapters, buildLabel);
+    expect([...labels.keys()]).toEqual(['one', 'two', 'three', 'unique']);
+    for (const [index, id] of ['one', 'two', 'three'].entries()) {
+      const row = labels.get(id)!;
+      expect(row.querySelector('.study-game-line__players')?.textContent).toBe(
+        'Lien Quoc vs Stephen Cho',
+      );
+      expect(row.querySelector('.study-game-line__result')?.textContent).toBe('1-0');
+      const name = row.querySelector('.study-game-line__chapter');
+      expect(name?.textContent).toBe(`Game ${index + 1}`);
+      expect(name?.classList.contains('study-game-line__meta')).toBe(true);
+    }
+    expect(labels.get('unique')?.textContent).not.toContain('Full game');
+  });
+
+  it('keeps games whose metadata makes the rendered labels distinct', () => {
+    const chapters = [
+      game('one', 'Lien Quoc', 'Stephen Cho', '1-0', { round: '4' }),
+      game('two', 'Lien Quoc', 'Stephen Cho', '1-0', { round: '5' }),
+    ];
+    expect([...buildChapterRowLabels(chapters, buildLabel).keys()]).toEqual(['one', 'two']);
+  });
+});
+
+describe('chapterResultTone', () => {
+  it('reads the winning seat in every study, a focus player or not', () => {
+    expect(chapterResultTone(game('a', 'Tony', 'Lee', '1-0'))).toBe('red');
+    expect(chapterResultTone(game('b', 'Tony', 'Lee', '0-1'))).toBe('black');
+    expect(chapterResultTone(game('c', 'Tony', 'Lee', '½-½'))).toBe('draw');
+    expect(chapterResultTone(game('d', 'Tony', 'Lee', '*'))).toBeNull();
   });
 });

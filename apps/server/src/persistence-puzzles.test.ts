@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { isRetiredGameSpec } from '@mistboard/game';
+import { isRetiredGameSpec, xiangqiPuzzleTrainingTags } from '@mistboard/game';
 import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { createUser } from './persistence.js';
 import { getPool } from './persistence-db.js';
@@ -39,6 +39,53 @@ async function getRoute(path: string): Promise<{ status: number | null; body: st
 }
 
 definePersistenceTests('daily puzzles', () => {
+  test('player puzzle provenance round-trips through PostgreSQL, reload and API summaries', async (t) => {
+    t.after(resetPuzzleStoreForTests);
+    resetPuzzleStoreForTests();
+    await getPuzzleStore();
+    const seed = loadAllSeedPuzzles().find((puzzle) => puzzle.variant === 'xiangqi')!;
+    assert.equal(seed.variant, 'xiangqi');
+    const tagged = { ...seed, id: 'xq-mined-player-roundtrip', tags: ['player:fixture-player'] };
+    for (const [id, hiddenReason] of [
+      [tagged.id, null],
+      ['xq-mined-player-hidden', 'review'],
+    ] as const) {
+      const puzzle = { ...tagged, id };
+      await getPool().query(
+        `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, hidden_reason)
+         VALUES ($1, $2, $3, (SELECT max(seq) + 1 FROM puzzles), $4, $5, $6, $7, 'mined', $8)`,
+        [
+          id,
+          puzzle.variant,
+          puzzle.title,
+          puzzle.goal.type,
+          puzzle.themes,
+          puzzle.solution.length,
+          JSON.stringify(puzzle),
+          hiddenReason,
+        ],
+      );
+    }
+    for (let reload = 0; reload < 2; reload += 1) {
+      resetPuzzleStoreForTests();
+      const store = await getPuzzleStore();
+      assert.deepEqual(store.byId.get(tagged.id), tagged);
+      assert.ok(store.tagsById.get(tagged.id)?.includes('player:fixture-player'));
+      for (const tag of xiangqiPuzzleTrainingTags(seed)) {
+        assert.ok(store.tagsById.get(tagged.id)?.includes(tag));
+      }
+      assert.equal(store.byId.has('xq-mined-player-hidden'), false);
+      const response = await getRoute('/api/puzzles?player=fixture-player&variant=xiangqi');
+      assert.equal(response.status, 200);
+      const summaries = JSON.parse(response.body).puzzles;
+      assert.deepEqual(
+        summaries.map((puzzle: { id: string }) => puzzle.id),
+        [tagged.id],
+      );
+      assert.ok(summaries[0].tags.includes('player:fixture-player'));
+    }
+  });
+
   test('persists and reuses the homepage daily puzzle assignment', async () => {
     const first = await getOrCreateDailyPuzzleSelection('2026-07-01', 'homepage');
     const second = await getOrCreateDailyPuzzleSelection('2026-07-01', 'homepage');

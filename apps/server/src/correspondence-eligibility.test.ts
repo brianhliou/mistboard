@@ -15,19 +15,27 @@ import {
   CHESS_SPEC_ID,
   correspondenceTimeControl,
   GAME_SPECS,
+  GOMOKU_SPEC_ID,
   isCorrespondenceRatedSpec,
   isOfficialTimeControl,
   MAHJONG_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { CORRESPONDENCE_ELIGIBLE_SPECS } from './routes/correspondence-rooms.js';
+import { isAllowlistedGameSpec } from './persistence-variant-access.js';
+import {
+  CORRESPONDENCE_ALLOWLISTED_SPECS,
+  CORRESPONDENCE_ELIGIBLE_SPECS,
+  CORRESPONDENCE_RESTRICTED_SPECS,
+} from './routes/correspondence-rooms.js';
 // Side-effect import: registers every tenant, so this sees the set the server boots with.
 import './variant-tenant/register-tenants.js';
 import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
 
 test('every correspondence-eligible spec can create AND time out a game', () => {
   assert.ok(CORRESPONDENCE_ELIGIBLE_SPECS.size > 0);
-  for (const specId of CORRESPONDENCE_ELIGIBLE_SPECS) {
+  for (const specId of [...CORRESPONDENCE_ELIGIBLE_SPECS, ...CORRESPONDENCE_RESTRICTED_SPECS]) {
     const tenant = correspondenceTenantForSpecId(specId);
     assert.ok(tenant, `${specId} is correspondence-eligible but has no registration`);
     assert.equal(
@@ -54,12 +62,16 @@ test('every correspondence-eligible spec is a real game spec', () => {
   }
 });
 
-test('every variant on the public shelf is eligible, and nothing else (2026-10-02)', () => {
+test('public correspondence follows the shelf with XMJ held off', () => {
   // Brian: "all of them should support it". The shelf is CANONICAL_VARIANT_ORDER,
   // the one list every picker reads; mahjong and study-only chess are not on it.
   // A variant added to the shelf without correspondence fails here, not in a
   // player's start panel.
-  assert.deepEqual([...CORRESPONDENCE_ELIGIBLE_SPECS].sort(), [...CANONICAL_VARIANT_ORDER].sort());
+  // Xiangqi Mahjong is on the shelf but held out (Brian, 2026-10-25).
+  assert.deepEqual(
+    [...CORRESPONDENCE_ELIGIBLE_SPECS].sort(),
+    CANONICAL_VARIANT_ORDER.filter((id) => id !== XIANGQI_MAHJONG_SPEC_ID).sort(),
+  );
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(MAHJONG_SPEC_ID));
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(CHESS_SPEC_ID));
 });
@@ -77,7 +89,7 @@ test('correspondence never becomes a LIVE rated pace — it rates only in its ow
   // 2026-10-02: rated correspondence exists, but in a separate 'correspondence' pool per
   // variant (rating-buckets.ts). The live allowlist must still never admit a
   // days-per-move allowance, or a correspondence game could land on a live ladder.
-  for (const daysPerMove of [1, 3, 7]) {
+  for (const daysPerMove of [1, 2, 3, 7]) {
     assert.equal(
       isOfficialTimeControl({ initialMs: daysPerMove * 86_400_000, incrementMs: 0, daysPerMove }),
       false,
@@ -87,8 +99,8 @@ test('correspondence never becomes a LIVE rated pace — it rates only in its ow
 });
 
 test('every rated-correspondence spec has a seek factory that honours `rated`', async () => {
-  // isCorrespondenceRatedSpec is derived (eligible AND a rating pool), so a spec another
-  // change makes correspondence-eligible becomes rateable on its own. This is what makes
+  // isCorrespondenceRatedSpec requires eligibility and a rating pool, with Gomoku
+  // explicitly casual-only. This is what makes
   // that safe: its factory must actually create a rated room when asked, and a casual
   // one otherwise, and report which. A factory that drops `rated` fails here instead of
   // quietly seating rated seeks in casual games.
@@ -98,9 +110,13 @@ test('every rated-correspondence spec has a seek factory that honours `rated`', 
   for (const flag of flags) process.env[flag] = 'true';
   try {
     const ratedSpecs = [...CORRESPONDENCE_ELIGIBLE_SPECS].filter(isCorrespondenceRatedSpec);
-    // Every launched variant is correspondence-eligible and has a rating pool, so the
-    // whole set is rateable by correspondence (mahjong and chess are not eligible).
-    assert.deepEqual([...ratedSpecs].sort(), [...CORRESPONDENCE_ELIGIBLE_SPECS].sort());
+    assert.deepEqual(
+      [...ratedSpecs].sort(),
+      // Three Kingdoms Banqi has no rating pool: casual only, like Gomoku.
+      [...CORRESPONDENCE_ELIGIBLE_SPECS]
+        .filter((id) => id !== GOMOKU_SPEC_ID && id !== THREE_KINGDOMS_BANQI_SPEC_ID)
+        .sort(),
+    );
     for (const specId of ratedSpecs) {
       const tenant = correspondenceTenantForSpecId(specId);
       const create = tenant?.createCorrespondenceGameForSeek;
@@ -126,6 +142,7 @@ test('every rated-correspondence spec has a seek factory that honours `rated`', 
 });
 
 const VARIANT_FLAGS = [
+  'MISTBOARD_XIANGQI_MAHJONG_ENABLED',
   'MISTBOARD_XIANGQI_ENABLED',
   'MISTBOARD_FORTRESS_XIANGQI_ENABLED',
   'MISTBOARD_BANQI_ENABLED',
@@ -137,6 +154,7 @@ const VARIANT_FLAGS = [
   'MISTBOARD_ATOMIC_XIANGQI_ENABLED',
   'MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED',
   'MISTBOARD_CORRESPONDENCE_ENABLED',
+  'MISTBOARD_GOMOKU_ENABLED',
 ];
 
 test('held by default: with the correspondence-rated flag off no eligible spec takes a rated seek', async () => {
@@ -150,4 +168,49 @@ test('held by default: with the correspondence-rated flag off no eligible spec t
       specId,
     );
   }
+});
+
+// ---- Launch and allowlisted playtest specs ----------------------------------
+
+test('XMJ is not played by correspondence, publicly or by grant (2026-10-25)', () => {
+  // Brian: "let's not support correspondence for this variant yet".
+  assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(XIANGQI_MAHJONG_SPEC_ID));
+  assert.ok(!CORRESPONDENCE_ALLOWLISTED_SPECS.has(XIANGQI_MAHJONG_SPEC_ID));
+  assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+});
+
+test('an allowlisted spec is off the public eligible list, backed by a factory and a sweeper, and never rated', async () => {
+  // XMJ is publicly launched with correspondence held off. Gomoku is casual-only.
+  // HK mahjong has four seats and cannot use correspondence.
+  assert.deepEqual([...CORRESPONDENCE_ALLOWLISTED_SPECS], []);
+  assert.equal(isCorrespondenceRatedSpec(GOMOKU_SPEC_ID), false);
+  for (const specId of CORRESPONDENCE_ALLOWLISTED_SPECS) {
+    // Disjoint: the eligible list is public (copy, pickers, rated eligibility).
+    assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(specId), `${specId} is on the public list`);
+    assert.ok(isAllowlistedGameSpec(specId), `${specId} is not behind the per-account grant`);
+    assert.equal(isCorrespondenceRatedSpec(specId), false, `${specId} would rate`);
+    const { ratedSeekError } = await import('./routes/correspondence-seeks.js');
+    assert.equal(
+      ratedSeekError(specId, correspondenceTimeControl(3), true),
+      'rated_unsupported_spec',
+      `${specId}: a rated seek is refused even with the rated flag on`,
+    );
+    const tenant = correspondenceTenantForSpecId(specId);
+    assert.equal(typeof tenant?.createCorrespondenceGameForSeek, 'function', specId);
+    assert.equal(typeof tenant?.sweepDueDeadline, 'function', specId);
+  }
+});
+
+test('held-off XMJ seeks stay hidden without looking up playtest grants', async () => {
+  const { seeksVisibleTo } = await import('./routes/correspondence-seeks.js');
+  const seeks = [{ gameSpecId: XIANGQI_SPEC_ID }, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID }];
+  const reader = { id: 'u1' } as NonNullable<Parameters<typeof seeksVisibleTo>[1]>;
+  let looked = false;
+  const grants = async () => {
+    looked = true;
+    return [];
+  };
+  assert.deepEqual(await seeksVisibleTo(seeks, reader, grants), [seeks[0]]);
+  assert.deepEqual(await seeksVisibleTo(seeks, null, grants), [seeks[0]]);
+  assert.equal(looked, false);
 });

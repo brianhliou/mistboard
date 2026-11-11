@@ -47,6 +47,30 @@ export function fogPatternDefs(boardSize: number, palette: BoardPalette = BROWN_
   ].join('');
 }
 
+/** The inset fog line around a square, with the board's outer corner rounded
+ *  when the square sits in one: a square-cornered line is cut short by the
+ *  board's rounded clip, and the fog's edge stops before the curve. */
+function fogEdge(
+  x: number,
+  y: number,
+  size: number,
+  corners: { tl: number; tr: number; br: number; bl: number },
+): string {
+  const { tl, tr, br, bl } = corners;
+  const arc = (r: number, ax: number, ay: number) => (r ? `A${r} ${r} 0 0 1 ${ax} ${ay}` : '');
+  return [
+    `M${x + tl} ${y}H${x + size - tr}`,
+    arc(tr, x + size, y + tr),
+    `V${y + size - br}`,
+    arc(br, x + size - br, y + size),
+    `H${x + bl}`,
+    arc(bl, x, y + size - bl),
+    `V${y + tl}`,
+    arc(tl, x + tl, y),
+    'Z',
+  ].join('');
+}
+
 export function renderBoardSvg(
   pieces: PieceOnBoard[],
   fogSquares: Square[],
@@ -126,8 +150,19 @@ export function renderBoardSvg(
     out.push(`<rect x="${fx}" y="${fy}" width="${sq}" height="${sq}" fill="${fill}"/>`);
     if (fogStyle !== 'veil') {
       // Inset 1 px cream shadow matching chessground's non-veil fog styles.
+      const col = fileToCol(fog.file);
+      const row = rankToRow(fog.rank);
+      const curve = round ? Math.max(0, radius - 0.5) : 0;
+      const atCorner = curve > 0 && (col === 0 || col === 7) && (row === 0 || row === 7);
       out.push(
-        `<rect x="${fx + 0.5}" y="${fy + 0.5}" width="${sq - 1}" height="${sq - 1}" fill="none" stroke="${palette.fogShadow}" stroke-width="1"/>`,
+        atCorner
+          ? `<path d="${fogEdge(fx + 0.5, fy + 0.5, sq - 1, {
+              tl: col === 0 && row === 0 ? curve : 0,
+              tr: col === 7 && row === 0 ? curve : 0,
+              br: col === 7 && row === 7 ? curve : 0,
+              bl: col === 0 && row === 7 ? curve : 0,
+            })}" fill="none" stroke="${palette.fogShadow}" stroke-width="1"/>`
+          : `<rect x="${fx + 0.5}" y="${fy + 0.5}" width="${sq - 1}" height="${sq - 1}" fill="none" stroke="${palette.fogShadow}" stroke-width="1"/>`,
       );
     }
   }

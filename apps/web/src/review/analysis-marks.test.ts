@@ -227,3 +227,20 @@ describe('where marks show on the board (lichess convention)', () => {
     expect(judgmentBadgeAtPly(marks, 1)).toEqual({ text: '??', suffixClass: 'blunder' });
   });
 });
+
+it('a luck-only overlay removes an eval judgment and advice without inventing a decision grade', () => {
+  const decisions = jieqiDecisionOverlay(
+    summarizeDecisions([{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 62 }]),
+  );
+  const mark = analysisMarks({
+    analysis: computeGameAnalysis(XIANGQI_BLUNDER),
+    decisions,
+    quoteEvalBestMove: true,
+    formatBestMove: defaultFormatBestMove,
+  }).get(1);
+  expect(mark?.luck).toBe(12);
+  expect(mark?.suffix).toBeUndefined();
+  expect(mark?.comment).toBeUndefined();
+  expect(mark?.grade).toBeUndefined();
+  expect(mark?.better).toBeNull();
+});

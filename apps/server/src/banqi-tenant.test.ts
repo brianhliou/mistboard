@@ -18,6 +18,7 @@ import {
   type BanqiSetup,
   createBanqiDeal,
   createInitialBanqiState,
+  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   getBanqiLegalMoves,
 } from '@mistboard/game';
 import { BANQI_DEFAULT_ENGINE_ID } from './banqi-engine.js';
@@ -50,6 +51,9 @@ test('banqi room creation mints and persists a server-secret deal, stamped with 
   // cannot rewrite how it replays.
   assert.equal(setup.chaseRule, BANQI_CHASE_RULE);
   assert.equal(created.room.projection.state.chaseRule, BANQI_CHASE_RULE);
+  // And the no-progress limit: 60 plies for a room created since 2026-10-17.
+  assert.equal(setup.noProgressLimit, 60);
+  assert.equal(created.room.projection.state.noProgressLimit, 60);
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
@@ -106,7 +110,7 @@ test('a full banqi game replays through the runtime identically to the kernel', 
       at: 1,
       roomId,
       gameSpecId: BANQI_SPEC_ID,
-      setup: { deal, chaseRule: BANQI_CHASE_RULE },
+      setup: { deal, chaseRule: BANQI_CHASE_RULE, noProgressLimit: DEFAULT_NO_PROGRESS_PLY_LIMIT },
     },
     { type: 'seat-assigned', at: 2, roomId, clientId: 'a', seat: 'red' },
     { type: 'seat-assigned', at: 3, roomId, clientId: 'b', seat: 'black' },
@@ -114,7 +118,10 @@ test('a full banqi game replays through the runtime identically to the kernel', 
 
   // Drive a deterministic line with the kernel (first legal move each ply),
   // recording the move-played events keyed by the SEAT to move.
-  let kernelState = createInitialBanqiState(roomId, deal, { chaseRule: BANQI_CHASE_RULE });
+  let kernelState = createInitialBanqiState(roomId, deal, {
+    chaseRule: BANQI_CHASE_RULE,
+    noProgressLimit: DEFAULT_NO_PROGRESS_PLY_LIMIT,
+  });
   let at = 4;
   let plies = 0;
   while (kernelState.status.type === 'playing' && plies < 60) {

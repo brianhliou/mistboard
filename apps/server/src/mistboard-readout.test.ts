@@ -3,7 +3,10 @@ import test from 'node:test';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
   buildMistboardReadout,
+  deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
+  isDisruptiveDrain,
+  type MistboardReadoutDeployDrain,
   type MistboardReadoutFacts,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
@@ -121,6 +124,21 @@ test('puzzle gates and qualified outliers become owned, deduplicated actions', (
     ],
   );
   assert.match(renderMistboardReadoutMarkdown(report), /1 sample-qualified outliers/);
+});
+
+test('a changed puzzle set alerts again while an unchanged set stays quiet', () => {
+  const facts = (puzzleId: string) => ({
+    ...emptyFacts,
+    puzzles: buildElephantChessPuzzleQualityReport({
+      aggregates: [qualityAggregate({ puzzleId, starts: 20, wrongAttempts: 60 })],
+      pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    }),
+  });
+  const first = reportWith(facts('puzzle-one'));
+  const same = reportWith(facts('puzzle-one'), first);
+  const changed = reportWith(facts('puzzle-two'), first);
+  assert.equal(first.alertKey, same.alertKey);
+  assert.notEqual(first.alertKey, changed.alertKey);
 });
 
 test('collector failure produces unknown rather than healthy', () => {
@@ -565,6 +583,119 @@ test('new feedback on consecutive days alerts both days; a standing backlog does
   assert.equal(c.verdict, 'healthy');
 });
 
+// Brian, 2026-10-16: deploys must not stop people starting games for 10 to 15
+// minutes. A drain refuses creates until the release commits its restart.
+test('a drain summary reads as held creates: commit wait if committed, else the whole drain', () => {
+  const lapsedAfterCommit = deployDrainFromSummary(
+    {
+      outcome: 'lapsed',
+      activatedAt: 1_000,
+      endedAt: 900_000,
+      durationMs: 899_000,
+      committed: true,
+      commitWaitMs: 241_000,
+      refusedCreates: 0,
+    },
+    'f5ca706f',
+  );
+  assert.equal(lapsedAfterCommit?.heldMs, 241_000);
+  assert.equal(isDisruptiveDrain(lapsedAfterCommit!), false);
+
+  const cancelledPending = deployDrainFromSummary(
+    {
+      outcome: 'cancelled',
+      activatedAt: 0,
+      endedAt: 400_000,
+      durationMs: 400_000,
+      committed: false,
+    },
+    null,
+  );
+  assert.equal(cancelledPending?.heldMs, 400_000);
+  assert.equal(cancelledPending?.refusedCreates, 0);
+  assert.equal(isDisruptiveDrain(cancelledPending!), true);
+
+  assert.equal(isDisruptiveDrain({ heldMs: 30_000, refusedCreates: 1 }), true);
+  assert.equal(deployDrainFromSummary({ outcome: 'shutdown' }, null), null);
+});
+
+test('a disruptive deploy alerts in the first readout after it, once, each one its own alert', () => {
+  const drain = (at: string, heldMin: number, refused: number): MistboardReadoutDeployDrain => {
+    const activatedAt = Date.parse(at);
+    return {
+      activatedAt,
+      endedAt: activatedAt + heldMin * 60_000 + 1_000,
+      outcome: 'shutdown',
+      committed: true,
+      heldMs: heldMin * 60_000,
+      refusedCreates: refused,
+      buildRevision: 'abc123',
+    };
+  };
+  const facts = (disruptive: MistboardReadoutDeployDrain[], drains = disruptive.length) => ({
+    ...emptyFacts,
+    deploys: { windowDays: 7, drains, disruptive },
+  });
+  const at = (
+    now: string,
+    f: MistboardReadoutFacts,
+    previousReport?: ReturnType<typeof buildMistboardReadout>,
+  ) =>
+    buildMistboardReadout({
+      snapshotId: `readout_${now}`,
+      trigger: 'daily',
+      now: new Date(now),
+      runtime,
+      facts: f,
+      previousReport,
+    });
+
+  const quiet = at('2026-10-15T17:23:00Z', facts([], 3));
+  assert.equal(quiet.verdict, 'healthy');
+  assert.match(
+    renderMistboardReadoutMarkdown(quiet),
+    /- Deploys: 3 drains in the last 7 days, 0 held new games over 5 min or refused a create/,
+  );
+
+  const sixMinutes = drain('2026-10-16T09:00:00Z', 6, 0);
+  const day1 = at('2026-10-16T17:23:00Z', facts([sixMinutes], 4), quiet);
+  assert.equal(day1.verdict, 'watch');
+  assert.equal(day1.actions[0]?.code, 'deploy-held-creates');
+  assert.match(day1.actions[0]!.text, /2026-10-16 09:00 UTC held 6\.0 min, 0 refused/);
+
+  // Still in the window the next day, but already reported: quiet.
+  const day2 = at('2026-10-17T17:23:00Z', facts([sixMinutes], 4), day1);
+  assert.equal(day2.actions.length, 0);
+  assert.equal(day2.verdict, 'healthy');
+
+  // A second incident is a new alert, not "the same problem".
+  const refused = drain('2026-10-18T08:00:00Z', 1, 2);
+  const day3 = at('2026-10-18T17:23:00Z', facts([sixMinutes, refused]), day2);
+  assert.equal(day3.actions.length, 1);
+  assert.match(day3.actions[0]!.text, /^1 deploy drain turned new games away: 2026-10-18 08:00/);
+  const day4 = at(
+    '2026-10-19T17:23:00Z',
+    facts([sixMinutes, refused, drain('2026-10-19T08:00:00Z', 1, 1)]),
+    day3,
+  );
+  assert.equal(day4.actions[0]?.code, 'deploy-held-creates');
+  assert.notEqual(day4.alertKey, day3.alertKey);
+
+  // Past Brian's ten minutes it is an action, not a watch.
+  const long = at('2026-10-20T17:23:00Z', facts([drain('2026-10-20T08:00:00Z', 12, 5)]), day4);
+  assert.equal(long.verdict, 'action');
+
+  // After a failed deploys collector, nothing was reported: report what is new
+  // since the readout before it.
+  const failed = {
+    ...day1,
+    deploys: null,
+    collectorErrors: [{ section: 'deploys' as const, code: 'collector_failed' as const }],
+  };
+  const recovered = at('2026-10-17T17:23:00Z', facts([sixMinutes]), failed);
+  assert.equal(recovered.actions[0]?.code, 'deploy-held-creates');
+});
+
 test('the alert key holds steady while counters move under an unchanged problem', () => {
   const first = reportWith(
     factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),
@@ -706,6 +837,19 @@ function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
   return keys;
 }
 
+test('unknown collector sections stay under Operations before Content', () => {
+  const markdown = renderMistboardReadoutMarkdown(
+    reportWith({
+      ...emptyFacts,
+      collectorErrors: [{ section: 'mining', code: 'collector_failed' }],
+    }),
+  );
+  const operations = markdown.match(/^## Operations\n([\s\S]*?)(?=^## )/m)?.[1];
+  assert.ok(operations, 'Operations section exists');
+  assert.ok(operations.includes('- Unknown sections: mining'));
+  assert.doesNotMatch(markdown.slice(markdown.indexOf('## Content')), /Unknown sections:/);
+});
+
 test('the operations section carries the broadcast viewer peak only when the runtime has one', () => {
   const without = renderMistboardReadoutMarkdown(reportWith(emptyFacts));
   assert.doesNotMatch(without, /Broadcast viewers/);
@@ -719,4 +863,110 @@ test('the operations section carries the broadcast viewer peak only when the run
   });
   assert.equal(report.production.broadcastViewersPeak, 14);
   assert.match(renderMistboardReadoutMarkdown(report), /Broadcast viewers: peak 14 open streams/);
+});
+
+function deliveryFacts(
+  sent = 20,
+  bounced = 1,
+  suppressed = 1,
+  complaintsReceived = 0,
+): MistboardReadoutFacts {
+  const counts = {
+    requested: sent,
+    sent,
+    delivered: 0,
+    bounced,
+    suppressed,
+    complained: 0,
+    completed: 0,
+  };
+  return {
+    ...emptyFacts,
+    loginEmailDelivery: { last7d: counts, last30d: counts, complaintsReceived },
+  };
+}
+
+test('login delivery rate needs 20 sends and strictly more than 5 percent', () => {
+  for (const [sent, bounced, suppressed, alerts] of [
+    [19, 1, 1, false],
+    [20, 1, 0, false],
+    [20, 0, 1, false],
+    [20, 1, 1, true],
+    [40, 1, 1, false],
+    [40, 2, 1, true],
+    [0, 4, 1, false],
+  ] as const) {
+    const report = reportWith(deliveryFacts(sent, bounced, suppressed));
+    assert.equal(
+      report.actions.some((a) => a.code === 'login-email-delivery-rate'),
+      alerts,
+      `${sent} sends, ${bounced} bounces, ${suppressed} suppressions`,
+    );
+  }
+});
+
+test('login delivery rate holds its alert key, clears, and alerts on re-crossing', () => {
+  const first = reportWith(deliveryFacts());
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]?.ownerIssue, 841);
+  const unchanged = reportWith(deliveryFacts(30, 2, 1), first);
+  assert.equal(unchanged.alertKey, first.alertKey);
+  assert.notEqual(unchanged.decisionFingerprint, first.decisionFingerprint);
+  const recovered = reportWith(deliveryFacts(40, 1, 1), unchanged);
+  assert.equal(recovered.verdict, 'healthy');
+  assert.notEqual(recovered.alertKey, unchanged.alertKey);
+  const recrossed = reportWith(deliveryFacts(40, 2, 1), recovered);
+  assert.equal(recrossed.verdict, 'action');
+  assert.notEqual(recrossed.alertKey, recovered.alertKey);
+});
+
+test('login complaint arrivals alert independently of rolling totals and send volume', () => {
+  const baseline = reportWith(deliveryFacts(0, 0, 0));
+  const first = reportWith(deliveryFacts(0, 0, 0, 1), baseline);
+  assert.equal(first.actions[0]?.code, 'login-email-complaint-new');
+  assert.equal(first.verdict, 'action');
+  const second = reportWith(deliveryFacts(0, 0, 0, 2), first);
+  assert.notEqual(second.alertKey, first.alertKey);
+  assert.match(second.actions[0]!.text, /1 new login email spam complaint/);
+  const unchanged = reportWith(deliveryFacts(0, 0, 0, 2), second);
+  assert.equal(unchanged.actions.length, 0);
+  assert.equal(unchanged.verdict, 'healthy');
+  assert.equal(reportWith(deliveryFacts(0, 0, 0, 1)).verdict, 'action');
+});
+
+test('login collection failure is unknown, preserves the complaint cursor, and does not invent zero events', () => {
+  const initial = reportWith(deliveryFacts(20, 0, 0, 2));
+  const failed = reportWith(
+    {
+      ...emptyFacts,
+      loginEmailDelivery: null,
+      collectorErrors: [{ section: 'loginEmailDelivery', code: 'collector_failed' }],
+    },
+    initial,
+  );
+  assert.equal(failed.verdict, 'unknown');
+  assert.equal(failed.loginEmailDelivery, null);
+  assert.equal(failed.loginEmailComplaintsSeen, 2);
+  assert.match(renderMistboardReadoutMarkdown(failed), /Login email delivery unavailable/);
+  const stillFailed = reportWith(
+    {
+      ...emptyFacts,
+      loginEmailDelivery: null,
+      collectorErrors: [{ section: 'loginEmailDelivery', code: 'collector_failed' }],
+    },
+    failed,
+  );
+  assert.equal(stillFailed.alertKey, failed.alertKey);
+  const recovered = reportWith(deliveryFacts(20, 0, 0, 2), stillFailed);
+  assert.equal(recovered.verdict, 'healthy');
+  const arrivedDuringFailure = reportWith(deliveryFacts(20, 0, 0, 3), stillFailed);
+  assert.equal(arrivedDuringFailure.actions[0]?.code, 'login-email-complaint-new');
+  const zero = reportWith(deliveryFacts(0, 0, 0));
+  assert.equal(zero.verdict, 'healthy');
+  assert.match(renderMistboardReadoutMarkdown(zero), /Login email.*0 sent/);
+  const legacy = reportWith(emptyFacts);
+  delete legacy.loginEmailDelivery;
+  delete legacy.loginEmailComplaintsSeen;
+  assert.doesNotThrow(() => renderMistboardReadoutMarkdown(legacy));
+  assert.equal(reportWith(deliveryFacts(0, 0, 0, 1), legacy).verdict, 'action');
 });

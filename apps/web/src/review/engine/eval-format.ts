@@ -2,6 +2,8 @@
 // number and the gauge always agree. All inputs are from Red's POV (positive =
 // Red better), matching how the review board normalises engine scores.
 
+import { winPercent } from '@mistboard/game';
+
 export function formatEval(cp: number | null, mate: number | null): string {
   if (mate != null) return `${mate > 0 ? '#' : '-#'}${Math.abs(mate)}`;
   if (cp == null) return '–';
@@ -53,4 +55,17 @@ export function advantageSymbol(cp: number | null, mate: number | null): string 
   if (a < ADVANTAGE_CLEAR_CP) return red ? '⩲' : '⩱';
   if (a < ADVANTAGE_WINNING_CP) return red ? '±' : '∓';
   return red ? '+−' : '−+';
+}
+
+/** The same bands for Red's expected score in [0, 1]. Compare on the score
+ *  scale: rounding an inverse-logistic cp moves a boundary by half a cp, and
+ *  even an unrounded inverse can put an exact boundary just below its band. */
+export function advantageSymbolForScore(score: number): string {
+  if (score >= winPercent(ADVANTAGE_WINNING_CP, null) / 100) return '+−';
+  if (score <= winPercent(-ADVANTAGE_WINNING_CP, null) / 100) return '−+';
+  if (score >= winPercent(ADVANTAGE_CLEAR_CP, null) / 100) return '±';
+  if (score <= winPercent(-ADVANTAGE_CLEAR_CP, null) / 100) return '∓';
+  if (score >= winPercent(ADVANTAGE_SLIGHT_CP, null) / 100) return '⩲';
+  if (score <= winPercent(-ADVANTAGE_SLIGHT_CP, null) / 100) return '⩱';
+  return '=';
 }

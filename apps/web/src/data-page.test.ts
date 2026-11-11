@@ -118,6 +118,51 @@ describe('/data page', () => {
     document.body.innerHTML = '';
   });
 
+  it('loads a bot deep link and preserves its stable ID on variant links', async () => {
+    const filtered = {
+      ...LISTING,
+      botId: 'jqe',
+      bots: [{ id: 'jqe', displayName: 'New bot name', variants: ['jieqi'] }],
+    };
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => filtered } as Response);
+    const root = await mounted('?variant=jieqi&bot=jqe');
+    expect(fetch).toHaveBeenCalledWith('/api/data?bot=jqe', { cache: 'no-store' });
+    const select = root.querySelector<HTMLSelectElement>('.data-bot-filter select')!;
+    expect(select.value).toBe('jqe');
+    expect(select.textContent).toContain('New bot name');
+    expect(root.querySelector('[data-variant="xiangqi"]')?.getAttribute('href')).toBe(
+      '/data?variant=xiangqi&bot=jqe',
+    );
+    select.value = '';
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...LISTING, bots: filtered.bots }),
+    } as Response);
+    select.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(select.value).toBe(''));
+    expect(window.location.search).toBe('?variant=jieqi');
+    expect(fetch).toHaveBeenLastCalledWith('/api/data', { cache: 'no-store' });
+  });
+
+  it('counts a selected bot scheduled games in the headline and rail', async () => {
+    const filtered = {
+      ...LISTING,
+      botId: 'jqe',
+      months: [],
+      engineMonths: [
+        { ...LISTING.months[0]!, games: 2, variants: [LISTING.months[0]!.variants[1]!] },
+      ],
+      bots: [{ id: 'jqe', displayName: 'jqe', variants: ['jieqi'] }],
+    };
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => filtered } as Response);
+    const root = await mounted('?variant=jieqi&bot=jqe');
+    expect(root.querySelector('.current-games-count')?.textContent).toBe('2 games in 1 month');
+    expect(
+      root.querySelector('[data-variant="jieqi"] .current-games-rail-count')?.textContent,
+    ).toBe('2');
+    expect(root.textContent).not.toContain('No finished month has games yet.');
+  });
+
   it('defaults to All variants: one row per month with the mixed JSONL file', async () => {
     const root = await mounted();
     expect(

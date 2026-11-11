@@ -105,7 +105,7 @@ describe('clipped text keeps its descenders', () => {
 
   // These clipped with an inherited tight line-height, which the scan above
   // cannot see, so each must keep setting its own.
-  it.each(['.landing-corr-title', '.pp-step-main', '.pp-step-sub', '.xqb-card-seat-name'])(
+  it.each(['.pp-step-main', '.pp-step-sub', '.xqb-card-seat-name'])(
     '%s sets its own line box',
     (selector) => {
       const decls = rules.get(selector)?.decls ?? {};

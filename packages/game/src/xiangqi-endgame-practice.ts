@@ -18,6 +18,7 @@
 // basic-endgame study (apps/server/src/xiangqi-endgame-study-i18n.ts): 例胜 /
 // 巧胜 / 例和, 高兵, 士象全, 炮架; zh-Hant writes 砲 for the cannon there too.
 
+import { hasOwnKey } from './js-compat.js';
 import {
   type EndgameEntry,
   endgameEntryFen,
@@ -457,4 +458,37 @@ export function xiangqiEndgamePracticeSets(): EndgamePracticeSet[] {
     const draws = chapters.filter((chapter) => chapter.goal !== 'mate');
     return { slug, chapters: [...wins, ...draws] };
   });
+}
+
+// ── Links to one shelf position ──
+//
+// Study and chapter ids are minted per database: prod, a local dev pair and a
+// fresh seed each hold the same five sets under different ids. What every
+// environment shares is the set's curated slug and, inside it, the position.
+// So a page that wants to open one exercise links `/practice/<slug>/<corpus
+// id>`, and the client resolves that against the live catalogue (#521).
+
+/** The environment-independent link to one shelf position. */
+export function xiangqiEndgamePracticePath(id: string): string {
+  for (const slug of XIANGQI_ENDGAME_PRACTICE_SLUGS) {
+    if (XIANGQI_ENDGAME_PRACTICE_SET_IDS[slug].includes(id)) return `/practice/${slug}/${id}`;
+  }
+  throw new Error(`xiangqi endgame practice: ${id} is in no practice set`);
+}
+
+/**
+ * The set and chapter a `/practice/<slug>/<id>` path names, or null when the
+ * slug is no set or the position is not in that set (fail-closed: the server
+ * 404s it rather than serving a page that can only bounce).
+ */
+export function xiangqiEndgamePracticeRouteFromPath(
+  path: string,
+): { slug: EndgamePracticeSetSlug; chapter: EndgamePracticeChapter } | null {
+  const match = /^\/practice\/([a-z-]+)\/([a-z0-9-]+)\/?$/.exec(path);
+  if (!match) return null;
+  const slug = match[1] as EndgamePracticeSetSlug;
+  const id = match[2] ?? '';
+  if (!hasOwnKey(XIANGQI_ENDGAME_PRACTICE_SET_IDS, slug)) return null;
+  if (!XIANGQI_ENDGAME_PRACTICE_SET_IDS[slug].includes(id)) return null;
+  return { slug, chapter: practiceChapter(id) };
 }

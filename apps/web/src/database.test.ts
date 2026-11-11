@@ -150,6 +150,10 @@ describe('databaseReviewHref', () => {
     expect(databaseReviewHref('game_test')).toBe('/game/game_test');
     expect(databaseReviewHref('dchx_fog01')).toBe('/game/dchx_fog01');
   });
+
+  it('opens a Xiangqi Mahjong table (no postgame page) at its own room', () => {
+    expect(databaseReviewHref('xmj_final1')).toBe('/room/xmj_final1');
+  });
 });
 
 function baseGame(): FeaturedGame {

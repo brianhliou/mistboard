@@ -12,6 +12,7 @@ import {
   createInitialAtomicXiangqiState,
   getAtomicXiangqiLegalMoves,
 } from '@mistboard/game';
+import * as atomicRuntime from './server-atomic-xiangqi-engine.js';
 import {
   atomicXiangqiMoveToUci,
   atomicXiangqiWinningMove,
@@ -70,4 +71,29 @@ test('an unmatched engine reply fails closed rather than guessing', () => {
   ]) {
     assert.equal(legalMoveForUci(moves, token), null, `should not match: "${token}"`);
   }
+});
+
+test('retired atomic retains historical seat identities without live execution exports', () => {
+  assert.equal('scheduleAtomicXiangqiEngineMove' in atomicRuntime, false);
+  assert.equal('playAtomicXiangqiEngineMoveIfReady' in atomicRuntime, false);
+  for (let level = 1; level <= 8; level++) {
+    const id = `fairy-stockfish-atomic-xiangqi-level-${level}`;
+    assert.equal(atomicRuntime.isAtomicXiangqiEngineClientId(id), true);
+    assert.equal(
+      atomicRuntime.atomicXiangqiEngineDisplayName(id),
+      `Fairy-Stockfish Level ${level}`,
+    );
+    assert.equal(atomicRuntime.atomicXiangqiEngineVersion(id), '0.1.0');
+  }
+  for (const id of [
+    undefined,
+    '',
+    'fairy-stockfish-atomic-xiangqi-level-9',
+    'fairy-stockfish-xiangqi-level-4',
+    'fairy-stockfish-atomic-xiangqi-level-4-extra',
+  ]) {
+    assert.equal(atomicRuntime.isAtomicXiangqiEngineClientId(id), false);
+    assert.equal(atomicRuntime.atomicXiangqiEngineVersion(id), null);
+  }
+  assert.equal(atomicRuntime.atomicXiangqiEngineDisplayName('unknown'), 'unknown');
 });

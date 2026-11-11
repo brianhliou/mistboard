@@ -14,6 +14,19 @@
 // same row/cell/highlight machinery, with branch children added later.
 import './move-list.css';
 
+/** Fill a luck badge ("🎲 -7%"), the die in its own span so a narrow sheet (the embed) can
+ *  shrink the die without the number; the badge's text is unchanged. */
+export function fillLuckBadge(el: HTMLElement, text: string): void {
+  if (!text.startsWith('🎲')) {
+    el.textContent = text;
+    return;
+  }
+  const die = document.createElement('span');
+  die.className = 'review-move-list__luck-die';
+  die.textContent = '🎲';
+  el.replaceChildren(die, document.createTextNode(text.slice('🎲'.length)));
+}
+
 export type MoveListEntry = {
   /** 1-based ply this move produced (the ply you land on by clicking it). */
   ply: number;
@@ -28,6 +41,9 @@ export type MoveListEntry = {
    *  right-aligned eval slot the way a study's tree view shows an assessment NAG.
    *  A chapter that plays a line out to a verdict puts it on the last move. */
   assessment?: string;
+  /** Reveal or flip luck, independent of move judgment; the shared luck card is keyed by
+   *  this entry's ply. */
+  luck?: number;
   /** The author's or the engine's note on this move, shown under its row. */
   note?: string;
   /** A sideline hung off the position this move was played in: what should have
@@ -96,14 +112,73 @@ export type MoveListOptions = {
  *  do nothing: on a phone the move list is read by scrolling the page anyway. */
 export function revealInScroller(cell: HTMLElement): void {
   for (let node = cell.parentElement; node && node !== document.body; node = node.parentElement) {
-    if (!/(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY)) continue;
-    if (node.scrollHeight <= node.clientHeight + 1) continue;
-    const box = node.getBoundingClientRect();
-    const target = cell.getBoundingClientRect();
-    if (target.top < box.top) node.scrollTop -= box.top - target.top;
-    else if (target.bottom > box.bottom) node.scrollTop += target.bottom - box.bottom;
-    return;
+    if (!isScrollCapable(node)) continue;
+    if (scrollToReveal(node, cell)) return;
   }
+}
+
+function isScrollCapable(node: HTMLElement): boolean {
+  return /(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY);
+}
+
+/** Scroll `node` so `cell` is inside it, when `node` actually overflows. Returns
+ *  false (and leaves it alone) when it has nothing to scroll. */
+function scrollToReveal(node: HTMLElement, cell: HTMLElement): boolean {
+  if (node.scrollHeight <= node.clientHeight + 1) return false;
+  const box = node.getBoundingClientRect();
+  const target = cell.getBoundingClientRect();
+  if (target.top < box.top) node.scrollTop -= box.top - target.top;
+  else if (target.bottom > box.bottom) node.scrollTop += target.bottom - box.bottom;
+  return true;
+}
+
+// Bumped on every viewport resize: the overflow rules that decide which ancestor
+// scrolls the list only change across media-query breakpoints, so a revealer's
+// cached scrollers stay valid until the next resize.
+let layoutEpoch = 0;
+let epochListening = false;
+function currentLayoutEpoch(): number {
+  if (!epochListening && typeof window !== 'undefined') {
+    epochListening = true;
+    window.addEventListener(
+      'resize',
+      () => {
+        layoutEpoch += 1;
+      },
+      { passive: true },
+    );
+  }
+  return layoutEpoch;
+}
+
+/** `revealInScroller` for the cells of one list, with the scroll containers
+ *  (`list` itself, then its scroll-capable ancestors below the body) resolved once
+ *  and cached, not re-walked with `getComputedStyle` on every step. That walk
+ *  forced a full style recalc each arrow key on a long game (#608). Same rule as
+ *  `revealInScroller`: the first cached scroller that overflows takes the scroll,
+ *  and the page itself never scrolls. A cell outside `list`, or a list not yet in
+ *  the document, falls back to the uncached walk. */
+export function createScrollRevealer(list: HTMLElement): (cell: HTMLElement) => void {
+  let scrollers: HTMLElement[] | null = null;
+  let cachedEpoch = -1;
+  return (cell) => {
+    if (!list.isConnected || !list.contains(cell)) {
+      revealInScroller(cell);
+      return;
+    }
+    const epoch = currentLayoutEpoch();
+    if (!scrollers || epoch !== cachedEpoch || !scrollers.every((node) => node.contains(list))) {
+      scrollers = [];
+      for (let node: HTMLElement | null = list; node && node !== document.body; ) {
+        if (isScrollCapable(node)) scrollers.push(node);
+        node = node.parentElement;
+      }
+      cachedEpoch = epoch;
+    }
+    for (const node of scrollers) {
+      if (scrollToReveal(node, cell)) return;
+    }
+  };
 }
 
 export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions = {}): MoveList {
@@ -118,6 +193,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
   const list = document.createElement('ol');
   list.className = 'review-move-list__rows';
   panel.append(list);
+  const reveal = createScrollRevealer(list);
 
   const cellsByPly = new Map<number, HTMLButtonElement>();
   const branchesByPly = new Map<number, HTMLLIElement>();
@@ -235,7 +311,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     button.type = 'button';
     button.className = 'review-move-list__move';
     button.dataset.ply = String(entry.ply);
-    // san holds the move text (+ any glyph); eval sits right-aligned (tree-view style).
+    // Keep the glyph outside the label's overflow box so it cannot be ellipsized.
     const san = document.createElement('span');
     san.className = 'review-move-list__san';
     san.textContent = entry.label;
@@ -243,18 +319,25 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     evalEl.className = 'review-move-list__eval';
     if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
-    if (entry.suffix) appendGlyph(san, entry.suffix, entry.suffixClass);
+    if (entry.suffix) appendGlyph(button, entry.suffix, entry.suffixClass);
+    if (entry.luck !== undefined) {
+      const luck = document.createElement('span');
+      luck.className = `review-move-list__luck review-move-list__luck--${entry.luck > 0 ? 'lucky' : entry.luck < 0 ? 'unlucky' : 'even'}`;
+      luck.dataset.luckPath = String(entry.ply);
+      fillLuckBadge(luck, `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`);
+      button.querySelector('.review-move-list__eval')!.before(luck);
+    }
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);
     return button;
   }
 
-  function appendGlyph(san: HTMLElement, suffix: string, suffixClass?: string): void {
+  function appendGlyph(cell: HTMLElement, suffix: string, suffixClass?: string): void {
     const glyph = document.createElement('span');
     glyph.className = 'review-move-list__suffix';
     if (suffixClass) glyph.classList.add(`review-move--${suffixClass}`);
     glyph.textContent = ` ${suffix}`;
-    san.append(glyph);
+    cell.querySelector('.review-move-list__eval')!.before(glyph);
   }
 
   function update(currentPly: number, jump: (ply: number) => void): void {
@@ -271,17 +354,16 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     // of the sheet and its comment cut off below), then the move itself, so a
     // branch taller than the sheet never pushes the current move out.
     const branch = branchesByPly.get(currentPly);
-    if (branch) revealInScroller(branch);
-    revealInScroller(current);
+    if (branch) reveal(branch);
+    reveal(current);
   }
 
   function annotate(byPly: Map<number, MoveAnnotation>): void {
     for (const [ply, cell] of cellsByPly) {
-      const san = cell.querySelector<HTMLElement>('.review-move-list__san');
       const evalEl = cell.querySelector<HTMLElement>('.review-move-list__eval');
       cell.querySelector('.review-move-list__suffix')?.remove();
       const ann = byPly.get(ply);
-      if (ann?.suffix && san) appendGlyph(san, ann.suffix, ann.suffixClass);
+      if (ann?.suffix) appendGlyph(cell, ann.suffix, ann.suffixClass);
       if (evalEl) evalEl.textContent = ann?.eval ?? '';
     }
   }
@@ -302,7 +384,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
         mainline.classList.remove('review-move-list__move--current');
       }
     }
-    if (cell) revealInScroller(cell);
+    if (cell) reveal(cell);
   }
 
   return { el: panel, update, annotate, bindLine, highlightLine };

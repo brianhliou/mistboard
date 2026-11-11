@@ -22,6 +22,7 @@ export const darkXiangqiArticle: Article = {
     // Same fix fog-chess already got: we brand it "Fog", the world searches
     // "fog of war". The summary carries the phrase; the title did not.
     seoTitle: 'Fog of War Xiangqi Rules',
+    tagline: 'Xiangqi under fog; capture the general to win.',
     summary:
       "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.",
     showSummaryOnPage: false,
@@ -29,6 +30,8 @@ export const darkXiangqiArticle: Article = {
     playableOnMistboard: true,
     publishedAt: '2026-05-26',
     updatedAt: '2026-07-23',
+    updateNote:
+      'Added a sample game from the site.',
     audience:
       'Xiangqi players, Fog Chess players, and anyone who wants a clean first explanation of xiangqi under fog.',
     thumbnail: { kind: 'svg', svg: XQ_DARK_XIANGQI_THUMBNAIL },

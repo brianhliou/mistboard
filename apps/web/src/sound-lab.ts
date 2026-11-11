@@ -28,7 +28,6 @@ import { readStoredSoundSet, SOUND_SETS, storeSoundSet } from './sound-sets.js';
 const KINDS: SoundKind[] = [
   'move',
   'capture',
-  'captured',
   'cannon-capture',
   'blast',
   'castle',

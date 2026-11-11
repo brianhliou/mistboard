@@ -26,6 +26,7 @@ import {
 } from './room-factory.js';
 import { tenantSeatStateView } from './runtime.js';
 import type { TenantGameStateLike, TenantRuntimeRoom, VariantTenant } from './tenant.js';
+import { tenantTurnOrder } from './tenant.js';
 import type { TenantLiveRoom } from './ws.js';
 
 export type TenantCorrespondenceBinding = {
@@ -63,6 +64,7 @@ export function tenantCorrespondenceBinding<
     // Serve the inbox the seat's own redacted board. Only for tenants whose
     // public feed carries no board (fog) and that the web can draw.
     seatBoard?: boolean;
+    casualOnly?: boolean;
   },
 ): TenantCorrespondenceBinding {
   const binding: TenantCorrespondenceBinding = {
@@ -77,9 +79,10 @@ export function tenantCorrespondenceBinding<
       const created = await createTenantCorrespondenceGameForSeek(
         tenant,
         deps.factoryContext(),
-        args,
+        deps.casualOnly ? { ...args, rated: false } : args,
       );
       if (!created.ok) return created;
+      const colors = tenantTurnOrder(tenant, created.room.projection.state);
       return {
         ok: true,
         room: {
@@ -87,8 +90,8 @@ export function tenantCorrespondenceBinding<
           gameSpecId: created.room.gameSpecId,
           rated: created.room.rated,
         },
-        // colors[0] is the first mover by contract; the seek stores move order.
-        seats: { first: tenant.colors[0] as string, second: tenant.colors[1] as string },
+        // The seek stores move order, including the recorded opening's mover.
+        seats: { first: colors[0] as string, second: colors[1] as string },
       };
     },
     sweepDueDeadline: async (roomId: string) => {

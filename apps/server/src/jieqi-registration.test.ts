@@ -40,7 +40,7 @@ function responseJson(response: ResponseCapture): Record<string, unknown> {
 function createContext(): JieqiCreateContext {
   return {
     databaseRequired: false,
-    isDraining: () => false,
+    refusesCreate: () => false,
     drainDeadlineMs: () => null,
     createJieqiRoom,
   };

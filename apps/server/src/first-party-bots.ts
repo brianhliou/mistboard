@@ -6,7 +6,7 @@
 // Consolidated roster (2026-07-21):
 //   - Misty            — the house player: every hidden-info / house-built
 //                        variant (fog chess, fog xiangqi, banqi, jungle, flip
-//                        jungle) under one identity.
+//                        jungle, xiangqi mahjong) under one identity.
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
 //                        xiangqi, fortress xiangqi, duck xiangqi and atomic xiangqi.
@@ -19,16 +19,30 @@
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
 // names; migration 111 remaps persisted attribution to the merged ids.
 
+import { RAPFI_LEVELS } from '@mistboard/game';
+import {
+  BANQI_PLAYABLE_ENGINES,
+  banqiEngineDisplayName,
+  banqiEngineTierFor,
+} from './banqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import {
+  threeKingdomsBanqiEngineDisplayName,
+  threeKingdomsBanqiEngineTierFor,
+} from './three-kingdoms-banqi-engine.js';
+
 export type FirstPartyBotProfile = {
   id: string;
   displayName: string;
   /** gameSpecId -> engine id currently fronted for that variant. */
   engines: Readonly<Record<string, string>>;
+  /** A seat's difficulty label when the shared profile name omits its rung. */
+  seatNamesByEngineId?: Readonly<Record<string, string>>;
   defaultGameSpecId: string;
-  /** The rung on a numbered ladder; absent for a named slot (Misty, Pikafish,
-   *  AB-JChess, KataGo), which is always the top of its ladder. */
-  ladderLevel?: number;
-  /** Retired engine ids whose games attribute to this bot. */
+  /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
+   *  bot-vs-bot pairing never seats it. */
+  offLadder?: true;
+  /** Additional engine ids whose games attribute to this bot, including retired tiers. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
    *  bookmarked /bot/<id> URLs, replayed roomCreated events). */
@@ -39,6 +53,9 @@ export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const PIKAFISH_JIEQI_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
+// The xiangqi Pikafish ladder (xiangqi-pikafish-engine.ts): level 8 is the bot's
+// current xiangqi engine, 1-7 are retired rungs whose games still attribute here.
+const PIKAFISH_XIANGQI_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
   return {
@@ -46,7 +63,6 @@ function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
     displayName: `Pikafish Level ${level}`,
     engines: { jieqi: `pikafish-jieqi-level-${level}` },
     defaultGameSpecId: 'jieqi',
-    ladderLevel: level,
   };
 }
 
@@ -85,7 +101,6 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
       'crazyhouse-xiangqi': `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
-    ladderLevel: level,
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],
     ...(legacy ? { attributionEngineIds: [legacy.engineId] } : {}),
   };
@@ -101,6 +116,8 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',
       'jungle-flip': 'misty-jungle-flip',
+      // The in-process tile bot (packages/game xiangqi-mahjong-bot.ts).
+      'xiangqi-mahjong': 'misty-xiangqi-mahjong',
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [
@@ -117,8 +134,21 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
+      ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => tier.id),
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-jungle-flip').map(
+        (tier) => tier.id,
+      ),
+      'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
-    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi'],
+    seatNamesByEngineId: Object.fromEntries([
+      ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
+      ['misty-jungle-flip-level-7', 'Misty Level 7'],
+    ]),
+    // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
+    // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
+    // still finishes as Misty (migration 178 moved the rows already written).
+    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi', 'misty-xiangqi-mahjong'],
   },
   {
     id: 'pikafish',
@@ -126,6 +156,16 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: {
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
+    },
+    // Jieqi Level 8 sits on a ladder of Pikafish Level 1..7 bots, so it names its
+    // rung. Xiangqi offers only full-strength Pikafish, so its seats read plain
+    // "Pikafish"; the explicit entries also correct rows stored as "Pikafish
+    // Level N" between 2026-10-23 and this fix.
+    seatNamesByEngineId: {
+      'pikafish-jieqi-strongest': 'Pikafish Level 8',
+      ...Object.fromEntries(
+        PIKAFISH_XIANGQI_LEVELS.map((level) => [`pikafish-xiangqi-level-${level}`, 'Pikafish']),
+      ),
     },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
@@ -158,6 +198,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
   ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
+  ...RAPFI_LEVELS.map(
+    ({ level }): FirstPartyBotProfile => ({
+      id: `rapfi-level-${level}`,
+      displayName: `Rapfi Level ${level}`,
+      engines: { gomoku: `rapfi-level-${level}` },
+      defaultGameSpecId: 'gomoku',
+    }),
+  ),
   // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
   // not a level number, so a stronger engine can replace it later.
   {
@@ -165,6 +213,24 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     displayName: 'AB-JChess',
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
+  },
+  // jqe (migration 175), one rung under AB-JChess since AB-JChess-20261031 (it held
+  // the top from 10-21), named for its engine like AB-JChess. Its
+  // engine is held behind MISTBOARD_JQE_ENABLED, so off it is unplayable and the
+  // public bot surfaces drop it (routes/bots.ts botPlayOptions).
+  {
+    id: 'jqe',
+    displayName: 'jqe',
+    engines: { jieqi: 'jqe-jieqi' },
+    defaultGameSpecId: 'jieqi',
+  },
+  // The worst-move xiangqi bot (migration 174): below the ladder, not on it.
+  {
+    id: 'general-blunder',
+    displayName: 'General Blunder',
+    engines: { xiangqi: 'fairy-stockfish-xiangqi-worst' },
+    defaultGameSpecId: 'xiangqi',
+    offLadder: true,
   },
   // The top jungle slot above Misty (migration 159): KataGo-AnimalChess, which won
   // the jungle challenge (#434). Named for its engine, like AB-JChess.
@@ -198,26 +264,6 @@ export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
   return botById.get(botId) ?? null;
 }
 
-// Both numbered ladders top out at Level 8: Fairy-Stockfish Level 8, and for
-// the jieqi ladder, whose numbered rungs stop at 7, Pikafish itself.
-const LADDER_TOP_LEVEL = Math.max(...FAIRY_STOCKFISH_LEVELS);
-
-/**
- * Whether a bot id is the top of its ladder: a named slot (no level), or the
- * highest numbered level. Canonical ids only; a pre-consolidation id names an
- * old tier, not today's top. The homepage chat announces wins over these bots
- * and no others (Brian, 2026-10-08: a win line should not feel easily earned).
- */
-export function isTopOfLadderBot(botId: string): boolean {
-  const bot = botById.get(botId);
-  if (!bot || bot.id !== botId) return false;
-  return bot.ladderLevel === undefined || bot.ladderLevel === LADDER_TOP_LEVEL;
-}
-
-export function topOfLadderBotIds(): string[] {
-  return FIRST_PARTY_BOT_PROFILES.map((bot) => bot.id).filter(isTopOfLadderBot);
-}
-
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {
   return botByEngineId.get(engineId) ?? null;
 }
@@ -225,7 +271,8 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
 /**
  * The public name of an engine seat, the same on every live surface (room
  * wire, /games, /watch, the homepage TV): the first-party bot fronting it,
- * which is the name the player picked in setup, else the engine's own name.
+ * with its engine-specific difficulty label when needed to match setup,
+ * else the engine's own name.
  * The room resolved the bot first and the feeds resolved the tier name only,
  * so one jieqi game read "Pikafish" in the room and "PikaJieQi - Strongest" on
  * its tile.
@@ -236,7 +283,59 @@ export function liveSeatEngineName(
   engineName: () => string,
 ): string {
   const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-  return bot?.displayName ?? engineName();
+  return bot ? botSeatName(bot, engineClientId) : engineName();
+}
+
+/**
+ * A first-party bot's seat name when it runs `engineId`: the rung label when the
+ * shared profile name omits it ("Pikafish Level 8"), else the bot's name. The one
+ * rule behind live seats (liveSeatEngineName), the participant rows written at
+ * game end (variant-tenant/events.ts, room-manager.ts) and finished-game reads
+ * (persistedSeatDisplayName), so a seat cannot read one name live and another
+ * once the game is over.
+ */
+export function botSeatName(
+  bot: FirstPartyBotProfile,
+  engineId: string | null | undefined,
+): string {
+  return (engineId ? bot.seatNamesByEngineId?.[engineId] : undefined) ?? bot.displayName;
+}
+
+/**
+ * The display name of a persisted participant, resolved at read time. Bot seats
+ * written before the writers used botSeatName stored the bare profile name
+ * ("Pikafish" for a jieqi Level 8 game); the stored engine id still says which
+ * rung played, so the label is recovered here without a backfill.
+ * Three Kingdoms and Banqi engine seats also shorten their old engine brand.
+ * These reads feed cards, /watch, profile lists and postgame review metadata;
+ * neither stored names nor engine identities change. Human names stay intact.
+ */
+export function persistedSeatDisplayName(participant: {
+  displayName: string;
+  subjectType: string;
+  subjectId: string | null;
+  engineId?: string | null;
+}): string {
+  const { engineId, subjectId, subjectType, displayName } = participant;
+  if (subjectType === 'engine-version') {
+    if (subjectId && threeKingdomsBanqiEngineTierFor(subjectId)) {
+      return threeKingdomsBanqiEngineDisplayName(subjectId);
+    }
+    const oldName = /^MistyThreeKingdomsBanqi(?: level ([1-8]))?$/.exec(displayName);
+    if (oldName) return oldName[1] ? `Misty level ${oldName[1]}` : 'Misty';
+  }
+  if (subjectType === 'engine-version' || subjectType === 'bot') {
+    const banqiId = subjectType === 'engine-version' ? subjectId : engineId;
+    if (banqiId && banqiEngineTierFor(banqiId)) return banqiEngineDisplayName(banqiId);
+    // Pre-engine_id rows can still recover the level from their exact old name.
+    const oldName = /^MistyBanqi Level ([1-8])$/.exec(displayName);
+    if (oldName) return `Misty Level ${oldName[1]}`;
+  }
+  if (participant.subjectType !== 'bot' || !engineId) return participant.displayName;
+  const bot =
+    (participant.subjectId ? firstPartyBotForId(participant.subjectId) : null) ??
+    firstPartyBotForEngine(engineId);
+  return bot?.seatNamesByEngineId?.[engineId] ?? participant.displayName;
 }
 
 // games.variant values that name the same spec as a bot's engine-map key. The

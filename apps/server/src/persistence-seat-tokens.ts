@@ -1,5 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type { Color, XiangqiColor } from '@mistboard/game';
+import {
+  type Color,
+  defaultClockIncrementMs,
+  defaultClockInitialMs,
+  type RoomTimeControl,
+  type XiangqiColor,
+} from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
 import { getPool, withTransaction } from './persistence-db.js';
 
@@ -20,6 +26,63 @@ export type RoomSeatTokenRecord<TSeat extends RoomSeatTokenSeat = Color> = {
   lastSeenAt: Date;
   revokedAt: Date | null;
 };
+
+/**
+ * Durable seat ownership for admission, including tenants that only insert a
+ * games row at game end. room-created is the durable clock-policy source;
+ * aborted tenants may have no games row, so exclude their terminal event too.
+ * Unloaded rooms only count while their last event's clock budget could last.
+ * Loaded rooms are authoritative and are filtered by the admission service.
+ */
+export async function listLiveRoomIdsForIdentity(identity: {
+  userId?: string | null;
+  deviceId?: string | null;
+}): Promise<string[]> {
+  if (!identity.userId && !identity.deviceId) return [];
+  const { rows } = await getPool().query<{
+    room_id: string;
+    time_control: RoomTimeControl | null;
+    last_event_at_ms: number;
+    last_event_seq: number;
+  }>(
+    `SELECT DISTINCT seats.room_id, created.payload->'timeControl' AS time_control,
+            COALESCE((latest.payload->>'at')::double precision,
+                     EXTRACT(EPOCH FROM latest.created_at) * 1000) AS last_event_at_ms,
+            latest.seq AS last_event_seq
+     FROM room_seat_tokens seats
+     JOIN events created ON created.room_id = seats.room_id
+       AND created.seq = 0 AND created.type = 'room-created'
+     JOIN LATERAL (
+       SELECT seq, payload, created_at FROM events
+       WHERE room_id = seats.room_id ORDER BY seq DESC LIMIT 1
+     ) latest ON true
+     LEFT JOIN games ON games.room_id = seats.room_id
+     WHERE seats.revoked_at IS NULL
+       AND (seats.user_id = $1 OR seats.device_id = $2)
+       AND (games.status IS NULL OR games.status = 'running')
+       AND created.payload->'timeControl'->>'daysPerMove' IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM events terminal
+         WHERE terminal.room_id = seats.room_id
+           AND terminal.type IN ('game-aborted', 'seat-resigned', 'seat-forfeited',
+                                 'clock-expired', 'game-adjudicated', 'draw-agreed')
+       )
+     ORDER BY seats.room_id`,
+    [identity.userId || null, identity.userId ? null : identity.deviceId || null],
+  );
+  const now = Date.now();
+  return rows
+    .filter((row) => {
+      const initialMs = row.time_control?.initialMs ?? defaultClockInitialMs;
+      const incrementMs = row.time_control?.incrementMs ?? defaultClockIncrementMs;
+      // Every earned increment needs an event. Counting every event as a move
+      // by the same player deliberately overestimates the maximum remaining
+      // clock, without replaying or scanning an unloaded room's whole log.
+      const maximumRemainingMs = initialMs + incrementMs * row.last_event_seq;
+      return now - row.last_event_at_ms < maximumRemainingMs;
+    })
+    .map((row) => row.room_id);
+}
 
 export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color>(
   roomId: string,

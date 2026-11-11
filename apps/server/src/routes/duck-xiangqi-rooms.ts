@@ -4,6 +4,7 @@
  */
 
 import { DUCK_XIANGQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   DUCK_XIANGQI_DEFAULT_ENGINE_ID,
   isDuckXiangqiEngineClientId,
@@ -12,7 +13,7 @@ import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type DuckXiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createDuckXiangqiRoom(
     timeControl?: RoomTimeControl,

@@ -119,6 +119,10 @@ a.study-index__rail-tab.is-active:hover {
   .study-index__create {
     min-height: 44px;
   }
+  /* iOS zooms the page into any focused field under 16px. */
+  .study-index__search-input {
+    font-size: 16px;
+  }
 }
 
 .study-index__search-button:hover {
@@ -411,10 +415,26 @@ a.study-index__rail-tab.is-active:hover {
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
+  /* The four tabs share one row: equal shares, tighter type, no wrap. */
   .study-index__rail-list {
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.3rem;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+  .study-index__rail-list > li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .study-index__rail-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .study-index__toolbar {
     flex-direction: column;

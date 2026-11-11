@@ -70,6 +70,12 @@
   .historical-xiangqi-select {
     height: 44px;
   }
+
+  /* 16px keeps iOS Safari from zooming the page when a field takes focus. */
+  .historical-xiangqi-input,
+  .historical-xiangqi-select {
+    font-size: 16px;
+  }
 }
 
 .historical-xiangqi-input:focus,
@@ -148,6 +154,13 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Touch floor (#576). */
+@media (pointer: coarse) {
+  .historical-xiangqi-floor-clear {
+    min-height: 40px;
+  }
 }
 
 .historical-xiangqi-floor-clear:hover,

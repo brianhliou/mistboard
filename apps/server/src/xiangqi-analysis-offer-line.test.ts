@@ -96,3 +96,34 @@ test('quiet plies cost no extra search', async () => {
   assert.equal(calls.length, quietUci.length + 1, 'no ply offered a piece; expected sweep only');
   assert.ok(plies.every((row) => row.offerLine === undefined));
 });
+
+test('capture-line analysis includes offers after a recorded repetition', async () => {
+  const shuffle: XiangqiMove[] = [
+    { from: 'h1', to: 'g3' },
+    { from: 'h10', to: 'g8' },
+    { from: 'g3', to: 'h1' },
+    { from: 'g8', to: 'h10' },
+  ];
+  const moves = [...shuffle, ...shuffle, ...MOVES];
+  const ucis = moves.map(xiangqiMoveToPikafishUci);
+  const calls: string[][] = [];
+  const plies = await analyzeXiangqiGame(ucis, { moves, evaluate: fakeEvaluate(calls) as never });
+  assert.equal(plies.find((row) => row.ply === 13)?.offerLine?.capture, CAPTURE_UCI);
+  assert.ok(calls.some((line) => line.length === ucis.length + 1 && line.at(-1) === CAPTURE_UCI));
+});
+
+test('CC0 offer grading rejects a loss that only the historical curve calls near-best', async () => {
+  // A 20cp drop from even loses 1.84 points at @5 but 2.33 at @6, crossing
+  // the classifier's 2-point near-best bar. It must cost no capture search.
+  const calls: string[][] = [];
+  const evaluate = fakeEvaluate(calls);
+  const plies = await analyzeXiangqiGame(MOVES_UCI, {
+    moves: MOVES,
+    evaluate: async (moves) => ({
+      ...(await evaluate(moves)),
+      cp: moves.length === 5 ? -20 : 0,
+    }),
+  });
+  assert.equal(plies.find((row) => row.ply === 5)?.offerLine, undefined);
+  assert.equal(calls.length, MOVES_UCI.length + 1);
+});

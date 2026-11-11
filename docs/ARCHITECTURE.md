@@ -2,7 +2,7 @@
 
 ## One-line shape
 
-Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Variants range from open-information games (standard xiangqi, Jungle) to hidden-information games (Fog of War chess and xiangqi, Jieqi, Banqi, Flip Jungle), and the architecture is built so hidden information can never reach the wrong client.
+Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Some games hide pieces from a player (Fog, Jieqi, Banqi, Flip Jungle), so the server sends each client only its own view.
 
 ## Package layout
 
@@ -52,6 +52,8 @@ Dispatch on a game-spec id never falls back: an unknown id throws or rejects rat
 Finished games review through one shared shell: `apps/web/src/review/review-shell.ts` (the centered three-column layout), `review-layout.ts` (board stage, underboard, controls, scrubber), and `tree-review.ts` (the variant-neutral tree-review controller: interactive board, branching move tree, eval gauge, engine panel, whole-game analysis). Each variant plugs in a `VariantTreeAdapter` over the move-tree spine (`review/game-tree.ts`) plus a small presentation bundle. Hidden-information variants project per-POV views through their rules kernel, so a review page can show a truth board next to per-seat masked views without leaking anything the postgame API did not reveal.
 
 Analysis comes in layers: server-side whole-game engine eval cached in the `game_analysis` table, a decision-vs-luck decomposition for chance-reveal variants, and study/gamebook tooling built on serialized move trees.
+
+Jieqi reveal luck is enabled by default. `MISTBOARD_JIEQI_LUCK_ENABLED=false` omits realized outcomes from review and study decisions, including cached results and completed job polls. `jieqiLuckAllowed(viewer)` is the server policy seam for future viewer entitlements. Disabling luck preserves move grades, accuracy, and their pool-average searches; grade-only computations use separate cache and checkpoint keys so re-enabling luck can compute the missing outcomes. The web review, study, and embeds render no dice when outcomes are absent. Game exports and share cards do not include decision data.
 
 ## In-browser engines (ceval)
 
@@ -108,7 +110,7 @@ Provider choice is not load-bearing; the server is plain Node and the client is 
 
 ## Notable choices
 
-- **Server-authoritative is non-negotiable.** Hidden-information correctness depends on it. The client never holds canonical state. A correct hidden-information implementation must never send hidden truth to the wrong consumer.
+- **The server is authoritative.** The client never holds canonical state.
 - **Event log as source of truth.** Game state is always reconstructable by replaying the event log. Replay, reconnect, and postgame review all share the same projection path.
 - **The per-player view is the security boundary.** All outbound WebSocket messages and non-admin API responses go through a view projection before leaving the server. Sending raw canonical state to a client is a security bug.
 - **Variants are pluggable, and dispatch fails closed.** The tenant runtime makes adding a variant a matter of writing a kernel, a tenant policy, and a registration; the conformance tests and the exhaustive request gate make it impossible to add one silently or route an unknown id to the wrong rules.

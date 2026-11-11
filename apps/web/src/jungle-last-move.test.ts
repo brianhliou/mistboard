@@ -148,7 +148,7 @@ describe('Jungle-family last-move indicators', () => {
     expect(inkOf(svg)).toEqual([JUNGLE_LAST_MOVE.fill.none.to]);
   });
 
-  it('marks a Flip Jungle flip as a single bordered cell inside its own square', () => {
+  it('marks a Flip Jungle flip as one cell in a move\u2019s destination tint, no border', () => {
     const svg = renderJungleFlipBoardSvg(
       { a1: { faceDown: false, color: 'red', role: 'rat' } },
       { lastMove: { from: 'a1', to: 'a1' }, lastMoveInk: 'red', shadow: false },
@@ -160,15 +160,16 @@ describe('Jungle-family last-move indicators', () => {
     expect(rects[0]?.cls).toBe('jungle-last-move-flip');
     expect(svg).not.toContain('jungle-last-move-from');
 
-    // The border straddles the rect edge, so the rect must sit inside the cell
-    // or the outer half of the stroke lands in the neighbouring square.
-    const [step] = lastMoveRects(
-      renderJungleFlipBoardSvg(
-        { b1: { faceDown: false, color: 'red', role: 'rat' } },
-        { lastMove: { from: 'a1', to: 'b1' }, lastMoveInk: 'red', shadow: false },
-      ),
+    // One flat shade, the same as a move's destination: no darker border.
+    const step = renderJungleFlipBoardSvg(
+      { b1: { faceDown: false, color: 'red', role: 'rat' } },
+      { lastMove: { from: 'a1', to: 'b1' }, lastMoveInk: 'red', shadow: false },
     );
-    expect(rects[0]?.w).toBeLessThan(step?.w ?? 0);
+    const flipRect = svg.match(/<rect class="jungle-last-move-flip"[^>]*\/>/)?.[0] ?? '';
+    const toRect = step.match(/<rect class="jungle-last-move-to"[^>]*\/>/)?.[0] ?? '';
+    expect(flipRect).not.toContain('stroke');
+    expect(flipRect.match(/fill="[^"]+"/)?.[0]).toBe(toRect.match(/fill="[^"]+"/)?.[0]);
+    expect(rects[0]?.w).toBe(lastMoveRects(step)[0]?.w);
   });
 
   it('keeps both endpoint tints after mutual elimination', () => {

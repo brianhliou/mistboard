@@ -1,14 +1,27 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
+import { botEngineVersion } from '../bot-engine-versions.js';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
-import { abJchessAvailable, JIEQI_ABJCHESS_ENGINE_ID } from '../jieqi-engine.js';
+import { parseGamePageCursor } from '../game-page-cursor.js';
+import {
+  abJchessAvailable,
+  JIEQI_ABJCHESS_ENGINE_ID,
+  JIEQI_JQE_ENGINE_ID,
+  jqeAvailable,
+} from '../jieqi-engine.js';
+import { isJungleFlipEngineClientId, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
 import type { ProfileGameRecord } from '../persistence-games.js';
 import { markUnavailableGames } from '../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
+
+// The bot page's "Load more" page size, and the most one request may ask for
+// (the persistence clamp is the same 50).
+const BOT_GAMES_PAGE = 15;
+const BOT_GAMES_PAGE_MAX = 50;
 
 // Per-variant play descriptor for a bot. `playable` reflects the variant's
 // launch flag right now; unplayable variants still list (the profile shows the
@@ -17,28 +30,50 @@ type BotPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  // The engine build this variant runs (bot-engine-versions.ts); absent when no
+  // version is recorded, so the page shows nothing instead of a guess.
+  version?: string;
 };
 
-export function botPlayOptions(bot: BotProfile): BotPlayOption[] {
+// What botPlayOptions reads: the full profile and the lighter play profile
+// (getPublicBotForPlay) both carry it.
+type BotPlayFields = Pick<
+  BotProfile,
+  'activeEngineId' | 'defaultGameSpecId' | 'id' | 'supportedGameSpecIds'
+>;
+
+export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
   const specIds =
     bot.supportedGameSpecIds.length > 0 ? bot.supportedGameSpecIds : [bot.defaultGameSpecId];
   const firstParty = firstPartyBotForId(bot.id);
   const options: BotPlayOption[] = [];
   for (const gameSpecId of specIds) {
+    if (isHiddenSpec(gameSpecId)) continue;
     const engineId =
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);
     if (!engineId) continue;
+    // A missing private net must never advertise the neural rung as playable.
+    if (isJungleFlipEngineClientId(engineId) && !jungleFlipEngineAvailable(engineId)) continue;
     // An engine the box cannot run is unplayable, not missing: AB-JChess and KataGo
     // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), which a
-    // dev box usually lacks.
+    // dev box usually lacks. jqe also needs MISTBOARD_JQE_ENABLED, held off until its
+    // author's OK, so off it drops out of /api/bots and its profile 404s.
     const serveable =
       engineId === JIEQI_ABJCHESS_ENGINE_ID
         ? abJchessAvailable()
-        : engineId === KATAGO_JUNGLE_ENGINE_ID
-          ? katagoJungleAvailable()
-          : true;
-    options.push({ gameSpecId, engineId, playable: isBotSpecPlayable(gameSpecId) && serveable });
+        : engineId === JIEQI_JQE_ENGINE_ID
+          ? jqeAvailable()
+          : engineId === KATAGO_JUNGLE_ENGINE_ID
+            ? katagoJungleAvailable()
+            : true;
+    const version = botEngineVersion(engineId);
+    options.push({
+      gameSpecId,
+      engineId,
+      playable: isBotSpecPlayable(gameSpecId) && serveable,
+      ...(version ? { version } : {}),
+    });
   }
   return options;
 }
@@ -98,7 +133,7 @@ async function withUnavailableGamesMarked<T extends BotProfilePage>(bot: T): Pro
   };
 }
 
-function isAnySpecPlayable(bot: BotProfile): boolean {
+function isAnySpecPlayable(bot: BotPlayFields): boolean {
   return botPlayOptions(bot).some((option) => option.playable);
 }
 
@@ -107,6 +142,7 @@ export async function tryHandle(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
+  parsedUrl: URL,
 ): Promise<boolean> {
   if (pathname === '/api/bots') {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -115,6 +151,46 @@ export async function tryHandle(
       .filter(isAnySpecPlayable)
       .map(withPlayOptions);
     writeJson(response, 200, { bots });
+    return true;
+  }
+
+  // Older games of one variant, past the list the profile payload carries
+  // (#550). Same gates as the profile: a public bot with something playable,
+  // and never a spec on no public surface.
+  const gamesMatch = pathname.match(/^\/api\/bots\/([^/]+)\/games$/);
+  if (gamesMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const requestedBotId = parsePublicBotId(decodeURIComponent(gamesMatch[1] ?? ''));
+    if (!requestedBotId) {
+      writeJson(response, 400, { error: 'invalid_bot_id' });
+      return true;
+    }
+    const variant = parsedUrl.searchParams.get('variant') ?? '';
+    if (!maybeGameSpecForId(variant)) {
+      writeJson(response, 400, { error: 'invalid_variant' });
+      return true;
+    }
+    const botId = firstPartyBotForId(requestedBotId)?.id ?? requestedBotId;
+    const bot = await persistence.getPublicBotForPlay(botId);
+    if (!bot || isHiddenSpec(variant) || !isAnySpecPlayable(bot)) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const before = parseGamePageCursor(parsedUrl.searchParams.get('before'));
+    if (before === undefined) {
+      writeJson(response, 400, { error: 'invalid_before' });
+      return true;
+    }
+    const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+    const limit = clampInt(
+      parsedUrl.searchParams.get('limit'),
+      BOT_GAMES_PAGE,
+      1,
+      BOT_GAMES_PAGE_MAX,
+    );
+    const games = await persistence.getBotGamesPage(botId, variant, offset, limit, before);
+    writeJson(response, 200, { games: await markUnavailableGames(games) });
     return true;
   }
 
@@ -139,4 +215,10 @@ export async function tryHandle(
   }
 
   return false;
+}
+
+function clampInt(raw: string | null, fallback: number, min: number, max: number): number {
+  const parsed = parseInt(raw ?? '', 10);
+  if (Number.isNaN(parsed)) return fallback;
+  return Math.max(min, Math.min(parsed, max));
 }

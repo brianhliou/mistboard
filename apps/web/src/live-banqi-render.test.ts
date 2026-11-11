@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BANQI_BOARD_CSS, renderBanqiBoardSvg } from './live-banqi-render.js';
+import { XIANGQI_PIECE_OUTLINE_SHARE } from './board-metrics.js';
+import {
+  BANQI_BOARD_CSS,
+  BANQI_PIECE_PX,
+  BANQI_PIECE_REACH,
+  BANQI_PIECE_SHAPE,
+  banqiFaceDownRadius,
+  banqiPieceDrawSize,
+  renderBanqiBoardSvg,
+} from './live-banqi-render.js';
 
 describe('renderBanqiBoardSvg', () => {
   const view = {
@@ -93,7 +102,7 @@ describe('renderBanqiBoardSvg', () => {
     }
   });
 
-  it('marks a flip as a single bordered cell', () => {
+  it('marks a flip as one cell in a move\u2019s destination tint, no border', () => {
     const svg = renderBanqiBoardSvg(
       { ...view, ply: 5, lastMove: { from: 'a1', to: 'a1' } } as never,
       'red',
@@ -103,17 +112,16 @@ describe('renderBanqiBoardSvg', () => {
     // A flip is a self-move: one cell, and never an origin wash to go with it.
     expect(rects).toHaveLength(1);
     expect(rects[0]?.cls).toContain('banqi-lastmove-flip');
+    expect(rects[0]?.cls).toContain('banqi-lastmove-to');
     expect(svg).not.toContain('banqi-lastmove-from');
 
-    // A move's tint fills its cell edge to edge, but the flip's rect must be
-    // strictly smaller: its border straddles the rect edge, so an un-inset flip
-    // would paint the outer half of that stroke into the neighbouring cell.
-    const [from, to] = lastMoveRects(
+    // One flat shade (Brian, 2026-10-28): the flip fills its whole cell like a
+    // move's destination, and no rule gives it a stroke.
+    const [, to] = lastMoveRects(
       renderBanqiBoardSvg({ ...view, ply: 5, lastMove: { from: 'a1', to: 'b1' } } as never, 'red'),
     );
-    const cell = (to?.x ?? 0) - (from?.x ?? 0); // one-step move => centres one cell apart
-    expect(cell).toBeGreaterThan(0);
-    expect(rects[0]?.w).toBeLessThan(cell);
+    expect(rects[0]?.w).toBe(to?.w);
+    expect(BANQI_BOARD_CSS).not.toMatch(/banqi-lastmove-flip[^{]*\{[^}]*stroke/);
   });
 
   it('colours the mark with the mover\u2019s ink, not the ink a flip revealed', () => {
@@ -248,5 +256,43 @@ describe('banqi board coordinates (#308)', () => {
     const red = renderBanqiBoardSvg(view as never, 'red', { coordinates: true });
     const black = renderBanqiBoardSvg(view as never, 'black', { coordinates: true });
     expect(labels(black)).toEqual(labels(red));
+  });
+});
+
+// Banqi keeps round pieces on its square grid (Brian, 2026-10-14: players expect
+// round xiangqi pieces) and leaves a gap between them, as on a physical set.
+describe('banqi piece look', () => {
+  it('draws discs whose edge spans 92% of the cell', () => {
+    expect(BANQI_PIECE_SHAPE).toBe('disc');
+    for (const cell of [50, 64, 72]) {
+      const edge = (banqiPieceDrawSize(cell) * XIANGQI_PIECE_OUTLINE_SHARE) / cell;
+      expect(edge, String(cell)).toBeCloseTo(BANQI_PIECE_REACH, 2);
+    }
+  });
+
+  it('draws flat face-down backs as discs of the face-up outer size', () => {
+    const r = banqiFaceDownRadius(BANQI_PIECE_PX);
+    // The back's 2-unit stroke puts its outer edge at r + 1.
+    expect(r + 1).toBeCloseTo((BANQI_PIECE_PX * XIANGQI_PIECE_OUTLINE_SHARE) / 2, 1);
+    const view = {
+      id: 'banqi-look',
+      perspective: 'red',
+      board: {
+        a1: { color: 'red', role: 'chariot', faceDown: false },
+        b1: { faceDown: true },
+      },
+      legalMoves: [],
+      captured: [],
+      status: { type: 'playing', turn: 'red' },
+      ply: 0,
+      firstColor: 'red',
+      moveNumber: 1,
+    };
+    const svg = renderBanqiBoardSvg(view as never, 'red', {
+      pieceSet: 'international',
+      tile3d: false,
+    });
+    expect(svg).toContain(`r="${r}"`);
+    expect(svg).not.toContain('<rect x="4" y="4" width="92" height="92" rx="14"');
   });
 });

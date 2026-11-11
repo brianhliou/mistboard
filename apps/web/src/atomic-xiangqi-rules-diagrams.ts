@@ -25,9 +25,8 @@ import {
   XQ_BOARD_H,
   XQ_BOARD_W,
   XQ_CELL,
+  xqBlastMarks,
   xqBoardSvg,
-  xqCoord,
-  xqPieceSize,
   xqPoint,
   xqSvg,
   xqVisionDemoState,
@@ -47,18 +46,6 @@ function boardFromFen(id: string, fen: string): AtomicXiangqiBoard {
 
 function state(id: string, board: AtomicXiangqiBoard) {
   return xqVisionDemoState(id, board);
-}
-
-/** Amber rings on cleared points, the live board's aftermath mark. */
-function blastRings(squares: readonly AtomicXiangqiSquare[], x0: number, y0: number): string {
-  const size = xqPieceSize();
-  return squares
-    .map((square) => {
-      const { file, rank } = xqCoord(square as XiangqiSquare);
-      const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
-      return `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.28)" stroke="#d99a1e" stroke-width="3" stroke-opacity="0.55"/>`;
-    })
-    .join('');
 }
 
 /** The points a capture on `move.to` would clear, read off the kernel. */
@@ -83,7 +70,7 @@ function pair(
       label: before.label,
       perspective: 'red',
       arrows: [{ from: before.move.from as XiangqiSquare, to: before.move.to as XiangqiSquare }],
-      overlay: blastRings(cleared, 0, 0),
+      ...xqBlastMarks(cleared, 0, 0),
     }) +
       xqBoardSvg({
         state: state(`${id}-after`, after),
@@ -91,7 +78,7 @@ function pair(
         y: 0,
         label: afterLabel,
         perspective: 'red',
-        overlay: blastRings(cleared, PAIR_GAP_X, 0),
+        ...xqBlastMarks(cleared, PAIR_GAP_X, 0),
       }),
   );
 }
@@ -175,7 +162,7 @@ export const ATOMIC_XIANGQI_GENERALS = () => {
         { from: SELF_MOVE.from as XiangqiSquare, to: SELF_MOVE.to as XiangqiSquare },
       ],
       dots: [{ square: SELF_MOVE.to as XiangqiSquare, blocked: true }],
-      overlay: blastRings(blastOf(GENERALS_BOARD, WIN_MOVE), PAIR_GAP_X / 2, 0),
+      ...xqBlastMarks(blastOf(GENERALS_BOARD, WIN_MOVE), PAIR_GAP_X / 2, 0),
     }),
   );
 };
@@ -200,7 +187,7 @@ export const ATOMIC_XIANGQI_CHECK = () => {
       label: 'BLACK IS IN CHECK',
       perspective: 'red',
       arrows: [{ from: 'd9' as XiangqiSquare, to: 'd10' as XiangqiSquare }],
-      overlay: blastRings(blastOf(CHECK_BOARD, { from: 'd9', to: 'd10' }), PAIR_GAP_X / 2, 0),
+      ...xqBlastMarks(blastOf(CHECK_BOARD, { from: 'd9', to: 'd10' }), PAIR_GAP_X / 2, 0),
     }),
   );
 };
@@ -237,7 +224,7 @@ export const ATOMIC_XIANGQI_THUMBNAIL = () => {
     label: '',
     perspective: 'red',
     arrows: [{ from: 'e5', to: 'e6' }],
-    overlay: blastRings(
+    ...xqBlastMarks(
       blast.map((victim) => victim.square),
       0,
       0,

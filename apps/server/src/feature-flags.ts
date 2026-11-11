@@ -74,6 +74,13 @@ export function mahjongEnabled(): boolean {
   return process.env.MISTBOARD_MAHJONG_ENABLED === 'true';
 }
 
+// Xiangqi mahjong (象棋麻將, 32 tiles, two players) live rooms. Server-side
+// opt-in, default off. Public since 2026-10-25: its launch switch in game-specs
+// removes the per-account grant requirement; this remains the runtime gate.
+export function xiangqiMahjongEnabled(): boolean {
+  return process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
 // Crazyhouse Xiangqi (xiangqi where captured pieces change sides) live rooms.
 // Server-side opt-in, default off: the runtime kill-switch for room creation.
 // Launched as a public casual variant; there is no pool to rate.
@@ -87,11 +94,23 @@ export function jieqiEnabled(): boolean {
   return process.env.MISTBOARD_JIEQI_ENABLED === 'true';
 }
 
+// Review reveal luck stays on by default. This also gates luck-only computation;
+// viewer access belongs in jieqiLuckAllowed, independently of shared engine caches.
+export function jieqiLuckEnabled(): boolean {
+  return process.env.MISTBOARD_JIEQI_LUCK_ENABLED !== 'false';
+}
+
 // Banqi (8x4 Chinese Dark Chess, symmetric hidden-identity) live rooms.
 // Server-side opt-in, default off — the tenant exists but is not launched. PvP
 // only at first (PvE is gated on an engine, like jieqi).
 export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
+}
+
+// Hidden FFQ banqi playtest. This opt-in never grants access on its own;
+// ffq-banqi-access.ts also requires an admin account at every entry point.
+export function ffqBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_FFQ_BANQI_ENABLED === 'true';
 }
 
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
@@ -101,11 +120,23 @@ export function jungleEnabled(): boolean {
   return process.env.MISTBOARD_JUNGLE_ENABLED === 'true';
 }
 
-// Flip Jungle (兽棋 / 翻翻棋, 4×4 flip animal chess, symmetric hidden-identity) live
+// Flip Jungle (翻翻兽棋, 4×4 flip animal chess, symmetric hidden-identity) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the belief bot comes later).
 export function jungleFlipEnabled(): boolean {
   return process.env.MISTBOARD_JUNGLE_FLIP_ENABLED === 'true';
+}
+
+// Three Kingdoms Banqi runtime kill-switch, off by default. When enabled it
+// admits everyone; coordinate the flag with the publicSurface launch release.
+export function threeKingdomsBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
+// Gomoku runtime kill-switch, off by default. It admits everyone when enabled;
+// coordinate it with the publicSurface launch release, never before the flip.
+export function gomokuEnabled(): boolean {
+  return process.env.MISTBOARD_GOMOKU_ENABLED === 'true';
 }
 
 // Correspondence (days-per-move) dark chess on the variant-tenant stack.
@@ -114,6 +145,14 @@ export function jungleFlipEnabled(): boolean {
 // only at C1.
 export function correspondenceEnabled(): boolean {
   return process.env.MISTBOARD_CORRESPONDENCE_ENABLED === 'true';
+}
+
+// The account that offers itself as a correspondence opponent on /correspondence
+// ("Play Brian"), by handle. Unset or blank: the card is hidden and the host
+// route answers 404. Set 2026-10-23.
+export function correspondenceHostHandle(): string | null {
+  const handle = process.env.MISTBOARD_CORRESPONDENCE_HOST_HANDLE?.trim().replace(/^@/, '');
+  return handle ? handle : null;
 }
 
 // Automated bot-vs-bot (engine-vs-engine) game generation. Server-side opt-in,

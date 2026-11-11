@@ -34,8 +34,10 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
+import { type EngineClock, liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
@@ -45,6 +47,7 @@ import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
 import {
   isXiangqiEngineClientId,
+  isXiangqiWorstEngine,
   type XiangqiEngineTier,
   xiangqiEngineTierFor,
   xiangqiEngineVersion,
@@ -93,6 +96,12 @@ export function xiangqiEngineSeatFor(room: XiangqiEngineRoom): XiangqiColor | nu
   return null;
 }
 
+function xiangqiEngineSeatCount(room: XiangqiEngineRoom): number {
+  return (['red', 'black'] as const).filter((seat) =>
+    isXiangqiEngineClientId(room.projection.seats[seat]),
+  ).length;
+}
+
 export function scheduleXiangqiEngineMove(
   ctx: XiangqiEngineContext,
   room: XiangqiEngineRoom,
@@ -123,7 +132,7 @@ export function scheduleXiangqiEngineMove(
 export type XiangqiEngineMoveProvider = (
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number },
+  opts: { movetimeMs?: number; clock?: EngineClock },
 ) => Promise<UciEval>;
 
 export async function playXiangqiEngineMoveIfReady(
@@ -148,12 +157,24 @@ export async function playXiangqiEngineMoveIfReady(
   // NODE budget is the strength anchor and binds first on a healthy clock; this
   // movetime is the latency ceiling + time-pressure guard. On the depth-capped
   // FSF rungs (levels 1-7) the movetime is, in practice, the strength knob too.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
+  // The top rungs at a short clock may run the phase rule instead
+  // (MISTBOARD_BOT_TIME_RULE=phase; engine-time-budget.ts `liveBotMoveTime`).
+  const {
+    movetimeMs,
+    rule: timeRule,
+    clock: engineClock,
+  } = liveBotMoveTime({
+    engineId,
+    roomId: room.id,
+    ply: history.length,
+    legalCount: getStandardXiangqiLegalMoves(room.projection.state).length,
+    initialMs: clock?.initialMs ?? null,
     remainingMs,
     incrementMs,
     ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
+    engineVsEngine: xiangqiEngineSeatCount(room) === 2,
   });
 
   const startedAt = Date.now();
@@ -165,12 +186,15 @@ export async function playXiangqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, history, { movetimeMs });
+      const search = await moveProvider(engineId, history, {
+        movetimeMs,
+        ...(engineClock ? { clock: engineClock } : {}),
+      });
       lastSearch = search;
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getStandardXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -241,7 +265,7 @@ export async function playXiangqiEngineMoveIfReady(
   reportEngineMoveOk();
   let chosen: XiangqiMove = validated;
   const legalMoves = getStandardXiangqiLegalMoves(room.projection.state);
-  const guarded = guardXiangqiEngineMove(room.projection.state, chosen, legalMoves);
+  const guarded = guardXiangqiEngineMoveFor(engineId, room.projection.state, chosen, legalMoves);
   if (guarded !== chosen) {
     logger.warn(
       {
@@ -256,6 +280,27 @@ export async function playXiangqiEngineMoveIfReady(
     chosen = guarded;
   }
 
+  // Hold the move so the player sees their own land first (#389). The wait is on
+  // the bot's clock; anything that ends or pauses the turn meanwhile drops the move.
+  const stateAtTurn = room.projection.state;
+  // Assigned inside requestMove, which control-flow narrowing does not follow.
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    roomId: room.id,
+    ply: history.length,
+    legalCount: legalMoves.length,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    remainingMs,
+    incrementMs,
+    computeMs: thinkTimeMs,
+    engineVsEngine: xiangqiEngineSeatCount(room) === 2,
+  });
+  if (pace.waitMs > 0) {
+    await sleepMs(pace.waitMs);
+    if (room.projection.state !== stateAtTurn || !engineToMove(room, seat)) return;
+  }
+
   const event: TenantRoomEvent<XiangqiColor, XiangqiMove, XiangqiSpecId> = {
     type: 'move-played',
     at: Date.now(),
@@ -266,14 +311,15 @@ export async function playXiangqiEngineMoveIfReady(
   // Queue BEFORE the append: if this move mates, the tenant event writer records
   // the game end and flushes the queue inside the same append, and a decision
   // queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildXiangqiEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildXiangqiEngineDecisionPayload({
       ...decisionBase,
       move: xiangqiMoveToPikafishUci(chosen),
       guardReplaced: guarded !== validated,
     }),
-  );
+    ...replyPacePayload(pace),
+    time_rule: timeRule,
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }
@@ -366,6 +412,10 @@ function bothSeatsFilled(room: XiangqiEngineRoom): boolean {
 
 function engineToMove(room: XiangqiEngineRoom, seat: XiangqiColor): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 
@@ -399,6 +449,18 @@ export function legalMoveForUci(
  * Replace a move that lets the opponent win on the immediate reply with any legal
  * move that does not — a cheap king-safety backstop matching the Fortress loop.
  */
+// The worst-move bot is meant to walk into the losses the guard prevents.
+export function guardXiangqiEngineMoveFor(
+  engineId: string,
+  state: XiangqiGameState,
+  chosen: XiangqiMove,
+  legalMoves: readonly XiangqiMove[],
+): XiangqiMove {
+  return isXiangqiWorstEngine(engineId)
+    ? chosen
+    : guardXiangqiEngineMove(state, chosen, legalMoves);
+}
+
 export function guardXiangqiEngineMove(
   state: XiangqiGameState,
   chosen: XiangqiMove,

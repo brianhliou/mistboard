@@ -2,7 +2,10 @@
 //
 // The flow is identical for every variant: create a PvE room as the black
 // human (which puts the engine on red), connect over WebSocket, wait for the
-// engine's opening move, then clean up with a pregame abort. Before this
+// engine's opening move, then clean up with a pregame abort. Gomoku's engine
+// is white; on a deal with the human to move, the smoke plays one stone, waits
+// for the engine's reply and resigns, since the abort window has closed by then.
+// Before this
 // runner the three smokes were ~90% identical clones and drifted (the DXQ
 // engine-id fix in bfb02b95 touched one clone only); a variant is now one
 // config entry in variant-smoke-configs.mjs.
@@ -24,12 +27,26 @@ export async function runVariantSmoke(config, argv = process.argv.slice(2)) {
   const baseUrl = resolveBaseUrl(options.baseUrl);
   const timeoutMs = options.timeoutMs ?? config.defaultTimeoutMs;
 
-  const created = await createRoom(config, baseUrl, timeoutMs);
-  if (created.skipped) {
-    reportResult({ ok: true, skipped: true, reason: created.reason, baseUrl: baseUrl.href });
+  const deadline = Date.now() + timeoutMs;
+  do {
+    const remainingMs = config.dealtOpening ? deadline - Date.now() : timeoutMs;
+    if (remainingMs <= 0) throw new Error(`timed out waiting for ${config.label} bot-first deal`);
+    const created = await createRoom(config, baseUrl, remainingMs);
+    if (created.skipped) {
+      reportResult({ ok: true, skipped: true, reason: created.reason, baseUrl: baseUrl.href });
+      return;
+    }
+    const result = await smokeRoom(
+      config,
+      baseUrl,
+      created,
+      config.dealtOpening ? Math.max(1, deadline - Date.now()) : timeoutMs,
+    );
+    if (result.retry) continue;
+    reportResult(result);
     return;
-  }
-  reportResult(await smokeRoom(config, baseUrl, created, timeoutMs));
+  } while (Date.now() < deadline);
+  throw new Error(`timed out waiting for ${config.label} bot-first deal`);
 }
 
 function argSpec(config) {
@@ -102,6 +119,8 @@ export function roomCreationFailure(config, status, body) {
 //   { kind: 'failure', message }            fail the smoke
 //   { kind: 'seat-token', seatToken }       remember the hello seat token
 //   { kind: 'abort', engineReplyState }     engine moved: record + send abort
+//   { kind: 'move', to }                    human-first deal: open with a stone
+//   { kind: 'resign', engineReplyState }    engine replied after both moved
 //   { kind: 'success', finalStatus }        abort confirmed: finish ok
 export function evaluateSmokeMessage(config, context, message) {
   const effects = [];
@@ -121,11 +140,55 @@ export function evaluateSmokeMessage(config, context, message) {
   if (!state) return effects;
 
   if (
+    config.dealtOpening &&
+    !context.sentAbort &&
+    !context.sentMove &&
+    state.status?.type === 'playing' &&
+    state.status.turn === 'black' &&
+    state.opening?.turn === 'black' &&
+    state.ply === state.opening.stones.length &&
+    matchesEngineSeat(config.engineSeat, message.seats?.[config.engineColor])
+  ) {
+    // A deal with the human to move (every mined Gomoku opening): place one
+    // stone on an empty corner and wait for the engine's reply.
+    const to = emptyCorner(state.opening.stones);
+    if (!to) return [...effects, { kind: 'failure', message: 'no empty corner to open with' }];
+    effects.push({ kind: 'move', to });
+    return effects;
+  }
+
+  if (
+    config.dealtOpening &&
+    context.sentMove &&
+    !context.sentAbort &&
+    state.status?.type === 'playing' &&
+    state.status.turn === 'black' &&
+    state.ply === state.opening.stones.length + 2 &&
+    state.lastMove != null &&
+    matchesEngineSeat(config.engineSeat, message.seats?.[config.engineColor])
+  ) {
+    // Both sides have moved, so the server refuses an abort; resign instead.
+    effects.push({
+      kind: 'resign',
+      engineReplyState: {
+        moveNumber: state.moveNumber,
+        turn: state.status.turn,
+        lastMove: state.lastMove,
+      },
+    });
+    return effects;
+  }
+
+  if (
     !context.sentAbort &&
     state.status?.type === 'playing' &&
     state.status.turn === 'black' &&
     state.moveNumber === 1 &&
-    matchesEngineSeat(config.engineSeat, message.seats?.red)
+    (!config.dealtOpening ||
+      (state.opening?.turn === config.engineColor &&
+        state.ply === state.opening.stones.length + 1 &&
+        state.lastMove != null)) &&
+    matchesEngineSeat(config.engineSeat, message.seats?.[config.engineColor ?? 'red'])
   ) {
     effects.push({
       kind: 'abort',
@@ -142,6 +205,15 @@ export function evaluateSmokeMessage(config, context, message) {
     effects.push({ kind: 'success', finalStatus: state.status });
   }
 
+  if (
+    context.sentResign &&
+    state.status?.type === 'finished' &&
+    state.status.reason === 'resignation'
+  ) {
+    effects.push({ kind: 'success', finalStatus: state.status });
+    return effects;
+  }
+
   if (state.status?.type === 'finished') {
     effects.push({
       kind: 'failure',
@@ -152,6 +224,13 @@ export function evaluateSmokeMessage(config, context, message) {
   }
 
   return effects;
+}
+
+const CORNERS = ['a1', 'o15', 'a15', 'o1'];
+
+function emptyCorner(stones) {
+  const taken = new Set(stones.map((stone) => stone.square));
+  return CORNERS.find((square) => !taken.has(square));
 }
 
 async function smokeRoom(config, baseUrl, created, timeoutMs) {
@@ -209,11 +288,20 @@ async function smokeRoom(config, baseUrl, created, timeoutMs) {
           capturedSeatToken = effect.seatToken;
         } else if (effect.kind === 'abort') {
           engineReplyState = effect.engineReplyState;
+          context.retry = effect.retry ?? false;
           context.sentAbort = true;
           socket.send(JSON.stringify({ type: 'abort' }));
+        } else if (effect.kind === 'move') {
+          context.sentMove = true;
+          socket.send(JSON.stringify({ type: 'move', to: effect.to }));
+        } else if (effect.kind === 'resign') {
+          engineReplyState = effect.engineReplyState;
+          context.sentResign = true;
+          socket.send(JSON.stringify({ type: 'resign' }));
         } else if (effect.kind === 'success') {
           finish({
             ok: true,
+            ...(context.retry ? { retry: true } : {}),
             baseUrl: baseUrl.href,
             roomId: created.roomId,
             mode: created.mode,

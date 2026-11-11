@@ -383,6 +383,34 @@ test('perpetual check by black is a loss for black', () => {
   assert.equal(fortressXiangqiPerpetualCheckLoser(moves, start), 'black');
 });
 
+test('perpetual check is judged over the whole repetition, not the last lap', () => {
+  const start = stateWith({
+    a1: { color: 'red', role: 'general' },
+    g1: { color: 'red', role: 'chariot' },
+    f7: { color: 'black', role: 'general' },
+  });
+  // The repeated position (chariot f1, general f7, black to move) stands after
+  // plies 1, 5 and 9. Red checks on every move of the last lap but stepped
+  // aside quietly (f1g1) in the first, so the draw stands.
+  const moves = movesFromUci([
+    'g1f1',
+    'f7e7',
+    'f1g1',
+    'e7f7',
+    'g1f1',
+    'f7e7',
+    'f1e1',
+    'e7f7',
+    'e1f1',
+  ]);
+  let state = start;
+  for (const move of moves) {
+    assert.ok(isFortressXiangqiLegalMove(state, move), `${JSON.stringify(move)} should be legal`);
+    state = applyFortressXiangqiMove(state, move);
+  }
+  assert.equal(fortressXiangqiPerpetualCheckLoser(moves, start), null);
+});
+
 test('an honest (check-free) repetition stays a draw', () => {
   const start = stateWith(
     withGenerals({

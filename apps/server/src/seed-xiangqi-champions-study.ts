@@ -26,6 +26,7 @@ import {
   applyMove,
   createInitialXiangqiState,
   judgmentComment,
+  personNameForLocale,
   type XiangqiGameState,
   type XiangqiJudgment,
   type XiangqiMove,
@@ -231,9 +232,9 @@ const CHAPTER_ZH: Record<string, { name: Localized; blurb: Localized }> = {
     name: { 'zh-Hans': '1965 · 胡荣华甩不掉的对手', 'zh-Hant': '1965 · 胡榮華甩不掉的對手' },
     blurb: {
       'zh-Hans':
-        '广东的回应。交接过去五年，老冠军依旧能赢新冠军，胡荣华还要再等十年才真正独霸棋坛。全局183个half-move。',
+        '广东的回应。交接过去五年，老冠军依旧能赢新冠军，胡荣华还要再等十年才真正独霸棋坛。全局183个半回合，也是这两局中最长的一局。',
       'zh-Hant':
-        '廣東的回應。交接過去五年，老冠軍依舊能贏新冠軍，胡榮華還要再等十年才真正獨霸棋壇。全局183個half-move。',
+        '廣東的回應。交接過去五年，老冠軍依舊能贏新冠軍，胡榮華還要再等十年才真正獨霸棋壇。全局183個半回合，也是這兩局中最長的一局。',
     },
   },
   m_44977: {
@@ -248,8 +249,8 @@ const CHAPTER_ZH: Record<string, { name: Localized; blurb: Localized }> = {
   m_17496: {
     name: { 'zh-Hans': '1980 · 接着是杨官璘', 'zh-Hant': '1980 · 接著是楊官璘' },
     blurb: {
-      'zh-Hans': '同一届比赛，五天之后，柳大华击败了第一届冠军杨官璘，全局七十个half-move。',
-      'zh-Hant': '同一屆比賽，五天之後，柳大華擊敗了第一屆冠軍楊官璘，全局七十個half-move。',
+      'zh-Hans': '同一届比赛，五天之后，柳大华击败了第一届冠军杨官璘，全局七十个半回合。',
+      'zh-Hant': '同一屆比賽，五天之後，柳大華擊敗了第一屆冠軍楊官璘，全局七十個半回合。',
     },
   },
   m_23400: {
@@ -263,18 +264,18 @@ const CHAPTER_ZH: Record<string, { name: Localized; blurb: Localized }> = {
     name: { 'zh-Hans': '1986 · 吕钦登场', 'zh-Hant': '1986 · 呂欽登場' },
     blurb: {
       'zh-Hans':
-        '广东的第三位大师，在他首夺全国冠军的那一年，对手于幼华日后也会拿到一次。吕钦此后共获五次全国冠军和五次世界冠军，世界冠军数至今无人超越。本局引擎给他95.7分。',
+        '广东的第三位高手，在他首夺全国冠军的那一年，对手于幼华日后也会拿到一次。吕钦此后共获五次全国冠军和五次世界冠军，世界冠军数至今无人超越。本局引擎给他95.7分。',
       'zh-Hant':
-        '廣東的第三位大師，在他首奪全國冠軍的那一年，對手于幼華日後也會拿到一次。呂欽此後共獲五次全國冠軍和五次世界冠軍，世界冠軍數至今無人超越。本局引擎給他95.7分。',
+        '廣東的第三位高手，在他首奪全國冠軍的那一年，對手于幼華日後也會拿到一次。呂欽此後共獲五次全國冠軍和五次世界冠軍，世界冠軍數至今無人超越。本局引擎給他95.7分。',
     },
   },
   m_18360: {
     name: { 'zh-Hans': '1989 · 夺冠之前的赵国荣', 'zh-Hant': '1989 · 奪冠之前的趙國榮' },
     blurb: {
       'zh-Hans':
-        '黑龙江对上海：赵国荣在四次全国冠军中的第一次到来的前一年，击败胡荣华。73个half-move，引擎给他97.7分，是本研究中最干净的对局之一。',
+        '黑龙江对上海：赵国荣在四次全国冠军中的第一次到来的前一年，击败胡荣华。73个半回合，引擎给他97.7分，是本研习中最干净、也最短的对局之一。',
       'zh-Hant':
-        '黑龍江對上海：趙國榮在四次全國冠軍中的第一次到來的前一年，擊敗胡榮華。73個half-move，引擎給他97.7分，是本研究中最乾淨的對局之一。',
+        '黑龍江對上海：趙國榮在四次全國冠軍中的第一次到來的前一年，擊敗胡榮華。73個半回合，引擎給他97.7分，是本研習中最乾淨、也最短的對局之一。',
     },
   },
   m_2071: {
@@ -326,9 +327,9 @@ const CHAPTER_ZH: Record<string, { name: Localized; blurb: Localized }> = {
     name: { 'zh-Hans': '2010 · 孙勇征，夺冠前一年', 'zh-Hant': '2010 · 孫勇征，奪冠前一年' },
     blurb: {
       'zh-Hans':
-        '孙勇征2011年夺得全国冠军。前一年，他六十个half-move击败徐天红，引擎给他97.1分，是本研究中最干净的对局之一。',
+        '孙勇征2011年夺得全国冠军。前一年，他六十个半回合击败徐天红，引擎给他97.1分，是本研习中最干净的对局之一。',
       'zh-Hant':
-        '孫勇征2011年奪得全國冠軍。前一年，他六十個half-move擊敗徐天紅，引擎給他97.1分，是本研究中最乾淨的對局之一。',
+        '孫勇征2011年奪得全國冠軍。前一年，他六十個半回合擊敗徐天紅，引擎給他97.1分，是本研習中最乾淨的對局之一。',
     },
   },
   m_135530: {
@@ -344,9 +345,9 @@ const CHAPTER_ZH: Record<string, { name: Localized; blurb: Localized }> = {
     name: { 'zh-Hans': '2025 · 王禹博，与空缺的顶端', 'zh-Hant': '2025 · 王禹博，與空缺的頂端' },
     blurb: {
       'zh-Hans':
-        '最新一位全国冠军，本局出自他夺冠的那届比赛。他在本研究中没有与任何其他冠军交手，这不是遗漏而正是要点：本该坐在他对面的那一代棋手，正在禁赛之中。',
+        '最新一位全国冠军，本局出自他夺冠的那届比赛。他在本研习中没有与任何其他章节的棋手交手，这不是遗漏而正是要点：本该坐在他对面的那一代棋手，正在禁赛之中。',
       'zh-Hant':
-        '最新一位全國冠軍，本局出自他奪冠的那屆比賽。他在本研究中沒有與任何其他冠軍交手，這不是遺漏而正是要點：本該坐在他對面的那一代棋手，正在禁賽之中。',
+        '最新一位全國冠軍，本局出自他奪冠的那屆比賽。他在本研習中沒有與任何其他章節的棋手交手，這不是遺漏而正是要點：本該坐在他對面的那一代棋手，正在禁賽之中。',
     },
   },
 };
@@ -448,11 +449,6 @@ export function traditionalEvent(raw: string): string {
       // Sponsor and place names in the event title: 华能杯, 农行杯, 民生实业杯,
       // 吴县市杯. These are companies and places, not people, so they DO convert
       // for a Traditional reader; the name rule is about persons.
-      //
-      // 华 is the character that makes this only safe here: it is also in 胡荣华,
-      // 柳大华 and 于幼华, three champions whose names must not convert. This
-      // function is called on an event field and nothing else, which is what
-      // keeps those apart.
       .replaceAll('华', '華')
       .replaceAll('农', '農')
       .replaceAll('实', '實')
@@ -546,7 +542,7 @@ function praiseComment(hit: PositiveHit): string {
   return 'Great: the only move that punishes the error before it, and every alternative is at least a mistake worse.';
 }
 
-function chapterFor(
+export function chapterFor(
   game: HarvestedGame,
   anno: AnnotationFile,
   meta: (typeof CHAPTERS)[number],
@@ -565,26 +561,16 @@ function chapterFor(
   const redZh = game.red.trim().split(/\s+/).slice(-1)[0] ?? red;
   const blackZh = game.black.trim().split(/\s+/).slice(-1)[0] ?? black;
   const provenanceZh = (locale: keyof Localized): string => {
-    const won =
-      game.result === '1-0' ? `${redZh}胜` : game.result === '0-1' ? `${blackZh}胜` : '和棋';
-    // The EVENT is converted before it goes into the line, not by the
-    // replacements below. Those run over the whole sentence, and the sentence
-    // contains the players' names: adding 国 -> 國 to that chain to fix
-    // "全国象棋个人赛" would also rewrite 赵国荣, whose name is not supposed to
-    // convert. Narrowing the conversion to the one field that needs it is the
-    // only version that does not corrupt a name.
-    const event = locale === 'zh-Hans' ? game.event : traditionalEvent(game.event);
-    const line = `${redZh}（红）对${blackZh}（黑）· ${event} · ${game.date.slice(0, 10)} · ${won}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
-    return locale === 'zh-Hans'
-      ? line
-      : line
-          .replaceAll('胜', '勝')
-          .replaceAll('红', '紅')
-          .replaceAll('对', '對')
-          .replaceAll('复盘页所用相同', '複盤頁所用相同')
-          .replaceAll('节点', '節點')
-          .replaceAll('准确率', '準確率')
-          .replaceAll('注解', '註解');
+    const redName = personNameForLocale({ name: redZh }, locale);
+    const blackName = personNameForLocale({ name: blackZh }, locale);
+    const winner = game.result === '1-0' ? redName : game.result === '0-1' ? blackName : null;
+    const date = game.date.slice(0, 10);
+    if (locale === 'zh-Hant') {
+      const outcome = winner ? `${winner}勝` : '和棋';
+      return `${redName}（紅）對${blackName}（黑）· ${traditionalEvent(game.event)} · ${date} · ${outcome}。引擎註解為 Pikafish，每步一百萬節點，與覆盤頁所用相同。準確率：紅 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
+    }
+    const outcome = winner ? `${winner}胜` : '和棋';
+    return `${redName}（红）对${blackName}（黑）· ${game.event} · ${date} · ${outcome}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
   };
   const root: SerializedNode = {
     annotations: {
@@ -668,8 +654,16 @@ function chapterFor(
   // a person's name is written in the script that person uses, and these are
   // mainland players.
   const tagsI18n = {
-    'zh-Hans': { red: redZh, black: blackZh, event: game.event },
-    'zh-Hant': { red: redZh, black: blackZh, event: traditionalEvent(game.event) },
+    'zh-Hans': {
+      red: personNameForLocale({ name: redZh }, 'zh-Hans'),
+      black: personNameForLocale({ name: blackZh }, 'zh-Hans'),
+      event: game.event,
+    },
+    'zh-Hant': {
+      red: personNameForLocale({ name: redZh }, 'zh-Hant'),
+      black: personNameForLocale({ name: blackZh }, 'zh-Hant'),
+      event: traditionalEvent(game.event),
+    },
   };
   return {
     name: meta.name,

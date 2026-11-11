@@ -56,6 +56,7 @@ export const longestForcedMatesXiangqiArticle: Article = {
   slug: 'longest-forced-mates-xiangqi',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'The Longest Forced Mates in Xiangqi',
   cardTitle: 'The Longest Forced Mates',

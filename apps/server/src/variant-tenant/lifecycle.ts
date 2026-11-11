@@ -2,8 +2,9 @@
  * Generic lifecycle timers for tenant rooms: the pregame abort window, the
  * active-clock expiry timer, and the disconnect-forfeit window. All timers are
  * speculative and .unref()'d (leaked-timer rule), re-derived from room state on
- * every schedule call, and append their terminal event through the tenant's
- * event writer so persistence/broadcast behave exactly like a player action.
+ * every schedule call, and append through the tenant's event writer so
+ * persistence/broadcast behave exactly like a player action. The writer may
+ * replace a clock-expired request with the tenant's legal automatic move.
  *
  * Clock policy (derived per room from the persisted time control, see
  * clockPolicyKindFor) governs which timers exist at all. Days-per-move
@@ -43,7 +44,7 @@ import type {
   TenantRuntimeRoom,
   TenantSeat,
 } from './tenant.js';
-import { firstSeat, seatAfter } from './tenant.js';
+import { firstSeat, seatAfter, tenantTurnOrder } from './tenant.js';
 
 // The projection+log slice the abort/deadline derivations read. Satisfied by
 // both TenantRuntimeRoom (event-writer side) and TenantLifecycleRoom (timer
@@ -100,10 +101,12 @@ export type TenantLifecycleContext<
   now?(): number;
 };
 
-export type TenantLifecycleTenant<C extends string> = {
+export type TenantLifecycleTenant<C extends string, State = unknown> = {
   colors: readonly C[];
+  firstMover?(state: State): C;
   engine?: { isEngineClientId(clientId: string | undefined): boolean };
   persistence: { logKindPrefix: string; logLabel: string };
+  ratedPregameTimeoutForfeits?: true;
 };
 
 export function clearTenantRuntimeTimers(room: {
@@ -165,7 +168,7 @@ export function scheduleTenantLifecycleTimers<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {
@@ -193,7 +196,10 @@ export function scheduleTenantLifecycleTimers<
 }
 
 // Resume at once when every human seat is back (engine seats are always
-// present while the server is up), otherwise when the grace window runs out.
+// present while the server is up) or the human on move is, otherwise when the
+// grace window runs out. Only the side to move has a running clock after the
+// resume, so its player being back is enough (#567, lichess-like); an engine on
+// move does not count, so a PvE room still waits for its human.
 // The window opens on the first schedule after the pause, which is the first
 // seated connection to the rehydrated room; a spectator never opens it.
 function scheduleTenantResume<
@@ -203,7 +209,7 @@ function scheduleTenantResume<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {
@@ -214,8 +220,13 @@ function scheduleTenantResume<
     (color) =>
       connected[color] || (tenant.engine?.isEngineClientId(room.projection.seats[color]) ?? false),
   );
-  if (everyoneBack) {
-    resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
+  const mover = room.projection.paused?.activeColor ?? null;
+  const moverBack =
+    mover !== null &&
+    connected[mover] &&
+    !(tenant.engine?.isEngineClientId(room.projection.seats[mover]) ?? false);
+  if (everyoneBack || moverBack) {
+    void resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
     return;
   }
   if (room.resumeDeadline === null || room.resumeDeadline === undefined) {
@@ -224,31 +235,31 @@ function scheduleTenantResume<
   room.resumeTimer = setTimeout(
     () => {
       room.resumeTimer = null;
-      resumeTenantRoom(tenant, room, ctx, Date.now(), 'grace-elapsed');
+      void resumeTenantRoom(tenant, room, ctx, Date.now(), 'grace-elapsed');
     },
     Math.max(0, room.resumeDeadline - now),
   );
   room.resumeTimer.unref();
 }
 
-function resumeTenantRoom<
+export async function resumeTenantRoom<
   C extends string,
   M,
   State extends TenantGameStateLike<C>,
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
   at: number,
   reason: TenantResumeReason,
-): void {
+): Promise<void> {
   const paused = room.projection.paused;
   const event = tenantResumeEventFor<C, M, Spec>(room.projection, at, reason);
   if (!paused || !event) return;
   room.resumeDeadline = null;
-  void ctx
+  await ctx
     .appendEvent(room, event)
     .then(async (seq) => {
       if (seq < 0) return; // a concurrent resume landed first
@@ -297,7 +308,7 @@ export async function pauseTenantRoomsOnShutdown<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   rooms: Iterable<Room>,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
   at: number,
@@ -311,13 +322,19 @@ export async function pauseTenantRoomsOnShutdown<
     try {
       const seq = await ctx.appendEvent(room, event);
       if (seq < 0) continue;
+      const appended = room.events[seq];
+      if (appended) ctx.broadcastEventAppended(room, appended, seq);
       paused += 1;
       await recordRoomLifecycleAuditSafe({
         roomId: room.id,
         kind: 'pause_on_shutdown',
         atMs: at,
         eventSeq: seq,
-        payload: { mode: 'tenant', gameSpecId: room.gameSpecId, turn: event.activeColor },
+        payload: {
+          mode: 'tenant',
+          gameSpecId: room.gameSpecId,
+          turn: appended?.type === 'clock-paused' ? appended.activeColor : null,
+        },
       });
     } catch (err) {
       (ctx.logTimerFailure ?? tenantTimerFailureLogger(tenant))('pause', room.id, err as Error);
@@ -344,7 +361,7 @@ export function scheduleTenantActionTimeout<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C> & {
+  tenant: TenantLifecycleTenant<C, State> & {
     rules?: { pendingAction?(state: State): TenantPendingAction<C, M> | null };
   },
   room: Room,
@@ -387,7 +404,7 @@ export function tenantAbortPhaseFor<
   State extends TenantGameStateLike<C>,
   Spec extends string,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: TenantProjectedRoom<C, M, State, Spec>,
 ): TenantAbortPhase<C> | null {
   const { status, moveNumber, lastMove } = room.projection.state;
@@ -402,7 +419,7 @@ export function tenantAbortPhaseFor<
   for (const color of tenant.colors) {
     if (!room.projection.seats[color]) return 'unjoined';
   }
-  const first = firstSeat(tenant);
+  const first = firstSeat({ colors: tenantTurnOrder(tenant, room.projection.state) });
   return lastMove === undefined ? `${first}-1` : `${seatAfter(tenant, first)}-1`;
 }
 
@@ -418,7 +435,7 @@ export function tenantDurableDeadlineFor<
   State extends TenantGameStateLike<C>,
   Spec extends string,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: TenantProjectedRoom<C, M, State, Spec>,
 ): { seat: C; dueAt: number } | null {
   if (clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move') return null;
@@ -430,7 +447,7 @@ export function tenantDurableDeadlineFor<
   // arbitrarily and anchor at 0, flagging an unfilled correspondence room
   // immediately for the wrong player.
   if (phase !== null && phase !== 'unjoined') {
-    const first = firstSeat(tenant);
+    const first = firstSeat({ colors: tenantTurnOrder(tenant, room.projection.state) });
     const seat = phase === `${first}-1` ? first : seatAfter(tenant, first);
     return { seat, dueAt: tenantAbortAnchorAt(tenant, room, phase) + allowanceMs };
   }
@@ -445,9 +462,9 @@ export function tenantDurableDeadlineFor<
 
 // Sweeper enforcement for a hydrated days-per-move room: re-derive the
 // deadline from the room itself (never trust the row), and when actually due
-// append the same terminal event the in-memory timers would have — pregame
-// phases abort, armed clocks expire — through the tenant's writer so
-// persistence/broadcast behave exactly like a live flag.
+// append the same request the in-memory timers would have — pregame phases
+// abort, armed clocks expire — through the tenant's writer, which revalidates
+// the clock and may replace expiry with a legal move before persisting it.
 export async function sweepTenantRoomDeadline<
   C extends string,
   M,
@@ -455,7 +472,7 @@ export async function sweepTenantRoomDeadline<
   Spec extends string,
   Room extends TenantProjectedRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: {
     appendEvent(room: Room, event: TenantRoomEvent<C, M, Spec>): Promise<number>;
@@ -490,6 +507,7 @@ export async function sweepTenantRoomDeadline<
     color: activeColor,
     clock: expiredClock,
   });
+  if (seq < 0) return 'not-due';
   const event = room.events[seq];
   if (event) ctx.broadcastEventAppended(room, event, seq);
   return 'expired';
@@ -506,17 +524,36 @@ export async function sweepTenantRoomDeadline<
 // refill starts the game, and the window, afresh. The second mover's window
 // starts at the first move. Deterministic over the event log, so hydration
 // recomputes the same deadline a restart interrupted.
+// The seat that loses when the first-move window runs out, or null when the
+// window aborts the game. See `ratedPregameTimeoutForfeits` on the tenant.
+export function tenantPregameTimeoutLoser<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(tenant: TenantLifecycleTenant<C, State>, room: TenantLifecycleRoom<C, M, State, Spec>): C | null {
+  if (tenant.ratedPregameTimeoutForfeits !== true || !room.rated) return null;
+  const phase = tenantAbortPhaseFor(tenant, room);
+  if (phase === null || phase === 'unjoined') return null;
+  // The seat that owes the move, not the phase's name: the phase counts moves
+  // from the first color, and a dealt game may open with either seat.
+  const { status } = room.projection.state;
+  const seat = status.type === 'playing' ? (status as { turn?: C }).turn : undefined;
+  return seat !== undefined && room.seatsSeen?.[seat] ? seat : null;
+}
+
 export function tenantAbortAnchorAt<
   C extends string,
   M,
   State extends TenantGameStateLike<C>,
   Spec extends string,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: TenantProjectedRoom<C, M, State, Spec>,
   phase: TenantAbortPhase<C>,
 ): number {
-  const firstMoverPhase = phase === `${firstSeat(tenant)}-1`;
+  const first = firstSeat({ colors: tenantTurnOrder(tenant, room.projection.state) });
+  const firstMoverPhase = phase === `${first}-1`;
   let anchor = 0;
   // Mirrors the projection's seat bookkeeping (applyTenantEvent).
   const seats: Partial<Record<C, string>> = {};
@@ -541,7 +578,7 @@ export function tenantForfeitingSeat<
   M,
   State extends TenantGameStateLike<C>,
   Spec extends string,
->(tenant: TenantLifecycleTenant<C>, room: TenantLifecycleRoom<C, M, State, Spec>): C | null {
+>(tenant: TenantLifecycleTenant<C, State>, room: TenantLifecycleRoom<C, M, State, Spec>): C | null {
   const { status, moveNumber } = room.projection.state;
   if (status.type !== 'playing' || moveNumber < 2) return null;
   // PvE: no disconnect forfeit at all, in either direction.
@@ -579,7 +616,7 @@ function someSeatConnected<
   M,
   State extends TenantGameStateLike<C>,
   Spec extends string,
->(tenant: TenantLifecycleTenant<C>, room: TenantLifecycleRoom<C, M, State, Spec>): boolean {
+>(tenant: TenantLifecycleTenant<C, State>, room: TenantLifecycleRoom<C, M, State, Spec>): boolean {
   const connected = tenantConnectedSeats(tenant, room.clients);
   return tenant.colors.some((color) => connected[color]);
 }
@@ -605,7 +642,7 @@ function scheduleTenantAbortTimeout<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {
@@ -666,13 +703,14 @@ function scheduleTenantAbortTimeout<
   const delay = Math.max(0, room.abortDeadline - now);
   room.abortTimer = setTimeout(() => {
     if (tenantAbortPhaseFor(tenant, room) === null) return;
+    const loser = tenantPregameTimeoutLoser(tenant, room);
     void ctx
-      .appendEvent(room, {
-        type: 'game-aborted',
-        at: Date.now(),
-        roomId: room.id,
-        reason: 'pregame-timeout',
-      })
+      .appendEvent(
+        room,
+        loser === null
+          ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'pregame-timeout' }
+          : { type: 'seat-forfeited', at: Date.now(), roomId: room.id, color: loser },
+      )
       .then((seq) => {
         const event = room.events[seq];
         if (event) ctx.broadcastEventAppended(room, event, seq);
@@ -691,7 +729,7 @@ function scheduleTenantClockTimeout<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {
@@ -707,9 +745,15 @@ function scheduleTenantClockTimeout<
   room.clockTimer = setTimeout(() => {
     const currentClock = room.projection.clock;
     const currentActive = currentClock?.activeColor ?? null;
-    if (room.projection.state.status.type !== 'playing' || !currentClock || currentActive === null)
+    if (
+      room.projection.state.status.type !== 'playing' ||
+      room.projection.paused ||
+      !currentClock ||
+      currentClock !== clock ||
+      currentActive === null
+    )
       return;
-    const firedAt = Date.now();
+    const firedAt = ctx.now?.() ?? Date.now();
     if (tenantClockRemainingMs(currentClock, currentActive, firedAt) > 0) return;
     const expiredClock = expireTenantClock(currentClock, firedAt, currentActive);
     if (!expiredClock) return;
@@ -739,7 +783,7 @@ function scheduleTenantForfeitTimeout<
   Spec extends string,
   Room extends TenantLifecycleRoom<C, M, State, Spec>,
 >(
-  tenant: TenantLifecycleTenant<C>,
+  tenant: TenantLifecycleTenant<C, State>,
   room: Room,
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
 ): void {

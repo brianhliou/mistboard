@@ -43,6 +43,12 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     targets: jungleHighlightTargets(session, view),
     draggingFrom: session.draggingFrom as JungleSquare | null,
     lastMove: view.lastMove ?? null,
+    markers: ctx.moveMarks.map((mark) => ({
+      square: mark.square as JungleSquare,
+      kind: 'glyph' as const,
+      icon: mark.verdict === 'right' ? ('check' as const) : ('cross' as const),
+      className: mark.verdict === 'right' ? 'xq-marker--good' : 'xq-marker--blunder',
+    })),
   });
   installBoardDrag({
     board,

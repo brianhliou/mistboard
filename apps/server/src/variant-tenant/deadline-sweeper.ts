@@ -9,6 +9,7 @@
 
 import { sweepDeadlineWarnings } from '../correspondence-deadline-warning.js';
 import { sweepCorrespondenceTurnDigests } from '../correspondence-turn-digest.js';
+import { sweepInboxEmails } from '../inbox-email.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { variantTenantForRoomId } from './registry.js';
@@ -28,6 +29,8 @@ export type TenantDeadlineSweeperOptions = {
   // Daily "your move" digest pass (correspondence-turn-digest.ts): runs every
   // tick, sends at most once per account per digest day. Injectable for tests.
   digestTurns?: (now: Date) => Promise<void>;
+  // Body-free unread DM notices, with their own rolling daily cap.
+  emailInbox?: (now: Date) => Promise<void>;
   // Expired-challenge reclaim pass: drops lapsed correspondence challenges
   // (private seeks past their TTL). Injectable for tests; defaults to the real
   // delete. Returns the count removed.
@@ -50,6 +53,7 @@ export function startTenantDeadlineSweeper(
   const registrationFor = options.registrationFor ?? variantTenantForRoomId;
   const warnDeadlines = options.warnDeadlines ?? ((at: Date) => sweepDeadlineWarnings(at));
   const digestTurns = options.digestTurns ?? ((at: Date) => sweepCorrespondenceTurnDigests(at));
+  const emailInbox = options.emailInbox ?? ((at: Date) => sweepInboxEmails(at));
   const sweepExpiredSeeks =
     options.sweepExpiredSeeks ?? ((at: Date) => persistence.deleteExpiredCorrespondenceSeeks(at));
 
@@ -117,6 +121,14 @@ export function startTenantDeadlineSweeper(
       logger.error(
         { kind: 'turn_digest_sweep_failure', error: (err as Error).message, at: now() },
         'turn digest sweep failure',
+      );
+    }
+    try {
+      await emailInbox(new Date(now()));
+    } catch (err) {
+      logger.error(
+        { kind: 'inbox_email_sweep_failure', error: (err as Error).message, at: now() },
+        'inbox email sweep failure',
       );
     }
     // Expired-challenge reclaim: independent of deadline enforcement, guarded so

@@ -6,8 +6,12 @@
    spec and the CSS behind it is a separate, hand-maintained thing. Caught by
    opening the page, not by 3,288 green tests.
 
-   Duck Xiangqi draws the same 9x10 intersection surface as standard xiangqi
-   with no coordinate gutter, so it takes the same ratios. */
+   Duck Xiangqi draws the standard xiangqi surface through the same frame
+   (`xiangqiLiveBoardFrame`): no gutter with coordinates off, a 12-unit gutter
+   on every side with them on. So it takes the standard board's four ratios.
+   The host clips with overflow:hidden, so a ratio that disagrees with the
+   viewBox eats the outer rank. duck-xiangqi-board-coords.test.ts pins these
+   against the renderer's own viewBox. */
 .live-route--duck-xiangqi {
   --uni-board-aspect: calc(552 / 612);
 }
@@ -16,12 +20,13 @@
   --uni-board-aspect: calc(540 / 612);
 }
 
-/* NO coordinates rule here, on purpose. The standard board reserves a gutter
-   when the reader turns coordinates on, so its aspect changes; this board pins
-   `coordGutter: 0` and never draws labels, so its viewBox is identical either
-   way. The rule that used to sit here copied the standard board's 576/636 and
-   so was wrong for exactly the readers who had that preference on. The host
-   clips with overflow:hidden, so it ate their outer rank and nobody else's. */
+:root[data-board-coordinates="on"] .live-route--duck-xiangqi {
+  --uni-board-aspect: calc(576 / 636);
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"] .live-route--duck-xiangqi {
+  --uni-board-aspect: calc(564 / 636);
+}
 
 .live-route--duck-xiangqi .board-status {
   width: 100%;

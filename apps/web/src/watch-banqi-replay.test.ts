@@ -21,12 +21,14 @@ describe('Banqi watch replay', () => {
     expect(handle.activeSampleId()).toBe('bq_watch');
     expect(root.textContent).toContain('Human vs engine');
     expect(root.textContent).toContain('Red wins');
-    expect(root.textContent).toContain('by Resignation');
+    expect(root.textContent).toContain('by resignation');
     expect(root.textContent).toContain('1 plies');
     expect(root.textContent).toContain('Casual');
     expect(root.textContent).toContain('Ply 0 / 1');
     // Banqi is symmetric → a single Truth pane (not the jieqi triptych).
     expect(root.querySelectorAll('.banqi-board')).toHaveLength(1);
+    // The /watch move list names what the opening flip turned up, never the self-move "a1-a1".
+    expect(handle.moveEntries?.().map((entry) => entry.label)).toEqual(['a1(R)']);
 
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
     expect(root.textContent).toContain('Ply 1 / 1 - Red wins');
@@ -138,6 +140,36 @@ describe('Banqi watch replay', () => {
     expect(discs(root)).toEqual(['SecondMover:red', 'FirstMover:black']);
     handle.destroy();
   });
+
+  // Mistboard TV's rail: the room's material at the board's ply, read from the
+  // masked view the spectator payload already carries. The first seat sits at the
+  // bottom, so its strip holds the pieces its bound ink has captured.
+  it('fills the TV rail with the captured pools and the face-down pool at the ply', async () => {
+    const postgame = postgameFixture('bq_mat');
+    const ply1 = postgame.history?.truth?.[1];
+    if (ply1) ply1.view = { ...ply1.view, captured: [{ owner: 'black', role: 'soldier' }] };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgame)),
+    );
+    const root = document.createElement('div');
+    const handle = await mountBanqiWatchReplay(root, 'bq_mat', { autoplay: false, compact: true });
+    const slots = railSlots();
+
+    expect(handle.fillMaterial).toBeTypeOf('function');
+    handle.jumpToPly?.(0);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual([]);
+    expect(slots.pool.querySelectorAll('.hidden-pool__row')).toHaveLength(2);
+
+    handle.jumpToPly?.(1);
+    handle.fillMaterial?.(slots);
+    expect(railLabels(slots.top)).toEqual([]);
+    expect(railLabels(slots.bottom)).toEqual(['black soldier']);
+    expect(slots.bottom.classList.contains('has-captures')).toBe(true);
+    handle.destroy();
+  });
 });
 
 // A minimal one-ply fixture: red flips a1 (revealing a chariot); only the truth
@@ -224,4 +256,18 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     headers: { 'content-type': 'application/json' },
     status: init.status ?? 200,
   });
+}
+
+function railSlots(): { top: HTMLElement; bottom: HTMLElement; pool: HTMLElement } {
+  return {
+    top: document.createElement('div'),
+    bottom: document.createElement('div'),
+    pool: document.createElement('div'),
+  };
+}
+
+function railLabels(slot: HTMLElement): string[] {
+  return [...slot.querySelectorAll('.review-capture-piece')].map(
+    (piece) => piece.getAttribute('aria-label') ?? '',
+  );
 }

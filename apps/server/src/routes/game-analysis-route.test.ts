@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
+import { reportAnalysisJobProgress } from '../analysis-job-progress.js';
 import { getAnalysisJob } from '../game-analysis-jobs.js';
 import { VacuousAnalysisError } from '../game-analysis-sweep.js';
 import { createGameAnalysisRoutes, type GameAnalysisRoutesConfig } from './game-analysis-route.js';
@@ -433,4 +434,143 @@ test('route ids with a hyphen match literally (jungle-flip style)', async () => 
     true,
   );
   assert.equal(response.status, 200);
+});
+
+test('refresh discovers existing work with GET and repeat POST never duplicates it', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let computes = 0;
+  const { handler, path } = makeRoutes({
+    resolveAnalysis: async (_id, _input, compute) => {
+      if (!compute) return null;
+      computes += 1;
+      await gate;
+      return { engineId: 'e@1', depth: 12, plies: [1, 2] };
+    },
+  });
+  const url = path('refresh', 'analysis');
+  const first = captureResponse();
+  await handler(request('POST'), first, url);
+  try {
+    const refreshed = captureResponse();
+    await handler(request('GET'), refreshed, url);
+    assert.equal(refreshed.status, 202, 'a reload must discover work without a POST');
+    assert.equal(json(refreshed).jobId, json(first).jobId);
+    const repeated = captureResponse();
+    await handler(request('POST'), repeated, url);
+    assert.equal(json(repeated).jobId, json(first).jobId);
+    assert.equal(computes, 1);
+  } finally {
+    release();
+    await waitJob(String(json(first).jobId));
+  }
+});
+
+test('discovery stays public/read-only, coalesces accounts and respects finished gates', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let computes = 0;
+  let visible = true;
+  const config: Overrides = {
+    routeId: 'recovery-public',
+    loadInputs: async () => (visible ? { moves: ['a', 'b'] } : null),
+    resolveAnalysis: async (_room, _inputs, compute) => {
+      if (!compute) return null;
+      computes += 1;
+      reportAnalysisJobProgress({ completed: 1 });
+      await gate;
+      return { engineId: 'e', depth: 12, plies: [1] };
+    },
+  };
+  const first = makeRoutes(config, { user: { id: 'private-account-one' } });
+  const other = makeRoutes(config, { user: { id: 'private-account-two' }, limiterAllows: false });
+  const anonymous = makeRoutes(
+    { ...config, engineBinary: { available: () => false, label: 'unused' } },
+    { user: null },
+  );
+  const url = first.path('public-room', 'analysis');
+  const accepted = captureResponse();
+  await first.handler(request('POST'), accepted, url);
+  const id = String(json(accepted).jobId);
+  try {
+    const read = captureResponse();
+    await anonymous.handler(request('GET'), read, url);
+    assert.equal(read.status, 202);
+    assert.equal(json(read).jobId, id);
+    assert.equal(json(read).state, 'running');
+    assert.deepEqual(json(read).progress, { phase: 'analysis', completed: 1, total: 3 });
+    assert.doesNotMatch(read.body, /private-account|items|deal|secret/);
+    const repeat = captureResponse();
+    await other.handler(request('POST'), repeat, url);
+    assert.equal(json(repeat).jobId, id);
+    assert.equal(computes, 1);
+    visible = false;
+    for (const path of [url, `${url}/jobs/${id}`]) {
+      const denied = captureResponse();
+      await anonymous.handler(request('GET'), denied, path);
+      assert.equal(denied.status, 404);
+    }
+  } finally {
+    release();
+    await waitJob(id);
+  }
+});
+
+test('cached base plus pending reveals resumes separately; every completed decision read projects its viewer', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const raw = {
+    engineId: 'e',
+    depth: 12,
+    decisions: [7],
+    privateCheckpoint: 'hidden-deal-sentinel',
+  };
+  let computes = 0;
+  const { handler, path } = makeRoutes({
+    resolveAnalysis: async () => ({ engineId: 'e', depth: 12, plies: [1, 2] }),
+    resolveDecisions: async (_room, _inputs, compute) => {
+      if (!compute) return null;
+      computes += 1;
+      reportAnalysisJobProgress({ completed: 1 });
+      await gate;
+      return raw;
+    },
+    decisionsForViewer: async (value) => ({
+      engineId: value.engineId,
+      depth: value.depth,
+      decisions: [],
+    }),
+  });
+  const url = path('reveals', 'decisions');
+  const accepted = captureResponse();
+  await handler(request('POST'), accepted, url);
+  const id = String(json(accepted).jobId);
+  try {
+    await new Promise((resolve) => setImmediate(resolve));
+    const base = captureResponse();
+    await handler(request('GET'), base, path('reveals', 'analysis'));
+    assert.equal(base.status, 200);
+    const read = captureResponse();
+    await handler(request('GET'), read, url);
+    assert.equal(read.status, 202);
+    assert.equal(json(read).jobId, id);
+    assert.deepEqual(json(read).progress, { phase: 'decisions', completed: 1, total: 2 });
+    assert.doesNotMatch(read.body, /hidden-deal|privateCheckpoint/);
+    assert.equal(computes, 1);
+  } finally {
+    release();
+    await waitJob(id);
+  }
+  for (const readUrl of [url, `${url}/jobs/${id}`]) {
+    const done = captureResponse();
+    await handler(request('GET'), done, readUrl);
+    assert.doesNotMatch(done.body, /hidden-deal|privateCheckpoint/);
+    assert.deepEqual((json(done).result as Decisions).decisions, []);
+  }
 });

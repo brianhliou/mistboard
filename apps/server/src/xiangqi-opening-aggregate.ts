@@ -13,7 +13,7 @@
 // statistics with positions that cannot occur.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isStandardXiangqiLegalMove,
   standardXiangqiPositionKey,
@@ -158,17 +158,7 @@ function replayOpening(
     if (state.status.type !== 'playing') return null;
     if (!isStandardXiangqiLegalMove(state, move)) return null;
     folded.push({ positionKey: standardXiangqiPositionKey(state), move });
-    const mover = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
-    if (
-      state.status.type === 'finished' &&
-      (state.status.reason === 'repetition' || state.status.reason === 'progress-clock')
-    ) {
-      state = {
-        ...state,
-        status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' },
-      };
-    }
+    state = applyXiangqiRecordMove(state, move);
   }
   return folded;
 }

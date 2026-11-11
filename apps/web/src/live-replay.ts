@@ -300,7 +300,7 @@ function maybeSoundForReplayStep(prevIndex: number | null, nextIndex: number | n
       playSound(soundForOwnReplayMove(prevView, moveEvent));
       return;
     }
-    playSound(ownPieceCount(nextView, seat) < ownPieceCount(prevView, seat) ? 'captured' : 'move');
+    playSound(ownPieceCount(nextView, seat) < ownPieceCount(prevView, seat) ? 'capture' : 'move');
     return;
   }
 

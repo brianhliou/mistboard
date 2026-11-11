@@ -69,15 +69,130 @@ export function currentMonth(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// The trailing commit link(s) of an entry: " ([abc12345](…))" or several,
+// comma-separated, inside one pair of parentheses.
+const TRAILING_LINKS = / \((\[[0-9a-f]{7,40}\]\([^)]*\)(, )?)+\)$/;
+
+/** An entry line's text without its leading "- " and trailing commit link. */
+export function entryText(line) {
+  return line.replace(/^- /, '').replace(TRAILING_LINKS, '').trim();
+}
+
+/**
+ * The entries whose text is already a line in `source` (any month, any
+ * heading), each with the line it matched. A release retried after a failed
+ * gate, with a fix commit on top of its first changelog commit, passes every
+ * hash check (HEAD is new and unlinked) and would add the same lines again
+ * linking the fix: 16 doubled lines on the page by 2026-10-25.
+ */
+export function findExistingEntries(source, entries) {
+  const existing = new Map();
+  let current = null;
+  const flush = () => {
+    if (current !== null) existing.set(entryText(current), current);
+    current = null;
+  };
+  for (const line of source.split('\n')) {
+    if (line.startsWith('- ')) {
+      flush();
+      current = line;
+    } else if (current !== null && /^\s+\S/.test(line)) {
+      current = `${current} ${line.trim()}`;
+    } else {
+      flush();
+    }
+  }
+  flush();
+  return entries
+    .filter((entry) => existing.has(entry.text.trim()))
+    .map((entry) => ({ ...entry, line: existing.get(entry.text.trim()) }));
+}
+
+/** Throw when an entry is already in `source` or given twice. */
+export function assertEntriesAreNew(source, entries) {
+  const texts = entries.map((entry) => entry.text.trim());
+  const twice = texts.find((text, index) => texts.indexOf(text) !== index);
+  if (twice !== undefined) {
+    throw new Error(`--changelog line given twice: ${JSON.stringify(twice)}`);
+  }
+  const found = findExistingEntries(source, entries);
+  if (found.length > 0) {
+    const listed = found.map((entry) => `  ${entry.line}`).join('\n');
+    throw new Error(
+      `--changelog: CHANGELOG.md already has ${found.length === 1 ? 'this line' : 'these lines'}:\n${listed}\n` +
+        'drop them from --changelog (a retried release keeps its first changelog commit)',
+    );
+  }
+}
+
+// A changelog HEAD can only be retried with the complete set it added. Match
+// headings as well as text, and ignore argument order and generated links.
+export function assertChangelogCommitMatches(before, after, entries) {
+  assertEntriesAreNew('', entries);
+  const readEntries = (source) => {
+    const result = [];
+    let heading = null;
+    let current = null;
+    const flush = () => {
+      if (heading && current) result.push(`${heading}: ${entryText(current)}`);
+      current = null;
+    };
+    for (const line of source.split('\n')) {
+      if (line.startsWith('- ')) {
+        flush();
+        current = line;
+      } else if (current && /^\s+\S/.test(line)) {
+        current += ` ${line.trim()}`;
+      } else {
+        flush();
+        if (MONTH_LINE.test(line)) heading = null;
+        const match = HEADING_LINE.exec(line);
+        if (match) heading = match[1];
+      }
+    }
+    flush();
+    return result;
+  };
+  const subtract = (left, right) => {
+    const remaining = [...right];
+    return left.filter((value) => {
+      const index = remaining.indexOf(value);
+      if (index === -1) return true;
+      remaining.splice(index, 1);
+      return false;
+    });
+  };
+  const oldLines = readEntries(before);
+  const newLines = readEntries(after);
+  const added = subtract(newLines, oldLines);
+  const removed = subtract(oldLines, newLines);
+  const requested = entries.map(({ heading, text }) => `${heading}: ${text}`);
+  const missing = subtract(added, requested);
+  const extra = subtract(requested, added);
+  if (missing.length || extra.length || removed.length) {
+    throw new Error(
+      '--changelog: HEAD changelog commit differs from the requested lines:\n' +
+        [
+          ...missing.map((line) => `- ${line}`),
+          ...extra.map((line) => `+ ${line}`),
+          ...removed.map((line) => `removed by HEAD: ${line}`),
+        ].join('\n') +
+        '\n- committed only; + requested only; retry with exactly the committed additions',
+    );
+  }
+}
+
 /**
  * Return `source` with each entry inserted under `month` and its heading,
  * creating the month (in newest-first position) and the heading (in canonical
  * order) when missing. New lines go at the top of their section, in the order
- * given. Throws when the existing file breaks the order it relies on.
+ * given. Throws when the existing file breaks the order it relies on, or when
+ * an entry's text is already a line in the file.
  */
 export function insertChangelogEntries(source, { month, entries, shortHash }) {
   if (!/^\d{4}-\d{2}$/.test(month)) throw new Error(`bad month ${month}`);
   if (!/^[0-9a-f]{7,40}$/.test(shortHash)) throw new Error(`bad commit hash ${shortHash}`);
+  assertEntriesAreNew(source, entries);
   const lines = source.split('\n');
   const groups = new Map();
   for (const entry of entries) {

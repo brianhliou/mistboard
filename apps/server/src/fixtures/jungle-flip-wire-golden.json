@@ -1,0 +1,944 @@
+[
+  {
+    "red": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "red",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 7"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "red",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [
+          {
+            "from": "a1",
+            "to": "a1"
+          },
+          {
+            "from": "b1",
+            "to": "b1"
+          },
+          {
+            "from": "c1",
+            "to": "c1"
+          },
+          {
+            "from": "d1",
+            "to": "d1"
+          },
+          {
+            "from": "a2",
+            "to": "a2"
+          },
+          {
+            "from": "b2",
+            "to": "b2"
+          },
+          {
+            "from": "c2",
+            "to": "c2"
+          },
+          {
+            "from": "d2",
+            "to": "d2"
+          },
+          {
+            "from": "a3",
+            "to": "a3"
+          },
+          {
+            "from": "b3",
+            "to": "b3"
+          },
+          {
+            "from": "c3",
+            "to": "c3"
+          },
+          {
+            "from": "d3",
+            "to": "d3"
+          },
+          {
+            "from": "a4",
+            "to": "a4"
+          },
+          {
+            "from": "b4",
+            "to": "b4"
+          },
+          {
+            "from": "c4",
+            "to": "c4"
+          },
+          {
+            "from": "d4",
+            "to": "d4"
+          }
+        ],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip"
+    },
+    "black": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "black",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 7"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "black",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [
+          {
+            "from": "a1",
+            "to": "a1"
+          },
+          {
+            "from": "b1",
+            "to": "b1"
+          },
+          {
+            "from": "c1",
+            "to": "c1"
+          },
+          {
+            "from": "d1",
+            "to": "d1"
+          },
+          {
+            "from": "a2",
+            "to": "a2"
+          },
+          {
+            "from": "b2",
+            "to": "b2"
+          },
+          {
+            "from": "c2",
+            "to": "c2"
+          },
+          {
+            "from": "d2",
+            "to": "d2"
+          },
+          {
+            "from": "a3",
+            "to": "a3"
+          },
+          {
+            "from": "b3",
+            "to": "b3"
+          },
+          {
+            "from": "c3",
+            "to": "c3"
+          },
+          {
+            "from": "d3",
+            "to": "d3"
+          },
+          {
+            "from": "a4",
+            "to": "a4"
+          },
+          {
+            "from": "b4",
+            "to": "b4"
+          },
+          {
+            "from": "c4",
+            "to": "c4"
+          },
+          {
+            "from": "d4",
+            "to": "d4"
+          }
+        ],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip"
+    },
+    "spectator": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "spectator",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 7"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "red",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip"
+    }
+  },
+  {
+    "red": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "red",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip-level-8",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip-level-8",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 8"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "red",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [
+          {
+            "from": "a1",
+            "to": "a1"
+          },
+          {
+            "from": "b1",
+            "to": "b1"
+          },
+          {
+            "from": "c1",
+            "to": "c1"
+          },
+          {
+            "from": "d1",
+            "to": "d1"
+          },
+          {
+            "from": "a2",
+            "to": "a2"
+          },
+          {
+            "from": "b2",
+            "to": "b2"
+          },
+          {
+            "from": "c2",
+            "to": "c2"
+          },
+          {
+            "from": "d2",
+            "to": "d2"
+          },
+          {
+            "from": "a3",
+            "to": "a3"
+          },
+          {
+            "from": "b3",
+            "to": "b3"
+          },
+          {
+            "from": "c3",
+            "to": "c3"
+          },
+          {
+            "from": "d3",
+            "to": "d3"
+          },
+          {
+            "from": "a4",
+            "to": "a4"
+          },
+          {
+            "from": "b4",
+            "to": "b4"
+          },
+          {
+            "from": "c4",
+            "to": "c4"
+          },
+          {
+            "from": "d4",
+            "to": "d4"
+          }
+        ],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip-level-8"
+    },
+    "black": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "black",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip-level-8",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip-level-8",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 8"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "black",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [
+          {
+            "from": "a1",
+            "to": "a1"
+          },
+          {
+            "from": "b1",
+            "to": "b1"
+          },
+          {
+            "from": "c1",
+            "to": "c1"
+          },
+          {
+            "from": "d1",
+            "to": "d1"
+          },
+          {
+            "from": "a2",
+            "to": "a2"
+          },
+          {
+            "from": "b2",
+            "to": "b2"
+          },
+          {
+            "from": "c2",
+            "to": "c2"
+          },
+          {
+            "from": "d2",
+            "to": "d2"
+          },
+          {
+            "from": "a3",
+            "to": "a3"
+          },
+          {
+            "from": "b3",
+            "to": "b3"
+          },
+          {
+            "from": "c3",
+            "to": "c3"
+          },
+          {
+            "from": "d3",
+            "to": "d3"
+          },
+          {
+            "from": "a4",
+            "to": "a4"
+          },
+          {
+            "from": "b4",
+            "to": "b4"
+          },
+          {
+            "from": "c4",
+            "to": "c4"
+          },
+          {
+            "from": "d4",
+            "to": "d4"
+          }
+        ],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip-level-8"
+    },
+    "spectator": {
+      "type": "snapshot",
+      "roomId": "jgf_golden_net",
+      "gameSpecId": "jungle-flip",
+      "serverAt": 0,
+      "clients": 0,
+      "seat": "spectator",
+      "solo": false,
+      "abortDeadline": null,
+      "connectedSeats": {
+        "red": true,
+        "black": false
+      },
+      "events": [
+        {
+          "type": "room-created",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "gameSpecId": "jungle-flip"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 1000,
+          "roomId": "jgf_golden_net",
+          "clientId": "misty-jungle-flip-level-8",
+          "seat": "red"
+        },
+        {
+          "type": "seat-assigned",
+          "at": 2000,
+          "roomId": "jgf_golden_net",
+          "clientId": "client-black",
+          "seat": "black"
+        }
+      ],
+      "seats": {
+        "red": "misty-jungle-flip-level-8",
+        "black": "client-black"
+      },
+      "seatDisplayNames": {
+        "red": "Misty Level 8"
+      },
+      "seatProfiles": {
+        "red": {
+          "botId": "misty"
+        }
+      },
+      "state": {
+        "id": "jgf_golden_net",
+        "perspective": "red",
+        "board": {
+          "a1": {
+            "faceDown": true
+          },
+          "b1": {
+            "faceDown": true
+          },
+          "c1": {
+            "faceDown": true
+          },
+          "d1": {
+            "faceDown": true
+          },
+          "a2": {
+            "faceDown": true
+          },
+          "b2": {
+            "faceDown": true
+          },
+          "c2": {
+            "faceDown": true
+          },
+          "d2": {
+            "faceDown": true
+          },
+          "a3": {
+            "faceDown": true
+          },
+          "b3": {
+            "faceDown": true
+          },
+          "c3": {
+            "faceDown": true
+          },
+          "d3": {
+            "faceDown": true
+          },
+          "a4": {
+            "faceDown": true
+          },
+          "b4": {
+            "faceDown": true
+          },
+          "c4": {
+            "faceDown": true
+          },
+          "d4": {
+            "faceDown": true
+          }
+        },
+        "legalMoves": [],
+        "captured": [],
+        "status": {
+          "type": "playing",
+          "turn": "red"
+        },
+        "ply": 0,
+        "firstColor": null,
+        "moveNumber": 1
+      },
+      "roomMode": "pve",
+      "pveEngineId": "misty-jungle-flip-level-8"
+    }
+  }
+]

@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!worker.mjs
+!fetch-release-asset.sh
+!LICENSE
+!ENGINE-LICENSE

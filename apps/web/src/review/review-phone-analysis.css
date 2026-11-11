@@ -1,0 +1,77 @@
+/* Phone game review analysis strip (review-phone-analysis.ts, #619): the
+   request button or the advantage chart, on the page between the board and
+   the arrow bar. display: none above 600px, where the Computer analysis tab
+   holds the same element. */
+
+.review-phone-analysis {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .review-phone-analysis {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Slots into the col1 stack beside the board (review-shell.css) by DOM
+       order, like the analysis board's engine bar. */
+    order: 1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2px 12px;
+  }
+  .review-phone-analysis[hidden] {
+    display: none;
+  }
+  .review-phone-analysis__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Chart state: the underboard chart at a strip's height (36px: the board
+     needs the rest, Brian 2026-10-28: "even further reduce the analysis
+     graph"). The plot is drawn with preserveAspectRatio none, so it squeezes
+     rather than crops. */
+  .review-phone-analysis .advantage-chart__svg {
+    height: 36px;
+    /* A sideways drag scrubs (the slot's pointer handlers); a vertical one
+       stays the browser's. */
+    touch-action: pan-y;
+  }
+  /* At 36px the phase names and the luck legend would cover the curve; the
+     Computer analysis tab above 600px keeps both. */
+  .review-phone-analysis .advantage-chart__phase-label,
+  .review-phone-analysis .advantage-chart__legend {
+    display: none;
+  }
+  .review-phone-analysis__eval {
+    flex: none;
+    min-width: 46px;
+    height: 24px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    background: var(--site-text);
+    color: var(--site-panel, var(--site-surface));
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 24px;
+    text-align: center;
+  }
+  .review-phone-analysis__eval[hidden],
+  .review-phone-analysis[data-kind="request"] .review-phone-analysis__eval {
+    display: none;
+  }
+
+  /* Request state: the same control as the tab, full width, 40px tall: the
+     strip's height in either state. */
+  .review-phone-analysis[data-kind="request"] {
+    padding-block: 0;
+  }
+  .review-phone-analysis .xiangqi-review__analyse {
+    width: 100%;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 12px;
+  }
+}

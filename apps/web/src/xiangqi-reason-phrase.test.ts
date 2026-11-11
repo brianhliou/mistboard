@@ -22,7 +22,7 @@ describe('xiangqi-family live end reasons', () => {
     ]) {
       expect(xiangqiReasonPhrase(reason), reason).not.toBe('result.gameRules');
     }
-    expect(xiangqiReasonPhrase('progress-clock')).toBe('result.sixtyPliesNoCapture');
+    expect(xiangqiReasonPhrase('progress-clock')).toBe('result.noCaptureLimit');
   });
 
   it('Fog Xiangqi names every reason its kernel emits', () => {

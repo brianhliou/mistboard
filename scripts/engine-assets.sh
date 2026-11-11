@@ -25,11 +25,13 @@
 #   scripts/engine-assets.sh verify <bindir> <inidir> uci/perft/net gates against <bindir>
 #   scripts/engine-assets.sh package <bindir> <out>   tarball + SHA256SUMS + MANIFEST
 #   scripts/engine-assets.sh fetch <bindir>           download + checksum + extract the release
+#   scripts/engine-assets.sh build-rapfi <bin> [source] [bundle]  isolated Rapfi build (offline with local inputs)
+#   scripts/engine-assets.sh verify-rapfi <bin>        checksum native inputs, load net and search
 set -eu
 
 # Bump when the make flags, the packaged file set or the layout change; the
 # pins and patches are hashed on their own.
-RECIPE_VERSION=1
+RECIPE_VERSION=4
 # The ISA every server engine targets. Do not swap in avx2 without confirming
 # the container's CPU flags (stockfish.ref).
 ARCH=x86-64-sse41-popcnt
@@ -41,22 +43,30 @@ ABJ_ARCH=x86-64-avx2
 # with AVX2/FMA (its net is its strength, like AB-JChess), linked static, and
 # without libzip, which only selfplay uses (katago-jungle.ref).
 KATA_CMAKE_FLAGS="-DUSE_BACKEND=EIGEN -DUSE_AVX2=1 -DCMAKE_BUILD_TYPE=Release -DNO_GIT_REVISION=1 -DZLIB_USE_STATIC_LIBS=ON -DLIBZIP_LIBRARY=OFF -DCMAKE_EXE_LINKER_FLAGS=-static"
+# jqe is CMake too: -march=haswell (the build its 100-game match ran; prod web's
+# EPYC has avx2/bmi2) instead of -march=native, linked static (jqe.ref).
+JQE_CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release -DJQE_NATIVE=OFF -DCMAKE_CXX_FLAGS=-march=haswell -DCMAKE_EXE_LINKER_FLAGS=-static"
+# jqe's net, engine/nets/it014.jqn at the jqe.ref commit. MIT like the code, so
+# unlike AB-JChess's and KataGo's it is packaged here, pinned by hash.
+JQE_NET=it014.jqn
+JQE_NET_SHA256=f90bd44e8ee244405eb08eb4f784e3f156900f0691f651b5124d50032f8ba160
+# Native Rapfi, not the WASM build: keep the Gomocup command modules and enable
+# the haswell ISA explicitly (CMake defaults them off). Prod EPYC supports
+# AVX2/BMI2 as above; AVX512/VNNI stay off. Data pins/extraction: rapfi-assets.mjs.
+RAPFI_CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release -DUSE_SSE=ON -DUSE_AVX2=ON -DUSE_BMI2=ON -DUSE_AVX512=OFF -DUSE_VNNI=OFF -DNO_COMMAND_MODULES=OFF -DCMAKE_CXX_FLAGS=-march=haswell -DCMAKE_EXE_LINKER_FLAGS=-static"
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
-# Pikafish's `make build` downloads official-pikafish/Networks `master-net`, a
-# release asset upstream replaces in place: on 2026-10-01 it became a net the
-# pinned binary refuses ("Network evaluation parameters compatible with the
-# engine must be available"), the 10-02 rebuild packaged it, and Level 8
-# resigned every game at move 1. The net is pinned by hash like everything
-# else, from our own copy of the one that pairs with pikafish.ref. A Pikafish
-# bump picks its matching net and uploads it the same way.
-PIKAFISH_NET_SHA256=7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e
-PIKAFISH_NET_URL=https://github.com/$RELEASE_REPO/releases/download/pikafish-net-7d13d735/pikafish.nnue
+# The patched Pikafish reads the same CC0 net as fetch-fsf-xiangqi-net.sh.
+# Fetch from its public source, never rehost it in our engine release. The
+# patch disables upstream's mutable master-net download during compilation.
+PIKAFISH_NET=xiangqi-c07e94a5c7cb.nnue
+PIKAFISH_NET_URL=https://raw.githubusercontent.com/fairy-stockfish/Fairy-Stockfish-NNUE/0f4dce21530775b1dc862b7c84aa707548183097/$PIKAFISH_NET
+PIKAFISH_NET_SHA256=c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref"
-BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref pikafish-cc0-net.patch ab-jchess.ref katago-jungle.ref jqe.ref rapfi.ref scripts/rapfi-assets.mjs"
+BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle jqe rapfi"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -78,7 +88,12 @@ recipe_hash() {
     echo "arch=$ARCH"
     echo "abj-arch=$ABJ_ARCH"
     echo "kata-cmake=$KATA_CMAKE_FLAGS"
+    echo "pikafish-net-file=$PIKAFISH_NET"
+    echo "pikafish-net-url=$PIKAFISH_NET_URL"
     echo "pikafish-net=$PIKAFISH_NET_SHA256"
+    echo "jqe-cmake=$JQE_CMAKE_FLAGS"
+    echo "jqe-net=$JQE_NET_SHA256"
+    echo "rapfi-cmake=$RAPFI_CMAKE_FLAGS"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -105,6 +120,42 @@ sf_make() {
   shift
   make -C "$dir" -j"$JOBS" ARCH="$ARCH" EXTRALDFLAGS=-static "$@" build >/dev/null
 }
+
+# Local source builds use the exact pinned Git tree, ignoring any working-tree
+# modifications. Never configure/build inside the shared source checkout.
+# The production archive needs only Rapfi/, not its Networks submodule: native
+# files come from the separately checksummed web bundle, extracted below.
+build_rapfi() (
+  bin=$1
+  source=${2:-}
+  bundle=${3:-}
+  mkdir -p "$bin"
+  bin=$(cd "$bin" && pwd)
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT HUP INT TERM
+  ref=$(pin rapfi.ref)
+  log "rapfi @ $ref (dhbloo/rapfi, haswell, static)"
+  mkdir -p "$work/source"
+  if [ -n "$source" ]; then
+    got=$(cd "$source" && git rev-parse HEAD)
+    [ "$got" = "$ref" ] || die "Rapfi source is $got, not pinned $ref"
+    (cd "$source" && git archive --output="$work/source.tar" "$ref" Rapfi)
+    tar -xf "$work/source.tar" -C "$work/source"
+  else
+    curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$work/rapfi.tar.gz" "https://github.com/dhbloo/rapfi/archive/$ref.tar.gz"
+    tar -xzf "$work/rapfi.tar.gz" -C "$work/source" --strip-components=1
+  fi
+  # shellcheck disable=SC2086
+  cmake -S "$work/source/Rapfi" -B "$work/build" $RAPFI_CMAKE_FLAGS >/dev/null
+  cmake --build "$work/build" -j"$JOBS" --target rapfi >/dev/null
+  strip -o "$bin/rapfi" "$work/build/pbrain-rapfi"
+  chmod +x "$bin/rapfi"
+  if [ -n "$bundle" ]; then
+    node "$ROOT/scripts/rapfi-assets.mjs" stage "$bin" "$bundle"
+  else
+    node "$ROOT/scripts/rapfi-assets.mjs" stage "$bin"
+  fi
+)
 
 build() {
   bin=$1
@@ -145,22 +196,24 @@ build() {
   cp "$work/pikafish-jieqi/src/PikaJieQi" "$bin/pikafish-jieqi"
 
   ref=$(pin pikafish.ref)
-  log "pikafish @ $ref"
+  log "pikafish @ $ref + pikafish-cc0-net.patch"
   fetch_source "$work/pikafish" https://github.com/official-pikafish/Pikafish.git "$ref"
-  # Placed before make, so its net.sh finds it and skips master-net.
-  curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$work/pikafish/src/pikafish.nnue" "$PIKAFISH_NET_URL"
-  net_pinned "$work/pikafish/src/pikafish.nnue"
+  git -C "$work/pikafish" apply "$ROOT/pikafish-cc0-net.patch" || die "pikafish-cc0-net.patch does not apply to $ref"
   sf_make "$work/pikafish/src"
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
-  cp "$work/pikafish/src/pikafish.nnue" "$bin/pikafish.nnue"
+  # Upstream ships its GPL text as Copying.txt; the tarball carries it as COPYING.
+  cp "$work/pikafish/Copying.txt" "$bin/COPYING"
+  pikafish_net "$bin"
 
   # The binary only: its net is fetched from the author's release by
   # railpack.json and never packaged here (ab-jchess.ref says why).
   ref=$(pin ab-jchess.ref)
-  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
+  # From AB-JChess-20261031 the source builds with its own per-ISA script (bash,
+  # g++, static, LTO), not a Stockfish makefile; it writes out/abjchess-<tier>.
+  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, g++ build_tier.sh)"
   fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
-  make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
-  cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
+  (cd "$work/ab-jchess/abjchess" && CXX=g++ JOBS="$JOBS" bash src/isa/build_tier.sh "$ABJ_ARCH" "$work/ab-jchess/out") >/dev/null
+  strip -o "$bin/ab-jchess" "$work/ab-jchess/out/abjchess-$ABJ_ARCH"
 
   # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
   # from Kouza's Dandelion release by railpack.json and never packaged here
@@ -173,11 +226,28 @@ build() {
   cmake --build "$work/katago-jungle/build" -j"$JOBS" >/dev/null
   strip -o "$bin/katago-jungle" "$work/katago-jungle/build/katago"
 
+  # The binary and its net (MIT, packaged; jqe.ref). x86-64 only.
+  ref=$(pin jqe.ref)
+  log "jqe @ $ref (devinokeefe/jieqi, haswell)"
+  fetch_source "$work/jqe" https://github.com/devinokeefe/jieqi.git "$ref"
+  # shellcheck disable=SC2086
+  cmake -S "$work/jqe/engine" -B "$work/jqe/engine/build" $JQE_CMAKE_FLAGS >/dev/null
+  cmake --build "$work/jqe/engine/build" -j"$JOBS" --target jqe >/dev/null
+  strip -o "$bin/jqe" "$work/jqe/engine/build/jqe"
+  cp "$work/jqe/engine/nets/$JQE_NET" "$bin/$JQE_NET"
+  jqe_net_pinned "$bin/$JQE_NET"
+
+  build_rapfi "$bin"
+
   chmod +x "$bin"/*
   rm -rf "$work"
   for name in $BINARIES; do
     log "$name: $(ldd "$bin/$name" 2>&1 | head -1 | tr -s ' ')"
   done
+}
+
+rapfi_search_ok() {
+  node "$ROOT/scripts/rapfi-assets.mjs" search "$1"
 }
 
 # uci_ok <binary> <label> <pattern>: the binary answers `uci` with <pattern>.
@@ -188,7 +258,42 @@ uci_ok() {
 # net_pinned <net>: the file is the net PIKAFISH_NET_SHA256 names.
 net_pinned() {
   got=$(sha256 "$1" | cut -c1-64)
-  [ "$got" = "$PIKAFISH_NET_SHA256" ] || die "pikafish.nnue is $got, not the pinned $PIKAFISH_NET_SHA256"
+  [ "$got" = "$PIKAFISH_NET_SHA256" ] || die "$PIKAFISH_NET is $got, not the pinned $PIKAFISH_NET_SHA256"
+}
+
+# The net is omitted from the public archive, so image verification fetches it
+# too. Reuse an existing file only after checking its pinned content.
+pikafish_net() {
+  bin=$1
+  if [ ! -f "$bin/$PIKAFISH_NET" ]; then
+    curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$bin/$PIKAFISH_NET" "$PIKAFISH_NET_URL" || die "download failed: $PIKAFISH_NET_URL"
+  fi
+  net_pinned "$bin/$PIKAFISH_NET"
+}
+
+# jqe_net_pinned <net>: the file is the net JQE_NET_SHA256 names.
+jqe_net_pinned() {
+  got=$(sha256 "$1" | cut -c1-64)
+  [ "$got" = "$JQE_NET_SHA256" ] || die "$JQE_NET is $got, not the pinned $JQE_NET_SHA256"
+}
+
+# jqe_search_ok <binary> <net>: jqe loads its net and searches the jieqi deal
+# position. Without a net it falls back to a classical eval and still answers,
+# so the gate wants its own "EvalFile loaded" line as well as a bestmove.
+jqe_search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name EvalFile value %s\nisready\nposition fen xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w A2B2N2R2C2P5a2b2n2r2c2p5 0 1\ngo nodes 20000\n' "$2"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out" 2>&1 || true
+  best=$(grep '^bestmove' "$out" | tail -1 || true)
+  loaded=$(grep 'EvalFile loaded' "$out" | head -1 || true)
+  err=$(grep 'EvalFile load failed' "$out" | head -1 || true)
+  rm -f "$out"
+  [ -n "$loaded" ] || die "jqe-search: the net did not load: ${err:-no EvalFile line}"
+  [ -n "$best" ] && log "jqe-search ok (net loads, $best)" || die "jqe-search: no bestmove with its net"
 }
 
 # net_search_ok <binary> <net> <label>: the binary loads <net> and searches.
@@ -203,9 +308,27 @@ net_search_ok() {
     echo quit
   } | "$1" > "$out" 2>&1 || true
   best=$(grep '^bestmove' "$out" | tail -1 || true)
+  loaded=$(grep -F 'NNUE evaluation using' "$out" | grep -F "$2" | head -1 || true)
   err=$(grep 'ERROR' "$out" | head -1 || true)
   rm -f "$out"
+  [ -n "$loaded" ] || die "$3: no NNUE info line for $2: ${err:-no output}"
   [ -n "$best" ] && log "$3 ok (net loads, $best)" || die "$3: no bestmove with its net: ${err:-no output}"
+}
+
+# Run the fixed single-thread bench with the default CC0 filename beside the
+# binary. Keep the expected signature even if a Linux rebuild disagrees: the
+# measured count in this error is evidence to investigate, not a new baseline.
+pikafish_bench_ok() {
+  out=$(mktemp)
+  (cd "$1" && ./pikafish bench 16 1 13 default depth) > "$out" 2>&1 || {
+    tail -5 "$out" >&2
+    rm -f "$out"
+    die "pikafish: bench failed"
+  }
+  nodes=$(sed -n 's/^Nodes searched[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)[[:space:]]*$/\1/p' "$out")
+  rm -f "$out"
+  [ "$nodes" = 1650882 ] || die "pikafish: bench 16 1 13 default depth = ${nodes:-missing} nodes, expected 1650882 (record this count; do not change the expectation)"
+  log "pikafish-bench ok (1650882 nodes)"
 }
 
 # perft_ok <binary> <ini> <variant> <position> <nodes> <label>: FSF agrees with
@@ -239,7 +362,7 @@ search_ok() {
 }
 
 verify() {
-  bin=$1
+  bin=$(cd "$1" && pwd)
   ini=$2
   for name in $BINARIES; do
     test -x "$bin/$name" || die "$bin/$name is missing or not executable"
@@ -258,16 +381,21 @@ verify() {
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi 'fen 3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1' 4 atomic-xiangqi-blast
   uci_ok "$bin/stockfish" stockfish 'id name Stockfish'
   uci_ok "$bin/pikafish-jieqi" pikafish-jieqi uciok
-  test -s "$bin/pikafish.nnue" || die "pikafish.nnue is missing or empty"
-  net_pinned "$bin/pikafish.nnue"
+  pikafish_net "$bin"
   uci_ok "$bin/pikafish" pikafish uciok
-  net_search_ok "$bin/pikafish" "$bin/pikafish.nnue" pikafish-search
+  net_search_ok "$bin/pikafish" "$bin/$PIKAFISH_NET" pikafish-search
+  pikafish_bench_ok "$bin"
   uci_ok "$bin/ab-jchess" ab-jchess 'id name AB JChess'
   # GTP, not UCI, and nothing to search without its net (the railpack net step
   # loads it and plays a move); here the build must be the Eigen one with AVX2.
   "$bin/katago-jungle" version | grep -q 'Using Eigen(CPU) backend' &&
     "$bin/katago-jungle" version | grep -q 'Compiled with AVX2' &&
     log "katago-jungle ok" || die "katago-jungle: not an Eigen AVX2 build of KataGo"
+  uci_ok "$bin/jqe" jqe 'id name jqe'
+  test -s "$bin/$JQE_NET" || die "$JQE_NET is missing or empty"
+  jqe_net_pinned "$bin/$JQE_NET"
+  jqe_search_ok "$bin/jqe" "$bin/$JQE_NET"
+  rapfi_search_ok "$bin"
   log "verified $(tag) in $bin"
 }
 
@@ -275,12 +403,20 @@ package() {
   bin=$1
   out=$2
   mkdir -p "$out"
+  node "$ROOT/scripts/rapfi-assets.mjs" check "$bin"
+  rapfi_files=$(node "$ROOT/scripts/rapfi-assets.mjs" files)
   {
     echo "tag=$(tag)"
     echo "arch=$ARCH"
     echo "abj-arch=$ABJ_ARCH"
     echo "recipe-version=$RECIPE_VERSION"
+    echo "pikafish-net-file=$PIKAFISH_NET"
+    echo "pikafish-net-url=$PIKAFISH_NET_URL"
     echo "pikafish-net=sha256:$PIKAFISH_NET_SHA256"
+    echo "jqe-cmake=$JQE_CMAKE_FLAGS"
+    echo "jqe-net=sha256:$JQE_NET_SHA256"
+    echo "rapfi-cmake=$RAPFI_CMAKE_FLAGS"
+    node "$ROOT/scripts/rapfi-assets.mjs" manifest
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -289,7 +425,9 @@ package() {
     done
   } > "$out/MANIFEST"
   # shellcheck disable=SC2086
-  tar -C "$bin" -czf "$out/$ASSET" $BINARIES pikafish.nnue
+  tar -C "$bin" -czf "$out/$ASSET" $BINARIES "$JQE_NET" $rapfi_files COPYING -C "$ROOT" pikafish-cc0-net.patch
+  # Ship the source pin and provenance beside the licence texts.
+  cp "$ROOT/rapfi.ref" "$out/rapfi.ref"
   (cd "$out" && sha256 "$ASSET" > SHA256SUMS)
   log "packaged $out/$ASSET ($(du -h "$out/$ASSET" | cut -f1))"
 }
@@ -315,6 +453,8 @@ case "${1:-}" in
   tag) tag ;;
   hash) recipe_hash ;;
   build) build "${2:?bindir}" ;;
+  build-rapfi) build_rapfi "${2:?bindir}" "${3:-}" "${4:-}" ;;
+  verify-rapfi) rapfi_search_ok "${2:?bindir}" ;;
   verify) verify "${2:?bindir}" "${3:?inidir}" ;;
   package) package "${2:?bindir}" "${3:?outdir}" ;;
   fetch) fetch "${2:?bindir}" ;;

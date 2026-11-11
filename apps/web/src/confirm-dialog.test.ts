@@ -55,6 +55,24 @@ describe('openConfirmDialog', () => {
     expect(document.querySelector('dialog[data-confirm-dialog]')).toBeNull();
   });
 
+  it('reports dismissal so a pending board preview can be cleared', () => {
+    let cancelled = 0;
+    const dialog = openConfirmDialog({
+      title: 'Play move?',
+      body: 'The move ends the game.',
+      confirmLabel: 'Play move',
+      onConfirm: () => {
+        throw new Error('dismissal must not confirm');
+      },
+      onCancel: () => {
+        cancelled += 1;
+      },
+    });
+    dialog.close('cancel');
+    expect(cancelled).toBe(1);
+    expect(document.querySelector('dialog[data-confirm-dialog]')).toBeNull();
+  });
+
   // Opening a second dialog drops the first. The replaced dialog must not fire
   // its own onConfirm on the way out, or dismissing one prompt would perform the
   // action another prompt was asking about.

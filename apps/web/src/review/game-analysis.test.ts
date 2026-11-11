@@ -1,4 +1,6 @@
+import { accuracyPercent } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { decisionView as banqiDecisionView } from './banqi-decisions.js';
 import {
   computeGameAnalysis,
   judgmentGlyph,
@@ -16,6 +18,45 @@ const evals = (cps: (number | null)[]) => ({
 });
 
 describe('computeGameAnalysis', () => {
+  it.each(['cp', 'mate'] as const)(
+    'uses the first mover POV for aggregate accuracy with %s evaluations',
+    (kind) => {
+      const response = {
+        engineId: 'rapfi-gomoku',
+        depth: 9,
+        plies: [-1, 1, -1, -1].map((sign, ply) => ({
+          ply,
+          cp: kind === 'cp' ? sign * 600 : null,
+          mate: kind === 'mate' ? sign * 6 : null,
+          best: null,
+        })),
+      };
+      const analysis = computeGameAnalysis(response, { firstMover: 'black' });
+      expect(analysis.moves.map((move) => move.judgment)).toEqual(['blunder', 'blunder', null]);
+      expect(analysis.red.blunders).toBe(1);
+      expect(analysis.black.blunders).toBe(1);
+      expect(analysis.red.accuracy).toBeCloseTo(analysis.moves[1]!.accuracy);
+      expect(analysis.black.accuracy).toBeLessThan(60);
+      // A mirrored first-seat opening must produce the same grades and aggregate scores.
+      const mirrored = computeGameAnalysis({
+        ...response,
+        plies: response.plies.map((point) => ({
+          ...point,
+          cp: point.cp === null ? null : -point.cp,
+          mate: point.mate === null ? null : -point.mate,
+        })),
+      });
+      expect(analysis.red).toEqual(mirrored.black);
+      expect(analysis.black).toEqual(mirrored.red);
+      const regraded = regradeBestPlayed(analysis, new Set([3]));
+      expect(regraded.red.accuracy).toBeCloseTo(analysis.red.accuracy);
+      expect(regraded.black.accuracy).toBeCloseTo(analysis.black.accuracy);
+      const merged = mergeDecisionAnalysis(analysis, new Map());
+      expect(merged.red.accuracy).toBeCloseTo(analysis.red.accuracy);
+      expect(merged.black.accuracy).toBeCloseTo(analysis.black.accuracy);
+    },
+  );
+
   it('assigns movers by ply parity (Red on odd plies)', () => {
     const a = computeGameAnalysis(evals([0, 20, 15, 30]));
     expect(a.moves.map((m) => m.mover)).toEqual(['red', 'black', 'red']);
@@ -121,6 +162,52 @@ describe('engine-specific win curve', () => {
     );
     expect(merged.red.accuracy).toBeLessThan(pikaMerged.red.accuracy);
   });
+
+  it('grades Misty moves and merged flip decisions on the same expected-score scale', () => {
+    const base = computeGameAnalysis({
+      ...evals([0, -120, -120, -120]),
+      engineId: 'misty-three-kingdoms-banqi-analysis@1',
+    });
+    // A 6-point expected-score loss crosses only the 5-point inaccuracy bar;
+    // the chess curve sees a 10.9-point loss and calls this a mistake.
+    const expectedAccuracy = accuracyPercent(50, 44);
+    expect(base.moves[0]?.judgment).toBe('inaccuracy');
+    expect(base.moves[0]?.winLoss).toBeCloseTo(6);
+    expect(base.moves[0]?.accuracy).toBeCloseTo(expectedAccuracy);
+    expect(base.red.inaccuracies).toBe(1);
+    expect(base.red.mistakes).toBe(0);
+    expect(regradeBestPlayed(base, new Set([3])).moves[0]?.judgment).toBe('inaccuracy');
+    // An empty overlay must retain ordinary move accuracy (the merge's second
+    // score-to-win% call site), rather than quietly restoring the chess curve.
+    expect(mergeDecisionAnalysis(base, new Map()).red.accuracy).toBeCloseTo(base.red.accuracy);
+
+    const flip = banqiDecisionView({
+      ply: 3,
+      mover: 'red',
+      bestWin: 50,
+      playedWin: 44,
+      realizedWin: 20,
+      playedRank: 2,
+    });
+    expect(flip.judgment).toBe(base.moves[0]?.judgment);
+    expect(flip.accuracy).toBeCloseTo(expectedAccuracy);
+    const merged = mergeDecisionAnalysis(base, new Map([[3, flip]]));
+    expect(merged.red.inaccuracies).toBe(2);
+    expect(merged.red.mistakes).toBe(0);
+    expect(merged.red.accuracy).toBeCloseTo(expectedAccuracy);
+  });
+
+  it('uses the mover POV for Misty losses when Black moves first', () => {
+    const base = computeGameAnalysis(
+      { ...evals([0, 120]), engineId: 'misty-three-kingdoms-banqi-analysis@1' },
+      { firstMover: 'black' },
+    );
+    expect(base.moves[0]?.mover).toBe('black');
+    expect(base.moves[0]?.judgment).toBe('inaccuracy');
+    expect(base.moves[0]?.winLoss).toBeCloseTo(6);
+    expect(base.black.accuracy).toBeCloseTo(accuracyPercent(50, 44));
+    expect(mergeDecisionAnalysis(base, new Map()).black.accuracy).toBeCloseTo(base.black.accuracy);
+  });
 });
 
 describe('mergeDecisionAnalysis', () => {
@@ -186,5 +273,26 @@ describe('withPraise', () => {
     expect(praiseGlyph('brilliant')).toEqual({ suffix: '!!', suffixClass: 'brilliant' });
     expect(praiseGlyph('great')).toEqual({ suffix: '!', suffixClass: 'great' });
     expect(praiseGlyph(undefined)).toBeNull();
+  });
+});
+
+describe('CC0 Xiangqi @6 review percentages', () => {
+  it('uses the stored curve for move grades, aggregate accuracy, regrading and decision merge', () => {
+    const old = computeGameAnalysis({
+      ...evals([0, -90, -90, -90]),
+      engineId: 'pikafish-xiangqi-analysis@5',
+    });
+    const fresh = computeGameAnalysis({
+      ...evals([0, -90, -90, -90]),
+      engineId: 'pikafish-xiangqi-analysis@6',
+    });
+    expect(old.moves[0]?.judgment).toBe('inaccuracy');
+    expect(fresh.moves[0]?.judgment).toBe('mistake');
+    expect(fresh.moves[0]?.winLoss).toBeCloseTo(50 - 100 / (1 + Math.exp(0.00465696 * 90)), 8);
+    expect(fresh.red.accuracy).toBeLessThan(old.red.accuracy);
+    const regraded = regradeBestPlayed(fresh, new Set([3]));
+    expect(regraded.moves[0]?.judgment).toBe('mistake');
+    expect(regraded.red.accuracy).toBeCloseTo(fresh.red.accuracy);
+    expect(mergeDecisionAnalysis(fresh, new Map()).red.accuracy).toBeCloseTo(fresh.red.accuracy);
   });
 });

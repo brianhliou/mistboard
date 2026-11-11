@@ -18,7 +18,11 @@ Source lives in the private **misty-banqi** repo (`~/projects/misty-banqi`), cra
 `banqi-wasm` (a cdylib that `#[path]`-includes the shared engine core). It exposes both
 one-shot `analyze(fen, nodes, multipv)` and `AnalysisSession.step(nodes)`. Continuous
 analysis retains the TT, killer/history ordering, and completed iterative-deepening state
-between bounded worker slices. To rebuild after an engine change:
+between bounded worker slices. Since banqi-wasm 0.2.5 (2026-10-17) both take the game's
+no-progress draw limit: `analyze_with_limit(fen, nodes, multipv, limit)` and
+`AnalysisSession.set_no_progress_limit(limit)`; the plain calls keep the engine's 40. The
+worker uses them when a request carries `noProgressLimit` (60, or 40 for a game created
+before 2026-10-17). To rebuild after an engine change:
 
 ```sh
 cd ~/projects/misty-banqi

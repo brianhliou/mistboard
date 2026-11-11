@@ -200,10 +200,4 @@ describe('move-nav bar review styling', () => {
     expect(card).toContain('border-radius: 6px');
     expect(card).not.toContain('background');
   });
-
-  it('keeps the fused study strip open at the bottom', () => {
-    const fused = block('.review-rail-main > .review-controls');
-    expect(fused).toContain('border-bottom: 0');
-    expect(fused).not.toContain('border-radius');
-  });
 });

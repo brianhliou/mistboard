@@ -10,28 +10,32 @@
 //      moves — there is no separate from===to flip as in banqi). So a "chance" ply is a move
 //      whose source piece was face-down beforehand; jieqiChancePlies() detects those by replay.
 //
-// The backend is a UCI binary (no in-process fallback): AB-JChess when its binary and net
-// resolve (prod since 2026-10, #482), else PikaJieQi (Pikafish jieqi_old), chosen per compute
-// by jieqiAnalysisEngine(). Each engine has its own profile below (budgets, cache ids, win
-// curve), and a stored analysis keeps the id of the engine that computed it: the client draws
-// and grades it on that engine's curve (winPercentK), and a read falls back to whichever
-// engine's row exists, so games analysed before the switch keep their PikaJieQi analysis. A
+// Decided 2026-11-09: AB-JChess grades reviews when its binary and net resolve (prod),
+// because it is the strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi
+// is the fallback when they do not (dev). Both keep #1000's reveal budget split and
+// kernel rules alignment; AB-JChess uses its measured budgets below (~1.4M nps).
+// Each stored analysis keeps its engine id and win curve; reads also accept the earlier
+// AB-JChess and PikaJieQi rows without recomputing them. A
 // missing binary fails closed at the route (503), and an all-null sweep throws
 // VacuousAnalysisError (never cached) — so a broken or score-less engine can't cache a flat,
 // mistake-free game.
 
 import {
-  applyJieqiMove,
   createInitialJieqiState,
+  getJieqiLegalMoves,
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
+  type JieqiInitialStateOptions,
   type JieqiMove,
   type JieqiPieceRole,
+  parseJieqiFen,
+  redPovScore,
   WIN_PCT_K,
   winPercent,
   winPercentK,
 } from '@mistboard/game';
+import { jieqiLuckEnabled } from './feature-flags.js';
 import {
   type AnalysisProgressStore,
   liveAnalysisProgressStore,
@@ -50,6 +54,7 @@ import {
   JIEQI_ANALYSIS_ENGINE_VERSION,
   type JieqiAnalysisEngine,
   type JieqiAnalysisEvaluators,
+  type JieqiAnalysisRequest,
   type JieqiEvalBudget,
   jieqiAnalysisEngine,
   PIKAFISH_JIEQI_ENGINE_REF,
@@ -60,32 +65,29 @@ import {
   jieqiStateToPikafishFen,
   pikafishUciToJieqiMove,
 } from './jieqi-fen.js';
+import { jieqiTenant } from './jieqi-tenant.js';
 import * as persistence from './persistence.js';
 import type { UciMultiPvLine } from './uci-engine-harness.js';
 
-// Search budget: fixed NODES, not fixed depth (see JieqiEvalBudget in jieqi-engine.ts for the
-// full argument and the measurements). The short version: a fixed depth buys wildly different
-// amounts of search per position, because extensions spend the budget for you. Measured over
-// one 64-ply game at the old depth 16, per-ply cost ran 94k -> 7.8M nodes (median 173k, mean
-// 845k). That made neighbouring plies incomparable and produced a visible false cliff: the
-// position one ply BEFORE a discovered check got 94k nodes and missed it (+160 for the side
-// about to be checked), while the position AFTER it was already in check, so check extensions
-// pushed the same nominal depth 16 past the tactic (-104). The eval graph then blamed a quiet
-// soldier step for a 264cp swing the mover could not have caused, and let the real blunder —
-// the move before it — through ungraded.
-//
-// 500k nodes was picked by measurement, not feel. It is enough to resolve that position
-// (it finds the tactic at effective depth 23, -504), and it is CHEAPER than depth 16 was:
-// 29.3M nodes / 10.2s for the whole game against 54.1M / 18.6s, because it caps the tail
-// instead of the median. Capping the tail is what the 2026-08-28 depth 20 -> 16 cut was
-// actually trying to buy (a 146-ply game costing ~10min of sweep); a node budget buys it
-// directly, without paying for it in the positions that needed the search.
-const JIEQI_ANALYSIS_NODES = 500_000;
+// Includes the tenant's legacy perpetual-check adjudication, as live/replay does.
+const applyJieqiMove = jieqiTenant.rules.applyMove;
 
-// Backstop only, on both arms of the budget. At 500k nodes and the 2-3M nps this binary runs
-// at, a ply is ~200ms, so this cap must never bind; if it does, that ply stopped being
-// reproducible.
-const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 6_000;
+// Level 8 calibration (#1000, authorized ARM64 proxy, 2026-11-08): Apple M3 Max,
+// 14 cores; Apple clang 21.0.0, `make -j2 build ARCH=apple-silicon COMP=clang`,
+// -O3 -DNDEBUG -flto=full -DUSE_NEON=8 -DUSE_POPCNT -DIS_64BIT, no PGO, no NNUE
+// (USE_NNUEEVAL=0). Unmodified pinned bcc83f88 source from the browser source tarball.
+// Fresh process/hash per position, Hash=256, Threads=1, MultiPV=1, go movetime 4000.
+// Public FENs from fixtures/variant-postgame/jieqi.jsonl (opening through endgame).
+// ply: nodes (final info line, including early mate termination):
+// 0:14315184, 4:13063484, 12:11522818, 24:10417208, 48:11833813, 80:10461455,
+// 120:9926158, 160:10105020, 220:23132637, 280:55772, 340:18457478, 380:1546179.
+// Median 10,992,136.5; round down to 10M for the Pikafish fallback.
+// AB-JChess grading uses its separately measured budgets below; no recalibration is required.
+// Fixed nodes avoid depth extensions giving adjacent positions different search effort.
+export const JIEQI_ANALYSIS_NODES = 10_000_000;
+
+// Safety backstop, including the exceptional 4x consistency re-search (~16s at 2.5M nps).
+const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 30_000;
 
 // ── Parent/child consistency (see reconcileJieqiSeries) ──────────────────────
 //
@@ -100,8 +102,7 @@ const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 6_000;
 // where the distribution stops being noise, not at a round number that felt safe.
 const JIEQI_CONSISTENCY_THRESHOLD_CP = 200;
 
-// One escalation, then stop. 4x clears the horizon cases (the discovered check above resolves
-// well inside it) and costs ~600ms on the handful of plies that trip it. It deliberately does
+// One escalation, then stop. 4x clears horizon cases on the handful of plies that trip it. It deliberately does
 // NOT clamp the ones it cannot clear: Pikafish's chance-node value is risk-averse by design
 // (see the Layer-2 note below), so with dark pieces on the board a persistent violation is not
 // proof the parent is wrong, and overwriting it would publish a number no search produced.
@@ -123,42 +124,37 @@ const TERMINAL_CP = 30_000;
 // the FEN-only sweeps, `nodes…` the fixed-depth ones, `consistent1` the ones with no
 // reconciliation pass. The stored `depth` column below is now just the other half of the cache
 // key — the search dial is JIEQI_ANALYSIS_NODES and it lives here, in the id.
-export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1+nodes${JIEQI_ANALYSIS_NODES}+consistent1`;
+// `public1`: computed from the public deal with both public pools (Brian, 2026-10-16); rows
+// under the earlier ids were computed from the real deal and are never served again.
+export const JIEQI_PRE_LEVEL8_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1+nodes500000+consistent1+public1`;
+export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history2-rules1+nodes${JIEQI_ANALYSIS_NODES}+hash256+threads1+consistent1+public1`;
 
 // ── AB-JChess budgets (#482) ─────────────────────────────────────────────────────
 //
-// AB-JChess is ~50x slower per node than PikaJieQi and stronger per node: single-threaded it
-// searched ~30k nps on prod web (EPYC 9655, avx2 build) and, measured on an M-series dev box
-// over a real 28-ply game (jq_23d2a761), ~35k nps in the all-dark opening rising to ~100k in
-// the middlegame (its net is lazily loaded on the first `go`, ~0.5 s once per session). It
-// prints no `info` line until a search is a few hundred ms old, but on every position measured
-// the last scored line before `bestmove` was an exact score from the last completed iteration
-// (never bound-only), which is what the reader keeps (a bound is only its last resort). A fixed depth is unreachable at these rates (depth 16 would be
-// minutes), so it gets a node budget for the same reason PikaJieQi does (see
-// JIEQI_ANALYSIS_NODES): every ply buys the same search.
-//
-// 50k nodes is ~1.7 s per ply on prod in the opening and ~1 s later (0.5-0.9 s locally), so
-// a 100-ply sweep is ~2-3 min. It still reaches depth 8-9 in the all-dark opening and 11-19
-// from the middlegame on, and finds the mate-in-1 that ends that game at once.
-const ABJCHESS_ANALYSIS_NODES = 50_000;
+// AB-JChess-20261031 searches ~1.4M nps on prod-like CPUs, versus ~30k for v0.2d.
+// Its 500k-node sweep takes ~0.35 s per ply; the 4x (2M-node) consistency re-search
+// takes ~1.4 s. Fixed nodes keep neighbouring positions comparable despite extensions.
+const ABJCHESS_ANALYSIS_NODES = 500_000;
 const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
-// A safety net, never the dial: 200k nodes (the re-search) at 30k nps is ~7 s. Binding it
-// would take a box under ~7k nps, and that ply would stop being reproducible.
+// A safety net, never the dial: 2M nodes at 1.4M nps is ~1.4 s, well inside this cap.
 const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
-// Decisions: a reveal costs one MultiPV search (it only names the candidate moves; its
-// scores never reach the output) plus one eval per (candidate, hidden role), up to ~24. Each
-// eval gets 20k nodes (~0.7 s on prod) and the MultiPV table 100k (~3 s), so a reveal is
-// ~10-15 s and a game's decomposition a few minutes, like PikaJieQi's depth-16 pass was.
-const ABJCHESS_DECISION_NODES = 20_000;
+// This build has no MultiPV. Rank every legal move: deterministic children cost
+// 50k nodes; reveal roles share that budget with #1000's 200k-per-piece floor.
+// True-baseline the top three plus played by splitting 200k across candidates
+// and distinct hidden roles, with the same floor. The floor can exceed the shared
+// budget when many roles remain. Ranking scores never reach the output.
+const ABJCHESS_DECISION_NODES = 200_000;
+const ABJCHESS_DECISION_RANK_NODES = 50_000;
 const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
 
 const ABJCHESS_NET_TAG = ABJCHESS_NET_FILE.replace(/\.nnue$/, '');
 
 // The re-search rule, stated in WIN% so it means the same on either engine's scale. 200cp
-// was chosen on lila's curve, where it is a ~17.6-point swing out of equality; AB-JChess's
-// cp are steeper (+112cp is already 75%), so the same 200cp there would be a ~38-point swing
-// and would almost never fire. PikaJieQi keeps its original cp rule: its cache ids predate
-// this and promise the evals they were computed with.
+// was chosen on lila's curve, where it is a ~17.6-point swing out of equality. AB-JChess's
+// cp were on a much steeper curve through v0.2d (+112cp already 75%, a ~38-point swing at
+// 200cp), and from AB-JChess-20261031 sit on jqe's flatter one (+409cp is 75%, ~13 points at
+// 200cp), so a cp rule would mean something different on each net. PikaJieQi keeps its
+// original cp rule: its cache ids predate this and promise the evals they were computed with.
 const JIEQI_CONSISTENCY_THRESHOLD_WIN = winPercent(JIEQI_CONSISTENCY_THRESHOLD_CP, null) - 50;
 
 /** Everything about one analysis engine that a cached result depends on. */
@@ -175,18 +171,81 @@ export type JieqiAnalysisProfile = {
   movetimeCapMs: number;
   /** Parent/child consistency rule (reconcileJieqiSeries). */
   consistency: { unit: 'cp'; threshold: number } | { unit: 'win'; threshold: number };
-  /** Budget of one decisions eval (a pool-mean term). */
+  /** Pool-baseline budget shared across distinct candidate/role terms, with a 200K floor. */
   decisionEval: JieqiEvalBudget;
+  /** Budget of each legal-move ranking eval; defaults to decisionEval for older profiles. */
+  decisionRank?: JieqiEvalBudget;
+  /** How candidate roots are ranked before their true pool-mean baselines. */
+  decisionCandidates: 'multipv' | 'legal-moves';
   /** Budget of the decisions MultiPV table (candidate moves only). */
   decisionMultiPv: JieqiEvalBudget;
 };
 
-export const ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID = `ab-jchess-jieqi-analysis@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_ANALYSIS_NODES}+consistent-win1`;
+export const ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID = `ab-jchess-jieqi-analysis@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_ANALYSIS_NODES}+consistent-win1+public1`;
+// Distinguish the rule, history and reveal-split contract from earlier AB rows.
+export const ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID = `${ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID}+chasedefault+history2-rules1`;
 
 export type JieqiRepetitionWindow = {
   fen: string;
   moves: readonly string[];
+  searchMoves?: readonly string[];
+  /** Canonical public state/window for AB legal-move ranking, including stored rules. */
+  state?: JieqiGameState;
+  decisionWindow?: JieqiDecisionWindow;
+  /** Exact public root endings, scored by the kernel rather than Pikafish's rules. */
+  terminalMoves?: readonly UciMultiPvLine[];
 };
+
+/** Preserve only public reversible history; use the stored game's rules at the root. */
+function kernelRootWindow(
+  state: JieqiGameState,
+  window: JieqiRepetitionWindow,
+): JieqiRepetitionWindow {
+  const searchMoves: string[] = [];
+  const terminalMoves: UciMultiPvLine[] = [];
+  for (const move of getJieqiLegalMoves(state)) {
+    const uci = jieqiMoveToPikafishUci(move);
+    // A reveal's terminal verdict depends on its unknown role. Its actual pool
+    // terms are handled after the counterfactual reveal, never from the hidden deal.
+    const next = state.board[move.from]?.faceDown ? null : applyJieqiMove(state, move);
+    if (next?.status.type !== 'finished') {
+      searchMoves.push(uci);
+      continue;
+    }
+    const winner = next.status.winner;
+    const turn = state.status.type === 'playing' ? state.status.turn : 'red';
+    terminalMoves.push({
+      index: 0,
+      move: uci,
+      cp: winner === null ? 0 : winner === turn ? TERMINAL_CP : -TERMINAL_CP,
+      mate: null,
+      depth: 0,
+      pv: [uci],
+      bound: null,
+    });
+  }
+  return { ...window, searchMoves, ...(terminalMoves.length ? { terminalMoves } : {}) };
+}
+
+async function evaluateKernelRoot(
+  window: JieqiRepetitionWindow,
+  evaluate: () => Promise<JieqiPositionEval>,
+): Promise<JieqiPositionEval> {
+  const evaluation = window.searchMoves?.length === 0 ? null : await evaluate();
+  // A known draw/loss cannot stand in for an unknown score of the other roots.
+  if (evaluation && comparableCp(evaluation) === null) return evaluation;
+  const terminal = [...(window.terminalMoves ?? [])].sort(
+    (a, b) => comparableCp(b)! - comparableCp(a)!,
+  )[0];
+  if (
+    terminal &&
+    (!evaluation || comparableCp(terminal)! > (comparableCp(evaluation) ?? -Infinity))
+  ) {
+    return { cp: terminal.cp, mate: terminal.mate, best: terminal.move, pv: terminal.pv };
+  }
+  if (!evaluation) throw new Error('jieqi analysis has no legal roots');
+  return evaluation;
+}
 
 export type JieqiPositionEval = {
   /** Centipawns from the RED SEAT's POV (positive = Red better); null when mate is set. */
@@ -195,7 +254,24 @@ export type JieqiPositionEval = {
   mate: number | null;
   /** Best move in Pikafish UCI (rank 0..9, e.g. "e7a7"); the engine's own dialect. */
   best: string | null;
+  /** Legal public continuation in engine UCI, ending before any hidden identity resolves. */
+  pv?: string[];
 };
+
+/** Never follow an engine's assumed hidden identity into a published continuation. */
+function publicJieqiPv(state: JieqiGameState, pv: readonly string[] = []): string[] {
+  const prefix: string[] = [];
+  for (const uci of pv) {
+    if (state.status.type !== 'playing') break;
+    const move = pikafishUciToJieqiMove(uci);
+    if (!move || isJieqiChanceMove(state, move)) break;
+    const next = applyJieqiMove(state, move);
+    if (next === state) break; // The kernel rejects illegal moves without changing state.
+    prefix.push(uci);
+    state = next;
+  }
+  return prefix;
+}
 
 /**
  * Evaluate a single PLAYING jieqi position with PikaJieQi, normalized to the RED SEAT's POV.
@@ -211,10 +287,10 @@ export async function evaluateJieqiPosition(
   state: JieqiGameState,
   evaluateFen: (
     fen: string,
-    opts: JieqiEvalBudget & { moves?: readonly string[] },
-  ) => Promise<{ cp: number | null; mate: number | null; best: string | null }> = evaluateJieqiFen,
+    opts: JieqiAnalysisRequest,
+  ) => Promise<JieqiPositionEval> = evaluateJieqiFen,
   repetitionWindow: JieqiRepetitionWindow = {
-    fen: jieqiStateToPikafishFen(state),
+    fen: jieqiStateToPikafishFen(state, { public: true }),
     moves: [],
   },
   nodes: number = JIEQI_ANALYSIS_NODES,
@@ -222,15 +298,21 @@ export async function evaluateJieqiPosition(
 ): Promise<JieqiPositionEval> {
   const mover: JieqiColor = state.status.type === 'playing' ? state.status.turn : 'red';
   const sign = mover === 'red' ? 1 : -1;
-  const evaluation = await evaluateFen(repetitionWindow.fen, {
-    nodes,
-    movetimeMs: movetimeCapMs,
-    moves: repetitionWindow.moves,
-  });
+  const window = kernelRootWindow(state, repetitionWindow);
+  const evaluation = await evaluateKernelRoot(window, () =>
+    evaluateFen(window.fen, {
+      nodes,
+      movetimeMs: movetimeCapMs,
+      moves: window.moves,
+      searchMoves: window.searchMoves,
+    }),
+  );
+  const pv = publicJieqiPv(state, evaluation.pv);
   return {
-    cp: evaluation.cp == null ? null : evaluation.cp * sign,
+    cp: evaluation.cp == null ? null : evaluation.cp === 0 ? 0 : evaluation.cp * sign,
     mate: evaluation.mate == null ? null : evaluation.mate * sign,
     best: evaluation.best,
+    ...(pv.length ? { pv } : {}),
   };
 }
 
@@ -253,12 +335,13 @@ export type JieqiGameAnalysis = {
 export function jieqiAnalysisRepetitionWindows(
   moves: readonly JieqiMove[],
   deal: JieqiDeal,
+  rules: JieqiInitialStateOptions = {},
 ): JieqiRepetitionWindow[] {
-  let state = createInitialJieqiState('analysis-window', deal);
+  let state = createInitialJieqiState('analysis-window', deal, rules);
   let startState = state;
   let windowMoves: JieqiMove[] = [];
   const windows: JieqiRepetitionWindow[] = [
-    { fen: jieqiStateToPikafishFen(startState), moves: [] },
+    { fen: jieqiStateToPikafishFen(startState, { public: true }), moves: [] },
   ];
   for (const move of moves) {
     const irreversible = state.board[move.from]?.faceDown === true || state.board[move.to] != null;
@@ -270,7 +353,7 @@ export function jieqiAnalysisRepetitionWindows(
       windowMoves.push(move);
     }
     windows.push({
-      fen: jieqiStateToPikafishFen(startState),
+      fen: jieqiStateToPikafishFen(startState, { public: true }),
       moves: windowMoves.map(jieqiMoveToPikafishUci),
     });
   }
@@ -286,10 +369,11 @@ export function jieqiAnalysisRepetitionWindows(
  * the walk against ONE persistent PikaJieQi session (spawn + option setup once, then a
  * FEN-per-position round-trip at the same depth/movetime the per-spawn path used).
  *
- * The sweep reads every position as an all-knowing spectator (no `viewer`): both pools exact,
- * including dark pieces captured face-down. Reveals are graded from the mover's view in the
- * decisions layer (#487), but quiet-move judgments still come from this chart, so a quiet move
- * made after the mover lost a dark piece is judged with knowledge the mover lacked.
+ * `deal` is the PUBLIC deal (loadFinishedJieqiGameInputs, jieqiPublicDeal): every piece that
+ * never moved is a placeholder, so nothing here is computed from an identity no reader may
+ * know (Brian, 2026-10-16). Every position is encoded with both PUBLIC pools: a side's hidden
+ * pool is its dealt set minus what it revealed, its dark captures included, so the
+ * placeholders' arrangement never reaches the engine, only their multiset.
  */
 export async function analyzeJieqiPostgame(
   moves: readonly JieqiMove[],
@@ -301,15 +385,16 @@ export async function analyzeJieqiPostgame(
   ) => Promise<JieqiPositionEval>,
   progress?: AnalysisProgressStore<SweepPlyEval>,
   profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
+  rules: JieqiInitialStateOptions = {},
 ): Promise<JieqiGameAnalysis> {
-  let state = createInitialJieqiState('analysis', deal);
+  let state = createInitialJieqiState('analysis', deal, rules);
   const states: JieqiGameState[] = [state];
   for (const move of moves) {
     state = applyJieqiMove(state, move);
     states.push(state);
   }
-  const repetitionWindows = jieqiAnalysisRepetitionWindows(moves, deal);
-  const deterministic = new Set(jieqiDeterministicPlies(moves, deal));
+  const repetitionWindows = jieqiAnalysisRepetitionWindows(moves, deal, rules);
+  const deterministic = new Set(jieqiDeterministicPlies(moves, deal, rules));
   // With a progress store the sweep checkpoints after every evaluated ply and
   // resumes from the last checkpoint (persist expensive output incrementally).
   const sweep = async (
@@ -328,7 +413,14 @@ export async function analyzeJieqiPostgame(
         continue;
       }
       const evaluation = await evaluatePosition(s, repetitionWindows[ply]!);
-      plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+      const pv = publicJieqiPv(s, evaluation.pv);
+      plies.push({
+        ply,
+        cp: evaluation.cp,
+        mate: evaluation.mate,
+        best: evaluation.best,
+        ...(pv.length ? { pv } : {}),
+      });
       if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
     }
     return plies;
@@ -444,7 +536,17 @@ export async function reconcileJieqiSeries(
     // (a stalled or stale binary) would otherwise punch a null into a series that had a
     // perfectly good value, and enough of those drift the whole sweep toward vacuous.
     if (rescored.cp != null || rescored.mate != null) {
-      out[k - 1] = { ...out[k - 1]!, cp: rescored.cp, mate: rescored.mate, best: rescored.best };
+      const replacement = {
+        ...out[k - 1]!,
+        cp: rescored.cp,
+        mate: rescored.mate,
+        best: rescored.best,
+      };
+      // The old line belongs to the old search, including when the new search has no PV.
+      delete replacement.pv;
+      const pv = publicJieqiPv(parentState, rescored.pv);
+      if (pv.length) replacement.pv = pv;
+      out[k - 1] = replacement;
     }
     const after = moverGain(k);
     if (after != null && after > threshold) out[k - 1]!.unstable = true;
@@ -466,8 +568,12 @@ export async function reconcileJieqiSeries(
  * of a dark chariot drew nothing): measured 2026-10-07 over 104 prod games, 30 of 94 such
  * captures marked, 18 of 39 soldier captures against 0 of 6 chariot ones.
  */
-export function jieqiChancePlies(moves: readonly JieqiMove[], deal: JieqiDeal): number[] {
-  let state = createInitialJieqiState('analysis', deal);
+export function jieqiChancePlies(
+  moves: readonly JieqiMove[],
+  deal: JieqiDeal,
+  rules: JieqiInitialStateOptions = {},
+): number[] {
+  let state = createInitialJieqiState('analysis', deal, rules);
   const chance: number[] = [];
   moves.forEach((move, i) => {
     if (isJieqiChanceMove(state, move)) chance.push(i + 1);
@@ -494,8 +600,12 @@ export function isJieqiChanceMove(state: JieqiGameState, move: JieqiMove): boole
  * this is exactly the complement of jieqiChancePlies; it stays a separate replay so the
  * consistency rule never silently widens if the chance set is ever narrowed again.
  */
-export function jieqiDeterministicPlies(moves: readonly JieqiMove[], deal: JieqiDeal): number[] {
-  let state = createInitialJieqiState('analysis', deal);
+export function jieqiDeterministicPlies(
+  moves: readonly JieqiMove[],
+  deal: JieqiDeal,
+  rules: JieqiInitialStateOptions = {},
+): number[] {
+  let state = createInitialJieqiState('analysis', deal, rules);
   const plies: number[] = [];
   moves.forEach((move, i) => {
     const source = state.board[move.from];
@@ -537,6 +647,7 @@ export async function resolveJieqiAnalysis(
   analyze?: (moves: readonly JieqiMove[], deal: JieqiDeal) => Promise<JieqiGameAnalysis>,
   computeIfMissing = true,
   profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
+  rules: JieqiInitialStateOptions = {},
 ): Promise<JieqiGameAnalysis | null> {
   const engineId = profile.analysisEngineId;
   const depth = JIEQI_ANALYSIS_DEPTH;
@@ -564,7 +675,7 @@ export async function resolveJieqiAnalysis(
     compute: async () => {
       const analysis = analyze
         ? await analyze(moves, deal)
-        : await analyzeJieqiPostgame(moves, deal, undefined, progress ?? undefined, profile);
+        : await analyzeJieqiPostgame(moves, deal, undefined, progress ?? undefined, profile, rules);
       return analysis.plies;
     },
     validate: (series) => {
@@ -598,13 +709,12 @@ export async function resolveJieqiAnalysis(
 // pool — then 0 luck is exactly "the average outcome". realized is one term of that same mean, so
 // luck is a clean, same-search, mean-zero-in-expectation quantity (no cross-depth noise).
 
-// Budget (PikaJieQi; AB-JChess budgets nodes, see ABJCHESS_DECISION_NODES). Each candidate
-// move's baseline is a small fan of single-position evals (one per distinct hidden role), all at
-// this depth so realized and the mean share one search. MultiPV only picks the candidate ceiling
-// moves; its clamped scores never reach the output. ~ a few evals per reveal → a couple of
-// minutes for a whole game, one-time and cached.
+// Historical depth is only a cache dimension. New decisions share one calibrated
+// position budget: half for MultiPV candidate selection, half across the selected
+// moves' distinct role terms (minimum 200K per term). Thus sweep + decisions cost
+// about two Level 8 searches per reveal, except floor/consistency escalations.
+// MultiPV's clamped values only rank candidates; published means use true role terms.
 export const JIEQI_DECISION_DEPTH = 16;
-const JIEQI_DECISION_MOVETIME_CAP_MS = 6_000;
 // One: every decisions eval runs on the run's single analysis session, which answers one
 // `go` at a time, so a wider fan-out would only queue inside the session.
 const JIEQI_DECISION_EVAL_CONCURRENCY = 1;
@@ -624,8 +734,8 @@ export type JieqiDecision = {
   bestWin: number;
   /** True pool-mean EV (win%) of the move actually played — the decision, before the dice. */
   playedWin: number;
-  /** Win% the reveal ACTUALLY produced (the actual role's term of the played move's mean). */
-  realizedWin: number;
+  /** Win% the reveal ACTUALLY produced. Absent when luck computation is disabled. */
+  realizedWin?: number;
   /** Rank of the played move among the candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
   /** The candidates that were true-baselined, best first. Every one of these was already
@@ -648,11 +758,15 @@ export type JieqiDecisionCandidate = {
 export type JieqiDecisionDeps = {
   /** Top candidate moves (engine ranking) for a pre-move FEN — used only to pick which moves to
    *  true-baseline as the ceiling; the returned scores are not used in the output. */
-  multiPv: (fen: string, repetitionWindow?: JieqiRepetitionWindow) => Promise<UciMultiPvLine[]>;
-  /** Single-position eval (side-to-move POV) at decision depth — the pool-mean's per-role term. */
+  multiPv: (
+    fen: string,
+    repetitionWindow?: JieqiRepetitionWindow,
+  ) => Promise<(UciMultiPvLine & { win?: number })[]>;
+  /** One pool-mean term (side-to-move POV); share its budget across distinct search terms. */
   evalPosition: (
     fen: string,
     repetitionWindow?: JieqiRepetitionWindow,
+    searchTerms?: number,
   ) => Promise<{ cp: number | null; mate: number | null }>;
 };
 
@@ -664,22 +778,128 @@ export function jieqiDecisionDepsFromSession(
   session: JieqiAnalysisEvaluators,
   profile: JieqiAnalysisProfile,
 ): JieqiDecisionDeps {
-  return {
-    multiPv: (fen, repetitionWindow) =>
-      session.multiPv(repetitionWindow?.fen ?? fen, {
-        ...profile.decisionMultiPv,
-        multiPv: JIEQI_DECISION_MULTIPV,
-        moves: repetitionWindow?.moves,
-        fresh: true,
-      }),
-    evalPosition: (fen, repetitionWindow) =>
-      session
-        .evaluateFen(repetitionWindow?.fen ?? fen, {
-          ...profile.decisionEval,
-          moves: repetitionWindow?.moves,
+  const evaluateWithBudget =
+    (budget: JieqiEvalBudget): JieqiDecisionDeps['evalPosition'] =>
+    (fen, repetitionWindow, searchTerms = 1) => {
+      const split =
+        budget.nodes != null
+          ? { ...budget, nodes: Math.max(200_000, Math.floor(budget.nodes / searchTerms)) }
+          : budget;
+      return evaluateKernelRoot(repetitionWindow ?? { fen, moves: [] }, () =>
+        session.evaluateFen(repetitionWindow?.fen ?? fen, {
+          ...split,
+          moves: repetitionWindow?.moves ?? [],
+          ...(repetitionWindow?.searchMoves ? { searchMoves: repetitionWindow.searchMoves } : {}),
           fresh: true,
-        })
-        .then((e) => ({ cp: e.cp, mate: e.mate })),
+        }),
+      );
+    };
+  const evalPosition = evaluateWithBudget(profile.decisionEval);
+  const rankBudget = profile.decisionRank ?? profile.decisionEval;
+  const rankPosition = evaluateWithBudget(rankBudget);
+  return {
+    evalPosition,
+    multiPv: async (fen, repetitionWindow) => {
+      if (profile.decisionCandidates === 'legal-moves') {
+        // The CURRENT public FEN includes both public pools (including dark captures).
+        // Sampling supplies a state for legality and counterfactual role swaps only;
+        // every child sent to the engine must pass through the PUBLIC encoder.
+        const parsed = parseJieqiFen(fen, { rng: () => 0 });
+        if (!parsed.ok) throw new Error(`Invalid jieqi decision FEN: ${parsed.error}`);
+        const lines: (UciMultiPvLine & { win?: number })[] = [];
+        const state = repetitionWindow?.state ?? parsed.state;
+        const mover = state.status.type === 'playing' ? state.status.turn : 'red';
+        const anchor = repetitionWindow
+          ? parseJieqiFen(repetitionWindow.fen, { rng: () => 0 })
+          : null;
+        const repWindow: JieqiDecisionWindow = repetitionWindow?.decisionWindow ?? {
+          anchor: anchor?.ok ? anchor.state : state,
+          moves: [...(repetitionWindow?.moves ?? [])],
+        };
+        for (const move of getJieqiLegalMoves(state)) {
+          const uci = jieqiMoveToPikafishUci(move);
+          if (isJieqiChanceMove(state, move)) {
+            const { baseline } = await poolMeanWin(
+              state,
+              move,
+              mover,
+              rankPosition,
+              repWindow,
+              profile.decisionsEngineId,
+            );
+            lines.push({
+              index: 0,
+              move: uci,
+              cp: null,
+              mate: null,
+              win: baseline,
+              depth: 0,
+              pv: [uci],
+              bound: null,
+            });
+            continue;
+          }
+          const post = applyJieqiMove(state, move);
+          const childWindow = renderDecisionWindow(
+            jieqiDecisionWindowAfterMove(state, move, post, repWindow),
+            mover,
+            post,
+          );
+          const evaluation =
+            post.status.type === 'finished'
+              ? {
+                  cp:
+                    post.status.winner === null
+                      ? 0
+                      : post.status.winner === mover
+                        ? -TERMINAL_CP
+                        : TERMINAL_CP,
+                  mate: null,
+                  depth: 0,
+                }
+              : await evaluateKernelRoot(childWindow, () =>
+                  session.evaluateFen(childWindow.fen, {
+                    ...rankBudget,
+                    moves: childWindow.moves,
+                    searchMoves: childWindow.searchMoves,
+                    fresh: true,
+                  }),
+                );
+          const score = redPovScore(evaluation.cp, evaluation.mate, -1);
+          lines.push({
+            index: 0,
+            move: uci,
+            cp: score.cp === 0 ? 0 : score.cp,
+            mate: score.mate,
+            depth: 0,
+            pv: [uci],
+            bound: null,
+          });
+        }
+        // Compare on the same win% curve as the true means. For equal mate
+        // values, prefer shorter wins and longer losses.
+        const score = (line: (typeof lines)[number]) =>
+          line.win ?? winPercent(line.cp, line.mate, profile.decisionsEngineId);
+        lines.sort((a, b) => score(b) - score(a) || (a.mate ?? 0) - (b.mate ?? 0));
+        return lines.map((line, i) => ({ ...line, index: i + 1 }));
+      }
+      const table =
+        repetitionWindow?.searchMoves?.length === 0
+          ? []
+          : await session.multiPv(repetitionWindow?.fen ?? fen, {
+              ...profile.decisionMultiPv,
+              multiPv: JIEQI_DECISION_MULTIPV,
+              moves: repetitionWindow?.moves,
+              ...(repetitionWindow?.searchMoves
+                ? { searchMoves: repetitionWindow.searchMoves }
+                : {}),
+              fresh: true,
+            });
+      if (!repetitionWindow?.terminalMoves?.length) return table;
+      return [...table, ...repetitionWindow.terminalMoves]
+        .sort((a, b) => comparableCp(b)! - comparableCp(a)!)
+        .map((line, index) => ({ ...line, index: index + 1 }));
+    },
   };
 }
 
@@ -705,19 +925,26 @@ function jieqiDecisionWindowAfterMove(
     : { anchor: repWindow.anchor, moves: [...repWindow.moves, jieqiMoveToPikafishUci(move)] };
 }
 
-// A reveal is graded on what its MOVER could know (#487). Under capturer-only reveal a player
-// never learns the identity of its own dark pieces the opponent took, so `viewer: mover` keeps
-// those in the mover's hidden pool, exactly as the live bot sees its own (server-jieqi-engine).
-// The opponent's pool stays exact: the mover captured those pieces and saw them.
-function gradingFen(state: JieqiGameState, mover: JieqiColor): string {
-  return jieqiStateToPikafishFen(state, { viewer: mover });
+// A reveal is graded on what its mover could know (#487), but its numbers are sent to every
+// reader of the finished game, so it is graded on what EVERY reader knows (Brian, 2026-10-16):
+// both public pools. The mover's own pool is what it believed in play (its dark pieces captured
+// face-down stay in it); the opponent's also keeps the pieces the mover captured dark, which
+// the mover saw but no reader may learn, so the grade is a little vaguer than the mover was.
+function gradingFen(state: JieqiGameState, _mover: JieqiColor): string {
+  return jieqiStateToPikafishFen(state, { public: true });
 }
 
 function renderDecisionWindow(
   repWindow: JieqiDecisionWindow,
   mover: JieqiColor,
+  state: JieqiGameState,
 ): JieqiRepetitionWindow {
-  return { fen: gradingFen(repWindow.anchor, mover), moves: repWindow.moves };
+  return kernelRootWindow(state, {
+    fen: gradingFen(repWindow.anchor, mover),
+    moves: repWindow.moves,
+    state,
+    decisionWindow: repWindow,
+  });
 }
 
 // Win% for a POST-move position from the MOVER's POV. Terminal positions score directly (no
@@ -728,7 +955,8 @@ async function moverWinAfter(
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repWindow: JieqiDecisionWindow,
-  winK: number,
+  engineId: string,
+  searchTerms: number,
 ): Promise<number> {
   if (post.status.type === 'finished') {
     const winner = post.status.winner;
@@ -736,17 +964,18 @@ async function moverWinAfter(
   }
   const { cp, mate } = await evalPosition(
     gradingFen(post, mover),
-    renderDecisionWindow(repWindow, mover),
+    renderDecisionWindow(repWindow, mover, post),
+    searchTerms,
   );
-  // The engine's own curve: AB-JChess cp mean more win% than PikaJieQi cp.
-  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate, winK);
+  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate, engineId);
 }
 
 // The identities the MOVER believes one of its dark squares may hold (#487): its dark tiles on
 // the board plus its own pieces the opponent captured while still dark, which it never saw. That
 // is the pool gradingFen gives the engine for the mover, so the weights and the positions agree.
 // Exported for the test that pins the review's luck card (apps/web jieqi-luck-mark.ts, which
-// mirrors both pools) to the same counts.
+// mirrors this pool) to the same counts. Under the public pools it is also the pool every
+// reader holds for that side.
 export function believedMoverPool(
   state: JieqiGameState,
   mover: JieqiColor,
@@ -761,21 +990,6 @@ export function believedMoverPool(
   return pool;
 }
 
-// The identities a CAPTURER believes one of its opponent's dark squares may hold: the victim's
-// face-down pieces still on the board. Under capturer-only reveal the capturer saw every victim
-// piece it took (dark or not) and every one the victim revealed by moving, so the victim's dealt
-// set minus everything seen is exactly this on-board multiset: no more, no less.
-export function victimDarkPool(
-  state: JieqiGameState,
-  victim: JieqiColor,
-): Map<JieqiPieceRole, number> {
-  const pool = new Map<JieqiPieceRole, number>();
-  for (const piece of Object.values(state.board)) {
-    if (piece?.color === victim && piece.faceDown) bumpRole(pool, piece.role);
-  }
-  return pool;
-}
-
 function bumpRole(pool: Map<JieqiPieceRole, number>, role: JieqiPieceRole): void {
   pool.set(role, (pool.get(role) ?? 0) + 1);
 }
@@ -783,10 +997,8 @@ function bumpRole(pool: Map<JieqiPieceRole, number>, role: JieqiPieceRole): void
 // Counterfactual: the dark piece of `color` on `square` is `role` instead of its true role, with
 // that colour's hidden-role MULTISET held fixed. Relabeling the square ALONE would add a phantom
 // `role` and drop a real one, skewing every pool count the FEN carries; so the true role moves to
-// a donor that held `role`: another dark tile of that colour, else (the mover's own pool only) one
-// of its pieces captured face-down, a role it believes possible though no tile holds it. Donors
-// are looked up on the ORIGINAL `state`, so a reveal's swap and a capture's swap (two colours,
-// disjoint tiles) compose without seeing each other.
+// a donor that held `role`: another dark tile of that colour, else one of its pieces captured
+// face-down, a role it may hold though no tile does.
 function relabelDarkSquare(
   cf: JieqiGameState,
   state: JieqiGameState,
@@ -823,86 +1035,66 @@ function relabelDarkSquare(
   return next;
 }
 
-// The TRUE pool-mean baseline (win%, mover POV) of `move` from a pre-move `state`, plus the
-// realized win% (the true identities' term). Two hidden identities can be in play, and the mover
-// knows neither when it chooses:
+// The pool-mean baseline (win%, mover POV) of `move` from a pre-move `state`, plus the realized
+// win% (the moved piece's own term).
 //
-//   - a REVEAL: the moved dark square is one of the identities the mover believes it may hold
-//     (believedMoverPool, #487);
-//   - a FACE-DOWN CAPTURE: the taken square is one of the victim's dark pieces still on the board
-//     (victimDarkPool), whatever it turns out to be.
+//   - A REVEAL: the moved dark square is one of the identities its mover may hold
+//     (believedMoverPool, #487), each weighed by its share. That piece moved, so it is named in
+//     the public deal and its own term is the realized one: the reveal's luck.
+//   - A FACE-DOWN CAPTURE has no terms of its own. Every position is encoded with both PUBLIC
+//     pools (gradingFen), where a piece captured dark stays in its owner's pool, so whatever it
+//     was, the position after the capture is the same FEN: one eval, the pool mean as the
+//     engine sees it. No reader may learn what it hit (Brian, 2026-10-16), so it carries no luck,
+//     and an unplayed candidate capture is valued the same way (never on its true target).
 //
-// A move that is neither has one term, so baseline === realized === a single eval. Grading a
-// capture on the identity it actually hit is hindsight: it marked the capture of a dark soldier
-// and spared the same capture of a dark chariot, when the mover could not tell them apart. The
-// same goes for an UNPLAYED candidate that captures a dark piece, which is why every candidate
-// runs through here: valued on its true target, "best" absorbed the luck of whatever it would
-// have hit.
-//
-// A move that is both averages over the PRODUCT of the two pools. That is exact, not an
-// approximation: given what the mover knows, its own bag and its opponent's are independent
-// draws, so the joint weight is the product of the marginals. It costs at most 6 x 6 = 36 evals
-// for one candidate (six hideable roles a side), and only while both bags are still full.
+// A move that is neither has one term, so baseline === realized === a single eval.
 async function poolMeanWin(
   state: JieqiGameState,
   move: JieqiMove,
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repWindow: JieqiDecisionWindow,
-  winK: number,
-): Promise<{ baseline: number; realized: number }> {
+  engineId: string,
+  candidateCount = 1,
+  includeLuck = false,
+): Promise<{ baseline: number; realized?: number }> {
   const source = state.board[move.from];
-  const target = state.board[move.to];
-  const victim: JieqiColor = mover === 'red' ? 'black' : 'red';
   const moverPool = source?.faceDown ? believedMoverPool(state, mover) : null;
-  const victimPool =
-    target?.faceDown && target.color === victim ? victimDarkPool(state, victim) : null;
-  type Term = { sourceRole: JieqiPieceRole | null; targetRole: JieqiPieceRole | null };
-  const terms: Term[] = [];
-  for (const sourceRole of moverPool ? [...moverPool.keys()] : [null]) {
-    for (const targetRole of victimPool ? [...victimPool.keys()] : [null]) {
-      terms.push({ sourceRole, targetRole });
-    }
-  }
+  const roles: (JieqiPieceRole | null)[] = moverPool ? [...moverPool.keys()] : [null];
   // Bounded fan-out (mirrors banqi), width 1: every eval goes to the one session this decisions
   // run holds, which answers one search at a time anyway.
-  const wins = await mapWithConcurrency(
-    terms,
-    JIEQI_DECISION_EVAL_CONCURRENCY,
-    ({ sourceRole, targetRole }) => {
-      let cf = state;
-      if (sourceRole) cf = relabelDarkSquare(cf, state, move.from, sourceRole);
-      if (targetRole) cf = relabelDarkSquare(cf, state, move.to, targetRole);
-      const post = applyJieqiMove(cf, move);
-      return moverWinAfter(
-        post,
-        mover,
-        evalPosition,
-        jieqiDecisionWindowAfterMove(cf, move, post, repWindow),
-        winK,
-      );
-    },
-  );
-  const share = (pool: Map<JieqiPieceRole, number> | null, role: JieqiPieceRole | null) => {
-    if (!pool || !role) return 1;
-    const total = [...pool.values()].reduce((a, b) => a + b, 0);
-    return (pool.get(role) ?? 0) / total;
-  };
-  let baseline = 0;
-  let realized = 50;
-  terms.forEach(({ sourceRole, targetRole }, idx) => {
-    baseline += share(moverPool, sourceRole) * share(victimPool, targetRole) * wins[idx]!;
-    const trueSource = !sourceRole || sourceRole === source?.role;
-    const trueTarget = !targetRole || targetRole === target?.role;
-    if (trueSource && trueTarget) realized = wins[idx]!;
+  const wins = await mapWithConcurrency(roles, JIEQI_DECISION_EVAL_CONCURRENCY, (role) => {
+    const cf = role ? relabelDarkSquare(state, state, move.from, role) : state;
+    const post = applyJieqiMove(cf, move);
+    return moverWinAfter(
+      post,
+      mover,
+      evalPosition,
+      jieqiDecisionWindowAfterMove(cf, move, post, repWindow),
+      engineId,
+      roles.length * candidateCount,
+    );
   });
-  return { baseline, realized };
+  const total = moverPool ? [...moverPool.values()].reduce((a, b) => a + b, 0) : 1;
+  let baseline = 0;
+  roles.forEach((role, idx) => {
+    baseline += ((role ? moverPool!.get(role)! : 1) / total) * wins[idx]!;
+  });
+  // These searches are required for grading. Only selecting the actual draw's
+  // term is luck-only; neither candidate ranking nor flag-off runs need it.
+  if (!includeLuck) return { baseline };
+  // A source still undetermined in the deal (never in a public deal: a moved piece is named)
+  // has no true term, so it realizes the mean.
+  const trueIndex = source?.unknown
+    ? -1
+    : roles.findIndex((role) => !role || role === source?.role);
+  return { baseline, realized: trueIndex >= 0 ? wins[trueIndex]! : baseline };
 }
 
 /**
  * Compute the decision-vs-luck numbers for every CHANCE ply (a reveal or a face-down capture,
  * jieqiChancePlies). Reconstructs the game from the deal (same kernel as the Layer-1 sweep). For
- * each, MultiPV names a few candidate ceiling moves; we true-baseline the played move plus those
+ * each, the profile ranks candidate ceiling moves; we true-baseline the played move plus those
  * candidates (unclamped pool-mean win% over every hidden identity the move touches, poolMeanWin),
  * take the max as `bestWin`, and read the played move's true-identity term as `realizedWin`. `deps` is
  * injectable so tests drive it without an engine. No dependency on the Layer-1 sweep — realized is
@@ -913,8 +1105,7 @@ async function poolMeanWin(
  * (gradingFen, #487): a player's dark pieces captured face-down stay in its own pool, because it
  * never saw them, and the pool mean averages over that same believed pool (poolMeanWin).
  * Plies that resolve no hidden identity are not graded here: the review judges them off the
- * Layer-1 sweep, which stays all-knowing (no viewer) because a spectator reads the chart after
- * the game.
+ * Layer-1 sweep, which also uses only the public deal and pools.
  */
 export async function analyzeJieqiDecisions(
   moves: readonly JieqiMove[],
@@ -922,6 +1113,8 @@ export async function analyzeJieqiDecisions(
   deps?: JieqiDecisionDeps,
   progress?: AnalysisProgressStore<JieqiDecision>,
   profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
+  rules: JieqiInitialStateOptions = {},
+  includeLuck = jieqiLuckEnabled(),
 ): Promise<JieqiDecision[]> {
   if (!deps) {
     // The live path: one analysis session for the whole decomposition.
@@ -933,11 +1126,13 @@ export async function analyzeJieqiDecisions(
           jieqiDecisionDepsFromSession({ evaluateFen, multiPv }, profile),
           progress,
           profile,
+          rules,
+          includeLuck,
         ),
       profile.engine,
     );
   }
-  let state = createInitialJieqiState('analysis', deal);
+  let state = createInitialJieqiState('analysis', deal, rules);
   let repWindow: JieqiDecisionWindow = { anchor: state, moves: [] };
   // With a progress store, checkpoint after every graded chance ply and resume from
   // the saved move cursor (quiet moves before it just re-advance the state —
@@ -957,14 +1152,14 @@ export async function analyzeJieqiDecisions(
     if (state.status.type === 'playing' && isJieqiChanceMove(state, move)) {
       const fen = gradingFen(state, mover);
       const playedUci = jieqiMoveToPikafishUci(move);
-      const table = await deps.multiPv(fen, renderDecisionWindow(repWindow, mover));
+      const table = await deps.multiPv(fen, renderDecisionWindow(repWindow, mover, state));
       // Candidate ceiling moves: the engine's top-N plus the played move (deduped).
       const candidateUcis = new Set<string>([
         ...table.slice(0, JIEQI_DECISION_CANDIDATES).map((row) => row.move),
         playedUci,
       ]);
       let playedWin = 50;
-      let realizedWin = 50;
+      let realizedWin: number | undefined;
       const scored: JieqiDecisionCandidate[] = [];
       for (const uci of candidateUcis) {
         const candidate = uci === playedUci ? move : pikafishUciToJieqiMove(uci);
@@ -975,7 +1170,9 @@ export async function analyzeJieqiDecisions(
           mover,
           deps.evalPosition,
           repWindow,
-          profile.winK,
+          profile.decisionsEngineId,
+          candidateUcis.size,
+          includeLuck && uci === playedUci,
         );
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
@@ -993,7 +1190,7 @@ export async function analyzeJieqiDecisions(
         mover,
         bestWin,
         playedWin,
-        realizedWin,
+        ...(realizedWin === undefined ? {} : { realizedWin }),
         playedRank,
         ...(candidates.length ? { candidates } : {}),
       });
@@ -1009,25 +1206,22 @@ export async function analyzeJieqiDecisions(
 // Cache engine id for the decomposition blob — a DIFFERENT engine_id than the basic analysis, so
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
-// to invalidate cached decisions when the algorithm changes without an engine change. d5 grades
+// to invalidate cached decisions when the algorithm changes without an engine change. d6 grades
+// from the public deal and both public pools, so a face-down capture carries no luck and no
+// number derives from an identity no reader may know (Brian, 2026-10-16). d5 grades
 // face-down captures (played and candidate) on the capturer's pool mean, not the identity hit;
 // d4 grades each reveal from its mover's view (#487); d3 added the live repetition window; d2
 // fixed counterfactual hidden-role-multiset preservation.
-export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d5-capture`;
-export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+mpv${ABJCHESS_DECISION_MULTIPV_NODES}+d5-capture`;
-/** Decisions ids of earlier algorithms, newest first. Never computed again, but rows stored
- *  under them are still served, after every current id, so a game analysed before a re-key
- *  keeps its decomposition instead of recomputing on the shared prod lane. Such a row is STALE
- *  and identifiable by its id: a d4 row has no entries for face-down captures (the review
- *  leaves them ungraded) and values candidate captures on their true target. The regrade path
- *  (resolveJieqiDecisions with servePreviousAlgorithms: false, scripts/backfill-jieqi-analysis.mjs
- *  --regrade-decisions) recomputes those games under the current ids. */
-export const JIEQI_LEGACY_DECISIONS_ENGINE_IDS: readonly string[] = [
-  `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+mpv${ABJCHESS_DECISION_MULTIPV_NODES}+d4-mover`,
-  `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d4-mover`,
-  `ab-jchess-jieqi-decisions@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+mpv${ABJCHESS_DECISION_MULTIPV_NODES}+d3`,
-  `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d3`,
-];
+export const JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d6-public`;
+export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+nodes${JIEQI_ANALYSIS_NODES}+split1+rules1+hash256+threads1+d6-public`;
+export const ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+rank${ABJCHESS_DECISION_RANK_NODES}+d6-public`;
+export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `${ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID.replace(/\+d6-public$/, '')}+chasedefault+split1+rules1+d6-public`;
+/** Decisions ids of earlier algorithms that may still be served after every current id.
+ *  Empty since d6 (2026-10-16): every earlier row was graded from the real deal, so its
+ *  numbers (a capture's luck, a candidate valued on its true target) carry identities no
+ *  reader may know. Those rows are never served; the regrade path
+ *  (scripts/backfill-jieqi-analysis.mjs --regrade-decisions) recomputes them. */
+export const JIEQI_LEGACY_DECISIONS_ENGINE_IDS: readonly string[] = [];
 
 // ── Engine profiles ───────────────────────────────────────────────────────────────
 
@@ -1040,8 +1234,9 @@ export const PIKAFISH_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
   researchNodes: JIEQI_CONSISTENCY_RESEARCH_NODES,
   movetimeCapMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
   consistency: { unit: 'cp', threshold: JIEQI_CONSISTENCY_THRESHOLD_CP },
-  decisionEval: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
-  decisionMultiPv: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
+  decisionEval: { nodes: JIEQI_ANALYSIS_NODES / 2, movetimeMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS },
+  decisionCandidates: 'multipv',
+  decisionMultiPv: { nodes: JIEQI_ANALYSIS_NODES / 2, movetimeMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS },
 };
 
 export const ABJCHESS_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
@@ -1054,6 +1249,11 @@ export const ABJCHESS_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
   movetimeCapMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
   consistency: { unit: 'win', threshold: JIEQI_CONSISTENCY_THRESHOLD_WIN },
   decisionEval: { nodes: ABJCHESS_DECISION_NODES, movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS },
+  decisionRank: {
+    nodes: ABJCHESS_DECISION_RANK_NODES,
+    movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
+  },
+  decisionCandidates: 'legal-moves',
   decisionMultiPv: {
     nodes: ABJCHESS_DECISION_MULTIPV_NODES,
     movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
@@ -1069,7 +1269,7 @@ export function jieqiAnalysisProfileFor(engine: JieqiAnalysisEngine): JieqiAnaly
   return engine === 'ab-jchess' ? ABJCHESS_JIEQI_ANALYSIS_PROFILE : PIKAFISH_JIEQI_ANALYSIS_PROFILE;
 }
 
-/** The profile NEW analysis is computed with: AB-JChess when it resolves, else PikaJieQi. */
+/** New analysis uses AB-JChess when available, otherwise Pikafish. */
 export function currentJieqiAnalysisProfile(): JieqiAnalysisProfile {
   return jieqiAnalysisProfileFor(jieqiAnalysisEngine());
 }
@@ -1082,9 +1282,13 @@ export function jieqiStoredIdsFor(
   key: 'analysisEngineId' | 'decisionsEngineId',
   previousAlgorithms = true,
 ): string[] {
+  if (key === 'decisionsEngineId' && !previousAlgorithms) return [profile[key]];
   return [
     profile[key],
     ...JIEQI_ANALYSIS_PROFILES.filter((p) => p !== profile).map((p) => p[key]),
+    ...(key === 'analysisEngineId'
+      ? [ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID, JIEQI_PRE_LEVEL8_ANALYSIS_ENGINE_ID]
+      : [ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID, JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID]),
     ...(key === 'decisionsEngineId' && previousAlgorithms ? JIEQI_LEGACY_DECISIONS_ENGINE_IDS : []),
   ];
 }
@@ -1136,18 +1340,22 @@ export async function resolveJieqiDecisions(
     /** False for a REGRADE: a row stored by an earlier decomposition algorithm (a legacy id)
      *  no longer counts as a hit, so the game recomputes under the current id. */
     servePreviousAlgorithms?: boolean;
+    rules?: JieqiInitialStateOptions;
   } = {},
 ): Promise<JieqiDecisionsResult | null> {
-  const engineId = profile.decisionsEngineId;
+  const includeLuck = jieqiLuckEnabled();
+  // Grade-only rows must never satisfy a later flag-on read. Reuse a full row
+  // for grading when off, but isolate grade-only results and their checkpoints.
+  const engineId = includeLuck
+    ? profile.decisionsEngineId
+    : `${profile.decisionsEngineId}+no-luck1`;
   const depth = JIEQI_DECISION_DEPTH;
   // Decisions are stored in win%, already on their engine's curve, so either engine's
   // blob reads correctly; serve whichever exists before computing.
-  const stored = await firstStoredResult(
-    cache,
-    roomId,
-    depth,
-    jieqiStoredIdsFor(profile, 'decisionsEngineId', options.servePreviousAlgorithms ?? true),
-  );
+  const stored = await firstStoredResult(cache, roomId, depth, [
+    ...jieqiStoredIdsFor(profile, 'decisionsEngineId', options.servePreviousAlgorithms ?? true),
+    ...(includeLuck ? [] : [engineId]),
+  ]);
   if (stored) return { engineId: stored.engineId, depth, decisions: stored.value };
   const progress = analyze
     ? null
@@ -1161,13 +1369,26 @@ export async function resolveJieqiDecisions(
     compute: () =>
       analyze
         ? analyze(moves, deal)
-        : analyzeJieqiDecisions(moves, deal, undefined, progress ?? undefined, profile),
+        : analyzeJieqiDecisions(
+            moves,
+            deal,
+            undefined,
+            progress ?? undefined,
+            profile,
+            options.rules,
+            includeLuck,
+          ),
     validate: (series) => {
       // A scoreless engine makes every position eval null, so every win% collapses to 50
       // (best === played === realized). Never cache that; a fixed engine recomputes.
       if (
         series.length > 0 &&
-        series.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
+        series.every(
+          (d) =>
+            d.bestWin === 50 &&
+            d.playedWin === 50 &&
+            (d.realizedWin === undefined || d.realizedWin === 50),
+        )
       ) {
         throw new VacuousAnalysisError('jieqi');
       }

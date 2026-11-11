@@ -19,6 +19,10 @@ test('games match on the permalink, a tenant route, and the embed path', () => {
     'https://mistboard.com/dark-xiangqi/game/abc-123/',
     'https://mistboard.com/embed/game/abc-123',
     '/game/abc-123',
+    // The play page's address, which is what a player has when a game ends.
+    'https://mistboard.com/room/abc-123',
+    '/room/abc-123',
+    'https://mistboard.com/xiangqi/room/abc-123',
   ]) {
     assert.deepEqual(
       embedTargetFromUrl(url),

@@ -31,8 +31,17 @@ export function writeSignedInHint(value: boolean): void {
 // settles, or undefined to return to the unresolved (hint-only) state. Keeping
 // this in sync with account-nav's cachedUser is what lets isLikelySignedIn live
 // outside account-nav (and break the import cycle).
+export const signedInResolvedEvent = 'mb:signed-in-resolved';
+
 export function setResolvedSignedIn(value: boolean | undefined): void {
+  if (resolvedSignedIn === value) return;
   resolvedSignedIn = value;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(signedInResolvedEvent));
+}
+
+/** Confirmed auth only: persisted first-paint hints do not authorize requests. */
+export function isSignedIn(): boolean {
+  return resolvedSignedIn === true;
 }
 
 // Synchronous best guess used to choose the initial render shape: the resolved
@@ -108,11 +117,65 @@ export function writeVariantGrantsHint(grants: readonly string[]): void {
   }
 }
 
+// Fired once account-nav has the account's real grants, so a surface drawn from
+// the hint (a rules page's Play buttons) can redraw for an account granted since
+// the hint was written.
+export const variantGrantsResolvedEvent = 'mb:variant-grants-resolved';
+
 export function setResolvedVariantGrants(grants: readonly string[] | undefined): void {
   resolvedVariantGrants = grants;
+  try {
+    window.dispatchEvent(new Event(variantGrantsResolvedEvent));
+  } catch {
+    // No window (tests outside a DOM): nothing is listening.
+  }
 }
 
 export function hasLikelyVariantGrant(gameSpecId: string): boolean {
   const grants = resolvedVariantGrants ?? readVariantGrantsHint();
   return grants.includes(gameSpecId);
+}
+
+// Stats exclusion, same shape as the admin hint. An account excluded from stats
+// (users.stats_excluded_at: the owner, QA) never plays rated, so the play
+// surfaces grey out their rated controls for it. Cosmetic like the others: the
+// server refuses the rated post, accept and seat (403
+// rated_requires_counted_account) whatever this says.
+const STATS_EXCLUDED_HINT_KEY = 'mb_stats_excluded';
+
+let resolvedStatsExcluded: boolean | undefined;
+
+export function readStatsExcludedHint(): boolean {
+  try {
+    return window.localStorage.getItem(STATS_EXCLUDED_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function writeStatsExcludedHint(value: boolean): void {
+  try {
+    if (value) window.localStorage.setItem(STATS_EXCLUDED_HINT_KEY, '1');
+    else window.localStorage.removeItem(STATS_EXCLUDED_HINT_KEY);
+  } catch {
+    // localStorage unavailable (private mode etc.) — fall through.
+  }
+}
+
+// Fired once account-nav knows whether the account is excluded, so a panel
+// drawn from the hint can redraw its rated controls.
+export const statsExcludedResolvedEvent = 'mb:stats-excluded-resolved';
+
+export function setResolvedStatsExcluded(value: boolean | undefined): void {
+  resolvedStatsExcluded = value;
+  try {
+    window.dispatchEvent(new Event(statsExcludedResolvedEvent));
+  } catch {
+    // No window (tests outside a DOM): nothing is listening.
+  }
+}
+
+export function isLikelyStatsExcluded(): boolean {
+  if (resolvedStatsExcluded !== undefined) return resolvedStatsExcluded;
+  return readStatsExcludedHint();
 }

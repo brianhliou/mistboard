@@ -24,6 +24,7 @@ import {
 import {
   BANQI_HEIGHT,
   BANQI_WIDTH,
+  banqiInkForSeat,
   banqiMoverInk,
   banqiSquareOf,
   banqiStateToEngineFen,
@@ -35,6 +36,7 @@ import {
   createInitialJieqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
+  createInitialThreeKingdomsBanqiState,
   createInitialXiangqiState,
   darkChessFen,
   duckXiangqiFen,
@@ -61,8 +63,11 @@ import {
   parseJungleFen,
   parseJungleFlipFen,
   parseStandardXiangqiFen,
+  parseThreeKingdomsBanqiFen,
   type Square,
   standardXiangqiFen,
+  threeKingdomsBanqiSeatToMove,
+  threeKingdomsBanqiStateToPublicFen,
 } from '@mistboard/game';
 import { type AuthRateLimiter, createAuthRateLimiter } from './auth-rate-limit.js';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
@@ -73,13 +78,16 @@ import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-rast
  *  FEN is in the URL. */
 // v2 (2026-09-12): the live board and the site's default piece set, board at full
 // height with the caption beside it (og-card-board.ts).
-export const POSITION_OG_IMAGE_VERSION = 3;
+// v4 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
+// v5 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
+export const POSITION_OG_IMAGE_VERSION = 5;
 
 /** Variants with a position card, i.e. the /analysis and /editor catalog. Slugs
  *  double as GameSpecIds. Order is the analysis dropdown's. */
 export const POSITION_OG_VARIANTS = [
   'xiangqi',
   'banqi',
+  'three-kingdoms-banqi',
   'jieqi',
   'fortress-xiangqi',
   'duck-xiangqi',
@@ -158,7 +166,8 @@ type TileMark = { kind: 'glyph'; glyph: string } | { kind: 'text'; text: string 
 type IntersectionExtra =
   | { file: number; rank: number; kind: 'face-down'; ink: Ink }
   | { file: number; rank: number; kind: 'glyph'; ink: Ink; glyph: string }
-  | { file: number; rank: number; kind: 'duck' };
+  | { file: number; rank: number; kind: 'duck' }
+  | { file: number; rank: number; kind: 'hidden-tile' };
 
 export type PositionOgBoard =
   | {
@@ -172,6 +181,8 @@ export type PositionOgBoard =
       /** Points under fog (a rules card showing one seat's opening view). The
        *  pieces there are already filtered out; this only draws the wash. */
       fog?: Array<{ file: number; rank: number }>;
+      /** Black at the bottom, without rotating the piece figures. */
+      orientation?: 'red' | 'black';
     }
   | { kind: 'grid'; files: number; ranks: number; tiles: GridTile[] }
   | {
@@ -276,18 +287,27 @@ export function resolvePositionOg(
     case 'dark-xiangqi': {
       // Same board and writer; only the legality bar moves, because under fog a
       // general may stand en prise.
-      const parsed = parseStandardXiangqiFen(trimmed, 'og-card', {
-        allowExposedGeneral: variant === 'dark-xiangqi',
-      });
+      const terminal = trimmed.split(/\s+/)[1] === '-';
+      // Finished games have no mover. Supply one only for the placement parser,
+      // without its opposite-check test: the final move may have delivered mate.
+      // Keep '-' in the public FEN and never label this as a playable position.
+      const parsed = parseStandardXiangqiFen(
+        terminal ? trimmed.replace(/^(\S+)\s+-/, '$1 r') : trimmed,
+        'og-card',
+        { allowExposedGeneral: terminal || variant === 'dark-xiangqi' },
+      );
       if (!parsed.ok) return null;
       const pieces: XiangqiOgPiece[] = Object.entries(parsed.state.board).flatMap(
         ([square, piece]) =>
           piece ? [{ ...xqCoord(square), color: piece.color, role: piece.role }] : [],
       );
+      const publicFen = standardXiangqiFen(parsed.state);
       return {
         variant,
-        publicFen: standardXiangqiFen(parsed.state),
-        toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
+        publicFen: terminal ? publicFen.replace(' r ', ' - ') : publicFen,
+        toMove: inkToMove(
+          !terminal && parsed.state.status.type === 'playing' ? parsed.state.status.turn : null,
+        ),
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras: [] },
       };
     }
@@ -344,7 +364,7 @@ export function resolvePositionOg(
       }
       return {
         variant,
-        publicFen: jieqiStateToPikafishFen(parsed.state),
+        publicFen: jieqiStateToPikafishFen(parsed.state, { public: true }),
         toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras },
       };
@@ -382,6 +402,27 @@ export function resolvePositionOg(
           pieces,
           extras,
         },
+      };
+    }
+    case 'three-kingdoms-banqi': {
+      const parsed = parseThreeKingdomsBanqiFen(trimmed, { gameId: 'og-card' });
+      if (!parsed.ok) return null;
+      const pieces: XiangqiOgPiece[] = [];
+      const extras: IntersectionExtra[] = [];
+      for (const [square, piece] of Object.entries(parsed.state.board)) {
+        if (!piece) continue;
+        const file = square.charCodeAt(0) - 97;
+        const rank = Number(square.slice(1));
+        if (piece.faceDown) extras.push({ file, rank, kind: 'hidden-tile' });
+        else pieces.push({ file, rank, color: piece.color, role: piece.role });
+      }
+      return {
+        variant,
+        publicFen: threeKingdomsBanqiStateToPublicFen(parsed.state),
+        toMove:
+          inkToMove(banqiInkForSeat(parsed.state, threeKingdomsBanqiSeatToMove(parsed.state))) ??
+          'First flip',
+        board: { kind: 'intersection', files: 9, ranks: 5, palaces: [], pieces, extras },
       };
     }
     case 'banqi': {
@@ -490,6 +531,8 @@ export function startPositionFen(variant: PositionOgVariant): string {
       return jieqiStateToPikafishFen(createInitialJieqiState('og-card'));
     case 'fortress-xiangqi':
       return fortressXiangqiEngineFen(createInitialFortressXiangqiState('og-card'));
+    case 'three-kingdoms-banqi':
+      return threeKingdomsBanqiStateToPublicFen(createInitialThreeKingdomsBanqiState('og-card', 0));
     case 'banqi':
       return banqiStateToEngineFen(createInitialBanqiState('og-card'));
     case 'jungle-flip':

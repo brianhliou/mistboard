@@ -6,17 +6,18 @@
 // The relative styles derive a RelativeMoveSpec from the pre-move board and
 // verify it round-trips through the importer's own resolver before
 // serializing, so a label can never be ambiguous or drift from what the
-// importer accepts. Positions the shared grammar cannot express uniquely
-// (a middle piece in a 3-stack, or the same role stacked on two files, both
-// soldier-only situations) fall back to coordinate notation rather than emit
-// a wrong or unparseable token.
+// importer accepts. WXF numbers every soldier in a 3-5 stack from the front
+// in place of the letter (22.3); the Chinese styles keep 前/后 and have no
+// verified form for a middle soldier. Positions a grammar cannot express
+// uniquely (that middle soldier in Chinese, or a two-stack beside another
+// stacked file of the same role, both soldier-only situations) fall back to
+// coordinate notation rather than emit a wrong or unparseable token.
 //
-// Standard xiangqi only: fog and reveal variants must keep coordinate labels
-// (a role-bearing token like 炮二平五 would leak hidden piece identity), and
-// drop variants have no relative-notation drop form.
+// Standard xiangqi entry points use its own rules. Hidden-info variants can
+// share the bodies below with a public-role board and their own legal moves;
+// masked movers must keep coordinate labels. Drop moves have no relative form.
 
 import {
-  ARBITER_ADJUDICATED_DRAWS,
   coordOf,
   createInitialXiangqiState,
   type XiangqiColor,
@@ -27,16 +28,20 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   getStandardXiangqiLegalMoves,
   isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
+  resumeAdjudicatedDraw,
 } from './variants-xiangqi-standard.js';
 import {
   FILE_ARG_ROLES,
   type RelativeMoveSpec,
   type RelativeSelector,
-  resolveRelativeMove,
+  resolveRelativeMoveFromLegalMoves,
+  WXF_ORDINAL_MIN_STACK,
   wxfFileNumber,
+  type XiangqiNotationBoard,
 } from './xiangqi-relative-notation.js';
 import { xiangqiMoveToPikafishUci } from './xiangqi-uci.js';
 
@@ -55,19 +60,38 @@ export type XiangqiRelativeStyle = Extract<
 
 // --- spec derivation ---------------------------------------------------------
 
+/** Which relative grammar a spec is for: WXF adds the numbered soldier form. */
+export type XiangqiRelativeGrammar = 'wxf' | 'chinese';
+
 /**
  * Describe a concrete move as a relative-notation spec against its pre-move
- * state, or null when the shared WXF/Chinese grammar cannot name it uniquely.
- * The returned spec is verified: resolveRelativeMove(state, spec) === move.
+ * state, or null when the grammar cannot name it uniquely. The returned spec
+ * is verified: resolveRelativeMove(state, spec) === move.
  */
 export function describeXiangqiRelativeMove(
   state: XiangqiGameState,
   move: XiangqiMove,
+  grammar: XiangqiRelativeGrammar = 'chinese',
 ): RelativeMoveSpec | null {
   if (state.status.type !== 'playing') return null;
-  const color = state.status.turn;
-  const piece = state.board[move.from];
-  if (!piece || piece.color !== color) return null;
+  return describeRelativeMove(
+    state.board,
+    state.status.turn,
+    move,
+    getStandardXiangqiLegalMoves(state),
+    grammar,
+  );
+}
+
+function describeRelativeMove(
+  board: XiangqiNotationBoard,
+  color: XiangqiColor,
+  move: XiangqiMove,
+  legalMoves: readonly XiangqiMove[],
+  grammar: XiangqiRelativeGrammar,
+): RelativeMoveSpec | null {
+  const piece = board[move.from];
+  if (!piece?.role || piece.color !== color) return null;
 
   const a = coordOf(move.from);
   const b = coordOf(move.to);
@@ -85,26 +109,27 @@ export function describeXiangqiRelativeMove(
       ? wxfFileNumber(b.file, color)
       : Math.abs(b.rank - a.rank);
 
-  const selector = selectorFor(state, move.from, piece.role, color, forwardUp);
+  const selector = selectorFor(board, move.from, piece.role, color, forwardUp, grammar);
   if (!selector) return null;
 
   const spec: RelativeMoveSpec = { role: piece.role, selector, op, arg };
 
   // Round-trip guarantee: only emit specs the importer resolves back to this
   // exact move. Catches every residual ambiguity in one place.
-  const resolved = resolveRelativeMove(state, spec);
+  const resolved = resolveRelativeMoveFromLegalMoves(board, color, spec, legalMoves);
   if (!resolved || resolved.from !== move.from || resolved.to !== move.to) return null;
   return spec;
 }
 
 function selectorFor(
-  state: XiangqiGameState,
+  board: XiangqiNotationBoard,
   from: XiangqiSquare,
   role: XiangqiPieceRole,
   color: XiangqiColor,
   forwardUp: boolean,
+  grammar: XiangqiRelativeGrammar,
 ): RelativeSelector | null {
-  const sources = Object.entries(state.board)
+  const sources = Object.entries(board)
     .filter(([, piece]) => piece && piece.color === color && piece.role === role)
     .map(([square]) => square as XiangqiSquare);
 
@@ -112,6 +137,21 @@ function selectorFor(
   const onFile = sources.filter((sq) => coordOf(sq).file === file);
   if (onFile.length === 1) {
     return { kind: 'file', wxfFile: wxfFileNumber(file, color) };
+  }
+
+  const ordered = [...onFile].sort((x, y) =>
+    forwardUp ? coordOf(y).rank - coordOf(x).rank : coordOf(x).rank - coordOf(y).rank,
+  );
+
+  // WXF: 3-5 soldiers on one file drop the letter and are numbered from the
+  // front, the file following as usual. The form carries its file, so another
+  // stacked file does not make it ambiguous.
+  if (grammar === 'wxf' && role === 'soldier' && onFile.length >= WXF_ORDINAL_MIN_STACK) {
+    return {
+      kind: 'ordinal',
+      index: ordered.indexOf(from) + 1,
+      wxfFile: wxfFileNumber(file, color),
+    };
   }
 
   // Stacked: the grammar's tandem form carries no file, so it is only unique
@@ -123,9 +163,6 @@ function selectorFor(
   );
   if (stackedFiles.size !== 1) return null;
 
-  const ordered = [...onFile].sort((x, y) =>
-    forwardUp ? coordOf(y).rank - coordOf(x).rank : coordOf(x).rank - coordOf(y).rank,
-  );
   if (from === ordered[0]) return { kind: 'tandem', end: 'front' };
   if (from === ordered[ordered.length - 1]) return { kind: 'tandem', end: 'rear' };
   return null; // middle of a 3+ stack: needs 中, which the grammar does not carry
@@ -214,10 +251,13 @@ function chineseNumeral(value: number, color: XiangqiColor): string {
 
 function serializeWxf(spec: RelativeMoveSpec): string {
   const letter = WXF_ROLE_TO_LETTER[spec.role];
+  const { selector } = spec;
   const prefix =
-    spec.selector.kind === 'file'
-      ? `${letter}${spec.selector.wxfFile}`
-      : `${spec.selector.end === 'front' ? '+' : '-'}${letter}`;
+    selector.kind === 'file'
+      ? `${letter}${selector.wxfFile}`
+      : selector.kind === 'ordinal'
+        ? `${selector.index}${selector.wxfFile}`
+        : `${selector.end === 'front' ? '+' : '-'}${letter}`;
   return `${prefix}${spec.op}${spec.arg}`;
 }
 
@@ -225,12 +265,14 @@ function serializeChinese(
   spec: RelativeMoveSpec,
   color: XiangqiColor,
   script: ChineseScript,
-): string {
+): string | null {
   const glyph = CN_ROLE_GLYPHS[script][color][spec.role];
+  const { selector } = spec;
+  if (selector.kind === 'ordinal') return null; // WXF-only form
   const prefix =
-    spec.selector.kind === 'file'
-      ? `${glyph}${chineseNumeral(spec.selector.wxfFile, color)}`
-      : `${CN_TANDEM_GLYPHS[script][spec.selector.end]}${glyph}`;
+    selector.kind === 'file'
+      ? `${glyph}${chineseNumeral(selector.wxfFile, color)}`
+      : `${CN_TANDEM_GLYPHS[script][selector.end]}${glyph}`;
   return `${prefix}${CN_OP_GLYPHS[script][spec.op]}${chineseNumeral(spec.arg, color)}`;
 }
 
@@ -253,12 +295,12 @@ export const XIANGQI_ALGEBRAIC_MATE = '#';
  * there). A variant with its own check rule (atomic) adds its own suffix.
  */
 export function xiangqiAlgebraicMoveBody(
-  board: XiangqiGameState['board'],
+  board: XiangqiNotationBoard,
   move: XiangqiMove,
   legalMoves: readonly XiangqiMove[],
 ): string | null {
   const piece = board[move.from];
-  if (!piece) return null;
+  if (!piece?.role) return null;
   const letter = WXF_ROLE_TO_LETTER[piece.role];
   const capture = board[move.to] ? 'x' : '';
 
@@ -351,10 +393,33 @@ export function formatXiangqiRelativeMove(
   move: XiangqiMove,
   style: XiangqiRelativeStyle,
 ): string | null {
-  const spec = describeXiangqiRelativeMove(state, move);
+  if (state.status.type !== 'playing') return null;
+  return formatXiangqiRelativeMoveFromLegalMoves(
+    state.board,
+    state.status.turn,
+    move,
+    style,
+    getStandardXiangqiLegalMoves(state),
+  );
+}
+
+/** Relative notation over public roles and the variant's own legal move set. */
+export function formatXiangqiRelativeMoveFromLegalMoves(
+  board: XiangqiNotationBoard,
+  color: XiangqiColor,
+  move: XiangqiMove,
+  style: XiangqiRelativeStyle,
+  legalMoves: readonly XiangqiMove[],
+): string | null {
+  const spec = describeRelativeMove(
+    board,
+    color,
+    move,
+    legalMoves,
+    style === 'wxf' ? 'wxf' : 'chinese',
+  );
   if (!spec) return null;
   if (style === 'wxf') return serializeWxf(spec);
-  const color = state.status.type === 'playing' ? state.status.turn : 'red';
   return serializeChinese(
     spec,
     color,
@@ -405,21 +470,13 @@ export function formatXiangqiMoves(
   startState?: XiangqiGameState,
 ): string[] {
   const initial = startState ?? createInitialXiangqiState('notation-format');
-  // Whoever is to move in the start position, not always Red: a chapter FEN can
-  // hand the line to Black on ply 1, and the resume below alternates from here.
-  const firstMover: XiangqiColor = initial.status.type === 'playing' ? initial.status.turn : 'red';
   let state: XiangqiGameState | null = initial;
   const labels: string[] = [];
-  for (const [index, move] of moves.entries()) {
-    // Resume through an auto-draw the record clearly played past.
-    if (state?.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      const turn: XiangqiColor =
-        index % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
-      state = { ...state, status: { type: 'playing', turn } };
-    }
+  for (const move of moves) {
+    if (state) state = resumeAdjudicatedDraw(state);
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {
       labels.push(formatXiangqiMove(state, move, style));
-      state = applyStandardXiangqiMove(state, move);
+      state = applyXiangqiRecordMove(state, move);
     } else {
       state = null;
       labels.push(style === 'iccs' ? xiangqiMoveToPikafishUci(move) : coordinateXiangqiLabel(move));

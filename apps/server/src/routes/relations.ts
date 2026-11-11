@@ -15,6 +15,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
 import { createAuthRateLimiter } from './../auth-rate-limit.js';
 import { collectLiveRoomStats } from './../live-room-stats.js';
+import { onlineFollowingEntries, onlineFollowingRows } from './../online-following.js';
 import * as persistence from './../persistence.js';
 import { onlinePresence, refreshPresence } from './../presence.js';
 import { PUBLIC_RATING_TIME_CLASS } from './../rating-buckets.js';
@@ -91,7 +92,9 @@ export async function tryHandle(
   // Online-friends (#94): the viewer's follow set intersected with the
   // in-memory presence map. Same visibility gate as /api/players/online:
   // private profiles never appear, even to their followers. Rows carry the
-  // same decoration as /api/players/online (best rating + playing flag).
+  // same decoration as /api/players/online (best rating + playing flag), plus
+  // the room a playing friend sits in, for the header menu's Watch link
+  // (online-following.ts owns the row shape).
   if (pathname === '/api/relations/online-following') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
@@ -109,9 +112,7 @@ export async function tryHandle(
       if (identity.startsWith('u:')) refreshPresence(identity.slice(2), now);
     }
     const following = new Set(await persistence.listFollowingIds(user.id));
-    const listed = onlinePresence(now)
-      .filter((entry) => following.has(entry.userId) && entry.profileVisibility !== 'private')
-      .sort((a, b) => a.handle.localeCompare(b.handle));
+    const listed = onlineFollowingEntries(onlinePresence(now), following);
     // One representative rating per player (their best blitz pool); decoration
     // only, so an empty map (no DB) leaves the field null rather than failing.
     const ratings = persistence.isInitialized()
@@ -120,13 +121,7 @@ export async function tryHandle(
           PUBLIC_RATING_TIME_CLASS,
         )
       : new Map<string, persistence.BestRatingEntry>();
-    const players = listed.map((entry) => ({
-      handle: entry.handle,
-      displayName: entry.displayName,
-      title: entry.title,
-      rating: ratings.get(entry.userId) ?? null,
-      playing: stats.playingUserIds.has(entry.userId),
-    }));
+    const players = onlineFollowingRows(listed, stats, ratings);
     writeJson(response, 200, { players, count: players.length });
     return true;
   }

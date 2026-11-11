@@ -28,12 +28,23 @@ const player = { id: 'user-1', accountRole: 'player' } as const;
 const other = { id: 'user-2', accountRole: 'player' } as const;
 const admin = { id: 'admin-1', accountRole: 'admin' } as const;
 
-test('mahjong is allowlisted; crazyhouse xiangqi (launched) and a normal variant are not', () => {
+test('HK mahjong is allowlisted; launched Gomoku needs no grant', () => {
   assert.equal(isAllowlistedGameSpec('mahjong'), true);
+  assert.equal(isAllowlistedGameSpec('gomoku'), false);
+  assert.equal(isAllowlistedGameSpec('three-kingdoms-banqi'), false);
+  assert.equal(isAllowlistedGameSpec('xiangqi-mahjong'), false);
   assert.equal(isAllowlistedGameSpec('crazyhouse-xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('not-a-spec'), false);
   assert.deepEqual([...ALLOWLISTED_GAME_SPEC_IDS], ['mahjong']);
+});
+
+test('public Gomoku and Three Kingdoms Banqi admit guests and accounts without grant queries', async () => {
+  const ungranted = db(0);
+  for (const id of ['gomoku', 'three-kingdoms-banqi'])
+    for (const reader of [null, admin, player])
+      assert.equal(await mayPlayVariant(reader, id, ungranted.pool), true);
+  assert.equal(ungranted.calls.length, 0);
 });
 
 test('a non-allowlisted variant is allowed without touching the database', async () => {

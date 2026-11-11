@@ -43,6 +43,9 @@ export type HistoricalXiangqiGameDetail = {
   visibility: string;
   // True when the source is license-cleared, so the PGN download would serve.
   pgnExport?: boolean;
+  // An online platform game (ElephantChess): the platform and the players'
+  // pseudonyms appear only in the Game info tab.
+  onlinePlatform?: boolean;
 };
 
 type LoadResult =
@@ -91,14 +94,19 @@ export function historicalXiangqiGameApiUrl(gameId: string): string {
 
 function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiGameDetail): void {
   const replay = buildXiangqiReplayFromMoves(game.moves, undefined, { record: true });
+  const online = game.onlinePlatform === true;
+  const redName = online ? null : game.redNameRaw;
+  const blackName = online ? null : game.blackNameRaw;
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
-    headline: ['Historical game'],
+    headline: [online ? 'Online game' : 'Historical game'],
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
-    subline: [formatDate(game.playedOn), game.eventName].filter(Boolean).join(' · '),
+    subline: [formatDate(game.playedOn), online ? null : game.eventName]
+      .filter(Boolean)
+      .join(' · '),
     players: [
-      { color: 'red', name: game.redNameRaw ?? 'Red' },
-      { color: 'black', name: game.blackNameRaw ?? 'Black' },
+      { color: 'red', name: redName ?? 'Red' },
+      { color: 'black', name: blackName ?? 'Black' },
     ],
     status: resultStatus(game),
   });
@@ -119,8 +127,8 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     provenance: historicalProvenance(game, replay),
     moves: replay.moves,
     players: {
-      red: game.redNameRaw ?? undefined,
-      black: game.blackNameRaw ?? undefined,
+      red: redName ?? undefined,
+      black: blackName ?? undefined,
     },
     result: {
       score: game.result === '1/2-1/2' ? '½-½' : game.result,
@@ -136,7 +144,10 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     // in the database into something they can annotate.
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
-      name: archiveStudyName(game),
+      name: online
+        ? ['Online game', formatDate(game.playedOn)].filter(Boolean).join(', ')
+        : archiveStudyName(game),
+      label: t('review.newStudyFromGame'),
     },
     // Roomless archive game: whole-game analysis is the shared client ceval sweep
     // (same as /analysis/xiangqi), computed on request. No server Pikafish cache.
@@ -175,6 +186,11 @@ function historicalProvenance(
   const blackRating = formatRating(tagNum('blackEloBefore'), tagNum('blackEloAfter'));
   if (blackRating) addDetail(details, 'Black rating', blackRating);
 
+  // The card shows Red and Black for an online game; the pseudonyms live here.
+  if (game.onlinePlatform) {
+    if (game.redNameRaw) addDetail(details, 'Red player', game.redNameRaw);
+    if (game.blackNameRaw) addDetail(details, 'Black player', game.blackNameRaw);
+  }
   if (game.termination) addDetail(details, 'Termination', capitalizeWord(game.termination));
   if (game.sourceUrl) addDetailLink(details, 'Source', game.sourceUrl);
   if (replay.illegalAt) {
@@ -280,7 +296,14 @@ function formatDate(value: string | null): string {
   if (!value) return t('historical.unknownDate');
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  // A calendar date, not an instant: format it in UTC or a viewer west of UTC
+  // sees the day before.
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 /** Name a study made from an archive game after its players, adding the event

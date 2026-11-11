@@ -127,7 +127,6 @@ try {
     winHi: number(auditProfile.winHi, 'auditProfile.winHi'),
     winLo: number(auditProfile.winLo, 'auditProfile.winLo'),
     minGapCp: number(auditProfile.minGapCp, 'auditProfile.minGapCp'),
-    materialGapCp: number(auditProfile.materialGapCp, 'auditProfile.materialGapCp'),
     limit: 0,
     ids: null,
     out: null,

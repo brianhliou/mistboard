@@ -1,0 +1,50 @@
+/* The phone room's abort countdown bubble (live-abort-bubble.ts). It overlays
+   the board stage, so nothing around the board moves when it shows or goes,
+   and it never takes a tap. Dark glass with light text like the banqi chase
+   bubble (live-banqi-chase-bubble.css): the board keeps its own colours in
+   both site themes, so the bubble does too. No caret: it points at no square,
+   it sits on the middle of the board (the river at game start). */
+.abort-bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 16;
+  box-sizing: border-box;
+  width: max-content;
+  /* A short reading width, and never wider than the board (set from JS). */
+  max-width: min(300px, var(--abort-bubble-board-max, 90%));
+  padding: 6px 11px;
+  border-radius: 9px;
+  color: #fbf6ec;
+  background: rgb(28 24 20 / 88%);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: pretty;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  animation: abort-bubble-in 160ms ease-out both;
+}
+
+@keyframes abort-bubble-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abort-bubble {
+    animation: none;
+  }
+}
+
+/* The column line it mirrors steps aside only while the bubble shows it. */
+.game-controls > .abort-countdown[data-board-bubble] {
+  display: none;
+}

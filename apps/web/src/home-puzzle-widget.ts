@@ -5,7 +5,6 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import './live-xiangqi.css';
-import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
@@ -96,7 +95,7 @@ export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
 function renderHomePuzzleWidgetContent(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement[] {
   const title = document.createElement('span');
   title.className = 'home-puzzle-widget-title';
-  title.textContent = t('homePuzzle.title', { variant: variantDisplayLabel(puzzle.variant) });
+  title.textContent = t('homePuzzle.title');
 
   const turn = document.createElement('span');
   turn.className = 'home-puzzle-widget-turn';
@@ -116,14 +115,9 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
     // The standard 9x10 board renders from the solver's perspective; no reserve.
     box.append(
       homePuzzleBoardSurface(
-        renderXiangqiBoardSvg(
-          getStandardXiangqiPlayerView(puzzle.initial, turn),
-          turn,
-          // A thumbnail that links to the puzzle, not a board anyone plays on.
-          // Suppressing the labels also keeps the box's authored aspect ratio
-          // right: the host clips, and the gutter is a different rectangle.
-          { coordinates: false },
-        ),
+        // Follows the coordinates setting like the viewer above it; landing.css
+        // gives the box the gutter's shape while the labels are on.
+        renderXiangqiBoardSvg(getStandardXiangqiPlayerView(puzzle.initial, turn), turn),
       ),
     );
     return box;

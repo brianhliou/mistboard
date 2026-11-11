@@ -2,7 +2,8 @@ import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
-import { seatColorWord } from './variant-seat-label.js';
+import type { ProfileBoardThumb } from './profile-game-board.js';
+import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
 export const MISTBOARD_ENGINE_SNAPSHOT_NAME = 'Mistboard Engine v2.0';
@@ -18,7 +19,8 @@ export const MISTBOARD_ENGINE_MISTY_ID = 'python-v2-v1.6';
 export const MISTBOARD_ENGINE_MISTY_NAME = 'Misty 1.6';
 
 export type GameParticipant = {
-  color: 'white' | 'black' | 'red';
+  // east/west: xiangqi mahjong, whose seats are winds, not colours (variant-seat-label.ts SEAT_NAMING).
+  color: 'white' | 'black' | 'red' | 'east' | 'west';
   displayName: string;
   subjectType: 'guest' | 'user' | 'bot' | 'engine-version' | 'manual' | 'imported';
   subjectId: string | null;
@@ -93,6 +95,9 @@ export type FeaturedGame = {
   // surfaces can show the result by ink ("Black wins") rather than the seat token.
   // Absent/null for every other variant (seat == ink) and for unreplayable games.
   firstColor?: 'red' | 'black' | null;
+  // Profile list with `?boards=1` only (#509): the final position as a
+  // thumbnail, null when the game has none to draw.
+  finalBoard?: ProfileBoardThumb | null;
 };
 
 export function displayParticipantName(
@@ -133,18 +138,23 @@ export function participantForColor(
 // Persisted participants are decisive when both seats are present (they
 // reflect what's actually stored and are immune to legacy variant aliases);
 // otherwise the pair derives from the canonical spec family, so a new variant
-// resolves without editing here: the xiangqi and jungle families play red vs
-// black, and everything else is orthodox white vs black.
+// resolves without editing here: xiangqi and jungle play red vs black,
+// mahjong east vs west, Gomoku black vs white, chess white vs black.
 export type MatchupSeatPair = readonly [GameParticipant['color'], GameParticipant['color']];
 
 export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
+  // Gomoku opens with Black, including when persisted participants arrive
+  // in white/black storage order.
+  if (maybeGameSpecForId(game.variant)?.family === 'gomoku') return ['black', 'white'];
   const colors = new Set((game.participants ?? []).map((participant) => participant.color));
   if (colors.size >= 2) {
+    if (colors.has('east') && colors.has('west')) return ['east', 'west'];
     if (!colors.has('red')) return ['white', 'black'];
     return colors.has('white') ? ['white', 'red'] : ['red', 'black'];
   }
   const family = maybeGameSpecForId(game.variant)?.family;
   if (family === 'xiangqi' || family === 'jungle') return ['red', 'black'];
+  if (family === 'mahjong') return ['east', 'west'];
   return ['white', 'black'];
 }
 
@@ -171,6 +181,9 @@ function fallbackSeatName(
   color: GameParticipant['color'],
   firstColor?: 'red' | 'black' | null,
 ): string {
+  // A variant whose seat id is bookkeeping (xiangqi mahjong's east/west) has no
+  // seat word to fall back on: a nameless seat is a guest, never "West".
+  if (seatsNamePlayers(variant)) return t('watch.guest');
   // Flip variants (banqi, jungle-flip) seat by MOVE ORDER, so the seat id is not a
   // colour claim: naming a nameless seat "Red" is wrong for half of all games. Use
   // the bound ink when the row carries firstColor, and the move-order word when it
@@ -221,17 +234,40 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
   return brandedEngineName(name) ?? name;
 }
 
+// The seat that moves first in a live game: red (xiangqi family, jungle), white
+// (chess) or east (Xiangqi Mahjong's dealer seat).
+const FIRST_MOVER_COLORS = new Set(['red', 'white', 'east']);
+
+export function liveFirstMover<T extends { color: string }>(players: readonly T[]): T | undefined {
+  return players.find((player) => FIRST_MOVER_COLORS.has(player.color)) ?? players[0];
+}
+
+/** First/second-mover names for a live featured game, or null without two
+ *  seats. A null name is a guest seat. */
+export function liveMatchupNames(
+  players: readonly { color: string; name: string | null | undefined }[],
+  guest: string,
+): { first: string; second: string } | null {
+  if (players.length < 2) return null;
+  const first = liveFirstMover(players)!;
+  const second = players.find((player) => player !== first) ?? players[1]!;
+  return { first: displayLiveName(first.name, guest), second: displayLiveName(second.name, guest) };
+}
+
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so
 // one seek board serves every eligible variant. These map that axis back to the words a
-// player recognises: chess is White/Black, the xiangqi family and Jungle Red/Black. Banqi
+// player recognises: chess is White/Black, the xiangqi family Red/Black, Jungle Red/Blue. Banqi
 // and Flip Jungle seat 'red'/'black' but a player's colour is decided by the first flip,
 // so their sides are First/Second, as the play menu labels them. Fail-safe: an unknown spec
 // falls back to White/Black rather than throwing (worst case a wrong color WORD on the
-// label; the seat itself is always assigned by the tenant's own colors).
+// label; the seat itself is always assigned by the tenant's own colors). The mahjong
+// family seats east and west, and east deals first.
 const WHITE_FIRST_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'chess']);
 
 export function firstMoverColorName(gameSpecId: string): string {
+  if (maybeGameSpecForId(gameSpecId)?.family === 'gomoku') return t('setup.black');
   if (isFlipSeatVariant(gameSpecId)) return t('setup.first');
+  if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatEast');
   if (WHITE_FIRST_SPECS.has(gameSpecId) || !maybeGameSpecForId(gameSpecId)) {
     return t('setup.white');
   }
@@ -239,7 +275,9 @@ export function firstMoverColorName(gameSpecId: string): string {
 }
 
 export function secondMoverColorName(gameSpecId: string): string {
-  return isFlipSeatVariant(gameSpecId) ? t('setup.second') : t('setup.black');
+  if (maybeGameSpecForId(gameSpecId)?.family === 'gomoku') return t('setup.white');
+  if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatWest');
+  return isFlipSeatVariant(gameSpecId) ? t('setup.second') : seatColorWord(gameSpecId, 'black');
 }
 
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new
@@ -247,10 +285,15 @@ export function secondMoverColorName(gameSpecId: string): string {
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
 // 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
-export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
+export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
+  gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
+  'ffq-banqi': null,
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
+  'xiangqi-mahjong': 'variant.xiangqiMahjong.name',
+  // Hidden playtest (#628, #684): admin-only on prod.
+  'three-kingdoms-banqi': 'variant.threeKingdomsBanqi.name',
   'dark-chess': 'variant.darkChess.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
@@ -270,8 +313,8 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
 // their own partial copy, and the bots one silently missed xiangqi, jungle,
 // jungle-flip, and dark-xiangqi.
 export function variantNameKeyForSpecId(gameSpecId: string): I18nKey | null {
-  const spec = maybeGameSpecForId(gameSpecId);
-  return spec ? (VARIANT_NAME_KEYS[spec.id] ?? null) : null;
+  const id = maybeGameSpecForId(gameSpecId)?.id;
+  return id ? VARIANT_NAME_KEYS[id] : null;
 }
 
 // Human label for a persisted games.variant value. Legacy/alias strings resolve
@@ -306,6 +349,12 @@ export function gameOutcome(result: string, variant?: string | null): GameOutcom
   if (result === 'black-wins') return { winner: seatColorWord(variant, 'black') };
   if (result === 'white-wins') return { winner: seatColorWord(variant, 'white') };
   if (result === 'draw') return { draw: true };
+  if (result === 'east-wins' || result === 'west-wins') {
+    // No participants reach this function, so a player-named variant gets the
+    // seat-neutral word rather than "West wins" (variant-seat-label.ts SEAT_NAMING).
+    if (seatsNamePlayers(variant)) return { label: t('watch.won') };
+    return { winner: seatColorWord(variant, result === 'east-wins' ? 'east' : 'west') };
+  }
   return { label: humanizeToken(result) };
 }
 
@@ -346,16 +395,40 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   truncated: 'replay.endTruncated',
   race: 'replay.endRace',
   chasing: 'replay.endChasing',
+  'perpetual-chase': 'replay.endPerpetualChase',
   'dead-position': 'replay.endDeadPosition',
+  points: 'replay.endPoints',
   'den-entered': 'replay.endDenEntered',
   'pieces-captured': 'replay.endPiecesCaptured',
 };
 
-export function terminationLabel(termination: string, locale?: Locale): string {
+// The persisted goal-win code is shared by two different rules. A scoped
+// lookup must name the variant explicitly, never borrow another game's goal.
+const RACE_TERMINATION_KEYS = new Map<GameSpecId, I18nKey>([
+  ['gomoku', 'replay.endFive'],
+  ['jungle', 'replay.endRace'],
+  ['jungle-flip', 'replay.endRace'],
+]);
+
+export function terminationLabel(
+  termination: string,
+  locale?: Locale,
+  variant?: GameSpecId,
+): string {
   if (!termination) return '';
+  if (termination === 'race' && variant !== undefined) {
+    const key = RACE_TERMINATION_KEYS.get(variant);
+    if (!key) throw new Error(`Unsupported race termination for ${variant}`);
+    return t(key, {}, locale);
+  }
   const key = TERMINATION_KEYS[termination];
   if (key) return t(key, {}, locale);
   return humanizeToken(termination);
+}
+
+/** The ending as it reads mid-sentence ("Red wins by timeout"): the label lowercased. */
+export function terminationReason(termination: string, locale?: Locale): string {
+  return terminationLabel(termination, locale).toLowerCase();
 }
 
 // A watch/games rail channel's name in the page locale. The server's `label` is

@@ -7,6 +7,7 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { computeGameAnalysis } from './game-analysis.js';
+import { jungleFlipDecisionOverlay, summarizeDecisions } from './jungle-flip-decisions.js';
 import { mountJungleFlipReview } from './jungle-flip-review.js';
 import type { DecisionOverlay } from './tree-review.js';
 
@@ -203,5 +204,57 @@ describe('jungle-flip decision overlay wiring', () => {
     const caption = root.querySelector('.review-decision-summary__caption');
     expect(caption!.textContent).toContain('Reveals are not graded');
     root.remove();
+  });
+});
+
+describe('ranked flip alternatives', () => {
+  it('formats and carries cached candidates through the variant overlay', async () => {
+    const decision = {
+      ply: 1,
+      mover: 'red' as const,
+      bestWin: 70,
+      playedWin: 50,
+      realizedWin: 40,
+      playedRank: 2,
+      candidates: [
+        { move: 'b2b2', win: 70 },
+        { move: 'a0a0', win: 50, played: true },
+      ],
+    };
+    const mark = jungleFlipDecisionOverlay(summarizeDecisions([decision])).byPly.get(1)!;
+    expect(mark.candidates).toEqual([
+      { label: 'b3 flip', uci: 'b2b2', win: 70, rank: 1 },
+      { label: 'a1 flip', uci: 'a0a0', win: 50, rank: 2, played: true },
+    ]);
+    const root = document.createElement('div');
+    document.body.append(root);
+    const overlay = jungleFlipDecisionOverlay(summarizeDecisions([decision]));
+    mountJungleFlipReview(root, 'ranked-test', STANDARD_JUNGLE_FLIP_DEAL, {
+      ariaLabel: 'test',
+      title: 'test',
+      summary: 'test',
+      moves: firstMoves(3),
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => fakeAnalysis(3),
+        run: async () => fakeAnalysis(3),
+      },
+      decisions: { fetchCached: async () => overlay, canRun: true, run: async () => overlay },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(root.textContent).toContain('b3 flip was best.');
+    const toggle = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
+      (button) => button.textContent?.includes('Show alternatives'),
+    )!;
+    toggle.click();
+    const row = root.querySelector('.move-tree__candidates');
+    expect(row?.textContent).toContain('b3 flip');
+    expect(row?.textContent).toContain('70%');
+    expect(row?.querySelector('.move-tree__candidate--played')?.textContent).toContain('a1 flip');
+    root.remove();
+    const { candidates: _oldMissing, ...old } = decision;
+    const legacy = jungleFlipDecisionOverlay(summarizeDecisions([old])).byPly.get(1)!;
+    expect(legacy.playedRank).toBe(2);
+    expect(legacy.candidates).toBeUndefined();
   });
 });

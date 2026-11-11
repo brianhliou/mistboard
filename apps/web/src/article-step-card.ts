@@ -4,10 +4,10 @@
 // step a column-wide board with a counter and a narrative line under it, which
 // read as a widget dropped into the prose. The embed card (embed/embed-card.ts)
 // is what a framed study looks like everywhere else: a title line, a bordered
-// card with seat rows above and below the board on its mat, a three-button bar
-// (back, a menu, forward), and a rail beside the board holding the score sheet
-// and the result foot. This builds that card inline, from the same classes
-// (embed.css), rather than mounting the embed: mountEmbedCard listens on the
+// card with seat rows above and below the board on its mat, and a rail beside
+// the board holding the score sheet and the result foot. This builds that card
+// inline, from the same classes (embed.css), with the shared compact move bar,
+// rather than mounting the embed: mountEmbedCard listens on the
 // document for arrow keys, fits itself to an iframe's box and posts its height
 // to the parent, none of which is right for a board sitting in an article
 // beside other boards. Keys here are scoped to the card, and its height comes
@@ -31,6 +31,8 @@ import type { ArticleLang } from './article-i18n.js';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { findPieceSlot, pieceSlotCentre } from './board-piece-slot.js';
 import type { EmbedSeat } from './embed/embed-card.js';
+import { createMoveNavBar, moveNavKeyAction } from './move-nav-bar.js';
+import { REPLAY_STEPS } from './replay-icons.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { createMoveList, type MoveList, type MoveListEntry } from './review/move-list.js';
 import { seatDiscEl } from './seat-disc.js';
@@ -89,26 +91,6 @@ export type StepCard = {
   destroy: () => void;
 };
 
-// Drawn, not typed, as in embed-card.ts: the media glyphs and the arrows
-// resolve from different fallback fonts and never match in weight.
-const ICON = {
-  prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
-  next: '<path d="M5 4.3v7.4L11.1 8z"/>',
-  menu: '<circle cx="8" cy="3.2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.8" r="1.5"/>',
-} as const;
-
-function control(icon: keyof typeof ICON, label: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'embed-card-control';
-  button.setAttribute('aria-label', label);
-  button.innerHTML =
-    '<svg class="embed-card-control-icon" viewBox="0 0 16 16" width="16" height="16" ' +
-    `aria-hidden="true" focusable="false" fill="currentColor">${ICON[icon]}</svg>`;
-  button.addEventListener('click', onClick);
-  return button;
-}
-
 function seatRow(seat: EmbedSeat, side: 'first' | 'second'): HTMLElement {
   const el = document.createElement('div');
   el.className = 'embed-card-seat';
@@ -122,6 +104,7 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): HTMLElement {
 
 export function createStepCard(options: StepCardOptions, initial: StepCardGame): StepCard {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
+  const controller = new AbortController();
   const el = document.createElement('div');
   el.className = 'article-step-card';
   if (options.wide) el.classList.add('article-step-card--wide');
@@ -152,8 +135,6 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
   boardCol.className = 'embed-card-board';
   const board = document.createElement('div');
   board.className = 'embed-board article-step-card-board';
-  const controls = document.createElement('div');
-  controls.className = 'embed-card-controls';
   const status = document.createElement('span');
   status.className = 'embed-card-status';
   status.setAttribute('aria-live', 'polite');
@@ -177,58 +158,40 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
   let narrative: HTMLElement | null = null;
   const max = (): number => Math.max(0, game.count - 1);
 
-  const menu = document.createElement('div');
-  menu.className = 'embed-card-menu';
-  menu.hidden = true;
-  menu.setAttribute('role', 'menu');
-  const closeMenu = (): void => {
-    menu.hidden = true;
-    menuButton.setAttribute('aria-expanded', 'false');
-  };
-  const menuButton = control('menu', copy.moreActions, () => {
-    const open = menu.hidden;
-    menu.hidden = !open;
-    menuButton.setAttribute('aria-expanded', String(open));
-    if (open) menu.querySelector<HTMLElement>('.embed-card-menu-item')?.focus();
+  const nav = createMoveNavBar({
+    density: 'compact',
+    // First/last are direct controls now; this card has no extra actions.
+    menu: false,
+    onFirst: () => jump(0),
+    onPrev: () => jump(index - 1),
+    onNext: () => jump(index + 1),
+    onLast: () => jump(max()),
+    signal: controller.signal,
   });
-  menuButton.setAttribute('aria-haspopup', 'true');
-  menuButton.setAttribute('aria-expanded', 'false');
-  const menuItem = (label: string, onSelect: () => void): void => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'embed-card-menu-item';
-    item.setAttribute('role', 'menuitem');
-    item.textContent = label;
-    item.addEventListener('click', () => {
-      closeMenu();
-      onSelect();
-    });
-    menu.append(item);
+  // Article renderers supply their language independently of the UI locale.
+  const labels = {
+    first: copy.firstMove,
+    prev: copy.previousMove,
+    next: copy.nextMove,
+    latest: copy.lastMove,
   };
-  menuItem(copy.backToStart, () => jump(0));
-  menuItem(copy.jumpToEnd, () => jump(max()));
-  const onDocClick = (event: MouseEvent): void => {
-    if (!menu.hidden && !controls.contains(event.target as Node)) closeMenu();
-  };
-  document.addEventListener('click', onDocClick);
-  controls.append(
-    control('prev', copy.previousMove, () => jump(index - 1)),
-    menuButton,
-    control('next', copy.nextMove, () => jump(index + 1)),
-    status,
-    menu,
-  );
+  for (const { action } of REPLAY_STEPS) {
+    nav.buttons[action].setAttribute('aria-label', labels[action]);
+    nav.buttons[action].title = labels[action];
+  }
+  nav.el.append(status);
 
-  card.addEventListener('keydown', (event) => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'ArrowLeft') jump(index - 1);
-    else if (event.key === 'ArrowRight') jump(index + 1);
-    else if (event.key === 'Home') jump(0);
-    else if (event.key === 'End') jump(max());
-    else if (event.key === 'Escape' && !menu.hidden) closeMenu();
-    else return;
-    event.preventDefault();
-  });
+  card.addEventListener(
+    'keydown',
+    (event) => {
+      const action = moveNavKeyAction(event);
+      if (!action) return;
+      // Claim even a bounded step so a page-wide listener never moves another board.
+      event.preventDefault();
+      nav.buttons[action].click();
+    },
+    { signal: controller.signal },
+  );
 
   function paint(from: number | null): void {
     const glide = glideFor(from);
@@ -244,6 +207,7 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
     // A landscape board (banqi) takes the room a narrower sheet column frees.
     const view = board.querySelector('svg')?.getAttribute('viewBox')?.split(/\s+/).map(Number);
     el.classList.toggle('article-step-card--landscape', !!view && view[2]! / view[3]! > 1.2);
+    nav.setBounds({ atStart: index === 0, atEnd: index === max() });
     status.textContent = `${index} / ${max()}`;
     if (moveList) {
       // The embed's foot: the game's result, standing, whatever ply is shown.
@@ -286,7 +250,7 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
     if (game.seats) boardCol.append(seatRow(game.seats.second, 'second'));
     boardCol.append(board);
     if (game.seats) boardCol.append(seatRow(game.seats.first, 'first'));
-    boardCol.append(controls);
+    boardCol.append(nav.el);
     card.classList.toggle('article-step-card-seated', Boolean(game.seats));
 
     moveList = null;
@@ -322,14 +286,13 @@ export function createStepCard(options: StepCardOptions, initial: StepCardGame):
     el,
     setGame(next) {
       game = next;
-      closeMenu();
       build();
     },
     repaint() {
       game.paint(board, index, null);
     },
     destroy() {
-      document.removeEventListener('click', onDocClick);
+      controller.abort();
       el.replaceChildren();
     },
   };

@@ -20,14 +20,21 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
+  isPublicGameSpec,
+  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  legacyLiveRoomForGameSpec,
   MAHJONG_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -36,17 +43,26 @@ import {
   crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
+  ffqBanqiEnabled,
   fortressXiangqiEnabled,
+  gomokuEnabled,
   jieqiEnabled,
+  jqeEnabled,
   jungleEnabled,
   jungleFlipEnabled,
   mahjongEnabled,
   xiangqiEnabled,
+  xiangqiMahjongEnabled,
 } from '../feature-flags.js';
+import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
-import { hasLikelyVariantGrant } from '../signed-in-state.js';
+import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
+import {
+  threeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiOffered,
+} from '../three-kingdoms-banqi-access.js';
 
 export type WebTenantEngineOption = {
   id: string;
@@ -83,6 +99,9 @@ export type WebTenantLandingConfig = {
   timePresetIds: readonly TimeControlId[];
   // Whether the variant appears in normal play-menu entry points.
   offerInMenu(): boolean;
+  // Restricted playtests can offer only supported entry modes. Omitted keeps
+  // the usual picker behavior (including disabled cards for missing bots).
+  modes?: readonly ('pvp' | 'pve' | 'lobby')[];
   // Whether a ?play deep link may select the variant (soft-launch links can be
   // live while the menu entry is still hidden).
   acceptsDeepLink(): boolean;
@@ -112,6 +131,19 @@ export type WebVariantTenant = {
   // games are linked from shared surfaces set it; others keep the legacy
   // /game/:id link those surfaces always produced.
   reviewRouteBase?: string;
+  // A finished game opens at its own room (/room/:id), which hydrates the
+  // finished match: for a table whose room client draws the final position for
+  // a visitor. It outranks gameRouteBase as the finished game's link; a review
+  // page, when the tenant has one, is reached from the room. The server
+  // registration carries the same flag (crosstableReviewUrl);
+  // variant-registry-sync.test.ts holds the two.
+  finishedGameOpensRoom?: true;
+  // The live room is gated by the server alone: /room/<prefix>* routes to
+  // loadLiveRoomClient even while enabled() is false, because enabled() reads a
+  // client hint (the admin flag from /api/auth/me) that a fresh page load does
+  // not have yet. The room's WebSocket refuses whoever the server would not
+  // seat (close 1008), and the room client shows that refusal.
+  liveRoomServerGated?: true;
   // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
   // Tenants without one ride the chess live shell (live.ts) and register
@@ -169,11 +201,22 @@ const XIANGQI_CAPABILITIES_BASE = {
 const alwaysEnabled = () => true;
 
 // Offered only to an account the server would actually seat: the build flag
-// plus a grant named on /api/auth/me (admins hold every one). Turning the flag
-// on alone would put a door in every visitor's play menu that their account
-// cannot open, and they would land as a spectator at an empty table with
-// nothing explaining why.
-const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
+// plus, while the spec is a hidden playtest, a grant named on /api/auth/me
+// (admins hold every one). Turning the flag on alone would put a door in every
+// visitor's play menu that their account cannot open, and they would land as a
+// spectator at an empty table with nothing explaining why. Once the spec's
+// launch switch (publicSurface) is on, the server drops it from the allowlist
+// and the flag alone decides.
+const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): boolean =>
+  enabled() &&
+  !isRetiredGameSpec(gameSpecId) &&
+  (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
+const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
+// Xiangqi mahjong is gated the same way, on its own flag and its own grant.
+const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
+// Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
+// The server repeats this check for create, HTTP shells and every connection.
+const ffqBanqiOffered = () => ffqBanqiEnabled() && isLikelyAdmin();
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -184,10 +227,185 @@ const hiddenFromMenu = () => false;
 // hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
 const retiredDeepLink = () => false;
 
+// The jqe slot (2026-10-16), one rung under AB-JChess since AB-JChess-20261031
+// took the top back, offered only in a VITE_JQE_ENABLED
+// build. The server holds the engine behind MISTBOARD_JQE_ENABLED until its author's
+// OK, so both flags turn on together.
+const JIEQI_JQE_ENGINE_OPTION: WebTenantEngineOption = {
+  id: 'jqe-jieqi',
+  name: 'jqe',
+  familyName: 'jqe',
+  kind: 'container',
+};
+
+// The jieqi ladder (2026-09-29), strongest first: the AB-JChess slot (2026-10), jqe
+// when enabled, Pikafish (level 8, full strength), then Pikafish Level 7..1,
+// Stockfish's Skill Level applied server-side (apps/server/src/jieqi-engine.ts).
+// Hand mirror of JIEQI_PLAYABLE_ENGINES; parity is asserted by
+// variant-registry-sync.test.ts. Level 4 is the default, as on the other rated ladders.
+const JIEQI_LADDER_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
+  {
+    id: 'ab-jchess-jieqi',
+    name: 'AB-JChess',
+    familyName: 'AB-JChess',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-strongest',
+    // Numbered like the rungs below it: with AB-JChess above, a bare
+    // "Pikafish" read as a different engine rather than Level 8.
+    name: 'Pikafish Level 8',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-7',
+    name: 'Pikafish Level 7',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-6',
+    name: 'Pikafish Level 6',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-5',
+    name: 'Pikafish Level 5',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-4',
+    name: 'Pikafish Level 4',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-3',
+    name: 'Pikafish Level 3',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-2',
+    name: 'Pikafish Level 2',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+  {
+    id: 'pikafish-jieqi-level-1',
+    name: 'Pikafish Level 1',
+    familyName: 'Pikafish',
+    kind: 'container',
+  },
+];
+
+export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEngineOption[] {
+  if (!withJqe) return JIEQI_LADDER_ENGINE_OPTIONS;
+  const [abJchess, ...below] = JIEQI_LADDER_ENGINE_OPTIONS;
+  return [abJchess!, JIEQI_JQE_ENGINE_OPTION, ...below];
+}
+
+let jungleFlipNeuralEngineAvailable = false;
+
+/** Runtime confirmation only: a build flag cannot know whether the private net exists. */
+export function setJungleFlipEngineOptions(engines: readonly WebTenantEngineOption[]): void {
+  jungleFlipNeuralEngineAvailable = engines.some(
+    (engine) => engine.id === 'misty-jungle-flip-level-8',
+  );
+}
+
+export function jungleFlipEngineOptions(
+  withNet = jungleFlipNeuralEngineAvailable,
+): readonly WebTenantEngineOption[] {
+  return [8, 7, 6, 5, 4, 3, 2, 1]
+    .filter((level) => level !== 8 || withNet)
+    .map((level) => ({
+      id: level === 7 ? 'misty-jungle-flip' : `misty-jungle-flip-level-${level}`,
+      name: `Misty Level ${level}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
+}
+
 // Every tenant block, retired ones included (see WEB_VARIANT_TENANTS below).
 // Deleting a retired variant's block is its own later commit
 // (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
+  {
+    gameSpecId: FFQ_BANQI_SPEC_ID,
+    roomIdPrefix: 'ffq_',
+    // A cold authorized room load does not have its admin hint yet. The HTTP
+    // shell and socket enforce the account check before any state is sent.
+    enabled: ffqBanqiEnabled,
+    pageTitleKey: 'variant.ffqBanqi.name',
+    loadLiveRoomClient: () =>
+      import('../live-ffq-banqi.js').then(
+        ({ bootstrapFFQBanqiLiveRoom }) => bootstrapFFQBanqiLiveRoom,
+      ),
+    // No postgame route, watch channel or public listing. Finished rooms keep
+    // the same masked live client; shared discovery never links them.
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      offerInMenu: ffqBanqiOffered,
+      acceptsDeepLink: ffqBanqiOffered,
+      modes: ['pvp'],
+    },
+  },
+  {
+    gameSpecId: GOMOKU_SPEC_ID,
+    roomIdPrefix: 'gmk_',
+    enabled: gomokuOffered,
+    liveRoomServerGated: true,
+    pageTitleKey: 'variant.gomoku.name',
+    gameRouteBase: '/gomoku/game',
+    reviewRouteBase: '/gomoku/game',
+    mountPostgame: (root, roomId) =>
+      import('../gomoku-postgame.js').then(({ mountGomokuPostgame }) =>
+        mountGomokuPostgame(root, roomId),
+      ),
+    loadLiveRoomClient: () =>
+      import('../live-gomoku.js').then(({ bootstrapGomokuLiveRoom }) => bootstrapGomokuLiveRoom),
+    watch: {
+      family: 'gomoku',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-gomoku-replay.js').then(({ mountGomokuWatchReplay }) =>
+          mountGomokuWatchReplay(root, roomId, options),
+        ),
+    },
+    landing: {
+      capabilities: {
+        firstColor: 'black',
+        firstGlyph: '●',
+        firstLabel: 'Black',
+        glyphClass: 'stone',
+        secondColor: 'white',
+        secondGlyph: '○',
+        secondLabel: 'White',
+        supportsRated: true,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      engineOptions: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+        id: `rapfi-level-${level}`,
+        name: `Rapfi Level ${level}`,
+        familyName: 'Rapfi',
+        kind: 'browser',
+      })),
+      defaultEngineId: 'rapfi-level-1',
+      // The picker stays unlisted. Admins have the same ?play deep-link door
+      // as Three Kingdoms banqi, for a friend room or the browser bot.
+      offerInMenu: gomokuEnabled,
+      acceptsDeepLink: gomokuOffered,
+    },
+  },
   {
     // Dark-chess correspondence rooms (server registration: correspondence
     // create flow). Deliberately capability-free: no loadLiveRoomClient (rooms
@@ -308,6 +526,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
+        // Below the ladder: plays the worst move it finds (XIANGQI_PICKER_ENGINES).
+        {
+          id: 'fairy-stockfish-xiangqi-worst',
+          name: 'General Blunder',
+          familyName: 'Fairy-Stockfish',
+          kind: 'container',
+        },
       ],
       // A device with no remembered xiangqi engine is a newcomer: the same
       // first-game rung the homepage offers (landing-bot-policy).
@@ -414,69 +639,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: jieqiEnabled,
-      // The jieqi ladder (2026-09-29), strongest first: the AB-JChess top slot
-      // (2026-10), Pikafish (level 8, full strength), then Pikafish Level 7..1,
-      // Stockfish's Skill Level applied server-side (apps/server/src/jieqi-engine.ts).
-      // Hand mirror of JIEQI_PLAYABLE_ENGINES; parity is asserted by
-      // variant-registry-sync.test.ts. Level 4 is the default, as on the other rated ladders.
-      engineOptions: [
-        {
-          id: 'ab-jchess-jieqi',
-          name: 'AB-JChess',
-          familyName: 'AB-JChess',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-strongest',
-          // Numbered like the rungs below it: with AB-JChess above, a bare
-          // "Pikafish" read as a different engine rather than Level 8.
-          name: 'Pikafish Level 8',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-7',
-          name: 'Pikafish Level 7',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-6',
-          name: 'Pikafish Level 6',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-5',
-          name: 'Pikafish Level 5',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-4',
-          name: 'Pikafish Level 4',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-3',
-          name: 'Pikafish Level 3',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-2',
-          name: 'Pikafish Level 2',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-        {
-          id: 'pikafish-jieqi-level-1',
-          name: 'Pikafish Level 1',
-          familyName: 'Pikafish',
-          kind: 'container',
-        },
-      ],
+      // The jieqi ladder, strongest first: jieqiEngineOptions() above.
+      engineOptions: jieqiEngineOptions(),
       // A device with no remembered jieqi engine is a newcomer: the same
       // first-game rung the homepage offers (landing-bot-policy).
       defaultEngineId: JIEQI_FIRST_GAME_ENGINE_ID,
@@ -531,17 +695,14 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: alwaysEnabled,
-      // One versioned bot (was 3 difficulty tiers; consolidated 2026-06-18 with the v0.2.0
-      // cheap-strength eval), fronted by the merged Misty identity since 2026-07-21.
-      engineOptions: [
-        {
-          id: 'misty-banqi',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'misty-banqi',
+      // Hand mirror of BANQI_PLAYABLE_ENGINES; strongest first. L7 keeps its stored id.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`,
+        name: `Misty Level ${level}`,
+        familyName: 'Misty',
+        kind: 'container',
+      })),
+      defaultEngineId: 'misty-banqi-level-4',
     },
   },
   {
@@ -616,7 +777,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋). Symmetric hidden-identity 4×4 flip animal chess; a
+    // Flip Jungle (翻翻兽棋). Symmetric hidden-identity 4×4 flip animal chess; a
     // self-contained live client on the socket-client + chrome stack (no fog; the deal
     // is hidden from both seats equally). PvP-only at launch (no bot).
     gameSpecId: JUNGLE_FLIP_SPEC_ID,
@@ -662,18 +823,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleFlipEnabled,
       acceptsDeepLink: jungleFlipEnabled,
-      // Tier-B MistyJungleFlip UCI engine (jungle-flip-engine in mistboard-engine),
-      // served via server-jungle-flip-engine.ts. One versioned full-strength bot, like
-      // banqi — fronted by the merged Misty identity since 2026-07-21.
-      engineOptions: [
-        {
-          id: 'misty-jungle-flip',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'misty-jungle-flip',
+      // Hand mirror of JUNGLE_FLIP_PLAYABLE_ENGINES; L8 requires the runtime roster.
+      get engineOptions() {
+        return jungleFlipEngineOptions();
+      },
+      defaultEngineId: 'misty-jungle-flip-level-4',
     },
   },
   {
@@ -771,19 +925,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: true,
         supportsTimeControl: true,
       },
-      // 1+1 is omitted; every other xiangqi tenant offers all four.
-      //
-      // The reason is not only that games are long (the seven seeded engine
-      // games run 120-229 plies, median 150). It is that a turn here is TWO
-      // decisions, a move and a duck placement, so a preset buys half the
-      // thinking time per decision that the same preset buys elsewhere. At the
-      // long end, ~115 turns a side, 1+1 affords 0.8s per decision and the
-      // clock decides the game. 3+2 affords 1.8s, which is roughly what plain
-      // xiangqi gives at 1+1, and that is offered — so 3+2 is offered here.
-      //
-      // 5+5 stays the preselected default (VARIANT_DEFAULT_TIME_CONTROLS in
-      // @mistboard/game); 3+2 is a pace a player has to choose deliberately.
-      timePresetIds: ['3m2', '5m5', '10m5'],
+      // All four paces, 1+1 included (Brian, 2026-11-06: "part of the
+      // challenge"). A turn here is a move plus a duck placement, so 1+1 is
+      // very fast; 5+5 stays the preselected default
+      // (VARIANT_DEFAULT_TIME_CONTROLS in @mistboard/game).
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // Both gated on the SAME predicate. The conformance test checks exactly
       // this, because gating the menu and the deep link on neighbouring flags
       // has shipped twice.
@@ -977,6 +1123,143 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       hideColorPicker: true,
     },
   },
+  {
+    // Xiangqi mahjong (象棋麻將): 32 tiles, two players, a hand of five.
+    //
+    // Gated like Hong Kong mahjong: the build flag plus the server's
+    // per-account allowlist. Against the bot, a friend room, or Find opponent
+    // (rated at 5+5; the rated unit is the whole four-hand match). The lobby
+    // lists its seeks only to granted accounts. On TV (and the live listings)
+    // only once the spec is public: the server gates the channel on
+    // publicSurface (watch-channels.ts listedOnSurface).
+    gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+    roomIdPrefix: 'xmj_',
+    enabled: xiangqiMahjongEnabled,
+    pageTitleKey: 'variant.xiangqiMahjong.name',
+    // A finished match opens at its own room, which shows the final hand with
+    // every tile face up and never the walls (server xiangqi-mahjong-pvp.test.ts);
+    // profile rows, the bell and the database link there (finishedGameOpensRoom
+    // wins over gameRouteBase in finishedGameHref). The room's Review button
+    // opens the review page below: every hand of the match, move by move, both
+    // hands and each draw face up. Its API answers only for a finished match
+    // (server routes/xiangqi-mahjong-games.ts); no engine, no discard advice.
+    finishedGameOpensRoom: true,
+    gameRouteBase: '/xiangqi-mahjong/game',
+    mountPostgame: (root, roomId) =>
+      import('../xiangqi-mahjong-postgame.js').then(({ mountXiangqiMahjongPostgame }) =>
+        mountXiangqiMahjongPostgame(root, roomId),
+      ),
+    loadLiveRoomClient: () =>
+      import('../live-xiangqi-mahjong.js').then(
+        ({ bootstrapXiangqiMahjongLiveRoom }) =>
+          () =>
+            bootstrapXiangqiMahjongLiveRoom(),
+      ),
+    // Mistboard TV: the room's table at each recorded view, spectator views
+    // while live, with the hand-by-hand log and the points in the rail.
+    watch: {
+      family: 'mahjong',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-xiangqi-mahjong-replay.js').then(({ mountXiangqiMahjongWatchReplay }) =>
+          mountXiangqiMahjongWatchReplay(root, roomId, options),
+        ),
+    },
+    landing: {
+      capabilities: {
+        firstColor: 'red',
+        firstGlyph: '東',
+        firstLabel: 'East',
+        secondColor: 'black',
+        secondGlyph: '西',
+        secondLabel: 'West',
+        neutralGlyphColor: true,
+        supportsRated: true,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // One predicate for both, as for Hong Kong mahjong.
+      offerInMenu: xiangqiMahjongOffered,
+      acceptsDeepLink: xiangqiMahjongOffered,
+      // Exactly one option: the dialog sends one global engine id, and a
+      // variant with no option of its own would ask the server for Misty.
+      engineOptions: [
+        {
+          id: 'misty-xiangqi-mahjong',
+          name: 'Misty',
+          familyName: 'Misty',
+          kind: 'container',
+        },
+      ],
+      defaultEngineId: 'misty-xiangqi-mahjong',
+      hideColorPicker: true,
+    },
+  },
+  {
+    // Public casual Three Kingdoms Banqi. Play respects the build-time gate;
+    // the server independently admits sockets and creates. Always unrated.
+    gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+    roomIdPrefix: 'tkb_',
+    enabled: threeKingdomsBanqiOffered,
+    // /room/tkb_* loads this client whatever the admin hint says; the server's
+    // WebSocket door enforces the runtime gate and its admin fallback.
+    liveRoomServerGated: true,
+    pageTitleKey: 'variant.threeKingdomsBanqi.name',
+    gameRouteBase: '/three-kingdoms-banqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../live-three-kingdoms-banqi-postgame.js').then(
+        ({ mountThreeKingdomsBanqiPostgame }) => mountThreeKingdomsBanqiPostgame(root, roomId),
+      ),
+    reviewRouteBase: '/three-kingdoms-banqi/game',
+    loadLiveRoomClient: () =>
+      import('../live-three-kingdoms-banqi.js').then(
+        ({ bootstrapThreeKingdomsBanqiLiveRoom }) =>
+          () =>
+            bootstrapThreeKingdomsBanqiLiveRoom(),
+      ),
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-three-kingdoms-banqi-replay.js').then(
+          ({ mountThreeKingdomsBanqiWatchReplay }) =>
+            mountThreeKingdomsBanqiWatchReplay(root, roomId, options),
+        ),
+    },
+    landing: {
+      // Ink binds on the opening flip, so the picker offers move order, as banqi.
+      capabilities: {
+        firstColor: 'red',
+        firstGlyph: '1',
+        firstLabel: 'First',
+        glyphClass: 'banqi-seat',
+        neutralGlyphColor: true,
+        pickerLabel: 'Move order',
+        secondColor: 'black',
+        secondGlyph: '2',
+        secondLabel: 'Second',
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // One predicate for both (the conformance test checks the pair). It is
+      // read per call, never at module load, because the admin answer arrives
+      // with /api/auth/me after the registry is built.
+      offerInMenu: threeKingdomsBanqiOffered,
+      acceptsDeepLink: threeKingdomsBanqiOffered,
+      // Runtime tiers come from the gated playable API, never build-time
+      // guesses about binaries or nets. Default to L4, as in banqi, then the
+      // first available level; L1 works even without a binary.
+      get engineOptions() {
+        return threeKingdomsBanqiEngineOptions();
+      },
+      get defaultEngineId() {
+        const options = threeKingdomsBanqiEngineOptions();
+        return (
+          options?.find((engine) => engine.id === 'misty-three-kingdoms-banqi-level-4')?.id ??
+          options?.[0]?.id
+        );
+      },
+    },
+  },
 ];
 
 // A retired spec's block stays registered (2026-10-11, Fortress and Atomic
@@ -1002,6 +1285,59 @@ export function webVariantTenantForSpecId(value: string | null): WebVariantTenan
       (tenant) => tenant.gameSpecId === value || tenant.legacyGameSpecIds?.includes(value),
     ) ?? null
   );
+}
+
+/**
+ * Whether the play menu offers this spec to this viewer: the build flag, and for
+ * an allowlisted spec the account's grant (hasLikelyVariantGrant). The
+ * correspondence pickers use it to add a playtest variant only for granted
+ * accounts, on the same predicate as the menu.
+ */
+export function webVariantOfferedInMenu(gameSpecId: string): boolean {
+  return webVariantTenantForSpecId(gameSpecId)?.landing?.offerInMenu() === true;
+}
+
+// A finished game's page: the tenant's postgame route (room-id prefix first,
+// spec id as a fallback for legacy aliases); for a table whose finished room is
+// its page (Xiangqi Mahjong), the room, which hydrates the finished match and
+// shows every hand; else the dark-chess /game/:id surface. Shared by the
+// profile game rows, the bell's "game ended" rows, the database and the
+// featured-game cards.
+export function finishedGameHref(roomId: string, gameSpecId: string | null): string {
+  const tenant = webVariantTenantForRoomId(roomId) ?? webVariantTenantForSpecId(gameSpecId);
+  const id = encodeURIComponent(roomId);
+  // A table whose room is its finished page links the room even when it also
+  // has a review page (Xiangqi Mahjong: the room's Review button opens it).
+  if (tenant?.finishedGameOpensRoom) return `/room/${id}`;
+  const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
+  if (routeBase) return `${routeBase}/${id}`;
+  return `/game/${id}`;
+}
+
+// What the legacy /game/:id route does with a room id. That page is the chess
+// shell, which reads only the chess stack's event log and 403s
+// (game_not_public) on any tenant's, so a tenant game never mounts it: it goes
+// to the tenant's own finished-game page (postgame route, or the room for a
+// table whose finished room is its page), or reads as not found when the
+// tenant has none (Hong Kong mahjong) or its build flag is off. Only an id with
+// no tenant (a bare Fog Chess room) or a chess-stack tenant (dark-chess
+// correspondence, dchx_) mounts the shell. Fail-closed: a new tenant lands on
+// not found until it names a page, never on the chess shell.
+export type LegacyGameRoute =
+  | { kind: 'chess' }
+  | { kind: 'redirect'; href: string }
+  | { kind: 'not-found' };
+
+export function legacyGameRouteForRoomId(roomId: string): LegacyGameRoute {
+  const tenant = webVariantTenantForRoomId(roomId);
+  if (!tenant || legacyLiveRoomForGameSpec(tenant.gameSpecId)) return { kind: 'chess' };
+  if (!tenant.enabled()) return { kind: 'not-found' };
+  const id = encodeURIComponent(roomId);
+  if (tenant.finishedGameOpensRoom) return { kind: 'redirect', href: `/room/${id}` };
+  if (tenant.gameRouteBase && tenant.mountPostgame) {
+    return { kind: 'redirect', href: `${tenant.gameRouteBase}/${id}` };
+  }
+  return { kind: 'not-found' };
 }
 
 /**
