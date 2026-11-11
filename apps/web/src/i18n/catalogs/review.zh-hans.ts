@@ -141,6 +141,8 @@ export const ZH_HANS_REVIEW = {
   'practice.position.badGoal': '这个链接没有说明是要将死对手、争取胜势还是守和。',
   'practice.position.badSide': '这个链接没有说明你执哪一方。',
   'practice.position.toEditor': '在棋盘编辑器里摆一个局面',
+  'practice.position.youPlay': '你执{side}，对手是引擎。',
+  'practice.position.backToArticle': '返回文章',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '开始',
   'practice.card.soldier': '兵不能后退',

@@ -59,6 +59,8 @@ export interface XiangqiPracticeOptions {
   summary?: string;
   /** Optional left-rail element (chapter tabs, etc.). */
   aside?: HTMLElement;
+  /** A single position page (/practice/position), not a study chapter. */
+  single?: boolean;
   /** The concept prose shown under the board, beside the goal. */
   brief?: string;
   /** Where this exercise sits in its set, for the "3 of 32" line. */
@@ -175,9 +177,9 @@ export function mountXiangqiPractice(
   // ── Layout ──
   const wrap = document.createElement('section');
   wrap.className = 'gamebook practice';
-  // No rail (a single position from a URL): the three-track grid would put the
-  // board in the rail's 19rem slot and leave the third track empty.
-  if (!opts.aside) wrap.classList.add('practice--solo');
+  // One position from a URL, not a chapter of a set: on a phone the page drops
+  // its card and generic heading so the board, goal and coach fit one screen.
+  if (opts.single) wrap.classList.add('practice--single');
   if (opts.aside) {
     const aside = document.createElement('div');
     aside.className = 'gamebook__aside';

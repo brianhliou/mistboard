@@ -1,6 +1,7 @@
 import { PRACTICE_WIN_CP } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  backPath,
   PRACTICE_POSITION_DRAW_MOVES,
   parsePracticePositionParams,
   practicePositionHref,
@@ -70,5 +71,20 @@ describe('parsePracticePositionParams', () => {
     const again = practicePositionHref(request.fen, request.goalKind, request.side);
     const second = parsePracticePositionParams(new URL(again, 'https://x.test').searchParams);
     expect(second.ok && second.fen).toBe(request.fen);
+  });
+});
+
+describe('backPath', () => {
+  const read = (from: string): string | null => backPath(new URLSearchParams({ from }));
+  it('links back to a site article, in any served language', () => {
+    expect(read('/blog/meng-fanrui')).toBe('/blog/meng-fanrui');
+    expect(read('/zh-hant/blog/meng-fanrui')).toBe('/zh-hant/blog/meng-fanrui');
+  });
+  it('refuses anything that is not an article path', () => {
+    expect(read('https://evil.example/blog/x')).toBeNull();
+    expect(read('//evil.example/blog/x')).toBeNull();
+    expect(read('/blog/x?next=//evil.example')).toBeNull();
+    expect(read('javascript:alert(1)')).toBeNull();
+    expect(backPath(new URLSearchParams())).toBeNull();
   });
 });

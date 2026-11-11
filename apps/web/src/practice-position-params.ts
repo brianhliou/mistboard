@@ -89,3 +89,10 @@ export function practicePositionHref(
   const params = new URLSearchParams({ fen, goal, side });
   return `/practice/position?${params.toString()}`;
 }
+
+/** An article path to link back to, or null. Only a site article path is
+ *  accepted, so a crafted link cannot send the reader off the site. */
+export function backPath(params: URLSearchParams): string | null {
+  const from = params.get('from');
+  return from && /^(\/zh-han[st])?\/blog\/[a-z0-9-]+$/.test(from) ? from : null;
+}

@@ -682,6 +682,8 @@ export const EN_REVIEW = {
     'This link does not say whether to play for mate, play for a win or hold the draw.',
   'practice.position.badSide': 'This link does not say which side you play.',
   'practice.position.toEditor': 'Set up a position in the board editor',
+  'practice.position.youPlay': 'You play {side} against the engine.',
+  'practice.position.backToArticle': 'Back to the article',
   'practice.ribbon.done': 'Done',
   'practice.ribbon.play': 'Play!',
   'practice.card.soldier': 'It never moves back',

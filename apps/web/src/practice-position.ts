@@ -12,12 +12,13 @@ import type { XiangqiGameState } from '@mistboard/game';
 import { track } from './analytics.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
-import { parsePracticePositionParams } from './practice-position-params.js';
+import { backPath, parsePracticePositionParams } from './practice-position-params.js';
 import { createCeval } from './review/engine/ceval.js';
 import type { PracticeEval } from './review/practice-play.js';
 import { evaluateXiangqiForPractice } from './review/xiangqi-practice.js';
 import { mountXiangqiPractice } from './review/xiangqi-practice-player.js';
 import { buildNav } from './site-shell.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './review/practice.css';
@@ -63,5 +64,40 @@ export function mountPracticePosition(root: HTMLElement): void {
     evaluate,
     title: t('practice.position.title'),
     nav: buildNav(),
+    aside: positionCard(request.side, backPath(new URLSearchParams(location.search))),
+    single: true,
   });
+}
+
+/** The left column, in the study practice rail's style: the side the learner
+ *  plays and, when the link came from an article, the way back to it. */
+function positionCard(side: 'red' | 'black', back: string | null): HTMLElement {
+  const card = document.createElement('section');
+  card.className = 'practice__panel practice__rail-card practice__position-card';
+  const head = document.createElement('header');
+  head.className = 'practice__rail-head';
+  const icon = document.createElement('div');
+  icon.className = 'practice__rail-icon';
+  icon.innerHTML = renderXiangqiPiece({ color: side, role: 'general' }, { size: 44 });
+  const text = document.createElement('div');
+  text.className = 'practice__rail-headtext';
+  const title = document.createElement('h2');
+  title.className = 'practice__rail-title';
+  title.textContent = t('practice.position.title');
+  const sub = document.createElement('p');
+  sub.className = 'practice__rail-sub';
+  sub.textContent = t('practice.position.youPlay', {
+    side: t(side === 'red' ? 'replay.red' : 'replay.black'),
+  });
+  text.append(title, sub);
+  head.append(icon, text);
+  card.append(head);
+  if (back) {
+    const link = document.createElement('a');
+    link.className = 'practice__position-back';
+    link.href = back;
+    link.textContent = t('practice.position.backToArticle');
+    card.append(link);
+  }
+  return card;
 }

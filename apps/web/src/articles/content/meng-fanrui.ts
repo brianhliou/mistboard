@@ -694,7 +694,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'cta',
-          buttons: [{"label":"Play Meng's side from move 27","href":"/practice/position?fen=4kab2%2F3na4%2F4b4%2Fp1p5p%2F5N3%2F2P3R2%2F8P%2F4B2c1%2F4A4%2F1rC1KA3+b+-+-+3+27&goal=win&side=black","emphasis":"primary"}],
+          buttons: [{"label":"Play Meng's side from move 27","href":"/practice/position?fen=4kab2%2F3na4%2F4b4%2Fp1p5p%2F5N3%2F2P3R2%2F8P%2F4B2c1%2F4A4%2F1rC1KA3+b+-+-+3+27&goal=win&side=black&from=%2Fblog%2Fmeng-fanrui","emphasis":"primary"}],
         },
         {
           kind: 'paragraph',

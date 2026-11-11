@@ -141,6 +141,8 @@ export const ZH_HANT_REVIEW = {
   'practice.position.badGoal': '這個連結沒有說明是要將死對手、爭取勝勢還是守和。',
   'practice.position.badSide': '這個連結沒有說明你執哪一方。',
   'practice.position.toEditor': '在棋盤編輯器裡擺一個局面',
+  'practice.position.youPlay': '你執{side}，對手是引擎。',
+  'practice.position.backToArticle': '返回文章',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '開始',
   'practice.card.soldier': '兵不能後退',
