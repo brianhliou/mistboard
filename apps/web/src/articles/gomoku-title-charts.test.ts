@@ -42,4 +42,15 @@ describe('Gomoku title match charts', () => {
       }
     }
   });
+
+  it('counts games, not readings, in the trajectory hover text', () => {
+    const T = decisive.trajectory;
+    for (const line of [T.wins, T.draws, T.losses]) {
+      for (const p of line) {
+        expect(p.games).toBeLessThanOrEqual(p.readings);
+        expect(p.readings).toBeLessThanOrEqual(2 * p.games);
+      }
+    }
+    expect([T.wins[0].games, T.draws[0].games, T.losses[0].games]).toEqual([113, 61, 25]);
+  });
 });

@@ -12,6 +12,8 @@ import {
   FEATURED_FIVE,
   FEATURED_LAST,
   FEATURED_RAPFI_MOVES,
+  FIRST,
+  FIRST_BIN_STONES,
   featuredGameState,
   KATAGOMO_SCORE,
   LEVEL8_SHARE,
@@ -203,6 +205,7 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
       `${L.decisive} of the ${decisive.games} games ended in a five, at a median of ${L.decisiveMedian} moves`,
       `All ${L.draws} draws ran the full ${L.drawMoves} moves`,
       `by stone ${PARTED_AT_STONES}`,
+      `They read ${pctOf(FIRST.wins)}, ${pctOf(FIRST.draws)} and ${pctOf(FIRST.losses)} ${FIRST_BIN_STONES - 5} moves after the deal`,
       `${pctOf(PARTED.wins)} in its eventual wins, ${pctOf(PARTED.draws)} in the draws and ${pctOf(PARTED.losses)} in its losses`,
       `a median stone ${decisive.forcedWin.medianStone}`,
       `Its ${decisive.losses.games} losses`,
@@ -249,5 +252,18 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
     expect(svgs[0]).toContain(`Draws: ${L.draws} games, ${L.drawMoves} moves each`);
     expect(svgs[1]).toContain('Rapfi won');
     expect(svgs[1]).toContain('Rapfi lost');
+  });
+
+  it('starts every trajectory line in the same bin the heading names', () => {
+    const T = decisive.trajectory;
+    expect(T.draws[0].stones).toBe(FIRST_BIN_STONES);
+    expect(T.losses[0].stones).toBe(FIRST_BIN_STONES);
+    const headings = rapfiVsKatagomoArticle.sections.map((x) => x.heading);
+    expect(headings).toContain(`The games start to turn within ${FIRST_BIN_STONES - 5} moves`);
+  });
+
+  it('links release pages, never a direct file download', () => {
+    expect(prose).toContain("[Gomocup 2025 release](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025)");
+    expect(prose).not.toMatch(/releases\/download/);
   });
 });

@@ -25,7 +25,8 @@
       "file": "b10_freestyle15x.bin.gz",
       "model": "gom_distill-b10c128nbt_fs15xdistill-s13414086656-d64362574",
       "sha256": "4fab5d142f9951b6d27bc0763779d2045c06e69e63cced8ed27cb25b4018e700",
-      "url": "https://github.com/hzyhhzy/KataGomo/releases/download/gomocup2025/b10_freestyle15x.bin.gz"
+      "url": "https://github.com/hzyhhzy/KataGomo/releases/download/gomocup2025/b10_freestyle15x.bin.gz",
+      "releaseUrl": "https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025"
     },
     "passRetry": "Mistboard has no pass; a pass is asked again with pass forbidden. No retry changed a result."
   },

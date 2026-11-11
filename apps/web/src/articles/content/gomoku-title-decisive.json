@@ -1,5 +1,5 @@
 {
- "$comment": "Why the Gomoku title match games are decisive: read from the equal-time match logs (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games) on 2026-11-11. Rapfi win chances are its own per-move evals as logged in the match, on its win curve (1/(1+exp(-eval/200)), a forced five as 0 or 1). Stone counts include the five dealt opening stones; game lengths are moves after the opening. KataGomo logged no evals in the match; katagomoView is a re-read on 2026-11-11 with the match's KataGomo build and net: every opening at 400 visits, and in 30 of Rapfi's wins (chosen by seed) the position with KataGomo to move one ply before Rapfi's eval jumped to won, at 140 visits (its match budget; it repeated its match move in 22 of 30) and 1,400.",
+ "$comment": "Why the Gomoku title match games are decisive: read from the equal-time match logs (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games) on 2026-11-11. Rapfi win chances are its own per-move evals as logged in the match, on its win curve (1/(1+exp(-eval/200)), a forced five as 0 or 1). Stone counts include the five dealt opening stones; game lengths are moves after the opening. KataGomo logged no evals in the match; katagomoView is a re-read on 2026-11-11 with the match's KataGomo build and net: every opening at 400 visits, and in 30 of Rapfi's wins (chosen by seed) the position with KataGomo to move one ply before Rapfi's eval jumped to won, at 140 visits (its match budget; it repeated its match move in 22 of 30) and 1,400. In trajectory, games is how many games had a Rapfi reading in that bin of stones and readings is how many readings were averaged (about two per game).",
  "games": 199,
  "lengths": {
   "decisive": 138,
@@ -73,292 +73,349 @@
   "wins": [
    {
     "stones": 8,
-    "games": 226,
-    "chance": 0.653
+    "games": 113,
+    "chance": 0.653,
+    "readings": 226
    },
    {
     "stones": 12,
-    "games": 226,
-    "chance": 0.7232
+    "games": 113,
+    "chance": 0.7232,
+    "readings": 226
    },
    {
     "stones": 16,
-    "games": 226,
-    "chance": 0.7841
+    "games": 113,
+    "chance": 0.7841,
+    "readings": 226
    },
    {
     "stones": 20,
-    "games": 225,
-    "chance": 0.8345
+    "games": 113,
+    "chance": 0.8345,
+    "readings": 225
    },
    {
     "stones": 24,
-    "games": 213,
-    "chance": 0.8719
+    "games": 108,
+    "chance": 0.8719,
+    "readings": 213
    },
    {
     "stones": 28,
-    "games": 190,
-    "chance": 0.8761
+    "games": 99,
+    "chance": 0.8761,
+    "readings": 190
    },
    {
     "stones": 32,
-    "games": 167,
-    "chance": 0.8805
+    "games": 88,
+    "chance": 0.8805,
+    "readings": 167
    },
    {
     "stones": 36,
-    "games": 142,
-    "chance": 0.8888
+    "games": 74,
+    "chance": 0.8888,
+    "readings": 142
    },
    {
     "stones": 40,
-    "games": 121,
-    "chance": 0.8883
+    "games": 62,
+    "chance": 0.8883,
+    "readings": 121
    },
    {
     "stones": 44,
-    "games": 105,
-    "chance": 0.8873
+    "games": 55,
+    "chance": 0.8873,
+    "readings": 105
    },
    {
     "stones": 48,
-    "games": 90,
-    "chance": 0.8894
+    "games": 46,
+    "chance": 0.8894,
+    "readings": 90
    },
    {
     "stones": 52,
-    "games": 78,
-    "chance": 0.8922
+    "games": 40,
+    "chance": 0.8922,
+    "readings": 78
    },
    {
     "stones": 56,
-    "games": 66,
-    "chance": 0.9038
+    "games": 34,
+    "chance": 0.9038,
+    "readings": 66
    },
    {
     "stones": 60,
-    "games": 57,
-    "chance": 0.904
+    "games": 31,
+    "chance": 0.904,
+    "readings": 57
    },
    {
     "stones": 64,
-    "games": 44,
-    "chance": 0.8887
+    "games": 23,
+    "chance": 0.8887,
+    "readings": 44
    },
    {
     "stones": 68,
-    "games": 37,
-    "chance": 0.8773
+    "games": 19,
+    "chance": 0.8773,
+    "readings": 37
    },
    {
     "stones": 72,
-    "games": 27,
-    "chance": 0.8322
+    "games": 14,
+    "chance": 0.8322,
+    "readings": 27
    },
    {
     "stones": 76,
-    "games": 22,
-    "chance": 0.8019
+    "games": 11,
+    "chance": 0.8019,
+    "readings": 22
    },
    {
     "stones": 80,
-    "games": 17,
-    "chance": 0.7835
+    "games": 10,
+    "chance": 0.7835,
+    "readings": 17
    }
   ],
   "draws": [
    {
     "stones": 8,
-    "games": 122,
-    "chance": 0.4945
+    "games": 61,
+    "chance": 0.4945,
+    "readings": 122
    },
    {
     "stones": 12,
-    "games": 122,
-    "chance": 0.5015
+    "games": 61,
+    "chance": 0.5015,
+    "readings": 122
    },
    {
     "stones": 16,
-    "games": 122,
-    "chance": 0.5146
+    "games": 61,
+    "chance": 0.5146,
+    "readings": 122
    },
    {
     "stones": 20,
-    "games": 122,
-    "chance": 0.5167
+    "games": 61,
+    "chance": 0.5167,
+    "readings": 122
    },
    {
     "stones": 24,
-    "games": 122,
-    "chance": 0.5233
+    "games": 61,
+    "chance": 0.5233,
+    "readings": 122
    },
    {
     "stones": 28,
-    "games": 122,
-    "chance": 0.5358
+    "games": 61,
+    "chance": 0.5358,
+    "readings": 122
    },
    {
     "stones": 32,
-    "games": 122,
-    "chance": 0.545
+    "games": 61,
+    "chance": 0.545,
+    "readings": 122
    },
    {
     "stones": 36,
-    "games": 122,
-    "chance": 0.5503
+    "games": 61,
+    "chance": 0.5503,
+    "readings": 122
    },
    {
     "stones": 40,
-    "games": 122,
-    "chance": 0.5568
+    "games": 61,
+    "chance": 0.5568,
+    "readings": 122
    },
    {
     "stones": 44,
-    "games": 122,
-    "chance": 0.569
+    "games": 61,
+    "chance": 0.569,
+    "readings": 122
    },
    {
     "stones": 48,
-    "games": 122,
-    "chance": 0.5829
+    "games": 61,
+    "chance": 0.5829,
+    "readings": 122
    },
    {
     "stones": 52,
-    "games": 122,
-    "chance": 0.5856
+    "games": 61,
+    "chance": 0.5856,
+    "readings": 122
    },
    {
     "stones": 56,
-    "games": 122,
-    "chance": 0.5948
+    "games": 61,
+    "chance": 0.5948,
+    "readings": 122
    },
    {
     "stones": 60,
-    "games": 122,
-    "chance": 0.6097
+    "games": 61,
+    "chance": 0.6097,
+    "readings": 122
    },
    {
     "stones": 64,
-    "games": 122,
-    "chance": 0.6108
+    "games": 61,
+    "chance": 0.6108,
+    "readings": 122
    },
    {
     "stones": 68,
-    "games": 122,
-    "chance": 0.6131
+    "games": 61,
+    "chance": 0.6131,
+    "readings": 122
    },
    {
     "stones": 72,
-    "games": 122,
-    "chance": 0.5992
+    "games": 61,
+    "chance": 0.5992,
+    "readings": 122
    },
    {
     "stones": 76,
-    "games": 122,
-    "chance": 0.5903
+    "games": 61,
+    "chance": 0.5903,
+    "readings": 122
    },
    {
     "stones": 80,
-    "games": 122,
-    "chance": 0.5727
+    "games": 61,
+    "chance": 0.5727,
+    "readings": 122
    }
   ],
   "losses": [
    {
     "stones": 8,
-    "games": 50,
-    "chance": 0.4189
+    "games": 25,
+    "chance": 0.4189,
+    "readings": 50
    },
    {
     "stones": 12,
-    "games": 50,
-    "chance": 0.3657
+    "games": 25,
+    "chance": 0.3657,
+    "readings": 50
    },
    {
     "stones": 16,
-    "games": 50,
-    "chance": 0.3362
+    "games": 25,
+    "chance": 0.3362,
+    "readings": 50
    },
    {
     "stones": 20,
-    "games": 50,
-    "chance": 0.2875
+    "games": 25,
+    "chance": 0.2875,
+    "readings": 50
    },
    {
     "stones": 24,
-    "games": 50,
-    "chance": 0.2645
+    "games": 25,
+    "chance": 0.2645,
+    "readings": 50
    },
    {
     "stones": 28,
-    "games": 50,
-    "chance": 0.2496
+    "games": 25,
+    "chance": 0.2496,
+    "readings": 50
    },
    {
     "stones": 32,
-    "games": 50,
-    "chance": 0.2301
+    "games": 25,
+    "chance": 0.2301,
+    "readings": 50
    },
    {
     "stones": 36,
-    "games": 50,
-    "chance": 0.217
+    "games": 25,
+    "chance": 0.217,
+    "readings": 50
    },
    {
     "stones": 40,
-    "games": 48,
-    "chance": 0.2151
+    "games": 24,
+    "chance": 0.2151,
+    "readings": 48
    },
    {
     "stones": 44,
-    "games": 45,
-    "chance": 0.1872
+    "games": 23,
+    "chance": 0.1872,
+    "readings": 45
    },
    {
     "stones": 48,
-    "games": 44,
-    "chance": 0.1795
+    "games": 22,
+    "chance": 0.1795,
+    "readings": 44
    },
    {
     "stones": 52,
-    "games": 42,
-    "chance": 0.1756
+    "games": 21,
+    "chance": 0.1756,
+    "readings": 42
    },
    {
     "stones": 56,
-    "games": 38,
-    "chance": 0.1789
+    "games": 19,
+    "chance": 0.1789,
+    "readings": 38
    },
    {
     "stones": 60,
-    "games": 35,
-    "chance": 0.1533
+    "games": 18,
+    "chance": 0.1533,
+    "readings": 35
    },
    {
     "stones": 64,
-    "games": 34,
-    "chance": 0.1359
+    "games": 17,
+    "chance": 0.1359,
+    "readings": 34
    },
    {
     "stones": 68,
-    "games": 32,
-    "chance": 0.1312
+    "games": 16,
+    "chance": 0.1312,
+    "readings": 32
    },
    {
     "stones": 72,
-    "games": 30,
-    "chance": 0.1244
+    "games": 15,
+    "chance": 0.1244,
+    "readings": 30
    },
    {
     "stones": 76,
-    "games": 30,
-    "chance": 0.1046
+    "games": 15,
+    "chance": 0.1046,
+    "readings": 30
    },
    {
     "stones": 80,
-    "games": 29,
-    "chance": 0.0812
+    "games": 15,
+    "chance": 0.0812,
+    "readings": 29
    }
   ]
  },

@@ -62,6 +62,14 @@ export const PARTED = {
   draws: partedAt(D.trajectory.draws),
   losses: partedAt(D.trajectory.losses),
 };
+/** The first trajectory bin, where the post reads the lines already apart. */
+export const FIRST_BIN_STONES = D.trajectory.wins[0].stones;
+/** Rapfi's mean win chance in the first trajectory bin, by final result. */
+export const FIRST = {
+  wins: D.trajectory.wins[0].chance,
+  draws: D.trajectory.draws[0].chance,
+  losses: D.trajectory.losses[0].chance,
+};
 /** The opening's dealt stones, so a stone count reads as moves played. */
 const DEALT = match.featured.opening.stones.length;
 
@@ -214,17 +222,19 @@ export const rapfiVsKatagomoArticle: Article = {
       ],
     },
     {
-      heading: `The games turn in the first ${PARTED_AT_STONES - DEALT} moves`,
+      heading: `The games start to turn within ${FIRST_BIN_STONES - DEALT} moves`,
       blocks: [
         p(
-          `Rapfi logged its reading of every position it moved in. Averaged by result, its win chance had already split by stone ${PARTED_AT_STONES}, ${PARTED_AT_STONES - DEALT} moves after the ${DEALT} dealt stones: ${pct(PARTED.wins)} in its eventual wins, ${pct(PARTED.draws)} in the draws and ${pct(PARTED.losses)} in its losses.`,
+          `Rapfi logged its win chance in every position it moved in. Each line below averages that over the games that ended one way: Rapfi won, drew or lost. A result settled late would show as three lines sitting together near 50% and parting only at the end.`,
         ),
         {
           kind: 'raw-svg',
           svg: resultLinesChartSvg(D.trajectory),
           caption: `Rapfi's mean win chance by stones on the board, in bins of ${D.trajectory.binStones}, one line per result.`,
         },
-        p(`In the games it won, Rapfi saw a forced five at a median stone ${D.forcedWin.medianStone}.`),
+        p(
+          `The lines part at once. They read ${pct(FIRST.wins)}, ${pct(FIRST.draws)} and ${pct(FIRST.losses)} ${FIRST_BIN_STONES - DEALT} moves after the deal, and by stone ${PARTED_AT_STONES} they read ${pct(PARTED.wins)} in its eventual wins, ${pct(PARTED.draws)} in the draws and ${pct(PARTED.losses)} in its losses. In the games it won, Rapfi saw a forced five at a median stone ${D.forcedWin.medianStone}.`,
+        ),
       ],
     },
     {
@@ -279,7 +289,7 @@ export const rapfiVsKatagomoArticle: Article = {
       heading: 'Thanks',
       blocks: [
         p(
-          `Rapfi is open source under the GPL-3.0 licence at [github.com/dhbloo/rapfi](${match.rapfi.repo}), and its networks are public domain (CC0). KataGomo is open source under the MIT licence at [github.com/hzyhhzy/KataGomo](${match.katagomo.repo}); the network we ran is [b10_freestyle15x](${match.katagomo.network.url}) from its Gomocup 2025 release. Thank you, dhbloo and the Rapfi contributors, and thank you, hzyhhzy.`,
+          `Rapfi is open source under the GPL-3.0 licence at [github.com/dhbloo/rapfi](${match.rapfi.repo}), and its networks are public domain (CC0). KataGomo is open source under the MIT licence at [github.com/hzyhhzy/KataGomo](${match.katagomo.repo}); the network we ran is b10_freestyle15x from its [Gomocup 2025 release](${match.katagomo.network.releaseUrl}). Thank you, dhbloo and the Rapfi contributors, and thank you, hzyhhzy.`,
         ),
         {
           kind: 'cta',
