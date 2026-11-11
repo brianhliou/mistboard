@@ -628,6 +628,8 @@ export const ZH_HANT_PLAY = {
   'live.challengeFriend': '邀請好友對局',
   'live.challengeFriendCreating': '正在建立邀請',
   'live.challengeFriendRetry': '重試建立邀請',
+  'live.correspondenceAgain': '以通信對局再下一局',
+  'live.correspondenceAgainSending': '正在發送挑戰',
   'live.finishWinner': '勝方',
   'variant.mahjong.name': '麻將',
   'variant.xiangqiMahjong.name': '象棋麻將',
