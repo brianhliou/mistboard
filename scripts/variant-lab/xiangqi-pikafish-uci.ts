@@ -54,32 +54,72 @@ export const XIANGQI_SOLVER_GATE_DEFAULTS: XiangqiSolverUniquenessOptions = {
 
 /** One MultiPV line of a completed search: raw UCI score (side-to-move POV,
  *  exactly one of cp/mate set) plus the full PV move-token list. */
-export type XiangqiScoredLine = { rank: number; score: XiangqiUciScore; pvUci: string[] };
+export type XiangqiScoredLine = {
+  rank: number;
+  score: XiangqiUciScore;
+  pvUci: string[];
+  depth?: number;
+  nodes?: number;
+};
 
 const MULTIPV_RE = /\bmultipv (\d+)\b/;
 const SCORE_RE = /\bscore (cp|mate) (-?\d+)\b/;
 const PV_RE = /\bpv (.+)$/;
 
-/** Keep only the last `info` line per multipv rank (the deepest completed
- *  one), sorted by rank. Scores stay raw: fold mates onto the cp axis with
- *  xiangqiScoredLineToVerifyLine / xiangqiUciScoreToCp, never locally. */
-export function parseXiangqiScoredLines(lines: readonly string[]): XiangqiScoredLine[] {
-  const byRank = new Map<number, XiangqiScoredLine>();
+/** Compare one complete MultiPV output snapshot. Pikafish prints ranks 1..N
+ * together, but an interrupted update can mix depths, reorder moves and emit
+ * bounds. Never join ranks across updates: that can invent a common depth and
+ * even duplicate a root move. Keep the deepest complete exact snapshot. */
+export function parseXiangqiScoredLines(
+  lines: readonly string[],
+  expectedRanks?: number,
+): XiangqiScoredLine[] {
+  const count =
+    expectedRanks ??
+    Math.max(
+      0,
+      ...lines
+        .filter((line) => line.startsWith('info ') && SCORE_RE.test(line) && PV_RE.test(line))
+        .map((line) => Number(MULTIPV_RE.exec(line)?.[1] ?? '1')),
+    );
+  if (count < 1) return [];
+  let snapshot: XiangqiScoredLine[] = [];
+  let exact = true;
+  let best: XiangqiScoredLine[] = [];
   for (const line of lines) {
     if (!line.startsWith('info ')) continue;
     const score = SCORE_RE.exec(line);
     const pv = PV_RE.exec(line);
-    if (!score || !pv) continue;
+    const depth = /\bdepth (\d+)/.exec(line);
+    if (!score || !pv || !depth) continue;
     const rank = Number(MULTIPV_RE.exec(line)?.[1] ?? '1');
-    const kind = score[1];
+    if (rank === 1) {
+      snapshot = [];
+      exact = true;
+    }
+    if (rank !== snapshot.length + 1) {
+      snapshot = [];
+      continue;
+    }
+    exact &&= !/\b(?:lowerbound|upperbound)\b/.test(line);
     const value = Number(score[2]);
-    byRank.set(rank, {
+    snapshot.push({
       rank,
-      score: kind === 'mate' ? { cp: null, mate: value } : { cp: value, mate: null },
+      score: score[1] === 'mate' ? { cp: null, mate: value } : { cp: value, mate: null },
       pvUci: pv[1]!.trim().split(/\s+/),
+      depth: Number(depth[1]),
+      nodes: Number(/\bnodes (\d+)/.exec(line)?.[1] ?? 0),
     });
+    if (
+      snapshot.length === count &&
+      exact &&
+      snapshot.every((entry) => entry.depth === snapshot[0]!.depth) &&
+      new Set(snapshot.map((entry) => entry.pvUci[0])).size === count &&
+      (snapshot[0]!.depth ?? 0) >= (best[0]?.depth ?? 0)
+    )
+      best = [...snapshot];
   }
-  return [...byRank.values()].sort((a, b) => a.rank - b.rank);
+  return best;
 }
 
 /** Normalize a parsed line to the gate's input shape via the SHARED
@@ -197,7 +237,7 @@ export class PikafishEngine {
   ): Promise<XiangqiScoredLine[]> {
     const position =
       movesUci.length > 0 ? `position startpos moves ${movesUci.join(' ')}` : 'position startpos';
-    return parseXiangqiScoredLines(await this.#search(position, limits, multipv));
+    return parseXiangqiScoredLines(await this.#search(position, limits, multipv), multipv);
   }
 
   /** Analyze a standalone position (`position fen ...`), history-free. This is
@@ -209,7 +249,10 @@ export class PikafishEngine {
     limits: XiangqiSearchLimits,
     multipv: number,
   ): Promise<XiangqiScoredLine[]> {
-    return parseXiangqiScoredLines(await this.#search(`position fen ${fen}`, limits, multipv));
+    return parseXiangqiScoredLines(
+      await this.#search(`position fen ${fen}`, limits, multipv),
+      multipv,
+    );
   }
 
   kill(): void {
