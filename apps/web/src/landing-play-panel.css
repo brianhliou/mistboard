@@ -124,8 +124,12 @@
   border-bottom: 1px solid var(--site-border-soft);
 }
 
+/* The pace cell holds the longest days label whole between its arrows: "3
+   days/move" is 81px at 13.5px, the arrows and gaps take 50, so 134px leaves
+   3px spare (118px cut it to "3 days/…"). The waiting cell gives up the width:
+   its longest line, "2 個等待中", is 58px. */
 .pp-row-person {
-  grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 78px;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) 134px 58px 78px;
   grid-template-areas: "icon name clock wait act";
 }
 
@@ -540,7 +544,7 @@
     }
 
     .pp-row-person {
-      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 62px;
+      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 134px 58px 62px;
     }
 
     .pp-name-label {

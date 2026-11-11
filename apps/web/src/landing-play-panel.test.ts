@@ -610,6 +610,23 @@ describe('homepage play panel', () => {
     expect(board.querySelector('.pp-card')).toBe(card);
   });
 
+  // The pace cell clips with an ellipsis: at 118px "3 days/move" read "3 days/…".
+  // Its text needs 81px at 13.5px and the two 22px arrows with their 3px gaps
+  // take 50, so every desktop person-row grid gives the pace track at least 131px.
+  it('gives the person pace cell room for the whole days label at desktop widths', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const phone = css.match(/@media \(max-width: 640px\) \{[\s\S]*$/)?.[0] ?? '';
+    const desktop = css.replace(phone, '');
+    const tracks = [
+      ...desktop.matchAll(/\.pp-row-person \{\s*grid-template-columns: ([^;]+);/g),
+    ].map((m) => m[1]!);
+    expect(tracks.length).toBeGreaterThanOrEqual(2);
+    for (const columns of tracks) {
+      const pace = Number(columns.match(/minmax\(0, 1fr\) (\d+)px/)?.[1]);
+      expect(pace, columns).toBeGreaterThanOrEqual(131);
+    }
+  });
+
   // #543: .pp-name clips its overflow, so a line box shorter than the font's
   // glyph box (Noto Sans 1.36, CJK fallback 1.45) cuts descenders.
   it('gives both name lines a line box tall enough for descenders', () => {
