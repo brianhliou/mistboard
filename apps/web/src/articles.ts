@@ -1803,7 +1803,7 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
-  if (block.kind === 'image-figure') return renderImageFigureBlock(block);
+  if (block.kind === 'image-figure') return renderImageFigureBlock(block, lang);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'animated-svg') return renderAnimatedSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
@@ -2237,7 +2237,7 @@ function articleContactNote(slug: string, locale: Locale): HTMLElement {
   return note;
 }
 
-function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
+function renderImageFigureBlock(block: ImageFigureBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-image';
   if (block.className) figure.classList.add(...block.className.split(/\s+/).filter(Boolean));
@@ -2275,7 +2275,13 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = block.credit.text;
-      cap.append(`${block.caption ? ' ' : ''}Photo: `, link);
+      // The catalog string is 'Photo: {source}'; split it so the source stays a link.
+      const [before, after = ''] = t(
+        'broadcast.playerPhotoCredit',
+        { source: '\u0000' },
+        articleLocale(lang),
+      ).split('\u0000');
+      cap.append(`${block.caption ? ' ' : ''}${before}`, link, after);
     }
     figure.append(cap);
   }

@@ -593,9 +593,13 @@
     "title": "Meng Fanrui 孟繁睿",
     "kind": "article",
     "description": "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.",
-    "status": "draft",
+    "status": "published",
     "publishedAt": "2026-11-18",
-    "liveAt": 1795017600000
+    "liveAt": 1795017600000,
+    "zhTitles": {
+      "zh-hans": "孟繁睿",
+      "zh-hant": "孟繁睿"
+    }
   },
   "misty": {
     "title": "How Misty Plays",

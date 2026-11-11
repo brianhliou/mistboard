@@ -1626,6 +1626,21 @@ describe('image figure credit', () => {
     expect(link?.rel).toBe('noopener');
   });
 
+  it('labels the credit in the page language, keeping the source a link', () => {
+    const block = {
+      kind: 'image-figure' as const,
+      src: '/a.jpg',
+      alt: 'A.',
+      caption: '孟繁睿。',
+      credit: { text: '中国象棋协会', href: 'https://example.com/' },
+    };
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      const cap = renderBlock(block, lang).querySelector('figcaption');
+      expect(cap?.textContent).toBe('孟繁睿。 照片：中国象棋协会');
+      expect(cap?.querySelector('a')?.textContent).toBe('中国象棋协会');
+    }
+  });
+
   it('keeps a caption without a credit as plain text', () => {
     const el = renderBlock({ kind: 'image-figure', src: '/a.jpg', alt: 'A.', caption: 'Plain.' });
     expect(el.querySelector('figcaption')?.textContent).toBe('Plain.');
