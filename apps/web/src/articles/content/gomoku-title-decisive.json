@@ -414,5 +414,15 @@
    "deepChanceMedian": 0.233,
    "repeatedMatchMove": 22
   }
+ },
+ "draws": {
+  "$comment": "Rapfi's logged match evals in the 61 draws: the last stone at which its reading was outside 38-62% (|eval| > 100). 8 draws never left that band. featured is game 2 (index 1, Rapfi Black), re-read by both engines for the study (scripts/variant-lab/gomoku-title-evals.ts): the last move after the opening at which either engine's chance for Black was more than 10 points from even.",
+  "games": 61,
+  "leftBand": 53,
+  "settledMedianMove": 66,
+  "featured": {
+   "game": 2,
+   "lastUnevenMove": 65
+  }
  }
 }

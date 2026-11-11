@@ -157,15 +157,17 @@ describe('rapfi-vs-katagomo prose', () => {
     expect(LEVEL8_SHARE).toBe(6);
   });
 
-  it('shows game 1 from the match study, opened on its last move', () => {
+  it('shows game 1 and a draw from the match study, each opened on its last move', () => {
     const embeds = rapfiVsKatagomoArticle.sections.flatMap((s) =>
       (s.blocks ?? []).flatMap((b) => (b.kind === 'embed' ? [b.path] : [])),
     );
     expect(embeds).toEqual([
       `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.featured}?ply=${match.featured.moves.length}`,
+      // Every draw filled the board, so the draw's last move is the record's draw length.
+      `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.draw}?ply=${decisive.lengths.drawMoves}`,
     ]);
     expect(RAPFI_KATAGOMO_STUDY.id).toMatch(/^[A-Za-z0-9_-]{8}$/);
-    expect(RAPFI_KATAGOMO_STUDY.chapters.featured).toMatch(/^[A-Za-z0-9_-]{8}$/);
+    for (const id of Object.values(RAPFI_KATAGOMO_STUDY.chapters)) expect(id).toMatch(/^[A-Za-z0-9_-]{8}$/);
   });
 });
 
@@ -204,7 +206,7 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
       `${pctOf(PARTED.wins)} in its eventual wins, ${pctOf(PARTED.draws)} in the draws and ${pctOf(PARTED.losses)} in its losses`,
       `a median stone ${decisive.forcedWin.medianStone}`,
       `Its ${decisive.losses.games} losses`,
-      `In the ${decisive.losses.read} with logged readings`,
+      `in the ${decisive.losses.read} with logged readings`,
       `a median ${pctOf(decisive.losses.bestChanceMedian)}`,
       `only ${decisive.losses.aboveSeventy} went above 70%`,
       `${((a.rapfi.fours / a.rapfi.moves) * 100).toFixed(1)}% of its moves made a four`,
@@ -219,6 +221,10 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
       `it still gave itself ${pctOf(decisive.katagomoView.rapfiWins.deepChanceMedian)}`,
       `about ${Math.round(decisive.edges.colour * 100)} points of score`,
       `being Rapfi about ${Math.round(decisive.edges.engine * 100)}`,
+      `at a median move ${decisive.draws.settledMedianMove}`,
+      `the other ${L.drawMoves - decisive.draws.settledMedianMove} or so moves fill the board`,
+      `Game ${decisive.draws.featured.game} is one of them`,
+      `until move ${decisive.draws.featured.lastUnevenMove}, then dead even`,
     ]) {
       expect(prose, text).toContain(text);
     }
@@ -231,6 +237,7 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
     expect(decisive.losses.bestChanceMedian).toBe(0.53);
     expect(decisive.katagomoView.openings.outsideFortySixty).toBe(34);
     expect(decisive.katagomoView.rapfiWins.chanceMedian).toBe(0.244);
+    expect(decisive.draws.settledMedianMove).toBe(66);
   });
 
   it('draws both charts from the record', () => {

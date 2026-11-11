@@ -105,20 +105,19 @@ const featuredBoard = (): string => gomokuRulesBoard(featuredGameState());
  *  is created on prod; then these ids are swapped for the prod ones. */
 export const RAPFI_KATAGOMO_STUDY = {
   id: 'gVo12Ybf',
-  chapters: { featured: 'Yhg41QMH' } as Record<string, string>,
+  chapters: { featured: 'Yhg41QMH', draw: 'pnDEEhxT' } as Record<string, string>,
 } as const;
 
 function p(text: string): ArticleBlock {
   return { kind: 'paragraph', text };
 }
 
-/** Game 1 from the study, opened on its last position, the graph under it. */
-function featuredEmbed(): ArticleBlock {
-  const chapter = RAPFI_KATAGOMO_STUDY.chapters.featured;
+/** A game from the study, opened on its last position, the graph under it. */
+function studyEmbed(chapter: string, ply: number, title: string): ArticleBlock {
   return {
     kind: 'embed',
-    path: `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${chapter}?ply=${F.moves.length}`,
-    title: 'KataGomo vs Rapfi, game 1',
+    path: `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters[chapter]}?ply=${ply}`,
+    title,
     // A placeholder until the card reports its height: the card plus the
     // win-chance graph under it (study_chapters.score_series).
     aspect: [702, 926],
@@ -178,6 +177,9 @@ export const rapfiVsKatagomoArticle: Article = {
           `That is about **${signed(E.elo)} Elo** for Rapfi (95% range ${signed(E.eloLow)} to ${signed(E.eloHigh)}). Both engines had the same clock on one CPU thread, and used it differently: Rapfi took ${seconds(ET.rapfiMeanMs)} of its ${SECONDS} seconds on average and searched a median **${commas(ET.rapfiNodesMedian)} positions** a move, while KataGomo, on its ${match.katagomo.backend} backend, searched a median ${commas(ET.katagomoVisitsMedian)} visits. A KataGomo visit runs a large neural network on one position; a Rapfi position costs far less.`,
         ),
         p(
+          `The engine mattered far more than the colour: moving first was worth about ${points(D.edges.colour)} points of score, being Rapfi about ${points(D.edges.engine)}.`,
+        ),
+        p(
           `The clock is what decides it. In an earlier match at matched search, Rapfi Level 8 at ${commas(L8.nodes)} positions a move against KataGomo at ${U.katagomoBudget.maxVisits} visits, the two scored level: ${wdl(U.total)} over ${U.total.games} games.`,
         ),
       ],
@@ -188,7 +190,7 @@ export const rapfiVsKatagomoArticle: Article = {
         p(
           `Each game starts from one of the dealt openings the site uses, with stones already on the board. In game 1 KataGomo had Black, and Rapfi won with its ${FEATURED_RAPFI_MOVES}th move, ${FEATURED_LAST}, a diagonal five from ${FEATURED_FIVE[0]} to ${FEATURED_FIVE.at(-1)}. Under the board, both engines read every position of the game: the teal line is Rapfi's win chance for Black, the orange line KataGomo's.`,
         ),
-        featuredEmbed(),
+        studyEmbed('featured', F.moves.length, 'KataGomo vs Rapfi, game 1'),
       ],
     },
     {
@@ -202,30 +204,51 @@ export const rapfiVsKatagomoArticle: Article = {
           svg: gameLengthChartSvg(D.lengths),
           caption: `Games by moves played after the opening, in bins of ${D.lengths.binMoves}. The grey bar is the ${D.lengths.draws} draws.`,
         },
+        p(
+          `Under these rules a full board is the only draw, and the engines have no way to agree one, so a drawn game is played out to the last point. In a typical draw the fight is over long before that. Rapfi last read either side as clearly ahead, above 62%, at a median move ${D.draws.settledMedianMove}, and the other ${D.lengths.drawMoves - D.draws.settledMedianMove} or so moves fill the board without a five.`,
+        ),
+        p(
+          `Game ${D.draws.featured.game} is one of them. Both engines read it as somewhat better for White until move ${D.draws.featured.lastUnevenMove}, then dead even to the end.`,
+        ),
+        studyEmbed('draw', D.lengths.drawMoves, `Rapfi vs KataGomo, game ${D.draws.featured.game}`),
       ],
     },
     {
       heading: `The games turn in the first ${PARTED_AT_STONES - DEALT} moves`,
       blocks: [
         p(
-          `Rapfi logged its own reading of every position it moved in. Averaged over the games it went on to win, draw and lose, the three lines are already apart by stone ${PARTED_AT_STONES}, ${PARTED_AT_STONES - DEALT} moves after the ${DEALT} dealt stones: Rapfi gave itself ${pct(PARTED.wins)} in its eventual wins, ${pct(PARTED.draws)} in the draws and ${pct(PARTED.losses)} in its losses. In the games it won, it saw a forced five at a median stone ${D.forcedWin.medianStone}.`,
+          `Rapfi logged its reading of every position it moved in. Averaged by result, its win chance had already split by stone ${PARTED_AT_STONES}, ${PARTED_AT_STONES - DEALT} moves after the ${DEALT} dealt stones: ${pct(PARTED.wins)} in its eventual wins, ${pct(PARTED.draws)} in the draws and ${pct(PARTED.losses)} in its losses.`,
         ),
         {
           kind: 'raw-svg',
           svg: resultLinesChartSvg(D.trajectory),
           caption: `Rapfi's mean win chance by stones on the board, in bins of ${D.trajectory.binStones}, one line per result.`,
         },
+        p(`In the games it won, Rapfi saw a forced five at a median stone ${D.forcedWin.medianStone}.`),
+      ],
+    },
+    {
+      heading: 'KataGomo read the openings better than Rapfi did',
+      blocks: [
         p(
-          `Its ${D.losses.games} losses were slides from an even game, not collapses from a won one. In the ${D.losses.read} with logged readings, the best Rapfi ever gave itself was a median ${pct(D.losses.bestChanceMedian)}, and only ${D.losses.aboveSeventy} went above 70%.`,
+          `Rapfi screened the openings, and it read them as even all match. KataGomo, reading each one at ${commas(KV.openings.visits)} visits, gave Black anywhere from ${pct(KV.openings.blackMin)} to ${pct(KV.openings.blackMax)}, and put ${KV.openings.outsideFortySixty} of the ${KV.openings.read} outside 40-60%.`,
         ),
         p(
-          `The openings were screened by Rapfi, and Rapfi read them as even all match. KataGomo did not. Reading each one at ${commas(KV.openings.visits)} visits, it gave Black anywhere from ${pct(KV.openings.blackMin)} to ${pct(KV.openings.blackMax)}, and put ${KV.openings.outsideFortySixty} of the ${KV.openings.read} outside 40-60%. Its reading matched the results better: in the ${KV.openings.high.openings} openings it gave Black over 60%, Black scored ${pct(KV.openings.high.blackScore)}, and in the ${KV.openings.low.openings} it gave Black under 40%, Black scored ${pct(KV.openings.low.blackScore)}.`,
+          `The results sided with KataGomo: in the ${KV.openings.high.openings} openings it gave Black over 60%, Black scored ${pct(KV.openings.high.blackScore)}; in the ${KV.openings.low.openings} it gave Black under 40%, Black scored ${pct(KV.openings.low.blackScore)}.`,
+        ),
+      ],
+    },
+    {
+      heading: 'How the games were lost',
+      blocks: [
+        p(
+          `**Rapfi lost from even games.** Its ${D.losses.games} losses were slides: in the ${D.losses.read} with logged readings, the best it ever gave itself was a median ${pct(D.losses.bestChanceMedian)}, and only ${D.losses.aboveSeventy} went above 70%.`,
         ),
         p(
-          `KataGomo also knew when it was losing. In ${KV.rapfiWins.sample} of Rapfi's wins, it read the position one move before Rapfi saw a won game and gave itself a median ${pct(KV.rapfiWins.chanceMedian)}. With ten times its match search, ${commas(KV.rapfiWins.deepVisits)} visits, it still gave itself ${pct(KV.rapfiWins.deepChanceMedian)}: by then no move saved the game.`,
+          `**KataGomo saw its losses coming.** In ${KV.rapfiWins.sample} of Rapfi's wins, it read the position one move before Rapfi saw a won game and gave itself a median ${pct(KV.rapfiWins.chanceMedian)}. With ten times its match search, ${commas(KV.rapfiWins.deepVisits)} visits, it still gave itself ${pct(KV.rapfiWins.deepChanceMedian)}. By its own reading, no move saved those games by then.`,
         ),
         p(
-          `Rapfi also attacks more. ${pct1(D.attack.rapfi.fours / D.attack.rapfi.moves)} of its moves made a four, against ${pct1(D.attack.katagomo.fours / D.attack.katagomo.moves)} of KataGomo's, and it made ${D.attack.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${D.attack.katagomo.doubleThreats}. The engine mattered far more than the colour: moving first was worth about ${points(D.edges.colour)} points of score, being Rapfi about ${points(D.edges.engine)}.`,
+          `**Rapfi attacks more.** ${pct1(D.attack.rapfi.fours / D.attack.rapfi.moves)} of its moves made a four, against ${pct1(D.attack.katagomo.fours / D.attack.katagomo.moves)} of KataGomo's, and it made ${D.attack.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${D.attack.katagomo.doubleThreats}.`,
         ),
       ],
     },
