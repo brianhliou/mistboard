@@ -7,13 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANS_CONTENT = {
-  'articles.replay.date': '日期',
   'articles.replay.round': '轮次',
-  'articles.replay.timeControl': '用时',
-  'articles.replay.source': '来源',
+  'articles.replay.roundN': '第{n}轮',
   'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
-  'articles.replay.notRecorded': '未记录',
-  'articles.replay.details': '棋局详情',
   'videos.heading': '视频库',
   'videos.intro': '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
   'videos.introMainland': '精选象棋与揭棋中文视频：规则、开局、战术与思路。',

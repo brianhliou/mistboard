@@ -22,59 +22,58 @@ function mount(metadata?: unknown, lang?: 'zh-Hans' | 'zh-Hant') {
   return { host, controller };
 }
 describe('recorded replay metadata header', () => {
-  it('separates event and labelled metadata from board while escaping source text', () => {
+  it('puts round, date, time control and source on one line, escaped, with nothing to unfold', () => {
     const { host, controller } = mount({
       date: '2026-09-17 13:00',
-      round: 'Round 7 <img src=x>',
+      round: '第07轮',
       timeControl: '40分＋20秒',
-      source: { label: 'DPXQ', url: 'http://www.dpxq.com/hldcg/search/view_m_143947.html' },
+      source: {
+        label: 'DPXQ',
+        url: 'http://www.dpxq.com/hldcg/search/view_m_143947.html',
+      },
     });
     const header = host.querySelector('.xq-replay-header')!;
     expect(header.querySelector('.xq-replay-header-event')?.textContent).toBe('Verified event');
-    expect(header.querySelector('dl')?.textContent).toContain('Round 7 <img src=x>');
-    expect(header.querySelector('img')).toBeNull();
-    expect(header.textContent).toContain('40 min + 20 sec');
-    expect(header.querySelector('.xq-replay-clock')?.textContent).toBe(
-      'Time control: 40 min + 20 sec',
+    expect(header.querySelector('.xq-replay-metadata')?.textContent).toBe(
+      'Round 7 · 17 September 2026 · 40 min + 20 sec · DPXQ',
     );
-    const details = header.querySelector('details');
-    expect(details?.open).toBe(false);
-    expect(details?.querySelector('summary')?.textContent).toBe('Game details');
-    expect(details?.querySelector('dl')).not.toBeNull();
+    expect(header.querySelector('img')).toBeNull();
+    expect(header.querySelector('details')).toBeNull();
     expect(header.querySelector('a')?.getAttribute('href')).toBe(
       'http://www.dpxq.com/hldcg/search/view_m_143947.html',
     );
     expect(header.nextElementSibling?.classList.contains('xq-replay-grid')).toBe(true);
     controller.destroy();
   });
-  it('does not guess missing values or allow arbitrary source URLs; legacy specs remain valid', () => {
+  it('leaves out what the record lacks, refuses foreign source URLs, keeps legacy specs', () => {
     const { host, controller } = mount({
+      round: 'Final <img src=x>',
       source: {
         label: 'DPXQ',
         url: 'https://www.dpxq.com.evil.test/hldcg/search/view_m_143947.html',
       },
     });
-    expect(host.querySelectorAll('.xq-replay-metadata dd')).toHaveLength(4);
-    expect(
-      [...host.querySelectorAll('.xq-replay-metadata dd')].every(
-        (d) => d.textContent === 'Not recorded',
-      ),
-    ).toBe(true);
+    expect(host.querySelector('.xq-replay-metadata')?.textContent).toBe('Round Final <img src=x>');
+    expect(host.querySelector('img')).toBeNull();
     expect(host.querySelector('.xq-replay-header a')).toBeNull();
+    expect(host.textContent).not.toContain('Not recorded');
     controller.destroy();
     const legacy = mount();
-    expect(legacy.host.querySelector('dl')).toBeNull();
+    expect(legacy.host.querySelector('.xq-replay-metadata')).toBeNull();
     expect(legacy.host.querySelector('.xq-replay-header')?.textContent).toBe('Verified event');
     legacy.controller.destroy();
   });
   it.each([
-    ['zh-Hans', '日期', '轮次', '用时', '未记录'],
-    ['zh-Hant', '日期', '輪次', '用時', '未記錄'],
-  ] as const)('localizes the %s header', async (lang, date, round, time, missing) => {
+    ['zh-Hans', '第7轮', '40分＋20秒'],
+    ['zh-Hant', '第7輪', '40分＋20秒'],
+  ] as const)('localizes the %s line', async (lang, round, time) => {
     await ensureLocaleCatalog(lang);
-    const { host, controller } = mount({}, lang);
-    const text = host.querySelector('.xq-replay-header')?.textContent;
-    for (const word of [date, round, time, missing]) expect(text).toContain(word);
+    const { host, controller } = mount(
+      { date: '2026-09-17', round: '第07轮', timeControl: '40分＋20秒' },
+      lang,
+    );
+    const text = host.querySelector('.xq-replay-metadata')?.textContent ?? '';
+    for (const word of [round, time, '2026']) expect(text).toContain(word);
     controller.destroy();
   });
 });

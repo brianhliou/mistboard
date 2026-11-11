@@ -1784,37 +1784,14 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   line-height: 1.4;
   color: var(--site-text);
 }
-.xq-replay-clock {
-  font-size: 12px;
-  font-weight: 400;
-  white-space: nowrap;
-}
-.xq-replay-details {
-  font-size: 12px;
-  font-weight: 400;
-}
-.xq-replay-details summary {
-  cursor: pointer;
-}
-.xq-replay-details[open] {
-  flex: 1 0 100%;
-}
 .xq-replay-metadata {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
-  gap: 6px 12px;
-  margin: 8px 0 4px;
   font-size: 12px;
   font-weight: 400;
-  line-height: 1.5;
-}
-.xq-replay-metadata dt {
+  line-height: 1.4;
   color: var(--site-muted);
 }
-.xq-replay-metadata dd {
-  margin: 2px 0 0;
-  color: var(--site-text);
-  overflow-wrap: anywhere;
+.xq-replay-metadata a {
+  color: inherit;
 }
 
 /* Second header line (event / context): de-emphasised under the players line. */
@@ -3395,6 +3372,81 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 .raw-svg-stepper-frame {
   width: 100%;
+}
+
+.raw-svg-stepper-frame-xq {
+  position: relative;
+}
+
+/* Fork chooser (xiangqi-replay.ts): stepping onto a move that has engine
+   alternatives asks which way to go. It sits over the board it is about, the
+   way the site's other board notices do, and closes on any step. */
+.xq-replay-fork {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: min(280px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  color: var(--site-text);
+  background: var(--site-panel);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 28%);
+  transform: translate(-50%, -50%);
+}
+.xq-replay-fork-title {
+  font-size: 12px;
+  color: var(--site-muted);
+}
+.xq-replay-fork-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  color: inherit;
+  background: var(--site-surface);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.xq-replay-fork-option.is-main {
+  border-color: var(--site-accent);
+}
+.xq-replay-fork-option:hover,
+.xq-replay-fork-option:focus-visible {
+  background: var(--site-panel);
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+.xq-replay-fork-move {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.xq-replay-fork-n {
+  color: var(--site-text);
+  font-weight: 600;
+}
+.xq-replay-fork-mark {
+  color: var(--site-accent);
+  font-weight: 700;
+}
+.xq-replay-fork-tag {
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: right;
 }
 
 .raw-svg-stepper-frame > svg {

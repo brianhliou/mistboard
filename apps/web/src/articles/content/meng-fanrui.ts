@@ -608,11 +608,11 @@ export const mengFanruiArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: "The men's final in Chengmai on 28 December 2025 went to a tiebreak. Meng Fanrui 孟繁睿 and He Wenzhe drew their slow game, then Meng won the fast game to take the Chinese Xiangqi Association's year-end title. He also finished 2025 first on the association's men's competition-points list.",
+      text: "Meng Fanrui is the Chinese Xiangqi Association's 2025 men's champion. He won the year-end final against He Wenzhe in a fast tiebreak game, and finished the year first on the association's points list.",
     },
     {
       kind: 'paragraph',
-      text: "Meng plays for Hebei. Below are three of his wins in full, two with black and one with red. At each marked move the move list branches: the game's move first, then up to three engine candidates, and under each the opponent's close replies. Pikafish analysed every position at ten million nodes; every branch is an engine line, not a move from the game.",
+      text: "Below are three of his 2026 wins, two with black and one with red. Where a game turned, the move list branches into the engine's best alternatives. The branches are Pikafish lines, not moves from the game.",
     },
   ],
   sections: [
@@ -621,11 +621,11 @@ export const mengFanruiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat [Yin Sheng](/blog/yin-sheng) in the semifinal tiebreak and met He in the final. [Tang Dan](/blog/tang-dan) won the women's title at the same event.",
+          text: "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat Yin Sheng in the semifinal tiebreak and met He in the final. Tang Dan won the women's title at the same event.",
         },
         {
           kind: 'paragraph',
-          text: "The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both Meng's title and his year-end points lead. Those points accumulate across the association's competition calendar. [Hebei's report](https://web.cmc.hebtv.com/cms/rmt0336/0/0rmhlm/dzjg/hbty/tyzx/12139099.shtml) and [Beijing Daily](https://xinwen.bjd.com.cn/content/s6951c072e4b0687a288ef7da.html) describe the final against He.",
+          text: "The points accumulate across the association's competition calendar. The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both the title and the points lead.",
         },
       ],
     },
@@ -638,11 +638,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points. The [official event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html) gives the team standings, and the [Hebei report](https://hebfb.hebccw.cn/system/2026/04/03/102168684.shtml) names the squad.",
-        },
-        {
-          kind: 'paragraph',
-          text: "Explore [his win over Chu Banruo](/broadcast/xiangqi/board/2026-xiangqi-team-championship-2026-xiangqi-team-championship-r02-bu6564s).",
+          text: "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points ([event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)).",
         },
       ],
     },
@@ -651,15 +647,7 @@ export const mengFanruiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "On 9 September, Meng beat Luo Hangyuan with both colours in the first round of the Shanghai Cup.",
-        },
-        {
-          kind: 'paragraph',
-          text: "Explore [his win with red](/broadcast/xiangqi/board/2026-shanghai-cup-2026-shanghai-cup-r01-b1dmm1zm).",
-        },
-        {
-          kind: 'paragraph',
-          text: "His other win over Luo came with Black, earlier that day. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.",
+          text: "On 9 September, Meng beat Luo Hangyuan twice in the first round of the Shanghai Cup, once with each colour. The replay is the win with black. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.",
         },
         {
           kind: 'xq-replay',
@@ -668,7 +656,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Meng reached the quarterfinal, where Yin Sheng advanced after a seven-game match. The [tournament report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c30036315/content.html) follows Yin through to the title.",
+          text: "Meng reached the quarterfinal, where Yin Sheng beat him after a seven-game match and went on to win the event.",
         },
       ],
     },
@@ -681,7 +669,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "How do the two league wins develop? Start with the 40+20 game against Ju and follow the evaluation alongside the moves.",
+          text: "Start with the slow game against Ju and follow the evaluation alongside the moves.",
         },
         {
           kind: 'xq-replay',
@@ -723,7 +711,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Game records are credited to [DPXQ](https://www.dpxq.com). The full record, opponents and event links are on Meng's player page.",
+          text: "Game records are credited to [DPXQ](https://www.dpxq.com). His full record is on his player page.",
         },
         {
           kind: 'cta',

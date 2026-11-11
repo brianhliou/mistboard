@@ -12,7 +12,7 @@
 // This board builds the judgment badge in its own intersection geometry rather
 // than through svg-board-marker (it borrows only the drawn ✓/✗ icon), so it
 // imports the badge palette directly.
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 // Its circle markers take a brush class (`xq-marker xq-shape--green`) whose
 // colours live here; without the import a page that draws one but loads no
@@ -633,7 +633,7 @@ export function animateXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective, layout);
   const to = intersection(settle.file, settle.rank, perspective, layout);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphsOnLanding(host, duration);
   // Forward moves only: on intersection boards the gold band rides on the
   // piece for the whole glide; on square grids the destination-cell wash and
   // the amber ring on the piece fade in as it lands. A reverse step renders the
