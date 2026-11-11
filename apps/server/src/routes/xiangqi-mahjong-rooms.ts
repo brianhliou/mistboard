@@ -38,6 +38,8 @@ const XMJ_ROUTE_SEATS = ['east', 'west'] as const;
  * Against the bot the human keeps east unless they named west. The shared
  * route coin-flips a 'random' preference; this table pinned it to east before
  * PvP existed, and the seat only alternates who deals, so the pin stays.
+ * Who deals first is the setup's call (createXmjSetup): east when a side was
+ * named (First = east deals, Second = the bot in east deals), drawn on Random.
  */
 export function xmjPveEngineSeat(
   engine: XmjEngineSeat | undefined,

@@ -1165,14 +1165,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         ),
     },
     landing: {
+      // Move order, as banqi (#1054): the choice is who deals the first hand,
+      // and the deal alternates every hand after it. First seats the creator
+      // east and Second west, and east deals first; Random draws the dealer.
+      // The bot and friend requests map red/black to east/west
+      // (landing-play.ts roomCreationRequestBody). The lobby assigns seats.
       capabilities: {
         firstColor: 'red',
-        firstGlyph: '東',
-        firstLabel: 'East',
-        secondColor: 'black',
-        secondGlyph: '西',
-        secondLabel: 'West',
+        firstGlyph: '1',
+        firstLabel: 'First',
+        glyphClass: 'banqi-seat',
         neutralGlyphColor: true,
+        pickerLabel: 'Move order',
+        secondColor: 'black',
+        secondGlyph: '2',
+        secondLabel: 'Second',
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -1191,7 +1198,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
       ],
       defaultEngineId: 'misty-xiangqi-mahjong',
-      hideColorPicker: true,
     },
   },
   {

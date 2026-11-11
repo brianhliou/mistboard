@@ -916,6 +916,54 @@ describe('landing play panel', () => {
     expect(window.location.pathname).toBe('/room/bq_home');
   });
 
+  // #1054: Xiangqi Mahjong shows the same Move order row; the choice is who
+  // deals the first hand, sent as the east/west seat the server reads.
+  it.each([
+    { label: 'Play a bot', button: 'Start game', pick: 'Second', expected: 'west' },
+    { label: 'Play a bot', button: 'Start game', pick: 'First', expected: 'east' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'First', expected: 'east' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'Second', expected: 'west' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'Random', expected: 'random' },
+  ])(
+    'shows Xiangqi Mahjong move order in $label and sends $pick as $expected',
+    async ({ label, button, pick, expected }) => {
+      vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+        if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/xmj_home' });
+        return jsonResponse({}, { status: 404 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, label);
+      selectModalVariant('xiangqi-mahjong');
+
+      const picker = document
+        .querySelector('.landing-color-option')
+        ?.closest<HTMLElement>('.landing-start-options');
+      expect(picker?.getAttribute('aria-label')).toBe('Move order');
+      expect(picker?.closest<HTMLElement>('.landing-setup-section')?.style.display).not.toBe(
+        'none',
+      );
+      expect(modalColorOptions()).toEqual([
+        { label: 'First', glyph: '1', classes: 'landing-color-glyph banqi-seat' },
+        { label: 'Random', glyph: '12', classes: 'landing-color-glyph random banqi-seat' },
+        { label: 'Second', glyph: '2', classes: 'landing-color-glyph banqi-seat' },
+      ]);
+
+      clickModalColor(pick);
+      clickModalButton(button);
+      await flushPromises();
+
+      const body = roomPostBody(fetchSpy);
+      expect(body.gameSpecId).toBe('xiangqi-mahjong');
+      expect(body.mode).toBe(label === 'Play a bot' ? 'pve' : 'pvp');
+      expect(body.preferredColor).toBe(expected);
+    },
+  );
+
   it('remembers each variant engine pick independently (no cross-variant clobber)', () => {
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
@@ -1767,6 +1815,18 @@ describe('roomCreationRequestBody — variant fails closed', () => {
     const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'misty-xiangqi-mahjong');
     expect(body.gameSpecId).toBe('xiangqi-mahjong');
     expect(body.engineId).toBe('misty-xiangqi-mahjong');
+  });
+
+  it('maps the Xiangqi Mahjong move order to the east and west seats', () => {
+    const withColor = (preferredColor: LandingRoomSetup['preferredColor']) => ({
+      ...setup('xiangqi-mahjong'),
+      preferredColor,
+    });
+    for (const mode of ['pve', 'pvp'] as const) {
+      expect(roomCreationRequestBody(mode, withColor('red')).preferredColor).toBe('east');
+      expect(roomCreationRequestBody(mode, withColor('black')).preferredColor).toBe('west');
+      expect(roomCreationRequestBody(mode, withColor('random')).preferredColor).toBe('random');
+    }
   });
 
   it('throws for a variant it has no mapping for instead of sending dark chess', () => {

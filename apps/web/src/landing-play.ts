@@ -2497,8 +2497,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     preferredColor = colorIsExplicit
       ? coerceColorPreferenceForCapabilities(preferredColor, capabilities)
       : defaultColorPreference(choice.mode, selectedGameSpecId);
-    // Some variants (Banqi) have no choosable side — the ink is bound by the
-    // first mover's opening flip — so suppress the color picker and randomize.
+    // Some variants (the four-player Mahjong table) have no choosable side, so
+    // suppress the color picker and let the server assign seats.
     const hideColorPicker =
       webVariantTenantForSpecId(selectedGameSpecId)?.landing?.hideColorPicker ?? false;
     if (hideColorPicker) preferredColor = 'random';
@@ -3872,14 +3872,20 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) {
-    // The seats are east and west and the dialog hides the color picker: a
-    // friend room draws the deal, and the bot table keeps the creator east.
+    // The seats are east and west; the picker offers Move order (#1054). First
+    // (red) seats the creator east and Second (black) west, and a named seat
+    // deals east first; Random lets the server draw the first dealer.
     return {
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
       rated,
-      preferredColor: mode === 'pvp' ? 'random' : 'east',
+      preferredColor:
+        setup.preferredColor === 'red' || setup.preferredColor === 'white'
+          ? 'east'
+          : setup.preferredColor === 'black'
+            ? 'west'
+            : 'random',
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
