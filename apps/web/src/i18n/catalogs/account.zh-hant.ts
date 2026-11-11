@@ -73,7 +73,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.notificationForum': '論壇：你關注主題的回覆，以及引用你的貼文',
   'account.notificationFollowers': '新粉絲',
   'account.notificationCorrespondenceDeadline': '通信棋截止時間提醒',
-  'account.notificationCorrespondenceStart': '通信棋對局開始',
+  'account.notificationCorrespondenceStart': '通信棋挑戰、對局開始和結果',
   'account.notificationCorrespondenceDigest': '每日彙總：等你走棋的對局',
   'account.preferenceSaved': '偏好已儲存。',
   'account.settingsUsername': '變更使用者名稱',

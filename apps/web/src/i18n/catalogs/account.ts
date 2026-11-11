@@ -85,7 +85,7 @@ export const EN_ACCOUNT = {
   'account.notificationForum': 'Forum: replies in threads you watch, and quotes of you',
   'account.notificationFollowers': 'New followers',
   'account.notificationCorrespondenceDeadline': 'Correspondence deadline warning',
-  'account.notificationCorrespondenceStart': 'A correspondence game starts',
+  'account.notificationCorrespondenceStart': 'Correspondence challenges, game starts and results',
   'account.notificationCorrespondenceDigest': 'Daily digest of games waiting on your move',
   'account.preferenceSaved': 'Preference saved.',
   'account.settingsUsername': 'Change username',

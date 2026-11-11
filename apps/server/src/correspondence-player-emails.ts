@@ -8,7 +8,8 @@
 //
 // Every send goes through persistence.correspondenceStartRecipient, which
 // returns a mailbox only for an open account that has an email and has not
-// turned off "A correspondence game starts". No new preference: the one switch
+// turned off "Correspondence challenges, game starts and results" (the
+// correspondenceStartEmail preference). No new preference: the one switch
 // covers every email about a correspondence game beginning or ending.
 //
 // Text only, never a board: a hidden-information game says nothing here its
