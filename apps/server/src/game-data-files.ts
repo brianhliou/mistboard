@@ -76,16 +76,46 @@ function isWithheldVariant(variant: string): boolean {
   return Object.hasOwn(DATA_WITHHELD_VARIANTS, variant);
 }
 
-/** Offered on /data: not withheld, and public. A hidden or retired variant
- *  (Fortress and Atomic Xiangqi, 2026-10-17) leaves the rail, the counts and
- *  every monthly file built from now on; its games keep their single-game
- *  export. */
+/** Offered on /data: not withheld, public, and with a single-game export to
+ *  put in a file. A hidden or retired variant (Fortress and Atomic Xiangqi,
+ *  2026-10-17) leaves the rail, the counts and every monthly file built from
+ *  now on; its games keep their single-game export. */
 function isOfferedVariant(variant: string): boolean {
-  return !isWithheldVariant(variant) && isPublicGameSpec(variant);
+  return (
+    !isWithheldVariant(variant) &&
+    isPublicGameSpec(variant) &&
+    exportFormatsForVariant(variant).length > 0
+  );
 }
 
+/** Why a public variant has no downloads. 'hidden-pieces': a finished game
+ *  still hides pieces nobody turned over (Three Kingdoms Banqi, #1002), and a
+ *  file would carry the deal that names them. */
+export type DataUnavailableReason = 'hidden-pieces' | 'no-export';
+
+const DATA_UNAVAILABLE_REASONS: Readonly<Record<string, DataUnavailableReason>> = {
+  'three-kingdoms-banqi': 'hidden-pieces',
+};
+
+/** Public variants in the export table that export nothing, so /data names
+ *  them without offering a file: in rail order. A variant that is not public
+ *  (a planned one) is never listed. */
+export const DATA_UNAVAILABLE_VARIANTS: ReadonlyArray<{
+  variant: string;
+  reason: DataUnavailableReason;
+}> = Object.keys(GAME_EXPORT_FORMATS)
+  .filter(
+    (variant) =>
+      isPublicGameSpec(variant) &&
+      !isWithheldVariant(variant) &&
+      exportFormatsForVariant(variant).length === 0,
+  )
+  .sort((a, b) => canonicalIndex(a) - canonicalIndex(b))
+  .map((variant) => ({ variant, reason: DATA_UNAVAILABLE_REASONS[variant] ?? 'no-export' }));
+
 /** The variants a monthly file can be built for: the single-game export table
- *  minus DATA_WITHHELD_VARIANTS and the variants that are not public, in the
+ *  minus DATA_WITHHELD_VARIANTS, the variants that export nothing and the
+ *  variants that are not public, in the
  *  site's rail order (play menu, rules, /games). The all-variants file holds
  *  exactly these. */
 export const DATA_VARIANTS: readonly string[] = Object.keys(GAME_EXPORT_FORMATS)
@@ -152,13 +182,21 @@ export type DataFileTarget =
       month: string;
       variant: string;
       format: DataFileFormat;
+      /** One bot's games. */
       botId?: string;
+      /** Every level of one opponent (bot-opponents.ts in @mistboard/game):
+       *  the games of any of its member bots. Never set with botId. */
+      opponentId?: string;
     }
   | { kind: 'collection'; corpusId: string; format: DataFileFormat };
 
 export function dataFileKey(target: DataFileTarget): string {
   if (target.kind === 'collection') return `collections/${target.corpusId}.${target.format}.gz`;
-  const prefix = target.botId ? `bots/${target.botId}/` : '';
+  const prefix = target.botId
+    ? `bots/${target.botId}/`
+    : target.opponentId
+      ? `opponents/${target.opponentId}/`
+      : '';
   return `${prefix}${target.kind}/${target.month}/${target.variant}.${target.format}.gz`;
 }
 
@@ -170,7 +208,8 @@ export function dataFilePath(target: DataFileTarget): string {
 export function dataFileName(target: DataFileTarget): string {
   if (target.kind === 'collection') return `mistboard_${target.corpusId}.${target.format}.gz`;
   const prefix = target.kind === 'engine-monthly' ? 'mistboard_engine' : 'mistboard';
-  return `${prefix}${target.botId ? `_${target.botId}` : ''}_${target.variant}_${target.month}.${target.format}.gz`;
+  const who = target.botId ?? (target.opponentId ? `${target.opponentId}-all-levels` : null);
+  return `${prefix}${who ? `_${who}` : ''}_${target.variant}_${target.month}.${target.format}.gz`;
 }
 
 /** Hex digits of the sha256 a content-addressed URL carries: 48 bits, which
@@ -193,6 +232,9 @@ const SLUG = '[a-z0-9][a-z0-9-]{0,119}';
 const HASH = `(?:\\.([0-9a-f]{${DATA_HASH_LENGTH}}))?`;
 const BOT_PATH_RE = new RegExp(
   `^${DATA_API_PREFIX}/bots/([a-zA-Z0-9_-]{1,80})/(monthly|engine-monthly)/(.+)$`,
+);
+const OPPONENT_PATH_RE = new RegExp(
+  `^${DATA_API_PREFIX}/opponents/([a-z0-9][a-z0-9-]{0,79})/(monthly|engine-monthly)/(.+)$`,
 );
 const MONTHLY_PATH_RE = new RegExp(
   `^${DATA_API_PREFIX}/(monthly|engine-monthly)/([^/]+)/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
@@ -221,6 +263,15 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
     return { ...parsed, target: { ...parsed.target, botId } };
   }
   if (pathname.startsWith(`${DATA_API_PREFIX}/bots/`))
+    return { ok: false, status: 404, error: 'not_found' };
+  const opponentPath = OPPONENT_PATH_RE.exec(pathname);
+  if (opponentPath) {
+    const [, opponentId, kind, rest] = opponentPath;
+    const parsed = parseDataFilePath(`${DATA_API_PREFIX}/${kind}/${rest}`);
+    if (!parsed?.ok || parsed.target.kind === 'collection') return parsed;
+    return { ...parsed, target: { ...parsed.target, opponentId } };
+  }
+  if (pathname.startsWith(`${DATA_API_PREFIX}/opponents/`))
     return { ok: false, status: 404, error: 'not_found' };
   const monthly = MONTHLY_PATH_RE.exec(pathname);
   if (monthly) {
@@ -309,9 +360,29 @@ export type DataListing = {
    *  their own files (#488). Never folded into `months`. */
   engineMonths: DataMonth[];
   collections: DataCollection[];
+  /** Every variant this listing could hold a file for, in rail order: the
+   *  offered variants, or with a bot or opponent filter the ones it plays.
+   *  A variant here with no months yet shows why on the page. */
+  offeredVariants: string[];
+  /** Offered variants with no closed month yet but finished games in the
+   *  month in progress: its file is the first, out when that month ends. */
+  firstArchives: Array<{ variant: string; month: string }>;
+  /** Public variants with no downloads, and why (unfiltered listing only). */
+  unavailableVariants: Array<{ variant: string; reason: DataUnavailableReason }>;
   bots?: Array<{ id: string; displayName: string; variants: string[] }>;
   botId?: string;
+  opponentId?: string;
 };
+
+/** Which games a monthly listing or file holds: everyone's, one bot's, or
+ *  every level of one opponent's. */
+export type DataScope = { botId?: string; opponentId?: string };
+
+function scopeFields(scope: DataScope): DataScope {
+  if (scope.botId) return { botId: scope.botId };
+  if (scope.opponentId) return { opponentId: scope.opponentId };
+  return {};
+}
 
 export type ListedCollection = {
   corpusId: string;
@@ -367,7 +438,7 @@ function buildMonths(
   stored: ReadonlyMap<string, StoredDataFileMeta>,
   now: Date,
   seenVariants: Set<string>,
-  botId?: string,
+  scope: DataScope,
 ): DataMonth[] {
   const byMonth = new Map<string, DataMonthVariant[]>();
   for (const count of counts) {
@@ -378,7 +449,7 @@ function buildMonths(
     seenVariants.add(count.variant);
     const files = dataFormatsForVariant(count.variant).map((format) =>
       fileEntry(
-        { kind, month: count.month, variant: count.variant, format, ...(botId ? { botId } : {}) },
+        { kind, month: count.month, variant: count.variant, format, ...scopeFields(scope) },
         count.games,
         stored,
       ),
@@ -395,7 +466,7 @@ function buildMonths(
       const games = variants.reduce((sum, v) => sum + v.games, 0);
       const files = dataFormatsForVariant(ALL_VARIANTS_KEY).map((format) =>
         fileEntry(
-          { kind, month, variant: ALL_VARIANTS_KEY, format, ...(botId ? { botId } : {}) },
+          { kind, month, variant: ALL_VARIANTS_KEY, format, ...scopeFields(scope) },
           games,
           stored,
         ),
@@ -406,8 +477,13 @@ function buildMonths(
 
 export function buildDataListing(input: {
   botId?: string;
+  opponentId?: string;
+  /** The variants the filter can hold (a bot's); DATA_VARIANTS when absent. */
+  offeredVariants?: readonly string[];
+  /** Per (month, variant) game counts. Only closed months become files; a
+   *  count in the month in progress only dates a variant's first file. */
   counts: readonly PublishedMonthCount[];
-  /** Scheduled engine games per (closed month, variant); absent means none. */
+  /** Scheduled engine games per (month, variant); absent means none. */
   engineCounts?: readonly PublishedMonthCount[];
   stored: readonly StoredDataFileMeta[];
   collections: readonly ListedCollection[];
@@ -415,15 +491,33 @@ export function buildDataListing(input: {
 }): DataListing {
   const stored = new Map(input.stored.map((file) => [file.key, file]));
   const seenVariants = new Set<string>();
-  const months = buildMonths('monthly', input.counts, stored, input.now, seenVariants, input.botId);
+  const scope = scopeFields(input);
+  const months = buildMonths('monthly', input.counts, stored, input.now, seenVariants, scope);
   const engineMonths = buildMonths(
     'engine-monthly',
     input.engineCounts ?? [],
     stored,
     input.now,
     seenVariants,
-    input.botId,
+    scope,
   );
+  const offered = DATA_VARIANTS.filter((variant) =>
+    (input.offeredVariants ?? DATA_VARIANTS).includes(variant),
+  );
+  // A variant's first file: the earliest month in progress holding its games,
+  // only while no closed month has any (Gomoku before its first month ends).
+  const pending = new Map<string, string>();
+  for (const count of [...input.counts, ...(input.engineCounts ?? [])]) {
+    const range = parseMonth(count.month);
+    if (!range || isClosedMonth(range, input.now) || count.games <= 0) continue;
+    if (!offered.includes(count.variant) || seenVariants.has(count.variant)) continue;
+    const known = pending.get(count.variant);
+    if (!known || count.month < known) pending.set(count.variant, count.month);
+  }
+  const firstArchives = offered.flatMap((variant) => {
+    const month = pending.get(variant);
+    return month ? [{ variant, month }] : [];
+  });
   const collections: DataCollection[] = input.collections.map((collection) => ({
     id: collection.corpusId,
     event: collection.origin.event,
@@ -443,8 +537,14 @@ export function buildDataListing(input: {
   return {
     license: LICENSE,
     schemaVersion: SCHEMA_VERSION,
-    ...(input.botId ? { botId: input.botId } : {}),
+    ...scope,
     variants: DATA_VARIANTS.filter((variant) => seenVariants.has(variant)),
+    offeredVariants: offered,
+    firstArchives,
+    unavailableVariants:
+      scope.botId || scope.opponentId
+        ? []
+        : DATA_UNAVAILABLE_VARIANTS.map((entry) => ({ ...entry })),
     months,
     engineMonths,
     collections,

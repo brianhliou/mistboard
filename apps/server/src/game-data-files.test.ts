@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { gunzipSync } from 'node:zlib';
-import { createXmjSetup } from '@mistboard/game';
+import { createXmjSetup, GAME_SPECS, isPublicGameSpec } from '@mistboard/game';
 import { resolveGameExport } from './game-export-tenant.js';
 import type { RecentEveGameRecord } from './persistence.js';
 import './xiangqi-mahjong-registration.js';
@@ -10,6 +10,7 @@ import {
   BUILD_SLICE_MS,
   buildDataFileContent,
   buildDataListing,
+  DATA_UNAVAILABLE_VARIANTS,
   DATA_VARIANTS,
   DATA_WITHHELD_VARIANTS,
   dataFileKey,
@@ -27,6 +28,7 @@ import {
 import type { NewDataFile, StoredDataFile } from './persistence-game-data.js';
 
 const NOW = new Date('2026-10-01T09:00:00Z');
+const GAME_SPEC_IDS: string[] = GAME_SPECS.map((spec) => spec.id);
 
 test('bot monthly files have separate immutable keys and round-trip paths', () => {
   const target = {
@@ -179,6 +181,132 @@ test('xiangqi mahjong monthly JSONL is byte-identical to its single-game downloa
     ['jsonl'],
   );
   assert.equal(parseDataFilePath('/api/data/monthly/2026-09/xiangqi-mahjong.pgn.gz')?.ok, false);
+});
+
+test('opponent files (every level of one ladder) have their own keys, names and paths', () => {
+  const target = {
+    kind: 'monthly',
+    month: '2026-09',
+    variant: 'xiangqi',
+    format: 'pgn',
+    opponentId: 'fairy-stockfish',
+  } as const;
+  assert.equal(dataFileKey(target), 'opponents/fairy-stockfish/monthly/2026-09/xiangqi.pgn.gz');
+  assert.equal(dataFileName(target), 'mistboard_fairy-stockfish-all-levels_xiangqi_2026-09.pgn.gz');
+  const path = hashedDataFilePath(target, 'b'.repeat(64));
+  assert.equal(
+    path,
+    '/api/data/opponents/fairy-stockfish/monthly/2026-09/xiangqi.bbbbbbbbbbbb.pgn.gz',
+  );
+  assert.deepEqual(parseDataFilePath(path), { ok: true, target, hash: 'b'.repeat(12) });
+  const engine = { ...target, kind: 'engine-monthly' } as const;
+  assert.equal(
+    dataFileName(engine),
+    'mistboard_engine_fairy-stockfish-all-levels_xiangqi_2026-09.pgn.gz',
+  );
+  assert.deepEqual(parseDataFilePath(hashedDataFilePath(engine, 'c'.repeat(64)))?.ok, true);
+  // Never the same file as one level's, nor everyone's.
+  const level = { ...target, opponentId: undefined, botId: 'fairy-stockfish-level-1' };
+  assert.notEqual(dataFileKey(target), dataFileKey(level));
+  assert.notEqual(dataFileKey(target), dataFileKey({ ...target, opponentId: undefined }));
+  for (const bad of [
+    '/api/data/opponents/../monthly/2026-09/xiangqi.pgn.gz',
+    '/api/data/opponents/Fairy/monthly/2026-09/xiangqi.pgn.gz',
+    '/api/data/opponents/fairy-stockfish/collections/x.jsonl.gz',
+    '/api/data/opponents/fairy-stockfish/monthly/2026-09/three-kingdoms-banqi.jsonl.gz',
+  ])
+    assert.equal(parseDataFilePath(bad)?.ok ?? false, false, bad);
+});
+
+test('every public variant is offered on /data or named as unavailable, never both', () => {
+  const offered = new Set(DATA_VARIANTS);
+  const unavailable = new Map(DATA_UNAVAILABLE_VARIANTS.map((u) => [u.variant, u.reason]));
+  for (const id of GAME_SPEC_IDS) {
+    if (!isPublicGameSpec(id) || id === 'chess') continue;
+    assert.ok(offered.has(id) !== unavailable.has(id), id);
+  }
+  // Three Kingdoms Banqi: a finished game still hides pieces nobody turned
+  // over, so it exports nothing and says why.
+  assert.equal(unavailable.get('three-kingdoms-banqi'), 'hidden-pieces');
+  assert.ok(!offered.has('three-kingdoms-banqi'));
+  assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/three-kingdoms-banqi.jsonl.gz'), {
+    ok: false,
+    status: 404,
+    error: 'unknown_variant',
+  });
+  assert.ok(offered.has('gomoku'));
+  // A variant that is not public appears in neither list.
+  for (const id of GAME_SPEC_IDS.filter((id) => !isPublicGameSpec(id))) {
+    assert.ok(!offered.has(id) && !unavailable.has(id), id);
+  }
+});
+
+test('a listing never names a variant that is not public, filtered or not', () => {
+  const hidden = GAME_SPEC_IDS.filter((id) => !isPublicGameSpec(id));
+  assert.ok(hidden.includes('ffq-banqi'));
+  const counts = [
+    ...hidden.map((variant) => ({ month: '2026-09', variant, games: 9 })),
+    ...hidden.map((variant) => ({ month: '2026-10', variant, games: 9 })),
+    { month: '2026-09', variant: 'three-kingdoms-banqi', games: 9 },
+    { month: '2026-09', variant: 'xiangqi', games: 2 },
+  ];
+  for (const scope of [{}, { opponentId: 'pikafish' }]) {
+    const listing = buildDataListing({
+      ...scope,
+      counts,
+      engineCounts: counts,
+      stored: [],
+      collections: [],
+      now: NOW,
+    });
+    const wire = JSON.stringify(listing);
+    for (const id of hidden) assert.ok(!wire.includes(`"${id}"`), `${id} in ${wire}`);
+    assert.ok(!wire.includes('ffq'), wire);
+    // The unavailable variant is named only as unavailable, with no file.
+    assert.ok(!wire.includes('three-kingdoms-banqi.'), wire);
+    assert.deepEqual(listing.variants, ['xiangqi']);
+  }
+});
+
+test('a variant with games only in the month in progress names its first file', () => {
+  const listing = buildDataListing({
+    counts: [
+      { month: '2026-10', variant: 'gomoku', games: 3 },
+      { month: '2026-10', variant: 'xiangqi', games: 3 },
+      { month: '2026-09', variant: 'xiangqi', games: 10 },
+    ],
+    engineCounts: [{ month: '2026-10', variant: 'jungle', games: 4 }],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  // Gomoku and Jungle have no closed month yet; xiangqi already has files.
+  assert.deepEqual(listing.firstArchives, [
+    { variant: 'jungle', month: '2026-10' },
+    { variant: 'gomoku', month: '2026-10' },
+  ]);
+  assert.deepEqual(listing.variants, ['xiangqi']);
+  assert.deepEqual(listing.offeredVariants, DATA_VARIANTS);
+  assert.deepEqual(
+    listing.unavailableVariants,
+    DATA_UNAVAILABLE_VARIANTS.map((entry) => ({ ...entry })),
+  );
+  // The open month never becomes a file.
+  assert.deepEqual(
+    listing.months.map((month) => month.month),
+    ['2026-09'],
+  );
+  const filtered = buildDataListing({
+    botId: 'rapfi-level-1',
+    offeredVariants: ['gomoku'],
+    counts: [{ month: '2026-10', variant: 'gomoku', games: 3 }],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  assert.deepEqual(filtered.offeredVariants, ['gomoku']);
+  assert.deepEqual(filtered.unavailableVariants, []);
+  assert.deepEqual(filtered.firstArchives, [{ variant: 'gomoku', month: '2026-10' }]);
 });
 
 test('only closed months are offered', () => {

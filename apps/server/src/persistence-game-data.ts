@@ -90,23 +90,33 @@ function botParticipantFilter(parameter: number): string {
     ))`;
 }
 
-function botIdentityParams(botId: string): [string[], string[]] {
-  const bot = firstPartyBotForId(botId);
-  return [
-    bot ? [bot.id, ...(bot.legacyBotIds ?? [])] : [botId],
-    bot ? [...new Set([...Object.values(bot.engines), ...(bot.attributionEngineIds ?? [])])] : [],
-  ];
+// One bot's identities, or the union of several (every level of an opponent):
+// a game against any of them is selected once.
+function botIdentityParams(botIds: string | readonly string[]): [string[], string[]] {
+  const bots = new Set<string>();
+  const engines = new Set<string>();
+  for (const botId of typeof botIds === 'string' ? [botIds] : botIds) {
+    const bot = firstPartyBotForId(botId);
+    for (const id of bot ? [bot.id, ...(bot.legacyBotIds ?? [])] : [botId]) bots.add(id);
+    if (!bot) continue;
+    for (const id of [...Object.values(bot.engines), ...(bot.attributionEngineIds ?? [])])
+      engines.add(id);
+  }
+  return [[...bots], [...engines]];
 }
+
+/** A bot filter: one bot id, or several whose games are unioned. */
+export type BotFilter = string | readonly string[];
 
 export type PublishedMonthCount = { month: string; variant: string; games: number };
 
-// Per (closed month, variant) game counts. `before` is the start of the
-// current month (UTC): nothing at or after it is listed.
+// Per (month, variant) game counts. Nothing ended at or after `before` is
+// counted; the caller decides whether the month in progress is included.
 export async function countPublishedGamesByMonth(
   variants: readonly string[],
   before: Date,
   games: MonthlyGames = 'human',
-  botId?: string,
+  botId?: BotFilter,
 ): Promise<PublishedMonthCount[]> {
   const { rows } = await getPool().query<{ month: string; variant: string; games: number }>(
     `SELECT to_char(date_trunc('month', g.ended_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
@@ -131,7 +141,7 @@ export async function listPublishedRoomIds(
   from: Date,
   to: Date,
   games: MonthlyGames = 'human',
-  botId?: string,
+  botId?: BotFilter,
 ): Promise<string[]> {
   const { rows } = await getPool().query<{ room_id: string }>(
     `SELECT g.room_id

@@ -356,6 +356,120 @@ definePersistenceTests('game data files', () => {
     );
   });
 
+  test('an opponent filter unions every public level, and old and exact bot links keep working', async () => {
+    await seedMonth();
+    await sqlQuery(`INSERT INTO bot_profiles
+      (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
+       supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
+      VALUES ('fairy-stockfish-level-1', 'Fairy-Stockfish Level 1', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi'], 300000, 3000, 'public'),
+       ('fairy-stockfish-level-2', 'Fairy-Stockfish Level 2', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi','jungle'], 300000, 3000, 'public'),
+       ('fairy-stockfish-level-3', 'Fairy-Stockfish Level 3', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi','banqi'], 300000, 3000, 'private'),
+       ('jqe', 'jqe', '', 'system', 'test-engine', 'jieqi', ARRAY['jieqi'], 300000, 3000, 'public')
+      ON CONFLICT (id) DO UPDATE SET supported_game_spec_ids = EXCLUDED.supported_game_spec_ids,
+        visibility = EXCLUDED.visibility`);
+    // Level 1 in one game, level 2 under its old id in another, level 3
+    // (private) in the banqi game, and a pvp game with no bot.
+    await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'fairy-stockfish-level-1'
+      WHERE game_id = 'xq_data_a' AND color = 'black'`);
+    await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'fairy-stockfish-xiangqi-level-2'
+      WHERE game_id = 'xq_data_b' AND color = 'black'`);
+    await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'fairy-stockfish-level-3'
+      WHERE game_id = 'bq_data_d' AND color = 'black'`);
+    clearDataListingCache();
+
+    const response = await request('/api/data?opponent=fairy-stockfish');
+    assert.equal(response.status, 200);
+    const listing = JSON.parse(response.body.toString('utf8')) as Awaited<
+      ReturnType<typeof loadDataListing>
+    >;
+    assert.equal(listing.opponentId, 'fairy-stockfish');
+    assert.equal(listing.botId, undefined);
+    // Only the public levels' variants; the private level's banqi is not offered.
+    assert.deepEqual(listing.offeredVariants, ['xiangqi', 'jungle']);
+    assert.deepEqual(listing.unavailableVariants, []);
+    assert.deepEqual(listing.collections, []);
+    assert.deepEqual(
+      listing.months.map((month) => [month.month, month.variants.map((v) => [v.variant, v.games])]),
+      [['2026-08', [['xiangqi', 2]]]],
+    );
+    assert.equal(
+      listing.months[0]?.variants[0]?.files[0]?.path,
+      '/api/data/opponents/fairy-stockfish/monthly/2026-08/xiangqi.pgn.gz',
+    );
+    // The whole payload never names a private level or a hidden variant.
+    const wire = response.body.toString('utf8');
+    for (const word of ['fairy-stockfish-level-3', 'ffq', 'bq_data_d'])
+      assert.ok(!wire.includes(word), word);
+
+    resetDataDownloadLimiterForTests();
+    const file = await download(
+      '/api/data/opponents/fairy-stockfish/monthly/2026-08/xiangqi.jsonl.gz',
+    );
+    assert.deepEqual(
+      gunzipSync(file.body)
+        .toString('utf8')
+        .trimEnd()
+        .split('\n')
+        .map((line) => JSON.parse(line).game_id),
+      ['xq_data_a', 'xq_data_b'],
+    );
+    assert.match(
+      file.headers['content-disposition'] ?? '',
+      /mistboard_fairy-stockfish-all-levels_xiangqi_2026-08\.jsonl\.gz/,
+    );
+    // Not a variant any public level plays, an unknown opponent, a one-bot
+    // opponent's second URL, or a bad id: all fail closed.
+    for (const path of [
+      '/api/data/opponents/fairy-stockfish/monthly/2026-08/banqi.jsonl.gz',
+      '/api/data/opponents/no-such/monthly/2026-08/xiangqi.jsonl.gz',
+      '/api/data/opponents/jqe/monthly/2026-08/jieqi.jsonl.gz',
+    ])
+      assert.equal((await request(path)).status, 404, path);
+    assert.equal((await request('/api/data?opponent=no-such')).status, 404);
+    assert.equal((await request('/api/data?opponent=Bad%2Fid')).status, 400);
+    assert.equal((await request('/api/data?opponent=fairy-stockfish&bot=jqe')).status, 400);
+
+    // One level: the exact link and the bot's old id give the same listing.
+    clearDataListingCache();
+    const exact = JSON.parse(
+      (await request('/api/data?bot=fairy-stockfish-level-2')).body.toString('utf8'),
+    );
+    const legacy = JSON.parse(
+      (await request('/api/data?bot=fairy-stockfish-xiangqi-level-2')).body.toString('utf8'),
+    );
+    assert.equal(exact.botId, 'fairy-stockfish-level-2');
+    assert.deepEqual(legacy, exact);
+    assert.equal(exact.months[0]?.games, 1);
+    // A one-bot opponent is that bot's listing.
+    const one = JSON.parse((await request('/api/data?opponent=jqe')).body.toString('utf8'));
+    assert.equal(one.botId, 'jqe');
+    assert.equal(one.opponentId, undefined);
+
+    // An already-built opponent file stops serving when every level goes private.
+    await sqlQuery(
+      `UPDATE bot_profiles SET visibility = 'private' WHERE id LIKE 'fairy-stockfish-level-%'`,
+    );
+    assert.equal((await request(file.location)).status, 404);
+  });
+
+  test('a variant whose first month is still open says when its first file comes', async () => {
+    await seedMonth();
+    // Jungle's only game moves into the open month.
+    await sqlQuery(
+      `UPDATE games SET ended_at = '2026-09-05T12:00:00Z' WHERE room_id = 'jgl_data_c'`,
+    );
+    clearDataListingCache();
+    const listing = await loadDataListing(new Date('2026-09-15T00:00:00Z'));
+    assert.deepEqual(listing.firstArchives, [{ variant: 'jungle', month: '2026-09' }]);
+    assert.ok(!listing.variants.includes('jungle'));
+    assert.ok(listing.offeredVariants.includes('jungle'));
+    assert.ok(listing.months.every((month) => month.month !== '2026-09'));
+    assert.deepEqual(
+      listing.unavailableVariants.map((entry) => entry.variant),
+      ['three-kingdoms-banqi'],
+    );
+  });
+
   test('the listing counts closed months only, without the excluded games', async () => {
     await seedMonth();
     clearDataListingCache();
