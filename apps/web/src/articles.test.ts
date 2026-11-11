@@ -146,9 +146,7 @@ describe('Pikafish search intent', () => {
       );
       expect(official?.parentElement?.textContent).toContain(download);
       expect(official?.closest('.article-cta-row')).toBeNull();
-      // The intro says the official download's own net is stronger than the CC0
-      // net Mistboard runs (2026-11-10).
-      expect(intro?.textContent).toMatch(/CC0|更[强強]/);
+      expect(intro?.textContent).toContain('11 MB');
     });
 
     it(`${lang}: renders FAQs for the online, analysis and download searches without interaction`, () => {

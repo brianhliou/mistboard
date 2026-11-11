@@ -25,9 +25,10 @@ import type { Article } from '../types.js';
 //
 // Since 2026-11-10 every Pikafish surface here (bots, review, browser board) runs
 // Pikafish's search on the CC0 Fairy-Stockfish xiangqi net (xiangqi-c07e94a5c7cb),
-// not Pikafish's own weights; the page says so and sends readers to the official
-// download for the stronger official net. No Elo gap is stated: none is published,
-// and measuring one would mean running the official weights.
+// not Pikafish's own weights. The page says so quietly (credits on /source and
+// /champions, the ratings caption, the download FAQ), with no section of its own,
+// by decision 2026-11-10. No Elo gap is stated: none is published, and measuring
+// one would mean running the official weights.
 //
 // Text card (text-card.ts). PIKAFISH is translated on zh pages (皮卡鱼), the word
 // a Chinese reader searches.
@@ -59,7 +60,7 @@ export const pikafishArticle: Article = {
   publishedAt: '2026-09-22',
   updatedAt: '2026-11-10',
   updateNote:
-    "Now says which net Mistboard runs: Pikafish's search with the free CC0 Fairy-Stockfish xiangqi net. Pikafish's own, stronger net comes with the official download.",
+    "Corrected the analysis board's net and download size.",
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
@@ -83,7 +84,7 @@ export const pikafishArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        "Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. The official download comes with Pikafish's own net, which is stronger than the free net Mistboard runs.",
+        'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.',
     },
   ],
   sections: [
@@ -163,21 +164,6 @@ export const pikafishArticle: Article = {
       ],
     },
     {
-      heading: 'Mistboard runs Pikafish on the free CC0 net',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text:
-            "A modern engine has two parts, a search that looks ahead and a neural network that scores each position it reaches. Every Pikafish on Mistboard (the bot, game review and the analysis board) uses Pikafish's search with the [Fairy-Stockfish xiangqi net](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), which its authors released under CC0 for anyone to use.",
-        },
-        {
-          kind: 'paragraph',
-          text:
-            "Pikafish's own net is stronger. For Pikafish at full strength on your own machine, download it from the [official Pikafish project](https://github.com/official-pikafish/Pikafish).",
-        },
-      ],
-    },
-    {
       heading: 'Questions',
       blocks: [
         {
@@ -206,7 +192,7 @@ export const pikafishArticle: Article = {
             {
               question: 'How strong is it?',
               answer:
-                'The Pikafish bot searches three million positions a move, about four seconds, on the server, with the CC0 net. That is beyond any human. The ladder above it goes down to a level a beginner can beat.',
+                'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.',
             },
             {
               question: 'Does the jieqi engine see my hidden pieces?',

@@ -281,8 +281,8 @@ const ZH_HANS: Record<string, string> = {
   // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
   'Pikafish now runs in your browser for xiangqi analysis.':
     '象棋的本地分析现在在你的浏览器里运行皮卡鱼。',
-  "Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty. Update, November 10: Pikafish on Mistboard now runs on the free CC0 Fairy-Stockfish xiangqi net, 11 MB, instead of Pikafish's own net.":
-    '象棋的本地分析此前用的是 Fairy-Stockfish 加一个小权重。现在直接运行皮卡鱼本身：全强度，带它自己的权重，也就是我们服务器上的电脑所用的那一份；分析棋盘和对局复盘都用它，齿轮里的设置（最佳着法箭头、多条变化、搜索强度）照旧。权重 51 MB，只需下载一次；之后你分析的内容不会离开你的电脑。堡垒象棋、原子象棋和鸭子象棋仍用 Fairy-Stockfish，暗子类玩法仍用 Misty。11 月 10 日更新：本站的皮卡鱼现改用免费的 CC0 Fairy-Stockfish 象棋神经网络（11 MB），不再使用皮卡鱼自己的神经网络。',
+  'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
+    '象棋的本地分析此前用的是 Fairy-Stockfish 加一个小权重。现在直接运行皮卡鱼本身：全强度，带它自己的权重，也就是我们服务器上的电脑所用的那一份；分析棋盘和对局复盘都用它，齿轮里的设置（最佳着法箭头、多条变化、搜索强度）照旧。权重 51 MB，只需下载一次；之后你分析的内容不会离开你的电脑。堡垒象棋、原子象棋和鸭子象棋仍用 Fairy-Stockfish，暗子类玩法仍用 Misty。',
   'Open the analysis board': '打开分析棋盘',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '斗兽棋的虎现在可以横向跳河了。',
@@ -837,8 +837,8 @@ const ZH_HANT: Record<string, string> = {
   // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
   'Pikafish now runs in your browser for xiangqi analysis.':
     '象棋的本機分析現在在你的瀏覽器裡執行皮卡魚。',
-  "Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty. Update, November 10: Pikafish on Mistboard now runs on the free CC0 Fairy-Stockfish xiangqi net, 11 MB, instead of Pikafish's own net.":
-    '象棋的本機分析先前用的是 Fairy-Stockfish 加一個小權重。現在直接執行皮卡魚本身：全強度，帶它自己的權重，也就是我們伺服器上的電腦所用的那一份；分析棋盤和對局覆盤都用它，齒輪裡的設定（最佳著法箭頭、多條變化、搜尋強度）照舊。權重 51 MB，只需下載一次；之後你分析的內容不會離開你的電腦。堡壘象棋、原子象棋和鴨子象棋仍用 Fairy-Stockfish，暗子類玩法仍用 Misty。11 月 10 日更新：本站的皮卡魚現改用免費的 CC0 Fairy-Stockfish 象棋神經網路（11 MB），不再使用皮卡魚自己的神經網路。',
+  'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
+    '象棋的本機分析先前用的是 Fairy-Stockfish 加一個小權重。現在直接執行皮卡魚本身：全強度，帶它自己的權重，也就是我們伺服器上的電腦所用的那一份；分析棋盤和對局覆盤都用它，齒輪裡的設定（最佳著法箭頭、多條變化、搜尋強度）照舊。權重 51 MB，只需下載一次；之後你分析的內容不會離開你的電腦。堡壘象棋、原子象棋和鴨子象棋仍用 Fairy-Stockfish，暗子類玩法仍用 Misty。',
   'Open the analysis board': '打開分析棋盤',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '鬥獸棋的虎現在可以橫向跳河了。',

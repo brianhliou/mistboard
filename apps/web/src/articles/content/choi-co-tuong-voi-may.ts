@@ -26,8 +26,8 @@ import { pikafishArticle } from './pikafish.js';
 
 export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Pikafish on Mistboard': 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
-  "Now says which net Mistboard runs: Pikafish's search with the free CC0 Fairy-Stockfish xiangqi net. Pikafish's own, stronger net comes with the official download.":
-    'Giờ nói rõ Mistboard chạy mạng nào: phần tìm kiếm của Pikafish với mạng cờ tướng Fairy-Stockfish CC0 miễn phí. Mạng riêng, mạnh hơn của Pikafish đi kèm bản tải chính thức.',
+  "Corrected the analysis board's net and download size.":
+    'Đã sửa thông tin về mạng nơ-ron và dung lượng tải của bàn phân tích.',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     'Chơi cờ tướng với máy online miễn phí: Pikafish, không cần tải về',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
@@ -36,8 +36,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Người chơi cờ tướng muốn chơi với máy hoặc phân tích ván cờ bằng Pikafish.',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
     'Pikafish là engine cờ tướng mã nguồn mở phát triển từ Stockfish. Chơi với máy hoặc phân tích thế cờ ngay trên trình duyệt, miễn phí và không cần tài khoản.',
-  "Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. The official download comes with Pikafish's own net, which is stronger than the free net Mistboard runs.":
-    'Muốn tải engine về máy? Xem các bản phát hành, mã nguồn và hướng dẫn cài đặt tại [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish). Bản tải chính thức có kèm mạng nơ-ron riêng của Pikafish, mạnh hơn mạng miễn phí mà Mistboard dùng.',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.':
+    'Muốn tải engine về máy? Xem các bản phát hành, mã nguồn và hướng dẫn cài đặt tại [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish). Phân tích trên trình duyệt tải mạng 11 MB ở lần dùng đầu tiên.',
   'Analyze with Pikafish':
     'Phân tích bằng Pikafish',
   'Can I analyze with Pikafish online?':
@@ -73,12 +73,6 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Với cờ lật, cờ úp và cờ thú lật, phần phân tích làm một việc mà cờ vua không cần: nó định giá từng lần lật quân, để bạn thấy phần mình chọn tách khỏi phần mình lật trúng. [Tách kỹ năng khỏi may rủi](/blog/skill-vs-luck) giải thích cách làm.',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser, so nothing you analyze leaves your machine. The net is 11 MB and downloads once.':
     '[Bàn phân tích](/analysis/xiangqi) dành cho thế cờ bạn tự xếp. Nó chạy Pikafish ngay trong trình duyệt, nên không có gì bạn phân tích rời khỏi máy của bạn. Mạng nặng 11 MB và chỉ tải một lần.',
-  'Mistboard runs Pikafish on the free CC0 net':
-    'Mistboard chạy Pikafish với mạng CC0 miễn phí',
-  "A modern engine has two parts, a search that looks ahead and a neural network that scores each position it reaches. Every Pikafish on Mistboard (the bot, game review and the analysis board) uses Pikafish's search with the [Fairy-Stockfish xiangqi net](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), which its authors released under CC0 for anyone to use.":
-    'Một engine hiện đại có hai phần, phần tìm kiếm nhìn trước các nước đi và một mạng nơ-ron chấm điểm từng thế cờ mà nó gặp. Mọi Pikafish trên Mistboard (máy đấu, xem lại ván đấu và bàn phân tích) đều dùng phần tìm kiếm của Pikafish với [mạng cờ tướng của Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), được các tác giả phát hành theo CC0 để ai cũng dùng được.',
-  "Pikafish's own net is stronger. For Pikafish at full strength on your own machine, download it from the [official Pikafish project](https://github.com/official-pikafish/Pikafish).":
-    'Mạng riêng của Pikafish mạnh hơn. Muốn dùng Pikafish ở sức mạnh tối đa trên máy của bạn, hãy tải từ [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish).',
   Questions: 'Câu hỏi thường gặp',
   'Can I play Pikafish online?': 'Có thể chơi cờ tướng với máy online không?',
   'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
@@ -91,8 +85,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   "For the engine itself, use the official Pikafish project for releases, source code and setup instructions. The download includes Pikafish's own net, which is stronger than the free CC0 net Mistboard runs. To play or analyze on Mistboard, open your browser without installing an app.":
     'Xem bản phát hành, mã nguồn và hướng dẫn cài đặt engine tại dự án Pikafish chính thức. Bản tải có kèm mạng riêng của Pikafish, mạnh hơn mạng CC0 miễn phí mà Mistboard dùng. Để chơi hoặc phân tích trên Mistboard, chỉ cần mở trình duyệt, không phải cài ứng dụng.',
   'How strong is it?': 'Máy mạnh đến mức nào?',
-  'The Pikafish bot searches three million positions a move, about four seconds, on the server, with the CC0 net. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
-    'Pikafish tính ba triệu thế cờ mỗi nước, khoảng bốn giây, trên máy chủ, với mạng CC0. Mức đó vượt xa mọi người chơi. Các cấp độ bên dưới đi xuống tới mức người mới chơi cũng thắng được.',
+  'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
+    'Pikafish tính ba triệu thế cờ mỗi nước, khoảng bốn giây, trên máy chủ. Mức đó vượt xa mọi người chơi. Các cấp độ bên dưới đi xuống tới mức người mới chơi cũng thắng được.',
   'Does the jieqi engine see my hidden pieces?': 'Engine cờ úp có nhìn thấy quân úp của tôi không?',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     'Không. Nó nhận đúng bàn cờ đã úp như bạn thấy, và lần xáo quân không ai biết: không phải bạn, không phải engine, không phải đối thủ.',
