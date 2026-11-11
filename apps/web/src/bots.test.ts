@@ -622,7 +622,7 @@ describe('bot pages', () => {
     expect(mistyCard.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
     expect(mistyCard.querySelector('[data-game-spec-id="banqi"]')).toBeNull();
     // The stored bios are English-only; the page carries its own localized lines.
-    expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
+    expect(root.textContent).toContain("Mistboard's own Fog Chess engine.");
     expect(root.textContent).not.toContain('Searches hidden positions');
     // A community bot keeps its own name and bio.
     expect(cardFor(root, 'my-engine')?.textContent).toContain('Mine.');
@@ -1236,7 +1236,7 @@ describe('bot pages', () => {
       root.querySelector(`.profile-summary-card[data-bot-id="${botId}"]`);
     const level1 = card('fairy-stockfish-level-1');
     expect(level1?.querySelector('.profile-summary-card-subtitle')?.textContent).toBe(
-      'First-party bot · Version 1b5bdd40',
+      'Hosted bot · Version 1b5bdd40',
     );
     // A one-variant bot keeps the compact card: one Play sized to its label, a footer.
     expect(level1?.querySelector('.profile-summary-card-variants')).toBeNull();

@@ -511,19 +511,26 @@ function buildOpponentCard(
       ratingGameSpecId: gameSpecId,
       primaryPlayGameSpecId: gameSpecId,
       ...(opponent.name ? { name: opponent.name } : {}),
-      ...(opponent.community ? {} : { subtitle: t('bots.firstParty') }),
+      ...(opponent.community
+        ? {}
+        : {
+            subtitle: t(isHostedOpponent(opponent.key, bot.id) ? 'bots.hosted' : 'bots.firstParty'),
+          }),
       ...(opponent.engineOnly ? { engineOnlyPlay: true } : {}),
+      // A champion card already carries the title; "Strongest" would repeat it.
       badge:
         startLevel !== null && selected.level === startLevel
           ? t('bots.startHere')
-          : strongest
+          : strongest && !holdsChampionTitle(bot.id, gameSpecId)
             ? t('bots.strongest')
             : undefined,
       bio: opponent.community
         ? undefined
         : opponent.engineOnly
           ? engineOnlyBio(gameSpecId, selected.level)
-          : (systemBotBio(bot) ?? null),
+          : bot.id === 'misty'
+            ? t('bots.mistyGameBio', { variant: variantDisplayLabel(gameSpecId) })
+            : (systemBotBio(bot) ?? null),
     });
     card.dataset.opponentId = opponent.key;
     layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);
@@ -598,9 +605,21 @@ function layoutDirectoryCard(
 
 /** The champion title a bot holds in this game, linked to /champions; null
  *  when it holds none (champions-page.ts is the record). */
+function holdsChampionTitle(botId: string, gameSpecId: string): boolean {
+  return CHAMPIONS.some(
+    (title) => title.botHref === `/bot/${botId}` && title.gameId === gameSpecId,
+  );
+}
+
+// Engines other people wrote, run here with credit: the subtitle says hosted,
+// never first-party. Mistboard's own bots (Misty, General Blunder) stay first-party.
+const HOSTED_OPPONENT_KEYS: ReadonlySet<string> = new Set(['fairy-stockfish', 'pikafish', 'rapfi']);
+function isHostedOpponent(opponentKey: string, botId: string): boolean {
+  return HOSTED_OPPONENT_KEYS.has(opponentKey) || botCredits(botId).length > 0;
+}
+
 function championTitleLink(botId: string, gameSpecId: string): HTMLAnchorElement | null {
-  if (!CHAMPIONS.some((title) => title.botHref === `/bot/${botId}` && title.gameId === gameSpecId))
-    return null;
+  if (!holdsChampionTitle(botId, gameSpecId)) return null;
   const champion = document.createElement('a');
   champion.className = 'bot-champion-title';
   champion.href = '/champions';

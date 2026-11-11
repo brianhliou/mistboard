@@ -691,6 +691,8 @@ export const EN_COMMUNITY = {
   'bots.mistyBio':
     "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
+  'bots.hosted': 'Hosted bot',
+  'bots.mistyGameBio': "Mistboard's own {variant} engine.",
   'bots.gameCountOne': '{count} game',
   'bots.gameCountMany': '{count} games',
   'bots.communityTitle': 'Community bots',

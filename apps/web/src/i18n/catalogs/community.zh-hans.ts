@@ -660,6 +660,8 @@ export const ZH_HANS_COMMUNITY = {
   'bots.abJchessCredit': 'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）',
   'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻兽棋。',
   'bots.firstParty': '官方机器人',
+  'bots.hosted': '托管机器人',
+  'bots.mistyGameBio': 'Mistboard 自研的{variant}引擎。',
   'bots.gameCountOne': '{count} 局',
   'bots.gameCountMany': '{count} 局',
   'bots.communityTitle': '社区机器人',
