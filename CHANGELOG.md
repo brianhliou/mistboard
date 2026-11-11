@@ -15,6 +15,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Correspondence emails now cover challenges, game starts and results, each under the existing notification setting ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- A signed-out player can start a correspondence game with a friend and keeps their seat after signing in ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Play again after a finished game between two accounts sends a correspondence challenge with the sides swapped ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- The Xiangqi Mahjong Play dialog offers a Move order choice for who deals first ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - Gomoku on a touch screen shows your stone on the first tap and plays it on the second, with a setting to turn this off ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Three Kingdoms Banqi is open to everyone as a casual game, with Find opponent, TV and correspondence ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Three Kingdoms Banqi on a phone keeps its controls at the bottom of the screen, and the game-over sheet reopens from the bar ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
@@ -97,6 +101,11 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The correspondence page lists games on your move first, then recent opponents you can challenge ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Signed-in players see their correspondence games waiting on a move on the homepage ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Challenge and invite links name who sent them, the game and the pace before you sign in ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Puzzle pages share one sidebar, and puzzle history draws boards with your board settings ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- The Pikafish page and source credits now name the CC0 Fairy-Stockfish xiangqi net that Mistboard's Pikafish runs on ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - the homepage opens with a shorter tagline and About on its own line ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - the Data page offers a month of one bot's public games as its own download ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - the homepage Play table adds Gomoku and drops the two fog variants ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
@@ -131,6 +140,13 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Correspondence friend invites keep the variant and side you picked ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- A correspondence room closed by another server process reopens instead of reconnecting forever ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Three Kingdoms Banqi keeps moved face-up pieces face up on the final board ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Just finished cards show the final Gomoku position and draw the Three Kingdoms Banqi board ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- The homepage shows the Three Kingdoms Banqi bot row before the bot list loads ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- The Featured board and live game cards put Gomoku names on the right clocks ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
+- Posting a correspondence game from the homepage opens the correspondence page instead of an Access rejected room ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - signed-out visitors read the room chat without polling for a sign-in error ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Misty bot names fit on game cards in Banqi and Three Kingdoms Banqi, old games included ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Three Kingdoms Banqi watch pages and game cards show which player has red and which has black ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
