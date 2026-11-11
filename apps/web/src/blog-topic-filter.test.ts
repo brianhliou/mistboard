@@ -249,6 +249,7 @@ describe('blog index engineering chip', () => {
       '/blog/jungle-den-term',
       '/blog/mistybanqi',
       '/blog/pikafish-reveal-bug',
+      '/blog/rapfi-vs-katagomo',
       '/blog/server-enforced-fog',
       '/blog/unstyled-first-paint',
     ]);

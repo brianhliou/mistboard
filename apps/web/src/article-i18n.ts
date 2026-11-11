@@ -248,6 +248,10 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
     'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
+  // Added 2026-11-11 with the English draft; the slug moves to
+  // TRANSLATED_ARTICLE_SLUGS when its zh is drafted from the signed-off English.
+  'rapfi-vs-katagomo':
+    'An engineering post whose English is under review before its 2026-11-13 date; zh is drafted only from signed-off English.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
   // Vietnamese renders of a translated English article (derived-translation.ts);
   // a zh reader gets the source article's zh page.
