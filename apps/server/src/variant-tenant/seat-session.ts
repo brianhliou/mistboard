@@ -9,7 +9,13 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { clockPolicyKindFor } from '@mistboard/game';
-import { isPlayDisabled, isStatsExcluded, type UserAccount } from '../persistence.js';
+import {
+  isPlayDisabled,
+  isStatsExcluded,
+  type RoomSeatTokenRecord,
+  type RoomSeatTokenSeat,
+  type UserAccount,
+} from '../persistence.js';
 import { hashSeatToken } from '../server-seat-session.js';
 import type { TenantSeat, TenantSeatTokenState } from './tenant.js';
 
@@ -263,4 +269,30 @@ export function displaceOlderTenantSeatClients<
       /* socket already closed */
     }
   }
+}
+
+// Unrevoked durable seat tokens as live token state: what a room loaded from
+// the store (hydration, or a resync after another process wrote) seats by.
+export function tenantSeatTokenStatesFromPersistence<C extends RoomSeatTokenSeat>(
+  tokens: Partial<Record<C, RoomSeatTokenRecord<C>>>,
+): Partial<Record<C, TenantSeatTokenState<C>>> {
+  const states: Partial<Record<C, TenantSeatTokenState<C>>> = {};
+  for (const token of Object.values<RoomSeatTokenRecord<C> | undefined>(
+    tokens as Record<string, RoomSeatTokenRecord<C> | undefined>,
+  )) {
+    if (!token || token.revokedAt) continue;
+    states[token.seat] = {
+      clientId: token.clientId,
+      deviceId: token.deviceId ?? null,
+      seat: token.seat,
+      tokenHash: token.tokenHash,
+      userId: token.userId,
+      userHandle: token.userHandle,
+      userDisplayName: token.userDisplayName,
+      issuedAt: token.issuedAt,
+      lastSeenAt: token.lastSeenAt,
+      revokedAt: token.revokedAt,
+    };
+  }
+  return states;
 }

@@ -187,6 +187,27 @@ describe('tenant socket client', () => {
     expect(FakeWebSocket.instances).toHaveLength(2);
   });
 
+  it('backs off when a server accepts the socket and closes it before any hello', () => {
+    const { client } = makeClient();
+    client.connect();
+    const delays: number[] = [];
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      lastSocket().open();
+      lastSocket().closeWith(1011, 'persistence failure');
+      expect(client.reconnectAttempt()).toBe(attempt);
+      delays.push(tenantReconnectDelayMs(client.reconnectAttempt()));
+      const before = FakeWebSocket.instances.length;
+      vi.advanceTimersByTime(delays[delays.length - 1]! - 1);
+      expect(FakeWebSocket.instances).toHaveLength(before);
+      vi.advanceTimersByTime(1);
+      expect(FakeWebSocket.instances).toHaveLength(before + 1);
+    }
+    expect(delays).toEqual([750, 1_500, 3_000, 6_000]);
+    lastSocket().open();
+    lastSocket().message({ type: 'hello', clientId: 'served' });
+    expect(client.reconnectAttempt()).toBe(0);
+  });
+
   it('captures clientId and persists the seat token from hello', () => {
     const { client, calls } = makeClient();
     client.connect();

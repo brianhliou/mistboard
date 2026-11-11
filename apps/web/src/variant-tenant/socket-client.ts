@@ -204,7 +204,9 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
         window.clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
-      reconnectAttempt = 0;
+      // The backoff resets on the server's first state frame, not here: a
+      // server that accepts the upgrade and then closes (a room it cannot
+      // serve) would otherwise be redialed every 750ms forever (#1056).
       // After a drop, an open transport still holds the old room snapshot.
       // Keep every shell's clocks frozen until a state frame restores it.
       if (!clientId) {
@@ -410,6 +412,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
 
     if (message.type === 'hello') {
+      reconnectAttempt = 0;
       clearRestartingBanner();
       connectionState = 'connected';
       clearNoticeTiers();
@@ -420,6 +423,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       options.applyHello(message);
       lastSeq = null;
     } else if (message.type === 'snapshot') {
+      reconnectAttempt = 0;
       connectionState = 'connected';
       clearNoticeTiers();
       options.applySnapshot(message);
