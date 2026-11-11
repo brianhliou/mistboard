@@ -202,6 +202,12 @@ export type XiangqiReplaySpec = {
   // "<title> · <event>" instead of "<red> (Red) vs <black> (Black) · <event>".
   title?: string;
   perspective?: XiangqiColor;
+  /**
+   * Optional "play it from here" link, drawn as the card's last row so the
+   * invitation belongs to the game it continues rather than sitting below the
+   * figure as a separate button. Annotated cards only.
+   */
+  play?: { label: string; href: string };
   // Shown on the final ply (the records stop at the mating move, so the rules
   // kernel still reports "playing"; the result is supplied explicitly).
   resultText: string;
@@ -893,6 +899,17 @@ export function mountXiangqiReplay(
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
     grid.append(boardCol, moveCol);
+    if (spec.play) {
+      const play = document.createElement('a');
+      play.className = 'xq-replay-play';
+      play.href = spec.play.href;
+      const icon = document.createElement('span');
+      icon.className = 'xq-replay-play-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '▶';
+      play.append(icon, spec.play.label);
+      grid.append(play);
+    }
     host.append(header, grid);
   } else {
     host.append(header, frame, controls, slider, narrative);

@@ -669,20 +669,17 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Start with the slow game against Ju and follow the evaluation alongside the moves.",
+          text: "Start with the slow game against Ju. The board opens after Ju's 27th move, where Pikafish rates Meng's black clearly better but not yet winning. Play on from there as Meng against the bot, or follow the evaluation through the rest of the game.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_M_143947, startPly: 53, perspective: 'black' },
-          caption: "Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves. The board opens after red's move 27, with Meng to move.",
-        },
-        {
-          kind: 'paragraph',
-          text: "After Ju's 27th move Pikafish rates Meng's black clearly better but not yet winning. Take his side from there against the bot and try to turn it into a win.",
-        },
-        {
-          kind: 'cta',
-          buttons: [{"label":"Play Meng's side from move 27","href":"/practice/position?fen=4kab2%2F3na4%2F4b4%2Fp1p5p%2F5N3%2F2P3R2%2F8P%2F4B2c1%2F4A4%2F1rC1KA3+b+-+-+3+27&goal=win&side=black&from=%2Fblog%2Fmeng-fanrui","emphasis":"primary"}],
+          spec: {
+            ...G_M_143947,
+            startPly: 53,
+            perspective: 'black',
+            play: { label: "Play Meng's side from move 27", href: '/practice/position?fen=4kab2%2F3na4%2F4b4%2Fp1p5p%2F5N3%2F2P3R2%2F8P%2F4B2c1%2F4A4%2F1rC1KA3+b+-+-+3+27&goal=win&side=black&from=%2Fblog%2Fmeng-fanrui' },
+          },
+          caption: "Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves.",
         },
         {
           kind: 'paragraph',

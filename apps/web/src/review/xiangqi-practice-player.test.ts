@@ -99,7 +99,7 @@ test('the goal and its explanation sit under the board and stay there', async ()
   // position, not off in the side panel.
   const briefEl = host.querySelector('.practice__board-col .practice__brief');
   expect(briefEl, 'the brief belongs in the board column').not.toBeNull();
-  expect(text(host, '.practice__brief-goal')).toBe('Checkmate');
+  expect(text(host, '.practice__brief-goal')).toMatch(/^(Red|Black) to play and checkmate$/);
   expect(text(host, '.gamebook__feedback')).toBe('Your move.');
 });
 

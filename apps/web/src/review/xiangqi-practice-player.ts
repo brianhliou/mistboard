@@ -208,7 +208,12 @@ export function mountXiangqiPractice(
   brief.className = 'practice__brief';
   const briefGoal = document.createElement('p');
   briefGoal.className = 'practice__brief-goal';
-  briefGoal.textContent = localizedPracticeGoal(opts.goal);
+  // The learner's colour leads, as a composed problem states it: "Black to
+  // play and win", not a bare "Win" the reader has to pair with the board.
+  briefGoal.textContent = t('practice.goal.sideTo', {
+    color: opts.orientation === 'black' ? t('setup.black') : t('setup.red'),
+    goal: localizedPracticeGoal(opts.goal),
+  });
   brief.append(briefGoal);
   if (opts.brief) {
     const briefText = document.createElement('p');

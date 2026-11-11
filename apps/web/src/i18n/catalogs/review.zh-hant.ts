@@ -150,6 +150,7 @@ export const ZH_HANT_REVIEW = {
   'practice.card.horse': '當心蹩馬腿',
   'practice.card.cannon': '要有砲架',
   'practice.card.insufficient': '守住和棋',
+  'practice.goal.sideTo': '{color}走棋，{goal}',
   'practice.goal.mate': '將死對手',
   'practice.goal.mateIn': '{moves} 回合內將死對手',
   'practice.goal.win': '取勝',

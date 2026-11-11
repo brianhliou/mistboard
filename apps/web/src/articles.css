@@ -2193,6 +2193,30 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   background: var(--site-panel);
 }
 
+/* The card's last row, across both columns: the invitation to play on from the
+   position the card opens on. A strip of the card, not a page button. */
+.xq-replay-annotated .xq-replay-play {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-top: 1px solid var(--site-border);
+  color: var(--site-accent);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.xq-replay-annotated .xq-replay-play:hover,
+.xq-replay-annotated .xq-replay-play:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 10%, transparent);
+}
+.xq-replay-annotated .xq-replay-play-icon {
+  font-size: 11px;
+}
+
 .xq-replay-annotated .xq-replay-board-col {
   display: flex;
   flex-direction: column;

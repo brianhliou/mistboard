@@ -166,3 +166,15 @@ test('the chooser numbers the move and carries the same marks as the move list',
   expect(marks).toEqual(['?!', '⩲']);
   expect(host.querySelector('.xq-replay-fork .xq-replay-glyph-inaccuracy')).not.toBeNull();
 });
+
+test('a play link is the card’s last row, inside the card', () => {
+  const host = mount({
+    ...spec,
+    play: { label: 'Play from move 2', href: '/practice/position?fen=x' },
+    annotations: { byPly: { 3: { glyph: '?' } } },
+  });
+  const link = host.querySelector<HTMLAnchorElement>('.xq-replay-grid > a.xq-replay-play');
+  expect(link?.getAttribute('href')).toBe('/practice/position?fen=x');
+  expect(link?.textContent).toContain('Play from move 2');
+  expect(link?.parentElement?.lastElementChild).toBe(link);
+});
