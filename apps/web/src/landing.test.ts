@@ -136,6 +136,7 @@ describe('homepage TV widget link', () => {
 
 describe('landing shell', () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     setThreeKingdomsBanqiEngineOptions([]);
   });
@@ -164,30 +165,31 @@ describe('landing shell', () => {
   });
 
   it.each(['true', 'false'])(
-    'prerenders offered TK rows (%s), Gomoku last and Fog absent on both tabs',
+    'prerenders first-paint TK rows without a roster (%s), Gomoku last and Fog absent on both tabs',
     (flag) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
-      setThreeKingdomsBanqiEngineOptions([
-        {
-          id: 'misty-three-kingdoms-banqi-level-1',
-          name: 'Misty Level 1',
-          familyName: 'Misty',
-          kind: 'container',
-        },
-      ]);
+      setThreeKingdomsBanqiEngineOptions([]);
+      const fetchSpy = vi.fn(() => {
+        throw new Error('prerender must not fetch a roster');
+      });
+      vi.stubGlobal('fetch', fetchSpy);
       const shell = document.createElement('div');
-      shell.innerHTML = renderLandingShellForPrerender();
+      shell.innerHTML = renderLandingPageForPrerender(readFileSync('index.html', 'utf8'), 'en');
       for (const kind of ['bot', 'person']) {
         const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
           (el) => el.dataset.gameSpec,
         );
         expect(specs.at(-1)).toBe('gomoku');
         expect(specs.includes('three-kingdoms-banqi')).toBe(flag === 'true');
+        if (flag === 'true') {
+          expect(specs.indexOf('three-kingdoms-banqi')).toBe(specs.indexOf('banqi') + 1);
+        }
         for (const spec of ['dark-xiangqi', 'dark-chess', 'ffq-banqi']) {
           expect(specs).not.toContain(spec);
         }
       }
+      expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
 

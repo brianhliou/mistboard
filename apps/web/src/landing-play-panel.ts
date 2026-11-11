@@ -7,6 +7,7 @@ import {
   type GameSpecId,
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeControlId,
 } from '@mistboard/game';
@@ -14,7 +15,7 @@ import { track } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
-import { correspondenceEnabled } from './feature-flags.js';
+import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
@@ -392,14 +393,20 @@ export function buildPlayPanel(
   // it, so a box without the engine never offers a bot that cannot move.
   let playableBots = new Map<string, ReadonlySet<string>>();
   let playableEngines: ReadonlySet<string> = new Set();
+  // Public TK must paint without waiting for the network, including in the
+  // prerender. Levels 1-7 need no net; an explicit live list replaces this
+  // fallback (even when empty), while a missing list or failed fetch keeps it.
+  let threeKingdomsBanqiEngineIds: ReadonlySet<string> = new Set(
+    threeKingdomsBanqiEngineOptions()?.map((engine) => engine.id) ??
+      (threeKingdomsBanqiEnabled()
+        ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
+        : []),
+  );
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
     landingBotLadder(
       gameSpecId,
       playableBots.get(gameSpecId),
-      new Set([
-        ...playableEngines,
-        ...(threeKingdomsBanqiEngineOptions() ?? []).map((engine) => engine.id),
-      ]),
+      gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID ? threeKingdomsBanqiEngineIds : playableEngines,
     );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
@@ -421,7 +428,8 @@ export function buildPlayPanel(
     botRows.replaceChildren();
     playingEls.clear();
     for (const gameSpecId of ordered()) {
-      if (!landingVariantSupportsPve(gameSpecId)) continue;
+      if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
+        continue;
       const ladder = ladderFor(gameSpecId);
       if (ladder.length === 0) continue;
       const paces = panelBotPaces(gameSpecId);
@@ -437,7 +445,10 @@ export function buildPlayPanel(
         const setupDefault = ladder.some((rung) => rung.engineId)
           ? landingBotLadderIndex(
               ladder,
-              webVariantTenantForSpecId(gameSpecId)?.landing?.defaultEngineId,
+              webVariantTenantForSpecId(gameSpecId)?.landing?.defaultEngineId ??
+                (gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+                  ? 'misty-three-kingdoms-banqi-level-4'
+                  : undefined),
             )
           : -1;
         const policy = landingBotLadderIndex(
@@ -1092,7 +1103,12 @@ export function buildPlayPanel(
       )
       .then((data) => {
         if (!data) return;
-        setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+        if (data.threeKingdomsBanqiEngines !== undefined) {
+          threeKingdomsBanqiEngineIds = new Set(
+            data.threeKingdomsBanqiEngines.map((engine) => engine.id),
+          );
+          setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
+        }
         playableEngines = new Set(
           [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
         );
