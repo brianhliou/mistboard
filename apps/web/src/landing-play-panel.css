@@ -223,13 +223,13 @@
 
 .pp-step-btn:hover:not(:disabled) {
   border-color: var(--site-accent);
-  background: var(--site-accent-soft);
+  background-color: var(--site-accent-soft);
   color: var(--site-accent-strong);
 }
 
 .pp-step-btn:disabled {
   border-color: transparent;
-  background: transparent;
+  background-color: transparent;
   box-shadow: none;
   color: var(--site-muted);
   opacity: 0.35;

@@ -112,4 +112,4 @@ same-seat-to-move projection; this change adds no takeback surface. EvE and
 correspondence skip both hold and pacing reserve. No registry, tenant list, route,
 engine tier, or rollout default changes.
 
-Review and local rehearsal evidence: [#1063 handoff](engine-pacing-1063.md).
+Review and local rehearsal evidence: [#1063](https://github.com/brianhliou/mistboard/issues/1063).
