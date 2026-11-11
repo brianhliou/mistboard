@@ -65,6 +65,38 @@ export function roomInviteHeading(preview: RoomInvitePreview): string {
   );
 }
 
+// Start boards by variant, kept once drawn: the room re-renders its notice on
+// every update, and a board that waited on the async draw each time never got
+// past its label.
+const startBoards = new Map<string, Promise<string | null>>();
+const drawnStartBoards = new Map<string, string | null>();
+
+function startBoardSvg(gameSpecId: string): Promise<string | null> {
+  let pending = startBoards.get(gameSpecId);
+  if (!pending) {
+    pending = renderStartPositionSvg(gameSpecId)
+      .catch((err) => {
+        console.warn('[room-invite] start board failed', err);
+        return null;
+      })
+      .then((svg) => {
+        drawnStartBoards.set(gameSpecId, svg);
+        return svg;
+      });
+    startBoards.set(gameSpecId, pending);
+  }
+  return pending;
+}
+
+function showStartBoard(board: HTMLElement, svg: string): void {
+  const frame = document.createElement('div');
+  frame.className = 'room-invite-board-frame notranslate';
+  frame.setAttribute('translate', 'no');
+  frame.innerHTML = svg;
+  frame.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  board.replaceChildren(frame);
+}
+
 /**
  * The variant's start position, drawn with no side: the same picture as its seek
  * tile, so a fog or face-down variant stays covered (start-position-board.ts).
@@ -74,21 +106,19 @@ export function buildRoomInviteBoard(gameSpecId: string): HTMLElement {
   const board = document.createElement('div');
   board.className = 'room-invite-board';
   board.setAttribute('aria-hidden', 'true');
+  const drawn = drawnStartBoards.get(gameSpecId);
+  if (drawn) {
+    showStartBoard(board, drawn);
+    return board;
+  }
   const label = document.createElement('span');
   label.className = 'room-invite-board-label';
   label.textContent = variantDisplayLabel(gameSpecId);
   board.append(label);
-  void renderStartPositionSvg(gameSpecId)
-    .then((svg) => {
-      if (!svg) return;
-      const frame = document.createElement('div');
-      frame.className = 'room-invite-board-frame notranslate';
-      frame.setAttribute('translate', 'no');
-      frame.innerHTML = svg;
-      frame.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      board.replaceChildren(frame);
-    })
-    .catch((err) => console.warn('[room-invite] start board failed', err));
+  if (drawn === null) return board;
+  void startBoardSvg(gameSpecId).then((svg) => {
+    if (svg) showStartBoard(board, svg);
+  });
   return board;
 }
 
@@ -120,4 +150,6 @@ export function correspondenceHostHandle(onLoad?: () => void): string | null {
 export function resetRoomInvitePreviews(): void {
   entries.clear();
   hostEntry = null;
+  startBoards.clear();
+  drawnStartBoards.clear();
 }

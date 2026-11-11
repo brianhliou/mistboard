@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { liveState } from './live-state.js';
 import { actionTitle, boardStatusTone, rejectedInviteHeading } from './live-status.js';
 import {
+  buildRoomInviteBoard,
   loadedRoomInvitePreview,
   parseRoomInvitePreview,
   resetRoomInvitePreviews,
@@ -103,5 +104,20 @@ describe('Fog Chess room status for a refused invitee', () => {
     liveState.connectionState = 'rejected';
     liveState.closeReason = 'room full';
     expect(rejectedInviteHeading()).toBeNull();
+  });
+
+  it('draws the start board once, so a re-rendered notice shows it at once', async () => {
+    const first = buildRoomInviteBoard('xiangqi');
+    expect(first.querySelector('.room-invite-board-label')?.textContent).toBe('Xiangqi');
+    await vi.waitFor(() => expect(first.querySelector('svg')).not.toBeNull());
+    const again = buildRoomInviteBoard('xiangqi');
+    expect(again.querySelector('.room-invite-board-frame svg')).not.toBeNull();
+  });
+
+  it('keeps the labelled tile for a fog variant, with no side to draw from', async () => {
+    const board = buildRoomInviteBoard('dark-chess');
+    await settle();
+    expect(board.querySelector('svg')).toBeNull();
+    expect(buildRoomInviteBoard('dark-chess').textContent).toBe('Fog Chess');
   });
 });
