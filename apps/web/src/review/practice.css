@@ -400,3 +400,94 @@
   background: color-mix(in srgb, #4d8a3d 70%, transparent);
   color: #eaf5e6;
 }
+
+/* ── Solo: one position, no rail (/practice/position) ──────────────────────
+   Two tracks, board and panel. The board is fitted to the row less the goal
+   line under it; the panel takes its own height and grows with the move list
+   up to the row, rather than standing as a tall empty box beside the board. */
+@media (min-width: 60.0625rem) {
+  .gamebook.practice--solo {
+    grid-template-columns: auto minmax(0, 20rem);
+    justify-content: center;
+    --gamebook-board-fit: min(calc((var(--gamebook-page-height) - 4rem) * 0.89), 44rem);
+  }
+  .practice--solo .practice__side {
+    align-self: start;
+    max-height: 100%;
+  }
+}
+
+/* Phone: the board as wide as the screen allows while board, goal and coach
+   still fit under the nav; the coach drops its strip and sits on one row. */
+@media (max-width: 60rem) {
+  .gamebook.practice--solo {
+    gap: 0.5rem;
+    --gamebook-board-fit: min(
+      calc(100vw - 2rem),
+      calc((100dvh - var(--gamebook-page-top, 5rem) - 13rem) * 0.89),
+      30rem
+    );
+  }
+  .practice--solo .practice__board-col {
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .practice--solo .practice__brief {
+    padding: 0.35rem 0.75rem;
+  }
+  .practice--solo .practice__side {
+    width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
+    max-width: 100%;
+    justify-self: center;
+  }
+  .practice--solo .practice__side {
+    padding-top: 0;
+  }
+  /* The played line as one row that scrolls sideways, so a long game never
+     pushes the coach below the screen. */
+  .practice--solo .practice__moves:not([hidden]) {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--site-border-soft, var(--site-border));
+  }
+  .practice--solo .practice__coach-strip {
+    display: none;
+  }
+  .practice--solo .practice__coach {
+    border-top: 0;
+  }
+  .practice--solo .practice__coach-body {
+    align-items: center;
+    padding: 0.4rem 14px 0.3rem;
+  }
+  .practice--solo .gamebook__feedback {
+    font-size: 0.9rem;
+  }
+  .practice--solo .practice__coach .gamebook__controls {
+    flex-wrap: nowrap;
+    padding: 0 14px 0.5rem;
+  }
+  .practice--solo .practice__coach .gamebook__btn {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+    padding-inline: 0.4rem;
+    white-space: nowrap;
+  }
+  /* The page heading is generic ("Play out a position"); the goal under the
+     board says what to do, so on a phone the heading is for screen readers. */
+  .gamebook__header:has(+ .practice--solo) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .gamebook.practice--solo {
+    margin-top: 0.75rem;
+  }
+}

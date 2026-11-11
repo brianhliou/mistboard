@@ -175,6 +175,9 @@ export function mountXiangqiPractice(
   // ── Layout ──
   const wrap = document.createElement('section');
   wrap.className = 'gamebook practice';
+  // No rail (a single position from a URL): the three-track grid would put the
+  // board in the rail's 19rem slot and leave the third track empty.
+  if (!opts.aside) wrap.classList.add('practice--solo');
   if (opts.aside) {
     const aside = document.createElement('div');
     aside.className = 'gamebook__aside';
@@ -503,6 +506,9 @@ export function mountXiangqiPractice(
       movesEl.append(li);
     }
     movesEl.hidden = view.moves.length === 0;
+    // Keep the newest move in view: a column on desktop, one row on a phone.
+    movesEl.scrollTop = movesEl.scrollHeight;
+    movesEl.scrollLeft = movesEl.scrollWidth;
   }
 
   // A page header only when a caller actually wants one. The study mount does

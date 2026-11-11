@@ -490,3 +490,23 @@ test('a draw the engine reads as lost ends the run and is reported as a failure'
   expect(handle.view().phase, 'the fake must actually end the run').toBe('defeat');
   expect(failures).toEqual([{ verdict: 'defeat', moves: 1 }]);
 });
+
+test('a mount with no rail takes the two-track solo layout; a rail keeps three tracks', async () => {
+  const row = entry('soldier-vs-bare-general');
+  const mount = (aside?: HTMLElement): HTMLElement => {
+    const host = document.createElement('div');
+    mountXiangqiPractice(host, {
+      initialTruth: endgameEntryState(row),
+      goal: { kind: 'win', centipawns: 600 },
+      orientation: row.turn,
+      evaluate: steady(900),
+      replyDelayMs: 0,
+      ...(aside ? { aside } : {}),
+    });
+    return host.querySelector<HTMLElement>('.gamebook.practice')!;
+  };
+  // Without the class the rail's 19rem slot holds the board and the third track
+  // stays empty: the /practice/position page drew a 304px board on a 1280px screen.
+  expect(mount().classList.contains('practice--solo')).toBe(true);
+  expect(mount(document.createElement('nav')).classList.contains('practice--solo')).toBe(false);
+});
