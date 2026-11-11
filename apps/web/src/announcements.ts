@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-18',
+    kind: 'article',
+    headline: 'A player page for Meng Fanrui.',
+    body: "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.",
+    href: '/blog/meng-fanrui',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-11-10',
     kind: 'release',
     headline: 'Three Kingdoms Banqi is open to everyone.',
