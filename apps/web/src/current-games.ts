@@ -734,9 +734,9 @@ function renderPill(el: HTMLElement, total: number): void {
 // west first, so the rows and the names handed to the board key off the same
 // first-mover set (liveFirstMover), never off list order.
 export function seatOrder(
-  game: Pick<CurrentGame, 'players'>,
+  game: Pick<CurrentGame, 'players' | 'gameSpecId'>,
 ): [CurrentGamePlayer | null, CurrentGamePlayer | null] {
-  const first = liveFirstMover(game.players) ?? null;
+  const first = liveFirstMover(game.players, game.gameSpecId) ?? null;
   const second = game.players.find((player) => player !== first) ?? null;
   return [second, first];
 }
@@ -923,7 +923,10 @@ function matchupLabel(game: CurrentGame): string {
   return namesMatchupLabel(first, second);
 }
 
-export function namesFor(game: Pick<CurrentGame, 'players'>): { first: string; second: string } {
+export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
+  first: string;
+  second: string;
+} {
   const [top, bottom] = seatOrder(game);
   return {
     first: displayLiveName(bottom?.name, t('games.guest')),

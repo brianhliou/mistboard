@@ -19,6 +19,15 @@
   accent-color: var(--accent, #1f6f5b);
 }
 
+.review-seat .review-seat__material:has(> .ffq-banqi-hp) {
+  flex: 1 1 auto;
+}
+
+.review-seat__material > .ffq-banqi-hp {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .ffq-banqi-counters,
 .ffq-banqi-captures {
   color: var(--muted);

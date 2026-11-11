@@ -18,12 +18,6 @@ export function renderPuzzleMenu(active: PuzzleMenuPage): HTMLElement {
   menu.className = 'puzzle-menu';
   menu.setAttribute('aria-label', t('nav.puzzles'));
   for (const item of ITEMS) {
-    if (item.page === 'dashboard') {
-      const gap = document.createElement('span');
-      gap.className = 'puzzle-menu__gap';
-      gap.setAttribute('aria-hidden', 'true');
-      menu.append(gap);
-    }
     const link = document.createElement('a');
     link.className = 'puzzle-menu__link';
     link.href = item.href;

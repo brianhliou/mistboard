@@ -161,6 +161,10 @@ export function isXiangqiUniquelyWinning(
 // win% is a logistic map of cp; K is the eval scale (matches the audit tool's
 // mapping, so the miner and the audit agree on "unique"). The knobs are win%
 // thresholds plus one cp material margin.
+//
+// The 400 was set on the old net's cp scale. The engine now reads the CC0 net,
+// whose cp sit on a different scale, so K is re-derived after the K refit in
+// #986; the value stays until then so the miner and the audit keep agreeing.
 
 const XIANGQI_WINRATE_K = 400;
 

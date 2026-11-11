@@ -6,6 +6,12 @@ import { createReadStream } from 'node:fs';
 import { access, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import {
+  PIKAFISH_XIANGQI_NNUE_NET,
+  PIKAFISH_XIANGQI_NNUE_SHA256,
+  PIKAFISH_XIANGQI_REF,
+  pikafishXiangqiDevSourceDir,
+} from '../../apps/server/src/xiangqi-pikafish-paths.ts';
 import { assertLocalDatabase, REPO_ROOT } from '../player-kit.mjs';
 import { findCriticalMoments } from './player-kit-moments.mjs';
 
@@ -60,11 +66,16 @@ async function fileHash(path) {
   return hash.digest('hex');
 }
 
+// The server's build (#989): upstream at the pikafish.ref pin plus
+// pikafish-cc0-net.patch, reading the Fairy-Stockfish CC0 net, in the local
+// patched checkout the server resolver also looks in.
 export async function pinnedEngine() {
   const pin = (await readFile(join(REPO_ROOT, 'pikafish.ref'), 'utf8')).split('\n')[0].trim();
-  const source = join(homedir(), 'projects/tools', `pikafish-${pin.slice(0, 8)}`);
+  if (!pin.startsWith(PIKAFISH_XIANGQI_REF))
+    throw new Error('server Pikafish pin differs from pikafish.ref');
+  const source = pikafishXiangqiDevSourceDir(homedir());
   const binary = await realpath(join(source, 'src/pikafish'));
-  const net = await realpath(join(source, 'src/pikafish.nnue'));
+  const net = await realpath(join(source, 'src', PIKAFISH_XIANGQI_NNUE_NET));
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const run = promisify(execFile);
@@ -78,7 +89,10 @@ export async function pinnedEngine() {
       .some((line) => line.startsWith('id name Pikafish ') && line.includes(pin.slice(0, 8)))
   )
     throw new Error('local Pikafish binary differs from pin');
-  return { pin, binary, net, binarySha256: await fileHash(binary), netSha256: await fileHash(net) };
+  const netSha256 = await fileHash(net);
+  if (netSha256 !== PIKAFISH_XIANGQI_NNUE_SHA256)
+    throw new Error('local Pikafish net is not the CC0 net');
+  return { pin, binary, net, binarySha256: await fileHash(binary), netSha256 };
 }
 
 async function loadPlayer(slug, dbUrl) {

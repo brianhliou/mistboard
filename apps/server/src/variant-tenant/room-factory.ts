@@ -98,6 +98,11 @@ export async function createTenantLiveRoom<
     rated?: boolean;
     /** Made by a lobby match. Defaults to whether createAsLobbyMatch is running. */
     lobbyMatch?: boolean;
+    /**
+     * The creator named a seat rather than Random. Only rules.createSetup reads
+     * it (xiangqi mahjong deals east first); the setup it returns is persisted.
+     */
+    sideChosen?: boolean;
   } = {},
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
@@ -119,6 +124,7 @@ export async function createTenantLiveRoom<
       rated,
       timeControl,
       lobbyMatch: lobbyMatch && engineSeats.length === 0,
+      ...(options.sideChosen ? { sideChosen: true } : {}),
     });
     if (!created.ok) return created;
     const room = created.room;

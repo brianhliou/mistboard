@@ -9,10 +9,15 @@
 // Uses the same evaluator, thresholds and accuracy maths the review page uses;
 // nothing here is a bespoke second opinion.
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { analyzeXiangqiPostgame } from '../apps/server/dist/routes/xiangqi-games.js';
-import { analyzeXiangqiGame } from '../apps/server/dist/xiangqi-analysis.js';
 import {
+  analyzeXiangqiGame,
+  XIANGQI_ANALYSIS_ENGINE_ID,
+} from '../apps/server/dist/xiangqi-analysis.js';
+import {
+  pikafishXiangqiNetPath,
   pikafishXiangqiPath,
   XIANGQI_ANALYSIS_NODES,
 } from '../apps/server/dist/xiangqi-pikafish-engine.js';
@@ -104,8 +109,10 @@ if (evals.length !== movesUci.length + 1) {
 }
 const elapsedMs = Date.now() - started;
 
-// Red-POV win% for every position 0..N.
-const wins = evals.map((e) => winPercent(e.cp ?? null, e.mate ?? null));
+// Red-POV win% for every position 0..N, on the curve of the engine that made the
+// evals: @6 (the CC0 net) for a fresh run, the stored id for --evals-from.
+const curveEngineId = evalsFrom ? evalsFrom.engineId : XIANGQI_ANALYSIS_ENGINE_ID;
+const wins = evals.map((e) => winPercent(e.cp ?? null, e.mate ?? null, curveEngineId));
 const SYMBOL = { blunder: '??', mistake: '?', inaccuracy: '?!' };
 
 const rows = [];
@@ -149,6 +156,21 @@ console.log(
   `engine: pikafish, ${nodes ?? 1_000_000} nodes/ply, ${(elapsedMs / 1000).toFixed(1)}s total ` +
     `(${(elapsedMs / evals.length).toFixed(0)}ms/position)`,
 );
+if (evalsFrom) {
+  console.log(`engine source: site analysis ${evalsFrom.engineId}`);
+} else {
+  // Which build actually ran: the server resolver's binary, its net, and the
+  // binary's own UCI banner (the patched pin build reports its pin).
+  const bin = pikafishXiangqiPath();
+  const banner = execFileSync(bin, [], { input: 'uci\nquit\n', encoding: 'utf8', timeout: 10_000 })
+    .split('\n')
+    .find((line) => line.startsWith('id name '));
+  console.log(`engine binary: ${bin}`);
+  console.log(`engine net:    ${pikafishXiangqiNetPath(bin)}`);
+  console.log(
+    `engine uci:    ${banner?.slice('id name '.length) ?? 'no id line'} (${curveEngineId})`,
+  );
+}
 console.log(
   `accuracy: red ${acc.first?.toFixed(1) ?? '-'}  black ${acc.second?.toFixed(1) ?? '-'}`,
 );

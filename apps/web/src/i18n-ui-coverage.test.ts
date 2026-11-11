@@ -49,6 +49,7 @@ const ALLOWED: Record<string, Reason> = {
   'study-thumbnails.ts': 'content', // archive cover credits
   'videos-data.ts': 'content', // third-party video titles
   'xiangqi-mahjong-32-rules-diagrams.ts': 'content', // rules-page tile alt text; article-i18n.coverage.test.ts
+  'fanfanqi-rules-diagrams.ts': 'content', // FFQ rules-page step notes; zh rules follow the English sign-off (#808)
   // visitor-facing debt
   'variant-mini-boards.ts': '#464',
 };

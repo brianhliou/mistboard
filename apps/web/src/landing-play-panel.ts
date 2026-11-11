@@ -3,10 +3,12 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   defaultEngineTimeControl,
   type GameSpecId,
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeControlId,
 } from '@mistboard/game';
@@ -14,7 +16,8 @@ import { track } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
-import { correspondenceEnabled } from './feature-flags.js';
+import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
@@ -392,14 +395,25 @@ export function buildPlayPanel(
   // it, so a box without the engine never offers a bot that cannot move.
   let playableBots = new Map<string, ReadonlySet<string>>();
   let playableEngines: ReadonlySet<string> = new Set();
+  // Public TK must paint without waiting for the network, including in the
+  // prerender. Levels 1-7 need no net; an explicit live list replaces this
+  // fallback (even when empty), while a missing list or failed fetch keeps it.
+  let threeKingdomsBanqiEngineIds: ReadonlySet<string> = new Set(
+    threeKingdomsBanqiEngineOptions()?.map((engine) => engine.id) ??
+      (threeKingdomsBanqiEnabled()
+        ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
+        : []),
+  );
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
     landingBotLadder(
       gameSpecId,
       playableBots.get(gameSpecId),
-      new Set([
-        ...playableEngines,
-        ...(threeKingdomsBanqiEngineOptions() ?? []).map((engine) => engine.id),
-      ]),
+      gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+        ? threeKingdomsBanqiEngineIds
+        : new Set([
+            ...playableEngines,
+            ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
+          ]),
     );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
@@ -421,7 +435,8 @@ export function buildPlayPanel(
     botRows.replaceChildren();
     playingEls.clear();
     for (const gameSpecId of ordered()) {
-      if (!landingVariantSupportsPve(gameSpecId)) continue;
+      if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
+        continue;
       const ladder = ladderFor(gameSpecId);
       if (ladder.length === 0) continue;
       const paces = panelBotPaces(gameSpecId);
@@ -437,7 +452,10 @@ export function buildPlayPanel(
         const setupDefault = ladder.some((rung) => rung.engineId)
           ? landingBotLadderIndex(
               ladder,
-              webVariantTenantForSpecId(gameSpecId)?.landing?.defaultEngineId,
+              webVariantTenantForSpecId(gameSpecId)?.landing?.defaultEngineId ??
+                (gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+                  ? 'misty-three-kingdoms-banqi-level-4'
+                  : undefined),
             )
           : -1;
         const policy = landingBotLadderIndex(
@@ -880,9 +898,11 @@ export function buildPlayPanel(
       let index = personPace.get(`${mode}:${gameSpecId}`);
       if (index === undefined || index >= paces.length) {
         const fromSaved = paces.findIndex((p) => paceKey(p) === savedKey);
-        // A day per move first, where the variant plays by correspondence: an
-        // open seek waits for someone instead of timing out to a bot offer.
-        const day = paces.findIndex((p) => p.kind === 'days' && p.days === 1);
+        // The site's correspondence pace first (3 days per move, as on the
+        // homepage and challenge forms), where the variant plays by
+        // correspondence: an open seek waits for someone instead of timing out
+        // to a bot offer.
+        const day = paces.findIndex((p) => p.kind === 'days' && p.days === DEFAULT_DAYS_PER_MOVE);
         const live = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
         const fallback = day >= 0 ? day : live;
         index = fromSaved >= 0 ? fromSaved : fallback >= 0 ? fallback : 0;
@@ -1086,13 +1106,20 @@ export function buildPlayPanel(
           ? (r.json() as Promise<{
               banqiEngines?: { id: string }[];
               jungleFlipEngines?: { id: string }[];
+              ffqBanqiEngines?: WebTenantEngineOption[];
               threeKingdomsBanqiEngines?: WebTenantEngineOption[];
             }>)
           : null,
       )
       .then((data) => {
         if (!data) return;
-        setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+        if (data.threeKingdomsBanqiEngines !== undefined) {
+          threeKingdomsBanqiEngineIds = new Set(
+            data.threeKingdomsBanqiEngines.map((engine) => engine.id),
+          );
+          setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
+        }
+        setFFQBanqiEngineOptions(data.ffqBanqiEngines ?? []);
         playableEngines = new Set(
           [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
         );

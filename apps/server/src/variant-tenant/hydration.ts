@@ -19,12 +19,8 @@ import {
   isTenantEventLog,
   tenantOrphanPauseFor,
 } from './runtime.js';
-import type {
-  TenantGameStateLike,
-  TenantRuntimeRoom,
-  TenantSeatTokenState,
-  VariantTenant,
-} from './tenant.js';
+import { tenantSeatTokenStatesFromPersistence } from './seat-session.js';
+import type { TenantGameStateLike, TenantRuntimeRoom, VariantTenant } from './tenant.js';
 
 export async function getOrLoadTenantRoom<
   Kind extends string,
@@ -189,28 +185,4 @@ export async function restoreHydratedTenantEngineReservation<
     return true;
   }
   return true;
-}
-
-export function tenantSeatTokenStatesFromPersistence<C extends persistence.RoomSeatTokenSeat>(
-  tokens: Partial<Record<C, persistence.RoomSeatTokenRecord<C>>>,
-): Partial<Record<C, TenantSeatTokenState<C>>> {
-  const states: Partial<Record<C, TenantSeatTokenState<C>>> = {};
-  for (const token of Object.values<persistence.RoomSeatTokenRecord<C> | undefined>(
-    tokens as Record<string, persistence.RoomSeatTokenRecord<C> | undefined>,
-  )) {
-    if (!token || token.revokedAt) continue;
-    states[token.seat] = {
-      clientId: token.clientId,
-      deviceId: token.deviceId ?? null,
-      seat: token.seat,
-      tokenHash: token.tokenHash,
-      userId: token.userId,
-      userHandle: token.userHandle,
-      userDisplayName: token.userDisplayName,
-      issuedAt: token.issuedAt,
-      lastSeenAt: token.lastSeenAt,
-      revokedAt: token.revokedAt,
-    };
-  }
-  return states;
 }

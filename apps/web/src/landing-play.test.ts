@@ -5,6 +5,7 @@ import {
   type GameSpecId,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { fetchPlayableEnginesOnce } from './landing.js';
 import {
   buildLandingPlayPanel,
@@ -13,6 +14,7 @@ import {
   type LandingRoomSetup,
   landingPlayDeepLinkAccepts,
   maybeOpenPlayDeepLink,
+  openLandingSetupDialog,
   roomCreationRequestBody,
   setRoomNavigator,
 } from './landing-play.js';
@@ -916,6 +918,54 @@ describe('landing play panel', () => {
     expect(window.location.pathname).toBe('/room/bq_home');
   });
 
+  // #1054: Xiangqi Mahjong shows the same Move order row; the choice is who
+  // deals the first hand, sent as the east/west seat the server reads.
+  it.each([
+    { label: 'Play a bot', button: 'Start game', pick: 'Second', expected: 'west' },
+    { label: 'Play a bot', button: 'Start game', pick: 'First', expected: 'east' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'First', expected: 'east' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'Second', expected: 'west' },
+    { label: 'Challenge a friend', button: 'Create room', pick: 'Random', expected: 'random' },
+  ])(
+    'shows Xiangqi Mahjong move order in $label and sends $pick as $expected',
+    async ({ label, button, pick, expected }) => {
+      vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+        if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/xmj_home' });
+        return jsonResponse({}, { status: 404 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, label);
+      selectModalVariant('xiangqi-mahjong');
+
+      const picker = document
+        .querySelector('.landing-color-option')
+        ?.closest<HTMLElement>('.landing-start-options');
+      expect(picker?.getAttribute('aria-label')).toBe('Move order');
+      expect(picker?.closest<HTMLElement>('.landing-setup-section')?.style.display).not.toBe(
+        'none',
+      );
+      expect(modalColorOptions()).toEqual([
+        { label: 'First', glyph: '1', classes: 'landing-color-glyph banqi-seat' },
+        { label: 'Random', glyph: '12', classes: 'landing-color-glyph random banqi-seat' },
+        { label: 'Second', glyph: '2', classes: 'landing-color-glyph banqi-seat' },
+      ]);
+
+      clickModalColor(pick);
+      clickModalButton(button);
+      await flushPromises();
+
+      const body = roomPostBody(fetchSpy);
+      expect(body.gameSpecId).toBe('xiangqi-mahjong');
+      expect(body.mode).toBe(label === 'Play a bot' ? 'pve' : 'pvp');
+      expect(body.preferredColor).toBe(expected);
+    },
+  );
+
   it('remembers each variant engine pick independently (no cross-variant clobber)', () => {
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
@@ -1138,6 +1188,192 @@ describe('landing play panel', () => {
     expect(correspondenceToggleVisible()).toBe(true);
     clickModalButton('Correspondence');
     expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
+  });
+
+  // #1055: the friend dialog's correspondence submit posted Fog Chess whatever the
+  // variant, and turned Red into Random. A correspondence friend invite is a link
+  // challenge on the picked variant, with the side sent as its move-order seat.
+  for (const { gameSpecId, color, seat } of [
+    { gameSpecId: 'xiangqi', color: 'Red', seat: 'first' },
+    { gameSpecId: 'xiangqi', color: 'Black', seat: 'second' },
+    { gameSpecId: 'jieqi', color: 'Red', seat: 'first' },
+    { gameSpecId: 'jieqi', color: 'Black', seat: 'second' },
+    { gameSpecId: 'dark-chess', color: 'White', seat: 'first' },
+    { gameSpecId: 'dark-chess', color: 'Black', seat: 'second' },
+    { gameSpecId: 'dark-chess', color: 'Random', seat: 'random' },
+  ]) {
+    it(`a correspondence friend invite on ${gameSpecId} as ${color} posts that variant and side`, async () => {
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setResolvedSignedIn(true);
+      const navigated: string[] = [];
+      setRoomNavigator((url) => {
+        navigated.push(url);
+      });
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/correspondence/seeks') {
+          return jsonResponse(
+            { seek: { id: 'seek_abc', gameSpecId }, challengeUrl: '/challenge/seek_abc' },
+            { status: 201 },
+          );
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Challenge a friend');
+      selectModalVariant(gameSpecId);
+      clickModalButton('Correspondence');
+      // The open layout names the unit once on the row, so each pill is the number.
+      clickModalTimeControl('2');
+      clickModalColor(color);
+      expect(selectedModalColor()).toBe(color);
+      clickModalButton('Create room');
+      await flushPromises();
+
+      expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/rooms')).toBe(false);
+      expect(seekPostBody(fetchSpy)).toEqual({
+        gameSpecId,
+        daysPerMove: 2,
+        preferredColor: seat,
+        visibility: 'private',
+      });
+      expect(navigated).toEqual(['/challenge/seek_abc']);
+    });
+  }
+
+  // #1059: signed out, Challenge a friend creates a direct invite room the guest
+  // sits in at once, instead of a sign-in wall. The side goes as the variant's
+  // own color, and no link challenge is posted.
+  for (const { gameSpecId, color, sent } of [
+    { gameSpecId: 'xiangqi', color: 'Black', sent: 'black' },
+    { gameSpecId: 'jieqi', color: 'Red', sent: 'red' },
+    { gameSpecId: 'dark-chess', color: 'White', sent: 'white' },
+    { gameSpecId: 'dark-chess', color: 'Random', sent: 'random' },
+  ]) {
+    it(`signed out, a correspondence friend invite on ${gameSpecId} as ${color} opens a room`, async () => {
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setResolvedSignedIn(false);
+      const navigated: string[] = [];
+      setRoomNavigator((url) => {
+        navigated.push(url);
+      });
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/rooms') {
+          return jsonResponse({ roomId: 'xq_guest', url: '/room/xq_guest' }, { status: 201 });
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Challenge a friend');
+      selectModalVariant(gameSpecId);
+      clickModalButton('Correspondence');
+      clickModalTimeControl('3');
+      clickModalColor(color);
+      clickModalButton('Create room');
+      await flushPromises();
+
+      expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/correspondence/seeks')).toBe(
+        false,
+      );
+      const roomPost = fetchSpy.mock.calls.find(([url]) => String(url) === '/api/rooms');
+      expect(JSON.parse(String(roomPost?.[1]?.body))).toEqual({
+        gameSpecId,
+        mode: 'correspondence',
+        daysPerMove: 3,
+        preferredColor: sent,
+      });
+      expect(navigated).toEqual(['/room/xq_guest']);
+      expect(document.querySelector('.landing-setup-status')?.textContent ?? '').toBe('');
+    });
+  }
+
+  // #1055: a stale signed-in hint (the session expired) gets a sign-in link
+  // whose referrer reopens the dialog with the same setup.
+  it('the correspondence sign-in link brings the player back to the same setup', async () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setResolvedSignedIn(true);
+    setRoomNavigator(() => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/correspondence/seeks') {
+          return jsonResponse({ error: 'not_signed_in' }, { status: 401 });
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      }),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+    clickModalButton('Correspondence');
+    clickModalTimeControl('7');
+    clickModalColor('Black');
+    clickModalButton('Create room');
+    await flushPromises();
+
+    const status = document.querySelector<HTMLElement>('.landing-setup-status');
+    expect(status?.textContent).toContain('Correspondence games need an account.');
+    const link = status?.querySelector<HTMLAnchorElement>('a');
+    expect(link).not.toBeNull();
+    const href = new URL(link!.getAttribute('href')!, 'https://mistboard.test');
+    expect(href.pathname).toBe('/account');
+    const referrer = href.searchParams.get('referrer');
+    expect(referrer).toBe('/?play=friend&variant=jieqi&tc=corr&days=7&side=black');
+
+    // Sign-in returns to the referrer: the dialog reopens with every pick intact.
+    document.querySelector('.landing-setup-overlay')?.remove();
+    window.history.replaceState(null, '', referrer!);
+    maybeOpenPlayDeepLink([]);
+    expect(selectedVariantSpec()).toBe('jieqi');
+    expect(document.querySelector('.landing-time-mode .selected')?.textContent?.trim()).toBe(
+      'Correspondence',
+    );
+    expect(
+      document.querySelector('.landing-correspondence-presets .selected')?.textContent?.trim(),
+    ).toBe('7');
+    expect(selectedModalColor()).toBe('Black');
+    expect(window.location.search).toBe('');
+  });
+
+  it('shows the correspondence sign-in notice in Chinese', async () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/correspondence/seeks') {
+          return jsonResponse({ error: 'not_signed_in' }, { status: 401 });
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      }),
+    );
+    for (const [locale, expected] of [
+      ['zh-Hans', '通信对局需要账号。'],
+      ['zh-Hant', '通信對局需要帳號。'],
+    ] as const) {
+      await ensureLocaleCatalog(locale);
+      openLandingSetupDialog({
+        engines: [],
+        initialCorrespondenceDays: 2,
+        initialGameSpecId: 'xiangqi',
+        initialTimeMode: 'correspondence',
+        locale,
+        mode: 'pvp',
+      });
+      clickModalButton(t('setup.createRoom', {}, locale));
+      await flushPromises();
+      const status = document.querySelector<HTMLElement>('.landing-setup-status');
+      expect(status?.textContent).toContain(expected);
+      expect(status?.textContent).not.toMatch(/[A-Za-z]{4}/);
+      document.querySelector('.landing-setup-overlay')?.remove();
+    }
   });
 
   it('an untouched pace follows the variant; a chosen one sticks across variants', () => {
@@ -1709,6 +1945,16 @@ function roomPostBody(fetchSpy: ReturnType<typeof vi.fn>): Record<string, unknow
   return JSON.parse(String((call![1] as RequestInit).body)) as Record<string, unknown>;
 }
 
+function seekPostBody(fetchSpy: ReturnType<typeof vi.fn>): Record<string, unknown> {
+  const call = fetchSpy.mock.calls.find(
+    ([input, init]) =>
+      String(input) === '/api/correspondence/seeks' &&
+      (init as RequestInit | undefined)?.method === 'POST',
+  );
+  expect(call).toBeDefined();
+  return JSON.parse(String((call![1] as RequestInit).body)) as Record<string, unknown>;
+}
+
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
     headers: { 'content-type': 'application/json' },
@@ -1767,6 +2013,18 @@ describe('roomCreationRequestBody — variant fails closed', () => {
     const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'misty-xiangqi-mahjong');
     expect(body.gameSpecId).toBe('xiangqi-mahjong');
     expect(body.engineId).toBe('misty-xiangqi-mahjong');
+  });
+
+  it('maps the Xiangqi Mahjong move order to the east and west seats', () => {
+    const withColor = (preferredColor: LandingRoomSetup['preferredColor']) => ({
+      ...setup('xiangqi-mahjong'),
+      preferredColor,
+    });
+    for (const mode of ['pve', 'pvp'] as const) {
+      expect(roomCreationRequestBody(mode, withColor('red')).preferredColor).toBe('east');
+      expect(roomCreationRequestBody(mode, withColor('black')).preferredColor).toBe('west');
+      expect(roomCreationRequestBody(mode, withColor('random')).preferredColor).toBe('random');
+    }
   });
 
   it('throws for a variant it has no mapping for instead of sending dark chess', () => {

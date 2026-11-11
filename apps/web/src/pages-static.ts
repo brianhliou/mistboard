@@ -9,10 +9,10 @@ import { buildContact } from './contact.js';
 import {
   PIKAFISH_REPO_URL,
   PIKAFISH_SITE_URL,
-  pikafishWeightsLicenseUrl,
   RAPFI_BUILD_URL,
   RAPFI_NETWORKS_LICENSE_URL,
   RAPFI_REPO_URL,
+  XIANGQI_CC0_NET_URL,
 } from './engine-credits.js';
 import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
@@ -715,8 +715,8 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
     // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
-    // its home page and the NNUE weights license (no commercial use without
-    // permission), in the reader's language where pikafish.com has one.
+    // its home page and the CC0 Fairy-Stockfish net it runs on here (not
+    // Pikafish's own weights, which are not licensed for commercial use).
     pikafishCreditLine(locale),
     // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
     // fork that carries our patches.
@@ -1007,7 +1007,7 @@ function pikafishCreditLine(locale: Locale): HTMLSpanElement {
     ' ',
     linkLine(t('source.pikafishSite', {}, locale), PIKAFISH_SITE_URL),
     ' · ',
-    linkLine(t('source.pikafishWeightsLicense', {}, locale), pikafishWeightsLicenseUrl(locale)),
+    linkLine(t('source.pikafishNet', {}, locale), XIANGQI_CC0_NET_URL),
   );
   return line;
 }

@@ -7,6 +7,7 @@ import {
   CORRESPONDENCE_SEEK_TTL_MS,
   closeUserAccount,
   correspondenceStartRecipient,
+  correspondenceUserName,
   countOpenSeeksForUser,
   createAccountSession,
   createCorrespondenceSeek,
@@ -420,6 +421,20 @@ definePersistenceTests('correspondence seeks', () => {
       at,
     );
     assert.equal(await correspondenceStartRecipient(quitter.id), null);
+  });
+
+  // #1057: the Play the host receipt promises the daily email only when the
+  // digest is on (default on), and the challenge page names the target.
+  test('correspondenceStartRecipient reports the turn digest; correspondenceUserName names', async () => {
+    const player = await seedUser('digest-player', 'digestplayer', 'Digest Player');
+    assert.equal((await correspondenceStartRecipient(player.id))?.turnDigest, true);
+    await updateUserAccountPreference(player.id, 'correspondenceTurnDigest', false, at);
+    assert.equal((await correspondenceStartRecipient(player.id))?.turnDigest, false);
+    assert.deepEqual(await correspondenceUserName(player.id), {
+      name: 'Digest Player',
+      handle: 'digestplayer',
+    });
+    assert.equal(await correspondenceUserName('nobody-at-all'), null);
   });
   // Public board seeks used to stand forever: prod's board was two identical
   // month-old Fog Chess posts from one player, the main content of an otherwise

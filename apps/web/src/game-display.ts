@@ -235,10 +235,17 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
 }
 
 // The seat that moves first in a live game: red (xiangqi family, jungle), white
-// (chess) or east (Xiangqi Mahjong's dealer seat).
+// (chess) or east (Xiangqi Mahjong's dealer seat). Gomoku seats black and white
+// and black moves first, so the colour alone cannot decide it: the spec is required.
 const FIRST_MOVER_COLORS = new Set(['red', 'white', 'east']);
 
-export function liveFirstMover<T extends { color: string }>(players: readonly T[]): T | undefined {
+export function liveFirstMover<T extends { color: string }>(
+  players: readonly T[],
+  gameSpecId: string,
+): T | undefined {
+  if (maybeGameSpecForId(gameSpecId)?.family === 'gomoku') {
+    return players.find((player) => player.color === 'black') ?? players[0];
+  }
   return players.find((player) => FIRST_MOVER_COLORS.has(player.color)) ?? players[0];
 }
 
@@ -247,9 +254,10 @@ export function liveFirstMover<T extends { color: string }>(players: readonly T[
 export function liveMatchupNames(
   players: readonly { color: string; name: string | null | undefined }[],
   guest: string,
+  gameSpecId: string,
 ): { first: string; second: string } | null {
   if (players.length < 2) return null;
-  const first = liveFirstMover(players)!;
+  const first = liveFirstMover(players, gameSpecId)!;
   const second = players.find((player) => player !== first) ?? players[1]!;
   return { first: displayLiveName(first.name, guest), second: displayLiveName(second.name, guest) };
 }

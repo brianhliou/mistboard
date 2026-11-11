@@ -129,7 +129,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'ffq-banqi',
-    label: 'FFQ Banqi',
+    label: 'Fanfanqi',
     shortLabel: 'FFQ',
     accent: '#2563a6',
     blurb: 'Banqi played for HP: each capture drains the opponent, and empty HP loses.',

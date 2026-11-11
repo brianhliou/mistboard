@@ -9,7 +9,7 @@ import {
   type XiangqiTrainingTagId,
 } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
-import { puzzleNavItems } from '../nav-items.js';
+import { renderPuzzleMenuLayout } from './puzzle-menu.js';
 import { themeIconMarkup } from './theme-icons.js';
 
 export type PuzzleThemeCount = XiangqiMotif & { count: number };
@@ -339,27 +339,7 @@ function recommendedSection(options: PuzzleThemeOptions): HTMLElement {
   return section;
 }
 
-/** Puzzles, Puzzle Themes, Puzzle Streak: the Puzzles menu, as lichess's left column. */
-function themesSidebar(): HTMLElement {
-  const side = document.createElement('nav');
-  side.className = 'puzzle-themes-side';
-  side.setAttribute('aria-label', t('nav.puzzles'));
-  for (const item of puzzleNavItems()) {
-    const link = document.createElement('a');
-    link.href = item.href;
-    link.textContent = t(item.labelKey);
-    if (item.href === '/puzzles/themes') {
-      link.setAttribute('aria-current', 'page');
-      link.classList.add('active');
-    }
-    side.append(link);
-  }
-  return side;
-}
-
 export function renderPuzzleThemesIndex(options: PuzzleThemeOptions): HTMLElement {
-  const layout = document.createElement('div');
-  layout.className = 'puzzle-themes-layout';
   const main = document.createElement('main');
   main.className = 'puzzle-themes-index';
   const title = document.createElement('h1');
@@ -378,6 +358,5 @@ export function renderPuzzleThemesIndex(options: PuzzleThemeOptions): HTMLElemen
     section.append(heading, grid);
     main.append(section);
   }
-  layout.append(themesSidebar(), main);
-  return layout;
+  return renderPuzzleMenuLayout('themes', main);
 }

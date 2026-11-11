@@ -426,9 +426,12 @@ export async function mountGomokuWatchReplay(
     }
     payload = loaded;
     roomId = id;
+    // A static card (followEnd: the /games "Just finished" tiles) opens on the
+    // final position, as the shared tenant replay does; ply 0 is only the
+    // dealt opening.
     const wanted =
       loadOptions?.initialPly ??
-      (sameLiveGame && !following ? previousPly : options.live ? maxPly() : 0);
+      (sameLiveGame && !following ? previousPly : options.live || options.followEnd ? maxPly() : 0);
     ply = Number.isFinite(wanted) ? Math.max(0, Math.min(Math.trunc(wanted), maxPly())) : 0;
     paused = !(loadOptions?.startAutoplay ?? options.autoplay ?? true);
     endFired = false;

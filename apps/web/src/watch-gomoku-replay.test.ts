@@ -173,6 +173,19 @@ describe('Gomoku watch replay', () => {
     expect(handle.gameResult?.()).toBe('white-wins');
   });
 
+  it('opens a followEnd card (the /games "Just finished" tile) on the final position, not the dealt opening', async () => {
+    const payload = finish(fixture(OPENING, ['a1', 'b1']), 'white');
+    const { root, handle } = await mount(payload, { compact: true, followEnd: true });
+    // Three dealt stones plus both placements; ply 0 would show only the three.
+    expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(5);
+    expect(root.querySelector('[data-square="b1"] .gomoku-stone')).not.toBeNull();
+    expect(handle.plyCount?.()).toBe(2);
+    expect(seats(root).map((seat) => [seat.name, seat.clock, seat.won])).toEqual([
+      ['White', '1', true],
+      ['Black', '0', false],
+    ]);
+  });
+
   it('numbers placed stones on a board wide enough to read them and leaves the small cards plain', async () => {
     const numbers = (root: HTMLElement) =>
       [...root.querySelectorAll('.gomoku-move-number')].map((label) => [

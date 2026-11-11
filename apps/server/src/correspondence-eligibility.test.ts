@@ -53,6 +53,20 @@ test('every correspondence-eligible spec can create AND time out a game', () => 
   }
 });
 
+// #1059: Challenge a friend opens a direct invite room on POST /api/rooms for a
+// signed-out creator, so every public eligible spec needs the room factory or
+// the dialog would 501 on it.
+test('every public correspondence-eligible spec can open a friend invite room', () => {
+  for (const specId of CORRESPONDENCE_ELIGIBLE_SPECS) {
+    const tenant = correspondenceTenantForSpecId(specId);
+    assert.equal(
+      typeof tenant?.createCorrespondenceRoom,
+      'function',
+      `${specId} is correspondence-eligible but cannot open an invite room`,
+    );
+  }
+});
+
 test('every correspondence-eligible spec is a real game spec', () => {
   for (const specId of CORRESPONDENCE_ELIGIBLE_SPECS) {
     assert.ok(

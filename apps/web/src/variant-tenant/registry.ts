@@ -54,11 +54,12 @@ import {
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
+import { ffqBanqiEngineOptions, ffqBanqiOffered } from '../ffq-banqi-access.js';
 import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
-import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
+import { hasLikelyVariantGrant } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOptions,
   threeKingdomsBanqiOffered,
@@ -216,7 +217,7 @@ const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
 // Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
 // The server repeats this check for create, HTTP shells and every connection.
-const ffqBanqiOffered = () => ffqBanqiEnabled() && isLikelyAdmin();
+
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -345,8 +346,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi.js').then(
         ({ bootstrapFFQBanqiLiveRoom }) => bootstrapFFQBanqiLiveRoom,
       ),
-    // No postgame route, watch channel or public listing. Finished rooms keep
-    // the same masked live client; shared discovery never links them.
+    gameRouteBase: '/ffq-banqi/game',
+    reviewRouteBase: '/ffq-banqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
+        mountFFQBanqiPostgame(root, roomId),
+      ),
+    // No watch channel or public discovery. Spectators use the gated room.
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
@@ -356,7 +362,16 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: ffqBanqiOffered,
       acceptsDeepLink: ffqBanqiOffered,
-      modes: ['pvp'],
+      modes: ['pvp', 'pve'],
+      get engineOptions() {
+        return ffqBanqiEngineOptions();
+      },
+      get defaultEngineId() {
+        const options = ffqBanqiEngineOptions();
+        return (
+          options?.find((engine) => engine.id === 'misty-ffq-banqi-level-4')?.id ?? options?.[0]?.id
+        );
+      },
     },
   },
   {
@@ -1165,14 +1180,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         ),
     },
     landing: {
+      // Move order, as banqi (#1054): the choice is who deals the first hand,
+      // and the deal alternates every hand after it. First seats the creator
+      // east and Second west, and east deals first; Random draws the dealer.
+      // The bot and friend requests map red/black to east/west
+      // (landing-play.ts roomCreationRequestBody). The lobby assigns seats.
       capabilities: {
         firstColor: 'red',
-        firstGlyph: '東',
-        firstLabel: 'East',
-        secondColor: 'black',
-        secondGlyph: '西',
-        secondLabel: 'West',
+        firstGlyph: '1',
+        firstLabel: 'First',
+        glyphClass: 'banqi-seat',
         neutralGlyphColor: true,
+        pickerLabel: 'Move order',
+        secondColor: 'black',
+        secondGlyph: '2',
+        secondLabel: 'Second',
         supportsRated: true,
         supportsTimeControl: true,
       },
@@ -1191,7 +1213,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
       ],
       defaultEngineId: 'misty-xiangqi-mahjong',
-      hideColorPicker: true,
     },
   },
   {

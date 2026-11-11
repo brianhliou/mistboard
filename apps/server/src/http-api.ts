@@ -24,6 +24,7 @@ import * as clubSignupRoute from './routes/club-signup.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceHostRoute from './routes/correspondence-host.js';
+import * as correspondenceInviteRoute from './routes/correspondence-invite.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as crazyhouseXiangqiGamesRoute from './routes/crazyhouse-xiangqi-games.js';
 import * as currentGamesRoute from './routes/current-games.js';
@@ -32,6 +33,7 @@ import * as dataRoute from './routes/data.js';
 import * as duckXiangqiGamesRoute from './routes/duck-xiangqi-games.js';
 import * as enginesRoute from './routes/engines.js';
 import * as feedbackRoute from './routes/feedback.js';
+import * as ffqBanqiGamesRoute from './routes/ffq-banqi-games.js';
 import * as fortressXiangqiGamesRoute from './routes/fortress-xiangqi-games.js';
 import * as forumRoute from './routes/forum.js';
 import * as gamesRoute from './routes/games.js';
@@ -119,6 +121,7 @@ export const routes: RouteModule[] = [
   adminGameArtifactsRoute,
   correspondenceGamesRoute,
   correspondenceHostRoute,
+  correspondenceInviteRoute,
   correspondenceSeeksRoute,
   // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.
   currentGamesRoute,
@@ -139,6 +142,7 @@ export const routes: RouteModule[] = [
   jungleFlipGamesRoute,
   banqiGamesRoute,
   threeKingdomsBanqiGamesRoute,
+  ffqBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
   gomokuGamesRoute,
   gamesRoute,

@@ -142,3 +142,10 @@ test('no manifest phrase is supplied by the real shell menu in any locale', asyn
     assert.ok(menuPhraseProblems([{ path: '/planted-menu-phrase', phrase }]).length > 0, phrase);
   }
 });
+
+test('FFQ finished-review route has a private crawler contract', () => {
+  const entry = CLIENT_ONLY_NOINDEX.find((row) => row.routeId === '/ffq-banqi/game/*');
+  assert.ok(entry);
+  assert.ok(isClientRoute(entry.path));
+  assert.ok(isNoindexRoute(entry.path));
+});

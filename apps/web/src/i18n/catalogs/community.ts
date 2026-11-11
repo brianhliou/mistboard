@@ -434,6 +434,8 @@ export const EN_COMMUNITY = {
   'challenge.expired': 'This challenge has expired.',
   'challenge.copyLink': 'Copy link',
   'challenge.copied': 'Copied',
+  'challenge.targetEmailed': 'We emailed {name}',
+  'challenge.targetNotEmailed': 'Send them this link',
   'challenge.accept': 'Accept',
   'challenge.alreadyAccepted': 'This challenge was already accepted.',
   'challenge.couldNotAccept': 'Could not accept. Try again.',

@@ -134,6 +134,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
       variantName: variant,
       game: postgame.game,
       status,
+      firstMoverColor: opening.turn,
     });
     const black = postgame.game.players?.find((player) => player.color === 'black');
     const white = postgame.game.players?.find((player) => player.color === 'white');
