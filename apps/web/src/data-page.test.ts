@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   currentMonthKey,
   type DataListing,
+  dataOpponents,
   formatBytes,
   formatMonth,
+  monthAfter,
   mountDataAbout,
   mountDataPage,
   readVariant,
@@ -171,7 +173,9 @@ describe('/data page', () => {
     expect(
       [...root.querySelectorAll('.data-months .data-table thead th')].map((th) => th.textContent),
     ).toEqual(['Month', 'Games', 'Download', 'SHA-256']);
-    expect(rowCells(root, '.data-months')).toEqual([['September 2026', '12', 'JSONL', '-']]);
+    expect(rowCells(root, '.data-months')).toEqual([
+      ['September 2026', '12', 'JSONL', 'Built on first download; size and checksum appear after.'],
+    ]);
     expect(root.querySelector('.data-months .data-download')?.getAttribute('href')).toBe(
       '/api/data/monthly/2026-09/all.jsonl.gz',
     );
@@ -204,6 +208,10 @@ describe('/data page', () => {
     const hash = root.querySelector('.data-months button.data-hash');
     expect(hash?.getAttribute('title')).toBe('a'.repeat(64));
     expect(hash?.textContent).toBe('JSONLaaaaaaaCopy');
+    // The unbuilt PGN beside it says when its checksum comes, never a made-up one.
+    expect(root.querySelector('.data-months .data-hash-pending')?.textContent).toBe(
+      'PGN: built on first download',
+    );
   });
 
   it('round-trips the variant through the URL; an unknown value falls back to All', async () => {
@@ -220,7 +228,9 @@ describe('/data page', () => {
       .querySelector<HTMLAnchorElement>('.current-games-rail-link[data-variant="jieqi"]')
       ?.click();
     expect(window.location.search).toBe('?variant=jieqi');
-    expect(rowCells(root, '.data-months')).toEqual([['September 2026', '2', 'JSONL', '-']]);
+    expect(rowCells(root, '.data-months')).toEqual([
+      ['September 2026', '2', 'JSONL', 'Built on first download; size and checksum appear after.'],
+    ]);
     root.querySelector<HTMLAnchorElement>('.current-games-rail-link[data-variant="all"]')?.click();
     expect(window.location.search).toBe('');
   });
@@ -283,6 +293,154 @@ describe('/data page', () => {
     expect(root.querySelector('.data-table-engine a')?.getAttribute('href')).toBe(
       '/api/data/engine-monthly/2026-09/duck-xiangqi.jsonl.gz',
     );
+  });
+
+  it('lists every offered variant, empty ones included, and names the ones with no downloads', async () => {
+    const listing: DataListing = {
+      ...LISTING,
+      offeredVariants: ['xiangqi', 'jieqi', 'gomoku'],
+      firstArchives: [{ variant: 'gomoku', month: '2026-11' }],
+      unavailableVariants: [{ variant: 'three-kingdoms-banqi', reason: 'hidden-pieces' }],
+    };
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => listing } as Response);
+    expect(readVariant(listing, '?variant=three-kingdoms-banqi')).toBe('three-kingdoms-banqi');
+    expect(readVariant(listing, '?variant=gomoku')).toBe('gomoku');
+    const root = await mounted('?variant=gomoku');
+    const rail = [...root.querySelectorAll<HTMLElement>('.current-games-rail-link')];
+    expect(rail.map((link) => link.dataset.variant)).toEqual([
+      'all',
+      'xiangqi',
+      'jieqi',
+      'gomoku',
+      'three-kingdoms-banqi',
+    ]);
+    expect(
+      root.querySelector('[data-variant="gomoku"] .current-games-rail-count')?.textContent,
+    ).toBe('0');
+    const tkb = root.querySelector<HTMLAnchorElement>('[data-variant="three-kingdoms-banqi"]')!;
+    expect(tkb.classList.contains('is-unavailable')).toBe(true);
+    expect(tkb.querySelector('.current-games-rail-count')?.textContent).toBe('');
+
+    const months = () => root.querySelector('.data-months')!;
+    expect(months().textContent).toContain(
+      'The first Gomoku games were played in November 2026. Their file appears once that month ends, on December 1, 2026.',
+    );
+    expect(months().querySelector('.data-table')).toBeNull();
+    expect(months().querySelector('.data-search-link a')?.getAttribute('href')).toBe(
+      '/games/search?variant=gomoku&source=mistboard',
+    );
+
+    tkb.click();
+    expect(window.location.search).toBe('?variant=three-kingdoms-banqi');
+    expect(months().textContent).toContain('nobody turned over');
+    expect(months().textContent).not.toMatch(/\b20\d\d\b/);
+    expect(months().querySelector('.data-table, .data-download')).toBeNull();
+    expect(months().textContent).not.toContain('first time anyone downloads');
+  });
+
+  it('picks an opponent, then all its levels or one; old and exact bot links land on the level', async () => {
+    const bots = [
+      {
+        id: 'fairy-stockfish-level-1',
+        displayName: 'Fairy-Stockfish Level 1',
+        variants: ['xiangqi'],
+      },
+      {
+        id: 'fairy-stockfish-level-2',
+        displayName: 'Fairy-Stockfish Level 2',
+        variants: ['xiangqi'],
+      },
+      { id: 'jqe', displayName: 'jqe', variants: ['jieqi'] },
+      { id: 'someones-bot', displayName: "Someone's bot", variants: ['xiangqi'] },
+    ];
+    expect(dataOpponents({ bots }).map((o) => [o.key, o.name, o.levelled])).toEqual([
+      ['fairy-stockfish', 'Fairy-Stockfish', true],
+      ['jqe', 'jqe', false],
+      ['someones-bot', "Someone's bot", false],
+    ]);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...LISTING, bots, opponentId: 'fairy-stockfish' }),
+    } as Response);
+    const root = await mounted('?variant=xiangqi&opponent=fairy-stockfish');
+    expect(fetch).toHaveBeenCalledWith('/api/data?opponent=fairy-stockfish', { cache: 'no-store' });
+    const [opponent, level] = [
+      ...root.querySelectorAll<HTMLSelectElement>('.data-bot-filter select'),
+    ];
+    expect(opponent!.value).toBe('fairy-stockfish');
+    expect(level!.hidden).toBe(false);
+    expect([...level!.options].map((o) => [o.value, o.textContent])).toEqual([
+      ['', 'All levels'],
+      ['fairy-stockfish-level-1', 'Level 1'],
+      ['fairy-stockfish-level-2', 'Level 2'],
+    ]);
+    expect(level!.value).toBe('');
+    expect(root.querySelector('[data-variant="jieqi"]')?.getAttribute('href')).toBe(
+      '/data?variant=jieqi&opponent=fairy-stockfish',
+    );
+    // No search link: /games/search has no bot filter, so it would show more.
+    expect(root.querySelector('.data-search-link')).toBeNull();
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...LISTING, bots, botId: 'fairy-stockfish-level-2' }),
+    } as Response);
+    level!.value = 'fairy-stockfish-level-2';
+    level!.dispatchEvent(new Event('change'));
+    expect(window.location.search).toBe('?variant=xiangqi&bot=fairy-stockfish-level-2');
+    await vi.waitFor(() => expect(level!.value).toBe('fairy-stockfish-level-2'));
+    expect(fetch).toHaveBeenLastCalledWith('/api/data?bot=fairy-stockfish-level-2', {
+      cache: 'no-store',
+    });
+
+    // A one-bot opponent is a plain bot link with no level picker.
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...LISTING, bots, botId: 'jqe' }),
+    } as Response);
+    opponent!.value = 'jqe';
+    opponent!.dispatchEvent(new Event('change'));
+    expect(window.location.search).toBe('?variant=xiangqi&bot=jqe');
+    await vi.waitFor(() => expect(level!.hidden).toBe(true));
+    expect(opponent!.value).toBe('jqe');
+  });
+
+  it('an old bot id resolves to its opponent and level', async () => {
+    const bots = [
+      {
+        id: 'fairy-stockfish-level-1',
+        displayName: 'Fairy-Stockfish Level 1',
+        variants: ['xiangqi'],
+      },
+      {
+        id: 'fairy-stockfish-level-2',
+        displayName: 'Fairy-Stockfish Level 2',
+        variants: ['xiangqi'],
+      },
+    ];
+    // The server answers an old id with the bot's current one.
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...LISTING, bots, botId: 'fairy-stockfish-level-2' }),
+    } as Response);
+    const root = await mounted('?bot=fairy-stockfish-xiangqi-level-2');
+    expect(fetch).toHaveBeenCalledWith('/api/data?bot=fairy-stockfish-xiangqi-level-2', {
+      cache: 'no-store',
+    });
+    const [opponent, level] = [
+      ...root.querySelectorAll<HTMLSelectElement>('.data-bot-filter select'),
+    ];
+    expect(opponent!.value).toBe('fairy-stockfish');
+    expect(level!.value).toBe('fairy-stockfish-level-2');
+  });
+
+  it('links the unfiltered listing to the same games on /games/search', async () => {
+    const root = await mounted();
+    expect(root.querySelector('.data-search-link a')?.getAttribute('href')).toBe(
+      '/games/search?source=mistboard',
+    );
+    expect(monthAfter('2026-11')).toBe('2026-12');
+    expect(monthAfter('2026-12')).toBe('2027-01');
   });
 
   it('/data/about shows every section openly, with a way back', () => {

@@ -18,6 +18,7 @@ import { prerenderMount } from './prerender-copy.js';
 
 import './current-games.css';
 import './data-page.css';
+import { BOT_OPPONENTS, botOpponentForBotId } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, localizedHref } from './i18n/locale.js';
@@ -66,6 +67,14 @@ export type DataListing = {
   collections: DataCollection[];
   bots?: Array<{ id: string; displayName: string; variants: string[] }>;
   botId?: string;
+  /** Set when the listing covers every listed level of one opponent (?opponent=). */
+  opponentId?: string;
+  /** Every variant with downloads, games or not yet; the rail lists all of them. */
+  offeredVariants?: string[];
+  /** A variant whose games are all in the open month: the month its first file covers. */
+  firstArchives?: Array<{ variant: string; month: string }>;
+  /** Launched variants with no downloads, and why. */
+  unavailableVariants?: Array<{ variant: string; reason: 'hidden-pieces' | 'no-export' }>;
 };
 
 export const ALL_VARIANTS = 'all';
@@ -115,13 +124,21 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
     return;
   }
 
-  const botFilter = document.createElement('label');
+  // Opponent first, then (for a ladder) its level: "All levels" is the
+  // server's union of every listed level (?opponent=), a level is one bot
+  // (?bot=), as on /bots.
+  const botFilter = document.createElement('div');
   botFilter.className = 'data-bot-filter';
-  const botLabel = document.createElement('span');
-  botLabel.textContent = t('data.botFilter');
+  const botLabel = document.createElement('label');
+  const botLabelText = document.createElement('span');
+  botLabelText.textContent = t('data.botFilter');
   const botSelect = document.createElement('select');
   botSelect.setAttribute('aria-label', t('data.botFilter'));
-  botFilter.append(botLabel, botSelect);
+  botLabel.append(botLabelText, botSelect);
+  const levelSelect = document.createElement('select');
+  levelSelect.className = 'data-level-select';
+  levelSelect.setAttribute('aria-label', t('data.levelFilter'));
+  botFilter.append(botLabel, levelSelect);
   header.append(botFilter);
 
   let variant = readVariant(listing);
@@ -138,30 +155,50 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
     variant = readVariant(listing);
     render();
   }
-  botSelect.addEventListener('change', () => {
+  function writeScope(scope: { bot?: string; opponent?: string }): void {
     const url = new URL(window.location.href);
-    if (botSelect.value) url.searchParams.set('bot', botSelect.value);
-    else url.searchParams.delete('bot');
+    url.searchParams.delete('bot');
+    url.searchParams.delete('opponent');
+    if (scope.opponent) url.searchParams.set('opponent', scope.opponent);
+    else if (scope.bot) url.searchParams.set('bot', scope.bot);
     window.history.pushState(null, '', url);
     void reloadListing();
+  }
+  botSelect.addEventListener('change', () => {
+    const choice = listing
+      ? dataOpponents(listing).find((opponent) => opponent.key === botSelect.value)
+      : null;
+    if (!choice) return writeScope({});
+    if (choice.levelled) writeScope({ opponent: choice.key });
+    else writeScope({ bot: choice.members[0]!.botId });
+  });
+  levelSelect.addEventListener('change', () => {
+    if (levelSelect.value) writeScope({ bot: levelSelect.value });
+    else writeScope({ opponent: botSelect.value });
   });
   const render = (): void => {
     if (!listing) return;
     renderCount(countLine, listing);
-    const allBots = document.createElement('option');
-    allBots.value = '';
-    allBots.textContent = t('data.allBots');
+    const opponents = dataOpponents(listing);
+    const selection = selectedOpponent(listing, opponents);
     botSelect.replaceChildren(
-      allBots,
-      ...(listing.bots ?? []).map((bot) => {
-        const option = document.createElement('option');
-        option.value = bot.id;
-        option.textContent = bot.displayName;
-        return option;
-      }),
+      option('', t('data.allBots')),
+      ...opponents.map((opponent) => option(opponent.key, opponent.name)),
     );
-    botSelect.value = listing.botId ?? '';
-    botFilter.hidden = (listing.bots?.length ?? 0) === 0;
+    botSelect.value = selection?.opponent.key ?? '';
+    levelSelect.hidden = !selection?.opponent.levelled;
+    if (selection?.opponent.levelled) {
+      levelSelect.replaceChildren(
+        option('', t('data.allLevels')),
+        ...selection.opponent.members.map((member) =>
+          option(member.botId, t('bots.levelName', { level: member.level ?? 0 })),
+        ),
+      );
+      levelSelect.value = selection.botId ?? '';
+    } else {
+      levelSelect.replaceChildren();
+    }
+    botFilter.hidden = opponents.length === 0;
 
     renderRail(rail, listing, variant, (next) => {
       variant = next;
@@ -169,9 +206,10 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
       render();
     });
     for (const link of rail.querySelectorAll<HTMLAnchorElement>('a')) {
-      if (!listing.botId) continue;
+      if (!listing.botId && !listing.opponentId) continue;
       const url = new URL(link.href);
-      url.searchParams.set('bot', listing.botId);
+      if (listing.opponentId) url.searchParams.set('opponent', listing.opponentId);
+      else if (listing.botId) url.searchParams.set('bot', listing.botId);
       link.href = `${url.pathname}${url.search}`;
     }
     renderMonths(monthsHost, listing, variant, onDownload);
@@ -197,8 +235,14 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
 
 async function fetchListing(): Promise<DataListing | null> {
   try {
-    const botId = new URLSearchParams(window.location.search).get('bot');
-    const path = botId ? `/api/data?bot=${encodeURIComponent(botId)}` : '/api/data';
+    const params = new URLSearchParams(window.location.search);
+    const opponentId = params.get('opponent');
+    const botId = params.get('bot');
+    const path = opponentId
+      ? `/api/data?opponent=${encodeURIComponent(opponentId)}`
+      : botId
+        ? `/api/data?bot=${encodeURIComponent(botId)}`
+        : '/api/data';
     const response = await fetch(path, { cache: 'no-store' });
     if (!response.ok) return null;
     return (await response.json()) as DataListing;
@@ -207,13 +251,88 @@ async function fetchListing(): Promise<DataListing | null> {
   }
 }
 
-/** ?variant= when it names a listed variant; anything else is All, as on /games/search. */
-export function readVariant(
-  listing: Pick<DataListing, 'variants'>,
-  search = window.location.search,
-): string {
+type RailListing = Pick<DataListing, 'variants' | 'offeredVariants' | 'unavailableVariants'>;
+
+/** ?variant= when it names a variant on the rail; anything else is All, as on /games/search. */
+export function readVariant(listing: RailListing, search = window.location.search): string {
   const raw = new URLSearchParams(search).get('variant');
-  return raw && listing.variants.includes(raw) ? raw : ALL_VARIANTS;
+  return raw && railVariants(listing).some((entry) => entry.variant === raw) ? raw : ALL_VARIANTS;
+}
+
+/** The rail after All: every offered variant (with games or not yet), then
+ *  the launched variants that have no downloads, muted. */
+export function railVariants(
+  listing: RailListing,
+): Array<{ variant: string; unavailable: boolean }> {
+  return [
+    ...(listing.offeredVariants ?? listing.variants).map((variant) => ({
+      variant,
+      unavailable: false,
+    })),
+    ...(listing.unavailableVariants ?? []).map(({ variant }) => ({ variant, unavailable: true })),
+  ];
+}
+
+// ── Opponent selector ────────────────────────────────────────────────────────
+
+export type DataOpponent = {
+  key: string;
+  name: string;
+  levelled: boolean;
+  members: Array<{ botId: string; level: number | null }>;
+};
+
+/** The selector's opponents: the bot-opponents map's (in its order) with the
+ *  levels this listing has, then any listed bot outside the map. */
+export function dataOpponents(listing: Pick<DataListing, 'bots'>): DataOpponent[] {
+  const bots = listing.bots ?? [];
+  const listed = new Map(bots.map((bot) => [bot.id, bot]));
+  const opponents: DataOpponent[] = [];
+  for (const opponent of BOT_OPPONENTS) {
+    const members = opponent.members.filter((member) => listed.has(member.botId));
+    if (members.length === 0) continue;
+    opponents.push({
+      key: opponent.id,
+      name: members.length === 1 ? listed.get(members[0]!.botId)!.displayName : opponent.name,
+      levelled: members.length > 1,
+      members: members.map((member) => ({ botId: member.botId, level: member.level })),
+    });
+  }
+  for (const bot of bots) {
+    if (botOpponentForBotId(bot.id)) continue;
+    opponents.push({
+      key: bot.id,
+      name: bot.displayName,
+      levelled: false,
+      members: [{ botId: bot.id, level: null }],
+    });
+  }
+  return opponents;
+}
+
+/** Which opponent (and level) the listing is for: ?opponent= is all levels, a
+ *  ?bot= (old ids included; the server answers with the current one) is its
+ *  opponent at that level. */
+export function selectedOpponent(
+  listing: Pick<DataListing, 'botId' | 'opponentId'>,
+  opponents: readonly DataOpponent[],
+): { opponent: DataOpponent; botId: string | null } | null {
+  if (listing.opponentId) {
+    const opponent = opponents.find((entry) => entry.key === listing.opponentId);
+    return opponent ? { opponent, botId: null } : null;
+  }
+  if (!listing.botId) return null;
+  const key = botOpponentForBotId(listing.botId)?.opponent.id ?? listing.botId;
+  const opponent = opponents.find((entry) => entry.key === key);
+  if (!opponent) return null;
+  return { opponent, botId: opponent.levelled ? listing.botId : null };
+}
+
+function option(value: string, label: string): HTMLOptionElement {
+  const el = document.createElement('option');
+  el.value = value;
+  el.textContent = label;
+  return el;
 }
 
 function writeVariant(variant: string): void {
@@ -275,8 +394,12 @@ export function currentMonthKey(now: Date = new Date()): string {
 
 // ── Header and rail ──────────────────────────────────────────────────────────
 
+function isScoped(listing: DataListing): boolean {
+  return Boolean(listing.botId || listing.opponentId);
+}
+
 function headlineMonths(listing: DataListing): DataMonth[] {
-  return listing.botId ? [...listing.months, ...(listing.engineMonths ?? [])] : listing.months;
+  return isScoped(listing) ? [...listing.months, ...(listing.engineMonths ?? [])] : listing.months;
 }
 
 function renderCount(el: HTMLElement, listing: DataListing): void {
@@ -315,8 +438,13 @@ function renderRail(
     .querySelector('.current-games-rail-thumb')
     ?.append(buildUiIcon('featured-channel', 'current-games-rail-crown'));
   const links = [all];
-  for (const variant of listing.variants) {
-    const link = railLink(variant, variantDisplayLabel(variant), totals.get(variant) ?? 0);
+  for (const { variant, unavailable } of railVariants(listing)) {
+    const link = railLink(
+      variant,
+      variantDisplayLabel(variant),
+      unavailable ? null : (totals.get(variant) ?? 0),
+    );
+    if (unavailable) link.classList.add('is-quiet', 'is-unavailable');
     const thumb = link.querySelector<HTMLElement>('.current-games-rail-thumb');
     const miniId = WATCH_CHANNEL_MINI_IDS[variant];
     if (thumb && miniId) {
@@ -341,7 +469,7 @@ function renderRail(
   rail.append(...links);
 }
 
-function railLink(variant: string, label: string, count: number): HTMLAnchorElement {
+function railLink(variant: string, label: string, count: number | null): HTMLAnchorElement {
   const link = document.createElement('a');
   link.className = 'current-games-rail-link';
   link.dataset.variant = variant;
@@ -353,7 +481,7 @@ function railLink(variant: string, label: string, count: number): HTMLAnchorElem
   name.textContent = label;
   const countEl = document.createElement('span');
   countEl.className = 'current-games-rail-count';
-  countEl.textContent = formatCount(count);
+  countEl.textContent = count === null ? '' : formatCount(count);
   text.append(name, countEl);
   const thumb = document.createElement('span');
   thumb.className = 'current-games-rail-thumb';
@@ -451,13 +579,17 @@ function tableRow(
   downloadCell.append(buttons);
   const hashCell = document.createElement('td');
   hashCell.className = 'data-col-hash';
+  // An unbuilt file has no size or checksum yet: say so rather than show a
+  // blank, and never make one up.
   const built = files.filter((file) => file.built);
   if (built.length === 0) {
-    hashCell.textContent = '-';
-    hashCell.classList.add('is-empty');
+    hashCell.textContent = t('data.notBuilt');
+    hashCell.classList.add('is-pending');
   } else {
-    for (const file of built) {
-      hashCell.append(hashLine(file, files.length > 1));
+    for (const file of files) {
+      hashCell.append(
+        file.built ? hashLine(file, files.length > 1) : pendingLine(file, files.length > 1),
+      );
     }
   }
   row.append(nameCell, gamesCell, downloadCell, hashCell);
@@ -513,6 +645,15 @@ function hashLine(file: DataFileEntry, labelled: boolean): HTMLElement {
   return button;
 }
 
+function pendingLine(file: DataFileEntry, labelled: boolean): HTMLElement {
+  const line = document.createElement('span');
+  line.className = 'data-hash-pending';
+  line.textContent = labelled
+    ? t('data.notBuiltFormat', { format: formatName(file.format) })
+    : t('data.notBuilt');
+  return line;
+}
+
 function copyButton(text: string, label: string): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -555,11 +696,31 @@ function renderMonths(
 ): void {
   const label = variant === ALL_VARIANTS ? t('data.allVariants') : variantDisplayLabel(variant);
   host.replaceChildren(sectionHeading(label));
+  const unavailable = listing.unavailableVariants?.find((entry) => entry.variant === variant);
+  if (unavailable) {
+    const key =
+      unavailable.reason === 'hidden-pieces' ? 'data.unavailableHidden' : 'data.unavailableNone';
+    host.append(note(t(key, { variant: label })), searchLink(listing, variant));
+    return;
+  }
   if (variant === ALL_VARIANTS) host.append(note(t('data.allVariantsNote')));
   const rows = monthRows(listing, variant);
   const engineRows = monthRows(listing, variant, 'engine');
   if (rows.length === 0) {
-    if (!listing.botId || engineRows.length === 0) host.append(note(t('data.noMonths')));
+    const first = listing.firstArchives?.find((entry) => entry.variant === variant);
+    if (first && engineRows.length === 0) {
+      host.append(
+        note(
+          t('data.firstArchive', {
+            variant: label,
+            month: formatMonth(first.month),
+            date: formatDay(monthAfter(first.month)),
+          }),
+        ),
+      );
+    } else if (!isScoped(listing) || engineRows.length === 0) {
+      host.append(note(t('data.noMonths')));
+    }
   } else {
     const { table, body } = dataTable('data.colMonth');
     for (const row of rows)
@@ -570,6 +731,7 @@ function renderMonths(
     note(
       `${t('data.builtNote')} ${t('data.currentMonthNote', { month: formatMonth(currentMonthKey()) })}`,
     ),
+    searchLink(listing, variant),
   );
   // The engine games, only where there are some: their own heading, note and
   // table, after everything about the human files.
@@ -580,6 +742,44 @@ function renderMonths(
       body.append(tableRow(monthName(row.month), row.games, row.files, onDownload));
     host.append(sectionHeading(t('data.engineHeading')), note(t('data.engineNote')), table);
   }
+}
+
+/** The same games one at a time on /games/search, with the filters both pages
+ *  share (variant, games played here). A bot or level filter has no search
+ *  equivalent, so a scoped listing gets no link rather than a wider one. */
+export function searchHref(listing: DataListing, variant: string): string | null {
+  if (isScoped(listing)) return null;
+  const params = new URLSearchParams();
+  if (variant !== ALL_VARIANTS) params.set('variant', variant);
+  params.set('source', 'mistboard');
+  return `/games/search?${params.toString()}`;
+}
+
+function searchLink(listing: DataListing, variant: string): Node {
+  const href = searchHref(listing, variant);
+  if (!href) return document.createTextNode('');
+  const p = document.createElement('p');
+  p.className = 'data-muted data-note data-search-link';
+  p.append(internalLink(t('data.searchLink'), href));
+  return p;
+}
+
+/** "2026-12" for "2026-11". */
+export function monthAfter(month: string): string {
+  const [year, index] = month.split('-').map(Number);
+  if (!year || !index) return month;
+  return index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, '0')}`;
+}
+
+function formatDay(month: string, locale: string = currentLocale()): string {
+  const [year, index] = month.split('-').map(Number);
+  if (!year || !index) return month;
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, index - 1, 1)));
 }
 
 // ── Licence credit and About the data ────────────────────────────────────────

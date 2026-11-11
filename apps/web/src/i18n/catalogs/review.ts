@@ -342,6 +342,7 @@ export const EN_REVIEW = {
   'historical.minPliesHint':
     'Games played here shorter than this are hidden. {plies} unless you change it; clear it to show every game.',
   'historical.floorNote': 'Games played here shorter than {plies} plies are hidden.',
+  'historical.dataLink': 'Monthly downloads of the games played on Mistboard',
   'historical.floorShowAll': 'Show them',
   'historical.maxPlies': 'Max plies',
   'historical.sortLabel': 'Sort by',
