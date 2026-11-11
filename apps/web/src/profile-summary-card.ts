@@ -4,7 +4,7 @@
 
 import './profile-summary-card.css';
 import type { RatingVariant } from '@mistboard/game';
-import { bindBotPlayControl } from './bot-play.js';
+import { type BotPlayTarget, bindBotPlayControl } from './bot-play.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
@@ -128,9 +128,11 @@ export type BotCardOptions = {
   ratingGameSpecId?: string;
   /** This variant's chip reads "Play <variant>" and leads the row as the primary action. */
   primaryPlayGameSpecId?: string;
-  /** Play creates the room by the option's engine id, with no botId: an
-   *  engine-only tenant (Three Kingdoms Banqi) has no bot profile that plays it. */
-  engineOnlyPlay?: boolean;
+  /** Play posts this bot and engine pair instead of the profile's bot id: a
+   *  ladder level the profile does not name by itself (Misty's Banqi and Flip
+   *  Jungle levels: botId plus engineId; Three Kingdoms Banqi, which has no
+   *  bot profile that plays it: engineId alone). */
+  playTarget?: BotPlayTarget;
 };
 
 // A bot that plays one variant keeps the compact shape: bio, its rating, one
@@ -169,11 +171,7 @@ export function buildBotSummaryCard(
     : buildBotRatingGrid(profile);
   if (ratings) card.append(ratings);
 
-  const actions = buildBotActions(
-    profile,
-    options.primaryPlayGameSpecId,
-    options.engineOnlyPlay === true,
-  );
+  const actions = buildBotActions(profile, options.primaryPlayGameSpecId, options.playTarget);
   if (actions) card.append(actions);
   card.append(buildBotFooter(profile));
   return card;
@@ -483,7 +481,7 @@ function buildBotRatingGrid(profile: BotSummaryProfile): HTMLElement | null {
 function buildBotActions(
   profile: BotSummaryProfile,
   primaryGameSpecId?: string,
-  engineOnly = false,
+  playTarget?: BotPlayTarget,
 ): HTMLElement | null {
   const options = botPlayOptions(profile);
   if (options.length === 0) return null;
@@ -495,7 +493,7 @@ function buildBotActions(
   const row = document.createElement('div');
   row.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
   for (const option of ordered) {
-    row.append(buildBotPlayControl(profile, option, option === primary, undefined, engineOnly));
+    row.append(buildBotPlayControl(profile, option, option === primary, undefined, playTarget));
   }
   return row;
 }
@@ -505,7 +503,7 @@ function buildBotPlayControl(
   option: BotSummaryPlayOption,
   primary = false,
   labelOverride?: string,
-  engineOnly = false,
+  playTarget?: BotPlayTarget,
 ): HTMLElement {
   const variant = gameSpecLabel(option.gameSpecId);
   const label = labelOverride ?? (primary ? t('bots.playVariant', { variant }) : variant);
@@ -527,8 +525,8 @@ function buildBotPlayControl(
   bindBotPlayControl(
     control,
     () =>
-      engineOnly
-        ? { engineId: option.engineId, gameSpecId: option.gameSpecId, preferredColor: 'random' }
+      playTarget
+        ? { ...playTarget, gameSpecId: option.gameSpecId, preferredColor: 'random' }
         : { botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' },
     {
       onStateChange: (state) => {

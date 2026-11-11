@@ -5,18 +5,20 @@
 // sibling of /@handle. Play affordances create the game directly via
 // bot-play.ts; there is no setup dialog.
 import {
+  BANQI_SPEC_ID,
   BOT_OPPONENTS,
   botOpponentById,
   botOpponentForBotId,
   canonicalVariantOrderIndex,
   type GameSpecId,
+  JUNGLE_FLIP_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import './account-profile.css';
 import './bots.css';
 import './current-games.css';
-import { bindBotPlayControl } from './bot-play.js';
+import { type BotPlayTarget, bindBotPlayControl } from './bot-play.js';
 import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
@@ -24,6 +26,7 @@ import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import {
   JIEQI_FIRST_GAME_LEVEL,
+  type LandingBotRung,
   landingBotLadder,
   XIANGQI_FIRST_GAME_LEVEL,
 } from './landing-bot-policy.js';
@@ -165,18 +168,20 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   shell.append(buildCommunityLayout('/bots', content));
   root.append(buildNav(), shell);
 
-  // The TK roster rides beside the bot list: TK's Misty plays by engine id and
-  // has no bot profile, so /api/bots never names it.
-  const tkRoster = fetchThreeKingdomsBanqiRoster();
+  // The engine roster rides beside the bot list: it says which of Misty's
+  // levels this server can seat (Banqi and Flip Jungle Level 8 need a net), and
+  // TK's Misty plays by engine id with no bot profile, so /api/bots never names it.
+  const botsLoad = fetchBots();
+  const rostersLoad = fetchEngineRosters();
   let bots: BotProfile[];
   try {
-    bots = await fetchBots();
+    bots = await botsLoad;
   } catch {
     body.replaceChildren(buildNotice(t('bots.unavailableTitle'), t('bots.unavailableBody')));
     return;
   }
 
-  const engineOpponents = engineOnlyOpponents(bots, await tkRoster);
+  const engineOpponents = engineLadderOpponents(bots, await rostersLoad);
   if (bots.length === 0 && engineOpponents.size === 0) {
     body.replaceChildren(statusLine(t('bots.none')));
     return;
@@ -185,20 +190,35 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   mountDirectory(rail, body, bots, engineOpponents);
 }
 
-// The live TK roster, or undefined when the server did not say (a failed fetch
-// or an older server). Never throws.
-async function fetchThreeKingdomsBanqiRoster(): Promise<WebTenantEngineOption[] | undefined> {
-  if (!threeKingdomsBanqiOffered()) return undefined;
+/** The engine tiers this server can seat, from GET /api/engines/playable (the
+ *  homepage's source). A list is undefined when the server did not say (a
+ *  failed fetch or an older server). */
+export type EngineRosters = {
+  banqi?: readonly { id: string }[];
+  jungleFlip?: readonly { id: string }[];
+  threeKingdomsBanqi?: readonly WebTenantEngineOption[];
+};
+
+// Never throws: a failed fetch is a roster that said nothing.
+async function fetchEngineRosters(): Promise<EngineRosters> {
   try {
     const resp = await fetch('/api/engines/playable', { headers: { accept: 'application/json' } });
-    if (!resp.ok) return undefined;
-    const data = (await resp.json()) as { threeKingdomsBanqiEngines?: WebTenantEngineOption[] };
-    if (data.threeKingdomsBanqiEngines !== undefined) {
+    if (!resp.ok) return {};
+    const data = (await resp.json()) as {
+      banqiEngines?: { id: string }[];
+      jungleFlipEngines?: { id: string }[];
+      threeKingdomsBanqiEngines?: WebTenantEngineOption[];
+    };
+    if (threeKingdomsBanqiOffered() && data.threeKingdomsBanqiEngines !== undefined) {
       setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
     }
-    return data.threeKingdomsBanqiEngines;
+    return {
+      banqi: data.banqiEngines,
+      jungleFlip: data.jungleFlipEngines,
+      threeKingdomsBanqi: data.threeKingdomsBanqiEngines,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -300,8 +320,10 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 type DirectoryMember = {
   bot: BotProfile;
   level: number | null;
-  /** The picker value when members share a bot id (TK's levels are all Misty). */
+  /** The picker value when members share a bot id (Misty's levels). */
   key?: string;
+  /** What Play posts when the bot id alone does not name the level. */
+  play?: BotPlayTarget;
 };
 type DirectoryOpponent = {
   key: string;
@@ -314,57 +336,96 @@ type DirectoryOpponent = {
   defaultLevel?: number;
 };
 
-// TK opens on Level 4, as the homepage's TK row does.
-const THREE_KINGDOMS_BANQI_DEFAULT_LEVEL = 4;
+// Misty's ladders open on Level 4, as the homepage's rows do.
+const MISTY_LADDER_DEFAULT_LEVEL = 4;
 
-/** Opponents that play by engine id and so have no /api/bots profile: today
- *  Misty's Three Kingdoms Banqi ladder, offered under the same door as its
- *  play (threeKingdomsBanqiOffered). An explicit live roster is the truth, even
- *  empty; without one, a public build seeds Levels 1-7 (no net), as the
- *  homepage does. FFQ Banqi is admin-only and never listed here. */
-export function engineOnlyOpponents(
+/** Misty's level ladders, which /api/bots lists as one profile per game: one
+ *  card with a level picker each, built from the homepage's rungs
+ *  (landingBotLadder) so Play posts exactly what the homepage posts.
+ *  - Banqi and Flip Jungle play Misty's bot id with the level's engine id, and
+ *    replace her plain card. A roster the server sent is the truth for which
+ *    levels exist; without one, Levels 1-7 (Level 8 needs a net, so it waits
+ *    for the roster to name it). Shown only where her profile offers the game.
+ *  - Three Kingdoms Banqi plays by engine id and has no /api/bots profile,
+ *    offered under the same door as its play (threeKingdomsBanqiOffered). An
+ *    explicit live roster is the truth, even empty; without one, a public build
+ *    seeds Levels 1-7 (no net), as the homepage does.
+ *  FFQ Banqi is admin-only and never listed here. */
+export function engineLadderOpponents(
   bots: readonly BotProfile[],
-  tkRoster: readonly WebTenantEngineOption[] | undefined,
+  rosters: EngineRosters,
 ): Map<string, DirectoryOpponent[]> {
   const opponents = new Map<string, DirectoryOpponent[]>();
-  if (!threeKingdomsBanqiOffered()) return opponents;
-  const engineIds = new Set(
-    tkRoster?.map((engine) => engine.id) ??
-      (threeKingdomsBanqiEnabled()
-        ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
-        : []),
-  );
-  const rungs = landingBotLadder(THREE_KINGDOMS_BANQI_SPEC_ID, undefined, engineIds);
-  if (rungs.length === 0) return opponents;
   const misty = bots.find((bot) => bot.id === 'misty');
-  const tkRecord = misty?.recordsByGameSpecId?.[THREE_KINGDOMS_BANQI_SPEC_ID];
+  for (const [gameSpecId, roster] of [
+    [BANQI_SPEC_ID, rosters.banqi],
+    [JUNGLE_FLIP_SPEC_ID, rosters.jungleFlip],
+  ] as const) {
+    if (!misty || !offersGame(misty, gameSpecId)) continue;
+    const offered = new Set(roster?.map((engine) => engine.id) ?? []);
+    const rungs = landingBotLadder(gameSpecId, undefined, offered).filter(
+      (rung) => roster === undefined || offered.has(rung.engineId ?? ''),
+    );
+    const ladder = mistyLadder('misty', rungs, () => misty);
+    if (ladder) opponents.set(gameSpecId, [ladder]);
+  }
+
+  if (threeKingdomsBanqiOffered()) {
+    const engineIds = new Set(
+      rosters.threeKingdomsBanqi?.map((engine) => engine.id) ??
+        (threeKingdomsBanqiEnabled()
+          ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
+          : []),
+    );
+    const rungs = landingBotLadder(THREE_KINGDOMS_BANQI_SPEC_ID, undefined, engineIds);
+    const tkRecord = misty?.recordsByGameSpecId?.[THREE_KINGDOMS_BANQI_SPEC_ID];
+    const ladder = mistyLadder(
+      'misty-three-kingdoms-banqi',
+      rungs,
+      (engineId): BotProfile => ({
+        ...(misty ?? MISTY_FALLBACK),
+        activeEngineId: engineId,
+        defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+        supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
+        playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
+        rating: null,
+        ratings: [],
+        record: tkRecord ?? EMPTY_RECORD,
+        gamesTotal: tkRecord?.games ?? 0,
+        recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
+      }),
+      { engineOnly: true },
+    );
+    if (ladder) opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [ladder]);
+  }
+  return opponents;
+}
+
+function mistyLadder(
+  key: string,
+  rungs: readonly LandingBotRung[],
+  botFor: (engineId: string) => BotProfile,
+  opts: { engineOnly?: boolean } = {},
+): DirectoryOpponent | null {
+  if (rungs.length === 0) return null;
   const members = rungs.map((rung): DirectoryMember => {
     const engineId = rung.engineId ?? '';
-    const bot: BotProfile = {
-      ...(misty ?? MISTY_FALLBACK),
-      activeEngineId: engineId,
-      defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
-      supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
-      playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
-      rating: null,
-      ratings: [],
-      record: tkRecord ?? EMPTY_RECORD,
-      gamesTotal: tkRecord?.games ?? 0,
-      recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
+    const play: BotPlayTarget = rung.botId ? { botId: rung.botId, engineId } : { engineId };
+    return {
+      bot: botFor(engineId),
+      level: rungs.length > 1 ? rung.level : null,
+      key: engineId,
+      play,
     };
-    return { bot, level: rungs.length > 1 ? rung.level : null, key: engineId };
   });
-  opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [
-    {
-      key: 'misty-three-kingdoms-banqi',
-      name: 'Misty',
-      members,
-      community: false,
-      engineOnly: true,
-      defaultLevel: THREE_KINGDOMS_BANQI_DEFAULT_LEVEL,
-    },
-  ]);
-  return opponents;
+  return {
+    key,
+    name: 'Misty',
+    members,
+    community: false,
+    ...(opts.engineOnly ? { engineOnly: true } : {}),
+    defaultLevel: MISTY_LADDER_DEFAULT_LEVEL,
+  };
 }
 
 // Misty as the card names her when /api/bots did not list her profile.
@@ -516,7 +577,7 @@ function buildOpponentCard(
         : {
             subtitle: t(isHostedOpponent(opponent.key, bot.id) ? 'bots.hosted' : 'bots.firstParty'),
           }),
-      ...(opponent.engineOnly ? { engineOnlyPlay: true } : {}),
+      ...(selected.play ? { playTarget: selected.play } : {}),
       // A champion card already carries the title; "Strongest" would repeat it.
       badge:
         startLevel !== null && selected.level === startLevel
@@ -634,10 +695,13 @@ function buildDirectoryGame(
   gameSpecId: string,
   engineOpponents: ReadonlyMap<string, DirectoryOpponent[]>,
 ): HTMLElement[] {
-  const opponents = [
-    ...directoryOpponents(bots, gameSpecId),
-    ...(engineOpponents.get(gameSpecId) ?? []),
-  ];
+  // An engine ladder takes the place of the plain card with its key (Misty on
+  // Banqi and Flip Jungle); the rest (TK's Misty) join after the mapped ones.
+  const ladders = engineOpponents.get(gameSpecId) ?? [];
+  const listed = directoryOpponents(bots, gameSpecId).map(
+    (opponent) => ladders.find((ladder) => ladder.key === opponent.key) ?? opponent,
+  );
+  const opponents = [...listed, ...ladders.filter((ladder) => !listed.includes(ladder))];
   const firstParty = opponents.filter((opponent) => !opponent.community);
   const community = opponents.filter((opponent) => opponent.community);
   // The map lists each game's opponents weakest first, so with a choice of
