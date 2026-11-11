@@ -35,14 +35,19 @@ import {
   track,
   trackCorrespondenceSeekPosted,
 } from './analytics.js';
-import { loginHrefForCurrentPage } from './auth-redirect.js';
+import { loginHrefForCurrentPage, loginHrefWithReferrer } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
-import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
+import {
+  correspondenceRatedAvailable,
+  isCorrespondenceSpecFor,
+  type SeekPreferredColor,
+  seekRequestBody,
+} from './correspondence-model.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
   LANDING_HERO_BOT_GAME_SPEC_IDS,
@@ -199,6 +204,7 @@ export type OpenLobbyRequest = {
 };
 type RoomCreationFailure = {
   error?: string;
+  limit?: number;
 };
 
 const ENGINE_SEAT_RETRY_MS = 3_000;
@@ -320,6 +326,15 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
  *  preference. The post-game invite gates on this so the two cannot disagree. */
 export function landingPlayDeepLinkAccepts(variant: string): boolean {
   return deepLinkInitialVariant(variant, 'pvp') !== undefined;
+}
+
+// `tc=corr&days=<n>` on a play deep link reopens setup on Correspondence at that
+// pace (the sign-in referrer from a correspondence setup carries it). A pace the
+// picker does not offer is ignored, and the dialog keeps real time.
+function deepLinkCorrespondenceDays(params: URLSearchParams): number | null {
+  if (params.get('tc') !== 'corr') return null;
+  const days = Number(params.get('days') ?? DEFAULT_CORRESPONDENCE_DAYS);
+  return (DAYS_PER_MOVE_OPTIONS as readonly number[]).includes(days) ? days : null;
 }
 
 function deepLinkInitialVariant(
@@ -1666,7 +1681,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   const defaultEngineId = availableEngines[0]?.id;
 
   switch (play) {
-    case 'lobby':
+    case 'lobby': {
+      const correspondenceDays = deepLinkCorrespondenceDays(params);
       openLandingSetupDialog({
         engineId: defaultEngineId,
         engines: availableEngines,
@@ -1679,10 +1695,15 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'lobby',
         modeSwitcher: true,
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
+        ...(correspondenceDays !== null
+          ? { initialTimeMode: 'correspondence', initialCorrespondenceDays: correspondenceDays }
+          : {}),
       });
       break;
+    }
     case 'friend': {
       const side = normalizeStoredColorPreference(params.get('side'));
+      const correspondenceDays = deepLinkCorrespondenceDays(params);
       openLandingSetupDialog({
         engineId: defaultEngineId,
         engines: availableEngines,
@@ -1697,6 +1718,9 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         // Friend games rate like Find opponent (lichess-style challenges).
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() || isLikelyStatsExcluded(),
         ...(side ? { initialColor: side } : {}),
+        ...(correspondenceDays !== null
+          ? { initialTimeMode: 'correspondence', initialCorrespondenceDays: correspondenceDays }
+          : {}),
       });
       break;
     }
@@ -1734,6 +1758,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('variant');
   params.delete('side');
   params.delete('engineId');
+  params.delete('tc');
+  params.delete('days');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -2165,10 +2191,10 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   // Lichess-style segmented toggle: Real time vs Correspondence. It only appears
   // when correspondence is actually offered for the current selection (casual
-  // dark chess in Challenge-a-friend / Find opponent); otherwise the section is
-  // real-time-only and the toggle stays hidden. Correspondence is the long end of
-  // the time axis, not a separate mode — Challenge-a-friend creates a private
-  // room, Find opponent posts an open seek.
+  // an eligible variant in Challenge-a-friend / Find opponent); otherwise the
+  // section is real-time-only and the toggle stays hidden. Correspondence is the
+  // long end of the time axis, not a separate mode: Challenge-a-friend posts a
+  // link challenge, Find opponent posts an open seek.
   const timeModeToggle = document.createElement('div');
   timeModeToggle.className = 'landing-start-options landing-time-mode';
   timeModeToggle.setAttribute('role', 'radiogroup');
@@ -2238,7 +2264,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // opened on a non-eligible variant and offered nothing but real-time clocks.
   // Rated correspondence (2026-10-02) is an open seek only (Find opponent): a rated
   // pick keeps the segment only where correspondence can be rated, and Challenge a
-  // friend's direct room stays casual.
+  // friend's link challenge stays casual.
   const correspondenceRatedOffered = () =>
     choice.mode === 'lobby' &&
     correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
@@ -2330,8 +2356,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   startButton.addEventListener('click', () => {
     rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
-      // Challenge a friend creates a private invite room; Find opponent posts an
-      // open seek to the board (color server-assigned there, like the live pool).
+      // Challenge a friend posts a link challenge (the invite link the friend
+      // opens); Find opponent posts an open seek to the board (color
+      // server-assigned there, like the live pool).
       if (choice.mode === 'lobby') {
         void postCorrespondenceSeekFromPlay(
           startButton,
@@ -2346,6 +2373,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           startButton,
           status,
           selectedCorrespondenceDays,
+          selectedGameSpecId,
           preferredColor,
           locale,
         );
@@ -2862,10 +2890,15 @@ function localizeSetupLabel(label: string, locale: Locale): string {
   }
 }
 
+// Challenge a friend + a correspondence allowance: a link challenge on the
+// picked variant (#1055). The friend opens the invite link and the game starts
+// when they accept. This used to post a Fog Chess room whatever the variant,
+// because the direct-room route serves dark chess only.
 async function createCorrespondenceFromPlay(
   button: HTMLButtonElement,
   status: HTMLElement,
   daysPerMove: number,
+  gameSpecId: LandingGameSpecId,
   preferredColor: LandingColorPreference,
   locale: Locale,
 ): Promise<void> {
@@ -2875,51 +2908,118 @@ async function createCorrespondenceFromPlay(
   try {
     const withdrawing = withdrawLobbySeeks();
     if (withdrawing) await withdrawing;
-    const response = await postThroughRestart('/api/rooms', {
+    const request = seekRequestBody({
+      gameSpecId,
+      daysPerMove,
+      preferredColor: correspondenceSeat(gameSpecId, preferredColor),
+      kind: 'link',
+    });
+    if (!request.ok) throw new Error(request.error);
+    const response = await postThroughRestart('/api/correspondence/seeks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        gameSpecId: DARK_CHESS_SPEC_ID,
-        mode: 'correspondence',
-        daysPerMove,
-        // The picker offers white/black/random only (chess colors).
-        preferredColor: preferredColor === 'red' ? 'random' : preferredColor,
-      }),
+      body: JSON.stringify(request.body),
     });
     if (response.ok) {
-      const data = (await response.json()) as { url?: string };
-      if (!data.url) throw new Error('room creation did not return a URL');
+      const data = (await response.json()) as {
+        challengeUrl?: string;
+        seek?: { gameSpecId?: string };
+      };
+      if (!data.challengeUrl) throw new Error('challenge creation did not return a URL');
+      trackCorrespondenceSeekPosted({
+        gameSpecId: data.seek?.gameSpecId ?? gameSpecId,
+        daysPerMove,
+        kind: 'link',
+        surface: 'home-button',
+      });
       if (!status.isConnected) return;
-      roomNavigator(data.url);
+      roomNavigator(data.challengeUrl);
       return;
     }
     const failure = await readRoomCreationFailure(response);
     if (!status.isConnected) return;
-    status.replaceChildren();
-    if (failure.error === 'correspondence_requires_account') {
-      status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
-    } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = t(
-        'setup.invalidDaysPerMove',
-        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
-        locale,
-      );
-    } else if (failure.error === 'server_draining') {
-      status.textContent = t('setup.serverRestartTimeout', {}, locale);
-    } else {
-      status.textContent = 'Correspondence is unavailable right now. Try again later.';
-    }
+    showCorrespondenceFailure(status, failure, locale, {
+      gameSpecId,
+      daysPerMove,
+      preferredColor,
+    });
     button.textContent = t('setup.tryAgain', {}, locale);
     button.disabled = false;
     button.removeAttribute('aria-busy');
   } catch (err) {
     console.warn(err);
     if (status.isConnected) {
-      status.textContent = 'Could not reach the server. Check your connection and try again.';
+      status.textContent = t('setup.couldNotReachServer', {}, locale);
     }
     button.textContent = t('setup.tryAgain', {}, locale);
     button.disabled = false;
     button.removeAttribute('aria-busy');
+  }
+}
+
+// The dialog's side as the seek's move-order seat: Red or White moves first in
+// every eligible variant, so the picked color maps through the variant's own
+// first/second colors.
+function correspondenceSeat(
+  gameSpecId: LandingGameSpecId,
+  preferredColor: LandingColorPreference,
+): SeekPreferredColor {
+  if (preferredColor === 'random') return 'random';
+  const capabilities = landingGameSpecCapabilities(gameSpecId);
+  const color = coerceColorPreferenceForCapabilities(preferredColor, capabilities);
+  if (color === capabilities.firstColor) return 'first';
+  if (color === capabilities.secondColor) return 'second';
+  return 'random';
+}
+
+type CorrespondenceDialogSetup = {
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor?: LandingColorPreference;
+  mode?: 'friend' | 'lobby';
+};
+
+// The deep link that reopens the setup dialog with these picks, so signing in
+// from the dialog lands back on the same setup (maybeOpenPlayDeepLink reads it).
+function correspondenceSetupPath(setup: CorrespondenceDialogSetup, locale: Locale): string {
+  const params = new URLSearchParams({
+    play: setup.mode ?? 'friend',
+    variant: setup.gameSpecId,
+    tc: 'corr',
+    days: String(setup.daysPerMove),
+  });
+  if (setup.preferredColor) params.set('side', setup.preferredColor);
+  return localizedHref(`/?${params.toString()}`, locale);
+}
+
+function showCorrespondenceFailure(
+  status: HTMLElement,
+  failure: RoomCreationFailure,
+  locale: Locale,
+  setup: CorrespondenceDialogSetup,
+): void {
+  status.replaceChildren();
+  if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
+    const link = document.createElement('a');
+    link.href = loginHrefWithReferrer(correspondenceSetupPath(setup, locale), locale);
+    link.textContent = t('correspondence.signIn', {}, locale);
+    status.append(t('setup.correspondenceNeedsAccount', {}, locale), ' ', link);
+  } else if (failure.error === 'invalid_days_per_move') {
+    status.textContent = t(
+      'setup.invalidDaysPerMove',
+      { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+      locale,
+    );
+  } else if (failure.error === 'seek_limit_reached') {
+    status.textContent = t(
+      'correspondence.seekLimitReached',
+      { limit: failure.limit ?? 6 },
+      locale,
+    );
+  } else if (failure.error === 'server_draining') {
+    status.textContent = t('setup.serverRestartTimeout', {}, locale);
+  } else {
+    status.textContent = t('setup.correspondenceUnavailable', {}, locale);
   }
 }
 
@@ -2971,41 +3071,23 @@ async function postCorrespondenceSeekFromPlay(
     }
     const failure = await readRoomCreationFailure(response);
     if (!status.isConnected) return;
-    status.replaceChildren();
-    if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
-      status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
-    } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = t(
-        'setup.invalidDaysPerMove',
-        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
-        locale,
-      );
-    } else if (failure.error === 'seek_limit_reached') {
-      status.textContent = 'You already have the most open games allowed. Cancel one first.';
-    } else if (failure.error === 'server_draining') {
-      status.textContent = t('setup.serverRestartTimeout', {}, locale);
-    } else {
-      status.textContent = 'Correspondence is unavailable right now. Try again later.';
-    }
+    showCorrespondenceFailure(status, failure, locale, {
+      gameSpecId,
+      daysPerMove,
+      mode: 'lobby',
+    });
     button.textContent = t('setup.tryAgain', {}, locale);
     button.disabled = false;
     button.removeAttribute('aria-busy');
   } catch (err) {
     console.warn(err);
     if (status.isConnected) {
-      status.textContent = 'Could not reach the server. Check your connection and try again.';
+      status.textContent = t('setup.couldNotReachServer', {}, locale);
     }
     button.textContent = t('setup.tryAgain', {}, locale);
     button.disabled = false;
     button.removeAttribute('aria-busy');
   }
-}
-
-function accountLink(label: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.href = '/account';
-  link.textContent = label;
-  return link;
 }
 
 function buildEngineSetupSection(
