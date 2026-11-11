@@ -412,6 +412,19 @@ export type VariantTenantRegistration = {
         | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
       >)
     | null;
+  // The direct invite room a Challenge a friend correspondence create opens on
+  // POST /api/rooms (#1059): unseated, casual, the creator's side preference
+  // stored. A signed-out creator takes the first seat as a guest; the friend's
+  // seat needs an account (seat-session.ts). Optional so the 17
+  // non-correspondence registrations need no churn; every eligible spec supplies
+  // it through tenantCorrespondenceBinding.
+  createCorrespondenceRoom?: (
+    timeControl: RoomTimeControl,
+    preference?: string,
+  ) => Promise<
+    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
+  >;
 };
 
 const registrationsByPrefix = new Map<string, VariantTenantRegistration>();

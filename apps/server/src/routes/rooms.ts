@@ -19,6 +19,7 @@ import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jung
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
+import { handleCorrespondenceCreate, requestsCorrespondence } from './correspondence-rooms.js';
 import {
   type HttpApiContext,
   isAllowedRatedTimeControl,
@@ -58,6 +59,20 @@ export async function tryHandle(
     }
     const body = await resolveBotRoomRequest(response, rawBody);
     if (!body) return true;
+    // A correspondence friend invite (#1059), any eligible spec, guest or
+    // account: claimed before the tenant matchers, which claim on gameSpecId
+    // alone and would open a live room.
+    if (requestsCorrespondence(body)) {
+      const registration = registeredVariantTenants().find(
+        (entry) => entry.gameSpecId === body.gameSpecId,
+      );
+      await handleCorrespondenceCreate(
+        { ...ctx, createCorrespondenceRoom: registration?.createCorrespondenceRoom },
+        response,
+        body,
+      );
+      return true;
+    }
     // Variant tenants claim their create requests via the registry; each
     // tenant's handler owns its flag/rated/engine gates and error strings.
     // A registry miss falls through to the chess path below. The requester's

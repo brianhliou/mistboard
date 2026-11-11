@@ -2908,6 +2908,18 @@ async function createCorrespondenceFromPlay(
   try {
     const withdrawing = withdrawLobbySeeks();
     if (withdrawing) await withdrawing;
+    // Signed out, the invite is a direct room the guest sits in at once (#1059);
+    // they are asked to sign in only once the friend has sat. A link challenge
+    // needs an account to post, which walled off most of the guests who tried.
+    if (!isLikelySignedIn()) {
+      await createGuestCorrespondenceRoom(button, status, {
+        gameSpecId,
+        daysPerMove,
+        preferredColor,
+        locale,
+      });
+      return;
+    }
     const request = seekRequestBody({
       gameSpecId,
       daysPerMove,
@@ -2955,6 +2967,51 @@ async function createCorrespondenceFromPlay(
     button.disabled = false;
     button.removeAttribute('aria-busy');
   }
+}
+
+// A signed-out Challenge a friend correspondence create: POST /api/rooms opens
+// a casual invite room on the picked variant, and the room page seats this
+// browser with the usual bearer token. Failures read like the seek path's.
+async function createGuestCorrespondenceRoom(
+  button: HTMLButtonElement,
+  status: HTMLElement,
+  setup: {
+    gameSpecId: LandingGameSpecId;
+    daysPerMove: number;
+    preferredColor: LandingColorPreference;
+    locale: Locale;
+  },
+): Promise<void> {
+  const { gameSpecId, daysPerMove, preferredColor, locale } = setup;
+  const response = await postThroughRestart('/api/rooms', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      gameSpecId,
+      mode: 'correspondence',
+      daysPerMove,
+      preferredColor:
+        preferredColor === 'random'
+          ? 'random'
+          : coerceColorPreferenceForCapabilities(
+              preferredColor,
+              landingGameSpecCapabilities(gameSpecId),
+            ),
+    }),
+  });
+  if (response.ok) {
+    const data = (await response.json()) as { url?: string };
+    if (!data.url) throw new Error('room creation did not return a URL');
+    if (!status.isConnected) return;
+    roomNavigator(data.url);
+    return;
+  }
+  const failure = await readRoomCreationFailure(response);
+  if (!status.isConnected) return;
+  showCorrespondenceFailure(status, failure, locale, { gameSpecId, daysPerMove, preferredColor });
+  button.textContent = t('setup.tryAgain', {}, locale);
+  button.disabled = false;
+  button.removeAttribute('aria-busy');
 }
 
 // The dialog's side as the seek's move-order seat: Red or White moves first in

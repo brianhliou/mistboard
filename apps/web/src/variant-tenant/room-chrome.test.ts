@@ -4,6 +4,7 @@ import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import { lastBotGame } from '../pve-memory.js';
 import { resetRoomInvitePreviews } from '../room-invite-preview.js';
+import { setResolvedSignedIn } from '../signed-in-state.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
@@ -777,6 +778,56 @@ describe('tenant room chrome meta and invite emphasis', () => {
     dropped.chrome.renderRoomActions();
     expect(dropped.refs.actionStatus.textContent).not.toContain('Invite opponent');
     expect(dropped.refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  // #1059: a guest who opened a correspondence invite is asked to sign in once
+  // the friend has sat, so the game can email them; the sign-in returns here.
+  describe('a guest-held correspondence seat', () => {
+    const days = { initialMs: 3 * 86_400_000, incrementMs: 0, daysPerMove: 3 };
+    afterEach(() => {
+      setResolvedSignedIn(undefined);
+      window.history.replaceState(null, '', '/');
+    });
+
+    it('asks the guest to sign in once the friend has sat', () => {
+      setResolvedSignedIn(false);
+      window.history.replaceState(null, '', '/room/xq_guest');
+      const { chrome, refs } = chromeHarness({ timeControl: days });
+      chrome.renderRoomActions();
+      const notice = refs.roomActions.querySelector('.correspondence-guest-notice');
+      expect(notice?.textContent).toContain(
+        'Sign in so we can email you when it is your move. You keep your seat in this game.',
+      );
+      expect(notice?.textContent).not.toMatch(/\u2014/);
+      const link = notice?.querySelector<HTMLAnchorElement>('a');
+      expect(link?.textContent).toBe('Sign in');
+      expect(link?.getAttribute('href')).toContain('/account?tab=login');
+      expect(decodeURIComponent(link?.getAttribute('href') ?? '')).toContain('/room/xq_guest');
+    });
+
+    it('keeps the invite, not the sign-in, while the friend has not sat', () => {
+      setResolvedSignedIn(false);
+      const { chrome, refs } = chromeHarness({ timeControl: days, seats: { white: 'c-white' } });
+      chrome.renderRoomActions();
+      expect(refs.roomActions.querySelector('.correspondence-guest-notice')).toBeNull();
+      expect(refs.roomActions.textContent).toContain('Copy invite');
+    });
+
+    it('asks nobody signed in, and nobody in a live game', () => {
+      setResolvedSignedIn(true);
+      const signedIn = chromeHarness({ timeControl: days });
+      signedIn.chrome.renderRoomActions();
+      expect(signedIn.refs.roomActions.querySelector('.correspondence-guest-notice')).toBeNull();
+
+      setResolvedSignedIn(false);
+      const live = chromeHarness({ timeControl: { initialMs: 300_000, incrementMs: 5_000 } });
+      live.chrome.renderRoomActions();
+      expect(live.refs.roomActions.querySelector('.correspondence-guest-notice')).toBeNull();
+
+      const spectator = chromeHarness({ timeControl: days, seat: 'spectator' });
+      spectator.chrome.renderRoomActions();
+      expect(spectator.refs.roomActions.querySelector('.correspondence-guest-notice')).toBeNull();
+    });
   });
 
   it('offers no copy-invite in a bot game', () => {

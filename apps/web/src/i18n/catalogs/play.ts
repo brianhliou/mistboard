@@ -217,6 +217,8 @@ export const EN_PLAY = {
   // Live board chrome (live-render.ts): draft picker, meta card, overlays.
   'live.reconnectNow': 'Reconnect now',
   'live.signInTakeSeat': 'Sign in to take your seat',
+  'live.correspondenceGuestSignIn':
+    'Sign in so we can email you when it is your move. You keep your seat in this game.',
   'live.signInIfPlayer': 'One of the players? Sign in to return to your seat',
   'live.playingRightNow': 'Playing right now',
   'live.modeLabel': 'Mode',

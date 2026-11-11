@@ -458,6 +458,7 @@ export const ZH_HANS_PLAY = {
   'live.seatSpectator': '观战者',
   'live.reconnectNow': '立即重连',
   'live.signInTakeSeat': '登录后就座',
+  'live.correspondenceGuestSignIn': '登录后，轮到你走棋时我们会发邮件提醒你。你在本局的座位不变。',
   'live.signInIfPlayer': '你是对局一方？登录后回到你的座位',
   'live.playingRightNow': '正在进行',
   'live.modeLabel': '模式',

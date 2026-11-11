@@ -4,7 +4,6 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
-  DARK_CHESS_SPEC_ID,
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
   type DaysPerMove,
@@ -13,7 +12,6 @@ import {
 } from '@mistboard/game';
 import type { DrainCreate } from '../deploy-gate.js';
 import { correspondenceEnabled } from './../feature-flags.js';
-import type { UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
 import { isProductionLikeRuntime } from './../server-policy.js';
 import { writeJson } from './lib.js';
@@ -32,7 +30,7 @@ import { writeJson } from './lib.js';
 // days-per-move cadence can inflate only that pool. Live paces still never admit a
 // correspondence time control (isOfficialTimeControl short-circuits on daysPerMove).
 // Which specs may be rated: isCorrespondenceRatedSpec (@mistboard/game). This direct
-// create route (dark chess, friend rooms) stays casual.
+// create route (friend invite rooms, every eligible spec since #1059) stays casual.
 //
 // Deliberately NOT derived from a capability (e.g. GameSpec.visibility): xiangqi is
 // visibility 'open', so any visibility-derived rule would exclude exactly the spec this
@@ -75,27 +73,29 @@ export type CorrespondenceCreateContext = {
   drainDeadlineMs(): number | null;
   // Defaults to the real persistence module; injectable for tests.
   isPersistenceInitialized?(): boolean;
-  createCorrespondenceRoom(
+  // The spec's direct invite create (the registration's createCorrespondenceRoom);
+  // absent when the spec has none, which answers 501.
+  createCorrespondenceRoom?(
     timeControl: RoomTimeControl,
-    creatorPreference?: 'white' | 'black' | 'random',
+    creatorPreference?: string,
   ): Promise<
     | { ok: true; room: { id: string; gameSpecId: string } }
     | { ok: false; error: 'disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
 
-// Disjoint from the chess fallback (which serves plain dark-chess live
-// creates) and from the other tenants' matchers (which claim on their own
-// gameSpecId): correspondence claims only the explicit mode.
+// POST /api/rooms claims a correspondence body before any tenant matcher (the
+// tenants claim on gameSpecId alone, and their live create paths know nothing
+// of days per move), so the explicit mode routes here for every spec. Which
+// specs actually get a room is the eligibility check below.
 export function requestsCorrespondence(body: Record<string, unknown>): boolean {
-  return body.mode === 'correspondence' && body.gameSpecId === DARK_CHESS_SPEC_ID;
+  return body.mode === 'correspondence';
 }
 
 export async function handleCorrespondenceCreate(
   ctx: CorrespondenceCreateContext,
   response: ServerResponse,
   body: Record<string, unknown>,
-  accountUser: UserAccount | null,
 ): Promise<void> {
   if (!correspondenceEnabled()) {
     writeJson(response, 404, { error: 'correspondence_disabled' });
@@ -105,18 +105,21 @@ export async function handleCorrespondenceCreate(
     writeJson(response, 410, { error: 'retired_game_spec' });
     return;
   }
-  // The matcher already narrows to dark chess; this is the fork-6 allowlist
-  // staying fail-closed even if a future matcher widens.
-  if (typeof body.gameSpecId !== 'string' || !CORRESPONDENCE_ELIGIBLE_SPECS.has(body.gameSpecId)) {
+  // The fork-6 allowlist, fail-closed: only the public eligible specs get an
+  // invite room. A grant-gated spec (CORRESPONDENCE_ALLOWLISTED_SPECS) stays a
+  // seek-only, granted-accounts-only game, so a guest can never open one.
+  if (
+    typeof body.gameSpecId !== 'string' ||
+    !CORRESPONDENCE_ELIGIBLE_SPECS.has(body.gameSpecId) ||
+    !ctx.createCorrespondenceRoom
+  ) {
     writeJson(response, 501, { error: 'correspondence_unsupported_spec' });
     return;
   }
-  // Account-only by decision: durable identity for cross-device reseating and
-  // notifications. The deliberate exception to account-optional v1.
-  if (!accountUser) {
-    writeJson(response, 401, { error: 'correspondence_requires_account' });
-    return;
-  }
+  // A guest may create the invite (#1059): the room is a friend room with no
+  // seat taken, the creator's browser takes its seat with the usual bearer
+  // token, and signing in later binds that seat to the account (seat-session.ts).
+  // The friend's seat still needs an account.
   const timeControl = parseCorrespondenceTimeControl(body.daysPerMove);
   if (!timeControl) {
     writeJson(response, 400, { error: 'invalid_days_per_move' });
@@ -166,7 +169,9 @@ export function parseCorrespondenceTimeControl(daysPerMove: unknown): RoomTimeCo
   return null;
 }
 
-export function parsePreferredColor(value: unknown): 'white' | 'black' | 'random' | undefined {
-  if (value === 'white' || value === 'black' || value === 'random') return value;
-  return undefined;
+// A side for the creator: 'random' or a color name, which the spec's own
+// create checks against its colors (an unknown one falls back to move order).
+export function parsePreferredColor(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 16) return undefined;
+  return value;
 }
