@@ -4,7 +4,7 @@ Pacing uses one formula for every calibrated variant. The target is
 `clamp(min(clockShare * clockAfterCompute + incrementShare * increment, maxBase)
 * clamp(legalCount / variantMedian, .7, 1.4) * openingFactor * seededJitter,
 minTarget, maxTarget)`. Untimed games use `untimedBaseMs` instead of the clock
-share. A single move or decisive evaluation keeps only the short beat. A level eval stretches the target up to 1.4x and a lopsided one shortens it to 0.7x (`balanceFactor`); the usual wait caps at 7 s and a single reply at 12 s. Compute
+share. A single move or decisive evaluation keeps only the short beat. A level eval stretches the target up to 1.4x and a lopsided one shortens it to 0.7x (`balanceFactor`); each paced reply is spread log-normally around a target capped at 3 s (most near or under it, a few long), and a single reply stops at 12 s. Compute
 time is subtracted from the target; the hold consumes real bot clock time.
 
 `MISTBOARD_BOT_PACING=true` is the master switch.
