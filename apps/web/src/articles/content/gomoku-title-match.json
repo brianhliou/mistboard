@@ -1,0 +1,238 @@
+{
+  "source": "mistboard-engine/lab/gomoku-title-match-2026-11/{run-100,run-100b,run-equal-3s}: summary.json and games/*.json, recomputed with the paired bootstrap in scripts/gomoku-level-ladder.mjs (100,000 resamples of opening pairs)",
+  "rule": "freestyle 15x15 (five or more wins; full board draws)",
+  "openings": {
+    "pool": "GOMOKU_DEALT_OPENINGS",
+    "poolSize": 197,
+    "sha256": "e5afe52ff3c5f296be7b0496ee62251e5a5cbc4b42d514c3adc46548c33a1f4e",
+    "sampling": "seededRandom(seed) without replacement, as scripts/gomoku-level-ladder.mjs; each opening twice, colours swapped"
+  },
+  "machine": "Apple silicon Mac (arm64), one search thread per engine, a fresh engine process for every move",
+  "rapfi": {
+    "repo": "https://github.com/dhbloo/rapfi",
+    "commit": "1387d11312190ec66665d361ff07a7c70221b78a",
+    "binarySha256": "5508e616aa4cf5832bc444995994a3b7a56ba751674b77a7fc957919c34953ed",
+    "build": "arm64 NEON+dotprod (prod serves an x86-64 AVX2 build of the same commit)",
+    "network": "Rapfi Networks 7eeb19b (CC0), mix9svqfreestyle_bsmix.bin.lz4",
+    "hashMb": 32
+  },
+  "katagomo": {
+    "repo": "https://github.com/hzyhhzy/KataGomo",
+    "commit": "df152116e3787c75c6a3de099d261ca092b7dfc1",
+    "binarySha256": "46173931188a188aeddf67890edd9ee6bace12bb0c40e8d4ae347b08430c3b3b",
+    "backend": "Eigen (CPU)",
+    "network": {
+      "file": "b10_freestyle15x.bin.gz",
+      "model": "gom_distill-b10c128nbt_fs15xdistill-s13414086656-d64362574",
+      "sha256": "4fab5d142f9951b6d27bc0763779d2045c06e69e63cced8ed27cb25b4018e700",
+      "url": "https://github.com/hzyhhzy/KataGomo/releases/download/gomocup2025/b10_freestyle15x.bin.gz"
+    },
+    "passRetry": "Mistboard has no pass; a pass is asked again with pass forbidden. No retry changed a result."
+  },
+  "uneven": {
+    "rapfiBudget": {
+      "level": 8,
+      "nodes": 80000,
+      "timeMs": 3500
+    },
+    "katagomoBudget": {
+      "maxVisits": 250,
+      "maxTimeS": 8
+    },
+    "runs": [
+      {
+        "id": "run-100",
+        "seed": 20261110,
+        "startedAt": "2026-11-11T04:13:22.522Z",
+        "games": 100,
+        "wins": 30,
+        "draws": 33,
+        "losses": 37
+      },
+      {
+        "id": "run-100b",
+        "seed": 20261111,
+        "startedAt": "2026-11-11T06:49:17.192Z",
+        "games": 100,
+        "wins": 35,
+        "draws": 32,
+        "losses": 33
+      }
+    ],
+    "total": {
+      "games": 200,
+      "wins": 65,
+      "draws": 65,
+      "losses": 70,
+      "score": 0.4875,
+      "elo": -9,
+      "pairs": 100,
+      "pairedScore": 0.4875,
+      "pairedScoreLow": 0.435,
+      "pairedScoreHigh": 0.54,
+      "eloLow": -45,
+      "eloHigh": 28,
+      "bootstrapSeed": 20261110,
+      "rapfiAsBlack": {
+        "games": 100,
+        "wins": 35,
+        "draws": 33,
+        "losses": 32
+      },
+      "rapfiAsWhite": {
+        "games": 100,
+        "wins": 30,
+        "draws": 32,
+        "losses": 38
+      },
+      "endings": {
+        "board-full": 65,
+        "five": 135
+      },
+      "meanPlies": 109,
+      "timing": {
+        "rapfiMoves": 10890,
+        "katagomoMoves": 10893,
+        "rapfiMeanMs": 381,
+        "katagomoMeanMs": 4076,
+        "katagomoSearchMeanMs": 3913,
+        "rapfiNodesMedian": 80000,
+        "katagomoVisitsMedian": 250,
+        "katagomoPassRetries": 132
+      }
+    }
+  },
+  "equal": {
+    "rapfiBudget": {
+      "timeMs": 3000
+    },
+    "katagomoBudget": {
+      "maxTimeS": 3
+    },
+    "seed": 20261112,
+    "startedAt": "2026-11-11T10:36:44.111Z",
+    "played": 200,
+    "voided": {
+      "index": 157,
+      "opening": "gmk-154",
+      "rapfiColor": "black",
+      "reason": "Rapfi exceeded browser watchdog: 3252ms"
+    },
+    "total": {
+      "games": 199,
+      "wins": 113,
+      "draws": 61,
+      "losses": 25,
+      "score": 0.7211,
+      "elo": 165,
+      "pairs": 99,
+      "pairedScore": 0.7222,
+      "pairedScoreLow": 0.6717,
+      "pairedScoreHigh": 0.7702,
+      "eloLow": 124,
+      "eloHigh": 210,
+      "bootstrapSeed": 20261112,
+      "rapfiAsBlack": {
+        "games": 99,
+        "wins": 63,
+        "draws": 24,
+        "losses": 12
+      },
+      "rapfiAsWhite": {
+        "games": 100,
+        "wins": 50,
+        "draws": 37,
+        "losses": 13
+      },
+      "endings": {
+        "five": 138,
+        "board-full": 61
+      },
+      "meanPlies": 104,
+      "timing": {
+        "rapfiMoves": 10386,
+        "katagomoMoves": 10336,
+        "rapfiMeanMs": 2372,
+        "katagomoMeanMs": 3226,
+        "katagomoSearchMeanMs": 3002,
+        "rapfiNodesMedian": 450000,
+        "katagomoVisitsMedian": 139,
+        "katagomoPassRetries": 135
+      }
+    }
+  },
+  "featured": {
+    "match": "equal",
+    "index": 0,
+    "opening": {
+      "id": "gmk-234",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -28,
+        "nodes": 1000000,
+        "depth": 20,
+        "forcedWin": false
+      }
+    },
+    "rapfiColor": "white",
+    "winner": "white",
+    "reason": "five",
+    "moves": [
+      "f10",
+      "e9",
+      "d9",
+      "h9",
+      "h8",
+      "g8",
+      "f7",
+      "f6",
+      "g9",
+      "e11",
+      "f11",
+      "f9",
+      "e10",
+      "c8",
+      "j11",
+      "e6",
+      "d6",
+      "h7",
+      "g12",
+      "h13",
+      "j5",
+      "f5",
+      "c5",
+      "e7",
+      "j6",
+      "i7",
+      "i8",
+      "d7",
+      "g4",
+      "b9"
+    ]
+  }
+}

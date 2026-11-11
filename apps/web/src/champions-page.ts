@@ -19,6 +19,7 @@ import { prerenderMount } from './prerender-copy.js';
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
 import { isPublicGameSpec } from '@mistboard/game';
+import GOMOKU_MATCH_RECORD from './articles/content/gomoku-title-match.json' with { type: 'json' };
 import { articleIsLive } from './articles/publish-time.js';
 import {
   PIKAFISH_REPO_URL,
@@ -26,7 +27,7 @@ import {
   RAPFI_REPO_URL,
   XIANGQI_CC0_NET_URL,
 } from './engine-credits.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { type I18nKey, type I18nParams, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import {
@@ -65,6 +66,8 @@ type Reign = TitleMatch & {
   draws: number;
   losses: number;
   tookKey: I18nKey;
+  // Numbers the took line reads from a committed match record.
+  tookParams?: I18nParams;
   about: (locale: Locale) => Part[];
 };
 
@@ -192,17 +195,47 @@ const JIEQI_AB_JCHESS_20261031: Title = {
   },
 };
 
-// No title match has been played. Rapfi is credited as the available engine,
-// without asserting a holder or publishing the locally bundled network URL.
-export const GOMOKU_OPEN_TITLE: Title = {
+// Rapfi won the first Gomoku title match against KataGomo (mistboard-engine
+// lab/gomoku-title-match-2026-11, run-equal-3s, 2026-11-11): 3 s a move for both
+// engines on one machine. The numbers come from the committed record the article
+// reads (articles/content/gomoku-title-match.json). The write-up goes live on its
+// own date; the test pins this date to the article's publishedAt and status. No
+// study of the games exists yet, so the card has no games link. Credits stay the
+// engine and its browser build, without publishing the locally bundled network URL.
+export const GOMOKU_TITLE_WRITE_UP = { status: 'published', publishedAt: '2026-11-13' } as const;
+const GOMOKU_TITLE_MATCH: TitleMatch = articleIsLive(GOMOKU_TITLE_WRITE_UP)
+  ? { writeUpHref: '/blog/rapfi-vs-katagomo' }
+  : {};
+const GOMOKU_EQUAL = GOMOKU_MATCH_RECORD.equal.total;
+export const GOMOKU_TITLE_PARAMS = {
+  games: GOMOKU_EQUAL.games,
+  wins: GOMOKU_EQUAL.wins,
+  draws: GOMOKU_EQUAL.draws,
+  losses: GOMOKU_EQUAL.losses,
+  score: Math.round(GOMOKU_EQUAL.score * 100),
+  seconds: GOMOKU_MATCH_RECORD.equal.rapfiBudget.timeMs / 1000,
+  nodes: GOMOKU_MATCH_RECORD.uneven.rapfiBudget.nodes.toLocaleString('en-US'),
+};
+export const GOMOKU_TITLE: Title = {
   gameId: 'gomoku',
   nameKey: 'variant.gomoku.name',
+  holder: 'Rapfi',
+  botHref: '/bot/rapfi-level-8',
   setupEngineId: 'rapfi-level-8',
   credits: {
     code: [
       { name: 'Rapfi', href: RAPFI_REPO_URL },
       { name: 'Rapfi WASM', href: RAPFI_BUILD_URL },
     ],
+  },
+  reign: {
+    wins: GOMOKU_EQUAL.wins,
+    draws: GOMOKU_EQUAL.draws,
+    losses: GOMOKU_EQUAL.losses,
+    tookKey: 'champions.tookGomoku',
+    tookParams: GOMOKU_TITLE_PARAMS,
+    about: (locale) => [t('champions.aboutGomoku', GOMOKU_TITLE_PARAMS, locale)],
+    ...GOMOKU_TITLE_MATCH,
   },
 };
 
@@ -269,14 +302,25 @@ export const TITLES: readonly Title[] = [
     ...MISTY,
     credits: mistyRepo('misty-xiangqi-mahjong'),
   },
-  ...(isPublicGameSpec('gomoku') ? [GOMOKU_OPEN_TITLE] : []),
+  ...(isPublicGameSpec('gomoku') ? [GOMOKU_TITLE] : []),
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);
 export const OPEN_TITLES = TITLES.filter((title) => !title.reign);
 
 // One line per title change, newest first.
-export const TITLE_HISTORY: ReadonlyArray<TitleMatch & { textKey: I18nKey }> = [
+export const TITLE_HISTORY: ReadonlyArray<
+  TitleMatch & { textKey: I18nKey; textParams?: I18nParams }
+> = [
+  ...(isPublicGameSpec('gomoku')
+    ? [
+        {
+          ...GOMOKU_TITLE_MATCH,
+          textKey: 'champions.historyGomoku' as const,
+          textParams: GOMOKU_TITLE_PARAMS,
+        },
+      ]
+    : []),
   { ...AB_JCHESS_2026_MATCH, textKey: 'champions.historyAbJchess2' },
   { ...JQE_MATCH, textKey: 'champions.historyJqe' },
   { ...JIEQI_MATCH, textKey: 'champions.historyJieqi' },
@@ -349,7 +393,12 @@ function button(label: string, href: string): HTMLAnchorElement {
 }
 
 // "<text> (write-up, games)." for the history list, with only the links that exist.
-function matchLine(locale: Locale, textKey: I18nKey, match: TitleMatch): Part[] {
+function matchLine(
+  locale: Locale,
+  textKey: I18nKey,
+  match: TitleMatch,
+  params: I18nParams = {},
+): Part[] {
   const links: Part[] = [];
   if (match.writeUpHref) {
     links.push(
@@ -360,9 +409,9 @@ function matchLine(locale: Locale, textKey: I18nKey, match: TitleMatch): Part[] 
     if (links.length > 0) links.push(t('champions.linkSeparator', {}, locale));
     links.push(proseLink(t('champions.gamesLink', {}, locale), match.gamesHref));
   }
-  if (links.length === 0) return [t(textKey, {}, locale), t('champions.lineEnd', {}, locale)];
+  if (links.length === 0) return [t(textKey, params, locale), t('champions.lineEnd', {}, locale)];
   return [
-    t(textKey, {}, locale),
+    t(textKey, params, locale),
     t('champions.parenOpen', {}, locale),
     ...links,
     t('champions.parenClose', {}, locale),
@@ -433,7 +482,7 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
   card.append(
     head,
     scoreBlock(reign, locale),
-    el('p', 'champions-took', [t(reign.tookKey, {}, locale)]),
+    el('p', 'champions-took', [t(reign.tookKey, reign.tookParams, locale)]),
     el('p', 'champions-about', reign.about(locale)),
     ...(title.credits ? [creditList(title.credits, locale)] : []),
     actions,
@@ -493,7 +542,7 @@ export function buildChampions(locale: Locale = currentLocale()): HTMLElement {
     ]),
 
     proseSubheading(t('champions.historyHeading', {}, locale)),
-    list(TITLE_HISTORY.map((entry) => matchLine(locale, entry.textKey, entry))),
+    list(TITLE_HISTORY.map((entry) => matchLine(locale, entry.textKey, entry, entry.textParams))),
 
     challengeHeading,
     list([

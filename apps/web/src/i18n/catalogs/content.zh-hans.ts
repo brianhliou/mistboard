@@ -532,6 +532,10 @@ export const ZH_HANS_CONTENT = {
     "作者 Huorongrong 和 Laoxu（Kouza），基于 Devin O'Keefe 的开源引擎 jqe 的代码，带有自己的神经网络。在本站每步 4 秒，4 线程。",
   'champions.tookJungle':
     '2026-09-22 从 MistyJungle 手中夺得头衔，共 200 局，每步 1,000 次访问，一局未负。',
+  'champions.tookGomoku':
+    '2026-11-11 赢得首场五子棋头衔赛，对手 KataGomo，双方每步 {seconds} 秒，共 {games} 局，得分率 {score}%。',
+  'champions.aboutGomoku':
+    '作者 dhbloo 及 Rapfi 贡献者，带有自己的神经网络。在本站每步搜索 {nodes} 个局面，在这个预算下与 KataGomo 得分大致持平。',
   'champions.readMatch': '阅读比赛报道',
   'champions.seeGames': '查看对局',
   'champions.playChampion': '与冠军对弈',
@@ -554,6 +558,8 @@ export const ZH_HANS_CONTENT = {
     '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 从皮卡鱼第 8 级手中夺得头衔，400 局 248-136-16，得分率 64%',
   'champions.historyJungle':
     '2026-09-22，斗兽棋：hzyhhzy 的 KataGo-AnimalChess（网络来自 Kouza）从 MistyJungle 手中夺得头衔，每步 1,000 次访问，200 局 82 胜 0 负 118 和',
+  'champions.historyGomoku':
+    '2026-11-11，五子棋：dhbloo 及 Rapfi 贡献者的 Rapfi 赢得首场头衔赛，对手 KataGomo，每步 {seconds} 秒，{games} 局 {wins}-{losses}-{draws}，得分率 {score}%',
   'champions.challengeHeading': '挑战头衔',
   'champions.ruleMatch':
     '与冠军对弈 200 局，每种颜色各 100 局，双方都使用冠军每步的时间或节点预算，在同一台机器上进行，公开随机种子。对抗赛可以延长到 200 局以上。',

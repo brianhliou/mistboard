@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import GOMOKU_MATCH from './articles/content/gomoku-title-match.json' with { type: 'json' };
 import { articleIsLive } from './articles/publish-time.js';
 import {
   AB_JCHESS_2026_WRITE_UP,
   buildChampions,
   CHAMPIONS,
+  GOMOKU_TITLE_WRITE_UP,
   OPEN_TITLES,
   TITLE_HISTORY,
   TITLES,
@@ -59,14 +61,16 @@ describe('/champions', () => {
   it('shows the won titles as hero cards and every other game with a bot as open', () => {
     const page = buildChampions('en');
     const heroes = [...page.querySelectorAll<HTMLElement>('.champions-hero')];
-    expect(heroes.map((card) => card.dataset.game)).toEqual(['jieqi', 'jungle']);
+    expect(heroes.map((card) => card.dataset.game)).toEqual(['jieqi', 'jungle', 'gomoku']);
     expect(heroes.map((card) => card.querySelector('h3')?.textContent)).toEqual([
       'AB-JChess',
       'KataGo-AnimalChess',
+      'Rapfi',
     ]);
     expect(heroes.map((card) => card.querySelector('.champions-hero-game')?.textContent)).toEqual([
       'Jieqi',
       'Jungle Chess',
+      'Gomoku',
     ]);
     for (const card of heroes) {
       expect(card.querySelector('.champions-crown svg.ui-icon-title-champion')).not.toBeNull();
@@ -84,7 +88,6 @@ describe('/champions', () => {
       'dark-chess',
       'jungle-flip',
       'xiangqi-mahjong',
-      'gomoku',
     ]);
     const holder = (game: string) =>
       page.querySelector<HTMLAnchorElement>(
@@ -131,6 +134,8 @@ describe('/champions', () => {
     // AB-JChess-20261031 won 306, lost 227, drew 67 against jqe (a 0.566 score).
     expect(stats('jieqi')).toEqual(['306 wins', '67 draws', '227 losses']);
     expect(stats('jungle')).toEqual(['82 wins', '118 draws', '0 losses']);
+    // Rapfi against KataGomo at 3 s a move each, from the committed match record.
+    expect(stats('gomoku')).toEqual(['113 wins', '61 draws', '25 losses']);
     expect(card('jieqi').querySelector('.champions-bar')?.getAttribute('aria-label')).toBe(
       '306 wins, 67 draws, 227 losses',
     );
@@ -141,6 +146,12 @@ describe('/champions', () => {
     );
     expect(card('jungle').querySelector('.champions-took')?.textContent).toContain(
       'from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move',
+    );
+    expect(card('gomoku').querySelector('.champions-took')?.textContent).toBe(
+      'Won the first Gomoku title match, against KataGomo, on 2026-11-11: 199 games at 3 s a move for both engines, scoring 72%.',
+    );
+    expect(card('gomoku').querySelector('.champions-about')?.textContent).toBe(
+      'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at 80,000 positions a move, a budget at which it scored about even with KataGomo.',
     );
     const buttons = (game: string) =>
       [...card(game).querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
@@ -157,10 +168,16 @@ describe('/champions', () => {
       'See the games /study/0t8xpyv6',
       'Play the champion /?play=computer&gameSpecId=jungle&engineId=katago-jungle',
     ]);
+    // No study of the Gomoku match yet, so no games button.
+    expect(buttons('gomoku')).toEqual([
+      ...(articleIsLive(GOMOKU_TITLE_WRITE_UP) ? ['Read the match /blog/rapfi-vs-katagomo'] : []),
+      'Play the champion /?play=computer&gameSpecId=gomoku&engineId=rapfi-level-8',
+    ]);
     const play = (game: string) =>
       card(game).querySelector('.champions-actions a:last-child')?.getAttribute('href') ?? null;
     expectPlaysTheHolder(play('jieqi'), 'jieqi', 'ab-jchess-jieqi');
     expectPlaysTheHolder(play('jungle'), 'jungle', 'katago-jungle');
+    expectPlaysTheHolder(play('gomoku'), 'gomoku', 'rapfi-level-8');
     // Each champion links its engine's source, and no card plugs another bot.
     expect(hrefs(card('jieqi') as HTMLElement)).toContain('https://github.com/lxsgx23/AB-JChess');
     expect(hrefs(card('jungle') as HTMLElement)).toContain(
@@ -188,7 +205,11 @@ describe('/champions', () => {
       [...page.querySelectorAll('.champions-hero h3 a.champions-hero-name-link')].map(
         (a) => `${a.textContent} ${a.getAttribute('href')}`,
       ),
-    ).toEqual(['AB-JChess /bot/ab-jchess', 'KataGo-AnimalChess /bot/katago']);
+    ).toEqual([
+      'AB-JChess /bot/ab-jchess',
+      'KataGo-AnimalChess /bot/katago',
+      'Rapfi /bot/rapfi-level-8',
+    ]);
 
     expect(credits(hero('jieqi'))).toEqual([
       'Code: AB-JChess https://github.com/lxsgx23/AB-JChess, jqe https://github.com/devinokeefe/jieqi',
@@ -197,6 +218,10 @@ describe('/champions', () => {
     expect(credits(hero('jungle'))).toEqual([
       'Code: KataGomo https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025, KataGo https://github.com/lightvector/KataGo',
       'Network: Dandelion 4 https://github.com/lxsgx23/Dandelion-Chess',
+    ]);
+    // The challenger has no slot on the card: Rapfi's code and its browser build only.
+    expect(credits(hero('gomoku'))).toEqual([
+      'Code: Rapfi https://github.com/dhbloo/rapfi, Rapfi WASM https://github.com/brianhliou/rapfi-wasm',
     ]);
     expect(credits(open('xiangqi'))).toEqual([
       'Code: Pikafish https://github.com/official-pikafish/Pikafish',
@@ -278,9 +303,9 @@ describe('/champions', () => {
       expect(
         [...jieqi.querySelectorAll('.champions-stats dd')].map((dd) => dd.textContent),
       ).toEqual(['306', '67', '227']);
-      const lines = [...page.querySelectorAll('.champions-list li')].map(
-        (li) => li.textContent ?? '',
-      );
+      const lines = [...page.querySelectorAll('.champions-list li')]
+        .map((li) => li.textContent ?? '')
+        .filter((line) => line.includes(', Jieqi: '));
       expect(lines[0]).toMatch(/^2026-10-31, Jieqi: AB-JChess-20261031/);
       expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe/);
     } finally {
@@ -368,12 +393,15 @@ describe('/champions', () => {
     expect(lines).toHaveLength(TITLE_HISTORY.length);
     // What follows the score depends on the date (the write-up link goes live 2026-11-02 09:00);
     // the dated test pins it.
+    const gomoku =
+      '2026-11-11, Gomoku: Rapfi, by dhbloo and the Rapfi contributors, won the first title match, against KataGomo, 113-25-61 over 199 games at 3 s a move, scoring 72%';
+    expect(lines[0].slice(0, gomoku.length)).toBe(gomoku);
     const first =
       "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%";
-    expect(lines[0].slice(0, first.length)).toBe(first);
-    expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
-    expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
-    expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
+    expect(lines[1].slice(0, first.length)).toBe(first);
+    expect(lines[2]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
+    expect(lines[3]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+    expect(lines[4]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
     const links = hrefs(page);
     for (const href of ['/blog/ab-jchess', '/blog/katago-jungle', '/data', '/study/0t8xpyv6']) {
       expect(links, href).toContain(href);
@@ -445,44 +473,79 @@ describe('/champions', () => {
   });
 });
 
-describe('Gomoku open title', () => {
+describe('Gomoku title', () => {
   afterEach(() => {
     vi.doUnmock('@mistboard/game');
     vi.resetModules();
   });
-  it('prepares Rapfi credits with no invented holder or match', async () => {
-    const module = await import('./champions-page.js');
-    expect(module).toHaveProperty(
-      'GOMOKU_OPEN_TITLE',
-      expect.objectContaining({ gameId: 'gomoku', setupEngineId: 'rapfi-level-8' }),
-    );
-    const title = (module as unknown as { GOMOKU_OPEN_TITLE: Record<string, unknown> })
-      .GOMOKU_OPEN_TITLE;
-    for (const field of ['holder', 'holderKey', 'botHref', 'reign'])
-      expect(title).not.toHaveProperty(field);
-    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(true);
+
+  // The card, its history line and the write-up read one record
+  // (articles/content/gomoku-title-match.json); the numbers cannot drift apart.
+  it('takes the reign from the equal-time match record', async () => {
+    const { GOMOKU_TITLE, GOMOKU_TITLE_PARAMS } = await import('./champions-page.js');
+    const T = GOMOKU_MATCH.equal.total;
+    expect(GOMOKU_TITLE.reign).toMatchObject({ wins: T.wins, draws: T.draws, losses: T.losses });
+    expect(T.wins + T.draws + T.losses).toBe(T.games);
+    expect(GOMOKU_TITLE_PARAMS).toEqual({
+      games: 199,
+      wins: 113,
+      draws: 61,
+      losses: 25,
+      score: 72,
+      seconds: 3,
+      nodes: '80,000',
+    });
+    // 55% takes a title (champions.ruleScore); the whole 95% range clears it.
+    expect(T.pairedScoreLow).toBeGreaterThan(0.55);
   });
-  it('renders the launched Rapfi open title last with supported public credit links', async () => {
+
+  it('links the write-up on its card and history line once live', async () => {
+    const links = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      vi.resetModules();
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const page = build('en');
+        const text = (as: Iterable<HTMLAnchorElement>) =>
+          [...as].map((a) => `${a.textContent} ${a.getAttribute('href')}`);
+        const li = [...page.querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-11-11, Gomoku: Rapfi'),
+        );
+        return {
+          card: text(
+            page.querySelectorAll<HTMLAnchorElement>('[data-game="gomoku"] .champions-actions a'),
+          ),
+          history: text(li?.querySelectorAll<HTMLAnchorElement>('a') ?? []),
+        };
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    const play = 'Play the champion /?play=computer&gameSpecId=gomoku&engineId=rapfi-level-8';
+    expect(GOMOKU_TITLE_WRITE_UP).toEqual({ status: 'published', publishedAt: '2026-11-13' });
+    expect(await links('2026-11-12T17:00:00Z')).toEqual({ card: [play], history: [] });
+    expect(await links('2026-11-13T17:00:00Z')).toEqual({
+      card: ['Read the match /blog/rapfi-vs-katagomo', play],
+      history: ['write-up /blog/rapfi-vs-katagomo'],
+    });
+  });
+
+  it('shows no Gomoku card or history line while Gomoku is not public', async () => {
     vi.resetModules();
     vi.doMock('@mistboard/game', async (importOriginal) => {
       const actual = await importOriginal<typeof import('@mistboard/game')>();
       return {
         ...actual,
-        isPublicGameSpec: (id: string) => id === 'gomoku' || actual.isPublicGameSpec(id),
+        isPublicGameSpec: (id: string) => id !== 'gomoku' && actual.isPublicGameSpec(id),
       };
     });
-    const launched = await import('./champions-page.js');
-    expect(launched.TITLES.at(-1)?.gameId).toBe('gomoku');
-    expect(launched.CHAMPIONS.some((title) => title.gameId === 'gomoku')).toBe(false);
-    const card = launched.buildChampions('en').querySelector('[data-game="gomoku"]');
-    expect(card).not.toBeNull();
-    expect(card!.querySelector('.champions-open-holder')).toBeNull();
-    expect(card!.querySelector('.champions-open-badge')?.textContent).toBe('Title open');
-    expect(hrefs(card as HTMLElement)).toEqual([
-      'https://github.com/dhbloo/rapfi',
-      'https://github.com/brianhliou/rapfi-wasm',
-    ]);
-    expect(card!.textContent).toContain('Rapfi');
-    expect(card!.querySelector('.champions-stat')).toBeNull();
+    const hidden = await import('./champions-page.js');
+    expect(hidden.TITLES.some((title) => title.gameId === 'gomoku')).toBe(false);
+    expect(hidden.TITLE_HISTORY.some((line) => line.textKey === 'champions.historyGomoku')).toBe(
+      false,
+    );
+    expect(hidden.buildChampions('en').querySelector('[data-game="gomoku"]')).toBeNull();
   });
 });

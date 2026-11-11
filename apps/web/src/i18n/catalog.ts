@@ -13,7 +13,7 @@ import { CRITICAL_REVIEW_I18N_KEYS, EN_REVIEW } from './catalogs/review.js';
 import { CRITICAL_SHELL_I18N_KEYS, EN_SHELL } from './catalogs/shell.js';
 import { currentLocale, type Locale } from './locale.js';
 
-type I18nParams = Record<string, number | string>;
+export type I18nParams = Record<string, number | string>;
 
 export type ZhLocale = Exclude<Locale, 'en'>;
 

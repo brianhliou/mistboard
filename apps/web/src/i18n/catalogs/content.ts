@@ -455,6 +455,10 @@ export const EN_CONTENT = {
     "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
+  'champions.tookGomoku':
+    'Won the first Gomoku title match, against KataGomo, on 2026-11-11: {games} games at {seconds} s a move for both engines, scoring {score}%.',
+  'champions.aboutGomoku':
+    'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at {nodes} positions a move, a budget at which it scored about even with KataGomo.',
   'champions.readMatch': 'Read the match',
   'champions.seeGames': 'See the games',
   'champions.playChampion': 'Play the champion',
@@ -480,6 +484,8 @@ export const EN_CONTENT = {
     "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%",
   'champions.historyJungle':
     '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
+  'champions.historyGomoku':
+    '2026-11-11, Gomoku: Rapfi, by dhbloo and the Rapfi contributors, won the first title match, against KataGomo, {wins}-{losses}-{draws} over {games} games at {seconds} s a move, scoring {score}%',
   'champions.challengeHeading': 'Challenge for a title',
   'champions.ruleMatch':
     "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
