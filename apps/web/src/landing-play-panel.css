@@ -26,13 +26,18 @@
 
 .pp-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 22px;
-  padding: 0 4px 6px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 0 6px;
 }
 
+/* Equal thirds (or halves): the strip reads as one control, not a row of
+   links, whichever tabs are present. */
 .pp-tab {
-  padding: 4px 0 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 6px 6px;
+  text-align: center;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
@@ -52,30 +57,26 @@
   border-bottom-color: var(--site-accent-strong);
 }
 
+/* Every count in the panel is one colour, the same as the bell's in the nav:
+   a number on a tab means something is waiting, whichever tab it is. */
 .pp-badge {
   display: inline-block;
   min-width: 17px;
   margin-left: 7px;
   padding: 0 5px;
-  border-radius: 9px;
-  background: var(--pp-gold);
-  color: #221a08;
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: #fff;
   font-size: 11px;
   font-weight: 700;
   line-height: 17px;
   text-align: center;
   vertical-align: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .pp-badge[hidden] {
   display: none;
-}
-
-/* The Your move count is the accent, not gold: gold in this panel is a player
-   waiting for a game, this is a game waiting on you. */
-.pp-badge-moves {
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong);
 }
 
 .pp-card {
@@ -557,6 +558,14 @@
   font-size: 12.5px;
 }
 
+/* Resting colour for the footer link; it rendered as the browser's default
+   blue. One element plus one class, so hover-grammar.css's two-class hover
+   rule still wins on hover. */
+.pp-moves-foot a {
+  color: var(--site-accent-strong);
+  text-decoration: none;
+}
+
 .pp-tile-text {
   display: flex;
   min-width: 0;
@@ -765,7 +774,7 @@
   }
 
   .pp-tabs {
-    gap: 16px;
+    gap: 0;
   }
 
   .pp-tab {
