@@ -847,6 +847,7 @@ export const ZH_HANT_PLAY = {
   'live.atomicCheckYour': '你的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.atomicCheckColor': '{color}的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.banqiChaseForbidden': '長捉：這步棋會讓同一局面第三次出現。請走別的著法。',
+  'live.ffq.chaseForbidden': '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。',
   'live.tk.points': '{count} 分',
   'live.tk.captured': '吃子',
   'live.tk.none': '無',

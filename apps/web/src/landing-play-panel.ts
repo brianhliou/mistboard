@@ -16,6 +16,7 @@ import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
 import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
@@ -406,7 +407,12 @@ export function buildPlayPanel(
     landingBotLadder(
       gameSpecId,
       playableBots.get(gameSpecId),
-      gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID ? threeKingdomsBanqiEngineIds : playableEngines,
+      gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+        ? threeKingdomsBanqiEngineIds
+        : new Set([
+            ...playableEngines,
+            ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
+          ]),
     );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
@@ -1097,6 +1103,7 @@ export function buildPlayPanel(
           ? (r.json() as Promise<{
               banqiEngines?: { id: string }[];
               jungleFlipEngines?: { id: string }[];
+              ffqBanqiEngines?: WebTenantEngineOption[];
               threeKingdomsBanqiEngines?: WebTenantEngineOption[];
             }>)
           : null,
@@ -1109,6 +1116,7 @@ export function buildPlayPanel(
           );
           setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
         }
+        setFFQBanqiEngineOptions(data.ffqBanqiEngines ?? []);
         playableEngines = new Set(
           [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
         );

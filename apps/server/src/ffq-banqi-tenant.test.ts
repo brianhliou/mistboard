@@ -85,7 +85,7 @@ function hello(socket: FakeSocket) {
   return frame;
 }
 
-test('FFQ creates a durable random setup, with no bot or rematch plumbing', () => {
+test('FFQ creates a durable casual setup and recognizes only its own bot seats', () => {
   const created = createTenantRuntimeRoom(ffqBanqiTenant, 'ffq_random');
   assert.ok(created.ok);
   const first = created.room.events[0];
@@ -97,7 +97,11 @@ test('FFQ creates a durable random setup, with no bot or rematch plumbing', () =
   );
   assert.equal(created.room.rated, false);
   assert.equal(created.room.pveBotId, null);
-  assert.equal(ffqBanqiTenant.engine, undefined);
+  assert.equal(ffqBanqiTenant.engine?.isEngineClientId('misty-ffq-banqi-level-4'), true);
+  assert.equal(
+    ffqBanqiTenant.engine?.isEngineClientId('misty-three-kingdoms-banqi-level-4'),
+    false,
+  );
   assert.ok(ffqBanqiTenant.rematch?.optOut);
   for (const setup of [undefined, {}, { deal: [] }]) {
     const hydrated = createTenantRuntimeRoomFromEvents(ffqBanqiTenant, [

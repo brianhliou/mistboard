@@ -3750,7 +3750,8 @@ export function roomCreationRequestBody(
   }
   if (
     setup.gameSpecId === JUNGLE_FLIP_SPEC_ID ||
-    setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+    setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID ||
+    setup.gameSpecId === FFQ_BANQI_SPEC_ID
   ) {
     // Flip Jungle is symmetric hidden-identity 4×4 flip animal chess; move-order
     // seats (ink binds on the first flip). PvP + in-process-spawned

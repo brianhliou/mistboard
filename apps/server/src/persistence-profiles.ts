@@ -413,6 +413,8 @@ export function isProfileGameResultFilter(value: unknown): value is ProfileGameR
 
 /** The profile Games list's filters, every one optional and ANDed together. */
 export type ProfileGameFilters = {
+  /** Server-only authorization, never read from query parameters. */
+  includeFFQ?: boolean;
   /** Rating pool (the rail's variant), legacy variant strings included. */
   ratingVariant?: RatingVariant | null;
   /** Win, loss or draw from the profile owner's seat. */
@@ -545,7 +547,7 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
-       AND ${notFFQBanqiGame()}
+       ${filters.includeFFQ ? '' : `AND ${notFFQBanqiGame()}`}
        ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
      )
@@ -610,7 +612,7 @@ export async function listRecentFinishedCorrespondenceGames(
 export async function getUserProfileByHandle(
   handle: string,
   viewerUserId: string | null,
-  options: { timeZone?: string | null } = {},
+  options: { timeZone?: string | null; includeFFQ?: boolean } = {},
 ): Promise<UserProfile | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -623,6 +625,7 @@ export async function getUserProfileByHandle(
     isViewer,
     0,
     PROFILE_GAMES_PAGE,
+    { includeFFQ: options.includeFFQ },
   );
 
   const visibilityClause = profileVisibilityClause(isViewer);

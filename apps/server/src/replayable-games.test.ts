@@ -299,3 +299,15 @@ test('hydrating a room whose log no longer replays fails soft', () => {
   const good = createTenantRuntimeRoomFromEvents(crazyhouseXiangqiTenant, goodEvents());
   assert.equal(good.ok, true);
 });
+
+test('FFQ personal history is opt-in and discovery still excludes it', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const rows = [{ roomId: 'ffq_personal', variant: 'ffq-banqi' }];
+  const deps: ReplayableGameDeps = {
+    registrationForRoomId: () => null,
+    loadRoomsEvents: async () => new Map(),
+  };
+  assert.deepEqual(await markUnavailableGames(rows, deps), []);
+  assert.deepEqual(await markUnavailableGames(rows, deps, true), rows);
+  assert.deepEqual(await filterReplayableGames(rows, deps), []);
+});
