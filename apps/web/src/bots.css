@@ -97,6 +97,31 @@
   gap: 30px;
 }
 
+/* The game rail beside the cards: the /games and /data rail (current-games.css),
+   chips on a phone. */
+.bots-layout {
+  gap: 20px;
+}
+
+/* A ladder's level, chosen inside its card, under the name. 44px tall for a
+   thumb, as the /data selects are. */
+.bot-level-picker {
+  display: flex;
+}
+
+.bot-level-select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--site-text);
+  background: var(--site-bg);
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+}
+
 /* ── Roster sections ──────────────────────────────────────────────────────── */
 
 .bot-roster-section {

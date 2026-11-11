@@ -168,12 +168,20 @@ describe('bot pages', () => {
       });
       const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
       const root = document.createElement('div');
+      window.history.replaceState(null, '', '/bots?game=gomoku');
       await mountBots(root);
+      window.history.replaceState(null, '', '/');
+      // One Rapfi card; every level is in its picker and the card opens on Level 1.
+      expect(root.querySelectorAll('.profile-summary-card')).toHaveLength(1);
+      expect(root.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+        '/bot/rapfi-level-1',
+      );
       expect(
-        Array.from(root.querySelectorAll('.profile-summary-card-name'), (link) =>
-          link.getAttribute('href'),
+        Array.from(
+          root.querySelectorAll<HTMLOptionElement>('.bot-level-select option'),
+          (option) => option.value,
         ),
-      ).toEqual(bots.map((bot) => `/bot/${bot.id}`));
+      ).toEqual(bots.map((bot) => bot.id));
       for (const bot of bots) {
         const row = buildProfileGameRow({
           roomId: `gmk_${bot.id}`,
@@ -452,141 +460,219 @@ describe('bot pages', () => {
     });
   });
 
-  // The page is for "play xiangqi against the computer": the ladder leads, named
-  // by level, Pikafish is its top rung, the first-timer level says Start here,
-  // and Misty (no xiangqi) follows under Other games.
-  // General Blunder plays xiangqi but is off the ladder: it goes below Level 1,
-  // never in the top-rung slot that reads Strongest.
-  it('puts General Blunder below Level 1, not as a top rung', async () => {
-    const payload = rosterPayload();
-    payload.bots.push(
-      pikafish({
-        id: 'general-blunder',
-        displayName: 'General Blunder',
-        bio: 'Plays the worst move it can find.',
-        activeEngineId: 'fairy-stockfish-xiangqi-worst',
-        supportedGameSpecIds: ['xiangqi'],
-        playOptions: [
-          { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
-        ],
-      }),
+  // /bots picks the game first (the rail, ?game=), then lists one card per
+  // opponent for it. A ladder is one card with a level picker; General Blunder
+  // runs on Fairy-Stockfish but is its own card, never a rung (bot-opponents.ts).
+  function cardFor(root: HTMLElement, opponentId: string): HTMLElement | null {
+    return root.querySelector<HTMLElement>(
+      `.profile-summary-card[data-opponent-id="${opponentId}"]`,
     );
+  }
+
+  function pickLevel(root: HTMLElement, opponentId: string, botId: string): HTMLElement {
+    const select = cardFor(root, opponentId)?.querySelector<HTMLSelectElement>('.bot-level-select');
+    expect(select).toBeTruthy();
+    select!.value = botId;
+    select!.dispatchEvent(new Event('change'));
+    return cardFor(root, opponentId)!;
+  }
+
+  function generalBlunder(): Record<string, unknown> {
+    return pikafish({
+      id: 'general-blunder',
+      displayName: 'General Blunder',
+      bio: 'Plays the worst move it can find.',
+      activeEngineId: 'fairy-stockfish-xiangqi-worst',
+      supportedGameSpecIds: ['xiangqi'],
+      playOptions: [
+        { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
+      ],
+    });
+  }
+
+  it('puts General Blunder in its own card ahead of the ladder, never Strongest', async () => {
+    const payload = rosterPayload();
+    payload.bots.push(generalBlunder());
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
 
-    const names = [
-      ...root.querySelectorAll(
-        '.bot-roster-section:nth-of-type(1) .profile-summary-card .profile-summary-card-name',
-      ),
-    ].map((el) => el.textContent);
-    expect(names[0]).toBe('General Blunder');
-    expect(names.at(-1)).toBe('Pikafish');
+    const cards = [
+      ...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card'),
+    ];
+    expect(cards.map((card) => card.dataset.opponentId)).toEqual([
+      'general-blunder',
+      'fairy-stockfish',
+      'pikafish',
+    ]);
+    expect(cardFor(root, 'general-blunder')?.querySelector('.bot-level-select')).toBeNull();
     expect(
-      root.querySelector(
-        '.profile-summary-card[data-bot-id="general-blunder"] .profile-summary-card-badge',
-      )?.textContent,
+      [
+        ...(cardFor(root, 'fairy-stockfish')?.querySelectorAll('.bot-level-select option') ?? []),
+      ].map((option) => (option as HTMLOptionElement).value),
+    ).not.toContain('general-blunder');
+    expect(
+      cardFor(root, 'general-blunder')?.querySelector('.profile-summary-card-badge')?.textContent,
     ).not.toBe('Strongest');
   });
 
-  it('leads with the xiangqi ladder by level, Pikafish on top, Misty in her own section', async () => {
+  it('opens on xiangqi: one ladder card with a level picker, Pikafish strongest, one game per card', async () => {
+    window.history.replaceState(null, '', '/bots');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');
+    document.body.append(root);
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
 
-    expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
-    expect(
-      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
-    ).toEqual(['Xiangqi, level by level', 'Misty, the house bot']);
+    expect(root.querySelector('h1')?.textContent).toBe('Play against the computer');
     // Community rail is shared with /player; Bots is the active entry.
     expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe('Bots');
+    // The game rail: every game a listed bot offers, in shelf order, xiangqi active.
+    const railLinks = [...root.querySelectorAll<HTMLAnchorElement>('.bots-game-rail a')];
+    expect(railLinks.map((link) => link.dataset.gameSpecId).sort()).toEqual(
+      ['banqi', 'dark-chess', 'fortress-xiangqi', 'jieqi', 'xiangqi'].sort(),
+    );
+    expect(root.querySelector('.bots-game-rail a[aria-current="page"]')?.getAttribute('href')).toBe(
+      '/bots',
+    );
+    expect(
+      railLinks.find((link) => link.dataset.gameSpecId === 'jieqi')?.getAttribute('href'),
+    ).toBe('/bots?game=jieqi');
+    expect(
+      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
+    ).toEqual(['Xiangqi']);
 
-    const sectionNames = (index: number) =>
-      [
-        ...root.querySelectorAll(
-          `.bot-roster-section:nth-of-type(${index}) .profile-summary-card .profile-summary-card-name`,
-        ),
-      ].map((el) => el.textContent);
-    expect(sectionNames(1)).toEqual([
-      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Level ${level}`),
-      'Pikafish',
-    ]);
-    expect(sectionNames(2)).toEqual(['Misty']);
+    const ladder = cardFor(root, 'fairy-stockfish')!;
+    expect(ladder.querySelector('.profile-summary-card-name')?.textContent).toBe('Fairy-Stockfish');
+    // Opens on the first-game level, which says Start here, and links that bot.
+    expect(ladder.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+      '/bot/fairy-stockfish-level-2',
+    );
+    expect(ladder.querySelector('.profile-summary-card-badge')?.textContent).toBe('Start here');
+    expect(
+      [...ladder.querySelectorAll<HTMLOptionElement>('.bot-level-select option')].map((option) => [
+        option.value,
+        option.textContent,
+      ]),
+    ).toEqual(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((level) => [`fairy-stockfish-level-${level}`, `Level ${level}`]),
+    );
+    // Only xiangqi: one Play button, no fortress row.
+    expect(ladder.querySelector('[data-game-spec-id="fortress-xiangqi"]')).toBeNull();
+    expect(ladder.querySelector('.profile-summary-card-variants')).toBeNull();
+    const play = ladder.querySelectorAll('.profile-summary-card-action');
+    expect(play).toHaveLength(1);
+    expect(play[0]?.textContent).toBe('Play Xiangqi');
+    expect(ladder.querySelector('.profile-summary-card-bio')).toBeNull();
+
+    // Picking a level swaps the bot the card plays and links, and keeps one card.
+    const level1 = pickLevel(root, 'fairy-stockfish', 'fairy-stockfish-level-1');
+    expect(level1.dataset.botId).toBe('fairy-stockfish-level-1');
+    expect(level1.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+      '/bot/fairy-stockfish-level-1',
+    );
+    expect(level1.querySelector('.profile-summary-card-badge')?.textContent).toBe('BOT');
+    expect(
+      root.querySelectorAll('.profile-summary-card[data-opponent-id="fairy-stockfish"]'),
+    ).toHaveLength(1);
+    expect(document.activeElement).toBe(level1.querySelector('.bot-level-select'));
+
+    // Pikafish plays xiangqi and jieqi; here it shows xiangqi only, as the top.
+    const top = cardFor(root, 'pikafish')!;
+    expect(top.querySelector('.bot-level-select')).toBeNull();
+    expect(top.querySelector('.profile-summary-card-badge')?.textContent).toBe('Strongest');
+    expect(top.querySelector('.profile-summary-card-action')?.textContent).toBe('Play Xiangqi');
+    expect(top.querySelector('[data-game-spec-id="jieqi"]')).toBeNull();
+  });
+
+  it('switches game from the rail and reads ?game= on load', async () => {
+    window.history.replaceState(null, '', '/bots?game=dark-chess');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({
+        bots: [
+          ...rosterPayload().bots,
+          misty({ id: 'my-engine', displayName: 'My Engine', ownerType: 'user', bio: 'Mine.' }),
+        ],
+      }),
+    );
+    const root = document.createElement('div');
+    // Attached: a detached page ignores popstate (it has been navigated away).
+    document.body.append(root);
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    expect(
+      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
+    ).toEqual(['Fog Chess', 'Community bots']);
+    const mistyCard = cardFor(root, 'misty')!;
+    // Her Fog Chess record only, not the lifetime sum across her variants.
+    expect(mistyCard.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(
+      '1,812',
+    );
+    expect(mistyCard.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
+    expect(mistyCard.querySelector('[data-game-spec-id="banqi"]')).toBeNull();
     // The stored bios are English-only; the page carries its own localized lines.
     expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
     expect(root.textContent).not.toContain('Searches hidden positions');
-    // Misty plays two variants, so her card has a row per variant (rating,
-    // games, record, Play) and no lifetime footer summing them.
-    const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
-    const mistyRow = (gameSpecId: string) =>
-      mistyCard?.querySelector(`.profile-summary-card-variant[data-game-spec-id="${gameSpecId}"]`);
-    expect(
-      mistyRow('dark-chess')?.querySelector('.profile-summary-card-rating-value')?.textContent,
-    ).toBe('1,812');
-    expect(mistyRow('dark-chess')?.textContent).toContain('12 games · 8-3-1');
-    expect(mistyRow('banqi')?.textContent).toContain('0 games');
-    expect(mistyRow('banqi')?.textContent).not.toContain('0-0-0');
-    expect(
-      mistyRow('banqi')?.querySelector('.profile-summary-card-rating-value')?.textContent,
-    ).toBe('1,620');
-    expect(mistyCard?.querySelector('.profile-summary-card-footer')).toBeNull();
+    // A community bot keeps its own name and bio.
+    expect(cardFor(root, 'my-engine')?.textContent).toContain('Mine.');
 
-    const badge = (botId: string) =>
-      root.querySelector(
-        `.profile-summary-card[data-bot-id="${botId}"] .profile-summary-card-badge`,
-      )?.textContent;
-    expect(badge('fairy-stockfish-level-2')).toBe('Start here');
-    expect(badge('fairy-stockfish-level-1')).toBe('BOT');
-    expect(badge('pikafish')).toBe('Strongest');
-    // Each rung leads with its xiangqi row, whose Play is the one filled button.
-    const firstRow = root.querySelector(
-      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-variant',
-    );
-    expect(firstRow?.getAttribute('data-game-spec-id')).toBe('xiangqi');
-    const primary = firstRow?.querySelector('.profile-summary-card-action');
-    expect(primary?.textContent).toBe('Play');
-    expect(primary?.getAttribute('aria-label')).toBe('Play Xiangqi');
-    expect(primary?.classList.contains('profile-summary-card-action-primary')).toBe(true);
+    root.querySelector<HTMLAnchorElement>('.bots-game-rail a[data-game-spec-id="jieqi"]')!.click();
+    expect(window.location.search).toBe('?game=jieqi');
     expect(
-      root.querySelectorAll(
-        '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action-primary',
+      [...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card')].map(
+        (card) => card.dataset.opponentId,
       ),
-    ).toHaveLength(1);
+    ).toEqual(['pikafish']);
+    expect(
+      cardFor(root, 'pikafish')?.querySelector('.profile-summary-card-action')?.textContent,
+    ).toBe('Play Jieqi');
 
-    const ladderCards = [
-      ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
-    ];
-    expect(ladderCards).toHaveLength(8);
-    expect(
-      ladderCards.map((card) =>
-        card.querySelector<HTMLAnchorElement>('.profile-summary-card-name')?.getAttribute('href'),
-      ),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((level) => `/bot/fairy-stockfish-level-${level}`));
-    for (const card of ladderCards) {
-      expect(card.getAttribute('data-subject-kind')).toBe('bot');
-      expect(card.querySelector('.profile-summary-card-avatar')).not.toBeNull();
-      expect(card.querySelector('.profile-summary-card-bio')).toBeNull();
-      expect(
-        [...card.querySelectorAll('.profile-summary-card-variant')].map((row) =>
-          row.getAttribute('data-game-spec-id'),
-        ),
-      ).toEqual(['xiangqi', 'fortress-xiangqi']);
-    }
-    // Pikafish (xiangqi + jieqi) leads with xiangqi in the xiangqi section.
+    window.history.replaceState(null, '', '/bots?game=nope');
+    window.dispatchEvent(new PopStateEvent('popstate'));
     expect(
       root
-        .querySelector(
-          '.profile-summary-card[data-bot-id="pikafish"] .profile-summary-card-variant',
-        )
+        .querySelector('.bots-game-rail a[aria-current="page"]')
         ?.getAttribute('data-game-spec-id'),
     ).toBe('xiangqi');
+    window.history.replaceState(null, '', '/');
   });
 
-  it('shows the xiangqi blitz rating per FSF card, dash and ?-suffix included', async () => {
+  // Grouping is presentation only, so no bot may fall out of it: every bot in
+  // the payload is reachable from /bots, as a card or a level, in every game
+  // it plays, including a system bot the map does not know yet.
+  it('reaches every listed bot in every game it plays', async () => {
+    const { directoryGames, directoryOpponents } = await import('./bots.js');
+    const bots = [
+      ...rosterPayload().bots,
+      generalBlunder(),
+      pikafish({
+        id: 'pikafish-level-3',
+        playOptions: [{ gameSpecId: 'jieqi', engineId: 'p3', playable: true }],
+      }),
+      misty({ id: 'new-system-bot', displayName: 'New' }),
+      misty({ id: 'my-engine', ownerType: 'user' }),
+    ] as unknown as Parameters<typeof directoryGames>[0];
+    for (const bot of bots) {
+      for (const option of bot.playOptions ?? []) {
+        const reached = directoryOpponents(bots, option.gameSpecId).flatMap((opponent) =>
+          opponent.members.map((member) => member.bot.id),
+        );
+        expect(reached, `${bot.id} in ${option.gameSpecId}`).toContain(bot.id);
+      }
+    }
+    const jieqi = directoryOpponents(bots, 'jieqi').find((opponent) => opponent.key === 'pikafish');
+    expect(jieqi?.members.map((member) => [member.bot.id, member.level])).toEqual([
+      ['pikafish-level-3', 3],
+      ['pikafish', 8],
+    ]);
+  });
+
+  it('shows the xiangqi blitz rating of the picked level, dash and ?-suffix included', async () => {
     const payload = {
       bots: [
         ladderBot(1, {
@@ -614,12 +700,11 @@ describe('bot pages', () => {
 
     await mountBots(root);
 
-    const ratings = [
-      ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
-    ].map(
-      (card) =>
-        card.querySelector('[data-game-spec-id="xiangqi"] .profile-summary-card-rating-value')
-          ?.textContent || '—',
+    const ratings = [1, 2, 3].map(
+      (level) =>
+        pickLevel(root, 'fairy-stockfish', `fairy-stockfish-level-${level}`).querySelector(
+          '.profile-summary-card-rating-value',
+        )?.textContent || '—',
     );
     expect(ratings).toEqual(['1,450', '1,710?', '—']);
   });
@@ -632,14 +717,13 @@ describe('bot pages', () => {
         if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_fog' });
         return jsonResponse({}, { status: 404 });
       });
+    window.history.replaceState(null, '', '/bots?game=dark-chess');
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
-    const fogChip = root.querySelector<HTMLButtonElement>(
-      '[data-game-spec-id="dark-chess"] button.profile-summary-card-action',
-    );
-    expect(fogChip?.getAttribute('aria-label')).toBe('Play Fog Chess');
+    const fogChip = root.querySelector<HTMLButtonElement>('button.profile-summary-card-action');
+    expect(fogChip?.textContent).toBe('Play Fog Chess');
     fogChip?.click();
     // The chip itself shows the starting state while the room is created.
     expect(fogChip?.textContent).toContain('Starting...');
@@ -663,19 +747,18 @@ describe('bot pages', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(jsonResponse({ bots: [ladderBot(4)] }));
+    window.history.replaceState(null, '', '/bots?game=fortress-xiangqi');
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
     const offChip = root.querySelector<HTMLElement>('.profile-summary-card-action-unavailable');
-    expect(offChip?.closest('[data-game-spec-id]')?.getAttribute('data-game-spec-id')).toBe(
-      'fortress-xiangqi',
-    );
-    expect(offChip?.textContent).toBe('Play');
+    expect(offChip?.textContent).toBe('Play Fortress Xiangqi');
     expect(offChip?.title).toBe('Not available right now');
     expect(offChip?.tagName).not.toBe('BUTTON');
     offChip?.click();
     await flushPromises();
+    window.history.replaceState(null, '', '/');
 
     // Only the roster fetch; the muted chip never creates a room.
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -1147,14 +1230,16 @@ describe('bot pages', () => {
       root.querySelector(`.profile-summary-card[data-bot-id="${botId}"]`);
     const level1 = card('fairy-stockfish-level-1');
     expect(level1?.querySelector('.profile-summary-card-subtitle')?.textContent).toBe(
-      'Fairy-Stockfish · Version 1b5bdd40',
+      'First-party bot · Version 1b5bdd40',
     );
     // A one-variant bot keeps the compact card: one Play sized to its label, a footer.
     expect(level1?.querySelector('.profile-summary-card-variants')).toBeNull();
     expect(level1?.querySelectorAll('.profile-summary-card-action')).toHaveLength(1);
     expect(level1?.querySelector('.profile-summary-card-footer')).not.toBeNull();
 
-    const mistyCard = card('misty');
+    // A card that lists several variants (the hover card; /bots shows one game).
+    const { buildBotSummaryCard } = await import('./profile-summary-card.js');
+    const mistyCard = buildBotSummaryCard(payload.bots[1] as never);
     expect(mistyCard?.querySelector('.profile-summary-card-version')).toBeNull();
     const rowText = (gameSpecId: string) =>
       mistyCard?.querySelector(`[data-game-spec-id="${gameSpecId}"]`)?.textContent ?? '';
@@ -1182,10 +1267,20 @@ describe('bot pages', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
+    const { buildBotSummaryCard } = await import('./profile-summary-card.js');
 
     await mountBots(root);
+    // The /bots rail offers only what the bot plays (in shelf order); banqi's
+    // old record adds no game.
+    expect(
+      [...root.querySelectorAll<HTMLElement>('.bots-game-rail a')].map((a) => a.dataset.gameSpecId),
+    ).toEqual(['dark-xiangqi', 'dark-chess']);
 
-    const rows = [...root.querySelectorAll('.profile-summary-card-variant')];
+    const rows = [
+      ...buildBotSummaryCard(payload.bots[0] as never).querySelectorAll(
+        '.profile-summary-card-variant',
+      ),
+    ];
     expect(rows.map((row) => row.getAttribute('data-game-spec-id'))).toEqual([
       'dark-chess',
       'dark-xiangqi',
