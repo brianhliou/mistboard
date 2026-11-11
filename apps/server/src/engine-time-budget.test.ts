@@ -1,11 +1,86 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { budgetForMove } from './engine-time-budget.js';
+import { replyPace } from './engine-reply-pacing.js';
+import { budgetForMove, liveBotMoveTime } from './engine-time-budget.js';
 
 // Fortress Strongest tier: node budget 800k anchors strength; movetime is the
 // latency ceiling. Time controls in play: 1+1, 3+2, 5+5.
 const CEIL = 6_000;
+
+test('full-budget searches plus pacing retain 10% of the starting bank at 1+0 and 1+1', () => {
+  for (const incrementMs of [0, 1_000]) {
+    let remainingMs = 60_000;
+    for (let move = 0; move < 200; move++) {
+      const input = {
+        engineId: 'pikafish-xiangqi-level-8',
+        roomId: 'reserve-regression',
+        ply: move * 2,
+        legalCount: 40,
+        initialMs: 60_000,
+        remainingMs,
+        incrementMs,
+        ceilingMs: CEIL,
+        flatReserveMs: 1_000,
+        floorMs: 50,
+        engineVsEngine: false,
+        pacingEnabled: true,
+        variant: 'xiangqi',
+      };
+      const computeMs = liveBotMoveTime({ ...input, rule: 'flat' }).movetimeMs;
+      const pace = replyPace({ ...input, computeMs, cp: null, mate: null, enabled: true });
+      remainingMs -= computeMs + pace.waitMs;
+      assert.ok(remainingMs >= 6_000, `1+${incrementMs / 1000} move ${move}: ${remainingMs}`);
+      remainingMs += incrementMs;
+    }
+  }
+});
+
+test('disabled pacing, EvE and correspondence retain the existing flat budget', () => {
+  const input = {
+    engineId: 'pikafish-xiangqi-level-8',
+    roomId: 'exclusions',
+    ply: 20,
+    legalCount: 40,
+    initialMs: 60_000,
+    remainingMs: 60_000,
+    incrementMs: 1_000,
+    ceilingMs: CEIL,
+    flatReserveMs: 1_000,
+    floorMs: 50,
+    engineVsEngine: false,
+  };
+  const expected = budgetForMove({ ...input, reserveMs: 1_000 }).computeBudgetMs;
+  for (const excluded of [
+    { pacingEnabled: false },
+    { pacingEnabled: true, engineVsEngine: true },
+    { pacingEnabled: true, correspondence: true },
+    { pacingEnabled: true, variant: 'unknown' },
+  ]) {
+    assert.equal(liveBotMoveTime({ ...input, ...excluded, rule: 'flat' }).movetimeMs, expected);
+  }
+});
+
+test('queue waits are paid before the shared reserve is allocated', () => {
+  const budget = liveBotMoveTime({
+    engineId: 'pikafish-xiangqi-level-8',
+    roomId: 'queue',
+    ply: 40,
+    legalCount: 40,
+    initialMs: 60_000,
+    remainingMs: 8_000,
+    waitedMs: 1_900,
+    incrementMs: 1_000,
+    ceilingMs: CEIL,
+    flatReserveMs: 1_000,
+    floorMs: 50,
+    engineVsEngine: false,
+    pacingEnabled: true,
+    variant: 'xiangqi',
+    rule: 'flat',
+  });
+  assert.ok(budget.movetimeMs <= 100);
+});
 
 test('untimed game thinks for the full ceiling', () => {
   const b = budgetForMove({ remainingMs: null, incrementMs: 0, ceilingMs: CEIL });

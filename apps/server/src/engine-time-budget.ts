@@ -19,7 +19,7 @@
  * node budget needs ~2.4s on prod) lives in the fortress build-track doc.
  */
 
-import { replyPace } from './engine-reply-pacing.js';
+import { pacingApplies, pacingClockReserveMs, replyPace } from './engine-reply-pacing.js';
 
 export type MoveBudgetInput = {
   /** Engine seat's remaining clock in ms, or null for an untimed game. */
@@ -244,6 +244,7 @@ export function phaseFactor(botMove: number): number {
 }
 
 export type PhaseMoveBudgetInput = {
+  reserveMs?: number;
   remainingMs: number | null;
   incrementMs: number;
   ceilingMs: number;
@@ -270,7 +271,14 @@ export type PhaseMoveBudget = MoveBudget & {
  * still leaves `reserve` on the clock once the increment lands.
  */
 export function phaseBudgetForMove(input: PhaseMoveBudgetInput): PhaseMoveBudget {
-  const { remainingMs, incrementMs, ceilingMs, ply, floorMs = 50 } = input;
+  const {
+    remainingMs,
+    incrementMs,
+    ceilingMs,
+    ply,
+    floorMs = 50,
+    reserveMs = PHASE_TIME.reserveMs,
+  } = input;
   const botMove = botMoveNumber(ply);
   if (remainingMs === null) {
     return {
@@ -280,7 +288,7 @@ export function phaseBudgetForMove(input: PhaseMoveBudgetInput): PhaseMoveBudget
     };
   }
   const inc = Math.max(0, incrementMs);
-  const bank = Math.max(0, remainingMs - PHASE_TIME.reserveMs);
+  const bank = Math.max(0, remainingMs - reserveMs);
   const movesToGo = Math.max(
     PHASE_TIME.movesToGoMin,
     PHASE_TIME.movesToGoStart - botMove * PHASE_TIME.movesToGoPerBotMove,
@@ -298,7 +306,7 @@ export function phaseBudgetForMove(input: PhaseMoveBudgetInput): PhaseMoveBudget
     1,
     Math.floor(
       remainingMs -
-        PHASE_TIME.reserveMs -
+        reserveMs -
         PHASE_TIME.overrunAllowanceMs +
         Math.min(inc, PHASE_TIME.overrunAllowanceMs),
     ),
@@ -322,19 +330,18 @@ export function phaseBudgetForMove(input: PhaseMoveBudgetInput): PhaseMoveBudget
  * `watchdogTimeoutMs` is the hard ceiling on the process.
  */
 export function nativeClockForMove(input: {
+  reserveMs?: number;
   remainingMs: number;
   incrementMs: number;
   ply: number;
 }): { clock: EngineClock | null; movetimeMs: number; watchdogTimeoutMs: number } {
+  const reserveMs = input.reserveMs ?? NATIVE_TIME.reserveMs;
   if (input.ply === 0) {
-    const movetimeMs = Math.max(
-      1,
-      Math.min(PHASE_TIME.firstPlyMs, input.remainingMs - NATIVE_TIME.reserveMs),
-    );
+    const movetimeMs = Math.max(1, Math.min(PHASE_TIME.firstPlyMs, input.remainingMs - reserveMs));
     return { clock: null, movetimeMs, watchdogTimeoutMs: movetimeMs + NATIVE_TIME.watchdogGraceMs };
   }
   const clock = {
-    timeMs: Math.max(1, Math.floor(input.remainingMs - NATIVE_TIME.reserveMs)),
+    timeMs: Math.max(1, Math.floor(input.remainingMs - reserveMs)),
     incMs: Math.max(0, Math.floor(input.incrementMs)),
   };
   return {
@@ -376,6 +383,8 @@ export function paceAwareMovetimeMs(input: {
 }
 
 export type LiveBotMoveTimeInput = {
+  variant?: string;
+  correspondence?: boolean;
   /** The rule in force; defaults to `botTimeRule()` (MISTBOARD_BOT_TIME_RULE). */
   rule?: BotTimeRule;
   engineId: string;
@@ -419,6 +428,24 @@ export type LiveBotMoveTime = {
 export function liveBotMoveTime(input: LiveBotMoveTimeInput): LiveBotMoveTime {
   const waitedMs = Math.max(0, input.waitedMs ?? 0);
   const remainingMs = input.remainingMs === null ? null : Math.max(0, input.remainingMs - waitedMs);
+  const paced = pacingApplies({ ...input, enabled: input.pacingEnabled });
+  const reserveMs = paced ? pacingClockReserveMs(input.initialMs) : input.flatReserveMs;
+  // Both the search and the hold obey this cap, before any increment arrives.
+  const capMs = remainingMs === null ? Infinity : Math.max(0, Math.floor(remainingMs - reserveMs));
+  // A fixed floor eventually consumes the reserve in a long zero-increment game.
+  const floorMs =
+    paced && remainingMs !== null ? Math.min(input.floorMs, capMs / 30) : input.floorMs;
+  const safe = (result: LiveBotMoveTime): LiveBotMoveTime => {
+    if (!paced || remainingMs === null) return result;
+    return {
+      ...result,
+      movetimeMs: Math.min(result.movetimeMs, capMs),
+      budgetMs: Math.min(result.budgetMs, capMs),
+      ...(result.clock
+        ? { clock: { ...result.clock, timeMs: Math.min(result.clock.timeMs, capMs) } }
+        : {}),
+    };
+  };
   const rule = effectiveTimeRule({
     rule: input.rule ?? botTimeRule(),
     engineId: input.engineId,
@@ -430,32 +457,37 @@ export function liveBotMoveTime(input: LiveBotMoveTimeInput): LiveBotMoveTime {
       remainingMs,
       incrementMs: input.incrementMs,
       ply: input.ply,
+      reserveMs: paced ? Math.max(NATIVE_TIME.reserveMs, reserveMs) : undefined,
     });
-    return {
+    return safe({
       movetimeMs: native.movetimeMs,
       rule: 'native',
       budgetMs: native.movetimeMs,
       ...(native.clock ? { clock: native.clock } : {}),
-    };
+    });
   }
   if (rule !== 'phase') {
     const { computeBudgetMs } = budgetForMove({
       remainingMs,
       incrementMs: input.incrementMs,
       ceilingMs: input.ceilingMs,
-      reserveMs: input.flatReserveMs,
-      floorMs: input.floorMs,
+      reserveMs,
+      floorMs,
     });
-    return { movetimeMs: computeBudgetMs, rule: 'flat', budgetMs: computeBudgetMs };
+    return safe({ movetimeMs: computeBudgetMs, rule: 'flat', budgetMs: computeBudgetMs });
   }
   const budget = phaseBudgetForMove({
     remainingMs,
     incrementMs: input.incrementMs,
     ceilingMs: input.ceilingMs,
     ply: input.ply,
-    floorMs: input.floorMs,
+    floorMs,
+    reserveMs: paced ? Math.max(PHASE_TIME.reserveMs, reserveMs) : undefined,
   });
   const pace = replyPace({
+    variant: input.variant,
+    initialMs: input.initialMs,
+    correspondence: input.correspondence,
     roomId: input.roomId,
     ply: input.ply,
     legalCount: input.legalCount,
@@ -476,5 +508,5 @@ export function liveBotMoveTime(input: LiveBotMoveTimeInput): LiveBotMoveTime {
           capMs: budget.capMs,
         })
       : budget.computeBudgetMs;
-  return { movetimeMs, rule: 'phase', budgetMs: budget.computeBudgetMs };
+  return safe({ movetimeMs, rule: 'phase', budgetMs: budget.computeBudgetMs });
 }

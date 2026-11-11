@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { PACING, type ReplyPaceInput, replyPace } from './engine-reply-pacing.js';
+import {
+  botPacingEnabled,
+  PACING,
+  pacingClockReserveMs,
+  type ReplyPaceInput,
+  replyPace,
+} from './engine-reply-pacing.js';
 
 const base: ReplyPaceInput = {
+  variant: 'xiangqi',
   roomId: 'xq_test',
   ply: 20,
   legalCount: 40,
@@ -15,6 +22,41 @@ const base: ReplyPaceInput = {
 };
 
 describe('replyPace', () => {
+  it('keeps variant rollout subordinate to the master switch and rejects unknown variants', () => {
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING_VARIANTS: 'jungle' }, 'jungle'), false);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'xiangqi'), true);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'jieqi'), true);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'jungle'), false);
+    const env = {
+      MISTBOARD_BOT_PACING: 'true',
+      MISTBOARD_BOT_PACING_VARIANTS: ' jungle,banqi,typo ',
+    };
+    assert.equal(botPacingEnabled(env, 'jungle'), true);
+    assert.equal(botPacingEnabled(env, 'xiangqi'), false);
+    assert.equal(botPacingEnabled(env, 'typo'), false);
+    assert.equal(botPacingEnabled({ ...env, MISTBOARD_BOT_PACING_VARIANTS: '' }, 'jungle'), false);
+    assert.equal(replyPace({ ...base, variant: 'typo' }).waitMs, 0);
+  });
+
+  it('excludes correspondence even when explicitly enabled', () => {
+    assert.equal(replyPace({ ...base, correspondence: true }).reason, 'correspondence');
+  });
+
+  it('keeps the absolute 5s reserve as well as 10% of the initial clock', () => {
+    assert.equal(pacingClockReserveMs(null), 5_000);
+    assert.equal(pacingClockReserveMs(60_000), 6_000);
+    assert.equal(pacingClockReserveMs(600_000), 60_000);
+    for (let i = 0; i < 100; i++) {
+      const pace = replyPace({
+        ...base,
+        roomId: `reserve-${i}`,
+        remainingMs: 12_000,
+        computeMs: 0,
+        incrementMs: 20_000,
+      });
+      assert.ok(12_000 - pace.waitMs >= 5_000);
+    }
+  });
   it('does nothing while the flag is off', () => {
     assert.deepEqual(replyPace({ ...base, enabled: false }), {
       waitMs: 0,
@@ -107,5 +149,16 @@ describe('replyPace', () => {
 
   it('never paces an engine-vs-engine game', () => {
     assert.equal(replyPace({ ...base, engineVsEngine: true }).waitMs, 0);
+  });
+});
+
+describe('fail-closed variant', () => {
+  it('never paces a caller that names no variant', () => {
+    const { variant: _omit, ...rest } = base;
+    assert.deepEqual(replyPace({ ...rest, enabled: true }), {
+      waitMs: 0,
+      targetMs: 0,
+      reason: 'off',
+    });
   });
 });
