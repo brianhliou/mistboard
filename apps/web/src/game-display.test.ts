@@ -336,6 +336,7 @@ describe('liveMatchupNames', () => {
         { color: 'east', name: null },
       ],
       'Guest',
+      'xiangqi-mahjong',
     );
     expect(names).toEqual({ first: 'Guest', second: 'Misty' });
   });
@@ -348,8 +349,21 @@ describe('liveMatchupNames', () => {
           { color: 'red', name: 'r' },
         ],
         'Guest',
+        'xiangqi',
       ),
     ).toEqual({ first: 'r', second: 'b' });
-    expect(liveMatchupNames([{ color: 'white', name: 'w' }], 'Guest')).toBeNull();
+    expect(liveMatchupNames([{ color: 'white', name: 'w' }], 'Guest', 'chess')).toBeNull();
+  });
+
+  it('seats Gomoku black first, so the bot is not named on the guest clock', () => {
+    const names = liveMatchupNames(
+      [
+        { color: 'white', name: 'Rapfi Level 4' },
+        { color: 'black', name: null },
+      ],
+      'Guest',
+      'gomoku',
+    );
+    expect(names).toEqual({ first: 'Guest', second: 'Rapfi Level 4' });
   });
 });
