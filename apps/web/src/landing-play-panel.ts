@@ -30,6 +30,7 @@ import {
 } from './landing-bot-policy.js';
 import {
   allowedTimePresetIds,
+  daysPerMoveLabel,
   enabledLandingVariantGameSpecs,
   fetchCorrespondenceSeeks,
   fetchOpenLobbyRequests,
@@ -255,8 +256,14 @@ export function panelBotPaces(gameSpecId: LandingGameSpecId): {
 
 /** Paces a person can be sought at: the live clocks (rated narrows them), then
  *  days per move for the correspondence variants: casual, or rated where the
- *  variant can be rated by correspondence (correspondenceRatedAvailable). */
-export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode): PersonPace[] {
+ *  variant can be rated by correspondence (correspondenceRatedAvailable). A
+ *  correspondence seek needs an account, so a signed-out visitor is offered
+ *  the live clocks only. */
+export function panelPersonPaces(
+  gameSpecId: LandingGameSpecId,
+  mode: PersonMode,
+  signedIn: boolean,
+): PersonPace[] {
   // A casual-only variant has no rated seek, so its row drops out of Rated
   // rather than offering a Find the lobby would refuse.
   if (mode === 'rated' && !landingVariantSupportsRated(gameSpecId)) return [];
@@ -266,6 +273,7 @@ export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode
     id: tc.id,
   }));
   const days: PersonPace[] =
+    signedIn &&
     (mode === 'casual' ||
       correspondenceRatedAvailable(gameSpecId, isCorrespondenceRatedModeEnabled())) &&
     correspondenceEnabled() &&
@@ -759,11 +767,18 @@ export function buildPlayPanel(
         : !signedIn
           ? ratedSignInNote
           : mode === 'rated'
-            ? t(
-                'lobby.panelRatedNote',
-                { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
-                locale,
-              )
+            ? [
+                t(
+                  'lobby.panelRatedNote',
+                  { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
+                  locale,
+                ),
+                // Days per move leave the rows in Rated while rated
+                // correspondence is held; say why instead of dropping them silently.
+                ...(isCorrespondenceRatedModeEnabled()
+                  ? []
+                  : [t('lobby.panelRatedCorrespondenceCasual', {}, locale)]),
+              ].join(locale === 'en' ? ' ' : '')
             : '';
   };
   casualBtn.addEventListener('click', () => {
@@ -821,7 +836,7 @@ export function buildPlayPanel(
     }
     // Each mode lists the correspondence seeks of its own kind, like the live rows.
     for (const seek of corrSeeks.filter((s) => (s.rated === true) === (mode === 'rated'))) {
-      const label = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+      const label = daysPerMoveLabel(seek.daysPerMove, locale);
       let action: HTMLElement;
       if (seek.isMine) {
         action = document.createElement('span');
@@ -891,7 +906,7 @@ export function buildPlayPanel(
   const renderPersonRows = (): void => {
     personRows.replaceChildren();
     for (const gameSpecId of ordered()) {
-      const paces = panelPersonPaces(gameSpecId, mode);
+      const paces = panelPersonPaces(gameSpecId, mode, signedIn);
       if (paces.length === 0) continue;
       const label = labelFor(gameSpecId);
       const savedKey = readStored().people?.[gameSpecId];
@@ -937,7 +952,7 @@ export function buildPlayPanel(
           const pace = paces[i]!;
           return pace.kind === 'live'
             ? { text: compactLabel(pace.id) }
-            : { text: t('lobby.daysPerMove', { days: pace.days }, locale), named: true };
+            : { text: daysPerMoveLabel(pace.days, locale), named: true };
         },
         onChange: (i) => {
           at = i;

@@ -43,7 +43,6 @@ import './current-games.css';
 import './account-profile.css';
 import './correspondence.css';
 import {
-  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   createInitialXiangqiState,
   DAYS_PER_MOVE_OPTIONS,
   DEFAULT_DAYS_PER_MOVE,
@@ -80,6 +79,7 @@ import {
   seekRequestBody,
   splitInbox,
   variantFact,
+  variantFactSpecIds,
 } from './correspondence-model.js';
 import {
   type CurrentGame,
@@ -1866,7 +1866,7 @@ function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
   facts.className = 'correspondence-hero-facts';
   for (const text of [
     t('correspondence.factDays', { list: DAYS_PER_MOVE_OPTIONS.join(' / ') }),
-    variantFactText(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => variantDisplayLabel(specId))),
+    variantFactText(variantFactSpecIds().map((specId) => variantDisplayLabel(specId))),
     t('correspondence.factReminders'),
   ]) {
     const item = document.createElement('li');

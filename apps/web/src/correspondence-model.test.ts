@@ -24,6 +24,7 @@ import {
   startFormPrefillHref,
   URGENT_DEADLINE_MS,
   variantFact,
+  variantFactSpecIds,
 } from './correspondence-model.js';
 
 const NOW = Date.parse('2026-10-02T12:00:00Z');
@@ -291,6 +292,16 @@ describe('variantFact', () => {
       shown: `${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}, ${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[1]}`,
       more: CORRESPONDENCE_ELIGIBLE_SPEC_IDS.length - 2,
     });
+  });
+});
+
+describe('variantFactSpecIds', () => {
+  it('names the shelf leads first, Xiangqi and Jieqi, and keeps every eligible variant', () => {
+    const ids = variantFactSpecIds();
+    expect(ids.slice(0, 2)).toEqual(['xiangqi', 'jieqi']);
+    expect([...ids].sort()).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS].sort());
+    const fact = variantFact(ids);
+    expect(fact).toEqual({ kind: 'more', shown: 'xiangqi, jieqi', more: ids.length - 2 });
   });
 });
 

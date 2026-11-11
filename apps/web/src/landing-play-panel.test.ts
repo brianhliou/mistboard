@@ -993,13 +993,15 @@ describe('homepage play panel', () => {
     expect(labels).toEqual(['Casual', 'Rated']);
   });
 
-  it('opens a person row on 3 days per move, with no bot-offer note', () => {
+  it('opens a signed-in person row on 3 days per move, with no bot-offer note', () => {
+    setResolvedSignedIn(true);
     const board = buildPlayPanel('en', { hydrate: false });
     const person = row(board, 'xiangqi', 'person');
-    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('3d/move');
+    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('3 days/move');
+    expect(person.querySelector('.pp-act')?.textContent).toBe('+ Post');
     expect(board.querySelector('.pp-note')?.textContent).toBe('');
-    // Rated has no days while rated correspondence is held, so it opens on 5+5.
-    setResolvedSignedIn(true);
+    // Rated has no days while rated correspondence is held, so it opens on 5+5
+    // and says why the days went away.
     setRatedModeEnabled(true);
     const signedIn = buildPlayPanel('en', { hydrate: false });
     [...signedIn.querySelectorAll<HTMLButtonElement>('.pp-mode-btn')]
@@ -1007,29 +1009,64 @@ describe('homepage play panel', () => {
       .click();
     const rated = row(signedIn, 'xiangqi', 'person');
     expect(rated.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('5+5');
+    expect(signedIn.querySelector('.pp-note')?.textContent).toBe(
+      'Rated: 1+1, 3+2, 5+5, 10+5. Correspondence is casual for now.',
+    );
+  });
+
+  it('offers a signed-out visitor live clocks only, opening on 5+5 with Find', () => {
+    setResolvedSignedIn(false);
+    // An old pick of days per move on this device does not bring days back.
+    localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ people: { xiangqi: '3d' } }));
+    expect(panelPersonPaces('xiangqi', 'casual', false).every((p) => p.kind === 'live')).toBe(true);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const rows = [...board.querySelectorAll<HTMLElement>('.pp-row-person')];
+    expect(rows.length).toBeGreaterThan(1);
+    for (const person of rows) {
+      const spec = person.dataset.gameSpec!;
+      const paces = panelPersonPaces(spec as never, 'casual', false);
+      if (paces.some((p) => p.kind === 'live' && p.id === '5m5')) {
+        expect(stepValue(person, 'clock'), spec).toBe('5+5');
+      }
+      expect(person.querySelector('.pp-act')?.textContent, spec).toBe('Find');
+      // Walk the whole stepper: no days per move anywhere.
+      clickNext(person, 'clock', 12);
+      expect(stepValue(person, 'clock'), spec).not.toMatch(/day/);
+    }
+  });
+
+  it('labels one day per move in the singular', () => {
+    setResolvedSignedIn(true);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const person = row(board, 'xiangqi', 'person');
+    const prev = () =>
+      person.querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn')[0]!.click();
+    prev();
+    prev();
+    expect(stepValue(person, 'clock')).toBe('1 day/move');
   });
 
   it('narrows rated to the rated clocks; days per move are rated where correspondence rates', () => {
     // Rated switch off: rated is live clocks only.
-    const rated = panelPersonPaces('xiangqi', 'rated');
+    const rated = panelPersonPaces('xiangqi', 'rated', true);
     const ratedIds = new Set(RATED_TIME_CONTROLS.map((tc) => tc.id));
     expect(rated.every((p) => p.kind === 'live' && ratedIds.has(p.id))).toBe(true);
-    const casual = panelPersonPaces('xiangqi', 'casual');
+    const casual = panelPersonPaces('xiangqi', 'casual', true);
     expect(casual.some((p) => p.kind === 'days')).toBe(true);
     // Every variant plays by correspondence since 2026-10-02.
-    expect(panelPersonPaces('jieqi', 'casual').some((p) => p.kind === 'days')).toBe(true);
+    expect(panelPersonPaces('jieqi', 'casual', true).some((p) => p.kind === 'days')).toBe(true);
     // Rated switch off: no rated days anywhere.
-    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
+    expect(panelPersonPaces('jieqi', 'rated', true).some((p) => p.kind === 'days')).toBe(false);
     // Rated switch on (2026-10-02): a correspondence-rated variant offers days in Rated
     // too, live clocks still narrowed to the rated ones.
     // Live rated on alone (rated correspondence held, the default): no rated days.
     setRatedModeEnabled(true);
-    expect(panelPersonPaces('xiangqi', 'rated').some((p) => p.kind === 'days')).toBe(false);
+    expect(panelPersonPaces('xiangqi', 'rated', true).some((p) => p.kind === 'days')).toBe(false);
     setRatedModeEnabled(true, true);
-    const ratedOn = panelPersonPaces('xiangqi', 'rated');
+    const ratedOn = panelPersonPaces('xiangqi', 'rated', true);
     expect(ratedOn.filter((p) => p.kind === 'live').every((p) => ratedIds.has(p.id))).toBe(true);
     expect(ratedOn.some((p) => p.kind === 'days')).toBe(true);
-    expect(panelPersonPaces('jieqi', 'rated').some((p) => p.kind === 'days')).toBe(true);
+    expect(panelPersonPaces('jieqi', 'rated', true).some((p) => p.kind === 'days')).toBe(true);
   });
 
   it('orders rows in canonical order', () => {

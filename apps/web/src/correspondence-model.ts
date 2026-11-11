@@ -7,7 +7,9 @@
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  canonicalVariantOrderIndex,
   DAYS_PER_MOVE_OPTIONS,
+  type GameSpecId,
   isCorrespondenceRatedSpec,
   maybeGameSpecForId,
 } from '@mistboard/game';
@@ -299,6 +301,14 @@ export function variantFact(
 ): { kind: 'all'; text: string } | { kind: 'more'; shown: string; more: number } {
   if (labels.length <= 3) return { kind: 'all', text: labels.join(' · ') };
   return { kind: 'more', shown: labels.slice(0, 2).join(', '), more: labels.length - 2 };
+}
+
+// The variants the hero's fact names, in shelf order so the two it spells out
+// are the site's leads (Xiangqi, Jieqi), not the picker's Fog Chess default.
+export function variantFactSpecIds(
+  ids: readonly GameSpecId[] = CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+): GameSpecId[] {
+  return [...ids].sort((a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b));
 }
 
 // ---- Open seeks -------------------------------------------------------------------

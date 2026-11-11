@@ -373,6 +373,13 @@ export function fallbackPlayableEngines(): PlayableEngine[] {
   return [{ id: PENDING_ENGINE_ID, name: 'Misty', familyName: 'Misty', kind: 'builtin' }];
 }
 
+/** A correspondence pace as a short label ("3 days/move", "1 day/move"). */
+export function daysPerMoveLabel(days: number, locale: Locale): string {
+  return days === 1
+    ? t('lobby.oneDayPerMove', {}, locale)
+    : t('lobby.daysPerMove', { days }, locale);
+}
+
 // How the play panel hands off to a freshly created/matched room. Defaults to a
 // full document navigation; mountLanding swaps in an in-place SPA transition so
 // the starting click's user activation carries into the room (lets the engine's
@@ -1563,7 +1570,7 @@ export function corrSeekRow(
   game.textContent = variantLabelForGameSpec(parseLandingGameSpecId(seek.gameSpecId), locale);
   const time = document.createElement('span');
   time.className = 'landing-lobby-td';
-  const pace = t('lobby.daysPerMove', { days: seek.daysPerMove }, locale);
+  const pace = daysPerMoveLabel(seek.daysPerMove, locale);
   // Rated reads on the pace cell, the way the live rows pair pace and mode.
   time.textContent = seek.rated === true ? `${pace} · ${t('play.rated', {}, locale)}` : pace;
   if (seek.isMine) {
