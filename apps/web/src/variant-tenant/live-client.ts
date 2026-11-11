@@ -1203,7 +1203,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
 
 /** Seat names as the room should show them: engine builds collapse to the
  *  brand, and with the game, Misty takes its name ("Misty Banqi Level 4"). */
-function brandSeatDisplayNames<C extends string>(
+export function brandSeatDisplayNames<C extends string>(
   names: Partial<Record<C, string>>,
   gameSpecId?: string,
   profiles: Partial<Record<C, ProfileIdentity>> = {},
@@ -1214,7 +1214,13 @@ function brandSeatDisplayNames<C extends string>(
     branded[color] =
       gameSpecId === undefined
         ? (brandedEngineName(name) ?? name)
-        : seatNameForGame(name, gameSpecId, { botId: profiles[color]?.botId ?? null });
+        : seatNameForGame(name, gameSpecId, {
+            botId: profiles[color]?.botId ?? null,
+            // A seat with no member handle is a bot or a guest. Three Kingdoms
+            // engines have no bot profile, so their seats carry neither id;
+            // the Misty name pattern (engine seats only) still names them.
+            isEngine: !profiles[color]?.handle,
+          });
   }
   return branded;
 }
