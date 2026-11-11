@@ -20,10 +20,13 @@ import { tenantDurableDeadlineFor } from './lifecycle.js';
 import {
   appendTenantRuntimeEvent,
   applyTenantEvent,
+  createTenantRuntimeRoomFromEvents,
+  isTenantEventLog,
   tenantClockExpiryEventFor,
   tenantEventWasAccepted,
   tenantPauseEventFor,
 } from './runtime.js';
+import { tenantSeatTokenStatesFromPersistence } from './seat-session.js';
 import type {
   TenantGameStateLike,
   TenantRoomEvent,
@@ -40,6 +43,23 @@ export type TenantEventWriterPersistence<C extends string, M, Spec extends strin
   appendRoomEvent(roomId: string, seq: number, event: TenantRoomEvent<C, M, Spec>): Promise<void>;
   deleteRoomDeadline(roomId: string): Promise<void>;
   isInitialized(): boolean;
+  /**
+   * The store's event log and seat tokens, read back when appendRoomEvent finds
+   * its seq already taken: another server process (a deploy overlap, two dev
+   * servers on one database) wrote to this room, so the in-memory copy is stale
+   * and is rebuilt from these. A writer without them rethrows the conflict.
+   */
+  loadRoomEvents?(roomId: string): Promise<persistence.PersistedRoomEvent[] | null>;
+  loadRoomSeatTokens?(
+    roomId: string,
+  ): Promise<
+    Partial<
+      Record<
+        C & persistence.RoomSeatTokenSeat,
+        persistence.RoomSeatTokenRecord<C & persistence.RoomSeatTokenSeat>
+      >
+    >
+  >;
   /** Flush target for room.pendingDebugArtifacts once the games row exists. */
   recordGameDebugArtifact?(artifact: persistence.GameDebugArtifactInput): Promise<void>;
   recordGameEnd(roomId: string, summary: persistence.GameSummary): Promise<void>;
@@ -67,6 +87,13 @@ export type TenantEventWriterContext<
   logGameAbortRecordFailure?(roomId: string, err: Error): void;
   logGameEndRecordFailure?(roomId: string, err: Error): void;
   persistence?: TenantEventWriterPersistence<C, M, Spec>;
+  /**
+   * The room was rebuilt from the store after another process appended to it
+   * (see resyncTenantRoomFromStore). The ws runtime sends every connected seat
+   * the fresh snapshot here, which is how a player whose room was swept to an
+   * end elsewhere learns the result.
+   */
+  onRoomResynced?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
   scheduleLifecycleTimers?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
   /**
    * Give a PvE scheduler a chance to move, after EVERY appended event.
@@ -136,7 +163,10 @@ export async function appendTenantEvent<
     if (!tenantEventWasAccepted(room.projection, projected, event)) return -1;
     const seq = room.events.length;
     if (writer.persistence.isInitialized()) {
-      await writer.persistence.appendRoomEvent(room.id, seq, event);
+      // A taken seq means the room moved on elsewhere. The event was judged
+      // against the stale copy, so it is refused, never re-numbered and retried.
+      const appended = await appendRoomEventOrResync(tenant, room, writer, seq, event);
+      if (!appended) return -1;
     }
     // Commit the projection computed above rather than re-deriving it. Applying
     // twice from the same projection gives the same answer while applyMove stays
@@ -239,7 +269,11 @@ export async function appendTenantSeatAssigned<
   const write = room.pendingWrites.then(async () => {
     const seq = room.events.length;
     if (writer.persistence.isInitialized()) {
-      await writer.persistence.appendRoomEvent(room.id, seq, args.event);
+      if (!(await appendRoomEventOrResync(tenant, room, writer, seq, args.event))) {
+        // The seat was chosen from the stale copy; the caller re-assigns it
+        // against the room as the store has it.
+        throw new TenantRoomResyncedError(room.id);
+      }
       await writer.persistence.upsertRoomSeatToken(
         room.id,
         persistenceRecordForTenantSeatToken(args.tokenState),
@@ -258,6 +292,120 @@ export async function appendTenantSeatAssigned<
     () => undefined,
   );
   return write;
+}
+
+/**
+ * A write found the room's next seq already in the store and rebuilt the room
+ * from it instead (resyncTenantRoomFromStore). Thrown by the seat-assigned
+ * writer so the connection handler re-runs seat assignment once against the
+ * fresh room rather than closing the socket.
+ */
+export class TenantRoomResyncedError extends Error {
+  constructor(roomId: string) {
+    super(`room ${roomId} was rebuilt from the store after a seq conflict`);
+    this.name = 'TenantRoomResyncedError';
+  }
+}
+
+function isEventSeqConflict(err: unknown): boolean {
+  const pgError = err as { code?: unknown; constraint?: unknown } | null;
+  return pgError?.code === '23505' && pgError.constraint === 'events_pkey';
+}
+
+// Append at seq, or, when another process already wrote that seq, rebuild the
+// room from the store and report false. Runs inside the room's serialized write
+// chain, so nothing else in this process touches the room meanwhile. Anything
+// other than a seq conflict, or a conflict the store cannot explain, rethrows.
+async function appendRoomEventOrResync<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  writer: Required<TenantEventWriterContext<Kind, C, M, State, Spec>>,
+  seq: number,
+  event: TenantRoomEvent<C, M, Spec>,
+): Promise<boolean> {
+  try {
+    await writer.persistence.appendRoomEvent(room.id, seq, event);
+    return true;
+  } catch (err) {
+    if (!isEventSeqConflict(err)) throw err;
+    if (!(await resyncTenantRoomFromStore(tenant, room, writer))) throw err;
+    return false;
+  }
+}
+
+/**
+ * Rebuild a stale in-memory room from the store, in place. Every web process
+ * runs the correspondence deadline sweeper, so while two share the database (a
+ * deploy overlap, two dev servers) one can hydrate a room another holds and end
+ * it there. The holder never hears of it, and before this its next write reused
+ * the swept seq and failed on events_pkey forever (#1056). The object keeps its
+ * identity (connected clients, timers), and only what the log decides is
+ * replaced. A terminal result found here was recorded by the process that wrote
+ * it, so this one marks the end recorded and writes no games row of its own.
+ */
+async function resyncTenantRoomFromStore<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  writer: Required<TenantEventWriterContext<Kind, C, M, State, Spec>>,
+): Promise<boolean> {
+  const { loadRoomEvents, loadRoomSeatTokens } = writer.persistence;
+  if (!loadRoomEvents || !loadRoomSeatTokens) return false;
+  const events = await loadRoomEvents(room.id);
+  // Only a longer log explains the conflict; anything else is not ours to fix.
+  if (!events || events.length <= room.events.length) return false;
+  if (!isTenantEventLog(tenant, events, room.id)) return false;
+  const rebuilt = createTenantRuntimeRoomFromEvents(tenant, events);
+  if (!rebuilt.ok) return false;
+  const tokens = await loadRoomSeatTokens(room.id);
+  room.events.splice(0, room.events.length, ...rebuilt.room.events);
+  room.projection = rebuilt.room.projection;
+  room.rated = rebuilt.room.rated;
+  room.seatTokens = tenantSeatTokenStatesFromPersistence(
+    tokens as Partial<
+      Record<
+        C & persistence.RoomSeatTokenSeat,
+        persistence.RoomSeatTokenRecord<C & persistence.RoomSeatTokenSeat>
+      >
+    >,
+  ) as TenantRuntimeRoom<Kind, C, M, State, Spec>['seatTokens'];
+  const status = room.projection.state.status.type;
+  if (status === 'finished' || status === 'aborted') {
+    room.gameEndRecorded = true;
+    room.pendingDebugArtifacts = undefined;
+    if (room.engineReservationId) {
+      releaseLiveEngineReservation(
+        room.engineReservationId,
+        `${tenant.engine?.reservationReleaseTag ?? tenant.kind}-${status}`,
+      );
+      room.engineReservationId = null;
+    }
+  }
+  logger.warn(
+    {
+      kind: `${tenant.persistence.logKindPrefix}_room_resynced`,
+      room_id: room.id,
+      event_count: events.length,
+      status,
+    },
+    `${tenant.persistence.logLabel} room rebuilt from the store after a seq conflict`,
+  );
+  writer.scheduleLifecycleTimers(room);
+  writer.onRoomResynced(room);
+  return true;
 }
 
 export function buildTenantGameSummary<
@@ -392,6 +540,7 @@ function contextWithDefaults<
       logTenantGameAbortRecordFailure(tenant, roomId, err),
     logGameEndRecordFailure: (roomId, err) => logTenantGameEndRecordFailure(tenant, roomId, err),
     persistence,
+    onRoomResynced: () => {},
     scheduleLifecycleTimers: () => {},
     scheduleEngineMove: () => {},
     ...ctx,

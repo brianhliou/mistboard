@@ -37,6 +37,7 @@ import {
   appendTenantSeatAssigned,
   recordTenantPersistenceError,
   type TenantEventWriterContext,
+  TenantRoomResyncedError,
 } from './events.js';
 import {
   clearTenantResumeTimer,
@@ -205,6 +206,9 @@ export function createTenantWsRuntime<
   }
 
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
+    // The room was rebuilt from the store after another process wrote to it:
+    // every open seat gets the room as it now stands (a swept result included).
+    onRoomResynced: (room) => broadcastSnapshot(room as LiveRoom),
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
     scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
   };
@@ -267,16 +271,21 @@ export function createTenantWsRuntime<
     // Allowlist-gated variants (139) ask the grant table before handing out a
     // seat. Non-gated specs short-circuit to true without a query.
     const variantAccessGranted = await mayPlayVariant(accountUser, tenant.gameSpecId);
-    const assignment = assignTenantSeat(
-      tenant,
-      room,
-      clientId,
-      seatToken,
-      accountUser,
-      deviceId,
-      variantAccessGranted,
-    );
-    if (!assignment.ok) {
+    const assignSeat = () =>
+      assignTenantSeat(
+        tenant,
+        room,
+        clientId,
+        seatToken,
+        accountUser,
+        deviceId,
+        variantAccessGranted,
+      );
+    type SeatAssignment = Extract<ReturnType<typeof assignSeat>, { ok: true }>;
+    // A refused seat closes the socket (or admits a spectator) and yields null.
+    const seatOrRefuse = (): SeatAssignment | null => {
+      const assignment = assignSeat();
+      if (assignment.ok) return assignment;
       // Spectator admission on a full room, via two independent routes:
       //  - canObserveRoom: the spec hides nothing while live, or the game has
       //    finished, so anyone may watch. This is the same predicate Mistboard TV
@@ -292,7 +301,7 @@ export function createTenantWsRuntime<
         isDebugViewAuthorized(request);
       if (assignment.reason === 'private room' && observable) {
         joinAsSpectator(ctx, socket, room, clientId, accountUser?.id ?? null);
-        return;
+        return null;
       }
       // A full room whose class refuses live spectators (fog, concealed hands)
       // while the game is still being played. 'private room' read to the room
@@ -303,39 +312,52 @@ export function createTenantWsRuntime<
       // room', because "not active" is true for it.
       if (assignment.reason === 'private room' && room.projection.state.status.type === 'playing') {
         socket.close(1008, TENANT_LIVE_GAME_NO_SEAT_REASON);
-        return;
+        return null;
       }
       socket.close(1008, assignment.reason);
-      return;
-    }
+      return null;
+    };
+    let assignment = seatOrRefuse();
+    if (!assignment) return;
 
-    try {
-      await appendTenantSeatAssigned(
-        tenant,
-        room,
-        {
-          event: {
-            type: 'seat-assigned',
-            at: Date.now(),
-            roomId: room.id,
-            clientId,
-            seat: assignment.seat,
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await appendTenantSeatAssigned(
+          tenant,
+          room,
+          {
+            event: {
+              type: 'seat-assigned',
+              at: Date.now(),
+              roomId: room.id,
+              clientId,
+              seat: assignment.seat,
+            },
+            tokenState: assignment.tokenState,
           },
-          tokenState: assignment.tokenState,
-        },
-        eventWriterCtx,
-      );
-    } catch (err) {
-      rollbackTenantSeatAssignment(room, assignment);
-      recordTenantPersistenceError(
-        tenant,
-        room.id,
-        room.events.length,
-        'seat-assigned',
-        err as Error,
-      );
-      socket.close(1011, 'persistence failure');
-      return;
+          eventWriterCtx,
+        );
+        break;
+      } catch (err) {
+        rollbackTenantSeatAssignment(room, assignment);
+        // Another process had written to this room; the writer rebuilt it from
+        // the store. Seat once more against that room (now possibly finished).
+        // A second conflict closes: the client backs off rather than spinning.
+        if (err instanceof TenantRoomResyncedError && attempt === 0) {
+          assignment = seatOrRefuse();
+          if (!assignment) return;
+          continue;
+        }
+        recordTenantPersistenceError(
+          tenant,
+          room.id,
+          room.events.length,
+          'seat-assigned',
+          err as Error,
+        );
+        socket.close(1011, 'persistence failure');
+        return;
+      }
     }
 
     const client: LiveClient = {
