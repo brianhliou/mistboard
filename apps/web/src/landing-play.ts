@@ -3092,7 +3092,7 @@ function showCorrespondenceFailure(
 // the live pool's unified-pool rule; players who want a specific color use the
 // "Post a game" form on /correspondence. Lands on the board so the player sees
 // their seek and can join someone else's while they wait.
-async function postCorrespondenceSeekFromPlay(
+export async function postCorrespondenceSeekFromPlay(
   button: HTMLButtonElement,
   status: HTMLElement,
   daysPerMove: number,

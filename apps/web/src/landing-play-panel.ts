@@ -41,7 +41,7 @@ import {
   landingVariantSupportsPve,
   landingVariantSupportsRated,
   type OpenLobbyRequest,
-  openLandingSetupDialog,
+  postCorrespondenceSeekFromPlay,
   variantLabelForGameSpec,
 } from './landing-play.js';
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
@@ -83,11 +83,19 @@ import { variantMiniIdForGameSpec } from './variants.js';
 type PanelTab = 'computer' | 'person';
 type PersonMode = 'casual' | 'rated';
 type PersonPace = { kind: 'live'; id: TimeControlId } | { kind: 'days'; days: number };
+type PaceFamily = PersonPace['kind'];
 
 type StoredPanel = {
   tab?: PanelTab;
   mode?: PersonMode;
   bots?: Record<string, { botId?: string; tc?: TimeControlId }>;
+  /** Live clocks or days per move, remembered for every person row at once
+   *  (2026-11-11): a pick on one row moves the whole panel to that family. */
+  personFamily?: PaceFamily;
+  /** Each row's own pick (a `paceKey`), used only while it is in the family. */
+  personPicks?: Record<string, string>;
+  /** Before 2026-11-11, one pick per row with no shared family. Ignored, and
+   *  dropped on the next write. */
   people?: Record<string, string>;
   /** Before 2026-10-24 the Play again record, written only by this panel's own
    *  Play button. Read as a fallback until a bot game writes the shared one. */
@@ -107,7 +115,11 @@ const LOBBY_POLL_MS = 3_000;
 function readStored(): StoredPanel {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StoredPanel) : {};
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    // Anything but an object (a stray `null`, an array, a number) reads as empty.
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as StoredPanel)
+      : {};
   } catch {
     return {};
   }
@@ -143,6 +155,26 @@ export function playAgainPick(
 
 function paceKey(pace: PersonPace): string {
   return pace.kind === 'live' ? pace.id : `${pace.days}d`;
+}
+
+/** Which of a row's paces it opens on: its own pick while that pick is in the
+ *  panel's family, else the family's default (5+5 live, 3 days per move), else
+ *  the other family's default for a row that cannot play the family (Xiangqi
+ *  Mahjong has no days; rated has none while rated correspondence is held). */
+export function personPaceIndex(
+  paces: readonly PersonPace[],
+  family: PaceFamily,
+  pick: string | undefined,
+): number {
+  const picked = paces.findIndex((p) => p.kind === family && paceKey(p) === pick);
+  if (picked >= 0) return picked;
+  const day = paces.findIndex((p) => p.kind === 'days' && p.days === DEFAULT_DAYS_PER_MOVE);
+  const live = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
+  const [first, second] = family === 'days' ? [day, live] : [live, day];
+  if (first >= 0) return first;
+  const anyInFamily = paces.findIndex((p) => p.kind === family);
+  if (anyInFamily >= 0) return anyInFamily;
+  return second >= 0 ? second : 0;
 }
 
 function compactLabel(id: TimeControlId): string {
@@ -746,7 +778,23 @@ export function buildPlayPanel(
   };
   searchCancel.addEventListener('click', stopSearch);
 
-  const personPace = new Map<string, number>();
+  // The pace family and each row's pick, mirrored in memory so the panel
+  // keeps them when storage is blocked. Nothing stored: a signed-in player
+  // opens on days per move (a seek waits for someone instead of timing out to
+  // a bot offer), a visitor on live clocks, the only pace open to a guest.
+  let personFamily: PaceFamily =
+    stored.personFamily === 'live' || stored.personFamily === 'days'
+      ? stored.personFamily
+      : signedIn
+        ? 'days'
+        : 'live';
+  const personPicks = new Map<string, string>(
+    stored.personPicks && typeof stored.personPicks === 'object'
+      ? Object.entries(stored.personPicks).filter(
+          (entry): entry is [string, string] => typeof entry[1] === 'string',
+        )
+      : [],
+  );
 
   const renderMode = (): void => {
     casualBtn.classList.toggle('is-active', mode === 'casual');
@@ -909,20 +957,7 @@ export function buildPlayPanel(
       const paces = panelPersonPaces(gameSpecId, mode, signedIn);
       if (paces.length === 0) continue;
       const label = labelFor(gameSpecId);
-      const savedKey = readStored().people?.[gameSpecId];
-      let index = personPace.get(`${mode}:${gameSpecId}`);
-      if (index === undefined || index >= paces.length) {
-        const fromSaved = paces.findIndex((p) => paceKey(p) === savedKey);
-        // The site's correspondence pace first (3 days per move, as on the
-        // homepage and challenge forms), where the variant plays by
-        // correspondence: an open seek waits for someone instead of timing out
-        // to a bot offer.
-        const day = paces.findIndex((p) => p.kind === 'days' && p.days === DEFAULT_DAYS_PER_MOVE);
-        const live = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
-        const fallback = day >= 0 ? day : live;
-        index = fromSaved >= 0 ? fromSaved : fallback >= 0 ? fallback : 0;
-      }
-      let at = index;
+      let at = personPaceIndex(paces, personFamily, personPicks.get(gameSpecId));
 
       const row = document.createElement('div');
       row.className = 'pp-row pp-row-person';
@@ -955,13 +990,30 @@ export function buildPlayPanel(
             : { text: daysPerMoveLabel(pace.days, locale), named: true };
         },
         onChange: (i) => {
+          const forward = i > at;
           at = i;
-          personPace.set(`${mode}:${gameSpecId}`, i);
+          const pace = paces[i]!;
+          const familyChanged = pace.kind !== personFamily;
+          personFamily = pace.kind;
+          personPicks.set(gameSpecId, paceKey(pace));
           writeStored((s) => {
-            s.people ??= {};
-            s.people[gameSpecId] = paceKey(paces[i]!);
+            s.personFamily = personFamily;
+            s.personPicks = Object.fromEntries(personPicks);
+            delete s.people;
           });
-          paint();
+          if (!familyChanged) {
+            paint();
+            return;
+          }
+          // Crossing between live and days moves every row to the new family.
+          // Redraw them all and keep focus on the arrow that was pressed.
+          renderPersonRows();
+          const arrows = personRows.querySelectorAll<HTMLButtonElement>(
+            `.pp-row-person[data-game-spec="${gameSpecId}"] .pp-step-clock .pp-step-btn`,
+          );
+          const arrow = arrows[forward ? 1 : 0];
+          if (arrow && !arrow.disabled) arrow.focus({ preventScroll: true });
+          else arrows[forward ? 0 : 1]?.focus({ preventScroll: true });
         },
         prevLabel: t('lobby.panelFaster', {}, locale),
         nextLabel: t('lobby.panelSlower', {}, locale),
@@ -969,14 +1021,26 @@ export function buildPlayPanel(
       act.addEventListener('click', () => {
         const pace = paces[at]!;
         if (pace.kind === 'days') {
-          openLandingSetupDialog({
+          // Post the seek straight away at this row's game and pace, casual
+          // (or rated where that is on), colour by lot; no setup dialog. The
+          // helper lands on /correspondence, where the seek is listed. A
+          // failure (no account, the seek limit) shows in the search bar.
+          searching?.();
+          searchBar.querySelector('.landing-engine-offer')?.remove();
+          searchStatus.replaceChildren();
+          searchBar.hidden = true;
+          // Holds the rows still (the 3 s refresh redraws them only when
+          // nothing is in flight) so the button keeps its Posting/Try again.
+          searching = () => {};
+          void postCorrespondenceSeekFromPlay(
+            act,
+            searchStatus,
+            pace.days,
+            gameSpecId,
+            mode === 'rated',
             locale,
-            mode: 'lobby',
-            initialGameSpecId: gameSpecId,
-            initialTimeMode: 'correspondence',
-            initialCorrespondenceDays: pace.days,
-            source: 'correspondence',
-            initialRated: mode === 'rated',
+          ).then(() => {
+            if (searchStatus.isConnected && searchStatus.textContent) searchBar.hidden = false;
           });
           return;
         }

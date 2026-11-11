@@ -5,7 +5,7 @@ import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js'
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
 import { landingBotLadder } from './landing-bot-policy.js';
-import { enabledLandingVariantGameSpecs } from './landing-play.js';
+import { enabledLandingVariantGameSpecs, setRoomNavigator } from './landing-play.js';
 import {
   buildPlayPanel,
   orderPanelSpecs,
@@ -47,7 +47,7 @@ function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
 // Person rows open on 3 days per move (#1058); a test of the live search picks 5+5 the
 // way a returning visitor's saved pace does.
 function rememberLivePace(): void {
-  localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ people: { xiangqi: '5m5' } }));
+  localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ personFamily: 'live' }));
 }
 
 // /api/live-stats reads are shared through a module cache; start each test cold.
@@ -1044,6 +1044,126 @@ describe('homepage play panel', () => {
     prev();
     prev();
     expect(stepValue(person, 'clock')).toBe('1 day/move');
+  });
+
+  it('remembers one pace family for every person row, keeping a row its own pick', () => {
+    setResolvedSignedIn(true);
+    rememberLivePace();
+    const board = buildPlayPanel('en', { hydrate: false });
+    const others = () =>
+      [...board.querySelectorAll<HTMLElement>('.pp-row-person')].filter(
+        (el) => el.dataset.gameSpec !== 'xiangqi',
+      );
+    for (const el of others())
+      expect(stepValue(el, 'clock'), el.dataset.gameSpec).not.toMatch(/day/);
+    // Step Xiangqi from 5+5 up through the live clocks onto the first days pace.
+    const live = panelPersonPaces('xiangqi', 'casual', true).filter((p) => p.kind === 'live');
+    const fiveFive = live.findIndex((p) => p.kind === 'live' && p.id === '5m5');
+    clickNext(row(board, 'xiangqi', 'person'), 'clock', live.length - fiveFive);
+    expect(stepValue(row(board, 'xiangqi', 'person'), 'clock')).toBe('1 day/move');
+    // Every other row moved to days, on the family default, and posts.
+    const checkDays = (panel: HTMLElement): void => {
+      for (const el of [...panel.querySelectorAll<HTMLElement>('.pp-row-person')]) {
+        const spec = el.dataset.gameSpec!;
+        if (spec === 'xiangqi') continue;
+        const hasDays = panelPersonPaces(spec as never, 'casual', true).some(
+          (p) => p.kind === 'days',
+        );
+        // Xiangqi Mahjong has no days per move; it stays on its live default.
+        expect(stepValue(el, 'clock'), spec).toBe(hasDays ? '3 days/move' : '5+5');
+      }
+    };
+    expect(others().length).toBeGreaterThan(1);
+    checkDays(board);
+    // A fresh page keeps the family and Xiangqi's own pick.
+    const again = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(row(again, 'xiangqi', 'person'), 'clock')).toBe('1 day/move');
+    checkDays(again);
+    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!);
+    expect(stored.personFamily).toBe('days');
+    expect(stored.personPicks).toEqual({ xiangqi: '1d' });
+  });
+
+  it('reads old or broken panel storage without crashing, and drops the per-row record', () => {
+    setResolvedSignedIn(true);
+    for (const raw of ['null', '[]', '7', '{"personPicks":5,"personFamily":"weekly"}']) {
+      localStorage.setItem('mistboard.playPanel.v1', raw);
+      const board = buildPlayPanel('en', { hydrate: false });
+      expect(stepValue(row(board, 'xiangqi', 'person'), 'clock'), raw).toBe('3 days/move');
+    }
+    // The per-row record from before the shared family is ignored.
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({ tab: 'person', people: { xiangqi: '5m5', jieqi: '7d' } }),
+    );
+    const board = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(row(board, 'xiangqi', 'person'), 'clock')).toBe('3 days/move');
+    expect(stepValue(row(board, 'jieqi', 'person'), 'clock')).toBe('3 days/move');
+    clickNext(row(board, 'jieqi', 'person'), 'clock');
+    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!);
+    expect(stored.people).toBeUndefined();
+    expect(stored.tab).toBe('person');
+    expect(stored.personPicks).toEqual({ jieqi: '7d' });
+  });
+
+  it('posts a days-per-move seek straight from + Post and lands on /correspondence', async () => {
+    setResolvedSignedIn(true);
+    const navigate = vi.fn();
+    setRoomNavigator(navigate);
+    const fetchSpy = vi.fn(async (_input: string, _init?: RequestInit) =>
+      Response.json({ seek: { gameSpecId: 'jieqi' } }, { status: 201 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    try {
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      const jieqi = row(board, 'jieqi', 'person');
+      clickNext(jieqi, 'clock'); // 3 days -> 7 days
+      expect(stepValue(jieqi, 'clock')).toBe('7 days/move');
+      jieqi.querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await flush();
+      expect(document.querySelector('.landing-setup-overlay')).toBeNull();
+      const post = fetchSpy.mock.calls.find(([url]) => url === '/api/correspondence/seeks');
+      expect(post?.[1]?.method).toBe('POST');
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+        gameSpecId: 'jieqi',
+        daysPerMove: 7,
+        preferredColor: 'random',
+      });
+      expect(navigate).toHaveBeenCalledWith('/correspondence');
+    } finally {
+      setRoomNavigator(null);
+      document.body.replaceChildren();
+    }
+  });
+
+  it('shows why a + Post failed and keeps the button for another try', async () => {
+    setResolvedSignedIn(true);
+    const navigate = vi.fn();
+    setRoomNavigator(navigate);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ error: 'needs_account' }, { status: 401 })),
+    );
+    try {
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      const xiangqi = row(board, 'xiangqi', 'person');
+      xiangqi.querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await flush();
+      await flush();
+      expect(navigate).not.toHaveBeenCalled();
+      const bar = board.querySelector<HTMLElement>('.pp-search')!;
+      expect(bar.hidden).toBe(false);
+      expect(bar.querySelector('.pp-search-status')?.textContent).not.toBe('');
+      expect(xiangqi.querySelector('.pp-act')?.textContent).toBe('Try again');
+      bar.querySelector<HTMLButtonElement>('.pp-search-cancel')!.click();
+      expect(bar.hidden).toBe(true);
+      expect(row(board, 'xiangqi', 'person').querySelector('.pp-act')?.textContent).toBe('+ Post');
+    } finally {
+      setRoomNavigator(null);
+      document.body.replaceChildren();
+    }
   });
 
   it('narrows rated to the rated clocks; days per move are rated where correspondence rates', () => {
