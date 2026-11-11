@@ -53,6 +53,9 @@ export type TenantSocketFrame = {
   seatToken?: string;
   seat?: unknown;
   seq?: number;
+  // Hello only: why a spectator holds no seat when signing in would give it one
+  // (a signed-out friend watching a waiting correspondence room).
+  seatRefusal?: string;
 };
 
 type TenantServerMessage =
@@ -103,6 +106,8 @@ export type TenantSocketClient = {
   connection(): TenantConnectionState;
   noticeTier(): TenantNoticeTier;
   closeReason(): string;
+  // The hello's seat refusal for an admitted spectator, '' otherwise.
+  seatRefusal?(): string;
   clientId(): string;
   latencyMs(): number | null;
   reconnectAttempt(): number;
@@ -147,6 +152,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   let clientId = '';
   let connectionState: TenantConnectionState = 'connecting';
   let closeReason = '';
+  let seatRefusal = '';
   let noticeTier: TenantNoticeTier = 'none';
   let noticeTierTimers: number[] = [];
   let latencyMs: number | null = null;
@@ -417,6 +423,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       connectionState = 'connected';
       clearNoticeTiers();
       clientId = message.clientId ?? clientId;
+      seatRefusal = typeof message.seatRefusal === 'string' ? message.seatRefusal : '';
       if (message.seatToken && isPlayableSeat(message.seat)) {
         writeSeatTokenForRoom(options.room, { seat: message.seat, token: message.seatToken });
       }
@@ -470,6 +477,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     connection: () => connectionState,
     noticeTier: () => noticeTier,
     closeReason: () => closeReason,
+    seatRefusal: () => seatRefusal,
     clientId: () => clientId,
     latencyMs: () => latencyMs,
     reconnectAttempt: () => reconnectAttempt,

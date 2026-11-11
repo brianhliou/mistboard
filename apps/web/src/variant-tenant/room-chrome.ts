@@ -221,6 +221,10 @@ export type TenantChromeContext<C extends string> = {
   // never closed. The chrome distinguishes only the reasons that need their own
   // sentence; everything else falls back to the tenant's rejectedBody line.
   closeReason(): string;
+  // Why a connected spectator holds no seat when a sign-in would give it one
+  // (the hello's seatRefusal: a signed-out friend watching a waiting
+  // correspondence room), or '' / absent.
+  seatRefusal?(): string;
   clock(): TenantWebClock<C> | null | undefined;
   paused?(): boolean;
   timeControl():
@@ -1074,8 +1078,10 @@ export function createTenantRoomChrome<C extends string>(
     notice.append(noticeTitle(actionTitle(view)));
     // A signed-out invitee (#1058): who asked, the game and the pace head the
     // notice, with the variant's start board under it, before "Sign in".
+    // A visitor watching the room already has the real board above the notice,
+    // so a second start board would only repeat it.
     const invite = invitePreview();
-    if (invite) {
+    if (invite && !watchingCorrespondenceInvite()) {
       notice.classList.add('room-invite-notice');
       notice.append(buildRoomInviteBoard(invite.gameSpecId));
     }
@@ -1083,7 +1089,10 @@ export function createTenantRoomChrome<C extends string>(
     // An account-gated seat (rated, correspondence): the guest gets a way in.
     // The login href carries this room as the auth referrer, so signing in
     // brings them straight back here and the reconnect seats them.
-    if (ctx.connectionState() === 'rejected' && accountGatedRejection()) {
+    if (
+      (ctx.connectionState() === 'rejected' && accountGatedRejection()) ||
+      watchingCorrespondenceInvite()
+    ) {
       const signIn = document.createElement('a');
       signIn.href = loginHrefForCurrentPage();
       signIn.textContent = t('live.signInTakeSeat');
@@ -1128,6 +1137,17 @@ export function createTenantRoomChrome<C extends string>(
     return null;
   }
 
+  // A signed-out friend watching a correspondence invite whose seat is still
+  // empty: the server refused the seat only for want of an account and let them
+  // watch instead (variant-tenant/ws.ts), naming the refusal on the hello. Once
+  // somebody takes the seat they are an ordinary spectator.
+  function watchingCorrespondenceInvite(): boolean {
+    if (ctx.connectionState() !== 'connected' || ctx.seat() !== 'spectator') return false;
+    if (ctx.seatRefusal?.() !== 'correspondence requires account') return false;
+    const seats = ctx.seats();
+    return tenant.colors.some((color) => !seats[color]);
+  }
+
   // A full room whose class hides the board from spectators until the game
   // ends (fog, concealed hands), refused while live (server variant-tenant/ws.ts).
   function liveGameRejection(): boolean {
@@ -1150,6 +1170,10 @@ export function createTenantRoomChrome<C extends string>(
     }
     if (ctx.connectionState() === 'displaced') return t('live.statusSessionMoved');
     if (!view) return t('live.statusConnecting');
+    if (watchingCorrespondenceInvite()) {
+      const invite = loadedRoomInvitePreview(ctx.room());
+      return invite ? roomInviteHeading(invite) : t('correspondence.heading');
+    }
     if (!ctx.isReplayLive()) return t('live.titleViewingReplay');
     if (lobbyOpponentMissing()) return t('live.statusWaitingForOpponent');
     if (inviteWindowOpen()) return t('live.titleInviteOpponent');
@@ -1165,9 +1189,9 @@ export function createTenantRoomChrome<C extends string>(
   // The invite preview for a signed-out visitor refused a correspondence seat,
   // once loaded; the first call fetches it and re-renders the notice on arrival.
   function invitePreview() {
-    if (ctx.connectionState() !== 'rejected' || accountGatedRejection() !== 'correspondence') {
-      return null;
-    }
+    const refused =
+      ctx.connectionState() === 'rejected' && accountGatedRejection() === 'correspondence';
+    if (!refused && !watchingCorrespondenceInvite()) return null;
     return roomInvitePreview(ctx.room(), () => {
       renderActionStatus();
       renderBoardStatus();
@@ -1217,6 +1241,7 @@ export function createTenantRoomChrome<C extends string>(
     }
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');
+    if (watchingCorrespondenceInvite()) return t('live.rejectedCorrespondenceAccount');
     if (!ctx.isReplayLive()) return t('live.roomReturnToLatest');
     if (lobbyOpponentMissing()) return t('live.roomWaitingOpponentConnect');
     if (inviteWindowOpen()) return t('live.roomInviteBody');
