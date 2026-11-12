@@ -28,6 +28,9 @@ export const xiangqiEveAdapter: VariantEveAdapter<
   tenant: xiangqiTenant,
   tierFor: xiangqiEngineTierFor,
   randomEngineId: XIANGQI_RANDOM_ENGINE_ID,
+  // The live room's rule stamp (the 120-ply progress clock); without it a game replays
+  // under the legacy 60-ply rule.
+  createSetup: () => xiangqiTenant.rules.createSetup?.(),
   legalMoves: getStandardXiangqiLegalMoves,
   moveToUci: xiangqiMoveToPikafishUci,
   legalMoveForUci,
