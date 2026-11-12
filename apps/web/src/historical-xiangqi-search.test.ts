@@ -689,8 +689,12 @@ describe('the default minimum length', () => {
     for (const source of ['archive', 'broadcast', 'engine-match']) {
       expect(dataPageHref({ ...base, variant: 'xiangqi', source })).toBeNull();
     }
+    // Three Kingdoms Banqi exports its masked record, so it links like any other.
+    expect(dataPageHref({ ...base, variant: 'three-kingdoms-banqi' })).toBe(
+      '/data?variant=three-kingdoms-banqi',
+    );
     // A variant with no export has no downloads to link to.
-    expect(dataPageHref({ ...base, variant: 'three-kingdoms-banqi' })).toBeNull();
+    expect(dataPageHref({ ...base, variant: 'ffq-banqi' })).toBeNull();
     // Filters /data does not have.
     expect(dataPageHref({ ...base, player: 'someone' })).toBeNull();
     expect(dataPageHref({ ...base, result: '1-0' })).toBeNull();

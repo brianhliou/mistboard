@@ -262,14 +262,16 @@ describe('landing shell', () => {
     // blog row below.
     const deepDives = demo?.querySelector(':scope > .landing-dives-row');
     expect(deepDives).not.toBeNull();
-    expect(
-      deepDives?.querySelector('.landing-article-card[href="/blog/yin-sheng"]'),
-    ).not.toBeNull();
-    expect(
-      demo?.querySelector(
-        ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
-      ),
-    ).toBeNull();
+    // The row holds the newest deep dives, so which player pages show moves
+    // as new ones publish; a player page is never in the blog row below.
+    expect(deepDives?.querySelector('.landing-article-card')).not.toBeNull();
+    for (const slug of ['yin-sheng', 'zuo-wenjing', 'tang-dan']) {
+      expect(
+        demo?.querySelector(
+          `:scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/${slug}"]`,
+        ),
+      ).toBeNull();
+    }
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
     // The other row is labelled too, and its label line links to the blog index.
     const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
