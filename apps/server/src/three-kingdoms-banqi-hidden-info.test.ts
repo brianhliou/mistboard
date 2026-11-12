@@ -329,7 +329,7 @@ test('an attempted face-down capture is rejected and reveals nothing to the oppo
   assert.ok(attempts > 0);
 });
 
-test('registration offers casual-only Banqi time controls, TV and a card, and no export', async () => {
+test('registration offers casual-only Banqi time controls, TV, a card and the masked export', async () => {
   const registration = variantTenantForRoomId(ROOM)!;
   assert.equal(registration.lobby?.supportsRated, false);
   assert.equal(
@@ -339,5 +339,7 @@ test('registration offers casual-only Banqi time controls, TV and a card, and no
   assert.equal(registration.lobby?.allowsTimeControl({ initialMs: 123, incrementMs: 0 }), false);
   assert.equal(registration.watch?.channelId, 'three-kingdoms-banqi');
   assert.equal(typeof registration.createCorrespondenceGameForSeek, 'function');
-  assert.equal(registration.export, null, 'no export: the deal names pieces nobody turned over');
+  // The export is built from the masked public views; its swap invariance is
+  // pinned in three-kingdoms-banqi-export.test.ts.
+  assert.equal(registration.export?.gameRouteBase, '/three-kingdoms-banqi/game');
 });

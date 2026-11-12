@@ -62,6 +62,7 @@ import {
   type UserPuzzleRating,
 } from './puzzles/api.js';
 import { feedbackPanel, puzzlePlayPosition } from './puzzles/detail-panels.js';
+import { explorationState, exploreMove } from './puzzles/exploration.js';
 import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
 import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { type QueuePanelProps, renderQueuePanel } from './puzzles/queue-panel.js';
@@ -723,6 +724,12 @@ function renderPuzzleDetail(
 
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
   const displayState = puzzleReplayState(session);
+  const canExplore =
+    opts.analysis !== false &&
+    !!adapter.createAnalysis &&
+    isPuzzleComplete(session) &&
+    !session.locked &&
+    session.viewPly >= 0;
 
   const boardPanel = document.createElement('div');
   boardPanel.className = 'puzzle-board-panel';
@@ -734,7 +741,7 @@ function renderPuzzleDetail(
   // Whether a move made now would be taken: false while a pause holds the
   // board (the setup glide, the ✓ before a reply, a wrong try's ✗) or the
   // solver is scrubbed back.
-  board.dataset.puzzleLive = String(isReplayLive(session));
+  board.dataset.puzzleLive = String(isReplayLive(session) || canExplore);
   const side = document.createElement('aside');
   side.className = 'puzzle-side-panel';
 
@@ -745,6 +752,16 @@ function renderPuzzleDetail(
     displayState,
     renderSession,
     submitMove: (move) => submitMove(session, move, renderSession, onSolved, opts),
+    ...(canExplore
+      ? {
+          exploreMove: (move: PuzzleMove) => {
+            if (exploreMove(session, move, displayState)) {
+              renderSession();
+              animatePuzzleMove(session, move);
+            }
+          },
+        }
+      : {}),
     moveMarks: puzzleMoveMarks(session),
   });
   renderedPuzzleSession = session;
@@ -760,7 +777,31 @@ function renderPuzzleDetail(
   const trainer = document.createElement('div');
   trainer.className = 'puzzle-trainer-panel';
   trainer.append(
-    moveListPanel(session, (viewPly) => jumpPuzzle(session, renderSession, viewPly)),
+    moveListPanel(
+      session,
+      (viewPly) => jumpPuzzle(session, renderSession, viewPly),
+      canExplore
+        ? {
+            onTry: (ply, move) => {
+              session.exploration = null;
+              session.viewPly = ply;
+              exploreMove(session, move, puzzleReplayState(session));
+              renderSession();
+            },
+            onJump: (cursor) => {
+              if (!session.exploration) return;
+              session.exploration.cursor = cursor;
+              session.selectedSquare = null;
+              renderSession();
+            },
+            onReturn: () => {
+              session.exploration = null;
+              session.selectedSquare = null;
+              renderSession();
+            },
+          }
+        : undefined,
+    ),
     opts.feedback?.(session) ??
       feedbackPanel(
         session,
@@ -896,6 +937,18 @@ export type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
 // before the setup move whatever the cursor says.
 function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: PuzzleScrub): void {
   if (session.submitting || session.setupIntro || session.wrongPreview) return;
+  if (session.exploration) {
+    const line = session.exploration;
+    line.cursor =
+      action === 'first'
+        ? 0
+        : action === 'last'
+          ? line.moves.length
+          : Math.max(0, Math.min(line.moves.length, line.cursor + (action === 'next' ? 1 : -1)));
+    session.selectedSquare = null;
+    renderSession();
+    return;
+  }
   const firstPly = firstPuzzleViewPly(session);
   const lastPly = session.playedMoves.length;
   switch (action) {
@@ -934,6 +987,13 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
 // like the arrows; a longer jump repaints, as ⏮ and ⏭ do.
 function jumpPuzzle(session: PuzzleSession, renderSession: () => void, viewPly: number): void {
   if (session.submitting || session.setupIntro || session.wrongPreview) return;
+  if (session.exploration) {
+    session.exploration = null;
+    session.selectedSquare = null;
+    session.viewPly = viewPly;
+    renderSession();
+    return;
+  }
   const target = Math.min(
     session.playedMoves.length,
     Math.max(firstPuzzleViewPly(session), viewPly),
@@ -958,6 +1018,11 @@ function puzzleMoveIntoView(session: PuzzleSession, viewPly: number): PuzzleMove
 
 function puzzleScrubBounds(session: PuzzleSession): { atStart: boolean; atEnd: boolean } {
   const held = session.submitting || session.setupIntro !== null || !!session.wrongPreview;
+  if (session.exploration)
+    return {
+      atStart: session.exploration.cursor === 0 || held,
+      atEnd: session.exploration.cursor === session.exploration.moves.length || held,
+    };
   return {
     atStart: session.viewPly <= firstPuzzleViewPly(session) || held,
     atEnd: session.viewPly >= session.playedMoves.length || held,
@@ -1481,6 +1546,7 @@ function showSolutionLine(
 // reply then bailed as unpainted and its board never went live).
 function playbackSolution(session: PuzzleSession, renderSession: () => void): void {
   const step = (): void => {
+    if (session.solutionPlaybackCancelled) return;
     if (session.locked || !isPaintedPuzzleSession(session)) return;
     if (session.viewPly >= session.playedMoves.length) return;
     scrubPuzzle(session, renderSession, 'next');
@@ -1551,6 +1617,7 @@ function forgetPaintedPuzzle(): void {
 // Moves of a shown solution (reveal, Streak's miss) get none: they were shown,
 // not found, as in the move list.
 function puzzleMoveMarks(session: PuzzleSession): PuzzleMoveMark[] {
+  if (session.exploration) return [];
   if (session.wrongPreview) return [{ square: session.wrongPreview.move.to, verdict: 'wrong' }];
   if (session.setupIntro || session.viewPly < 1) return [];
   const index = session.viewPly - 1;
@@ -1775,6 +1842,8 @@ function navigationFor(
 // The replay-aware state to display: the live state when the cursor sits at the
 // tip, else the initial state with the first viewPly moves re-applied.
 function puzzleReplayState(session: PuzzleSession): PuzzleState {
+  const explored = explorationState(session);
+  if (explored) return explored;
   if (session.wrongPreview) return session.wrongPreview.state;
   if (session.setupIntro) return session.setupIntro;
   if (session.viewPly >= session.playedMoves.length) return session.state;

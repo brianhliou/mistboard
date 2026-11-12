@@ -26,7 +26,7 @@ describe('/games live card seat order', () => {
       players: [player('west', 'Misty', true), player('east', 'Ann')],
       gameSpecId: 'xiangqi-mahjong',
     });
-    expect(names).toEqual({ first: 'Ann', second: 'Misty' });
+    expect(names).toEqual({ first: 'Ann', second: 'Misty Xiangqi Mahjong' });
   });
 
   it('keeps red and white at the bottom whatever the list order', () => {

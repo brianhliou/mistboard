@@ -7,6 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANT_CONTENT = {
+  'articles.replay.round': '輪次',
+  'articles.replay.roundN': '第{n}輪',
+  'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
   'videos.heading': '影片庫',
   'videos.intro': '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
   'videos.introMainland': '精選象棋與揭棋中文影片：規則、開局、戰術與思路。',
@@ -654,6 +657,13 @@ export const ZH_HANT_CONTENT = {
   'data.countOneMonth': '{months} 個月，{games}',
   'data.countManyMonths': '{months} 個月，{games}',
   'data.noMonths': '還沒有已結束且有對局的月份。',
+  'data.levelFilter': '等級',
+  'data.allLevels': '全部等級',
+  'data.notBuilt': '首次下載時產生，之後顯示大小和校驗和。',
+  'data.notBuiltFormat': '{format}：首次下載時產生',
+  'data.unavailableNone': '{variant}暫不提供下載。',
+  'data.firstArchive': '首批{variant}對局下於{month}。該月結束後，即{date}，會出現它們的檔案。',
+  'data.searchLink': '在對局搜尋中逐局瀏覽這些對局',
   'data.currentMonthNote': '{month}結束後會加入。',
   'data.downloadLabel': '下載 {format}：{file}',
   'data.aboutHeading': '關於資料',

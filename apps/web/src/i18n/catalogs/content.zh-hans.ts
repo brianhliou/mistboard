@@ -7,6 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANS_CONTENT = {
+  'articles.replay.round': '轮次',
+  'articles.replay.roundN': '第{n}轮',
+  'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
   'videos.heading': '视频库',
   'videos.intro': '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
   'videos.introMainland': '精选象棋与揭棋中文视频：规则、开局、战术与思路。',
@@ -654,6 +657,13 @@ export const ZH_HANS_CONTENT = {
   'data.countOneMonth': '{months} 个月，{games}',
   'data.countManyMonths': '{months} 个月，{games}',
   'data.noMonths': '还没有已结束且有对局的月份。',
+  'data.levelFilter': '等级',
+  'data.allLevels': '全部等级',
+  'data.notBuilt': '首次下载时生成，之后显示大小和校验和。',
+  'data.notBuiltFormat': '{format}：首次下载时生成',
+  'data.unavailableNone': '{variant}暂不提供下载。',
+  'data.firstArchive': '首批{variant}对局下于{month}。该月结束后，即{date}，会出现它们的文件。',
+  'data.searchLink': '在对局搜索中逐局浏览这些对局',
   'data.currentMonthNote': '{month}结束后会加入。',
   'data.downloadLabel': '下载 {format}：{file}',
   'data.aboutHeading': '关于数据',

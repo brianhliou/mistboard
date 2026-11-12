@@ -55,7 +55,7 @@ import {
   faceDownFaceSvg,
   faceDownSlotClass,
 } from './review/face-down-faces.js';
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphs, animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -318,7 +318,7 @@ export function animateJungleFlipBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphsOnLanding(host, duration);
   // Fade the destination tint in as the piece lands. A reverse step renders the
   // PRIOR move's mark on a different cell, so fading it would not track the glide.
   if (!opts.reverse) {

@@ -363,6 +363,8 @@ export const ZH_HANT_PLAY = {
   'puzzle.embedLoadFailed': '這道題目無法載入。',
   'puzzle.embedNotAvailable': '這道題目暫不可用。',
   'puzzle.openInAnalysis': '在分析棋盤中開啟',
+  'puzzle.exploration': '分析變化',
+  'puzzle.backToSolution': '返回答案',
   'puzzle.checkFailed': '無法檢查著法，請重試。',
   'puzzle.dashboardTitle': '解題面板',
   'puzzle.dashboardSubtitle': '訓練、分析、進步',

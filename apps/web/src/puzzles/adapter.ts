@@ -181,6 +181,9 @@ export type PuzzleSession = {
   // across renderSession() rebuilds so the engine toggle + eval + arrows
   // survive a full re-render. Disposed when the session is replaced.
   analysis?: PuzzleAnalysisController | null;
+  // Local post-completion exploration, separate from the graded solution.
+  exploration?: { rootPly: number; moves: PuzzleMove[]; cursor: number } | null;
+  solutionPlaybackCancelled?: boolean;
   // The miss that ended the attempt, kept when the board then plays the line
   // out (Puzzle Streak's game over): the move list marks it beside the move
   // that was right at that ply. `ply` indexes playedMoves.
@@ -240,6 +243,8 @@ export type PuzzleBoardContext = {
   renderSession: () => void;
   /** Submit a candidate solution move through the shared attempt path. */
   submitMove: (move: PuzzleMove) => Promise<void>;
+  /** Local legal moves after completion; never books a puzzle attempt. */
+  exploreMove?: (move: PuzzleMove) => void;
   /** Verdict badges for the painted position: ✓ on a found solver move, ✗ on
    *  a wrong try held before its take-back. Adapters pin each at `square`. */
   moveMarks: readonly PuzzleMoveMark[];

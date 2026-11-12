@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_MIN_PLIES,
+  dataPageHref,
   eventLine,
   gamesSearchPageUrl,
   type HistoricalXiangqiGameListItem,
@@ -659,6 +660,46 @@ describe('the default minimum length', () => {
         limit: 50,
       }),
     ).toBe('/games/search?variant=jieqi&plyMin=20');
+  });
+
+  it('links to /data only for a search /data can hold exactly', () => {
+    const base = {
+      sort: 'recent' as const,
+      variant: '',
+      player: '',
+      event: '',
+      source: '',
+      result: '',
+      from: '',
+      to: '',
+      plyMin: DEFAULT_MIN_PLIES,
+      plyMax: '',
+      offset: 0,
+      limit: 50,
+    };
+    expect(dataPageHref(base)).toBe('/data');
+    expect(dataPageHref({ ...base, variant: 'gomoku', source: 'mistboard' })).toBe(
+      '/data?variant=gomoku',
+    );
+    expect(dataPageHref({ ...base, variant: 'jieqi', source: 'mistboard-pve' })).toBe(
+      '/data?variant=jieqi',
+    );
+    expect(dataPageHref({ ...base, source: 'engine-game' })).toBe('/data');
+    // Imported and archive games never point at downloads.
+    for (const source of ['archive', 'broadcast', 'engine-match']) {
+      expect(dataPageHref({ ...base, variant: 'xiangqi', source })).toBeNull();
+    }
+    // Three Kingdoms Banqi exports its masked record, so it links like any other.
+    expect(dataPageHref({ ...base, variant: 'three-kingdoms-banqi' })).toBe(
+      '/data?variant=three-kingdoms-banqi',
+    );
+    // A variant with no export has no downloads to link to.
+    expect(dataPageHref({ ...base, variant: 'ffq-banqi' })).toBeNull();
+    // Filters /data does not have.
+    expect(dataPageHref({ ...base, player: 'someone' })).toBeNull();
+    expect(dataPageHref({ ...base, result: '1-0' })).toBeNull();
+    expect(dataPageHref({ ...base, from: '2026-10-01' })).toBeNull();
+    expect(dataPageHref({ ...base, plyMin: '40' })).toBeNull();
   });
 });
 

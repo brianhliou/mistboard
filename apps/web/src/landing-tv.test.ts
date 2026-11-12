@@ -305,7 +305,7 @@ test('a guest seat (null name on the live frame) is labelled Guest, matching the
     },
   };
   await tick();
-  expect(namesByRoomId.liveG).toEqual({ first: 'Misty', second: 'Guest' });
+  expect(namesByRoomId.liveG).toEqual({ first: 'Misty Jungle Chess', second: 'Guest' });
   tv.destroy();
 });
 

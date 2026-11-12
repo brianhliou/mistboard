@@ -28,7 +28,7 @@ import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { t } from '../i18n/catalog.js';
 import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
-import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
+import { animateXiangqiBoardMove, createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { renderXiangqiPiece } from '../xiangqi-pieces.js';
 import { fitGamebookToViewport } from './gamebook-fit.js';
 import {
@@ -59,6 +59,8 @@ export interface XiangqiPracticeOptions {
   summary?: string;
   /** Optional left-rail element (chapter tabs, etc.). */
   aside?: HTMLElement;
+  /** A single position page (/practice/position), not a study chapter. */
+  single?: boolean;
   /** The concept prose shown under the board, beside the goal. */
   brief?: string;
   /** Where this exercise sits in its set, for the "3 of 32" line. */
@@ -153,7 +155,7 @@ export function mountXiangqiPractice(
       initialTruth: opts.initialTruth,
       evaluate: opts.evaluate,
       ...(opts.replyDelayMs === undefined ? {} : { minReplyDelayMs: opts.replyDelayMs }),
-      onMovePlayed: (move, parentTruth) => {
+      onMovePlayed: (move, parentTruth, by) => {
         // The full standard-xiangqi voice, including the cannon boom, from the
         // classifier the live rooms use: a drill that clicks where a game booms
         // teaches the wrong ear for the piece.
@@ -164,17 +166,33 @@ export function mountXiangqiPractice(
         // repaint deferred to it let the defender's move click and then land on
         // the board half a second or more later; for the learner's own move it
         // held the old position for the whole search and then jumped two plies.
-        render();
+        // A new move returns a reader who was looking back to the live position.
+        // The defender's move glides the way a live opponent's does; the
+        // learner's own move was just dragged or clicked into place.
+        viewing = null;
+        render({ glide: by === 'defender' });
       },
     }),
   );
 
-  const currentView = (): StandardXiangqiPlayerView =>
-    xiangqiTreeAdapter.project(session.truth())[0]!.view;
+  const viewOf = (truth: XiangqiGameState): StandardXiangqiPlayerView =>
+    xiangqiTreeAdapter.project(truth)[0]!.view;
+  const currentView = (): StandardXiangqiPlayerView => viewOf(session.truth());
+  // Index into session.line() of a position the reader stepped back to, or null
+  // for the live position. Looking back never changes the attempt: the board is
+  // read-only there, and the next move snaps it live again.
+  let viewing: number | null = null;
+  // The line position last painted, so a one-step move can glide.
+  let painted = -1;
+  const shownIndex = (): number => viewing ?? session.line().length - 1;
+  const browsing = (): boolean => viewing !== null;
 
   // ── Layout ──
   const wrap = document.createElement('section');
   wrap.className = 'gamebook practice';
+  // One position from a URL, not a chapter of a set: on a phone the page drops
+  // its card and generic heading so the board, goal and coach fit one screen.
+  if (opts.single) wrap.classList.add('practice--single');
   if (opts.aside) {
     const aside = document.createElement('div');
     aside.className = 'gamebook__aside';
@@ -203,7 +221,12 @@ export function mountXiangqiPractice(
   brief.className = 'practice__brief';
   const briefGoal = document.createElement('p');
   briefGoal.className = 'practice__brief-goal';
-  briefGoal.textContent = localizedPracticeGoal(opts.goal);
+  // The learner's colour leads, as a composed problem states it: "Black to
+  // play and win", not a bare "Win" the reader has to pair with the board.
+  briefGoal.textContent = t('practice.goal.sideTo', {
+    color: opts.orientation === 'black' ? t('setup.black') : t('setup.red'),
+    goal: localizedPracticeGoal(opts.goal),
+  });
   brief.append(briefGoal);
   if (opts.brief) {
     const briefText = document.createElement('p');
@@ -251,6 +274,17 @@ export function mountXiangqiPractice(
   const movesEl = document.createElement('ol');
   movesEl.className = 'practice__moves';
   side.append(movesEl);
+  // Step through the attempt, as any move list does. Arrow keys do the same.
+  const stepper = document.createElement('div');
+  stepper.className = 'practice__stepper';
+  const prevBtn = button('\u25c0', 'practice__step');
+  prevBtn.setAttribute('aria-label', t('replay.previous'));
+  prevBtn.title = t('replay.previous');
+  const nextStepBtn = button('\u25b6', 'practice__step');
+  nextStepBtn.setAttribute('aria-label', t('replay.next'));
+  nextStepBtn.title = t('replay.next');
+  stepper.append(prevBtn, nextStepBtn);
+  side.append(stepper);
 
   const coach = document.createElement('div');
   coach.className = 'practice__coach';
@@ -318,8 +352,8 @@ export function mountXiangqiPractice(
     board: boardEl,
     getInteractionView: () => currentView(),
     getPerspective: () => opts.orientation,
-    seatFor: () => (session.view().awaitingMove && !busy ? opts.orientation : null),
-    enabled: () => session.view().awaitingMove && !busy,
+    seatFor: () => (session.view().awaitingMove && !busy && !browsing() ? opts.orientation : null),
+    enabled: () => session.view().awaitingMove && !busy && !browsing(),
     onMove: (move) => {
       void attempt(move);
     },
@@ -337,18 +371,41 @@ export function mountXiangqiPractice(
     render();
   }
 
+  function stepTo(index: number): void {
+    const last = session.line().length - 1;
+    const target = Math.max(0, Math.min(index, last));
+    const next = target === last ? null : target;
+    if (next === viewing) return;
+    viewing = next;
+    render({ glide: true });
+  }
+  prevBtn.addEventListener('click', () => stepTo(shownIndex() - 1));
+  nextStepBtn.addEventListener('click', () => stepTo(shownIndex() + 1));
+  const onKey = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const el = event.target instanceof Element ? event.target : null;
+    if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (!wrap.isConnected) return;
+    event.preventDefault();
+    stepTo(shownIndex() + (event.key === 'ArrowLeft' ? -1 : 1));
+  };
+  document.addEventListener('keydown', onKey);
+
   hintBtn.addEventListener('click', () => {
     session.hint();
     render();
   });
   retryBtn.addEventListener('click', () => {
     session.retry();
+    viewing = null;
     render();
   });
   nextBtn.addEventListener('click', () => {
     opts.onNext?.();
   });
   restartBtn.addEventListener('click', () => {
+    viewing = null;
     busy = true;
     render();
     void session.reset().finally(() => {
@@ -383,9 +440,23 @@ export function mountXiangqiPractice(
     }
   }
 
-  function render(): void {
+  function render(paint: { glide?: boolean } = {}): void {
     const view = session.view();
-    interactive.render(currentView(), opts.orientation);
+    const line = session.line();
+    if (viewing !== null && viewing >= line.length - 1) viewing = null;
+    const shown = shownIndex();
+    const shownView = viewOf(line[shown]!);
+    interactive.render(shownView, opts.orientation);
+    // One step forward glides the move just reached; one step back glides the
+    // move being undone back to where it came from.
+    if (paint.glide && shown === painted + 1 && shownView.lastMove) {
+      animateXiangqiBoardMove(boardEl, shownView.lastMove, opts.orientation);
+    } else if (paint.glide && shown === painted - 1) {
+      const undone = viewOf(line[painted]!).lastMove;
+      if (undone) animateXiangqiBoardMove(boardEl, undone, opts.orientation, { reverse: true });
+    }
+    painted = shown;
+    wrap.classList.toggle('practice--browsing', browsing());
     const state = busy ? 'thinking' : view.phase;
     coach.dataset.state = state;
     side.dataset.state = state;
@@ -394,7 +465,7 @@ export function mountXiangqiPractice(
     // move from, second draws the whole move. Naming squares in prose would make
     // the learner translate coordinates instead of looking at the board.
     hintText.textContent = '';
-    const hint = view.hint;
+    const hint = browsing() ? null : view.hint;
     if (!hint) {
       interactive.setMarkers([]);
       interactive.setArrows([]);
@@ -478,7 +549,10 @@ export function mountXiangqiPractice(
       feedback.textContent = verdictLine(view);
     }
 
-    renderMoves(view);
+    renderMoves(view, shown);
+    prevBtn.disabled = shown === 0;
+    nextStepBtn.disabled = !browsing();
+    stepper.hidden = view.moves.length === 0;
 
     hintBtn.hidden = view.phase !== 'play' || busy;
     retryBtn.hidden = view.phase !== 'failed';
@@ -489,20 +563,31 @@ export function mountXiangqiPractice(
     nextBtn.hidden = view.phase !== 'success' || !opts.onNext;
   }
 
-  function renderMoves(view: PracticeView): void {
+  function renderMoves(view: PracticeView, shown: number): void {
     movesEl.replaceChildren();
     for (const [index, label] of view.moves.entries()) {
       const li = document.createElement('li');
       li.className = 'practice__move';
+      if (index + 1 === shown) li.classList.add('is-current');
       // Even indices are the learner's moves (they always move first from the
       // exercise's start; an exercise that opens on the defender plays that
       // reply before the learner is handed the board, so the log still starts
       // with whoever moved first).
       li.classList.add(index % 2 === 0 ? 'practice__move--learner' : 'practice__move--defender');
-      li.textContent = label;
+      const moveBtn = button(label, 'practice__move-button');
+      moveBtn.addEventListener('click', () => stepTo(index + 1));
+      li.append(moveBtn);
       movesEl.append(li);
     }
     movesEl.hidden = view.moves.length === 0;
+    // Keep the shown move in view: a column on desktop, one row on a phone.
+    const current = movesEl.querySelector<HTMLElement>('.is-current');
+    if (current && browsing()) {
+      current.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } else {
+      movesEl.scrollTop = movesEl.scrollHeight;
+      movesEl.scrollLeft = movesEl.scrollWidth;
+    }
   }
 
   // A page header only when a caller actually wants one. The study mount does
@@ -531,7 +616,7 @@ export function mountXiangqiPractice(
   root.replaceChildren(...chrome, wrap);
   fitGamebookToViewport(wrap);
   render();
-  const started = session.start().then(render);
+  const started = session.start().then(() => render());
 
   return {
     view: () => session.view(),
@@ -540,6 +625,7 @@ export function mountXiangqiPractice(
     destroy: () => {
       // The interactive board has no teardown of its own (its listeners live on
       // the elements it renders), so dropping the subtree is the whole cleanup.
+      document.removeEventListener('keydown', onKey);
       root.replaceChildren();
     },
   };

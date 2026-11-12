@@ -6,6 +6,7 @@
  * variant adapter's moveLabels / historyLabels (position-aware) or moveLabel.
  */
 
+import { t } from '../i18n/catalog.js';
 import {
   oppositePuzzleColor,
   type PuzzleColor,
@@ -13,6 +14,12 @@ import {
   type PuzzleSession,
 } from './adapter.js';
 import { puzzleBoardAdapter } from './registry.js';
+
+type ExplorationControls = {
+  onTry: (ply: number, move: PuzzleMove) => void;
+  onJump: (cursor: number) => void;
+  onReturn: () => void;
+};
 
 /**
  * `onJump`, when given, makes each move a click target that moves the replay
@@ -22,16 +29,50 @@ import { puzzleBoardAdapter } from './registry.js';
 export function moveListPanel(
   session: PuzzleSession,
   onJump?: (viewPly: number) => void,
+  exploration?: ExplorationControls,
 ): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-moves';
   const list = document.createElement('ol');
   list.className = 'puzzle-move-list';
-  const rows = puzzleMoveRows(session, onJump);
+  const rows = puzzleMoveRows(session, onJump, exploration);
   for (const row of rows) {
     list.append(row);
   }
   panel.append(list);
+  if (session.exploration && exploration) {
+    const line = session.exploration;
+    const block = document.createElement('div');
+    block.className = 'puzzle-exploration';
+    const label = document.createElement('strong');
+    label.textContent = t('puzzle.exploration');
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'puzzle-exploration-return';
+    back.textContent = t('puzzle.backToSolution');
+    back.addEventListener('click', exploration.onReturn);
+    const moves = document.createElement('div');
+    moves.className = 'puzzle-exploration-moves';
+    const labels = puzzleBoardAdapter(session.puzzle.variant).moveLabels?.(session.puzzle, [
+      ...session.playedMoves.slice(0, line.rootPly),
+      ...line.moves,
+    ]).played;
+    for (const [i, move] of line.moves.entries()) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.explorationPly = String(i + 1);
+      button.textContent =
+        labels?.[line.rootPly + i] ?? puzzleBoardAdapter(session.puzzle.variant).moveLabel(move);
+      if (i + 1 === line.cursor) button.setAttribute('aria-current', 'step');
+      button.addEventListener('click', () => exploration.onJump(i + 1));
+      moves.append(button);
+    }
+    const heading = document.createElement('div');
+    heading.className = 'puzzle-exploration-head';
+    heading.append(label, back);
+    block.append(heading, moves);
+    panel.append(block);
+  }
   return panel;
 }
 
@@ -83,11 +124,16 @@ type PuzzleMoveCell = {
   history?: boolean;
   // The viewPly the board shows after this move (absent on a wrong try).
   viewPly?: number;
+  tryMove?: { ply: number; move: PuzzleMove };
 };
 type PuzzleMoveRowCells = { black?: PuzzleMoveCell; red?: PuzzleMoveCell };
 type JumpTo = ((viewPly: number) => void) | undefined;
 
-function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
+function puzzleMoveRows(
+  session: PuzzleSession,
+  onJump: JumpTo,
+  exploration?: ExplorationControls,
+): HTMLElement[] {
   const solverColor = session.puzzle.sideToMove ?? 'red';
   const setup = puzzleSetupMove(session);
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
@@ -134,7 +180,11 @@ function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
   const setupOffset = history.length + (setup ? 1 : 0);
   // While the opening glide is pending the board shows the position before the
   // setup move, so the last history move is the current one.
-  const activeViewPly = session.setupIntro ? -1 : session.viewPly;
+  const activeViewPly = session.exploration
+    ? Number.NaN
+    : session.setupIntro
+      ? -1
+      : session.viewPly;
   const revealedFrom = session.revealed ? (session.revealedFromPly ?? null) : null;
 
   const wrong = session.wrongMove ?? null;
@@ -176,7 +226,7 @@ function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
     const number = puzzleMoveRowNumber(firstColor, combinedIndex);
     const color = moveColorAt(firstColor, combinedIndex);
     const list = variations.get(number) ?? [];
-    list.push({ [color]: { label, active: false, mark: 'wrong' } });
+    list.push({ [color]: { label, active: false, mark: 'wrong', tryMove: attempt } });
     variations.set(number, list);
   }
   const variationBlock = (number: number, attempts: PuzzleMoveRowCells[]): HTMLElement => {
@@ -193,6 +243,19 @@ function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
       );
       const cell = puzzleMoveCell(`puzzle-move-${color}`, move.label);
       dressMoveCell(cell, move, undefined);
+      if (exploration && move.tryMove) {
+        const attempt = move.tryMove;
+        cell.classList.add('puzzle-move-cell--jump');
+        cell.setAttribute('role', 'button');
+        cell.tabIndex = 0;
+        cell.addEventListener('click', () => exploration.onTry(attempt.ply, attempt.move));
+        cell.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            exploration.onTry(attempt.ply, attempt.move);
+          }
+        });
+      }
       item.append(numberCell, cell);
       block.append(item);
     }

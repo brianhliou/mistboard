@@ -20,7 +20,7 @@ import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import { articleAnalysisLoader } from './article-replay-analysis.js';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 import './embed/embed-credit.css';
 import {
@@ -34,6 +34,7 @@ import {
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import { t } from './i18n/catalog.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
@@ -62,6 +63,7 @@ import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed, XIANGQI_PIECE_SETS } from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
+import { normalizeReplayMetadata, type XiangqiReplayMetadata } from './xiangqi-replay-metadata.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
@@ -117,6 +119,17 @@ const RADIUS = 8;
  * analysis path and shaped by scripts/annotate-game.mjs, so an article never
  * hand-writes a judgment or a line.
  */
+/** A line replacing a move, with at most one further level of replies. */
+export type XiangqiReplayBranch = {
+  /** ICCS from the position before the mainline ply (or reply's replaced move). */
+  line: string;
+  label?: string;
+  lineEval?: string;
+  note?: string;
+  /** Alternatives to this line's move at a 1-based ply index. */
+  replies?: Record<number, XiangqiReplayBranch[]>;
+};
+
 export type XiangqiReplayAnnotation = {
   /**
    * Judgment glyph. The negative classes come from analysis.ts; `!` and `!!`
@@ -134,6 +147,7 @@ export type XiangqiReplayAnnotation = {
    * prefix and then this line.
    */
   line?: string;
+  branches?: XiangqiReplayBranch[];
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
   /**
@@ -166,6 +180,8 @@ export type XiangqiReplaySpec = {
   // Space-separated ICCS coordinate tokens (e.g. "h2e2 h9g7 ..."). ICCS ranks
   // are 0-9 with 0 = Red's back rank; engine ranks are 1-10, so rank + 1.
   iccs: string;
+  /** Exact chart analysis budget; absent means the legacy 1M site pass. */
+  analysisNodes?: number;
   /**
    * Position the line starts from, as a standard xiangqi FEN. Omitted means the
    * opening, which is right for a game record and wrong for everything else: a
@@ -179,11 +195,19 @@ export type XiangqiReplaySpec = {
   red: string;
   black: string;
   event: string;
+  /** Verified recorded header fields; absent values are never inferred. */
+  metadata?: XiangqiReplayMetadata;
   // Optional standalone title, used when the record is a named study or manual
   // line rather than a game between two players. When set, the header reads
   // "<title> · <event>" instead of "<red> (Red) vs <black> (Black) · <event>".
   title?: string;
   perspective?: XiangqiColor;
+  /**
+   * Optional "play it from here" link, drawn as the card's last row so the
+   * invitation belongs to the game it continues rather than sitting below the
+   * figure as a separate button. Annotated cards only.
+   */
+  play?: { label: string; href: string };
   // Shown on the final ply (the records stop at the mating move, so the rules
   // kernel still reports "playing"; the result is supplied explicitly).
   resultText: string;
@@ -419,7 +443,7 @@ function glideReplayMove(
   const from = pointXY(o.file, o.rank, board);
   const to = pointXY(s.file, s.rank, board);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(frame, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphsOnLanding(frame, duration);
   // Forward only: a back step draws the PRIOR move's markers somewhere else, so
   // neither would track this glide. The gold band rides on the piece; the
   // judgment badge fades in after the piece lands.
@@ -586,9 +610,76 @@ export function mountXiangqiReplay(
 
   const header = document.createElement('div');
   header.className = 'xq-replay-header';
-  header.textContent = spec.title
+  const eventHeader = document.createElement('div');
+  eventHeader.className = 'xq-replay-header-event';
+  eventHeader.textContent = spec.title
     ? `${spec.title} · ${spec.event}`
     : `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole} · ${spec.event}`;
+  header.append(eventHeader);
+  if (spec.metadata !== undefined) {
+    // One quiet line under the event: round, date, time control, source. A
+    // value the record does not carry is left out rather than printed as "not
+    // recorded", and nothing folds open: a disclosure that pushed the board
+    // down read as part of the page moving.
+    const metadata = normalizeReplayMetadata(spec.metadata);
+    const locale = options.lang ?? 'en';
+    const line = document.createElement('div');
+    line.className = 'xq-replay-metadata';
+    const parts: (string | HTMLElement)[] = [];
+    // Translate notation only when the source explicitly records both units.
+    // Preserve the raw source fields in the spec, and never infer a control.
+    const roundNumber = metadata.round?.match(/^第(\d+)[轮輪]$/)?.[1];
+    if (roundNumber) {
+      parts.push(t('articles.replay.roundN', { n: Number(roundNumber) }, locale));
+    } else if (metadata.round) {
+      parts.push(`${t('articles.replay.round', {}, locale)} ${metadata.round}`);
+    }
+    const day = metadata.date?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (day) {
+      parts.push(
+        // Day-month order, as the article prose writes dates.
+        new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC',
+        }).format(Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]))),
+      );
+    } else if (metadata.date) {
+      parts.push(metadata.date);
+    }
+    const control = metadata.timeControl?.match(/^(\d{1,3})分[＋+](\d{1,3})秒$/);
+    if (control) {
+      parts.push(
+        t(
+          'articles.replay.timeIncrement',
+          { minutes: Number(control[1]), seconds: Number(control[2]) },
+          locale,
+        ),
+      );
+    } else if (metadata.timeControl) {
+      parts.push(metadata.timeControl);
+    }
+    if (metadata.source?.label) {
+      if (metadata.source.url) {
+        const link = document.createElement('a');
+        link.href = metadata.source.url;
+        link.textContent = metadata.source.label;
+        link.rel = 'noopener noreferrer';
+        parts.push(link);
+      } else {
+        parts.push(metadata.source.label);
+      }
+    }
+    parts.forEach((part, i) => {
+      if (i > 0) line.append(' · ');
+      line.append(part);
+    });
+    if (parts.length) {
+      header.classList.add('xq-replay-header--metadata');
+      header.append(line);
+    }
+  }
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -725,7 +816,7 @@ export function mountXiangqiReplay(
     // The names live in the seat bars now, so the line above the card carries
     // only the event; repeating the players there read as a caption on a card
     // that already names them.
-    header.textContent = spec.title ? `${spec.title} · ${spec.event}` : spec.event;
+    eventHeader.textContent = spec.title ? `${spec.title} · ${spec.event}` : spec.event;
 
     const seat = (name: string, side: 'red' | 'black') => {
       const el = document.createElement('div');
@@ -808,6 +899,17 @@ export function mountXiangqiReplay(
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
     grid.append(boardCol, moveCol);
+    if (spec.play) {
+      const play = document.createElement('a');
+      play.className = 'xq-replay-play';
+      play.href = spec.play.href;
+      const icon = document.createElement('span');
+      icon.className = 'xq-replay-play-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '▶';
+      play.append(icon, spec.play.label);
+      grid.append(play);
+    }
     host.append(header, grid);
   } else {
     host.append(header, frame, controls, slider, narrative);
@@ -838,7 +940,24 @@ export function mountXiangqiReplay(
    * mainline up to `atPly - 1`, then `moves` up to `cursor`. Mainline `index`
    * is left untouched so leaving a variation lands exactly where it started.
    */
-  let variation: { atPly: number; moves: XiangqiMove[]; cursor: number } | null = null;
+  let variation: {
+    atPly: number;
+    moves: XiangqiMove[];
+    cursor: number;
+    segments?: { id: string; start: number; end: number }[];
+    branch?: OpenBranch;
+  } | null = null;
+  const expandedReplies = new Set<string>();
+
+  type Segment = { id: string; start: number; end: number };
+  /** The tree branch a variation walks: enough to find its replies again. */
+  type OpenBranch = {
+    data: XiangqiReplayBranch;
+    id: string;
+    prefix: XiangqiMove[];
+    ancestors: Segment[];
+    depth: number;
+  };
 
   function annotationAt(ply: number): XiangqiReplayAnnotation | undefined {
     return annotated?.byPly[ply];
@@ -857,8 +976,19 @@ export function mountXiangqiReplay(
   // keep the old style after a switch.
   let mainlineLabels: string[] = [];
   let variationLabels = new Map<number, string[]>();
+  /**
+   * A tree branch's legal moves, labels and result, keyed by ply and branch id.
+   * They depend only on the record and the notation style, yet rebuilding them
+   * replays the game from its start for every branch: on a 120-ply game with a
+   * dozen branches that was ~120ms per step, felt as lag on every move.
+   */
+  let branchCache = new Map<
+    string,
+    { line: XiangqiMove[]; labels: string[]; result: string | null }
+  >();
 
   function relabel(): void {
+    branchCache = new Map();
     mainlineLabels = annotated
       ? formatXiangqiMoves(moves, currentXiangqiNotationStyle(), startState)
       : [];
@@ -991,6 +1121,168 @@ export function mountXiangqiReplay(
     return b;
   }
 
+  /** Render one tree path; all moves are validated from their actual parent. */
+  function branchLine(
+    ply: number,
+    data: XiangqiReplayBranch,
+    id: string,
+    prefix: XiangqiMove[],
+  ): { line: XiangqiMove[]; labels: string[]; result: string | null } {
+    const cacheKey = `${ply}|${id}`;
+    let cached = branchCache.get(cacheKey);
+    if (!cached) {
+      let state = states[ply - 1]!;
+      for (const move of prefix) state = applyXiangqiRecordMove(state, move);
+      const parsed: XiangqiMove[] = [];
+      for (const token of data.line.trim().split(/\s+/)) {
+        if (!/^[a-i]\d[a-i]\d$/.test(token)) break;
+        const move = iccsToMove(token);
+        const next = applyXiangqiRecordMove(state, move);
+        if (next === state) break;
+        parsed.push(move);
+        state = next;
+      }
+      const fullPath = [...prefix, ...parsed];
+      cached = {
+        line: parsed,
+        labels: parsed.length
+          ? formatXiangqiMoves(
+              [...moves.slice(0, ply - 1), ...fullPath],
+              currentXiangqiNotationStyle(),
+              startState,
+            ).slice(ply - 1 + prefix.length)
+          : [],
+        result: parsed.length ? lineResult(ply, fullPath) : null,
+      };
+      branchCache.set(cacheKey, cached);
+    }
+    return cached;
+  }
+
+  function renderTreeBranch(
+    ply: number,
+    data: XiangqiReplayBranch,
+    id: string,
+    prefix: XiangqiMove[] = [],
+    ancestors: { id: string; start: number; end: number }[] = [],
+    depth = 1,
+  ): HTMLElement | null {
+    const cached = branchLine(ply, data, id, prefix);
+    const { line, labels } = cached;
+    if (!line.length) return null;
+    const path = [...prefix, ...line];
+    const row = document.createElement('div');
+    row.className = `xq-replay-branch xq-replay-tree-branch xq-replay-tree-depth-${depth}`;
+    row.dataset.branchId = id;
+    const tag = document.createElement('span');
+    tag.className = 'xq-replay-branch-tag';
+    tag.textContent = data.label ?? t('review.article.variation', {}, options.lang ?? 'en');
+    row.append(tag);
+    const segments = [...ancestors, { id, start: prefix.length + 1, end: path.length }];
+    const active = variation?.segments?.find(
+      (segment) =>
+        variation && variation.cursor >= segment.start && variation.cursor <= segment.end,
+    );
+    if (variation?.atPly === ply && active?.id === id) row.classList.add('is-active');
+    const replies =
+      depth === 1
+        ? Object.entries(data.replies ?? {}).filter(
+            ([key]) =>
+              Number.isInteger(Number(key)) && Number(key) >= 1 && Number(key) <= line.length,
+          )
+        : [];
+    const count = replies.reduce((sum, [, children]) => sum + children.length, 0);
+    const collapsed = window.innerWidth <= 480 && !expandedReplies.has(id);
+    if (count && window.innerWidth <= 480) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'xq-replay-replies-toggle';
+      toggle.textContent = `${collapsed ? '+' : '−'}${count}`;
+      toggle.setAttribute(
+        'aria-label',
+        t(
+          collapsed ? 'review.article.showReplies' : 'review.article.hideReplies',
+          { count },
+          options.lang ?? 'en',
+        ),
+      );
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.addEventListener('click', () => {
+        if (collapsed) expandedReplies.add(id);
+        else expandedReplies.delete(id);
+        render();
+        moveList
+          .querySelector<HTMLElement>(`[data-branch-id="${id}"] .xq-replay-replies-toggle`)
+          ?.focus({ preventScroll: true });
+      });
+      row.append(toggle);
+    }
+    line.forEach((_move, i) => {
+      const absolutePly = ply + prefix.length + i + plyOffset;
+      if (i === 0 || absolutePly % 2 === 1) {
+        const number = document.createElement('span');
+        number.className = 'xq-replay-move-n';
+        number.textContent = `${Math.ceil(absolutePly / 2)}${absolutePly % 2 === 1 ? '.' : '…'}`;
+        row.append(number);
+      }
+      row.append(
+        moveButton(labels[i] ?? '', {
+          current:
+            variation?.atPly === ply &&
+            active?.id === id &&
+            variation.cursor === prefix.length + i + 1,
+          onClick: () => {
+            reportEngagement();
+            variation = {
+              atPly: ply,
+              moves: path,
+              cursor: prefix.length + i + 1,
+              segments,
+              branch: { data, id, prefix, ancestors, depth },
+            };
+            render();
+          },
+        }),
+      );
+      for (const [key, children] of replies) {
+        if (Number(key) !== i + 1) continue;
+        children.forEach((child, childIndex) => {
+          const childPrefix = [...prefix, ...line.slice(0, i)];
+          const childAncestors = [
+            ...ancestors,
+            { id, start: prefix.length + 1, end: prefix.length + i },
+          ];
+          const childRow = renderTreeBranch(
+            ply,
+            child,
+            `${id}-${key}-${childIndex}`,
+            childPrefix,
+            childAncestors,
+            depth + 1,
+          );
+          if (childRow) {
+            childRow.hidden = collapsed;
+            row.append(childRow);
+          }
+        });
+      }
+    });
+    const result = cached.result;
+    if (result || data.lineEval) {
+      const verdict = document.createElement('span');
+      verdict.className = 'xq-replay-branch-eval';
+      verdict.textContent = result ?? data.lineEval ?? '';
+      row.append(verdict);
+    }
+    if (data.note) {
+      const note = document.createElement('span');
+      note.className = 'xq-replay-branch-note';
+      note.textContent = data.note;
+      row.append(note);
+    }
+    return row;
+  }
+
   // The move tree: mainline in numbered pairs, and a judged move's engine line
   // rendered INLINE directly beneath the row it belongs to, the way a study
   // shows a variation.
@@ -1035,6 +1327,13 @@ export function mountXiangqiReplay(
         }),
       );
 
+      if (a?.branches) {
+        a.branches.forEach((branch, branchIndex) => {
+          const branchRow = renderTreeBranch(ply, branch, `${ply}-${branchIndex}`);
+          if (branchRow) moveList.append(branchRow);
+        });
+        continue;
+      }
       const line = a?.line ? parseLine(ply) : [];
       if (line.length === 0) continue;
       const labels = labelsForLine(ply, line);
@@ -1068,7 +1367,7 @@ export function mountXiangqiReplay(
         }
         branch.appendChild(
           moveButton(labels[i] ?? '', {
-            current: variation?.atPly === ply && variation.cursor === i + 1,
+            current: !variation?.segments && variation?.atPly === ply && variation.cursor === i + 1,
             onClick: () => {
               variation = { atPly: ply, moves: line, cursor: i + 1 };
               render();
@@ -1128,6 +1427,7 @@ export function mountXiangqiReplay(
   }
 
   function render(glide?: { move: XiangqiMove; reverse: boolean }): void {
+    forkPanel = null;
     const view = viewState();
     // Only the mainline carries a verdict; a position inside an engine line is
     // not a move anyone played.
@@ -1295,9 +1595,223 @@ export function mountXiangqiReplay(
     if (moved || wasInLine) render(wasInLine ? undefined : oneStep(from, clamped));
   }
 
+  // --- Fork chooser ---------------------------------------------------------
+  // Stepping forward onto a move that has alternatives asks which way to go
+  // before anything moves: the game's move first, then each variation. Only the
+  // forward step asks; clicking a move in the list, the slider and the jumps go
+  // where they point.
+  type ForkChoice = { label: string; tag: string; mark?: string; pick: () => void };
+  let forkPly = 0;
+  let forkPanel: HTMLElement | null = null;
+  // The option the reader last moved to; Next picks it. Kept apart from
+  // document focus because pressing the Next button moves focus onto it.
+  let forkAt = 0;
+
+  function enterBranch(ply: number, open: OpenBranch): void {
+    const { line } = branchLine(ply, open.data, open.id, open.prefix);
+    if (!line.length) return;
+    const path = [...open.prefix, ...line];
+    variation = {
+      atPly: ply,
+      moves: path,
+      cursor: open.prefix.length + 1,
+      segments: [
+        ...open.ancestors,
+        { id: open.id, start: open.prefix.length + 1, end: path.length },
+      ],
+      branch: open,
+    };
+    render({ move: path[open.prefix.length]!, reverse: false });
+  }
+
+  function forkChoices(): ForkChoice[] {
+    const lang = options.lang ?? 'en';
+    const variationTag = t('review.article.variation', {}, lang);
+    const choices: ForkChoice[] = [];
+    if (!variation) {
+      const ply = index + 1;
+      if (ply > total) return [];
+      const a = annotationAt(ply);
+      if (a?.branches?.length) {
+        a.branches.forEach((data, branchIndex) => {
+          const open = { data, id: `${ply}-${branchIndex}`, prefix: [], ancestors: [], depth: 1 };
+          const { line, labels, result } = branchLine(ply, data, open.id, []);
+          if (line.length) {
+            choices.push({
+              label: labels[0] ?? '',
+              tag: data.label ?? variationTag,
+              mark: result ?? data.lineEval,
+              pick: () => enterBranch(ply, open),
+            });
+          }
+        });
+      } else if (a?.line) {
+        const line = parseLine(ply);
+        if (line.length) {
+          choices.push({
+            label: labelsForLine(ply, line)[0] ?? '',
+            tag: branchTag(a, copy),
+            mark: lineResult(ply, line) ?? a.lineEval,
+            pick: () => {
+              variation = { atPly: ply, moves: line, cursor: 1 };
+              render({ move: line[0]!, reverse: false });
+            },
+          });
+        }
+      }
+      if (!choices.length) return [];
+      forkPly = ply;
+      return [
+        {
+          label: mainlineLabels[ply - 1] ?? '',
+          tag: t('review.mainLine', {}, lang),
+          mark: a?.glyph,
+          pick: () => goto(ply),
+        },
+        ...choices,
+      ];
+    }
+    // Inside a first-level branch: its replies replace the branch's next move.
+    const open = variation.branch;
+    if (open?.depth !== 1 || !open.data.replies) return [];
+    const atPly = variation.atPly;
+    const key = variation.cursor - open.prefix.length + 1;
+    const { line, labels, result } = branchLine(atPly, open.data, open.id, open.prefix);
+    if (key < 2 || key > line.length) return [];
+    (open.data.replies[key] ?? []).forEach((child, childIndex) => {
+      const childOpen: OpenBranch = {
+        data: child,
+        id: `${open.id}-${key}-${childIndex}`,
+        prefix: [...open.prefix, ...line.slice(0, key - 1)],
+        ancestors: [
+          ...open.ancestors,
+          { id: open.id, start: open.prefix.length + 1, end: open.prefix.length + key - 1 },
+        ],
+        depth: 2,
+      };
+      const reply = branchLine(atPly, child, childOpen.id, childOpen.prefix);
+      if (reply.line.length) {
+        choices.push({
+          label: reply.labels[0] ?? '',
+          tag: child.label ?? variationTag,
+          mark: reply.result ?? child.lineEval,
+          pick: () => enterBranch(atPly, childOpen),
+        });
+      }
+    });
+    if (!choices.length) return [];
+    forkPly = atPly + open.prefix.length + key - 1;
+    return [
+      {
+        label: labels[key - 1] ?? '',
+        tag: open.data.label ?? variationTag,
+        mark: result ?? open.data.lineEval,
+        pick: () => goto(index + 1),
+      },
+      ...choices,
+    ];
+  }
+
+  function closeFork(refocus = false): void {
+    if (!forkPanel) return;
+    forkPanel.remove();
+    forkPanel = null;
+    if (refocus) host.focus({ preventScroll: true });
+  }
+
+  function openFork(choices: ForkChoice[]): void {
+    closeFork();
+    const lang = options.lang ?? 'en';
+    const panel = document.createElement('div');
+    panel.className = 'xq-replay-fork';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', t('review.chooseLine', {}, lang));
+    const title = document.createElement('div');
+    title.className = 'xq-replay-fork-title';
+    title.textContent = t('review.chooseLine', {}, lang);
+    const n = document.createElement('span');
+    n.className = 'xq-replay-fork-n';
+    // Odd plies belong to whoever moved first; a Black-first record numbers
+    // its first move 1… and Red's reply 2., as the move list does.
+    const redMoves = (forkPly % 2 === 1) === (firstMover === 'red');
+    const number = firstMover === 'red' ? Math.ceil(forkPly / 2) : Math.floor(forkPly / 2) + 1;
+    n.textContent = `${number}${redMoves ? '.' : '…'}`;
+    title.prepend(n, ' ');
+    panel.append(title);
+    choices.forEach((choice, i) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `xq-replay-fork-option${i === 0 ? ' is-main' : ''}`;
+      const move = document.createElement('span');
+      move.className = 'xq-replay-fork-move';
+      move.textContent = choice.label;
+      if (choice.mark) {
+        const mark = document.createElement('span');
+        const glyph =
+          choice.mark === '??'
+            ? 'blunder'
+            : choice.mark === '?'
+              ? 'mistake'
+              : choice.mark === '?!'
+                ? 'inaccuracy'
+                : null;
+        mark.className = glyph ? `xq-replay-glyph xq-replay-glyph-${glyph}` : 'xq-replay-fork-mark';
+        mark.textContent = choice.mark;
+        move.append(' ', mark);
+      }
+      const tag = document.createElement('span');
+      tag.className = 'xq-replay-fork-tag';
+      tag.textContent = choice.tag;
+      button.append(move, tag);
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        closeFork();
+        takeFocusAfterRender = true;
+        choice.pick();
+      });
+      button.addEventListener('focus', () => {
+        forkAt = i;
+      });
+      panel.append(button);
+    });
+    frame.append(panel);
+    forkPanel = panel;
+    forkAt = 0;
+    panel.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  }
+
+  /** Arrow keys inside the open chooser: up/down move, right picks, left/Escape close. */
+  function forkKey(e: KeyboardEvent): boolean {
+    if (!forkPanel) return false;
+    const buttons = [...forkPanel.querySelectorAll<HTMLButtonElement>('button')];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      buttons[(forkAt + step + buttons.length) % buttons.length]?.focus({ preventScroll: true });
+    } else if (e.key === 'ArrowRight') {
+      buttons[forkAt]?.click();
+    } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+      closeFork(true);
+    } else {
+      return false;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    return true;
+  }
+
+  function stepForward(): void {
+    if (forkPanel) {
+      forkPanel.querySelectorAll<HTMLButtonElement>('button')[forkAt]?.click();
+      return;
+    }
+    const choices = annotated ? forkChoices() : [];
+    if (choices.length > 1) openFork(choices);
+    else goto(index + 1);
+  }
+
   const onFirst = () => goto(0);
   const onPrev = () => goto(index - 1);
-  const onNext = () => goto(index + 1);
+  const onNext = () => stepForward();
   const onLast = () => goto(total);
   const onSlider = () => goto(Number(slider.value));
   first.addEventListener('click', onFirst);
@@ -1306,6 +1820,7 @@ export function mountXiangqiReplay(
   last.addEventListener('click', onLast);
   slider.addEventListener('input', onSlider);
   const onKey = (e: KeyboardEvent) => {
+    if (forkKey(e)) return;
     if (e.key === 'ArrowLeft') {
       onPrev();
       e.preventDefault();
@@ -1316,6 +1831,8 @@ export function mountXiangqiReplay(
   };
   host.addEventListener('keydown', onKey);
   const onDocPointer = (event: MouseEvent) => {
+    const hit = event.target as Node | null;
+    if (forkPanel && hit && !forkPanel.contains(hit) && !next.contains(hit)) closeFork();
     if (menu.hidden) return;
     const target = event.target as Node | null;
     if (target && (menu.contains(target) || menuButton.contains(target))) return;
@@ -1339,6 +1856,8 @@ export function mountXiangqiReplay(
     render();
   };
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
+  const onResize = () => render();
+  window.addEventListener('resize', onResize);
 
   // --- Advantage chart (lazy) ----------------------------------------------
   let chart: { setPly(ply: number): void } | null = null;
@@ -1463,6 +1982,7 @@ export function mountXiangqiReplay(
       host.removeEventListener('keydown', onKey);
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('click', onDocPointer);
       document.removeEventListener('keydown', onDocKey);
       host.replaceChildren();
@@ -1602,12 +2122,15 @@ export function mountXiangqiReplayBoard(
   const onNotation = (): void => relabel();
   window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
+  const onResize = () => render();
+  window.addEventListener('resize', onResize);
   render();
 
   return {
     destroy: () => {
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      window.removeEventListener('resize', onResize);
       host.replaceChildren();
     },
     jumpToPly: (ply) => {

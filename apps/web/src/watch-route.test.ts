@@ -159,9 +159,9 @@ describe('watch route copy helpers', () => {
       whiteName: null,
     };
 
-    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; list rows show
-    // the brand.
-    expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty');
+    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; a row shows
+    // the brand named after its game.
+    expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty Fog Xiangqi');
     expect(resultLabel(game.result)).toBe('Red wins');
   });
 
@@ -218,7 +218,7 @@ describe('watch route copy helpers', () => {
         },
       ],
     };
-    expect(watchQueueResultLabel(base)).toBe('Misty wins');
+    expect(watchQueueResultLabel(base)).toBe('Misty Xiangqi Mahjong wins');
     expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
     expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
@@ -300,7 +300,7 @@ describe('watchGamePlayers', () => {
   it('paints flip-variant seat rows with the bound ink, not the seat id', () => {
     const rows = watchGamePlayers(flipGame('banqi', 'black'));
     expect(rows.map((row) => [row.name, row.color])).toEqual([
-      ['Misty', 'black'],
+      ['Misty Banqi', 'black'],
       ['human', 'red'],
     ]);
   });

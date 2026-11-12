@@ -3,6 +3,7 @@
 // sheet, its comments and the result covered; the cover's button, or stepping
 // forward, lifts it. Without the flag the card is unchanged.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EMBED_ENGAGEMENT_MESSAGE } from './embed-card.js';
 import { embedPathWithSolutionHidden, embedSolutionHiddenFromSearch } from './embed-route.js';
 import { mountEmbedStudy } from './embed-study-page.js';
 
@@ -180,4 +181,25 @@ describe('solution=hidden on the URL', () => {
       '/embed/study/a/b?notation=wxf&solution=hidden#x',
     );
   });
+});
+
+it('notifies an owned parent once on actual solution reveal, never while loading', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'parent');
+  const postMessage = vi.fn();
+  Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage } });
+  try {
+    const root = await mount({ hideSolution: true });
+    expect(postMessage).not.toHaveBeenCalled();
+    const button = q<HTMLButtonElement>(root, '.embed-card-solution-show')!;
+    button.click();
+    button.click();
+    q<HTMLButtonElement>(root, '[aria-label="Next move"]')?.click();
+    expect(postMessage).toHaveBeenCalledExactlyOnceWith(
+      { type: EMBED_ENGAGEMENT_MESSAGE, action: 'solution-revealed' },
+      window.location.origin,
+    );
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'parent', descriptor);
+    else Reflect.deleteProperty(window, 'parent');
+  }
 });

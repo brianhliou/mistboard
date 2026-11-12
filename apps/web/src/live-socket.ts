@@ -9,6 +9,7 @@
  */
 
 import type { Color, GameEvent, GameSpecId, PlayerView } from '@mistboard/game';
+import { seatNameForGame } from './game-display.js';
 import { seedFogViewHistory } from './live-replay.js';
 import type {
   ConnectedSeats,
@@ -177,8 +178,18 @@ function applyFullFrame(message: StateFrame): void {
   liveState.timeControl = message.timeControl ?? null;
   if (message.connectedSeats) liveState.connectedSeats = message.connectedSeats;
   if (message.rematch) liveState.rematch = message.rematch;
-  if (message.seatDisplayNames) liveState.seatDisplayNames = message.seatDisplayNames;
   if (message.seatProfiles) liveState.seatProfiles = message.seatProfiles;
+  if (message.seatDisplayNames) {
+    // Misty takes the game's name in her room ("Misty Fog Chess"); every other
+    // seat name is shown as sent.
+    const names: typeof liveState.seatDisplayNames = {};
+    for (const [seat, name] of Object.entries(message.seatDisplayNames) as [Color, string][]) {
+      names[seat] = seatNameForGame(name, liveState.gameSpecId, {
+        botId: liveState.seatProfiles[seat]?.botId ?? null,
+      });
+    }
+    liveState.seatDisplayNames = names;
+  }
 }
 
 function applyRematchState(message: RematchStateMessage): void {

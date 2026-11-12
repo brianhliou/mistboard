@@ -7,7 +7,9 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  botNameForGame,
   brandedEngineName,
+  displayLiveName,
   displayParticipantName,
   type FeaturedGame,
   firstMoverColorName,
@@ -16,6 +18,7 @@ import {
   liveMatchupNames,
   matchupLabel,
   matchupSeats,
+  seatNameForGame,
   secondMoverColorName,
   terminationLabel,
   variantDisplayLabel,
@@ -149,9 +152,9 @@ describe('brandedEngineName', () => {
 });
 
 describe('displayParticipantName', () => {
-  it('names an engine seat by brand, whichever build actually played', () => {
+  it('names an engine seat by brand and game, whichever build actually played', () => {
     const seated = (displayName: string, subjectId: string): FeaturedGame => ({
-      ...game(XIANGQI_SPEC_ID),
+      ...game('dark-xiangqi'),
       participants: [
         {
           color: 'red',
@@ -170,10 +173,12 @@ describe('displayParticipantName', () => {
       ],
     });
     // Resolved through the id map (python-dmx-v1.0 -> "Misty DMX 1.0")...
-    expect(displayParticipantName(seated('whatever', 'python-dmx-v1.0'), 'black')).toBe('Misty');
+    expect(displayParticipantName(seated('whatever', 'python-dmx-v1.0'), 'black')).toBe(
+      'Misty Fog Xiangqi',
+    );
     // ...and straight off a persisted build name with no id mapping.
     expect(displayParticipantName(seated('Misty DXQ 1.1', 'python-fdx-v1.1'), 'black')).toBe(
-      'Misty',
+      'Misty Fog Xiangqi',
     );
   });
 
@@ -365,5 +370,66 @@ describe('liveMatchupNames', () => {
       'gomoku',
     );
     expect(names).toEqual({ first: 'Guest', second: 'Rapfi Level 4' });
+  });
+});
+
+describe('botNameForGame', () => {
+  it.each([
+    ['dark-chess', 'Misty Fog Chess'],
+    ['dark-xiangqi', 'Misty Fog Xiangqi'],
+    ['banqi', 'Misty Banqi'],
+    ['jungle', 'Misty Jungle Chess'],
+    ['jungle-flip', 'Misty Flip Jungle'],
+    ['three-kingdoms-banqi', 'Misty Three Kingdoms Banqi'],
+    ['xiangqi-mahjong', 'Misty Xiangqi Mahjong'],
+  ])('names Misty after %s', (gameSpecId, expected) => {
+    expect(botNameForGame('misty', 'Misty', gameSpecId)).toBe(expected);
+  });
+
+  it('keeps the level a seat name carries', () => {
+    expect(botNameForGame('misty', 'Misty Level 4', 'banqi')).toBe('Misty Banqi Level 4');
+    expect(botNameForGame('misty', 'Misty level 7', 'three-kingdoms-banqi')).toBe(
+      'Misty Three Kingdoms Banqi Level 7',
+    );
+  });
+
+  it('leaves every other bot alone', () => {
+    expect(botNameForGame('pikafish', 'Pikafish', 'xiangqi')).toBe('Pikafish');
+    expect(botNameForGame('rapfi-level-3', 'Rapfi Level 3', 'gomoku')).toBe('Rapfi Level 3');
+    expect(botNameForGame(null, 'Misty', 'banqi')).toBe('Misty');
+  });
+
+  it('falls back to plain Misty for an unknown or missing game', () => {
+    expect(botNameForGame('misty', 'Misty', 'not-a-game')).toBe('Misty');
+    expect(botNameForGame('misty', 'Misty', null)).toBe('Misty');
+  });
+
+  it('localizes the game name', async () => {
+    window.history.replaceState(null, '', '/zh-hans/bots');
+    await ensureLocaleCatalog('zh-Hans');
+    try {
+      expect(botNameForGame('misty', 'Misty', 'banqi')).toBe('Misty 暗棋');
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+});
+
+describe('seatNameForGame', () => {
+  it('names a Misty build or engine seat after the game', () => {
+    expect(seatNameForGame('Misty DXQ 1.1', 'dark-xiangqi')).toBe('Misty Fog Xiangqi');
+    expect(seatNameForGame('MistyBanqi Level 3', 'banqi', { isEngine: true })).toBe(
+      'Misty Banqi Level 3',
+    );
+    expect(seatNameForGame('Misty', 'jungle-flip', { botId: 'misty' })).toBe('Misty Flip Jungle');
+  });
+
+  it('never renames a person called Misty', () => {
+    expect(seatNameForGame('Misty', 'banqi')).toBe('Misty');
+    expect(seatNameForGame('Misty Level 4', 'banqi', { isEngine: false })).toBe('Misty Level 4');
+  });
+
+  it('keeps plain Misty when no game is given (cross-game lists)', () => {
+    expect(displayLiveName('Misty 1.6', 'Guest')).toBe('Misty');
   });
 });

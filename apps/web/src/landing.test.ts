@@ -13,8 +13,11 @@ import {
 } from './landing.js';
 import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
-import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
-import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiEngineOptions,
+} from './three-kingdoms-banqi-access.js';
+import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
@@ -81,6 +84,44 @@ describe('playable engines loading', () => {
     expect(jungleFlipEngineOptions().map((engine) => engine.id)).not.toContain(
       'misty-jungle-flip-level-8',
     );
+  });
+
+  it('keeps a loaded runtime roster while its own request is in flight', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const tk = Array.from({ length: 8 }, (_, i) => ({
+      id: `misty-three-kingdoms-banqi-level-${i + 1}`,
+      name: `Misty Level ${i + 1}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
+    // Another fetch (the hero panel's) already loaded both rosters.
+    setThreeKingdomsBanqiEngineOptions(tk);
+    setJungleFlipEngineOptions(jungleFlipEngineOptions(true));
+    let respond: (resp: Response) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (respond = resolve))),
+    );
+    try {
+      const pending = fetchPlayableEnginesOnce();
+      await Promise.resolve();
+      expect(threeKingdomsBanqiEngineOptions()?.map((engine) => engine.id)).toEqual(
+        tk.map((engine) => engine.id),
+      );
+      expect(jungleFlipEngineOptions()[0]!.id).toBe('misty-jungle-flip-level-8');
+      respond(
+        jsonResponse({
+          engines: ROSTER,
+          threeKingdomsBanqiEngines: tk,
+          jungleFlipEngines: jungleFlipEngineOptions(true),
+        }),
+      );
+      expect(await pending).toEqual(ROSTER);
+      expect(threeKingdomsBanqiEngineOptions()).toHaveLength(8);
+    } finally {
+      setThreeKingdomsBanqiEngineOptions([]);
+      setJungleFlipEngineOptions([]);
+    }
   });
 
   it('retries transient failures and resolves once the roster is available', async () => {
@@ -262,14 +303,16 @@ describe('landing shell', () => {
     // blog row below.
     const deepDives = demo?.querySelector(':scope > .landing-dives-row');
     expect(deepDives).not.toBeNull();
-    expect(
-      deepDives?.querySelector('.landing-article-card[href="/blog/yin-sheng"]'),
-    ).not.toBeNull();
-    expect(
-      demo?.querySelector(
-        ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
-      ),
-    ).toBeNull();
+    // The row holds the newest deep dives, so which player pages show moves
+    // as new ones publish; a player page is never in the blog row below.
+    expect(deepDives?.querySelector('.landing-article-card')).not.toBeNull();
+    for (const slug of ['yin-sheng', 'zuo-wenjing', 'tang-dan']) {
+      expect(
+        demo?.querySelector(
+          `:scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/${slug}"]`,
+        ),
+      ).toBeNull();
+    }
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
     // The other row is labelled too, and its label line links to the blog index.
     const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');

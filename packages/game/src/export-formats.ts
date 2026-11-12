@@ -26,9 +26,11 @@ export const GAME_EXPORT_FORMATS = {
   'dark-xiangqi': ['pgn', 'json'],
   jieqi: ['pgn', 'json'],
   banqi: ['pgn', 'json'],
-  // Covered identities stay masked after the game (#1002); an export would
-  // carry the deal, which names pieces nobody turned over.
-  'three-kingdoms-banqi': [],
+  // Covered identities stay masked after the game (#1002), so this record is
+  // the public view: each flip names the piece it turned over, no deal, and a
+  // piece never turned over appears nowhere. It still replays on its own (a
+  // covered tile cannot be captured, and legality reads only face-up pieces).
+  'three-kingdoms-banqi': ['pgn', 'json'],
   // The FFQ FEN is a masked observer snapshot, not a replay/import format.
   // Decided 2026-11-10: FFQ launches with no public export or share card (#808).
   'ffq-banqi': [],

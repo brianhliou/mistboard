@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- The bots page lists every game, including Three Kingdoms Banqi and Flip Jungle, with one card per opponent, its levels inside, and Misty named after the game it plays ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Play a person on the homepage shows open games and every variant under one pace ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - On desktop, correspondence games waiting on your move appear as a Your move tab in the homepage Play panel ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Computer opponents take time to reply like a player, longer when the game is level; Banqi, Jungle and Flip Jungle now do too ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
@@ -48,6 +49,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- A player page for Meng Fanrui, the 2025 Chinese Xiangqi Association men's champion, in English and Chinese ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
+- Study boards embedded in articles show the engine score chart, the luck split for banqi and jieqi flips, and Fog Xiangqi games with a Red or Black view ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
+- Article game replays offer the engine's alternatives at each fork and show round, date and source on one line, and the practice board steps through the played line, accepts a goal of winning and fits one screen on phone and desktop ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - the xiangqi rules page shows chess players how the soldier moves, with three diagrams ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - The jieqi guide explains review grades, reveal luck and the board die ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Studies can hold Gomoku boards, and Gomoku studies can be shared publicly ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -70,6 +74,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Three Kingdoms Banqi games download as PGN and JSON, naming each piece only when it was turned over ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Banqi analysis reuses exact evaluations and overlaps position searches without weakening them ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Banqi and Three Kingdoms Banqi review keep their controls at the bottom of a phone screen ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Banqi and Three Kingdoms Banqi review on a phone let you pick a side line at a fork ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
@@ -104,6 +109,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The data page filters games by any bot at all its levels and says which variants have no file yet ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - The homepage Play table's arrows look like buttons, and fade out at the end of their list ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Flair offers every piece from every piece set, plus Jungle animals and chess pieces ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - The Play menu opens Create a game, the game setup on Anyone ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
@@ -147,6 +153,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- A move's mark now finishes fading as the piece lands, on every board that glides its moves ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
+- The Play dialog offers Three Kingdoms Banqi's bot as soon as its bot list loads, instead of showing Soon until you switch opponents ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Pikafish bot profiles no longer describe the bots as mainline Pikafish ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Game review no longer shows a perpetual-check rule win as mate in one or grades the repeating move a blunder on broadcast and imported games ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - The touch move confirmation setting lines up with the other Board settings ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))

@@ -1765,6 +1765,35 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   text-align: center;
 }
 
+.xq-replay-header--metadata {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  width: 100%;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--site-border);
+  text-align: left;
+}
+.xq-replay-header--metadata .xq-replay-header-event {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--site-text);
+}
+.xq-replay-metadata {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--site-muted);
+}
+.xq-replay-metadata a {
+  color: inherit;
+}
+
 /* Second header line (event / context): de-emphasised under the players line. */
 .xq-replay-header-event {
   margin-top: 2px;
@@ -2164,6 +2193,30 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   background: var(--site-panel);
 }
 
+/* The card's last row, across both columns: the invitation to play on from the
+   position the card opens on. A strip of the card, not a page button. */
+.xq-replay-annotated .xq-replay-play {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-top: 1px solid var(--site-border);
+  color: var(--site-accent);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.xq-replay-annotated .xq-replay-play:hover,
+.xq-replay-annotated .xq-replay-play:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 10%, transparent);
+}
+.xq-replay-annotated .xq-replay-play-icon {
+  font-size: 11px;
+}
+
 .xq-replay-annotated .xq-replay-board-col {
   display: flex;
   flex-direction: column;
@@ -2211,6 +2264,20 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 .xq-replay .xq-replay-chart .advantage-chart__svg {
   height: 104px;
+}
+
+/* Keep a complete replay legible within a desktop browser, including its
+   clock, controls and graph. A phone retains its natural board size. */
+.xq-replay-header--metadata + .xq-replay-grid .xq-replay-chart {
+  height: 80px;
+}
+.xq-replay-header--metadata + .xq-replay-grid .advantage-chart__svg {
+  height: 68px;
+}
+@media (min-width: 721px) {
+  .xq-replay-header--metadata + .xq-replay-grid .xq-article-svg[data-xq-layout="single"] {
+    max-height: max(280px, min(480px, calc(100svh - 350px)));
+  }
 }
 
 .xq-replay:not(.xq-replay-annotated) .xq-replay-chart {
@@ -2508,6 +2575,40 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   text-transform: uppercase;
 }
 
+.xq-replay-annotated .xq-replay-tree-branch {
+  margin-left: 8px;
+  color: var(--site-muted);
+}
+
+.xq-replay-annotated .xq-replay-tree-depth-2 {
+  flex-basis: 100%;
+  margin-left: 12px;
+}
+
+.xq-replay-annotated .xq-replay-tree-branch[hidden] {
+  display: none;
+}
+
+.xq-replay-annotated .xq-replay-tree-branch:hover > .xq-replay-move-button:not(.is-current),
+.xq-replay-annotated .xq-replay-tree-branch.is-active > .xq-replay-move-button:not(.is-current) {
+  color: var(--site-text);
+}
+
+.xq-replay-replies-toggle {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.xq-replay-branch-note {
+  flex-basis: 100%;
+  font-size: 11px;
+}
+
 .xq-replay-annotated .xq-replay-glyph {
   font-weight: 700;
 }
@@ -2539,6 +2640,11 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 /* Narrow: the move tree drops under the board instead of beside it. */
 @media (max-width: 720px) {
+  .xq-replay-details summary {
+    min-height: 44px;
+    line-height: 44px;
+  }
+
   .xq-replay-annotated .xq-replay-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3290,6 +3396,81 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 .raw-svg-stepper-frame {
   width: 100%;
+}
+
+.raw-svg-stepper-frame-xq {
+  position: relative;
+}
+
+/* Fork chooser (xiangqi-replay.ts): stepping onto a move that has engine
+   alternatives asks which way to go. It sits over the board it is about, the
+   way the site's other board notices do, and closes on any step. */
+.xq-replay-fork {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: min(280px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  color: var(--site-text);
+  background: var(--site-panel);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 28%);
+  transform: translate(-50%, -50%);
+}
+.xq-replay-fork-title {
+  font-size: 12px;
+  color: var(--site-muted);
+}
+.xq-replay-fork-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  color: inherit;
+  background: var(--site-surface);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.xq-replay-fork-option.is-main {
+  border-color: var(--site-accent);
+}
+.xq-replay-fork-option:hover,
+.xq-replay-fork-option:focus-visible {
+  background: var(--site-panel);
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+.xq-replay-fork-move {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.xq-replay-fork-n {
+  color: var(--site-text);
+  font-weight: 600;
+}
+.xq-replay-fork-mark {
+  color: var(--site-accent);
+  font-weight: 700;
+}
+.xq-replay-fork-tag {
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: right;
 }
 
 .raw-svg-stepper-frame > svg {
@@ -4122,4 +4303,10 @@ a.article-meta-author:hover .article-meta-author-name {
 
 :root[data-effective-theme="dark"] .article-image-row-item img.article-figure-dark {
   display: block;
+}
+
+/* A figure reached by #id (the way back from a practice position) lands with
+   a little air above it rather than flush against the window's edge. */
+.article-figure[id] {
+  scroll-margin-top: 1rem;
 }

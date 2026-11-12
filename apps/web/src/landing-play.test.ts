@@ -21,6 +21,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -757,6 +758,51 @@ describe('landing play panel', () => {
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
       'misty-jungle-flip-level-1',
     );
+  });
+
+  it('offers Three Kingdoms Banqi in the open Play dialog as soon as its roster lands', () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setThreeKingdomsBanqiEngineOptions([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    try {
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+      openPlaySetup(panel, 'Play a bot');
+      const tkCard = () =>
+        document.querySelector<HTMLButtonElement>(
+          '.landing-variant-card[data-game-spec="three-kingdoms-banqi"]',
+        );
+      const soon = t('setup.soon', {}, 'en');
+      // No roster yet: the bot flow greys Three Kingdoms out.
+      expect(tkCard()?.disabled).toBe(true);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')?.textContent).toBe(soon);
+      const selectedBefore = selectedVariantSpec();
+
+      setThreeKingdomsBanqiEngineOptions(
+        Array.from({ length: 8 }, (_, i) => ({
+          id: `misty-three-kingdoms-banqi-level-${i + 1}`,
+          name: `Misty Level ${i + 1}`,
+          familyName: 'Misty',
+          kind: 'container',
+        })),
+      );
+
+      // Same dialog, no Lobby/Bot toggle: the card is playable and the pick kept.
+      expect(tkCard()?.disabled).toBe(false);
+      expect(tkCard()?.classList.contains('landing-variant-card-disabled')).toBe(false);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')).toBeNull();
+      expect(selectedVariantSpec()).toBe(selectedBefore);
+      selectModalVariant('three-kingdoms-banqi');
+      expect(selectedVariantSpec()).toBe('three-kingdoms-banqi');
+      expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+        'misty-three-kingdoms-banqi-level-4',
+      );
+    } finally {
+      setThreeKingdomsBanqiEngineOptions([]);
+    }
   });
 
   it('hides neural Flip Jungle L8 when runtime net confirmation is absent, missing or lost', async () => {

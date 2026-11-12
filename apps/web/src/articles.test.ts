@@ -232,6 +232,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
+      '/blog/meng-fanrui',
       '/blog/fog-future',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
@@ -641,6 +643,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/meng-fanrui',
       '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',
@@ -1626,6 +1629,21 @@ describe('image figure credit', () => {
     expect(link?.getAttribute('href')).toBe('https://www.xiangqiqipu.com/Player/View-33.html');
     expect(link?.target).toBe('_blank');
     expect(link?.rel).toBe('noopener');
+  });
+
+  it('labels the credit in the page language, keeping the source a link', () => {
+    const block = {
+      kind: 'image-figure' as const,
+      src: '/a.jpg',
+      alt: 'A.',
+      caption: '孟繁睿。',
+      credit: { text: '中国象棋协会', href: 'https://example.com/' },
+    };
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      const cap = renderBlock(block, lang).querySelector('figcaption');
+      expect(cap?.textContent).toBe('孟繁睿。 照片：中国象棋协会');
+      expect(cap?.querySelector('a')?.textContent).toBe('中国象棋协会');
+    }
   });
 
   it('keeps a caption without a credit as plain text', () => {
