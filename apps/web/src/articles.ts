@@ -1294,7 +1294,9 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
       // These closing play rows use the header's labels, locale and links, so
       // a bot button appears only where the variant really offers a bot.
       if (
-        (base.slug === 'gomoku' || base.slug === 'three-kingdoms-banqi') &&
+        (base.slug === 'gomoku' ||
+          base.slug === 'three-kingdoms-banqi' ||
+          base.slug === 'fanfanqi') &&
         node.classList.contains('article-cta-row')
       ) {
         const playCta = buildRulesPlayCta(base.slug, article.title, locale);
@@ -1544,17 +1546,21 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-// Explicit placement for rules pages outside the canonical public shelf:
-// related playtests follow their base game; Gomoku follows the shelf's end.
-const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
-  'three-kingdoms-banqi': 'banqi',
-  // A separate board-game family follows the public shelf in local playtests.
-  gomoku: 'xiangqi-mahjong',
+// Explicit placement for rules pages outside the canonical public shelf, as an
+// offset from a shelf entry. The banqi family is ordered by player base
+// (decided 2026-11-07): Fanfanqi, then Banqi, then Three Kingdoms Banqi.
+// Gomoku, a separate board-game family, follows the shelf's end.
+const RULES_RAIL_PLACEMENT: Record<string, { spec: string; offset: number }> = {
+  fanfanqi: { spec: 'banqi', offset: -0.5 },
+  'three-kingdoms-banqi': { spec: 'banqi', offset: 0.5 },
+  gomoku: { spec: 'xiangqi-mahjong', offset: 0.5 },
 };
 
 function rulesArticleRailSortIndex(article: Article): number {
-  const after = RULES_RAIL_AFTER_SPEC[article.slug];
-  if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
+  const placement = RULES_RAIL_PLACEMENT[article.slug];
+  if (placement && isGameSpecId(placement.spec)) {
+    return canonicalVariantOrderIndex(placement.spec) + placement.offset;
+  }
   const gameSpecId = article.gameSpecId ?? gameSpecIdFromRulesSlug(article.slug);
   if (gameSpecId && isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
@@ -3320,6 +3326,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   jieqi: 'jieqi',
   banqi: 'banqi',
   'three-kingdoms-banqi': 'three-kingdoms-banqi',
+  fanfanqi: 'ffq-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
   'xiangqi-mahjong-32': 'xiangqi-mahjong',

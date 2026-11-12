@@ -13,6 +13,12 @@
 //                  bot picker after a bot game ("New game": the dialog offers
 //                  the same bot and settings, so "opponent" read oddly; lichess
 //                  labels its post-AI-game button the same way)
+//   Play again by correspondence
+//                  seated players after a game between two accounts, in a
+//                  variant with correspondence: a private correspondence
+//                  challenge to the same opponent, sides swapped (#606,
+//                  correspondence-again.ts). The caller decides eligibility;
+//                  the panel only places it
 //   Review game    everyone
 //   Challenge a friend
 //                  seated players after a bot or PvP game, a row like the two
@@ -24,6 +30,8 @@
 // Every action reports a `postgame_action` event, so which of these earns its
 // place is a PostHog read rather than a guess.
 import { track } from './analytics.js';
+import type { CorrespondenceAgainOffer } from './challenge-model.js';
+import { correspondenceAgainButton } from './correspondence-again.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { landingPlayDeepLinkAccepts } from './landing-play.js';
@@ -91,6 +99,9 @@ export type PostGameActionsInput = {
   /** The caller's rematch control (PvP offer widget or PvE new-game button), seated only. */
   rematch: HTMLElement | null;
   reviewHref: string | null;
+  /** The "play again by correspondence" offer (finishedGameCorrespondenceOffer),
+   *  or null/absent when this game earns none. Seated players only. */
+  correspondenceAgain?: { offer: CorrespondenceAgainOffer; roomId: string } | null;
 };
 
 type PostGameSheet = {
@@ -251,6 +262,16 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     input.rematch.classList.add('postgame-actions__rematch');
     input.rematch.addEventListener('click', report('rematch'));
     box.append(input.rematch);
+  }
+
+  if (input.seated && input.correspondenceAgain) {
+    const again = correspondenceAgainButton(input.correspondenceAgain.offer, {
+      surface: 'postgame',
+      roomId: input.correspondenceAgain.roomId,
+    });
+    again.classList.add('postgame-actions__correspondence');
+    again.addEventListener('click', report('correspondence_again'));
+    box.append(again);
   }
 
   const opponentHref = input.seated ? newOpponentHref(input.variant, input.mode) : null;

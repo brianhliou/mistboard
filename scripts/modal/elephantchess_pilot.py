@@ -19,46 +19,79 @@ import modal
 
 APP_NAME = "mistboard-elephantchess-pilot"
 DATABASE_SECRET = "mistboard-mining-production-db"
-RELEASE_NAME = "pikafish-official-2026-01-02"
-ENGINE_ID = "Pikafish 2026-01-02"
-PROFILE_VERSION = "elephantchess-pilot-2026-07-v1-modal-linux-sse41"
+# The server's engine (#989): upstream Pikafish at the pikafish.ref pin plus
+# pikafish-cc0-net.patch, reading the Fairy-Stockfish CC0 net. The image builds it
+# from source for Linux the way scripts/engine-assets.sh does, so there is no
+# local release directory to keep in step.
+ENGINE_ID = "Pikafish dev-20260919-6a59ee2f"
+PROFILE_VERSION = "elephantchess-pilot-2026-07-v1-modal-linux-sse41-cc0"
 MANIFEST_FILE_SHA256 = "ea3701043c4167e92539165d01be3fa603c9d6c15bc97b915f8a420c145559ef"
 MANIFEST_CONTENT_SHA256 = "e7f520ef1b0d7e8374ffafc4b88d8d3e4862cf06cf27852beef9f32f030f66aa"
-ENGINE_BINARY_SHA256 = "be780323c9d1bb03771d6a59f6ce8020970aaf97db245b9e1cebe3b9dcd792c9"
-ENGINE_NETWORK_SHA256 = "c4026370d7516d9b0f668447f9ca1931241538bdc689cde6fec6a991ac4d5f77"
+# scripts/engine-assets.sh PIKAFISH_NET / _URL / _SHA256; checked against it below.
+ENGINE_NETWORK_NAME = "xiangqi-c07e94a5c7cb.nnue"
+ENGINE_NETWORK_URL = (
+    "https://raw.githubusercontent.com/fairy-stockfish/Fairy-Stockfish-NNUE/"
+    "0f4dce21530775b1dc862b7c84aa707548183097/xiangqi-c07e94a5c7cb.nnue"
+)
+ENGINE_NETWORK_SHA256 = "c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11"
+# engine-assets.sh's behavioural pin for the patched build.
+ENGINE_BENCH_NODES = 1650882
+ENGINE_ARCH = "x86-64-sse41-popcnt"
 
 REMOTE_ROOT = Path("/opt/mistboard")
-REMOTE_BINARY = Path("/opt/pikafish/pikafish-sse41-popcnt")
-REMOTE_NETWORK = Path("/opt/pikafish/pikafish.nnue")
+REMOTE_ENGINE_DIR = Path("/opt/pikafish")
+REMOTE_BINARY = REMOTE_ENGINE_DIR / "pikafish"
+REMOTE_NETWORK = REMOTE_ENGINE_DIR / ENGINE_NETWORK_NAME
+# A from-source build's hash is not known before the image exists, so the image
+# records it; the run pins whatever this image built, and the bench count above
+# is what pins the engine's behaviour.
+REMOTE_BINARY_SHA256_FILE = REMOTE_ENGINE_DIR / "pikafish.sha256"
 
 if modal.is_local():
     REPO_ROOT = Path(__file__).resolve().parents[2]
-    DEFAULT_RELEASE_DIR = REPO_ROOT.parent / "tools" / RELEASE_NAME
-    RELEASE_DIR = Path(os.environ.get("MISTBOARD_MODAL_PIKAFISH_DIR", DEFAULT_RELEASE_DIR))
-    LOCAL_BINARY = RELEASE_DIR / "Linux" / "pikafish-sse41-popcnt"
-    LOCAL_NETWORK = RELEASE_DIR / "pikafish.nnue"
 else:
     REPO_ROOT = REMOTE_ROOT
-    LOCAL_BINARY = REMOTE_BINARY
-    LOCAL_NETWORK = REMOTE_NETWORK
 
 
-def _require_pinned_file(path: Path, expected_sha256: str) -> None:
-    if not path.is_file():
-        raise RuntimeError(
-            f"required artifact not found: {path}; set MISTBOARD_MODAL_PIKAFISH_DIR"
+def _engine_pin() -> str:
+    pin = (REPO_ROOT / "pikafish.ref").read_text(encoding="utf-8").split("\n")[0].strip()
+    if len(pin) != 40 or not ENGINE_ID.endswith(f"-{pin[:8]}"):
+        raise RuntimeError(f"pikafish.ref {pin!r} does not match ENGINE_ID {ENGINE_ID!r}")
+    return pin
+
+
+def _require_recipe_net() -> None:
+    recipe = (REPO_ROOT / "scripts" / "engine-assets.sh").read_text(encoding="utf-8")
+    pinned = {
+        key: value
+        for key, value in (
+            line.split("=", 1) for line in recipe.splitlines() if line.startswith("PIKAFISH_NET")
         )
-    with path.open("rb") as artifact:
+    }
+    url = pinned.get("PIKAFISH_NET_URL", "").replace("$PIKAFISH_NET", ENGINE_NETWORK_NAME)
+    if (
+        pinned.get("PIKAFISH_NET") != ENGINE_NETWORK_NAME
+        or pinned.get("PIKAFISH_NET_SHA256") != ENGINE_NETWORK_SHA256
+        or url != ENGINE_NETWORK_URL
+    ):
+        raise RuntimeError("ENGINE_NETWORK_* differ from engine-assets.sh; update them together")
+
+
+def _engine_binary_sha256() -> str:
+    recorded = REMOTE_BINARY_SHA256_FILE.read_text(encoding="utf-8").split()[0]
+    with REMOTE_BINARY.open("rb") as artifact:
         actual = hashlib.file_digest(artifact, "sha256").hexdigest()
-    if actual != expected_sha256:
-        raise RuntimeError(
-            f"artifact hash mismatch for {path.name}: expected {expected_sha256}, got {actual}"
-        )
+    if actual != recorded:
+        raise RuntimeError(f"Pikafish binary changed after the image build: {actual}")
+    return actual
 
 
 if modal.is_local():
-    _require_pinned_file(LOCAL_BINARY, ENGINE_BINARY_SHA256)
-    _require_pinned_file(LOCAL_NETWORK, ENGINE_NETWORK_SHA256)
+    ENGINE_PIN = _engine_pin()
+    _require_recipe_net()
+    for required in ("pikafish-cc0-net.patch",):
+        if not (REPO_ROOT / required).is_file():
+            raise RuntimeError(f"required build input not found: {REPO_ROOT / required}")
 
 SOURCE_IGNORES = [
     "**/.git/**",
@@ -74,7 +107,27 @@ SOURCE_IGNORES = [
 if modal.is_local():
     image = (
         modal.Image.from_registry("node:22-bookworm-slim", add_python="3.12")
-        .apt_install("libatomic1")
+        .apt_install("libatomic1", "git", "make", "g++", "curl", "ca-certificates")
+        # Same steps as engine-assets.sh: fetch the pin, apply the patch, build
+        # static for sse41, fetch and verify the CC0 net, gate on the bench count.
+        .add_local_file(
+            REPO_ROOT / "pikafish-cc0-net.patch", "/tmp/pikafish-cc0-net.patch", copy=True
+        )
+        .run_commands(
+            "mkdir -p /tmp/pikafish && git -C /tmp/pikafish init -q",
+            f"git -C /tmp/pikafish fetch -q --depth 1 https://github.com/official-pikafish/Pikafish.git {ENGINE_PIN}",
+            "git -C /tmp/pikafish checkout -q FETCH_HEAD",
+            "git -C /tmp/pikafish apply /tmp/pikafish-cc0-net.patch",
+            f"make -C /tmp/pikafish/src -j\"$(nproc)\" ARCH={ENGINE_ARCH} EXTRALDFLAGS=-static build >/dev/null",
+            f"mkdir -p {REMOTE_ENGINE_DIR} && cp /tmp/pikafish/src/pikafish {REMOTE_BINARY}",
+            f"curl -fsSL --proto =https --tlsv1.2 --retry 3 -o {REMOTE_NETWORK} {ENGINE_NETWORK_URL}",
+            f"echo '{ENGINE_NETWORK_SHA256}  {REMOTE_NETWORK}' | sha256sum -c -",
+            f"cd {REMOTE_ENGINE_DIR} && ./pikafish bench 16 1 13 default depth > /tmp/bench.txt 2>&1"
+            f" && grep -Eq '^Nodes searched[[:space:]]*:[[:space:]]*{ENGINE_BENCH_NODES}[[:space:]]*$'"
+            " /tmp/bench.txt",
+            f"chmod 0555 {REMOTE_BINARY} && sha256sum {REMOTE_BINARY} > {REMOTE_BINARY_SHA256_FILE}",
+            "rm -rf /tmp/pikafish /tmp/pikafish-cc0-net.patch /tmp/bench.txt",
+        )
         .add_local_file(
             REPO_ROOT / "package.json", str(REMOTE_ROOT / "package.json"), copy=True
         )
@@ -108,9 +161,6 @@ if modal.is_local():
             f"cd {REMOTE_ROOT} && npm run build --workspace @mistboard/game",
             f"cd {REMOTE_ROOT} && npm run build --workspace @mistboard/board-render",
         )
-        .add_local_file(LOCAL_BINARY, str(REMOTE_BINARY), copy=True)
-        .add_local_file(LOCAL_NETWORK, str(REMOTE_NETWORK), copy=True)
-        .run_commands(f"chmod 0555 {REMOTE_BINARY}")
     )
 else:
     # Function metadata is hydrated by Modal before the module is imported in a
@@ -189,7 +239,7 @@ def _initialization_command(manifest_path: str, *, verify_only: bool) -> list[st
         "--binary",
         str(REMOTE_BINARY),
         "--binary-sha256",
-        ENGINE_BINARY_SHA256,
+        _engine_binary_sha256(),
         "--net",
         str(REMOTE_NETWORK),
         "--net-sha256",

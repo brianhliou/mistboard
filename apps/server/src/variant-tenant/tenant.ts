@@ -474,7 +474,10 @@ export type VariantTenant<
     // back to createInitialState (including on replay). `timeControl` is the
     // room's, so a tenant whose rules differ by pace (xiangqi mahjong in
     // correspondence) can record that in the setup and replay it.
-    createSetup?(options?: { timeControl?: RoomTimeControl }): unknown;
+    // `sideChosen` is true when the creator named a seat rather than Random
+    // (xiangqi mahjong: the named side decides who deals first). The setup
+    // records the outcome, so replay never needs the flag.
+    createSetup?(options?: { timeControl?: RoomTimeControl; sideChosen?: boolean }): unknown;
     // Deliberately two parameters. Several tenants pass their kernel's own
     // applyMove straight through, and those already take a third options
     // argument, so a positional `at` here would land in that slot. A tenant

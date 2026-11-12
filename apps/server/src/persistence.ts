@@ -150,6 +150,7 @@ export {
   CORRESPONDENCE_SEEK_TTL_MS,
   closeCorrespondenceSeek,
   correspondenceStartRecipient,
+  correspondenceUserName,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   deleteCorrespondenceSeek,
@@ -461,6 +462,7 @@ export type {
   ProfileRatingHistory,
   ProfileRatingHistoryPoint,
   PublicProfileUser,
+  RecentOpponent,
   UpdateUserProfileResult,
   UserProfile,
 } from './persistence-profiles.js';
@@ -472,6 +474,7 @@ export {
   getUserRatingHistory,
   isProfileGameResultFilter,
   listRecentFinishedCorrespondenceGames,
+  listRecentOpponents,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,

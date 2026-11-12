@@ -23,6 +23,13 @@ import type { Article } from '../types.js';
 // levels; /bot/pikafish is live and its play button creates the game with no
 // setup dialog; /analysis/xiangqi and /analysis/jieqi are in the catalog.
 //
+// Since 2026-11-10 every Pikafish surface here (bots, review, browser board) runs
+// Pikafish's search on the CC0 Fairy-Stockfish xiangqi net (xiangqi-c07e94a5c7cb),
+// not Pikafish's own weights. The page says so quietly (credits on /source and
+// /champions, the ratings caption, the download FAQ), with no section of its own,
+// by decision 2026-11-10. No Elo gap is stated: none is published, and measuring
+// one would mean running the official weights.
+//
 // Text card (text-card.ts). PIKAFISH is translated on zh pages (皮卡鱼), the word
 // a Chinese reader searches.
 const PIKAFISH_THUMBNAIL = (locale: Locale): string =>
@@ -51,9 +58,9 @@ export const pikafishArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-22',
-  updatedAt: '2026-10-23',
+  updatedAt: '2026-11-10',
   updateNote:
-    'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.',
+    "Corrected the analysis board's net and download size.",
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
@@ -77,7 +84,7 @@ export const pikafishArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.',
+        'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.',
     },
   ],
   sections: [
@@ -111,7 +118,7 @@ export const pikafishArticle: Article = {
             ['Pikafish', '2334'],
           ],
           caption:
-            'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.',
+            'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move, rated before it moved to the CC0 net in November.',
         },
         {
           kind: 'paragraph',
@@ -152,7 +159,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.',
+            'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser, so nothing you analyze leaves your machine. The net is 11 MB and downloads once.',
         },
       ],
     },
@@ -170,7 +177,7 @@ export const pikafishArticle: Article = {
             {
               question: 'Can I analyze with Pikafish online?',
               answer:
-                'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.',
+                'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 11 MB net loads on first use.',
             },
             {
               question: 'Is it free?',
@@ -180,7 +187,7 @@ export const pikafishArticle: Article = {
             {
               question: 'Where can I download Pikafish?',
               answer:
-                'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.',
+                "For the engine itself, use the official Pikafish project for releases, source code and setup instructions. The download includes Pikafish's own net, which is stronger than the free CC0 net Mistboard runs. To play or analyze on Mistboard, open your browser without installing an app.",
             },
             {
               question: 'How strong is it?',

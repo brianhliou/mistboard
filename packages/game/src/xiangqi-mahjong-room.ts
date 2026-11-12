@@ -149,10 +149,15 @@ export interface XmjRoomState {
  * first mover in east, and the days-per-move pregame deadline (who owes the
  * first move, then the reply) is read from seat order, so the dealer must be
  * the first seat. The deal still alternates hand by hand.
+ *
+ * `sideChosen`: the creator picked First or Second in the Move order row. The
+ * room seats them east (First) or west (Second), so east deals the first hand,
+ * as in correspondence. Random leaves it unset and the dealer is drawn. The
+ * walls are shuffled the same way either way.
  */
 export function createXmjSetup(
   random: () => number,
-  options: { correspondence?: boolean } = {},
+  options: { correspondence?: boolean; sideChosen?: boolean } = {},
 ): XmjRoomSetup {
   const walls: XmjTile[][] = [];
   for (let i = 0; i < XMJ_MATCH_HANDS; i += 1) walls.push(xmjShuffle(random));
@@ -160,6 +165,7 @@ export function createXmjSetup(
   if (options.correspondence) {
     return { walls, firstDealer: 'east', correspondence: true, taiTable };
   }
+  if (options.sideChosen) return { walls, firstDealer: 'east', taiTable };
   return { walls, firstDealer: random() < 0.5 ? 'east' : 'west', taiTable };
 }
 

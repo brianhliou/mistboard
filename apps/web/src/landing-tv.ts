@@ -269,7 +269,7 @@ export async function mountLandingTv(
   // matching what the finished record will say.
   const registerLiveNames = (featured: LiveFeatured): void => {
     if (options.namesByRoomId[featured.roomId]) return;
-    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'));
+    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'), featured.gameSpecId);
     if (names) options.namesByRoomId[featured.roomId] = names;
   };
 

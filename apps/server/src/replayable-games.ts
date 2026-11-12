@@ -12,7 +12,7 @@
 // no `replays` binding pass through unless already known to fail. Discovery
 // surfaces drop such a game (filterReplayableGames); a person's own lists keep
 // it, marked, so their history stays whole (markUnavailableGames). FFQ
-// playtests are excluded entirely from both, before any event loading.
+// playtests are excluded from discovery and require an explicit opt-in in personal lists.
 
 import { crosstableReviewUrl } from './crosstable.js';
 import { isFFQBanqiGame } from './ffq-banqi-access.js';
@@ -35,6 +35,8 @@ export type ReplayableGameDeps = {
   // crosstableReviewUrl, whose answers the web registry is held to by
   // apps/web/src/variant-registry-sync.test.ts.
   gamePageUrl?: (roomId: string, variant: string) => string | null;
+  // Internal replay validation for a gated card; never set by discovery routes.
+  includeFFQ?: boolean;
 };
 
 const liveDeps: ReplayableGameDeps = {
@@ -49,7 +51,7 @@ export async function filterReplayableGames<T extends { roomId: string; variant?
   deps: ReplayableGameDeps = liveDeps,
 ): Promise<T[]> {
   // Drop playtests before registration lookup or canonical event loading.
-  const discoverable = rows.filter((row) => !isFFQBanqiGame(row));
+  const discoverable = rows.filter((row) => deps.includeFFQ || !isFFQBanqiGame(row));
   const failed = await unreplayableRoomIds(discoverable, deps);
   return discoverable.filter((row) => !failed.has(row.roomId));
 }
@@ -60,13 +62,14 @@ export async function filterReplayableGames<T extends { roomId: string; variant?
  * else 'old-rules' when the stored log no longer replays. For the lists that
  * belong to a person (their profile, their favorites, a bot's record), where a
  * game that silently vanished would misstate their history; the discovery
- * surfaces keep filterReplayableGames. FFQ playtests are omitted entirely.
+ * surfaces keep filterReplayableGames. FFQ needs an authorized caller to opt in.
  */
 export async function markUnavailableGames<T extends { roomId: string; variant: string }>(
   rows: readonly T[],
   deps: ReplayableGameDeps = liveDeps,
+  includeFFQ = false,
 ): Promise<Array<T & { unavailable?: GameUnavailableReason }>> {
-  rows = rows.filter((row) => !isFFQBanqiGame(row));
+  rows = rows.filter((row) => includeFFQ || !isFFQBanqiGame(row));
   const gamePageUrl = deps.gamePageUrl ?? liveDeps.gamePageUrl!;
   const unsupported = new Set(
     rows.filter((row) => gamePageUrl(row.roomId, row.variant) === null).map((row) => row.roomId),

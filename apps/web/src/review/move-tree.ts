@@ -23,6 +23,8 @@ export interface MoveTreeAnnotation {
   suffixClass?: string;
   /** Formatted eval after the move (fixed POV), e.g. '+2.1', '#3'. */
   eval?: string;
+  /** Tooltip on the eval, for a score that needs a sentence (a rule verdict in place of "#1"). */
+  evalTitle?: string;
   /** Luck readout for a chance (reveal) move, e.g. '🎲 -11%'. Shown inline next to the move. */
   luck?: string;
   /** Tone hook for the luck badge → .review-move-list__luck--<tone>. */
@@ -210,6 +212,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // the position you got, not a counterfactual. (Keying this off luck-badge presence instead made
     // eval visibility track auth state, since the decomposition only runs for signed-in viewers.)
     if (ann?.eval) evalEl.textContent = ann.eval;
+    if (ann?.eval && ann.evalTitle) evalEl.title = ann.evalTitle;
     if (ann?.assessment) assessEl.textContent = ann.assessment;
     // Authored-comment marker: a small bubble; the text itself lives in the
     // under-board comment panel for the node the cursor is on.

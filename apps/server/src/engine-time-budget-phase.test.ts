@@ -241,19 +241,20 @@ const liveBase = {
   engineVsEngine: false,
 };
 
-test('liveBotMoveTime: flat is exactly budgetForMove, whatever the pacing', () => {
+test('liveBotMoveTime: paced flat uses the shared 10% reserve', () => {
   const flat = liveBotMoveTime({
     ...liveBase,
     rule: 'flat',
     ply: 0,
     remainingMs: 60_000,
     pacingEnabled: true,
+    variant: 'xiangqi',
   });
   const expected = budgetForMove({
     remainingMs: 60_000,
     incrementMs: 1_000,
     ceilingMs: CEIL,
-    reserveMs: 1_000,
+    reserveMs: 6_000,
     floorMs: 50,
   }).computeBudgetMs;
   assert.deepEqual(flat, { movetimeMs: expected, rule: 'flat', budgetMs: expected });
@@ -267,6 +268,7 @@ test('liveBotMoveTime: a non-top tier stays flat under the phase switch', () => 
     ply: 20,
     remainingMs: 50_000,
     pacingEnabled: true,
+    variant: 'xiangqi',
   });
   assert.equal(r.rule, 'flat');
 });
@@ -280,6 +282,7 @@ test('liveBotMoveTime: the pace hold becomes search time under phase', () => {
     ply: 0,
     remainingMs: 60_000,
     pacingEnabled: true,
+    variant: 'xiangqi',
   });
   const unpaced = liveBotMoveTime({
     ...liveBase,
@@ -299,6 +302,7 @@ test('liveBotMoveTime: the pace hold becomes search time under phase', () => {
     ply: 0,
     remainingMs: 60_000,
     pacingEnabled: true,
+    variant: 'xiangqi',
     engineVsEngine: true,
   });
   assert.equal(eve.movetimeMs, eve.budgetMs);
@@ -314,6 +318,7 @@ test('liveBotMoveTime: some paced turn in a 1+1 game is raised above its budget'
       ply,
       remainingMs: 40_000,
       pacingEnabled: true,
+      variant: 'xiangqi',
     });
     assert.ok(r.movetimeMs <= CEIL);
     if (r.movetimeMs > r.budgetMs) raised++;
@@ -377,9 +382,10 @@ test('liveBotMoveTime: native carries the clock and no pace raise', () => {
     ply: 9,
     remainingMs: 41_000,
     pacingEnabled: true,
+    variant: 'xiangqi',
   });
   assert.equal(r.rule, 'native');
-  assert.deepEqual(r.clock, { timeMs: 41_000 - NATIVE_TIME.reserveMs, incMs: 1_000 });
+  assert.deepEqual(r.clock, { timeMs: 41_000 - 6_000, incMs: 1_000 });
 });
 
 /**

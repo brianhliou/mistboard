@@ -3236,7 +3236,8 @@ button.profile-puzzle-row[aria-pressed="true"] {
 
 /* ── Flair picker ─────────────────────────────────────────────────────────────
    A radio grid, not a <select>: flair is chosen by how it looks, and a dropdown
-   of two dozen names shows the reader none of them. The radio itself is
+   of 150 names shows the reader none of them. One grid per family or piece set,
+   each under a small label. The radio itself is
    visually hidden and the swatch carries the selected state, so the control
    stays a real radio group for keyboard and screen-reader users. */
 .account-flair-group {
@@ -3257,6 +3258,20 @@ button.profile-puzzle-row[aria-pressed="true"] {
   grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
   gap: 6px;
   margin-top: 8px;
+}
+
+/* A piece set lays out one side per row (red over black), so the row length is
+   the set's role count. Cells shrink below 44px rather than wrap, which keeps
+   the 8 Jungle animals in a row at 390px with no horizontal scroll. */
+.account-flair-options-rows {
+  grid-template-columns: repeat(var(--flair-per-row), minmax(0, 48px));
+}
+
+.account-flair-set-label {
+  margin: 14px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--site-muted);
 }
 
 .account-flair-option {

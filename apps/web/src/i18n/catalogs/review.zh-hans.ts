@@ -930,6 +930,13 @@ export const ZH_HANS_REVIEW = {
   'engine.gomokuWhiteInShort': '白 {moves} 步胜',
   'engine.gomokuBlackWinsShort': '黑胜',
   'engine.gomokuWhiteWinsShort': '白胜',
+  'engine.ruleShort': '长将',
+  'engine.ruleRedWins':
+    '并非将死。引擎把即将出现的重复局面判为红方胜：按 Mistboard 规则，长将一方判负。',
+  'engine.ruleBlackWins':
+    '并非将死。引擎把即将出现的重复局面判为黑方胜：按 Mistboard 规则，长将一方判负。',
+  'engine.ruleRecordNote':
+    '按 Mistboard 规则，此着走成长将重复，应判负；本场比赛未执行此规则，故不评级。',
   'engine.depth': '深度 {depth}',
   'engine.nodes': '{nodes} 节点',
   'engine.thinking': '思考中…',

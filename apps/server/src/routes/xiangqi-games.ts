@@ -8,6 +8,7 @@ import {
   type XiangqiColor,
   type XiangqiMove,
   xiangqiMoveToPikafishUci,
+  xiangqiRuleMate,
 } from '@mistboard/game';
 import { xiangqiEnabled } from './../feature-flags.js';
 import { liveAnalysisProgressStore, resolveCachedComputation } from './../game-analysis-kernel.js';
@@ -188,6 +189,7 @@ export async function analyzeXiangqiPostgame(
     .map((entry) => entry.move);
   const movesUci = moves.map((move) => xiangqiMoveToPikafishUci(move));
   const plies = await analyze(movesUci, moves);
+  const initialState = createStandardXiangqiStateFromSetup('analysis', payload.view);
   return {
     engineId: XIANGQI_ANALYSIS_ENGINE_ID,
     depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
@@ -207,7 +209,23 @@ export async function analyzeXiangqiPostgame(
         p.offerLine && capture
           ? { capture, pv: pikafishLineToOurUci(p.offerLine.pv) ?? [] }
           : undefined;
-      return { ...p, best: pikafishBestToOurUci(p.best), pv, second, offerLine };
+      // A short mate that is really Pikafish's perpetual-check verdict gets
+      // tagged, so review labels it as the rule instead of "#1". Read on the
+      // converted line: xiangqiRuleMate takes our square notation.
+      const rule = xiangqiRuleMate({
+        history: moves.slice(0, p.ply),
+        mate: p.mate,
+        pv,
+        initialState,
+      });
+      return {
+        ...p,
+        best: pikafishBestToOurUci(p.best),
+        pv,
+        second,
+        offerLine,
+        ...(rule ? { rule } : {}),
+      };
     }),
   };
 }

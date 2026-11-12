@@ -9,6 +9,7 @@ import {
   initLandingCarousel,
   mountArticleThumbnails,
 } from './articles.js';
+import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import {
   displayParticipantName,
   type FeaturedGame,
@@ -29,6 +30,10 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
+import {
+  buildLandingCorrespondenceMoves,
+  createYourMoveFeed,
+} from './landing-correspondence-moves.js';
 import {
   BROADCAST_SLOT_PENDING_CLASS,
   buildLandingEventBanners,
@@ -361,6 +366,13 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     tv.destroy();
   };
   setRoomNavigator((url) => {
+    // The navigator also carries plain pages (a correspondence seek lands on
+    // /correspondence). Swapping one in as a room mounted the live shell with no
+    // room and showed "Access rejected"; a page gets a normal load.
+    if (landingNavigationKind(url) === 'page') {
+      window.location.assign(url);
+      return;
+    }
     void transitionToRoom(root, url, teardownLanding);
   });
 }
@@ -397,6 +409,12 @@ async function transitionToRoom(
   }
   prepareRoomTransition(root, url, teardownLanding, t('live.pageTitle'));
   liveModule.bootstrapLiveRoom();
+}
+
+// Only a room URL can be swapped in place; anything else is a page.
+export function landingNavigationKind(url: string): 'room' | 'page' {
+  const next = new URL(url, window.location.href);
+  return roomIdFromPath(next.pathname) || next.searchParams.get('room') ? 'room' : 'page';
 }
 
 // Tenants with a self-contained live client transition through
@@ -526,16 +544,19 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
 // an empty list — callers keep the placeholder and may retry. Never throws.
 export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | null> {
   setThreeKingdomsBanqiEngineOptions([]);
+  setFFQBanqiEngineOptions([]);
   setJungleFlipEngineOptions([]);
   try {
     const resp = await fetch('/api/engines/playable');
     if (!resp.ok) return null;
     const data = (await resp.json()) as {
       engines: PlayableEngine[];
+      ffqBanqiEngines?: PlayableEngine[];
       threeKingdomsBanqiEngines?: PlayableEngine[];
       jungleFlipEngines?: PlayableEngine[];
     };
     setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+    setFFQBanqiEngineOptions(data.ffqBanqiEngines ?? []);
     setJungleFlipEngineOptions(data.jungleFlipEngines ?? []);
     return data.engines.length > 0 ? data.engines : null;
   } catch {
@@ -697,12 +718,16 @@ export function buildLandingStage(
   // is the complementary "join a game" surface. ──
   const lobbyPanel = document.createElement('section');
   lobbyPanel.className = 'landing-lobby-panel';
+  // One load of the player's correspondence games on their move feeds both the
+  // phone card under Play and the desktop panel's Your move tab.
+  const yourMove = createYourMoveFeed({ hydrate: !opts.skipLiveWidgets });
   // The bot-first play panel (#491) is the default; `?hero=lobby` brings the
   // lichess-shaped tabs back on a device (playPanelEnabled).
+  const panelListsYourMove = !phone && playPanelEnabled();
   if (!phone) {
     lobbyPanel.append(
-      playPanelEnabled()
-        ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
+      panelListsYourMove
+        ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets, yourMove })
         : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
     );
   }
@@ -717,7 +742,18 @@ export function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
+  // A signed-in player's correspondence games on their move sit under the Play
+  // button (#1058); the row stays hidden for everyone else. Where the Play
+  // panel lists them (its Your move tab), the card shows only at phone width.
+  playStack.append(
+    playPanel,
+    buildLandingCorrespondenceMoves({
+      hydrate: !opts.skipLiveWidgets,
+      feed: yourMove,
+      phoneOnly: panelListsYourMove,
+    }),
+    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
+  );
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('div');
   about.className = 'landing-about';

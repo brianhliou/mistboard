@@ -216,6 +216,58 @@ for (const flag of [undefined, 'false', 'true']) {
           error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
         });
       }
+      // PvE has exactly the same flag + admin door; bot games stay casual.
+      for (const preferredColor of ['red', 'black'] as const) {
+        const pve = await post(
+          '/api/rooms',
+          {
+            gameSpecId: 'ffq-banqi',
+            mode: 'pve',
+            engineId: 'misty-ffq-banqi-level-1',
+            preferredColor,
+          },
+          headers(),
+        );
+        assert.equal(pve.status, admitted ? 201 : 404);
+        if (admitted) {
+          const room = ffqBanqiRooms.get(pve.body.roomId)!;
+          assert.equal(room.rated, false);
+          assert.equal(
+            room.projection.seats[preferredColor === 'red' ? 'black' : 'red'],
+            'misty-ffq-banqi-level-1',
+          );
+        }
+      }
+      const savedEnginePath = process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH;
+      process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH = '/nonexistent/ffq-banqi-engine';
+      try {
+        const missing = await post(
+          '/api/rooms',
+          { gameSpecId: 'ffq-banqi', mode: 'pve', engineId: 'misty-ffq-banqi-level-4' },
+          headers(),
+        );
+        assert.equal(missing.status, 404);
+        assert.equal(
+          missing.body.error,
+          admitted ? 'ffq_banqi_engine_disabled' : 'ffq_banqi_disabled',
+        );
+      } finally {
+        if (savedEnginePath === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH;
+        else process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH = savedEnginePath;
+      }
+      const invalid = await post(
+        '/api/rooms',
+        { gameSpecId: 'ffq-banqi', mode: 'pve', engineId: 'unknown' },
+        headers(),
+      );
+      assert.equal(invalid.status, admitted ? 400 : 404);
+      assert.equal(invalid.body.error, admitted ? 'invalid_engine' : 'ffq_banqi_disabled');
+      const ratedBot = await post(
+        '/api/rooms',
+        { gameSpecId: 'ffq-banqi', mode: 'pve', engineId: 'misty-ffq-banqi-level-1', rated: true },
+        headers(),
+      );
+      assert.equal(ratedBot.status, admitted ? 501 : 404);
       const direct = await createFFQBanqiRoom(role ? { accountRole: role } : null);
       assert.equal(direct.ok, admitted, 'the factory itself also enforces policy');
       for (const selectors of CONFLICTS) {
@@ -232,12 +284,7 @@ for (const flag of [undefined, 'false', 'true']) {
           );
         }
       }
-      for (const surface of [
-        { mode: 'pve' },
-        { rated: true },
-        { engineId: 'anything' },
-        { botId: 'misty' },
-      ]) {
+      for (const surface of [{ rated: true }, { botId: 'misty' }]) {
         const result = await post('/api/rooms', { gameSpecId: 'ffq-banqi', ...surface }, headers());
         assert.equal(result.status, admitted ? 501 : 404);
         assert.equal(

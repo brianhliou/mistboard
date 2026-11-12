@@ -53,6 +53,9 @@ export type TenantSocketFrame = {
   seatToken?: string;
   seat?: unknown;
   seq?: number;
+  // Hello only: why a spectator holds no seat when signing in would give it one
+  // (a signed-out friend watching a waiting correspondence room).
+  seatRefusal?: string;
 };
 
 type TenantServerMessage =
@@ -103,6 +106,8 @@ export type TenantSocketClient = {
   connection(): TenantConnectionState;
   noticeTier(): TenantNoticeTier;
   closeReason(): string;
+  // The hello's seat refusal for an admitted spectator, '' otherwise.
+  seatRefusal?(): string;
   clientId(): string;
   latencyMs(): number | null;
   reconnectAttempt(): number;
@@ -147,6 +152,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   let clientId = '';
   let connectionState: TenantConnectionState = 'connecting';
   let closeReason = '';
+  let seatRefusal = '';
   let noticeTier: TenantNoticeTier = 'none';
   let noticeTierTimers: number[] = [];
   let latencyMs: number | null = null;
@@ -204,7 +210,9 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
         window.clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
-      reconnectAttempt = 0;
+      // The backoff resets on the server's first state frame, not here: a
+      // server that accepts the upgrade and then closes (a room it cannot
+      // serve) would otherwise be redialed every 750ms forever (#1056).
       // After a drop, an open transport still holds the old room snapshot.
       // Keep every shell's clocks frozen until a state frame restores it.
       if (!clientId) {
@@ -410,16 +418,19 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
 
     if (message.type === 'hello') {
+      reconnectAttempt = 0;
       clearRestartingBanner();
       connectionState = 'connected';
       clearNoticeTiers();
       clientId = message.clientId ?? clientId;
+      seatRefusal = typeof message.seatRefusal === 'string' ? message.seatRefusal : '';
       if (message.seatToken && isPlayableSeat(message.seat)) {
         writeSeatTokenForRoom(options.room, { seat: message.seat, token: message.seatToken });
       }
       options.applyHello(message);
       lastSeq = null;
     } else if (message.type === 'snapshot') {
+      reconnectAttempt = 0;
       connectionState = 'connected';
       clearNoticeTiers();
       options.applySnapshot(message);
@@ -466,6 +477,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     connection: () => connectionState,
     noticeTier: () => noticeTier,
     closeReason: () => closeReason,
+    seatRefusal: () => seatRefusal,
     clientId: () => clientId,
     latencyMs: () => latencyMs,
     reconnectAttempt: () => reconnectAttempt,

@@ -98,7 +98,10 @@ function convert(chapter) {
       event: tags.event ?? '',
       ...(chapter.orientation === 'black' ? { perspective: 'black' } : {}),
       resultText: tags.result ?? '*',
-      annotations: { byPly, engine: 'Pikafish, 1,000,000 nodes per position' },
+      annotations: {
+        byPly,
+        engine: 'Pikafish (Fairy-Stockfish CC0 net), 1,000,000 nodes per position',
+      },
     },
   };
 }

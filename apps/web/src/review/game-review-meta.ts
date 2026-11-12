@@ -21,6 +21,7 @@
 // room) is plain envelope data and lives here so it can't drift between variants.
 
 import type { GameSpecId } from '@mistboard/game';
+import { reviewCorrespondenceAgainSlot } from '../correspondence-again.js';
 import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import {
   brandedEngineName,
@@ -104,6 +105,12 @@ export type ReviewMetaConfig = {
   /** Optional seat→ink binding for flip variants. Player order remains seat
    *  order, but each row's disc uses the color established by the opening flip. */
   seatColors?: ReviewSeatColors;
+  /** Private playtests can close the spectator-chat endpoint. */
+  spectatorChat?: boolean;
+  /** The persisted seat colour that moved first, for a variant where that is
+   *  not red or white (Gomoku: its opening decides). Read by "Play again by
+   *  correspondence" to swap sides; without it Gomoku offers none. */
+  firstMoverColor?: string;
 };
 
 export type ReviewMeta = {
@@ -131,9 +138,24 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
     status: config.status,
   });
   if (game.origin) card.el.append(reviewOriginBlock(game.origin));
+  // "Play again by correspondence" (#606): shown only once the signed-in
+  // account turns out to be one of this game's two players.
+  if (game.mode !== 'imported' && !game.origin) {
+    card.el.append(
+      reviewCorrespondenceAgainSlot({
+        gameSpecId: config.gameSpecId,
+        game,
+        firstMoverColor: config.firstMoverColor,
+        roomId: game.roomId,
+      }),
+    );
+  }
   return {
     metaCard: card.el,
-    details: game.mode === 'imported' ? undefined : buildSpectatorChat(game.roomId),
+    details:
+      game.mode === 'imported' || config.spectatorChat === false
+        ? undefined
+        : buildSpectatorChat(game.roomId),
   };
 }
 

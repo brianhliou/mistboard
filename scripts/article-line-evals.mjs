@@ -43,27 +43,19 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
-import { resolve } from 'node:path';
+import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../apps/server/src/xiangqi-pikafish-paths.ts';
 import { parseStandardXiangqiFen, standardXiangqiEngineFen } from '../packages/game/dist/index.js';
 import { articleLineAssessment as symbolFor } from './lib/article-line-assessment.mjs';
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
-const HOME = process.env.HOME ?? '';
-// The site's own engine (the pikafish.ref build) when this Mac has it, so the
-// verdicts match production; the January 2026 official build is a different
-// engine (docs-private/players/README.md § 3) and is only the fallback.
-const PINNED = resolve(HOME, 'projects/tools/pikafish-6a59ee2f/src');
-const HAS_PINNED = existsSync(resolve(PINNED, 'pikafish'));
-const BIN =
-  process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH ??
-  (HAS_PINNED
-    ? resolve(PINNED, 'pikafish')
-    : resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon'));
-const NET =
-  process.env.MISTBOARD_PIKAFISH_XIANGQI_NET ??
-  (HAS_PINNED
-    ? resolve(PINNED, 'pikafish.nnue')
-    : resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue'));
+// The site's own engine: the patched pikafish.ref build on the CC0 net, found the
+// way the server finds it (env override, else the local patched checkout). No
+// fallback to another build; a different net is a different cp scale (#989).
+const BIN = pikafishXiangqiPath();
+const NET = pikafishXiangqiNetPath(BIN);
 
 // Article modules import stylesheets, and some read `window` at module scope to
 // pick up a stored board theme. Neither exists under node. Both are stubbed
@@ -302,7 +294,7 @@ async function main() {
   const { proc, send, until } = openEngine();
   send('uci');
   await until((l) => l === 'uciok');
-  if (existsSync(NET)) send(`setoption name EvalFile value ${NET}`);
+  send(`setoption name EvalFile value ${NET}`);
   // One thread when measuring part of the set: a multi-threaded search at a fixed
   // node budget is not repeatable, and a page build re-measuring its own lines
   // flipped a verdict between two runs at four (2026-10-01). A full run keeps

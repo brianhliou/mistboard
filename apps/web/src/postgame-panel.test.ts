@@ -1,13 +1,58 @@
 import { describe, expect, it, vi } from 'vitest';
 import { postGameActions, renderGameResult, resultScore } from './postgame-panel.js';
 
-vi.mock('./analytics.js', () => ({ track: vi.fn() }));
+vi.mock('./analytics.js', () => ({
+  track: vi.fn(),
+  trackCorrespondenceAgainShown: vi.fn(),
+  trackCorrespondenceSeekPosted: vi.fn(),
+}));
 
 function labels(box: HTMLElement): string[] {
   return [...box.children].map((child) => child.textContent ?? '');
 }
 
 describe('postGameActions', () => {
+  // #606: the correspondence offer rides right after the rematch, seated only.
+  it('places "Play again by correspondence" after the rematch for a seated player', () => {
+    const correspondenceAgain = {
+      offer: {
+        gameSpecId: 'xiangqi',
+        opponentHandle: 'bob',
+        preferredColor: 'second' as const,
+        daysPerMove: 1,
+      },
+      roomId: 'room-1',
+    };
+    const rematch = document.createElement('button');
+    rematch.textContent = 'Rematch';
+    const seated = postGameActions({
+      variant: 'xiangqi',
+      mode: 'pvp',
+      seated: true,
+      rematch,
+      reviewHref: '/game/room-1',
+      correspondenceAgain,
+    });
+    expect(labels(seated).slice(0, 3)).toEqual([
+      'Rematch',
+      'Play again by correspondence',
+      'New opponent',
+    ]);
+    expect(
+      seated.querySelector('.postgame-actions__correspondence[data-correspondence-again]'),
+    ).not.toBeNull();
+
+    const spectator = postGameActions({
+      variant: 'xiangqi',
+      mode: 'pvp',
+      seated: false,
+      rematch: null,
+      reviewHref: '/game/room-1',
+      correspondenceAgain,
+    });
+    expect(labels(spectator)).toEqual(['Review game']);
+  });
+
   it('gives a spectator only the review', () => {
     const box = postGameActions({
       variant: 'xiangqi',

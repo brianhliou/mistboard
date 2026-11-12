@@ -34,7 +34,10 @@
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
-import { resolve } from 'node:path';
+import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../apps/server/src/xiangqi-pikafish-paths.ts';
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
 registerHooks({ resolve: stubCss });
@@ -58,13 +61,9 @@ globalThis.document ??= {
   addEventListener() {},
 };
 
-const HOME = process.env.HOME ?? '';
-const BIN =
-  process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH ??
-  resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon');
-const NET =
-  process.env.MISTBOARD_PIKAFISH_XIANGQI_NET ??
-  resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue');
+// The server's engine: the patched pikafish.ref build on the CC0 net (#989).
+const BIN = pikafishXiangqiPath();
+const NET = pikafishXiangqiNetPath(BIN);
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {

@@ -62,25 +62,38 @@ export function banqiRevealChance(
 }
 
 /**
- * The view as it stood when play ended, face-down tiles masked again: a
- * finished room serves the truth view (every tile face up), which empties the
- * face-down tally. A tile is flipped in place (a self-move) and a face-down
- * tile never moves or is taken, and every square starts occupied, so the
- * squares the move log never flipped are exactly the face-down ones at the
- * end. Returns null when the log does not cover the whole game (the caller
- * then shows nothing rather than a wrong tally).
+ * The view as it stood when play ended, face-down tiles masked again: an
+ * older finished room served the truth view (every tile face up), which
+ * empties the face-down tally. A tile is flipped in place (a self-move) and a
+ * face-down tile never moves, so a turned tile is face up wherever it went:
+ * the log is followed piece by piece (a flip turns a square up, a board move
+ * carries its piece's face from `from` to `to`), and every occupied square the
+ * log never turned up is face down at the end. A tile the served view already
+ * masks stays masked. Returns null when the log does not cover the whole game
+ * (the caller then shows nothing rather than a wrong tally).
  */
 export function banqiFaceDownAtEnd<S extends string, V extends BanqiOddsView<S> & { ply: number }>(
   view: V,
   moves: readonly { from: S; to: S }[],
 ): V | null {
   if (moves.length !== view.ply) return null;
-  const flipped = new Set<S>();
-  for (const move of moves) if (move.from === move.to) flipped.add(move.from);
+  // Squares holding a face-up piece, after each move. Keyed by the square the
+  // piece stands on now, not the square it was flipped on: a piece flipped on
+  // a2 that walked to c3 is face up on c3 (a TK game, 2026-11-10, drew nearly
+  // every moved piece face down on its last ply when this followed flips only).
+  const faceUp = new Set<S>();
+  for (const move of moves) {
+    if (move.from === move.to) {
+      faceUp.add(move.from);
+    } else {
+      faceUp.delete(move.from);
+      faceUp.add(move.to);
+    }
+  }
   const board: BanqiFamilyBoard<S> = {};
   for (const [square, entry] of Object.entries(view.board) as [S, BanqiVisibleBoardEntry][]) {
     if (!entry) continue;
-    board[square] = flipped.has(square) ? entry : { faceDown: true };
+    board[square] = faceUp.has(square) && !entry.faceDown ? entry : { faceDown: true };
   }
   return { ...view, board };
 }

@@ -39,6 +39,10 @@ export type Announcement = {
   // there twice, once as itself and once as the post (2026-09-22, two Pikafish
   // cards on the homepage). announcement-links.test.ts holds the rule.
   showInHomeArticleWidget?: boolean;
+  // The homepage News row links straight to `href` instead of this entry on
+  // /feed. Only for an entry whose headline is the whole offer, so the reader
+  // loses nothing by skipping /feed (#1058: Play Brian took two hops).
+  rowLinksToHref?: boolean;
 };
 
 const baseAnnouncements: Announcement[] = [
@@ -73,6 +77,7 @@ const baseAnnouncements: Announcement[] = [
     body: 'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.',
     href: '/correspondence',
     cta: 'Play Brian H. Liou',
+    rowLinksToHref: true,
   },
   {
     date: '2026-11-08',

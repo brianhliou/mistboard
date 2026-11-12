@@ -146,7 +146,7 @@ describe('Pikafish search intent', () => {
       );
       expect(official?.parentElement?.textContent).toContain(download);
       expect(official?.closest('.article-cta-row')).toBeNull();
-      expect(intro?.textContent).toContain('51 MB');
+      expect(intro?.textContent).toContain('11 MB');
     });
 
     it(`${lang}: renders FAQs for the online, analysis and download searches without interaction`, () => {
@@ -162,7 +162,8 @@ describe('Pikafish search intent', () => {
       const answers = [...page.querySelectorAll('.article-faq-answer')]
         .map((answer) => answer.textContent)
         .join('\n');
-      expect(answers).toContain('51 MB');
+      expect(answers).toContain('11 MB');
+      expect(answers).toContain('CC0');
       expect(answers).toContain('Fairy-Stockfish');
       expect(answers).toContain(`${name}官方`);
       expect(answers).not.toMatch(/\[[^\]]+\]\(/);
@@ -826,12 +827,16 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
-  it('sorts three kingdoms banqi right after banqi in the rules rail order', () => {
+  it('orders the banqi family by player base: fanfanqi, banqi, three kingdoms', () => {
     const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
     const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
     const banqi = slugs.indexOf('banqi');
-    expect(banqi).toBeGreaterThanOrEqual(0);
-    expect(slugs[banqi + 1]).toBe('three-kingdoms-banqi');
+    expect(banqi).toBeGreaterThanOrEqual(1);
+    expect(slugs.slice(banqi - 1, banqi + 2)).toEqual([
+      'fanfanqi',
+      'banqi',
+      'three-kingdoms-banqi',
+    ]);
   });
 
   it('renders rules tiles as marker, label and tagline, with no per-tile badge', () => {

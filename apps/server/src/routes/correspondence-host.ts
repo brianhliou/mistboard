@@ -21,9 +21,10 @@ import { type HttpApiContext, readJsonBody, requirePersistence, writeJson } from
 // against the host account (MISTBOARD_CORRESPONDENCE_HOST_HANDLE). The game is
 // made the way any directed challenge is: a private seek posted as the host and
 // aimed at the player, then accepted as the player. So every post and accept
-// gate (play locks, blocks, variant flags, the drain, the delete-once race) and
-// the start email to the seek's creator, which is the host's notice, are the
-// board's own; this route adds only the fixed terms and the caps.
+// gate (play locks, blocks, variant flags, the drain, the delete-once race) is
+// the board's own; this route adds only the fixed terms and the caps. Its seek
+// mails no challenge, and the accept sends the host a "new game" email and the
+// player a receipt in place of the generic start emails (#1057).
 //   GET  /api/correspondence/host   is it on, who is the host, room left for you
 //   POST /api/correspondence/host   start a game: { gameSpecId, side }
 export const HOST_PATH = '/api/correspondence/host';
@@ -63,8 +64,12 @@ function defaultHostDeps(ctx: HttpApiContext): HostDeps {
     countGames: (hostUserId, playerUserId) =>
       persistence.countHostCorrespondenceGames(hostUserId, playerUserId),
     specIds: hostSpecIds,
-    post: (host, body) => createSeekResult(ctx, host, body, 'board', { skipOpenSeekCap: true }),
-    accept: (player, seekId) => acceptSeekResult(ctx, player, seekId),
+    post: (host, body) =>
+      createSeekResult(ctx, host, body, 'board', {
+        skipOpenSeekCap: true,
+        skipChallengeEmail: true,
+      }),
+    accept: (player, seekId) => acceptSeekResult(ctx, player, seekId, { hostGame: true }),
     cancel: async (host, seekId) => {
       await persistence.closeCorrespondenceSeek(seekId, 'cancelled', host.id);
     },

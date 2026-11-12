@@ -274,9 +274,9 @@ export const ZH_HANS_CONTENT = {
   'source.pieceSetClerical':
     '隶书棋子：pychess-variants 的 lishuw 棋子，作者 gbtami 及贡献者，AGPL-3.0。',
   'source.pikafish':
-    '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。其神经网络权重另有授权协议。',
+    '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。本站使用 CC0 授权的 Fairy-Stockfish 象棋神经网络，而非皮卡鱼官方权重。',
   'source.pikafishSite': 'pikafish.com',
-  'source.pikafishWeightsLicense': '权重协议',
+  'source.pikafishNet': 'CC0 神经网络',
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及贡献者：皮卡鱼以下的各级象棋机器人和鸭子象棋机器人，GPL-3.0。',
   'source.pikafishJieqi':
@@ -521,7 +521,7 @@ export const ZH_HANS_CONTENT = {
     '作者 hzyhhzy，网络来自 Kouza：自我对弈训练的神经网络。在本站每步 150 次访问。',
   'champions.creditCode': '代码',
   'champions.creditNetwork': '神经网络',
-  'champions.netPikafish': '皮卡鱼 NNUE',
+  'champions.netPikafish': 'Fairy-Stockfish 象棋 NNUE（CC0）',
   'champions.historyJqe':
     "2026-10-21，揭棋：Devin O'Keefe 的 jqe 从 AB-JChess 0.2d 手中夺得头衔，300 局 171-114-15，得分率 60%",
   'champions.lineEnd': '。',
