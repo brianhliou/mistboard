@@ -45,7 +45,7 @@ export const oneOpponentFourVariantsArticle: Article = {
   summary:
     'Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-11-20',
   thumbnail: { kind: 'svg', svg: THUMBNAIL },
   boardFamily: 'xiangqi',
