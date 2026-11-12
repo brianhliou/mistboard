@@ -7,10 +7,18 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { ffqBanqiAdmits } from './../ffq-banqi-access.js';
+import {
+  FFQ_BANQI_ANALYSIS_TIER,
+  type FFQBanqiAnalysisCache,
+  type FFQBanqiGameAnalysis,
+  resolveFFQBanqiAnalysis,
+} from '../ffq-banqi-analysis.js';
+import { ffqBanqiEngineAvailable } from '../ffq-banqi-engine.js';
 import { ffqBanqiPostgameHistory } from '../ffq-banqi-replay.js';
 import { type FFQBanqiEvent, ffqBanqiTenant } from './../ffq-banqi-tenant.js';
 import * as persistence from './../persistence.js';
 import { isTenantEventLog, replayTenantEvents } from './../variant-tenant/runtime.js';
+import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
 // Admin-only finished replay. All snapshots are observer-masked, even after
@@ -50,6 +58,70 @@ const defaultDeps: FFQBanqiPostgameRouteDeps = {
 
 const POSTGAME_ROUTE = /^\/api\/ffq-banqi\/games\/([^/]+)$/;
 
+const ANALYSIS_ROUTE = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis(?:\/jobs\/[^/]+)?$/;
+
+export function createFFQBanqiAnalysisRoutes(
+  deps: FFQBanqiPostgameRouteDeps = defaultDeps,
+  options: {
+    cache?: FFQBanqiAnalysisCache;
+    analyze?: (events: readonly FFQBanqiEvent[]) => Promise<FFQBanqiGameAnalysis>;
+    engineAvailable?: () => boolean;
+    route?: GameAnalysisRouteDeps;
+  } = {},
+) {
+  const handle = createGameAnalysisRoutes(
+    {
+      routeId: 'ffq-banqi',
+      logPrefix: 'ffq_banqi',
+      variantLabel: 'Fanfanqi',
+      enabled: () => true,
+      requiresPersistence: false,
+      engineBinary: {
+        available:
+          options.engineAvailable ?? (() => ffqBanqiEngineAvailable(FFQ_BANQI_ANALYSIS_TIER)),
+        label: 'Misty FFQ level 7 classical engine',
+      },
+      loadInputs: async (roomId) => (await loadFinishedGame(roomId, deps))?.events ?? null,
+      countPlies: (events) => events.filter((event) => event.type === 'move-played').length,
+      resolveAnalysis: (roomId, events, computeIfMissing) =>
+        resolveFFQBanqiAnalysis(roomId, events, options.cache, options.analyze, computeIfMissing),
+      // Flips AND captures of covered pieces resolve chance. Neither raw swing
+      // should be graded as a player's mistake.
+      analysisExtras: (events) => {
+        const frames = ffqBanqiPostgameHistory(events).truth;
+        return {
+          chancePlies: events
+            .filter((event) => event.type === 'move-played')
+            .flatMap((event, index) =>
+              frames[index]?.view.board[event.move.to]?.faceDown ? [index + 1] : [],
+            ),
+        };
+      },
+    },
+    options.route,
+  );
+  return async (
+    request: IncomingMessage,
+    response: ServerResponse,
+    pathname: string,
+  ): Promise<boolean> => {
+    if (!ANALYSIS_ROUTE.test(pathname)) return false;
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('x-robots-tag', 'noindex');
+    if (!(await deps.admits(request))) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    if (!deps.persistenceReady()) {
+      writeJson(response, 503, { error: 'persistence_disabled' });
+      return true;
+    }
+    return handle(request, response, pathname);
+  };
+}
+
+const handleAnalysis = createFFQBanqiAnalysisRoutes();
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -57,6 +129,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleAnalysis(request, response, pathname)) return true;
   return handleFFQBanqiPostgame(request, response, pathname);
 }
 
@@ -94,15 +167,9 @@ export async function ffqBanqiPostgameForApi(
   roomId: string,
   deps: FFQBanqiPostgamePersistence = defaultDeps,
 ) {
-  const [game, events] = await Promise.all([
-    deps.getGameSummary(roomId),
-    deps.loadRoomEvents(roomId),
-  ]);
-  if (!game || game.variant !== FFQ_BANQI_SPEC_ID) return null;
-  if (!events || !isTenantEventLog(ffqBanqiTenant, events, roomId)) return null;
-
-  const projection = replayTenantEvents(ffqBanqiTenant, events);
-  if (projection.state.status.type !== 'finished') return null;
+  const loaded = await loadFinishedGame(roomId, deps);
+  if (!loaded) return null;
+  const { game, events, projection } = loaded;
 
   return {
     game: postgameGameSummary(game),
@@ -153,4 +220,18 @@ function ffqBanqiPostgameTimeline(
     }
   }
   return timeline;
+}
+
+async function loadFinishedGame(roomId: string, deps: FFQBanqiPostgamePersistence) {
+  const [game, events] = await Promise.all([
+    deps.getGameSummary(roomId),
+    deps.loadRoomEvents(roomId),
+  ]);
+  if (!game || game.variant !== FFQ_BANQI_SPEC_ID) return null;
+  if (!events || !isTenantEventLog(ffqBanqiTenant, events, roomId)) return null;
+
+  const projection = replayTenantEvents(ffqBanqiTenant, events);
+  if (projection.state.status.type !== 'finished') return null;
+
+  return { game, events, projection };
 }

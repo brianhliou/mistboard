@@ -77,7 +77,11 @@ export type FFQBanqiEngineRequest = EngineTurnRequest<FFQBanqiMove> & {
   nodes: number;
   movetimeCapMs: number;
 };
-export type FFQBanqiEngineResponse = EngineTurnResponse<FFQBanqiMove>;
+export type FFQBanqiEngineResponse = EngineTurnResponse<FFQBanqiMove> & {
+  /** UCI score, from the side to move's POV; absent for scoreless providers. */
+  cp?: number | null;
+  mate?: number | null;
+};
 export type FFQBanqiEngineProvider = (
   request: FFQBanqiEngineRequest,
 ) => Promise<FFQBanqiEngineResponse>;
@@ -131,6 +135,8 @@ export const ffqBanqiLiveEngineMove: FFQBanqiEngineProvider = async (request) =>
       gameId: request.gameId,
       sessionId: request.sessionId,
       move,
+      cp: result.cp,
+      mate: result.mate,
     };
   } finally {
     release();

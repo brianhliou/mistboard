@@ -42,6 +42,7 @@ export function mountFFQBanqiReview(
     boardAspect: 568 / 312,
     // Coordinates are drawn inside the board, so a toggle only needs a re-render.
     appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
+    reserveGaugeTrack: true,
     boardCols: 10,
     boardMaxPx: 560,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
@@ -73,6 +74,12 @@ export function mountFFQBanqiReview(
       square: shape.orig as BanqiBoardMarker['square'],
       kind: 'circle',
       className: `xq-shape--${shape.brush}`,
+    }),
+    moveGlyphMarker: (move, glyph) => ({
+      square: move.to,
+      kind: 'glyph',
+      text: glyph.text,
+      className: `xq-marker--${glyph.tone}`,
     }),
     seatCaptures: (host, view, _root, owner) => {
       if (owner !== 'red' && owner !== 'black') return;
