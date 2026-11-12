@@ -563,6 +563,7 @@ export const ZH_HANT_REVIEW = {
   'historical.minPlies': '最少步數',
   'historical.minPliesHint': '短於此步數的本站對局不顯示。預設為 {plies}；清空即顯示全部對局。',
   'historical.floorNote': '已隱藏本站少於 {plies} 步的對局。',
+  'historical.dataLink': '本站對局的每月下載',
   'historical.floorShowAll': '顯示這些對局',
   'historical.maxPlies': '最多步數',
   'historical.sortLabel': '排序',

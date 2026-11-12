@@ -29,6 +29,9 @@ export const DATA_DOWNLOAD_FIXTURE: DataListing = {
   license: 'CC-BY-4.0',
   schemaVersion: '1',
   variants: ['xiangqi', 'jieqi'],
+  offeredVariants: ['xiangqi', 'jieqi', 'gomoku'],
+  firstArchives: [{ variant: 'gomoku', month: '2026-11' }],
+  unavailableVariants: [],
   collections: [],
   months: [
     {

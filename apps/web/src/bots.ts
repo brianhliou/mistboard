@@ -1,18 +1,35 @@
-// Public bot directory (/bots) and bot profile (/bot/:id). The directory is a
-// compact lichess-density roster (featured identities + the Fairy-Stockfish
-// ladder); the profile page reuses the player-profile surface primitives
+// Public bot directory (/bots) and bot profile (/bot/:id). The directory picks
+// a game, then lists one card per opponent (a ladder is one card with a level
+// picker; bot-opponents.ts in @mistboard/game holds the grouping); the profile page reuses the player-profile surface primitives
 // (profile-shell, header shell, rating rail, game rows) so it renders as a
 // sibling of /@handle. Play affordances create the game directly via
 // bot-play.ts; there is no setup dialog.
+import {
+  BANQI_SPEC_ID,
+  BOT_OPPONENTS,
+  botOpponentById,
+  botOpponentForBotId,
+  canonicalVariantOrderIndex,
+  type GameSpecId,
+  JUNGLE_FLIP_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+} from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import './account-profile.css';
 import './bots.css';
-import { bindBotPlayControl } from './bot-play.js';
+import './current-games.css';
+import { type BotPlayTarget, bindBotPlayControl } from './bot-play.js';
 import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
-import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
-import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
+import { threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { botNameForGame, type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import {
+  JIEQI_FIRST_GAME_LEVEL,
+  type LandingBotRung,
+  landingBotLadder,
+  XIANGQI_FIRST_GAME_LEVEL,
+} from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
 import {
   buildProfileDashboard,
@@ -21,8 +38,13 @@ import {
   buildProfileTabsShell,
 } from './profile-ui.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiOffered,
+} from './three-kingdoms-banqi-access.js';
 import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
+import type { WebTenantEngineOption } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
 type BotPlayOption = {
@@ -91,26 +113,17 @@ class BotNotFound extends Error {}
 const BOT_PROFILE_GAMES_PAGE = 10;
 const BOT_GAMES_PAGE = 15;
 
-const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
-// The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
-const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
-// The named jieqi slots above Pikafish (level 8), weakest first; server
-// first-party-bots.ts. AB-JChess (AB-JChess-20261031) is on top again, jqe one
-// rung under it; jqe is listed only while the server serves it (/api/bots drops it
-// while MISTBOARD_JQE_ENABLED is off). An unknown slot sorts first, so it never
-// takes Strongest by accident.
-const JIEQI_TOP_BOT_ORDER = ['pikafish', 'jqe', 'ab-jchess'];
-const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 // The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
 const JUNGLE_TOP_BOT_ID = 'katago';
-// The xiangqi bot that plays its worst move (2026-10-17): off the ladder, so it
-// sits below Level 1 rather than reading as a top rung.
+// The xiangqi bot that plays its worst move (2026-10-17), its own opponent.
 const XIANGQI_WORST_BOT_ID = 'general-blunder';
+// The game /bots opens on when ?game= names none.
+const DEFAULT_DIRECTORY_GAME = 'xiangqi';
 
-// /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
-// all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
-// says what a searcher typed, and the ladder comes first because that is what
-// they came to play.
+// /bots: every game the site's bots play, chosen first in the rail (?game=,
+// xiangqi by default), then one card per opponent for that game. The server
+// body for crawlers (apps/server bots-page-body.ts) keeps the xiangqi query
+// "play xiangqi against the computer" (象棋人机对战) as its heading.
 export async function mountBots(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'bots-route');
@@ -123,54 +136,90 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   const headerCopy = document.createElement('div');
   headerCopy.className = 'bots-directory-header-copy';
 
-  const eyebrow = document.createElement('span');
-  eyebrow.className = 'account-eyebrow';
-  eyebrow.textContent = t('bots.eyebrow');
-
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = t('bots.heading');
+  heading.textContent = t('bots.directoryHeading');
 
   const sub = document.createElement('p');
   sub.className = 'bots-sub';
-  sub.textContent = t('bots.sub');
+  sub.textContent = t('bots.directorySub');
 
   const meta = document.createElement('div');
   meta.className = 'bots-directory-meta';
-  meta.append(
-    buildDirectoryMeta(t('bots.metaFree')),
-    buildDirectoryMeta(t('bots.metaNoAccount')),
-    buildDirectoryMeta(t('bots.metaLevels')),
-  );
-  headerCopy.append(eyebrow, heading, sub, meta);
+  meta.append(buildDirectoryMeta(t('bots.metaFree')), buildDirectoryMeta(t('bots.metaNoAccount')));
+  headerCopy.append(heading, sub, meta);
 
   header.append(headerCopy);
 
+  const layout = document.createElement('div');
+  layout.className = 'current-games-layout bots-layout';
+  const rail = document.createElement('nav');
+  rail.className = 'current-games-rail bots-game-rail';
+  rail.setAttribute('aria-label', t('bots.gamesLabel'));
   const body = document.createElement('section');
   body.className = 'bots-directory';
   body.append(statusLine(t('bots.loading')));
+  layout.append(rail, body);
 
   const content = document.createElement('div');
   content.className = 'bots-main';
-  content.append(header, body);
+  content.append(header, layout);
 
   shell.append(buildCommunityLayout('/bots', content));
   root.append(buildNav(), shell);
 
+  // The engine roster rides beside the bot list: it says which of Misty's
+  // levels this server can seat (Banqi and Flip Jungle Level 8 need a net), and
+  // TK's Misty plays by engine id with no bot profile, so /api/bots never names it.
+  const botsLoad = fetchBots();
+  const rostersLoad = fetchEngineRosters();
   let bots: BotProfile[];
   try {
-    bots = await fetchBots();
+    bots = await botsLoad;
   } catch {
     body.replaceChildren(buildNotice(t('bots.unavailableTitle'), t('bots.unavailableBody')));
     return;
   }
 
-  if (bots.length === 0) {
+  const engineOpponents = engineLadderOpponents(bots, await rostersLoad);
+  if (bots.length === 0 && engineOpponents.size === 0) {
     body.replaceChildren(statusLine(t('bots.none')));
     return;
   }
 
-  body.replaceChildren(...buildBotDirectorySections(bots));
+  mountDirectory(rail, body, bots, engineOpponents);
+}
+
+/** The engine tiers this server can seat, from GET /api/engines/playable (the
+ *  homepage's source). A list is undefined when the server did not say (a
+ *  failed fetch or an older server). */
+export type EngineRosters = {
+  banqi?: readonly { id: string }[];
+  jungleFlip?: readonly { id: string }[];
+  threeKingdomsBanqi?: readonly WebTenantEngineOption[];
+};
+
+// Never throws: a failed fetch is a roster that said nothing.
+async function fetchEngineRosters(): Promise<EngineRosters> {
+  try {
+    const resp = await fetch('/api/engines/playable', { headers: { accept: 'application/json' } });
+    if (!resp.ok) return {};
+    const data = (await resp.json()) as {
+      banqiEngines?: { id: string }[];
+      jungleFlipEngines?: { id: string }[];
+      threeKingdomsBanqiEngines?: WebTenantEngineOption[];
+    };
+    if (threeKingdomsBanqiOffered() && data.threeKingdomsBanqiEngines !== undefined) {
+      setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
+    }
+    return {
+      banqi: data.banqiEngines,
+      jungleFlip: data.jungleFlipEngines,
+      threeKingdomsBanqi: data.threeKingdomsBanqiEngines,
+    };
+  } catch {
+    return {};
+  }
 }
 
 function buildDirectoryMeta(label: string): HTMLElement {
@@ -260,142 +309,508 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 
 // ── Directory ───────────────────────────────────────────────────────────────
 
-// The xiangqi ladder leads, level 1 to 8 and then every other system bot that
-// plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
-// shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
-// first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
-// do not play xiangqi follow: Misty in a section of its own, since its card
-// lists every game it plays, then the rest under Other games.
-function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
-  const system = bots.filter((bot) => bot.ownerType === 'system');
-  const ladder = system
-    .filter((bot) => bot.id.startsWith(LADDER_BOT_ID_PREFIX))
-    .sort((a, b) => ladderLevel(a) - ladderLevel(b));
-  const jieqiLadder = system
-    .filter((bot) => bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX))
-    .sort((a, b) => ladderLevel(a) - ladderLevel(b));
-  const worst = system.filter((bot) => bot.id === XIANGQI_WORST_BOT_ID);
-  const others = system.filter(
-    (bot) =>
-      !bot.id.startsWith(LADDER_BOT_ID_PREFIX) &&
-      !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX) &&
-      bot.id !== XIANGQI_WORST_BOT_ID,
-  );
-  const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
-  // Pikafish (level 8), then the named slots above it; the last alone reads Strongest.
-  const jieqiTopRungs = others
-    .filter((bot) => playsGame(bot, 'jieqi'))
-    .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
-  const jieqiStrongestId = jieqiTopRungs.at(-1)?.id;
-  const nonLadder = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
-  const misty = nonLadder.filter((bot) => bot.id === 'misty');
-  const otherGames = nonLadder.filter((bot) => bot.id !== 'misty');
-  const community = bots.filter((bot) => bot.ownerType === 'user');
-  const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
-  const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
+// /bots picks the game first (the rail, ?game=), then shows one card per
+// opponent that plays it. A ladder of levels is one card with a level picker,
+// not eight cards. Which bots make up an opponent is the explicit map in
+// @mistboard/game bot-opponents.ts, never a name prefix; a bot outside it (a
+// community bot) is its own card. Each card shows only the chosen game: its
+// Play button, its rating and its record. Grouping is presentation only: the
+// card plays, links to and reports one member bot.
 
+type DirectoryMember = {
+  bot: BotProfile;
+  level: number | null;
+  /** The picker value when members share a bot id (Misty's levels). */
+  key?: string;
+  /** What Play posts when the bot id alone does not name the level. */
+  play?: BotPlayTarget;
+};
+type DirectoryOpponent = {
+  key: string;
+  name: string | undefined;
+  members: DirectoryMember[];
+  community: boolean;
+  /** Plays by engine id with no botId (Three Kingdoms Banqi). */
+  engineOnly?: boolean;
+  /** The member the card opens on, when it is not the first. */
+  defaultLevel?: number;
+};
+
+// Misty's ladders open on Level 4, as the homepage's rows do.
+const MISTY_LADDER_DEFAULT_LEVEL = 4;
+
+/** Misty's level ladders, which /api/bots lists as one profile per game: one
+ *  card with a level picker each, built from the homepage's rungs
+ *  (landingBotLadder) so Play posts exactly what the homepage posts.
+ *  - Banqi and Flip Jungle play Misty's bot id with the level's engine id, and
+ *    replace her plain card. A roster the server sent is the truth for which
+ *    levels exist; without one, Levels 1-7 (Level 8 needs a net, so it waits
+ *    for the roster to name it). Shown only where her profile offers the game.
+ *  - Three Kingdoms Banqi plays by engine id and has no /api/bots profile,
+ *    offered under the same door as its play (threeKingdomsBanqiOffered). An
+ *    explicit live roster is the truth, even empty; without one, a public build
+ *    seeds Levels 1-7 (no net), as the homepage does.
+ *  FFQ Banqi is admin-only and never listed here. */
+export function engineLadderOpponents(
+  bots: readonly BotProfile[],
+  rosters: EngineRosters,
+): Map<string, DirectoryOpponent[]> {
+  const opponents = new Map<string, DirectoryOpponent[]>();
+  const misty = bots.find((bot) => bot.id === 'misty');
+  for (const [gameSpecId, roster] of [
+    [BANQI_SPEC_ID, rosters.banqi],
+    [JUNGLE_FLIP_SPEC_ID, rosters.jungleFlip],
+  ] as const) {
+    if (!misty || !offersGame(misty, gameSpecId)) continue;
+    const offered = new Set(roster?.map((engine) => engine.id) ?? []);
+    const rungs = landingBotLadder(gameSpecId, undefined, offered).filter(
+      (rung) => roster === undefined || offered.has(rung.engineId ?? ''),
+    );
+    const ladder = mistyLadder('misty', rungs, () => misty);
+    if (ladder) opponents.set(gameSpecId, [ladder]);
+  }
+
+  if (threeKingdomsBanqiOffered()) {
+    const engineIds = new Set(
+      rosters.threeKingdomsBanqi?.map((engine) => engine.id) ??
+        (threeKingdomsBanqiEnabled()
+          ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
+          : []),
+    );
+    const rungs = landingBotLadder(THREE_KINGDOMS_BANQI_SPEC_ID, undefined, engineIds);
+    const tkRecord = misty?.recordsByGameSpecId?.[THREE_KINGDOMS_BANQI_SPEC_ID];
+    const ladder = mistyLadder(
+      'misty-three-kingdoms-banqi',
+      rungs,
+      (engineId): BotProfile => ({
+        ...(misty ?? MISTY_FALLBACK),
+        activeEngineId: engineId,
+        defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+        supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
+        playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
+        rating: null,
+        ratings: [],
+        record: tkRecord ?? EMPTY_RECORD,
+        gamesTotal: tkRecord?.games ?? 0,
+        recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
+      }),
+      { engineOnly: true },
+    );
+    if (ladder) opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [ladder]);
+  }
+  return opponents;
+}
+
+function mistyLadder(
+  key: string,
+  rungs: readonly LandingBotRung[],
+  botFor: (engineId: string) => BotProfile,
+  opts: { engineOnly?: boolean } = {},
+): DirectoryOpponent | null {
+  if (rungs.length === 0) return null;
+  const members = rungs.map((rung): DirectoryMember => {
+    const engineId = rung.engineId ?? '';
+    const play: BotPlayTarget = rung.botId ? { botId: rung.botId, engineId } : { engineId };
+    return {
+      bot: botFor(engineId),
+      level: rungs.length > 1 ? rung.level : null,
+      key: engineId,
+      play,
+    };
+  });
+  return {
+    key,
+    name: 'Misty',
+    members,
+    community: false,
+    ...(opts.engineOnly ? { engineOnly: true } : {}),
+    defaultLevel: MISTY_LADDER_DEFAULT_LEVEL,
+  };
+}
+
+// Misty as the card names her when /api/bots did not list her profile.
+const MISTY_FALLBACK: BotProfile = {
+  id: 'misty',
+  displayName: 'Misty',
+  bio: '',
+  ownerType: 'system',
+  ownerUserId: null,
+  activeEngineId: '',
+  defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+  supportedGameSpecIds: [],
+  play: {
+    mode: 'pve',
+    gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+    engineId: '',
+    timeControl: { initialMs: 0, incrementMs: 0 },
+    preferredColor: 'random',
+  },
+  gamesTotal: 0,
+  record: { games: 0, wins: 0, losses: 0, draws: 0 },
+  rating: null,
+};
+
+const EMPTY_RECORD: BotRecord = { games: 0, wins: 0, losses: 0, draws: 0 };
+
+/** Every game some listed bot offers, in the site's shelf order. */
+export function directoryGames(
+  bots: readonly BotProfile[],
+  extraGames: Iterable<string> = [],
+): string[] {
+  const games = new Set<string>(extraGames);
+  for (const bot of bots) for (const option of playOptionsFor(bot)) games.add(option.gameSpecId);
+  return [...games].sort(
+    (a, b) =>
+      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId) ||
+      a.localeCompare(b),
+  );
+}
+
+/** ?game= when it names a listed game; otherwise xiangqi, or the first listed. */
+export function readDirectoryGame(
+  games: readonly string[],
+  search = window.location.search,
+): string {
+  const raw = new URLSearchParams(search).get('game');
+  if (raw && games.includes(raw)) return raw;
+  return games.includes(DEFAULT_DIRECTORY_GAME) ? DEFAULT_DIRECTORY_GAME : (games[0] ?? '');
+}
+
+function offersGame(bot: BotProfile, gameSpecId: string): boolean {
+  return playOptionsFor(bot).some((option) => option.gameSpecId === gameSpecId);
+}
+
+/** The opponents that play one game, in map order (weakest first), then any
+ *  first-party bot the map does not know, then community bots. */
+export function directoryOpponents(
+  bots: readonly BotProfile[],
+  gameSpecId: string,
+): DirectoryOpponent[] {
+  const byId = new Map(bots.map((bot) => [bot.id, bot]));
+  const opponents: DirectoryOpponent[] = [];
+  for (const opponent of BOT_OPPONENTS) {
+    const members: DirectoryMember[] = [];
+    for (const member of opponent.members) {
+      const bot = byId.get(member.botId);
+      if (bot && offersGame(bot, gameSpecId)) members.push({ bot, level: member.level });
+    }
+    if (members.length === 0) continue;
+    // A ladder with one member here (Pikafish in xiangqi) is a plain card.
+    if (members.length === 1) members[0] = { bot: members[0]!.bot, level: null };
+    opponents.push({ key: opponent.id, name: opponent.name, members, community: false });
+  }
+  const unmapped = bots.filter(
+    (bot) => !botOpponentForBotId(bot.id) && offersGame(bot, gameSpecId),
+  );
+  for (const bot of unmapped) {
+    opponents.push({
+      key: bot.id,
+      name: undefined,
+      members: [{ bot, level: null }],
+      community: bot.ownerType !== 'system',
+    });
+  }
+  return opponents;
+}
+
+// The level a newcomer is given, on the opponent that carries it.
+function startLevelFor(gameSpecId: string, opponentKey: string): number | null {
+  if (gameSpecId === 'xiangqi' && opponentKey === 'fairy-stockfish')
+    return XIANGQI_FIRST_GAME_LEVEL;
+  if (gameSpecId === 'jieqi' && opponentKey === 'pikafish') return JIEQI_FIRST_GAME_LEVEL;
+  return null;
+}
+
+/** The bot record cut to one game: only that game's play option, rating and record. */
+export function gameScopedProfile(bot: BotProfile, gameSpecId: string): BotProfile {
+  const ratings = botRatings(bot).filter((rating) => rating.gameSpecId === gameSpecId);
+  const record =
+    bot.recordsByGameSpecId?.[gameSpecId] ??
+    (supportedGameSpecIds(bot).length <= 1 ? bot.record : EMPTY_RECORD);
+  return {
+    ...bot,
+    defaultGameSpecId: gameSpecId,
+    supportedGameSpecIds: [gameSpecId],
+    playOptions: playOptionsFor(bot).filter((option) => option.gameSpecId === gameSpecId),
+    ratings,
+    rating: ratings[0] ?? null,
+    record,
+    gamesTotal: record.games,
+    recordsByGameSpecId: { [gameSpecId]: record },
+  };
+}
+
+function buildOpponentCard(
+  opponent: DirectoryOpponent,
+  gameSpecId: string,
+  strongest: boolean,
+): HTMLElement {
+  const startLevel = startLevelFor(gameSpecId, opponent.key);
+  const openLevel = startLevel ?? opponent.defaultLevel ?? null;
+  // A card shows one game, so Misty takes its name ("Misty Banqi"); the picker
+  // carries the level. Every other opponent keeps its own name.
+  const name =
+    opponent.name === undefined
+      ? undefined
+      : botNameForGame(opponent.members[0]?.bot.id, opponent.name, gameSpecId);
+  const levelled = opponent.members.length > 1;
+  const memberKey = (member: DirectoryMember): string => member.key ?? member.bot.id;
+  let selected =
+    opponent.members.find((member) => member.level !== null && member.level === openLevel) ??
+    opponent.members[0]!;
+
+  const picker = levelled ? document.createElement('select') : null;
+  if (picker) {
+    picker.className = 'site-select bot-level-select';
+    picker.setAttribute('aria-label', t('bots.levelPicker', { name: name ?? '' }));
+    for (const member of opponent.members) {
+      const option = document.createElement('option');
+      option.value = memberKey(member);
+      option.textContent = t('bots.levelName', { level: member.level ?? 0 });
+      picker.append(option);
+    }
+    picker.value = memberKey(selected);
+  }
+
+  const build = (): HTMLElement => {
+    const bot = selected.bot;
+    const card = buildBotSummaryCard(gameScopedProfile(bot, gameSpecId), {
+      ratingGameSpecId: gameSpecId,
+      primaryPlayGameSpecId: gameSpecId,
+      ...(name ? { name } : {}),
+      ...(opponent.community
+        ? {}
+        : {
+            subtitle: t(isHostedOpponent(opponent.key, bot.id) ? 'bots.hosted' : 'bots.firstParty'),
+          }),
+      ...(selected.play ? { playTarget: selected.play } : {}),
+      // A champion card already carries the title; "Strongest" would repeat it.
+      badge:
+        startLevel !== null && selected.level === startLevel
+          ? t('bots.startHere')
+          : strongest && !holdsChampionTitle(bot.id, gameSpecId)
+            ? t('bots.strongest')
+            : undefined,
+      bio: opponent.community
+        ? undefined
+        : opponent.engineOnly
+          ? engineOnlyBio(gameSpecId, selected.level)
+          : bot.id === 'misty'
+            ? t('bots.mistyGameBio', { variant: variantDisplayLabel(gameSpecId) })
+            : (systemBotBio(bot) ?? null),
+    });
+    card.dataset.opponentId = opponent.key;
+    layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);
+    return card;
+  };
+
+  let card = build();
+  picker?.addEventListener('change', () => {
+    const next = opponent.members.find((member) => memberKey(member) === picker.value);
+    if (!next) return;
+    selected = next;
+    const nextCard = build();
+    card.replaceWith(nextCard);
+    card = nextCard;
+    picker.focus();
+  });
+  return card;
+}
+
+function engineOnlyBio(gameSpecId: string, level: number | null): string | null {
+  if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID) return null;
+  return level === null
+    ? t('bots.mistyThreeKingdomsBio')
+    : t('bots.mistyThreeKingdomsLevelBio', { level });
+}
+
+// The directory card: the shared summary card, then (from the repo's own
+// records only) the champion title and the engine credits under the bio, and a
+// foot holding the rating, games and record, and the play row: a ladder's level
+// select on the left, Play on the right, the same place on every card.
+function layoutDirectoryCard(
+  card: HTMLElement,
+  bot: BotProfile,
+  gameSpecId: string,
+  picker: HTMLSelectElement | null,
+  engineOnly: boolean,
+): void {
+  const header = card.querySelector('.profile-summary-card-header');
+  const bio = card.querySelector('.profile-summary-card-bio');
+  const champion = championTitleLink(bot.id, gameSpecId);
+  if (champion) {
+    champion.classList.add('bot-card-champion');
+    header?.after(champion);
+  }
+  const credits = engineOnly ? [] : botCredits(bot.id);
+  if (credits.length > 0) {
+    const list = buildBotCredits(credits);
+    list.className = 'bot-card-credits';
+    (bio ?? champion ?? header)?.after(list);
+  }
+
+  const foot = document.createElement('div');
+  foot.className = 'bot-card-foot';
+  const rating = card.querySelector('.profile-summary-card-rating-line');
+  const footer = card.querySelector('.profile-summary-card-footer');
+  let actions = card.querySelector<HTMLElement>('.profile-summary-card-bot-actions');
+  if (!actions && picker) {
+    actions = document.createElement('div');
+    actions.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
+  }
+  // TK games are kept on engine ids, not Misty's profile: with no TK record,
+  // say nothing rather than "0 games".
+  if (engineOnly && !bot.recordsByGameSpecId?.[gameSpecId]) footer?.remove();
+  else if (footer) foot.append(footer);
+  if (rating) foot.prepend(rating);
+  if (actions) {
+    if (picker) actions.prepend(picker);
+    foot.append(actions);
+  }
+  card.append(foot);
+}
+
+/** The champion title a bot holds in this game, linked to /champions; null
+ *  when it holds none (champions-page.ts is the record). */
+function holdsChampionTitle(botId: string, gameSpecId: string): boolean {
+  return CHAMPIONS.some(
+    (title) => title.botHref === `/bot/${botId}` && title.gameId === gameSpecId,
+  );
+}
+
+// Engines other people wrote, run here with credit: the subtitle says hosted,
+// never first-party. Mistboard's own bots (Misty, General Blunder) stay first-party.
+const HOSTED_OPPONENT_KEYS: ReadonlySet<string> = new Set(['fairy-stockfish', 'pikafish', 'rapfi']);
+function isHostedOpponent(opponentKey: string, botId: string): boolean {
+  return HOSTED_OPPONENT_KEYS.has(opponentKey) || botCredits(botId).length > 0;
+}
+
+function championTitleLink(botId: string, gameSpecId: string): HTMLAnchorElement | null {
+  if (!holdsChampionTitle(botId, gameSpecId)) return null;
+  const champion = document.createElement('a');
+  champion.className = 'bot-champion-title';
+  champion.href = '/champions';
+  const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
+  champion.setAttribute('aria-label', title);
+  champion.append(buildUiIcon('title-champion'), title);
+  return champion;
+}
+
+function buildDirectoryGame(
+  bots: readonly BotProfile[],
+  gameSpecId: string,
+  engineOpponents: ReadonlyMap<string, DirectoryOpponent[]>,
+): HTMLElement[] {
+  // An engine ladder takes the place of the plain card with its key (Misty on
+  // Banqi and Flip Jungle); the rest (TK's Misty) join after the mapped ones.
+  const ladders = engineOpponents.get(gameSpecId) ?? [];
+  const listed = directoryOpponents(bots, gameSpecId).map(
+    (opponent) => ladders.find((ladder) => ladder.key === opponent.key) ?? opponent,
+  );
+  const opponents = [...listed, ...ladders.filter((ladder) => !listed.includes(ladder))];
+  const firstParty = opponents.filter((opponent) => !opponent.community);
+  const community = opponents.filter((opponent) => opponent.community);
+  // The map lists each game's opponents weakest first, so with a choice of
+  // first-party opponents the last one is the strongest you can play.
+  const mapped = firstParty.filter((opponent) => botOpponentById(opponent.key));
+  const strongestKey = mapped.length > 1 ? mapped.at(-1)?.key : undefined;
+  const intro =
+    gameSpecId === 'xiangqi'
+      ? t('bots.ladderIntro')
+      : gameSpecId === 'jieqi'
+        ? t('bots.jieqiLadderIntro')
+        : '';
   const groups: BotRosterGroup[] = [
     {
-      title: t('bots.ladderTitle'),
-      intro: t('bots.ladderIntro'),
-      rows: [
-        ...worst.map((bot) =>
-          buildBotSummaryCard(bot, {
-            ...xiangqiCard,
-            subtitle: t('bots.firstParty'),
-            bio: systemBotBio(bot),
-          }),
-        ),
-        ...ladder.map((bot) => {
-          const level = ladderLevel(bot);
-          return buildBotSummaryCard(bot, {
-            ...xiangqiCard,
-            name: t('bots.levelName', { level }),
-            subtitle: t('bots.ladderSubtitle'),
-            badge: level === XIANGQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
-            // The stored bio restates the level and lists the games the chips
-            // already name, in English on every locale.
-            bio: null,
-          });
-        }),
-        ...topRungs.map((bot) =>
-          buildBotSummaryCard(bot, {
-            ...xiangqiCard,
-            badge: t('bots.strongest'),
-            subtitle: t('bots.firstParty'),
-            bio: systemBotBio(bot),
-          }),
-        ),
-      ],
-    },
-    {
-      title: t('bots.jieqiLadderTitle'),
-      intro: t('bots.jieqiLadderIntro'),
-      rows: jieqiLadder.length
-        ? [
-            ...jieqiLadder.map((bot) => {
-              const level = ladderLevel(bot);
-              return buildBotSummaryCard(bot, {
-                ...jieqiCard,
-                name: t('bots.levelName', { level }),
-                subtitle: 'Pikafish',
-                badge: level === JIEQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
-                bio: null,
-              });
-            }),
-            ...jieqiTopRungs.map((bot) =>
-              // Pikafish is Level 8 here, named like the rungs below it; the
-              // named slots above it (AB-JChess, jqe) keep their own name, bio and badge.
-              bot.id !== 'pikafish'
-                ? buildBotSummaryCard(bot, {
-                    ...jieqiCard,
-                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
-                    subtitle: t('bots.firstParty'),
-                    bio: systemBotBio(bot),
-                  })
-                : buildBotSummaryCard(bot, {
-                    ...jieqiCard,
-                    name: t('bots.levelName', { level: 8 }),
-                    subtitle: 'Pikafish',
-                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
-                    bio: null,
-                  }),
-            ),
-          ]
-        : [],
-    },
-    {
-      title: t('bots.mistyTitle'),
-      intro: t('bots.mistyIntro'),
-      rows: misty.map((bot) =>
-        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
-      ),
-    },
-    {
-      title: t('bots.otherTitle'),
-      intro: t('bots.otherIntro'),
-      rows: otherGames.map((bot) =>
-        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      title: gameSpecLabel(gameSpecId),
+      intro,
+      rows: firstParty.map((opponent) =>
+        buildOpponentCard(opponent, gameSpecId, opponent.key === strongestKey),
       ),
     },
     {
       title: t('bots.communityTitle'),
       intro: t('bots.communityIntro'),
-      rows: community.map((bot) => buildBotSummaryCard(bot)),
+      rows: community.map((opponent) => buildOpponentCard(opponent, gameSpecId, false)),
     },
   ];
   return groups.filter((group) => group.rows.length > 0).map(buildRosterSection);
+}
+
+function buildGameRail(
+  rail: HTMLElement,
+  games: readonly string[],
+  active: string,
+  select: (gameSpecId: string) => void,
+): void {
+  rail.replaceChildren(
+    ...games.map((gameSpecId) => {
+      const link = document.createElement('a');
+      link.className = 'current-games-rail-link';
+      link.dataset.gameSpecId = gameSpecId;
+      const url = new URL(window.location.href);
+      if (gameSpecId === DEFAULT_DIRECTORY_GAME) url.searchParams.delete('game');
+      else url.searchParams.set('game', gameSpecId);
+      link.href = `${url.pathname}${url.search}`;
+      const text = document.createElement('span');
+      text.className = 'current-games-rail-text';
+      const name = document.createElement('span');
+      name.className = 'current-games-rail-name';
+      name.textContent = gameSpecLabel(gameSpecId);
+      text.append(name);
+      const thumb =
+        variantThumb(gameSpecId, 112, 'current-games-rail-thumb') ??
+        Object.assign(document.createElement('span'), { className: 'current-games-rail-thumb' });
+      link.append(text, thumb);
+      if (gameSpecId === active) {
+        link.classList.add('active');
+        link.setAttribute('aria-current', 'page');
+      }
+      link.addEventListener('click', (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        if (gameSpecId === active) return;
+        window.history.pushState(null, '', link.href);
+        select(gameSpecId);
+      });
+      return link;
+    }),
+  );
+}
+
+function mountDirectory(
+  rail: HTMLElement,
+  body: HTMLElement,
+  bots: readonly BotProfile[],
+  engineOpponents: ReadonlyMap<string, DirectoryOpponent[]>,
+): void {
+  const games = directoryGames(bots, engineOpponents.keys());
+  if (games.length === 0) {
+    body.replaceChildren(statusLine(t('bots.none')));
+    return;
+  }
+  const render = (): void => {
+    const game = readDirectoryGame(games);
+    buildGameRail(rail, games, game, render);
+    body.replaceChildren(...buildDirectoryGame(bots, game, engineOpponents));
+  };
+  window.addEventListener('popstate', () => {
+    if (body.isConnected) render();
+  });
+  render();
 }
 
 // Only system-owned prose gets a catalog overlay; community biographies stay
 // verbatim. Unknown system bots keep their stored bio as a fallback.
 function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.ownerType !== 'system') return undefined;
-  if (bot.id.startsWith(LADDER_BOT_ID_PREFIX)) {
-    return t('bots.fairyStockfishLevelBio', { level: ladderLevel(bot) });
+  const placed = botOpponentForBotId(bot.id);
+  const level = placed?.member.level;
+  if (placed?.opponent.id === 'fairy-stockfish' && level) {
+    return t('bots.fairyStockfishLevelBio', { level });
   }
-  if (bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX)) {
-    return t('bots.pikafishLevelBio', { level: ladderLevel(bot) });
+  if (placed?.opponent.id === 'pikafish' && level && bot.id !== 'pikafish') {
+    return t('bots.pikafishLevelBio', { level });
   }
   if (bot.id === XIANGQI_WORST_BOT_ID) return t('bots.generalBlunderBio');
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
@@ -451,20 +866,11 @@ function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
   return list;
 }
 
-function playsGame(bot: BotProfile, gameSpecId: string): boolean {
-  return playOptionsFor(bot).some((option) => option.gameSpecId === gameSpecId && option.playable);
-}
-
 type BotRosterGroup = {
   title: string;
   intro: string;
   rows: HTMLElement[];
 };
-
-function ladderLevel(bot: BotProfile): number {
-  const level = Number.parseInt(/-level-(\d+)$/.exec(bot.id)?.[1] ?? '', 10);
-  return Number.isFinite(level) ? level : Number.MAX_SAFE_INTEGER;
-}
 
 function buildRosterSection(group: BotRosterGroup): HTMLElement {
   const section = document.createElement('section');
@@ -556,17 +962,8 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
     bot.ownerType === 'system' ? 'bots.firstPartyBadge' : 'bots.communityBadge',
   );
   meta.append(badge, owner);
-  if (
-    CHAMPIONS.some((title) => title.botHref === `/bot/${bot.id}` && title.gameId === gameSpecId)
-  ) {
-    const champion = document.createElement('a');
-    champion.className = 'bot-champion-title';
-    champion.href = '/champions';
-    const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
-    champion.setAttribute('aria-label', title);
-    champion.append(buildUiIcon('title-champion'), title);
-    heading.after(champion);
-  }
+  const champion = championTitleLink(bot.id, gameSpecId);
+  if (champion) heading.after(champion);
   identity.append(meta);
 
   const counts = document.createElement('div');

@@ -102,7 +102,17 @@
   white-space: nowrap;
 }
 
-.data-table td.data-col-hash.is-empty {
+.data-table td.data-col-hash.is-pending {
+  min-width: 12rem;
+  max-width: 16rem;
+  white-space: normal;
+  font-size: 0.85rem;
+  color: var(--site-muted);
+}
+
+.data-hash-pending {
+  display: block;
+  font-size: 0.85rem;
   color: var(--site-muted);
 }
 
@@ -352,8 +362,9 @@
     margin-top: 6px;
   }
 
-  .data-table tbody .data-col-hash.is-empty {
-    display: none;
+  .data-table tbody .data-col-hash.is-pending {
+    min-width: 0;
+    max-width: none;
   }
 
   .data-cite {
@@ -388,17 +399,23 @@
   margin-top: 12px;
 }
 
+.data-bot-filter label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-bot-filter [hidden] {
+  display: none;
+}
+
 .data-bot-filter[hidden] {
   display: none;
 }
 
-.data-bot-filter select {
-  min-height: 44px;
-  max-width: 100%;
-  padding: 8px 12px;
-  font: inherit;
-  color: var(--site-text);
-  background: var(--site-bg);
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
+/* Both selects are the shared select.site-select (app-base.css). */
+
+.current-games-rail-link.is-unavailable .current-games-rail-count {
+  display: none;
 }

@@ -523,6 +523,36 @@ a.player-name-link:focus-visible {
   text-decoration: underline;
 }
 
+/* The site's filter select: the /data opponent and level filters and the /bots
+   level picker. One rule, so a page never grows its own copy. 44px tall for a
+   thumb. Element plus class so a surface's `.x select` cannot outrank it by
+   chunk order. */
+select.site-select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--site-text);
+  background: var(--site-bg);
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+select.site-select:focus-visible {
+  outline: 3px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* Explicit height on a touch screen: WebKit ignores min-height on a native
+   menulist. 16px because iOS zooms the page into any form control under that. */
+@media (pointer: coarse) {
+  select.site-select {
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
 .landing-page {
   display: flex;
   flex-direction: column;

@@ -563,6 +563,7 @@ export const ZH_HANS_REVIEW = {
   'historical.minPlies': '最少步数',
   'historical.minPliesHint': '短于此步数的本站对局不显示。默认为 {plies}；清空即显示全部对局。',
   'historical.floorNote': '已隐藏本站少于 {plies} 步的对局。',
+  'historical.dataLink': '本站对局的每月下载',
   'historical.floorShowAll': '显示这些对局',
   'historical.maxPlies': '最多步数',
   'historical.sortLabel': '排序',

@@ -1,7 +1,7 @@
 /** Three Kingdoms Banqi registry: casual lobby, TV, cards and casual correspondence.
  * Public admission and listing follow the runtime access gate; games are always
- * unrated. No export: covered identities stay masked after the game (#1002), and
- * an export would carry the deal, which names pieces nobody turned over. */
+ * unrated. The export is the masked public record (three-kingdoms-banqi-game-export.ts):
+ * covered identities stay masked after the game (#1002), so it never carries the deal. */
 
 import {
   type BanqiSeat,
@@ -23,6 +23,7 @@ import {
   type ThreeKingdomsBanqiEngineRoom,
 } from './server-three-kingdoms-banqi-engine.js';
 import { threeKingdomsBanqiAdmits } from './three-kingdoms-banqi-access.js';
+import { threeKingdomsBanqiExport } from './three-kingdoms-banqi-game-export.js';
 import {
   type ThreeKingdomsBanqiEvent,
   type ThreeKingdomsBanqiRuntimeRoom,
@@ -152,7 +153,7 @@ registerVariantTenant({
     },
   },
   reviewRouteBase: '/three-kingdoms-banqi/game',
-  export: null,
+  export: threeKingdomsBanqiExport,
   card: tenantCardBinding(threeKingdomsBanqiTenant, {
     variant: 'three-kingdoms-banqi',
     analysis: null,

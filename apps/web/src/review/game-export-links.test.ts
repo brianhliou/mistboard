@@ -32,6 +32,14 @@ describe('the finished game share rows', () => {
     expect(rows('jungle', 'jgl_1').links.map(([text]) => text)).toEqual(['JSON', 'Image']);
   });
 
+  it('downloads a finished Three Kingdoms Banqi game as its masked PGN and JSON', () => {
+    expect(rows('three-kingdoms-banqi', 'tkb_1').links).toEqual([
+      ['PGN', '/api/games/tkb_1/export.pgn', 'mistboard-tkb_1.pgn'],
+      ['JSON', '/api/games/tkb_1/export.json', 'mistboard-tkb_1.json'],
+      ['Image', `/og/game/tkb_1.png?v=${GAME_IMAGE_VERSION}`, 'mistboard-tkb_1.png'],
+    ]);
+  });
+
   it('offers the embed iframe for the game, at the site default frame size', () => {
     const { embed, host } = rows('dark-chess', 'room-9');
     expect(embed).toBe(

@@ -132,6 +132,21 @@ describe('reviewMetaPlayers', () => {
     ]);
   });
 
+  it('names Misty after the game in one game, and only Misty', () => {
+    const names = reviewMetaPlayers(
+      [
+        { color: 'red', name: 'Misty', rating: null, kind: 'account', handle: 'misty' },
+        { color: 'black', name: 'Misty Level 4', rating: null, kind: 'account', botId: 'misty' },
+      ],
+      undefined,
+      null,
+      'banqi',
+    ).map((player) => player.name);
+    // A person who calls themselves Misty keeps the name; the bot seat is
+    // "Misty Banqi" with its level.
+    expect(names).toEqual(['Misty', 'Misty Banqi Level 4']);
+  });
+
   it('links a user seat by handle and a bot seat by bot id, and leaves the rest plain', () => {
     expect(
       reviewMetaPlayers([

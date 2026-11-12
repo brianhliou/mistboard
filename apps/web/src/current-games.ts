@@ -359,11 +359,11 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     const hasInk = variantSeatsHaveInk(game.gameSpecId);
     const ink = (seat: CurrentGamePlayer | null): string | null | false =>
       !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
-    const topRow = buildSeatRow(top, clockEls, ink(top));
+    const topRow = buildSeatRow(top, clockEls, ink(top), game.gameSpecId);
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom), game.gameSpecId);
     article.append(open, topRow, boardRoot, bottomRow);
     stampSeatInkFamily(article, game.gameSpecId);
 
@@ -749,6 +749,7 @@ export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
   ink: string | null | false,
+  gameSpecId?: string,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
@@ -756,7 +757,11 @@ export function buildSeatRow(
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  const fullName = displayLiveName(player?.name, t('games.guest'));
+  const fullName = displayLiveName(
+    player?.name,
+    t('games.guest'),
+    player ? { ...player, gameSpecId } : undefined,
+  );
   const nameEl = playerNameEl(
     player?.isEngine ? cardSeatName(fullName) : fullName,
     profileTargetFor(player),
@@ -908,8 +913,11 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
 } {
   const [top, bottom] = seatOrder(game);
   return {
-    first: displayLiveName(bottom?.name, t('games.guest')),
-    second: displayLiveName(top?.name, t('games.guest')),
+    first: displayLiveName(bottom?.name, t('games.guest'), {
+      ...bottom,
+      gameSpecId: game.gameSpecId,
+    }),
+    second: displayLiveName(top?.name, t('games.guest'), { ...top, gameSpecId: game.gameSpecId }),
   };
 }
 
