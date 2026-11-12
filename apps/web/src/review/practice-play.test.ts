@@ -177,6 +177,20 @@ test('the played line is recorded for both sides, and take-back rewinds it', asy
   expect(session.view().moves).toEqual(['L', 'D1']);
 });
 
+test('line() holds every position played, start first, and rewinds on take-back', async () => {
+  const { session } = harness(
+    { evals: { '': ev(300, 'a1'), L: ev(-320, 'd1'), 'L d1': ev(310, 'a2') } },
+    WIN,
+  );
+  await session.start();
+  expect(session.line().map(key)).toEqual(['']);
+  await session.attempt('L');
+  // One position per move plus the start, so a stepper can show any of them.
+  expect(session.line().map(key)).toEqual(['', 'L', 'L d1']);
+  await session.reset();
+  expect(session.line().map(key)).toEqual(['']);
+});
+
 test('a take-back rewinds the played line with the position', async () => {
   const { session } = harness({ evals: { '': ev(600, 'a1'), L: ev(-100, 'd1') } }, WIN);
   await session.start();

@@ -95,6 +95,16 @@ export function animateMoveGlyphs(
   paintGlyphFade(host, fade, 0);
 }
 
+/**
+ * Badges for a glided move: a short fade that ENDS as the piece lands, so the
+ * badge arrives with the piece rather than a full glide later (it used to wait
+ * the whole glide and then fade for another, complete at twice the glide).
+ */
+export function animateMoveGlyphsOnLanding(host: HTMLElement, glideMs: number): void {
+  const fade = Math.min(100, glideMs);
+  animateMoveGlyphs(host, fade, glideMs - fade);
+}
+
 function cancelMoveGlyphs(host: HTMLElement): void {
   for (const animation of pendingGlyphs.get(host)?.animations ?? []) animation.cancel();
   pendingGlyphs.delete(host);

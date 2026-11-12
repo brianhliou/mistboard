@@ -708,7 +708,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `article-server-meta.ts` | Renders the server's `article-meta.generated.json` from `articles-data.ts` (title, kind, summary as description, status); used by `articles-meta-sync.test.ts` and `npm run articles:meta` |
 | `article-i18n.ts` | Article localization strings and language helpers |
 | `articles/content/jieqi-platform-marks.ts` | Authored piece close-ups for the Jieqi platform guide; labels use article translation and the shared review renderers follow the reader's selected piece set |
-| `article-replay-analysis.ts` | Precomputed advantage-chart analysis for article game boards with no `boardId`: files in `articles/analysis/<record hash>.json`, lazily globbed (one chunk each). `article-replay-analysis-coverage.ts` classifies every `xq-replay` board (archive / file / not a game); `article-replay-analysis.test.ts` fails when a game has neither. Written by `scripts/article-chart-analysis.mjs` |
+| `article-replay-analysis.ts` | Precomputed advantage-chart analysis for article game boards with no `boardId`: files in `articles/analysis/<record hash>.json`, lazily globbed (one chunk each). `article-replay-analysis-coverage.ts` classifies every `xq-replay` board (archive / file / not a game); `article-replay-analysis.test.ts` fails when a game has neither. Written by `scripts/article-chart-analysis.mjs` or the player-article generator; optional `analysisNodes` separates 10M chart keys and engine ids from legacy 1M records |
 | `i18n/catalog.ts` | Shared client UI translation registry and `t()` helper: English is statically bundled (the fallback and compile-time key authority), zh catalogs live in a MUTABLE locale registry filled by `ensureLocaleCatalog(locale)`, which dynamic-imports one lazy chunk per locale (`i18n/locales/*`) so English-only visitors never download them; after the bootstrap await, `t()` stays synchronous |
 | `i18n/catalogs/shell.ts` | Navigation, site-shell, appearance, connection, homepage-widget, and error-state translation strings (English, the key authority) |
 | `i18n/catalogs/content.ts` | Editorial, rules, news, patron, contact, policy, and contribution translation strings (English, the key authority) |
@@ -826,7 +826,13 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `xiangqi-fog.ts` | Shared Fog of War SVG region for every xiangqi board (full 9×10): one masked region with flat tint + optional drift/mistveil texture mapped to the global fog assets |
 | `xiangqi-piece-sets.ts` | Selectable piece sets for the xiangqi family (all seven roles): international/Chess-style/animal image sets, traditional/simplified character scripts on a shared disc/ring, and five third-party SVG sets (lacquer, wood, book, brush, clerical) with their own backs; sources and licences in `public/piece-sets/xiangqi/<id>/README.md`; retired ids (western, symbols) clear from storage |
 | `xiangqi-appearance-storage.ts` | localStorage-backed xiangqi board-theme + piece-set preferences (read/write/normalize), shared by the xiangqi renderers |
-| `xiangqi-replay.ts` | Full xiangqi (9×10) article replay: one board stepped through a move list via the real kernel, rendered on demand (first used by the Xiangqi Rules article) |
+| `xiangqi-replay.ts` + `xiangqi-replay-metadata.js` | Full xiangqi (9×10) article replay with verified-source metadata headers and localized unknown states: one board stepped through a move list via the real kernel, rendered on demand (first used by the Xiangqi Rules article) |
+| `article-embed-engagement.ts` | Counts a same-origin decision-frame reveal once in the existing article board-use readout; ignores load, unrelated frames and untrusted messages |
+| `study-chapter-annotations.ts` + `study-chapter-spec.ts` | Study-tree mainline annotations and replay-spec conversion; preserves all sibling candidates and one nested reply level while retaining legacy single-line output |
+| `study-chapter-annotations.test.ts` + `xiangqi-replay-tree.test.ts` | Study siblings/depth/legacy compatibility and article variation paths, FEN board comparisons, 390px reply collapse, baked Meng tree legality |
+| `scripts/article-variation-tree.mjs` + `.test.mjs` | Local production-pinned Pikafish MultiPV candidate/reply pruning, eight-ply lines and end assessments, with JSON results and explicit baking into article specs |
+| `scripts/data/article-variation-trees.json` + `article-variation-tree-report.json` | Meng Fanrui measured variations, per-position timings/counts, verification and remaining exercise references for #1015 |
+| `scripts/player-page-article.mjs` + `scripts/annotated-game-to-spec.mjs` | Player-article generation from canonical private drafts: verified recorded metadata, safe decision-line embeds, captions, exact stored chart preparation (legacy 1M site series or 10M initial/row series, with separate identities) and regeneration checks |
 | `shogi4-rules-diagrams.ts` | GENERATED inline SVG diagrams for the Shogi4 rules article (Oca tiles); regenerate via the shogi4 repo's `gen_rules_diagrams.py`, do not hand-edit |
 | `shogi4-sample-game.ts` | GENERATED per-ply Shogi4 sample-game board frames (with hand trays) for the rules article; regenerate via the shogi4 repo's `gen_game_replay.py`, do not hand-edit |
 | `chess-replay.ts` | Lightweight client-side chess game replay: one chessground board stepped through a UCI move list via the rules kernel, positions rendered on demand (chess analogue of `xiangqi-replay.ts`) |
@@ -1220,7 +1226,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/figure-lightbox.ts` | _needs a one-line description_ |
 | `apps/web/src/jieqi-platform-game.ts` | _needs a one-line description_ |
 | `apps/web/src/replay-stepper-copy.ts` | _needs a one-line description_ |
-| `apps/web/src/study-chapter-spec.ts` | _needs a one-line description_ |
+| `apps/web/src/study-chapter-spec.ts` | Runtime study-to-replay conversion with root FEN, annotations, sibling branches and nested replies |
 | `apps/web/src/xiangqi-crossed-soldier.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-import-page.ts` | _needs a one-line description_ |
 | `apps/server/src/dark-chess-analysis-job.ts` | _needs a one-line description_ |

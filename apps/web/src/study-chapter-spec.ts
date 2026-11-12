@@ -14,7 +14,12 @@
 
 import { createInitialXiangqiState, standardXiangqiFen } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
-import type { XiangqiReplayAnnotation, XiangqiReplaySpec } from './xiangqi-replay.js';
+import { type ChapterSideline, chapterSideline } from './study-chapter-annotations.js';
+import type {
+  XiangqiReplayAnnotation,
+  XiangqiReplayBranch,
+  XiangqiReplaySpec,
+} from './xiangqi-replay.js';
 
 /** NAG codes as the study stores them, mapped to what the widget renders. */
 const GLYPH: Record<number, NonNullable<XiangqiReplayAnnotation['glyph']>> = {
@@ -97,6 +102,26 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
       ? uci
       : uciToIccs(uci);
 
+  const toBranch = (sideline: ChapterSideline): XiangqiReplayBranch => {
+    const line: string[] = [];
+    for (const token of sideline.moves) {
+      const converted = toToken(token);
+      if (!converted) break;
+      line.push(converted);
+    }
+    const replies = Object.fromEntries(
+      Object.entries(sideline.replies ?? {})
+        .filter(([ply]) => Number(ply) <= line.length)
+        .map(([ply, children]) => [ply, children.map(toBranch).filter((b) => b.line)]),
+    );
+    return {
+      line: line.join(' '),
+      ...(sideline.verdict ? { lineEval: sideline.verdict } : {}),
+      ...(sideline.note ? { note: sideline.note } : {}),
+      ...(Object.keys(replies).length ? { replies } : {}),
+    };
+  };
+
   while (node?.children?.length) {
     const played = node.children[0];
     if (!played) break;
@@ -137,7 +162,11 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
         lineEval = assessed === undefined ? undefined : ASSESSMENT_GLYPH[assessed];
         variation = variation.children?.[0];
       }
+      const branches = siblings
+        .map((sibling) => toBranch(chapterSideline(sibling)))
+        .filter((b) => b.line);
       byPly[ply] = {
+        ...(branches.length > 1 || branches[0]?.replies ? { branches } : {}),
         ...(glyph ? { glyph } : {}),
         ...(note ? { note } : {}),
         ...(line.length ? { line: line.join(' ') } : {}),

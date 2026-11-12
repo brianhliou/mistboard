@@ -1,6 +1,9 @@
 // Content translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_CONTENT = {
+  'articles.replay.round': 'Round',
+  'articles.replay.roundN': 'Round {n}',
+  'articles.replay.timeIncrement': '{minutes} min + {seconds} sec',
   'videos.heading': 'Video library',
   'videos.intro':
     'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',

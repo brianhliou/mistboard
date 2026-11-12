@@ -7,6 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANT_CONTENT = {
+  'articles.replay.round': '輪次',
+  'articles.replay.roundN': '第{n}輪',
+  'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
   'videos.heading': '影片庫',
   'videos.intro': '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
   'videos.introMainland': '精選象棋與揭棋中文影片：規則、開局、戰術與思路。',

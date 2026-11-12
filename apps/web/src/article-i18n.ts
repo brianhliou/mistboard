@@ -153,6 +153,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // signed off that day. The sixth player page; terms and names follow
   // zuo-wenjing. Taiwan is 中华台北 in zh-Hans and 台灣 in zh-Hant.
   'tang-dan',
+  // Machine-drafted 2026-11-11, not native-reviewed, from the English signed
+  // off that day. Opponents' names from the DPXQ records (骆航远, 巨龙飞);
+  // zh-Hant uses 盃 as the other player pages do.
+  'meng-fanrui',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -2411,6 +2415,71 @@ const ZH_HANS: Record<string, string> = {
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
+  // Meng Fanrui, machine-drafted 2026-11-11.
+  'Luo Hangyuan': '骆航远',
+  'Ju Longfei': '巨龙飞',
+  'Li Hanlin': '李翰林',
+  "Play Meng's side from move 27": '从第 27 回合起执孟繁睿一方下',
+  'Meng Fanrui 孟繁睿': '孟繁睿',
+  "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.":
+    '2025 年中国象棋协会年终总决赛冠军、男子积分榜第一。完整呈现他 2026 年的三盘胜局，其中一盘是 5+3 快棋加赛，每个转折点都分出引擎的候选变化。',
+  "Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.":
+    '孟繁睿夺得 2025 年中国象棋协会男子年终总决赛冠军，并以竞赛积分榜第一结束全年。',
+  'In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.':
+    '本站收录他 2026 年四项赛事的 39 盘对局：七胜、三十和、两负。',
+  "Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them.":
+    '三盘完整胜局，红黑都有。在每个标记的着法上，引擎的最佳候选从实战分出，对手相近的应着嵌在其下。',
+  'Meng Fanrui at the 2025 year-end finals in Chengmai, December 2025.':
+    '2025 年 12 月，澄迈年终总决赛上的孟繁睿。',
+  'Meng Fanrui in a black jacket at the board, studying the position.':
+    '身穿黑色外套的孟繁睿坐在棋盘前，凝神看棋。',
+  'Chinese Xiangqi Association': '中国象棋协会',
+  "Meng Fanrui is the Chinese Xiangqi Association's 2025 men's champion. He won the year-end final against He Wenzhe in a fast tiebreak game, and finished the year first on the association's points list.":
+    '孟繁睿是中国象棋协会 2025 年男子冠军。他在年终总决赛的决赛中通过快棋加赛战胜何文哲，并以协会积分榜第一结束全年。',
+  "Below are three of his 2026 wins, two with black and one with red. Where a game turned, the move list branches into the engine's best alternatives. The branches are Pikafish lines, not moves from the game.":
+    '下面是他 2026 年的三盘胜局，两盘执黑，一盘执红。在棋局转折处，着法列表会分出引擎的最佳替代着法。这些分支是皮卡鱼的变化，不是实战着法。',
+  'The year-end champion': '年终总冠军',
+  "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat Yin Sheng in the semifinal tiebreak and met He in the final. Tang Dan won the women's title at the same event.":
+    '总决赛汇集了全年竞赛积分榜前列的棋手，外加两名世锦赛外卡。孟繁睿从小组出线，在半决赛快棋加赛中击败尹昇，决赛对上何文哲。唐丹在同一项赛事中夺得女子冠军。',
+  "The points accumulate across the association's competition calendar. The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both the title and the points lead.":
+    '积分在协会全年的各项比赛中累计。[主管机构的报道](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html)同时记载了这个冠军和积分第一。',
+  "Hebei won the men's national team championship on 2 April 2026. Meng played alongside Yang Shizhe, Lu Weitao and Zhang Bojia. His nine games in our archive contain two wins and seven draws.":
+    '2026 年 4 月 2 日，河北队夺得全国象棋男子团体赛冠军。孟繁睿与杨世哲、陆伟韬、张博嘉并肩出战。我们档案里他的九盘对局是两胜七和。',
+  "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points ([event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)).":
+    '河北与广东同积 15 个场分，河北凭对手分夺冠（[赛事报道](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)）。',
+  "On 9 September, Meng beat Luo Hangyuan twice in the first round of the Shanghai Cup, once with each colour. The replay is the win with black. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.":
+    '9 月 9 日，孟繁睿在上海杯首轮两胜骆航远，红黑各胜一盘。这里的复盘是执黑那盘。在红方第 27 回合，分支把骆航远的选择和引擎的候选并列；从那里接着看孟繁睿的应着。',
+  "Luo Hangyuan vs Meng Fanrui, 2026 Shanghai Cup, 9 September 2026. Meng won with black in 64 moves. The board opens after red's move 27, with Meng to move.":
+    '骆航远对孟繁睿，2026 上海杯，2026 年 9 月 9 日。孟繁睿执黑 64 回合取胜。棋盘从红方第 27 回合之后开始，轮到孟繁睿走。',
+  'Meng reached the quarterfinal, where Yin Sheng beat him after a seven-game match and went on to win the event.':
+    '孟繁睿打进四分之一决赛，在一场七盘的对抗后负于尹昇，尹昇随后夺得冠军。',
+  'Division A League, Hangzhou': '象甲联赛，杭州',
+  "The league records here run from 14 to 18 September. Meng's three wins came against Li Hanlin, Ju Longfei and Yang Siyuan. The games against Ju and Yang were slow games; the win over Li was a 5+3 tiebreak.":
+    '这里的联赛记录从 9 月 14 日到 18 日。孟繁睿的三盘胜局分别对李翰林、巨龙飞和杨思远。对巨龙飞和杨思远是慢棋，胜李翰林的是一盘 5+3 快棋加赛。',
+  "Start with the slow game against Ju. The board opens after Ju's 27th move, where Pikafish rates Meng's black clearly better but not yet winning. Play on from there as Meng against the bot, or follow the evaluation through the rest of the game.":
+    '先看对巨龙飞的慢棋。棋盘从巨龙飞第 27 回合之后开始，此时皮卡鱼判断孟繁睿的黑方明显占优，但还没有胜定。你可以从这里扮演孟繁睿和电脑接着下，也可以顺着评估看完余下的棋。',
+  'Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves.':
+    '巨龙飞对孟繁睿，2026 全国象棋男子甲级联赛，2026 年 9 月 17 日。孟繁睿执黑 63 回合取胜。',
+  '2026 National Xiangqi Men’s Division A League': '2026 全国象棋男子甲级联赛',
+  "Then look at the 5+3 game against Li. Click a sharp change on its graph, open the branches at the nearby marked move, and replay Meng's reply from there.":
+    '再看对李翰林的 5+3 快棋。点击曲线上一处急剧的变化，打开附近标记着法的分支，从那里重走孟繁睿的应着。',
+  'Meng Fanrui vs Li Hanlin, 2026 National Xiangqi Men’s Division A League, 15 September 2026. Meng won with red in 60 moves. The board opens at the start.':
+    '孟繁睿对李翰林，2026 全国象棋男子甲级联赛，2026 年 9 月 15 日。孟繁睿执红 60 回合取胜。棋盘从开局开始。',
+  'His games in this set': '这里收录的他的对局',
+  'These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins replayed above.':
+    '这 39 盘是他 2026 赛季的一部分，从 2 月 25 日到 9 月 18 日。表中统计下面四项赛事里有着法记录的对局，除了上面复盘的三盘胜局，也包括和棋和负局。',
+  'Five Rams Cup': '五羊杯',
+  'National Team Championship': '全国象棋团体赛',
+  'Division A League': '象甲联赛',
+  "Meng's record in the 39 games held here": '孟繁睿在这里 39 盘对局中的战绩',
+  'Game records are credited to [DPXQ](https://www.dpxq.com). His full record is on his player page.':
+    '棋谱来自 [DPXQ](https://www.dpxq.com)。他的完整战绩在他的棋手页上。',
+  "Meng Fanrui's games": '孟繁睿的对局',
+  'The 2026 Division A League': '2026 象甲联赛',
+  'Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis':
+    '孟繁睿：2025 年终总冠军，对局与分析',
+  'Meng Fanrui in glasses and a black jacket at the board.':
+    '戴眼镜、身穿黑色外套的孟繁睿坐在棋盘前。',
   'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省运动会上的尹昇。',
   'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
     '2022 年浙江省第十七届运动会赛后，身穿红白色浙江队队服、戴眼镜的尹昇在赞助商背景板前微笑。',
@@ -9337,6 +9406,71 @@ const ZH_HANT: Record<string, string> = {
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
+  // Meng Fanrui, machine-drafted 2026-11-11.
+  'Luo Hangyuan': '駱航遠',
+  'Ju Longfei': '巨龍飛',
+  'Li Hanlin': '李翰林',
+  "Play Meng's side from move 27": '從第 27 回合起執孟繁睿一方下',
+  'Meng Fanrui 孟繁睿': '孟繁睿',
+  "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.":
+    '2025 年中國象棋協會年終總決賽冠軍、男子積分榜第一。完整呈現他 2026 年的三盤勝局，其中一盤是 5+3 快棋加賽，每個轉折點都分出引擎的候選變化。',
+  "Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.":
+    '孟繁睿奪得 2025 年中國象棋協會男子年終總決賽冠軍，並以競賽積分榜第一結束全年。',
+  'In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.':
+    '本站收錄他 2026 年四項賽事的 39 盤對局：七勝、三十和、兩負。',
+  "Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them.":
+    '三盤完整勝局，紅黑都有。在每個標記的著法上，引擎的最佳候選從實戰分出，對手相近的應著嵌在其下。',
+  'Meng Fanrui at the 2025 year-end finals in Chengmai, December 2025.':
+    '2025 年 12 月，澄邁年終總決賽上的孟繁睿。',
+  'Meng Fanrui in a black jacket at the board, studying the position.':
+    '身穿黑色外套的孟繁睿坐在棋盤前，凝神看棋。',
+  'Chinese Xiangqi Association': '中國象棋協會',
+  "Meng Fanrui is the Chinese Xiangqi Association's 2025 men's champion. He won the year-end final against He Wenzhe in a fast tiebreak game, and finished the year first on the association's points list.":
+    '孟繁睿是中國象棋協會 2025 年男子冠軍。他在年終總決賽的決賽中通過快棋加賽戰勝何文哲，並以協會積分榜第一結束全年。',
+  "Below are three of his 2026 wins, two with black and one with red. Where a game turned, the move list branches into the engine's best alternatives. The branches are Pikafish lines, not moves from the game.":
+    '下面是他 2026 年的三盤勝局，兩盤執黑，一盤執紅。在棋局轉折處，著法列表會分出引擎的最佳替代著法。這些分支是皮卡魚的變化，不是實戰著法。',
+  'The year-end champion': '年終總冠軍',
+  "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat Yin Sheng in the semifinal tiebreak and met He in the final. Tang Dan won the women's title at the same event.":
+    '總決賽匯集了全年競賽積分榜前列的棋手，外加兩名世錦賽外卡。孟繁睿從小組出線，在半決賽快棋加賽中擊敗尹昇，決賽對上何文哲。唐丹在同一項賽事中奪得女子冠軍。',
+  "The points accumulate across the association's competition calendar. The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both the title and the points lead.":
+    '積分在協會全年的各項比賽中累計。[主管機構的報導](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html)同時記載了這個冠軍和積分第一。',
+  "Hebei won the men's national team championship on 2 April 2026. Meng played alongside Yang Shizhe, Lu Weitao and Zhang Bojia. His nine games in our archive contain two wins and seven draws.":
+    '2026 年 4 月 2 日，河北隊奪得全國象棋男子團體賽冠軍。孟繁睿與楊世哲、陸偉韜、張博嘉並肩出戰。我們檔案裡他的九盤對局是兩勝七和。',
+  "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points ([event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)).":
+    '河北與廣東同積 15 個場分，河北憑對手分奪冠（[賽事報導](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)）。',
+  "On 9 September, Meng beat Luo Hangyuan twice in the first round of the Shanghai Cup, once with each colour. The replay is the win with black. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.":
+    '9 月 9 日，孟繁睿在上海盃首輪兩勝駱航遠，紅黑各勝一盤。這裡的復盤是執黑那盤。在紅方第 27 回合，分支把駱航遠的選擇和引擎的候選並列；從那裡接著看孟繁睿的應著。',
+  "Luo Hangyuan vs Meng Fanrui, 2026 Shanghai Cup, 9 September 2026. Meng won with black in 64 moves. The board opens after red's move 27, with Meng to move.":
+    '駱航遠對孟繁睿，2026 上海盃，2026 年 9 月 9 日。孟繁睿執黑 64 回合取勝。棋盤從紅方第 27 回合之後開始，輪到孟繁睿走。',
+  'Meng reached the quarterfinal, where Yin Sheng beat him after a seven-game match and went on to win the event.':
+    '孟繁睿打進四分之一決賽，在一場七盤的對抗後負於尹昇，尹昇隨後奪得冠軍。',
+  'Division A League, Hangzhou': '象甲聯賽，杭州',
+  "The league records here run from 14 to 18 September. Meng's three wins came against Li Hanlin, Ju Longfei and Yang Siyuan. The games against Ju and Yang were slow games; the win over Li was a 5+3 tiebreak.":
+    '這裡的聯賽記錄從 9 月 14 日到 18 日。孟繁睿的三盤勝局分別對李翰林、巨龍飛和楊思遠。對巨龍飛和楊思遠是慢棋，勝李翰林的是一盤 5+3 快棋加賽。',
+  "Start with the slow game against Ju. The board opens after Ju's 27th move, where Pikafish rates Meng's black clearly better but not yet winning. Play on from there as Meng against the bot, or follow the evaluation through the rest of the game.":
+    '先看對巨龍飛的慢棋。棋盤從巨龍飛第 27 回合之後開始，此時皮卡魚判斷孟繁睿的黑方明顯佔優，但還沒有勝定。你可以從這裡扮演孟繁睿和電腦接著下，也可以順著評估看完餘下的棋。',
+  'Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves.':
+    '巨龍飛對孟繁睿，2026 全國象棋男子甲級聯賽，2026 年 9 月 17 日。孟繁睿執黑 63 回合取勝。',
+  '2026 National Xiangqi Men’s Division A League': '2026 全國象棋男子甲級聯賽',
+  "Then look at the 5+3 game against Li. Click a sharp change on its graph, open the branches at the nearby marked move, and replay Meng's reply from there.":
+    '再看對李翰林的 5+3 快棋。點擊曲線上一處急劇的變化，打開附近標記著法的分支，從那裡重走孟繁睿的應著。',
+  'Meng Fanrui vs Li Hanlin, 2026 National Xiangqi Men’s Division A League, 15 September 2026. Meng won with red in 60 moves. The board opens at the start.':
+    '孟繁睿對李翰林，2026 全國象棋男子甲級聯賽，2026 年 9 月 15 日。孟繁睿執紅 60 回合取勝。棋盤從開局開始。',
+  'His games in this set': '這裡收錄的他的對局',
+  'These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins replayed above.':
+    '這 39 盤是他 2026 賽季的一部分，從 2 月 25 日到 9 月 18 日。表中統計下面四項賽事裡有著法記錄的對局，除了上面復盤的三盤勝局，也包括和棋和負局。',
+  'Five Rams Cup': '五羊盃',
+  'National Team Championship': '全國象棋團體賽',
+  'Division A League': '象甲聯賽',
+  "Meng's record in the 39 games held here": '孟繁睿在這裡 39 盤對局中的戰績',
+  'Game records are credited to [DPXQ](https://www.dpxq.com). His full record is on his player page.':
+    '棋譜來自 [DPXQ](https://www.dpxq.com)。他的完整戰績在他的棋手頁上。',
+  "Meng Fanrui's games": '孟繁睿的對局',
+  'The 2026 Division A League': '2026 象甲聯賽',
+  'Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis':
+    '孟繁睿：2025 年終總冠軍，對局與分析',
+  'Meng Fanrui in glasses and a black jacket at the board.':
+    '戴眼鏡、身穿黑色外套的孟繁睿坐在棋盤前。',
   'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省運動會上的尹昇。',
   'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
     '2022 年浙江省第十七屆運動會賽後，身穿紅白色浙江隊隊服、戴眼鏡的尹昇在贊助商背景板前微笑。',

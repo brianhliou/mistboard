@@ -7,6 +7,9 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANT_REVIEW = {
+  'review.article.showReplies': '顯示 {count} 個應手分支',
+  'review.article.hideReplies': '隱藏 {count} 個應手分支',
+  'review.article.variation': '變化',
   'review.chooseLine': '選擇分支',
   'review.mainLine': '主線',
   // Remaining review widgets and dynamically generated move advice (#855).
@@ -135,9 +138,11 @@ export const ZH_HANT_REVIEW = {
   'practice.position.title': '從局面開始練習',
   'practice.position.badFen': '這個連結裡沒有可讀取的象棋局面。',
   'practice.position.finished': '這個局面已經結束，沒有可走的棋。',
-  'practice.position.badGoal': '這個連結沒有說明是要將死對手還是守和。',
+  'practice.position.badGoal': '這個連結沒有說明是要將死對手、爭取勝勢還是守和。',
   'practice.position.badSide': '這個連結沒有說明你執哪一方。',
   'practice.position.toEditor': '在棋盤編輯器裡擺一個局面',
+  'practice.position.youPlay': '你執{side}，對手是引擎。',
+  'practice.position.backToArticle': '返回文章',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '開始',
   'practice.card.soldier': '兵不能後退',
@@ -145,6 +150,7 @@ export const ZH_HANT_REVIEW = {
   'practice.card.horse': '當心蹩馬腿',
   'practice.card.cannon': '要有砲架',
   'practice.card.insufficient': '守住和棋',
+  'practice.goal.sideTo': '{color}走棋，{goal}',
   'practice.goal.mate': '將死對手',
   'practice.goal.mateIn': '{moves} 回合內將死對手',
   'practice.goal.win': '取勝',
@@ -1093,6 +1099,7 @@ export const ZH_HANT_REVIEW = {
   'review.luckCard.bothEffect.unlucky': '{side}勝率比平均結果低{points}個百分點',
   'review.luckCard.bothEffect.even': '{side}勝率與平均結果相當',
   'replay.solutionHidden': '找出殺法。',
+  'replay.whatWouldYouPlay': '你會怎麼走？',
   'replay.showSolution': '顯示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
   'analysis.banqiTablebase.clockDraw': '依 {limit} 步規則判和',
