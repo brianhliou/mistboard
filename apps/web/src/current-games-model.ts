@@ -137,11 +137,18 @@ export function liveCardShowsHands(gameSpecId: string): boolean {
 
 // Hidden-identity variants whose finished board /watch already shows publicly,
 // drawn here through the same compact showcase renderer and its default view:
-// jieqi's as-played board (a piece nobody moved stays face-down), and banqi's
-// and Flip Jungle's boards (unflipped pieces stay face-down). All three are
-// 'open' to spectators in the server's liveObservePolicy and have a /watch
-// channel.
-const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi', 'jungle-flip']);
+// jieqi's as-played board (a piece nobody moved stays face-down), and banqi's,
+// Flip Jungle's and Three Kingdoms banqi's boards (unflipped pieces stay
+// face-down; Three Kingdoms draws the server's public frames). All four are
+// 'open' to spectators in the server's liveObservePolicy and have a tenant
+// watch replay. FFQ banqi has no watch replay or public listing, so it never
+// reaches this page and stays off the list.
+const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set([
+  'jieqi',
+  'banqi',
+  'jungle-flip',
+  'three-kingdoms-banqi',
+]);
 
 // Whether a finished game's tile draws its final position, its final hands, or
 // the misty tile. Open-information variants and the public-view list above draw

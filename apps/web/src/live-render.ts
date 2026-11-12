@@ -67,12 +67,14 @@ import {
   connectionNoticeMode,
   modeLabel,
   reasonPhraseLabel,
+  rejectedInviteHeading,
   rejectedSignInHref,
   seatLabel,
 } from './live-status.js';
 import { currentCaptures, currentView } from './live-view.js';
 import { renderGameResult, resultScore } from './postgame-panel.js';
 import { createGameMetaCard, seatResultScores } from './review/game-meta-card.js';
+import { loadedRoomInvitePreview, roomInvitePreview } from './room-invite-preview.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import { localizedRulesHref } from './variant-public-surfaces.js';
 import { activeLiveShellTenant, liveShellTenants } from './variant-tenant/live-shell.js';
@@ -278,11 +280,25 @@ function renderActionStatus(view: PlayerView | null): void {
   const tone = actionTone(view);
   notice.className = `action-notice ${tone}`;
 
+  // A signed-out invitee to a correspondence room (#1058): start the preview
+  // fetch; once it lands the title names who asked. No start board here: the
+  // room's own covered board already sits above the notice, so a second
+  // labelled tile would only repeat it (tenant rooms keep theirs).
+  if (
+    liveState.connectionState === 'rejected' &&
+    liveState.closeReason === 'correspondence requires account'
+  ) {
+    roomInvitePreview(liveState.room, render);
+  }
+  const invite = rejectedInviteHeading() ? loadedRoomInvitePreview(liveState.room) : null;
+  if (invite) notice.className = 'action-notice default room-invite-notice';
+
   const title = document.createElement('strong');
   title.textContent = actionTitle(view);
   const body = document.createElement('span');
   body.textContent = actionBody(view);
-  notice.append(title, body);
+  notice.append(title);
+  notice.append(body);
 
   if (
     showBanner &&

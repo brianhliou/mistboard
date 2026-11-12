@@ -19,6 +19,7 @@ import {
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiSquare,
+  xiangqiRuleMate,
 } from '@mistboard/game';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import {
@@ -123,6 +124,10 @@ const xiangqiPresentation: TreePresentation<
         pvAfterCapture: pvAfterCapture.length ? decodeLine(pvAfterCapture) : null,
       }).glyph;
     },
+    // Pikafish scores a perpetual-check repetition as "mate 1"; the kernel decides whether a
+    // mate score is that rule (stored best/pv are in our square notation).
+    ruleVerdict: ({ root, history, entry }) =>
+      xiangqiRuleMate({ history, mate: entry.mate, pv: entry.pv, initialState: root }),
   },
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
@@ -196,8 +201,10 @@ export function mountXiangqiReview(
     config.openingExplorer === false
       ? undefined
       : (config.explorer ?? xiangqiOpeningExplorer(withTablebase));
+  // A record's event played on past a repetition our rules would have ended, so the moves
+  // into a rule verdict go ungraded there; a game played here keeps its grades.
   const presentation = config.record
-    ? { ...xiangqiPresentation, adapter: xiangqiRecordTreeAdapter }
+    ? { ...xiangqiPresentation, adapter: xiangqiRecordTreeAdapter, ruleVerdictsEnforced: false }
     : xiangqiPresentation;
   return mountTreeReview(root, presentation, { ...config, explorer });
 }

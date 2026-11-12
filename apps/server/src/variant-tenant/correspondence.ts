@@ -22,6 +22,7 @@ import { sweepTenantRoomDeadline, type TenantLifecycleContext } from './lifecycl
 import type { TenantManagedRoom, VariantTenantRegistration } from './registry.js';
 import {
   createTenantCorrespondenceGameForSeek,
+  createTenantLiveRoom,
   type TenantLiveRoomFactoryContext,
 } from './room-factory.js';
 import { tenantSeatStateView } from './runtime.js';
@@ -34,6 +35,7 @@ export type TenantCorrespondenceBinding = {
   createCorrespondenceGameForSeek: NonNullable<
     VariantTenantRegistration['createCorrespondenceGameForSeek']
   >;
+  createCorrespondenceRoom: NonNullable<VariantTenantRegistration['createCorrespondenceRoom']>;
   seatBoard?: NonNullable<VariantTenantRegistration['seatBoard']>;
 };
 
@@ -93,6 +95,24 @@ export function tenantCorrespondenceBinding<
         // The seek stores move order, including the recorded opening's mover.
         seats: { first: colors[0] as string, second: colors[1] as string },
       };
+    },
+    // A friend invite room (#1059): nobody is seated yet. The creator takes a
+    // seat on connect like any friend room, the invite link seats the friend,
+    // and the second seat arms the days-per-move deadline. Always casual: a
+    // rated correspondence game is an open seek or a challenge, never a room.
+    // A preference that is not one of the tenant's colors is dropped, so the
+    // seat falls back to move order.
+    createCorrespondenceRoom: async (timeControl: RoomTimeControl, preference?: string) => {
+      const creatorPreference =
+        preference === 'random' || (preference !== undefined && tenant.rules.isColor(preference))
+          ? (preference as C | 'random')
+          : undefined;
+      const created = await createTenantLiveRoom(tenant, deps.factoryContext(), {
+        timeControl,
+        creatorPreference,
+      });
+      if (!created.ok) return created;
+      return { ok: true, room: { id: created.room.id, gameSpecId: created.room.gameSpecId } };
     },
     sweepDueDeadline: async (roomId: string) => {
       const room = await deps.getOrLoadRoom(roomId);

@@ -723,6 +723,59 @@ definePersistenceTests('account routes', () => {
     assert.deepEqual(JSON.parse(response.body), { error: 'invalid_public_profile' });
     assert.deepEqual((await findUserByEmail('unsafe-profile-route@example.com'))?.profileLinks, []);
   });
+
+  test('account public-profile route stores flair from every piece set and refuses unknown keys', async () => {
+    const now = new Date('2026-11-11T12:00:00.000Z');
+    const sessionToken = 'flair-set-route-token';
+    await createUser({
+      id: 'user_flair_set_route',
+      email: 'flair-set-route@example.com',
+      emailVerifiedAt: now,
+      handle: 'flair-set-route',
+      displayName: 'Flair Set Route',
+      now,
+    });
+    const expiresAt = new Date(Date.now() + 86_400_000);
+    await createAccountSession({
+      id: 'flair-set-route-session',
+      userId: 'user_flair_set_route',
+      tokenHash: hashSecret(sessionToken),
+      expiresAt,
+    });
+    const cookie = accountSessionCookie('flair-set-route-session', sessionToken, expiresAt).split(
+      ';',
+    )[0];
+    const save = async (flair: unknown) => {
+      const response = captureResponse();
+      await tryHandle(
+        {},
+        jsonRequest({ bio: '', location: '', profileLinks: [], flair }, cookie),
+        response,
+        '/api/account/public-profile',
+      );
+      return response;
+    };
+
+    // The longest key also round-trips through the column's shape CHECK.
+    for (const key of [
+      'piece-animal-dobutsu-black-elephant',
+      'jungle-red-tiger',
+      'chess-white-knight',
+    ]) {
+      const response = await save(key);
+      assert.equal(response.status, 200, key);
+      assert.equal((await findUserByEmail('flair-set-route@example.com'))?.flair, key);
+    }
+
+    const unknown = await save('piece-foo-red-general');
+    assert.equal(unknown.status, 400);
+    assert.deepEqual(JSON.parse(unknown.body), { error: 'invalid_public_profile' });
+    // A refused key leaves the stored flair alone rather than clearing it.
+    assert.equal(
+      (await findUserByEmail('flair-set-route@example.com'))?.flair,
+      'chess-white-knight',
+    );
+  });
 });
 
 function jsonRequest(body: unknown, cookie?: string, method = 'PATCH'): IncomingMessage {

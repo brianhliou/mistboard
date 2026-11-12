@@ -81,10 +81,10 @@ export function puzzleNavItems(): NavItem[] {
 // defects, a decision to stop promoting the Discord while it is still empty.
 // No surface links it now (see the constants above).
 // Play dropdown. The title itself navigates to the lobby (lichess split-menu
-// behavior, same as Watch and Community), and the panel repeats it explicitly:
-// on touch / no-hover devices tapping the title opens the panel instead of
-// navigating, so without the explicit item there would be no way to reach the
-// lobby from this menu.
+// behavior, same as Watch and Community). The first item opens the Play a game
+// dialog on the Anyone tab over the homepage (lichess "Create lobby game"; was
+// a plain "Lobby" link to / until 2026-11-11), so touch devices, where tapping
+// the title opens the panel, still reach the homepage through it.
 //
 // Correspondence is here because the page has existed since correspondence
 // shipped but was reachable ONLY from the notification bell (which shows only
@@ -94,7 +94,7 @@ export function puzzleNavItems(): NavItem[] {
 // and the open seeks, which is how anyone finds out correspondence exists.
 export function playNavItems(): NavItem[] {
   return [
-    { label: 'Lobby', labelKey: 'nav.lobby', href: '/' },
+    { label: 'Create a game', labelKey: 'nav.createGame', href: '/?play=lobby' },
     {
       label: 'Correspondence',
       labelKey: 'nav.correspondence',

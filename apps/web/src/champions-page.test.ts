@@ -200,7 +200,7 @@ describe('/champions', () => {
     ]);
     expect(credits(open('xiangqi'))).toEqual([
       'Code: Pikafish https://github.com/official-pikafish/Pikafish',
-      'Network: Pikafish NNUE https://www.pikafish.com/en/list.html',
+      'Network: Fairy-Stockfish xiangqi NNUE (CC0) https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
     ]);
     // Fairy-Stockfish plays duck and crazyhouse xiangqi with NNUE off: code only.
     for (const game of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
@@ -235,8 +235,8 @@ describe('/champions', () => {
       const xiangqi = credits(zh.querySelector('.champions-open[data-game="xiangqi"]')!);
       expect(xiangqi[1], locale).toBe(
         locale === 'zh-Hans'
-          ? '神经网络: 皮卡鱼 NNUE https://www.pikafish.com/list.html'
-          : '神經網路: 皮卡魚 NNUE https://www.pikafish.com/zh-hant/list.html',
+          ? '神经网络: Fairy-Stockfish 象棋 NNUE（CC0） https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE'
+          : '神經網路: Fairy-Stockfish 象棋 NNUE（CC0） https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
       );
     }
   });

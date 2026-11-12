@@ -53,9 +53,9 @@ describe('correspondence: your open seeks', () => {
     expect(card?.classList.contains('current-game-card')).toBe(true);
     expect(card?.closest('.current-games-grid')).not.toBeNull();
     expect(card?.querySelector('.current-game-board')).not.toBeNull();
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
-      'Waiting for an opponent',
-    );
+    // The section heading already says "Waiting for an opponent"; the card does
+    // not repeat it (#1058).
+    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe('Open seek');
     expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
     // A public seek has no page of its own, so no card-wide link to cover Cancel.
     expect(card?.querySelector('a.current-game-open')).toBeNull();

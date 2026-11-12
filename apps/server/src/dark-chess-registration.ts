@@ -15,7 +15,6 @@
  */
 
 import type { Color, DARK_CHESS_SPEC_ID, Move, RoomTimeControl } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   DARK_CHESS_TENANT_ROOM_ID_PREFIX,
   type DarkChessTenantState,
@@ -24,10 +23,7 @@ import {
 import { countDeployGatingRooms } from './deploy-gate.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import * as persistence from './persistence.js';
-import {
-  handleCorrespondenceCreate,
-  requestsCorrespondence,
-} from './routes/correspondence-rooms.js';
+import { writeJson } from './routes/lib.js';
 import { tenantCorrespondenceBinding, tenantSeatBoard } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -157,27 +153,17 @@ registerVariantTenant({
       at,
     ),
   clearRooms: () => darkChessTenantRooms.clear(),
+  // POST /api/rooms claims every correspondence create before the tenant
+  // matchers (routes/rooms.ts, #1059) and calls createCorrespondenceRoom below,
+  // so this slice has no create request of its own to claim.
   http: {
-    matchesCreateRequest: requestsCorrespondence,
-    handleCreate: async (ctx, request, response, body) =>
-      handleCorrespondenceCreate(
-        {
-          ...ctx,
-          createCorrespondenceRoom: async (timeControl, creatorPreference) => {
-            const created = await createDarkChessCorrespondenceRoom(timeControl, creatorPreference);
-            if (!created.ok) return created;
-            return {
-              ok: true,
-              room: { id: created.room.id, gameSpecId: created.room.gameSpecId },
-            };
-          },
-        },
-        response,
-        body,
-        await currentAccountUser(request),
-      ),
+    matchesCreateRequest: () => false,
+    handleCreate: async (_ctx, _request, response) => {
+      writeJson(response, 404, { error: 'not_found' });
+    },
   },
   lobby: null,
   sweepDueDeadline: darkChessCorrespondence.sweepDueDeadline,
   createCorrespondenceGameForSeek: darkChessCorrespondence.createCorrespondenceGameForSeek,
+  createCorrespondenceRoom: darkChessCorrespondence.createCorrespondenceRoom,
 });

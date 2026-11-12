@@ -323,6 +323,8 @@ export function createTenantRuntimeRoom<
     rated?: boolean;
     timeControl?: RoomTimeControl;
     lobbyMatch?: boolean;
+    // The creator named a seat (not Random); handed to rules.createSetup.
+    sideChosen?: boolean;
   } = {},
 ): TenantRoomCreation<Kind, C, M, State, Spec> {
   // A tenant with more than two seats that has not said what a forfeit does
@@ -337,7 +339,10 @@ export function createTenantRuntimeRoom<
   if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
-  const setup = tenant.rules.createSetup?.({ timeControl: options.timeControl });
+  const setup = tenant.rules.createSetup?.({
+    timeControl: options.timeControl,
+    ...(options.sideChosen ? { sideChosen: true } : {}),
+  });
   const events: TenantRoomEvent<C, M, Spec>[] = [
     {
       type: 'room-created',

@@ -24,6 +24,13 @@ import {
   type DuckXiangqiEngineTier,
 } from '../duck-xiangqi-fsf-engine.js';
 import {
+  FFQ_BANQI_ENGINE_ID,
+  FFQ_BANQI_ENGINE_NAME,
+  FFQ_BANQI_ENGINE_VERSION,
+  FFQ_BANQI_PLAYABLE_ENGINES,
+  ffqBanqiEngineDisplayName,
+} from '../ffq-banqi-engine.js';
+import {
   FORTRESS_XIANGQI_ENGINE_VERSION,
   FORTRESS_XIANGQI_PLAYABLE_ENGINES,
   FORTRESS_XIANGQI_RANDOM_ENGINE_ID,
@@ -1376,6 +1383,29 @@ const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fr
   }),
 );
 
+const FFQ_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => {
+    const random = tier.evaluation === 'random';
+    const signature = `${tier.id}-${FFQ_BANQI_ENGINE_VERSION}-nodes-${tier.nodes}-ms-${tier.movetimeCapMs}`;
+    return [
+      tier.id,
+      {
+        id: tier.id,
+        engineId: FFQ_BANQI_ENGINE_ID,
+        engineName: FFQ_BANQI_ENGINE_NAME,
+        name: ffqBanqiEngineDisplayName(tier.id),
+        kind: random ? 'builtin' : 'container',
+        gameSpecId: 'ffq-banqi',
+        configHash: signature,
+        playSignature: signature,
+        config: random
+          ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+          : { kind: 'ffq-banqi-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+        notes: 'Hidden admin-only FFQ playtest. Provisional node rungs; calibration pending.',
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1394,6 +1424,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...JUNGLE_ENGINES,
   ...KATAGO_JUNGLE_ENGINES,
   ...THREE_KINGDOMS_BANQI_ENGINES,
+  ...FFQ_BANQI_ENGINES,
 };
 
 /**

@@ -26,6 +26,7 @@ import {
   xiangqiMoveToPikafishUci,
   xiangqiSquareToPikafish,
 } from './xiangqi-pikafish-engine.js';
+import { pikafishXiangqiDevSourceDir } from './xiangqi-pikafish-paths.js';
 
 function mockPikafishPaths(t: TestContext, files: string[]) {
   const savedPath = process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
@@ -44,24 +45,27 @@ function mockPikafishPaths(t: TestContext, files: string[]) {
   });
 }
 
+// An official-release layout under ~/projects/tools: the resolver must never
+// pick a build it was not pinned to, whatever that build is called.
+const officialRelease = () =>
+  resolve(process.env.HOME ?? '', 'projects/tools/pikafish-official/MacOS/pikafish-apple-silicon');
+
 test('Pikafish defaults to the patched dev build instead of the January binary', (t) => {
   assert.ok(process.env.HOME, 'dev build lookup needs a home directory');
-  const dev = resolve(process.env.HOME, 'projects/tools/pikafish-6a59ee2f-cc0/src/pikafish');
-  const january = resolve(
-    process.env.HOME,
-    'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
-  );
-  mockPikafishPaths(t, [dev, january]);
+  const dev = resolve(pikafishXiangqiDevSourceDir(process.env.HOME), 'src/pikafish');
+  assert.match(dev, /\/projects\/tools\/pikafish-[0-9a-f]{8}-cc0\/src\/pikafish$/);
+  mockPikafishPaths(t, [dev, officialRelease()]);
   assert.equal(pikafishXiangqiPath(), dev);
 });
 
 test('Pikafish skips the January binary and keeps packaged binary locations', (t) => {
   const packaged = resolve(process.cwd(), 'bin/pikafish');
-  const january = resolve(
-    process.env.HOME ?? '',
-    'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
-  );
-  mockPikafishPaths(t, [january, packaged, '/app/bin/pikafish', '/usr/local/bin/pikafish']);
+  mockPikafishPaths(t, [
+    officialRelease(),
+    packaged,
+    '/app/bin/pikafish',
+    '/usr/local/bin/pikafish',
+  ]);
   assert.equal(pikafishXiangqiPath(), packaged);
   for (const bin of ['/app/bin/pikafish', '/usr/local/bin/pikafish']) {
     t.mock.method(fs, 'existsSync', (path: fs.PathLike) => String(path) === bin);
@@ -82,14 +86,7 @@ test('Pikafish resolves only the CC0 net beside the binary or its parent', (t) =
 });
 
 test('Pikafish fails closed when only the old net or binary exists', (t) => {
-  mockPikafishPaths(t, [
-    '/engines/src/pikafish.nnue',
-    '/engines/pikafish.nnue',
-    resolve(
-      process.env.HOME ?? '',
-      'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
-    ),
-  ]);
+  mockPikafishPaths(t, ['/engines/src/pikafish.nnue', '/engines/pikafish.nnue', officialRelease()]);
   assert.throws(() => pikafishXiangqiPath(), /MISTBOARD_PIKAFISH_XIANGQI_PATH/);
   assert.throws(
     () => pikafishXiangqiNetPath('/engines/src/pikafish'),

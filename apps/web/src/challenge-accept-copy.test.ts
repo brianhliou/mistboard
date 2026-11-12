@@ -69,3 +69,35 @@ describe('challenge link copy', () => {
     }
   });
 });
+
+// A directed challenge tells its creator whether the target was emailed (#1057),
+// never why not; a plain link challenge has no target and says nothing.
+describe('challenge target status', () => {
+  it('says who was emailed, by handle, linked to their profile', () => {
+    const card = buildChallengeCard({
+      ...VIEW,
+      targetName: 'Bob',
+      targetHandle: 'bob',
+      targetEmailed: true,
+    });
+    const line = card.querySelector('.challenge-target-status');
+    expect(line?.textContent).toBe('We emailed @bob');
+    expect(line?.querySelector('a')?.getAttribute('href')).toContain('bob');
+  });
+
+  it('asks the creator to send the link when the target gets no email', () => {
+    const card = buildChallengeCard({
+      ...VIEW,
+      targetName: 'Bob',
+      targetHandle: 'bob',
+      targetEmailed: false,
+    });
+    expect(card.querySelector('.challenge-target-status')?.textContent).toBe('Send them this link');
+    expect(card.querySelector('.challenge-share-link')).not.toBeNull();
+  });
+
+  it('a link challenge with no target shows no status line', () => {
+    const card = buildChallengeCard(VIEW);
+    expect(card.querySelector('.challenge-target-status')).toBeNull();
+  });
+});

@@ -215,11 +215,23 @@ describe('static pages', () => {
     );
   });
 
-  it('credits Pikafish on the source page with its site, weights license and repository', () => {
+  it('credits Pikafish on the source page with its site, repository and the CC0 net it runs on', () => {
     const cases = [
-      ['/source', 'Pikafish by the Pikafish developers', 'https://www.pikafish.com/en/list.html'],
-      ['/zh-hans/source', '皮卡鱼（Pikafish）', 'https://www.pikafish.com/list.html'],
-      ['/zh-hant/source', '皮卡魚（Pikafish）', 'https://www.pikafish.com/zh-hant/list.html'],
+      [
+        '/source',
+        'Pikafish by the Pikafish developers',
+        'https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
+      ],
+      [
+        '/zh-hans/source',
+        '皮卡鱼（Pikafish）',
+        'https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
+      ],
+      [
+        '/zh-hant/source',
+        '皮卡魚（Pikafish）',
+        'https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
+      ],
     ] as const;
     for (const [path, credit, licenseUrl] of cases) {
       window.history.replaceState(null, '', path);

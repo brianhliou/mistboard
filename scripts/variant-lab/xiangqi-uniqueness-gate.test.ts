@@ -109,7 +109,7 @@ test('parsed scores normalize through the SHARED xiangqiUciScoreToCp', () => {
   assert.equal(xiangqiScoredLineToVerifyLine(mateZero)?.scoreCp, -XIANGQI_MATE_SCORE_CP);
 });
 
-test('parseXiangqiScoredLines keeps the deepest info line per rank, in rank order', () => {
+test('parseXiangqiScoredLines keeps the deepest complete snapshot, in rank order', () => {
   const lines = parseXiangqiScoredLines([
     'info depth 10 multipv 2 score cp 80 pv b2e2 h9g7',
     'info depth 10 multipv 1 score cp 200 pv h2e2 h9g7',
@@ -123,11 +123,15 @@ test('parseXiangqiScoredLines keeps the deepest info line per rank, in rank orde
     rank: 1,
     score: { cp: 350, mate: null },
     pvUci: ['h2e2', 'b9c7', 'e2e6'],
+    depth: 18,
+    nodes: 0,
   });
   assert.deepEqual(lines[1], {
     rank: 2,
     score: { cp: 40, mate: null },
     pvUci: ['b2e2', 'h9g7', 'a0a1'],
+    depth: 18,
+    nodes: 0,
   });
 });
 
@@ -175,4 +179,84 @@ test('analyzeXiangqiSolverPly searches the standalone FEN at MultiPV 2 and gates
   assert.equal(dual.unique, false);
   assert.equal(dual.reason, 'near-tie');
   assert.equal(resets, 2);
+});
+
+test('interrupted MultiPV updates cannot assemble a false common-depth comparison', () => {
+  // Reduced from the real 1N5Zb 25M-node CC0 trace: depth 31 never completes.
+  const raw = [
+    'info depth 30 multipv 1 score cp 501 nodes 18561587 pv c7c0 e0e1',
+    'info depth 30 multipv 2 score cp 62 nodes 18561587 pv g7e7 d0e1',
+    'info depth 30 multipv 3 score cp 51 nodes 18561587 pv b9a7 b0a2',
+    'info depth 31 multipv 1 score cp 530 nodes 22709200 pv c7c0 d0e1',
+    'info depth 30 multipv 2 score cp 62 nodes 22709200 pv g7e7 d0e1',
+    'info depth 30 multipv 3 score cp 51 nodes 22709200 pv b9a7 b0a2',
+    'info depth 31 multipv 1 score cp 530 nodes 24453896 pv c7c0 d0e1',
+    'info depth 31 multipv 2 score cp 48 nodes 24453896 pv g7e7 d0e1',
+    'info depth 30 multipv 3 score cp 51 nodes 24453896 pv b9a7 b0a2',
+    'info depth 31 multipv 1 score cp 530 nodes 25000092 pv c7c0 d0e1',
+    'info depth 31 multipv 2 score cp 151 upperbound nodes 25000092 pv b9a7',
+    'info depth 31 multipv 3 score cp 48 nodes 25000092 pv g7e7 d0e1',
+    'bestmove c7c0 ponder d0e1',
+  ];
+  assert.deepEqual(
+    parseXiangqiScoredLines(raw, 3).map((line) => [line.depth, line.score.cp, line.pvUci[0]]),
+    [
+      [30, 501, 'c7c0'],
+      [30, 62, 'g7e7'],
+      [30, 51, 'b9a7'],
+    ],
+  );
+});
+
+test('a malformed duplicate-root snapshot cannot replace a valid comparison', () => {
+  const parsed = parseXiangqiScoredLines(
+    [
+      'info depth 20 multipv 1 score cp 500 pv a0a1',
+      'info depth 20 multipv 2 score cp 100 pv b0b1',
+      'info depth 21 multipv 1 score cp 600 pv a0a1',
+      'info depth 21 multipv 2 score cp 200 pv a0a1',
+    ],
+    2,
+  );
+  assert.deepEqual(
+    parsed.map((line) => [line.depth, line.pvUci[0]]),
+    [
+      [20, 'a0a1'],
+      [20, 'b0b1'],
+    ],
+  );
+});
+
+test('an exact best score from an incomplete same-depth update cannot refresh an older pair', () => {
+  const parsed = parseXiangqiScoredLines(
+    [
+      'info depth 20 multipv 1 score cp 600 pv a0a1',
+      'info depth 20 multipv 2 score cp 0 pv b0b1',
+      'info depth 20 multipv 1 score cp 650 pv a0a1',
+      'info depth 20 multipv 2 score cp 100 upperbound pv b0b1',
+    ],
+    2,
+  );
+  assert.deepEqual(
+    parsed.map((line) => line.score.cp),
+    [600, 0],
+  );
+});
+
+test('a requested runner-up stays missing when no complete pair is emitted', () => {
+  const raw = ['info depth 20 multipv 1 score cp 600 pv a0a1', 'bestmove a0a1'];
+  assert.deepEqual(parseXiangqiScoredLines(raw, 2), []);
+  assert.equal(parseXiangqiScoredLines(raw, 1)[0]?.score.cp, 600);
+});
+
+test('the inferred MultiPV width cannot shrink after an interrupted update', () => {
+  const raw = [
+    'info depth 20 multipv 1 score cp 500 pv a0a1',
+    'info depth 20 multipv 2 score cp 100 pv b0b1',
+    'info depth 21 multipv 1 score cp 600 pv a0a1',
+  ];
+  assert.deepEqual(
+    parseXiangqiScoredLines(raw).map((line) => line.score.cp),
+    [500, 100],
+  );
 });

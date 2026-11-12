@@ -1006,6 +1006,13 @@ export const EN_REVIEW = {
   'engine.gomokuWhiteInShort': 'W in {moves}',
   'engine.gomokuBlackWinsShort': 'B wins',
   'engine.gomokuWhiteWinsShort': 'W wins',
+  'engine.ruleShort': 'Perpetual',
+  'engine.ruleRedWins':
+    'Not a checkmate. The engine scores the coming repetition as a win for Red: perpetual check loses under Mistboard rules.',
+  'engine.ruleBlackWins':
+    'Not a checkmate. The engine scores the coming repetition as a win for Black: perpetual check loses under Mistboard rules.',
+  'engine.ruleRecordNote':
+    'Repeats into a perpetual-check loss under Mistboard rules, which this event did not apply. Not graded.',
   'engine.depth': 'Depth {depth}',
   'engine.nodes': '{nodes} nodes',
   'engine.thinking': 'thinking…',

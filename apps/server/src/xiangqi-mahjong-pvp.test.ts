@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 import {
   createXmjSetup,
+  type RoomTimeControl,
   XIANGQI_MAHJONG_SPEC_ID,
   XMJ_CLAIM_PAUSE_MS,
   type XmjMove,
@@ -423,6 +424,78 @@ test('xmj pvp: against the bot the human keeps east unless they named west', () 
   assert.equal(xmjPveEngineSeat(bot, 'east')?.seat, 'west');
   assert.equal(xmjPveEngineSeat(bot, 'west')?.seat, 'east');
   assert.equal(xmjPveEngineSeat(undefined, 'west'), undefined, 'PvP seats no bot');
+});
+
+// #1054: the Move order row decides who deals the first hand. A named seat
+// (First = east, Second = west) puts east on the first deal; Random draws it.
+function roomCreated(room: XmjRuntimeRoom) {
+  const [created] = room.events as XmjEvent[];
+  assert.equal(created?.type, 'room-created');
+  return created as { setup?: { firstDealer?: XmjSeat }; creatorPreference?: string };
+}
+
+function firstDealerOf(room: XmjRuntimeRoom): XmjSeat {
+  const setup = roomCreated(room).setup;
+  assert.ok(setup?.firstDealer, 'the room-created event records the first dealer');
+  return setup.firstDealer;
+}
+
+test('xmj move order: First seats the creator on the first deal, Second the opponent', async () => {
+  const bot = { engineId: XMJ_BOT_CLIENT_ID, seat: 'east' as XmjSeat };
+  const rooms = {
+    friendFirst: await createXiangqiMahjongRoom(FIVE_FIVE, 'east'),
+    friendSecond: await createXiangqiMahjongRoom(FIVE_FIVE, 'west'),
+    // The bot route passes the raw choice and seats the bot opposite it.
+    botFirst: await createXiangqiMahjongRoom(FIVE_FIVE, 'east', xmjPveEngineSeat(bot, 'east')),
+    botSecond: await createXiangqiMahjongRoom(FIVE_FIVE, 'west', xmjPveEngineSeat(bot, 'west')),
+  };
+  try {
+    for (const [name, created] of Object.entries(rooms)) {
+      assert.ok(created.ok, name);
+      if (!created.ok) return;
+      assert.equal(firstDealerOf(created.room), 'east', `${name}: east deals the first hand`);
+    }
+    if (!rooms.friendFirst.ok || !rooms.friendSecond.ok) return;
+    if (!rooms.botFirst.ok || !rooms.botSecond.ok) return;
+    // First: the creator sits east, the dealing seat.
+    assert.equal(roomCreated(rooms.friendFirst.room).creatorPreference, 'east');
+    assert.equal(rooms.botFirst.room.projection.seats.east, undefined, 'the human deals');
+    assert.equal(isXmjBotClientId(rooms.botFirst.room.projection.seats.west), true);
+    // Second: the creator sits west, and the opponent (friend or bot) deals.
+    assert.equal(roomCreated(rooms.friendSecond.room).creatorPreference, 'west');
+    assert.equal(isXmjBotClientId(rooms.botSecond.room.projection.seats.east), true);
+    assert.equal(rooms.botSecond.room.projection.seats.west, undefined);
+  } finally {
+    for (const created of Object.values(rooms)) {
+      if (created.ok) xiangqiMahjongRooms.delete(created.room.id);
+    }
+  }
+});
+
+test('xmj move order: Random, the lobby and Play again still draw the first dealer', async () => {
+  // Random passes no side, so the dealer is a draw: 40 rooms reach both seats
+  // (a false failure needs 40 identical draws, about 1 in 10^12).
+  const dealers = new Set<XmjSeat>();
+  for (let i = 0; i < 40 && dealers.size < 2; i += 1) {
+    const created = await createXiangqiMahjongRoom(FIVE_FIVE, 'random');
+    assert.ok(created.ok);
+    if (!created.ok) return;
+    dealers.add(firstDealerOf(created.room));
+    xiangqiMahjongRooms.delete(created.room.id);
+  }
+  assert.deepEqual([...dealers].sort(), ['east', 'west']);
+});
+
+test('xmj move order: correspondence opens with east dealing, chosen side or not', () => {
+  const daily = { initialMs: 0, incrementMs: 0, daysPerMove: 3 } as RoomTimeControl;
+  for (const sideChosen of [false, true]) {
+    const setup = tenant.rules.createSetup?.({ timeControl: daily, sideChosen }) as {
+      firstDealer: XmjSeat;
+      correspondence?: boolean;
+    };
+    assert.equal(setup.firstDealer, 'east');
+    assert.equal(setup.correspondence, true);
+  }
 });
 
 test('xmj pvp: guests and accounts without grants can sit at a launched table', async () => {

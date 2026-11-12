@@ -1,0 +1,27 @@
+/* The signed-out room invite (#1058): the variant's start board between the
+   "Alice invited you" heading and the sign-in line. */
+.room-invite-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(200px, 100%);
+  min-height: 80px;
+  margin: 6px 0;
+  border-radius: 6px;
+  background: var(--site-panel);
+  overflow: hidden;
+}
+
+.room-invite-board-label {
+  padding: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.room-invite-board-frame,
+.room-invite-board-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}

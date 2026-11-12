@@ -1,4 +1,5 @@
 import type { Color, PlayerView } from '@mistboard/game';
+import { finishedGameCorrespondenceOffer } from './correspondence-again.js';
 import { t } from './i18n/catalog.js';
 import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
@@ -52,6 +53,7 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
       seated,
       rematch,
       reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
+      correspondenceAgain: chessShellCorrespondenceAgain(),
     });
     return;
   }
@@ -173,6 +175,25 @@ export function buildPlayAgainRoomRequestBody(): PlayAgainRoomRequestBody | null
     // game silently started a 3+2 game (room 7bf718fa → b52b5221).
     ...(liveState.timeControl ? { timeControl: liveState.timeControl } : {}),
   };
+}
+
+// "Play again by correspondence" (#606) for a seated chess-shell player: White
+// moved first, so the swap gives a White player Black next time.
+function chessShellCorrespondenceAgain(): Parameters<
+  typeof renderPostGameActions
+>[1]['correspondenceAgain'] {
+  const seat = liveState.seat;
+  if (!isColor(seat)) return null;
+  const offer = finishedGameCorrespondenceOffer({
+    seated: true,
+    mode: liveState.roomMode,
+    gameSpecId: liveState.gameSpecId ?? undefined,
+    viewerHandle: liveState.seatProfiles[seat]?.handle,
+    opponent: liveState.seatProfiles[oppositeColor(seat)],
+    viewerMovedFirst: seat === 'white',
+    daysPerMove: liveState.timeControl?.daysPerMove,
+  });
+  return offer ? { offer, roomId: liveState.room } : null;
 }
 
 function postGameVariant(): string | undefined {

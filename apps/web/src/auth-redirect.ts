@@ -11,11 +11,24 @@ export function registerHrefForCurrentPage(locale: Locale = currentLocale()): st
   return authHrefForCurrentPage('register', locale);
 }
 
+// Sign in, then return to a given local path rather than the current URL: a
+// setup dialog names the deep link that reopens it with the same picks.
+export function loginHrefWithReferrer(
+  referrerPath: string,
+  locale: Locale = currentLocale(),
+): string {
+  return authHref('login', safeLocalPath(referrerPath), locale);
+}
+
 function authHrefForCurrentPage(tab: 'login' | 'register', locale: Locale): string {
-  const params = new URLSearchParams({ tab });
   const referrer = safeLocalPath(
     `${window.location.pathname}${window.location.search}${window.location.hash}`,
   );
+  return authHref(tab, referrer, locale);
+}
+
+function authHref(tab: 'login' | 'register', referrer: string | null, locale: Locale): string {
+  const params = new URLSearchParams({ tab });
   if (referrer && !referrer.startsWith('/account')) params.set(AUTH_REFERRER_PARAM, referrer);
   return localizedHref(`/account?${params.toString()}`, locale);
 }

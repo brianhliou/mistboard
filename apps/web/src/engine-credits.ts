@@ -5,7 +5,6 @@
 
 import { gomokuEnabled } from './feature-flags.js';
 import type { I18nKey } from './i18n/catalog.js';
-import type { Locale } from './i18n/locale.js';
 
 export type EngineAuthor = {
   /** Who: a person, a team, or "X by Y" when an engine has several parts. */
@@ -102,17 +101,10 @@ export function enabledEngineCredits(): readonly EngineCredit[] {
   return ENGINE_CREDITS.filter((credit) => credit.enabled?.() ?? true);
 }
 
-// Pikafish's code, home page and NNUE weights licence (no commercial use without
-// permission), the last in the reader's language where pikafish.com has one.
-// /source and /champions both credit them from here.
+// Pikafish's code and home page. Its own NNUE weights carry a licence with no
+// commercial use without permission, so since 2026-11-10 every Pikafish here
+// (bots, review, the browser board) runs the CC0 Fairy-Stockfish xiangqi net
+// instead. /source and /champions credit the engine and that net from here.
 export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
 export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
-const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
-  en: 'https://www.pikafish.com/en/list.html',
-  'zh-Hans': 'https://www.pikafish.com/list.html',
-  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
-};
-
-export function pikafishWeightsLicenseUrl(locale: Locale): string {
-  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
-}
+export const XIANGQI_CC0_NET_URL = 'https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE';

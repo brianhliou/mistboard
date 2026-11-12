@@ -26,8 +26,8 @@ import { pikafishArticle } from './pikafish.js';
 
 export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Pikafish on Mistboard': 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
-  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
-    'Phần mở đầu giờ chỉ cách chơi và phân tích với Pikafish ngay trên trình duyệt, kèm đường dẫn tải engine chính thức.',
+  "Corrected the analysis board's net and download size.":
+    'Đã sửa thông tin về mạng nơ-ron và dung lượng tải của bàn phân tích.',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     'Chơi cờ tướng với máy online miễn phí: Pikafish, không cần tải về',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
@@ -36,14 +36,14 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Người chơi cờ tướng muốn chơi với máy hoặc phân tích ván cờ bằng Pikafish.',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
     'Pikafish là engine cờ tướng mã nguồn mở phát triển từ Stockfish. Chơi với máy hoặc phân tích thế cờ ngay trên trình duyệt, miễn phí và không cần tài khoản.',
-  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
-    'Muốn tải engine về máy? Xem các bản phát hành, mã nguồn và hướng dẫn cài đặt tại [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish). Phân tích trên trình duyệt tải mạng 51 MB ở lần dùng đầu tiên.',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.':
+    'Muốn tải engine về máy? Xem các bản phát hành, mã nguồn và hướng dẫn cài đặt tại [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish). Phân tích trên trình duyệt tải mạng 11 MB ở lần dùng đầu tiên.',
   'Analyze with Pikafish':
     'Phân tích bằng Pikafish',
   'Can I analyze with Pikafish online?':
     'Có thể phân tích bằng Pikafish online không?',
-  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
-    'Có. Mở bàn phân tích, nhập thế cờ hoặc nhập ván đấu rồi bật engine. Pikafish chạy trong trình duyệt; mạng 51 MB được tải ở lần dùng đầu tiên.',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 11 MB net loads on first use.':
+    'Có. Mở bàn phân tích, nhập thế cờ hoặc nhập ván đấu rồi bật engine. Pikafish chạy trong trình duyệt; mạng 11 MB được tải ở lần dùng đầu tiên.',
   'Play Pikafish': 'Chơi với Pikafish',
   'Play Pikafish at jieqi': 'Chơi cờ úp với Pikafish',
   'Play against Pikafish': 'Chơi với Pikafish',
@@ -51,8 +51,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Một cú nhấp là bắt đầu ván. Bạn được chia một bên, một đồng hồ, và Pikafish ngồi phía bên kia, tính ba triệu thế cờ cho mỗi nước.',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     'Ba triệu thế cờ mỗi nước là rất mạnh. Bên dưới Pikafish có tám cấp độ máy Fairy-Stockfish: cấp 1 dành cho người mới học cách đi quân tuần này, cấp 8 gần với đỉnh. Mỗi cấp có một chỉ số sức mạnh đo được qua các ván đấu với nhau, lấy mốc 1500 là một engine chỉ đi nước hợp lệ ngẫu nhiên.',
-  'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':
-    'Đo vào tháng 9 năm 2026 qua các ván máy đấu máy trên trang. Pikafish tính ba triệu thế cờ mỗi nước.',
+  'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move, rated before it moved to the CC0 net in November.':
+    'Đo vào tháng 9 năm 2026 qua các ván máy đấu máy trên trang. Pikafish tính ba triệu thế cờ mỗi nước, được xếp hạng trước khi chuyển sang mạng CC0 vào tháng 11.',
   'Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
     'Chọn một cấp trong [menu chơi](/?play=computer&gameSpecId=xiangqi), thắng vài ván ở đó, rồi lên cấp tiếp theo.',
   // The ladder table: its cells sit outside the readable fields the coverage
@@ -71,8 +71,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Mọi ván cờ tướng đã xong trên trang đều có thể gửi đi phân tích. Pikafish chạy qua ván đó trên máy chủ, và danh sách nước đi cho thấy đánh giá thay đổi ở đâu, engine muốn đi nước nào thay vào đó, và nước nào làm thua ván. Kiểu xem lại sau ván mà người chơi cờ vua đã quen, nay cho cờ tướng.',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
     'Với cờ lật, cờ úp và cờ thú lật, phần phân tích làm một việc mà cờ vua không cần: nó định giá từng lần lật quân, để bạn thấy phần mình chọn tách khỏi phần mình lật trúng. [Tách kỹ năng khỏi may rủi](/blog/skill-vs-luck) giải thích cách làm.',
-  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
-    '[Bàn phân tích](/analysis/xiangqi) dành cho thế cờ bạn tự xếp. Nó chạy Pikafish ngay trong trình duyệt ở sức mạnh tối đa, với mạng nơ-ron riêng, nên không có gì bạn phân tích rời khỏi máy của bạn. Mạng nặng 51 MB và chỉ tải một lần.',
+  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser, so nothing you analyze leaves your machine. The net is 11 MB and downloads once.':
+    '[Bàn phân tích](/analysis/xiangqi) dành cho thế cờ bạn tự xếp. Nó chạy Pikafish ngay trong trình duyệt, nên không có gì bạn phân tích rời khỏi máy của bạn. Mạng nặng 11 MB và chỉ tải một lần.',
   Questions: 'Câu hỏi thường gặp',
   'Can I play Pikafish online?': 'Có thể chơi cờ tướng với máy online không?',
   'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
@@ -82,8 +82,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Có. Chơi cờ, tám cấp độ, cờ úp, xem lại ván đấu và bàn phân tích đều miễn phí. Tài khoản là không bắt buộc.',
   'Where can I download Pikafish?':
     'Tải Pikafish ở đâu?',
-  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
-    'Xem bản phát hành, mã nguồn và hướng dẫn cài đặt engine tại dự án Pikafish chính thức. Để chơi hoặc phân tích trên Mistboard, chỉ cần mở trình duyệt, không phải cài ứng dụng.',
+  "For the engine itself, use the official Pikafish project for releases, source code and setup instructions. The download includes Pikafish's own net, which is stronger than the free CC0 net Mistboard runs. To play or analyze on Mistboard, open your browser without installing an app.":
+    'Xem bản phát hành, mã nguồn và hướng dẫn cài đặt engine tại dự án Pikafish chính thức. Bản tải có kèm mạng riêng của Pikafish, mạnh hơn mạng CC0 miễn phí mà Mistboard dùng. Để chơi hoặc phân tích trên Mistboard, chỉ cần mở trình duyệt, không phải cài ứng dụng.',
   'How strong is it?': 'Máy mạnh đến mức nào?',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     'Pikafish tính ba triệu thế cờ mỗi nước, khoảng bốn giây, trên máy chủ. Mức đó vượt xa mọi người chơi. Các cấp độ bên dưới đi xuống tới mức người mới chơi cũng thắng được.',

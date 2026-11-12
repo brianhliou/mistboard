@@ -125,6 +125,9 @@ export type FFQBanqiPlayerView = {
   // Retained for snapshot compatibility; FFQ has no private captures.
   unknownCaptured: Record<BanqiColor, 0>;
   legalMoves: FFQBanqiMove[];
+  // Public-geometry chase restrictions, only on the seat to move's own view
+  // and only when non-empty. Covered identities never affect this list.
+  forbiddenMoves?: FFQBanqiMove[];
   lastMove?: FFQBanqiMove;
 };
 
@@ -294,6 +297,17 @@ export function isFFQBanqiLegalMove(state: FFQBanqiState, move: FFQBanqiMove): b
   );
 }
 
+/** Moves legal without the mover's chase count, but forbidden at its real count. */
+export function getFFQBanqiForbiddenChaseMoves(state: FFQBanqiState): FFQBanqiMove[] {
+  const seat = ffqBanqiSeatToMove(state);
+  if (state.chaseCounts[seat] < FFQ_BANQI_CHASE_LIMIT) return [];
+  const legal = new Set(getFFQBanqiLegalMoves(state).map((move) => `${move.from}:${move.to}`));
+  return getFFQBanqiLegalMoves({
+    ...state,
+    chaseCounts: { ...state.chaseCounts, [seat]: 0 },
+  }).filter((move) => !legal.has(`${move.from}:${move.to}`));
+}
+
 export function getFFQBanqiResult(state: FFQBanqiState): FFQBanqiStatus {
   if (state.status.type !== 'playing') return state.status;
   if (state.hp.red <= 0 || state.hp.black <= 0)
@@ -379,6 +393,8 @@ export function getFFQBanqiPlayerView(
   const pool = { red: { ...BANQI_PIECE_COUNTS }, black: { ...BANQI_PIECE_COUNTS } };
   for (const piece of board) if (piece && !piece.faceDown) pool[piece.color][piece.role] -= 1;
   for (const capture of captured) pool[capture.owner][capture.role] -= 1;
+  const forbidden =
+    perspective === ffqBanqiSeatToMove(state) ? getFFQBanqiForbiddenChaseMoves(state) : [];
   return {
     id: state.id,
     perspective,
@@ -393,6 +409,7 @@ export function getFFQBanqiPlayerView(
     noProgressClock: state.noProgressClock,
     chaseCounts: { ...state.chaseCounts },
     legalMoves: perspective === ffqBanqiSeatToMove(state) ? getFFQBanqiLegalMoves(state) : [],
+    ...(forbidden.length > 0 ? { forbiddenMoves: forbidden } : {}),
     ...(state.lastMove ? { lastMove: { ...state.lastMove } } : {}),
   };
 }

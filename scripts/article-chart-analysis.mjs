@@ -4,13 +4,16 @@
 // (apps/web/src/article-replay-analysis.ts reads the files).
 //
 //   npm run build --workspace @mistboard/server     # the analysis code runs from dist
-//   MISTBOARD_PIKAFISH_XIANGQI_PATH=~/projects/tools/pikafish-6a59ee2f/src/pikafish \
-//   MISTBOARD_PIKAFISH_XIANGQI_NET=~/projects/tools/pikafish-6a59ee2f/src/pikafish.nnue \
-//     node scripts/article-chart-analysis.mjs [--dry-run] [--concurrency 4]
+//   node scripts/article-chart-analysis.mjs [--dry-run] [--concurrency 4]
+//
+// The engine is the server's: upstream Pikafish at the pikafish.ref pin plus
+// pikafish-cc0-net.patch on the Fairy-Stockfish CC0 net, found by the server
+// resolver (the local patched checkout, or MISTBOARD_PIKAFISH_XIANGQI_PATH/_NET).
 //
 // One series per game, from the SAME function the site's postgame route and the
 // archive sweep cache (analyzeXiangqiPostgame: Pikafish at the site's node
-// budget, engineId pikafish-xiangqi-analysis@5), on the pikafish.ref pin. Before
+// budget, engineId pikafish-xiangqi-analysis@6). Charts written before #989 are
+// @5 series from the old net and are not regenerated here. Before
 // running the engine it looks for that exact series already on disk: an
 // annotate-game.mjs --json run at the site budget carries it as `site`
 // (docs-private/players/*/annot1m/<dpxq key>.json), matched to the article

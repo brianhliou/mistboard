@@ -639,9 +639,20 @@ export function trackCorrespondenceSeekPosted(props: {
   gameSpecId: string;
   daysPerMove: number;
   kind: CorrespondenceSeekKind;
-  surface: 'correspondence' | 'lobby' | 'profile' | 'home-button';
+  surface: 'correspondence' | 'lobby' | 'profile' | 'home-button' | 'postgame' | 'review';
 }): void {
   track('correspondence_seek_posted', props);
+}
+
+// "Play again by correspondence" offered after a finished game (#606): the first
+// step of its funnel, once per game per page. Sent is correspondence_seek_posted
+// with surface 'postgame' or 'review'; accepted is the poster's game_started
+// with entry_source 'postgame-correspondence' or 'review-correspondence'.
+export function trackCorrespondenceAgainShown(props: {
+  gameSpecId: string;
+  surface: 'postgame' | 'review';
+}): void {
+  track('correspondence_again_shown', props);
 }
 
 export function trackCorrespondenceSeekAccepted(props: {

@@ -20,6 +20,10 @@ import { spawn } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../apps/server/src/xiangqi-pikafish-paths.ts';
+import {
   applyMove,
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
@@ -43,12 +47,10 @@ if (!gamesDir || !annoDir) {
   process.exit(1);
 }
 
-const bin = process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
-const net = process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
-if (!bin || !net) {
-  console.error('set MISTBOARD_PIKAFISH_XIANGQI_PATH and MISTBOARD_PIKAFISH_XIANGQI_NET');
-  process.exit(1);
-}
+// The server's engine: the patched pikafish.ref build on the CC0 net (#989); the
+// two MISTBOARD_PIKAFISH_XIANGQI_* env vars still override it.
+const bin = pikafishXiangqiPath();
+const net = pikafishXiangqiNetPath(bin);
 
 // --- minimal persistent UCI driver ------------------------------------------
 // Skips `lowerbound`/`upperbound` rows: those are aborted iterations, not

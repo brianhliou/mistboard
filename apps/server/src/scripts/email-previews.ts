@@ -1,5 +1,6 @@
 // Renders every player email (correspondence start, deadline warning, daily
-// digest, and the account codes) with sample data to HTML and text files, plus
+// digest, challenge, joiner start, Play the host start and receipt, game over,
+// and the account codes) with sample data to HTML and text files, plus
 // an index.html linking them, for looking at the templates in a browser.
 //
 //   npm run email:preview [-- <out-dir>]   (default: a folder in the OS temp dir)
@@ -12,8 +13,13 @@ import { resolve } from 'node:path';
 import { accountCodeEmail } from '../account-session.js';
 import { escapeHtml } from '../email-layout.js';
 import {
+  correspondenceChallengeEmail,
   correspondenceDeadlineEmail,
   correspondenceDigestEmail,
+  correspondenceGameOverEmail,
+  correspondenceHostReceiptEmail,
+  correspondenceHostStartEmail,
+  correspondenceJoinedStartEmail,
   correspondenceStartEmail,
   type EmailLocale,
   type PlayerEmail,
@@ -108,6 +114,90 @@ for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as EmailLocale[]) {
           },
         ],
         now,
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-challenge`,
+      email: correspondenceChallengeEmail(
+        {
+          seekId: 'cs_6k2m9p',
+          gameSpecId: 'xiangqi',
+          challengerName: 'alice',
+          challengerHandle: 'alice',
+          daysPerMove: 3,
+          rated: true,
+          openDays: 7,
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-joined-start`,
+      email: correspondenceJoinedStartEmail(
+        {
+          roomId: 'xq_7h1d3s',
+          gameSpecId: 'xiangqi',
+          opponentName: 'alice',
+          recipientOnMove: true,
+          daysPerMove: 3,
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-host-start`,
+      email: correspondenceHostStartEmail(
+        {
+          roomId: 'xq_7h1d3s',
+          gameSpecId: 'xiangqi',
+          playerName: 'bob',
+          playerHandle: 'bob',
+          hostOnMove: false,
+          daysPerMove: 3,
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-host-receipt`,
+      email: correspondenceHostReceiptEmail(
+        {
+          roomId: 'xq_7h1d3s',
+          gameSpecId: 'xiangqi',
+          hostName: 'alice',
+          playerOnMove: true,
+          daysPerMove: 3,
+          turnDigest: true,
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-game-over-won`,
+      email: correspondenceGameOverEmail(
+        {
+          roomId: 'xq_7h1d3s',
+          gameSpecId: 'xiangqi',
+          opponentName: 'alice',
+          outcome: 'won',
+          termination: 'checkmate',
+          reviewPath: '/xiangqi/game/xq_7h1d3s',
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-game-over-cancelled`,
+      email: correspondenceGameOverEmail(
+        {
+          roomId: 'xq_7h1d3s',
+          gameSpecId: 'xiangqi',
+          opponentName: 'alice',
+          outcome: 'cancelled',
+          termination: null,
+          reviewPath: null,
+        },
         locale,
       ),
     },

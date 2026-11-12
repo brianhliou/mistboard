@@ -1,11 +1,17 @@
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  type CorrespondenceAgainInput,
   canOfferPostGameChallenge,
+  correspondenceAgainOffer,
+  correspondenceAgainRequestBody,
+  finishedGameDaysPerMove,
+  finishedGameViewerSeat,
   type PostGameChallengeInput,
   targetedChallengeRequestBody,
 } from './challenge-model.js';
@@ -156,5 +162,140 @@ describe('targeted correspondence challenge payload', () => {
         error: 'correspondence_unsupported_spec',
       });
     }
+  });
+});
+
+// #606: "Play again by correspondence" after a finished game.
+describe('play again by correspondence', () => {
+  const finished: CorrespondenceAgainInput = {
+    ...game,
+    viewerMovedFirst: true,
+    daysPerMove: null,
+  };
+
+  it('offers a game between two accounts in every correspondence variant', () => {
+    for (const gameSpecId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+      expect(correspondenceAgainOffer({ ...finished, gameSpecId }), gameSpecId).toEqual({
+        gameSpecId,
+        opponentHandle: 'bob',
+        preferredColor: 'second',
+        daysPerMove: 1,
+      });
+    }
+  });
+
+  it.each<[string, Partial<CorrespondenceAgainInput>]>([
+    ['a bot opponent', { mode: 'pve', opponent: { handle: 'misty', botId: 'misty-l3' } }],
+    ['a bot seat in a pvp-shaped game', { opponent: { handle: 'misty', botId: 'misty-l3' } }],
+    ['a guest opponent', { opponent: { handle: undefined } }],
+    ['a guest viewer', { viewerHandle: null }],
+    ['a spectator', { seated: false }],
+    ['a variant without correspondence', { gameSpecId: XIANGQI_MAHJONG_SPEC_ID }],
+    ['an unknown variant', { gameSpecId: 'chess' }],
+    ['correspondence switched off', { correspondenceEnabled: false }],
+    ['a game still running', { finished: false }],
+    ['an unknown move order', { viewerMovedFirst: null }],
+  ])('offers nothing for %s', (_label, patch) => {
+    expect(correspondenceAgainOffer({ ...finished, ...patch })).toBeNull();
+  });
+
+  it('swaps the side: the first mover is offered second, the second mover first', () => {
+    expect(correspondenceAgainOffer(finished)?.preferredColor).toBe('second');
+    expect(correspondenceAgainOffer({ ...finished, viewerMovedFirst: false })?.preferredColor).toBe(
+      'first',
+    );
+  });
+
+  it("keeps a correspondence game's pace and gives a live game one day", () => {
+    for (const days of DAYS_PER_MOVE_OPTIONS) {
+      expect(correspondenceAgainOffer({ ...finished, daysPerMove: days })?.daysPerMove).toBe(days);
+    }
+    // A correspondence room's mode is not 'correspondence' on the tenant stack;
+    // its days per move is what makes it one.
+    expect(
+      correspondenceAgainOffer({ ...finished, mode: 'unknown', daysPerMove: 3 })?.daysPerMove,
+    ).toBe(3);
+    expect(correspondenceAgainOffer({ ...finished, daysPerMove: 4 })?.daysPerMove).toBe(1);
+    expect(correspondenceAgainOffer({ ...finished, daysPerMove: undefined })?.daysPerMove).toBe(1);
+  });
+
+  it('posts a casual, directed seek with target, variant, swapped side and pace', () => {
+    const offer = correspondenceAgainOffer({
+      ...finished,
+      gameSpecId: 'xiangqi',
+      viewerMovedFirst: false,
+      opponent: { handle: '@Bob' },
+      daysPerMove: 7,
+    });
+    expect(offer).not.toBeNull();
+    const body = correspondenceAgainRequestBody(offer!);
+    expect(JSON.parse(JSON.stringify(body))).toEqual({
+      targetHandle: 'Bob',
+      gameSpecId: 'xiangqi',
+      daysPerMove: 7,
+      preferredColor: 'first',
+    });
+    expect(body).not.toHaveProperty('rated');
+  });
+
+  it('offers a restricted playtest variant only while the menu offers it', () => {
+    for (const gameSpecId of CORRESPONDENCE_RESTRICTED_SPEC_IDS) {
+      const input = { ...finished, gameSpecId };
+      expect(correspondenceAgainOffer(input), gameSpecId).toBeNull();
+      const offer = correspondenceAgainOffer(input, () => true);
+      expect(offer?.gameSpecId).toBe(gameSpecId);
+      expect(correspondenceAgainRequestBody(offer!, () => true)).toMatchObject({ gameSpecId });
+      expect(correspondenceAgainRequestBody(offer!, () => false)).toBeNull();
+    }
+  });
+});
+
+describe('finished game seats on the review page', () => {
+  const players = [
+    { color: 'red', handle: 'alice' },
+    { color: 'black', handle: 'bob' },
+  ];
+
+  it('finds the viewer by handle and reads red or white as first', () => {
+    expect(finishedGameViewerSeat(players, '@ALICE')).toMatchObject({
+      opponent: { handle: 'bob' },
+      viewerMovedFirst: true,
+    });
+    expect(finishedGameViewerSeat(players, 'bob')?.viewerMovedFirst).toBe(false);
+    expect(
+      finishedGameViewerSeat(
+        [
+          { color: 'white', handle: 'alice' },
+          { color: 'black', handle: 'bob' },
+        ],
+        'alice',
+      )?.viewerMovedFirst,
+    ).toBe(true);
+  });
+
+  it('uses the named first mover when the page gives one (Gomoku)', () => {
+    const gomoku = [
+      { color: 'black', handle: 'alice' },
+      { color: 'white', handle: 'bob' },
+    ];
+    expect(finishedGameViewerSeat(gomoku, 'alice', 'black')?.viewerMovedFirst).toBe(true);
+    expect(finishedGameViewerSeat(gomoku, 'alice', 'white')?.viewerMovedFirst).toBe(false);
+  });
+
+  it('returns nothing for a spectator, a signed-out reader or a bot seat', () => {
+    expect(finishedGameViewerSeat(players, 'carol')).toBeNull();
+    expect(finishedGameViewerSeat(players, null)).toBeNull();
+    expect(finishedGameViewerSeat([players[0]!], 'alice')).toBeNull();
+    expect(
+      finishedGameViewerSeat([{ color: 'red', handle: 'alice', botId: 'x' }, players[1]!], 'alice'),
+    ).toBeNull();
+  });
+
+  it('reads days per move off the time control or the persisted clock', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    expect(finishedGameDaysPerMove({ timeControl: { daysPerMove: 5 } })).toBe(5);
+    expect(finishedGameDaysPerMove({ initialMs: 3 * DAY, incrementMs: 0 })).toBe(3);
+    expect(finishedGameDaysPerMove({ initialMs: 300_000, incrementMs: 3_000 })).toBeNull();
+    expect(finishedGameDaysPerMove({})).toBeNull();
   });
 });

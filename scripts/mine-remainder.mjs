@@ -224,12 +224,13 @@ function preflight() {
   }
   log('  modal db secret      present');
 
-  const releaseDir =
-    process.env.MISTBOARD_MODAL_PIKAFISH_DIR ??
-    join(REPO_ROOT, '..', 'tools', 'pikafish-official-2026-01-02');
+  // The Modal image builds the server's engine itself (#989): upstream at the
+  // pikafish.ref pin plus pikafish-cc0-net.patch, with the CC0 net that
+  // engine-assets.sh pins. No local release directory is read.
   for (const [label, path] of [
-    ['pikafish linux build', join(releaseDir, 'Linux', 'pikafish-sse41-popcnt')],
-    ['pikafish network', join(releaseDir, 'pikafish.nnue')],
+    ['pikafish pin', join(REPO_ROOT, 'pikafish.ref')],
+    ['pikafish cc0 patch', join(REPO_ROOT, 'pikafish-cc0-net.patch')],
+    ['engine recipe', join(REPO_ROOT, 'scripts', 'engine-assets.sh')],
   ]) {
     if (!existsSync(path)) fail(`Missing ${label}: ${path}`);
     log(`  ${label.padEnd(21)}present`);
@@ -317,7 +318,7 @@ function generateManifest(corpus, existingSeed) {
     manifestFileSha256: fileSha256,
     manifestContentSha256: summary.manifestSha256,
     selected: summary.coverage.selected,
-    profileVersion: `${seed}-modal-linux-sse41`,
+    profileVersion: `${seed}-modal-linux-sse41-cc0`,
   };
 }
 

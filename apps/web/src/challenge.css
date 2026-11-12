@@ -125,3 +125,9 @@
   color: #c0392b;
   font-size: 14px;
 }
+
+.challenge-target-status {
+  margin: 0 0 8px;
+  color: var(--site-muted);
+  font-size: 14px;
+}

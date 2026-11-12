@@ -653,7 +653,11 @@ describe('site shell phone menu', () => {
           a.getAttribute('href'),
         ),
       );
-      const missing = [...barHrefs].filter((href) => !menuHrefs.has(href));
+      // The homepage is the Play title's href; on phones the logo carries it,
+      // since the Play menu's first item opens the create-game dialog instead.
+      const brandHref = document.querySelector('.site-nav-brand')?.getAttribute('href');
+      expect(brandHref).toBe('/');
+      const missing = [...barHrefs].filter((href) => !menuHrefs.has(href) && href !== brandHref);
       expect(missing).toEqual([]);
     } finally {
       setResolvedAdmin(undefined);
@@ -681,7 +685,7 @@ describe('site shell phone menu', () => {
       [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
         a.getAttribute('href'),
       ),
-    ).toEqual(['/', '/correspondence']);
+    ).toEqual(['/?play=lobby', '/correspondence']);
     expect(
       [...(sections[1]?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href')),
     ).toEqual([

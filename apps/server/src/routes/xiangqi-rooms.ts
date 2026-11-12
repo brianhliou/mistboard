@@ -8,7 +8,7 @@ import {
 
 // The slice of server context this route needs; the registry entry binds the
 // tenant's room factory in (xiangqi-registration.ts). Rated PvP is
-// account-gated (#151 rated flip); PvE is served by mainline Pikafish and
+// account-gated (#151 rated flip); PvE is served by Pikafish and
 // stays casual.
 export type XiangqiCreateContext = {
   databaseRequired: boolean;

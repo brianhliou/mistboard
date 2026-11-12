@@ -635,6 +635,38 @@ test('a correspondence setup always deals east first and says so in the state', 
   assert.ok(!isXmjRoomSetup({ ...createXmjSetup(seeded(1)), correspondence: 'yes' }));
 });
 
+// ---- Move order (who deals first) ----------------------------------------------
+
+test('a chosen side deals east first, whatever the draw would have said', () => {
+  for (const draw of [0.1, 0.9]) {
+    const setup = createXmjSetup(() => draw, { sideChosen: true });
+    assert.equal(setup.firstDealer, 'east');
+    assert.equal(setup.correspondence, undefined, 'a live setup, not a correspondence one');
+    assert.ok(isXmjRoomSetup(setup));
+    assert.deepEqual(createXmjRoomState(setup).status, { type: 'playing', turn: 'east' });
+  }
+  // The walls are the same shuffle with or without the choice.
+  assert.deepEqual(
+    createXmjSetup(seeded(5), { sideChosen: true }).walls,
+    createXmjSetup(seeded(5)).walls,
+  );
+});
+
+test('Random still draws the first dealer: both outcomes are reachable', () => {
+  assert.equal(createXmjSetup(() => 0.1).firstDealer, 'east');
+  assert.equal(createXmjSetup(() => 0.9).firstDealer, 'west');
+  assert.equal(createXmjSetup(() => 0.1, { sideChosen: false }).firstDealer, 'east');
+  assert.equal(createXmjSetup(() => 0.9, { sideChosen: false }).firstDealer, 'west');
+});
+
+test('correspondence opens with east dealing even when no side was chosen', () => {
+  assert.equal(createXmjSetup(() => 0.9, { correspondence: true }).firstDealer, 'east');
+  assert.equal(
+    createXmjSetup(() => 0.9, { correspondence: true, sideChosen: true }).firstDealer,
+    'east',
+  );
+});
+
 test('correspondence: a discard opens the claimant’s turn with no window, and it owns the clock', () => {
   for (const claimant of [NOTHING, CAN_CHOW]) {
     const state = afterCorrespondenceDiscard(claimant);

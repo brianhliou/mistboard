@@ -31,6 +31,11 @@ export type ChallengeView = {
   expired: boolean;
   // Rated correspondence (2026-10-02); absent reads as casual.
   rated?: boolean;
+  // A directed challenge, to its creator only (#1057): who it is aimed at and
+  // whether their email switch let us tell them. Never why it is off.
+  targetName?: string | null;
+  targetHandle?: string | null;
+  targetEmailed?: boolean;
 };
 
 /**
@@ -68,14 +73,13 @@ export async function mountChallengeAccept(root: HTMLElement, challengeId: strin
     return;
   }
   if (res.status === 401) {
-    const notice = buildNotice(t('challenge.signInToPlay'), t('challenge.signInToPlayBody'));
-    const signIn = document.createElement('a');
-    signIn.className = 'challenge-btn';
-    // Return here after signing in so the link converts a click into a game.
-    signIn.href = seekSignInHref(challengeId);
-    signIn.textContent = t('challenge.signIn');
-    notice.append(signIn);
-    shell(notice);
+    // A link challenge's 401 carries who, what and the pace (#1058); a directed
+    // one, or anything unreadable, keeps the plain sign-in notice.
+    const body = (await res.json().catch(() => null)) as { preview?: unknown } | null;
+    const preview = parseChallengePreview(body?.preview);
+    shell(
+      preview ? buildSignedOutChallengeCard(preview, challengeId) : buildSignInNotice(challengeId),
+    );
     return;
   }
   if (res.status === 404) {
@@ -94,6 +98,81 @@ export async function mountChallengeAccept(root: HTMLElement, challengeId: strin
   }
 
   shell(buildChallengeCard(view));
+}
+
+/** What the server tells a signed-out visitor about a link challenge (#1058). */
+export type ChallengePreview = Pick<
+  ChallengeView,
+  | 'gameSpecId'
+  | 'daysPerMove'
+  | 'preferredColor'
+  | 'visibility'
+  | 'challengerName'
+  | 'challengerHandle'
+  | 'rated'
+>;
+
+export function parseChallengePreview(value: unknown): ChallengePreview | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.gameSpecId !== 'string' || typeof v.daysPerMove !== 'number') return null;
+  const order = v.preferredColor;
+  return {
+    gameSpecId: v.gameSpecId,
+    daysPerMove: v.daysPerMove,
+    preferredColor: order === 'first' || order === 'second' ? order : 'random',
+    visibility: v.visibility === 'public' ? 'public' : 'private',
+    challengerName: typeof v.challengerName === 'string' ? v.challengerName : null,
+    challengerHandle: typeof v.challengerHandle === 'string' ? v.challengerHandle : null,
+    rated: v.rated === true,
+  };
+}
+
+function buildSignInButton(challengeId: string, label = t('challenge.signIn')): HTMLElement {
+  const signIn = document.createElement('a');
+  signIn.className = 'challenge-btn';
+  // Return here after signing in so the link converts a click into a game.
+  signIn.href = seekSignInHref(challengeId);
+  signIn.textContent = label;
+  return signIn;
+}
+
+function buildSignInNotice(challengeId: string): HTMLElement {
+  const notice = buildNotice(t('challenge.signInToPlay'), t('challenge.signInToPlayBody'));
+  notice.append(buildSignInButton(challengeId));
+  return notice;
+}
+
+/**
+ * The /challenge page for a signed-out visitor: the same board, heading and
+ * terms a signed-in reader sees, then "Sign in to play" in place of Accept.
+ * The board is the variant's start position from the first side, so a fog
+ * variant keeps its fogged tile (start-position-board.ts).
+ */
+export function buildSignedOutChallengeCard(
+  preview: ChallengePreview,
+  challengeId: string,
+): HTMLElement {
+  const view: ChallengeView = {
+    ...preview,
+    id: challengeId,
+    isMine: false,
+    canAccept: false,
+    canDecline: false,
+    expired: false,
+  };
+  const card = document.createElement('section');
+  card.className = 'challenge-card';
+  card.dataset.visibility = view.visibility;
+  const body = document.createElement('div');
+  body.className = 'challenge-body';
+  card.append(buildBoard(view), body);
+  body.append(buildHeading(view), buildTerms(view));
+  const actions = document.createElement('div');
+  actions.className = 'challenge-actions';
+  actions.append(buildSignInButton(challengeId, t('challenge.signInToPlay')));
+  body.append(actions);
+  return card;
 }
 
 // A 404 says nothing about what the link was (a stranger to a private
@@ -209,18 +288,27 @@ function buildBoard(view: ChallengeView): HTMLElement {
   return board;
 }
 
-export function buildChallengeCard(view: ChallengeView): HTMLElement {
-  const isPublic = view.visibility === 'public';
-  const card = document.createElement('section');
-  card.className = 'challenge-card';
-  card.dataset.visibility = view.visibility;
+// "We emailed @bob" above the link of a directed challenge, or "Send them this
+// link" when the target's email is off; a plain link challenge has no target.
+function buildTargetStatus(view: ChallengeView): HTMLElement | null {
+  if (typeof view.targetEmailed !== 'boolean') return null;
+  const line = document.createElement('p');
+  line.className = 'challenge-target-status';
+  const name = view.targetHandle ? `@${view.targetHandle}` : view.targetName;
+  if (view.targetEmailed && name) {
+    appendWithNameNode(
+      line,
+      (token) => t('challenge.targetEmailed', { name: token }),
+      playerNameEl(name, profileTargetFor({ handle: view.targetHandle }), 'challenge-target-name'),
+    );
+  } else {
+    line.textContent = t('challenge.targetNotEmailed');
+  }
+  return line;
+}
 
-  const body = document.createElement('div');
-  body.className = 'challenge-body';
-  card.append(buildBoard(view), body);
-
-  body.append(buildHeading(view));
-
+// "Xiangqi · 3 days per move · You play Black", plus Rated when it is.
+function buildTerms(view: ChallengeView): HTMLElement {
   const detail = document.createElement('p');
   detail.className = 'challenge-subhead';
   const terms = t('challenge.detail', {
@@ -233,7 +321,20 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
   });
   // Accepting a rated challenge plays for rating: say so before the button, not after.
   detail.textContent = view.rated === true ? `${terms} · ${t('play.rated')}` : terms;
-  body.append(detail);
+  return detail;
+}
+
+export function buildChallengeCard(view: ChallengeView): HTMLElement {
+  const isPublic = view.visibility === 'public';
+  const card = document.createElement('section');
+  card.className = 'challenge-card';
+  card.dataset.visibility = view.visibility;
+
+  const body = document.createElement('div');
+  body.className = 'challenge-body';
+  card.append(buildBoard(view), body);
+
+  body.append(buildHeading(view), buildTerms(view));
 
   if (view.expired) {
     const note = document.createElement('p');
@@ -289,6 +390,8 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     share.readOnly = true;
     share.value = `${location.origin}/challenge/${view.id}`;
     share.addEventListener('focus', () => share.select());
+    const target = buildTargetStatus(view);
+    if (target) body.append(target);
     body.append(share);
 
     const copy = document.createElement('button');

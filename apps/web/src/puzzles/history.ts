@@ -1,5 +1,10 @@
-import { renderXiangqiOgBoardSvg } from '@mistboard/board-render';
-import { coordOf, parseJungleFen, parseStandardXiangqiFen, puzzleShortCode } from '@mistboard/game';
+import {
+  getStandardXiangqiPlayerView,
+  parseJungleFen,
+  parseStandardXiangqiFen,
+  puzzleShortCode,
+} from '@mistboard/game';
+import '../live-xiangqi.css';
 import './history.css';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
@@ -7,9 +12,8 @@ import { currentLocale, LOCALE_META } from '../i18n/locale.js';
 import { renderJungleBoardSvg } from '../jungle-render.js';
 import type { PuzzleHistoryEntry } from '../profile-puzzles.js';
 import { buildNav } from '../site-shell.js';
-import { xiangqiDisplayFile, xiangqiDisplayRow } from '../xiangqi-board-geometry.js';
-import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
-import { renderXiangqiPiece } from '../xiangqi-pieces.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { renderXiangqiBoardSvg } from '../xiangqi-board.js';
 import { renderPuzzleMenuLayout } from './puzzle-menu.js';
 
 type HistoryEntry = PuzzleHistoryEntry & {
@@ -59,43 +63,12 @@ function thumbnail(entry: HistoryEntry): HTMLElement {
     if (entry.variant === 'xiangqi') {
       const parsed = parseStandardXiangqiFen(entry.fen);
       if (parsed.ok) {
-        // The board's lines come from the shared OG renderer; the pieces are
-        // the reader's own piece set, placed on the same points.
-        const height = 305;
-        const cell = height / (9 + 2 * 0.58);
-        const margin = 0.58 * cell;
-        const offsetX = 137.5 - (2 * margin + 8 * cell) / 2;
-        const size = (0.98 / 0.948) * cell;
-        const pieces = Object.entries(parsed.state.board).flatMap(([square, piece]) => {
-          if (!piece) return [];
-          const { file, rank } = coordOf(square as keyof typeof parsed.state.board);
-          const x = offsetX + margin + xiangqiDisplayFile(file, perspective, 9) * cell;
-          const y = margin + xiangqiDisplayRow(rank, perspective, 10) * cell;
-          return [
-            renderXiangqiPiece(piece, {
-              x: x - size / 2,
-              y: y - size / 2,
-              size,
-              crossed: drawsCrossedSoldier(piece, rank),
-              shadow: false,
-            }),
-          ];
-        });
-        board.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 275 305">${renderXiangqiOgBoardSvg(
-          {
-            files: 9,
-            ranks: 10,
-            pieces: [],
-            riverBetweenRanks: [5, 6],
-            palaces: [
-              { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
-              { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
-            ],
-            centerX: 137.5,
-            y: 0,
-            height,
-          },
-        )}${pieces.join('')}</svg>`;
+        // Use the same board as the homepage puzzle and replay boards, so
+        // layout, colour, pieces and the reader's other board settings agree.
+        board.innerHTML = renderXiangqiBoardSvg(
+          getStandardXiangqiPlayerView(parsed.state, perspective),
+          perspective,
+        );
       }
     } else if (entry.variant === 'jungle') {
       const parsed = parseJungleFen(entry.fen);
@@ -214,6 +187,14 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
       main.removeAttribute('aria-busy');
     }
   };
+  const repaint = () => {
+    if (!root.isConnected) {
+      window.removeEventListener(xiangqiAppearanceChangedEvent, repaint);
+      return;
+    }
+    if (attempts.length) render();
+  };
+  window.addEventListener(xiangqiAppearanceChangedEvent, repaint);
   more.addEventListener('click', () => void load());
   await load();
 }

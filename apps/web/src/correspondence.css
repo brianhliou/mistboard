@@ -353,8 +353,8 @@
 /* ---- Start tiles ------------------------------------------------------------------- */
 
 /* Two small tiles side by side, each opening its form in a dialog; a phone
-   stacks them. They stay on top on every width: at about 80px each they cost
-   less than scrolling past your games to find them. */
+   stacks them. They follow the games waiting on you (#1058); a phone with games
+   draws them as one compact row (below). */
 .correspondence-launchers {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 440px));
@@ -471,6 +471,76 @@
 
 .correspondence-host-signin {
   align-self: flex-start;
+}
+
+/* A phone with games: the two create cards share one row, title and button
+   only, so the first screen keeps what is waiting on you (#1058). */
+@media (max-width: 640px) {
+  .correspondence-shell.has-games .correspondence-launchers {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher .correspondence-hint,
+  .correspondence-shell.has-games .correspondence-launcher > .correspondence-host-photo {
+    display: none;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher .correspondence-btn {
+    align-self: stretch;
+  }
+}
+
+/* ---- Recent opponents -------------------------------------------------------------- */
+
+.correspondence-recent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.correspondence-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.correspondence-recent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correspondence-recent-challenge {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-heading);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.correspondence-recent-challenge:hover {
+  border-color: var(--site-accent, currentColor);
 }
 
 @media (max-width: 640px) {
@@ -652,12 +722,12 @@
   gap: 48px;
 }
 
+/* A compact strip, not a poster: the games in play below it are the picture. */
 .correspondence-hero {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 32px 56px;
-  padding: 36px;
+  align-items: flex-end;
+  gap: 20px 40px;
+  padding: 22px 28px;
   border: 1px solid var(--site-border);
   border-radius: 14px;
   background:
@@ -666,11 +736,17 @@
 }
 
 .correspondence-hero-copy {
-  flex: 1 1 380px;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
+}
+
+.correspondence-hero-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .correspondence-eyebrow {
@@ -684,8 +760,8 @@
 
 .correspondence-hero-title {
   margin: 0;
-  font-size: clamp(2.1rem, 5vw, 3.4rem);
-  line-height: 1.05;
+  font-size: clamp(1.6rem, 3.2vw, 2.2rem);
+  line-height: 1.1;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--site-heading);
@@ -693,10 +769,16 @@
 
 .correspondence-hero-pitch {
   margin: 0;
-  max-width: 46ch;
-  font-size: 1.08rem;
-  line-height: 1.55;
+  max-width: 68ch;
+  font-size: 0.98rem;
+  line-height: 1.5;
   color: var(--site-text);
+}
+
+.correspondence-hero-facts {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--site-muted);
 }
 
 .correspondence-signedout-actions {
@@ -705,75 +787,16 @@
   gap: 10px;
 }
 
+.correspondence-hero > .correspondence-signedout-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
 .correspondence-signedout-actions .correspondence-btn,
 .correspondence-signedout-actions .correspondence-ghost {
   min-height: 46px;
   padding: 0 22px;
   font-size: 0.95rem;
-}
-
-.correspondence-hero-facts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.correspondence-hero-facts li {
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--site-border);
-  color: var(--site-muted);
-  font-size: 0.82rem;
-}
-
-.correspondence-hero-note {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--site-muted);
-}
-
-.correspondence-hero-board {
-  flex: 0 1 340px;
-  min-width: 0;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.correspondence-hero-board-host {
-  aspect-ratio: 9 / 10;
-  border-radius: 10px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-}
-
-.correspondence-static-board {
-  width: 100%;
-  height: 100%;
-}
-
-.correspondence-static-board svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.correspondence-hero-caption {
-  font-size: 0.82rem;
-  color: var(--site-muted);
-  text-align: center;
-}
-
-.correspondence-hero-caption a {
-  color: var(--site-link);
-  text-decoration: none;
-}
-
-.correspondence-hero-caption a:hover {
-  text-decoration: underline;
 }
 
 /* Every correspondence game in play, as a board grid like /games. */
@@ -915,6 +938,18 @@
   padding: 0 22px;
 }
 
+/* Below a laptop the buttons drop under the copy and take the full width. */
+@media (max-width: 760px) {
+  .correspondence-hero {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .correspondence-hero > .correspondence-signedout-actions {
+    flex: 1 1 100%;
+  }
+}
+
 @media (max-width: 520px) {
   .correspondence-header h1 {
     font-size: 1.6rem;
@@ -972,7 +1007,7 @@
   }
 
   .correspondence-hero {
-    padding: 22px 18px;
+    padding: 18px;
   }
 
   .correspondence-signedout-actions > * {
@@ -983,11 +1018,6 @@
   .correspondence-signedout-actions .correspondence-ghost {
     padding: 0 12px;
     white-space: nowrap;
-  }
-
-  .correspondence-hero-board {
-    flex-basis: 100%;
-    max-width: 300px;
   }
 
   /* Two boards a row on a phone, so the wall stays a wall. */

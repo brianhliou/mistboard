@@ -344,9 +344,9 @@ export const EN_CONTENT = {
   'source.pieceSetClerical':
     'Clerical pieces: the lishuw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
   'source.pikafish':
-    'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights carry their own license.',
+    "Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Here it runs on the CC0 Fairy-Stockfish xiangqi net, not Pikafish's own weights.",
   'source.pikafishSite': 'pikafish.com',
-  'source.pikafishWeightsLicense': 'Weights license',
+  'source.pikafishNet': 'CC0 net',
   'source.projectIdentity': 'Project identity',
   'source.identityAssets':
     'The Mistboard name, logo, mistboard.com domain, hosted service identity, and official events are controlled project assets.',
@@ -443,7 +443,7 @@ export const EN_CONTENT = {
     'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
   'champions.creditCode': 'Code',
   'champions.creditNetwork': 'Network',
-  'champions.netPikafish': 'Pikafish NNUE',
+  'champions.netPikafish': 'Fairy-Stockfish xiangqi NNUE (CC0)',
   'champions.championBadge': 'Champion',
   'champions.statWins': 'wins',
   'champions.statDraws': 'draws',
@@ -926,7 +926,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.pieceSetClerical',
   'source.pikafish',
   'source.pikafishSite',
-  'source.pikafishWeightsLicense',
+  'source.pikafishNet',
   'source.projectIdentity',
   'source.identityAssets',
   'source.identityForksName',

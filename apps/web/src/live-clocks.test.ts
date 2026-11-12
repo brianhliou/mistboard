@@ -240,3 +240,32 @@ describe('day-scale clocks (correspondence)', () => {
     expect(refs.clockNote.hidden).toBe(true);
   });
 });
+
+describe('pregame seat rows follow the board (#1058)', () => {
+  afterEach(() => {
+    liveState.seatDisplayNames = {};
+    liveState.seat = 'spectator';
+  });
+
+  it("puts the creator's own name at the bottom when they hold Black", () => {
+    liveState.seat = 'black';
+    liveState.seatDisplayNames = { black: 'alice' };
+    const refs = makeRefs();
+    const view = { ...playingView(), perspective: 'black' as const };
+    delete view.clock;
+    renderClocks(refs, view);
+    expect(refs.playerBottom.textContent).toContain('alice');
+    expect(refs.playerTop.textContent).toContain('White');
+  });
+
+  it('keeps White at the bottom for a spectator', () => {
+    liveState.seat = 'spectator';
+    liveState.seatDisplayNames = { black: 'alice' };
+    const refs = makeRefs();
+    const view = { ...playingView(), perspective: 'white' as const };
+    delete view.clock;
+    renderClocks(refs, view);
+    expect(refs.playerTop.textContent).toContain('alice');
+    expect(refs.playerBottom.textContent).toContain('White');
+  });
+});

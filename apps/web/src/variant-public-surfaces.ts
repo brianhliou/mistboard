@@ -1,6 +1,7 @@
 import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
   GOMOKU_SPEC_ID,
@@ -8,7 +9,7 @@ import {
   isRetiredGameSpec,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
-import { gomokuEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { ffqBanqiEnabled, gomokuEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { localizedHref } from './i18n/locale.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -35,6 +36,7 @@ const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
 // Rules pages whose slug is not the spec id. variant-conformance.test.ts holds
 // every variant's rules link to a rules page that exists.
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
+  fanfanqi: 'ffq-banqi',
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
   'xiangqi-mahjong-32': 'xiangqi-mahjong',
@@ -85,7 +87,8 @@ export function localizedRulesHrefForRoom(roomId: string): string | null {
 export function variantPlaytestSurfaceEnabled(id: GameSpecId): boolean {
   return (
     (id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled()) ||
-    (id === GOMOKU_SPEC_ID && gomokuEnabled())
+    (id === GOMOKU_SPEC_ID && gomokuEnabled()) ||
+    (id === FFQ_BANQI_SPEC_ID && ffqBanqiEnabled())
   );
 }
 

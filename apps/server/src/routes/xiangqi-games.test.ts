@@ -172,3 +172,33 @@ test('CC0 @6 recomputes on demand while retaining the historical @5 cache row', 
   assert.deepEqual(await resolveXiangqiAnalysis(room, oneMovePayload, cache, analyze), fresh);
   assert.equal(calls, 1, 'subsequent @6 requests reuse the fresh row');
 });
+
+test('analyzeXiangqiPostgame tags a perpetual-check mate score as the rule', async () => {
+  // 2026 Women's Xiangqi League, round 2 (Liu Huan vs Yu Siyuan), first 58 moves:
+  // Black's horse checks on every move from move 25. After 29... f4-g2+ Pikafish
+  // answers "mate 1" with e1-f1, the third repetition of Black's perpetual check.
+  const record = (
+    'h3-e3 h10-g8 h1-g3 c7-c6 i1-h1 i10-h10 g4-g5 b10-c8 b3-c3 d10-e9 a1-a2 c10-e8 ' +
+    'b1-a3 c8-b6 a2-d2 a10-d10 d2-d10 e10-d10 h1-h7 h8-i8 h7-h10 g8-h10 e3-e7 h10-g8 ' +
+    'e7-e6 b6-a4 c3-d3 g7-g6 g5-g6 e8-g6 g3-f5 g6-e8 f5-d4 d10-e10 d4-c6 g8-f6 d3-d4 ' +
+    'b8-a8 e4-e5 f6-h5 f1-e2 h5-f4 c6-a7 a4-b6 a3-b5 b6-d7 d4-d6 f4-g2 e1-f1 i8-f8 ' +
+    'e6-e7 g2-f4 f1-e1 f4-g2 e1-f1 g2-f4 f1-e1 f4-g2'
+  )
+    .split(' ')
+    .map((text) => {
+      const [from, to] = text.split('-');
+      return { type: 'move-played', move: { from, to } as XiangqiMove };
+    });
+  const result = await analyzeXiangqiPostgame({ timeline: record }, async (moves) =>
+    moves.map((_, i) =>
+      i + 1 === 58
+        ? // Pikafish's own dialect (ranks 0-9): e0f0 is our e1-f1.
+          { ply: 58, cp: null, mate: 1, best: 'e0f0', pv: ['e0f0'] }
+        : { ply: i + 1, cp: 8, mate: null, best: null },
+    ),
+  );
+  assert.equal(result.plies[57]?.ply, 58);
+  assert.equal(result.plies[57]?.rule, 'perpetual-check');
+  assert.equal(result.plies[57]?.best, 'e1f1');
+  assert.equal(result.plies.filter((p) => p.rule).length, 1, 'only the rule-mate row is tagged');
+});

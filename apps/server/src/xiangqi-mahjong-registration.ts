@@ -99,6 +99,10 @@ export async function createXiangqiMahjongRoom(
   engine?: { engineId: string; seat: XmjSeat; botId?: string },
   rated = false,
 ): Promise<XmjLiveRoomCreation> {
+  // Move order (#1054): a named seat means east deals the first hand, so First
+  // (east) deals and Second (west) receives. Random, the lobby and Play again
+  // keep the drawn dealer. Read before PvE rewrites the preference below.
+  const sideChosen = creatorPreference === 'east' || creatorPreference === 'west';
   const created = await createTenantLiveRoom(
     xiangqiMahjongTenant,
     {
@@ -124,9 +128,10 @@ export async function createXiangqiMahjongRoom(
             seat: engine.seat,
             botId: engine.botId ?? XMJ_BOT_ID,
           },
+          sideChosen,
         }
       : // PvP: both seats are human and handed out on connect.
-        { timeControl, creatorPreference, rated },
+        { timeControl, creatorPreference, rated, sideChosen },
   );
   if (!created.ok) {
     return created.error === 'disabled'

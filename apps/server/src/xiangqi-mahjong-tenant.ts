@@ -199,9 +199,12 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   rules: {
     // A days-per-move room plays the correspondence turn (xiangqi-mahjong-room.ts):
     // no claim window or pause, the next hand deals at once, east deals first.
+    // A named side (Move order First or Second) also deals east first: the
+    // creator sits east for First and west for Second. Random draws the dealer.
     createSetup: (options) =>
       createXmjSetup(() => randomInt(2 ** 30) / 2 ** 30, {
         correspondence: options?.timeControl?.daysPerMove !== undefined,
+        ...(options?.sideChosen ? { sideChosen: true } : {}),
       }),
     createInitialState: (roomId, setup) => {
       // No persisted walls is a programming error: dealing fresh ones would

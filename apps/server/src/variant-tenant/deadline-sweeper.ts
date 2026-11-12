@@ -5,14 +5,22 @@
  * room before acting — so a stale or orphaned row can never flag a game
  * early. Single-instance deployment today; take a per-room advisory lock
  * here before scaling the web service out.
+ *
+ * Two processes do overlap briefly (a deploy brings the new container up
+ * before the old one drains; two dev servers share one database), and each runs
+ * this sweeper. The second pass below covers the room the other process ended:
+ * the process still holding it in memory finds its own copy due, its write
+ * meets the seq the other process took, and the writer rebuilds the room from
+ * the store and pushes the result to the open seats (#1056).
  */
 
+import { clockPolicyKindFor } from '@mistboard/game';
 import { sweepDeadlineWarnings } from '../correspondence-deadline-warning.js';
 import { sweepCorrespondenceTurnDigests } from '../correspondence-turn-digest.js';
 import { sweepInboxEmails } from '../inbox-email.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
-import { variantTenantForRoomId } from './registry.js';
+import { registeredVariantTenants, variantTenantForRoomId } from './registry.js';
 
 export const DEADLINE_SWEEP_INTERVAL_MS = 60_000;
 
@@ -35,6 +43,11 @@ export type TenantDeadlineSweeperOptions = {
   // (private seeks past their TTL). Injectable for tests; defaults to the real
   // delete. Returns the count removed.
   sweepExpiredSeeks?: (now: Date) => Promise<number>;
+  // Days-per-move rooms in play that this process holds in memory. Each is
+  // swept like a due row (the closure re-derives its own deadline and does
+  // nothing when not due), so a room whose row another process already closed
+  // still reaches its players here. Injectable for tests.
+  loadedRoomIds?: () => string[];
 };
 
 export type TenantDeadlineSweeper = {
@@ -56,6 +69,7 @@ export function startTenantDeadlineSweeper(
   const emailInbox = options.emailInbox ?? ((at: Date) => sweepInboxEmails(at));
   const sweepExpiredSeeks =
     options.sweepExpiredSeeks ?? ((at: Date) => persistence.deleteExpiredCorrespondenceSeeks(at));
+  const loadedRoomIds = options.loadedRoomIds ?? loadedCorrespondenceRoomIds;
 
   async function tick(): Promise<void> {
     if (!isInitialized()) return;
@@ -69,7 +83,9 @@ export function startTenantDeadlineSweeper(
       );
       return;
     }
+    const swept = new Set<string>();
     for (const row of due) {
+      swept.add(row.roomId);
       const registration = registrationFor(row.roomId);
       if (!registration?.sweepDueDeadline) {
         // An orphaned row (no registration claims the prefix, or the tenant
@@ -95,6 +111,22 @@ export function startTenantDeadlineSweeper(
           {
             kind: 'deadline_sweep_room_failure',
             room_id: row.roomId,
+            error: (err as Error).message,
+            at: now(),
+          },
+          'deadline sweep room failure',
+        );
+      }
+    }
+    for (const roomId of loadedRoomIds()) {
+      if (swept.has(roomId)) continue;
+      try {
+        await registrationFor(roomId)?.sweepDueDeadline?.(roomId);
+      } catch (err) {
+        logger.error(
+          {
+            kind: 'deadline_sweep_room_failure',
+            room_id: roomId,
             error: (err as Error).message,
             at: now(),
           },
@@ -152,4 +184,17 @@ export function startTenantDeadlineSweeper(
     stop: () => clearInterval(timer),
     tick,
   };
+}
+
+function loadedCorrespondenceRoomIds(): string[] {
+  const ids: string[] = [];
+  for (const registration of registeredVariantTenants()) {
+    if (!registration.sweepDueDeadline) continue;
+    for (const room of registration.rooms.values()) {
+      if (room.projection?.state.status.type !== 'playing') continue;
+      if (clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move') continue;
+      ids.push(room.id);
+    }
+  }
+  return ids;
 }

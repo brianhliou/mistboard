@@ -1188,6 +1188,61 @@ describe('account page auth flow', () => {
 
     expect(requests.map((request) => request.flair)).toEqual(['piece-red-cannon', null]);
   });
+
+  it('shows every flair at once in labelled groups that stay one radio choice', async () => {
+    window.history.replaceState(null, '', '/account/settings');
+    const user = { ...testUser('misty'), flair: 'piece-lacquer-red-chariot' };
+    const requests: { flair?: unknown }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ user });
+        if (url === '/api/account/public-profile') {
+          const body = JSON.parse(String(init?.body)) as { flair?: unknown };
+          requests.push(body);
+          return jsonResponse({ user: { ...user, flair: body.flair ?? null } });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    const { mountAccountSettings } = await import('./account.js');
+    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    await flushDom();
+
+    const labels = Array.from(
+      document.querySelectorAll('.account-flair-field .account-flair-set-label'),
+    ).map((label) => label.textContent);
+    expect(labels.slice(0, 3)).toEqual([
+      'Variants',
+      'Xiangqi: International',
+      'Xiangqi: Traditional',
+    ]);
+    expect(labels.slice(-2)).toEqual(['Jungle Chess', 'Chess']);
+    const lacquer = document.querySelector('[data-flair-group="xiangqi-lacquer"]');
+    expect(lacquer?.getAttribute('aria-labelledby')).toBe('account-flair-group-xiangqi-lacquer');
+    expect(lacquer?.querySelectorAll('input[name="flair"]')).toHaveLength(14);
+    expect(
+      document.querySelector<HTMLInputElement>(
+        'input[name="flair"][value="piece-lacquer-red-chariot"]',
+      )?.checked,
+    ).toBe(true);
+
+    const knight = document.querySelector<HTMLInputElement>(
+      'input[name="flair"][value="chess-white-knight"]',
+    );
+    if (!knight) throw new Error('missing chess flair option');
+    knight.checked = true;
+    document
+      .querySelector<HTMLFormElement>('.account-public-profile-form')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushDom();
+
+    expect(requests.map((request) => request.flair)).toEqual(['chess-white-knight']);
+    // One radio name across every group, so picking in one grid clears the others.
+    expect(document.querySelectorAll('input[name="flair"]:checked')).toHaveLength(1);
+  });
 });
 
 function submitAccountForm(): void {

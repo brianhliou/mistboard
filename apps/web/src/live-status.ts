@@ -3,6 +3,7 @@ import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { ConnectionNoticeTier, InfoTone, PlayableSeat, Seat } from './live-state.js';
 import { liveState } from './live-state.js';
+import { loadedRoomInvitePreview, roomInviteHeading } from './room-invite-preview.js';
 import { isColor } from './web-utils.js';
 
 // Staged visibility for a connection problem. A mid-game socket drop usually
@@ -51,9 +52,21 @@ export function actionTone(view: PlayerView | null): InfoTone {
   return 'default';
 }
 
+// A signed-out visitor refused a correspondence seat (#1058): the invite
+// preview's "Alice invited you to Fog Chess, 3 days per move" once it has
+// loaded (live-render starts the fetch), else null.
+export function rejectedInviteHeading(): string | null {
+  if (liveState.connectionState !== 'rejected') return null;
+  if (liveState.closeReason !== 'correspondence requires account') return null;
+  const invite = loadedRoomInvitePreview(liveState.room);
+  return invite ? roomInviteHeading(invite) : null;
+}
+
 export function actionTitle(view: PlayerView | null): string {
   if (connectionNoticeMode() === 'banner') {
-    if (liveState.connectionState === 'rejected') return t('live.statusAccessRejected');
+    if (liveState.connectionState === 'rejected') {
+      return rejectedInviteHeading() ?? t('live.statusAccessRejected');
+    }
     if (liveState.connectionState === 'displaced') return t('live.statusSessionMoved');
     if (liveState.connectionState === 'connecting') return t('live.statusConnecting');
     return t('live.statusReconnecting');
@@ -102,7 +115,9 @@ export function actionBody(view: PlayerView | null): string {
 }
 
 export function boardStatusLabel(): string {
-  if (liveState.connectionState === 'rejected') return t('live.statusAccessRejected');
+  if (liveState.connectionState === 'rejected') {
+    return rejectedInviteHeading() ?? t('live.statusAccessRejected');
+  }
   if (liveState.connectionState === 'displaced') return t('live.statusSessionMoved');
   if (liveState.connectionState === 'disconnected' || liveState.connectionState === 'reconnecting')
     return t('live.statusReconnecting');
@@ -110,7 +125,9 @@ export function boardStatusLabel(): string {
 }
 
 export function boardStatusTone(): 'pending' | 'danger' {
-  if (liveState.connectionState === 'rejected') return 'danger';
+  if (liveState.connectionState === 'rejected') {
+    return rejectedInviteHeading() ? 'pending' : 'danger';
+  }
   if (liveState.connectionState === 'displaced') return 'danger';
   if (liveState.connectionState === 'disconnected') return 'danger';
   return 'pending';

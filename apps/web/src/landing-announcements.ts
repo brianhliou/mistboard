@@ -68,7 +68,10 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   const entry = localizeAnnouncement(source, locale);
   // From `source`: the slug is built from the English headline so one anchor
   // works in every locale (announcementSlug). `entry` is already translated.
-  const entryHref = `${localizedHref('/feed', locale)}#${announcementSlug(source)}`;
+  const entryHref =
+    source.rowLinksToHref && source.href
+      ? localizedHref(source.href, locale)
+      : `${localizedHref('/feed', locale)}#${announcementSlug(source)}`;
   // The whole row is one link (list-row hover grammar, hover-grammar.css): it
   // was a date link over a headline link, two targets with two hovers that
   // went to the same place. The headline links to this entry ON /feed, not to
@@ -78,6 +81,7 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   const row = document.createElement('a');
   row.className = `landing-news-update landing-news-update-${entry.kind} landing-news-link hover-row`;
   row.href = entryHref;
+  if (source.rowLinksToHref && source.href) row.dataset.directLink = '';
   row.dataset.announcementKind = entry.kind;
 
   const marker = document.createElement('span');

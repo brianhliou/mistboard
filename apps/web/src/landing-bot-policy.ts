@@ -4,6 +4,7 @@ import {
   canonicalVariantOrderIndex,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
   GOMOKU_SPEC_ID,
@@ -378,6 +379,19 @@ export function landingBotLadder(
   playable: ReadonlySet<string> = NO_PLAYABLE_BOTS,
   playableEngines: ReadonlySet<string> = NO_PLAYABLE_BOTS,
 ): readonly LandingBotRung[] {
+  if (gameSpecId === FFQ_BANQI_SPEC_ID) {
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        engineId: `misty-ffq-banqi-level-${i + 1}`,
+        level: i + 1,
+        name: `Misty Level ${i + 1}`,
+        engine: 'Misty',
+        net: null,
+        gated: true,
+      }),
+    ).filter((rung) => playableEngines.has(rung.engineId!));
+  }
   if (!isLandingBotGameSpecId(gameSpecId)) return [];
   if (gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) {
     // TK's setup creates by engine id, without botId: Misty's public profile

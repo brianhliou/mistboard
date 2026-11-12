@@ -90,13 +90,13 @@ describe('Flip Jungle engine picker mirror', () => {
 });
 
 describe('FFQ banqi hidden admin playtest', () => {
-  it('registers its live client without enabling public replay or discovery', () => {
+  it('registers private live and review clients without public discovery', () => {
     const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(web?.roomIdPrefix).toBe('ffq_');
     expect(web?.loadLiveRoomClient).toBeTypeOf('function');
     expect(web?.watch).toBeUndefined();
-    expect(web?.gameRouteBase).toBeUndefined();
-    expect(web?.mountPostgame).toBeUndefined();
+    expect(web?.gameRouteBase).toBe('/ffq-banqi/game');
+    expect(web?.mountPostgame).toBeTypeOf('function');
     const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(server).toMatchObject({
       roomIdPrefix: 'ffq_',
@@ -106,13 +106,12 @@ describe('FFQ banqi hidden admin playtest', () => {
       card: null,
     });
     expect(server?.admitsConnection).toBeTypeOf('function');
-    expect(server?.reviewRouteBase).toBeUndefined();
+    expect(server?.reviewRouteBase).toBe('/ffq-banqi/game');
   });
 
-  it('adds no FFQ game or review route to the server shell allowlist', () => {
-    for (const path of ['/ffq-banqi/game/reserved-room', '/ffq-banqi/review/reserved-room']) {
-      expect(isClientRoute(path), path).toBe(false);
-    }
+  it('serves only the owned game shell; HTTP authorization precedes shell dispatch', () => {
+    expect(isClientRoute('/ffq-banqi/game/ffq_reserved')).toBe(true);
+    expect(isClientRoute('/ffq-banqi/review/ffq_reserved')).toBe(false);
   });
 });
 

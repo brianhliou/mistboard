@@ -924,6 +924,13 @@ export const ZH_HANT_REVIEW = {
   'engine.gomokuWhiteInShort': '白 {moves} 步勝',
   'engine.gomokuBlackWinsShort': '黑勝',
   'engine.gomokuWhiteWinsShort': '白勝',
+  'engine.ruleShort': '長將',
+  'engine.ruleRedWins':
+    '並非將死。引擎把即將出現的重複局面判為紅方勝：按 Mistboard 規則，長將一方判負。',
+  'engine.ruleBlackWins':
+    '並非將死。引擎把即將出現的重複局面判為黑方勝：按 Mistboard 規則，長將一方判負。',
+  'engine.ruleRecordNote':
+    '按 Mistboard 規則，此著走成長將重複，應判負；本場比賽未執行此規則，故不評級。',
   'engine.depth': '深度 {depth}',
   'engine.nodes': '{nodes} 節點',
   'engine.thinking': '思考中…',

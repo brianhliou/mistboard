@@ -2,6 +2,7 @@
  * identities, including the finished snapshot.
  * Planting its truthView in the FFQ tenant must fail this regression.
  */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -15,8 +16,10 @@ import {
   ffqBanqiStateToFen,
   getFFQBanqiLegalMoves,
 } from '@mistboard/game';
+import { buildFFQBanqiEngineCommands } from './ffq-banqi-engine.js';
 import { type FFQBanqiEvent, ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { ffqBanqiTierRequestFor } from './server-ffq-banqi-engine.js';
 import './variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 import {
@@ -240,4 +243,42 @@ test('FFQ correspondence retains public covered captures in every seat and obser
       );
     }
   }
+});
+
+test('FFQ whole EngineTurnRequest and UCI stdin are byte-identical under covered board permutations', () => {
+  const deal = [...createFFQBanqiDeal(809)];
+  const swapped = [...deal];
+  assert.notDeepEqual(deal[0], deal[1], 'the swapped hidden identities must differ');
+  [swapped[0], swapped[1]] = [swapped[1], swapped[0]];
+  const a = replayTenantEvents(ffqBanqiTenant, log(deal, [])).state;
+  const b = replayTenantEvents(ffqBanqiTenant, log(swapped, [])).state;
+  const serialize = (state: typeof a) => {
+    const request = ffqBanqiTierRequestFor(state, 'misty-ffq-banqi-level-4', 3000);
+    for (let i = 0; i < 32; i++)
+      if (state.board[i]?.faceDown)
+        assert.deepEqual(request.position.view.board[i], { faceDown: true });
+    const payload = JSON.stringify({ request, commands: buildFFQBanqiEngineCommands(request) });
+    assert.doesNotMatch(payload, /"(setup|deal|seed)"/);
+    return payload;
+  };
+  assert.equal(serialize(a), serialize(b));
+});
+
+test('FFQ engine learns every covered captured type but no on-board identity', () => {
+  const deal = [...createFFQBanqiDeal(800)];
+  const cannon = deal.findIndex((p) => p.color === 'red' && p.role === 'cannon');
+  [deal[6], deal[cannon]] = [deal[cannon], deal[6]];
+  const state = replayTenantEvents(ffqBanqiTenant, log(deal, [{ from: 6, to: 4 }])).state;
+  assert.ok(state.captures.some((c) => c.wasFaceDown));
+  const swapped = { ...state, board: [...state.board] };
+  const backs = state.board.flatMap((p, i) => (p?.faceDown ? [i] : []));
+  const [i, j] = backs;
+  [swapped.board[i!], swapped.board[j!]] = [swapped.board[j!], swapped.board[i!]];
+  const request = ffqBanqiTierRequestFor(state, 'misty-ffq-banqi-level-4', 3000);
+  assert.deepEqual(request.position.view.captured, state.captures);
+  assert.deepEqual(request.position.view.unknownCaptured, { red: 0, black: 0 });
+  assert.equal(
+    JSON.stringify(request),
+    JSON.stringify(ffqBanqiTierRequestFor(swapped, request.engineId, 3000)),
+  );
 });

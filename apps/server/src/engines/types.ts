@@ -78,6 +78,8 @@ export type EngineId =
   | 'misty-banqi-amateur'
   | 'misty-banqi-strong'
   | 'misty-banqi-strongest'
+  // Hidden FFQ playtest ladder (L1 random).
+  | `misty-ffq-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Three Kingdoms banqi: historical bot and the admin-playtest ladder (L1 random).
   | 'misty-three-kingdoms-banqi'
   | `misty-three-kingdoms-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
@@ -157,6 +159,7 @@ export type EngineConfigKind =
   | 'pikafish-xiangqi'
   | 'banqi-uci'
   | 'three-kingdoms-banqi-uci'
+  | 'ffq-banqi-uci'
   | 'jungle-flip-uci'
   | 'jungle-uci'
   | 'katago-gtp';
@@ -262,6 +265,9 @@ export type KatagoGtpEngineConfig = {
   movetime_ms: number;
 };
 
+// FFQ provisional classical node-budget ladder (#809).
+export type FFQBanqiUciEngineConfig = { kind: 'ffq-banqi-uci'; nodes: number; movetime_ms: number };
+
 export type EngineConfig =
   | BuiltinEngineConfig
   | PythonSubprocessEngineConfig
@@ -269,6 +275,7 @@ export type EngineConfig =
   | PikafishEngineConfig
   | PikafishXiangqiEngineConfig
   | BanqiUciEngineConfig
+  | FFQBanqiUciEngineConfig
   | ThreeKingdomsBanqiUciEngineConfig
   | JungleFlipUciEngineConfig
   | JungleUciEngineConfig

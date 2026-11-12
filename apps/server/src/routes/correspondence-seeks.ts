@@ -14,6 +14,12 @@ import {
   mayPlayCorrespondenceByUserId,
 } from './../correspondence-access.js';
 import {
+  challengeTargetStatus,
+  notifyCorrespondenceChallenge,
+  notifyCorrespondenceHostStart,
+  notifyCorrespondenceJoinedStart,
+} from './../correspondence-player-emails.js';
+import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
@@ -307,7 +313,19 @@ export async function tryHandle(
     return listOpenSeeks(user, response);
   }
   if (!user) {
-    writeJson(response, 401, { error: 'not_signed_in' });
+    // A signed-out visitor holding a /challenge link is still told to sign in,
+    // but the 401 may carry who is asking, the game and the pace, so the page
+    // can say so above the button (#1058). Never for a directed challenge.
+    const viewMatch = pathname.match(/^\/api\/correspondence\/seeks\/([^/]+)$/);
+    const preview =
+      viewMatch && (request.method ?? 'GET') === 'GET'
+        ? await anonymousChallengePreviewFor(decodeURIComponent(viewMatch[1]!))
+        : null;
+    writeJson(
+      response,
+      401,
+      preview ? { error: 'not_signed_in', preview } : { error: 'not_signed_in' },
+    );
     return true;
   }
 
@@ -470,6 +488,16 @@ export type CreateSeekOptions = {
   // in the same request, so it never stands; the host's own open seeks must not
   // block it.
   skipOpenSeekCap?: boolean;
+  // The host route mails both players its own start emails once the game is
+  // made, so the private seek it posts must not also mail a challenge (#1057).
+  skipChallengeEmail?: boolean;
+};
+
+/** Options for an accept made on a player's behalf (the correspondence host route). */
+export type AcceptSeekOptions = {
+  // Play the host: the host and the player get the host template and the
+  // player's receipt instead of the generic start emails (#1057).
+  hostGame?: boolean;
 };
 
 export async function createSeekResult(
@@ -635,6 +663,20 @@ export async function createSeekResult(
       source,
     });
   }
+  // A directed challenge mails its target (#1057), unless the account turned
+  // off correspondence game emails. Never awaited.
+  if (targetUserId && expiresAt && !options.skipChallengeEmail) {
+    notifyCorrespondenceChallenge({
+      seekId: id,
+      gameSpecId,
+      targetUserId,
+      challengerName: user.displayName || user.handle,
+      challengerHandle: user.handle || null,
+      daysPerMove,
+      rated,
+      expiresAt,
+    });
+  }
   return {
     status: 201,
     body: {
@@ -698,6 +740,7 @@ export async function acceptSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
+  options: AcceptSeekOptions = {},
 ): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
@@ -820,7 +863,24 @@ export async function acceptSeekResult(
   // taken. Fire-and-forget on purpose: the seated game is the durable outcome,
   // so a mail provider outage must never turn a successful accept into an error
   // for the accepter, who is right here watching this response.
-  notifyCorrespondenceStart(correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide));
+  // #1057: the accepter gets a start email too. Play the host swaps both for
+  // its own pair: the host's "new game" email and the player's receipt.
+  const acceptedNotice = {
+    roomId: created.room.id,
+    gameSpecId: seek.gameSpecId,
+    daysPerMove: seek.daysPerMove,
+    creatorUserId: seek.creatorUserId,
+    accepter: { id: user.id, displayName: user.displayName, handle: user.handle },
+    accepterOnMove: accepterSide === 'first',
+  };
+  if (options.hostGame) {
+    notifyCorrespondenceHostStart(acceptedNotice);
+  } else {
+    notifyCorrespondenceStart(
+      correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide),
+    );
+    notifyCorrespondenceJoinedStart(acceptedNotice);
+  }
   const roomRated = created.room.rated === true;
   if ((seek.rated === true) !== roomRated) {
     // Unreachable while the conformance test holds (every isCorrespondenceRatedSpec
@@ -988,6 +1048,64 @@ function quickPairSeekAnswer(seekId: string, existing: boolean): SeekRouteResult
   };
 }
 
+/** What a signed-out visitor holding a challenge link may read (#1058). */
+export type AnonymousChallengePreview = {
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: string;
+  visibility: string;
+  rated: boolean;
+  challengerName: string | null;
+  challengerHandle: string | null;
+};
+
+/**
+ * Pure: the preview a signed-out reader gets, or null. Only an open, unexpired
+ * seek nobody is named on (a link challenge or a public board seek): the same
+ * seeks a signed-in stranger holding the id already reads in full. A directed
+ * challenge stays a plain "sign in", so its target and challenger are never
+ * told to a stranger. Names, game, pace and move order only: no board, no seat, no email,
+ * no account id, so a hidden-information variant has nothing to leak here; the
+ * page draws the variant's own start-position thumbnail.
+ */
+export function anonymousChallengePreview(
+  seek: {
+    gameSpecId: string;
+    daysPerMove: number;
+    preferredColor: string;
+    visibility: string;
+    rated?: boolean;
+    targetUserId: string | null;
+    expiresAt: Date | null;
+    creatorName: string | null;
+    creatorHandle: string | null;
+  },
+  nowMs: number,
+): AnonymousChallengePreview | null {
+  if (seek.targetUserId !== null) return null;
+  if (seek.expiresAt !== null && seek.expiresAt.getTime() <= nowMs) return null;
+  return {
+    gameSpecId: seek.gameSpecId,
+    daysPerMove: seek.daysPerMove,
+    preferredColor: seek.preferredColor,
+    visibility: seek.visibility,
+    rated: seek.rated === true,
+    challengerName: seek.creatorName,
+    challengerHandle: seek.creatorHandle ?? null,
+  };
+}
+
+async function anonymousChallengePreviewFor(
+  seekId: string,
+): Promise<AnonymousChallengePreview | null> {
+  const seek = await persistence.getCorrespondenceSeekListing(seekId);
+  if (!seek) return null;
+  // A hidden or playtest variant passes only through its room door, which an
+  // anonymous reader never holds (seeksVisibleTo with no user).
+  if ((await seeksVisibleTo([seek], null)).length === 0) return null;
+  return anonymousChallengePreview(seek, Date.now());
+}
+
 // The challenge landing page's read: enough to render "X challenged you to Y"
 // with the right action buttons. A stranger to a directed challenge is told it
 // does not exist (privacy), not that they are forbidden.
@@ -1011,6 +1129,10 @@ async function viewSeek(
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
+  // The creator's page of a directed challenge says whether the target was
+  // emailed (#1057): their current email switch, never the reason it is off.
+  const target =
+    view.isMine && seek.targetUserId ? await challengeTargetStatus(seek.targetUserId) : null;
   writeJson(response, 200, {
     id: seek.id,
     gameSpecId: seek.gameSpecId,
@@ -1020,6 +1142,9 @@ async function viewSeek(
     visibility: seek.visibility,
     challengerName: seek.creatorName,
     challengerHandle: seek.creatorHandle ?? null,
+    ...(target
+      ? { targetName: target.name, targetHandle: target.handle, targetEmailed: target.emailed }
+      : {}),
     isMine: view.isMine,
     canAccept: view.canAccept,
     canDecline: view.canDecline,

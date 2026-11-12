@@ -17,7 +17,7 @@ import {
   getOrLoadDarkChessTenantRoom,
 } from './dark-chess-registration.js';
 import { type DarkChessTenantEvent, darkChessTenant } from './dark-chess-tenant.js';
-import { createUser, getGameSummary, loadRoom } from './persistence.js';
+import { createUser, getGameSummary, loadRoom, type UserAccount } from './persistence.js';
 import {
   assert,
   definePersistenceTests,
@@ -28,6 +28,8 @@ import {
 import { hashSeatToken } from './server-seat-session.js';
 import { startTenantDeadlineSweeper } from './variant-tenant/deadline-sweeper.js';
 import { appendTenantEvent, appendTenantSeatAssigned } from './variant-tenant/events.js';
+import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { assignTenantSeat, type TenantSeatAssignment } from './variant-tenant/seat-session.js';
 import type { TenantSeatTokenState } from './variant-tenant/tenant.js';
 
 // Long enough that room setup (a handful of single-row writes) always fits
@@ -151,7 +153,129 @@ definePersistenceTests('correspondence e2e', () => {
     assert.equal(await deadlineRow(room.id), null);
     darkChessTenantRooms.clear();
   });
+
+  // #1059: a signed-out visitor creates a friend invite, sits as a guest, and
+  // is asked to sign in once the friend (an account) has sat. These drive the
+  // real create binding and the real seat assignment, then append the seat the
+  // way the WebSocket connect does on every (re)connect. (One
+  // definePersistenceTests per file: each registers its own migration hook.)
+  test('a guest invite: account joins, the guest signs in and keeps the seat', async () => {
+    const room = await createGuestInvite();
+    const guest = assignTenantSeat(darkChessTenant, room, 'g-client', undefined, null);
+    assert.ok(guest.ok);
+    assert.equal(guest.seat, 'white');
+    assert.ok(guest.seatToken, 'a guest seat is a bearer token like any live guest seat');
+    await appendSeat(room, guest);
+    // One seat open: no countdown yet, so nothing for the sweeper or digest.
+    assert.equal(await deadlineRow(room.id), null);
+
+    const friend = await makeAccount('frank');
+    const joined = assignTenantSeat(darkChessTenant, room, 'f-client', undefined, friend);
+    assert.ok(joined.ok);
+    assert.equal(joined.seat, 'black');
+    await appendSeat(room, joined);
+    const armed = await deadlineRow(room.id);
+    assert.ok(armed, 'both seats taken arms the first-move window');
+    assert.equal(armed.seat, 'white');
+    // The guest's seat has no account yet: the digest skips a null seat user.
+    assert.equal(armed.seat_user_id, null);
+
+    // A third browser, signed in, cannot take the guest's seat.
+    const stranger = await makeAccount('sly');
+    const refused = assignTenantSeat(darkChessTenant, room, 's-client', undefined, stranger);
+    assert.deepEqual(refused, { ok: false, reason: 'private room' });
+
+    // The guest signs in; the same browser reconnects with its token and the
+    // seat binds to the account, durably.
+    const gina = await makeAccount('gina');
+    const bound = assignTenantSeat(darkChessTenant, room, 'g-client-2', guest.seatToken, gina);
+    assert.ok(bound.ok);
+    assert.equal(bound.seat, 'white');
+    await appendSeat(room, bound);
+    const rebound = await deadlineRow(room.id);
+    assert.equal(rebound?.seat_user_id, gina.id);
+    const tokenRow = await queryOne<{ user_id: string | null }>(
+      `SELECT user_id FROM room_seat_tokens WHERE room_id = $1 AND seat = 'white'`,
+      [room.id],
+    );
+    assert.equal(tokenRow?.user_id, gina.id);
+
+    // Restart path: the hydrated room knows the seat's account, so the account
+    // reclaims it from any device with no token.
+    darkChessTenantRooms.clear();
+    const hydrated = await getOrLoadDarkChessTenantRoom(room.id);
+    assert.ok(hydrated);
+    assert.equal(hydrated.seatTokens.white?.userId, gina.id);
+    const phone = assignTenantSeat(darkChessTenant, hydrated, 'phone', undefined, gina);
+    assert.ok(phone.ok);
+    assert.equal(phone.seat, 'white');
+    darkChessTenantRooms.clear();
+  });
+
+  test('a guest invite nobody moves in aborts on sweep (pregame-timeout)', async () => {
+    const room = await createGuestInvite();
+    const guest = assignTenantSeat(darkChessTenant, room, 'g-client', undefined, null);
+    assert.ok(guest.ok);
+    await appendSeat(room, guest);
+    const joined = assignTenantSeat(
+      darkChessTenant,
+      room,
+      'f-client',
+      undefined,
+      await makeAccount('fay'),
+    );
+    assert.ok(joined.ok);
+    await appendSeat(room, joined);
+    assert.ok(await deadlineRow(room.id));
+
+    darkChessTenantRooms.clear();
+    await sleep(SETTLE_MS);
+    await sweepOnce();
+
+    const events = await loadRoom(room.id);
+    assert.ok(events);
+    const last = events[events.length - 1] as { type: string; reason?: string };
+    assert.equal(last.type, 'game-aborted');
+    assert.equal(last.reason, 'pregame-timeout');
+    const hydrated = await getOrLoadDarkChessTenantRoom(room.id);
+    assert.equal(hydrated?.projection.state.status.type, 'aborted');
+    assert.equal(await deadlineRow(room.id), null);
+    darkChessTenantRooms.clear();
+  });
 });
+
+// The registration's invite create, as POST /api/rooms calls it.
+async function createGuestInvite() {
+  const registration = registeredVariantTenants().find(
+    (entry) => entry.gameSpecId === 'dark-chess',
+  );
+  assert.ok(registration?.createCorrespondenceRoom);
+  const created = await registration.createCorrespondenceRoom(COMPRESSED_TC, 'white');
+  assert.ok(created.ok);
+  const room = await getOrLoadDarkChessTenantRoom(created.room.id);
+  assert.ok(room);
+  return room;
+}
+
+async function appendSeat(
+  room: NonNullable<Awaited<ReturnType<typeof getOrLoadDarkChessTenantRoom>>>,
+  assignment: Extract<TenantSeatAssignment<'white' | 'black'>, { ok: true }>,
+): Promise<void> {
+  await appendTenantSeatAssigned(
+    darkChessTenant,
+    room,
+    {
+      event: seatAssigned(room.id, assignment.seat, assignment.tokenState.clientId),
+      tokenState: assignment.tokenState,
+    },
+    {},
+  );
+}
+
+async function makeAccount(handle: string): Promise<UserAccount> {
+  const id = await makeUser(handle);
+  return { id, handle, displayName: capitalize(handle) } as UserAccount;
+}
 
 async function sweepOnce(): Promise<void> {
   // Real listDue + real registry routing; only the interval is parked so the

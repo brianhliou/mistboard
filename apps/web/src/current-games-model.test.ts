@@ -1,6 +1,6 @@
 import { GAME_SPECS } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { roomViewPolicy } from '../../server/src/server-policy.js';
+import { liveObservePolicy, roomViewPolicy } from '../../server/src/server-policy.js';
 import {
   type CurrentGame,
   deadlineFractionLeft,
@@ -16,6 +16,7 @@ import {
   settleAwaitingFinish,
   splitSections,
 } from './current-games-model.js';
+import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 function game(overrides: Partial<CurrentGame>): CurrentGame {
   return {
@@ -104,6 +105,28 @@ describe('finishedTileKind', () => {
     expect(finishedTileKind('jungle-flip')).toBe('board');
   });
 
+  // Every Three Kingdoms banqi card was the misty tile (tkb_d52a34fc,
+  // 2026-11-10): the spec was never added to the public-view list, although
+  // its finished board is public on /watch and the game page.
+  it('draws Three Kingdoms banqi, and keeps FFQ banqi (no watch replay) in the mist', () => {
+    expect(finishedTileKind('three-kingdoms-banqi')).toBe('board');
+    expect(finishedTileKind('ffq-banqi')).toBe('fog');
+  });
+
+  // The registration gap above, closed structurally: a hidden-identity spec
+  // the server opens to spectators and the web can replay on /watch draws its
+  // board here, so the next such variant cannot silently fall to the mist.
+  it('draws every spectator-open hidden-identity spec that has a watch replay', () => {
+    const replayable = GAME_SPECS.filter(
+      (spec) =>
+        spec.visibility === 'hidden-identity' &&
+        liveObservePolicy(spec.visibility, spec.id) === 'open' &&
+        !!webVariantTenantForSpecId(spec.id)?.watch,
+    ).map((spec) => spec.id);
+    expect(replayable).toContain('three-kingdoms-banqi');
+    for (const id of replayable) expect([id, finishedTileKind(id)]).toEqual([id, 'board']);
+  });
+
   it('keeps every unknown variant in the mist', () => {
     expect(finishedTileKind('no-such-variant')).toBe('fog');
   });
@@ -119,14 +142,16 @@ describe('finishedTileKind', () => {
     expect(finishedHandsUrl('xmj_a b')).toBe('/api/xiangqi-mahjong/games/xmj_a%20b?final=1');
   });
 
-  it('draws exactly the open and fog specs plus jieqi, banqi and Flip Jungle', () => {
+  it('draws exactly the open and fog specs plus jieqi, banqi, Flip Jungle and Three Kingdoms banqi', () => {
     const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
       (spec) => spec.id,
     );
     const open = GAME_SPECS.filter(
       (spec) => spec.visibility === 'open' || spec.visibility === 'dark',
     ).map((spec) => spec.id);
-    expect(drawn.sort()).toEqual([...open, 'banqi', 'jieqi', 'jungle-flip'].sort());
+    expect(drawn.sort()).toEqual(
+      [...open, 'banqi', 'jieqi', 'jungle-flip', 'three-kingdoms-banqi'].sort(),
+    );
   });
 
   // Hidden-info guard: the client never decides on its own to draw a board the

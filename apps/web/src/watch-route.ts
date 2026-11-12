@@ -905,7 +905,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // ── Featured live-follow: poll the cross-channel election and drive the board ──
   const registerLiveNames = (featured: LiveFeatured): void => {
     if (namesByRoomId[featured.roomId]) return;
-    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'));
+    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'), featured.gameSpecId);
     if (names) namesByRoomId[featured.roomId] = names;
   };
 
@@ -917,7 +917,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // nobody owns a color yet.
   const liveMetaPlayers = (featured: LiveFeatured): GameMetaPlayer[] => {
     const players = featured.players ?? [];
-    const first = liveFirstMover(players);
+    const first = liveFirstMover(players, featured.gameSpecId);
     const ordered = first ? [first, ...players.filter((p) => p !== first)] : players;
     const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({

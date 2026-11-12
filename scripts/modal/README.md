@@ -10,15 +10,20 @@ judgments. No Modal Volume is required.
 2. Create a Modal Secret named `mistboard-mining-production-db` with one key,
    `DATABASE_URL`. Use a least-privilege, TLS-enabled Railway public Postgres
    connection. Do not use Railway's private hostname from Modal.
-3. Keep the pinned Pikafish 2026-01-02 release at
-   `../tools/pikafish-official-2026-01-02`, relative to this repository, or set
-   `MISTBOARD_MODAL_PIKAFISH_DIR` to that release directory.
+3. Nothing to download for the engine. The image builds the server's Pikafish
+   the way `scripts/engine-assets.sh` does: upstream at the `pikafish.ref` pin
+   plus `pikafish-cc0-net.patch`, for Linux sse41, and fetches the
+   Fairy-Stockfish CC0 net (`xiangqi-c07e94a5c7cb.nnue`).
 4. Set `MISTBOARD_MODAL_MANIFEST_PATH` to the private frozen manifest. The
    manifest is sent as a function input and is not committed into the image.
 
-The launcher verifies the local Linux executable and NNUE hashes before Modal
-builds an image. The remote initializer repeats those checks and the UCI
-identity check inside Linux.
+Before Modal builds an image, the launcher checks that `pikafish.ref` matches its
+UCI id and that its net name, URL and sha256 match `engine-assets.sh`. The image
+build verifies the net's sha256, fails unless `bench 16 1 13 default depth`
+searches 1,650,882 nodes, and records the binary's sha256. The remote
+initializer pins the run to that binary and the net, and repeats the UCI
+identity check. A rebuilt image is a new binary hash, so rerun `verify` after
+any change to the pin or the patch.
 
 ## Safe launch sequence
 

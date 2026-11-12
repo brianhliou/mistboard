@@ -424,6 +424,8 @@ export const ZH_HANT_COMMUNITY = {
   'challenge.expired': '這個挑戰已過期。',
   'challenge.copyLink': '複製連結',
   'challenge.copied': '已複製',
+  'challenge.targetEmailed': '已寄電子郵件通知 {name}',
+  'challenge.targetNotEmailed': '把這個連結傳給對方',
   'challenge.accept': '接受',
   'challenge.alreadyAccepted': '這個挑戰已被別人接受。',
   'challenge.couldNotAccept': '無法接受，請重試。',

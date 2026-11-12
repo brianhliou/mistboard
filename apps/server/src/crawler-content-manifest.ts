@@ -153,6 +153,10 @@ export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] =
     path: '/banqi/game/crawler',
   },
   {
+    routeId: '/ffq-banqi/game/*',
+    path: '/ffq-banqi/game/ffq_crawler',
+  },
+  {
     routeId: '/three-kingdoms-banqi/game/*',
     path: '/three-kingdoms-banqi/game/crawler',
   },

@@ -9,7 +9,7 @@ import { expectNoErrors, trackPageErrors } from './support';
 // VITE_FFQ_BANQI_ENABLED=true npm run test:e2e -- ffq-banqi.spec.ts --project=desktop --workers=1
 test.skip(({ isMobile }) => isMobile, 'the requested FFQ journey is desktop');
 
-test('FFQ: two admins flip in fixed seats and both see HP 60/60', async ({
+test('FFQ: admins play, reconnect and replay a masked finished game with HP', async ({
   browser,
   baseURL,
 }, info) => {
@@ -77,7 +77,7 @@ test('FFQ: two admins flip in fixed seats and both see HP 60/60', async ({
     await red.goto('/');
     await expect(red.locator('.site-nav-menu-admin')).toHaveCount(1);
     await red.goto('/?play=friend&gameSpecId=ffq-banqi&side=red');
-    await expect(red.locator('.landing-setup-dialog')).toContainText('FFQ Banqi');
+    await expect(red.locator('.landing-setup-dialog')).toContainText('Fanfanqi');
     const creating = red.waitForResponse(
       (res) => new URL(res.url()).pathname === '/api/rooms' && res.request().method() === 'POST',
     );
@@ -138,6 +138,54 @@ test('FFQ: two admins flip in fixed seats and both see HP 60/60', async ({
         body: await page.screenshot({ fullPage: true }),
         contentType: 'image/png',
       });
+    }
+    await red.locator('[data-game-action="resign"]').click();
+    await red.locator('[data-game-action="confirm-yes"]').click();
+    const apiUrl = `/api/ffq-banqi/games/${room.roomId}`;
+    await expect.poll(async () => (await red.request.get(apiUrl)).status()).toBe(200);
+    const replay = await (await red.request.get(apiUrl)).json();
+    expect(replay.history.truth).toHaveLength(3);
+    JSON.parse(JSON.stringify(replay), (key, value) => {
+      expect(['setup', 'deal', 'seed', 'revealed', 'deal_fen']).not.toContain(key);
+      if (value?.faceDown === true) expect(value).toEqual({ faceDown: true });
+      return value;
+    });
+    for (const suffix of ['', '?watch=1']) {
+      await red.goto(`/ffq-banqi/game/${room.roomId}${suffix}`);
+      await expectHP(red);
+      await expect(
+        red.locator('a[href*="export.pgn"], a[href*="export.json"], a[href*="/og/game/"]'),
+      ).toHaveCount(0);
+      const first = suffix
+        ? red.getByRole('button', { name: 'First move', exact: true })
+        : red.locator('[data-replay="first"]');
+      const last = suffix
+        ? red.getByRole('button', { name: 'Last move', exact: true })
+        : red.locator('[data-replay="latest"]');
+      await first.click();
+      await expectHP(red);
+      await last.click();
+      await expectHP(red);
+      await info.attach(suffix ? 'ffq-watch-replay' : 'ffq-finished-review', {
+        body: await red.screenshot({ fullPage: true }),
+        contentType: 'image/png',
+      });
+    }
+    // The anonymous surface stays closed after authoritative finalization.
+    // Vite serves its own SPA shell in dev; page authorization belongs to
+    // the backend HTTP boundary, which production uses for HTML and APIs.
+    const serverOrigin = new URL(origin.origin);
+    serverOrigin.port = String(Number(origin.port) + 1);
+    const anonymous = await browser.newContext({ baseURL: serverOrigin.origin });
+    contexts.push(anonymous);
+    for (const path of [
+      apiUrl,
+      `/ffq-banqi/game/${room.roomId}`,
+      `/api/games/${room.roomId}/export.pgn`,
+      `/api/games/${room.roomId}/export.json`,
+      `/og/game/${room.roomId}.png`,
+    ]) {
+      expect((await anonymous.request.get(path)).status(), path).toBe(404);
     }
     expectNoErrors(withoutClosedChat(redErrors));
     expectNoErrors(withoutClosedChat(blackErrors));

@@ -3,17 +3,26 @@
 // write; apps/web/src/flair.ts mirrors it with the rendering metadata, and
 // apps/web/src/flair-sync.test.ts fails the build if the two drift.
 //
-// Two families, both drawn from art the site already ships, so adding flair
+// Every family is drawn from art the site already ships, so adding flair
 // added no assets:
-//   variant-*  the final variant markers (public/variant-markers/final/*.png)
-//   piece-*    xiangqi piece characters, rendered as text in a styled disc
+//   variant-*                   the final variant markers (public/variant-markers/final/*.png)
+//   piece-<ink>-<role>          xiangqi pieces in the Traditional set (the first piece
+//                               flair; existing accounts store these keys, so they keep
+//                               their unprefixed names)
+//   piece-<set>-<ink>-<role>    xiangqi pieces in every other board piece set
+//   jungle-<ink>-<role>         the Jungle animal tokens
+//   chess-<ink>-<role>          the chess pieces (the one chess set the site ships)
 //
 // Deliberately a closed list rather than free text or an upload. A fixed
 // allowlist cannot carry a slur, a URL, or an image that needs moderating, so
-// flair ships with no moderation surface at all — that is the whole reason it
+// flair ships with no moderation surface at all; that is the whole reason it
 // is shaped this way.
+//
+// Every key must also pass the column's shape CHECK in 122_user_flair.sql
+// (lowercase, digits and hyphens, at most 40 characters); flair.test.ts holds
+// the list to it.
 
-export const FLAIR_KEYS = [
+const VARIANT_FLAIR_KEYS = [
   'variant-xiangqi',
   'variant-fortress-xiangqi',
   'variant-duck-xiangqi',
@@ -26,23 +35,65 @@ export const FLAIR_KEYS = [
   'variant-dark-xiangqi',
   'variant-dark-chess',
   'variant-gomoku',
-  'piece-red-general',
-  'piece-red-advisor',
-  'piece-red-elephant',
-  'piece-red-horse',
-  'piece-red-chariot',
-  'piece-red-cannon',
-  'piece-red-soldier',
-  'piece-black-general',
-  'piece-black-advisor',
-  'piece-black-elephant',
-  'piece-black-horse',
-  'piece-black-chariot',
-  'piece-black-cannon',
-  'piece-black-soldier',
 ] as const;
 
-export type FlairKey = (typeof FLAIR_KEYS)[number];
+const XIANGQI_INKS = ['red', 'black'] as const;
+const XIANGQI_ROLES = [
+  'general',
+  'advisor',
+  'elephant',
+  'horse',
+  'chariot',
+  'cannon',
+  'soldier',
+] as const;
+
+// The board settings' piece-set order (XIANGQI_PIECE_SETS in
+// apps/web/src/xiangqi-piece-sets.ts), which is also the picker's order.
+// 'traditional' is the set whose keys carry no set segment.
+const XIANGQI_FLAIR_SETS = [
+  'international',
+  'traditional',
+  'simplified',
+  'lacquer',
+  'wood',
+  'book',
+  'brush',
+  'clerical',
+  'animal-dobutsu',
+] as const;
+
+const JUNGLE_INKS = ['red', 'black'] as const;
+const JUNGLE_ROLES = ['rat', 'cat', 'dog', 'wolf', 'leopard', 'tiger', 'lion', 'elephant'] as const;
+
+const CHESS_INKS = ['white', 'black'] as const;
+const CHESS_ROLES = ['king', 'queen', 'rook', 'bishop', 'knight', 'pawn'] as const;
+
+type XiangqiInk = (typeof XIANGQI_INKS)[number];
+type XiangqiRole = (typeof XIANGQI_ROLES)[number];
+type PrefixedXiangqiSet = Exclude<(typeof XIANGQI_FLAIR_SETS)[number], 'traditional'>;
+
+export type FlairKey =
+  | (typeof VARIANT_FLAIR_KEYS)[number]
+  | `piece-${XiangqiInk}-${XiangqiRole}`
+  | `piece-${PrefixedXiangqiSet}-${XiangqiInk}-${XiangqiRole}`
+  | `jungle-${(typeof JUNGLE_INKS)[number]}-${(typeof JUNGLE_ROLES)[number]}`
+  | `chess-${(typeof CHESS_INKS)[number]}-${(typeof CHESS_ROLES)[number]}`;
+
+function pieceKeys(prefix: string, inks: readonly string[], roles: readonly string[]): FlairKey[] {
+  return inks.flatMap((ink) => roles.map((role) => `${prefix}-${ink}-${role}` as FlairKey));
+}
+
+// Picker order: variants, then each xiangqi set (red then black), then Jungle,
+// then chess.
+export const FLAIR_KEYS: readonly FlairKey[] = [
+  ...VARIANT_FLAIR_KEYS,
+  ...XIANGQI_FLAIR_SETS.flatMap((set) =>
+    pieceKeys(set === 'traditional' ? 'piece' : `piece-${set}`, XIANGQI_INKS, XIANGQI_ROLES),
+  ),
+  ...pieceKeys('jungle', JUNGLE_INKS, JUNGLE_ROLES),
+  ...pieceKeys('chess', CHESS_INKS, CHESS_ROLES),
+];
 
 const FLAIR_KEY_SET: ReadonlySet<string> = new Set<string>(FLAIR_KEYS);
 

@@ -369,7 +369,9 @@ async function main() {
         ? {
             scoreSeries: {
               side: g.side,
-              series: [{ name: 'Pikafish', color: 'a', values: g.series }],
+              series: [
+                { name: 'Pikafish (Fairy-Stockfish CC0 net)', color: 'a', values: g.series },
+              ],
             },
           }
         : {}),

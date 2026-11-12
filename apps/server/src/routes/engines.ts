@@ -2,6 +2,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from '../account-session.js';
 import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { playableLiveEngines } from './../engine-registry.js';
+import { ffqBanqiAdmits } from '../ffq-banqi-access.js';
+import {
+  FFQ_BANQI_PLAYABLE_ENGINES,
+  ffqBanqiEngineAvailable,
+  ffqBanqiEngineDisplayName,
+  isFFQBanqiEngineClientId,
+} from '../ffq-banqi-engine.js';
 import {
   isJungleFlipEngineClientId,
   JUNGLE_FLIP_PLAYABLE_ENGINES,
@@ -24,11 +31,23 @@ export async function tryHandle(
 ): Promise<boolean> {
   if (pathname !== '/api/engines/playable') return false;
   if (!requireMethod(request, response, 'GET')) return true;
-  const admitsTk = threeKingdomsBanqiAdmits(await currentAccountUser(request));
+  const account = await currentAccountUser(request);
+  const admitsTk = threeKingdomsBanqiAdmits(account);
+  const ffqBanqiEngines = ffqBanqiAdmits(account)
+    ? FFQ_BANQI_PLAYABLE_ENGINES.filter((tier) => ffqBanqiEngineAvailable(tier.id)).map((tier) => ({
+        id: tier.id,
+        name: ffqBanqiEngineDisplayName(tier.id),
+        familyName: 'Misty',
+        kind: tier.evaluation === 'random' ? 'builtin' : 'container',
+      }))
+    : undefined;
   // The ordinary roster is public. Keep TK in its own gated field, including
   // when a local operator adds a TK id to EXTRA_PLAYABLE_ENGINES.
   const engines = playableLiveEngines()
-    .filter((engine) => !isThreeKingdomsBanqiEngineClientId(engine.id))
+    .filter(
+      (engine) =>
+        !isThreeKingdomsBanqiEngineClientId(engine.id) && !isFFQBanqiEngineClientId(engine.id),
+    )
     .filter(
       (engine) => !isJungleFlipEngineClientId(engine.id) || jungleFlipEngineAvailable(engine.id),
     )
@@ -73,6 +92,7 @@ export async function tryHandle(
     200,
     {
       engines,
+      ...(ffqBanqiEngines ? { ffqBanqiEngines } : {}),
       banqiEngines,
       jungleFlipEngines,
       ...(threeKingdomsBanqiEngines ? { threeKingdomsBanqiEngines } : {}),

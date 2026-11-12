@@ -592,6 +592,16 @@ test('Three Kingdoms fetch pins the noise-capable 0.3.0 binary and matching serv
   assert.match(provider, /THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0\.3\.0'/);
 });
 
+test('FFQ banqi fetch pins the public v0.1.0 engine and railpack installs it', () => {
+  const fetch = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const entry = fetch.match(/^ {2}ffq-banqi-engine\)\n([\s\S]*?);;/m);
+  assert.ok(entry);
+  assert.match(entry[1], /repo=brianhliou\/misty-ffq-banqi tag=v0\.1\.0 mode=exec/);
+  assert.match(entry[1], /sha=62e74d73d6caca517a73036e01e884027316c8f7a7a6c6394e0ac016b4e427ca\b/);
+  const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
+  assert.match(railpack, /fetch-release-asset\.sh \/app\/bin ffq-banqi-engine"/);
+});
+
 // Build the forbidden path from pieces so this regression test does not match itself.
 const publicNetPath = ['releases', 'download', 'pikafish-net-7d13d735'].join('/');
 const oldWebNetPath = ['github.com/brianhliou/pikafish-wasm', 'releases', 'download'].join('/');

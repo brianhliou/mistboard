@@ -548,6 +548,7 @@ export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
   prefix('/historical-xiangqi/game/'),
   prefix('/dark-xiangqi/game/'),
   prefix('/banqi/game/'),
+  prefix('/ffq-banqi/game/'),
   prefix('/three-kingdoms-banqi/game/'),
   prefix('/jungle/game/'),
   prefix('/jungle-flip/game/'),

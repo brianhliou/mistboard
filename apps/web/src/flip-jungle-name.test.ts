@@ -8,8 +8,14 @@ const NOTATION_CITATION =
 // These name banqi, including Tencent's published notation title, never the
 // animal game. Match exact sentences in exact files, with occurrence counts:
 // exempting an article or translation file would hide a later naming regression.
-// FFQ banqi must add its own explicit entries when it reaches this branch.
+// FFQ banqi (翻翻棋 is its mainland name) adds its own explicit entries.
 const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
+  'apps/web/src/i18n/catalogs/play.zh-hans.ts': [
+    { sentence: '翻翻棋最多允许连续捉子四次。这步棋会是第五次。请走别的着法。', count: 1 },
+  ],
+  'apps/web/src/i18n/catalogs/play.zh-hant.ts': [
+    { sentence: '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。', count: 1 },
+  ],
   'apps/web/src/articles/content/jieqi-openings.ts': [{ sentence: NOTATION_CITATION, count: 1 }],
   'apps/web/src/articles/content/khai-cuoc-co-up.ts': [
     { sentence: NOTATION_CITATION, count: 1 },

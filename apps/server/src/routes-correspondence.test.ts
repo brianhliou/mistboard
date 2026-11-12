@@ -64,28 +64,25 @@ function createContext(
 
 const signedIn = { id: 'user-1', handle: 'tester', displayName: 'Tester' } as UserAccount;
 
-test('correspondence matcher claims only explicit dark-chess correspondence requests', () => {
+test('correspondence matcher claims every explicit correspondence request', () => {
   assert.equal(requestsCorrespondence({ gameSpecId: 'dark-chess', mode: 'correspondence' }), true);
-  // Plain dark-chess creates stay on the chess fallback path.
+  // Every spec's correspondence create routes here since #1059; the handler
+  // answers 501 for a spec with no invite room.
+  assert.equal(requestsCorrespondence({ gameSpecId: 'xiangqi', mode: 'correspondence' }), true);
+  // Plain creates stay on their tenant or chess fallback path.
   assert.equal(requestsCorrespondence({ gameSpecId: 'dark-chess', mode: 'pvp' }), false);
   assert.equal(requestsCorrespondence({ gameSpecId: 'dark-chess' }), false);
-  // Other specs answer through their own surfaces.
-  assert.equal(
-    requestsCorrespondence({ gameSpecId: 'dark-mini-xiangqi', mode: 'correspondence' }),
-    false,
-  );
 });
 
 test('correspondence create is flag-gated', async () => {
   process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'false';
   try {
     const { response, captured } = fakeResponse();
-    await handleCorrespondenceCreate(
-      createContext(),
-      response,
-      { gameSpecId: 'dark-chess', mode: 'correspondence', daysPerMove: 3 },
-      signedIn,
-    );
+    await handleCorrespondenceCreate(createContext(), response, {
+      gameSpecId: 'dark-chess',
+      mode: 'correspondence',
+      daysPerMove: 3,
+    });
     assert.equal(captured.status, 404);
     assert.equal(captured.body?.error, 'correspondence_disabled');
   } finally {
@@ -93,27 +90,58 @@ test('correspondence create is flag-gated', async () => {
   }
 });
 
-test('correspondence create requires an account', async () => {
+test('a guest creates a correspondence invite room (#1059)', async () => {
+  // No account is read on create: the creator's browser takes its seat with the
+  // bearer token, and the friend's seat is the one that needs an account.
+  const ctx = createContext();
+  ctx.createCorrespondenceRoom = async (timeControl, creatorPreference) => {
+    ctx.created.push({ timeControl, creatorPreference });
+    return { ok: true, room: { id: 'xq_guest-invite', gameSpecId: 'xiangqi' } };
+  };
+  const { response, captured } = fakeResponse();
+  await handleCorrespondenceCreate(ctx, response, {
+    gameSpecId: 'xiangqi',
+    mode: 'correspondence',
+    daysPerMove: 3,
+    preferredColor: 'red',
+  });
+  assert.equal(captured.status, 201);
+  assert.equal(captured.body?.url, '/room/xq_guest-invite');
+  assert.equal(captured.body?.rated, false);
+  assert.deepEqual(ctx.created, [
+    { timeControl: correspondenceTimeControl(3), creatorPreference: 'red' },
+  ]);
+});
+
+test('correspondence create refuses specs with no public invite room', async () => {
+  for (const gameSpecId of ['ffq-banqi', 'xiangqi-mahjong', 'not-a-spec', 42]) {
+    const { response, captured } = fakeResponse();
+    await handleCorrespondenceCreate(createContext(), response, {
+      gameSpecId,
+      mode: 'correspondence',
+      daysPerMove: 3,
+    });
+    assert.equal(captured.status, 501, String(gameSpecId));
+    assert.equal(captured.body?.error, 'correspondence_unsupported_spec');
+  }
+  // An eligible spec whose registration supplies no create is refused the same way.
   const { response, captured } = fakeResponse();
   await handleCorrespondenceCreate(
-    createContext(),
+    createContext({ createCorrespondenceRoom: undefined }),
     response,
     { gameSpecId: 'dark-chess', mode: 'correspondence', daysPerMove: 3 },
-    null,
   );
-  assert.equal(captured.status, 401);
-  assert.equal(captured.body?.error, 'correspondence_requires_account');
+  assert.equal(captured.status, 501);
 });
 
 test('correspondence create rejects off-menu allowances', async () => {
   for (const daysPerMove of [5, 0, -1, 'three', undefined, 0.5]) {
     const { response, captured } = fakeResponse();
-    await handleCorrespondenceCreate(
-      createContext(),
-      response,
-      { gameSpecId: 'dark-chess', mode: 'correspondence', daysPerMove },
-      signedIn,
-    );
+    await handleCorrespondenceCreate(createContext(), response, {
+      gameSpecId: 'dark-chess',
+      mode: 'correspondence',
+      daysPerMove,
+    });
     assert.equal(captured.status, 400, `daysPerMove=${String(daysPerMove)}`);
     assert.equal(captured.body?.error, 'invalid_days_per_move');
   }
@@ -125,7 +153,6 @@ test('correspondence create requires persistence', async () => {
     createContext({ isPersistenceInitialized: () => false }),
     response,
     { gameSpecId: 'dark-chess', mode: 'correspondence', daysPerMove: 3 },
-    signedIn,
   );
   assert.equal(captured.status, 503);
   assert.equal(captured.body?.error, 'persistence_disabled');
@@ -134,17 +161,12 @@ test('correspondence create requires persistence', async () => {
 test('correspondence create succeeds for a signed-in user with an official allowance', async () => {
   const ctx = createContext();
   const { response, captured } = fakeResponse();
-  await handleCorrespondenceCreate(
-    ctx,
-    response,
-    {
-      gameSpecId: 'dark-chess',
-      mode: 'correspondence',
-      daysPerMove: 3,
-      preferredColor: 'white',
-    },
-    signedIn,
-  );
+  await handleCorrespondenceCreate(ctx, response, {
+    gameSpecId: 'dark-chess',
+    mode: 'correspondence',
+    daysPerMove: 3,
+    preferredColor: 'white',
+  });
   assert.equal(captured.status, 201);
   assert.equal(captured.body?.roomId, 'dchx_test-room');
   assert.equal(captured.body?.mode, 'correspondence');
@@ -158,14 +180,14 @@ test('compressed dev allowances are accepted only behind the dev flag', async ()
   const body = { gameSpecId: 'dark-chess', mode: 'correspondence', daysPerMove: 0.002 };
   {
     const { response, captured } = fakeResponse();
-    await handleCorrespondenceCreate(createContext(), response, body, signedIn);
+    await handleCorrespondenceCreate(createContext(), response, body);
     assert.equal(captured.status, 400);
   }
   process.env.MISTBOARD_DEV_CORRESPONDENCE_TC = 'true';
   try {
     const ctx = createContext();
     const { response, captured } = fakeResponse();
-    await handleCorrespondenceCreate(ctx, response, body, signedIn);
+    await handleCorrespondenceCreate(ctx, response, body);
     assert.equal(captured.status, 201);
     assert.equal(ctx.created[0]?.timeControl.daysPerMove, 0.002);
     assert.equal(ctx.created[0]?.timeControl.initialMs, Math.round(0.002 * DAY_MS));
@@ -234,24 +256,81 @@ test('sweepDarkChessDueDeadline flags a due in-memory room through the ws runtim
   }
 });
 
-test('correspondence seats require an account on both sides', async () => {
+test('a guest may take only the first seat of a correspondence room (#1059)', async () => {
   const created = await createDarkChessCorrespondenceRoom(correspondenceTimeControl(3));
   assert.ok(created.ok);
   const room = created.room;
   try {
-    // Anonymous claim via the invite link is refused; the close reason gives the
-    // web shell its sign-in copy.
-    const anonymous = assignTenantSeat(darkChessTenant, room, 'anon-client', undefined, null);
-    assert.deepEqual(anonymous, { ok: false, reason: 'correspondence requires account' });
-    const signedInClaim = assignTenantSeat(
+    // The invite's creator, signed out, sits as a guest with a bearer token.
+    const creator = assignTenantSeat(darkChessTenant, room, 'guest-client', undefined, null);
+    assert.ok(creator.ok);
+    assert.equal(creator.tokenState.userId, null);
+    // A second guest (the friend, signed out) is refused; the close reason gives
+    // the web shell its sign-in copy.
+    const friendGuest = assignTenantSeat(darkChessTenant, room, 'anon-client', undefined, null);
+    assert.deepEqual(friendGuest, { ok: false, reason: 'correspondence requires account' });
+    const friend = assignTenantSeat(darkChessTenant, room, 'acct-client', undefined, signedIn);
+    assert.ok(friend.ok);
+    assert.notEqual(friend.seat, creator.seat);
+    assert.equal(friend.tokenState.userId, signedIn.id);
+  } finally {
+    darkChessTenantRooms.clear();
+  }
+});
+
+test('signing in binds a guest correspondence seat; another browser cannot claim it (#1059)', async () => {
+  const created = await createDarkChessCorrespondenceRoom(correspondenceTimeControl(3));
+  assert.ok(created.ok);
+  const room = created.room;
+  try {
+    const creator = assignTenantSeat(darkChessTenant, room, 'guest-client', undefined, null);
+    assert.ok(creator.ok);
+    assert.ok(creator.seatToken);
+    const friendAccount = {
+      id: 'friend-1',
+      handle: 'friend',
+      displayName: 'Friend',
+    } as UserAccount;
+    const friend = assignTenantSeat(
       darkChessTenant,
       room,
-      'acct-client',
+      'friend-client',
       undefined,
-      signedIn,
+      friendAccount,
     );
-    assert.ok(signedInClaim.ok);
-    assert.equal(signedInClaim.tokenState.userId, signedIn.id);
+    assert.ok(friend.ok);
+
+    // Another browser, signed in or not, with no token gets no seat: both seats are held.
+    const intruder = { id: 'intruder', handle: 'x', displayName: 'X' } as UserAccount;
+    const stolen = assignTenantSeat(darkChessTenant, room, 'other-client', undefined, intruder);
+    assert.deepEqual(stolen, { ok: false, reason: 'private room' });
+    const stolenGuest = assignTenantSeat(darkChessTenant, room, 'other-guest', undefined, null);
+    assert.equal(stolenGuest.ok, false);
+
+    // The friend's account cannot fold the guest's seat into its own: no one plays both sides.
+    const doubled = assignTenantSeat(
+      darkChessTenant,
+      room,
+      'friend-2',
+      creator.seatToken,
+      friendAccount,
+    );
+    assert.ok(doubled.ok);
+    assert.equal(room.seatTokens[creator.seat]?.userId, null);
+
+    // The creator's browser signs in and reconnects with its token: the seat binds.
+    const bound = assignTenantSeat(darkChessTenant, room, 'guest-2', creator.seatToken, signedIn);
+    assert.ok(bound.ok);
+    assert.equal(bound.seat, creator.seat);
+    assert.equal(bound.tokenState.userId, signedIn.id);
+    assert.equal(bound.tokenState.userHandle, signedIn.handle);
+    // Once bound, the token alone no longer seats a different account or a guest.
+    const replayed = assignTenantSeat(darkChessTenant, room, 'guest-3', creator.seatToken, null);
+    assert.deepEqual(replayed, { ok: false, reason: 'private room' });
+    // And the account reclaims the seat from any device without the token.
+    const reclaimed = assignTenantSeat(darkChessTenant, room, 'phone', undefined, signedIn);
+    assert.ok(reclaimed.ok);
+    assert.equal(reclaimed.seat, creator.seat);
   } finally {
     darkChessTenantRooms.clear();
   }

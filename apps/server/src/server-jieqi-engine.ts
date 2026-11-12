@@ -27,9 +27,8 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
 import {
   type BotTimeRule,
   botTimeRule,
@@ -105,7 +104,12 @@ function engineToMove(room: JieqiEngineRoom, seat: JieqiColor): boolean {
   // A paused room is not the engine's turn: a search that lands (or fails)
   // after the shutdown pause must neither move nor resign. The resume
   // reschedules the engine, which searches again on the restored room.
-  if (room.projection.paused) return false;
+  if (
+    room.stopping ||
+    room.projection.paused ||
+    room.projection.timeControl?.daysPerMove !== undefined
+  )
+    return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 
@@ -215,6 +219,7 @@ export type JieqiEngineMoveProvider = (
 ) => Promise<UciEval>;
 
 export type JieqiLiveTurn = {
+  variant?: string;
   rule: BotTimeRule;
   engineId: string;
   roomId: string;
@@ -273,7 +278,8 @@ export function jieqiDrawGuardBudgetMs(input: {
   waitedMs: number;
   live?: JieqiLiveTurn;
 }): number {
-  return Math.max(MIN_MOVETIME_MS, Math.floor(jieqiLiveMoveBudgetMs(input) / 2));
+  const half = Math.floor(jieqiLiveMoveBudgetMs(input) / 2);
+  return input.live ? half : Math.max(MIN_MOVETIME_MS, half);
 }
 
 export async function playJieqiEngineMoveIfReady(
@@ -284,6 +290,14 @@ export async function playJieqiEngineMoveIfReady(
   const seat = jieqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) return;
 
@@ -301,6 +315,7 @@ export async function playJieqiEngineMoveIfReady(
   // The top rungs at a short clock may run the phase rule instead
   // (MISTBOARD_BOT_TIME_RULE=phase); `live.rule` is what the decision artifact records.
   const live: JieqiLiveTurn = {
+    variant: 'jieqi',
     rule: botTimeRule(),
     engineId,
     roomId: room.id,
@@ -312,7 +327,7 @@ export async function playJieqiEngineMoveIfReady(
   const timeRule = effectiveTimeRule({ ...live, incrementMs });
   const budgetInput = { ceilingMs: tier.movetimeMs, remainingMs, incrementMs, live };
   const movetimeMs = jieqiLiveMoveBudgetMs(budgetInput);
-  const budgetAfterWait = (waitedMs: number) => jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs });
+  if (movetimeMs <= 0 || !turn.current()) return;
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
@@ -329,8 +344,13 @@ export async function playJieqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      const elapsedMs = Date.now() - startedAt;
+      const budgetAfterWait = (waitedMs: number) =>
+        jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs: elapsedMs + waitedMs });
+      const retryBudgetMs = budgetAfterWait(0);
+      if (retryBudgetMs <= 0) return null;
       const search = await moveProvider(engineId, fen, {
-        movetimeMs,
+        movetimeMs: retryBudgetMs,
         budgetAfterWait,
         moves,
         newGame,
@@ -345,6 +365,7 @@ export async function playJieqiEngineMoveIfReady(
           const elapsedMs = Date.now() - startedAt;
           const budget = (waitedMs: number) =>
             jieqiDrawGuardBudgetMs({ ...budgetInput, waitedMs: elapsedMs + waitedMs });
+          if (budget(0) <= 0 || !turn.current()) return Promise.resolve(search);
           return moveProvider(engineId, fen, {
             movetimeMs: budget(0),
             budgetAfterWait: budget,
@@ -359,7 +380,7 @@ export async function playJieqiEngineMoveIfReady(
       const parsed = pikafishUciToJieqiMove(uci);
       return parsed && isJieqiLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+    stillOnTurn: turn.current,
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -375,7 +396,7 @@ export async function playJieqiEngineMoveIfReady(
         'Jieqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !turn.current()) return;
 
   if (validated === null) {
     // FAIL CLOSED: capture a complete replayable record, page, and resign. Jieqi
@@ -454,6 +475,8 @@ export async function playJieqiEngineMoveIfReady(
   const legalCount = getJieqiLegalMoves(room.projection.state).length;
   const computeMs = Date.now() - startedAt;
   const pace = replyPace({
+    variant: 'jieqi',
+    initialMs: clock?.initialMs,
     roomId: room.id,
     ply: gameMoves.length,
     legalCount,
@@ -464,10 +487,7 @@ export async function playJieqiEngineMoveIfReady(
     computeMs,
     engineVsEngine: jieqiEngineSeatCount(room) === 2,
   });
-  if (pace.waitMs > 0) {
-    await sleepMs(pace.waitMs);
-    if (room.projection.state !== stateAtTurn || !engineToMove(room, seat)) return;
-  }
+  if (!(await turn.wait(pace.waitMs))) return;
 
   const event: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = {
     type: 'move-played',

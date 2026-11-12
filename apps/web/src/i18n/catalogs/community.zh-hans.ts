@@ -424,6 +424,8 @@ export const ZH_HANS_COMMUNITY = {
   'challenge.expired': '这个挑战已过期。',
   'challenge.copyLink': '复制链接',
   'challenge.copied': '已复制',
+  'challenge.targetEmailed': '已发邮件通知 {name}',
+  'challenge.targetNotEmailed': '把这个链接发给对方',
   'challenge.accept': '接受',
   'challenge.alreadyAccepted': '这个挑战已被别人接受。',
   'challenge.couldNotAccept': '无法接受，请重试。',

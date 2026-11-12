@@ -22,14 +22,20 @@
 // DELIBERATELY SELF-CONTAINED. It spawns the binary directly and takes FENs as
 // literals: no dist/ imports, no corpus directory. `calibrate-win-curve.mjs` is
 // unrunnable today because it depends on both -- a worktree that was deleted and
-// a scratchpad that was cleared. Do not add those dependencies here.
+// a scratchpad that was cleared. Do not add those dependencies here. The one
+// import is the server's dependency-free path resolver, read from source, so the
+// probe runs the patched pikafish.ref build on the CC0 net like the site (#989).
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../apps/server/src/xiangqi-pikafish-paths.ts';
 
-// Keep in sync with packages/game/src/analysis.ts.
+// Keep in sync with packages/game/src/analysis.ts: PIKAFISH_CC0_WIN_PCT_K, the
+// curve for pikafish-xiangqi-analysis@6 (this engine). The 2026-09-01 answers
+// above were read on the old net with @5's 0.00368208.
 const WIN_PCT_CLAMP_CP = 1000;
-const WIN_PCT_K = 0.00368208;
+const WIN_PCT_K = 0.00465696;
 const clampedWinPercent = (cp) => {
   const c = Math.max(-WIN_PCT_CLAMP_CP, Math.min(WIN_PCT_CLAMP_CP, cp));
   return 50 + 50 * (2 / (1 + Math.exp(-WIN_PCT_K * c)) - 1);
@@ -65,17 +71,6 @@ const DEFAULT_POSITIONS = [
   },
   { ply: 40, edge: 21.0, fen: '2bak1b2/4a4/6n2/p5p1p/1r7/c1pnP4/3R4P/4c1r2/4A4/4KABR1 w - - 0 21' },
 ];
-
-function enginePath() {
-  const explicit = process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
-  if (explicit) return resolve(explicit);
-  const dev = resolve(
-    process.env.HOME ?? '',
-    'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
-  );
-  if (existsSync(dev)) return dev;
-  throw new Error('no Pikafish binary; set MISTBOARD_PIKAFISH_XIANGQI_PATH');
-}
 
 /** Spawn one engine and keep it for every search: startup dominates otherwise. */
 function openEngine(bin, nnue) {
@@ -152,9 +147,8 @@ const budgets = (argValue('--nodes') ?? '250000,1000000,4000000').split(',').map
 const ownFen = argValue('--fen');
 const positions = ownFen ? [{ ply: null, edge: null, fen: ownFen }] : DEFAULT_POSITIONS;
 
-const bin = enginePath();
-const nnue = resolve(bin, '../../pikafish.nnue');
-const engine = openEngine(bin, existsSync(nnue) ? nnue : null);
+const bin = pikafishXiangqiPath();
+const engine = openEngine(bin, pikafishXiangqiNetPath(bin));
 await engine.init();
 
 const pad = (s, n) => String(s).padStart(n);

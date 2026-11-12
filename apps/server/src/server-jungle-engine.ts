@@ -31,9 +31,9 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import {
   JUNGLE_RUST_ENGINE_VERSION,
   jungleEngineBinaryAvailable,
@@ -266,11 +266,20 @@ export async function playJungleEngineMoveIfReady(
   const seat = jungleEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
 
   const now = ctx.now?.() ?? Date.now();
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, now) : null;
   const incrementMs = clock?.incrementMs ?? 0;
+  const startedAt = Date.now();
   if (remainingMs !== null && remainingMs <= 0) return;
 
   // The KataGo seat has no in-process fallback: its strength is the net. Missing
@@ -282,14 +291,24 @@ export async function playJungleEngineMoveIfReady(
       await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
       return;
     }
-    await playJungleSearchedEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs, {
-      engineVersion: KATAGO_JUNGLE_ENGINE_VERSION,
-      ceilingMs: katagoTier.movetimeCapMs,
-      // The decision artifact's tier_nodes column carries KataGo's VISIT budget.
-      tier: { nodes: katagoTier.visits, movetimeMs: katagoTier.movetimeCapMs },
-      search: (fen, movetimeCapMs) =>
-        katagoProvider(fen, seat, { visits: katagoTier.visits, movetimeCapMs }),
-    });
+    await playJungleSearchedEngineMove(
+      ctx,
+      room,
+      seat,
+      engineId,
+      remainingMs,
+      incrementMs,
+      turn,
+      startedAt,
+      {
+        engineVersion: KATAGO_JUNGLE_ENGINE_VERSION,
+        ceilingMs: katagoTier.movetimeCapMs,
+        // The decision artifact's tier_nodes column carries KataGo's VISIT budget.
+        tier: { nodes: katagoTier.visits, movetimeMs: katagoTier.movetimeCapMs },
+        search: (fen, movetimeCapMs) =>
+          katagoProvider(fen, seat, { visits: katagoTier.visits, movetimeCapMs }),
+      },
+    );
     return;
   }
 
@@ -309,20 +328,29 @@ export async function playJungleEngineMoveIfReady(
       return;
     }
     const repSeedFens = jungleRepSeedFensForRoom(room);
-    await playJungleSearchedEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs, {
-      engineVersion: JUNGLE_RUST_ENGINE_VERSION,
-      ceilingMs: rustTier.movetimeCapMs,
-      tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
-      search: (fen, movetimeCapMs) =>
-        moveProvider(engineId, fen, { nodes: rustTier.nodes, movetimeCapMs, repSeedFens }),
-    });
+    await playJungleSearchedEngineMove(
+      ctx,
+      room,
+      seat,
+      engineId,
+      remainingMs,
+      incrementMs,
+      turn,
+      startedAt,
+      {
+        engineVersion: JUNGLE_RUST_ENGINE_VERSION,
+        ceilingMs: rustTier.movetimeCapMs,
+        tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
+        search: (fen, movetimeCapMs) =>
+          moveProvider(engineId, fen, { nodes: rustTier.nodes, movetimeCapMs, repSeedFens }),
+      },
+    );
     return;
   }
 
   // Flag off → the in-process TS engine is the DELIBERATE engine for jungle PvE (a config
   // choice, not a failure fallback). This path retires once jungle is Rust-mandatory in
   // every environment (flag on + binary provisioned).
-  const startedAt = Date.now();
   const chosen = chooseJungleEngineMove(room.projection.state, tier);
   if (!chosen) {
     logger.error(
@@ -331,7 +359,24 @@ export async function playJungleEngineMoveIfReady(
     );
     return;
   }
-  if (!engineToMove(room, seat)) return;
+  const thinkTimeMs = Date.now() - startedAt;
+  const pace = replyPace({
+    variant: 'jungle',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: room.projection.state.moveNumber,
+    legalCount: getJungleLegalMoves(room.projection.state).length,
+    cp: null,
+    mate: null,
+    remainingMs,
+    incrementMs,
+    computeMs: thinkTimeMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isJungleEngineClientId(room.projection.seats[color]),
+    ),
+  });
+  if (!(await turn.wait(pace.waitMs)) || !turn.current()) return;
 
   const event: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
     type: 'move-played',
@@ -346,9 +391,8 @@ export async function playJungleEngineMoveIfReady(
   // `search` block — which is itself the useful signal: an artifact with a null
   // budget and no search says the TS engine moved, not the Rust binary, and that
   // distinction was previously only visible in a boot-time flag.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'jungle',
       roomId: room.id,
       engineId,
@@ -360,12 +404,13 @@ export async function playJungleEngineMoveIfReady(
       incrementMs,
       tier: { depth: tier.depth },
       search: null,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts: [],
       move: jungleMoveToEngineUci(chosen),
       legalCount: getJungleLegalMoves(room.projection.state).length,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }
@@ -423,22 +468,40 @@ async function playJungleSearchedEngineMove(
   engineId: string,
   remainingMs: number | null,
   incrementMs: number,
+  turn: ReturnType<typeof createReplyTurn>,
+  startedAt: number,
   engine: JungleSearchedEngine,
 ): Promise<void> {
   const state = room.projection.state;
+  const clock = room.projection.clock;
   const fen = jungleStateToEngineFen(state);
   // Clock-aware per-move budget (shared allocator). Strength = the tier's NODE (or
   // visit) budget; this movetime is the latency ceiling + time-pressure guard.
-  const { computeBudgetMs: movetimeCapMs } = budgetForMove({
+  const paceInput = {
+    variant: 'jungle',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: room.projection.state.moveNumber,
+    legalCount: getJungleLegalMoves(room.projection.state).length,
     remainingMs,
     incrementMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isJungleEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: engine.ceilingMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
+  };
+  let { movetimeMs: movetimeCapMs } = liveBotMoveTime(budgetInput);
+  if (movetimeCapMs <= 0 || !turn.current()) return;
 
-  const startedAt = Date.now();
   let lastSearch: UciEval | null = null;
+  let budgetExhausted = false;
   const {
     chosen: validated,
     attempts,
@@ -446,6 +509,14 @@ async function playJungleSearchedEngineMove(
   } = await resolveValidatedEngineMove<JungleMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      movetimeCapMs = liveBotMoveTime({
+        ...budgetInput,
+        waitedMs: Date.now() - startedAt,
+      }).movetimeMs;
+      if (movetimeCapMs <= 0) {
+        budgetExhausted = true;
+        return null;
+      }
       const search = await engine.search(fen, movetimeCapMs);
       lastSearch = search;
       return search.best;
@@ -454,7 +525,7 @@ async function playJungleSearchedEngineMove(
       const parsed = engineUciToJungleMove(uci);
       return parsed && isJungleLegalMove(state, parsed) ? parsed : null;
     },
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+    stillOnTurn: () => !budgetExhausted && turn.current(),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -470,7 +541,7 @@ async function playJungleSearchedEngineMove(
         'Jungle engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !turn.current()) return;
 
   if (validated === null) {
     // FAIL CLOSED: capture a replayable record, page, and resign the engine seat.
@@ -502,6 +573,16 @@ async function playJungleSearchedEngineMove(
   }
 
   reportEngineMoveOk();
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+  });
+  if (!(await turn.wait(pace.waitMs)) || !turn.current()) return;
+
   const event: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
     type: 'move-played',
     at: Date.now(),
@@ -512,9 +593,8 @@ async function playJungleSearchedEngineMove(
   // Queue BEFORE the append: if this move ends the game, the tenant event writer
   // records the game end and flushes the queue inside that same append, and a
   // decision queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'jungle',
       roomId: room.id,
       engineId,
@@ -526,13 +606,14 @@ async function playJungleSearchedEngineMove(
       incrementMs,
       tier: engine.tier,
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts,
       move: jungleMoveToEngineUci(validated),
       fen,
       legalCount: getJungleLegalMoves(state).length,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

@@ -64,8 +64,9 @@ export function createAdvantageChart(
   opts: {
     onJump: (ply: number) => void;
     seatColors?: ReviewSeatColors;
-    /** The variant's eval text, so the readout matches the move list. */
-    formatScore?: (cp: number | null, mate: number | null) => string;
+    /** The variant's eval text, so the readout matches the move list. `entry` is the
+     *  whole eval, for a caller that writes a rule verdict (`rule`) in words. */
+    formatScore?: (cp: number | null, mate: number | null, entry?: PlyEval) => string;
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
@@ -83,7 +84,22 @@ export function createAdvantageChart(
   const maxPly = Math.max(1, evals.length - 1);
   const xOf = (ply: number) => (ply / maxPly) * VIEW_W;
   const yFor = (win: number) => PAD_Y + (1 - win / 100) * (VIEW_H - 2 * PAD_Y);
-  const winOf = (e: PlyEval) => winPercent(e.cp, e.mate, opts.winK);
+  // A rule-verdict eval (`rule`: the engine's "mate 1" is the perpetual-check rule, not a
+  // checkmate) holds the previous ply's standing. On a record the rule was never applied and
+  // play went on, so plotting it as a forced mate draws a spike to the edge and straight back
+  // that no position in the game had; the ply before is the last reading of the position
+  // itself. In a game played here the result says who won by the rule; the curve still should
+  // not claim a mate. The first ply has no previous reading and holds level (50).
+  const winByPly = new Map<number, number>();
+  {
+    let previous = 50;
+    for (const e of evals) {
+      const win = e.rule ? previous : winPercent(e.cp, e.mate, opts.winK);
+      winByPly.set(e.ply, win);
+      previous = win;
+    }
+  }
+  const winOf = (e: PlyEval) => winByPly.get(e.ply) ?? winPercent(e.cp, e.mate, opts.winK);
   const yOf = (e: PlyEval) => yFor(winOf(e));
 
   const el = document.createElement('section');
@@ -329,7 +345,9 @@ export function createAdvantageChart(
 
     // Same formatter as the move list's eval column right beside the chart: two
     // readings of one number must not disagree about its scale.
-    const score = (opts.formatScore ?? formatEval)(point.cp, point.mate);
+    const score = opts.formatScore
+      ? opts.formatScore(point.cp, point.mate, point)
+      : formatEval(point.cp, point.mate);
     showChartTip(tip, {
       move: opts.moveLabel?.(ply) ?? null,
       value: score,

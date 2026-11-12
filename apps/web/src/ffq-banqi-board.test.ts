@@ -68,6 +68,23 @@ describe('FFQ banqi board adapter', () => {
     }
   });
 
+  it('projects forbidden numeric moves and selects a piece whose only move is forbidden', () => {
+    const source = view();
+    source.board[0] = { color: 'red', role: 'chariot', faceDown: false };
+    source.board[1] = null;
+    source.legalMoves = [];
+    source.forbiddenMoves = [{ from: 0, to: 1 }];
+    expect(ffqBanqiBoardView(source).forbiddenMoves).toEqual([{ from: 'a1', to: 'a2' }]);
+    expect(ffqBanqiClickResult(source, 'red', null, 'a1')).toEqual({
+      kind: 'select',
+      square: 'a1',
+    });
+    expect(ffqBanqiClickResult(source, 'red', 'a1', 'a2')).toEqual({
+      kind: 'forbidden',
+      move: { from: 'a1', to: 'a2' },
+    });
+  });
+
   it('gives a selected cannon capture priority over flipping its covered target', () => {
     const source = view();
     source.board[0] = { color: 'red', role: 'cannon', faceDown: false };

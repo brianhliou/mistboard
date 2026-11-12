@@ -7,7 +7,9 @@
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  canonicalVariantOrderIndex,
   DAYS_PER_MOVE_OPTIONS,
+  type GameSpecId,
   isCorrespondenceRatedSpec,
   maybeGameSpecForId,
 } from '@mistboard/game';
@@ -301,6 +303,14 @@ export function variantFact(
   return { kind: 'more', shown: labels.slice(0, 2).join(', '), more: labels.length - 2 };
 }
 
+// The variants the hero's fact names, in shelf order so the two it spells out
+// are the site's leads (Xiangqi, Jieqi), not the picker's Fog Chess default.
+export function variantFactSpecIds(
+  ids: readonly GameSpecId[] = CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+): GameSpecId[] {
+  return [...ids].sort((a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b));
+}
+
 // ---- Open seeks -------------------------------------------------------------------
 
 // Other players' public seeks: your own are in "Your challenges" with a Cancel
@@ -449,14 +459,4 @@ export function correspondenceInProgress<T extends Pick<CurrentGame, 'timeClass'
   games: readonly T[],
 ): T[] {
   return games.filter((game) => game.timeClass === 'correspondence');
-}
-
-// The game the hero draws: the first one the public feed sent an open board
-// for. Null means the hero shows a starting position instead.
-export function heroBoardGame<T extends Pick<CurrentGame, 'observe' | 'payload' | 'gameSpecId'>>(
-  games: readonly T[],
-): T | null {
-  return (
-    games.find((game) => inboxTileKind(game.gameSpecId, game) === 'board' && !!game.payload) ?? null
-  );
 }

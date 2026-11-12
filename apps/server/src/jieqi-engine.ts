@@ -144,7 +144,7 @@ const JIEQI_LADDER_TIERS = [
 const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
   ...JIEQI_LADDER_TIERS,
   {
-    // Level 8: no depth cap, no skill, and the movetime matches mainline Pikafish's top
+    // Level 8: no depth cap, no skill, and the movetime matches Pikafish's top
     // xiangqi rung (level-8, 4000ms). Measured at the jieqi start position on an 8-core
     // dev box: this config reaches depth 32.
     // Named like the rungs below it (migration 173 renames stored games).

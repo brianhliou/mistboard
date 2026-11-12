@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   allowsAnonymousAccess,
+  anonymousChallengePreview,
   challengeAcceptError,
   challengeViewModel,
   openSeekPayload,
@@ -238,4 +239,54 @@ test('seekGoneView: a private challenge stays a plain 404 to a stranger', () => 
   assert.equal(seekGoneView(link, 'stranger'), null);
   assert.equal(seekGoneView(link, 'creator')?.reason, 'taken');
   assert.equal(seekGoneView(link, 'friend')?.roomId, 'room_3');
+});
+
+// #1058: a signed-out visitor holding a /challenge link sees who, what and the
+// pace above "Sign in to play". Never a directed challenge, never a lapsed one,
+// and only the named fields.
+test('anonymousChallengePreview: a link challenge previews name, game, pace and order only', () => {
+  const seek = {
+    id: 'seek_1',
+    creatorUserId: 'u_alice',
+    gameSpecId: 'xiangqi',
+    daysPerMove: 3,
+    preferredColor: 'first',
+    visibility: 'private',
+    rated: false,
+    targetUserId: null,
+    expiresAt: future,
+    creatorName: 'Alice',
+    creatorHandle: 'alice',
+    creatorEmail: 'alice@example.test',
+  };
+  const preview = anonymousChallengePreview(seek, T0);
+  assert.deepEqual(preview, {
+    gameSpecId: 'xiangqi',
+    daysPerMove: 3,
+    preferredColor: 'first',
+    visibility: 'private',
+    rated: false,
+    challengerName: 'Alice',
+    challengerHandle: 'alice',
+  });
+  const wire = JSON.stringify(preview);
+  assert.ok(!wire.includes('u_alice'), 'no account id');
+  assert.ok(!wire.includes('example.test'), 'no email');
+  assert.ok(!wire.includes('seek_1'), 'nothing the caller did not already hold');
+});
+
+test('anonymousChallengePreview: a directed or expired challenge previews nothing', () => {
+  const base = {
+    gameSpecId: 'xiangqi',
+    daysPerMove: 3,
+    preferredColor: 'random',
+    visibility: 'private',
+    targetUserId: null as string | null,
+    expiresAt: future as Date | null,
+    creatorName: 'Alice',
+    creatorHandle: 'alice',
+  };
+  assert.equal(anonymousChallengePreview({ ...base, targetUserId: 'u_bob' }, T0), null);
+  assert.equal(anonymousChallengePreview({ ...base, expiresAt: past }, T0), null);
+  assert.notEqual(anonymousChallengePreview({ ...base, expiresAt: null }, T0), null);
 });

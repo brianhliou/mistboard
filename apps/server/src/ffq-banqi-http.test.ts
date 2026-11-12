@@ -231,6 +231,31 @@ for (const flag of [undefined, 'false', 'true']) {
           const url = new URL(path, 'http://localhost');
           const safeShell =
             method === 'GET' && [`/room/${id}`, `/room/${id}/`].includes(url.pathname);
+          if (
+            admitted &&
+            method === 'GET' &&
+            (path === `/api/ffq-banqi/games/${id}` || path === `/ffq-banqi/game/${id}`)
+          ) {
+            const headers = new Map();
+            const response = {
+              setHeader: (key: string, value: unknown) => headers.set(key.toLowerCase(), value),
+            } as unknown as ServerResponse;
+            assert.equal(
+              await guardFFQBanqiHttpRead(
+                context,
+                {
+                  method,
+                  headers: { cookie: 'mistboard_session=fixture.token' },
+                } as IncomingMessage,
+                response,
+                new URL(path, 'http://localhost'),
+              ),
+              false,
+              path,
+            );
+            assert.equal(headers.get('cache-control'), 'no-store');
+            continue;
+          }
           let result = await invoke(handler, method, path, role !== null);
           if (safeShell && url.pathname.endsWith('/')) {
             const target = `/room/${id}${url.search}`;
@@ -285,7 +310,7 @@ for (const flag of [undefined, 'false', 'true']) {
       if (!admitted) assert.equal(summaryReads, 0, 'unauthorized request loaded a summary');
       assert.equal(
         queries.filter((sql) => sql.includes('SELECT games.room_id')).length,
-        admitted ? 6 : 0,
+        admitted ? 3 : 0,
         'only authorized summary endpoints load persisted summaries',
       );
     });

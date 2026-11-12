@@ -1,6 +1,8 @@
 import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ffqBanqiEnabled } from '../feature-flags.js';
+import { setFFQBanqiEngineOptions } from '../ffq-banqi-access.js';
+import { landingBotLadder } from '../landing-bot-policy.js';
 import {
   enabledLandingVariantGameSpecs,
   landingPlayDeepLinkAccepts,
@@ -27,6 +29,7 @@ beforeEach(() => {
     vi.fn(async () => new Response('{}', { status: 200 })),
   );
   setResolvedAdmin(undefined);
+  setFFQBanqiEngineOptions([]);
 });
 afterEach(() => {
   window.localStorage.clear();
@@ -40,6 +43,14 @@ describe('FFQ hidden admin room entry', () => {
   it.each([undefined, 'false', 'true'])('requires flag=%s AND an admin, even in dev', (flag) => {
     vi.stubEnv('DEV', true);
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', flag);
+    setFFQBanqiEngineOptions([
+      {
+        id: 'misty-ffq-banqi-level-1',
+        name: 'Misty level 1',
+        familyName: 'Misty',
+        kind: 'builtin',
+      },
+    ]);
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
     expect(tenant).not.toBeNull();
     expect(webVariantTenantForRoomId('ffq_test')).toBe(tenant);
@@ -56,7 +67,12 @@ describe('FFQ hidden admin room entry', () => {
         ),
       ).toBe(offered);
       expect(variantPublicSurfaceEnabled(FFQ_BANQI_SPEC_ID)).toBe(false);
-      for (const mode of ['pve', 'lobby'] as const) {
+      expect(
+        enabledLandingVariantGameSpecs('pve', 'en')
+          .map((entry) => entry.gameSpecId)
+          .includes(FFQ_BANQI_SPEC_ID),
+      ).toBe(offered);
+      for (const mode of ['lobby'] as const) {
         expect(
           enabledLandingVariantGameSpecs(mode, 'en').map((entry) => entry.gameSpecId),
         ).not.toContain(FFQ_BANQI_SPEC_ID);
@@ -67,7 +83,7 @@ describe('FFQ hidden admin room entry', () => {
     expect(tenant?.landing?.offerInMenu()).toBe(false);
   });
 
-  it('opens a friend setup but cannot carry FFQ into a bot or lobby setup', () => {
+  it('keeps FFQ out of lobby and unavailable bot setups', () => {
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     setResolvedAdmin(true);
     openLandingSetupDialog({
@@ -85,11 +101,12 @@ describe('FFQ hidden admin room entry', () => {
     ).toBe('Red');
     for (const mode of ['pve', 'lobby'] as const) {
       document.querySelector<HTMLButtonElement>(`[data-play-mode="${mode}"]`)?.click();
-      expect(entry()).toBeNull();
+      if (mode === 'pve') expect(entry()?.getAttribute('aria-disabled')).toBe('true');
+      else expect(entry()).toBeNull();
     }
   });
 
-  it('creates only casual human rooms with fixed Red/Black seats', () => {
+  it('creates casual rooms with fixed Red/Black seats and runtime-gated bot levels', () => {
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     setResolvedAdmin(true);
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
@@ -102,9 +119,56 @@ describe('FFQ hidden admin room entry', () => {
     });
     expect(tenant?.landing?.engineOptions).toBeUndefined();
     expect(variantSupportsPve(FFQ_BANQI_SPEC_ID)).toBe(false);
+    const options = [1, 4].map((level) => ({
+      id: `misty-ffq-banqi-level-${level}`,
+      name: `Misty level ${level}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
+    setFFQBanqiEngineOptions(options);
+    expect(tenant?.landing?.engineOptions).toEqual(options);
+    expect(tenant?.landing?.defaultEngineId).toBe('misty-ffq-banqi-level-4');
+    expect(variantSupportsPve(FFQ_BANQI_SPEC_ID)).toBe(true);
+    openLandingSetupDialog({
+      mode: 'pve',
+      initialGameSpecId: FFQ_BANQI_SPEC_ID,
+      engines: [],
+      modeSwitcher: true,
+    });
+    expect(
+      document
+        .querySelector('.landing-variant-card[data-game-spec="ffq-banqi"]')
+        ?.getAttribute('aria-checked'),
+    ).toBe('true');
+
+    expect(
+      landingBotLadder(FFQ_BANQI_SPEC_ID, new Set(), new Set(options.map((e) => e.id))).map(
+        (r) => r.level,
+      ),
+    ).toEqual([1, 4]);
+    expect(
+      roomCreationRequestBody(
+        'pve',
+        {
+          gameSpecId: FFQ_BANQI_SPEC_ID,
+          preferredColor: 'black',
+          rated: true,
+          timeControl: { initialMs: 300000, incrementMs: 5000 },
+        },
+        'misty-ffq-banqi-level-4',
+      ),
+    ).toMatchObject({
+      gameSpecId: FFQ_BANQI_SPEC_ID,
+      mode: 'pve',
+      engineId: 'misty-ffq-banqi-level-4',
+      preferredColor: 'black',
+      rated: false,
+    });
+
     expect(tenant?.watch).toBeUndefined();
-    expect(tenant?.gameRouteBase).toBeUndefined();
-    expect(tenant?.mountPostgame).toBeUndefined();
+    // Finished games open the private review page (#808).
+    expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
+    expect(tenant?.mountPostgame).toBeTypeOf('function');
     for (const preferredColor of ['red', 'black', 'random'] as const) {
       expect(
         roomCreationRequestBody('pvp', {
