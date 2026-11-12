@@ -278,3 +278,20 @@ test('a changelog HEAD reuses exactly its own additions and reports differing he
   }
   assert.deepEqual(f.snapshot(), before);
 });
+
+test('push without batch CI refuses before changing its changelog or running gates', (t) => {
+  const f = fixture(t);
+  const before = f.snapshot();
+  const result = f.run(['--push', '--changelog', 'Fixed: Must stay uncommitted']);
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.stderr, /batch:ci/);
+  assert.deepEqual(f.snapshot(), before);
+  assert.ok(
+    !result.events.some(
+      (event) =>
+        event.command === 'npm' ||
+        (event.command === 'git' && (event.args.includes('push') || event.args.includes('commit'))),
+    ),
+  );
+  assert.equal(existsSync(f.env.MISTBOARD_RELEASE_LOCK), false);
+});

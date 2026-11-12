@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { retryHostedCi, waitForExactCi } from './lib/ci-flake-retry.mjs';
 
 const { test } = process.env.VITEST ? await import('vitest') : await import('node:test');
 
@@ -17,6 +18,8 @@ function declaration(name, text = source) {
 
 // Execute the real release orchestration, replacing only its external effects.
 // Nothing invokes git, gh, production, the keychain, or a real drain here.
+// Fresh-candidate scenarios use the emergency path; routine batch reuse and
+// refusal have their own explicit scenarios below.
 async function releaseScenario({
   ciError,
   liveGames = 1,
@@ -26,12 +29,17 @@ async function releaseScenario({
   localCi = false,
   branchError = false,
   batchRun = null,
+  extraShip = 'Fixture emergency path',
+  mergeDuringGate = false,
+  recoveredRun = null,
 } = {}) {
   const events = [];
   const pushes = [];
+  const errors = [];
   const release = { adopted: [], drainOwner: 'test-owner', stages: [], shipWindow: {} };
   const options = {
     push: true,
+    extraShip,
     head: 'HEAD',
     remote: 'origin',
     targetBranch: 'main',
@@ -45,7 +53,7 @@ async function releaseScenario({
     release,
     startedAt: 0,
     performance: { now: () => 0 },
-    console: { log: noop, error: noop },
+    console: { log: noop, error: (message) => errors.push(message) },
     process: {
       exit: (code) => {
         throw new Error(`exit ${code}`);
@@ -76,8 +84,14 @@ async function releaseScenario({
     },
     fetchActiveGameCount: async () => (Array.isArray(liveGames) ? liveGames.shift() : liveGames),
     requireUsableDrainToken: () => events.push('token'),
-    catchUpWithMain: noop,
-    findReusableBatchRun: () => batchRun,
+    catchUpWithMain: () => {
+      if (mergeDuringGate) release.headRevision = 'c'.repeat(40);
+    },
+    findReusableBatchRun: () => {
+      events.push('batch lookup');
+      return mergeDuringGate && release.headRevision !== HEAD ? null : batchRun;
+    },
+    recoverFailedBatchRun: async () => recoveredRun,
     safeDeployBaseArgs: () => ['--owner', 'test-owner'],
     runTimed: (label, command) => {
       events.push(label);
@@ -116,8 +130,20 @@ async function releaseScenario({
   } catch (caught) {
     error = caught;
   }
-  return { events, pushes, release, error };
+  return { events, pushes, release, error, errors };
 }
+
+test('a routine release without prior green batch CI refuses before changelog, gates, drain or push', async () => {
+  const { events, pushes, error, errors } = await releaseScenario({
+    extraShip: null,
+    localCi: true,
+  });
+  assert.ok(error, 'missing batch CI must refuse the release');
+  assert.match(errors.join('\n'), /batch:ci/);
+  assert.deepEqual(pushes, []);
+  assert.ok(!events.includes('local gate'));
+  assert.ok(!events.includes('production drain start'));
+});
 
 test('release publishes an exact candidate, overlaps the pending drain with CI, then promotes main', async () => {
   const { events, pushes, release, error } = await releaseScenario();
@@ -141,7 +167,7 @@ test('a green assembled batch authorizes the changelog HEAD without a new candid
     conclusion: 'success',
     url: 'https://example.test/batch-ci',
   };
-  const { events, pushes, release, error } = await releaseScenario({ batchRun });
+  const { events, pushes, release, error } = await releaseScenario({ batchRun, extraShip: null });
   assert.equal(error, undefined);
   assert.deepEqual(pushes, [`${HEAD}:refs/heads/main`]);
   assert.ok(!events.includes('ci'));
@@ -279,6 +305,10 @@ function candidateWait(run) {
     'findGithubRun',
     'GITHUB_POLL_MS',
     'console',
+    'waitForExactCi',
+    'retryHostedCi',
+    'sleep',
+    'workdir',
     `${declaration('waitForGithubCi')}\nreturn waitForGithubCi({ headRevision: '${HEAD}', branch: 'release/${HEAD}', exact: true });`,
   );
   return wait(
@@ -290,6 +320,10 @@ function candidateWait(run) {
     },
     10000,
     { log: () => {} },
+    waitForExactCi,
+    retryHostedCi,
+    async () => {},
+    '/fixture',
   );
 }
 
@@ -451,4 +485,79 @@ test('the main pre-push hook recognizes the exact hosted-CI-verified SHA', () =>
   });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /release candidate passed hosted CI/);
+});
+
+test('a merge during the local gate invalidates earlier batch evidence before promotion', async () => {
+  const { error, errors, pushes, events } = await releaseScenario({
+    extraShip: null,
+    mergeDuringGate: true,
+    batchRun: { headSha: HEAD, status: 'completed', conclusion: 'success' },
+  });
+  assert.ok(error);
+  assert.match(errors.join('\n'), /batch:ci/);
+  assert.deepEqual(pushes, []);
+  assert.ok(!events.includes('production drain start'));
+});
+
+test('a listed failed prior batch can authorize release only after its retry turns green', async () => {
+  const green = { headSha: HEAD, status: 'completed', conclusion: 'success', attempt: 2 };
+  const { error, pushes, release } = await releaseScenario({
+    extraShip: null,
+    recoveredRun: green,
+  });
+  assert.equal(error, undefined);
+  assert.deepEqual(pushes, [`${HEAD}:refs/heads/main`]);
+  assert.equal(release.reusedCiRun, green);
+});
+
+test('release recovery waits on the existing failed candidate and records its single retry', async () => {
+  const failed = {
+    databaseId: 123,
+    headSha: HEAD,
+    status: 'completed',
+    conclusion: 'failure',
+    attempt: 1,
+  };
+  const green = { ...failed, conclusion: 'success', attempt: 2 };
+  const states = [failed, failed, green];
+  const release = { headRevision: HEAD, ciReruns: [] };
+  let retries = 0;
+  const recover = new AsyncFunction(
+    'findReusableBatchCi',
+    'workdir',
+    'release',
+    'findGithubRun',
+    'listBatchRuns',
+    'waitForExactCi',
+    'retryHostedCi',
+    'options',
+    'GITHUB_POLL_MS',
+    'sleep',
+    'console',
+    `${declaration('recoverFailedBatchRun')}\nreturn recoverFailedBatchRun();`,
+  );
+  const run = await recover(
+    ({ acceptRun }) => (acceptRun(failed) ? failed : null),
+    '/fixture',
+    release,
+    (sha, branch) => {
+      assert.equal(sha, HEAD);
+      assert.equal(branch, `release/${HEAD}`);
+      return states.shift();
+    },
+    () => [],
+    waitForExactCi,
+    async ({ record }) => {
+      retries++;
+      record({ runId: 123, attempt: 2 });
+      return true;
+    },
+    { timeoutMs: 1000 },
+    0,
+    async () => {},
+    { log: () => {} },
+  );
+  assert.equal(run, green);
+  assert.equal(retries, 1);
+  assert.deepEqual(release.ciReruns, [{ runId: 123, attempt: 2 }]);
 });
