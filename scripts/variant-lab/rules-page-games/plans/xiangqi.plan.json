@@ -1,0 +1,360 @@
+{
+  "create": {
+    "owner": "mistboard",
+    "name": "Xiangqi: a sample game, annotated",
+    "description": "Sacrifice the Horse in 13, a trap from a manual printed in 1632, read by Pikafish. From the xiangqi rules page at mistboard.com/rules/xiangqi.",
+    "visibility": "public",
+    "chapter": {
+      "name": "Sacrifice the Horse in 13",
+      "variant": "xiangqi",
+      "orientation": "red",
+      "tree": {
+        "version": 1,
+        "rootFen": "",
+        "root": {
+          "children": [
+            {
+              "uci": "h3e3",
+              "children": [
+                {
+                  "uci": "h8e8",
+                  "children": [
+                    {
+                      "uci": "h1g3",
+                      "children": [
+                        {
+                          "uci": "h10g8",
+                          "children": [
+                            {
+                              "uci": "i1i2",
+                              "children": [
+                                {
+                                  "uci": "i10h10",
+                                  "children": [
+                                    {
+                                      "uci": "i2d2",
+                                      "children": [
+                                        {
+                                          "uci": "h10h4",
+                                          "children": [
+                                            {
+                                              "uci": "d2d9",
+                                              "children": [
+                                                {
+                                                  "uci": "b10a8",
+                                                  "children": [
+                                                    {
+                                                      "uci": "a1a2",
+                                                      "children": [
+                                                        {
+                                                          "uci": "b8b1",
+                                                          "children": [
+                                                            {
+                                                              "uci": "b3b8",
+                                                              "children": [
+                                                                {
+                                                                  "uci": "g8h10",
+                                                                  "children": [
+                                                                    {
+                                                                      "uci": "e3e7",
+                                                                      "children": [
+                                                                        {
+                                                                          "uci": "f10e9",
+                                                                          "children": [
+                                                                            {
+                                                                              "uci": "a2d2",
+                                                                              "children": [
+                                                                                {
+                                                                                  "uci": "e10f10",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "uci": "d9d10",
+                                                                                      "children": [
+                                                                                        {
+                                                                                          "uci": "e9d10",
+                                                                                          "children": [
+                                                                                            {
+                                                                                              "uci": "d2f2",
+                                                                                              "children": [
+                                                                                                {
+                                                                                                  "uci": "e8f8",
+                                                                                                  "children": [
+                                                                                                    {
+                                                                                                      "uci": "f2f8",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "uci": "f10e10",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "uci": "b8e8",
+                                                                                                              "children": [],
+                                                                                                              "annotations": {
+                                                                                                                "comments": [
+                                                                                                                  {
+                                                                                                                    "text": "Checkmate."
+                                                                                                                  }
+                                                                                                                ]
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            }
+                                                                                          ]
+                                                                                        }
+                                                                                      ]
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ],
+                                                                      "annotations": {
+                                                                        "comments": [
+                                                                          {
+                                                                            "text": "The cannon takes the centre soldier with check, and Red's chariots and cannons come through the gap."
+                                                                          }
+                                                                        ]
+                                                                      }
+                                                                    }
+                                                                  ],
+                                                                  "annotations": {
+                                                                    "glyphs": [4],
+                                                                    "comments": [
+                                                                      {
+                                                                        "text": "The losing move. From here Pikafish gives Red a won game; the advisor to e9 still held."
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                },
+                                                                {
+                                                                  "uci": "f10e9",
+                                                                  "children": [
+                                                                    {
+                                                                      "uci": "b8g8",
+                                                                      "children": [
+                                                                        {
+                                                                          "uci": "a10b10",
+                                                                          "children": [
+                                                                            {
+                                                                              "uci": "e3e7",
+                                                                              "children": [
+                                                                                {
+                                                                                  "uci": "h4h8",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "uci": "g8g9",
+                                                                                      "children": [],
+                                                                                      "annotations": {
+                                                                                        "glyphs": [
+                                                                                          14
+                                                                                        ]
+                                                                                      }
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ],
+                                                                  "annotations": {
+                                                                    "comments": [
+                                                                      {
+                                                                        "text": "Pikafish's choice."
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                }
+                                                              ],
+                                                              "annotations": {
+                                                                "shapes": [
+                                                                  {
+                                                                    "kind": "arrow",
+                                                                    "brush": "green",
+                                                                    "orig": "f10",
+                                                                    "dest": "e9"
+                                                                  }
+                                                                ]
+                                                              }
+                                                            }
+                                                          ],
+                                                          "annotations": {
+                                                            "glyphs": [6],
+                                                            "comments": [
+                                                              {
+                                                                "text": "The cannon takes the horse Red left behind. Pikafish would bring an advisor up to e9 instead: the horse was bait."
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        {
+                                                          "uci": "f10e9",
+                                                          "children": [
+                                                            {
+                                                              "uci": "a2f2",
+                                                              "children": [
+                                                                {
+                                                                  "uci": "c7c6",
+                                                                  "children": [
+                                                                    {
+                                                                      "uci": "f2f9",
+                                                                      "children": [
+                                                                        {
+                                                                          "uci": "b8d8",
+                                                                          "children": [
+                                                                            {
+                                                                              "uci": "b3d3",
+                                                                              "children": [],
+                                                                              "annotations": {
+                                                                                "glyphs": [10]
+                                                                              }
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ],
+                                                          "annotations": {
+                                                            "comments": [
+                                                              {
+                                                                "text": "Pikafish's choice."
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      ],
+                                                      "annotations": {
+                                                        "shapes": [
+                                                          {
+                                                            "kind": "arrow",
+                                                            "brush": "green",
+                                                            "orig": "f10",
+                                                            "dest": "e9"
+                                                          }
+                                                        ]
+                                                      }
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "annotations": {
+                                                "glyphs": [6],
+                                                "comments": [
+                                                  {
+                                                    "text": "The chariot dives into Black's camp at once. Pikafish preferred the quiet soldier push first."
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            {
+                                              "uci": "c4c5",
+                                              "children": [
+                                                {
+                                                  "uci": "b10a8",
+                                                  "children": [
+                                                    {
+                                                      "uci": "b1c3",
+                                                      "children": [
+                                                        {
+                                                          "uci": "d10e9",
+                                                          "children": [
+                                                            {
+                                                              "uci": "e3e2",
+                                                              "children": [
+                                                                {
+                                                                  "uci": "b8d8",
+                                                                  "children": [],
+                                                                  "annotations": {
+                                                                    "glyphs": [14]
+                                                                  }
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "annotations": {
+                                                "comments": [
+                                                  {
+                                                    "text": "Pikafish's choice."
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          ],
+                                          "annotations": {
+                                            "shapes": [
+                                              {
+                                                "kind": "arrow",
+                                                "brush": "green",
+                                                "orig": "c4",
+                                                "dest": "c5"
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "annotations": {
+            "comments": [
+              {
+                "text": "Sacrifice the Horse in 13, a trap from a manual printed in 1632. Pikafish read every position for this study: marks (?!, ?, ??) grade each move against its choice, a side line shows what it would play instead, and the graph is Red's chance as it sees it."
+              }
+            ]
+          }
+        }
+      },
+      "tags": {
+        "red": "Red",
+        "black": "Black",
+        "result": "1-0",
+        "event": "Classic manual, 1632"
+      },
+      "scoreSeries": {
+        "side": "red",
+        "series": [
+          {
+            "name": "Pikafish",
+            "color": "a",
+            "values": [
+              0.5185, 0.5185, 0.5495, 0.5355, 0.5515, 0.5275000000000001, 0.5205,
+              0.5195000000000001, 0.5575, 0.502, 0.5025, 0.48, 0.5665, 0.5885, 1, 1, 1, 1, 1, 1, 1,
+              1, 1, 1, 1, 1
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "ops": []
+}

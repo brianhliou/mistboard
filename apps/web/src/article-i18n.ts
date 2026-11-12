@@ -3110,8 +3110,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'Added diagrams of how the soldier moves, for chess players.':
-    '为国际象棋棋手添加了兵卒走法的图示。',
+  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
+    '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -6098,7 +6098,6 @@ const ZH_HANS: Record<string, string> = {
     '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
   'Sacrifice the Horse in 13': '弃马十三着',
-  'Classic manual, 1632': '古谱，1632 年',
   'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
   'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
@@ -10285,8 +10284,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'Added diagrams of how the soldier moves, for chess players.':
-    '為西洋棋棋手添加了兵卒走法的圖示。',
+  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
+    '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -12940,7 +12939,6 @@ const ZH_HANT: Record<string, string> = {
     '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
   'Sacrifice the Horse in 13': '棄馬十三著',
-  'Classic manual, 1632': '古譜，1632 年',
   'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
   'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
