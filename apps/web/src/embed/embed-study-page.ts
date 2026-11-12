@@ -826,8 +826,16 @@ async function mountCrazyhouseXiangqiEmbed(
     railWidthPx: embedRailWidthPx('crazyhouse-xiangqi'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) =>
-      mountCrazyhouseXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+    // A study chapter's marks and comments, listed under their moves.
+    mountBoard: async (host, hooks) => {
+      const { glyphs, notes } = chapterAnnotations(chapter);
+      return mountCrazyhouseXiangqiReplayBoard(
+        host,
+        line,
+        { perspective: 'red', glyphs, notes },
+        hooks,
+      );
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

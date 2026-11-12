@@ -650,6 +650,59 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it("lists a crazyhouse chapter's glyphs and comments under their moves", async () => {
+    // The crazyhouse board's move list carried labels only, so the rules
+    // page's annotated study showed none of its marks.
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'ChxAnn01',
+          name: 'Annotated',
+          orientation: 'red',
+          variant: 'crazyhouse-xiangqi',
+          tags: {},
+          root: {
+            root: {
+              children: [
+                {
+                  uci: 'h3h10',
+                  children: [
+                    {
+                      uci: 'i10h10',
+                      children: [
+                        {
+                          uci: 'N@e5',
+                          annotations: {
+                            glyphs: [2],
+                            comments: [{ text: 'The engine would drop an elephant.' }],
+                          },
+                          children: [],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ChxAnn01' });
+
+    const suffixes = Array.from(root.querySelectorAll('.review-move-list__suffix')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(suffixes).toEqual(['?']);
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'The engine would drop an elephant.',
+    );
+    root.remove();
+  });
+
   it('stops a crazyhouse line at the first token the kernel refuses', async () => {
     // A horse dropped while none is held, then legal moves after it.
     const tokens = ['h3h10', 'i10h10', 'R@e5', 'h10h1'];

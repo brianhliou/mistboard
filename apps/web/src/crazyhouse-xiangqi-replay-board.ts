@@ -30,6 +30,7 @@ import {
   crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from './crazyhouse-xiangqi-view.js';
+import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove, xiangqiBoardSvg } from './xiangqi-board.js';
 
@@ -73,13 +74,25 @@ export function replayCrazyhouseXiangqiLine(
 export function mountCrazyhouseXiangqiReplayBoard(
   host: HTMLElement,
   line: CrazyhouseXiangqiReplayLine,
-  options: { perspective?: CrazyhouseXiangqiColor } = {},
+  options: {
+    perspective?: CrazyhouseXiangqiColor;
+    /** A study chapter's judgment glyph per 1-based mainline ply, on the sheet. */
+    glyphs?: Record<number, string>;
+    /** A study chapter's comment on a mainline move, by ply, under the move. */
+    notes?: Record<number, string>;
+  } = {},
   hooks: { onPlyChange?: (ply: number, maxPly: number) => void } = {},
 ): {
   destroy: () => void;
   jumpToPly: (ply: number) => void;
   plyCount: () => number;
-  moveEntries: () => Array<{ ply: number; label: string }>;
+  moveEntries: () => Array<{
+    ply: number;
+    label: string;
+    suffix?: string;
+    suffixClass?: string;
+    note?: string;
+  }>;
   bottomSeat: () => 'first' | 'second';
 } {
   const { states, played } = line;
@@ -150,7 +163,16 @@ export function mountCrazyhouseXiangqiReplayBoard(
     },
     plyCount: () => total,
     moveEntries: () =>
-      played.map((move, i) => ({ ply: i + 1, label: crazyhouseXiangqiMoveLabel(move) })),
+      played.map((move, i) => {
+        const glyph = options.glyphs?.[i + 1];
+        const note = options.notes?.[i + 1];
+        return {
+          ply: i + 1,
+          label: crazyhouseXiangqiMoveLabel(move),
+          ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+          ...(note ? { note } : {}),
+        };
+      }),
     bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),
   };
 }
