@@ -1,4 +1,4 @@
-import { GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
+import { correspondenceTimeControl, GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
 import {
   abortRunningGame,
   createUser,
@@ -22,8 +22,102 @@ import {
   test,
 } from './persistence-test-support.js';
 import type { RatingVariant } from './rating-buckets.js';
+import { bucketForGame } from './rating-buckets.js';
+
+test('Three Kingdoms Banqi uses its own bullet, blitz and rapid pools, never correspondence', () => {
+  for (const [initialMs, incrementMs, timeClass] of [
+    [60_000, 1_000, 'bullet'],
+    [180_000, 2_000, 'blitz'],
+    [300_000, 5_000, 'rapid'],
+    [600_000, 5_000, 'rapid'],
+  ] as const) {
+    assert.deepEqual(bucketForGame({ variant: 'three-kingdoms-banqi', initialMs, incrementMs }), {
+      variant: 'three_kingdoms_banqi',
+      timeClass,
+    });
+  }
+  assert.equal(
+    bucketForGame({ variant: 'three-kingdoms-banqi', ...correspondenceTimeControl(1) }),
+    null,
+  );
+});
 
 definePersistenceTests('ratings', () => {
+  test('Three Kingdoms Banqi moves both accounts into its public pool; PvE never moves ratings', async () => {
+    const now = new Date();
+    for (const id of ['tkfirst', 'tksecond']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id,
+        displayName: id,
+        now,
+      });
+    }
+    const summary = {
+      variant: 'three-kingdoms-banqi',
+      mode: 'pvp' as const,
+      rated: true,
+      result: 'red-wins' as const,
+      termination: 'resignation' as const,
+      plyCount: 3,
+      startedAt: now,
+      endedAt: now,
+      initialMs: 180_000,
+      incrementMs: 2_000,
+      whiteClient: null,
+      blackClient: null,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      visibility: 'public' as const,
+      participants: (['red', 'black'] as const).map((color, index) => ({
+        color,
+        displayName: index === 0 ? 'tkfirst' : 'tksecond',
+        subjectType: 'user' as const,
+        subjectId: index === 0 ? 'tkfirst' : 'tksecond',
+        visibility: 'public' as const,
+      })),
+    };
+    await recordGameEnd('tk-rated-pvp', summary);
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const ratings = () =>
+        client.query<{ user_id: string; elo_rating: number }>(
+          'SELECT user_id, elo_rating FROM user_ratings ORDER BY user_id',
+        );
+      const before = (await ratings()).rows;
+      assert.equal(before.length, 2);
+      assert.ok(before.find((row) => row.user_id === 'tkfirst')!.elo_rating > 1500);
+      assert.ok(before.find((row) => row.user_id === 'tksecond')!.elo_rating < 1500);
+      const profile = await getUserProfileByHandle('tkfirst', null);
+      const row = profile?.ratings.find((rating) => rating.variant === 'three_kingdoms_banqi');
+      assert.equal(row?.ratedGamesPlayed, 1);
+      assert.equal(row?.totalGamesPlayed, 1);
+      assert.ok((row?.eloRating ?? 0) > 1500);
+      assert.ok(!profile?.ratings.some((rating) => rating.variant === 'banqi'));
+      const ladder = await getLeaderboard({ variant: 'three_kingdoms_banqi', timeClass: 'blitz' });
+      const ladders = await getLeaderboardSummary({ timeClass: 'blitz' });
+      assert.ok(ladders.some((entry) => entry.variant === 'three_kingdoms_banqi'));
+      for (const payload of [profile, ladder, ladders]) {
+        assert.doesNotMatch(JSON.stringify(payload), /"(?:board|setup|deal|events|snapshot)"\s*:/);
+      }
+      // Even a malformed rated PvE summary with two account participants may
+      // not move either account. The real room factory also forces casual.
+      await recordGameEnd('tk-pve', { ...summary, mode: 'pve' });
+      assert.deepEqual((await ratings()).rows, before);
+      await recordGameEnd('tk-correspondence', {
+        ...summary,
+        ...correspondenceTimeControl(1),
+      });
+      assert.deepEqual((await ratings()).rows, before);
+    } finally {
+      await client.end();
+    }
+  });
+
   test('rated PvP game updates both players Glicko ratings', async () => {
     const now = new Date();
     await createUser({

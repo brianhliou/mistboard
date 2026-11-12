@@ -298,6 +298,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     banqi: true,
     jungle: true,
     jungle_flip: true,
+    three_kingdoms_banqi: true,
     fortress_xiangqi: true,
     xiangqi: true,
     duck_xiangqi: true,
@@ -307,6 +308,12 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     gomoku: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
+});
+
+test('Three Kingdoms Banqi has its own live rating pool and casual-only correspondence', () => {
+  assert.equal(ratingPoolForSpec(THREE_KINGDOMS_BANQI_SPEC_ID), 'three_kingdoms_banqi');
+  assert.equal(isRatedPoolBase('three_kingdoms_banqi'), true);
+  assert.equal(isCorrespondenceRatedSpec(THREE_KINGDOMS_BANQI_SPEC_ID), false);
 });
 
 test('ratingPoolForSpec is rated for launched pools and null for casual-only specs', () => {
@@ -368,14 +375,15 @@ test('retired specs: Fortress, Atomic Xiangqi and Mahjong, hidden but still reso
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
 });
 
-test('rated correspondence requires eligibility and an active pool, with Gomoku casual-only', () => {
+test('rated correspondence requires eligibility and an active pool, with Gomoku and TK casual-only', () => {
   // The one predicate the seek route, the rating bucket and the web Rated toggle share.
   // Gomoku keeps its live pool without admitting rated correspondence.
   for (const spec of GAME_SPECS) {
     const expected =
       CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id) &&
       ratingPoolForSpec(spec.id) !== null &&
-      spec.id !== GOMOKU_SPEC_ID;
+      spec.id !== GOMOKU_SPEC_ID &&
+      spec.id !== THREE_KINGDOMS_BANQI_SPEC_ID;
     assert.equal(isCorrespondenceRatedSpec(spec.id), expected, spec.id);
   }
   assert.equal(isCorrespondenceRatedSpec(XIANGQI_SPEC_ID), true);

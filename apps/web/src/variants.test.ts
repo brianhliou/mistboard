@@ -143,6 +143,7 @@ describe('web variant launch registry', () => {
       [XIANGQI_SPEC_ID, 'xiangqi'],
       [JIEQI_SPEC_ID, 'jieqi'],
       [BANQI_SPEC_ID, 'banqi'],
+      ['three-kingdoms-banqi', 'three-kingdoms-banqi'],
       [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
       [CRAZYHOUSE_XIANGQI_SPEC_ID, 'crazyhouse-xiangqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
@@ -192,6 +193,81 @@ describe('web variant launch registry', () => {
     }
     vi.unstubAllEnvs();
     vi.resetModules();
+  });
+
+  it('gates Three Kingdoms Banqi rating rows with its public build flag', async () => {
+    try {
+      for (const enabled of [false, true]) {
+        vi.resetModules();
+        vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', String(enabled));
+        const registry = await import('./variants.js');
+        expect(
+          registry.VARIANTS.find((v) => v.gameSpecId === 'three-kingdoms-banqi'),
+        ).toMatchObject({
+          id: 'three_kingdoms_banqi',
+          apiParam: 'three-kingdoms-banqi',
+          miniId: 'three-kingdoms-banqi',
+          onLeaderboard: enabled,
+          onProfile: enabled,
+        });
+        expect(registry.leaderboardVariants.some((v) => v.id === 'three_kingdoms_banqi')).toBe(
+          enabled,
+        );
+        expect(registry.profileRatingVariants.some((v) => v.id === 'three_kingdoms_banqi')).toBe(
+          enabled,
+        );
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it('sends rated TK friend challenges while keeping Misty casual', async () => {
+    const { roomCreationRequestBody } = await import('./landing-play.js');
+    const setup = {
+      gameSpecId: 'three-kingdoms-banqi' as const,
+      preferredColor: 'random' as const,
+      rated: true,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    };
+    expect(roomCreationRequestBody('pvp', setup)).toMatchObject({
+      gameSpecId: setup.gameSpecId,
+      rated: true,
+    });
+    expect(
+      roomCreationRequestBody('pve', setup, 'misty-three-kingdoms-banqi-level-1'),
+    ).toMatchObject({
+      gameSpecId: setup.gameSpecId,
+      rated: false,
+    });
+  });
+
+  it('shows the Three Kingdoms Banqi rating in the profile rail beside Banqi', async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    try {
+      const { buildProfileRatings } = await import('./profile.js');
+      const section = buildProfileRatings([
+        {
+          variant: 'three_kingdoms_banqi',
+          timeClass: 'blitz',
+          eloRating: 1612,
+          ratedGamesPlayed: 3,
+          totalGamesPlayed: 4,
+          provisional: false,
+        },
+      ]);
+      const row = section.querySelector('.profile-rating-row[data-variant="three_kingdoms_banqi"]');
+      expect(row?.textContent).toContain('Three Kingdoms Banqi');
+      expect(row?.textContent).toContain('1612');
+      expect(row?.classList.contains('profile-rating-row-empty')).toBe(false);
+      expect(row?.previousElementSibling?.getAttribute('data-variant')).toBe('banqi');
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 });
 
