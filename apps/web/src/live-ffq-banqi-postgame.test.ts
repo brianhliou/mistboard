@@ -23,6 +23,7 @@ import {
   makeFFQBanqiTreeAdapter,
 } from './review/ffq-banqi-tree-adapter.js';
 import { createGameTree } from './review/game-tree.js';
+import { setResolvedSignedIn } from './signed-in-state.js';
 import { ffqBanqiWatchRecord, mountFFQBanqiWatchReplay } from './watch-ffq-banqi-replay.js';
 
 const ROOM = 'ffq_review_web';
@@ -120,19 +121,22 @@ function assertHpBars(host: HTMLElement, ply: number): void {
 }
 
 beforeEach(() => {
+  setResolvedSignedIn(true);
   vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
   window.history.replaceState(null, '', '/');
   vi.stubGlobal(
     'fetch',
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify(record), { headers: { 'content-type': 'application/json' } }),
+    vi.fn(async (input: RequestInfo | URL) =>
+      String(input).endsWith('/analysis')
+        ? new Response(null, { status: 204 })
+        : new Response(JSON.stringify(record), { headers: { 'content-type': 'application/json' } }),
     ),
   );
 });
 afterEach(() => {
   for (const stop of destroy.splice(0)) stop();
   for (const host of roots.splice(0)) host.remove();
+  setResolvedSignedIn(undefined);
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -230,10 +234,65 @@ describe('FFQ masked review', () => {
     expect(host.querySelector('.game-favorite-action, .review-spectator-chat')).toBeNull();
     expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
       ffqBanqiPostgameApiUrl(ROOM),
+      `${ffqBanqiPostgameApiUrl(ROOM)}/analysis`,
     ]);
-    expect(host.textContent).not.toContain('Request computer analysis');
+    expect(host.textContent).toContain('Request computer analysis');
     expect(host.querySelector('textarea')?.value ?? '').not.toContain('/embed/');
     expect(ffqBanqiPostgameApiUrl('ffq a')).toBe('/api/ffq-banqi/games/ffq%20a');
+  });
+
+  it('requests analysis, renders the chart and move marks, and reloads the cache', async () => {
+    let cached = false;
+    const chancePlies = record.timeline.flatMap(({ move }, i) =>
+      record.history.truth[i]!.view.board[move!.to]?.faceDown ? [i + 1] : [],
+    );
+    const judgedPly = record.timeline.findIndex((_, i) => !chancePlies.includes(i + 1)) + 1;
+    expect(judgedPly).toBeGreaterThan(0);
+    const cp = judgedPly % 2 === 1 ? -1500 : 1500;
+    const analysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      plies: record.history.truth.map(({ ply }) => ({
+        ply,
+        cp: ply < judgedPly ? 0 : cp,
+        mate: null,
+        best: null,
+      })),
+      chancePlies,
+    };
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!String(input).endsWith('/analysis')) return new Response(JSON.stringify(record));
+      if (init?.method === 'POST') cached = true;
+      return cached ? new Response(JSON.stringify(analysis)) : new Response(null, { status: 204 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const host = root();
+    mountFFQBanqiPostgame(host, ROOM);
+    await vi.waitFor(() => expect(host.querySelector('.xiangqi-review__analyse')).not.toBeNull());
+    expect(host.querySelector('.advantage-chart')).toBeNull();
+    host.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
+    await vi.waitFor(() => expect(host.querySelector('.advantage-chart__line')).not.toBeNull());
+    expect(host.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(host.querySelectorAll('.analysis-summary__player')).toHaveLength(2);
+    host.querySelector<HTMLButtonElement>('.review-move--blunder')!.click();
+    expect(host.querySelector('.xq-marker--blunder')).not.toBeNull();
+    const reloaded = root();
+    mountFFQBanqiPostgame(reloaded, ROOM);
+    await vi.waitFor(() => expect(reloaded.querySelector('.advantage-chart__line')).not.toBeNull());
+    expect(reloaded.querySelector('.xiangqi-review__analyse')).toBeNull();
+    expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
+  });
+
+  it('translates native FFQ engine coordinates only into the recorded continuation', () => {
+    const adapter = makeFFQBanqiTreeAdapter(record.history.truth, played);
+    for (let ply = 0; ply < played.length; ply++) {
+      const native = record.timeline[ply]!.move!;
+      const square = (n: number) => `${String.fromCharCode(97 + (n % 4))}${Math.floor(n / 4)}`;
+      const uci = square(native.from) + square(native.to);
+      expect(adapter.toEngineUci(played[ply]!)).toBe(uci);
+      expect(adapter.fromUci(uci, record.history.truth[ply]!)).toEqual(played[ply]);
+    }
+    expect(adapter.fromUci('a0a0', record.history.truth.at(-1)!)).toBeNull();
   });
 
   it('does not fetch when disabled and handles the server access refusal', async () => {

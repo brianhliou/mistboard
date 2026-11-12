@@ -10,6 +10,7 @@ import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { banqiOutcome } from './banqi-result-label.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
@@ -17,8 +18,10 @@ import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { mountFFQBanqiReview } from './review/ffq-banqi-review.js';
 import type { FFQBanqiReviewSnapshot } from './review/ffq-banqi-tree-adapter.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
 // Finished replay uses only server-projected masked frames.
@@ -193,7 +196,15 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
     urlPly: true,
-    analysis: null,
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
+      requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
+      fetchCached: (options) => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus }),
+    },
   });
 }
 

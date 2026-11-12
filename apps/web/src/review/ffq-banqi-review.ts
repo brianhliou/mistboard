@@ -45,8 +45,8 @@ export function mountFFQBanqiReview(
     appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     boardCols: 10,
     boardMaxPx: 560,
-    // No client engine: keep the gauge's track so the columns land where
-    // banqi's and Three Kingdoms' review pages put them.
+    // Keep the gauge's track so the columns land where banqi's and Three
+    // Kingdoms' review pages put them.
     phoneForkPicker: true,
     reserveGaugeTrack: true,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
@@ -78,6 +78,12 @@ export function mountFFQBanqiReview(
       square: shape.orig as BanqiBoardMarker['square'],
       kind: 'circle',
       className: `xq-shape--${shape.brush}`,
+    }),
+    moveGlyphMarker: (move, glyph) => ({
+      square: move.to,
+      kind: 'glyph',
+      text: glyph.text,
+      className: `xq-marker--${glyph.tone}`,
     }),
     // The pieces this seat took, then its HP, as Three Kingdoms shows its
     // points. `owner` is the ink of the other seat's pieces in the row, so the
