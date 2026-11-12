@@ -63,6 +63,7 @@ import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
+import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn, isLikelyStatsExcluded } from './signed-in-state.js';
 import { navPhoneMediaQuery } from './site-shell.js';
@@ -1861,7 +1862,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   }
   // In the engine flow, never default-select a variant with no bot (it shows
   // greyed-out below); fall back to one that has an engine.
+  // A variant whose bot roster has not loaded yet is remembered, so the dialog
+  // moves to it when the roster lands unless the player picked another first.
+  let pveAwaitedGameSpecId: LandingGameSpecId | null = null;
   if (choice.mode === 'pve' && !landingVariantSupportsPve(selectedGameSpecId)) {
+    pveAwaitedGameSpecId = selectedGameSpecId;
     selectedGameSpecId = fallbackGameSpecId;
   }
   // The top of the play funnel: which door, which mode, which variant the
@@ -2007,6 +2012,37 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // option set is mode-aware because PvE can show non-engine variants as
   // disabled cards instead of hiding them entirely.
   const variantSelectable = variantOptions.length > 1;
+  // Each variant tile, with how the engine flow greys it out when it has no bot.
+  // Kept so a runtime roster that lands after the dialog opened can re-apply it
+  // in place (onRuntimeEngineRostersChanged below) instead of leaving "Soon".
+  const variantTiles: {
+    el: HTMLButtonElement;
+    gameSpecId: LandingGameSpecId;
+    label: string;
+    disabledClass: string;
+  }[] = [];
+  const applyPveAvailability = (tile: (typeof variantTiles)[number]): void => {
+    const { el, gameSpecId, label, disabledClass } = tile;
+    const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
+    el.disabled = pveDisabled;
+    el.classList.toggle(disabledClass, pveDisabled);
+    if (pveDisabled) {
+      el.setAttribute('aria-disabled', 'true');
+      el.title = t('setup.noComputerOpponentYet', { variant: label }, locale);
+    } else {
+      el.removeAttribute('aria-disabled');
+      el.removeAttribute('title');
+    }
+    const badge = el.querySelector(':scope > .landing-variant-card-badge');
+    if (pveDisabled && !badge) {
+      const soon = document.createElement('span');
+      soon.className = 'landing-variant-card-badge';
+      soon.textContent = t('setup.soon', {}, locale);
+      el.append(soon);
+    } else if (!pveDisabled) {
+      badge?.remove();
+    }
+  };
   if (variantSelectable && phone) {
     // Phone: one row naming the current variant. Tapping it swaps the sheet's
     // rows for the full list (same order, same Soon rule as the grid), so the
@@ -2043,13 +2079,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       option.className = 'landing-variant-option';
       option.setAttribute('role', 'radio');
       option.dataset.gameSpec = gameSpecId;
-      const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
-      if (pveDisabled) {
-        option.disabled = true;
-        option.classList.add('landing-variant-option-disabled');
-        option.setAttribute('aria-disabled', 'true');
-        option.title = t('setup.noComputerOpponentYet', { variant: label }, locale);
-      }
       const miniId = variantMiniIdForGameSpec(gameSpecId);
       const thumb = document.createElement('span');
       thumb.className = 'landing-variant-option-thumb';
@@ -2060,19 +2089,22 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       name.className = 'landing-variant-option-name';
       name.textContent = label;
       option.append(thumb, name);
-      if (pveDisabled) {
-        const badge = document.createElement('span');
-        badge.className = 'landing-variant-card-badge';
-        badge.textContent = t('setup.soon', {}, locale);
-        option.append(badge);
-      } else {
-        option.addEventListener('click', () => {
-          selectedGameSpecId = gameSpecId;
-          syncVariantControls();
-          syncGameSpecificSections();
-          setVariantPickerOpen(false);
-        });
-      }
+      const tile = {
+        el: option,
+        gameSpecId,
+        label,
+        disabledClass: 'landing-variant-option-disabled',
+      };
+      applyPveAvailability(tile);
+      variantTiles.push(tile);
+      option.addEventListener('click', () => {
+        if (option.disabled) return;
+        selectedGameSpecId = gameSpecId;
+        pveAwaitedGameSpecId = null;
+        syncVariantControls();
+        syncGameSpecificSections();
+        setVariantPickerOpen(false);
+      });
       options.set(gameSpecId, option);
       list.append(option);
     }
@@ -2108,16 +2140,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       card.className = 'landing-variant-card';
       card.setAttribute('role', 'radio');
       card.dataset.gameSpec = gameSpecId;
-      // No computer opponent yet (Dark Xiangqi): grey the card out
-      // of the engine flow rather than letting it be picked and silently create
-      // a PvP room.
-      const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
-      if (pveDisabled) {
-        card.disabled = true;
-        card.classList.add('landing-variant-card-disabled');
-        card.setAttribute('aria-disabled', 'true');
-        card.title = t('setup.noComputerOpponentYet', { variant: label }, locale);
-      }
       const miniId = variantMiniIdForGameSpec(gameSpecId);
       if (miniId) {
         const thumb = document.createElement('span');
@@ -2133,19 +2155,20 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           ? t('variant.threeKingdomsBanqi.cardName', {}, locale)
           : label;
       card.append(name);
-      if (pveDisabled) {
-        const badge = document.createElement('span');
-        badge.className = 'landing-variant-card-badge';
-        badge.textContent = t('setup.soon', {}, locale);
-        card.append(badge);
-      } else {
-        card.addEventListener('click', () => {
-          selectedGameSpecId = gameSpecId;
-          syncVariantControls();
-          syncGameSpecificSections();
-          openNextSetupSection('variant');
-        });
-      }
+      // No computer opponent yet (Dark Xiangqi): grey the card out
+      // of the engine flow rather than letting it be picked and silently create
+      // a PvP room.
+      const tile = { el: card, gameSpecId, label, disabledClass: 'landing-variant-card-disabled' };
+      applyPveAvailability(tile);
+      variantTiles.push(tile);
+      card.addEventListener('click', () => {
+        if (card.disabled) return;
+        selectedGameSpecId = gameSpecId;
+        pveAwaitedGameSpecId = null;
+        syncVariantControls();
+        syncGameSpecificSections();
+        openNextSetupSection('variant');
+      });
       cards.set(gameSpecId, card);
       grid.append(card);
     }
@@ -2400,7 +2423,23 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     void createRoomFromPlay(startButton, choice.mode, selectedEngineId, setup, status, locale);
   });
 
+  // A bot roster that lands while the dialog is open (TK, FFQ, Flip Jungle's
+  // net tier) re-applies the Soon rule and the engine row in place, keeping the
+  // player's picks; a variant that lost its bot hands the selection back.
+  const stopRosterWatch = onRuntimeEngineRostersChanged(() => {
+    for (const tile of variantTiles) applyPveAvailability(tile);
+    if (choice.mode === 'pve') {
+      if (pveAwaitedGameSpecId && landingVariantSupportsPve(pveAwaitedGameSpecId)) {
+        selectedGameSpecId = pveAwaitedGameSpecId;
+        pveAwaitedGameSpecId = null;
+      } else if (!landingVariantSupportsPve(selectedGameSpecId)) {
+        selectedGameSpecId = defaultLandingGameSpecId(variantOptions, choice.mode);
+      }
+    }
+    syncGameSpecificSections();
+  });
   const close = () => {
+    stopRosterWatch();
     cancelLobbyWait?.();
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
