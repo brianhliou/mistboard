@@ -2065,7 +2065,7 @@ a.puzzle-tag--link:hover {
 
   .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) {
     display: block;
-    height: 44px;
+    height: 40px;
   }
   .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) > .puzzle-move-list {
     display: none;
@@ -2074,9 +2074,11 @@ a.puzzle-tag--link:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 44px;
+    height: 40px;
     box-sizing: border-box;
     padding: 0 8px;
+    border-top: 0;
+    box-shadow: inset 0 -1px 0 var(--site-border-soft);
     font-size: 12px;
   }
   .puzzles-shell .puzzle-exploration-head {
@@ -2582,6 +2584,10 @@ a.puzzle-tag--link:hover {
     overflow: hidden;
   }
 
+  .puzzles-page > .puzzles-shell:has(.puzzle-exploration) {
+    --puzzle-stack-chrome: 160px;
+  }
+
   .puzzles-shell .puzzles-layout {
     display: flex;
     flex: 1 1 0;
@@ -2674,6 +2680,16 @@ a.puzzle-tag--link:hover {
     height: var(--puzzle-prompt-height);
     min-height: 0;
     overflow: hidden;
+  }
+
+  /* Analysis needs a full-width board even on the 320x568 viewport. Keep
+     the completed controls at their 44px touch height without extra padding. */
+  .puzzles-shell
+    .puzzle-trainer-panel:has(> .puzzle-moves > .puzzle-exploration)
+    > .puzzle-solved-panel {
+    height: 44px;
+    padding-block: 0;
+    border-top: 0;
   }
 
   /* Keep the session row beside the controls it belongs to. A tall phone's

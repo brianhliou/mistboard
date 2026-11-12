@@ -199,7 +199,7 @@ describe('puzzle phone first screen', () => {
       '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: 0; }',
     );
     expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
-    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
+    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(2);
     // Desktop keeps it under the board.
     expect(desktop).toMatch(/\.puzzle-session-chips \{ order: 4; grid-column: 2;/);
   });
