@@ -6,14 +6,19 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ALL_JUNGLE_FLIP_SQUARES,
+  applyCrazyhouseXiangqiMove,
   applyJungleFlipMove,
   applyJungleMove,
   applyStandardXiangqiMove,
+  type CrazyhouseXiangqiGameState,
+  crazyhouseXiangqiMoveFromUci,
+  createInitialCrazyhouseXiangqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
   createInitialStandardXiangqiState,
   engineUciToJungleMove,
   getJungleFlipLegalMoves,
+  isCrazyhouseXiangqiLegalMove,
   isStandardXiangqiLegalMove,
   type JungleFlipDeal,
   type JungleFlipGameState,
@@ -179,6 +184,30 @@ describe('rules page sample games', () => {
     expect(lines.map(([ply]) => ply)).toEqual([43, 45]);
     for (const [ply, moves] of lines) {
       let s = createInitialJungleState('rules-jungle-line');
+      for (const t of line.slice(0, ply)) s = play(s, t);
+      for (const t of moves) s = play(s, t);
+    }
+  });
+  it('crazyhouse-xiangqi: Win 3 of the companion study, legal throughout, a soldier drop mates', () => {
+    const chapter = readPlan('crazyhouse-xiangqi').create.chapter;
+    expect(chapter.variant).toBe('crazyhouse-xiangqi');
+    expect(embedPaths('crazyhouse-xiangqi')).toContain('/embed/study/MszNccka/DUIIzl7E');
+    const play = (s: CrazyhouseXiangqiGameState, t: string): CrazyhouseXiangqiGameState => {
+      const m = crazyhouseXiangqiMoveFromUci(t);
+      if (!m || s.status.type !== 'playing' || !isCrazyhouseXiangqiLegalMove(s, m))
+        throw new Error(`illegal ${t}`);
+      return applyCrazyhouseXiangqiMove(s, m);
+    };
+    const line = mainLine(chapter.tree.root).map((n) => n.uci);
+    expect(line).toHaveLength(97);
+    expect(line.at(-1)).toBe('P@e9');
+    let state = createInitialCrazyhouseXiangqiState('rules-chx');
+    for (const t of line) state = play(state, t);
+    expect(state.status).toMatchObject({ type: 'finished', winner: 'red' });
+    const lines = sidelines(chapter.tree.root);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const [ply, moves] of lines) {
+      let s = createInitialCrazyhouseXiangqiState('rules-chx-line');
       for (const t of line.slice(0, ply)) s = play(s, t);
       for (const t of moves) s = play(s, t);
     }

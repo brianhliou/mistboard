@@ -219,9 +219,13 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
       if (side.comment) comment(head!, side.comment);
       if (side.redScoreEnd != null) glyph(tail!, assessmentForRedScore(side.redScoreEnd).nag);
       cursor.children.push(head!);
-      arrows(cursor, [
-        { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
-      ]);
+      // A drop (`R@d8`) has no origin square, so it gets no arrow; a duck move
+      // (`b3b5@d9`) has one.
+      if (!/^[A-Za-z]@/.test(side.moves[0]!)) {
+        arrows(cursor, [
+          { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
+        ]);
+      }
     }
     cursor = node;
   });
