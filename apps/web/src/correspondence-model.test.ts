@@ -13,7 +13,6 @@ import {
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
-  heroBoardGame,
   inboxTileKind,
   indexByRoom,
   othersSeeks,
@@ -24,6 +23,7 @@ import {
   startFormPrefillHref,
   URGENT_DEADLINE_MS,
   variantFact,
+  variantFactSpecIds,
 } from './correspondence-model.js';
 
 const NOW = Date.parse('2026-10-02T12:00:00Z');
@@ -294,6 +294,16 @@ describe('variantFact', () => {
   });
 });
 
+describe('variantFactSpecIds', () => {
+  it('names the shelf leads first, Xiangqi and Jieqi, and keeps every eligible variant', () => {
+    const ids = variantFactSpecIds();
+    expect(ids.slice(0, 2)).toEqual(['xiangqi', 'jieqi']);
+    expect([...ids].sort()).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS].sort());
+    const fact = variantFact(ids);
+    expect(fact).toEqual({ kind: 'more', shown: 'xiangqi, jieqi', more: ids.length - 2 });
+  });
+});
+
 describe('signed-out showcase', () => {
   const feed = [
     { gameSpecId: 'xiangqi', observe: 'open' as const, timeClass: 'blitz' as const, payload: {} },
@@ -309,12 +319,6 @@ describe('signed-out showcase', () => {
 
   it('keeps only correspondence games, in feed order', () => {
     expect(correspondenceInProgress(feed)).toEqual([feed[1], feed[2], feed[3]]);
-  });
-
-  it('picks the first correspondence game with an open board for the hero, never a fog game', () => {
-    expect(heroBoardGame(correspondenceInProgress(feed))).toBe(feed[3]);
-    expect(heroBoardGame([feed[1], feed[2]])).toBeNull();
-    expect(heroBoardGame([])).toBeNull();
   });
 });
 

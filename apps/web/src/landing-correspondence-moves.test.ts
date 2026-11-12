@@ -1,10 +1,14 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CorrespondenceGame } from './correspondence-model.js';
 import {
   buildLandingCorrespondenceMoves,
+  createYourMoveFeed,
   renderLandingCorrespondenceMoves,
 } from './landing-correspondence-moves.js';
+import { buildPlayPanel } from './landing-play-panel.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { navPhoneMediaQuery } from './site-shell.js';
 
 // #1058: the signed-in homepage lists the player's correspondence games on their
 // move, and shows nothing at all otherwise (no promotional tile).
@@ -96,5 +100,49 @@ describe('homepage correspondence row', () => {
     const box = buildLandingCorrespondenceMoves({ hydrate: false });
     expect(box.hidden).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('one load for the phone card and the desktop Your move tab', () => {
+  it('fetches once and draws both from the same answer', async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url === '/api/correspondence/games'
+        ? new Response(JSON.stringify({ games: [game('a', true), game('b', true, 1)] }))
+        : new Response('{}', { status: 404 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const feed = createYourMoveFeed();
+    const panel = buildPlayPanel('en', { hydrate: false, yourMove: feed });
+    const card = buildLandingCorrespondenceMoves({ feed, phoneOnly: true });
+    document.body.append(panel, card);
+    setResolvedSignedIn(true);
+    await settle();
+    const corrCalls = fetchMock.mock.calls.filter(([url]) => url === '/api/correspondence/games');
+    expect(corrCalls).toHaveLength(1);
+    expect(card.hidden).toBe(false);
+    const tab = panel.querySelector<HTMLElement>('.pp-tab-moves')!;
+    expect(tab.hidden).toBe(false);
+    expect(tab.textContent).toBe('Your move2');
+  });
+
+  it('marks the card phone-only where the panel lists the games, and only then', () => {
+    expect(buildLandingCorrespondenceMoves({ hydrate: false, phoneOnly: true }).className).toBe(
+      'landing-corr-moves is-phone-only',
+    );
+    expect(buildLandingCorrespondenceMoves({ hydrate: false }).className).toBe(
+      'landing-corr-moves',
+    );
+  });
+
+  it('hides the phone-only card exactly above the phone breakpoint', () => {
+    // The panel (and so its tab) is built only when the header's phone query
+    // fails at mount; the card must take over at that same width.
+    const max = Number(/max-width: (\d+)px/.exec(navPhoneMediaQuery)?.[1]);
+    const css = readFileSync('src/landing-correspondence-moves.css', 'utf8');
+    expect(css).toMatch(
+      new RegExp(
+        `@media \\(min-width: ${max + 1}px\\) \\{\\s*\\.landing-corr-moves\\.is-phone-only \\{\\s*display: none;`,
+      ),
+    );
   });
 });

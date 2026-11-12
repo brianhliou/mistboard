@@ -227,3 +227,10 @@ describe('phone nav', () => {
     ]);
   });
 });
+
+describe('play menu', () => {
+  it('opens the Play a game dialog on the Anyone tab, like lichess Create lobby game', async () => {
+    const { playNavItems } = await import('./nav-items.js');
+    expect(playNavItems()[0]).toMatchObject({ labelKey: 'nav.createGame', href: '/?play=lobby' });
+  });
+});

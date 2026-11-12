@@ -122,7 +122,7 @@ test('parsed scores normalize through the SHARED xiangqiUciScoreToCp', () => {
   assert.equal(xiangqiScoredLineToVerifyLine(mateZero)?.scoreCp, -XIANGQI_MATE_SCORE_CP);
 });
 
-test('parseXiangqiScoredLines keeps complete deepest iterations in rank order', () => {
+test('parseXiangqiScoredLines keeps the deepest complete snapshot, in rank order', () => {
   const lines = parseXiangqiScoredLines([
     'info depth 10 multipv 2 score cp 80 pv b2e2 h9g7',
     'info depth 10 multipv 1 score cp 200 pv h2e2 h9g7',
@@ -317,5 +317,23 @@ test('an exact best score from an incomplete same-depth update cannot refresh an
   assert.deepEqual(
     parsed.map((line) => line.score.cp),
     [600, 0],
+  );
+});
+
+test('a requested runner-up stays missing when no complete pair is emitted', () => {
+  const raw = ['info depth 20 multipv 1 score cp 600 pv a0a1', 'bestmove a0a1'];
+  assert.deepEqual(parseXiangqiScoredLines(raw, 2), []);
+  assert.equal(parseXiangqiScoredLines(raw, 1)[0]?.score.cp, 600);
+});
+
+test('the inferred MultiPV width cannot shrink after an interrupted update', () => {
+  const raw = [
+    'info depth 20 multipv 1 score cp 500 pv a0a1',
+    'info depth 20 multipv 2 score cp 100 pv b0b1',
+    'info depth 21 multipv 1 score cp 600 pv a0a1',
+  ];
+  assert.deepEqual(
+    parseXiangqiScoredLines(raw).map((line) => line.score.cp),
+    [500, 100],
   );
 });

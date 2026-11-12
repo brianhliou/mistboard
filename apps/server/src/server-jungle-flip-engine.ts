@@ -28,9 +28,9 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import {
   isJungleFlipEngineClientId,
   JUNGLE_FLIP_ENGINE_VERSION,
@@ -170,6 +170,14 @@ export async function playJungleFlipEngineMoveIfReady(
   const seat = jungleFlipEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
   const tier = jungleFlipEngineTierFor(engineId);
   if (!tier) return;
 
@@ -177,6 +185,7 @@ export async function playJungleFlipEngineMoveIfReady(
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, now) : null;
   const incrementMs = clock?.incrementMs ?? 0;
+  const startedAt = Date.now();
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const fen = jungleFlipStateToEngineFen(room.projection.state);
@@ -188,19 +197,34 @@ export async function playJungleFlipEngineMoveIfReady(
   // clock-aware time-pressure guard (shared allocator). Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink
   // when timed. Replaces the old naive min(cap, remaining - safety) clamp.
-  const { computeBudgetMs: movetimeCapMs } = budgetForMove({
+  const paceInput = {
+    variant: 'jungle-flip',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: room.projection.state.moveNumber,
+    legalCount: getJungleFlipLegalMoves(room.projection.state).length,
     remainingMs,
     incrementMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isJungleFlipEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: tier.movetimeCapMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
+  };
+  let { movetimeMs: movetimeCapMs } = liveBotMoveTime(budgetInput);
+  if (movetimeCapMs <= 0 || !turn.current()) return;
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries, validate
   // every output against the kernel, FAIL CLOSED (resign + page) rather than silently
   // substituting a threat-blind legal move.
-  const startedAt = Date.now();
   let lastSearch: UciEval | null = null;
+  let budgetExhausted = false;
   const {
     chosen: validated,
     attempts,
@@ -208,6 +232,14 @@ export async function playJungleFlipEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JungleFlipMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      movetimeCapMs = liveBotMoveTime({
+        ...budgetInput,
+        waitedMs: Date.now() - startedAt,
+      }).movetimeMs;
+      if (movetimeCapMs <= 0) {
+        budgetExhausted = true;
+        return null;
+      }
       const search = await moveProvider(engineId, fen, {
         nodes: tier.nodes,
         movetimeCapMs,
@@ -223,7 +255,7 @@ export async function playJungleFlipEngineMoveIfReady(
       const parsed = engineUciToJungleFlipMove(uci);
       return parsed && isJungleFlipLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+    stillOnTurn: () => !budgetExhausted && turn.current(),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -239,7 +271,7 @@ export async function playJungleFlipEngineMoveIfReady(
         'Flip Jungle engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !turn.current()) return;
 
   if (validated === null) {
     // FAIL CLOSED: capture a complete replayable record, page, and resign. Flip Jungle
@@ -273,6 +305,16 @@ export async function playJungleFlipEngineMoveIfReady(
   }
 
   reportEngineMoveOk();
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+  });
+  if (!(await turn.wait(pace.waitMs)) || !turn.current()) return;
+
   const event: TenantRoomEvent<JungleFlipSeat, JungleFlipMove, JungleFlipSpecId> = {
     type: 'move-played',
     at: Date.now(),
@@ -283,9 +325,8 @@ export async function playJungleFlipEngineMoveIfReady(
   // Queue BEFORE the append: if this move ends the game, the tenant event writer
   // records the game end and flushes the queue inside that same append, and a
   // decision queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'jungle-flip',
       roomId: room.id,
       engineId,
@@ -297,13 +338,14 @@ export async function playJungleFlipEngineMoveIfReady(
       incrementMs,
       tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts,
       move: jungleFlipMoveToEngineUci(validated),
       fen,
       legalCount: getJungleFlipLegalMoves(room.projection.state).length,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

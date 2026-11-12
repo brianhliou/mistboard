@@ -51,7 +51,8 @@ export const EN_PLAY = {
   'lobby.colMode': 'Mode',
   'lobby.anonymous': 'Anonymous',
   'lobby.yours': 'Yours',
-  'lobby.daysPerMove': '{days}d/move',
+  'lobby.daysPerMove': '{days} days/move',
+  'lobby.oneDayPerMove': '1 day/move',
   'lobby.tagBot': 'Bot',
   'lobby.tagHuman': 'Human',
   'lobby.enginePoolRating':
@@ -313,7 +314,7 @@ export const EN_PLAY = {
   'correspondence.couldNotPostGame': 'Could not post that game. Try again.',
   'correspondence.seekTileTitle': 'Post a seek',
   'correspondence.seekTileBody':
-    'It stays open until another player accepts it, here or on the Current games page. Or make a link to send a friend.',
+    'It stays open until another player accepts it, here, on the homepage or on the Current games page. Or make a link to send a friend.',
   'correspondence.seekTileButton': 'New seek',
   'correspondence.hostTileBody':
     'The person who builds Mistboard. {days} days per move, and the game starts right away.',
@@ -354,12 +355,13 @@ export const EN_PLAY = {
   'correspondence.opponentLink': 'A link',
   'correspondence.yourSideLabel': 'Your side',
   'correspondence.sideRandom': 'Random',
-  'correspondence.kindHintPublic': 'Anyone can accept it here and on the Current games page.',
+  'correspondence.kindHintPublic':
+    'Anyone can accept it here, on the homepage or on the Current games page.',
   'correspondence.kindHintLink': 'You get a link to send to one person.',
   'correspondence.postSeek': 'Post seek',
   'correspondence.createLink': 'Create link',
   'correspondence.seekPosted':
-    'Your seek is up. Other players see it under Open seeks and on the Current games page.',
+    'Your seek is up. Other players see it under Open seeks, on the homepage and on the Current games page.',
   'correspondence.openSeeks': 'Open seeks',
   'correspondence.accept': 'Accept',
   'correspondence.noOpenSeeks':
@@ -377,13 +379,9 @@ export const EN_PLAY = {
   'correspondence.heroTitle': 'Games that wait for you',
   'correspondence.heroPitch':
     'We give every move days, not minutes. Play from any device, move when it suits you, and we keep the clock.',
-  'correspondence.heroNote':
-    'Correspondence needs an account, so your games follow you to any device.',
   'correspondence.factDays': '{list} days per move',
   'correspondence.factReminders': 'Reminders before a deadline',
   'correspondence.factVariantsMore': '{list} and {count} more',
-  'correspondence.heroLive': 'In play now: {matchup}',
-  'correspondence.heroStart': 'Every game starts here',
   'correspondence.gamesInProgress': 'Games in progress',
   'correspondence.toMoveLeft': '{name} to move, {time} left',
   'correspondence.howHeading': 'How it works',
@@ -701,6 +699,7 @@ export const EN_PLAY = {
   // Public casual Three Kingdoms Banqi (#628).
   'variant.threeKingdomsBanqi.name': 'Three Kingdoms Banqi',
   'variant.threeKingdomsBanqi.cardName': '3 Kingdoms Banqi',
+  'variant.threeKingdomsBanqi.tileName': 'TK Banqi',
   'variant.ffqBanqi.name': 'Fanfanqi',
   'live.ffq.hp': '{hp}/{max} HP',
   'live.ffq.noProgress': 'No progress {count}/{limit}',
@@ -947,6 +946,7 @@ export const EN_PLAY = {
   'live.tk.adminOnly': 'This {variant} room is unavailable while play is switched off.',
   'lobby.panelTabComputer': 'Play the computer',
   'lobby.panelTabPerson': 'Play a person',
+  'lobby.panelTabYourMove': 'Your move',
   'lobby.panelPlayAgain': 'Play again',
   'lobby.panelPlayerWaiting': 'A player is waiting',
   'lobby.panelPlay': 'Play',
@@ -960,6 +960,7 @@ export const EN_PLAY = {
   'lobby.panelFaster': 'Faster clock',
   'lobby.panelSlower': 'Slower clock',
   'lobby.panelRatedNote': 'Rated: {clocks}.',
+  'lobby.panelRatedCorrespondenceCasual': 'Correspondence is casual for now.',
   'lobby.panelRatedSignIn': 'Sign in to play rated games.',
   'lobby.ratedCasualOnlyAccount': 'This account plays casual games only.',
   'lobby.panelOpenGames': 'Open games',
@@ -967,6 +968,13 @@ export const EN_PLAY = {
   'lobby.panelVersus': '{variant} vs {opponent}',
   'lobby.panelAnonymous': 'Anonymous',
   'lobby.panelYours': 'Yours',
+  'lobby.panelPaceLive': 'Live',
+  'lobby.panelPaceDays': 'Days per move',
+  'lobby.panelPaceOnly': '{pace} only',
+  'lobby.panelPaceInstead': '{pace} instead',
+  'lobby.panelDaysShort': '{days}d',
+  'lobby.panelMoreGames': '+{count} more',
+  'lobby.panelDaysSignIn': 'Sign in for days per move',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;
@@ -1112,6 +1120,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'lobby.anonymous',
   'lobby.yours',
   'lobby.daysPerMove',
+  'lobby.oneDayPerMove',
   'lobby.tagBot',
   'lobby.tagHuman',
   'lobby.enginePoolRating',

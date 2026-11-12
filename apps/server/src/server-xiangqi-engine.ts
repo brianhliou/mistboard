@@ -34,9 +34,8 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
 import { type EngineClock, liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
@@ -143,6 +142,14 @@ export async function playXiangqiEngineMoveIfReady(
   const seat = xiangqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
   const tier = xiangqiEngineTierFor(engineId);
   if (!tier) return;
 
@@ -159,11 +166,9 @@ export async function playXiangqiEngineMoveIfReady(
   // FSF rungs (levels 1-7) the movetime is, in practice, the strength knob too.
   // The top rungs at a short clock may run the phase rule instead
   // (MISTBOARD_BOT_TIME_RULE=phase; engine-time-budget.ts `liveBotMoveTime`).
-  const {
-    movetimeMs,
-    rule: timeRule,
-    clock: engineClock,
-  } = liveBotMoveTime({
+  const budgetInput = {
+    variant: 'xiangqi',
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
     engineId,
     roomId: room.id,
     ply: history.length,
@@ -175,7 +180,9 @@ export async function playXiangqiEngineMoveIfReady(
     flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
     engineVsEngine: xiangqiEngineSeatCount(room) === 2,
-  });
+  };
+  const { movetimeMs, rule: timeRule } = liveBotMoveTime(budgetInput);
+  if (movetimeMs <= 0 || !turn.current()) return;
 
   const startedAt = Date.now();
   let lastSearch: UciEval | null = null;
@@ -186,15 +193,17 @@ export async function playXiangqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      const budget = liveBotMoveTime({ ...budgetInput, waitedMs: Date.now() - startedAt });
+      if (budget.movetimeMs <= 0) return null;
       const search = await moveProvider(engineId, history, {
-        movetimeMs,
-        ...(engineClock ? { clock: engineClock } : {}),
+        movetimeMs: budget.movetimeMs,
+        ...(budget.clock ? { clock: budget.clock } : {}),
       });
       lastSearch = search;
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getStandardXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+    stillOnTurn: turn.current,
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -210,7 +219,7 @@ export async function playXiangqiEngineMoveIfReady(
         'Xiangqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !turn.current()) return;
   const thinkTimeMs = Date.now() - startedAt;
 
   const decisionBase = {
@@ -282,10 +291,12 @@ export async function playXiangqiEngineMoveIfReady(
 
   // Hold the move so the player sees their own land first (#389). The wait is on
   // the bot's clock; anything that ends or pauses the turn meanwhile drops the move.
-  const stateAtTurn = room.projection.state;
   // Assigned inside requestMove, which control-flow narrowing does not follow.
   const search = lastSearch as UciEval | null;
   const pace = replyPace({
+    variant: 'xiangqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
     roomId: room.id,
     ply: history.length,
     legalCount: legalMoves.length,
@@ -296,10 +307,7 @@ export async function playXiangqiEngineMoveIfReady(
     computeMs: thinkTimeMs,
     engineVsEngine: xiangqiEngineSeatCount(room) === 2,
   });
-  if (pace.waitMs > 0) {
-    await sleepMs(pace.waitMs);
-    if (room.projection.state !== stateAtTurn || !engineToMove(room, seat)) return;
-  }
+  if (!(await turn.wait(pace.waitMs))) return;
 
   const event: TenantRoomEvent<XiangqiColor, XiangqiMove, XiangqiSpecId> = {
     type: 'move-played',
@@ -415,7 +423,12 @@ function engineToMove(room: XiangqiEngineRoom, seat: XiangqiColor): boolean {
   // A paused room is not the engine's turn: a search that lands (or fails)
   // after the shutdown pause must neither move nor resign. The resume
   // reschedules the engine, which searches again on the restored room.
-  if (room.projection.paused) return false;
+  if (
+    room.stopping ||
+    room.projection.paused ||
+    room.projection.timeControl?.daysPerMove !== undefined
+  )
+    return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 

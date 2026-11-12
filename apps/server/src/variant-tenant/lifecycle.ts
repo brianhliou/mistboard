@@ -17,6 +17,7 @@
  */
 
 import { clockPolicyKindFor, DAY_MS } from '@mistboard/game';
+import { cancelReplyWait } from '../engine-reply-pacing.js';
 import {
   ABORT_WINDOW_MS,
   FORFEIT_WINDOW_MS,
@@ -117,6 +118,7 @@ export function clearTenantRuntimeTimers(room: {
   engineTimer: ReturnType<typeof setTimeout> | null;
   resumeTimer?: ReturnType<typeof setTimeout> | null;
 }): void {
+  cancelReplyWait(room);
   clearTenantAbortTimer(room);
   clearTenantClockTimer(room);
   clearTenantForfeitTimer(room);

@@ -40,6 +40,11 @@ export type PlyEval = {
    *  still renders on the chart — it is the best the engine offered — but the two moves that
    *  touch it are graded against a value the engine itself contradicts, so neither is judged. */
   unstable?: boolean;
+  /** `mate` is a rule verdict, not a checkmate: the engine scored a repetition under
+   *  perpetual check as a loss for the checker ("mate 1" on a position where nobody is
+   *  mated). Tagged by the server sweep, or on the client from the moves for rows cached
+   *  before the tag (xiangqiRuleMate). The move list shows the rule instead of "#1". */
+  rule?: 'perpetual-check';
 };
 
 export type XiangqiGameAnalysisResponse = {
@@ -96,6 +101,10 @@ export type GameAnalysis = {
   /** 1-based plies where the move played WAS the engine's own best move for the position before
    *  it (see computeGameAnalysis opts.bestPlayedPlies). Ungraded and scored 100. */
   bestPlayedPlies: number[];
+  /** 1-based plies left ungraded because they touch a rule-verdict eval (`rule`) on a record
+   *  whose event did not enforce the rule (a broadcast, an imported or pasted game): the swing
+   *  there is a loss the players were never held to. Absent or empty where the rule applies. */
+  rulePlies?: number[];
   red: PlayerAnalysis;
   black: PlayerAnalysis;
 };
@@ -166,7 +175,14 @@ function moverCp(cpRed: number | null, mate: number | null, mover: 'red' | 'blac
  *  guard below); callers that can't resolve the engine's UCI dialect omit it. */
 export function computeGameAnalysis(
   response: XiangqiGameAnalysisResponse,
-  opts?: { firstMover?: 'red' | 'black'; bestPlayedPlies?: ReadonlySet<number> },
+  opts?: {
+    firstMover?: 'red' | 'black';
+    bestPlayedPlies?: ReadonlySet<number>;
+    /** False on a record whose event did not play under our repetition rules: a move that
+     *  reaches or leaves a rule-verdict eval is then ungraded, like an unstable one. Default
+     *  true (a game played here, where the verdict is the real result). */
+    ruleVerdictsEnforced?: boolean;
+  },
 ): GameAnalysis {
   const firstMover = opts?.firstMover ?? 'red';
   const evals = [...response.plies].sort((a, b) => a.ply - b.ply);
@@ -196,6 +212,18 @@ export function computeGameAnalysis(
     if (index >= 1) unstablePlies.add(index);
     if (index + 1 < evals.length) unstablePlies.add(index + 1);
   });
+  // A rule-verdict eval on a record: "mate 1" there means the next repetition loses by OUR
+  // rules, which the source event did not apply (play went on). Grading the move that walked
+  // into it as a blunder, or the reply that would complete it as throwing away a mate, judges
+  // the players by a rule they were not held to, so both moves that touch it go unjudged.
+  const rulePlies = new Set<number>();
+  if (opts?.ruleVerdictsEnforced === false) {
+    evals.forEach((evaluation, index) => {
+      if (!evaluation.rule) return;
+      if (index >= 1) rulePlies.add(index);
+      if (index + 1 < evals.length) rulePlies.add(index + 1);
+    });
+  }
   // A chance ply stays chance-graded even if the reveal it chose was the engine's pick — its
   // decomposition (mergeDecisionAnalysis) owns that grade, and a flat 100 would overwrite it.
   const bestPlayed = new Set(
@@ -217,7 +245,7 @@ export function computeGameAnalysis(
     const winBefore = mover === 'red' ? redBefore : 100 - redBefore;
     const winAfter = mover === 'red' ? redAfter : 100 - redAfter;
     const isChance = chancePlies.has(ply);
-    const isUnstable = unstablePlies.has(ply);
+    const isUnstable = unstablePlies.has(ply) || rulePlies.has(ply);
     const isBestPlayed = bestPlayed.has(ply);
     const judgment =
       isChance || isUnstable || isBestPlayed ? null : moveJudgment(winBefore, winAfter);
@@ -257,6 +285,7 @@ export function computeGameAnalysis(
   const accuracyOverride = new Map<number, number | null>([
     ...[...chancePlies].map((ply): [number, number | null] => [ply, null]),
     ...[...unstablePlies].map((ply): [number, number | null] => [ply, null]),
+    ...[...rulePlies].map((ply): [number, number | null] => [ply, null]),
     ...[...bestPlayed].map((ply): [number, number | null] => [ply, 100]),
   ]);
   const accuracies = gameAccuracy(
@@ -285,6 +314,7 @@ export function computeGameAnalysis(
     chancePlies: [...chancePlies].sort((a, b) => a - b),
     unstablePlies: [...unstablePlies].sort((a, b) => a - b),
     bestPlayedPlies: [...bestPlayed].sort((a, b) => a - b),
+    ...(rulePlies.size ? { rulePlies: [...rulePlies].sort((a, b) => a - b) } : {}),
     red: summarize('red'),
     black: summarize('black'),
   };
@@ -306,7 +336,37 @@ export function regradeBestPlayed(
       plies: analysis.evals,
       chancePlies: analysis.chancePlies,
     },
-    { firstMover: analysis.moves[0]?.mover ?? 'red', bestPlayedPlies },
+    {
+      firstMover: analysis.moves[0]?.mover ?? 'red',
+      bestPlayedPlies,
+      ruleVerdictsEnforced: !analysis.rulePlies?.length,
+    },
+  );
+}
+
+/** Re-grade an analysis over evals the caller tagged with rule verdicts (`rule`), which the
+ *  review can only do against its move tree. `enforced` false (a record) leaves the moves that
+ *  touch a rule eval ungraded; true keeps the grades and only the label changes. Returns the
+ *  same object when nothing is tagged. */
+export function withRuleVerdicts(
+  analysis: GameAnalysis,
+  evals: PlyEval[],
+  enforced: boolean,
+): GameAnalysis {
+  if (!evals.some((entry) => entry.rule)) return analysis;
+  if (enforced) return { ...analysis, evals };
+  return computeGameAnalysis(
+    {
+      engineId: analysis.engineId,
+      depth: analysis.depth,
+      plies: evals,
+      chancePlies: analysis.chancePlies,
+    },
+    {
+      firstMover: analysis.moves[0]?.mover ?? 'red',
+      bestPlayedPlies: new Set(analysis.bestPlayedPlies),
+      ruleVerdictsEnforced: false,
+    },
   );
 }
 
