@@ -153,3 +153,33 @@ test('the random floors resolve nowhere in the playable tier tables', () => {
   assert.equal(fortressXiangqiEngineTierFor(FORTRESS_XIANGQI_RANDOM_ENGINE_ID), null);
   assert.equal(duckXiangqiEngineTierFor(DUCK_XIANGQI_RANDOM_ENGINE_ID), null);
 });
+
+test('hidden deals: each game seed deals its own setup when the opening policy names none', async () => {
+  // Ladder jobs store a per-game seed on the task and a policy with no seed.
+  // Before the fix every game of the 2026-11-12 Fanfanqi ladder (560 games)
+  // and the TK L7-L8 run replayed one deal.
+  const { ffqBanqiEveAdapter } = await import('./ffq-banqi-eve-adapter.js');
+  const dealFor = async (seed: string) => {
+    const result = await playVariantEngineGame(ffqBanqiEveAdapter, {
+      roomId: `ffq_eve_seed_${seed}`,
+      firstEngineId: 'misty-ffq-banqi-level-2',
+      secondEngineId: 'misty-ffq-banqi-level-3',
+      maxPlies: 0,
+      openingPolicy: { kind: 'standard' },
+      seed,
+      moveProvider: async () => {
+        throw new Error('no move is asked for at a zero ply cap');
+      },
+    });
+    const created = result.events.find((event) => event.type === 'room-created');
+    return JSON.stringify(created && 'setup' in created ? created.setup : null);
+  };
+  const [a, b, again] = await Promise.all([
+    dealFor('1794503464925'),
+    dealFor('1794503464927'),
+    dealFor('1794503464925'),
+  ]);
+  assert.notEqual(a, 'null');
+  assert.notEqual(a, b);
+  assert.equal(a, again);
+});
