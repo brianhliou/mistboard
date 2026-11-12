@@ -13,17 +13,16 @@ const THUMBNAIL = (locale: Parameters<typeof textCard>[1]): string =>
     locale,
   );
 
-// The four games as @mistboard studies, one per variant (a study holds one
-// variant), made by scripts/variant-lab/rebirthfox-annotated-studies.ts from
-// rebirthfox-games.json. These ids are the LOCAL database's: the prod studies
-// are created with the same script and study:edit --apply on Brian's yes, and
-// these ids replaced then. Rewrite the trees with the script's --update mode,
-// never by hand.
+// The four games as @mistboard studies on prod, one per variant (a study holds
+// one variant), made by scripts/variant-lab/rebirthfox-annotated-studies.ts
+// from rebirthfox-games.json and created with study:edit --apply on 2026-11-12.
+// A local dev database lacks them, so the embeds 404 locally. Rewrite the trees
+// with the script's --update mode, never by hand.
 export const REBIRTHFOX_STUDIES = {
-  fog: { id: '888gXTxO', chapter: 'CCAS8FFK' },
-  banqi: { id: 'LGHoQ8Yv', chapter: 'PWAvb6AJ' },
-  jieqi: { id: 'GoP84icD', chapter: 'crwc0UnD' },
-  duck: { id: 'jKxR8HZJ', chapter: 'nJA9yhB6' },
+  fog: { id: 'sp2GKGQ3', chapter: 'TWd2mAml' },
+  banqi: { id: 'DkDToKIV', chapter: 'zozxiQls' },
+  jieqi: { id: 'zYSSXZ4h', chapter: 'b4wpEiV1' },
+  duck: { id: 'gIzTqkx7', chapter: 'F395Gmnl' },
 } as const;
 
 function gameEmbed(game: keyof typeof REBIRTHFOX_STUDIES, ply: number, title: string): ArticleBlock {
