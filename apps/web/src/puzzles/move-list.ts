@@ -84,6 +84,9 @@ export function moveListPanel(
  * the desktop column scrolls down. Call after the list is in the document.
  */
 export function keepActivePuzzleMoveInView(root: ParentNode): void {
+  const exploration = root.querySelector<HTMLElement>('.puzzle-exploration-moves');
+  const step = exploration?.querySelector<HTMLElement>('[aria-current]');
+  if (exploration && step) keepPuzzleMoveHorizontallyInView(exploration, step);
   const list = root.querySelector<HTMLElement>('.puzzle-move-list');
   const cell = list?.querySelector<HTMLElement>('.puzzle-move-cell--active');
   const row = cell?.closest<HTMLElement>('.puzzle-move-item');
@@ -94,6 +97,11 @@ export function keepActivePuzzleMoveInView(root: ParentNode): void {
   else if (rowBox.top < listBox.top) list.scrollTop -= listBox.top - rowBox.top;
   // The phone's one-line strip scrolls sideways: bring the active ply in from
   // either edge with a little room, so it never sits clipped at the right.
+  keepPuzzleMoveHorizontallyInView(list, cell);
+}
+
+function keepPuzzleMoveHorizontallyInView(list: HTMLElement, cell: HTMLElement): void {
+  const listBox = list.getBoundingClientRect();
   const cellBox = cell.getBoundingClientRect();
   const room = 12;
   if (cellBox.right > listBox.right - room) list.scrollLeft += cellBox.right - listBox.right + room;

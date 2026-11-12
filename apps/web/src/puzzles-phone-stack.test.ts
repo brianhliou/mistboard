@@ -319,6 +319,21 @@ describe('keepActivePuzzleMoveInView', () => {
     keepActivePuzzleMoveInView(root);
     expect(list.scrollLeft).toBe(200 - (20 + 12));
   });
+
+  it('keeps the current exploration move visible without an active solution ply', () => {
+    const { list, root } = line(5);
+    list.className = 'puzzle-exploration-moves';
+    const current = list.querySelector<HTMLElement>('.puzzle-move-cell--active')!;
+    current.classList.remove('puzzle-move-cell--active');
+    current.setAttribute('aria-current', 'step');
+    keepActivePuzzleMoveInView(root);
+    expect(list.scrollLeft).toBe(6 * 90 - 320 + 12);
+    current.removeAttribute('aria-current');
+    list.children[2]!.firstElementChild!.setAttribute('aria-current', 'step');
+    keepActivePuzzleMoveInView(root);
+    expect(list.scrollLeft).toBe(2 * 90 - 12);
+    expect(list.scrollTop).toBe(0);
+  });
 });
 
 describe('puzzlePhoneMoveNav', () => {

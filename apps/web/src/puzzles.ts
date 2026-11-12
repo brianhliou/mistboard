@@ -824,6 +824,7 @@ function renderPuzzleDetail(
   );
   const actions = actionPanel(session, renderSession);
   const playPosition = isPuzzleComplete(session) ? puzzlePlayPosition(session, displayState) : null;
+  const reportControl = trainer.querySelector<HTMLElement>('.puzzle-solved-panel > .puzzle-report');
   const phoneBar = puzzlePhoneMoveNav(
     puzzleScrubBounds(session),
     (action) => scrubPuzzle(session, renderSession, action),
@@ -831,7 +832,9 @@ function renderPuzzleDetail(
       // The desktop menu holds secondary actions. On a phone it also lends
       // the engine controls and settings from the sidebar into the sheet.
       blocks: () => [
-        ...(window.matchMedia('(max-width: 980px)').matches ? [session.analysis?.engineEl] : []),
+        ...(window.matchMedia('(max-width: 980px)').matches
+          ? [session.analysis?.engineEl, reportControl]
+          : []),
         playPosition,
       ],
       head: () =>

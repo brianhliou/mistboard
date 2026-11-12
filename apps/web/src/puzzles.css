@@ -2064,9 +2064,44 @@ a.puzzle-tag--link:hover {
   }
 
   .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) {
-    display: grid;
-    grid-template-rows: 44px auto;
-    height: auto;
+    display: block;
+    height: 44px;
+  }
+  .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) > .puzzle-move-list {
+    display: none;
+  }
+  .puzzles-shell .puzzle-exploration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .puzzles-shell .puzzle-exploration-head {
+    display: contents;
+  }
+  .puzzles-shell .puzzle-exploration-head > strong {
+    flex: none;
+    color: var(--site-muted);
+    white-space: nowrap;
+  }
+  .puzzles-shell .puzzle-exploration-return {
+    order: 2;
+    flex: none;
+    font: inherit;
+  }
+  .puzzles-shell .puzzle-exploration-moves {
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    min-width: 0;
+    margin: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .puzzles-shell .puzzle-exploration-moves > button {
+    flex: none;
   }
   .puzzles-shell .puzzle-exploration button {
     min-width: 40px;
@@ -2490,6 +2525,22 @@ a.puzzle-tag--link:hover {
     content: "";
   }
 
+  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-report {
+    display: flex;
+    padding: 0;
+    border-bottom: 1px solid var(--site-border);
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-report > .puzzle-report-link {
+    flex: 1 1 auto;
+    min-height: 44px;
+    text-align: left;
+  }
+
   /* Stacked, the trainer panel sizes to its content; hold about its painted
      height while it loads so what follows starts where it will stay. */
   .puzzle-board-panel--pending .puzzle-side-panel {
@@ -2630,19 +2681,6 @@ a.puzzle-tag--link:hover {
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
     flex: none;
     margin-block: 0;
-  }
-
-  /* Report a problem takes its own row under the one-row strip, and the strip
-     grows for it out of the gap the session row sits in; at the fixed height
-     the open form was clipped. */
-  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel:has(> .puzzle-report) {
-    height: auto;
-    min-height: var(--puzzle-prompt-height);
-  }
-
-  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
-    grid-column: 1 / -1;
-    padding: 2px 12px 8px;
   }
 
   /* Streak's shell scrolls on desktop (its summary card can be long); with a
