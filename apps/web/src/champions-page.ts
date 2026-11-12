@@ -218,6 +218,7 @@ export const TITLES: readonly Title[] = [
       draws: 19,
       losses: 6,
       tookKey: 'champions.tookPikafish',
+      gamesHref: '/study/Tf6bUHnC',
       about: (locale) => [t('champions.aboutPikafish', {}, locale)],
     },
   },
