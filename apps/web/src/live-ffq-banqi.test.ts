@@ -1,7 +1,6 @@
 import {
   applyFFQBanqiMove,
   createInitialFFQBanqiState,
-  FFQ_BANQI_DAMAGE,
   type FFQBanqiEndReason,
   type FFQBanqiPlayerView,
   getFFQBanqiPlayerView,
@@ -130,19 +129,41 @@ afterEach(() => {
 });
 
 describe('FFQ banqi live room', () => {
-  it('draws all 32 hit targets, four open tiles, fixed seats, HP and quiet counters', async () => {
+  it('draws all 32 hit targets, four open tiles, fixed seats and the HP seat panel', async () => {
     await mount();
-    expect(document.querySelector('#app.live-route--banqi')).not.toBeNull();
+    expect(document.querySelector('#app.live-route--banqi.live-route--ffq-banqi')).not.toBeNull();
     expect(document.querySelectorAll('.banqi-live-board [data-square]')).toHaveLength(32);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(4);
-    const bars = [...document.querySelectorAll<HTMLProgressElement>('.ffq-banqi-hp progress')];
+    // Three Kingdoms' seat panel under the board, the top seat first: HP where
+    // it shows points, then each seat's captures ("None" before any).
+    const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat.tk-seat--hp')];
+    expect(blocks.map((block) => block.dataset.seat)).toEqual(['black', 'red']);
+    for (const block of blocks) {
+      expect(block.querySelector('.tk-seat__name')?.textContent).toBe(
+        block.dataset.seat === 'red' ? 'Red' : 'Black',
+      );
+      expect(block.querySelector('.tk-seat__head .ffq-banqi-hp-meter progress')).not.toBeNull();
+      expect(block.querySelectorAll('.tk-seat__line')).toHaveLength(1);
+      expect(block.querySelector('[data-line="captured"] .tk-seat__key')?.textContent).toBe(
+        'Captured',
+      );
+      expect(block.querySelector('[data-line="captured"] .tk-seat__none')?.textContent).toBe(
+        'None',
+      );
+    }
+    const bars = [
+      ...document.querySelectorAll<HTMLProgressElement>(
+        '.hidden-pool .ffq-banqi-hp-meter progress',
+      ),
+    ];
     expect(bars.map((bar) => [bar.value, bar.max])).toEqual([
       [60, 60],
       [60, 60],
     ]);
-    expect(document.querySelector('.ffq-banqi-counters')?.textContent).toBe(
-      'No progress 0/30 · Red chase 0/4 · Black chase 0/4',
-    );
+    // No progress or chase readouts: those are rules, shown on the board only
+    // when a move would break one.
+    expect(document.querySelector('.ffq-banqi-progress, .ffq-banqi-counters')).toBeNull();
+    expect(document.querySelector('.hidden-pool')?.textContent).not.toMatch(/progress|chase/i);
     // One disc per seat on each surface: the meta card and the clock rows (#901).
     for (const surface of ['.game-meta-card', '.clock-player-line']) {
       expect(document.querySelectorAll(`${surface} .seat-disc--red`)).toHaveLength(1);
@@ -277,7 +298,7 @@ describe('FFQ banqi live room', () => {
     expect(document.querySelector('[data-square="h3"][data-forbidden-move]')).not.toBeNull();
   });
 
-  it('shows each capture damage against its owner, including a friendly covered capture', async () => {
+  it('shows each seat its captured pieces and HP from the view, including a friendly covered capture', async () => {
     const view = initial();
     view.hp = { red: 58, black: 15 };
     view.noProgressClock = 29;
@@ -292,22 +313,66 @@ describe('FFQ banqi live room', () => {
       })),
     ];
     await mount(view);
-    expect(document.querySelector('[data-side="red"]')?.textContent).toContain('58/60 HP');
-    expect(document.querySelector('[data-side="black"]')?.textContent).toContain('15/60 HP');
-    const bars = [...document.querySelectorAll<HTMLProgressElement>('.ffq-banqi-hp progress')];
+    expect(document.querySelector('[data-seat="red"] .tk-seat__head')?.textContent).toBe(
+      'Red58/60 HP',
+    );
+    expect(document.querySelector('[data-seat="black"] .tk-seat__head')?.textContent).toBe(
+      'Black15/60 HP',
+    );
+    const bars = [
+      ...document.querySelectorAll<HTMLProgressElement>(
+        '.hidden-pool .ffq-banqi-hp-meter progress',
+      ),
+    ];
     expect(bars.map((bar) => [bar.value, bar.max, bar.getAttribute('aria-label')])).toEqual([
-      [58, 60, 'Red'],
       [15, 60, 'Black'],
+      [58, 60, 'Red'],
     ]);
-    const damage = [...document.querySelectorAll('.ffq-banqi-captures li')].map(
-      (li) => li.textContent,
-    );
-    for (const [i, capture] of view.captured.entries())
-      expect(damage[i]).toContain(`−${FFQ_BANQI_DAMAGE[capture.role]} HP`);
-    expect(damage[0]).toBe('Red captured Red Soldier: Red −2 HP');
-    expect(document.querySelector('.ffq-banqi-counters')?.textContent).toBe(
-      'No progress 29/30 · Red chase 3/4 · Black chase 4/4',
-    );
+    // Red took three black pieces and, with a cannon, its own covered soldier;
+    // a covered capture is shaded, as banqi shades one.
+    const taken = [
+      ...document.querySelectorAll(
+        '[data-seat="red"] [data-line="captured"] .review-capture-piece',
+      ),
+    ];
+    expect(taken.map((piece) => piece.getAttribute('aria-label'))).toEqual([
+      'black general, captured face-down',
+      'black advisor, captured face-down',
+      'black cannon, captured face-down',
+      'red soldier, captured face-down',
+    ]);
+    expect(taken.every((piece) => piece.classList.contains('is-taken-face-down'))).toBe(true);
+    expect(
+      document.querySelector('[data-seat="black"] [data-line="captured"] .tk-seat__none'),
+    ).not.toBeNull();
+    expect(document.querySelector('.ffq-banqi-progress, .ffq-banqi-counters')).toBeNull();
+    expect(document.querySelector('.hidden-pool')?.textContent).not.toMatch(/progress|chase/i);
+  });
+
+  it('builds the seat panel from the viewer view alone: swapping two covered pieces changes nothing', async () => {
+    const panels: string[] = [];
+    for (const swap of [false, true]) {
+      const state = createInitialFFQBanqiState(ROOM, 7);
+      state.board[0] = { color: 'red', role: 'cannon', faceDown: false };
+      state.board[1] = { color: 'black', role: 'soldier', faceDown: true };
+      state.board[2] = { color: 'black', role: 'horse', faceDown: true };
+      const covered = state.board
+        .map((entry, index) => (entry?.faceDown && index > 2 ? index : -1))
+        .filter((index) => index >= 0);
+      const [a, b] = covered.filter(
+        (index, _, all) =>
+          state.board[index]!.color !== state.board[all[0]!]!.color ||
+          state.board[index]!.role !== state.board[all[0]!]!.role ||
+          index === all[0],
+      );
+      if (swap) [state.board[a!], state.board[b!]] = [state.board[b!], state.board[a!]];
+      const captured = applyFFQBanqiMove(state, { from: 0, to: 2 });
+      const view = getFFQBanqiPlayerView(captured, 'black');
+      await mount(view, 'black');
+      panels.push(document.querySelector('.hidden-pool')!.innerHTML);
+    }
+    expect(panels[0]).toContain('black horse, captured face-down');
+    expect(panels[1]).toBe(panels[0]);
   });
 
   it('renders a cannon covered capture role for the non-capturer and observer, live and finished', async () => {
@@ -321,9 +386,14 @@ describe('FFQ banqi live room', () => {
       for (const perspective of ['black', 'observer'] as const) {
         const view = getFFQBanqiPlayerView(captured, perspective);
         await mount(view, perspective === 'observer' ? 'spectator' : perspective);
-        expect(document.querySelector('.ffq-banqi-captures')?.textContent).toBe(
-          'Red captured Black Horse: Black −5 HP',
-        );
+        const taken = [
+          ...document.querySelectorAll(
+            '[data-seat="red"] [data-line="captured"] .review-capture-piece',
+          ),
+        ];
+        expect(taken.map((piece) => piece.getAttribute('aria-label'))).toEqual([
+          'black horse, captured face-down',
+        ]);
         expect(view.board[1]).toEqual({ faceDown: true });
       }
     }
@@ -398,7 +468,7 @@ describe('FFQ banqi live room', () => {
       await mount(initial(), seat);
       click(0);
       expect(moves()).toEqual([]);
-      expect(document.querySelectorAll('.ffq-banqi-hp')).toHaveLength(2);
+      expect(document.querySelectorAll('.hidden-pool .ffq-banqi-hp-meter')).toHaveLength(2);
     },
   );
 
@@ -415,7 +485,7 @@ describe('FFQ banqi live room', () => {
     expect(moves()).toEqual([]);
   });
 
-  it('adopts finished masked history and repaints HP and counters when scrubbing', async () => {
+  it('adopts finished masked history and repaints HP when scrubbing', async () => {
     const start = initial();
     const end = initial();
     end.ply = 1;

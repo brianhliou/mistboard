@@ -110,7 +110,7 @@ function assertHpBars(host: HTMLElement, ply: number): void {
   expect(host.querySelectorAll('progress')).toHaveLength(2);
   for (const side of ['red', 'black'] as const) {
     const bars = host.querySelectorAll<HTMLProgressElement>(
-      `.ffq-banqi-hp[data-side="${side}"] progress`,
+      `:is(.ffq-banqi-hp, .ffq-banqi-hp-meter)[data-side="${side}"] progress`,
     );
     expect(bars).toHaveLength(1);
     expect(bars[0]!.max).toBe(FFQ_BANQI_START_HP);
@@ -150,7 +150,7 @@ describe('FFQ masked review', () => {
     );
   });
 
-  it('steps the board, both HP counters and capture damage together without hidden faces', () => {
+  it('steps the board, both HP meters and each seat captures together without hidden faces', () => {
     const host = root();
     const handle = mountFFQBanqiReview(host, record.history.truth, {
       moves: played,
@@ -169,11 +169,22 @@ describe('FFQ masked review', () => {
     ]) {
       handle.jumpToPly(ply);
       assertHpBars(host, ply);
-      const damage = record.history.truth[ply]!.damage;
+      const frame = record.history.truth[ply]!;
+      const damage = frame.damage;
       for (const side of ['red', 'black'] as const) {
-        const material = host.querySelector(`[data-side="${side}"]`)!.parentElement!;
-        if (damage[side]) expect(material.textContent).toContain(`${damage[side]} damage`);
-        else expect(material.textContent).not.toContain('damage');
+        // The seat row: the pieces this seat took, then its HP (as Three
+        // Kingdoms shows points), with no damage note or counters.
+        const material = host.querySelector(`.ffq-banqi-hp-meter[data-side="${side}"]`)!
+          .parentElement!;
+        expect(material.textContent).toContain(`${frame.view.hp[side]}/${FFQ_BANQI_START_HP} HP`);
+        expect(material.textContent).not.toMatch(/damage|progress|chase/i);
+        expect(material.querySelectorAll('.review-capture-piece').length).toBe(
+          new Set(
+            frame.view.captured
+              .filter((capture) => capture.capturedBy === side)
+              .map((capture) => `${capture.owner}:${capture.role}:${capture.wasFaceDown}`),
+          ).size,
+        );
       }
       if (damage.red + damage.black)
         expect(handle.mainlineMoveLabel(ply)).toContain(`${damage.red + damage.black} damage`);
@@ -181,6 +192,23 @@ describe('FFQ masked review', () => {
     }
     assertMasked(handle.serialize());
     expect(record.view.board.some((piece) => piece?.faceDown)).toBe(true);
+  });
+
+  it('lays the review out as banqi and Three Kingdoms do: a gauge track and the phone fork picker', () => {
+    const host = root();
+    const handle = mountFFQBanqiReview(host, record.history.truth, {
+      moves: played,
+      ariaLabel: 'Review',
+      title: gameSpecForId(FFQ_BANQI_SPEC_ID).publicName,
+      summary: '',
+      seatLabels: true,
+      analysis: null,
+    });
+    destroy.push(handle.destroy);
+    // No engine, so no eval bar: the spacer keeps the columns where an engine
+    // page puts them.
+    expect(host.querySelectorAll('.review-shell__gauge-spacer')).toHaveLength(1);
+    expect(host.querySelectorAll('.review-fork-picker')).toHaveLength(1);
   });
 
   it('mounts the gated page with canonical name and no exports, share card or embed', async () => {
@@ -192,7 +220,13 @@ describe('FFQ masked review', () => {
     expect(host.querySelector('a[href$="export.pgn"]')).toBeNull();
     expect(host.querySelector('a[href$="export.json"]')).toBeNull();
     expect(host.querySelector(`a[href*="/og/game/${ROOM}.png"]`)).toBeNull();
-    expect(host.querySelector('a[href$="?watch=1"]')).not.toBeNull();
+    // The left column is the meta card alone, as on banqi and Three Kingdoms;
+    // the as-played replay link sits with the share rows.
+    expect(host.querySelector('.review-actions--rail')).toBeNull();
+    const watch = host.querySelector<HTMLAnchorElement>('a[href$="?watch=1"]');
+    expect(watch?.closest('.review-share__row')).not.toBeNull();
+    expect(watch?.closest('.review-rail-group')).toBeNull();
+    expect(watch?.textContent).toBe('Replay as played');
     expect(host.querySelector('.game-favorite-action, .review-spectator-chat')).toBeNull();
     expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
       ffqBanqiPostgameApiUrl(ROOM),

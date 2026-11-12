@@ -702,11 +702,8 @@ export const EN_PLAY = {
   'variant.threeKingdomsBanqi.tileName': 'TK Banqi',
   'variant.ffqBanqi.name': 'Fanfanqi',
   'live.ffq.hp': '{hp}/{max} HP',
-  'live.ffq.noProgress': 'No progress {count}/{limit}',
-  'live.ffq.chase': '{side} chase {count}/{limit}',
   'live.ffq.chaseForbidden':
     'Fanfanqi allows only four chases in a row. This move would be your fifth. Play another move.',
-  'live.ffq.captureDamage': '{capturer} captured {owner} {piece}: {owner} −{damage} HP',
   'live.ffq.adminOnly': 'This playtest requires an admin account and the Fanfanqi flag.',
   'result.hp': 'HP depletion',
   'live.pageTitle': 'Live',

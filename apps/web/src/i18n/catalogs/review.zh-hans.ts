@@ -497,6 +497,7 @@ export const ZH_HANS_REVIEW = {
   'replay.saveFailed': '保存失败：{message}',
   'replay.editingNote': '正在编辑批注（{severity}）',
   'replay.loadingGame': '正在加载对局',
+  'replay.watchAsPlayed': '按对局节奏回放',
   'replay.gameNotFound': '找不到对局',
   'replay.postgameUnavailable': '无法查看赛后复盘',
   'replay.postgameServiceUnavailable': '赛后复盘服务不可用。',
