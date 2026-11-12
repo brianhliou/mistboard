@@ -78,6 +78,23 @@ function candidateRow(puzzle: unknown, auditEvidence: Record<string, unknown>) {
   };
 }
 
+test('legacy publication also rejects a matching position without a mining candidate link', async () => {
+  const puzzle = { ...seedMatePuzzle(), sourceGame: { gameId: 'source-game', ply: 17 } };
+  const candidate = candidateRow(puzzle, {});
+  const db = {
+    async query(sql: string) {
+      if (sql.includes('SELECT run.status')) return { rows: [runRow()] };
+      if (sql.includes('SELECT candidate.*')) return { rows: [candidate] };
+      if (sql.includes("SELECT id, data FROM puzzles WHERE variant = 'xiangqi'"))
+        return {
+          rows: [{ id: 'position-only-earlier', data: { ...puzzle, sourceGame: undefined } }],
+        };
+      return { rows: [] };
+    },
+  } as unknown as pg.Pool;
+  await assert.rejects(planXiangqiPuzzlePublication(db, 'run'), /position-only-earlier/);
+});
+
 async function assertPublishedMateSpeedOnly(
   t: TestContext,
   auditEvidence: Record<string, unknown>,

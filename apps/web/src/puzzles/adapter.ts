@@ -92,6 +92,17 @@ export type PuzzleSummary = {
     // An online platform's game: the server sends no event, players or link.
     online?: boolean;
   };
+  /** Archive credit for a position-only puzzle; there is no hosted game. */
+  credit?: {
+    name: string;
+    event: string;
+    red: string;
+    black: string;
+    url: string;
+    eventEn?: string;
+    redEn?: string;
+    blackEn?: string;
+  };
 };
 
 // The opponent's setup move (initial.lastMove) with the piece it captured,
@@ -352,6 +363,24 @@ export function oppositePuzzleColor(color: PuzzleColor): PuzzleColor {
 export function colorLabel(color: PuzzleColor | null): string {
   if (color === 'black') return t('setup.black');
   return t('setup.red');
+}
+
+export function puzzleGoalLabel(puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount'>): string {
+  if (puzzle.goal.type === 'checkmate')
+    return t('puzzle.mateIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
+  if (puzzle.goal.type === 'win')
+    return t('puzzle.winIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
+  return t('puzzle.winning');
+}
+
+/** The bound defines a mating task: show it before grading slower wins. */
+export function puzzleSolvePrompt(
+  puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount' | 'sideToMove'>,
+): string {
+  const color = colorLabel(puzzle.sideToMove);
+  return puzzle.goal.type === 'checkmate'
+    ? t('puzzle.goalToMove', { goal: puzzleGoalLabel(puzzle), color })
+    : t('puzzle.toMove', { color });
 }
 
 export function dropRoleLabel(role: string): string {

@@ -160,7 +160,7 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   const prompt = root.querySelector('.puzzle-streak-feedback')!;
   expect(prompt.querySelector('.puzzle-feedback-icon svg')).not.toBeNull();
   expect(prompt.querySelector('.puzzle-feedback-title')?.textContent).toMatch(
-    /^(Red|Black) to move$/,
+    /^Mate in \d+ \| (Red|Black) to move$/,
   );
   expect(prompt.querySelector('.puzzle-feedback-body')?.textContent).toBe('Find the best move.');
   expect(

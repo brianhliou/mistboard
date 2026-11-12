@@ -2,7 +2,12 @@ import { puzzleAttemptedProps, track } from '../analytics.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
 import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
-import { colorLabel, type PuzzleDetail, type PuzzleMove, type PuzzleSession } from './adapter.js';
+import {
+  type PuzzleDetail,
+  type PuzzleMove,
+  type PuzzleSession,
+  puzzleSolvePrompt,
+} from './adapter.js';
 import { type PuzzleAttempt, PuzzlePlayDisabledError, sendPuzzleQualityEvent } from './api.js';
 import { puzzleInfoCard } from './queue-panel.js';
 import { puzzleBoardAdapter } from './registry.js';
@@ -467,7 +472,7 @@ function streakPromptTitle(session: PuzzleSession, puzzle: PuzzleDetail): string
     case 'pending':
       return t('puzzle.statusChecking');
     case 'neutral':
-      return t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) });
+      return puzzleSolvePrompt(puzzle);
   }
 }
 

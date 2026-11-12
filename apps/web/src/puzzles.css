@@ -2215,6 +2215,17 @@ a.puzzle-tag--link:hover {
     gap: 4px;
   }
 
+  .puzzles-shell .puzzle-pm-head__source--position-only {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2px 12px;
+  }
+
+  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-event,
+  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-credit {
+    grid-column: 1 / -1;
+  }
+
   .puzzles-shell .puzzle-phone-menu .puzzle-pm-row {
     display: flex;
     align-items: center;

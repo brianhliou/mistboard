@@ -13,7 +13,7 @@
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
-import { colorLabel } from './adapter.js';
+import { colorLabel, puzzleSolvePrompt } from './adapter.js';
 import {
   goalLabel,
   parseVariantFilter,
@@ -60,11 +60,12 @@ export function puzzlePhoneMenuHead(props: QueuePanelProps): HTMLElement | null 
   goal.textContent = `${
     solved
       ? t('puzzle.goalToMove', { goal: goalLabel(current), color })
-      : t('puzzle.toMove', { color })
+      : puzzleSolvePrompt(current)
   } · ${t('puzzle.ratingHidden')}`;
 
   const source = document.createElement('span');
   source.className = 'puzzle-pm-head__line puzzle-pm-head__source';
+  if (current.credit) source.classList.add('puzzle-pm-head__source--position-only');
   // The player lines show the name only, the team in the tooltip (sourceGameLines).
   source.append(...sourceGameLines(current));
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   assertXiangqiPuzzleAdmissionProfile,
   legacyPositionRepetitionKey,
+  standardXiangqiPositionKey,
   validateStandardXiangqiPuzzle,
   XIANGQI_SOLVER_SCORE_PROFILE,
   XIANGQI_SPEC_ID,
@@ -233,6 +234,20 @@ export async function planXiangqiPuzzlePublication(
   });
   const eligible = items.filter(({ entry }) => entry.candidate.status !== 'published');
   const published = items.filter(({ entry }) => entry.candidate.status === 'published');
+
+  // Cover seed and position-only publications too; they need no source-game
+  // mining candidate, so the older candidate-key join cannot see them.
+  if (eligible.length) {
+    const prior = await db.query<{ id: string; data: XiangqiPuzzle }>(
+      `SELECT id, data FROM puzzles WHERE variant = 'xiangqi'`,
+    );
+    const keys = new Map(prior.rows.map((r) => [standardXiangqiPositionKey(r.data.initial), r.id]));
+    for (const { puzzle } of eligible) {
+      const other = keys.get(standardXiangqiPositionKey(puzzle.initial));
+      if (other)
+        throw new Error(`puzzle ${puzzle.id} repeats a position already published as ${other}`);
+    }
+  }
 
   if (items.length > 0) {
     const puzzleIds = items.map(({ puzzle }) => puzzle.id);

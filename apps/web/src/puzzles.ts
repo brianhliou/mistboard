@@ -369,7 +369,11 @@ export async function mountPuzzles(
       userRating,
       ratingDelta,
       selectedSource: session
-        ? { id: session.puzzle.id, sourceGame: session.puzzle.sourceGame }
+        ? {
+            id: session.puzzle.id,
+            sourceGame: session.puzzle.sourceGame,
+            credit: session.puzzle.credit,
+          }
         : null,
       onVariantChange: async (nextFilter) => {
         variantFilter = nextFilter;

@@ -479,7 +479,7 @@ describe('puzzle phone menu rows', () => {
   });
   const keys = (rows: HTMLElement[]) => rows.map((row) => row.dataset.puzzleMenuRow);
 
-  it('shows Rated and auto-next while solving, and hides the goal and themes', () => {
+  it('shows Rated, auto-next and the mate objective while solving, keeping themes hidden', () => {
     const rows = puzzlePhoneMenuRows(props());
     expect(keys(rows)).toEqual(['rated', 'autoNext']);
     const head = puzzlePhoneMenuHead(props());
@@ -488,7 +488,7 @@ describe('puzzle phone menu rows', () => {
     expect(head?.querySelector('a')).toBeNull();
     expect(head?.textContent).toContain('Played locally');
     expect(head?.textContent).toContain('to move');
-    expect(head?.textContent).not.toContain('Mate in');
+    expect(head?.textContent).toContain('Mate in 2');
   });
 
   it('adds the themes row and the goal once solved', () => {
