@@ -59,6 +59,7 @@ import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
+import { notifyRuntimeEngineRostersChanged } from '../runtime-engine-rosters.js';
 import { hasLikelyVariantGrant } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOptions,
@@ -313,9 +314,10 @@ let jungleFlipNeuralEngineAvailable = false;
 
 /** Runtime confirmation only: a build flag cannot know whether the private net exists. */
 export function setJungleFlipEngineOptions(engines: readonly WebTenantEngineOption[]): void {
-  jungleFlipNeuralEngineAvailable = engines.some(
-    (engine) => engine.id === 'misty-jungle-flip-level-8',
-  );
+  const withNet = engines.some((engine) => engine.id === 'misty-jungle-flip-level-8');
+  if (withNet === jungleFlipNeuralEngineAvailable) return;
+  jungleFlipNeuralEngineAvailable = withNet;
+  notifyRuntimeEngineRostersChanged();
 }
 
 export function jungleFlipEngineOptions(

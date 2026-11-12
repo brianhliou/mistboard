@@ -542,13 +542,19 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
 // One attempt at loading the real playable roster. Returns the engines on
 // success, or null if the API is unreachable, errors, or (defensively) returns
 // an empty list — callers keep the placeholder and may retry. Never throws.
+// The runtime rosters change only once the request settles: a failure still
+// withdraws them (the server could not confirm them), but blanking them while
+// the request was in flight greyed out a bot another fetch had already loaded.
 export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | null> {
-  setThreeKingdomsBanqiEngineOptions([]);
-  setFFQBanqiEngineOptions([]);
-  setJungleFlipEngineOptions([]);
+  const withdrawRuntimeRosters = (): null => {
+    setThreeKingdomsBanqiEngineOptions([]);
+    setFFQBanqiEngineOptions([]);
+    setJungleFlipEngineOptions([]);
+    return null;
+  };
   try {
     const resp = await fetch('/api/engines/playable');
-    if (!resp.ok) return null;
+    if (!resp.ok) return withdrawRuntimeRosters();
     const data = (await resp.json()) as {
       engines: PlayableEngine[];
       ffqBanqiEngines?: PlayableEngine[];
@@ -560,7 +566,7 @@ export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | nul
     setJungleFlipEngineOptions(data.jungleFlipEngines ?? []);
     return data.engines.length > 0 ? data.engines : null;
   } catch {
-    return null;
+    return withdrawRuntimeRosters();
   }
 }
 

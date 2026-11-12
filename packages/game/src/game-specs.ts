@@ -382,6 +382,9 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // and sort with the unlisted specs.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
+  // Fanfanqi (admin playtest until launch) leads the banqi family, so the
+  // admins who see it meet it in its launch place (decided 2026-11-11).
+  FFQ_BANQI_SPEC_ID,
   BANQI_SPEC_ID,
   // Keep the launched banqi family together.
   THREE_KINGDOMS_BANQI_SPEC_ID,
@@ -400,9 +403,12 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
 ];
 
 /** Sort index for {@link CANONICAL_VARIANT_ORDER}; unlisted specs sort to the end. */
+// Ranks by the whole shelf, not only its public part, so a shelf spec still in
+// playtest sorts in its place for the admins who see it. Public specs keep the
+// same relative order; anything off the shelf sorts after it.
 export function canonicalVariantOrderIndex(id: GameSpecId): number {
-  const index = CANONICAL_VARIANT_ORDER.indexOf(id);
-  return index === -1 ? CANONICAL_VARIANT_ORDER.length : index;
+  const index = VARIANT_SHELF_ORDER.indexOf(id);
+  return index === -1 ? VARIANT_SHELF_ORDER.length : index;
 }
 
 export const GAME_SPECS: readonly GameSpec[] = [

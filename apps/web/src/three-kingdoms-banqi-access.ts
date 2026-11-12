@@ -2,6 +2,7 @@
 // admins can enter with it off. The server independently checks admission.
 // Search and public content follow the shared publicSurface launch switch.
 import { threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { notifyRuntimeEngineRostersChanged, sameRuntimeRoster } from './runtime-engine-rosters.js';
 import { isLikelyAdmin } from './signed-in-state.js';
 import type { WebTenantEngineOption } from './variant-tenant/registry.js';
 
@@ -13,8 +14,10 @@ let rosterLoad: Promise<void> | null = null;
 export function setThreeKingdomsBanqiEngineOptions(
   engines: readonly WebTenantEngineOption[],
 ): void {
+  const changed = !sameRuntimeRoster(runtimeEngines, engines);
   runtimeEngines = engines;
   rosterLoad = null;
+  if (changed) notifyRuntimeEngineRostersChanged();
 }
 
 export function threeKingdomsBanqiEngineOptions(): readonly WebTenantEngineOption[] | undefined {
@@ -31,7 +34,9 @@ export function loadThreeKingdomsBanqiEngineOptions(): Promise<void> {
       const data = (await resp.json()) as {
         threeKingdomsBanqiEngines?: WebTenantEngineOption[];
       };
-      if (runtimeEngines.length === 0) runtimeEngines = data.threeKingdomsBanqiEngines ?? [];
+      if (runtimeEngines.length > 0) return;
+      runtimeEngines = data.threeKingdomsBanqiEngines ?? [];
+      if (runtimeEngines.length > 0) notifyRuntimeEngineRostersChanged();
     })
     .catch(() => {});
   return rosterLoad;
