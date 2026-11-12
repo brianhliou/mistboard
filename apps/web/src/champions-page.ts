@@ -211,6 +211,15 @@ export const TITLES: readonly Title[] = [
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
     credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
+    // Title match xq-title-pikafish-vs-fsf-2026-11-11 on prod's engine queue: 40 games,
+    // colours alternated, level 8 against Fairy-Stockfish level 8, 24.5/40.
+    reign: {
+      wins: 15,
+      draws: 19,
+      losses: 6,
+      tookKey: 'champions.tookPikafish',
+      about: (locale) => [t('champions.aboutPikafish', {}, locale)],
+    },
   },
   JIEQI_AB_JCHESS_20261031,
   { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY, credits: mistyRepo('misty-banqi') },

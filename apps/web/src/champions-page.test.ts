@@ -59,12 +59,14 @@ describe('/champions', () => {
   it('shows the won titles as hero cards and every other game with a bot as open', () => {
     const page = buildChampions('en');
     const heroes = [...page.querySelectorAll<HTMLElement>('.champions-hero')];
-    expect(heroes.map((card) => card.dataset.game)).toEqual(['jieqi', 'jungle']);
+    expect(heroes.map((card) => card.dataset.game)).toEqual(['xiangqi', 'jieqi', 'jungle']);
     expect(heroes.map((card) => card.querySelector('h3')?.textContent)).toEqual([
+      'Pikafish',
       'AB-JChess',
       'KataGo-AnimalChess',
     ]);
     expect(heroes.map((card) => card.querySelector('.champions-hero-game')?.textContent)).toEqual([
+      'Xiangqi',
       'Jieqi',
       'Jungle Chess',
     ]);
@@ -76,7 +78,6 @@ describe('/champions', () => {
 
     const open = [...page.querySelectorAll<HTMLElement>('.champions-open')];
     expect(open.map((card) => card.dataset.game)).toEqual([
-      'xiangqi',
       'banqi',
       'duck-xiangqi',
       'crazyhouse-xiangqi',
@@ -90,8 +91,6 @@ describe('/champions', () => {
       page.querySelector<HTMLAnchorElement>(
         `.champions-open[data-game="${game}"] .champions-open-holder a`,
       );
-    expect(holder('xiangqi')?.textContent).toBe('Pikafish');
-    expect(holder('xiangqi')?.getAttribute('href')).toBe('/bot/pikafish');
     for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip', 'xiangqi-mahjong']) {
       expect(holder(game)?.textContent, game).toBe('Misty');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/misty');
@@ -188,7 +187,11 @@ describe('/champions', () => {
       [...page.querySelectorAll('.champions-hero h3 a.champions-hero-name-link')].map(
         (a) => `${a.textContent} ${a.getAttribute('href')}`,
       ),
-    ).toEqual(['AB-JChess /bot/ab-jchess', 'KataGo-AnimalChess /bot/katago']);
+    ).toEqual([
+      'Pikafish /bot/pikafish',
+      'AB-JChess /bot/ab-jchess',
+      'KataGo-AnimalChess /bot/katago',
+    ]);
 
     expect(credits(hero('jieqi'))).toEqual([
       'Code: AB-JChess https://github.com/lxsgx23/AB-JChess',
@@ -198,7 +201,7 @@ describe('/champions', () => {
       'Code: KataGomo https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025, KataGo https://github.com/lightvector/KataGo',
       'Network: Dandelion 4 https://github.com/lxsgx23/Dandelion-Chess',
     ]);
-    expect(credits(open('xiangqi'))).toEqual([
+    expect(credits(hero('xiangqi'))).toEqual([
       'Code: Pikafish https://github.com/official-pikafish/Pikafish',
       'Network: Fairy-Stockfish xiangqi NNUE (CC0) https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE',
     ]);
@@ -232,7 +235,7 @@ describe('/champions', () => {
     for (const locale of ['zh-Hans', 'zh-Hant'] as const) {
       await ensureLocaleCatalog(locale);
       const zh = buildChampions(locale);
-      const xiangqi = credits(zh.querySelector('.champions-open[data-game="xiangqi"]')!);
+      const xiangqi = credits(zh.querySelector('.champions-hero[data-game="xiangqi"]')!);
       expect(xiangqi[1], locale).toBe(
         locale === 'zh-Hans'
           ? '神经网络: Fairy-Stockfish 象棋 NNUE（CC0） https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE'
@@ -405,10 +408,10 @@ describe('/champions', () => {
       ).toBe(`${prefix}/?play=computer&gameSpecId=jungle&engineId=katago-jungle`);
       const zhName = (game: string) =>
         page.querySelector(`[data-game="${game}"] h3`)?.textContent ?? '';
-      expect(zhName('xiangqi')).toBe('象棋');
-      expect(
-        page.querySelector('[data-game="xiangqi"] .champions-open-holder a')?.textContent,
-      ).toBe(locale === 'zh-Hans' ? '皮卡鱼' : '皮卡魚');
+      expect(zhName('xiangqi')).toBe(locale === 'zh-Hans' ? '皮卡鱼' : '皮卡魚');
+      expect(page.querySelector('[data-game="xiangqi"] .champions-hero-game')?.textContent).toBe(
+        '象棋',
+      );
       expect(page.querySelector('[data-game="jieqi"] .champions-hero-game')?.textContent).toBe(
         '揭棋',
       );
