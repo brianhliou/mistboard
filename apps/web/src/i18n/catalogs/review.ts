@@ -267,6 +267,7 @@ export const EN_REVIEW = {
   'replay.editingNote': 'Editing note ({severity})',
   // Xiangqi postgame + analysis entry (xiangqi-postgame.ts, xiangqi-analysis.ts).
   'replay.loadingGame': 'Loading game',
+  'replay.watchAsPlayed': 'Replay as played',
   'replay.gameNotFound': 'Game not found',
   'replay.postgameUnavailable': 'Postgame unavailable',
   'replay.postgameServiceUnavailable': 'The postgame service is not available.',

@@ -161,11 +161,21 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     spectatorChat: false,
   });
 
-  const actions = document.createElement('div');
+  // The as-played replay sits with the share links, so the left column keeps
+  // the meta card alone, as banqi's and Three Kingdoms' review pages do.
+  const watchRow = document.createElement('div');
+  watchRow.className = 'review-share__row review-share__row--downloads';
+  const watchLabel = document.createElement('span');
+  watchLabel.className = 'review-share__label';
+  watchLabel.textContent = t('nav.watch');
   const watch = document.createElement('a');
+  watch.className = 'review-share__copy review-share__download';
   watch.href = `/ffq-banqi/game/${encodeURIComponent(postgame.game.roomId)}?watch=1`;
-  watch.textContent = t('nav.watch');
-  actions.append(watch);
+  watch.textContent = t('replay.watchAsPlayed');
+  const watchGroup = document.createElement('div');
+  watchGroup.className = 'review-share__downloads';
+  watchGroup.append(watch);
+  watchRow.append(watchLabel, watchGroup);
   root.replaceChildren(buildNav());
   mountFFQBanqiReview(root, postgame.history.truth, {
     pageClassName: 'banqi-review',
@@ -173,8 +183,8 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     title: variantName,
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
-    actions,
     details,
+    shareExtra: [watchRow],
     phoneInfoSheet: true,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,

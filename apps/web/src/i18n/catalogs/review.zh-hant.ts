@@ -491,6 +491,7 @@ export const ZH_HANT_REVIEW = {
   'replay.saveFailed': '儲存失敗：{message}',
   'replay.editingNote': '正在編輯批註（{severity}）',
   'replay.loadingGame': '正在載入對局',
+  'replay.watchAsPlayed': '按對局節奏回放',
   'replay.gameNotFound': '找不到對局',
   'replay.postgameUnavailable': '無法查看賽後覆盤',
   'replay.postgameServiceUnavailable': '賽後覆盤服務不可用。',

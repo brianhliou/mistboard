@@ -1,4 +1,5 @@
 import {
+  type BanqiColor,
   type BanqiMove,
   type BanqiSeat,
   FFQ_BANQI_SPEC_ID,
@@ -7,7 +8,7 @@ import {
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 import { ffqBanqiBoardView } from '../ffq-banqi-board.js';
-import { createFFQBanqiHpRow } from '../ffq-banqi-hp.js';
+import { createFFQBanqiHpMeter } from '../ffq-banqi-hp.js';
 import { variantDisplayLabel } from '../game-display.js';
 import {
   animateBanqiBoardMove,
@@ -44,6 +45,10 @@ export function mountFFQBanqiReview(
     appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     boardCols: 10,
     boardMaxPx: 560,
+    // No client engine: keep the gauge's track so the columns land where
+    // banqi's and Three Kingdoms' review pages put them.
+    phoneForkPicker: true,
+    reserveGaugeTrack: true,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     seatFor: () => null,
     createBoard: (opts) => {
@@ -74,18 +79,21 @@ export function mountFFQBanqiReview(
       kind: 'circle',
       className: `xq-shape--${shape.brush}`,
     }),
+    // The pieces this seat took, then its HP, as Three Kingdoms shows its
+    // points. `owner` is the ink of the other seat's pieces in the row, so the
+    // row and its HP belong to the other ink. Every Fanfanqi capture is public,
+    // a covered one included.
     seatCaptures: (host, view, _root, owner) => {
       if (owner !== 'red' && owner !== 'black') return;
-      fillCapturedPoolWith(host, view.captured, owner, banqiPieceGhostSvg);
-      const seat = owner === 'red' ? 'black' : 'red';
-      const hp = createFFQBanqiHpRow(view, seat);
-      const damage = snapshots[view.ply]?.damage[seat] ?? 0;
-      host.append(hp);
-      if (damage) {
-        const note = document.createElement('span');
-        note.textContent = ` · ${damage} damage`;
-        host.append(note);
-      }
+      const seat: BanqiColor = owner === 'red' ? 'black' : 'red';
+      const taken = view.captured
+        .filter((capture) => capture.capturedBy === seat)
+        .map((capture) => ({ ...capture, takenFaceDown: capture.wasFaceDown }));
+      // A cannon can take a covered piece of its own ink: it shows after the
+      // other ink's, in the seat that took it.
+      for (const ink of [owner, seat] as const)
+        fillCapturedPoolWith(host, taken, ink, banqiPieceGhostSvg);
+      host.append(createFFQBanqiHpMeter(view, seat));
     },
   };
   return mountTreeReview(root, presentation, config);
