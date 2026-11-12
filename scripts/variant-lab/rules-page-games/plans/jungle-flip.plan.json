@@ -382,7 +382,7 @@
           "annotations": {
             "comments": [
               {
-                "text": "MistyJungleFlip against itself at 7.5 million nodes a move, three times the strength the site's bot plays at, read again by the same engine at the same depth. Marks (?!, ?, ??) grade each move against its choice; none was needed, because no move cost its player more than a few points. The graph is Red's chance as the engine saw it, and the die beside a turned-over tile grades how lucky the turn was from what both players could see. The game is won in the first five turn-overs."
+                "text": "MistyJungleFlip against itself at 7.5 million nodes a move, three times the strength the site's bot plays at, read again by the same engine at the same depth. Marks (?!, ?, ??) grade each move against its choice; none was needed, because no move cost its player more than a few points. The graph is Red's chance as the engine saw it, and a turn-over is graded on the average of every tile it could have been, so its luck is the jump in the graph that follows it. The game is won in the first five turn-overs."
               }
             ]
           }
