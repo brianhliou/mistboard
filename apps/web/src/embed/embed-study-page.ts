@@ -12,7 +12,7 @@
 // can.
 
 import type { BanqiGameState, BanqiMove, EmbedPov } from '@mistboard/game';
-import { createGomokuRoomState, jieqiMoveLabel, parseGomokuFen } from '@mistboard/game';
+import { createGomokuRoomState, parseGomokuFen } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
@@ -31,6 +31,10 @@ import {
   mountCrazyhouseXiangqiReplayBoard,
   replayCrazyhouseXiangqiLine,
 } from '../crazyhouse-xiangqi-replay-board.js';
+import {
+  mountDarkXiangqiStudyReplay,
+  replayDarkXiangqiStudy,
+} from '../dark-xiangqi-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { seatInkForVariant } from '../flip-seat-ink.js';
 import {
@@ -61,7 +65,7 @@ import {
   xiangqiResultLabel,
 } from '../xiangqi-replay.js';
 import {
-  type EmbedCard,
+  type EmbedCardOptions,
   embedColumnAspect,
   embedPovPicker,
   embedRailWidthPx,
@@ -126,8 +130,13 @@ export async function mountEmbedStudy(
   const chapterNumber = (payload.chapters ?? []).indexOf(chapter) + 1;
   const hidden = options.hideSolution === true;
   const decisions =
-    chapter.variant === 'jieqi' && chapter.hasDecisions
-      ? await fetchStudyChapterDecisions(route.studyId, chapter.id, chapter.root)
+    !hidden && chapter.hasDecisions
+      ? await fetchStudyChapterDecisions(
+          chapter.variant ?? 'xiangqi',
+          route.studyId,
+          chapter.id,
+          chapter.root,
+        )
       : null;
   options = { ...options, decisions };
   await mountChapterEmbed(
@@ -190,6 +199,7 @@ function solutionCardOptions(options: ChapterEmbedOptions): {
  *  ringed on it. */
 export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'xiangqi',
+  'dark-xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
   'fortress-xiangqi',
@@ -221,6 +231,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'chess' || variant === 'dark-chess') {
     await mountChessEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'dark-xiangqi') {
+    await mountDarkXiangqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'banqi') {
@@ -269,8 +283,12 @@ export async function mountChapterEmbed(
   // seat rows' clock slots stay empty.
   const isDuck = chapter.variant === 'duck-xiangqi';
   const isAtomic = chapter.variant === 'atomic-xiangqi';
+  // A duck study's marks and comments, listed under their moves.
+  const duckAnnotations = isDuck
+    ? (({ glyphs, notes }) => ({ glyphs, notes }))(chapterAnnotations(chapter))
+    : {};
   const copy = replayStepperCopy(undefined, 'xiangqi');
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     // A Chinese import stores its Event in Chinese; the header reads it in
     // the page's language, as the study page does (study-chapter-games.ts).
     header: spec.title
@@ -316,6 +334,7 @@ export async function mountChapterEmbed(
               black: spec.black,
               event: spec.event,
               resultText: spec.resultText,
+              ...duckAnnotations,
             },
             hooks,
           )
@@ -332,6 +351,88 @@ export async function mountChapterEmbed(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+/** All study boards share the card's under-board slot and their own move labels. */
+async function mountStudyEmbedCard(
+  root: HTMLElement,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+  cardOptions: EmbedCardOptions,
+) {
+  let chart: ReturnType<typeof createEmbedScoreChart> | null = null;
+  let currentPly = 0;
+  const card = await mountEmbedCard(root, {
+    ...cardOptions,
+    mountBoard: (host, hooks) =>
+      cardOptions.mountBoard(host, {
+        onPlyChange: (ply, maxPly) => {
+          currentPly = ply;
+          chart?.setPly(ply);
+          hooks.onPlyChange(ply, maxPly);
+        },
+      }),
+  });
+  const series = options.hideSolution
+    ? null
+    : embedScoreSeries(chapter.scoreSeries, (card.handle.plyCount?.() ?? 0) + 1);
+  if (series) {
+    chart = createEmbedScoreChart(series, {
+      onJump: (ply) => card.jumpToPly(ply),
+      moveLabel: (ply) =>
+        card.handle.moveEntries?.().find((entry) => entry.ply === ply)?.label ?? '',
+    });
+    chart.setPly(currentPly);
+    card.setUnderBoard(chart.el);
+  }
+  return card;
+}
+
+async function mountDarkXiangqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const annotations = chapterAnnotations(chapter);
+  if (!annotations.moves.length) {
+    note(root, 'This chapter has no moves to show.');
+    return;
+  }
+  const line = replayDarkXiangqiStudy(annotations.moves);
+  const tags = chapter.tags ?? {};
+  const token = tagResultToken(tags.result) ?? statusResultToken(line.states.at(-1)!.status);
+  let board: ReturnType<typeof mountDarkXiangqiStudyReplay> | null = null;
+  const pov = options.pov ?? 'truth';
+  const picker = embedPovPicker(pov, { first: t('setup.red'), second: t('setup.black') }, (next) =>
+    board?.setPov(next),
+  );
+  await mountStudyEmbedCard(root, chapter, options, {
+    header: tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study'),
+    headerControls: picker,
+    seats: {
+      first: { name: tags.red ?? t('setup.red'), ink: 'red' },
+      second: { name: tags.black ?? t('setup.black'), ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'dark-xiangqi') : '',
+    credit,
+    aspect: boardAspectForSpec('dark-xiangqi'),
+    railWidthPx: embedRailWidthPx('dark-xiangqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) => {
+      board = mountDarkXiangqiStudyReplay(
+        host,
+        line,
+        annotations,
+        chapter.orientation === 'black' ? 'black' : 'red',
+        hooks,
+      );
+      board.setPov(pov);
+      return board;
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
@@ -375,7 +476,7 @@ async function mountGomokuEmbed(
             : status.type === 'finished'
               ? 'draw'
               : null;
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study'),
     seats: {
       first: { name: tags.black ?? t('setup.black'), ink: 'black' },
@@ -408,14 +509,8 @@ async function mountBanqiEmbed(
     note(root, 'This chapter has no dealt position to show.');
     return;
   }
-  const moves: string[] = [];
-  let node = chapter.root?.root;
-  while (node?.children?.length) {
-    const played = node.children[0];
-    if (!played?.uci) break;
-    moves.push(played.uci);
-    node = played;
-  }
+  // The mainline with the study's marks and comments, as the jieqi embed reads it.
+  const { moves, glyphs, notes } = chapterAnnotations(chapter);
   const tags = chapter.tags ?? {};
   const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   // The tags' result is seat-keyed (1-0 is the first mover); an untagged
@@ -468,7 +563,7 @@ async function mountBanqiEmbed(
         },
       })
     : null;
-  card = await mountEmbedCard(root, {
+  card = await mountStudyEmbedCard(root, chapter, options, {
     header: event,
     // The seats are the first and second mover; the ink each plays is bound by
     // the first flip. Once it is (a set-up position is bound from the start),
@@ -496,7 +591,15 @@ async function mountBanqiEmbed(
     mountBoard: async (host, hooks) => {
       board = mountBanqiReplayBoard(
         host,
-        { rootFen, moves, perspective: 'red', lines: readerLines },
+        {
+          rootFen,
+          moves,
+          perspective: 'red',
+          lines: readerLines,
+          glyphs,
+          notes,
+          decisions: options.hideSolution ? null : options.decisions,
+        },
         {
           onPlyChange: (ply, maxPly) => {
             at = { ply };
@@ -597,7 +700,7 @@ async function mountJungleEmbed(
         : tags.result === '1/2-1/2'
           ? reviewResultLabel('draw', 'jungle')
           : '';
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: event,
     seats: {
       first: { name: tags.red ?? 'Red', ink: 'red' },
@@ -673,7 +776,7 @@ async function mountFortressXiangqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
       first: { name: tags.red ?? 'Red', ink: 'red' },
@@ -711,7 +814,7 @@ async function mountCrazyhouseXiangqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
       first: { name: tags.red ?? 'Red', ink: 'red' },
@@ -753,25 +856,7 @@ async function mountJieqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  // The win-chance graph under the board, inside the board column the way the
-  // article replay draws its chart, when the chapter carries one that fits
-  // this line (one value per position). A hidden solution keeps it off: the
-  // graph would give the answer's swing away.
-  const series = options.hideSolution
-    ? null
-    : embedScoreSeries(chapter.scoreSeries, line.states.length);
-  let card: EmbedCard | null = null;
-  const chart = series
-    ? createEmbedScoreChart(series, {
-        onJump: (ply) => card?.jumpToPly(ply),
-        moveLabel: (ply) => {
-          const move = line.played[ply - 1];
-          const after = line.states[ply];
-          return move && after ? jieqiMoveLabel(move, after) : '';
-        },
-      })
-    : null;
-  card = await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
       first: { name: tags.red ?? 'Red', ink: 'red' },
@@ -783,7 +868,6 @@ async function mountJieqiEmbed(
     railWidthPx: embedRailWidthPx('jieqi'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    ...(chart ? { underBoard: chart.el } : {}),
     mountBoard: async (host, hooks) =>
       mountJieqiReplayBoard(
         host,
@@ -799,14 +883,7 @@ async function mountJieqiEmbed(
           openingArrowPly: options.openingMoveArrow === true ? (options.startPly ?? 0) : undefined,
           openingArrowMove: options.openingArrowMove,
         },
-        chart
-          ? {
-              onPlyChange: (ply, maxPly) => {
-                chart.setPly(ply);
-                hooks.onPlyChange(ply, maxPly);
-              },
-            }
-          : hooks,
+        hooks,
       ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
@@ -831,7 +908,7 @@ async function mountJungleFlipEmbed(
   const final = line.states[line.states.length - 1]!;
   const firstColor = final.firstColor ?? null;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
       first: {
@@ -900,7 +977,7 @@ async function mountChessEmbed(
           board?.setPov(next),
         )
       : null;
-  await mountEmbedCard(root, {
+  await mountStudyEmbedCard(root, chapter, options, {
     header: event,
     ...(picker ? { headerControls: picker } : {}),
     seats: {

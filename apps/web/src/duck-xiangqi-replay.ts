@@ -24,6 +24,7 @@ import {
 import type { ArticleLang } from './article-i18n.js';
 import { animateDuckXiangqiTurn, duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
+import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import './live-xiangqi.css';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -40,6 +41,10 @@ export type DuckXiangqiReplaySpec = {
   event: string;
   perspective?: DuckXiangqiColor;
   resultText: string;
+  /** Study annotations by 1-based mainline ply: a move glyph (?!, ??) and a
+   *  comment, listed under the move the way the jieqi board lists them. */
+  glyphs?: Readonly<Record<number, string>>;
+  notes?: Readonly<Record<number, string>>;
 };
 
 export type DuckXiangqiReplayController = { destroy: () => void };
@@ -270,7 +275,13 @@ export function mountDuckXiangqiReplayBoard(
   destroy: () => void;
   jumpToPly: (ply: number) => void;
   plyCount: () => number;
-  moveEntries: () => Array<{ ply: number; label: string }>;
+  moveEntries: () => Array<{
+    ply: number;
+    label: string;
+    suffix?: string;
+    suffixClass?: string;
+    note?: string;
+  }>;
   bottomSeat: () => 'first' | 'second';
 } {
   const perspective = spec.perspective ?? 'red';
@@ -307,7 +318,17 @@ export function mountDuckXiangqiReplayBoard(
       render(from);
     },
     plyCount: () => total,
-    moveEntries: () => turns.map((turn, i) => ({ ply: i + 1, label: duckXiangqiTurnLabel(turn) })),
+    moveEntries: () =>
+      turns.map((turn, i) => {
+        const glyph = spec.glyphs?.[i + 1];
+        const note = spec.notes?.[i + 1];
+        return {
+          ply: i + 1,
+          label: duckXiangqiTurnLabel(turn),
+          ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+          ...(note ? { note } : {}),
+        };
+      }),
     // Red is the first mover in xiangqi, so a red-perspective board puts the
     // first mover at the bottom.
     bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),

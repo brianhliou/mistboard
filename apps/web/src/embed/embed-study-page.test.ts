@@ -12,13 +12,12 @@ import { ENDGAME_LINE, ENDGAME_ROOT_FEN } from '../articles/banqi-endgame-diagra
 import { JUNGLE_ART } from '../jungle-art.js';
 import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
+import type { StudyChapterPayload, StudyTreeNode } from '../study-chapter-spec.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
 /** Study variants the embed card deliberately refuses by name, each with why. */
 const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
-  'dark-xiangqi':
-    'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
   'three-kingdoms-banqi':
     'admin-only until the public launch (#628): an embed is a public surface, and the study API 404s it to everyone else',
 };
@@ -332,6 +331,47 @@ describe('mountEmbedStudy', () => {
       root.remove();
     });
   }
+
+  it("lists a duck chapter's glyphs and comments under their moves", async () => {
+    // The duck board's move list carried labels only, so an annotated duck
+    // study embedded in an article showed none of its marks.
+    const duckChapter = {
+      id: 'DuckAnn1',
+      name: 'Annotated',
+      orientation: 'red',
+      variant: 'duck-xiangqi',
+      tags: { red: 'Red seat', black: 'Black seat' },
+      root: {
+        root: {
+          children: [
+            {
+              uci: 'b3b5@d9',
+              children: [
+                {
+                  uci: 'b8b6@a8',
+                  annotations: { glyphs: [6], comments: [{ text: 'The engine preferred h8h4.' }] },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [duckChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'DuckAnn1' });
+
+    const suffixes = Array.from(root.querySelectorAll('.review-move-list__suffix')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(suffixes).toEqual(['?!']);
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'The engine preferred h8h4.',
+    );
+    root.remove();
+  });
 
   it('renders an untagged atomic chapter without inferring its result with standard rules', async () => {
     const chapter = {
@@ -1070,6 +1110,50 @@ describe('mountEmbedStudy', () => {
     expect(mid.querySelector('.embed-card-result')?.textContent).toBe('');
   });
 
+  it("lists a banqi chapter's glyphs and comments under their moves", async () => {
+    // The banqi embed walked the mainline by hand and dropped every node's
+    // annotations, so an annotated banqi study showed a bare move list.
+    const [first, second, third] = ENDGAME_LINE.map((move) => `${move.from}${move.to}`);
+    const chapter = {
+      id: 'BqAnn123',
+      name: 'Annotated',
+      orientation: 'red',
+      variant: 'banqi',
+      root: {
+        rootFen: ENDGAME_ROOT_FEN,
+        root: {
+          children: [
+            {
+              uci: first,
+              children: [
+                {
+                  uci: second,
+                  annotations: { glyphs: [4], comments: [{ text: 'The draw cost 12 points.' }] },
+                  children: [{ uci: third }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'BqAnn123' });
+
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(3);
+    const suffixes = Array.from(root.querySelectorAll('.review-move-list__suffix')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(suffixes).toEqual(['??']);
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'The draw cost 12 points.',
+    );
+    root.remove();
+  });
+
   it('tablebase=1 puts the table under a banqi board: the line’s move is marked, a hovered row is an arrow, and any other row starts a sideline under the move it left', async () => {
     const line = ENDGAME_LINE.map((move) => `${move.from}${move.to}`);
     const body = {
@@ -1585,6 +1669,221 @@ describe('jieqi study luck', () => {
     root.querySelector<HTMLButtonElement>('.embed-card-controls button')?.click();
     expect(root.querySelector('.luck-mark')).toBeNull();
     root.querySelector<HTMLButtonElement>('.review-move-list__move[data-ply="2"]')!.click();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    root.remove();
+  });
+});
+
+describe('Fog Xiangqi study embed', () => {
+  // Black ignores the attack on its general on ply 10, then Red captures it.
+  // Standard xiangqi rejects that continuation; fog has no check rule.
+  const moves = 'e4e5 a7a6 e5e6 a6a5 e6e7 a5a4 e7e8 a4a3 e8e9 a3b3 e9e10'.split(' ');
+  function chapter(scoreLength?: number): StudyChapterPayload {
+    const root = chainTree(moves) as StudyTreeNode;
+    root.children![0]!.annotations = {
+      glyphs: [1],
+      comments: [{ text: 'Advance toward the general.' }],
+    };
+    return {
+      id: 'fog',
+      variant: 'dark-xiangqi',
+      name: 'General capture',
+      root: { root },
+      ...(scoreLength === undefined
+        ? {}
+        : {
+            scoreSeries: {
+              side: 'red',
+              series: [{ name: 'Engine', color: 'a', values: Array(scoreLength).fill(0.6) }],
+            },
+          }),
+    };
+  }
+  async function mount(payload = chapter(), options = {}) {
+    stubFetch(200, { chapters: [payload] });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'fog' }, options);
+    return root;
+  }
+
+  it('renders every ply through the general capture with the whole board by default', async () => {
+    const root = await mount();
+    expect(root.querySelectorAll('.review-move-list__move[data-ply]')).toHaveLength(moves.length);
+    expect(root.querySelectorAll('.xq-piece')).toHaveLength(32);
+    expect(root.querySelector('.xq-live-fog')?.children).toHaveLength(0);
+    for (let ply = 1; ply <= moves.length; ply++) {
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe(
+        `${ply} / ${moves.length}`,
+      );
+    }
+    expect(root.querySelector('[aria-label="black general"]')).toBeNull();
+    expect(root.querySelector('.embed-card-result')?.textContent).toContain('Red wins');
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+    expect(root.querySelector('[aria-label="black general"]')).not.toBeNull();
+  });
+
+  it('lists glyphs and comments under their own moves', async () => {
+    const root = await mount();
+    expect(
+      root.querySelector('[data-ply="1"] .review-move-list__suffix')?.textContent?.trim(),
+    ).toBe('!');
+    expect(
+      root.querySelector('.review-move-list__branch[data-at-ply="1"] .review-move-list__note')
+        ?.textContent,
+    ).toBe('Advance toward the general.');
+  });
+
+  it('draws matching scores under the board and synchronizes the chart and stepper', async () => {
+    const root = await mount(chapter(moves.length + 1), { startPly: 2 });
+    const chart = root.querySelector<HTMLElement>('.embed-score-chart')!;
+    expect(chart).not.toBeNull();
+    expect(chart.parentElement?.classList.contains('embed-card-board')).toBe(true);
+    expect(chart.dataset.ply).toBe('2');
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(chart.dataset.ply).toBe('3');
+    const plot = chart.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+    plot.getBoundingClientRect = () => ({ left: 0, width: 200 }) as DOMRect;
+    plot.dispatchEvent(new MouseEvent('click', { clientX: 200, bubbles: true }));
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe(
+      `${moves.length} / ${moves.length}`,
+    );
+  });
+
+  it('omits a mismatched score series while still rendering the full replay', async () => {
+    const root = await mount(chapter(moves.length));
+    expect(root.querySelectorAll('.review-move-list__move[data-ply]')).toHaveLength(moves.length);
+    expect(root.querySelector('.embed-score-chart')).toBeNull();
+  });
+
+  it('switches Red, Black and whole-board views using the chapter mainline only', async () => {
+    const root = await mount(chapter(), { startPly: 2 });
+    expect(root.querySelector('.embed-pov')).not.toBeNull();
+    const truth = root.querySelector('.embed-board')!.innerHTML;
+    for (const pov of ['white', 'black']) {
+      root.querySelector<HTMLButtonElement>(`[data-pov="${pov}"]`)!.click();
+      expect(root.querySelector('.xq-live-fog')?.children.length).toBeGreaterThan(0);
+      expect(root.querySelector('.embed-board')!.innerHTML).not.toBe(truth);
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe(`2 / ${moves.length}`);
+    }
+    root.querySelector<HTMLButtonElement>('[data-pov="truth"]')!.click();
+    expect(root.querySelector('.embed-board')!.innerHTML).toBe(truth);
+  });
+});
+
+describe('shared study embed analysis', () => {
+  const banqiRoot = '8/8/8/XX6 r H1s1 0 1 Hs';
+  const decisions = [
+    {
+      ply: 1,
+      mover: 'red',
+      bestWin: 70,
+      playedWin: 50,
+      realizedWin: 62,
+      playedRank: 2,
+      candidates: [
+        { move: 'b0b0', win: 70 },
+        { move: 'a0a0', win: 50, played: true },
+      ],
+    },
+  ];
+  for (const [variant, moves, rootFen] of [
+    ['banqi', ['a1a1', 'b1b1'], banqiRoot],
+    ['duck-xiangqi', ['b3b5@d9', 'b8b6@a8'], undefined],
+    ['xiangqi', ['h3e3', 'h8e8'], undefined],
+  ] as const) {
+    it(`draws ${variant} scores with board labels, navigation, hidden and stale guards`, async () => {
+      const chapter = {
+        id: 'chart',
+        name: 'Scores',
+        variant,
+        root: { ...(rootFen ? { rootFen } : {}), root: chainTree(moves) },
+        scoreSeries: {
+          side: 'red',
+          series: [{ name: 'Engine', color: 'a', values: [0.5, 0.6, 0.4] }],
+        },
+      };
+      const root = document.createElement('div');
+      document.body.append(root);
+      stubFetch(200, { chapters: [chapter] });
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'chart' }, { startPly: 1 });
+      const chart = root.querySelector<HTMLElement>('.embed-score-chart')!;
+      expect(chart).not.toBeNull();
+      expect(chart.parentElement?.classList.contains('embed-card-board')).toBe(true);
+      expect(chart.dataset.ply).toBe('1');
+      const plot = chart.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+      plot.getBoundingClientRect = () => ({ left: 0, width: 200 }) as DOMRect;
+      plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
+      const label = root.querySelector(
+        '.review-move-list__move[data-ply="2"] .review-move-list__san',
+      )?.textContent;
+      expect(label).toBeTruthy();
+      expect(chart.querySelector('.review-chart-tip__move')?.textContent).toBe(`1... ${label}`);
+      plot.dispatchEvent(new MouseEvent('click', { clientX: 200, bubbles: true }));
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 2');
+      root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+      expect(chart.dataset.ply).toBe('1');
+      root.remove();
+      for (const [payload, options] of [
+        [chapter, { hideSolution: true }],
+        [
+          {
+            ...chapter,
+            scoreSeries: {
+              side: 'red',
+              series: [{ name: 'Stale', color: 'a', values: [0.5, 0.6] }],
+            },
+          },
+          {},
+        ],
+      ] as const) {
+        stubFetch(200, { chapters: [payload] });
+        const hidden = document.createElement('div');
+        await mountEmbedStudy(hidden, { studyId: 's', chapterId: 'chart' }, options);
+        expect(hidden.querySelector('.embed-score-chart')).toBeNull();
+      }
+    });
+  }
+  it('reads Banqi study decisions using the finished-game luck card and choice grading', async () => {
+    const fetcher = vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () =>
+        url.endsWith('/decisions')
+          ? { engineId: 'offline', source: 'fixture', decisions }
+          : {
+              chapters: [
+                {
+                  id: 'luck',
+                  variant: 'banqi',
+                  hasDecisions: true,
+                  root: { rootFen: banqiRoot, root: chainTree(['a1a1', 'b1b1']) },
+                },
+              ],
+            },
+    }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'luck' }, { startPly: 1 });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      '/api/studies/s',
+      '/api/studies/s/chapters/luck/decisions',
+    ]);
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toBe('🎲 +12%');
+    expect(root.querySelector('.review-move-list__suffix')?.textContent).toContain('?');
+    expect(root.textContent).toContain('b1 flip was best');
+    expect(root.querySelector('.luck-mark[data-luck-square="a1"]')).not.toBeNull();
+    root
+      .querySelector<HTMLElement>('.review-move-list__luck')!
+      .dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    await vi.waitFor(() => expect(document.querySelector('.luck-card--open')).not.toBeNull());
+    expect(
+      [...document.querySelectorAll('.luck-card--open')].some((card) =>
+        card.textContent?.includes('Horse'),
+      ),
+    ).toBe(true);
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
     expect(root.querySelector('.luck-mark')).toBeNull();
     root.remove();
   });
