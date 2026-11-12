@@ -144,6 +144,9 @@ const scoreText = (line) =>
     ? `${line.score.cp >= 0 ? '+' : ''}${(line.score.cp / 100).toFixed(2)}`
     : `mate ${line.score.mate}`;
 
+const mateProofHtml = (proof, index) =>
+  `<p>Board proof ${index + 1} · mate within ${escapeHtml(proof.mateIn)} moves · ${escapeHtml(proof.verdict)} · ${escapeHtml(proof.reason)} · ${proof.nodes} nodes${proof.limits ? ` · ${proof.limits.maxNodes.toLocaleString('en-US')} node / ${proof.limits.maxTimeMs / 1000}s cap` : ''}</p><p>Proven within-bound keys: ${escapeHtml(proof.winningMoves.map(moveText).join(' ') || 'none found')}. ${proof.complete ? 'All legal starting moves checked.' : 'Uniqueness is not certified by a partial search; two proved keys already establish ambiguity.'}</p>`;
+
 export function corpusQualityReportHtml(report) {
   const rows = report.entries
     .map((entry) => {
@@ -154,7 +157,7 @@ export function corpusQualityReportHtml(report) {
           (
             ply,
           ) => `<h4>Solver turn ${ply.solutionPly / 2 + 1} · solution ply ${ply.solutionPly + 1}</h4>
-      ${ply.mateGoalEvidence ? `<p>Board proof · mate within ${escapeHtml(ply.mateGoalEvidence.mateIn)} moves · ${escapeHtml(ply.mateGoalEvidence.verdict)} · ${escapeHtml(ply.mateGoalEvidence.reason)} · ${ply.mateGoalEvidence.nodes} nodes</p><p>Proven within-bound keys: ${escapeHtml(ply.mateGoalEvidence.winningMoves.map(moveText).join(' ') || 'none found')}. ${ply.mateGoalEvidence.complete ? 'All legal starting moves checked.' : 'Uniqueness is not certified by a partial search; two proved keys already establish ambiguity.'}</p>` : ''}
+      ${(ply.mateGoalAttempts?.length ? ply.mateGoalAttempts : ply.mateGoalEvidence ? [ply.mateGoalEvidence] : []).map(mateProofHtml).join('')}
       ${ply.searches
         .map(
           (

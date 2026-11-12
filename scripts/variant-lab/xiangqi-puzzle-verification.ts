@@ -2,7 +2,7 @@
 import type { XiangqiPuzzleGoal } from '../../packages/game/src/puzzles-xiangqi.ts';
 import type { XiangqiPuzzleSolverJudgment } from '../../packages/game/src/puzzles-xiangqi-endpoint.ts';
 import {
-  proveXiangqiMateGoal,
+  proveXiangqiMateGoalWithRetry,
   type XiangqiMateGoalEvidence,
 } from '../../packages/game/src/puzzles-xiangqi-mate.ts';
 import {
@@ -23,7 +23,7 @@ import {
 } from './xiangqi-pikafish-uci.ts';
 
 export const XIANGQI_PUZZLE_VERIFICATION_PROFILE = {
-  version: 'cc0-25m-selective-100m-mate-goal-v2',
+  version: 'cc0-25m-selective-100m-mate-goal-v3',
   baselineNodes: [5_000_000, 25_000_000],
   baselineTimeMs: [30_000, 90_000],
   escalationNodes: 100_000_000,
@@ -161,8 +161,15 @@ export async function verifyXiangqiSolverTurn(
   const budgets: number[] = [];
   const transcripts: NonNullable<PikafishEngine['lastSearch']>[] = [];
   let mateGoalEvidence: XiangqiMateGoalEvidence | undefined;
-  const proveMate = (bound: number, answer?: XiangqiMove) => {
-    mateGoalEvidence = proveXiangqiMateGoal(state, bound);
+  let mateGoalAttempts: XiangqiMateGoalEvidence[] = [];
+  const proveMate = (
+    bound: number,
+    answer?: XiangqiMove,
+    engineEscalationReasons: string[] = [],
+  ) => {
+    const verified = proveXiangqiMateGoalWithRetry(state, bound);
+    mateGoalEvidence = verified.proof;
+    mateGoalAttempts = verified.attempts;
     const proof = mateGoalEvidence;
     let judgment: XiangqiPuzzleSolverJudgment;
     if (proof.verdict === 'unresolved')
@@ -172,7 +179,18 @@ export async function verifyXiangqiSolverTurn(
     else if (answer && coordinate(proof.winningMoves[0]!) !== coordinate(answer))
       judgment = { solutionPly, verdict: 'fail', reason: 'stored-answer-mismatch' };
     else judgment = { solutionPly, verdict: 'pass', reason: proof.reason };
-    return { transcripts, searches, budgets, escalationReasons: [], mateGoalEvidence, judgment };
+    return {
+      transcripts,
+      searches,
+      budgets,
+      escalationReasons: [
+        ...engineEscalationReasons,
+        ...(mateGoalAttempts.length > 1 ? ['mate-goal-30s-retry'] : []),
+      ],
+      mateGoalEvidence,
+      mateGoalAttempts,
+      judgment,
+    };
   };
   if (mateIn !== undefined && goal?.type !== 'checkmate')
     throw new Error('A mate bound requires a checkmate goal');
@@ -183,6 +201,7 @@ export async function verifyXiangqiSolverTurn(
   if (stored && completesXiangqiMateGoal(state, stored, solutionPly, goal))
     return {
       mateGoalEvidence,
+      mateGoalAttempts,
       transcripts,
       searches,
       budgets,
@@ -222,6 +241,7 @@ export async function verifyXiangqiSolverTurn(
   if (!answer)
     return {
       mateGoalEvidence,
+      mateGoalAttempts,
       transcripts,
       searches,
       budgets,
@@ -252,7 +272,7 @@ export async function verifyXiangqiSolverTurn(
         s.lines[0]?.pvUci[0] === coordinate(answer),
     )
   )
-    return proveMate(inferred, answer);
+    return proveMate(inferred, answer, escalationReasons);
   if (
     goal?.type !== 'winning-advantage' &&
     !timeCapped &&
@@ -260,6 +280,7 @@ export async function verifyXiangqiSolverTurn(
   )
     return {
       mateGoalEvidence,
+      mateGoalAttempts,
       transcripts,
       searches,
       budgets,
@@ -268,6 +289,7 @@ export async function verifyXiangqiSolverTurn(
     };
   return {
     mateGoalEvidence,
+    mateGoalAttempts,
     transcripts,
     searches,
     budgets,

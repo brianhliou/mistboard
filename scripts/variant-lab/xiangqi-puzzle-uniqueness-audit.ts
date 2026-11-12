@@ -125,6 +125,7 @@ export type XiangqiPuzzleAuditPlyReport = {
   matchesShipped: boolean;
   bestCp: number | null;
   mateGoalEvidence?: XiangqiMateGoalEvidence;
+  mateGoalAttempts?: XiangqiMateGoalEvidence[];
   secondCp: number | null;
   bestMate: number | null;
   secondMate: number | null;
@@ -242,6 +243,7 @@ export async function auditXiangqiPuzzle(
         unique,
         uniquenessReason: reason,
         mateGoalEvidence: verified.mateGoalEvidence,
+        mateGoalAttempts: verified.mateGoalAttempts,
       });
     }
     if (state.status.type !== 'playing') break;

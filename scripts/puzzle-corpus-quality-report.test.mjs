@@ -136,3 +136,33 @@ test('mate proofs render their objective and provide root coverage without an en
   assert.ok(html.includes('All legal starting moves checked.'));
   assert.ok(!html.includes('1M/5M'));
 });
+
+test('a selective mate retry retains its failed first receipt and actual second budget', () => {
+  const f = fixture();
+  const row = f.shards[0][2];
+  const first = {
+    mateIn: 3,
+    verdict: 'unresolved',
+    reason: 'mate-goal-budget-exhausted',
+    winningMoves: [],
+    nodes: 123,
+    complete: false,
+    legalMoveCount: 5,
+    limits: { maxNodes: 250000, maxTimeMs: 3000 },
+  };
+  const last = {
+    ...first,
+    verdict: 'unique',
+    reason: 'unique-within-mate-goal',
+    winningMoves: [{ from: 'a1', to: 'a5' }],
+    complete: true,
+    limits: { maxNodes: 5000000, maxTimeMs: 30000 },
+  };
+  row.evidence[0].mateGoalEvidence = last;
+  row.evidence[0].mateGoalAttempts = [first, last];
+  const html = corpusQualityReportHtml(buildCorpusQualityReport(f.snapshot, f.manifest, f.shards));
+  assert.ok(html.includes('mate-goal-budget-exhausted'));
+  assert.ok(html.includes('250,000 node / 3s cap'));
+  assert.ok(html.includes('5,000,000 node / 30s cap'));
+  assert.equal((html.match(/Board proof /g) ?? []).length, 2);
+});

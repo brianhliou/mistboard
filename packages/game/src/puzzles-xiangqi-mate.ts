@@ -3,13 +3,18 @@ import type { XiangqiGameState, XiangqiMove } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
+  isStandardXiangqiGeneralInCheck,
 } from './variants-xiangqi-standard.js';
 
 export const XIANGQI_MATE_GOAL_PROFILE = {
-  version: 'kernel-mate-within-n-v1',
+  version: 'kernel-mate-within-n-v2',
+  moveOrdering: 'checks-captures-and-king-defences-v1',
   maxNodes: 250_000,
   maxTimeMs: 3_000,
   maxPlies: 127,
+  retryMateIn: 3,
+  retryMaxNodes: 5_000_000,
+  retryMaxTimeMs: 30_000,
 } as const;
 
 export type XiangqiMateGoalEvidence = {
@@ -23,6 +28,7 @@ export type XiangqiMateGoalEvidence = {
   legalMoveCount: number;
   complete: boolean;
   nodes: number;
+  limits: { maxNodes: number; maxTimeMs: number; maxPlies: number };
 };
 
 /** Mate in N means a board checkmate (or xiangqi stalemate win) within 2N-1
@@ -50,6 +56,7 @@ export function proveXiangqiMateGoal(
     legalMoveCount: legal.length,
     complete,
     nodes,
+    limits: { maxNodes: budget.maxNodes, maxTimeMs: budget.maxTimeMs, maxPlies: budget.maxPlies },
   });
   let nodes = 0;
   const legal = state.status.type === 'playing' ? getStandardXiangqiLegalMoves(state) : [];
@@ -70,8 +77,19 @@ export function proveXiangqiMateGoal(
   const solver = state.status.turn;
   const deadline = performance.now() + budget.maxTimeMs;
   const exhausted = new Error('mate-goal-budget-exhausted');
+  const checkTime = () => {
+    if (performance.now() >= deadline) throw exhausted;
+  };
+  // Ordering changes only which proof/refutation is tried first. Every legal
+  // move remains available; no quiet defence or quiet mating continuation is
+  // discarded. Preserve move order for ties and all root alternatives.
+  const captureValue = (s: XiangqiGameState, move: XiangqiMove) => {
+    const role = s.board[move.to]?.role;
+    return role === 'chariot' ? 9 : role === 'cannon' || role === 'horse' ? 4 : role ? 1 : 0;
+  };
   function wins(current: XiangqiGameState, remaining: number): boolean {
-    if (++nodes > budget.maxNodes || performance.now() >= deadline) throw exhausted;
+    if (++nodes > budget.maxNodes) throw exhausted;
+    checkTime();
     if (current.status.type !== 'playing')
       return (
         current.status.type === 'finished' &&
@@ -82,9 +100,38 @@ export function proveXiangqiMateGoal(
     const moves = getStandardXiangqiLegalMoves(current);
     // A playing state without legal moves is malformed, not a vacuous proof.
     if (!moves.length) return false;
-    const continuation = (move: XiangqiMove) =>
-      wins(applyStandardXiangqiMove(current, move), remaining - 1);
-    return current.status.turn === solver ? moves.some(continuation) : moves.every(continuation);
+    if (current.status.turn !== solver) {
+      // A defender needs only one refutation. Try captures and king flights
+      // before unrelated quiet piece moves; all defences still have to pass
+      // before a mating key can be proved.
+      moves.sort(
+        (a, b) =>
+          captureValue(current, b) - captureValue(current, a) ||
+          Number(current.board[b.from]?.role === 'general') -
+            Number(current.board[a.from]?.role === 'general'),
+      );
+      return moves.every((move) => wins(applyStandardXiangqiMove(current, move), remaining - 1));
+    }
+    if (remaining === 1)
+      return moves.some((move) => wins(applyStandardXiangqiMove(current, move), 0));
+    const children = moves.map((move) => {
+      checkTime();
+      const after = applyStandardXiangqiMove(current, move);
+      const priority =
+        after.status.type === 'finished'
+          ? after.status.winner === solver
+            ? 3
+            : 0
+          : after.status.type === 'playing' &&
+              isStandardXiangqiGeneralInCheck(after, after.status.turn)
+            ? 2
+            : current.board[move.to]
+              ? 1
+              : 0;
+      return { after, priority, capture: captureValue(current, move) };
+    });
+    children.sort((a, b) => b.priority - a.priority || b.capture - a.capture);
+    return children.some(({ after }) => wins(after, remaining - 1));
   }
   try {
     for (const move of legal) {
@@ -100,4 +147,26 @@ export function proveXiangqiMateGoal(
   return winningMoves.length === 1
     ? result('unique', 'unique-within-mate-goal', true)
     : result('no-mate', 'mate-goal-not-forced', true);
+}
+
+/** Retry only an exhausted mate-in-three proof, directly at the tested cap.
+ * Keep both receipts; a failed or ambiguous proof is never retried into a pass. */
+export function proveXiangqiMateGoalWithRetry(
+  state: XiangqiGameState,
+  mateIn: number,
+  prove: typeof proveXiangqiMateGoal = proveXiangqiMateGoal,
+) {
+  const attempts = [prove(state, mateIn)];
+  if (
+    mateIn === XIANGQI_MATE_GOAL_PROFILE.retryMateIn &&
+    attempts[0]!.verdict === 'unresolved' &&
+    attempts[0]!.reason === 'mate-goal-budget-exhausted'
+  )
+    attempts.push(
+      prove(state, mateIn, {
+        maxNodes: XIANGQI_MATE_GOAL_PROFILE.retryMaxNodes,
+        maxTimeMs: XIANGQI_MATE_GOAL_PROFILE.retryMaxTimeMs,
+      }),
+    );
+  return { proof: attempts[attempts.length - 1]!, attempts };
 }

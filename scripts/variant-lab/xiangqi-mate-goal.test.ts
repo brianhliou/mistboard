@@ -2,13 +2,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { XiangqiPuzzle } from '../../packages/game/src/puzzles-xiangqi.ts';
-import { proveXiangqiMateGoal } from '../../packages/game/src/puzzles-xiangqi-mate.ts';
+import {
+  proveXiangqiMateGoal,
+  proveXiangqiMateGoalWithRetry,
+} from '../../packages/game/src/puzzles-xiangqi-mate.ts';
 import { XIANGQI_SOLVER_GATE_DEFAULTS } from '../../packages/game/src/puzzles-xiangqi-mining.ts';
 import {
   positionRepetitionKey,
   type XiangqiGameState,
 } from '../../packages/game/src/variants-xiangqi.ts';
-import { applyStandardXiangqiMove } from '../../packages/game/src/variants-xiangqi-standard.ts';
+import {
+  applyStandardXiangqiMove,
+  getStandardXiangqiLegalMoves,
+} from '../../packages/game/src/variants-xiangqi-standard.ts';
 import { auditXiangqiCorpusPuzzle } from './xiangqi-corpus-quality-audit.ts';
 import { parseXiangqiScoredLines } from './xiangqi-pikafish-uci.ts';
 import { buildGatedLine, type XiangqiPuzzleMinerOptions } from './xiangqi-puzzle-miner.ts';
@@ -186,4 +192,92 @@ test('changing engine mate bounds cannot fall back to ordinary score admission',
   );
   assert.equal(result.judgment.verdict, 'unresolved');
   assert.equal(result.judgment.reason, 'mate-goal-bound-unstable');
+});
+
+test('only exhausted mate-in-three proofs receive one tested retry; both receipts survive', () => {
+  const p = fixtures['mate-in-three-control']!;
+  const exhausted = proveXiangqiMateGoal(p.initial, 3, { maxNodes: 1 });
+  const success = proveXiangqiMateGoal(p.initial, 3);
+  const seen: unknown[] = [];
+  const verified = proveXiangqiMateGoalWithRetry(p.initial, 3, (_state, _n, limits) => {
+    seen.push(limits);
+    return seen.length === 1 ? exhausted : success;
+  });
+  assert.deepEqual(seen, [undefined, { maxNodes: 5_000_000, maxTimeMs: 30_000 }]);
+  assert.deepEqual(verified.attempts, [exhausted, success]);
+  assert.equal(verified.proof.verdict, 'unique');
+  for (const n of [1, 2, 4]) {
+    let calls = 0;
+    const result = proveXiangqiMateGoalWithRetry(p.initial, n, () => {
+      calls++;
+      return exhausted;
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.proof.verdict, 'unresolved');
+  }
+  for (const receipt of [
+    success,
+    { ...exhausted, verdict: 'ambiguous' as const },
+    { ...exhausted, reason: 'invalid-mate-goal' },
+  ]) {
+    let calls = 0;
+    proveXiangqiMateGoalWithRetry(p.initial, 3, () => {
+      calls++;
+      return receipt;
+    });
+    assert.equal(calls, 1, 'a conclusive or invalid proof is not retried');
+  }
+});
+
+test('forcing move ordering agrees with exhaustive natural-order proofs, including quiet defences', () => {
+  for (const p of Object.values(fixtures)) {
+    const solver = p.initial.status.type === 'playing' ? p.initial.status.turn : null;
+    const wins = (state: XiangqiGameState, remaining: number): boolean => {
+      if (state.status.type !== 'playing')
+        return (
+          state.status.type === 'finished' &&
+          state.status.winner === solver &&
+          ['checkmate', 'stalemate'].includes(state.status.reason)
+        );
+      if (!remaining) return false;
+      const replies = getStandardXiangqiLegalMoves(state);
+      const next = (m: (typeof p.solution)[number]) =>
+        wins(applyStandardXiangqiMove(state, m), remaining - 1);
+      return state.status.turn === solver
+        ? replies.some(next)
+        : replies.length > 0 && replies.every(next);
+    };
+    const expected = getStandardXiangqiLegalMoves(p.initial).filter((m) =>
+      wins(applyStandardXiangqiMove(p.initial, m), 2),
+    );
+    const result = proveXiangqiMateGoal(p.initial, 2);
+    assert.equal(
+      result.verdict,
+      expected.length === 0 ? 'no-mate' : expected.length === 1 ? 'unique' : 'ambiguous',
+    );
+    assert.deepEqual(result.winningMoves, expected.slice(0, 2));
+  }
+});
+
+test('a subsequent board proof retains why its engine evidence was escalated', async () => {
+  const p = fixtures.n6sE3!;
+  const result = await verifyXiangqiSolverTurn(
+    {
+      newGame: async () => {},
+      analyzeFen: async () =>
+        parseXiangqiScoredLines(
+          [
+            'info depth 30 multipv 1 score mate 2 pv h5g7',
+            'info depth 30 multipv 2 score cp 130 pv f5f9',
+            'info depth 30 multipv 3 score cp -600 pv c2d4',
+          ],
+          3,
+        ),
+    },
+    p.initial,
+    0,
+  );
+  assert.equal(result.judgment.verdict, 'pass');
+  assert.ok(result.escalationReasons.includes('near-separation-cutoff'));
+  assert.deepEqual(result.budgets, [5_000_000, 25_000_000, 100_000_000]);
 });

@@ -54,6 +54,7 @@ export async function auditXiangqiCorpusPuzzle(
     budgets: number[];
     escalationReasons: string[];
     mateGoalEvidence?: XiangqiMateGoalEvidence;
+    mateGoalAttempts?: XiangqiMateGoalEvidence[];
   }[] = [];
   const validation = validateStandardXiangqiPuzzle(puzzle);
   if (!validation.ok)
@@ -90,6 +91,7 @@ export async function auditXiangqiCorpusPuzzle(
       let escalationReasons: string[] = [];
       let judgment: XiangqiPuzzleSolverJudgment;
       let mateGoalEvidence: XiangqiMateGoalEvidence | undefined;
+      let mateGoalAttempts: XiangqiMateGoalEvidence[] = [];
       try {
         const verified = await verifyXiangqiSolverTurn(
           engine,
@@ -100,8 +102,15 @@ export async function auditXiangqiCorpusPuzzle(
           XIANGQI_SOLVER_GATE_DEFAULTS,
           puzzle.goal.type === 'checkmate' ? (puzzle.solution.length - ply + 1) / 2 : undefined,
         );
-        ({ searches, transcripts, budgets, escalationReasons, judgment, mateGoalEvidence } =
-          verified);
+        ({
+          searches,
+          transcripts,
+          budgets,
+          escalationReasons,
+          judgment,
+          mateGoalEvidence,
+          mateGoalAttempts,
+        } = verified);
       } catch (error) {
         judgment = {
           solutionPly: ply,
@@ -116,6 +125,7 @@ export async function auditXiangqiCorpusPuzzle(
         budgets,
         escalationReasons,
         mateGoalEvidence,
+        mateGoalAttempts,
         elapsedMs: Date.now() - started,
       });
       judgments.push(judgment);
