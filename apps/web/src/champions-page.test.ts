@@ -107,8 +107,8 @@ describe('/champions', () => {
     const challengeLinks = page.querySelectorAll<HTMLAnchorElement>(
       'a.champions-btn[href="#challenge"]',
     );
-    expect(challengeLinks).toHaveLength(1);
-    expect(challengeLinks[0]?.textContent).toBe('Challenge for a title');
+    // No button jumps to the rules; the rules stay as their own section.
+    expect(challengeLinks).toHaveLength(0);
     expect(page.querySelector('h2#challenge')?.textContent).toBe('Challenge for a title');
     expect(TITLES).toHaveLength(CHAMPIONS.length + OPEN_TITLES.length);
   });
@@ -191,7 +191,7 @@ describe('/champions', () => {
     ).toEqual(['AB-JChess /bot/ab-jchess', 'KataGo-AnimalChess /bot/katago']);
 
     expect(credits(hero('jieqi'))).toEqual([
-      'Code: AB-JChess https://github.com/lxsgx23/AB-JChess, jqe https://github.com/devinokeefe/jieqi',
+      'Code: AB-JChess https://github.com/lxsgx23/AB-JChess',
       'Network: abjchess-20261030.nnue https://github.com/lxsgx23/AB-JChess/releases/tag/AB-JChess-20261031',
     ]);
     expect(credits(hero('jungle'))).toEqual([

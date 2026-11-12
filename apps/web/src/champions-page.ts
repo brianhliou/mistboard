@@ -171,10 +171,7 @@ const JIEQI_AB_JCHESS_20261031: Title = {
   // Built on jqe's MIT code. The net (abjchess-20261030.nnue) ships in the authors'
   // AB-JChess-20261031 release (scripts/fetch-abjchess-net.sh), never re-hosted.
   credits: {
-    code: [
-      { name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' },
-      { name: 'jqe', href: 'https://github.com/devinokeefe/jieqi' },
-    ],
+    code: [{ name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' }],
     network: [
       {
         name: 'abjchess-20261030.nnue',
@@ -486,11 +483,6 @@ export function buildChampions(locale: Locale = currentLocale()): HTMLElement {
     proseSubheading(t('champions.openHeading', {}, locale)),
     proseParagraph([t('champions.openIntro', {}, locale)]),
     open,
-    // One link to the rules for the whole grid; a button on every card all
-    // pointed at the same #challenge (Brian, 2026-10-28: "bad redundant UI").
-    el('div', 'champions-actions champions-open-cta', [
-      button(t('champions.challengeHeading', {}, locale), '#challenge'),
-    ]),
 
     proseSubheading(t('champions.historyHeading', {}, locale)),
     list(TITLE_HISTORY.map((entry) => matchLine(locale, entry.textKey, entry))),
