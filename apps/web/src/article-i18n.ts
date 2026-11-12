@@ -473,12 +473,12 @@ const ZH_HANS: Record<string, string> = {
     '重复循环中，每一步都将军的一方判负。若循环中没有任何将军，且只有一方每一步都捉子，则该方判负。其余情况判和。',
   'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
     '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子，攻击能反吃回来的同种棋子也不算。马或炮攻击车，或士、象攻击车、马、炮，即使对方有保护也算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
-  'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
-    'AB-JChess 执红对 jqe，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，过河后于第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到红帅身旁的 d3。红方的翻子却不顺利：c5 的车在第 20 回合刚翻出就被吃掉，a1 角位藏的则是兵。黑方在第 30 回合将死红方。',
-  'Jieqi: AB-JChess against jqe, Black mates on move 30':
-    '揭棋：AB-JChess 对 jqe，黑方第 30 回合将死',
-  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
-    '想看更多好棋，[对抗赛文章](/blog/ab-jchess-vs-jqe)讲解了这一盘及另外四盘，[战胜我们揭棋电脑的 14 盘棋](/blog/jieqi-bot-wins)则展示了玩家如何赢过它。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
+    'jqe 执红对 AB-JChess，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。红方在前 11 回合吃掉六枚棋子，但黑方有两枚暗子在第 11 和第 13 回合翻出车，局势转向黑方。第 17 回合双方各失误一次。第 23 回合红方翻开帅旁的棋子，翻出的是兵，黑方的双车在第 25 回合将死红方。标记和变着是 AB-JChess 对这盘棋的解读，翻子旁的骰子评估这次翻子的运气。',
+  'Jieqi: jqe against AB-JChess, Black mates on move 25':
+    '揭棋：jqe 对 AB-JChess，黑方第 25 回合将死',
+  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
+    '想看更多好棋，[对抗赛文章](/blog/ab-jchess-vs-jqe)另外讲解了六盘，[战胜我们揭棋电脑的 14 盘棋](/blog/jieqi-bot-wins)则展示了玩家如何赢过它。',
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻开自己的暗子吗？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
@@ -493,8 +493,8 @@ const ZH_HANS: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
   'Play a bot': '与电脑对弈',
-  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
-    '重复局面现在也判长捉，无吃子判和从双方各走 60 步改为 40 步。',
+  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
+    '示例对局换成了新的一盘，每步棋都由 AB-JChess 评分，并评估了每次翻子的运气。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想学揭棋的玩家，无论是否下过象棋。',
   'START: RED AT THE BOTTOM': '开局：红方在下',
@@ -2580,9 +2580,6 @@ const ZH_HANS: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'PikaJieQi self-play': 'PikaJieQi 自对弈',
-  'Red works through the reveals and delivers checkmate on move 36.':
-    '红方在一次次揭子中推进，第 36 回合将死。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -7286,12 +7283,12 @@ const ZH_HANT: Record<string, string> = {
     '重複循環中，每一步都將軍的一方判負。若循環中沒有任何將軍，且只有一方每一步都捉子，則該方判負。其餘情況判和。',
   'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
     '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子，攻擊能反吃回來的同種棋子也不算。馬或炮攻擊車，或士、象攻擊車、馬、炮，即使對方有保護也算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
-  'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
-    'AB-JChess 執紅對 jqe，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，過河後於第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到紅帥身旁的 d3。紅方的翻子卻不順利：c5 的車在第 20 回合剛翻出就被吃掉，a1 角位藏的則是兵。黑方在第 30 回合將死紅方。',
-  'Jieqi: AB-JChess against jqe, Black mates on move 30':
-    '揭棋：AB-JChess 對 jqe，黑方第 30 回合將死',
-  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
-    '想看更多好棋，[對抗賽文章](/blog/ab-jchess-vs-jqe)講解了這一盤及另外四盤，[戰勝我們揭棋電腦的 14 盤棋](/blog/jieqi-bot-wins)則展示了玩家如何贏過它。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
+    'jqe 執紅對 AB-JChess，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。紅方在前 11 回合吃掉六枚棋子，但黑方有兩枚暗子在第 11 和第 13 回合翻出車，局勢轉向黑方。第 17 回合雙方各失誤一次。第 23 回合紅方翻開帥旁的棋子，翻出的是兵，黑方的雙車在第 25 回合將死紅方。標記和變著是 AB-JChess 對這盤棋的解讀，翻子旁的骰子評估這次翻子的運氣。',
+  'Jieqi: jqe against AB-JChess, Black mates on move 25':
+    '揭棋：jqe 對 AB-JChess，黑方第 25 回合將死',
+  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
+    '想看更多好棋，[對抗賽文章](/blog/ab-jchess-vs-jqe)另外講解了六盤，[戰勝我們揭棋電腦的 14 盤棋](/blog/jieqi-bot-wins)則展示了玩家如何贏過它。',
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻開自己的暗子嗎？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
@@ -7306,8 +7303,8 @@ const ZH_HANT: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
   'Play a bot': '與電腦對弈',
-  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
-    '重複局面現在也判長捉，無吃子判和從雙方各走 60 步改為 40 步。',
+  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
+    '示例對局換成了新的一盤，每步棋都由 AB-JChess 評分，並評估了每次翻子的運氣。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想學揭棋的玩家，無論是否下過象棋。',
   'START: RED AT THE BOTTOM': '開局：紅方在下',
@@ -9571,9 +9568,6 @@ const ZH_HANT: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'PikaJieQi self-play': 'PikaJieQi 自對弈',
-  'Red works through the reveals and delivers checkmate on move 36.':
-    '紅方在一次次揭子中推進，第 36 回合將死。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
