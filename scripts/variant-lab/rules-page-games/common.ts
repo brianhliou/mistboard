@@ -49,6 +49,7 @@ export function winFor(r: Row, k: number): number {
 }
 
 export type Notes = {
+  title?: string;
   intro: string;
   judged: Record<string, string>;
   comments: Record<string, string>;

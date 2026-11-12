@@ -5,9 +5,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  ALL_JUNGLE_FLIP_SQUARES,
+  applyJungleFlipMove,
   applyStandardXiangqiMove,
+  createInitialJungleFlipState,
   createInitialStandardXiangqiState,
+  getJungleFlipLegalMoves,
   isStandardXiangqiLegalMove,
+  type JungleFlipDeal,
+  type JungleFlipGameState,
+  type JungleFlipMove,
+  parseJungleFlipFen,
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
@@ -99,6 +107,51 @@ describe('rules page sample games', () => {
       for (const t of moves) {
         expect(isStandardXiangqiLegalMove(s, xqMove(t)), `line at ${ply}: ${t}`).toBe(true);
         s = applyStandardXiangqiMove(s, xqMove(t));
+      }
+    }
+  });
+
+  it('jungle-flip: game 6 replays on its deal, every tile is turned, no line turns one', () => {
+    const chapter = readPlan('jungle-flip').create.chapter;
+    expect(chapter.variant).toBe('jungle-flip');
+    expect(embedPaths('jungle-flip')).toContain('/embed/study/rMatOJCL/JkINhawC');
+    const parsed = parseJungleFlipFen(chapter.tree.rootFen, { gameId: 'rules-flip' } as never);
+    if (!parsed.ok || parsed.sampled) throw new Error('the chapter needs its dealt root');
+    const deal: JungleFlipDeal = ALL_JUNGLE_FLIP_SQUARES.map((sq) => {
+      const p = parsed.state.board[sq]!;
+      return { color: p.color, role: p.role };
+    });
+    const flipMove = (t: string): JungleFlipMove => ({
+      from: t.slice(0, 2) as JungleFlipMove['from'],
+      to: t.slice(2, 4) as JungleFlipMove['to'],
+    });
+    const play = (s: JungleFlipGameState, t: string): JungleFlipGameState => {
+      const m = flipMove(t);
+      const legal = getJungleFlipLegalMoves(s).some((x) => x.from === m.from && x.to === m.to);
+      if (!legal) throw new Error(`illegal ${t}`);
+      return applyJungleFlipMove(s, m);
+    };
+    // The stored root names every tile, so it may only name tiles the game turns over.
+    const unturned = (moves: string[]): string[] => {
+      const turned = new Set(
+        moves.filter((t) => t.slice(0, 2) === t.slice(2, 4)).map((t) => t.slice(0, 2)),
+      );
+      return ALL_JUNGLE_FLIP_SQUARES.filter((sq) => !turned.has(sq));
+    };
+    const line = mainLine(chapter.tree.root).map((n) => n.uci);
+    expect(line).toHaveLength(55);
+    let state = createInitialJungleFlipState('rules-flip', deal);
+    for (const t of line) state = play(state, t);
+    expect(state.status).toMatchObject({ type: 'finished', winner: 'red' });
+    expect(unturned(line)).toEqual([]);
+    // Planted: cut before the last turn-over and the check must name the tile still down.
+    expect(unturned(line.slice(0, 29))).toEqual(['b3']);
+    for (const [ply, moves] of sidelines(chapter.tree.root)) {
+      let s = createInitialJungleFlipState('rules-flip-line', deal);
+      for (const t of line.slice(0, ply)) s = play(s, t);
+      for (const t of moves) {
+        expect(t.slice(0, 2) === t.slice(2, 4), `line at ${ply} turns ${t}`).toBe(false);
+        s = play(s, t);
       }
     }
   });
