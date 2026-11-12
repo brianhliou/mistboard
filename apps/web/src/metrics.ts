@@ -111,6 +111,12 @@ export type AdminMetrics = {
   humanGamesByResult: Record<string, number>;
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
+  guestSignInConversion?: {
+    weekStart: string;
+    guests: number;
+    signedInWithin7d: number;
+    complete: boolean;
+  }[];
   retentionCohorts: AdminRetentionCohort[];
   loginEmailDelivery: LoginEmailDeliveryMetrics;
   engines: {
@@ -418,7 +424,14 @@ function buildWeekReview(admin: AdminMetrics): HTMLElement {
     const split = document.createElement('p');
     split.className = 'metrics-section-note';
     split.textContent = `Games: ${formatStatNumber(selected.pvpGames)} vs people · ${formatStatNumber(selected.pveGames)} vs bots. New accounts count sign-ups whether or not they played.`;
-    review.replaceChildren(heading, note, grid, split);
+    const conversion = admin.guestSignInConversion?.find(
+      (week) => week.weekStart === selected?.weekStart,
+    );
+    const signIns = document.createElement('p');
+    signIns.className = 'metrics-section-note';
+    if (conversion)
+      signIns.textContent = `Guest sign-in after playing a person: ${conversion.signedInWithin7d} of ${conversion.guests} guest browsers signed in within 7 days${conversion.guests ? ` (${Math.round((100 * conversion.signedInWithin7d) / conversion.guests)}%)` : ''}. Counted once per UTC game-finish week.${conversion.complete ? '' : ' Window still open.'} Browser links start at deployment; earlier sign-ins cannot be backfilled.`;
+    review.replaceChildren(heading, note, grid, split, signIns);
   };
   picker.addEventListener('change', () => {
     selected = weeks.find((week) => week.weekStart === picker.value);

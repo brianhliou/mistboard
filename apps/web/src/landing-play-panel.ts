@@ -957,7 +957,7 @@ export function buildPlayPanel(
   ratedBtn.addEventListener('click', () => {
     if (ratedBlocked) return;
     if (!signedIn) {
-      window.location.href = loginHrefForCurrentPage(locale);
+      window.location.href = loginHrefForCurrentPage(locale, 'rated-toggle');
       return;
     }
     if (mode === 'rated') return;
@@ -1043,7 +1043,7 @@ export function buildPlayPanel(
     if (!signedIn) {
       const hint = document.createElement('a');
       hint.className = 'pp-pace-hint';
-      hint.href = loginHrefForCurrentPage(locale);
+      hint.href = loginHrefForCurrentPage(locale, 'correspondence');
       hint.textContent = t('lobby.panelDaysSignIn', {}, locale);
       parts.push(hint);
     }

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
+import type { GuestSignInWeek } from './persistence-sessions.js';
 
 export const MISTBOARD_READOUT_SCHEMA_VERSION = 2 as const;
 // v1 snapshots are still the comparison baseline the day after a deploy, so
@@ -39,6 +40,7 @@ export type MistboardReadoutAction = {
 };
 
 export type MistboardReadoutProduct = {
+  guestSignInConversion?: GuestSignInWeek[];
   accountsCreated: number;
   previousAccountsCreated: number;
   completedGames: number;
@@ -971,6 +973,19 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
     if (typeof product.topPlayerGames === 'number' && product.completedGames > 0) {
       lines.push(
         `- Busiest player: ${product.topPlayerGames} of the ${product.completedGames} completed games (${Math.round((product.topPlayerGames / product.completedGames) * 100)}%)`,
+      );
+    }
+    if (product.guestSignInConversion) {
+      lines.push(
+        '- Guest sign-in after playing a person (UTC game-finish week; distinct browsers; sign-in within 7 days):',
+      );
+      for (const week of product.guestSignInConversion) {
+        lines.push(
+          `  - ${week.weekStart}: ${week.signedInWithin7d}/${week.guests}${week.complete ? '' : ' (window still open)'}`,
+        );
+      }
+      lines.push(
+        '- Browser links are recorded from deployment; earlier sign-ins cannot be backfilled.',
       );
     }
     lines.push(

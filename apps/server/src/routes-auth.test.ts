@@ -254,6 +254,43 @@ definePersistenceTests('auth routes', () => {
     });
   }
 
+  for (const [index, device] of [
+    'guest-browser-at-signin',
+    'bad@example.com',
+    undefined,
+  ].entries()) {
+    test(`successful sign-in records only a valid browser device (${index})`, async () => {
+      const loginId = `device-link-${index}`;
+      const now = new Date();
+      await createEmailLoginChallenge({
+        id: loginId,
+        email: `device-link-${index}@example.com`,
+        codeHash: hashSecret('12345678'),
+        expiresAt: new Date(now.getTime() + 60000),
+      });
+      const response = captureResponse();
+      await tryHandle(
+        {},
+        jsonRequest(
+          { loginId, code: '12345678', deviceId: 'untrusted-body-browser' },
+          `198.51.100.${130 + index}`,
+          device ? { 'x-mistboard-device-id': device } : {},
+        ),
+        response,
+        '/api/auth/email/confirm',
+      );
+      assert.equal(response.status, 200);
+      const user = JSON.parse(response.body).user;
+      const { rows } = await getPool().query(
+        'SELECT device_id FROM account_sessions WHERE user_id = $1',
+        [user.id],
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].device_id, index === 0 ? device : null);
+      assert.doesNotMatch(response.body, /guest-browser|untrusted-body-browser|device_id|deviceId/);
+    });
+  }
+
   test('email auth returns delivery timing and creates a session after confirmation', async () => {
     const sentBefore = authCounters.totalCodesSent;
     const startResponse = captureResponse();

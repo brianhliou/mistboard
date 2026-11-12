@@ -2522,7 +2522,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     choice.mode === 'pve'
       ? () => {
           if (!isLikelySignedIn()) {
-            window.location.href = loginHrefForCurrentPage(locale);
+            window.location.href = loginHrefForCurrentPage(locale, 'rated-toggle');
             return;
           }
           reopenSetupDialogInMode(choice, 'lobby', selectedGameSpecId, {
@@ -3104,7 +3104,11 @@ function showCorrespondenceFailure(
   status.replaceChildren();
   if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
     const link = document.createElement('a');
-    link.href = loginHrefWithReferrer(correspondenceSetupPath(setup, locale), locale);
+    link.href = loginHrefWithReferrer(
+      correspondenceSetupPath(setup, locale),
+      locale,
+      'correspondence',
+    );
     link.textContent = t('correspondence.signIn', {}, locale);
     status.append(t('setup.correspondenceNeedsAccount', {}, locale), ' ', link);
   } else if (failure.error === 'invalid_days_per_move') {

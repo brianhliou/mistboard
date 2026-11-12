@@ -16,7 +16,7 @@ import {
   replaceAccountPreferences,
 } from './account-preferences.js';
 import { identify, resetIdentity, track } from './analytics.js';
-import { requestedAuthReferrer } from './auth-redirect.js';
+import { authContextForOpen, requestedAuthReferrer } from './auth-redirect.js';
 import {
   DISPLAY_PREFERENCE_DEFINITIONS,
   type DisplayPreferenceId,
@@ -30,6 +30,7 @@ import { buildFlairIcon, flairLabel, flairOfferedInPicker, flairPickerGroups } f
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
+import { postWithBrowserIdentity } from './room-create-retry.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
 import { setBoardCoordinatesPreference } from './theme.js';
 
@@ -1850,6 +1851,8 @@ function buildLoginForm(
   locale: Locale = currentLocale(),
   options: { redirectOnSuccess: boolean } = { redirectOnSuccess: true },
 ): HTMLElement {
+  const authContext = authContextForOpen();
+  track('auth_opened', authContext);
   const panel = document.createElement('section');
   panel.className = 'account-panel account-auth-panel';
   panel.dataset.entryPoint = tab;
@@ -2086,6 +2089,7 @@ function buildLoginForm(
       if (!Number.isFinite(expiresAt) || !Number.isFinite(resendAvailableAt)) {
         throw new Error('auth_bad_response');
       }
+      track('auth_code_sent', { source: authContext.source });
       email.readOnly = true;
       emailStage.hidden = true;
       codeStage.hidden = false;
@@ -2160,6 +2164,10 @@ function buildLoginForm(
         handle: data.user.handle,
         account_role: data.user.accountRole,
         email_verified: data.user.emailVerified,
+      });
+      track('auth_signed_in', {
+        source: authContext.source,
+        is_new_account: data.isNewUser === true,
       });
       // signup_completed is fired by the server on account creation (it
       // reaches PostHog even when the browser blocks analytics); firing it
@@ -2244,7 +2252,10 @@ async function fetchAuthJson<T>(
 ): Promise<{ data: T; resp: Response }> {
   let resp: Response;
   try {
-    resp = await fetch(input, init);
+    resp =
+      input === '/api/auth/email/confirm'
+        ? await postWithBrowserIdentity(input, init)
+        : await fetch(input, init);
   } catch {
     throw new Error('auth_request_failed');
   }

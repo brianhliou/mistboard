@@ -37,6 +37,7 @@ describe('account page auth flow', () => {
       configurable: true,
       value: memoryStorage(),
     });
+    window.sessionStorage.clear();
     window.history.replaceState(null, '', '/account?tab=login');
     document.body.innerHTML = '<div id="app"></div>';
   });
@@ -46,6 +47,53 @@ describe('account page auth flow', () => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
+
+  it.each([true, false])(
+    'tracks the complete auth funnel without private properties (new=%s)',
+    async (isNewUser) => {
+      const user = testUser('private-handle');
+      window.history.replaceState(
+        null,
+        '',
+        '/account?tab=login&source=rated-toggle&referrer=%2F%3Femail%3Dprivate%40example.com%26code%3D87654321',
+      );
+      const fetch = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('login-private', '87654321'), 202);
+        if (String(input) === '/api/auth/email/confirm') return jsonResponse({ user, isNewUser });
+        throw new Error(`unexpected fetch: ${input}`);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const analytics = await import('./analytics.js');
+      const track = vi.spyOn(analytics, 'track');
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value =
+        'private@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      const events = track.mock.calls.filter(([event]) =>
+        ['auth_opened', 'auth_code_sent', 'auth_signed_in'].includes(event),
+      );
+      expect(events).toEqual([
+        ['auth_opened', { source: 'rated-toggle', path: '/' }],
+        ['auth_code_sent', { source: 'rated-toggle' }],
+        ['auth_signed_in', { source: 'rated-toggle', is_new_account: isNewUser }],
+      ]);
+      expect(JSON.stringify(events.map(([, props]) => props))).not.toMatch(
+        /@|87654321|private|email|handle|loginId/,
+      );
+      const confirm = fetch.mock.calls.find(
+        ([input]) => String(input) === '/api/auth/email/confirm',
+      );
+      expect(
+        new Headers((confirm?.[1] as RequestInit)?.headers).get('x-mistboard-device-id'),
+      ).toBeTruthy();
+    },
+  );
 
   it.each([
     ['gmial.com', 'gmail.com'],
@@ -101,7 +149,7 @@ describe('account page auth flow', () => {
     email.dispatchEvent(new Event('input'));
     email.dispatchEvent(new Event('change'));
     document.querySelector<HTMLButtonElement>('.account-auth-email-suggestion')?.click();
-    expect(track.mock.calls).toEqual([
+    expect(track.mock.calls.filter(([event]) => event !== 'auth_opened')).toEqual([
       ['auth_email_domain_suggestion_shown', { suggested_domain: 'gmail.com' }],
       ['auth_email_domain_suggestion_accepted', { suggested_domain: 'gmail.com' }],
     ]);

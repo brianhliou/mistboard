@@ -34,6 +34,7 @@ import {
 import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
+import { getWeeklyGuestSignIns } from './persistence-sessions.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
   listXiangqiBroadcastTourSourcesOn,
@@ -402,7 +403,7 @@ async function collectLoginEmailDelivery(db: Queryable, now: Date) {
 
 async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadoutProduct> {
   const { periodStart, periodEnd, previousPeriodStart } = readoutPeriods(now);
-  const [counts, modes, variants, players] = await Promise.all([
+  const [counts, modes, variants, players, guestSignInConversion] = await Promise.all([
     db.query<{
       accounts_created: number;
       previous_accounts_created: number;
@@ -443,6 +444,7 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
       [periodStart, periodEnd],
     ),
     collectPlayers(db, { periodStart, periodEnd, previousPeriodStart }),
+    getWeeklyGuestSignIns({ now, weeks: 6 }, db),
   ]);
   const row = counts.rows[0];
   return {
@@ -454,6 +456,7 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
     completedGamesByVariant: variants.rows,
     abortedGames: row?.aborted_games ?? 0,
     ...players,
+    guestSignInConversion,
   };
 }
 

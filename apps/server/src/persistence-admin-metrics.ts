@@ -22,6 +22,7 @@ import {
   type LoginEmailDeliveryMetrics,
 } from './persistence-email-delivery.js';
 import { PATRON_ACTIVE_STATUSES, patronQualifyingRowSql } from './persistence-patron.js';
+import { type GuestSignInWeek, getWeeklyGuestSignIns } from './persistence-sessions.js';
 import { SITE_STATS_TIME_ZONE } from './persistence-site-stats.js';
 
 // Admin /metrics, Postgres-true. Everything in `weekly` and the headline
@@ -136,6 +137,7 @@ export interface AdminMetrics {
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
   retentionCohorts: AdminRetentionCohort[];
+  guestSignInConversion?: GuestSignInWeek[];
   loginEmailDelivery: LoginEmailDeliveryMetrics;
   engines: AdminMetricsEngines;
 }
@@ -182,6 +184,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     retentionCohorts,
     loginEmailDelivery,
     gamePace,
+    guestSignInConversion,
   ] = await Promise.all([
     weekAxis(pool, now, weeks),
     collectHeadline(pool, now),
@@ -194,6 +197,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     collectRetentionCohorts(pool, now, weeks),
     getLoginEmailDeliveryMetrics(now),
     collectGamePace(pool, now),
+    getWeeklyGuestSignIns({ now, weeks }),
   ]);
 
   const weekly = axis.map((weekStart): AdminMetricsWeek => {
@@ -237,6 +241,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     ...headline,
     weekly,
     retentionCohorts,
+    guestSignInConversion,
     loginEmailDelivery,
     gamePace,
     engines,
