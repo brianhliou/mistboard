@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Play a person on the homepage shows open games and every variant under one pace ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- On desktop, correspondence games waiting on your move appear as a Your move tab in the homepage Play panel ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- Computer opponents take time to reply like a player, longer when the game is level; Banqi, Jungle and Flip Jungle now do too ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Correspondence emails now cover challenges, game starts and results, each under the existing notification setting ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - A signed-out player can start a correspondence game with a friend and keeps their seat after signing in ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - Play again after a finished game between two accounts sends a correspondence challenge with the sides swapped ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
@@ -101,6 +104,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The homepage Play table's arrows look like buttons, and fade out at the end of their list ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- Flair offers every piece from every piece set, plus Jungle animals and chess pieces ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- The Play menu opens Create a game, the game setup on Anyone ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- The correspondence page opens on a compact header, and hidden-information games show their own marker ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - The correspondence page lists games on your move first, then recent opponents you can challenge ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - Signed-in players see their correspondence games waiting on a move on the homepage ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - Challenge and invite links name who sent them, the game and the pace before you sign in ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
@@ -140,6 +147,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Pikafish bot profiles no longer describe the bots as mainline Pikafish ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- Game review no longer shows a perpetual-check rule win as mate in one or grades the repeating move a blunder on broadcast and imported games ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
+- The touch move confirmation setting lines up with the other Board settings ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Correspondence friend invites keep the variant and side you picked ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - A correspondence room closed by another server process reopens instead of reconnecting forever ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
 - Three Kingdoms Banqi keeps moved face-up pieces face up on the final board ([9a4333f0](https://github.com/brianhliou/mistboard/commit/9a4333f0))
