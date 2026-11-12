@@ -168,7 +168,9 @@ export const duckXiangqiArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/uMbk76wd/RPLi9LsH',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/duck-xiangqi.plan.json);
+          // swapped for the prod ids when the prod study is created from that plan.
+          path: '/embed/study/nBf6yO5F/fMtBPsH4',
           title: 'Duck Xiangqi: an engine game, Black captures the general on move 60',
           // Shorter than atomic's 700: duck notation (b3-b5@d9) widens the
           // move sheet, so the board gets less of the 702px column (408px).

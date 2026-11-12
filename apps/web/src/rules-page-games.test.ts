@@ -7,18 +7,23 @@ import { resolve } from 'node:path';
 import {
   ALL_JUNGLE_FLIP_SQUARES,
   applyCrazyhouseXiangqiMove,
+  applyDuckXiangqiTurn,
   applyJungleFlipMove,
   applyJungleMove,
   applyStandardXiangqiMove,
   type CrazyhouseXiangqiGameState,
   crazyhouseXiangqiMoveFromUci,
   createInitialCrazyhouseXiangqiState,
+  createInitialDuckXiangqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
   createInitialStandardXiangqiState,
+  type DuckXiangqiGameState,
+  type DuckXiangqiSquare,
   engineUciToJungleMove,
   getJungleFlipLegalMoves,
   isCrazyhouseXiangqiLegalMove,
+  isDuckXiangqiLegalTurn,
   isStandardXiangqiLegalMove,
   type JungleFlipDeal,
   type JungleFlipGameState,
@@ -208,6 +213,37 @@ describe('rules page sample games', () => {
     expect(lines.length).toBeGreaterThan(0);
     for (const [ply, moves] of lines) {
       let s = createInitialCrazyhouseXiangqiState('rules-chx-line');
+      for (const t of line.slice(0, ply)) s = play(s, t);
+      for (const t of moves) s = play(s, t);
+    }
+  });
+
+  it('duck-xiangqi: Game 1 of the companion study, legal throughout, Black takes the general', () => {
+    const chapter = readPlan('duck-xiangqi').create.chapter;
+    expect(chapter.variant).toBe('duck-xiangqi');
+    expect(embedPaths('duck-xiangqi')).toContain('/embed/study/nBf6yO5F/fMtBPsH4');
+    const play = (s: DuckXiangqiGameState, t: string): DuckXiangqiGameState => {
+      const m = /^([a-i]\d+)([a-i]\d+)(?:@([a-i]\d+))?$/.exec(t);
+      const turn = m && {
+        from: m[1] as DuckXiangqiSquare,
+        to: m[2] as DuckXiangqiSquare,
+        duckTo: (m[3] as DuckXiangqiSquare | undefined) ?? null,
+      };
+      if (!turn || s.status.type !== 'playing' || !isDuckXiangqiLegalTurn(s, turn))
+        throw new Error(`illegal ${t}`);
+      return applyDuckXiangqiTurn(s, turn);
+    };
+    const line = mainLine(chapter.tree.root).map((n) => n.uci);
+    expect(line).toHaveLength(120);
+    let state = createInitialDuckXiangqiState('rules-duck');
+    for (const t of line) state = play(state, t);
+    expect(state.status).toMatchObject({ type: 'finished', winner: 'black' });
+    // The game-ending capture is the win, never a judged move.
+    expect(mainLine(chapter.tree.root).at(-1)?.annotations?.glyphs ?? []).toEqual([]);
+    const lines = sidelines(chapter.tree.root);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const [ply, moves] of lines) {
+      let s = createInitialDuckXiangqiState('rules-duck-line');
       for (const t of line.slice(0, ply)) s = play(s, t);
       for (const t of moves) s = play(s, t);
     }
