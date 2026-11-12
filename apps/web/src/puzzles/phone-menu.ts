@@ -149,7 +149,7 @@ export function puzzlePhoneMenuRows(props: QueuePanelProps): HTMLElement[] {
   if (props.theme && props.variantFilter === XIANGQI_SPEC_ID) {
     rows.push(puzzleThemePicker(props.theme, true));
     const browse = document.createElement('div');
-    browse.className = 'puzzle-pm-row';
+    browse.className = 'puzzle-pm-row puzzle-pm-row--browse-themes';
     browse.append(puzzleThemesLink());
     rows.push(browse);
   }

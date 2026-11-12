@@ -194,10 +194,9 @@ describe('puzzle phone first screen', () => {
       /\.puzzles-shell \.puzzle-board-panel > \.puzzle-session-chips \{ order: 4;[^}]*height: 30px;/,
     );
     expect(phoneBlock).not.toMatch(/\.puzzle-session-chips \{[^}]*display: none/);
-    // Centred in the spare height under the prompt; auto margins take only
-    // what the capped board leaves, never the board's own height.
+    // History follows the prompt instead of floating in a tall phone's gap.
     expect(portraitBlock).toContain(
-      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: auto; }',
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: 0; }',
     );
     expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
     expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
