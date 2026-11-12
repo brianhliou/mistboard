@@ -4,6 +4,7 @@ import {
   type GomokuRoomState,
   parseGomokuMove,
   parseRapfiOutput,
+  RAPFI_LEVELS,
   type RapfiLevel,
   type RapfiPosition,
   rapfiGameSeed,
@@ -12,6 +13,8 @@ import {
   selectRapfiMove,
 } from '@mistboard/game';
 import { resolveValidatedEngineMove } from './engine-move-guard.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import {
   GOMOKU_ANALYSIS_HASH_BYTES,
   type GomokuAnalysisOptions,
@@ -19,7 +22,12 @@ import {
 } from './gomoku-analysis.js';
 import { type GomokuRuntimeRoom, gomokuTenant, isGomokuEngineClientId } from './gomoku-tenant.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
 import { UciEnginePool, withEngineProcess } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 
@@ -39,6 +47,8 @@ const livePool = new UciEnginePool({
 
 type MoveOptions = GomokuAnalysisOptions & {
   isCurrent?: () => boolean;
+  /** Clock-aware ceiling; nodes and seeded candidate selection remain unchanged. */
+  movetimeMs?: number;
   /** Offline calibration supplies its recorded game seed; rooms derive it from id. */
   gameSeed?: number;
   /** Observe the successful native search without changing its commands or choice. */
@@ -84,6 +94,10 @@ export async function gomokuLiveEngineMove(
     Number(engineId.at(-1)) as RapfiLevel,
     rapfiPlySeed(options.gameSeed ?? rapfiGameSeed(state.id), state.ply),
   );
+  const searchMs = Math.min(
+    request.timeMs,
+    Math.max(1, Math.floor(options.movetimeMs ?? request.timeMs)),
+  );
   const release = await livePool.acquire();
   try {
     return await withEngineProcess(async (track) => {
@@ -101,12 +115,16 @@ export async function gomokuLiveEngineMove(
           [
             'INFO thread_num 1',
             `INFO max_memory ${GOMOKU_ANALYSIS_HASH_BYTES}`,
-            ...request.lines.slice(1),
+            ...request.lines
+              .slice(1)
+              .map((line) =>
+                line.startsWith('INFO timeout_turn ') ? `INFO timeout_turn ${searchMs}` : line,
+              ),
           ],
           (line) => /^\d+,\d+$/.test(line.trim()),
           // Each move starts a fresh process; Rapfi loads its net on the first
           // search. The engine's time budget does not cover cold startup.
-          options.timeoutMs ?? request.timeMs + 2_000,
+          options.timeoutMs ?? searchMs + 2_000,
         );
         // Require a valid final move even when structured candidates choose it.
         const [x, y] = output.at(-1)!.trim().split(',').map(Number);
@@ -187,21 +205,96 @@ export async function playGomokuEngineMoveIfReady(
   const engineId = room.projection.seats[seat]!;
   // Reconnects append seat-assigned without changing the searched position.
   // Compare the turn/ply/board so metadata cannot repeatedly discard replies.
-  const isCurrent = () =>
-    engineToMove(room, seat) &&
+  const samePosition = () =>
     room.projection.state.ply === state.ply &&
-    room.projection.state.board.every((color, index) => color === state.board[index]) &&
-    room.projection.seats[seat] === engineId;
+    room.projection.state.board.every((color, index) => color === state.board[index]);
+  const turn = createReplyTurn(
+    room,
+    () => engineToMove(room, seat) && room.projection.seats[seat] === engineId,
+    samePosition,
+  );
+  const isCurrent = turn.current;
+  const startedAt = Date.now();
+  const clock = room.projection.clock;
+  const remainingMs = clock ? tenantClockRemainingMs(clock, seat, Date.now()) : null;
+  const tier = RAPFI_LEVELS[Number(engineId.at(-1)) - 1]!;
+  const paceInput = {
+    variant: 'gomoku',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: state.ply,
+    // The bot only moves while playing, where every empty point is legal.
+    legalCount: state.board.filter((point) => point === null).length,
+    remainingMs,
+    incrementMs: clock?.incrementMs ?? 0,
+    engineVsEngine: gomokuTenant.colors.every((color) =>
+      isGomokuEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
+    ceilingMs: tier.timeMs,
+    flatReserveMs: 1_000,
+    floorMs: 50,
+  };
+  let movetimeMs = liveBotMoveTime(budgetInput).movetimeMs;
+  if (movetimeMs <= 0 || !isCurrent()) return;
+  let budgetExhausted = false;
+  let lastSearch: UciEval | null = null;
   thinking.add(room);
   try {
-    const { chosen: move, aborted } = await resolveValidatedEngineMove<GomokuMove>({
+    const {
+      chosen: move,
+      aborted,
+      attempts,
+    } = await resolveValidatedEngineMove<GomokuMove>({
       maxAttempts: 2,
-      requestMove: async () => (await provider(state, engineId, { isCurrent }))?.to ?? null,
+      requestMove: async () => {
+        movetimeMs = liveBotMoveTime({
+          ...budgetInput,
+          waitedMs: Date.now() - startedAt,
+        }).movetimeMs;
+        if (movetimeMs <= 0) {
+          budgetExhausted = true;
+          return null;
+        }
+        return (
+          (
+            await provider(state, engineId, {
+              isCurrent,
+              movetimeMs,
+              onSearch: ({ move, lines }) => {
+                const chosen = parseRapfiOutput(lines).find(
+                  (candidate) =>
+                    String.fromCharCode(97 + candidate.move.x) + (candidate.move.y + 1) === move.to,
+                );
+                if (chosen)
+                  lastSearch = {
+                    best: move.to,
+                    cp: chosen.forcedFive ? null : chosen.eval,
+                    mate: chosen.forcedFive
+                      ? (chosen.forcedFive.result === 'win' ? 1 : -1) *
+                        Math.max(1, Math.ceil(chosen.forcedFive.plies / 2))
+                      : null,
+                    depth: chosen.depth,
+                    nodes: chosen.totalNodes,
+                    timeMs: chosen.timeMs,
+                    pv: chosen.pv.map(
+                      (point) => `${String.fromCharCode(97 + point.x)}${point.y + 1}`,
+                    ),
+                  };
+              },
+            })
+          )?.to ?? null
+        );
+      },
       validate: (to) => {
         const candidate = parseGomokuMove(to);
         return candidate && gomokuTenant.rules.isLegalMove(state, candidate) ? candidate : null;
       },
-      stillOnTurn: isCurrent,
+      stillOnTurn: () => !budgetExhausted && isCurrent(),
       onReject: ({ attempt, reason, error }) =>
         logger.warn(
           { kind: 'gomoku_engine_move_rejected', room_id: room.id, attempt, reason, error },
@@ -225,15 +318,51 @@ export async function playGomokuEngineMoveIfReady(
         { kind: 'gomoku_engine_failed_closed', room_id: room.id },
         'Rapfi failed twice; aborting the game as an engine failure',
       );
+    const thinkTimeMs = Date.now() - startedAt;
+    const search = lastSearch as UciEval | null;
+    const pace = replyPace({
+      ...paceInput,
+      cp: search?.cp ?? null,
+      mate: search?.mate ?? null,
+      computeMs: thinkTimeMs,
+      ...(move === null ? { enabled: false } : {}),
+    });
+    if (!(await turn.wait(pace.waitMs))) return;
+    do {
+      writes = room.pendingWrites;
+      await writes;
+    } while (writes !== room.pendingWrites);
+    if (!isCurrent()) return;
     const event = move
       ? { type: 'move-played' as const, at: Date.now(), roomId: room.id, color: seat, move }
       : { type: 'seat-forfeited' as const, at: Date.now(), roomId: room.id, color: seat };
+    queueEngineDecision(room, {
+      ...buildLiveEngineDecisionPayload({
+        variant: 'gomoku',
+        roomId: room.id,
+        engineId,
+        engineVersion: gomokuTenant.engine!.engineVersion!(engineId)!,
+        seat,
+        ply: state.ply,
+        budgetMs: movetimeMs,
+        remainingMs,
+        incrementMs: paceInput.incrementMs,
+        tier: { nodes: tier.nodes, movetimeMs: tier.timeMs },
+        search: lastSearch,
+        thinkTimeMs,
+        attempts,
+        move: move?.to ?? null,
+        legalCount: paceInput.legalCount,
+      }),
+      ...replyPacePayload(pace),
+    });
     const seq = await ctx.appendEvent(room, event);
     if (seq >= 0) ctx.broadcastEventAppended(room, event, seq);
   } finally {
     thinking.delete(room);
     // Pause/resume/undo can change the turn while a search is in flight.
     // Their scheduler saw `thinking`; arrange the current turn after cleanup.
-    scheduleGomokuEngineMove(ctx, room, provider);
+    // Room disposal cancels the reply turn and must never restart its scheduler.
+    if (!turn.cancelled()) scheduleGomokuEngineMove(ctx, room, provider);
   }
 }
