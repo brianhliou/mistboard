@@ -626,10 +626,12 @@
     }
   },
   "one-opponent-four-variants": {
-    "title": "One opponent, four variants",
+    "title": "Won the fog game, lost the other three: four variants against one opponent",
     "kind": "article",
-    "description": "Four correspondence games against the same player, one in each of four xiangqi variants. Each turned at one moment, and each moment came from what that variant changes.",
-    "status": "draft"
+    "description": "Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.",
+    "status": "draft",
+    "publishedAt": "2026-11-20",
+    "liveAt": 1795190400000
   },
   "one-thousand-games": {
     "title": "1,000 games played",

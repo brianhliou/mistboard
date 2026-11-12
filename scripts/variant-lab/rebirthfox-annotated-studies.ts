@@ -12,6 +12,9 @@
 //   npm run study:edit -- --plan <dir>/<variant>.json --apply    # create it
 //   … --update fog:<studyId>/<chapterId>,jieqi:…,banqi:…,duck:…  # rewrite them
 //
+// A rewritten tree drops the chapter's stored luck: re-run
+// scripts/study-chapter-decisions.mjs for banqi and jieqi after every --update.
+//
 // Engines and budgets are in the data's `_engines`. Fog scores are full
 // information: the engine sees the whole board, neither player did. Jieqi
 // reveals and banqi flips are graded on the search before the piece turns
@@ -38,11 +41,7 @@ import {
   jieqiStateToDealtFen,
   standardXiangqiFen,
 } from '@mistboard/game';
-import {
-  annotateFromEngine,
-  type EngineAnnotationInput,
-  type JudgedMove,
-} from '../study-annotate.js';
+import { annotateFromEngine, type EngineAnnotationInput } from '../study-annotate.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -88,7 +87,6 @@ type Game = {
 type Data = Record<'fog' | 'jieqi' | 'banqi' | 'duck', Game> & { _engines: Record<string, string> };
 const data = JSON.parse(readFileSync(DATA, 'utf8')) as Data;
 
-const pct = (s: number): string => `${Math.round(s * 100)}%`;
 const SQ = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))(?:@([a-i](?:10|[1-9])))?$/;
 function parse(token: string): { from: string; to: string; duck: string | null } {
   const m = SQ.exec(token);
@@ -195,43 +193,41 @@ function said(kernel: Kernel, state: unknown, token: string): string {
 // data's; the claims about what each player could see are the game record's.
 const NARRATIVE: Record<keyof Omit<Data, '_engines'>, Record<number, string>> = {
   fog: {
-    2: "Red's horse on h1 is in Black's view (the cannon on h8 sees it through the cannon on h3) and stays there.",
-    4: 'The same horse, the same view, the same miss.',
-    11: "The turning point. The only Black pieces in Red's view are on d10, e7 and e8. The horse on b10 that guards d9 is under the fog, so the chariot lands on a guarded square.",
-    12: 'The horse takes the chariot. From here the engine never gives Red more than 9%.',
+    2: "Black's cannon on h8 could take this horse by jumping the cannon on h3.",
+    4: 'Still there, still not taken.',
+    11: 'The turning point. Red sees Black only on d10, e7 and e8; the horse guarding d9 is under the fog.',
+    12: 'The horse takes the chariot.',
     18: 'Black finally takes the horse on h1.',
-    48: "The cannon takes the general on e3, through the advisor Red put on e2 three plies ago. The cannon came to e1 on the move before, under the fog: Red's view showed Black pieces only on a7, d9 and e9. In fog there is no check, so a general in line is simply taken.",
+    48: 'The cannon came to e1 unseen and takes the general through the advisor on e2.',
   },
   jieqi: {
-    44: 'The turning point. Before this the game is level. The chariot steps to f3, where the engine wanted f2, which keeps it level.',
+    44: 'The turning point: the game was level until this chariot move.',
     45: "Red's cannon comes to e2, behind its other cannon on e3, and now aims at the chariot on e5.",
-    46: 'Black takes the cannon on e3. A longer search (2 million nodes) agrees this capture is best; the damage was the move before.',
-    47: "The face-down piece on g1 moves as an elephant from its home square and takes back on e3. It turns out to be an elephant. Red's expected score before the reveal is 84.5%; with an elephant under it, 91.6%.",
+    46: 'The best capture here; the damage was the move before.',
+    47: 'The face-down piece on g1 moves as an elephant from its home point, takes back on e3, and turns out to be an elephant.',
     48: 'Black takes the elephant, but has given a chariot for a cannon and an elephant.',
   },
   banqi: {
     1: "Black's elephant: the first flip sets the colours, so the first mover plays Black.",
-    13: "The engine had wanted h4 for five flips running (it was one of Black's soldiers). This flip on c2 turns up a Red cannon.",
-    15: "The engine's own choice, and Black's expected score was 47.8% before the tile turned. It is a Red cannon, in line with Black's cannon on g1 with one tile between them, and after the draw the score is 27.1%. Pure luck: the choice cost nothing.",
+    15: "A Red cannon, in line with Black's cannon on g1 with one tile between them.",
     16: 'The new cannon takes on g1 at once.',
-    23: "The cannon on f1 could take the elephant on f3. The flip instead costs 8 points by the engine's count, and the tile is a Red soldier.",
     48: "Red's soldier takes Black's general, the one capture in banqi that runs uphill, and Black resigns.",
   },
   duck: {
-    36: "The turning point of the middlegame. Black's expected score is 79% here (a second search of the same size says 87%), and this capture of a soldier brings it to 62%.",
+    40: "The turning point of the middlegame: Red's chariot takes this horse at once.",
     78: 'The general steps from d10 to e10 with the duck on f8. It will step back and forth thirteen times.',
-    100: "Still shuffling. Red's expected score was 51% when the shuffle began; while Black waits, Red's soldiers walk across.",
-    102: "The thirteenth step. Red's expected score, 51% when the shuffle began, is now 70%.",
+    100: "Still shuffling, while Red's soldiers walk across.",
+    102: 'The thirteenth step.',
     104: "Black's soldier takes an advisor and the other advisor takes it straight back.",
     137: "Red's chariot takes the general.",
   },
 };
 
 const INTRO: Record<keyof Omit<Data, '_engines'>, string> = {
-  fog: `${data._engines.fog}. Scores see the whole board, so a mark on a fog move says what the move cost, not what its player could have known.`,
-  jieqi: `${data._engines.jieqi}. A move that turns a piece over is graded before it turns, so the luck of the draw is never marked.`,
-  banqi: `${data._engines.banqi}. A flip is graded on its average over every tile it could turn up, so a bad draw after a sound flip carries no mark. The first flip turned up a black piece, so the first mover (the Red seat in the game record) plays Black. Red and Black in these comments name the pieces.`,
-  duck: `${data._engines.duck}. Duck scores swing hard with the side to move, so Black's moves are graded against the next Black-to-move position.`,
+  fog: `${data._engines.fog}. Scores see the whole board, which neither player could.`,
+  jieqi: `${data._engines.jieqi}.`,
+  banqi: `${data._engines.banqi}. The first flip turned up a black piece, so the first mover plays Black.`,
+  duck: `${data._engines.duck}. Black's moves are graded against the next Black-to-move position.`,
 };
 
 const TITLE: Record<keyof Omit<Data, '_engines'>, string> = {
@@ -241,28 +237,48 @@ const TITLE: Record<keyof Omit<Data, '_engines'>, string> = {
   duck: 'Duck Xiangqi: the endgame lost by waiting',
 };
 
-// What the comments call each seat. In banqi the first flip binds a colour to
-// the first mover, and here it turned up black, so the 'red' seat plays Black.
-const SIDE_NAME: Record<keyof Omit<Data, '_engines'>, Record<'red' | 'black', string>> = {
-  fog: { red: 'Red', black: 'Black' },
-  jieqi: { red: 'Red', black: 'Black' },
-  banqi: { red: 'Black', black: 'Red' },
-  duck: { red: 'Red', black: 'Black' },
-};
-
-// Whose moves carry marks: Brian's, except fog, where the turning move is Red's.
+// Whose moves carry marks: Brian's in jieqi and banqi; both sides in fog, where
+// the turning move is Red's, and in duck, where Red's misses shape the chart.
 const JUDGE: Record<keyof Omit<Data, '_engines'>, 'red' | 'black' | 'both'> = {
   fog: 'both',
   jieqi: 'black',
   banqi: 'red',
-  duck: 'black',
+  duck: 'both',
 };
 
 function plan(key: keyof Omit<Data, '_engines'>) {
   const game = data[key];
   const kernel = kernelFor(key);
   const states = replay(kernel, game.moves);
-  const sidelines = Object.entries(game.lines ?? {}).map(([ply, line]) => {
+  // The badges carry each mark's numbers and preferred move, so an engine line
+  // is kept only where the story stops (the move after the line's position).
+  const lines = Object.entries(game.lines ?? {}).filter(
+    ([ply]) => key !== 'banqi' && NARRATIVE[key][Number(ply) + 1] !== undefined,
+  );
+  // Duck: every marked move shows what the engine would have played, duck
+  // included. The engine's line where one was kept, else its preferred turn
+  // alone (Red's positions have no stored line). The annotator drops any
+  // candidate whose move earned no mark.
+  if (key === 'duck') {
+    lines.length = 0;
+    game.best.forEach((best, ply) => {
+      if (!best || best === game.moves[ply]) return;
+      // The engine and the kernel can disagree on a rule; a turn the kernel
+      // refuses is left out and reported rather than drawn.
+      try {
+        replay(kernel, [best], states[ply]);
+      } catch {
+        console.warn(`duck best at ply ${ply}: ${best} refused, no line`);
+        return;
+      }
+      const kept = game.lines?.[String(ply)];
+      lines.push([
+        String(ply),
+        kept?.moves[0] === best ? kept : { moves: [best], redScoreEnd: null, nodes: null },
+      ]);
+    });
+  }
+  const sidelines = lines.map(([ply, line]) => {
     const at = Number(ply);
     // The engine's line, up to the first move the site's kernel refuses (an
     // engine and the kernel can disagree on a rule deep in a duck line). A
@@ -288,9 +304,12 @@ function plan(key: keyof Omit<Data, '_engines'>) {
       ply: at,
       moves: line.moves,
       redScoreEnd: line.redScoreEnd,
+      // Duck hangs a line off every mark; a label on each would bury the notes.
       comment: flip
-        ? `The engine's flip, ${said(kernel, states[at], first)}. Its score is an average over every tile that could lie there.`
-        : `The engine's line${line.nodes ? ` at ${line.nodes / 1_000_000} million nodes` : ''}.`,
+        ? `The engine's flip, ${said(kernel, states[at], first)}.`
+        : key === 'duck'
+          ? undefined
+          : "The engine's line.",
     };
   });
   const input: EngineAnnotationInput = {
@@ -298,13 +317,15 @@ function plan(key: keyof Omit<Data, '_engines'>) {
     moves: game.moves,
     redScore: game.redScore,
     best: game.best,
-    moveScore: game.moveScore,
+    // Duck scores swing about 10 points with the side to move, so a move is
+    // graded against the mover's next turn, never the very next position.
+    moveScore:
+      key === 'duck'
+        ? game.redScore.map((_, i) => game.moveScore?.[i] ?? game.redScore[i + 2] ?? null)
+        : game.moveScore,
     judge: JUDGE[key],
     sidelines,
     comments: NARRATIVE[key],
-    judgedComment: (m: JudgedMove) =>
-      `${m.glyph} ${SIDE_NAME[key][m.mover]}'s expected score goes from ${pct(m.before)} to ${pct(m.after)}` +
-      (m.best ? `; the engine preferred ${said(kernel, states[m.ply - 1], m.best)}.` : '.'),
     intro: INTRO[key],
   };
   const r = game.room;

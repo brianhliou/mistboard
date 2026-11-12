@@ -42,14 +42,15 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(len(new["redScore"]), len(new["moves"]) + 1)
             self.assertEqual(len(new["best"]), len(new["redScore"]))
 
-    def test_every_position_uses_the_site_curve_at_the_selected_budget(self):
+    def test_every_position_uses_its_scale_at_the_selected_budget(self):
         for name in converter.GAMES:
+            field = "red_score" if name in converter.NATIVE else "site_curve_red_score"
             for i, series in converter.selected_positions(self.source(name), name).items():
                 row = series["positions"].get(str(i))
                 if row is not None:
-                    self.assertEqual(self.result[name]["redScore"][i], row["site_curve_red_score"])
-        # These values differ substantially from native WDL/NNUE/chance scores.
-        for name, budget, index in [("fog", "20000000", 10), ("banqi", "5000000", 22),
+                    self.assertEqual(self.result[name]["redScore"][i], row[field])
+        # The site curve differs substantially from native WDL/chance scores.
+        for name, budget, index in [("fog", "20000000", 10),
                                     ("jieqi", "20000000", 46), ("duck", "50000000", 35)]:
             row = self.source(name)["series"][budget]["positions"][str(index)]
             self.assertNotEqual(self.result[name]["redScore"][index], row["red_score"])
@@ -57,13 +58,13 @@ class ConverterTests(unittest.TestCase):
     def test_restricted_search_is_red_seat_pov_before_the_reveal(self):
         for name, budget in [("banqi", "5000000"), ("jieqi", "20000000")]:
             for ply, decision in self.source(name)["series"][budget]["decisions"].items():
-                expected = decision["site_curve_expected_after"]
+                expected = decision["expected_after" if name in converter.NATIVE else "site_curve_expected_after"]
                 if decision["mover"] == "black":
                     expected = 1 - expected
                 self.assertEqual(self.result[name]["moveScore"][int(ply) - 1], expected)
         # Banqi's first seat has Black ink: do not invert its seat-based score.
         game = self.result["banqi"]
-        self.assertAlmostEqual(game["moveScore"][14], 0.46324561670945996)
+        self.assertAlmostEqual(game["moveScore"][14], self.source("banqi")["series"]["5000000"]["decisions"]["15"]["expected_after"])
         self.assertNotEqual(game["moveScore"][14], game["redScore"][15])
         self.assertEqual(self.result["jieqi"]["best"][46], "g1e3")
         self.assertEqual(self.result["jieqi"]["moveScore"][46], self.result["jieqi"]["redScore"][46])

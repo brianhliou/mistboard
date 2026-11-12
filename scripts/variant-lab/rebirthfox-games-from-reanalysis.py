@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Rebuild the offline study input; run with python3, without engines or network.
 
-Field mapping (all output probabilities are Red SEAT POV, including Banqi):
+Field mapping (all output probabilities are Red SEAT POV, including Banqi).
+Banqi reads the native red_score/expected_after instead (see NATIVE):
   positions[i].site_curve_red_score -> redScore[i], never native red_score.
   positions[i].best -> best[i], translating engine UCI to kernel tokens.
   decisions[ply].site_curve_expected_after -> moveScore[ply-1], complemented
@@ -33,6 +34,10 @@ import re
 
 
 LAB = Path(__file__).resolve().parent
+# Banqi keeps the engine's native scale (0.5 + cp/2000, linear in cp), so a
+# flip's pre-reveal score is a true average over the tiles it could turn up and
+# choice + draw add up. The logistic site curve of an averaged cp does not.
+NATIVE = {"banqi"}
 GAMES = ("fog", "jieqi", "banqi", "duck")
 JUDGE = {"fog": "both", "jieqi": "black", "banqi": "red", "duck": "black"}
 
@@ -123,7 +128,7 @@ def convert(old, analysis):
                 if str(i) in game.get("lines", {}):
                     output["lines"][str(i)] = deepcopy(game["lines"][str(i)])
                 continue
-            score = red_probability(row["site_curve_red_score"], "red")
+            score = red_probability(row["red_score" if name in NATIVE else "site_curve_red_score"], "red")
             best = token(row.get("best"), name)
             output["redScore"].append(score)
             output["best"].append(best)
@@ -134,7 +139,7 @@ def convert(old, analysis):
                 if public_token(decision["move"]) != moves[i]:
                     raise ValueError(f"{name}: decision mismatch at ply {i+1}")
                 output["moveScore"][i] = red_probability(
-                    decision["site_curve_expected_after"], decision["mover"]
+                    decision["expected_after" if name in NATIVE else "site_curve_expected_after"], decision["mover"]
                 )
             pv = [token(move, name) for move in row.get("pv", [])[:6]]
             mover = "black" if i % 2 else "red"
@@ -163,7 +168,10 @@ def convert(old, analysis):
                 "50M at every Black-to-move position; Black graded against the next Black-to-move position",
     }
     for name in GAMES:
-        result["_engines"][name] += "; scores use the historical site win curve"
+        result["_engines"][name] += (
+            "; scores are the engine's own expected score" if name in NATIVE
+            else "; scores use the historical site win curve"
+        )
     return result
 
 
