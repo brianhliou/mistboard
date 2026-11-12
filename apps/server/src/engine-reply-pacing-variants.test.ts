@@ -275,6 +275,7 @@ for (const path of CASES) {
       f.setProviderHook(() => {
         assert.ok(f.caps.at(-1)! <= 100, 'search cannot spend the 6000 ms reserve');
         t.mock.timers.tick(200);
+        return undefined;
       });
       await f.play();
       assert.deepEqual(f.appended, ['move-played']);
