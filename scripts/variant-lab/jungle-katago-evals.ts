@@ -167,6 +167,7 @@ async function main(): Promise<void> {
             winrateBlack: top.winrateBlack,
             drawPct: top.drawPct,
             best: top.pv.slice(0, 2).join(''),
+            pv: top.pv.slice(0, 12),
             candidates: k.slice(0, 4).map((c) => ({
               move: c.move,
               visits: c.visits,

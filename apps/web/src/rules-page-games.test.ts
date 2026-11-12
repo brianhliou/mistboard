@@ -7,14 +7,18 @@ import { resolve } from 'node:path';
 import {
   ALL_JUNGLE_FLIP_SQUARES,
   applyJungleFlipMove,
+  applyJungleMove,
   applyStandardXiangqiMove,
   createInitialJungleFlipState,
+  createInitialJungleState,
   createInitialStandardXiangqiState,
+  engineUciToJungleMove,
   getJungleFlipLegalMoves,
   isStandardXiangqiLegalMove,
   type JungleFlipDeal,
   type JungleFlipGameState,
   type JungleFlipMove,
+  type JungleGameState,
   parseJungleFlipFen,
   type XiangqiGameState,
   type XiangqiSquare,
@@ -153,6 +157,30 @@ describe('rules page sample games', () => {
         expect(t.slice(0, 2) === t.slice(2, 4), `line at ${ply} turns ${t}`).toBe(false);
         s = play(s, t);
       }
+    }
+  });
+
+  it('jungle: KataGo vs MistyJungle game 0, legal throughout, Red enters the den', () => {
+    const chapter = readPlan('jungle').create.chapter;
+    expect(chapter.variant).toBe('jungle');
+    expect(embedPaths('jungle')).toContain('/embed/study/Qg4lD1ac/xk9oEFSp');
+    const play = (s: JungleGameState, t: string): JungleGameState => {
+      const m = engineUciToJungleMove(t);
+      const next = m && applyJungleMove(s, m);
+      if (!next) throw new Error(`illegal ${t}`);
+      return next;
+    };
+    const line = mainLine(chapter.tree.root).map((n) => n.uci);
+    expect(line).toHaveLength(93);
+    let state = createInitialJungleState('rules-jungle');
+    for (const t of line) state = play(state, t);
+    expect(state.status).toMatchObject({ type: 'finished', winner: 'red' });
+    const lines = sidelines(chapter.tree.root);
+    expect(lines.map(([ply]) => ply)).toEqual([43, 45]);
+    for (const [ply, moves] of lines) {
+      let s = createInitialJungleState('rules-jungle-line');
+      for (const t of line.slice(0, ply)) s = play(s, t);
+      for (const t of moves) s = play(s, t);
     }
   });
 });
