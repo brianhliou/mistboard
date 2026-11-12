@@ -3,11 +3,16 @@
 // emitted by player-page-article.mjs. No browser, database or network needed.
 // node scripts/article-variation-tree.mjs --spec G_M_143657 --plies 31,53 --write
 // --benchmark --limit 1 measures a root without writing. Defaults: 2M nodes,
-// six threads, production-pinned local Pikafish and the adjacent pikafish.nnue.
+// six threads, and the patched Pikafish on the CC0 net the server runs, found
+// through its own resolver (#989).
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../apps/server/src/xiangqi-pikafish-paths.ts';
 import { articleLineAssessment } from './lib/article-line-assessment.mjs';
 
 /** Scores are from the side to move, ordered best first; mate is not cp. */
@@ -96,11 +101,8 @@ export async function main(args = process.argv.slice(2)) {
     )
     .slice(0, limit || undefined);
   if (!jobs.length) throw new Error('No matching article positions');
-  const binary =
-    process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH ??
-    resolve(process.env.HOME, 'projects/tools/pikafish-6a59ee2f/src/pikafish');
-  const net =
-    process.env.MISTBOARD_PIKAFISH_XIANGQI_NET ?? resolve(dirname(binary), 'pikafish.nnue');
+  const binary = pikafishXiangqiPath();
+  const net = pikafishXiangqiNetPath(binary);
   const uci = engine(binary);
   let searches = 0;
   const started = performance.now();
