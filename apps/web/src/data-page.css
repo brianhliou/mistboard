@@ -218,6 +218,14 @@
   cursor: pointer;
 }
 
+/* A finger needs more than the 21px line box (phone audit: 24px floor). */
+@media (pointer: coarse) {
+  .data-copy {
+    min-height: 28px;
+    padding: 4px 10px;
+  }
+}
+
 .data-copy:hover,
 .data-copy:focus-visible {
   border-color: var(--site-accent-strong);
