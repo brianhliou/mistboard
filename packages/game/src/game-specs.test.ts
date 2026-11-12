@@ -8,6 +8,7 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
+  canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -61,6 +62,20 @@ test('canonical display order contains exactly the current public variant shelf'
     XIANGQI_MAHJONG_SPEC_ID,
     GOMOKU_SPEC_ID,
   ]);
+});
+
+test('Fanfanqi sorts ahead of Banqi for the admins who see it, while staying off the public shelf', () => {
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(FFQ_BANQI_SPEC_ID), false);
+  assert.ok(
+    canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID) < canonicalVariantOrderIndex(BANQI_SPEC_ID),
+  );
+  assert.ok(
+    canonicalVariantOrderIndex(JIEQI_SPEC_ID) < canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID),
+  );
+  const publicByIndex = [...CANONICAL_VARIANT_ORDER].sort(
+    (a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b),
+  );
+  assert.deepEqual(publicByIndex, [...CANONICAL_VARIANT_ORDER]);
 });
 
 test('Gomoku is a public casual, rated freestyle placement game', () => {
