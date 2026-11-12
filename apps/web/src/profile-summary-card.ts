@@ -233,7 +233,7 @@ function buildBotVariantRows(
       if (row.record.games > 0) meta.push(recordLabel(row.record));
     }
     const version = showVersions ? row.option?.version : undefined;
-    if (version) meta.push(t('bots.versionValue', { version }));
+    if (version) meta.push(t('bots.versionValue', { version: shortEngineVersion(version) }));
     if (meta.length > 0) {
       const metaEl = document.createElement('span');
       metaEl.className = 'profile-summary-card-variant-meta';
@@ -367,8 +367,8 @@ function buildBotHeader(
   if (version) {
     const versionEl = document.createElement('span');
     versionEl.className = 'profile-summary-card-version';
-    versionEl.title = t('bots.engineVersion');
-    versionEl.textContent = t('bots.versionValue', { version });
+    versionEl.title = `${t('bots.engineVersion')}: ${version}`;
+    versionEl.textContent = t('bots.versionValue', { version: shortEngineVersion(version) });
     owner.append(' · ', versionEl);
   }
   identity.append(name, owner);
@@ -870,4 +870,12 @@ function formatJoined(value: string | undefined, locale: Locale): string | null 
     month: 'long',
     year: 'numeric',
   }).format(date);
+}
+
+/**
+ * A recorded version can name several pins ("<build> · <net> · <branch>"); a card shows
+ * only the build, like every other bot, and the full string stays in the hover title.
+ */
+export function shortEngineVersion(version: string): string {
+  return version.split(' · ')[0] ?? version;
 }
