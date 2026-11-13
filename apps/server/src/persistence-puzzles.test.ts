@@ -10,6 +10,7 @@ import { assert, definePersistenceTests, test } from './persistence-test-support
 import { seedPuzzleRating } from './puzzle-rating.js';
 import {
   getPuzzleStore,
+  loadPuzzlesOutsideServingSet,
   RETIRED_VARIANT_HIDDEN_REASON,
   resetPuzzleStoreForTests,
 } from './puzzle-store.js';
@@ -75,6 +76,10 @@ definePersistenceTests('daily puzzles', () => {
         assert.ok(store.tagsById.get(tagged.id)?.includes(tag));
       }
       assert.equal(store.byId.has('xq-mined-player-hidden'), false);
+      // History thumbnails still find the withheld row; it never re-enters the store.
+      const outside = await loadPuzzlesOutsideServingSet(['xq-mined-player-hidden', 'missing']);
+      assert.deepEqual([...outside.keys()], ['xq-mined-player-hidden']);
+      assert.equal(outside.get('xq-mined-player-hidden')?.variant, 'xiangqi');
       const response = await getRoute('/api/puzzles?player=fixture-player&variant=xiangqi');
       assert.equal(response.status, 200);
       const summaries = JSON.parse(response.body).puzzles;

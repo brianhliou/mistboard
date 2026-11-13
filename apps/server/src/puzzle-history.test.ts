@@ -75,10 +75,11 @@ const xiangqi = loadSeedPuzzleRegistry('xiangqi')
 const jungle = loadSeedPuzzleRegistry('jungle').find(
   (puzzle): puzzle is JunglePuzzle => puzzle.variant === 'jungle',
 )!;
-const thumbnailFields = (index: number) => ({
+const thumbnailFields = (index: number, available = true) => ({
   fen: standardXiangqiEngineFen(xiangqi[index]!.initial),
   sideToMove:
     xiangqi[index]!.initial.status.type === 'playing' ? xiangqi[index]!.initial.status.turn : null,
+  available,
 });
 
 // Real session resolution and persistence serialization; only the pg boundary
@@ -87,7 +88,9 @@ type HistoryRow = (typeof rows)[number] & { cursor_created_at?: string };
 const timestamp = (row: HistoryRow) =>
   row.cursor_created_at ?? row.created_at.toISOString().replace('Z', '000Z');
 
-function database(t: TestContext, attempts: HistoryRow[] = rows) {
+// `withheld`: rows still in the puzzles table but out of the serving set
+// (hidden_reason set), which the snapshot query never returns.
+function database(t: TestContext, attempts: HistoryRow[] = rows, withheld: object[] = []) {
   resetPuzzleStoreForTests();
   init('postgres://mistboard@127.0.0.1:9/never');
   t.after(async () => {
@@ -96,6 +99,14 @@ function database(t: TestContext, attempts: HistoryRow[] = rows) {
   });
   return t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
+    if (sql.includes('SELECT id, data FROM puzzles WHERE id = ANY')) {
+      const ids = values[0] as string[];
+      return {
+        rows: withheld
+          .filter((data) => ids.includes((data as { id: string }).id))
+          .map((data) => ({ id: (data as { id: string }).id, data })),
+      };
+    }
     if (sql.includes('SELECT data, position_only FROM puzzles'))
       return {
         rows: [{ ...xiangqi[0], id: 'first' }, { ...xiangqi[1], id: 'second' }, jungle].map(
@@ -218,12 +229,34 @@ test('puzzle history returns stored outcomes and rating changes in chronological
       createdAt: '2026-10-27T12:00:00.000Z',
       fen: null,
       sideToMove: null,
+      available: false,
     },
   ]);
   assert.equal(last.body.nextOffset, null);
   const pastEnd = await history('?variant=xiangqi&offset=3', 'alice');
   assert.deepEqual(pastEnd.body.attempts, []);
   assert.equal(pastEnd.body.nextOffset, null);
+});
+
+test('a puzzle withheld after the attempt keeps its board and is marked unavailable', async (t) => {
+  database(t, rows, [{ ...xiangqi[0], id: 'third' }]);
+  const response = await history('?variant=xiangqi&limit=2&offset=2', 'alice');
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.attempts, [
+    {
+      puzzleId: 'third',
+      variant: 'xiangqi',
+      solved: false,
+      rated: false,
+      ratingBefore: 1512,
+      ratingAfter: 1512,
+      ratingDelta: 0,
+      createdAt: '2026-10-27T12:00:00.000Z',
+      ...thumbnailFields(0, false),
+    },
+  ]);
+  const payload = JSON.stringify(response.body);
+  for (const forbidden of ['solution', 'initial']) assert.equal(payload.includes(forbidden), false);
 });
 
 test('another account cannot select private puzzle activity using query parameters', async (t) => {

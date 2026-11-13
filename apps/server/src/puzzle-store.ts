@@ -275,6 +275,32 @@ export async function getPuzzleStore(): Promise<PuzzleStoreSnapshot> {
   return inFlight;
 }
 
+// History thumbnails for puzzles that left the serving set (withheld after a
+// report or an editorial review). The player already saw the starting position;
+// this read never puts the puzzle back into play, and a retired variant's rows
+// stay out exactly as they do in the snapshot.
+export async function loadPuzzlesOutsideServingSet(
+  ids: readonly string[],
+): Promise<Map<string, StoredPuzzle>> {
+  const found = new Map<string, StoredPuzzle>();
+  if (!ids.length) return found;
+  if (!isInitialized()) {
+    for (const puzzle of loadAllSeedPuzzles() as readonly StoredPuzzle[])
+      if (ids.includes(puzzle.id)) found.set(puzzle.id, puzzle);
+    return found;
+  }
+  const { rows } = await getPool().query<{ data: StoredPuzzle }>(
+    'SELECT id, data FROM puzzles WHERE id = ANY($1::text[])',
+    [[...ids]],
+  );
+  for (const row of rows) {
+    if (isRetiredGameSpec(row.data.variant) || !KNOWN_PUZZLE_VARIANTS.has(row.data.variant))
+      continue;
+    found.set(row.data.id, row.data);
+  }
+  return found;
+}
+
 async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
   if (!seedSyncChecked) {
     await ensureSeedSynced();

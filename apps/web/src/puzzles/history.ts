@@ -19,6 +19,8 @@ import { renderPuzzleMenuLayout } from './puzzle-menu.js';
 type HistoryEntry = PuzzleHistoryEntry & {
   fen: string | null;
   sideToMove: 'red' | 'black' | null;
+  /** False once the puzzle was withdrawn: its board still draws, its page is gone. */
+  available?: boolean;
 };
 type HistoryPage = { attempts: HistoryEntry[]; nextCursor: string | null };
 
@@ -51,7 +53,8 @@ export function puzzleHistoryTime(createdAt: string, now = Date.now()): string {
 function thumbnail(entry: HistoryEntry): HTMLElement {
   const link = document.createElement('a');
   link.className = `puzzle-history__attempt puzzle-history__attempt--${entry.solved ? 'solved' : 'incorrect'}`;
-  link.href = `/puzzles/${encodeURIComponent(entry.puzzleId)}`;
+  // A withdrawn puzzle's page answers 404, so its card keeps the board and drops the link.
+  if (entry.available !== false) link.href = `/puzzles/${encodeURIComponent(entry.puzzleId)}`;
   link.dataset.puzzleId = entry.puzzleId;
   const board = document.createElement('span');
   board.className = 'puzzle-history__board';
