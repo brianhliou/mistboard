@@ -64,7 +64,7 @@ export const xiangqiNnueTrainingArticle: Article = {
   summary:
     'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-11-24',
   thumbnail: { kind: 'svg', svg: THUMBNAIL },
   boardFamily: 'xiangqi',
