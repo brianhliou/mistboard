@@ -40,9 +40,10 @@ const SOUND_MASTER_GAIN = 7.5;
 // piano/sfx) ship near-0dBFS mp3s that play 2-3x louder than the synthesized
 // mist tones (peaks ~0.3-0.6), so they come down hard; the wood set is short
 // real-board recordings closer to reference, so it needs less. Tunable per set
-// after audition.
+// after audition. Wood came down from 0.8 on 2026-11-13: at the default volume
+// it read as loud and clacky.
 const FILE_SET_MASTER_GAIN: Partial<Record<SoundSetId, number>> = {
-  wood: 0.8,
+  wood: 0.57,
   futuristic: 0.4,
   nes: 0.4,
   piano: 0.4,
@@ -382,7 +383,17 @@ function createSoundController(): SoundController {
         source.playbackRate.value = spec.rate ?? 1;
         const gain = audio.createGain();
         gain.gain.value = volume * (spec.gain ?? 1) * (FILE_SET_MASTER_GAIN[activeSet] ?? 0.4);
-        source.connect(gain).connect(audio.destination);
+        if (spec.lowpass) {
+          const filter = audio.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = spec.lowpass;
+          // A lowpass Q is resonance in dB: -3.01 dB is linear 0.707, a flat
+          // (Butterworth) corner with no bump at the cutoff.
+          filter.Q.value = -3.01;
+          source.connect(filter).connect(gain).connect(audio.destination);
+        } else {
+          source.connect(gain).connect(audio.destination);
+        }
         source.start();
         return;
       }

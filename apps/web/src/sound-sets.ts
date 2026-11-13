@@ -42,6 +42,9 @@ export type SoundFileSpec = {
   // Playback-rate tweak: <1 darkens/pitches down for special cues.
   rate?: number;
   gain?: number;
+  // Low-pass cutoff in Hz, applied after the rate change: takes the sharp
+  // click off a bright recording without changing its pitch.
+  lowpass?: number;
 };
 
 // One mapping for all file sets — every set ships the same eight files.
@@ -71,17 +74,32 @@ const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
 // CREDITS.md). Four source files serve the tactile kinds. The terminal cues are
 // a matched CC0 pizzicato family; live-sound.ts provides percussive fallbacks
 // during loading.
+export const WOOD_CAPTURE_LOWPASS_HZ = 2500;
+const WOOD_CAPTURE_GAIN = 0.9;
 const WOOD_FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   move: { file: 'move.mp3' },
-  capture: { file: 'capture.mp3' },
+  // The capture recording is a bright clack, far louder than a move above
+  // 2 kHz. Every kind built from it plays through a low-pass and a trim, so a
+  // capture lands as a knock a little above a move (chosen by ear 2026-11-13).
+  capture: { file: 'capture.mp3', gain: WOOD_CAPTURE_GAIN, lowpass: WOOD_CAPTURE_LOWPASS_HZ },
   castle: { file: 'slide.mp3' },
   drop: { file: 'move.mp3' },
   flip: { file: 'move.mp3' },
   // The cannon slam: the capture, pitched down for extra weight.
-  'cannon-capture': { file: 'capture.mp3', rate: 0.85, gain: 1.1 },
+  'cannon-capture': {
+    file: 'capture.mp3',
+    rate: 0.85,
+    gain: 1.1 * WOOD_CAPTURE_GAIN,
+    lowpass: WOOD_CAPTURE_LOWPASS_HZ,
+  },
   // No explosion was ever recorded on a wooden board: the capture dragged
   // down further still, the heaviest thing the set can say.
-  blast: { file: 'capture.mp3', rate: 0.62, gain: 1.2 },
+  blast: {
+    file: 'capture.mp3',
+    rate: 0.62,
+    gain: 1.2 * WOOD_CAPTURE_GAIN,
+    lowpass: WOOD_CAPTURE_LOWPASS_HZ,
+  },
   'game-start': { file: 'start.mp3' },
   win: { file: 'win.ogg' },
   lose: { file: 'loss.ogg' },
