@@ -59,10 +59,10 @@ describe('auth attribution', () => {
     ['/room/live-room', 'route', '/room/:id'],
   ])('uses the route when storage is blocked: %s', async (referrer, source, path) => {
     const { authContextForOpen } = await import('./auth-redirect.js');
-    vi.spyOn(window.sessionStorage, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-    vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });
     window.history.replaceState(
