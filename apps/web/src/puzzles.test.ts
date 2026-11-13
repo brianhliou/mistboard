@@ -491,6 +491,30 @@ describe('puzzles route', () => {
     );
   });
 
+  it('draws a withdrawn puzzle and leaves its card without a link to the missing page', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          attempts: [
+            { ...historyEntry(RED_MATE, '2026-10-31T16:00:00Z'), available: false },
+            { ...historyEntry(BLACK_MATE, '2026-10-31T15:59:00Z'), available: true },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    const withdrawn = root.querySelector<HTMLAnchorElement>(`[data-puzzle-id="${RED_MATE.id}"]`)!;
+    const live = root.querySelector<HTMLAnchorElement>(`[data-puzzle-id="${BLACK_MATE.id}"]`)!;
+    expect(withdrawn.querySelector('.puzzle-history__board svg')).not.toBeNull();
+    expect(withdrawn.hasAttribute('href')).toBe(false);
+    expect(live.getAttribute('href')).toBe(`/puzzles/${encodeURIComponent(BLACK_MATE.id)}`);
+  });
+
   it('groups by successive one-hour gaps, including chained sessions lasting over an hour', () => {
     const at = (time: string) => historyEntry(RED_MATE, `2026-10-31T${time}:00Z`);
     expect(
