@@ -96,10 +96,10 @@ function database(t: TestContext, attempts: HistoryRow[] = rows) {
   });
   return t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    if (sql.includes('SELECT data FROM puzzles'))
+    if (sql.includes('SELECT data, position_only FROM puzzles'))
       return {
         rows: [{ ...xiangqi[0], id: 'first' }, { ...xiangqi[1], id: 'second' }, jungle].map(
-          (data) => ({ data }),
+          (data) => ({ data, position_only: false }),
         ),
       };
     if (sql.includes('UPDATE account_sessions')) {
