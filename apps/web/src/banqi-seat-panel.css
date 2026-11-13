@@ -111,6 +111,18 @@
   .live-review__cluster
   .hidden-pool
   .tk-seat__pieces
+  .captures-row {
+  /* The discs sit in the shared captures row, which never wraps, so the wrap
+     above only moved whole rows. Fanfanqi groups a role taken face-up apart
+     from the same role taken face-down, so one ink can pass eight discs and
+     ran past the board into the side column. Wrap the discs themselves. */
+  flex-wrap: wrap;
+  gap: 3px;
+}
+:is(.live-route--three-kingdoms-banqi, .live-route--ffq-banqi)
+  .live-review__cluster
+  .hidden-pool
+  .tk-seat__pieces
   .review-capture-piece {
   position: relative;
   display: inline-block;
@@ -182,6 +194,23 @@
       --tk-piece: clamp(30px, calc(((100cqw - 24px) / 2 - 28px) / 8), 44px);
       grid-template-columns: minmax(0, 1fr);
       row-gap: 3px;
+    }
+    /* Side by side, each seat was its own grid, so when one seat's captures
+       wrapped to a second line its face-down line sat lower than the other
+       seat's. Three Kingdoms seats share the pool's rows instead: five (name,
+       two keys, two piece lines), six when the face-down line carries a note,
+       each line at the top of its row so a short one ("None") sits under its key.
+       Fanfanqi seats get the same rule in live-ffq-banqi.css. */
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
+      grid-row: span 5;
+      grid-template-rows: subgrid;
+      align-items: start;
+    }
+    .live-route--three-kingdoms-banqi
+      .live-review__cluster
+      .hidden-pool
+      .tk-seat:has(.hidden-pool__note) {
+      grid-row: span 6;
     }
     :is(.live-route--three-kingdoms-banqi, .live-route--ffq-banqi)
       .live-review__cluster
