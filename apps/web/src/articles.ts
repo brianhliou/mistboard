@@ -1050,9 +1050,18 @@ function initSingleCarousel(carousel: HTMLElement): void {
   prev?.addEventListener('click', () => nudge(-1));
   next?.addEventListener('click', () => nudge(1));
 
-  for (const event of ['pointerdown', 'touchstart', 'wheel', 'focusin']) {
+  for (const event of ['pointerdown', 'touchstart', 'focusin']) {
     carousel.addEventListener(event, stopForever, { passive: true, once: true });
   }
+  // A sideways wheel or trackpad swipe is input on the row; a vertical wheel
+  // only scrolls the page past it and leaves rotation running.
+  carousel.addEventListener(
+    'wheel',
+    (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) stopForever();
+    },
+    { passive: true },
+  );
   carousel.addEventListener('mouseenter', () => {
     hovered = true;
   });

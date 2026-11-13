@@ -129,7 +129,11 @@ describe('landing carousel rotation', () => {
   ])('permanently stops after %s inside a carousel (phone: %s)', (event, isPhone) => {
     phone = isPhone;
     const { car, track } = carousel(6, 210, 8, 515);
-    track.firstElementChild!.dispatchEvent(new Event(event, { bubbles: true }));
+    track.firstElementChild!.dispatchEvent(
+      event === 'wheel'
+        ? new WheelEvent('wheel', { bubbles: true, deltaX: 40, deltaY: 0 })
+        : new Event(event, { bubbles: true }),
+    );
     const before = track.style.transform;
     if (isPhone) car.scrollLeft = 137; // A native swipe remains where the reader left it.
     const left = car.scrollLeft;
@@ -139,6 +143,15 @@ describe('landing carousel rotation', () => {
     vi.advanceTimersByTime(30_000);
     expect(track.style.transform).toBe(before);
     expect(car.scrollLeft).toBe(left);
+  });
+
+  it('keeps rotating after a vertical wheel that only scrolls the page past it', () => {
+    const { track, offset } = carousel(4, 200, 10, 410);
+    track.firstElementChild!.dispatchEvent(
+      new WheelEvent('wheel', { bubbles: true, deltaX: 0, deltaY: 120 }),
+    );
+    vi.advanceTimersByTime(10_000);
+    expect(offset()).toBe(210);
   });
 
   it('stops on a navigation click while still allowing manual navigation', () => {

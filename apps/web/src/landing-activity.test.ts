@@ -52,7 +52,7 @@ describe('landing activity', () => {
     ).toBe('/games');
   });
 
-  it('shares one poll between phone mission totals and the live-only activity box, including zero to live', async () => {
+  it('keeps every phone count in the mission on one shared poll, including zero to live', async () => {
     vi.useFakeTimers();
     const counters = { playing: 0, totalCompletedGames: 575, last30dCompletedGames: 261 };
     const fetchMock = vi.fn(async () => jsonResponse(counters));
@@ -71,9 +71,10 @@ describe('landing activity', () => {
     counters.totalCompletedGames = 576;
     counters.last30dCompletedGames = 262;
     await vi.advanceTimersByTimeAsync(20);
-    expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('2 games in play');
+    expect(mission.querySelector('.landing-activity-live')?.textContent).toBe('2 games in play');
+    expect(activity.querySelector('.landing-activity-live')).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(activity.hidden).toBe(false);
+    expect(activity.hidden).toBe(true);
     expect(mission.querySelector('.landing-activity-link')?.textContent).toBe(
       '576games played (262 in the last 30 days)',
     );
@@ -82,7 +83,7 @@ describe('landing activity', () => {
     counters.playing = 0;
     await vi.advanceTimersByTimeAsync(20);
     expect(activity.hidden).toBe(true);
-    expect(activity.querySelector('.landing-activity-live')).toBeNull();
+    expect(mission.querySelector('.landing-activity-live')).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(3);
     activity.remove();
     mission.remove();

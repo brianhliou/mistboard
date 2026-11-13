@@ -40,17 +40,12 @@ export function buildLandingActivity(
   const primary = activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]);
   const totalsTarget = options.totalsTarget ?? body;
   totalsTarget.append(primary);
-  // On phones the mission owns the totals; only a nonzero live line uses this box.
+  // On phones the mission holds every count (totals and the live line), so
+  // this box stays hidden and only owns the poll.
   box.hidden = !!options.totalsTarget;
   box.append(body);
   if (options.hydrate !== false) {
-    void hydrateLandingActivity(
-      box,
-      body,
-      primary,
-      totalsTarget,
-      options.pollMs ?? ACTIVITY_POLL_MS,
-    );
+    void hydrateLandingActivity(box, primary, totalsTarget, options.pollMs ?? ACTIVITY_POLL_MS);
   }
   return box;
 }
@@ -65,7 +60,6 @@ function gamesPlayedLabel(monthCount: number): string {
 
 async function hydrateLandingActivity(
   box: HTMLElement,
-  body: HTMLElement,
   primary: HTMLElement,
   totalsTarget: HTMLElement,
   pollMs: number,
@@ -99,13 +93,12 @@ async function hydrateLandingActivity(
         ),
       ]);
       if (live) live.replaceWith(next);
-      else body.append(next);
+      else totalsTarget.append(next);
       live = next;
     } else {
       live?.remove();
       live = null;
     }
-    if (totalsTarget !== body) box.hidden = !live;
   };
 
   render(await fetchCounters(pollMs));

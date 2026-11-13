@@ -671,8 +671,9 @@ export function buildLandingStage(
 } {
   const locale = currentLocale();
   const phone = opts.phone ?? isPhoneHome();
-  // Phone only: the mission sits under the shortcut tiles and above News.
-  // Build it before activity so both locations share one counters hydrate/poll.
+  // Phone only: the mission sits under the shortcut tiles and above News and
+  // holds every count (games played, games in play). Build it before activity,
+  // which owns the one counters hydrate/poll and stays hidden on phones.
   const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
   const stage = document.createElement('main');
   stage.className = 'landing-stage';
