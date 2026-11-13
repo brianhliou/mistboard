@@ -193,7 +193,7 @@ describe('bot pages', () => {
           root.querySelectorAll<HTMLOptionElement>('.bot-level-select option'),
           (option) => option.value,
         ),
-      ).toEqual(bots.map((bot) => bot.id));
+      ).toEqual(bots.map((bot) => bot.id).reverse());
       for (const bot of bots) {
         const row = buildProfileGameRow({
           roomId: `gmk_${bot.id}`,
@@ -488,7 +488,7 @@ describe('bot pages', () => {
     });
   }
 
-  it('puts General Blunder in its own card ahead of the ladder, never Strongest', async () => {
+  it('puts General Blunder in its own card after the ladder, never Strongest', async () => {
     const payload = rosterPayload();
     payload.bots.push(generalBlunder());
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
@@ -500,10 +500,11 @@ describe('bot pages', () => {
     const cards = [
       ...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card'),
     ];
+    // Strongest first: Pikafish, the Fairy-Stockfish ladder, then General Blunder.
     expect(cards.map((card) => card.dataset.opponentId)).toEqual([
-      'general-blunder',
-      'fairy-stockfish',
       'pikafish',
+      'fairy-stockfish',
+      'general-blunder',
     ]);
     expect(cardFor(root, 'general-blunder')?.querySelector('.bot-level-select')).toBeNull();
     expect(
@@ -514,6 +515,53 @@ describe('bot pages', () => {
     expect(
       cardFor(root, 'general-blunder')?.querySelector('.profile-summary-card-badge')?.textContent,
     ).not.toBe('Strongest');
+  });
+
+  it('lists jieqi strongest first: the first card says Strongest and the picker opens the list at the top level', async () => {
+    const jqe = misty({
+      id: 'jqe',
+      displayName: 'jqe',
+      activeEngineId: 'jqe-jieqi',
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+      playOptions: [{ gameSpecId: 'jieqi', engineId: 'jqe-jieqi', playable: true }],
+      ratings: [],
+    });
+    const ladder = [1, 2, 3].map((level) =>
+      pikafish({
+        id: `pikafish-level-${level}`,
+        displayName: `Pikafish Level ${level}`,
+        supportedGameSpecIds: ['jieqi'],
+        playOptions: [{ gameSpecId: 'jieqi', engineId: `p${level}`, playable: true }],
+      }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({ bots: [...ladder, pikafish(), jqe] }),
+    );
+    window.history.replaceState(null, '', '/bots?game=jieqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+    window.history.replaceState(null, '', '/');
+
+    const cards = [
+      ...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card'),
+    ];
+    expect(cards.map((card) => card.dataset.opponentId)).toEqual(['jqe', 'pikafish']);
+    expect(cards[0]?.querySelector('.profile-summary-card-badge')?.textContent).toBe('Strongest');
+    expect(cards[1]?.querySelector('.profile-summary-card-badge')?.textContent).not.toBe(
+      'Strongest',
+    );
+    const select = cardFor(root, 'pikafish')?.querySelector<HTMLSelectElement>('.bot-level-select');
+    expect([...(select?.options ?? [])].map((option) => option.value)).toEqual([
+      'pikafish',
+      'pikafish-level-3',
+      'pikafish-level-2',
+      'pikafish-level-1',
+    ]);
+    // Newcomers still open on the first-game level, not the top of the list.
+    expect(select?.value).toBe('pikafish-level-2');
   });
 
   it('opens on xiangqi: one ladder card with a level picker, Pikafish strongest, one game per card', async () => {
@@ -556,7 +604,7 @@ describe('bot pages', () => {
         option.textContent,
       ]),
     ).toEqual(
-      [1, 2, 3, 4, 5, 6, 7, 8].map((level) => [`fairy-stockfish-level-${level}`, `Level ${level}`]),
+      [8, 7, 6, 5, 4, 3, 2, 1].map((level) => [`fairy-stockfish-level-${level}`, `Level ${level}`]),
     );
     // Only xiangqi: one Play button, no fortress row.
     expect(ladder.querySelector('[data-game-spec-id="fortress-xiangqi"]')).toBeNull();
@@ -1523,7 +1571,7 @@ describe('/bots covers every launched bot variant', () => {
       expect(
         [...(select?.options ?? [])].map((option) => [option.value, option.textContent]),
       ).toEqual(
-        [1, 2, 3, 4, 5, 6, 7, 8].map((level) => [engineIdAt(base, level), `Level ${level}`]),
+        [8, 7, 6, 5, 4, 3, 2, 1].map((level) => [engineIdAt(base, level), `Level ${level}`]),
       );
       expect(select?.value).toBe(`${base}-level-4`);
       // Her per-game record, rating and bio stay on the card.
@@ -1567,7 +1615,7 @@ describe('/bots covers every launched bot variant', () => {
           '.bot-level-select option',
         ) ?? []),
       ].map((option) => option.value);
-      expect(values).toEqual([1, 2, 3, 4, 5, 6, 7].map((level) => engineIdAt(base, level)));
+      expect(values).toEqual([7, 6, 5, 4, 3, 2, 1].map((level) => engineIdAt(base, level)));
     });
   }
 
@@ -1584,7 +1632,7 @@ describe('/bots covers every launched bot variant', () => {
     await mountBots(root);
     const select = cardFor(root, 'misty')?.querySelector<HTMLSelectElement>('.bot-level-select');
     expect([...(select?.options ?? [])].map((option) => option.textContent)).toEqual(
-      [1, 2, 3, 4, 5, 6, 7].map((level) => `Level ${level}`),
+      [7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
     );
     expect(select?.value).toBe('misty-banqi-level-4');
   });
