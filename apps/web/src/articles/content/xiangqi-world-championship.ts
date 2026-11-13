@@ -656,6 +656,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/nUgtl53Q',
           spec: { ...C_LQ1997 },
           caption:
             'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.',
@@ -675,6 +676,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/eI2FUAlL',
           spec: { ...C_ZGR1991 },
           caption:
             'Zhao Guorong vs Wu Guilin, 1991, from the championship he won.',
@@ -707,6 +709,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/Yfb9i06a',
           spec: { ...C_XYC2007 },
           caption:
             'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.',
@@ -726,6 +729,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/G92vER9D',
           spec: { ...C_ZXX2009 },
           caption:
             'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.',
@@ -745,6 +749,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/6kUsDhga',
           spec: { ...C_JC2011 },
           caption:
             'Jiang Chuan vs Lei Kam Fun, 2011, from the championship he won.',
@@ -768,6 +773,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/ag8UcjsR',
           spec: { ...C_WTY2022 },
           caption:
             'Wang Tianyi vs Wang Kuo, 2022, from the third of his three titles.',
@@ -787,6 +793,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/VvXSjIg8',
           spec: { ...C_ZWT2015 },
           caption:
             'Lại Lý Huynh vs Zheng Weitong, 2015. Two hundred and seventy-four plies, and the man who loses it here takes the world title himself ten years later.',
@@ -806,6 +813,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/E8oNNYjS',
           spec: { ...C_XC2019 },
           caption:
             'Xu Chao vs Huang Xueqian, 2019, the final round. This is the game that won it: nine judged moves between them, and six of those are blunders.',
@@ -825,6 +833,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/DaMW0sZt',
           spec: { ...C_MC2023 },
           caption:
             'Meng Chen vs Lại Lý Huynh, 2023. The second time the future champion loses to a champion before becoming one.',

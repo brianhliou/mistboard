@@ -350,6 +350,7 @@ export const tonyFungGaZenArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/vjOmvwix',
           spec: { ...G_M_144721, startPly: 76, perspective: 'red' },
           caption: "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.",
         },
@@ -371,11 +372,13 @@ export const tonyFungGaZenArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/JJCJJwLg',
           spec: { ...G_M_142503, startPly: 26, perspective: 'red' },
           caption: "Tony Fung Ga Zen vs Wang Dayu, 2026 China league qualifier, round 1, 17 August 2026. Fung won with red in 28 moves. The board opens after black's move 13, with Fung to move.",
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/BdflG21D',
           spec: { ...G_M_142542, startPly: 32, perspective: 'red' },
           caption: "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.",
         },
@@ -394,6 +397,7 @@ export const tonyFungGaZenArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/rfXwld7X',
           spec: { ...G_M_140266, startPly: 79, perspective: 'black' },
           caption: "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.",
         },
@@ -403,6 +407,7 @@ export const tonyFungGaZenArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/tG1sq9TT',
           spec: { ...G_M_140287, startPly: 23, perspective: 'black' },
           caption: "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.",
         },
@@ -438,6 +443,7 @@ export const tonyFungGaZenArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '3ii1g3EK/Ip0dgR4o',
           spec: { ...G_M_118072, startPly: 49, perspective: 'black' },
           caption: "Cheng Yin Lung vs Tony Fung Ga Zen, 2022 World Xiangqi Championship, round 8, 27 October 2022. Fung won with black in 35 moves. The board opens after red's move 25, with Fung to move.",
         },

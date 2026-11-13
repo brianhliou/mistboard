@@ -92,6 +92,34 @@ function chartBuild(change = (a) => a) {
   ];
   return { dir, site, run: () => spawnSync(process.execPath, args, { encoding: 'utf8' }) };
 }
+test('a board with study= ships its record and names its study chapter; a malformed ref refuses', () => {
+  const f = chartBuild();
+  try {
+    const draft = join(f.dir, 'player', 'draft.md');
+    const plain = readFileSync(draft, 'utf8');
+    writeFileSync(
+      draft,
+      plain.replace(
+        '[board key=fixture ply=0]',
+        '[board key=fixture ply=0 study=VSX0aLce/Ogrhzz2m]',
+      ),
+    );
+    const run = f.run();
+    assert.equal(run.status, 0, run.stderr);
+    const out = readFileSync(join(f.dir, 'content', 'test-player.ts'), 'utf8');
+    assert.match(out, /kind: 'xq-replay',\n\s*study: 'VSX0aLce\/Ogrhzz2m',\n\s*spec: /);
+    assert.match(out, /"iccs": "h2e2 h9g7"/);
+    for (const bad of ['VSX0aLce', '../x/y', 'a/b?c=1']) {
+      writeFileSync(
+        draft,
+        plain.replace('[board key=fixture ply=0]', `[board key=fixture ply=0 study=${bad}]`),
+      );
+      assert.notEqual(f.run().status, 0, bad);
+    }
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
 test('generating an article automatically prepares exact stored site analysis and keeps it on regeneration', () => {
   const f = chartBuild();
   try {

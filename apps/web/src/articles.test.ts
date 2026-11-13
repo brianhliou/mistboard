@@ -10,6 +10,7 @@ import {
   BANQI_RULES_THUMBNAIL,
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
+import type { XiangqiReplayBlock } from './articles/types.js';
 import {
   buildArticleFooter,
   buildArticlePage,
@@ -1551,6 +1552,67 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('a game board that names its study', () => {
+  const block = {
+    kind: 'xq-replay',
+    study: 'VSX0aLce/Ogrhzz2m',
+    spec: {
+      iccs: 'h2e2 h9g7',
+      red: 'Red',
+      black: 'Black',
+      event: '2026 Shanghai Cup',
+      resultText: '1-0',
+      startPly: 41,
+    },
+    caption: 'Move 41 is the one to watch.',
+  } satisfies XiangqiReplayBlock;
+
+  it('renders that chapter embed at the start ply, titled with the event, in place of the stepper', () => {
+    const figure = renderBlock(block);
+    const frame = figure.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe('/embed/study/VSX0aLce/Ogrhzz2m?ply=41');
+    expect(frame?.title).toBe('2026 Shanghai Cup');
+    expect(frame?.classList.contains('article-embed-frame')).toBe(true);
+    expect(frame?.style.aspectRatio).toBe('702 / 800');
+    expect(figure.querySelector('figcaption')?.textContent).toBe(block.caption);
+    expect(figure.dataset.pendingWidget).toBeUndefined();
+  });
+
+  it('opens on the start position when the spec has no start ply', () => {
+    const { startPly: _, ...spec } = block.spec;
+    const frame = renderBlock({ ...block, spec }).querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe('/embed/study/VSX0aLce/Ogrhzz2m');
+  });
+
+  it('refuses a reference that is not studyId/chapterId', () => {
+    expect(() => renderBlock({ ...block, study: 'VSX0aLce' })).toThrow(/studyId\/chapterId/);
+    expect(() => renderBlock({ ...block, study: '../x/y?z' })).toThrow(/studyId\/chapterId/);
+  });
+
+  it('every study reference on a published page is well formed and points at one game', () => {
+    const refs = new Map<string, string>();
+    for (const article of articles) {
+      const walk = (v: unknown): void => {
+        if (Array.isArray(v)) {
+          v.forEach(walk);
+          return;
+        }
+        if (!v || typeof v !== 'object') return;
+        const o = v as { kind?: string; study?: string; spec?: { iccs?: string } };
+        if (o.kind === 'xq-replay' && o.study) {
+          expect(o.study).toMatch(/^[A-Za-z0-9_-]{8}\/[A-Za-z0-9_-]{8}$/);
+          const prior = refs.get(o.study);
+          if (prior !== undefined) expect(o.spec?.iccs).toBe(prior);
+          refs.set(o.study, o.spec?.iccs ?? '');
+        }
+        for (const x of Object.values(o)) walk(x);
+      };
+      walk(article);
+    }
+    expect(refs.size).toBeGreaterThanOrEqual(51);
   });
 });
 
