@@ -2,6 +2,11 @@ import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { targetedChallengeRequestBody } from './challenge-model.js';
+import {
+  type CorrespondenceGameType,
+  rememberCorrespondenceGameType,
+  storedCorrespondenceGameType,
+} from './correspondence-game-type.js';
 import { correspondenceRatedAvailable, correspondenceSpecIdsFor } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -116,6 +121,13 @@ export function openChallengeDialog(opts: {
   const notCounted = isLikelyStatsExcluded();
   const ratedAvailable = (): boolean =>
     !notCounted && correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
+  // Opens on the player's last pick, Casual until they make one
+  // (correspondence-game-type.ts); a forced Casual is not saved.
+  let wantedGameType: CorrespondenceGameType = storedCorrespondenceGameType();
+  rated.addEventListener('change', () => {
+    wantedGameType = rated.value === 'rated' ? 'rated' : 'casual';
+    rememberCorrespondenceGameType(wantedGameType);
+  });
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
@@ -123,7 +135,7 @@ export function openChallengeDialog(opts: {
       ratedOption.disabled = !available;
       if (notCounted) ratedOption.textContent = t('setup.ratedNotCounted', {}, locale);
     }
-    if (!available) rated.value = 'casual';
+    rated.value = available ? wantedGameType : 'casual';
   };
   syncRated();
   // Absent, not just disabled, while rated correspondence is held (flag off).

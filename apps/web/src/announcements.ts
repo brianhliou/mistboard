@@ -55,6 +55,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-11-13',
+    kind: 'release',
+    headline: 'Correspondence games can now be rated.',
+    body: 'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.',
+    href: '/correspondence',
+    cta: 'Play by correspondence',
+  },
+  {
     date: '2026-11-10',
     kind: 'release',
     headline: 'Three Kingdoms Banqi is open to everyone.',

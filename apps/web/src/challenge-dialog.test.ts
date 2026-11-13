@@ -1,9 +1,13 @@
 import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS } from '@mistboard/game';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 
 describe('openChallengeDialog', () => {
+  // Casual/Rated is remembered in browser storage; start each test from no pick.
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+  });
   afterEach(() => {
     for (const d of document.querySelectorAll('dialog[data-challenge-dialog]')) d.remove();
     vi.restoreAllMocks();
@@ -97,6 +101,8 @@ describe('openChallengeDialog', () => {
     const on = open();
     expect(on.rated?.hidden).toBe(false);
     expect(on.rated?.options[1]?.disabled).toBe(false);
+    // Casual until the player picks Rated (decided 2026-11-12).
+    expect(on.rated?.value).toBe('casual');
     on.rated!.value = 'rated';
     [...(on.dialog?.querySelectorAll('button') ?? [])]
       .find((b) => b.textContent === 'Send challenge')
@@ -104,4 +110,43 @@ describe('openChallengeDialog', () => {
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as { rated?: boolean };
     expect(body.rated).toBe(true);
   });
+
+  it('opens on the last Casual/Rated pick, shared with the Start a game form', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    setRatedModeEnabled(true, true);
+    const open = () => {
+      for (const d of document.querySelectorAll('dialog[data-challenge-dialog]')) d.remove();
+      openChallengeDialog({ handle: 'kim' });
+      return document.querySelector<HTMLSelectElement>(
+        'dialog[data-challenge-dialog] select[aria-label="Rating"]',
+      )!;
+    };
+    const first = open();
+    expect(first.value).toBe('casual');
+    first.value = 'rated';
+    first.dispatchEvent(new Event('change'));
+    expect(open().value).toBe('rated');
+    const back = open();
+    back.value = 'casual';
+    back.dispatchEvent(new Event('change'));
+    expect(open().value).toBe('casual');
+  });
 });
+
+// The test DOM has no browser storage; give each test an empty one.
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
+}

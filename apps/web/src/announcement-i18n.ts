@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-13 (rated correspondence) ── 计分 / 休闲 follow the play catalog's
+  // Casual/Rated switch, 外部协助 its fair-play pledge (account.registerFairPlay).
+  'Correspondence games can now be rated.': '通信对局现在可以计分了。',
+  'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.':
+    '发起通信对局或向他人发出通信挑战时，可以选择计分。每种棋各有独立的通信对局等级分，与实时对局的等级分分开计算，并显示在你的个人资料中。除非你选择计分，对局默认为休闲。计分对局中不得使用引擎或其他外部协助。',
   'Three Kingdoms Banqi is open to everyone.': '三国暗棋向所有人开放。',
   'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
     '与朋友休闲对弈，在大厅寻找对手，或挑战 Misty。在 9×5 棋盘上翻子，按象棋走法吃子，先得 100 分获胜。所有对局均不计分。',
@@ -593,6 +598,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-13 (rated correspondence) ──
+  'Correspondence games can now be rated.': '通信對局現在可以計分了。',
+  'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.':
+    '發起通信對局或向他人發出通信挑戰時，可以選擇計分。每種棋各有獨立的通信對局等級分，與即時對局的等級分分開計算，並顯示在你的個人資料中。除非你選擇計分，對局預設為休閒。計分對局中不得使用引擎或其他外部協助。',
   'Three Kingdoms Banqi is open to everyone.': '三國暗棋向所有人開放。',
   'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
     '與朋友休閒對弈，在大廳尋找對手，或挑戰 Misty。在 9×5 棋盤上翻子，按象棋走法吃子，先得 100 分獲勝。所有對局均不計分。',
