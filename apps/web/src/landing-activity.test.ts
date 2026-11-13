@@ -8,6 +8,10 @@ beforeEach(() => resetLiveStatsCacheForTests());
 describe('landing activity', () => {
   afterEach(() => {
     document.body.replaceChildren();
+    if (vi.isFakeTimers()) {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
     vi.unstubAllGlobals();
     setVisibility('visible');
   });
@@ -46,6 +50,44 @@ describe('landing activity', () => {
         .querySelector<HTMLAnchorElement>('.landing-activity-live a.landing-activity-inline-stat')
         ?.getAttribute('href'),
     ).toBe('/games');
+  });
+
+  it('shares one poll between phone mission totals and the live-only activity box, including zero to live', async () => {
+    vi.useFakeTimers();
+    const counters = { playing: 0, totalCompletedGames: 575, last30dCompletedGames: 261 };
+    const fetchMock = vi.fn(async () => jsonResponse(counters));
+    vi.stubGlobal('fetch', fetchMock);
+    const mission = document.createElement('div');
+    const activity = buildLandingActivity({ totalsTarget: mission, pollMs: 20 });
+    document.body.append(activity, mission);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mission.querySelector('.landing-activity-value')?.textContent).toBe('575');
+    expect(activity.querySelector('.landing-activity-primary')).toBeNull();
+    expect(activity.hidden).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const headline = mission.querySelector('.landing-activity-value');
+
+    counters.playing = 2;
+    counters.totalCompletedGames = 576;
+    counters.last30dCompletedGames = 262;
+    await vi.advanceTimersByTimeAsync(20);
+    expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('2 games in play');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(activity.hidden).toBe(false);
+    expect(mission.querySelector('.landing-activity-link')?.textContent).toBe(
+      '576games played (262 in the last 30 days)',
+    );
+    expect(mission.querySelector('.landing-activity-value')).toBe(headline);
+
+    counters.playing = 0;
+    await vi.advanceTimersByTimeAsync(20);
+    expect(activity.hidden).toBe(true);
+    expect(activity.querySelector('.landing-activity-live')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    activity.remove();
+    mission.remove();
+    await vi.advanceTimersByTimeAsync(20);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('singularises one game in play', async () => {

@@ -3154,8 +3154,8 @@
     display: inline;
   }
 
-  /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place
-     of the auto-rotating carousel (its transform is pinned off). */
+  /* Blog rows: a native swipe strip, bleeding off the right edge. Automatic
+     rotation scrolls to each card's snap position until the first interaction. */
   .landing-demo .landing-articles-row {
     margin-top: 0;
   }
@@ -3176,7 +3176,7 @@
   .landing-demo .landing-articles-row .landing-carousel-track {
     --landing-carousel-gap: 10px;
     /* biome-ignore lint/complexity/noImportantStyles: the carousel script writes
-       an inline transform as it rotates; a swiped strip must not move on its own. */
+       an inline transform above phone width; phones rotate through native scrolling. */
     transform: none !important;
     padding-right: 16px;
   }
@@ -3209,7 +3209,7 @@
     display: none;
   }
 
-  /* The mission closes the phone home, under the chat. */
+  /* The mission sits under the shortcut tiles and above News (order: 4). */
   .landing-phone-mission {
     padding: 4px 2px;
   }
@@ -3228,6 +3228,10 @@
     color: var(--site-text);
     font-size: 17px;
     line-height: 1.4;
+  }
+
+  .landing-phone-mission-totals {
+    margin-bottom: 6px;
   }
 
   .landing-phone-mission-about {

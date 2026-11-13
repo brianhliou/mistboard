@@ -28,7 +28,7 @@ type Totals = { totalCompletedGames: number; last30dCompletedGames: number };
 type Counters = { playing: number; totals: Totals | null };
 
 export function buildLandingActivity(
-  options: { hydrate?: boolean; pollMs?: number } = {},
+  options: { hydrate?: boolean; pollMs?: number; totalsTarget?: HTMLElement } = {},
 ): HTMLElement {
   const box = document.createElement('section');
   box.className = 'landing-activity';
@@ -38,10 +38,19 @@ export function buildLandingActivity(
   // No live-line placeholder: it would flash before hydrate on the (common)
   // zero case and then vanish.
   const primary = activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]);
-  body.append(primary);
+  const totalsTarget = options.totalsTarget ?? body;
+  totalsTarget.append(primary);
+  // On phones the mission owns the totals; only a nonzero live line uses this box.
+  box.hidden = !!options.totalsTarget;
   box.append(body);
   if (options.hydrate !== false) {
-    void hydrateLandingActivity(box, body, primary, options.pollMs ?? ACTIVITY_POLL_MS);
+    void hydrateLandingActivity(
+      box,
+      body,
+      primary,
+      totalsTarget,
+      options.pollMs ?? ACTIVITY_POLL_MS,
+    );
   }
   return box;
 }
@@ -58,6 +67,7 @@ async function hydrateLandingActivity(
   box: HTMLElement,
   body: HTMLElement,
   primary: HTMLElement,
+  totalsTarget: HTMLElement,
   pollMs: number,
 ): Promise<void> {
   let hasTotals = false;
@@ -73,7 +83,7 @@ async function hydrateLandingActivity(
         label.textContent = gamesPlayedLabel(last30dCompletedGames);
         label.setAttribute('title', t('home.gamesPlayedMonthTitle'));
       }
-      if (!primary.isConnected) body.prepend(primary);
+      if (primary.parentElement !== totalsTarget) totalsTarget.prepend(primary);
       hasTotals = true;
     } else if (!hasTotals) {
       // Never a placeholder dash beside a real live line.
@@ -95,6 +105,7 @@ async function hydrateLandingActivity(
       live?.remove();
       live = null;
     }
+    if (totalsTarget !== body) box.hidden = !live;
   };
 
   render(await fetchCounters(pollMs));
