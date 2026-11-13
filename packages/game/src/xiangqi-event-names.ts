@@ -68,6 +68,10 @@ export const XIANGQI_EVENT_GLOSSARY: ReadonlyArray<readonly [string, string]> = 
   ['海选赛', 'Qualifier'],
   ['双人赛', 'Pairs'],
   ['快棋', 'Rapid'],
+  // The World Open's groups (dpxq files each as its own tour): a bare 团体
+  // fell through to pinyin, "Women Tuanti".
+  ['女子团体', "Women's Team"],
+  ['男子团体', "Men's Team"],
   ['女子组', 'Women'],
   ['男子组', 'Men'],
   ['公开组', 'Open'],
