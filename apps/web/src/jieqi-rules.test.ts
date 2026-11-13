@@ -23,7 +23,7 @@ describe('English Jieqi rules review', () => {
     expect(page.querySelector('#tips-for-playing-well')).toBeNull();
     expect(
       page.querySelector(
-        'iframe[src*="/embed/study/yjFgHr3X/onCJNmMA"], [data-embed-path*="onCJNmMA"]',
+        'iframe[src*="/embed/study/4KNglJHs/olxXB9Ny"], [data-embed-path*="olxXB9Ny"]',
       ),
     ).not.toBeNull();
   });

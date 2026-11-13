@@ -172,7 +172,7 @@ export const jieqiArticle: Article = {
           kind: 'embed',
           // Local study ids (scripts/variant-lab/rules-page-games/plans/jieqi.plan.json);
           // swapped for the prod ids when the study is created there.
-          path: '/embed/study/yjFgHr3X/onCJNmMA',
+          path: '/embed/study/4KNglJHs/olxXB9Ny',
           title: 'Jieqi: jqe against AB-JChess, Black mates on move 25',
           // A placeholder until the card reports its height: the 702px column
           // holds the board, seat rows, win-chance graph, controls and credit.

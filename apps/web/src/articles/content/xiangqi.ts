@@ -330,7 +330,7 @@ export const xiangqiArticle: Article = {
             kind: 'embed',
             // Local study ids (scripts/variant-lab/rules-page-games/plans/xiangqi.plan.json);
             // swapped for the prod ids when the study is created there.
-            path: '/embed/study/lZQBORsn/nP95SV4C',
+            path: '/embed/study/FhTsmUme/Z9O7CHU2',
             title: 'Sacrifice the Horse in 13',
             // Width-bound at the 702px column, as the jieqi rules page's embed.
             aspect: [702, 800],

@@ -106,7 +106,7 @@ describe('rules page sample games', () => {
   it('xiangqi: the 1632 trap, legal from the start, Red mates on move 13', () => {
     const chapter = readPlan('xiangqi').create.chapter;
     expect(chapter.variant).toBe('xiangqi');
-    expect(embedPaths('xiangqi')).toContain('/embed/study/lZQBORsn/nP95SV4C');
+    expect(embedPaths('xiangqi')).toContain('/embed/study/FhTsmUme/Z9O7CHU2');
     let state: XiangqiGameState = createInitialStandardXiangqiState('rules-xiangqi');
     const line = mainLine(chapter.tree.root);
     expect(line).toHaveLength(25);
@@ -128,7 +128,7 @@ describe('rules page sample games', () => {
   it('jungle-flip: game 6 replays on its deal, every tile is turned, no line turns one', () => {
     const chapter = readPlan('jungle-flip').create.chapter;
     expect(chapter.variant).toBe('jungle-flip');
-    expect(embedPaths('jungle-flip')).toContain('/embed/study/rMatOJCL/JkINhawC');
+    expect(embedPaths('jungle-flip')).toContain('/embed/study/7d1IkHPE/vUJ3Yodx');
     const parsed = parseJungleFlipFen(chapter.tree.rootFen, { gameId: 'rules-flip' } as never);
     if (!parsed.ok || parsed.sampled) throw new Error('the chapter needs its dealt root');
     const deal: JungleFlipDeal = ALL_JUNGLE_FLIP_SQUARES.map((sq) => {
@@ -173,7 +173,7 @@ describe('rules page sample games', () => {
   it('jungle: KataGo vs MistyJungle game 0, legal throughout, Red enters the den', () => {
     const chapter = readPlan('jungle').create.chapter;
     expect(chapter.variant).toBe('jungle');
-    expect(embedPaths('jungle')).toContain('/embed/study/Qg4lD1ac/xk9oEFSp');
+    expect(embedPaths('jungle')).toContain('/embed/study/lVSs3WaU/9itqMaqN');
     const play = (s: JungleGameState, t: string): JungleGameState => {
       const m = engineUciToJungleMove(t);
       const next = m && applyJungleMove(s, m);
@@ -196,7 +196,7 @@ describe('rules page sample games', () => {
   it('crazyhouse-xiangqi: Win 3 of the companion study, legal throughout, a soldier drop mates', () => {
     const chapter = readPlan('crazyhouse-xiangqi').create.chapter;
     expect(chapter.variant).toBe('crazyhouse-xiangqi');
-    expect(embedPaths('crazyhouse-xiangqi')).toContain('/embed/study/MszNccka/DUIIzl7E');
+    expect(embedPaths('crazyhouse-xiangqi')).toContain('/embed/study/NI4LXant/RyY4z1M3');
     const play = (s: CrazyhouseXiangqiGameState, t: string): CrazyhouseXiangqiGameState => {
       const m = crazyhouseXiangqiMoveFromUci(t);
       if (!m || s.status.type !== 'playing' || !isCrazyhouseXiangqiLegalMove(s, m))
@@ -221,7 +221,7 @@ describe('rules page sample games', () => {
   it('duck-xiangqi: Game 1 of the companion study, legal throughout, Black takes the general', () => {
     const chapter = readPlan('duck-xiangqi').create.chapter;
     expect(chapter.variant).toBe('duck-xiangqi');
-    expect(embedPaths('duck-xiangqi')).toContain('/embed/study/nBf6yO5F/fMtBPsH4');
+    expect(embedPaths('duck-xiangqi')).toContain('/embed/study/Hkwqd2kn/ZlZFbv0q');
     const play = (s: DuckXiangqiGameState, t: string): DuckXiangqiGameState => {
       const m = /^([a-i]\d+)([a-i]\d+)(?:@([a-i]\d+))?$/.exec(t);
       const turn = m && {

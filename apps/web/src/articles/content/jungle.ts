@@ -212,7 +212,7 @@ export const jungleArticle: Article = {
           kind: 'embed',
           // Local study ids (scripts/variant-lab/rules-page-games/plans/jungle.plan.json);
           // swapped for the prod ids when the prod study is created from that plan.
-          path: '/embed/study/Qg4lD1ac/xk9oEFSp',
+          path: '/embed/study/lVSs3WaU/9itqMaqN',
           title: 'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry',
           // Width-bound at the 702px column: the 7x9 board gets the column
           // minus the move sheet, plus seat rows, controls, header and credit.

@@ -207,7 +207,7 @@ export const luatCoUpArticle: Article = {
           // for the prod ids when the study is created there. Study comments are
           // localized only to en, zh-Hans and zh-Hant, so a Vietnamese reader gets
           // the English notes.
-          path: '/embed/study/yjFgHr3X/onCJNmMA',
+          path: '/embed/study/4KNglJHs/olxXB9Ny',
           title: 'Cờ úp: jqe gặp AB-JChess, Đen chiếu bí ở nước 25',
           aspect: [702, 800],
         } as ArticleBlock,
