@@ -83,17 +83,26 @@
   }
 }
 
-/* Review seat row: the seat's captures, then its HP meter, which takes the
-   rest of the row. */
+/* Review seat row: the seat's captures, then its HP at the row's end as a
+   compact readout, "32/60 HP" over a thin bar of the same width. A bar that
+   stretched across the row competed with the captures, and a Fanfanqi seat can
+   take pieces of both inks; a fixed readout leaves the captures the rest of the
+   row, and the row stays one line, as every review seat row does. */
 .review-seat .review-seat__material:has(> .ffq-banqi-hp-meter) {
   flex: 1 1 auto;
 }
 .review-seat__material > .ffq-banqi-hp-meter {
-  margin-left: 6px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: 6px;
   font-size: 11px;
+  line-height: 1;
 }
 .review-seat__material > .ffq-banqi-hp-meter progress {
-  min-width: 48px;
-  max-width: 160px;
-  height: 8px;
+  order: 1;
+  width: 100%;
+  height: 4px;
 }
