@@ -83,6 +83,14 @@ export type XiangqiBroadcastGameDetails = {
   opening?: string;
 };
 
+/** Snapshot after the latest move; `at` is the server receipt time in Unix
+ *  milliseconds. Push request fields `red`/`black` map to `redMs`/`blackMs`. */
+export type XiangqiBroadcastClock = {
+  redMs: number;
+  blackMs: number;
+  at: number;
+};
+
 export type XiangqiBroadcastBoard = {
   schema: typeof XIANGQI_BROADCAST_SCHEMA;
   id: string;
@@ -95,6 +103,7 @@ export type XiangqiBroadcastBoard = {
   status: XiangqiBroadcastBoardStatus;
   result: XiangqiBroadcastResult;
   moves: XiangqiMove[];
+  clock?: XiangqiBroadcastClock;
   sourceUrl?: string;
   details?: XiangqiBroadcastGameDetails;
   /** Set on a finished game the source published a record for that we do not
@@ -277,10 +286,23 @@ export function validateXiangqiBroadcastBoard(
   validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
   if (value.details !== undefined) validateGameDetails(value.details, errors);
+  if (value.clock !== undefined) validateClock(value.clock, errors);
   if (value.recordWithheld !== undefined) validateRecordWithheld(value, errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+function validateClock(value: unknown, errors: string[]): void {
+  if (!isRecord(value)) {
+    errors.push('board.clock must be an object');
+    return;
+  }
+  for (const key of ['redMs', 'blackMs', 'at'] as const) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0) {
+      errors.push(`board.clock.${key} must be a finite non-negative number`);
+    }
+  }
 }
 
 const RECORD_WITHHELD = new Set<XiangqiBroadcastRecordWithheld>(['ambiguous']);

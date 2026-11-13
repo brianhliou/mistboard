@@ -16,6 +16,75 @@ import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.
 // The canonical anchor used across the import tests: 炮二平五 = C2.5 = h3->e3.
 const OPENING = 'h3e3';
 
+test('push PGN retains routing, players, result and time control per game', () => {
+  const games = parseXiangqiPgn(`[Round "3.12"]
+[Board "12"]
+[White "Red Master"]
+[Black "Black Master"]
+[TimeControl "90+30"]
+[Result "*"]
+
+1. h2-e2 h9-g7 2. h0-g2 i9-h9 *
+
+[Round "4"]
+[Board "1"]
+[Red "Red Two"]
+[Result "1-0"]
+
+1. C2.5 1-0`);
+  assert.equal(games.length, 2);
+  assert.equal(games[0]?.error, undefined);
+  assert.equal(games[0]?.plyCount, 4);
+  assert.equal(games[0]?.tags.Round, '3.12');
+  assert.equal(games[0]?.tags.Board, '12');
+  assert.equal(games[0]?.tags.TimeControl, '90+30');
+  assert.deepEqual(xiangqiPgnPlayers(games[0]!.tags), { red: 'Red Master', black: 'Black Master' });
+  assert.equal(games[0]?.result, '*');
+  assert.equal(games[1]?.error, undefined);
+  assert.equal(games[1]?.result, '1-0');
+});
+
+test('PGN supports forced notation and structured atomic mainline failures', () => {
+  const [forced] = parseXiangqiPgn('1. h2e2 *', { format: 'coordinate' });
+  assert.deepEqual(forced?.failure, {
+    code: 'illegal_move',
+    format: 'coordinate',
+    ply: 1,
+    move: 'h2e2',
+  });
+  assert.equal(parseXiangqiPgn('1. h2e2 *')[0]?.plyCount, 1);
+  const games = parseXiangqiPgn('[Round "1"]\n\n1. h2-e2 h9-g9 *\n\n[Round "2"]\n\n1. h2-e2 *', {
+    format: 'uci-0indexed',
+  });
+  assert.deepEqual(games[0]?.failure, {
+    code: 'illegal_move',
+    format: 'uci-0indexed',
+    ply: 2,
+    move: 'h9-g9',
+  });
+  assert.deepEqual(games[0]?.children, []);
+  assert.equal(games[0]?.plyCount, 0);
+  assert.equal(games[1]?.plyCount, 1);
+  assert.deepEqual(parseXiangqiPgn('1. unreadable *')[0]?.failure, { code: 'unknown_notation' });
+});
+
+test('push can require a standard PGN start without changing study imports', () => {
+  const custom = '[FEN "3k5/9/9/9/9/9/9/9/9/4K4 w - - 0 1"]\n\n*';
+  assert.equal(parseXiangqiPgn(custom)[0]?.error, undefined);
+  for (const source of [custom, '[FEN "not-a-fen"]\n\n*']) {
+    const [game] = parseXiangqiPgn(source, { requireStandardStart: true });
+    assert.deepEqual(game?.failure, { code: 'unsupported_start_position' });
+    assert.deepEqual(game?.children, []);
+    assert.equal(game?.plyCount, 0);
+  }
+  const fen = standardXiangqiFen(createInitialXiangqiState('pgn'));
+  const [standard] = parseXiangqiPgn(`[FEN "${fen}"]\n\n1. h2-e2 *`, {
+    requireStandardStart: true,
+  });
+  assert.equal(standard?.error, undefined);
+  assert.equal(standard?.plyCount, 1);
+});
+
 const continuedRecords = JSON.parse(
   readFileSync(
     new URL('../fixtures/xiangqi-notation/adjudicated-records.json', import.meta.url),

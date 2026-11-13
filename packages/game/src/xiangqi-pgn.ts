@@ -17,6 +17,7 @@
 
 import {
   createInitialXiangqiState,
+  positionRepetitionKey,
   type XiangqiGameState,
   type XiangqiMove,
 } from './variants-xiangqi.js';
@@ -24,6 +25,8 @@ import { applyXiangqiRecordMove } from './variants-xiangqi-standard.js';
 import {
   importXiangqiGame,
   resolveXiangqiMoveInFormat,
+  type XiangqiImportFailure,
+  type XiangqiImportOptions,
   type XiangqiMoveFormat,
 } from './xiangqi-import.js';
 import { formatXiangqiMove, type XiangqiNotationStyle } from './xiangqi-notation-format.js';
@@ -59,6 +62,17 @@ export interface XiangqiPgnGame {
   /** Set when the movetext could not be fully read; the tree holds whatever
    *  replayed before the failure, so a partial import is still offerable. */
   error?: string;
+  /** Mainline import diagnostics, or an opt-in standard-start rejection.
+   *  A failed mainline has no children and zero plies; study variations keep
+   *  their existing best-effort import behavior. */
+  failure?: XiangqiImportFailure | { code: 'unsupported_start_position' };
+}
+
+export interface XiangqiPgnOptions {
+  format?: XiangqiImportOptions['format'];
+  /** Broadcast push only accepts the opening array with red to move. The
+   *  default still permits custom-start studies and endgame compositions. */
+  requireStandardStart?: boolean;
 }
 
 // `!`/`?` suffixes are the same information as $1-$6 in a different spelling.
@@ -91,8 +105,8 @@ interface RawNode {
 /** Read a PGN file into one entry per game. Never throws: an unreadable game
  *  comes back with `error` set so a multi-game import can report per game
  *  instead of failing the whole file. */
-export function parseXiangqiPgn(input: string): XiangqiPgnGame[] {
-  return splitGames(input).map(readGame);
+export function parseXiangqiPgn(input: string, options: XiangqiPgnOptions = {}): XiangqiPgnGame[] {
+  return splitGames(input).map((raw) => readGame(raw, options));
 }
 
 // --- splitting a multi-game file ---------------------------------------------
@@ -264,7 +278,7 @@ function buildNodes(steps: readonly Step[]): RawNode[] {
 
 // --- resolution ---------------------------------------------------------------
 
-function readGame(raw: string): XiangqiPgnGame {
+function readGame(raw: string, options: XiangqiPgnOptions): XiangqiPgnGame {
   const { tags, movetext } = readTags(raw);
   const tokenizer: Tokenizer = { text: movetext, pos: 0 };
   const parsed = readSequence(tokenizer, 0);
@@ -272,6 +286,24 @@ function readGame(raw: string): XiangqiPgnGame {
   const result = readResult(movetext, tags);
 
   const start = startState(tags);
+  if (
+    options.requireStandardStart &&
+    tags.FEN !== undefined &&
+    (!start.ok ||
+      !tags.FEN.trim() ||
+      positionRepetitionKey(start.state) !==
+        positionRepetitionKey(createInitialXiangqiState('pgn-import')))
+  ) {
+    return {
+      tags,
+      result,
+      children: [],
+      format: null,
+      plyCount: 0,
+      error: 'The [FEN] tag must name the standard opening position.',
+      failure: { code: 'unsupported_start_position' },
+    };
+  }
   if (!start.ok) {
     return {
       tags,
@@ -298,7 +330,10 @@ function readGame(raw: string): XiangqiPgnGame {
     };
   }
 
-  const sniff = importXiangqiGame(mainline.join(' '), { initialState: start.state });
+  const sniff = importXiangqiGame(mainline.join(' '), {
+    initialState: start.state,
+    format: options.format,
+  });
   if (!sniff.format) {
     return {
       tags,
@@ -308,6 +343,7 @@ function readGame(raw: string): XiangqiPgnGame {
       format: null,
       plyCount: 0,
       error: sniff.error ?? 'Unrecognized move notation.',
+      failure: sniff.failure,
     };
   }
 

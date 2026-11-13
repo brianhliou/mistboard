@@ -96,6 +96,117 @@ const COMPOSITION_2 = {
 };
 const STANDARD_BINIT = '0919293949596979891777062646668600102030405060708012720323436383';
 
+test('forced ICCS, WXF and Chinese read the same push game, including ICCS dashes', () => {
+  const expected = [
+    { from: 'h3', to: 'e3' },
+    { from: 'h10', to: 'g8' },
+    { from: 'h1', to: 'g3' },
+    { from: 'i10', to: 'h10' },
+  ];
+  for (const [format, text] of [
+    ['uci-0indexed', 'h2e2 h9g7 h0g2 i9h9'],
+    ['uci-0indexed', 'h2-e2 h9-g7 h0-g2 i9-h9'],
+    ['wxf', 'C2.5 H8+7 H2+3 R9.8'],
+    ['chinese', '炮二平五 马8进7 马二进三 车9平8'],
+  ] as const) {
+    const result = importXiangqiGame(text, { format });
+    assert.equal(result.error, undefined);
+    assert.equal(result.format, format);
+    assert.deepEqual(result.moves, expected);
+  }
+});
+
+test('forced format takes precedence over the default legality-guided sniffer', () => {
+  assert.equal(importXiangqiGame('h2e2').format, 'uci-0indexed');
+  const wrong = importXiangqiGame('h2e2', { format: 'coordinate' });
+  assert.deepEqual(wrong.failure, {
+    code: 'illegal_move',
+    format: 'coordinate',
+    ply: 1,
+    move: 'h2e2',
+  });
+  assert.deepEqual(wrong.moves, []);
+
+  // On a custom study position both rank conventions can read legally. The
+  // explicit codec still wins over the default native-coordinate priority.
+  const initialState = {
+    ...createInitialXiangqiState('forced'),
+    board: {
+      e1: { color: 'red', role: 'general' },
+      e10: { color: 'black', role: 'general' },
+      e4: { color: 'red', role: 'soldier' },
+      h3: { color: 'red', role: 'cannon' },
+      h4: { color: 'red', role: 'cannon' },
+    } satisfies XiangqiBoard,
+  };
+  assert.deepEqual(importXiangqiGame('h3f3', { initialState }).moves, [{ from: 'h3', to: 'f3' }]);
+  assert.deepEqual(importXiangqiGame('h3f3', { initialState, format: 'uci-0indexed' }).moves, [
+    { from: 'h4', to: 'f4' },
+  ]);
+});
+
+test('illegal moves report the original token and 1-based ply with no partial moves', () => {
+  for (const [format, text, move] of [
+    ['uci-0indexed', 'h2-e2 h9-g9', 'h9-g9'],
+    ['uci-0indexed', 'h2-e2 h9--g7', 'h9--g7'],
+    ['wxf', 'C2.5 H8.7', 'H8.7'],
+    ['chinese', '炮二平五 马8平7', '马8平7'],
+  ] as const) {
+    for (const options of [{}, { format }]) {
+      const result = importXiangqiGame(text, options);
+      assert.deepEqual(result.moves, []);
+      assert.equal(result.format, null);
+      assert.deepEqual(result.failure, { code: 'illegal_move', format, ply: 2, move });
+    }
+  }
+});
+
+test('a malformed later token is diagnosed rather than truncating the game', () => {
+  for (const [format, first] of [
+    ['uci-0indexed', 'h2-e2'],
+    ['wxf', 'C2.5'],
+    ['chinese', '炮二平五'],
+  ] as const) {
+    for (const options of [{}, { format }]) {
+      const result = importXiangqiGame(`${first} broken!`, options);
+      assert.deepEqual(result.moves, []);
+      assert.deepEqual(result.failure, {
+        code: 'illegal_move',
+        format,
+        ply: 2,
+        move: 'broken!',
+      });
+    }
+  }
+  const trailing = importXiangqiGame('炮二平五x', { format: 'chinese' });
+  assert.deepEqual(trailing.moves, []);
+  assert.deepEqual(trailing.failure, {
+    code: 'illegal_move',
+    format: 'chinese',
+    ply: 2,
+    move: 'x',
+  });
+});
+
+test('Chinese imports retain legacy whitespace and punctuation tolerance', () => {
+  for (const options of [{}, { format: 'chinese' as const }]) {
+    assert.deepEqual(
+      importXiangqiGame('炮 二 平 五。马8进7', options).moves,
+      importXiangqiGame('炮二平五 马8进7').moves,
+    );
+  }
+});
+
+test('nothing readable is unknown notation, and a forced format never falls back', () => {
+  for (const text of ['unreadable', '']) {
+    assert.deepEqual(importXiangqiGame(text).failure, { code: 'unknown_notation' });
+  }
+  assert.deepEqual(importXiangqiGame('C2.5', { format: 'chinese' }).failure, {
+    code: 'unknown_notation',
+  });
+  assert.equal(importXiangqiGame('C2.5').format, 'wxf');
+});
+
 test('xiangqiBoardFromDhtmlxqBinit decodes the standard start', () => {
   assert.deepEqual(xiangqiBoardFromDhtmlxqBinit(STANDARD_BINIT), createInitialXiangqiBoard());
 });

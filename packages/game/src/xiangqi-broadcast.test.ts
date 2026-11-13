@@ -19,6 +19,33 @@ function loadJson(path: URL): unknown {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+test('a canonical broadcast clock is optional and survives validation unchanged', () => {
+  const board = loadJson(new URL('games/men-r1-b02-live.json', fixtureRoot)) as object;
+  const clock = { redMs: 1712000, blackMs: 0, at: 1794585600000 };
+  const parsed = validateXiangqiBroadcastBoard({ ...board, clock });
+  assert.ok(parsed.ok);
+  assert.deepEqual(parsed.value.clock, clock);
+  assert.equal(validateXiangqiBroadcastBoard(board).ok, true);
+});
+
+test('broadcast clock validation rejects malformed, missing and non-finite values', () => {
+  const board = loadJson(new URL('games/men-r1-b02-live.json', fixtureRoot)) as object;
+  for (const clock of [null, [], 'clock', {}, { red: 1, black: 2 }]) {
+    assert.equal(validateXiangqiBroadcastBoard({ ...board, clock }).ok, false);
+  }
+  for (const key of ['redMs', 'blackMs', 'at']) {
+    for (const value of [undefined, null, '1000', -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const clock = { redMs: 1000, blackMs: 2000, at: 1794585600000, [key]: value };
+      const parsed = validateXiangqiBroadcastBoard({ ...board, clock });
+      assert.equal(parsed.ok, false);
+      if (!parsed.ok)
+        assert.deepEqual(parsed.errors, [
+          `board.clock.${key} must be a finite non-negative number`,
+        ]);
+    }
+  }
+});
+
 test('xiangqi broadcast fixture pack validates', () => {
   const tour = validateXiangqiBroadcastTour(loadJson(new URL('tour.json', fixtureRoot)));
   assert.equal(tour.ok, true, tour.ok ? undefined : tour.errors.join('\n'));
