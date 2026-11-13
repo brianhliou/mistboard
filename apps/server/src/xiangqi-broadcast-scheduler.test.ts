@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { DpxqSiblingSeed, DpxqTrackedTour } from './xiangqi-broadcast-dpxq-index.js';
+import { xiangqiBroadcastTourLevel } from './xiangqi-broadcast-levels.js';
 import type { XiangqiBroadcastPollMode } from './xiangqi-broadcast-poll-window.js';
 import {
   XIANGQI_BROADCAST_POLL_LEAD_MS,
@@ -9,10 +11,90 @@ import type { XiangqiBroadcastPollResult } from './xiangqi-broadcast-poller.js';
 import {
   clampXiangqiBroadcastScheduleIntervalMs,
   createXiangqiBroadcastScheduler,
+  sweepDpxqTourIndex,
   XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS,
   XIANGQI_BROADCAST_INDEX_SWEEP_MS,
   type XiangqiBroadcastSchedulerDeps,
 } from './xiangqi-broadcast-scheduler.js';
+
+test('an index sweep seeds the women sibling once and it polls in the same tick (#1074)', async () => {
+  const parentSlug = '2026-world-xiangqi-open';
+  const tours: DpxqTrackedTour[] = [
+    {
+      slug: parentSlug,
+      sourceUrl: `mistboard-discover://dpxq-tour?tour=12529&tourSlug=${parentSlug}`,
+      endsAt: '2026-11-15T23:59:59+08:00',
+      location: 'Singapore',
+      pollIntervalMs: 45_000,
+    },
+  ];
+  const seeded: DpxqSiblingSeed[] = [];
+  const logs: Parameters<XiangqiBroadcastSchedulerDeps['recordSyncLog']>[0][] = [];
+  const polls: string[] = [];
+  const now = () => Date.parse('2026-11-12T12:00:00Z');
+  const row = (id: string, name: string) =>
+    `<div><p class="tname"><a href="/hldcg/tour_${id}.html">${name}</a></p><p class="tplace">Singapore</p><p class="tdate">2026-11-10</p><p class="tdate">2026-11-15</p></div>`;
+  const html = `<div><p class="tcomm">正在进行</p></div>${
+    row('12529', '2026年第五届世界象棋公开赛 男子团体') +
+    row('12820', '2026年第五届世界象棋公开赛 女子团体') +
+    row('99901', '2026年全国象棋个人赛') +
+    row('99902', '2025年第五届世界象棋公开赛 女子团体')
+  }`;
+  const sweepIndex = () =>
+    sweepDpxqTourIndex({
+      now,
+      fetchImpl: async () => ({ ok: true, status: 200, text: async () => html }),
+      listTours: async () => tours,
+      seedSibling: async (seed) => {
+        seeded.push(seed);
+        tours.push({
+          ...seed.tour,
+          sourceUrl: seed.tour.sourceUrl ?? null,
+          endsAt: seed.tour.endsAt ?? null,
+          pollIntervalMs: seed.pollIntervalMs,
+        });
+        return true;
+      },
+      extendEndsAt: async () => {
+        assert.fail('the index has not extended the event');
+      },
+      recordSyncLog: async (log) => {
+        logs.push(log);
+      },
+    });
+  const scheduler = createXiangqiBroadcastScheduler({
+    now,
+    sweepIndex,
+    listScheduledTours: async () =>
+      seeded.map((seed) => ({
+        slug: seed.tour.slug,
+        sourceUrl: seed.tour.sourceUrl ?? null,
+        startsAt: seed.tour.startsAt ?? null,
+        endsAt: seed.tour.endsAt ?? null,
+        pollMode: seed.pollMode,
+        pollIntervalMs: seed.pollIntervalMs,
+      })),
+    recordSyncLog: async (log) => {
+      logs.push(log);
+    },
+    poll: async ({ tourSlug }) => {
+      polls.push(tourSlug);
+      return okResult();
+    },
+  });
+  await scheduler.tick();
+  assert.equal(seeded.length, 1);
+  assert.equal(seeded[0].parentSlug, parentSlug);
+  assert.equal(seeded[0].pollIntervalMs, 45_000);
+  assert.equal(seeded[0].pollMode, 'auto');
+  assert.equal(seeded[0].tour.location, 'Singapore');
+  assert.equal(xiangqiBroadcastTourLevel(seeded[0].tour.slug), 'B');
+  assert.deepEqual(polls, ['2026-world-xiangqi-open-women']);
+  assert.equal(logs[0]?.kind, 'event_sibling_seeded');
+  await sweepIndex();
+  assert.equal(seeded.length, 1, 'a second index pass seeds nothing new');
+  assert.equal(logs.length, 1, 'the seed is logged once');
+});
 
 function okResult(overrides: Partial<Extract<XiangqiBroadcastPollResult, { ok: true }>> = {}) {
   return {

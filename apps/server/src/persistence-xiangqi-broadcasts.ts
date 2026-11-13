@@ -26,6 +26,7 @@ import {
 import type pg from 'pg';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
+import type { DpxqSiblingSeed, DpxqTrackedTour } from './xiangqi-broadcast-dpxq-index.js';
 import {
   normalizeXiangqiBroadcastPollMode,
   type XiangqiBroadcastPollMode,
@@ -1289,19 +1290,52 @@ export async function listXiangqiBroadcastFinalEvals(input: {
   return evals;
 }
 
-/** Every tour's source and end date, for the dpxq index sweep (which ones
- *  we already relay, and whose end date dpxq has since moved). */
+/** Every tour's source, end date and inherited settings for the index sweep. */
 export async function listXiangqiBroadcastTourSourcesOn(
   client: Queryable,
-): Promise<Array<{ slug: string; sourceUrl: string | null; endsAt: string | null }>> {
-  const { rows } = await client.query<Pick<TourRow, 'slug' | 'source_url' | 'ends_at'>>(
-    `SELECT slug, source_url, ends_at FROM xiangqi_broadcast_tours ORDER BY slug`,
+): Promise<DpxqTrackedTour[]> {
+  const { rows } = await client.query<
+    Pick<TourRow, 'slug' | 'source_url' | 'ends_at' | 'location' | 'poll_interval_ms'>
+  >(
+    `SELECT slug, source_url, ends_at, location, poll_interval_ms
+       FROM xiangqi_broadcast_tours ORDER BY slug`,
   );
   return rows.map((row) => ({
     slug: row.slug,
     sourceUrl: row.source_url,
     endsAt: row.ends_at?.toISOString() ?? null,
+    location: row.location,
+    pollIntervalMs: row.poll_interval_ms,
   }));
+}
+
+/** Insert once, with scheduling in the same write. A concurrent sweep or a
+ *  curated slug collision cannot overwrite an existing tour's settings. */
+export async function seedXiangqiBroadcastSiblingTourOn(
+  client: Queryable,
+  seed: DpxqSiblingSeed,
+): Promise<boolean> {
+  const checked = validateXiangqiBroadcastTour(seed.tour);
+  if (!checked.ok) throw new Error(`invalid sibling tour: ${checked.errors.join('; ')}`);
+  const tour = translatedXiangqiBroadcastTour(checked.value);
+  const { rowCount } = await client.query(
+    `INSERT INTO xiangqi_broadcast_tours
+       (slug, name, location, source_url, starts_at, ends_at, payload,
+        poll_mode, poll_enabled, poll_interval_ms)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'auto', false, $8)
+     ON CONFLICT (slug) DO NOTHING`,
+    [
+      tour.slug,
+      tour.name,
+      optionalString(tour.location),
+      optionalString(tour.sourceUrl),
+      optionalDate(tour.startsAt),
+      optionalDate(tour.endsAt),
+      JSON.stringify(tour),
+      seed.pollIntervalMs,
+    ],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 /**
