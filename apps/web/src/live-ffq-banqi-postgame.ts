@@ -10,6 +10,7 @@ import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { banqiOutcome } from './banqi-result-label.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
@@ -17,8 +18,10 @@ import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { mountFFQBanqiReview } from './review/ffq-banqi-review.js';
 import type { FFQBanqiReviewSnapshot } from './review/ffq-banqi-tree-adapter.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
 // Finished replay uses only server-projected masked frames.
@@ -161,11 +164,21 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     spectatorChat: false,
   });
 
-  const actions = document.createElement('div');
+  // The as-played replay sits with the share links, so the left column keeps
+  // the meta card alone, as banqi's and Three Kingdoms' review pages do.
+  const watchRow = document.createElement('div');
+  watchRow.className = 'review-share__row review-share__row--downloads';
+  const watchLabel = document.createElement('span');
+  watchLabel.className = 'review-share__label';
+  watchLabel.textContent = t('nav.watch');
   const watch = document.createElement('a');
+  watch.className = 'review-share__copy review-share__download';
   watch.href = `/ffq-banqi/game/${encodeURIComponent(postgame.game.roomId)}?watch=1`;
-  watch.textContent = t('nav.watch');
-  actions.append(watch);
+  watch.textContent = t('replay.watchAsPlayed');
+  const watchGroup = document.createElement('div');
+  watchGroup.className = 'review-share__downloads';
+  watchGroup.append(watch);
+  watchRow.append(watchLabel, watchGroup);
   root.replaceChildren(buildNav());
   mountFFQBanqiReview(root, postgame.history.truth, {
     pageClassName: 'banqi-review',
@@ -173,8 +186,8 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     title: variantName,
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
-    actions,
     details,
+    shareExtra: [watchRow],
     phoneInfoSheet: true,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
@@ -183,7 +196,15 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
     urlPly: true,
-    analysis: null,
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
+      requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
+      fetchCached: (options) => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus }),
+    },
   });
 }
 

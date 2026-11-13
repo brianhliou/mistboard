@@ -9,10 +9,12 @@ import {
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ENDGAME_LINE, ENDGAME_ROOT_FEN } from '../articles/banqi-endgame-diagrams.js';
+import { duckXiangqiGhostSvg } from '../duck-xiangqi-board.js';
 import { JUNGLE_ART } from '../jungle-art.js';
 import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
 import type { StudyChapterPayload, StudyTreeNode } from '../study-chapter-spec.js';
+import { xiangqiMarkerSvg } from '../xiangqi-board.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
@@ -96,6 +98,144 @@ function stubFetch(status: number, body: unknown) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+async function mountAnnotatedDuck({ sideline = true, shapes = true } = {}) {
+  const chapter = {
+    id: 'DuckMarks',
+    name: 'Duck alternatives',
+    variant: 'duck-xiangqi',
+    root: {
+      root: {
+        children: [
+          {
+            uci: 'b3e3@e6',
+            ...(shapes
+              ? {
+                  annotations: {
+                    shapes: [
+                      { orig: 'h8', dest: 'h5', brush: 'blue' },
+                      { orig: 'a7', brush: 'red' },
+                    ],
+                  },
+                }
+              : {}),
+            children: [
+              {
+                uci: 'b8e8@d6',
+                annotations: { glyphs: [4, 19], comments: [{ text: 'A missed duck placement.' }] },
+              },
+              ...(sideline
+                ? [
+                    {
+                      uci: 'h8h5@e5',
+                      annotations: { comments: [{ text: 'The engine line.' }] },
+                      children: [{ uci: 'a4a5@f5', annotations: { glyphs: [17] } }],
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ],
+      },
+    },
+  };
+  stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+  const root = document.createElement('div');
+  await mountEmbedStudy(root, { studyId: 's', chapterId: chapter.id }, { startPly: 1 });
+  return root;
+}
+
+describe('Duck study embed annotations', () => {
+  it('pins the ply N glyph on the moved piece destination, not the duck', async () => {
+    const root = await mountAnnotatedDuck();
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    const expected = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    expected.innerHTML = xiangqiMarkerSvg(
+      { square: 'e8', kind: 'glyph', text: '??', className: 'probe' },
+      'red',
+    );
+    expect(badgeAt(root.querySelector('.embed-board'), '.xq-marker--blunder')).toEqual(
+      badgeAt(expected, '.probe'),
+    );
+    expect(root.querySelector('.embed-board .xq-marker--glyph')).not.toBeNull();
+    expect(root.querySelector('.dkx-duck-ghost-token')).toBeNull();
+  });
+
+  it('lists the first sideline under ply N with verdicts and steps both turn halves', async () => {
+    const root = await mountAnnotatedDuck();
+    const branch = root.querySelector<HTMLElement>('.review-move-list__branch[data-at-ply="2"]');
+    const moves = [...branch!.querySelectorAll<HTMLButtonElement>('.review-move-list__line-move')];
+    expect(moves.map((m) => m.textContent)).toEqual(['h8-h5@e5', 'a4-a5@f5']);
+    expect(branch!.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      'The engine line.',
+    );
+    expect(branch!.querySelector('.review-move-list__line-verdict')?.textContent).toBe('∓');
+    expect(
+      [...root.querySelectorAll('.review-move-list__move .review-move-list__eval')].map(
+        (e) => e.textContent,
+      ),
+    ).toEqual(['', '−+']);
+    moves[0]!.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('1+1');
+    expect(root.querySelector('[data-piece-square="h5"]')).not.toBeNull();
+    expect(root.querySelector('[data-duck-square="e5"]')).not.toBeNull();
+    expect(root.querySelector('[data-piece-square="e3"]')).not.toBeNull();
+    expect(root.querySelector('.dkx-duck-ghost-token')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('1+2');
+    expect(root.querySelector('[data-piece-square="a5"]')).not.toBeNull();
+    expect(root.querySelector('[data-duck-square="f5"]')).not.toBeNull();
+    const prev = root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!;
+    prev.click();
+    prev.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('1 / 2');
+    expect(root.querySelector('.dkx-duck-ghost-token')).not.toBeNull();
+  });
+
+  it('previews the alternative arrow and duck before ply N without stored shapes', async () => {
+    const root = await mountAnnotatedDuck({ shapes: false });
+    const arrow = root.querySelector('.xq-live-arrows .xq-arrow--best');
+    expect(arrow).not.toBeNull();
+    const ghost = root.querySelector('[data-ghost-duck-square="e5"]');
+    expect(ghost).not.toBeNull();
+    const expected = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    expected.innerHTML = duckXiangqiGhostSvg('e5', 'red', 'intersection', undefined);
+    expect(ghost!.querySelector('.dkx-duck-ghost-token')?.outerHTML).toBe(
+      expected.firstElementChild?.outerHTML,
+    );
+    expect(ghost!.querySelector('.dkx-duck-ghost-token')?.getAttribute('style')).toContain(
+      'opacity:0.45',
+    );
+    const ring = ghost!.querySelector('.dkx-duck-ghost-ring');
+    expect(ring?.classList.contains('xq-arrow--best')).toBe(true);
+    expect(ring?.getAttribute('stroke-dasharray')).toBeTruthy();
+    expect(root.querySelector('.dkx-duck-ghost')?.getAttribute('pointer-events')).toBe('none');
+    expect(
+      root.querySelector('.embed-board')!.innerHTML.indexOf('data-ghost-duck-square'),
+    ).toBeLessThan(root.querySelector('.embed-board')!.innerHTML.indexOf('class="xq-live-arrows"'));
+  });
+
+  it('matches the ghost ring to the stored alternative arrow and keeps position shapes', async () => {
+    const root = await mountAnnotatedDuck();
+    expect(root.querySelectorAll('.xq-live-arrows .xq-shape--blue')).toHaveLength(1);
+    expect(root.querySelector('.xq-live-markers .xq-shape--red')).not.toBeNull();
+    expect(
+      root
+        .querySelector('[data-ghost-duck-square="e5"] .dkx-duck-ghost-ring')
+        ?.classList.contains('xq-shape--blue'),
+    ).toBe(true);
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+    expect(root.querySelector('.xq-live-arrows')?.children).toHaveLength(0);
+    expect(root.querySelector('.dkx-duck-ghost-token')).toBeNull();
+  });
+
+  it('draws position shapes without inventing a ghost when there is no sideline', async () => {
+    const root = await mountAnnotatedDuck({ sideline: false });
+    expect(root.querySelector('.xq-live-arrows .xq-shape--blue')).not.toBeNull();
+    expect(root.querySelector('.dkx-duck-ghost-token')).toBeNull();
+    expect(root.querySelector('.review-move-list__line-move')).toBeNull();
+  });
 });
 
 describe('embedStudyRouteFromPath', () => {

@@ -283,10 +283,7 @@ export async function mountChapterEmbed(
   // seat rows' clock slots stay empty.
   const isDuck = chapter.variant === 'duck-xiangqi';
   const isAtomic = chapter.variant === 'atomic-xiangqi';
-  // A duck study's marks and comments, listed under their moves.
-  const duckAnnotations = isDuck
-    ? (({ glyphs, notes }) => ({ glyphs, notes }))(chapterAnnotations(chapter))
-    : {};
+  const duckAnnotations = isDuck ? chapterAnnotations(chapter) : {};
   const copy = replayStepperCopy(undefined, 'xiangqi');
   await mountStudyEmbedCard(root, chapter, options, {
     // A Chinese import stores its Event in Chinese; the header reads it in
@@ -326,6 +323,7 @@ export async function mountChapterEmbed(
         ? mountDuckXiangqiReplayBoard(
             host,
             {
+              ...duckAnnotations,
               // A duck chapter's mainline is stored as duck turn tokens
               // (`from+to@duckTo`, the tree adapter's own spelling), in the
               // same field a xiangqi chapter uses for ICCS.
@@ -334,7 +332,6 @@ export async function mountChapterEmbed(
               black: spec.black,
               event: spec.event,
               resultText: spec.resultText,
-              ...duckAnnotations,
             },
             hooks,
           )

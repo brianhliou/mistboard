@@ -1,7 +1,7 @@
 // A recorded, masked line. No sampled deal, hidden-identity overlay or local
 // rules replay: a branch could only guess the identities under the backs.
 import { type BanqiMove, banqiMoveLabelOnBoard, type FFQBanqiPlayerView } from '@mistboard/game';
-import { ffqBanqiBoardView } from '../ffq-banqi-board.js';
+import { ffqBanqiBoardView, ffqBanqiIndex, ffqBanqiSquare } from '../ffq-banqi-board.js';
 import type { VariantTreeAdapter } from './game-tree.js';
 
 export type FFQBanqiReviewSnapshot = {
@@ -51,7 +51,19 @@ export function makeFFQBanqiTreeAdapter(
       return ffqBanqiReviewMoveLabel(move, frame);
     },
     moveKey: key,
-    toEngineUci: key,
-    fromUci: () => null,
+    toEngineUci: (move) => {
+      const square = (s: string) => {
+        const n = ffqBanqiIndex(s);
+        return `${String.fromCharCode(97 + (n % 4))}${Math.floor(n / 4)}`;
+      };
+      return square(move.from) + square(move.to);
+    },
+    fromUci: (uci, parent) => {
+      if (!/^[a-d][0-7][a-d][0-7]$/.test(uci)) return null;
+      const square = (s: string) => ffqBanqiSquare(Number(s[1]) * 4 + s.charCodeAt(0) - 97);
+      const move = { from: square(uci.slice(0, 2)), to: square(uci.slice(2)) };
+      // Decode only recorded continuations; analysis never opens a hidden branch.
+      return next(parent, move) ? move : null;
+    },
   };
 }

@@ -456,6 +456,10 @@ export const EN_CONTENT = {
     'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
   'champions.aboutAbJchess2':
     "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
+  'champions.tookPikafish':
+    'Won the title match against Fairy-Stockfish Level 8 on 2026-11-11, over 40 games, scoring 61%.',
+  'champions.aboutPikafish':
+    'An open-source xiangqi engine from the Stockfish line. Here it runs on the public CC0 Fairy-Stockfish xiangqi network.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',

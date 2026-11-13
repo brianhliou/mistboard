@@ -530,6 +530,10 @@ export const ZH_HANT_CONTENT = {
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
+  'champions.tookPikafish':
+    '2026-11-11 在對 Fairy-Stockfish 8 級的頭銜賽中獲勝，共 40 局，得分率 61%。',
+  'champions.aboutPikafish':
+    '源自 Stockfish 的開源象棋引擎。在這裡它使用公開的 CC0 Fairy-Stockfish 象棋網路。',
   'champions.tookAbJchess2': '2026-10-31 從 jqe 手中奪回頭銜，共 600 局，得分率 57%。',
   'champions.aboutAbJchess2':
     "作者 Huorongrong 和 Laoxu（Kouza），基於 Devin O'Keefe 的開源引擎 jqe 的程式碼，帶有自己的神經網路。在本站每步 4 秒，4 執行緒。",

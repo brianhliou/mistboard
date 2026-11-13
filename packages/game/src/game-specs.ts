@@ -138,7 +138,7 @@ export type RatingPoolBaseId =
   | 'banqi'
   | 'jungle'
   | 'jungle_flip'
-  // Never rated: no user_ratings CHECK entry exists or is owed until a launch.
+  // Migration 195 adds the live Three Kingdoms Banqi pool.
   | 'three_kingdoms_banqi'
   // Reserved metadata only; excluded from RatingVariant and RATED_POOL_BASES.
   | 'ffq_banqi'
@@ -166,7 +166,7 @@ export type GameSpecId =
   | 'jungle'
   | 'jungle-flip'
   // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
-  // 100. Launched casual and unrated; runtime flags remain kill-switches. Rules engine:
+  // 100. Rated human PvP; runtime flags remain kill-switches. Rules engine:
   // packages/game/src/variants-three-kingdoms-banqi.ts.
   | 'three-kingdoms-banqi'
   | 'fortress-xiangqi'
@@ -766,7 +766,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     // Three Kingdoms banqi: banqi's 32 pieces on 9x5 points, first to 100.
-    // Launched casual and unrated; server and build flags remain kill-switches.
+    // Rated human PvP; PvE and correspondence remain casual.
     id: THREE_KINGDOMS_BANQI_SPEC_ID,
     publicName: 'Three Kingdoms Banqi',
     family: 'xiangqi',
@@ -778,6 +778,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'three_kingdoms_banqi',
+    rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
@@ -953,6 +954,7 @@ export type RatingVariant = Extract<
   | 'banqi'
   | 'jungle'
   | 'jungle_flip'
+  | 'three_kingdoms_banqi'
   | 'fortress_xiangqi'
   // Standard Xiangqi pool. Owes a user_ratings CHECK migration adding 'xiangqi'
   // before the global rated flag + MISTBOARD_XIANGQI_ENABLED are both on.
@@ -990,14 +992,14 @@ export function ratingPoolForSpec(id: GameSpecId): RatingVariant | null {
 // casual or rated, and a rated one writes the variant's pool under its OWN
 // 'correspondence' time class, never a live one. THE single predicate every surface
 // asks (seek create, accept, the rating bucket, the web Rated toggle): a spec qualifies
-// when it is correspondence-eligible AND has an active rating pool, except Gomoku:
-// Gomoku correspondence is casual-only even though live play has a rating pool.
+// when it is correspondence-eligible AND has an active rating pool, except Gomoku
+// and Three Kingdoms Banqi, whose correspondence stays casual-only.
 // The rating write is generic over pools and seat colors,
 // and the tenant seek factory carries `rated` into the room (createTenantCorrespondence
 // GameForSeek), which correspondence-eligibility.test.ts proves for every spec this
 // returns true for. A casual-only spec (no pool) is cleanly excluded.
 export function isCorrespondenceRatedSpec(id: string | null | undefined): boolean {
-  if (id === GOMOKU_SPEC_ID) return false;
+  if (id === GOMOKU_SPEC_ID || id === THREE_KINGDOMS_BANQI_SPEC_ID) return false;
   if (!id || !CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id as GameSpecId)) return false;
   const spec = maybeGameSpecForId(id);
   return spec !== null && ratingPoolForSpec(spec.id) !== null;

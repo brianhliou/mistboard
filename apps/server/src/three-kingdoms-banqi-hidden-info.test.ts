@@ -329,9 +329,9 @@ test('an attempted face-down capture is rejected and reveals nothing to the oppo
   assert.ok(attempts > 0);
 });
 
-test('registration offers casual-only Banqi time controls, TV, a card and the masked export', async () => {
+test('registration offers rated Banqi time controls, TV, a card and the masked export', async () => {
   const registration = variantTenantForRoomId(ROOM)!;
-  assert.equal(registration.lobby?.supportsRated, false);
+  assert.equal(registration.lobby?.supportsRated, true);
   assert.equal(
     registration.lobby?.allowsTimeControl({ initialMs: 300000, incrementMs: 5000 }),
     true,

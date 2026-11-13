@@ -48,13 +48,13 @@ describe('variant markers', () => {
     expect(isPublicGameSpec(id)).toBe(true);
   });
 
-  it('shares public Three Kingdoms art with TV without a rated variant row', () => {
+  it('shares public Three Kingdoms art with TV and its rated variant row', () => {
     const id = 'three-kingdoms-banqi';
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(renderVariantMarker(id as VariantMiniId)).toContain(
       "url('/variant-markers/final/three-kingdoms-banqi.png')",
     );
-    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(id);
     expect(isPublicGameSpec(id)).toBe(true);
     expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
   });

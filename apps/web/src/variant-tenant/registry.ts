@@ -1218,8 +1218,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Public casual Three Kingdoms Banqi. Play respects the build-time gate;
-    // the server independently admits sockets and creates. Always unrated.
+    // Public Three Kingdoms Banqi. Play respects the build-time gate;
+    // the server independently admits sockets and creates. Rated human PvP.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
@@ -1259,7 +1259,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        supportsRated: false,
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],

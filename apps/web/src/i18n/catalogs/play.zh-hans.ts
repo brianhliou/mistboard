@@ -899,9 +899,6 @@ export const ZH_HANS_PLAY = {
   'lobby.panelDaysSignIn': '登录后可按天/步对局',
   'variant.ffqBanqi.name': 'FFQ 暗棋',
   'live.ffq.hp': '{hp}/{max} 生命值',
-  'live.ffq.noProgress': '无进展 {count}/{limit}',
-  'live.ffq.chase': '{side} 追捉 {count}/{limit}',
-  'live.ffq.captureDamage': '{capturer} 吃掉了{owner}的{piece}：{owner}生命值 −{damage}',
   'live.ffq.adminOnly': '此试玩需要管理员账号，并启用 FFQ 暗棋功能开关。',
   'result.hp': '生命值耗尽',
 } satisfies Partial<Record<PlayI18nKey, string>>;

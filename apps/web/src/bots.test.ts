@@ -585,9 +585,11 @@ describe('bot pages', () => {
     expect(document.activeElement).toBe(level1.querySelector('.bot-level-select'));
 
     // Pikafish plays xiangqi and jieqi; here it shows xiangqi only, as the top.
+    // It holds the xiangqi title, so the card carries that and no "Strongest".
     const top = cardFor(root, 'pikafish')!;
     expect(top.querySelector('.bot-level-select')).toBeNull();
-    expect(top.querySelector('.profile-summary-card-badge')?.textContent).toBe('Strongest');
+    expect(top.querySelector('.bot-champion-title')?.textContent).toBe('Xiangqi Champion');
+    expect(top.querySelector('.profile-summary-card-badge')?.textContent).not.toBe('Strongest');
     expect(top.querySelector('.profile-summary-card-action')?.textContent).toBe('Play Xiangqi');
     expect(top.querySelector('[data-game-spec-id="jieqi"]')).toBeNull();
   });

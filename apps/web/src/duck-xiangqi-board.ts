@@ -92,6 +92,8 @@ export type DuckXiangqiBoardState = {
   /** Right-click arrows and circles, from the shared board-annotation store. */
   arrows?: readonly XiangqiBoardArrow[];
   markers?: readonly XiangqiBoardMarker[];
+  /** An engine alternative's duck placement, shown beneath its arrow. */
+  ghostDuck?: { square: DuckXiangqiSquare; className?: string; color?: string };
   /**
    * True on the one render where the duck has just landed on a new point, so it
    * plays its landing once. The CALLER decides (the live room tracks the last
@@ -287,10 +289,26 @@ export function duckXiangqiGhostSvg(
   const size = XIANGQI_LIVE_PIECE_SIZE * DUCK_TOKEN_SCALE;
   const resolved = pieceSet ?? readStoredXiangqiPieceSet();
   return [
-    `<g class="dkx-duck-ghost-token" transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
+    `<g class="dkx-duck-ghost-token" style="opacity:0.45" transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
     duckTokenMarks(resolved, layout),
     `</g>`,
   ].join('');
+}
+
+/** The same duck art as a live placement preview, plus a dashed ring in the
+ * alternative arrow's ink. Separate from the real duck and never a hit target. */
+function alternativeDuckLayer(
+  ghost: DuckXiangqiBoardState['ghostDuck'],
+  perspective: Color,
+  layout: XiangqiBoardLayout,
+  pieceSet: XiangqiPieceSet | undefined,
+): string {
+  if (!ghost) return '';
+  const p = point(ghost.square, perspective, layout);
+  return `<g data-ghost-duck-square="${ghost.square}">
+    ${duckXiangqiGhostSvg(ghost.square, perspective, layout, pieceSet)}
+    <circle class="dkx-duck-ghost-ring xq-marker ${ghost.className ?? ''}" cx="${p.x}" cy="${p.y}" r="${XIANGQI_LIVE_PIECE_SIZE / 2}" style="fill:none" stroke="${ghost.color ?? '#2b6cb8'}" stroke-width="3" stroke-dasharray="6 4"/>
+  </g>`;
 }
 
 /**
@@ -502,7 +520,7 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet, state.lifted ?? null)}</g>
       <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet, state.duckLanded === true, state.lifted ?? null)}</g>
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveLayer(view, perspective, layout, 'over', state.pieceSet)}</g>
-      <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none"></g>
+      <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none">${alternativeDuckLayer(state.ghostDuck, perspective, layout, state.pieceSet)}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
         .map((arrow) => xiangqiArrowSvg(arrow, perspective, layout))
