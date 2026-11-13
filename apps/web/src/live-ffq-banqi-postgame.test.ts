@@ -174,7 +174,6 @@ describe('FFQ masked review', () => {
       handle.jumpToPly(ply);
       assertHpBars(host, ply);
       const frame = record.history.truth[ply]!;
-      const damage = frame.damage;
       for (const side of ['red', 'black'] as const) {
         // The seat row: the pieces this seat took, then its HP (as Three
         // Kingdoms shows points), with no damage note or counters.
@@ -190,8 +189,8 @@ describe('FFQ masked review', () => {
           ).size,
         );
       }
-      if (damage.red + damage.black)
-        expect(handle.mainlineMoveLabel(ply)).toContain(`${damage.red + damage.black} damage`);
+      // A capture's damage shows in the HP bars only; the move list keeps the move.
+      if (ply > 0) expect(handle.mainlineMoveLabel(ply)).not.toMatch(/damage|·/);
       expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
     }
     assertMasked(handle.serialize());
