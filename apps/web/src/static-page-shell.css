@@ -93,6 +93,13 @@
   font-weight: 400;
 }
 
+/* A rail destination with its own layout (no rail): a quiet trailing arrow. */
+.static-page-rail-out {
+  margin-left: 0.4em;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
 /* Touch floor (#576). */
 @media (pointer: coarse) {
   .static-page-rail-link {

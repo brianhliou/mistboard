@@ -724,9 +724,10 @@ describe('site shell phone menu', () => {
               link.textContent,
             ]),
           ).toEqual(
+            // The rail's trailing arrow (a page without the rail) is rail-only.
             [...rail.querySelectorAll('.static-page-rail-link')].map((link) => [
               link.getAttribute('href'),
-              link.textContent,
+              link.firstChild?.textContent,
             ]),
           );
           expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
