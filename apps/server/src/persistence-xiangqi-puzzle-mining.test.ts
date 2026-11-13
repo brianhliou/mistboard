@@ -976,6 +976,8 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     const firstRunId = await publishOneCandidate('crossrun-first-v1', 0, legacyKey);
     const firstPlan = await planXiangqiPuzzlePublication(getPool(), firstRunId);
     assert.equal(firstPlan.eligibleCandidates, 1);
+    const firstPuzzleId = firstPlan.candidates[0]?.puzzle.id;
+    assert.ok(firstPuzzleId);
     const firstPublished = await publishXiangqiPuzzlePublication({
       runId: firstRunId,
       expectedTotal: 1,
@@ -990,7 +992,10 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     const secondRunId = await publishOneCandidate('crossrun-second-v1', 8, currentKey);
     await assert.rejects(
       planXiangqiPuzzlePublication(getPool(), secondRunId),
-      /repeats a position already published as puzzle/,
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes('repeats a position already published as ') &&
+        error.message.endsWith(firstPuzzleId),
     );
   });
 
