@@ -1,0 +1,617 @@
+{
+  "method": "Ranking only; no decision grades or baseline times. Cold query cache per game; two slots.",
+  "nodes": 200000,
+  "machine": {
+    "cpu": "Apple M3 Max",
+    "logicalCpus": 14,
+    "platform": "darwin",
+    "release": "27.2.0",
+    "node": "v26.11.1",
+    "revision": "89bd9188802b87ea11a182ccb9ce20d277876449",
+    "engineSha256": "95c6f08cafe828170e4c35d64af310c4e17c0c3e5f7d3e67f69057237ed25bcd",
+    "netSha256": "03e7052b0c5178bd1a683bc38ec9a9f0c41177367b6891f8e697dd95876e413e"
+  },
+  "startedAt": "2026-11-13T02:26:00.985Z",
+  "games": [
+    {
+      "name": "Game 1: second seat wins in 33",
+      "flips": [
+        {
+          "ply": 1,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"],
+          "retained": true
+        },
+        {
+          "ply": 2,
+          "oldBest": "g1g1",
+          "rankedTopThree": ["g1g1", "g2g2", "a2a2"],
+          "retained": true
+        },
+        {
+          "ply": 3,
+          "oldBest": "b0b0",
+          "rankedTopThree": ["b0b0", "a1a1", "c1c1"],
+          "retained": true
+        },
+        {
+          "ply": 4,
+          "oldBest": "d2d2",
+          "rankedTopThree": ["d2d2", "b2b2", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 5,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "c0c0", "g2g2"],
+          "retained": true
+        },
+        {
+          "ply": 6,
+          "oldBest": "d2d2",
+          "rankedTopThree": ["d2d2", "e3e3", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 9,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "g0g0", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 10,
+          "oldBest": "h3h3",
+          "rankedTopThree": ["h3h3", "f1f1", "c3c3"],
+          "retained": true
+        },
+        {
+          "ply": 11,
+          "oldBest": "f2f2",
+          "rankedTopThree": ["e2e2", "f2f2", "a1a1"],
+          "retained": true
+        },
+        {
+          "ply": 12,
+          "oldBest": "d1d1",
+          "rankedTopThree": ["g2g2", "h3h3", "d1d1"],
+          "retained": true
+        },
+        {
+          "ply": 13,
+          "oldBest": "h2h2",
+          "rankedTopThree": ["h2h2", "d2d2", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 15,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["e1e1", "f0f0", "e2e2"],
+          "retained": true
+        },
+        {
+          "ply": 17,
+          "oldBest": "e2e2",
+          "rankedTopThree": ["e2e2", "e1e1", "e0e0"],
+          "retained": true
+        },
+        {
+          "ply": 18,
+          "oldBest": "f2f3",
+          "rankedTopThree": ["f2f3", "h1h1", "h2h2"],
+          "retained": true
+        },
+        {
+          "ply": 19,
+          "oldBest": "g1g1",
+          "rankedTopThree": ["e0e0", "g0g0", "h0h0"],
+          "retained": false
+        },
+        {
+          "ply": 20,
+          "oldBest": "f2f3",
+          "rankedTopThree": ["f2f3", "h1h1", "h2h2"],
+          "retained": true
+        },
+        {
+          "ply": 21,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["g0g0", "h0h0", "e0f0"],
+          "retained": false
+        },
+        {
+          "ply": 22,
+          "oldBest": "f2f3",
+          "rankedTopThree": ["f2f3", "h2h2", "g3f3"],
+          "retained": true
+        },
+        {
+          "ply": 23,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["g0g0", "a1a1", "a3a3"],
+          "retained": false
+        },
+        {
+          "ply": 25,
+          "oldBest": "a1a1",
+          "rankedTopThree": ["a1a1", "c3c3", "c1c1"],
+          "retained": true
+        },
+        {
+          "ply": 27,
+          "oldBest": "a1a1",
+          "rankedTopThree": ["a1a1", "c3c3", "c0c0"],
+          "retained": true
+        },
+        {
+          "ply": 33,
+          "oldBest": "e3e3",
+          "rankedTopThree": ["c1c1", "c0c0", "e3e3"],
+          "retained": true
+        },
+        {
+          "ply": 39,
+          "oldBest": "c3c3",
+          "rankedTopThree": ["c2b2", "a0a0", "c2c1"],
+          "retained": false
+        },
+        {
+          "ply": 41,
+          "oldBest": "a0a0",
+          "rankedTopThree": ["c2b2", "c3c3", "e3e3"],
+          "retained": false
+        },
+        {
+          "ply": 45,
+          "oldBest": "e3e3",
+          "rankedTopThree": ["e3e3", "e1e1", "a0a0"],
+          "retained": true
+        },
+        {
+          "ply": 47,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["e1e1", "a0a0", "h3h3"],
+          "retained": true
+        },
+        {
+          "ply": 49,
+          "oldBest": "a0a0",
+          "rankedTopThree": ["a0a0", "h3h3", "d0d0"],
+          "retained": true
+        },
+        {
+          "ply": 51,
+          "oldBest": "d2d2",
+          "rankedTopThree": ["a0a0", "g1g1", "d2d2"],
+          "retained": true
+        },
+        {
+          "ply": 53,
+          "oldBest": "a0a0",
+          "rankedTopThree": ["a0a0", "g1g1", "h2h2"],
+          "retained": true
+        },
+        {
+          "ply": 59,
+          "oldBest": "h2h2",
+          "rankedTopThree": ["a0a0", "h2h2", "f0g0"],
+          "retained": true
+        },
+        {
+          "ply": 61,
+          "oldBest": "a0a0",
+          "rankedTopThree": ["a0a0", "h3h3", "f0g0"],
+          "retained": true
+        },
+        {
+          "ply": 65,
+          "oldBest": "a0a0",
+          "rankedTopThree": ["a0a0"],
+          "retained": true
+        }
+      ],
+      "wallMs": 58892.62875,
+      "evalCalls": 570
+    },
+    {
+      "name": "Game 4: second seat wins in 60",
+      "flips": [
+        {
+          "ply": 1,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"],
+          "retained": true
+        },
+        {
+          "ply": 2,
+          "oldBest": "d1d1",
+          "rankedTopThree": ["d1d1", "b3b3", "a3a3"],
+          "retained": true
+        },
+        {
+          "ply": 3,
+          "oldBest": "b2b2",
+          "rankedTopThree": ["b2b2", "c1c1", "b0b0"],
+          "retained": true
+        },
+        {
+          "ply": 4,
+          "oldBest": "b3b2",
+          "rankedTopThree": ["b3b2", "f2f2", "g2g2"],
+          "retained": true
+        },
+        {
+          "ply": 5,
+          "oldBest": "c1c1",
+          "rankedTopThree": ["c1c1", "d0d0", "a1a1"],
+          "retained": true
+        },
+        {
+          "ply": 6,
+          "oldBest": "b3b2",
+          "rankedTopThree": ["b3b2", "g2g2", "e1e1"],
+          "retained": true
+        },
+        {
+          "ply": 7,
+          "oldBest": "c1c1",
+          "rankedTopThree": ["c1c1", "f2f2", "a1a1"],
+          "retained": true
+        },
+        {
+          "ply": 10,
+          "oldBest": "a3a3",
+          "rankedTopThree": ["a3a3", "c3c3", "e0e0"],
+          "retained": true
+        },
+        {
+          "ply": 13,
+          "oldBest": "b1b2",
+          "rankedTopThree": ["b3b2", "c0c0", "d3d3"],
+          "retained": false
+        },
+        {
+          "ply": 16,
+          "oldBest": "d1d2",
+          "rankedTopThree": ["a3a3", "e1e1", "c3c3"],
+          "retained": false
+        },
+        {
+          "ply": 18,
+          "oldBest": "d1d2",
+          "rankedTopThree": ["d1d2", "d3d3", "a3a3"],
+          "retained": true
+        },
+        {
+          "ply": 20,
+          "oldBest": "e2e2",
+          "rankedTopThree": ["e0e0", "e2e2", "a3a3"],
+          "retained": true
+        },
+        {
+          "ply": 22,
+          "oldBest": "e1e0",
+          "rankedTopThree": ["e1e0", "a3a3", "e2e2"],
+          "retained": true
+        },
+        {
+          "ply": 24,
+          "oldBest": "e1e0",
+          "rankedTopThree": ["a3a3", "e1e0", "g0g0"],
+          "retained": true
+        },
+        {
+          "ply": 25,
+          "oldBest": "g2g2",
+          "rankedTopThree": ["g2g2", "f3f3", "c2b2"],
+          "retained": true
+        },
+        {
+          "ply": 26,
+          "oldBest": "e1e0",
+          "rankedTopThree": ["e1e0", "a3a3", "h0h0"],
+          "retained": true
+        },
+        {
+          "ply": 27,
+          "oldBest": "d3d2",
+          "rankedTopThree": ["d3d2", "e3e3", "g2g2"],
+          "retained": true
+        },
+        {
+          "ply": 28,
+          "oldBest": "e1e0",
+          "rankedTopThree": ["e1e0", "h0h0", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 29,
+          "oldBest": "d3d2",
+          "rankedTopThree": ["d3d2", "e3e3", "a2a2"],
+          "retained": true
+        },
+        {
+          "ply": 31,
+          "oldBest": "d3d2",
+          "rankedTopThree": ["d3d2", "a2a2", "g2g2"],
+          "retained": true
+        },
+        {
+          "ply": 48,
+          "oldBest": "a3a3",
+          "rankedTopThree": ["a3a3", "f0e0", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 51,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "g2g2", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 53,
+          "oldBest": "h1h1",
+          "rankedTopThree": ["h1h1", "g2g2", "f3f3"],
+          "retained": true
+        },
+        {
+          "ply": 60,
+          "oldBest": "a3a3",
+          "rankedTopThree": ["a3a3", "e3e2", "a2a2"],
+          "retained": true
+        },
+        {
+          "ply": 61,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "b0a0", "a1a0"],
+          "retained": true
+        },
+        {
+          "ply": 62,
+          "oldBest": "a3a3",
+          "rankedTopThree": ["a3a3", "a2a2", "e3e2"],
+          "retained": true
+        },
+        {
+          "ply": 63,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "f2f2", "a1a0"],
+          "retained": true
+        },
+        {
+          "ply": 66,
+          "oldBest": "g0g1",
+          "rankedTopThree": ["g0g1", "a3a3", "e3e2"],
+          "retained": true
+        },
+        {
+          "ply": 71,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "a2a3", "b0a0"],
+          "retained": true
+        },
+        {
+          "ply": 72,
+          "oldBest": "g1g0",
+          "rankedTopThree": ["e3d3", "h2h2", "g1g0"],
+          "retained": true
+        },
+        {
+          "ply": 78,
+          "oldBest": "h0g0",
+          "rankedTopThree": ["h0g0", "g2g1", "f1f1"],
+          "retained": true
+        },
+        {
+          "ply": 79,
+          "oldBest": "h1h0",
+          "rankedTopThree": ["h1h0", "f2e2", "a2a3"],
+          "retained": true
+        }
+      ],
+      "wallMs": 74224.158834,
+      "evalCalls": 718
+    },
+    {
+      "name": "Game 19: second seat wins in 111",
+      "flips": [
+        {
+          "ply": 1,
+          "oldBest": "e1e1",
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"],
+          "retained": true
+        },
+        {
+          "ply": 2,
+          "oldBest": "c1c1",
+          "rankedTopThree": ["c1c1", "b2b2", "a1a1"],
+          "retained": true
+        },
+        {
+          "ply": 3,
+          "oldBest": "d1d1",
+          "rankedTopThree": ["d1d1", "b3b3", "e1e1"],
+          "retained": true
+        },
+        {
+          "ply": 4,
+          "oldBest": "b2b2",
+          "rankedTopThree": ["b2b2", "b0b0", "c1c1"],
+          "retained": true
+        },
+        {
+          "ply": 5,
+          "oldBest": "c1c1",
+          "rankedTopThree": ["a2a2", "c1c1", "b0b0"],
+          "retained": true
+        },
+        {
+          "ply": 6,
+          "oldBest": "b2b1",
+          "rankedTopThree": ["b2b1", "c0c0", "f0f0"],
+          "retained": true
+        },
+        {
+          "ply": 7,
+          "oldBest": "g0g0",
+          "rankedTopThree": ["g0g0", "g3g3", "b3b3"],
+          "retained": true
+        },
+        {
+          "ply": 8,
+          "oldBest": "f3f3",
+          "rankedTopThree": ["f3f3", "d0d0", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 9,
+          "oldBest": "g3g3",
+          "rankedTopThree": ["g3g3", "h2h2", "f0f0"],
+          "retained": true
+        },
+        {
+          "ply": 10,
+          "oldBest": "c3c3",
+          "rankedTopThree": ["c3c3", "b2b1", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 11,
+          "oldBest": "g3g3",
+          "rankedTopThree": ["g3g3", "g2g2", "f3f3"],
+          "retained": true
+        },
+        {
+          "ply": 12,
+          "oldBest": "g1g1",
+          "rankedTopThree": ["d3d3", "b2b1", "g1g1"],
+          "retained": true
+        },
+        {
+          "ply": 13,
+          "oldBest": "g1g1",
+          "rankedTopThree": ["g1g1", "e2e2", "g2g2"],
+          "retained": true
+        },
+        {
+          "ply": 14,
+          "oldBest": "d3d3",
+          "rankedTopThree": ["d3d3", "e2e2", "b2b1"],
+          "retained": true
+        },
+        {
+          "ply": 15,
+          "oldBest": "g2g2",
+          "rankedTopThree": ["g2g2", "e0e0", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 18,
+          "oldBest": "c2c2",
+          "rankedTopThree": ["c2c2", "e1e1", "f2f2"],
+          "retained": true
+        },
+        {
+          "ply": 19,
+          "oldBest": "b1b2",
+          "rankedTopThree": ["e0e0", "g0g0", "h1h1"],
+          "retained": false
+        },
+        {
+          "ply": 21,
+          "oldBest": "d0d0",
+          "rankedTopThree": ["d0d0", "e0e0", "c0c0"],
+          "retained": true
+        },
+        {
+          "ply": 25,
+          "oldBest": "g0g0",
+          "rankedTopThree": ["e0e0", "g0g0", "c0c0"],
+          "retained": true
+        },
+        {
+          "ply": 29,
+          "oldBest": "a1b1",
+          "rankedTopThree": ["a1b1", "g2g2", "a2a2"],
+          "retained": true
+        },
+        {
+          "ply": 39,
+          "oldBest": "h1h1",
+          "rankedTopThree": ["h1h1", "e0e0", "a2a2"],
+          "retained": true
+        },
+        {
+          "ply": 43,
+          "oldBest": "g3g3",
+          "rankedTopThree": ["a2a2", "b3b3", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 45,
+          "oldBest": "d0d0",
+          "rankedTopThree": ["d0d0", "e0e0", "c0c0"],
+          "retained": true
+        },
+        {
+          "ply": 46,
+          "oldBest": "a0a1",
+          "rankedTopThree": ["f1g1", "a0a1", "e3e3"],
+          "retained": true
+        },
+        {
+          "ply": 63,
+          "oldBest": "a2a2",
+          "rankedTopThree": ["e0e0", "a2a2", "g3g3"],
+          "retained": true
+        },
+        {
+          "ply": 68,
+          "oldBest": "b1c1",
+          "rankedTopThree": ["b1c1", "c2c2", "b3b3"],
+          "retained": true
+        },
+        {
+          "ply": 73,
+          "oldBest": "e2e2",
+          "rankedTopThree": ["g3g3", "f0f1", "g0h0"],
+          "retained": false
+        },
+        {
+          "ply": 79,
+          "oldBest": "g3g3",
+          "rankedTopThree": ["g3g3", "e2e2", "d0e0"],
+          "retained": true
+        },
+        {
+          "ply": 82,
+          "oldBest": "f2g2",
+          "rankedTopThree": ["c2c2", "a2a1", "f2g2"],
+          "retained": true
+        },
+        {
+          "ply": 90,
+          "oldBest": "a2b2",
+          "rankedTopThree": ["a2b2", "b3c3", "c2c3"],
+          "retained": true
+        },
+        {
+          "ply": 105,
+          "oldBest": "c0c0",
+          "rankedTopThree": ["c0c0", "g0f0", "d0d1"],
+          "retained": true
+        },
+        {
+          "ply": 144,
+          "oldBest": "e2e2",
+          "rankedTopThree": ["e2e2", "a1b1", "a1a2"],
+          "retained": true
+        }
+      ],
+      "wallMs": 70457.224625,
+      "evalCalls": 665
+    }
+  ],
+  "retained": 87,
+  "agreementRate": 0.90625,
+  "finishedAt": "2026-11-13T02:29:24.586Z"
+}

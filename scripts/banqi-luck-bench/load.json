@@ -1,0 +1,673 @@
+{
+  "machine": {
+    "cpu": "Apple M3 Max",
+    "logicalCpus": 14,
+    "platform": "darwin",
+    "release": "27.2.0",
+    "node": "v26.11.1",
+    "revision": "a90cc8a20cc1fb11b75ea39c498fd2a7b7b3dfb5",
+    "engineSha256": "95c6f08cafe828170e4c35d64af310c4e17c0c3e5f7d3e67f69057237ed25bcd",
+    "netSha256": "03e7052b0c5178bd1a683bc38ec9a9f0c41177367b6891f8e697dd95876e413e"
+  },
+  "startedAt": "2026-11-13T01:51:17.672Z",
+  "method": "One memory-only app server process, plus an HTTP adapter for the production review route factory with fixture loader/test accounts; cached basic-analysis readiness; real decisions queue/resolver and live Banqi WS moves; then direct pool stress.",
+  "limitations": "Basic-analysis readiness is stubbed as a cache hit; no sweep compute, database, authenticated review endpoint, browser, WAN, or production CPU. Full decision jobs are cancelled after the observation window.",
+  "unloaded": {
+    "label": "unloaded",
+    "websocketRtt": {
+      "count": 81,
+      "p50Ms": 0.2872079999979178,
+      "p95Ms": 0.39808400000015354,
+      "maxMs": 0.9051249999999982
+    },
+    "botReply": {
+      "count": 12,
+      "p50Ms": 2152.680541999999,
+      "p95Ms": 2420.9687909999993,
+      "maxMs": 2420.9687909999993
+    },
+    "fixedL8Search": {
+      "count": 8,
+      "p50Ms": 1884.2470419999954,
+      "p95Ms": 1895.7828749999971,
+      "maxMs": 1895.7828749999971
+    },
+    "samples": {
+      "websocketRttMs": [
+        0.9051249999999982, 0.39870799999994233, 0.39808400000015354, 0.37545799999998053,
+        0.3414580000003298, 0.3435829999998532, 0.2960410000000593, 0.238416999999572,
+        0.44087500000023283, 0.2361670000000231, 0.28954200000043784, 0.2657500000004802,
+        0.25408299999980954, 0.27300000000013824, 0.29158300000017334, 0.3335000000006403,
+        0.3549159999984113, 0.3266249999996944, 0.2724159999997937, 0.26808299999902374,
+        0.27450000000135333, 0.31333400000039546, 0.30674999999973807, 0.35883300000023155,
+        0.2938339999982418, 0.3467499999987922, 0.290499999999156, 0.3118749999994179,
+        0.2967080000016722, 0.3086670000011509, 0.2397079999991547, 0.3723329999993439,
+        0.3056250000008731, 0.2940840000010212, 0.3043340000003809, 0.24845899999854737,
+        0.32341599999926984, 0.2542910000011034, 0.3056250000008731, 0.36924999999973807,
+        0.2679580000003625, 0.2959579999987909, 0.23191599999699974, 0.30887499999880674,
+        0.2962090000000899, 0.28937500000029104, 0.28637499999967986, 0.3155000000006112,
+        0.2763749999976426, 0.28116700000100536, 0.2740830000002461, 0.2880409999997937,
+        0.24899999999979627, 0.28783300000213785, 0.2641249999978754, 0.259249999999156,
+        0.2827499999984866, 0.22383300000001327, 0.2872079999979178, 0.26866700000027777,
+        0.28445799999826704, 0.2629579999993439, 0.23029200000019046, 0.2380830000001879,
+        0.4442079999971611, 0.21195799999986775, 0.27087500000197906, 0.23733300000458257,
+        0.2501249999986612, 0.2700830000030692, 0.25629099999787286, 0.28762499999720603,
+        0.2914170000003651, 0.30287500000122236, 0.24704200000269338, 0.2515419999981532,
+        0.28266599999915343, 0.2528329999986454, 0.2437500000014552, 0.24729200000001583,
+        0.28474999999889405
+      ],
+      "botReplyMs": [
+        1519.3105419999997, 1825.186791, 2041.6451669999997, 2047.3577500000001, 2152.680541999999,
+        1999.2072079999998, 2196.6246250000004, 2255.319125, 2190.109542000002, 2237.2551669999993,
+        2298.1975420000017, 2420.9687909999993
+      ],
+      "fixedL8SearchMs": [
+        1886.913958000001, 1894.6335419999996, 1884.9935409999998, 1895.7828749999971,
+        1883.6220419999954, 1880.625583000001, 1884.2470419999954, 1882.8437090000007
+      ],
+      "fixedL8SearchNodes": [2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001]
+    }
+  },
+  "enqueue": [
+    {
+      "status": 202,
+      "body": {
+        "jobId": "b6509a0a-416d-4fc9-9c2b-b1d745bc920c",
+        "status": "pending",
+        "state": "queued",
+        "progress": {
+          "phase": "analysis",
+          "completed": 0,
+          "total": 67
+        }
+      },
+      "wallMs": 9.81233400000201
+    },
+    {
+      "status": 202,
+      "body": {
+        "jobId": "0b147c09-d595-4d85-abdf-7fe75bf555d0",
+        "status": "pending",
+        "state": "queued",
+        "progress": {
+          "phase": "analysis",
+          "completed": 0,
+          "total": 121
+        }
+      },
+      "wallMs": 7.9097079999992275
+    },
+    {
+      "status": 202,
+      "body": {
+        "jobId": "567d689d-2c16-42d7-8518-a18191790a12",
+        "status": "pending",
+        "state": "queued",
+        "progress": {
+          "phase": "analysis",
+          "completed": 0,
+          "total": 223
+        }
+      },
+      "wallMs": 7.9728329999998095
+    }
+  ],
+  "loaded": {
+    "label": "three queued reviews",
+    "websocketRtt": {
+      "count": 78,
+      "p50Ms": 0.2739999999976135,
+      "p95Ms": 0.352707999998529,
+      "maxMs": 0.4688750000059372
+    },
+    "botReply": {
+      "count": 12,
+      "p50Ms": 1873.9230830000015,
+      "p95Ms": 2364.541541999999,
+      "maxMs": 2364.541541999999
+    },
+    "fixedL8Search": {
+      "count": 8,
+      "p50Ms": 1923.4373750000013,
+      "p95Ms": 1937.4584170000016,
+      "maxMs": 1937.4584170000016
+    },
+    "samples": {
+      "websocketRttMs": [
+        0.259541999999783, 0.3129170000029262, 0.2743750000008731, 0.3443750000005821,
+        0.23595799999748124, 0.2486669999998412, 0.26412499999423744, 0.3117920000004233,
+        0.31054199999925913, 0.2577079999973648, 0.3209169999972801, 0.3146249999990687,
+        0.2830420000027516, 0.2818330000009155, 0.2886249999937718, 0.289334000000963,
+        0.3030829999988782, 0.18995800000266172, 0.2698339999988093, 0.2086249999993015,
+        0.24679199999809498, 0.3792080000057467, 0.352707999998529, 0.25254100000165636,
+        0.3413749999963329, 0.32449999999516876, 0.2452080000002752, 0.2227500000008149,
+        0.2630829999980051, 0.27616600000328617, 0.2830829999948037, 0.30008400000224356,
+        0.2739999999976135, 0.23587500000576256, 0.27691699999559205, 0.2530830000032438,
+        0.25499999999738066, 0.24012499999662396, 0.3117920000004233, 0.24904200000310084,
+        0.24908400000276743, 0.3189589999965392, 0.3177919999943697, 0.2662909999999101,
+        0.3259159999943222, 0.26795799999672454, 0.31437500000174623, 0.4303749999962747,
+        0.28516600000148173, 0.2846669999998994, 0.3169999999954598, 0.2479590000002645,
+        0.27795800000603776, 0.28237499999522697, 0.29816700000083074, 0.24612499999057036,
+        0.4688750000059372, 0.26237499999115244, 0.26445800000510644, 0.2740829999966081,
+        0.2590829999971902, 0.27449999999953434, 0.25291599999764003, 0.22358299999905284,
+        0.27691600000252947, 0.1919999999954598, 0.19520800000464078, 0.24220799999602605,
+        0.24962499999674037, 0.28095800000301097, 0.2580410000082338, 0.2448339999973541,
+        0.2924579999962589, 0.22904199999175034, 0.2510000000038417, 0.27183399999921676,
+        0.2884170000033919, 0.2556249999906868
+      ],
+      "botReplyMs": [
+        1554.5052499999947, 1869.395583999998, 1873.9230830000015, 1558.494292000003,
+        1862.0742079999982, 2077.175750000002, 1726.4365839999955, 2093.8916669999962,
+        2116.642749999999, 2250.3204170000026, 2282.4055420000004, 2364.541541999999
+      ],
+      "fixedL8SearchMs": [
+        1923.4373750000013, 1920.126166999995, 1926.5173749999958, 1924.0492080000113,
+        1926.8755840000085, 1921.2700409999961, 1937.4584170000016, 1921.691875000004
+      ],
+      "fixedL8SearchNodes": [2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001]
+    }
+  },
+  "poll": [
+    {
+      "status": 200,
+      "body": {
+        "status": "pending",
+        "state": "running",
+        "progress": {
+          "phase": "decisions",
+          "completed": 0,
+          "total": 66
+        }
+      },
+      "wallMs": 2.0380829999921843
+    },
+    {
+      "status": 200,
+      "body": {
+        "status": "pending",
+        "state": "queued",
+        "progress": {
+          "phase": "analysis",
+          "completed": 0,
+          "total": 121
+        }
+      },
+      "wallMs": 1.7480840000062017
+    },
+    {
+      "status": 200,
+      "body": {
+        "status": "pending",
+        "state": "queued",
+        "progress": {
+          "phase": "analysis",
+          "completed": 0,
+          "total": 223
+        }
+      },
+      "wallMs": 1.8450840000004973
+    }
+  ],
+  "queuedWindowMs": 60102.176875000005,
+  "reviewStatesBeforeCancellation": [
+    {
+      "status": "pending",
+      "started": true,
+      "error": null
+    },
+    {
+      "status": "pending",
+      "started": false,
+      "error": null
+    },
+    {
+      "status": "pending",
+      "started": false,
+      "error": null
+    }
+  ],
+  "peakReviewsThroughQueue": 1,
+  "directPool": {
+    "label": "three direct concurrent reviews",
+    "websocketRtt": {
+      "count": 53,
+      "p50Ms": 0.2635420000005979,
+      "p95Ms": 0.34591699999873526,
+      "maxMs": 0.38983299999381416
+    },
+    "botReply": {
+      "count": 6,
+      "p50Ms": 1945.1142499999987,
+      "p95Ms": 2110.205708999987,
+      "maxMs": 2110.205708999987
+    },
+    "fixedL8Search": {
+      "count": 8,
+      "p50Ms": 1923.379041999986,
+      "p95Ms": 1938.5250830000004,
+      "maxMs": 1938.5250830000004
+    },
+    "samples": {
+      "websocketRttMs": [
+        0.3748339999874588, 0.2489169999898877, 0.29825000000710133, 0.29579100001137704,
+        0.34591699999873526, 0.28483399999095127, 0.2520409999997355, 0.23491699999431148,
+        0.2671249999984866, 0.24887500000477303, 0.28399999999965075, 0.2288330000010319,
+        0.2654999999940628, 0.2413749999977881, 0.20270799999707378, 0.25020799999765586,
+        0.38983299999381416, 0.29470800000126474, 0.24870799999916926, 0.26358299999265,
+        0.2915000000066357, 0.26945900000282563, 0.24125000000640284, 0.2697500000067521,
+        0.29829099999915343, 0.29666700000234414, 0.26187500001105946, 0.23087499999383,
+        0.25666699999419507, 0.2841669999907026, 0.28416600001219194, 0.2635420000005979,
+        0.20749999998952262, 0.23904200000106357, 0.2686669999966398, 0.2544579999957932,
+        0.26841699999931734, 0.25874999999359716, 0.26750000000174623, 0.21987499999522697,
+        0.23670800001127645, 0.22299999999813735, 0.20283299998845905, 0.2773329999909038,
+        0.23579200000676792, 0.2666250000038417, 0.24129199999151751, 0.209166999993613,
+        0.2891659999877447, 0.28458300000056624, 0.2690419999998994, 0.24662499999976717,
+        0.2464579999941634
+      ],
+      "botReplyMs": [
+        1507.721583000006, 1550.3484590000007, 1966.3291250000038, 1945.1142499999987,
+        2008.1670410000079, 2110.205708999987
+      ],
+      "fixedL8SearchMs": [
+        1927.6803329999966, 1921.4317500000034, 1923.379041999986, 1923.8094580000034,
+        1919.9459999999963, 1938.5250830000004, 1923.280832999997, 1931.7728329999954
+      ],
+      "fixedL8SearchNodes": [2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001, 2000001]
+    }
+  },
+  "directResumePly": 1,
+  "directWindowMs": 30071.73520899999,
+  "failedDuringStress": 0,
+  "poolStatsBeforeCancellation": {
+    "pools": [
+      {
+        "name": "abjchess-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "abjchess-live",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "atomic-xiangqi-fsf",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "atomic-xiangqi-fsf-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "banqi",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 54,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "banqi-analysis",
+        "active": 2,
+        "queueDepth": 4,
+        "maxProcesses": 2,
+        "acquired": 1144,
+        "waited": 376,
+        "timedOut": 0,
+        "peakQueueDepth": 4
+      },
+      {
+        "name": "crazyhouse-xiangqi-fsf",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "crazyhouse-xiangqi-fsf-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "duck-xiangqi-fsf",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "ffq-banqi",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "fortress-xiangqi-fsf",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "fortress-xiangqi-fsf-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "jqe-live",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "jungle",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "jungle-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "jungle-flip",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "jungle-flip-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "katago-jungle",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "pikafish-xiangqi",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "pikafish-xiangqi-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "pikajieqi",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "pikajieqi-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "rapfi-gomoku-analysis",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 1,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "rapfi-gomoku-pve",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 4,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "three-kingdoms-banqi",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      },
+      {
+        "name": "xiangqi-fsf",
+        "active": 0,
+        "queueDepth": 0,
+        "maxProcesses": 2,
+        "acquired": 0,
+        "waited": 0,
+        "timedOut": 0,
+        "peakQueueDepth": 0
+      }
+    ],
+    "totals": {
+      "active": 2,
+      "queueDepth": 4,
+      "waited": 376,
+      "timedOut": 0
+    },
+    "processes": {
+      "name": "all-engine-processes",
+      "active": 2,
+      "queueDepth": 0,
+      "maxProcesses": 12,
+      "acquired": 1198,
+      "waited": 0,
+      "timedOut": 0,
+      "peakQueueDepth": 0
+    }
+  },
+  "poolPeaks": {
+    "abjchess-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "abjchess-live": {
+      "active": 0,
+      "queued": 0
+    },
+    "atomic-xiangqi-fsf": {
+      "active": 0,
+      "queued": 0
+    },
+    "atomic-xiangqi-fsf-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "banqi": {
+      "active": 1,
+      "queued": 0
+    },
+    "banqi-analysis": {
+      "active": 2,
+      "queued": 4
+    },
+    "crazyhouse-xiangqi-fsf": {
+      "active": 0,
+      "queued": 0
+    },
+    "crazyhouse-xiangqi-fsf-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "duck-xiangqi-fsf": {
+      "active": 0,
+      "queued": 0
+    },
+    "ffq-banqi": {
+      "active": 0,
+      "queued": 0
+    },
+    "fortress-xiangqi-fsf": {
+      "active": 0,
+      "queued": 0
+    },
+    "fortress-xiangqi-fsf-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "jqe-live": {
+      "active": 0,
+      "queued": 0
+    },
+    "jungle": {
+      "active": 0,
+      "queued": 0
+    },
+    "jungle-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "jungle-flip": {
+      "active": 0,
+      "queued": 0
+    },
+    "jungle-flip-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "katago-jungle": {
+      "active": 0,
+      "queued": 0
+    },
+    "pikafish-xiangqi": {
+      "active": 0,
+      "queued": 0
+    },
+    "pikafish-xiangqi-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "pikajieqi": {
+      "active": 0,
+      "queued": 0
+    },
+    "pikajieqi-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "rapfi-gomoku-analysis": {
+      "active": 0,
+      "queued": 0
+    },
+    "rapfi-gomoku-pve": {
+      "active": 0,
+      "queued": 0
+    },
+    "three-kingdoms-banqi": {
+      "active": 0,
+      "queued": 0
+    },
+    "xiangqi-fsf": {
+      "active": 0,
+      "queued": 0
+    }
+  },
+  "liveEngineCounters": {
+    "moves": 30,
+    "fallbacks": 0,
+    "failures": 0
+  },
+  "finishedAt": "2026-11-13T01:53:28.428Z"
+}

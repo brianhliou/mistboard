@@ -20,6 +20,7 @@ import {
   BANQI_DECISIONS_ENGINE_ID,
   banqiAnalysisRepetitionWindow,
   evaluateBanqiPosition,
+  rankBanqiDecisionMoves,
 } from './banqi-analysis.js';
 import { banqiEngineTierFor, evaluateBanqiFenNodes } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen } from './banqi-fen.js';
@@ -238,7 +239,43 @@ test('grading excludes a forbidden third chase from root searchmoves', async () 
   });
 });
 
-test('flip grading divides 2M nodes by distinct pool identities, with a 200K floor', async () => {
+test('ranking keeps the pre-move repetition window and restricts each root to one legal move', async () => {
+  let state = createBanqiStateFromSetup('root-history', fixture.setup);
+  const prefix = fixture.moves.slice(0, 83);
+  const states = [state];
+  for (const move of prefix) {
+    state = applyBanqiMove(state, move);
+    states.push(state);
+  }
+  const window = banqiAnalysisRepetitionWindow(states, prefix, prefix.length);
+  assert.deepEqual(state.status, { type: 'playing', turn: 'black' });
+  assert.ok(window.moves.length > 0);
+  const legal = getBanqiLegalMoves(state).map(banqiMoveToEngineUci);
+  assert.ok(legal.some((m) => m.slice(0, 2) !== m.slice(2)));
+  assert.ok(legal.some((m) => m.slice(0, 2) === m.slice(2)));
+  const seen: string[] = [];
+  const ranked = await rankBanqiDecisionMoves(
+    state,
+    'black',
+    async (fen, history, search) => {
+      assert.equal(fen, banqiStateToEngineFen(state));
+      assert.deepEqual(history, window);
+      assert.equal(search?.nodes, 200_000);
+      assert.equal(search.searchMoves?.length, 1);
+      seen.push(search.searchMoves[0]!);
+      return { cp: seen.length * 10, mate: null };
+    },
+    window,
+  );
+  assert.deepEqual(seen, legal);
+  assert.deepEqual(
+    ranked.map((row) => row.move),
+    [...legal].reverse(),
+    'black mover scores stay positive',
+  );
+});
+
+test('baseline flip terms keep the 200K floor for early, middle and late pools', async () => {
   const setup: BanqiSetup = {
     deal: STANDARD_BANQI_DEAL,
     chaseRule: 'repetition',
@@ -277,10 +314,10 @@ test('flip grading divides 2M nodes by distinct pool identities, with a 200K flo
     );
     assert.ok(seenNodes.length > 0);
     assert.ok(
-      seenNodes.every((nodes) => nodes === Math.max(200_000, Math.floor(2_000_000 / n))),
+      seenNodes.every((nodes) => nodes === 200_000),
       `N=${n}, got ${seenNodes}`,
     );
-    assert.ok(quietNodes.every((nodes) => nodes === 2_000_000));
+    assert.ok(quietNodes.every((nodes) => nodes === 200_000));
   }
   assert.deepEqual(distinctCounts, [14, 2, 1]);
 });
@@ -288,17 +325,15 @@ test('flip grading divides 2M nodes by distinct pool identities, with a 200K flo
 test('new grading identities invalidate classical sweeps, decisions and checkpoints', () => {
   assert.notEqual(BANQI_ANALYSIS_ENGINE_ID, 'misty-banqi-analysis@0.3.0+history1');
   assert.notEqual(BANQI_DECISIONS_ENGINE_ID, 'misty-banqi-decisions@0.3.0+d4');
+  assert.notEqual(BANQI_DECISIONS_ENGINE_ID, 'misty-banqi-decisions@0.3.0+nnue-nodes-2000000+d5');
+  assert.ok(!BANQI_DECISIONS_ENGINE_ID.endsWith('+d6'));
+  assert.match(BANQI_DECISIONS_ENGINE_ID, /rank200000\+baseline200000\+floor200000\+d7$/);
 });
 
-test('live flip grading requests the same NNUE net, split budget and full budgets for quiet alternatives', async () => {
+test('live flip grading requests NNUE, 200K identity terms and 200K restricted root ranking', async () => {
   const prefix = fixture.moves.slice(0, 90);
   let state = createBanqiStateFromSetup('decision-request', fixture.setup);
   for (const move of prefix) state = applyBanqiMove(state, move);
-  const n = new Set(
-    Object.values(state.board)
-      .filter((piece) => piece?.faceDown)
-      .map((piece) => `${piece!.color}-${piece!.role}`),
-  ).size;
   await withGradingEngine(async (engine) => {
     await analyzeBanqiDecisions([...prefix, fixture.moves[90]!], fixture.setup, undefined, {
       load: async () => ({ nextIndex: 90, items: [] }),
@@ -306,12 +341,14 @@ test('live flip grading requests the same NNUE net, split budget and full budget
     });
     const commands = engine.commands();
     const go = commands.filter((line) => line.startsWith('go '));
+    assert.ok(go.some((line) => line.startsWith('go nodes 200000 ')));
     assert.ok(
       go.some((line) =>
-        line.startsWith(`go nodes ${Math.max(200_000, Math.floor(2_000_000 / n))} `),
+        line.endsWith(`searchmoves ${getBanqiLegalMoves(state).map(banqiMoveToEngineUci)[0]}`),
       ),
     );
-    assert.ok(go.some((line) => line.startsWith('go nodes 2000000 ')));
+    assert.ok(go.every((line) => line.startsWith('go nodes 200000 ')));
+    assert.ok(go.every((line) => !line.startsWith('go nodes 2000000 ')));
     assert.equal(
       commands.filter((line) => line === `setoption name EvalFile value ${engine.net}`).length,
       go.length,
@@ -377,4 +414,51 @@ test('whole analysis requests remain identical when hidden identities are permut
       });
     }
   });
+});
+
+test('decision grades and ranking requests ignore hidden swaps after a real quiet-move history', async () => {
+  const prefix = fixture.moves.slice(0, 84);
+  let state = createBanqiStateFromSetup('hidden-grades', fixture.setup);
+  for (const move of prefix) state = applyBanqiMove(state, move);
+  assert.ok(state.noProgressClock > 0);
+  const hidden = ALL_BANQI_SQUARES.filter((sq) => state.board[sq]?.faceDown);
+  const a = hidden[0]!;
+  const b = hidden.find(
+    (sq) =>
+      state.board[sq]!.role !== state.board[a]!.role ||
+      state.board[sq]!.color !== state.board[a]!.color,
+  )!;
+  assert.ok(b);
+  const playedSquare = hidden.find((sq) => sq !== a && sq !== b)!;
+  assert.ok(playedSquare);
+  const played: BanqiMove = { from: playedSquare, to: playedSquare };
+  const swapped = { ...fixture.setup, deal: [...fixture.setup.deal] };
+  const ai = ALL_BANQI_SQUARES.indexOf(a);
+  const bi = ALL_BANQI_SQUARES.indexOf(b);
+  [swapped.deal[ai], swapped.deal[bi]] = [swapped.deal[bi]!, swapped.deal[ai]!];
+  async function grade(setup: BanqiSetup) {
+    const requests: unknown[] = [];
+    let historyRequests = 0;
+    const decisions = await analyzeBanqiDecisions(
+      [...prefix, played],
+      setup,
+      {
+        evalPosition: async (fen, history, search) => {
+          requests.push({ fen, history, search });
+          if (history?.moves.length) historyRequests++;
+          let hash = 0;
+          for (const char of fen) hash = (hash * 31 + char.charCodeAt(0)) % 997;
+          return { cp: hash - 498, mate: null };
+        },
+      },
+      {
+        load: async () => ({ nextIndex: prefix.length, items: [] }),
+        save: async () => {},
+      },
+    );
+    assert.ok(historyRequests > 0, 'quiet rankings and baselines preserve the public history');
+    assert.equal(decisions.length, 1);
+    return { decisions, requests };
+  }
+  assert.deepEqual(await grade(swapped), await grade(fixture.setup));
 });
