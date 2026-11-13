@@ -65,6 +65,13 @@ function buildStaticPageRail(
       link.className = 'static-page-rail-link';
       link.href = localizedHref(item.href, locale);
       link.textContent = t(item.labelKey, {}, locale);
+      if ('leavesRail' in item && item.leavesRail) {
+        const out = document.createElement('span');
+        out.className = 'static-page-rail-out';
+        out.setAttribute('aria-hidden', 'true');
+        out.textContent = '↗';
+        link.append(out);
+      }
       if (item.key === activeKey) {
         link.classList.add('active');
         link.setAttribute('aria-current', 'page');

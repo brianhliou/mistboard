@@ -75,7 +75,7 @@ describe('static pages', () => {
       'Contact',
       'Is Mistboard lagging?',
       'Title verification',
-      'Mistboard Patron',
+      'Mistboard Patron↗',
       'Terms of Use',
       'Privacy',
       'Source code',
@@ -83,7 +83,7 @@ describe('static pages', () => {
       'Work with us',
       'Engine champions',
       'Developers',
-      'Game data',
+      'Game data↗',
       'API',
       'Thank you',
     ]);
