@@ -43,7 +43,12 @@ import './current-games.css';
 import './account-profile.css';
 import './landing-play.css';
 import './correspondence.css';
-import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE, type GameSpecId } from '@mistboard/game';
+import {
+  canonicalVariantOrderIndex,
+  DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
+  type GameSpecId,
+} from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { openChallengeDialog } from './challenge-dialog.js';
@@ -889,8 +894,12 @@ export function buildStartForm(
   form.className = 'correspondence-seek-form';
   form.noValidate = true;
 
-  // Public specs, plus a playtest variant for an account the menu offers it to.
-  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
+  // Public specs, plus a playtest variant for an account the menu offers it to,
+  // in the canonical shelf order so the tiles sit where Play a game puts them.
+  const specIds = [...correspondenceSpecIdsFor(webVariantOfferedInMenu)].sort(
+    (a, b) =>
+      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
+  );
   let currentVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
   if (!specIds.includes(currentVariant)) currentVariant = specIds[0] ?? currentVariant;
 
