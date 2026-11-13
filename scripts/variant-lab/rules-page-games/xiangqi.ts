@@ -7,7 +7,7 @@
 //   npx tsx scripts/variant-lab/rules-page-games/xiangqi.ts build --rows plans/xiangqi.rows.jsonl
 //   npx biome check --write scripts/variant-lab/rules-page-games/plans/xiangqi.plan.json
 //
-// PIKAFISH is the pikafish.ref build on the CC0 net (~/projects/tools/pikafish-6a59ee2f-cc0/src).
+// PIKAFISH is the pikafish.ref build on the CC0 net (resolved by apps/server/src/xiangqi-pikafish-paths.ts).
 import {
   applyStandardXiangqiMove,
   createInitialStandardXiangqiState,
