@@ -581,8 +581,6 @@ export const ZH_HANS_PLAY = {
   'correspondence.opponentLink': '链接',
   'correspondence.yourSideLabel': '你的执方',
   'correspondence.sideRandom': '随机',
-  'correspondence.kindHintPublic': '任何人都可以在这里、首页或「进行中的对局」页面接受。',
-  'correspondence.kindHintLink': '你会得到一个链接，发给想对弈的人。',
   'correspondence.postSeek': '发布求战',
   'correspondence.createLink': '创建链接',
   'correspondence.seekPosted':

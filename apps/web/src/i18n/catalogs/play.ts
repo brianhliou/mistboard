@@ -355,9 +355,6 @@ export const EN_PLAY = {
   'correspondence.opponentLink': 'A link',
   'correspondence.yourSideLabel': 'Your side',
   'correspondence.sideRandom': 'Random',
-  'correspondence.kindHintPublic':
-    'Anyone can accept it here, on the homepage or on the Current games page.',
-  'correspondence.kindHintLink': 'You get a link to send to one person.',
   'correspondence.postSeek': 'Post seek',
   'correspondence.createLink': 'Create link',
   'correspondence.seekPosted':

@@ -1289,6 +1289,41 @@ describe('landing play panel', () => {
     });
   }
 
+  it('offers Rated on a correspondence friend invite and posts it rated', async () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setRatedModeEnabled(true, true);
+    setResolvedSignedIn(true);
+    setRoomNavigator(() => {});
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/correspondence/seeks') {
+        return jsonResponse(
+          { seek: { id: 'seek_r', gameSpecId: 'jieqi' }, challengeUrl: '/challenge/seek_r' },
+          { status: 201 },
+        );
+      }
+      return jsonResponse({ playing: 0, online: 0 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+    clickModalButton('Correspondence');
+    clickModalTimeControl('2');
+    expect(document.body.textContent).not.toContain('coming soon');
+    clickModalButton('Rated');
+    clickModalButton('Create room');
+    await flushPromises();
+
+    expect(seekPostBody(fetchSpy)).toMatchObject({
+      gameSpecId: 'jieqi',
+      daysPerMove: 2,
+      visibility: 'private',
+      rated: true,
+    });
+  });
+
   // #1059: signed out, Challenge a friend creates a direct invite room the guest
   // sits in at once, instead of a sign-in wall. The side goes as the variant's
   // own color, and no link challenge is posted.
