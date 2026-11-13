@@ -110,7 +110,21 @@ describe('phone home widget set', () => {
     expect(mission?.querySelector('.landing-phone-mission-text')?.textContent).toBe(
       "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
     );
-    expect(mission?.querySelector('a')?.getAttribute('href')).toBe('/about');
+    expect(mission?.querySelector('.landing-phone-mission-about')?.getAttribute('href')).toBe(
+      '/about',
+    );
+    const totals = mission?.querySelector('.landing-activity-primary');
+    expect(totals?.textContent).toBe('4,888games played (4,267 in the last 30 days)');
+    expect(totals?.querySelector('a')?.getAttribute('href')).toBe('/stats');
+    expect(totals?.parentElement?.previousElementSibling?.className).toBe(
+      'landing-phone-mission-text',
+    );
+    expect(totals?.parentElement?.nextElementSibling?.className).toBe(
+      'landing-phone-mission-about',
+    );
+    expect(stage.el.querySelector('.landing-play-stack .landing-activity-primary')).toBeNull();
+    expect(stage.el.querySelector<HTMLElement>('.landing-activity')?.hidden).toBe(true);
+    expect(fetchedUrls().filter((url) => url === '/api/live-stats')).toHaveLength(1);
     expect(
       stage.el.querySelectorAll(':scope > .landing-footer .landing-footer-links a'),
     ).toHaveLength(4);
@@ -123,6 +137,19 @@ describe('phone home widget set', () => {
     ).toHaveLength(PHONE_NEWS_ROWS);
     // The header's More » leads on; no closing row under three entries.
     expect(stage.el.querySelector('.landing-news-column .landing-news-more')).toBeNull();
+  });
+
+  it('reserves the phone mission totals in the prerendered shell without fetching', () => {
+    stubViewport(true);
+    const stage = buildLandingStage(fallbackPlayableEngines(), { skipLiveWidgets: true });
+    expect(
+      stage.el.querySelector('.landing-phone-mission .landing-activity-value')?.textContent,
+    ).toBe('–');
+    expect(
+      stage.el.querySelector('.landing-phone-mission .landing-activity-label')?.textContent,
+    ).toBe('games played');
+    expect(stage.el.querySelector('.landing-play-stack .landing-activity-primary')).toBeNull();
+    expect(fetchedUrls()).not.toContain('/api/live-stats');
   });
 
   it('on desktop, still mounts every widget and fetches its data', async () => {

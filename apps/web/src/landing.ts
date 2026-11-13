@@ -649,8 +649,8 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
 }
 
 // `phone` builds the phone home (mobile pass #576): the TV board, Play with its
-// two opponent buttons and the games-played line under them (back 2026-10-23),
-// the shortcut tiles, the blog strip and the chat room, then the footer. The
+// two opponent buttons, the live-games line, the shortcut tiles, the mission
+// with games-played totals, the blog strip and the chat room, then the footer. The
 // lobby panel, correspondence card, event banners (until the broadcast pages
 // work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
 // are not built at all there, so none of them fetches, polls or opens
@@ -671,6 +671,10 @@ export function buildLandingStage(
 } {
   const locale = currentLocale();
   const phone = opts.phone ?? isPhoneHome();
+  // Phone only: the mission sits under the shortcut tiles and above News and
+  // holds every count (games played, games in play). Build it before activity,
+  // which owns the one counters hydrate/poll and stays hidden on phones.
+  const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
   const stage = document.createElement('main');
   stage.className = 'landing-stage';
   if (phone) stage.classList.add('landing-stage-phone');
@@ -758,7 +762,11 @@ export function buildLandingStage(
       feed: yourMove,
       phoneOnly: panelListsYourMove,
     }),
-    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
+    buildLandingActivity({
+      hydrate: !opts.skipLiveWidgets,
+      totalsTarget:
+        missionBlock?.querySelector<HTMLElement>('.landing-phone-mission-totals') ?? undefined,
+    }),
   );
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('div');
@@ -865,10 +873,6 @@ export function buildLandingStage(
   newsColumn.append(
     buildLandingAnnouncements(locale, phone ? { maxRows: PHONE_NEWS_ROWS, moreRow: false } : {}),
   );
-  // Phone only: the mission closes the page, under the chat, so the TV board and
-  // the Play buttons keep the first screen (2026-11-08). The h1 tagline stays in
-  // the DOM for search and screen readers.
-  const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
   const chatColumn = document.createElement('div');
   chatColumn.className = 'landing-chat-column';
   chatColumn.append(

@@ -22,6 +22,7 @@ import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs
 import { articleIsLive } from './articles/publish-time.js';
 import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
+import { navPhoneMediaQuery } from './site-shell.js';
 import './community-rail.css';
 import './articles.css';
 import './hover-grammar.css';
@@ -966,13 +967,19 @@ function initSingleCarousel(carousel: HTMLElement): void {
   let index = 0;
   let dir = 1;
   let timer: number | null = null;
+  let inView = false;
+  let hovered = false;
+  let touched = false;
+  let observer: IntersectionObserver | null = null;
+  const phone = (): boolean => window.matchMedia?.(navPhoneMediaQuery).matches ?? false;
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   const stepPx = (): number => {
     if (cards.length < 2) return 0;
     return cards[1]!.getBoundingClientRect().left - cards[0]!.getBoundingClientRect().left;
   };
-  const overflow = (): number => Math.max(0, track.scrollWidth - carousel.clientWidth);
+  const overflow = (): number =>
+    Math.max(0, (phone() ? carousel.scrollWidth : track.scrollWidth) - carousel.clientWidth);
   const maxIndex = (): number => {
     const step = stepPx();
     if (step <= 0) return 0;
@@ -981,9 +988,10 @@ function initSingleCarousel(carousel: HTMLElement): void {
     return Math.ceil(overflow() / step - 0.05);
   };
 
-  const apply = () => {
+  const apply = (move = false) => {
     const mi = maxIndex();
     carousel.classList.toggle('is-static', mi <= 0);
+    index = Math.max(0, Math.min(index, mi));
     if (prev) prev.disabled = index <= 0;
     if (next) next.disabled = index >= mi;
     if (mi <= 0) {
@@ -991,8 +999,13 @@ function initSingleCarousel(carousel: HTMLElement): void {
       track.style.transform = 'none';
       return;
     }
-    index = Math.max(0, Math.min(index, mi));
-    track.style.transform = `translateX(${-Math.min(index * stepPx(), overflow())}px)`;
+    const left = Math.min(index * stepPx(), overflow());
+    if (phone()) {
+      track.style.transform = 'none';
+      if (move) carousel.scrollTo({ left, behavior: reduceMotion ? 'instant' : 'smooth' });
+    } else {
+      track.style.transform = `translateX(${-left}px)`;
+    }
   };
 
   const tick = () => {
@@ -1001,7 +1014,7 @@ function initSingleCarousel(carousel: HTMLElement): void {
     if (index >= mi) dir = -1;
     else if (index <= 0) dir = 1;
     index += dir;
-    apply();
+    apply(true);
   };
 
   const stop = () => {
@@ -1010,34 +1023,71 @@ function initSingleCarousel(carousel: HTMLElement): void {
       timer = null;
     }
   };
-  const start = () => {
+  // Only explicit input ends rotation. Native scroll events also fire for
+  // scrollTo, so listening to them would stop after the first automatic card.
+  const stopForever = () => {
+    touched = true;
     stop();
-    if (reduceMotion) return;
-    timer = window.setInterval(() => {
-      if (!document.body.contains(carousel)) {
-        stop();
-        return;
-      }
-      tick();
-    }, LANDING_CAROUSEL_ROTATION_MS);
+    observer?.disconnect();
+  };
+  const onResize = () => {
+    if (!carousel.isConnected) {
+      stopForever();
+      window.removeEventListener('resize', onResize);
+      return;
+    }
+    apply();
   };
 
   const nudge = (delta: number) => {
+    stopForever();
     const mi = maxIndex();
     if (mi <= 0) return;
     index = Math.max(0, Math.min(index + delta, mi));
     dir = delta >= 0 ? 1 : -1;
-    apply();
+    apply(true);
   };
   prev?.addEventListener('click', () => nudge(-1));
   next?.addEventListener('click', () => nudge(1));
 
-  carousel.addEventListener('mouseenter', stop);
-  carousel.addEventListener('mouseleave', start);
-  window.addEventListener('resize', apply);
+  for (const event of ['pointerdown', 'touchstart', 'focusin']) {
+    carousel.addEventListener(event, stopForever, { passive: true, once: true });
+  }
+  // A sideways wheel or trackpad swipe is input on the row; a vertical wheel
+  // only scrolls the page past it and leaves rotation running.
+  carousel.addEventListener(
+    'wheel',
+    (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) stopForever();
+    },
+    { passive: true },
+  );
+  carousel.addEventListener('mouseenter', () => {
+    hovered = true;
+  });
+  carousel.addEventListener('mouseleave', () => {
+    hovered = false;
+  });
+  window.addEventListener('resize', onResize);
 
   apply();
-  start();
+  if (!reduceMotion && typeof IntersectionObserver !== 'undefined') {
+    observer = new IntersectionObserver(
+      (entries) => {
+        inView = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5);
+      },
+      { threshold: [0, 0.5] },
+    );
+    observer.observe(carousel);
+    timer = window.setInterval(() => {
+      if (!carousel.isConnected) {
+        stopForever();
+        window.removeEventListener('resize', onResize);
+        return;
+      }
+      if (!touched && inView && !hovered && document.visibilityState !== 'hidden') tick();
+    }, LANDING_CAROUSEL_ROTATION_MS);
+  }
 }
 
 export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement {
