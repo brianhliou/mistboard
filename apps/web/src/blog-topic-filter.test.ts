@@ -251,7 +251,6 @@ describe('blog index engineering chip', () => {
       '/blog/pikafish-reveal-bug',
       '/blog/server-enforced-fog',
       '/blog/unstyled-first-paint',
-      '/blog/xiangqi-nnue-training',
     ]);
     expect(slugsUnder('engineering')).toEqual(listedEngineering);
   });

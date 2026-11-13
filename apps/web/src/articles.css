@@ -1915,12 +1915,6 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   min-width: 8.5em;
 }
 
-/* The Elo column stays on one line on desktop (nowrapColumns), so the row
-   names wrap instead of pushing the table past the text column. */
-[data-article-slug="xiangqi-nnue-training"] .article-table-wrap td:first-child {
-  white-space: normal;
-}
-
 /* At 8.5em the fixed-bot match table ran 15px past a 390px phone column. */
 @media (max-width: 600px) {
   [data-article-slug="pikafish-reveal-bug"] .article-table td:first-child {
