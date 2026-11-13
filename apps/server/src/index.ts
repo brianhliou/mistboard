@@ -4,6 +4,7 @@ import type { GameEvent } from '@mistboard/game';
 import pg from 'pg';
 import { WebSocketServer } from 'ws';
 import { closeBanqiAnalysisQueries, openBanqiAnalysisQueries } from './banqi-analysis-runner.js';
+import { isUserIdFairPlayMarked } from './fair-play.js';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
 import { drainAchievementTriggers, installAchievementEvaluator } from './achievement-triggers.js';
@@ -164,7 +165,8 @@ const rematchOrch: RematchOrchestrator = {
   send,
   buildRoomUrl: (roomId) => `/?room=${encodeURIComponent(roomId)}`,
   accountMayRate: async (userId) =>
-    !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
+    !persistence.isInitialized() ||
+    (!(await persistence.isUserIdStatsExcluded(userId)) && !(await isUserIdFairPlayMarked(userId))),
   createRoom: (spec) =>
     roomLifecycle.createRoom(
       spec.mode,

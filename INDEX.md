@@ -1444,3 +1444,5 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `apps/server/src/xiangqi-broadcast-push-store.ts` + `.test.ts`: transactional round creation, initial-player validation and shared sequence-aware writer adapter; persistent HTTP retry/correction and isolation tests.
 
 `scripts/broadcast-push-sim.mjs` + `.test.mjs`: fetch-only growing-game reference client with bounded retries. `scripts/broadcast-push-local-smoke.mjs` + `.test.mjs`: local token CLI replay and authoritative board/noindex-page checks. Public contract: `docs/broadcast-push-api.md`.
+
+`apps/server/src/fair-play.ts` + `fair-play.test.ts` + `persistence-fair-play.test.ts`: admin fair-play marks, bounded opponent rating refunds, repeat/dry-run safety and leaderboard exclusion; migration 197 adds the mark and refund ledger. `scripts/account-flags.mjs --mark-fair-play [--dry-run]` / `--unmark-fair-play` operates it (#1077).
