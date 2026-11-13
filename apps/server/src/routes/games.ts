@@ -737,12 +737,20 @@ async function gameSummaryForApi(
 function gameWithPostgamePlayers(
   game: persistence.RecentEveGameRecord,
 ): persistence.RecentEveGameRecord & { players: PostgamePlayer[] } {
+  const players = postgamePlayers(game.participants ?? [], {
+    whiteName: game.whiteName,
+    blackName: game.blackName,
+  });
   return {
     ...game,
-    players: postgamePlayers(game.participants ?? [], {
-      whiteName: game.whiteName,
-      blackName: game.blackName,
-    }),
+    // The legacy raw roster also travels in this envelope. Apply the same
+    // metadata gate there, including for in-memory summaries.
+    participants: (game.participants ?? []).map(({ title, flair, ...seat }, index) => ({
+      ...seat,
+      ...(players[index]?.title != null ? { title } : {}),
+      ...(players[index]?.flair != null ? { flair } : {}),
+    })),
+    players,
   };
 }
 

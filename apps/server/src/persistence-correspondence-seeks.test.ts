@@ -23,6 +23,7 @@ import {
   updateUserAccountPreference,
   userExists,
 } from './persistence.js';
+import * as seekPersistence from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
@@ -40,6 +41,38 @@ definePersistenceTests('correspondence seeks', () => {
       displayName,
       now: at,
     });
+
+  test('linkable identity SQL gates handle/title/flair together for closed, private and missing users', async () => {
+    assert.ok('linkableIdentitySql' in seekPersistence);
+    assert.equal(typeof seekPersistence.linkableIdentitySql, 'function');
+    const identitySql = seekPersistence.linkableIdentitySql as (
+      alias: string,
+      field: 'handle' | 'title' | 'flair',
+    ) => string;
+    const { rows } = await getPool().query(`SELECT
+      ${identitySql('u', 'handle')} AS handle,
+      ${identitySql('u', 'title')} AS title,
+      ${identitySql('u', 'flair')} AS flair
+      FROM (VALUES
+        (NULL::timestamptz, 'public', 'public-user', 'xim', 'variant-banqi'),
+        (NULL::timestamptz, 'unlisted', 'unlisted-user', 'xim', 'variant-banqi'),
+        (NULL::timestamptz, 'private', 'private-user', 'xim', 'variant-banqi'),
+        (now(), 'public', 'closed-user', 'xim', 'variant-banqi'),
+        (NULL::timestamptz, NULL, NULL, NULL, NULL)
+      ) AS u(closed_at, profile_visibility, handle, title, flair)`);
+    assert.deepEqual(rows.slice(0, 2), [
+      { handle: 'public-user', title: 'xim', flair: 'variant-banqi' },
+      { handle: 'unlisted-user', title: 'xim', flair: 'variant-banqi' },
+    ]);
+    assert.deepEqual(
+      rows.slice(2),
+      Array.from({ length: 3 }, () => ({ handle: null, title: null, flair: null })),
+    );
+    assert.doesNotMatch(
+      JSON.stringify(rows.slice(2)),
+      /private-user|closed-user|xim|variant-banqi/,
+    );
+  });
 
   // #353: before listOutgoingSeeksForUser, a private link challenge appeared in
   // NO listing its creator could reach. listOpenCorrespondenceSeeks is
