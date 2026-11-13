@@ -1,4 +1,3 @@
-import { PIECE_SVGS } from '@mistboard/board-render';
 import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
@@ -48,7 +47,6 @@ import { variantNameKeyForSpecId } from './game-display.js';
 import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
-import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
   LANDING_HERO_BOT_GAME_SPEC_IDS,
   landingBotLineup,
@@ -65,6 +63,19 @@ import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-fl
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
+import {
+  buildSetupRowSection,
+  colorOptionButton,
+  landingGameSpecCapabilities,
+  type SetupColorPreference,
+  type SetupSection,
+  type SetupSectionOptions,
+  type SetupSideCapabilities,
+  startOptionButton,
+  updateColorOptionButton,
+  updateStartOptionButtonLabel,
+  variantCardButton,
+} from './setup-panel-parts.js';
 import { isLikelySignedIn, isLikelyStatsExcluded } from './signed-in-state.js';
 import { navPhoneMediaQuery } from './site-shell.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
@@ -78,7 +89,6 @@ import {
 } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
-import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 export type PlayableEngine = {
   id: string;
@@ -152,21 +162,8 @@ type LandingTimePreset = {
   incrementMs: number;
   timeClass: TimeClass;
 };
-type LandingColorPreference = 'white' | 'red' | 'black' | 'random';
-type LandingPlayerColor = Exclude<LandingColorPreference, 'random'>;
-type LandingGameSpecCapabilities = {
-  firstColor: LandingPlayerColor;
-  firstGlyph: string;
-  firstLabel: string;
-  glyphClass?: string;
-  neutralGlyphColor?: boolean;
-  pickerLabel?: string;
-  secondColor: LandingPlayerColor;
-  secondGlyph: string;
-  secondLabel: string;
-  supportsRated: boolean;
-  supportsTimeControl: boolean;
-};
+type LandingColorPreference = SetupColorPreference;
+type LandingGameSpecCapabilities = SetupSideCapabilities;
 export type LandingRoomSetup = {
   gameSpecId: LandingGameSpecId;
   rated: boolean;
@@ -352,16 +349,6 @@ function deepLinkInitialVariant(
 function landingModeAllowed(gameSpecId: GameSpecId, mode: LandingPlayMode): boolean {
   return webVariantTenantForSpecId(gameSpecId)?.landing?.modes?.includes(mode) ?? true;
 }
-const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
-  firstColor: 'white',
-  firstGlyph: '♚',
-  firstLabel: 'White',
-  secondColor: 'black',
-  secondGlyph: '♚',
-  secondLabel: 'Black',
-  supportsRated: true,
-  supportsTimeControl: true,
-};
 // UI-only placeholder shown in the engine picker before /api/engines/playable
 // resolves (or if every retry fails). It is NOT a real, submittable engine: the
 // id is a sentinel the server rejects with 400 invalid_engine, so it can never
@@ -2135,26 +2122,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     grid.setAttribute('aria-label', t('setup.variant', {}, locale));
     const cards = new Map<LandingGameSpecId, HTMLButtonElement>();
     for (const { gameSpecId, label } of variantOptions) {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'landing-variant-card';
-      card.setAttribute('role', 'radio');
-      card.dataset.gameSpec = gameSpecId;
-      const miniId = variantMiniIdForGameSpec(gameSpecId);
-      if (miniId) {
-        const thumb = document.createElement('span');
-        thumb.className = 'landing-variant-card-thumb';
-        thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
-        card.append(thumb);
-      }
-      const name = document.createElement('span');
-      name.className = 'landing-variant-card-name';
-      // A tile has room for one short line; Three Kingdoms writes its number.
-      name.textContent =
-        gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
-          ? t('variant.threeKingdomsBanqi.cardName', {}, locale)
-          : label;
-      card.append(name);
+      const card = variantCardButton(gameSpecId, label, locale);
       // No computer opponent yet (Dark Xiangqi): grey the card out
       // of the engine flow rather than letting it be picked and silently create
       // a PvP room.
@@ -3550,196 +3518,11 @@ function buildColorPreferenceSection(
   return section;
 }
 
-function colorOptionButton(
-  value: LandingColorPreference,
-  label: string,
-  selected: boolean,
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `landing-start-option landing-color-option${selected ? ' selected' : ''}`;
-  button.setAttribute('role', 'radio');
-  button.setAttribute('aria-checked', selected ? 'true' : 'false');
-
-  const glyph = document.createElement('span');
-  glyph.className = `landing-color-glyph ${value}`;
-  glyph.setAttribute('aria-hidden', 'true');
-  glyph.append(...colorGlyphNodes(value));
-
-  const text = document.createElement('span');
-  text.className = 'landing-color-label';
-  text.textContent = label;
-
-  button.append(glyph, text);
-  return button;
-}
-
-function updateColorOptionButton(
-  button: HTMLButtonElement,
-  value: LandingColorPreference,
-  label: string,
-  gameSpecId: LandingGameSpecId,
-): void {
-  const glyph = button.querySelector<HTMLSpanElement>('.landing-color-glyph');
-  const text = button.querySelector<HTMLSpanElement>('.landing-color-label');
-  if (glyph) {
-    const capabilities = landingGameSpecCapabilities(gameSpecId);
-    glyph.className = capabilities.neutralGlyphColor
-      ? `landing-color-glyph${value === 'random' ? ' random' : ''}`
-      : `landing-color-glyph ${value}`;
-    if (capabilities.glyphClass) glyph.classList.add(capabilities.glyphClass);
-    glyph.replaceChildren(...colorGlyphNodes(value, gameSpecId));
-  }
-  if (text) text.textContent = label;
-}
-
-function colorGlyphNodes(
-  value: LandingColorPreference,
-  gameSpecId: LandingGameSpecId = DARK_CHESS_SPEC_ID,
-): Node[] {
-  if (gameSpecId === JUNGLE_SPEC_ID) {
-    return jungleElephantGlyphNodes(value);
-  }
-  if (gameSpecId === DARK_CHESS_SPEC_ID) {
-    return chessKingGlyphNodes(value);
-  }
-  const capabilities = landingGameSpecCapabilities(gameSpecId);
-  if (capabilities.glyphClass === 'xiangqi') {
-    return xiangqiGeneralGlyphNodes(value);
-  }
-  if (capabilities.glyphClass === 'stone') {
-    return gomokuStoneGlyphNodes(value);
-  }
-  if (value === 'random') {
-    const first = document.createElement('span');
-    first.className = capabilities.neutralGlyphColor ? '' : capabilities.firstColor;
-    first.textContent = capabilities.firstGlyph;
-    const second = document.createElement('span');
-    second.className = capabilities.neutralGlyphColor ? '' : capabilities.secondColor;
-    second.textContent = capabilities.secondGlyph;
-    return [first, second];
-  }
-  return [
-    document.createTextNode(
-      value === capabilities.secondColor ? capabilities.secondGlyph : capabilities.firstGlyph,
-    ),
-  ];
-}
-
-function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
-  // The tile is the span; the art is zoomed inside it, because the elephant
-  // fills only the middle of its 512px image.
-  const elephant = (color: 'red' | 'black') => {
-    const tile = document.createElement('span');
-    tile.className = `landing-color-piece jungle ${color}`;
-    const image = document.createElement('img');
-    image.src = jungleDobutsuPieceHref(color, 'elephant');
-    image.alt = '';
-    tile.append(image);
-    return tile;
-  };
-  if (value === 'random') return [elephant('red'), elephant('black')];
-  return [elephant(value === 'black' ? 'black' : 'red')];
-}
-
-// The general in the player's own piece set, so an international-set player
-// picks a side by the piece they will see on the board, not by 帥 and 將.
-function xiangqiGeneralGlyphNodes(value: LandingColorPreference): Node[] {
-  const general = (color: 'red' | 'black') => {
-    const piece = document.createElement('span');
-    piece.className = `landing-color-piece xiangqi ${color}`;
-    piece.innerHTML = renderXiangqiPiece(
-      { color, role: 'general' },
-      { ariaLabel: `${color} general` },
-    );
-    return piece;
-  };
-  if (value === 'random') return [general('red'), general('black')];
-  return [general(value === 'black' ? 'black' : 'red')];
-}
-
-// Gomoku sides are stones drawn like the board's own, never text glyphs: a
-// character glyph turns white on the selected fill, so a picked Black read as
-// a white stone (Brian's phone, 2026-11-05).
-function gomokuStoneGlyphNodes(value: LandingColorPreference): Node[] {
-  const stone = (color: 'black' | 'white') => {
-    const piece = document.createElement('span');
-    piece.className = `landing-color-piece stone ${color}`;
-    piece.setAttribute('aria-hidden', 'true');
-    return piece;
-  };
-  if (value === 'random') return [stone('black'), stone('white')];
-  return [stone(value === 'white' ? 'white' : 'black')];
-}
-
-function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
-  const king = (color: 'white' | 'black') => {
-    const piece = document.createElement('span');
-    piece.className = `landing-color-piece chess ${color}`;
-    piece.innerHTML = PIECE_SVGS[`${color}:king`] ?? '';
-    piece.querySelector('svg')?.setAttribute('viewBox', '0 0 45 45');
-    return piece;
-  };
-  if (value === 'random') return [king('white'), king('black')];
-  return [king(value === 'black' ? 'black' : 'white')];
-}
-
-function landingGameSpecCapabilities(gameSpecId: LandingGameSpecId): LandingGameSpecCapabilities {
-  // Tenant capabilities live on their registry entries; chess (the fallback)
-  // keeps its row here until the P2 migration.
-  return (
-    webVariantTenantForSpecId(gameSpecId)?.landing?.capabilities ?? DARK_CHESS_LANDING_CAPABILITIES
-  );
-}
-
 function setupSectionLabel(text: string): HTMLSpanElement {
   const label = document.createElement('span');
   label.className = 'landing-setup-label';
   label.textContent = text;
   return label;
-}
-
-type SetupSectionOptions = {
-  /** Muted line under the row label (open layout only). */
-  hint?: string;
-};
-
-type SetupSection = {
-  button: HTMLButtonElement | null;
-  content: HTMLElement;
-  id: string;
-  panel: HTMLElement | null;
-  value: HTMLElement | null;
-  valueText: () => string;
-  wrapper: HTMLElement;
-};
-
-/** Phone row: the label above its control, always open. */
-function buildSetupRowSection(
-  id: string,
-  label: string,
-  content: HTMLElement,
-  valueText: () => string,
-  options: SetupSectionOptions = {},
-): SetupSection {
-  const leadingLabel = content.firstElementChild;
-  if (leadingLabel?.classList.contains('landing-setup-label')) leadingLabel.remove();
-
-  const wrapper = document.createElement('section');
-  wrapper.className = 'landing-setup-row';
-  wrapper.dataset.setupSection = id;
-  const title = document.createElement('span');
-  title.className = 'landing-setup-row-label';
-  title.textContent = label;
-  if (options.hint) {
-    // A muted second line under the label, e.g. what "3 + 2" counts.
-    const hint = document.createElement('span');
-    hint.className = 'landing-setup-row-hint';
-    hint.textContent = options.hint;
-    title.append(hint);
-  }
-  wrapper.append(title, content);
-  return { button: null, content, id, panel: null, value: null, valueText, wrapper };
 }
 
 function buildSetupAccordionPanel(
@@ -3803,34 +3586,6 @@ function selectedRoomSetup(
     },
     preferredColor,
   };
-}
-
-function startOptionButton(label: string, selected: boolean): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `landing-start-option${selected ? ' selected' : ''}`;
-  button.setAttribute('role', 'radio');
-  button.setAttribute('aria-checked', selected ? 'true' : 'false');
-  updateStartOptionButtonLabel(button, label);
-  return button;
-}
-
-function updateStartOptionButtonLabel(button: HTMLButtonElement, label: string): void {
-  button.replaceChildren();
-  // Split a trailing parenthetical ("3 + 2 (coming soon)") into a muted hint badge so
-  // the live label stays prominent and the not-yet-available note de-emphasizes.
-  const hintMatch = label.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-  if (hintMatch) {
-    const main = document.createElement('span');
-    main.className = 'landing-start-option-text';
-    main.textContent = hintMatch[1];
-    const hint = document.createElement('span');
-    hint.className = 'landing-start-option-hint';
-    hint.textContent = hintMatch[2];
-    button.append(main, hint);
-  } else {
-    button.textContent = label;
-  }
 }
 
 async function createRoomFromPlay(

@@ -6,10 +6,16 @@ import { setResolvedAdmin, setResolvedStatsExcluded } from './signed-in-state.js
 // The /correspondence Start a game form's Casual/Rated control. Rated correspondence is
 // held behind the server's MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default), so
 // the control is absent until /api/server-status says otherwise.
+// The form is laid out as the Play a game panel: one labelled row per choice.
+function setupRow(form: HTMLElement, id: string, label: string): HTMLElement | undefined {
+  const row = form.querySelector<HTMLElement>(`.landing-setup-row[data-setup-section="${id}"]`);
+  return row?.querySelector('.landing-setup-row-label')?.firstChild?.textContent === label
+    ? row
+    : undefined;
+}
+
 function gameTypeField(form: HTMLElement): HTMLElement | undefined {
-  return [...form.querySelectorAll<HTMLElement>('.correspondence-field')].find(
-    (field) => field.querySelector('.correspondence-field-label')?.textContent === 'Rating',
-  );
+  return setupRow(form, 'gameType', 'Rating');
 }
 
 function postedBody(form: HTMLElement, fetchMock: ReturnType<typeof vi.fn>) {
@@ -41,7 +47,11 @@ describe('correspondence Start a game: Casual/Rated', () => {
     expect(ratedButton()?.textContent).toBe('Rated');
     setResolvedStatsExcluded(true);
     expect(ratedButton()?.disabled).toBe(true);
-    expect(ratedButton()?.textContent).toBe('Rated (not available on this account)');
+    // The reason is the option's muted second line, as Play a game draws it.
+    expect(ratedButton()?.querySelector('.landing-start-option-text')?.textContent).toBe('Rated');
+    expect(ratedButton()?.querySelector('.landing-start-option-hint')?.textContent).toBe(
+      'not available on this account',
+    );
     setResolvedStatsExcluded(false);
     expect(ratedButton()?.disabled).toBe(false);
     expect(ratedButton()?.textContent).toBe('Rated');
@@ -89,7 +99,7 @@ describe('correspondence Start a game: Casual/Rated', () => {
         .find((b) => b.textContent === label)
         ?.click();
     const opensOn = (panel: HTMLElement) =>
-      gameTypeField(panel)?.querySelector('button.is-on')?.textContent;
+      gameTypeField(panel)?.querySelector('button.selected')?.textContent;
 
     pick(
       buildStartForm(() => {}, { gameSpecId: 'jieqi' }),
@@ -150,6 +160,39 @@ describe('correspondence Start a game: prefill', () => {
   });
 });
 
+describe('correspondence Start a game: the Play a game layout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('picks the variant from its tile and keeps the select and the sides in step', () => {
+    const panel = buildStartForm(() => {}, { gameSpecId: 'xiangqi' });
+    const select = panel.querySelector<HTMLSelectElement>('select');
+    const tile = (id: string) =>
+      panel.querySelector<HTMLButtonElement>(`.landing-variant-card[data-game-spec="${id}"]`);
+    expect(tile('xiangqi')?.classList.contains('selected')).toBe(true);
+    tile('gomoku')?.click();
+    expect(select?.value).toBe('gomoku');
+    expect(tile('gomoku')?.getAttribute('aria-checked')).toBe('true');
+    expect(tile('xiangqi')?.classList.contains('selected')).toBe(false);
+    const sides = [...(setupRow(panel, 'side', 'You play')?.querySelectorAll('button') ?? [])];
+    expect(sides.map((button) => button.textContent)).toEqual(['Black', 'Random', 'White']);
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(postedBody(panel, fetchMock)).toMatchObject({ gameSpecId: 'gomoku' });
+  });
+
+  it('labels the day options with a days per move hint and posts the picked days', () => {
+    const panel = buildStartForm(() => {});
+    const row = setupRow(panel, 'time', 'Time control');
+    expect(row?.querySelector('.landing-setup-row-hint')?.textContent).toBe('days per move');
+    [...(row?.querySelectorAll('button') ?? [])].find((b) => b.textContent === '7')?.click();
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(postedBody(panel, fetchMock)).toMatchObject({ daysPerMove: 7 });
+  });
+});
+
 describe('correspondence Start a game: opponent', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -157,9 +200,7 @@ describe('correspondence Start a game: opponent', () => {
 
   it('offers Anyone and A link only; a player is challenged from their profile', () => {
     const panel = buildStartForm(() => {});
-    const field = [...panel.querySelectorAll<HTMLElement>('.correspondence-field')].find(
-      (el) => el.querySelector('.correspondence-field-label')?.textContent === 'Opponent',
-    );
+    const field = setupRow(panel, 'opponent', 'Opponent');
     const labels = [...(field?.querySelectorAll('button') ?? [])].map((b) => b.textContent);
     expect(labels).toEqual(['Anyone', 'A link']);
     expect(panel.textContent).not.toContain('A player');
