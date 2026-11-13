@@ -6,12 +6,14 @@ import {
   deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
   isDisruptiveDrain,
+  type MistboardReadoutBotTimingVariant,
   type MistboardReadoutDeployDrain,
   type MistboardReadoutFacts,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
   readoutPeriods,
   readoutSnapshotKey,
+  renderBotTiming,
   renderMistboardReadoutMarkdown,
   scheduledReadoutTrigger,
 } from './mistboard-readout.js';
@@ -969,4 +971,133 @@ test('login collection failure is unknown, preserves the complaint cursor, and d
   delete legacy.loginEmailComplaintsSeen;
   assert.doesNotThrow(() => renderMistboardReadoutMarkdown(legacy));
   assert.equal(reportWith(deliveryFacts(0, 0, 0, 1), legacy).verdict, 'action');
+});
+
+function botVariant(
+  variant: string,
+  timeLossRoomIds: string[],
+  overrides: Partial<MistboardReadoutBotTimingVariant> = {},
+): MistboardReadoutBotTimingVariant {
+  return {
+    variant,
+    botGames: 10,
+    timeLosses: timeLossRoomIds.length,
+    timeLossRoomIds,
+    replies: 200,
+    p95ReplyMs: 1_840,
+    pacedReplies: 150,
+    ...overrides,
+  };
+}
+
+function botFacts(...variants: MistboardReadoutBotTimingVariant[]): MistboardReadoutFacts {
+  return { ...emptyFacts, botTiming: { variants } };
+}
+
+test('a bot loss on time alerts in the first readout that holds it, once per game', () => {
+  const quiet = reportWith(botFacts(botVariant('xiangqi', []), botVariant('jieqi', [])));
+  assert.equal(quiet.verdict, 'healthy');
+  assert.equal(quiet.actions.length, 0);
+
+  // Planted: one loss in one variant is an action naming the game.
+  const day1 = reportWith(
+    botFacts(botVariant('xiangqi', ['room_a']), botVariant('jieqi', [])),
+    quiet,
+  );
+  assert.equal(day1.verdict, 'action');
+  assert.equal(day1.actions.length, 1);
+  assert.equal(day1.actions[0]?.code, 'bot-time-losses');
+  assert.equal(day1.actions[0]?.ownerIssue, 1061);
+  assert.match(
+    day1.actions[0]!.text,
+    /^xiangqi: the bot lost 1 new game on time \(1 in the last 7 days, expected 0\): room_a\./,
+  );
+
+  // Still in the rolling window the next day: already reported, quiet.
+  const day2 = reportWith(
+    botFacts(botVariant('xiangqi', ['room_a']), botVariant('jieqi', [])),
+    day1,
+  );
+  assert.equal(day2.actions.length, 0);
+  assert.equal(day2.verdict, 'healthy');
+  assert.notEqual(day2.alertKey, day1.alertKey);
+  const day3 = reportWith(botFacts(botVariant('xiangqi', ['room_a'])), day2);
+  assert.equal(day3.alertKey, day2.alertKey);
+
+  // The old loss ages out on the day a new one arrives: the count is flat at 1,
+  // and the new game still alerts as its own event.
+  const day4 = reportWith(botFacts(botVariant('xiangqi', ['room_b'])), day3);
+  assert.equal(day4.actions.length, 1);
+  assert.match(day4.actions[0]!.text, /: room_b\./);
+  const day5 = reportWith(botFacts(botVariant('xiangqi', ['room_b', 'room_c'])), day4);
+  assert.equal(day5.actions.length, 1);
+  assert.match(day5.actions[0]!.text, /lost 1 new game on time \(2 in the last 7 days/);
+  assert.notEqual(day5.alertKey, day4.alertKey);
+
+  // Two variants losing on the same day are two lines.
+  const both = reportWith(
+    botFacts(botVariant('xiangqi', ['room_b', 'room_c']), botVariant('duck-xiangqi', ['room_d'])),
+    day5,
+  );
+  assert.deepEqual(
+    both.actions.map((action) => action.dedupeKey),
+    ['bot-time-losses:duck-xiangqi:room_d'],
+  );
+});
+
+test('a bot timing collector failure is unknown and the losses it hid are told after', () => {
+  const day1 = reportWith(botFacts(botVariant('xiangqi', ['room_a'])));
+  const failed = reportWith(
+    {
+      ...emptyFacts,
+      botTiming: null,
+      collectorErrors: [{ section: 'botTiming', code: 'collector_failed' }],
+    },
+    day1,
+  );
+  assert.equal(failed.verdict, 'unknown');
+  assert.equal(failed.actions.length, 0);
+  assert.match(renderMistboardReadoutMarkdown(failed), /- Bot timing unavailable\./);
+  // The failed readout listed nothing, so every loss in the window is told
+  // again rather than risk missing one that arrived during the failure.
+  const recovered = reportWith(botFacts(botVariant('xiangqi', ['room_a', 'room_b'])), failed);
+  assert.equal(recovered.actions.length, 1);
+  assert.match(recovered.actions[0]!.text, /lost 2 new games on time/);
+});
+
+test('a snapshot from before bot timing parses, renders, and seeds the edge', () => {
+  const legacy = reportWith(emptyFacts);
+  delete legacy.botTiming;
+  const markdown = renderMistboardReadoutMarkdown(legacy);
+  assert.doesNotMatch(markdown, /Bot timing|undefined|NaN/);
+  const stored = JSON.parse(JSON.stringify(legacy)) as typeof legacy;
+  const next = reportWith(botFacts(botVariant('xiangqi', ['room_a'])), stored);
+  assert.equal(next.actions[0]?.code, 'bot-time-losses');
+  // No time losses after an old snapshot: nothing to say.
+  assert.equal(reportWith(botFacts(botVariant('xiangqi', [])), stored).verdict, 'healthy');
+});
+
+test('the bot timing line reads per variant, busiest first, and handles no replies', () => {
+  assert.equal(
+    renderBotTiming({
+      variants: [
+        botVariant('jieqi', [], { botGames: 3, replies: 1, p95ReplyMs: 950 }),
+        botVariant('xiangqi', ['room_a'], { botGames: 12, replies: 240, p95ReplyMs: 1_840 }),
+        botVariant('fog-xiangqi', [], { botGames: 1, replies: 0, p95ReplyMs: null }),
+      ],
+    }),
+    '- Bot timing, last 7 days (compute plus pacing wait): ' +
+      'xiangqi 12 games, 1 lost on time, p95 reply 1.8 s over 240 replies; ' +
+      'jieqi 3 games, 0 lost on time, p95 reply 0.9 s over 1 reply; ' +
+      'fog-xiangqi 1 game, 0 lost on time, p95 reply n/a over 0 replies',
+  );
+  assert.match(renderBotTiming({ variants: [] }), /no counted PvE games/);
+  const markdown = renderMistboardReadoutMarkdown(reportWith(botFacts(botVariant('xiangqi', []))));
+  assert.match(markdown, /## Operations[\s\S]*- Bot timing, last 7 days[\s\S]*## Content/);
+});
+
+test('bot timing enters the decision fingerprint', () => {
+  const a = reportWith(botFacts(botVariant('xiangqi', [], { p95ReplyMs: 1_000 })));
+  const b = reportWith(botFacts(botVariant('xiangqi', [], { p95ReplyMs: 9_000 })));
+  assert.notEqual(a.decisionFingerprint, b.decisionFingerprint);
 });
