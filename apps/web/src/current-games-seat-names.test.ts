@@ -1,6 +1,7 @@
 // "Fairy-Stockfish Level 8" was cut to "Fairy-Stockfish Le..." on a /games
 // card (2026-10-21): the seat line has about 130px beside the BOT tag and the
-// clock. The cards call the engine FSF and keep the full name in the tooltip.
+// clock. Just finished cards call the engine FSF and keep the full name in the
+// tooltip; Playing now cards show the whole name, wrapping (2026-11-12).
 import { describe, expect, it } from 'vitest';
 import { buildFinishedTile, buildSeatRow } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
@@ -44,11 +45,14 @@ describe('cardSeatName', () => {
 });
 
 describe('/games seat names', () => {
-  it('a live bot seat shows FSF and keeps the full name as its tooltip', () => {
+  it('a live bot seat shows its whole name, with the BOT tag after it', () => {
     const row = buildSeatRow(player('Fairy-Stockfish Level 8', true), {}, 'black');
     const name = row.querySelector<HTMLElement>('.current-game-seat-name');
-    expect(name?.textContent).toBe('FSF Level 8');
+    expect(name?.textContent).toBe('Fairy-Stockfish Level 8');
     expect(name?.title).toBe('Fairy-Stockfish Level 8');
+    const label = row.querySelector('.current-game-seat-label');
+    expect(label?.lastElementChild?.classList.contains('current-game-bot')).toBe(true);
+    expect(label?.contains(row.querySelector('.current-game-seat-clock'))).toBe(false);
   });
 
   it('a person is never renamed, whatever the name', () => {

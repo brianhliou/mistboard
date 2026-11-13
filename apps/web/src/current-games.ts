@@ -762,19 +762,20 @@ export function buildSeatRow(
     t('games.guest'),
     player ? { ...player, gameSpecId } : undefined,
   );
-  const nameEl = playerNameEl(
-    player?.isEngine ? cardSeatName(fullName) : fullName,
-    profileTargetFor(player),
-    'current-game-seat-name',
-  );
+  // The whole name, wrapping onto a second line rather than cut (decided
+  // 2026-11-12), with the BOT tag following its last word.
+  const label = document.createElement('span');
+  label.className = 'current-game-seat-label';
+  const nameEl = playerNameEl(fullName, profileTargetFor(player), 'current-game-seat-name');
   nameEl.title = fullName;
-  who.append(nameEl);
+  label.append(nameEl);
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
     badge.textContent = t('games.bot');
-    who.append(badge);
+    label.append(' ', badge);
   }
+  who.append(label);
   const clock = document.createElement('span');
   clock.className = 'current-game-seat-clock';
   row.append(who, clock);
