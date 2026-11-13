@@ -7,7 +7,7 @@ import { liveBotMoveTime } from './engine-time-budget.js';
 
 test('200 distinct legal positions per variant reproduce the committed medians', () => {
   const fixtures = pacingCalibrationFixtures();
-  assert.equal(fixtures.length, 10);
+  assert.equal(fixtures.length, 11);
   assert.deepEqual(fixtures.map((f) => f.variant).sort(), Object.keys(PACING_LEGAL_MEDIANS).sort());
   for (const { variant, positions, median } of fixtures) {
     assert.equal(positions.length, CALIBRATION_POSITIONS);

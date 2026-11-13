@@ -11,10 +11,9 @@ export type FFQBanqiReviewSnapshot = {
   damage: { red: number; black: number };
 };
 
+// The move alone: a capture's damage shows in the HP bars, not in the move list.
 export function ffqBanqiReviewMoveLabel(move: BanqiMove, next: FFQBanqiReviewSnapshot): string {
-  const label = banqiMoveLabelOnBoard(move, ffqBanqiBoardView(next.view).board);
-  const damage = next.damage.red + next.damage.black;
-  return damage ? `${label} · ${damage} damage` : label;
+  return banqiMoveLabelOnBoard(move, ffqBanqiBoardView(next.view).board);
 }
 
 export function makeFFQBanqiTreeAdapter(
