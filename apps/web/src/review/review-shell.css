@@ -794,6 +794,15 @@
   grid-area: side;
 }
 
+/* A panel section is a one-track grid, and an auto track grows to its widest
+   unbreakable content. The game card's player names never wrap (they end in an
+   ellipsis instead), so a long bot name ("Misty Three Kingdoms Banqi Level 1")
+   pushed the section past the rail and the card under the board between 1260px
+   and about 1360px. Hold the track to the rail so the name truncates. */
+.review-shell__left > .panel-section {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .review-shell__right {
   grid-area: table;
 }

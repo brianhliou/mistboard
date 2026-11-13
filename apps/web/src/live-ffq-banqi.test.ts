@@ -1,13 +1,17 @@
 import {
   applyFFQBanqiMove,
+  type BanqiColor,
+  type BanqiPieceRole,
   createInitialFFQBanqiState,
   type FFQBanqiEndReason,
   type FFQBanqiPlayerView,
   getFFQBanqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { banqiRevealChance, banqiRevealOdds } from './banqi-reveal-odds.js';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
 import type { Locale } from './i18n/locale.js';
+import { playSound, playTerminalPlan } from './live-sound.js';
 import type {
   TenantSocketClientOptions,
   TenantSocketFrame,
@@ -45,10 +49,50 @@ vi.mock('./board-anim.js', async (original) => ({
   pieceAnimationDurationMs: () => 0,
   pieceFlipDurationMs: () => 0,
 }));
+vi.mock('./live-sound.js', async (original) => ({
+  ...(await original<typeof import('./live-sound.js')>()),
+  playSound: vi.fn(),
+  playTerminalPlan: vi.fn(),
+}));
 
 const ROOM = 'ffqb_webtest';
 function initial(): FFQBanqiPlayerView {
   return getFFQBanqiPlayerView(createInitialFFQBanqiState(ROOM, 7), 'red');
+}
+function coveredCapture() {
+  const state = createInitialFFQBanqiState(ROOM, 7);
+  // Keep the deal's multiset and each square's face while arranging a cannon
+  // shot over square 10 onto its own covered general on 14.
+  for (const [square, color, role] of [
+    [6, 'red', 'cannon'],
+    [14, 'red', 'general'],
+    [15, 'black', 'general'],
+    [16, 'red', 'soldier'],
+    [25, 'black', 'soldier'],
+  ] as const) {
+    const source = state.board.findIndex((piece) => piece?.color === color && piece.role === role);
+    const displaced = state.board[square]!;
+    state.board[source] = { ...displaced, faceDown: state.board[source]!.faceDown };
+    state.board[square] = { color, role, faceDown: displaced.faceDown };
+  }
+  const next = applyFFQBanqiMove(state, { from: 6, to: 14 });
+  expect(next.captures).toEqual([
+    { owner: 'red', role: 'general', capturedBy: 'red', wasFaceDown: true },
+  ]);
+  return next;
+}
+function faceDownRow(ink: BanqiColor): HTMLElement {
+  const row = document.querySelector<HTMLElement>(
+    `.hidden-pool [data-seat="${ink}"] [data-line="face-down"]`,
+  );
+  if (!row) throw new Error(`Missing ${ink} face-down row`);
+  return row;
+}
+function renderedChance(ink: BanqiColor, role: BanqiPieceRole): string | null {
+  return (
+    faceDownRow(ink).querySelector(`[data-role="${role}"] .reveal-odds-chip__pct`)?.textContent ??
+    null
+  );
 }
 function chaseView(): FFQBanqiPlayerView {
   const state = createInitialFFQBanqiState(ROOM, 7);
@@ -99,6 +143,7 @@ function resultText(): string | null | undefined {
   return document.querySelector('[data-game-result]')?.textContent;
 }
 beforeEach(() => {
+  vi.clearAllMocks();
   socket.options = null;
   socket.sent = [];
   socket.connection = 'connected';
@@ -129,6 +174,60 @@ afterEach(() => {
 });
 
 describe('FFQ banqi live room', () => {
+  it('plays the move sound when sending a click move', async () => {
+    const view = initial();
+    view.board[0] = { color: 'red', role: 'chariot', faceDown: false };
+    view.board[1] = null;
+    view.legalMoves = [{ from: 0, to: 1 }];
+    await mount(view);
+    click(0);
+    expect(playSound).not.toHaveBeenCalled();
+    click(1);
+    expect(moves()).toEqual([{ type: 'move', from: 0, to: 1 }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('move');
+  });
+
+  it.each(['snapshot', 'event-appended'] as const)(
+    'hears the first opponent flip from %s and stays quiet on reconnect',
+    async (type) => {
+      const state = createInitialFFQBanqiState(ROOM, 7);
+      const options = await mount(getFFQBanqiPlayerView(state, 'black'), 'black');
+      const move = getFFQBanqiPlayerView(state, 'red').legalMoves.find((m) => m.from === m.to)!;
+      const next = applyFFQBanqiMove(state, move);
+      const frame = {
+        type,
+        seat: 'black',
+        state: getFFQBanqiPlayerView(next, 'black'),
+        event: { type: 'move-played', color: 'red', move, at: 1, ply: 1 },
+      };
+      expect(playSound).not.toHaveBeenCalled();
+      if (type === 'snapshot') options.applySnapshot(frame);
+      else options.applyEvent(frame);
+      expect(playSound).toHaveBeenCalledExactlyOnceWith('flip');
+      options.applySnapshot({ ...structuredClone(frame), type: 'snapshot' });
+      options.applyHello({ ...structuredClone(frame), type: 'hello' });
+      expect(playSound).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('sounds a spectator result once from a finished snapshot', async () => {
+    const view = initial();
+    const options = await mount(view, 'spectator');
+    view.status = { type: 'finished', winner: 'red', reason: 'resignation' };
+    options.applySnapshot({
+      type: 'snapshot',
+      seat: 'spectator',
+      state: view,
+    } as TenantSocketFrame);
+    options.applySnapshot({
+      type: 'snapshot',
+      seat: 'spectator',
+      state: view,
+    } as TenantSocketFrame);
+    expect(playTerminalPlan).toHaveBeenCalledExactlyOnceWith('draw', null);
+    expect(playSound).not.toHaveBeenCalled();
+  });
+
   it('draws all 32 hit targets, four open tiles, fixed seats and the HP seat panel', async () => {
     await mount();
     expect(document.querySelector('#app.live-route--banqi.live-route--ffq-banqi')).not.toBeNull();
@@ -143,7 +242,7 @@ describe('FFQ banqi live room', () => {
         block.dataset.seat === 'red' ? 'Red' : 'Black',
       );
       expect(block.querySelector('.tk-seat__head .ffq-banqi-hp-meter progress')).not.toBeNull();
-      expect(block.querySelectorAll('.tk-seat__line')).toHaveLength(1);
+      expect(block.querySelectorAll('.tk-seat__line')).toHaveLength(2);
       expect(block.querySelector('[data-line="captured"] .tk-seat__key')?.textContent).toBe(
         'Captured',
       );
@@ -173,12 +272,127 @@ describe('FFQ banqi live room', () => {
     expect(document.body.textContent).not.toMatch(/First to move|Second to move|first flip|binds/i);
   });
 
+  it('uses the remaining public pool after a covered capture, with one denominator for both inks', async () => {
+    const view = getFFQBanqiPlayerView(coveredCapture(), 'red');
+    const expected = {
+      red: { general: 0, advisor: 2, elephant: 2, chariot: 2, horse: 2, cannon: 1, soldier: 4 },
+      black: { general: 0, advisor: 2, elephant: 2, chariot: 2, horse: 2, cannon: 2, soldier: 4 },
+    };
+    expect(view.pool).toEqual(expected);
+    // Only the supplied remaining pool enters the odds code, with no truth
+    // board or reconstruction of already-public covered captures.
+    const odds = banqiRevealOdds({ pool: view.pool });
+    expect(odds.total).toBe(27);
+    let total = 0;
+    for (const ink of ['red', 'black'] as const) {
+      for (const [role, count] of Object.entries(expected[ink])) {
+        const chance = banqiRevealChance(odds, ink, role as BanqiPieceRole);
+        expect(chance).toBeCloseTo(count / 27);
+        total += chance;
+      }
+    }
+    expect(total).toBeCloseTo(1);
+    await mount(view);
+    expect(renderedChance('red', 'cannon')).toBe('4%');
+    expect(renderedChance('black', 'cannon')).toBe('7%');
+    expect(renderedChance('red', 'soldier')).toBe('15%');
+    expect(renderedChance('red', 'general')).toBeNull();
+    expect(renderedChance('black', 'general')).toBeNull();
+  });
+
+  it.each(['red', 'black', 'spectator'])(
+    'keeps rendered odds identical for %s when covered identities swap, casual or rated',
+    async (seat) => {
+      const state = coveredCapture();
+      const other = structuredClone(state);
+      const a = other.board.findIndex((piece) => piece?.faceDown);
+      const b = other.board.findIndex(
+        (piece) => piece?.faceDown && piece.color !== other.board[a]!.color,
+      );
+      [other.board[a], other.board[b]] = [other.board[b]!, other.board[a]!];
+      expect(other.board).not.toEqual(state.board);
+      const perspective = seat === 'spectator' ? 'observer' : (seat as BanqiColor);
+      const view = getFFQBanqiPlayerView(state, perspective);
+      const swapped = getFFQBanqiPlayerView(other, perspective);
+      expect(JSON.stringify(swapped)).toBe(JSON.stringify(view));
+      const panels: string[] = [];
+      for (const rated of [false, true]) {
+        for (const masked of [view, swapped]) {
+          await mount(masked, seat, { rated });
+          for (const ink of ['red', 'black'] as const) {
+            expect(faceDownRow(ink).querySelectorAll('.hidden-pool__chip')).toHaveLength(6);
+          }
+          panels.push(document.querySelector('.hidden-pool')!.innerHTML);
+        }
+      }
+      expect(new Set(panels).size).toBe(1);
+    },
+  );
+
+  it.each<[Locale, string]>([
+    ['en', 'Still face-down'],
+    ['zh-Hans', '尚未翻开'],
+    ['zh-Hant', '尚未翻開'],
+  ])('keeps final odds without a move log and reuses %s labels', async (locale, label) => {
+    const view = getFFQBanqiPlayerView(coveredCapture(), 'observer');
+    view.status = { type: 'finished', reason: 'resignation', winner: 'black' };
+    view.legalMoves = [];
+    await mount(view, 'spectator', {}, locale);
+    for (const ink of ['red', 'black'] as const) {
+      expect(faceDownRow(ink).querySelector('.tk-seat__key')?.textContent).toBe(label);
+      expect(renderedChance(ink, 'soldier')).toBe('15%');
+    }
+  });
+
+  it('keeps both face-down lines when the pool is empty, without invalid percentages', async () => {
+    const state = createInitialFFQBanqiState(ROOM, 7);
+    for (const piece of state.board) if (piece) piece.faceDown = false;
+    await mount(getFFQBanqiPlayerView(state, 'red'));
+    for (const ink of ['red', 'black'] as const) {
+      expect(faceDownRow(ink).querySelector('.tk-seat__none')?.textContent).toBe('None');
+    }
+    expect(document.querySelector('.hidden-pool .reveal-odds-chip__pct')).toBeNull();
+  });
+
+  it('refreshes odds after a flip and restores each masked pool while scrubbing', async () => {
+    const state = createInitialFFQBanqiState(ROOM, 7);
+    const square = state.board.findIndex((piece) => piece?.faceDown && piece.role === 'general');
+    const ink = state.board[square]!.color;
+    const start = getFFQBanqiPlayerView(state, 'red');
+    const next = applyFFQBanqiMove(state, { from: square, to: square });
+    const options = await mount(start);
+    expect(renderedChance(ink, 'general')).toBe('4%');
+    options.applySnapshot({
+      type: 'snapshot',
+      state: getFFQBanqiPlayerView(next, 'red'),
+    } as TenantSocketFrame);
+    options.render();
+    expect(renderedChance(ink, 'general')).toBeNull();
+    next.status = { type: 'finished', winner: 'black', reason: 'resignation' };
+    const end = getFFQBanqiPlayerView(next, 'red');
+    await mount(end, 'red', {
+      liveHistory: [
+        { ply: 0, view: start },
+        { ply: 1, view: end },
+      ],
+      events: [
+        { type: 'move-played', color: 'red', move: { from: square, to: square }, at: 1, ply: 1 },
+      ],
+    });
+    expect(renderedChance(ink, 'general')).toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    expect(renderedChance(ink, 'general')).toBe('4%');
+    document.querySelector<HTMLButtonElement>('[data-replay="latest"]')!.click();
+    expect(renderedChance(ink, 'general')).toBeNull();
+  });
+
   it('sends a numeric flip, keeps Red after a black flip and lets Black move next', async () => {
     const state = createInitialFFQBanqiState(ROOM, 7);
     const target = state.board.findIndex((entry) => entry?.faceDown && entry.color === 'black');
     const options = await mount();
     click(target);
     expect(moves()).toEqual([{ type: 'move', from: target, to: target }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('flip');
     const next = applyFFQBanqiMove(state, { from: target, to: target });
     options.applyHello({
       type: 'hello',
@@ -213,6 +427,7 @@ describe('FFQ banqi live room', () => {
     expect(moves()).toEqual([{ type: 'move', from: 0, to: 2 }]);
     click(15);
     expect(moves()).toHaveLength(1);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('capture');
   });
 
   it.each<[Locale, string]>([
@@ -419,6 +634,7 @@ describe('FFQ banqi live room', () => {
       new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 60 }),
     );
     expect(moves()).toEqual([{ type: 'move', from: 0, to: 1 }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('move');
     expect(document.querySelector('.banqi-selection')).toBeNull();
   });
 
@@ -438,6 +654,7 @@ describe('FFQ banqi live room', () => {
       new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 60 }),
     );
     expect(moves()).toEqual([]);
+    expect(playSound).not.toHaveBeenCalled();
     expect(document.querySelector('[data-forbidden-move]')).not.toBeNull();
     expect(document.querySelector('[data-banqi-chase-notice]')?.textContent).toContain(
       'four chases in a row',

@@ -2,21 +2,21 @@
 // both pure functions of ONE masked view, so neither can know more than the
 // viewer (CLAUDE.md "In-game aids bar": bookkeeping, never an evaluation).
 //
-// Banqi is the simple case next to jieqi (jieqi-reveal-odds.ts). All 32 tiles
-// start face-down in one shuffled pool, a face-down tile carries no ink to
-// anyone, and a face-down tile can never be captured or moved. So the pool of
-// unseen identities, start minus revealed minus captured (banqiHiddenPool), is
-// exact and the same for both seats and spectators, and every face-down tile
-// draws from all of it, both inks together:
+// Banqi-family tiles share one shuffled pool; a face-down tile hides its ink
+// as well as its role. The remaining pool is exact and public to both seats
+// and spectators: subtract revealed pieces and every public capture. Fanfanqi
+// permits covered captures, but discloses their identity to everyone and
+// supplies this remaining pool in its masked view. Every face-down tile draws
+// from all of it, both inks together:
 //   P(a face-down tile is red chariot) = unseen red chariots / unseen total.
 // The denominator is the WHOLE pool (red and black), which is why each ink's
 // percentages sum to that ink's share, not to 100%.
 //
-// Three Kingdoms banqi (#628) deals the same 32 pieces onto a bigger board and
-// keeps every rule this relies on (a face-down tile is never moved or taken),
-// so the same functions serve it; they are generic over the square type.
+// Banqi and Three Kingdoms derive their remaining pool from the masked board
+// and public captures (banqiHiddenPool); Fanfanqi uses its supplied pool.
 
 import {
+  BANQI_POOL_ROLE_ORDER,
   type BanqiCapturedView,
   type BanqiColor,
   type BanqiPieceRole,
@@ -25,6 +25,7 @@ import {
   type BanqiVisibleBoardEntry,
   banqiHiddenPool,
   type HiddenPool,
+  type HiddenPoolSide,
 } from '@mistboard/game';
 
 /** A masked board on any banqi-family grid (banqi's 8x4, Three Kingdoms' 9x5). */
@@ -43,7 +44,26 @@ export type BanqiRevealOdds = {
   pool: HiddenPool<BanqiColor, BanqiPieceRole>;
 };
 
-export function banqiRevealOdds<S extends string>(view: BanqiOddsView<S>): BanqiRevealOdds {
+export function banqiRevealOdds<S extends string>(
+  view:
+    | BanqiOddsView<S>
+    | { pool: Readonly<Record<BanqiColor, Readonly<Record<BanqiPieceRole, number>>>> },
+): BanqiRevealOdds {
+  if ('pool' in view) {
+    const side = (color: BanqiColor): HiddenPoolSide<BanqiPieceRole> => {
+      const entries = BANQI_POOL_ROLE_ORDER.flatMap((role) => {
+        const count = view.pool[color][role];
+        return count > 0 ? [{ role, count }] : [];
+      });
+      return {
+        entries,
+        total: entries.reduce((sum, entry) => sum + entry.count, 0),
+        unknownCaptured: 0,
+      };
+    };
+    const pool = { red: side('red'), black: side('black') };
+    return { total: pool.red.total + pool.black.total, pool };
+  }
   // The pool reads only the entries, never the squares they stand on, so a
   // board on another grid is the same input as far as it is concerned.
   const pool = banqiHiddenPool({ board: view.board as BanqiPlayerBoard, captured: view.captured });
