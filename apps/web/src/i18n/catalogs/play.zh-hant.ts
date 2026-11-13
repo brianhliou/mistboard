@@ -579,8 +579,6 @@ export const ZH_HANT_PLAY = {
   'correspondence.opponentLink': '連結',
   'correspondence.yourSideLabel': '你的執方',
   'correspondence.sideRandom': '隨機',
-  'correspondence.kindHintPublic': '任何人都可以在這裡、首頁或「進行中的對局」頁面接受。',
-  'correspondence.kindHintLink': '你會得到一個連結，發給想對弈的人。',
   'correspondence.postSeek': '發布求戰',
   'correspondence.createLink': '建立連結',
   'correspondence.seekPosted':

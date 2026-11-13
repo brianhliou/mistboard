@@ -1085,8 +1085,6 @@ export function buildStartForm(
   // The form may be drawn from the stored hint before /api/auth/me answers.
   window.addEventListener(statsExcludedResolvedEvent, syncRated);
 
-  const hint = document.createElement('p');
-  hint.className = 'correspondence-hint correspondence-seek-hint';
   const submit = document.createElement('button');
   submit.type = 'submit';
   submit.className = 'landing-setup-start';
@@ -1095,17 +1093,12 @@ export function buildStartForm(
   status.setAttribute('role', 'status');
   status.hidden = true;
 
-  const hints: Record<StartFormSeekKind, I18nKey> = {
-    link: 'correspondence.kindHintLink',
-    public: 'correspondence.kindHintPublic',
-  };
   const submits: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.createLink',
     public: 'correspondence.postSeek',
   };
   const syncKind = (): void => {
     const value = kind.value();
-    hint.textContent = t(hints[value]);
     submit.textContent = t(submits[value]);
     status.hidden = true;
   };
@@ -1183,7 +1176,7 @@ export function buildStartForm(
   );
   const actions = document.createElement('div');
   actions.className = 'landing-setup-actions';
-  actions.append(hint, submit, status);
+  actions.append(submit, status);
   form.append(accordion, actions);
   panel.append(header, form);
   return panel;
