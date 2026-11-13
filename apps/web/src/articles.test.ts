@@ -233,6 +233,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The xiangqi own-net engineering post, a draft dated Tuesday 2026-11-24.
+      '/blog/xiangqi-nnue-training',
       // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
       '/blog/meng-fanrui',
       '/blog/fog-future',

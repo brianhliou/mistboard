@@ -27,6 +27,7 @@ import { abJchessVsJqeArticle } from './articles/content/ab-jchess-vs-jqe.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { jqeArticle } from './articles/content/jqe.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
+import { xiangqiNnueTrainingArticle } from './articles/content/xiangqi-nnue-training.js';
 import { chariotCannonRepetitionKeyArticle } from './articles/content/chariot-cannon-repetition-key.js';
 import { flipJungleSkillCeilingArticle } from './articles/content/flip-jungle-skill-ceiling.js';
 import { katagoJungleArticle } from './articles/content/katago-jungle.js';
@@ -107,6 +108,7 @@ export const articles: Article[] = [
   chariotCannonRepetitionKeyArticle,
   solverAuditArticle,
   pikafishRevealBugArticle,
+  xiangqiNnueTrainingArticle,
   katagoJungleArticle,
   abJchessVsJqeArticle,
   jqeArticle,
