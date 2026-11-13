@@ -632,12 +632,21 @@ export {
   playableAllowlistedSpecs,
   revokeVariantAccess,
 } from './persistence-variant-access.js';
+export type { XiangqiBroadcastPushToken } from './persistence-xiangqi-broadcast-push.js';
+export {
+  findXiangqiBroadcastPushToken,
+  findXiangqiBroadcastPushTokenOn,
+  revokeXiangqiBroadcastPushTokenOn,
+  touchXiangqiBroadcastPushToken,
+  touchXiangqiBroadcastPushTokenOn,
+} from './persistence-xiangqi-broadcast-push.js';
 export type {
   StoredXiangqiBroadcastBoard,
   StoredXiangqiBroadcastRound,
   StoredXiangqiBroadcastTour,
   XiangqiBroadcastBoardSearchFilters,
   XiangqiBroadcastBoardSearchItem,
+  XiangqiBroadcastBoardUpdateOptions,
   XiangqiBroadcastBoardUpdateResult,
   XiangqiBroadcastBoardUpdateStatus,
   XiangqiBroadcastImportError,

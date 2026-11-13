@@ -809,6 +809,7 @@ export async function xiangqiBroadcastBoardExportForApi(
     status: board.status,
     result: board.result,
     moves: board.moves,
+    ...(board.clock ? { clock: board.clock } : {}),
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
     ...(board.recordWithheld ? { recordWithheld: board.recordWithheld } : {}),
   };

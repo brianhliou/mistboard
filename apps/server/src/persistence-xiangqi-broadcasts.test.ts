@@ -384,6 +384,34 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal((await getXiangqiBroadcastBoard(fullBoard.id))?.moves.length, 2);
   });
 
+  test('clock and timeControl metadata-only updates persist and duplicate reads stay unchanged', async () => {
+    const pack = await fixturePack();
+    const original = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    const board = { ...original, status: 'live' as const, result: '*' as const };
+    await importXiangqiBroadcastPack({ ...pack, boards: [board] });
+    const clock = { redMs: 90_000, blackMs: 80_000, at: 1234 };
+    const withClock = { ...board, clock };
+    const updated = await applyXiangqiBroadcastBoardUpdate(withClock);
+    assert.equal(updated.ok && updated.status, 'updated');
+    assert.deepEqual((await getXiangqiBroadcastBoard(board.id))?.clock, clock);
+    const withTimeControl = { ...withClock, details: { timeControl: '90+30' } };
+    const metadata = await applyXiangqiBroadcastBoardUpdate(withTimeControl);
+    assert.equal(metadata.ok && metadata.status, 'updated');
+    const stored = await getXiangqiBroadcastBoard(board.id);
+    assert.equal(stored?.details?.timeControl, '90+30');
+    assert.deepEqual(stored?.clock, clock);
+    const duplicate = await applyXiangqiBroadcastBoardUpdate(withTimeControl);
+    assert.equal(duplicate.ok && duplicate.status, 'unchanged');
+    assert.equal(
+      (await getXiangqiBroadcastBoard(board.id))?.updatedAt.getTime(),
+      stored?.updatedAt.getTime(),
+    );
+    assert.deepEqual(
+      (await xiangqiBroadcastBoardStreamForApi(board.id))?.payload.board.clock,
+      clock,
+    );
+  });
+
   // #416 follow-through: the derived board key changed to include the source
   // page's game id, so the first poll after the change files a polling tour's
   // derived boards under new ids. The record under the old id is the same game

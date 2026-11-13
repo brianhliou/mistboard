@@ -106,6 +106,7 @@ export function buildXiangqiBroadcastBoardReplay(board: StoredXiangqiBroadcastBo
       black: board.black,
       status: board.status,
       result: board.result,
+      ...(board.clock ? { clock: board.clock } : {}),
       plyCount: board.plyCount,
       finalStatus: board.finalStatus,
       createdAt: board.createdAt,

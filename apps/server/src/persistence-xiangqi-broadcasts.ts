@@ -164,6 +164,8 @@ export type XiangqiBroadcastBoardUpdateResult =
       boardId: string;
       status: XiangqiBroadcastBoardUpdateStatus;
       plyCount: number;
+      /** Push-only: an ignored late post; absent for poller/simulator callers. */
+      stale?: boolean;
     }
   | {
       ok: false;
@@ -216,6 +218,7 @@ type BoardRow = {
   source_url: string | null;
   ply_count: number;
   final_status: XiangqiGameStatus;
+  last_accepted_seq: number | null;
   payload: XiangqiBroadcastBoard;
   created_at: Date;
   updated_at: Date;
@@ -406,13 +409,14 @@ async function upsertBoard(
   board: XiangqiBroadcastBoard,
   plyCount: number,
   finalStatus: XiangqiGameStatus,
+  seq: number | null = null,
 ): Promise<void> {
   await client.query(
     `INSERT INTO xiangqi_broadcast_boards
        (id, tour_slug, round_id, source_board_id, board_number, red, black, status, result,
-        moves, source_url, ply_count, final_status, payload)
+        moves, source_url, ply_count, final_status, payload, last_accepted_seq)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10::jsonb,
-             $11, $12, $13::jsonb, $14::jsonb)
+             $11, $12, $13::jsonb, $14::jsonb, $15)
      ON CONFLICT (id) DO UPDATE SET
        tour_slug = EXCLUDED.tour_slug,
        round_id = EXCLUDED.round_id,
@@ -427,6 +431,7 @@ async function upsertBoard(
        ply_count = EXCLUDED.ply_count,
        final_status = EXCLUDED.final_status,
        payload = EXCLUDED.payload,
+       last_accepted_seq = GREATEST(xiangqi_broadcast_boards.last_accepted_seq, EXCLUDED.last_accepted_seq),
        updated_at = now()`,
     [
       board.id,
@@ -443,6 +448,7 @@ async function upsertBoard(
       plyCount,
       JSON.stringify(finalStatus),
       JSON.stringify(board),
+      seq,
     ],
   );
 }
@@ -697,8 +703,15 @@ async function dropBroadcastAnalysis(client: Queryable, boardId: string): Promis
 
 type BoardTags = Pick<
   XiangqiBroadcastBoard,
-  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details' | 'recordWithheld'
+  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details' | 'recordWithheld' | 'clock'
 >;
+
+// Field by field: a clock read back from jsonb comes with its keys reordered,
+// so JSON.stringify would call a duplicate post a change.
+function clocksEqual(a: BoardTags['clock'], b: BoardTags['clock']): boolean {
+  if (!a || !b) return !a && !b;
+  return a.redMs === b.redMs && a.blackMs === b.blackMs && a.at === b.at;
+}
 
 function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
   return (
@@ -707,6 +720,7 @@ function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
     a.status === b.status &&
     a.result === b.result &&
     a.sourceUrl === b.sourceUrl &&
+    clocksEqual(a.clock, b.clock) &&
     // The game's details arrive on a re-read of a board stored before they
     // existed; same moves, new details is an update, not a duplicate.
     JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null) &&
@@ -727,9 +741,18 @@ async function roundBelongsToTour(
   return (rowCount ?? 0) > 0;
 }
 
+export type XiangqiBroadcastBoardUpdateOptions = {
+  allowCorrection?: boolean;
+  source?: string;
+  /** Opt in to push sequence, pushability and finished-state rules. */
+  push?: { seq?: number };
+  /** Shorter records require this AND push.seq newer than the stored sequence. */
+  allowTakeback?: boolean;
+};
+
 export async function applyXiangqiBroadcastBoardUpdate(
   rawBoard: unknown,
-  options: { allowCorrection?: boolean; source?: string } = {},
+  options: XiangqiBroadcastBoardUpdateOptions = {},
 ): Promise<XiangqiBroadcastBoardUpdateResult> {
   return await withTransaction((client) =>
     applyXiangqiBroadcastBoardUpdateOn(client, rawBoard, options),
@@ -739,7 +762,7 @@ export async function applyXiangqiBroadcastBoardUpdate(
 export async function applyXiangqiBroadcastBoardUpdateOn(
   client: Queryable,
   rawBoard: unknown,
-  options: { allowCorrection?: boolean; source?: string } = {},
+  options: XiangqiBroadcastBoardUpdateOptions = {},
 ): Promise<XiangqiBroadcastBoardUpdateResult> {
   {
     const boardResult = validateXiangqiBroadcastBoard(rawBoard);
@@ -755,7 +778,40 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
     // Recompute cached English names from the current Chinese values before
     // any comparison or write: deterministic, so idempotent re-polls still
     // compare equal, and stale caches self-heal on the next update.
-    const board = translatedXiangqiBroadcastBoard(boardResult.value);
+    let board = translatedXiangqiBroadcastBoard(boardResult.value);
+    const seq = options.push?.seq ?? null;
+    if (seq !== null && !Number.isFinite(seq)) {
+      return {
+        ok: false,
+        boardId: board.id,
+        kind: 'invalid_body',
+        message: 'seq must be a finite number',
+      };
+    }
+    if (options.push) {
+      // On must run inside a transaction. The advisory lock also serializes
+      // concurrent first posts, when there is no board row to lock yet.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [board.id]);
+      const { rows } = await client.query<{ source_url: string | null; poll_mode: string }>(
+        `SELECT source_url, poll_mode FROM xiangqi_broadcast_tours WHERE slug = $1 FOR SHARE`,
+        [board.tourSlug],
+      );
+      if (!rows[0])
+        return {
+          ok: false,
+          boardId: board.id,
+          kind: 'reference_validation_failed',
+          message: 'unknown tour',
+        };
+      if (rows[0].source_url !== null && rows[0].poll_mode !== 'off') {
+        return {
+          ok: false,
+          boardId: board.id,
+          kind: 'event_not_pushable',
+          message: 'event is filled from another source',
+        };
+      }
+    }
     if (!(await roundBelongsToTour(client, board.roundId, board.tourSlug))) {
       return rejectedBoardUpdate(
         await skipBoard(
@@ -779,34 +835,95 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
       );
     }
 
-    const existing = await getBoardById(client, board.id);
+    const locked = options.push
+      ? (
+          await client.query<BoardRow>(
+            `SELECT * FROM xiangqi_broadcast_boards WHERE id = $1 FOR UPDATE`,
+            [board.id],
+          )
+        ).rows[0]
+      : undefined;
+    const existing = options.push
+      ? locked
+        ? boardFromRow(locked)
+        : null
+      : await getBoardById(client, board.id);
+    const previousSeq = locked?.last_accepted_seq == null ? null : Number(locked.last_accepted_seq);
+    const newerSeq = seq !== null && (previousSeq === null || seq > previousSeq);
+    const unchanged = async (stale = false): Promise<XiangqiBroadcastBoardUpdateResult> => {
+      // A duplicate can acknowledge a new counter without changing the board.
+      // Late/stale posts never advance the watermark.
+      if (!stale && newerSeq) {
+        await client.query(
+          `UPDATE xiangqi_broadcast_boards SET last_accepted_seq = $2 WHERE id = $1`,
+          [board.id, seq],
+        );
+      }
+      return {
+        ok: true,
+        boardId: board.id,
+        status: 'unchanged',
+        plyCount: existing!.plyCount,
+        ...(options.push ? { stale } : {}),
+      };
+    };
     if (!existing) {
       await retireRekeyedTwin(client, board);
       await retireResultsOnlyTwin(client, board);
-      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await upsertBoard(client, board, replay.plies, replay.finalStatus, seq);
       return { ok: true, boardId: board.id, status: 'created', plyCount: replay.plies };
     }
 
-    if (movesEqual(existing.moves, board.moves)) {
-      if (boardTagsEqual(existing, board)) {
-        return { ok: true, boardId: board.id, status: 'unchanged', plyCount: existing.plyCount };
+    const sameMoves = movesEqual(existing.moves, board.moves);
+    if (options.push) {
+      board = {
+        ...board,
+        ...(board.clock === undefined && existing.clock ? { clock: existing.clock } : {}),
+        ...(existing.details ? { details: { ...existing.details, ...board.details } } : {}),
+      };
+      // The receipt time is server metadata, not a change to a retried clock.
+      if (
+        sameMoves &&
+        existing.clock &&
+        board.clock &&
+        existing.clock.redMs === board.clock.redMs &&
+        existing.clock.blackMs === board.clock.blackMs
+      ) {
+        board.clock = existing.clock;
       }
-      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+    }
+
+    if (options.push && existing.status === 'complete') {
+      if (!newerSeq) return await unchanged(!sameMoves);
+      // A correction may change the record/result, but cannot reopen a game.
+      if (board.status !== 'complete')
+        board = { ...board, status: 'complete', result: existing.result };
+    }
+
+    if (sameMoves) {
+      if (boardTagsEqual(existing, board)) {
+        return await unchanged();
+      }
+      await upsertBoard(client, board, replay.plies, replay.finalStatus, seq);
       return { ok: true, boardId: board.id, status: 'updated', plyCount: replay.plies };
     }
 
     if (isMovePrefix(existing.moves, board.moves)) {
-      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await upsertBoard(client, board, replay.plies, replay.finalStatus, seq);
       await dropBroadcastAnalysis(client, board.id);
       return { ok: true, boardId: board.id, status: 'extended', plyCount: replay.plies };
     }
 
-    if (isMovePrefix(board.moves, existing.moves)) {
-      return { ok: true, boardId: board.id, status: 'unchanged', plyCount: existing.plyCount };
+    const shorter = board.moves.length < existing.moves.length;
+    if (options.push && shorter && !(options.allowTakeback && newerSeq)) {
+      return await unchanged(true);
+    }
+    if (isMovePrefix(board.moves, existing.moves) && !(options.allowTakeback && newerSeq)) {
+      return await unchanged();
     }
 
     if (options.allowCorrection) {
-      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await upsertBoard(client, board, replay.plies, replay.finalStatus, seq);
       await dropBroadcastAnalysis(client, board.id);
       await appendSyncLog(client, {
         tourSlug: board.tourSlug,
@@ -815,7 +932,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
         sourceBoardId: board.sourceBoardId,
         severity: 'warning',
         kind: 'corrected',
-        message: 'accepted explicit correction for non-prefix board update',
+        message: 'accepted explicit board correction',
         payload: {
           previousPlyCount: existing.plyCount,
           nextPlyCount: replay.plies,
