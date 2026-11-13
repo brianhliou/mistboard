@@ -883,6 +883,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: '1pfJeXA1/Pi1kljz1',
           spec: { ...C_BV0kkYY4 },
           caption:
             'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.',
