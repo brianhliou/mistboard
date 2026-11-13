@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
+import { broadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import {
   type BroadcastPageSources,
   broadcastPageFor,
@@ -14,7 +15,28 @@ import type {
 
 const at = new Date('2026-10-01T00:00:00Z');
 
+test('unlisted broadcasts stay off the index and direct pages retain content with noindex', async () => {
+  const { tours, rounds, boards, sources } = broadcastDiscoveryFixture();
+  const index = await broadcastPageFor('/broadcast/xiangqi', sources);
+  assert.ok(index?.body?.includes(tours[0]!.name));
+  assert.ok(!index?.body?.includes(tours[1]!.name));
+  const paths = [
+    `/broadcast/xiangqi/${tours[1]!.slug}`,
+    `/broadcast/xiangqi/${tours[1]!.slug}/round/${rounds[1]!.id}`,
+    ...boards
+      .filter((board) => board.tourSlug === tours[1]!.slug)
+      .map((board) => `/broadcast/xiangqi/board/${board.id}`),
+  ];
+  for (const path of paths) {
+    const page = await broadcastPageFor(path, sources);
+    assert.equal(page?.noindex, true, path);
+    assert.ok(page.body?.includes(tours[1]!.name), path);
+    assert.ok(page.meta, path);
+  }
+});
+
 const tour: StoredXiangqiBroadcastTour = {
+  listed: true,
   schema: XIANGQI_BROADCAST_SCHEMA,
   slug: '2026-wuyang-cup',
   name: '第三十二届五羊杯',

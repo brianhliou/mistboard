@@ -437,7 +437,7 @@ export async function broadcastPageFor(
       map.get(name) ?? null;
   switch (route.kind) {
     case 'index': {
-      const tours = await sources.listTours();
+      const tours = (await sources.listTours()).filter((tour) => tour.listed);
       const summaries = await Promise.all(
         tours.map(async (tour): Promise<TourSummary> => {
           const rounds = await sources.listRounds(tour.slug);
@@ -471,6 +471,7 @@ export async function broadcastPageFor(
           ...(share?.imagePath ? { imagePath: share.imagePath } : {}),
         },
         body: renderTourBody(tour, rounds, boards, slugOf(await slugs)),
+        noindex: !tour.listed,
       };
     }
     case 'round': {
@@ -490,6 +491,7 @@ export async function broadcastPageFor(
           ...(share?.imagePath ? { imagePath: share.imagePath } : {}),
         },
         body: renderRoundBody(tour, round, rounds, boards, slugOf(await slugs)),
+        noindex: !tour.listed,
       };
     }
     case 'board': {
@@ -508,6 +510,7 @@ export async function broadcastPageFor(
           ...(share?.imagePath ? { imagePath: share.imagePath } : {}),
         },
         body: renderBoardBody(board, tour, round, slugOf(await slugs), locale),
+        noindex: !tour?.listed,
       };
     }
   }

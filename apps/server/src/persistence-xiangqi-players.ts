@@ -115,13 +115,17 @@ type SideRow = {
 // Both seats of every finished board as one row each, with the outcome from
 // that seat. `sides` is the only place the red/black asymmetry lives.
 const SIDES_CTE = `
-  WITH sides AS (
+  WITH listed_boards AS (
+    SELECT boards.* FROM xiangqi_broadcast_boards boards
+    JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
+    WHERE tours.listed
+  ), sides AS (
     SELECT boards.id AS board_id, boards.tour_slug, boards.round_id, boards.result,
            boards.ply_count, boards.source_url,
            boards.payload->'details'->>'opening' AS opening,
            boards.red AS me, boards.black AS them, 'red' AS colour,
            CASE boards.result WHEN '1-0' THEN 'win' WHEN '0-1' THEN 'loss' ELSE 'draw' END AS outcome
-    FROM xiangqi_broadcast_boards boards
+    FROM listed_boards boards
     WHERE boards.result <> '*'
     UNION ALL
     SELECT boards.id, boards.tour_slug, boards.round_id, boards.result,
@@ -129,7 +133,7 @@ const SIDES_CTE = `
            boards.payload->'details'->>'opening',
            boards.black, boards.red, 'black',
            CASE boards.result WHEN '0-1' THEN 'win' WHEN '1-0' THEN 'loss' ELSE 'draw' END
-    FROM xiangqi_broadcast_boards boards
+    FROM listed_boards boards
     WHERE boards.result <> '*'
   )`;
 

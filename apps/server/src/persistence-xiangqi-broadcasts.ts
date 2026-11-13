@@ -39,6 +39,8 @@ import {
 } from './xiangqi-broadcast-translate.js';
 
 export type StoredXiangqiBroadcastTour = XiangqiBroadcastTour & {
+  /** Discovery eligibility; direct reads and ingestion remain available. */
+  listed: boolean;
   /** The operator's setting: auto (the event window), on, or off. */
   pollMode: XiangqiBroadcastPollMode;
   /** Derived at read time: whether the scheduler polls this tour now. */
@@ -175,6 +177,7 @@ type Queryable = Pick<pg.Pool | pg.PoolClient, 'query'>;
 
 type TourRow = {
   slug: string;
+  listed: boolean;
   name: string;
   location: string | null;
   source_url: string | null;
@@ -277,6 +280,7 @@ function tourFromRow(row: TourRow): StoredXiangqiBroadcastTour {
   const schedule = scheduleFromRow(row);
   return {
     ...row.payload,
+    listed: row.listed,
     pollMode: schedule.pollMode,
     pollEnabled: xiangqiBroadcastPollState({ ...schedule, now: Date.now() }).polling,
     pollIntervalMs: row.poll_interval_ms,
@@ -959,9 +963,14 @@ export async function deleteXiangqiBroadcastTour(slug: string): Promise<boolean>
   });
 }
 
-export async function listXiangqiBroadcastTours(): Promise<StoredXiangqiBroadcastTour[]> {
+export async function listXiangqiBroadcastTours(
+  options: { includeUnlisted?: boolean } = {},
+): Promise<StoredXiangqiBroadcastTour[]> {
   const { rows } = await getPool().query<TourRow>(
-    `SELECT * FROM xiangqi_broadcast_tours ORDER BY starts_at DESC NULLS LAST, slug`,
+    `SELECT * FROM xiangqi_broadcast_tours
+      WHERE listed OR $1
+      ORDER BY starts_at DESC NULLS LAST, slug`,
+    [options.includeUnlisted === true],
   );
   return rows.map(tourFromRow);
 }
@@ -1010,7 +1019,7 @@ function buildCompletedBoardSearchWhere(filters: XiangqiBroadcastBoardSearchFilt
 } {
   // A results-only board (a pairing with no published moves) is a result,
   // not a game record: the games database and the study curator list games.
-  const conditions: string[] = [`boards.result <> '*'`, 'boards.ply_count > 0'];
+  const conditions: string[] = ['tours.listed', `boards.result <> '*'`, 'boards.ply_count > 0'];
   const values: unknown[] = [];
   const bind = (value: unknown): string => {
     values.push(value);
@@ -1149,7 +1158,9 @@ export type AggregatableXiangqiBroadcastGame = {
  * An aggregate over games we already serve in their entirety exposes strictly
  * less than the pages we already serve.
  *
- * What IS enforced here: only finished games (`result <> '*'`). A live board is
+ * Unlisted tours are excluded: a direct link does not authorize discovery
+ * through statistics or sample-game links. Only finished games are included
+ * (`result <> '*'`). A live board is
  * still being played and its move list grows underneath the build, so folding
  * one in would bake a half-game into the statistics and count it again at the
  * next rebuild.
@@ -1180,6 +1191,7 @@ export async function listAggregatableXiangqiBroadcastGames(opts: {
      JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE boards.result <> '*'
+       AND tours.listed
        AND boards.ply_count > 0
        AND boards.id > $1
      ORDER BY boards.id ASC
@@ -1321,8 +1333,9 @@ export async function seedXiangqiBroadcastSiblingTourOn(
   const { rowCount } = await client.query(
     `INSERT INTO xiangqi_broadcast_tours
        (slug, name, location, source_url, starts_at, ends_at, payload,
-        poll_mode, poll_enabled, poll_interval_ms)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'auto', false, $8)
+        poll_mode, poll_enabled, poll_interval_ms, listed)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'auto', false, $8,
+       COALESCE((SELECT listed FROM xiangqi_broadcast_tours WHERE slug = $9), true))
      ON CONFLICT (slug) DO NOTHING`,
     [
       tour.slug,
@@ -1333,6 +1346,7 @@ export async function seedXiangqiBroadcastSiblingTourOn(
       optionalDate(tour.endsAt),
       JSON.stringify(tour),
       seed.pollIntervalMs,
+      seed.parentSlug,
     ],
   );
   return (rowCount ?? 0) > 0;

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { broadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import {
   buildBroadcastCalendar,
   dpxqTourIdFromSourceUrl,
@@ -23,6 +24,30 @@ async function indexFixture(): Promise<string> {
 }
 
 const NOW = Date.parse('2026-09-23T18:00:00Z');
+
+test('the public calendar suppresses unlisted tours, including matching external index rows', () => {
+  const { tours } = broadcastDiscoveryFixture();
+  const rows = [
+    { tourId: '12461', name: '2026年全国象棋个人赛' },
+    { tourId: '12528', name: '2026年世界象棋快棋锦标赛' },
+  ].map((row) => ({
+    ...row,
+    location: 'Fixture',
+    startsOn: '2026-11-13',
+    endsOn: '2026-11-15',
+    section: 'live' as const,
+    hasGameList: true,
+    hasPairings: true,
+  }));
+  const now = Date.parse('2026-11-13T12:00:00Z');
+  for (const externalRows of [[], rows]) {
+    const events = buildBroadcastCalendar({ tours, rows: externalRows, now });
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.tourSlug, tours[0]!.slug);
+    assert.ok(!JSON.stringify(events).includes(tours[1]!.slug));
+    assert.ok(!events.some((event) => event.sourceUrl?.includes('12528')));
+  }
+});
 
 test('the index plans a sibling seed with parent settings, once, leaving unrelated events manual (#1074)', () => {
   const parent = {

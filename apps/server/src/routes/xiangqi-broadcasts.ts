@@ -60,7 +60,9 @@ export type XiangqiBroadcastApiPersistence = {
   listXiangqiBroadcastFinalEvals?(
     boardIds: readonly string[],
   ): Promise<Map<string, { cp: number | null; mate: number | null }>>;
-  listXiangqiBroadcastTours(): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
+  listXiangqiBroadcastTours(
+    options?: Parameters<typeof persistence.listXiangqiBroadcastTours>[0],
+  ): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
   getXiangqiBroadcastTour(slug: string): ReturnType<typeof persistence.getXiangqiBroadcastTour>;
   listXiangqiBroadcastRounds(
     tourSlug: string,
@@ -84,7 +86,7 @@ export type XiangqiBroadcastApiPersistence = {
 };
 
 const livePersistence: XiangqiBroadcastApiPersistence = {
-  listXiangqiBroadcastTours: () => persistence.listXiangqiBroadcastTours(),
+  listXiangqiBroadcastTours: (options) => persistence.listXiangqiBroadcastTours(options),
   getXiangqiBroadcastTour: (slug) => persistence.getXiangqiBroadcastTour(slug),
   listXiangqiBroadcastRounds: (tourSlug) => persistence.listXiangqiBroadcastRounds(tourSlug),
   listXiangqiBroadcastBoards: (roundId) => persistence.listXiangqiBroadcastBoards(roundId),
@@ -142,7 +144,7 @@ type SourceHealth = {
 export async function xiangqiBroadcastIndexForApi(
   deps: XiangqiBroadcastApiPersistence = livePersistence,
 ) {
-  const tours = await deps.listXiangqiBroadcastTours();
+  const tours = (await deps.listXiangqiBroadcastTours()).filter((tour) => tour.listed);
   const entries = await Promise.all(
     tours.map(async (tour) => {
       const [rounds, syncLogs] = await Promise.all([
@@ -312,7 +314,7 @@ function roundBoardStats(
 export async function xiangqiBroadcastOpsIndexForApi(
   deps: XiangqiBroadcastApiPersistence = livePersistence,
 ) {
-  const tours = await deps.listXiangqiBroadcastTours();
+  const tours = await deps.listXiangqiBroadcastTours({ includeUnlisted: true });
   const entries = await Promise.all(
     tours.map(async (tour) => {
       const [rounds, syncLogs] = await Promise.all([
@@ -1132,7 +1134,7 @@ export async function tryHandle(
     if (!requirePersistence(response)) return true;
     const [rows, tours] = await Promise.all([
       dpxqTourIndexForCalendar({ fetchImpl: defaultXiangqiBroadcastFetch }),
-      persistence.listXiangqiBroadcastTours(),
+      persistence.listXiangqiBroadcastTours({ includeUnlisted: true }),
     ]);
     writeJson(response, 200, {
       sourceReadable: rows !== null,

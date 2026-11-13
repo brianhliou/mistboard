@@ -324,6 +324,7 @@ export function buildBroadcastCalendar(input: {
   rows: readonly DpxqIndexRow[];
   tours: readonly {
     slug: string;
+    listed?: boolean;
     name: string;
     nameEn?: string;
     location?: string;
@@ -335,13 +336,19 @@ export function buildBroadcastCalendar(input: {
   translate?: (zh: string) => string | undefined;
 }): BroadcastCalendarEvent[] {
   const slugByDpxqTour = new Map<string, string>();
+  const unlistedTourIds = new Set<string>();
   for (const tour of input.tours) {
     const tourId = dpxqTourIdFromSourceUrl(tour.sourceUrl) ?? HAND_IMPORTED_DPXQ_TOURS[tour.slug];
+    if (tour.listed === false) {
+      if (tourId) unlistedTourIds.add(tourId);
+      continue;
+    }
     if (tourId) slugByDpxqTour.set(tourId, tour.slug);
   }
   const events: BroadcastCalendarEvent[] = [];
   const listed = new Set<string>();
   for (const row of input.rows) {
+    if (unlistedTourIds.has(row.tourId)) continue;
     if (!isTopDpxqEvent(row.name)) continue;
     const ended = Date.parse(dpxqEndOfDay(row.endsOn));
     if (row.section === 'ended' && input.now - ended > CALENDAR_PAST_MS) continue;
@@ -361,6 +368,7 @@ export function buildBroadcastCalendar(input: {
     });
   }
   for (const tour of input.tours) {
+    if (tour.listed === false) continue;
     if (listed.has(tour.slug) || !tour.startsAt) continue;
     const startsOn = tour.startsAt.slice(0, 10);
     const endsOn = (tour.endsAt ?? tour.startsAt).slice(0, 10);

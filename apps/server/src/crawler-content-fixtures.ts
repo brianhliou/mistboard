@@ -115,6 +115,7 @@ const player: XiangqiPlayerRecord = {
 };
 const at = new Date('2026-11-07');
 const tour = {
+  listed: true,
   schema: XIANGQI_BROADCAST_SCHEMA,
   slug: 'crawler-cup',
   name: '象棋邀请赛',

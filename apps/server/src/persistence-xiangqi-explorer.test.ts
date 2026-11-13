@@ -10,6 +10,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { XiangqiMove } from '@mistboard/game';
+import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import {
   insertHistoricalXiangqiGame,
   listAggregatableXiangqiBroadcastGames,
@@ -56,6 +57,24 @@ const MOVES: XiangqiMove[] = [
 ];
 
 definePersistenceTests('xiangqi opening explorer', () => {
+  test('unlisted games never enter explorer aggregates or sample links', async () => {
+    const { tours, boards } = await seedBroadcastDiscoveryFixture();
+    const games = await listAggregatableXiangqiBroadcastGames({ limit: 100 });
+    assert.deepEqual(
+      games.map((game) => game.id),
+      [boards[0]!.id],
+    );
+    const accumulator = createAccumulator();
+    for (const game of games) {
+      accumulateGame(accumulator, { ...game, kind: 'broadcast' });
+    }
+    const serialized = JSON.stringify([...accumulator].map(([key, moves]) => [key, [...moves]]));
+    assert.ok(!serialized.includes(tours[1]!.slug));
+    assert.deepEqual(
+      await listAggregatableXiangqiBroadcastGames({ limit: 100, afterId: boards[0]!.id }),
+      [],
+    );
+  });
   test('aggregation admits cleared sources and refuses every other status', async () => {
     const cleared = await upsertHistoricalXiangqiSource({
       slug: 'explorer-cleared-test',

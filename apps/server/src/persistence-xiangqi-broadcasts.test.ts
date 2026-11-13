@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard, XiangqiBroadcastTour } from '@mistboard/game';
+import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { getPool } from './persistence-db.js';
 import { getGameAnalysis, saveGameAnalysis } from './persistence-game-analysis.js';
@@ -132,6 +133,49 @@ function timeoutFetch(): XiangqiBroadcastSourceFetch {
 }
 
 definePersistenceTests('xiangqi broadcasts', () => {
+  test('discovery excludes unlisted events while direct reads, polling and reimports preserve them', async () => {
+    const { tours, rounds, boards } = await seedBroadcastDiscoveryFixture();
+    const hidden = tours[1]!;
+    assert.deepEqual(
+      (await listXiangqiBroadcastTours()).map((tour) => tour.slug),
+      [tours[0]!.slug],
+    );
+    assert.equal((await listXiangqiBroadcastTours({ includeUnlisted: true })).length, 2);
+    assert.equal((await getXiangqiBroadcastTour(tours[0]!.slug))?.listed, true);
+    assert.equal((await getXiangqiBroadcastTour(hidden.slug))?.listed, false);
+    assert.equal((await listXiangqiBroadcastRounds(hidden.slug)).length, 1);
+    assert.equal((await listXiangqiBroadcastBoards(rounds[1]!.id)).length, 2);
+    for (const board of boards.filter((board) => board.tourSlug === hidden.slug)) {
+      assert.deepEqual((await getXiangqiBroadcastBoard(board.id))?.moves, board.moves);
+    }
+    const page = await queryCompletedXiangqiBroadcastBoards({});
+    assert.equal(page.total, 1);
+    assert.deepEqual(
+      page.boards.map((board) => board.tourSlug),
+      [tours[0]!.slug],
+    );
+    assert.deepEqual(await queryCompletedXiangqiBroadcastBoards({ event: hidden.name }), {
+      boards: [],
+      total: 0,
+    });
+    await importXiangqiBroadcastPack({ tour: hidden, rounds: [], boards: [] });
+    assert.equal((await getXiangqiBroadcastTour(hidden.slug))?.listed, false);
+    assert.ok(
+      (await listXiangqiBroadcastScheduledTours()).some((tour) => tour.slug === hidden.slug),
+    );
+    const sibling = { ...hidden, slug: `${hidden.slug}-women` };
+    assert.equal(
+      await seedXiangqiBroadcastSiblingTourOn(getPool(), {
+        parentSlug: hidden.slug,
+        tourId: '99999',
+        tour: sibling,
+        pollMode: 'auto',
+        pollIntervalMs: 30_000,
+      }),
+      true,
+    );
+    assert.equal((await getXiangqiBroadcastTour(sibling.slug))?.listed, false);
+  });
   test('a source that states no schedule does not erase the seeded one', async () => {
     // The seeded tour/round dates are what the calendar shows and what
     // resolveScheduledRound reads to pick a poll's round. A converted game page

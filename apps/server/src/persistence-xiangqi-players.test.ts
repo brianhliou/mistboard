@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { personNameForLocale } from '@mistboard/game';
+import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { close, getPool, init, isInitialized } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -284,6 +285,26 @@ test('player teaching games resolve canonical slugs and exclude non-A and empty 
 });
 
 definePersistenceTests('xiangqi players', () => {
+  test('unlisted boards cannot create players, contribute records, or appear in player games', async () => {
+    const { tours } = await seedBroadcastDiscoveryFixture();
+    const players = await listXiangqiPlayers();
+    assert.ok(!players.some((player) => player.name === 'Unlisted opponent'));
+    const shared = players.find((player) => player.name === 'Shared fixture player');
+    assert.ok(shared);
+    assert.equal(shared.games, 1);
+    assert.deepEqual(
+      shared.events.map((event) => event.tourSlug),
+      [tours[0]!.slug],
+    );
+    const boards = await listXiangqiPlayerBoards(shared, () => null);
+    assert.deepEqual(
+      boards.map((board) => board.tourSlug),
+      [tours[0]!.slug],
+    );
+    const games = await playerPersistence.listXiangqiPlayerGames(shared.slug!);
+    assert.equal(games.length, 1);
+    assert.ok(!JSON.stringify({ players, boards, games }).includes(tours[1]!.slug));
+  });
   test('lists the fixture pack players from finished boards only, with their boards', async () => {
     await importXiangqiBroadcastPack(await readXiangqiBroadcastFixturePack(FIXTURE_DIR, false));
     const all = await listXiangqiPlayers();
