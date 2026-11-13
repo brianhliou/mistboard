@@ -8,11 +8,18 @@
 // 2025 men's league row grew from August to December) and polling is bounded
 // by the end date. The daily readout lists top events dpxq is tracking that we
 // are not, because the 2026 women's league was on dpxq while our calendar said
-// it had no 2026 edition. Seeding one stays a reviewed step: the event's grade
-// in xiangqi-broadcast-levels.ts decides who gets a player page.
+// it had no 2026 edition. Only sibling groups of relayed events are seeded
+// automatically; unrelated events still need review.
 
-import { dpxqTourPageUrl, HAND_IMPORTED_DPXQ_TOURS } from '@mistboard/game';
+import {
+  dpxqTourPageUrl,
+  HAND_IMPORTED_DPXQ_TOURS,
+  XIANGQI_BROADCAST_SCHEMA,
+  type XiangqiBroadcastTour,
+} from '@mistboard/game';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
+import { dpxqEventGroup } from './xiangqi-broadcast-groups.js';
+import { translateXiangqiEventName } from './xiangqi-broadcast-translate.js';
 
 export const DPXQ_TOUR_INDEX_URL = 'http://www.dpxq.com/hldcg/';
 
@@ -117,7 +124,21 @@ export function dpxqEndOfDay(date: string): string {
   return `${date}T23:59:59+08:00`;
 }
 
-export type DpxqTrackedTour = { slug: string; sourceUrl: string | null; endsAt: string | null };
+export type DpxqTrackedTour = {
+  slug: string;
+  sourceUrl: string | null;
+  endsAt: string | null;
+  location?: string | null;
+  pollIntervalMs?: number;
+};
+
+export type DpxqSiblingSeed = {
+  parentSlug: string;
+  tourId: string;
+  tour: XiangqiBroadcastTour;
+  pollMode: 'auto';
+  pollIntervalMs: number;
+};
 
 export type DpxqEndDateMove = { slug: string; tourId: string; from: string | null; to: string };
 
@@ -125,12 +146,22 @@ export type DpxqIndexPlan = {
   /** Tours whose dpxq row now ends later than ours. Only ever later: a row
    *  edited shorter by mistake must not cut polling short. */
   endDateMoves: DpxqEndDateMove[];
+  /** Newly listed groups of an event we already relay, with parent settings. */
+  siblingSeeds: DpxqSiblingSeed[];
   /** Top events no tour of ours polls: live or upcoming, or finished in the
    *  last month with records up (a backfill waiting to be seeded). */
   untracked: DpxqIndexRow[];
 };
 
 export const DPXQ_RECENTLY_ENDED_MS = 30 * 24 * 60 * 60_000;
+
+function overlappingDpxqDates(a: DpxqIndexRow, b: DpxqIndexRow): boolean {
+  const startA = Date.parse(`${a.startsOn}T00:00:00+08:00`);
+  const startB = Date.parse(`${b.startsOn}T00:00:00+08:00`);
+  const endA = Date.parse(dpxqEndOfDay(a.endsOn));
+  const endB = Date.parse(dpxqEndOfDay(b.endsOn));
+  return startA <= endA && startB <= endB && startA <= endB && startB <= endA;
+}
 
 export function planDpxqIndexSync(input: {
   rows: readonly DpxqIndexRow[];
@@ -158,7 +189,50 @@ export function planDpxqIndexSync(input: {
       row.hasGameList && input.now - Date.parse(dpxqEndOfDay(row.endsOn)) <= DPXQ_RECENTLY_ENDED_MS
     );
   });
-  return { endDateMoves, untracked };
+  const siblingSeeds: DpxqSiblingSeed[] = [];
+  const occupiedSlugs = new Set(input.tours.map((tour) => tour.slug));
+  // Prefer the root tour over an already seeded sibling, independently of
+  // listing order, so later groups do not get a growing chain of suffixes.
+  const parents = [...input.tours].sort(
+    (a, b) => a.slug.length - b.slug.length || a.slug.localeCompare(b.slug),
+  );
+  for (const row of input.rows) {
+    if (trackedIds.has(row.tourId)) continue;
+    const group = dpxqEventGroup(row.name);
+    if (!group.suffix) continue;
+    for (const parent of parents) {
+      if (parent.pollIntervalMs === undefined) continue;
+      const parentId = dpxqTourIdFromSourceUrl(parent.sourceUrl);
+      const parentRow = parentId ? rowsById.get(parentId) : undefined;
+      if (!parentRow || !overlappingDpxqDates(row, parentRow)) continue;
+      const parentGroup = dpxqEventGroup(parentRow.name);
+      if (parentGroup.event !== group.event || parentGroup.suffix === group.suffix) continue;
+      const slug = `${parent.slug}-${group.suffix}`;
+      // A hand-curated slug is never overwritten or repurposed for another id.
+      if (occupiedSlugs.has(slug)) break;
+      const nameEn = translateXiangqiEventName(row.name);
+      siblingSeeds.push({
+        parentSlug: parent.slug,
+        tourId: row.tourId,
+        pollMode: 'auto',
+        pollIntervalMs: parent.pollIntervalMs,
+        tour: {
+          schema: XIANGQI_BROADCAST_SCHEMA,
+          slug,
+          name: row.name,
+          ...(nameEn ? { nameEn } : {}),
+          location: parent.location ?? parentRow.location,
+          startsAt: `${row.startsOn}T00:00:00+08:00`,
+          endsAt: dpxqEndOfDay(row.endsOn),
+          sourceUrl: `mistboard-discover://dpxq-tour?tour=${row.tourId}&tourSlug=${slug}`,
+        },
+      });
+      trackedIds.add(row.tourId);
+      occupiedSlugs.add(slug);
+      break;
+    }
+  }
+  return { endDateMoves, siblingSeeds, untracked };
 }
 
 export async function fetchDpxqTourIndex(input: {

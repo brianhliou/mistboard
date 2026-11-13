@@ -453,7 +453,8 @@ Edit task → find file → open only that file.
 | `xiangqi-broadcast-discovery.ts` | Discovery sources: a broadcast source that is a query, not a list (`mistboard-discover://<provider>?...`). Parses/registers providers, resolves the active round from the seeded schedule (`resolveScheduledRound`), and builds the in-memory manifest (`buildDiscoveryManifestSources`), filtering to the scheduled round when boards state their own |
 | `xiangqi-broadcast-discovery-dpxq.ts` | `dpxq-live` provider: ranks live boards by online-viewer count off `s_online.asp` when a tour has no uploaded records yet; also registers the shipped providers (`registerDefaultXiangqiBroadcastDiscoveryProviders`) |
 | `xiangqi-broadcast-analysis.ts` | Whole-game Pikafish analysis for broadcast games under `broadcast:<boardId>` (the study curator's key): the site-game analysis endpoint at `/api/xiangqi-broadcasts/games/:id/analysis`, and a throttled background sweep (one game at a time, only when the analysis queue is idle, `MISTBOARD_BROADCAST_ANALYSIS_PER_HOUR`, default 6) |
-| `xiangqi-broadcast-dpxq-index.ts` | dpxq's tour index (`/hldcg/`): parses every tracked event with dates and sub-page flags; plans end-date moves for relayed tours and lists top events we do not relay (readout `broadcast-events-untracked`) |
+| `xiangqi-broadcast-dpxq-index.ts` | dpxq's tour index (`/hldcg/`): parses dates and sub-page flags, plans end-date moves and automatic sibling-group seeds, and lists untracked top events for the readout |
+| `xiangqi-broadcast-groups.ts` | Conservative trailing dpxq group labels and generated sibling slug suffixes, shared by discovery and grade inheritance |
 | `xiangqi-broadcast-discovery-dpxq-tour.ts` | `dpxq-tour` provider: reads a tournament's own game list (`movelist_<tour>.html`) so each board arrives with its round stated rather than inferred from who is watching; preferred whenever the tour has game records |
 | `xiangqi-broadcast-discovery-wxf.ts` | `wxf-category` provider: lists a wxf-xiangqi.org results category (`catid=`) and files each round article under the round its title states (第N轮); the converter names that page's boards `r<NN>t<TT>` from each frame's "round-table" token. Backup source for WXF events |
 | `xiangqi-broadcast-dpxq.ts` | Adapter normalizing raw dpxq.com (东萍象棋) live-room and archive pages into the DhtmlXQ frame envelope the WXF/DhtmlXQ converter consumes (`looksLikeDpxqPage`, `normalizeDpxqPageToFrameHtml`) |
@@ -1361,7 +1362,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/sitemap-broadcasts.ts` | _needs a one-line description_ |
 | `apps/server/src/variant-tenant/replay-guard.ts` | _needs a one-line description_ |
 | `apps/server/src/xiangqi-broadcast-dpxq-pairings.ts` | _needs a one-line description_ |
-| `apps/server/src/xiangqi-broadcast-levels.ts` | _needs a one-line description_ |
+| `apps/server/src/xiangqi-broadcast-levels.ts` | Reviewed broadcast grades; sibling groups inherit their parent's grade unless explicitly graded themselves |
 | `apps/web/src/articles/svg-labels.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/text-card.ts` | _needs a one-line description_ |
 | `apps/web/src/banqi-replay-board.ts` | _needs a one-line description_ |

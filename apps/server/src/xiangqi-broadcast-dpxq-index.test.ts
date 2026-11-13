@@ -10,6 +10,8 @@ import {
   planDpxqIndexSync,
 } from './xiangqi-broadcast-dpxq-index.js';
 import { decodeSourceBody } from './xiangqi-broadcast-fetch.js';
+import { dpxqEventGroup } from './xiangqi-broadcast-groups.js';
+import { translateXiangqiEventName } from './xiangqi-broadcast-translate.js';
 
 // The real index as served on 2026-09-23 (gb2312), the day the 2026 women's
 // league was found live on it while our calendar said it had no edition.
@@ -21,6 +23,127 @@ async function indexFixture(): Promise<string> {
 }
 
 const NOW = Date.parse('2026-09-23T18:00:00Z');
+
+test('the index plans a sibling seed with parent settings, once, leaving unrelated events manual (#1074)', () => {
+  const parent = {
+    tourId: '12529',
+    name: '2026年第五届世界象棋公开赛 男子团体',
+    location: 'Singapore',
+    startsOn: '2026-11-10',
+    endsOn: '2026-11-15',
+    section: 'live' as const,
+    hasGameList: true,
+    hasPairings: true,
+  };
+  const women = { ...parent, tourId: '12820', name: '2026年第五届世界象棋公开赛 女子团体' };
+  const unrelated = { ...parent, tourId: '99901', name: '2026年全国象棋个人赛' };
+  const previousYear = { ...women, tourId: '99902', name: '2025年第五届世界象棋公开赛 女子团体' };
+  const tour = {
+    slug: '2026-world-xiangqi-open',
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12529&tourSlug=2026-world-xiangqi-open',
+    endsAt: '2026-11-15T23:59:59+08:00',
+    location: 'Singapore venue',
+    pollIntervalMs: 45_000,
+  };
+  const input = { rows: [parent, women, women, unrelated, previousYear], tours: [tour], now: NOW };
+  const plan = planDpxqIndexSync(input);
+  assert.deepEqual(plan.siblingSeeds, [
+    {
+      parentSlug: tour.slug,
+      tourId: '12820',
+      pollMode: 'auto',
+      pollIntervalMs: 45_000,
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug: '2026-world-xiangqi-open-women',
+        name: women.name,
+        nameEn: translateXiangqiEventName(women.name),
+        location: 'Singapore venue',
+        sourceUrl:
+          'mistboard-discover://dpxq-tour?tour=12820&tourSlug=2026-world-xiangqi-open-women',
+        startsAt: '2026-11-10T00:00:00+08:00',
+        endsAt: '2026-11-15T23:59:59+08:00',
+      },
+    },
+  ]);
+  assert.ok(plan.untracked.some((row) => row.tourId === unrelated.tourId));
+  assert.ok(plan.untracked.some((row) => row.tourId === previousYear.tourId));
+  assert.deepEqual(
+    planDpxqIndexSync({
+      ...input,
+      tours: [...input.tours, { ...tour, ...plan.siblingSeeds[0].tour }],
+    }).siblingSeeds,
+    [],
+  );
+});
+
+test('sibling matching strips only trailing group labels and requires overlapping dates', () => {
+  const base = '2026年第五届世界象棋公开赛';
+  for (const [label, suffix] of [
+    ['女子', 'women'],
+    ['男子组', 'men'],
+    ['女子团体', 'women'],
+    ['团体', 'team'],
+    ['个人组', 'individual'],
+    ['公开组', 'open'],
+    ['其他组别', 'other'],
+    ['混合组', 'mixed'],
+  ]) {
+    assert.deepEqual(dpxqEventGroup(`${base}（${label}）`), { event: base, suffix });
+    assert.deepEqual(dpxqEventGroup(`${base} ${label}`), { event: base, suffix });
+  }
+  assert.deepEqual(dpxqEventGroup('2026年全国象棋女子甲级联赛'), {
+    event: '2026年全国象棋女子甲级联赛',
+    suffix: null,
+  });
+  assert.equal(dpxqEventGroup('2026年 女子组').suffix, null);
+
+  const parent = {
+    tourId: '12529',
+    name: `${base} 男子`,
+    location: 'Singapore',
+    startsOn: '2026-11-10',
+    endsOn: '2026-11-15',
+    section: 'live' as const,
+    hasGameList: true,
+    hasPairings: true,
+  };
+  const tour = {
+    slug: 'parent',
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12529',
+    endsAt: null,
+    pollIntervalMs: 30_000,
+  };
+  for (const candidate of [
+    { ...parent, tourId: '2', name: `${base} 女子`, startsOn: '2026-11-16', endsOn: '2026-11-20' },
+    { ...parent, tourId: '3', name: `${base} 女子`, startsOn: '2025-11-10', endsOn: '2025-11-15' },
+    { ...parent, tourId: '4', name: '2026年第六届世界象棋公开赛 女子' },
+    { ...parent, tourId: '5', name: `${base} 女子 预选赛` },
+    { ...parent, tourId: '6', name: `${base} 女子`, startsOn: 'not-a-date' },
+  ]) {
+    assert.deepEqual(
+      planDpxqIndexSync({ rows: [parent, candidate], tours: [tour], now: NOW }).siblingSeeds,
+      [],
+      candidate.name,
+    );
+  }
+  const women = { ...parent, tourId: '2', name: `${base} 女子` };
+  assert.equal(
+    planDpxqIndexSync({ rows: [{ ...parent, name: base }, women], tours: [tour], now: NOW })
+      .siblingSeeds.length,
+    1,
+    'a parent without a group suffix also matches',
+  );
+  assert.equal(
+    planDpxqIndexSync({
+      rows: [parent, women],
+      tours: [tour, { ...tour, slug: 'parent-women', sourceUrl: null }],
+      now: NOW,
+    }).siblingSeeds.length,
+    0,
+    'an occupied slug stays manual',
+  );
+});
 
 test('the real index parses into sectioned rows with dates and sub-page flags', async () => {
   const rows = parseDpxqTourIndex(await indexFixture());

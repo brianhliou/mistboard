@@ -28,6 +28,7 @@ import {
   listXiangqiBroadcastTours,
   nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
+  seedXiangqiBroadcastSiblingTourOn,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
 import {
@@ -43,6 +44,7 @@ import {
   runXiangqiBroadcastTape,
   xiangqiBroadcastSourceResponse,
 } from './xiangqi-broadcast-sim.js';
+import { translateXiangqiEventName } from './xiangqi-broadcast-translate.js';
 
 const FIXTURE_DIR = fileURLToPath(
   new URL('../../../packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample', import.meta.url),
@@ -1544,6 +1546,47 @@ definePersistenceTests('xiangqi broadcasts', () => {
       (await getXiangqiBroadcastTour('2025-wxc-sample'))?.endsAt,
       '2025-11-30T23:59:59+08:00',
     );
+  });
+
+  test('a sibling seed inserts its complete auto schedule once without changing an existing tour', async () => {
+    const tour: XiangqiBroadcastTour = {
+      schema: 'mistboard.xiangqi.broadcast.v1',
+      slug: '2026-world-xiangqi-open-women',
+      name: '2026年第五届世界象棋公开赛 女子团体',
+      location: 'Singapore',
+      sourceUrl: 'mistboard-discover://dpxq-tour?tour=12820&tourSlug=2026-world-xiangqi-open-women',
+      startsAt: '2026-11-10T00:00:00+08:00',
+      endsAt: '2026-11-15T23:59:59+08:00',
+    };
+    const seed = {
+      tour,
+      parentSlug: '2026-world-xiangqi-open',
+      tourId: '12820',
+      pollMode: 'auto' as const,
+      pollIntervalMs: 45_000,
+    };
+    const inserted = await Promise.all([
+      seedXiangqiBroadcastSiblingTourOn(getPool(), seed),
+      seedXiangqiBroadcastSiblingTourOn(getPool(), seed),
+    ]);
+    assert.equal(inserted.filter(Boolean).length, 1);
+    const stored = await getXiangqiBroadcastTour(tour.slug);
+    assert.equal(stored?.pollMode, 'auto');
+    assert.equal(stored?.pollIntervalMs, 45_000);
+    assert.equal(stored?.location, tour.location);
+    assert.equal(stored?.startsAt, tour.startsAt);
+    assert.equal(stored?.endsAt, tour.endsAt);
+    assert.equal(stored?.nameEn, translateXiangqiEventName(tour.name));
+    const listed = (await listXiangqiBroadcastTourSourcesOn(getPool())).find(
+      (item) => item.slug === tour.slug,
+    );
+    assert.equal(listed?.location, tour.location);
+    assert.equal(listed?.pollIntervalMs, 45_000);
+
+    await setXiangqiBroadcastTourSchedule(tour.slug, { pollMode: 'off', pollIntervalMs: 60_000 });
+    assert.equal(await seedXiangqiBroadcastSiblingTourOn(getPool(), seed), false);
+    assert.equal((await getXiangqiBroadcastTour(tour.slug))?.pollMode, 'off');
+    assert.equal((await getXiangqiBroadcastTour(tour.slug))?.pollIntervalMs, 60_000);
   });
 
   test('nested manifests are rejected as malformed manifest entries', async () => {
