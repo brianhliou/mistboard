@@ -563,7 +563,9 @@ function buildOpponentCard(
   if (picker) {
     picker.className = 'site-select bot-level-select';
     picker.setAttribute('aria-label', t('bots.levelPicker', { name: name ?? '' }));
-    for (const member of opponent.members) {
+    // Members come weakest first; the picker lists the strongest level first,
+    // like the cards (decided 2026-11-12). The level it opens on is unchanged.
+    for (const member of [...opponent.members].reverse()) {
       const option = document.createElement('option');
       option.value = memberKey(member);
       option.textContent = t('bots.levelName', { level: member.level ?? 0 });
@@ -710,10 +712,13 @@ function buildDirectoryGame(
   const opponents = [...listed, ...ladders.filter((ladder) => !listed.includes(ladder))];
   const firstParty = opponents.filter((opponent) => !opponent.community);
   const community = opponents.filter((opponent) => opponent.community);
-  // The map lists each game's opponents weakest first, so with a choice of
-  // first-party opponents the last one is the strongest you can play.
-  const mapped = firstParty.filter((opponent) => botOpponentById(opponent.key));
-  const strongestKey = mapped.length > 1 ? mapped.at(-1)?.key : undefined;
+  // The map lists each game's opponents weakest first; the page shows them
+  // strongest first (decided 2026-11-12), so with a choice of first-party
+  // opponents the first card is the strongest you can play. Opponents the map
+  // does not rank (TK's Misty) follow them.
+  const ranked = firstParty.filter((opponent) => botOpponentById(opponent.key)).reverse();
+  const unranked = firstParty.filter((opponent) => !botOpponentById(opponent.key));
+  const strongestKey = ranked.length > 1 ? ranked[0]?.key : undefined;
   const intro =
     gameSpecId === 'xiangqi'
       ? t('bots.ladderIntro')
@@ -724,7 +729,7 @@ function buildDirectoryGame(
     {
       title: gameSpecLabel(gameSpecId),
       intro,
-      rows: firstParty.map((opponent) =>
+      rows: [...ranked, ...unranked].map((opponent) =>
         buildOpponentCard(opponent, gameSpecId, opponent.key === strongestKey),
       ),
     },
