@@ -185,15 +185,15 @@ describe('static pages', () => {
   });
 
   it.each([
-    ['/source', ['Contribute', 'Developers', 'Game data', 'API', 'Thank you']],
-    ['/zh-hans/source', ['参与贡献', '开发者', '对局数据', 'API 文档', '致谢']],
-    ['/zh-hant/source', ['參與貢獻', '開發者', '對局資料', 'API 文件', '致謝']],
+    ['/source', ['Developers', 'API', 'Game data', 'Contribute', 'Thank you']],
+    ['/zh-hans/source', ['开发者', 'API 文档', '对局数据', '参与贡献', '致谢']],
+    ['/zh-hant/source', ['開發者', 'API 文件', '對局資料', '參與貢獻', '致謝']],
   ] as const)('preserves resource links in the source page content at %s', (path, labels) => {
     window.history.replaceState(null, '', path);
     const root = document.createElement('main');
     mountSource(root);
 
-    const destinations = ['/contribute', '/developers', '/data', '/api-docs', '/thanks'];
+    const destinations = ['/developers', '/api-docs', '/data', '/contribute', '/thanks'];
     for (const [index, href] of destinations.entries()) {
       expect(root.querySelector(`.source-section a[href="${href}"]`)?.textContent).toBe(
         labels[index],
