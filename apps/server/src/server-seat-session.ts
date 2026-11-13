@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Color } from '@mistboard/game';
+import { isFairPlayMarked } from './fair-play.js';
 import { isPlayDisabled, isStatsExcluded, type UserAccount } from './persistence.js';
 import {
   appendEvent,
@@ -63,6 +64,9 @@ export async function assignSeat(
   // catches a stale client.
   if (room.rated && isStatsExcluded(accountUser) && !isServerEngineClient(clientId)) {
     return { seat: 'spectator', deniedReason: 'rated-requires-counted-account' };
+  }
+  if (room.rated && isFairPlayMarked(accountUser) && !isServerEngineClient(clientId)) {
+    return { seat: 'spectator', deniedReason: 'rated_account_marked' };
   }
   // Per-account play lock (126). Placed on the fallthrough path on purpose: the
   // grant/reclaim branches above have already returned, so locking an account

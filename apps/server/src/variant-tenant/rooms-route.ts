@@ -1,3 +1,4 @@
+import { isFairPlayMarked } from '../fair-play.js';
 // Generic room-creation route factory for variant tenants.
 //
 // The per-variant `routes/<variant>-rooms.ts` handlers were ~73% identical
@@ -95,6 +96,9 @@ export function gateRatedRoomRequest(args: {
   // A stats-excluded account (operator, QA) is not counted, so it never rates.
   if (persistence.isStatsExcluded(args.accountUser)) {
     return { ok: false, status: 403, error: 'rated_requires_counted_account' };
+  }
+  if (isFairPlayMarked(args.accountUser)) {
+    return { ok: false, status: 403, error: 'rated_account_marked' };
   }
   // Fail CLOSED on a missing time control too: a rated room needs a real clock.
   if (!args.timeControl || !isAllowedRatedTimeControl(args.timeControl)) {

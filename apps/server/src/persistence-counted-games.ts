@@ -327,6 +327,11 @@ export function puzzlePlayerId(sessionsAlias = 'q'): string {
 // Row filter for counts over the users table itself.
 export const COUNTED_USER = `stats_excluded_at IS NULL`;
 
+// One eligibility filter for every public rating/leaderboard read.
+export function fairPlayEligible(usersAlias: string): string {
+  return `${usersAlias}.fair_play_marked_at IS NULL`;
+}
+
 // Row filter for rows an account wrote (chat lines): counted unless the author
 // is excluded. A NULL author (the account was deleted) still counts; the line
 // was a person's.

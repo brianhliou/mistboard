@@ -1,3 +1,4 @@
+import { isFairPlayMarked } from '../fair-play.js';
 /**
  * Generic seat assignment + seat-token lifecycle for tenant rooms.
  *
@@ -59,6 +60,7 @@ export type TenantSeatAssignment<C extends string> =
       ok: false;
       reason:
         | 'private room'
+        | 'rated_account_marked'
         | 'rated requires account'
         | 'rated requires counted account'
         | 'correspondence requires account'
@@ -165,6 +167,9 @@ export function assignTenantSeat<
   // room: the backstop for a stale client that skipped the create/lobby gate.
   if (room.rated && isStatsExcluded(accountUser)) {
     return { ok: false, reason: 'rated requires counted account' };
+  }
+  if (room.rated && isFairPlayMarked(accountUser)) {
+    return { ok: false, reason: 'rated_account_marked' };
   }
   // Correspondence (days-per-move) seats need an account for the friend who
   // joins: notifications, deadline rows, and cross-device reseat all key off

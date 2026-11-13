@@ -3,7 +3,7 @@
 // totals. Pure reads over user_ratings/games; no users-row plumbing. Split out
 // of persistence-accounts.ts.
 import { PROVISIONAL_RD } from './glicko.js';
-import { COUNTED_USER, countedAccountSeat } from './persistence-counted-games.js';
+import { COUNTED_USER, countedAccountSeat, fairPlayEligible } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import { publicRatingPoolSql, type RatingTimeClass, type RatingVariant } from './rating-buckets.js';
@@ -53,6 +53,7 @@ export async function getLeaderboard(query: LeaderboardQuery): Promise<Leaderboa
        AND u.profile_visibility IN ('public', 'unlisted')
        AND r.games_played > 0
        AND u.${COUNTED_USER}
+       AND ${fairPlayEligible('u')}
      ORDER BY (r.elo_rating - 2 * r.rating_deviation) DESC
      LIMIT $3`,
     [query.variant, query.timeClass, bounded],
@@ -114,6 +115,7 @@ export async function getLeaderboardSummary(query: {
          AND r.games_played > 0
          -- Stats-excluded accounts (the operator, QA) rate mostly test games.
          AND u.${COUNTED_USER}
+       AND ${fairPlayEligible('u')}
      ) ranked
      WHERE row_number <= $2
      ORDER BY variant, row_number`,
@@ -166,6 +168,7 @@ export async function getMostActivePlayers(limit = 10): Promise<ActivePlayerEntr
      JOIN users u ON u.id = p.subject_id
      WHERE ${countedAccountSeat('p')}
        AND g.status = 'completed'
+       AND ${fairPlayEligible('u')}
        AND u.profile_visibility IN ('public', 'unlisted')
      GROUP BY u.id, u.handle, u.display_name, u.title
      ORDER BY COUNT(*) DESC, u.handle
@@ -201,11 +204,13 @@ export async function getBestRatings(
     elo_rating: number;
     rating_deviation: number;
   }>(
-    `SELECT DISTINCT ON (user_id) user_id, variant, elo_rating, rating_deviation
-     FROM user_ratings
-     WHERE user_id = ANY($1) AND time_class = $2 AND games_played > 0
-       AND ${publicRatingPoolSql('variant')}
-     ORDER BY user_id, elo_rating DESC`,
+    `SELECT DISTINCT ON (r.user_id) r.user_id, r.variant, r.elo_rating, r.rating_deviation
+     FROM user_ratings r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.user_id = ANY($1) AND r.time_class = $2 AND games_played > 0
+       AND ${publicRatingPoolSql('r.variant')}
+       AND ${fairPlayEligible('u')}
+     ORDER BY r.user_id, r.elo_rating DESC`,
     [userIds, timeClass],
   );
   const best = new Map<string, BestRatingEntry>();
@@ -233,11 +238,13 @@ export async function getBestRatingsAnyTimeClass(
     elo_rating: number;
     rating_deviation: number;
   }>(
-    `SELECT DISTINCT ON (user_id) user_id, variant, elo_rating, rating_deviation
-     FROM user_ratings
-     WHERE user_id = ANY($1) AND games_played > 0
-       AND ${publicRatingPoolSql('variant')}
-     ORDER BY user_id, elo_rating DESC`,
+    `SELECT DISTINCT ON (r.user_id) r.user_id, r.variant, r.elo_rating, r.rating_deviation
+     FROM user_ratings r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.user_id = ANY($1) AND r.games_played > 0
+       AND ${publicRatingPoolSql('r.variant')}
+       AND ${fairPlayEligible('u')}
+     ORDER BY r.user_id, r.elo_rating DESC`,
     [userIds],
   );
   const best = new Map<string, BestRatingEntry>();

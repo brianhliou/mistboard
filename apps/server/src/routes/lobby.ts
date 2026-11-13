@@ -6,6 +6,7 @@ import {
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from './../feature-flags.js';
 import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
@@ -137,6 +138,10 @@ export async function tryHandle(
     // seek, and the rated room's seat gate refuses it again for a stale client.
     if (body.rated === true && persistence.isStatsExcluded(accountUser)) {
       writeJson(response, 403, { error: 'rated_requires_counted_account' });
+      return true;
+    }
+    if (body.rated === true && isFairPlayMarked(accountUser)) {
+      writeJson(response, 403, { error: 'rated_account_marked' });
       return true;
     }
     const lobbyRated = body.rated === true && accountUser !== null;

@@ -15,13 +15,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { markFairPlay, unmarkFairPlay } from './fair-play.js';
 import {
   type AccountSession,
   createAccountSession,
   createUser,
   getCorrespondenceSeek,
 } from './persistence.js';
-import { getPool } from './persistence-db.js';
+import { getPool, withTransaction } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -42,6 +43,69 @@ const BLITZ = { initialMs: 180_000, incrementMs: 2_000 };
 const COUNTED_ERROR = 'rated_requires_counted_account';
 
 definePersistenceTests('rated stats-excluded', () => {
+  test('fair play: marked rated seek post/accept and live entry refuse; unmark reopens rated', async () => {
+    const markedId = await seedUser('fp-marked');
+    const otherId = await seedUser('fp-other');
+    const markedCookie = await makeSessionCookie(markedId);
+    const otherCookie = await makeSessionCookie(otherId);
+    const body = { gameSpecId: XIANGQI_SPEC_ID, daysPerMove: 3, rated: true };
+    const existing = await callSeekRoute('POST', '/api/correspondence/seeks', markedCookie, body);
+    assert.equal(existing.status, 201);
+    const existingId = (existing.json.seek as { id: string }).id;
+    await withTransaction((client) => markFairPlay(client, markedId));
+    const posted = await callSeekRoute('POST', '/api/correspondence/seeks', markedCookie, body);
+    assert.equal(posted.status, 403);
+    assert.equal(posted.json.error, 'rated_account_marked');
+    const acceptMarkedCreator = await callSeekRoute(
+      'POST',
+      `/api/correspondence/seeks/${existingId}/accept`,
+      otherCookie,
+    );
+    assert.equal(acceptMarkedCreator.status, 403);
+    assert.equal(acceptMarkedCreator.json.error, 'rated_account_marked');
+    assert.equal(await seekOpen(existingId), true);
+    const otherSeek = await callSeekRoute('POST', '/api/correspondence/seeks', otherCookie, body);
+    assert.equal(otherSeek.status, 201);
+    const otherSeekId = (otherSeek.json.seek as { id: string }).id;
+    const accept = await callSeekRoute(
+      'POST',
+      `/api/correspondence/seeks/${otherSeekId}/accept`,
+      markedCookie,
+    );
+    assert.equal(accept.status, 403);
+    assert.equal(accept.json.error, 'rated_account_marked');
+    assert.equal(await seekOpen(otherSeekId), true);
+    const casual = await callSeekRoute('POST', '/api/correspondence/seeks', markedCookie, {
+      ...body,
+      rated: false,
+    });
+    assert.equal(casual.status, 201);
+    for (const call of [callLobby, callRooms]) {
+      const refused = await call(lobbyContext(), markedCookie, {
+        gameSpecId: XIANGQI_SPEC_ID,
+        timeControl: BLITZ,
+        mode: 'pvp',
+        rated: true,
+      });
+      assert.equal(refused.status, 403);
+      assert.equal(refused.json.error, 'rated_account_marked');
+    }
+    const challenge = await callSeekRoute('POST', '/api/correspondence/seeks', otherCookie, {
+      ...body,
+      targetHandle: 'fp-marked',
+    });
+    assert.equal(challenge.status, 403);
+    assert.equal(challenge.json.error, 'rated_account_marked');
+    await withTransaction((client) => unmarkFairPlay(client, markedId));
+    const reopened = await callSeekRoute('POST', '/api/correspondence/seeks', markedCookie, body);
+    assert.equal(reopened.status, 200);
+    const accepted = await callSeekRoute(
+      'POST',
+      `/api/correspondence/seeks/${otherSeekId}/accept`,
+      markedCookie,
+    );
+    assert.equal(accepted.status, 201);
+  });
   test('lobby: an excluded account cannot post a rated seek; casual is open', async () => {
     const ex = await seedUser('rx-ex', { excluded: true });
     const ctx = lobbyContext();

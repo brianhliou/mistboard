@@ -23,6 +23,7 @@ import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
+import { isFairPlayMarked, isUserIdFairPlayMarked } from '../fair-play.js';
 import { correspondenceEnabled, correspondenceRatedEnabled } from './../feature-flags.js';
 import { logger } from './../obs.js';
 import type {
@@ -99,7 +100,14 @@ export function ratedSeekError(
   gameSpecId: string,
   timeControl: RoomTimeControl,
   enabled: boolean = correspondenceRatedEnabled(),
-): 'rated_disabled' | 'rated_unsupported_spec' | 'rated_unsupported_time_control' | null {
+  account: Pick<UserAccount, 'fairPlayMarkedAt'> | null = null,
+):
+  | 'rated_account_marked'
+  | 'rated_disabled'
+  | 'rated_unsupported_spec'
+  | 'rated_unsupported_time_control'
+  | null {
+  if (isFairPlayMarked(account)) return 'rated_account_marked';
   if (!enabled) return 'rated_disabled';
   if (!isCorrespondenceRatedSpec(gameSpecId)) return 'rated_unsupported_spec';
   if (!isOfficialCorrespondenceTimeControl(timeControl)) return 'rated_unsupported_time_control';
@@ -107,7 +115,7 @@ export function ratedSeekError(
 }
 
 function ratedSeekErrorStatus(error: NonNullable<ReturnType<typeof ratedSeekError>>): number {
-  if (error === 'rated_disabled') return 403;
+  if (error === 'rated_disabled' || error === 'rated_account_marked') return 403;
   if (error === 'rated_unsupported_spec') return 501;
   return 400;
 }
@@ -543,7 +551,7 @@ export async function createSeekResult(
   // honoured is refused, never quietly downgraded to casual.
   const rated = body.rated === true;
   if (rated) {
-    const ratedError = ratedSeekError(gameSpecId, timeControl);
+    const ratedError = ratedSeekError(gameSpecId, timeControl, undefined, user);
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
@@ -587,6 +595,9 @@ export async function createSeekResult(
     // anyone else could never be accepted, and would show them the variant.
     if (allowlisted && !(await mayPlayCorrespondenceByUserId(targetUserId, gameSpecId))) {
       return { status: 403, body: { error: 'target_variant_not_granted' } };
+    }
+    if (rated && (await isUserIdFairPlayMarked(targetUserId))) {
+      return { status: 403, body: { error: 'rated_account_marked' } };
     }
     // A rated challenge to an uncounted account could never become a rated game.
     if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
@@ -796,7 +807,10 @@ export async function acceptSeekResult(
   // qualifying since it was posted), and both players must be free to play: the
   // accepter's lock is checked above, the creator's here, because accepting seats them.
   if (seek.rated) {
-    const ratedError = ratedSeekError(seek.gameSpecId, timeControl);
+    if (isFairPlayMarked(user) || (await isUserIdFairPlayMarked(seek.creatorUserId))) {
+      return { status: 403, body: { error: 'rated_account_marked' } };
+    }
+    const ratedError = ratedSeekError(seek.gameSpecId, timeControl, undefined, user);
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
