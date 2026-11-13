@@ -818,7 +818,8 @@ it('holds an unstarted clock at 3:00 through idle and reload, then counts down a
   const { fetchSpy } = server({ unstarted: true });
   let root = await open();
   await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
-  expect(root.querySelector('.puzzle-storm-status')?.textContent).toBe('Move to start');
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('Move to start');
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('Mate in');
   expect(root.querySelector('.puzzle-left-card')).toBeNull();
   await vi.advanceTimersByTimeAsync(240_000);
   expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('3:00');
@@ -827,7 +828,8 @@ it('holds an unstarted clock at 3:00 through idle and reload, then counts down a
   root.remove();
   root = await open();
   await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
-  expect(root.querySelector('.puzzle-storm-status')?.textContent).toBe('Move to start');
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('Move to start');
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('Mate in');
   expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('3:00');
   await move(root, puzzles[0]!.solution[0]!);
   expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('to move');

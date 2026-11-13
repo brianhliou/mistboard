@@ -56,6 +56,11 @@ export type PuzzleDetailSourceGame = SourceGame & {
 };
 
 export type PuzzleDetailSourceFields = {
+  credit?: NonNullable<XiangqiPuzzle['credit']> & {
+    eventEn?: string;
+    redEn?: string;
+    blackEn?: string;
+  };
   sourceGame?: PuzzleDetailSourceGame;
   setupMove?: XiangqiPuzzleSetupMove;
   history?: XiangqiMove[];
@@ -121,9 +126,24 @@ function copyMove(move: XiangqiMove): XiangqiMove {
  * out as it is, unlinked.
  */
 export async function puzzleDetailSourceFields(
-  puzzle: Pick<XiangqiPuzzle, 'id' | 'initial' | 'sourceGame'>,
+  puzzle: Pick<XiangqiPuzzle, 'id' | 'initial' | 'sourceGame' | 'credit'>,
   load: SourceGameLoader | null,
 ): Promise<PuzzleDetailSourceFields> {
+  if (puzzle.credit) {
+    const { name, event, red, black, url } = puzzle.credit;
+    return {
+      credit: {
+        name,
+        event,
+        red,
+        black,
+        url,
+        eventEn: translateXiangqiEventName(event),
+        redEn: englishSourcePlayerName(red),
+        blackEn: englishSourcePlayerName(black),
+      },
+    };
+  }
   const stored = puzzle.sourceGame;
   if (!stored) return {};
   const context = load ? await sourceContext(puzzle, load) : null;

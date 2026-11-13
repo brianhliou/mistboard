@@ -79,6 +79,8 @@
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:tooling && npm run test:unit --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs && tsx --test scripts/*.test.ts scripts/variant-lab/*.test.ts",
+    "puzzles:build-position-packet": "tsx scripts/variant-lab/xiangqi-position-packet.ts",
+    "puzzles:publish-positions": "tsx apps/server/src/publish-xiangqi-position-packet.ts",
     "test:puzzles:corpus": "npm run test:puzzles:corpus --workspace @mistboard/game",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e",
     "typecheck:e2e": "tsc -p tests/e2e/tsconfig.json",

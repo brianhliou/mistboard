@@ -345,6 +345,7 @@ a.puzzle-streak-chip:focus-visible {
    the edge, a red move's mark sat against the black move beside it. */
 .puzzle-move-mark {
   margin-left: 6px;
+  flex-shrink: 0;
   font-weight: 700;
 }
 
@@ -1131,6 +1132,7 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-move-red,
 .puzzle-move-black {
   min-width: 0;
+  padding-inline: 6px;
   overflow-wrap: anywhere;
   color: var(--site-text);
   font-size: 15px;
@@ -1142,7 +1144,7 @@ a.puzzle-streak-chip:focus-visible {
   align-self: stretch;
   display: flex;
   align-items: center;
-  margin: 0 -6px;
+  margin: 0;
   padding: 0 6px;
   background: var(--site-accent-soft);
   color: var(--site-heading);
@@ -1151,6 +1153,38 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-move-cell--right:not(.puzzle-move-cell--revealed) {
   color: #2b8a57;
+}
+
+.puzzle-exploration {
+  padding: 8px 12px;
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 13px;
+}
+.puzzle-moves:has(> .puzzle-exploration) {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.puzzle-exploration-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.puzzle-exploration-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.puzzle-exploration button {
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+}
+.puzzle-exploration button[aria-current] {
+  background: var(--site-accent-soft);
 }
 
 .puzzle-move-cell--revealed {
@@ -1930,6 +1964,10 @@ a.puzzle-tag--link:hover {
     margin-top: 0;
   }
 
+  .puzzles-shell .puzzle-assist-row:not(:has(> .puzzle-assist-next)) {
+    max-width: clamp(140px, 43vw, 184px);
+  }
+
   .puzzles-shell .puzzle-assist-row > .puzzle-feedback-skip {
     flex: 0 1 auto;
     min-width: 0;
@@ -2023,6 +2061,59 @@ a.puzzle-tag--link:hover {
     align-items: center;
     height: 30px;
     box-sizing: border-box;
+  }
+
+  .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) {
+    display: block;
+    height: 40px;
+  }
+  .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) > .puzzle-move-list {
+    display: none;
+  }
+  .puzzles-shell .puzzle-exploration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    border-top: 0;
+    box-shadow: inset 0 -1px 0 var(--site-border-soft);
+    font-size: 12px;
+  }
+  .puzzles-shell .puzzle-exploration-head {
+    display: contents;
+  }
+  .puzzles-shell .puzzle-exploration-head > strong {
+    flex: none;
+    color: var(--site-muted);
+    white-space: nowrap;
+  }
+  .puzzles-shell .puzzle-exploration-return {
+    order: 2;
+    flex: none;
+    font: inherit;
+  }
+  .puzzles-shell .puzzle-exploration-moves {
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    min-width: 0;
+    margin: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .puzzles-shell .puzzle-exploration-moves > button {
+    flex: none;
+  }
+  .puzzles-shell .puzzle-exploration button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .puzzles-shell .puzzle-moves:has(.puzzle-move-cell--wrong[role="button"]) {
+    min-height: 44px;
+  }
+  .puzzles-shell .puzzle-move-cell--wrong[role="button"] {
+    min-height: 40px;
   }
 
   .puzzles-shell .puzzle-move-list {
@@ -2215,6 +2306,17 @@ a.puzzle-tag--link:hover {
     gap: 4px;
   }
 
+  .puzzles-shell .puzzle-pm-head__source--position-only {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2px 12px;
+  }
+
+  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-event,
+  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-credit {
+    grid-column: 1 / -1;
+  }
+
   .puzzles-shell .puzzle-phone-menu .puzzle-pm-row {
     display: flex;
     align-items: center;
@@ -2230,6 +2332,34 @@ a.puzzle-tag--link:hover {
 
   .puzzles-shell .puzzle-pm-rows > .puzzle-pm-row:last-child {
     border-bottom: 0;
+  }
+
+  .puzzles-shell .puzzle-pm-row--browse-themes > a {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    border-radius: 4px;
+    color: var(--site-text);
+    text-decoration: none;
+  }
+
+  .puzzles-shell .puzzle-pm-row--browse-themes > a::after {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-right: 6px;
+    border-top: 2px solid var(--site-muted);
+    border-right: 2px solid var(--site-muted);
+    transform: rotate(45deg);
+    content: "";
+  }
+
+  .puzzles-shell .puzzle-pm-row--browse-themes > a:is(:hover, :focus-visible) {
+    background: var(--site-panel-soft);
+    color: var(--site-accent);
   }
 
   .puzzles-shell .puzzle-pm-row__text {
@@ -2397,6 +2527,22 @@ a.puzzle-tag--link:hover {
     content: "";
   }
 
+  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-report {
+    display: flex;
+    padding: 0;
+    border-bottom: 1px solid var(--site-border);
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-report > .puzzle-report-link {
+    flex: 1 1 auto;
+    min-height: 44px;
+    text-align: left;
+  }
+
   /* Stacked, the trainer panel sizes to its content; hold about its painted
      height while it loads so what follows starts where it will stay. */
   .puzzle-board-panel--pending .puzzle-side-panel {
@@ -2436,6 +2582,10 @@ a.puzzle-tag--link:hover {
     height: auto;
     padding: 0;
     overflow: hidden;
+  }
+
+  .puzzles-page > .puzzles-shell:has(.puzzle-exploration) {
+    --puzzle-stack-chrome: 160px;
   }
 
   .puzzles-shell .puzzles-layout {
@@ -2532,26 +2682,21 @@ a.puzzle-tag--link:hover {
     overflow: hidden;
   }
 
-  /* The session row is centred in the height left under the prompt: auto
-     margins take only what the board, already at its cap, leaves over, so the
-     row never costs the board a pixel and sits mid-gap rather than pinned
-     under the prompt. */
+  /* Analysis needs a full-width board even on the 320x568 viewport. Keep
+     the completed controls at their 44px touch height without extra padding. */
+  .puzzles-shell
+    .puzzle-trainer-panel:has(> .puzzle-moves > .puzzle-exploration)
+    > .puzzle-solved-panel {
+    height: 44px;
+    padding-block: 0;
+    border-top: 0;
+  }
+
+  /* Keep the session row beside the controls it belongs to. A tall phone's
+     spare height stays below the complete board/control stack. */
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
     flex: none;
-    margin-block: auto;
-  }
-
-  /* Report a problem takes its own row under the one-row strip, and the strip
-     grows for it out of the gap the session row sits in; at the fixed height
-     the open form was clipped. */
-  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel:has(> .puzzle-report) {
-    height: auto;
-    min-height: var(--puzzle-prompt-height);
-  }
-
-  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
-    grid-column: 1 / -1;
-    padding: 2px 12px 8px;
+    margin-block: 0;
   }
 
   /* Streak's shell scrolls on desktop (its summary card can be long); with a

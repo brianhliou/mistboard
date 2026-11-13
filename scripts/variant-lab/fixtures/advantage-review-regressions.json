@@ -1,0 +1,1803 @@
+[
+  {
+    "code": "7VlRK",
+    "initial": {
+      "id": "xq-mined-hxq_ca7c4f8835004e863df0c83f-119",
+      "board": {
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e2": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "f3": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "f8": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f9": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "g3": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "g5": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g6": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "black",
+        "type": "playing"
+      },
+      "moveNumber": 60,
+      "progressClock": 0,
+      "positionCounts": {
+        "black|c1re,c10be,e1rg,e10bg,e2ra,f10ba,f3ra,f8ba,f9bc,g3bs,g5re,g6be": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "f3",
+        "from": "g3"
+      }
+    ],
+    "searches": [
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 16
+            },
+            "pvUci": [
+              "g2f2",
+              "e0d0",
+              "f2f1",
+              "e1f0",
+              "f7e8",
+              "d0e0",
+              "f8f0",
+              "c0a2",
+              "f0h0",
+              "a2c4",
+              "h0h8",
+              "g4i2",
+              "e9d9",
+              "i2g4",
+              "e8f7",
+              "g4i2",
+              "h8f8",
+              "c4e2",
+              "f8e8",
+              "e2c0",
+              "c9e7",
+              "c0e2",
+              "e8e2",
+              "i2g4",
+              "e2e6",
+              "g4i2",
+              "e7g9",
+              "i2g4",
+              "e6e8",
+              "g4i2",
+              "g9e7"
+            ],
+            "depth": 26,
+            "nodes": 4904890
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 25
+            },
+            "pvUci": [
+              "f8f2",
+              "e0d0",
+              "f2f6",
+              "d0d1",
+              "g2g1",
+              "d1d0",
+              "g1f1",
+              "e1f2",
+              "f6h6",
+              "c0e2",
+              "h6h8",
+              "d0d1",
+              "f9e8",
+              "g4i2",
+              "e8d7",
+              "f2e1",
+              "h8h1",
+              "i2g4",
+              "h1e1",
+              "d1d0",
+              "e1b1",
+              "d0e0",
+              "b1b8",
+              "g4i2",
+              "b8e8",
+              "e2c0",
+              "e9d9",
+              "i2g4",
+              "e8b8",
+              "g4i2",
+              "d7e8",
+              "i2g4",
+              "e8f9",
+              "g4i2",
+              "b8f8",
+              "i2g4",
+              "f8e8",
+              "g4i2",
+              "c9e7",
+              "c0e2",
+              "e8e2",
+              "i2g4",
+              "e2e6",
+              "g4i2",
+              "e7g9",
+              "i2g4",
+              "e6e8",
+              "g4i2",
+              "g9e7"
+            ],
+            "depth": 26,
+            "nodes": 4904890
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 370,
+              "mate": null
+            },
+            "pvUci": [
+              "e9d9",
+              "g4e2",
+              "f8e8",
+              "e0f0",
+              "e8e6",
+              "e2c4",
+              "d9d8",
+              "c4e2",
+              "d8d7",
+              "e2g4",
+              "d7e7",
+              "c0e2",
+              "f7e8",
+              "g4i2",
+              "e7f7",
+              "e2c4",
+              "e8d7",
+              "c4a2"
+            ],
+            "depth": 26,
+            "nodes": 4904890
+          }
+        ],
+        "best": {
+          "scoreCp": 29984,
+          "mate": 16
+        },
+        "second": {
+          "scoreCp": 29975,
+          "mate": 25
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 20,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      },
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 15
+            },
+            "pvUci": [
+              "g2f2",
+              "e0d0",
+              "f2f1",
+              "e1f0",
+              "f7e8",
+              "d0e0",
+              "f8f0",
+              "c0a2",
+              "g5e7",
+              "a2c4",
+              "e8d7",
+              "g4i2",
+              "f0h0",
+              "i2g4",
+              "h0h8",
+              "g4i2",
+              "h8e8",
+              "c4e2",
+              "e8e2",
+              "i2g4",
+              "e2h2",
+              "g4i2",
+              "h2h8",
+              "i2g0",
+              "h8e8",
+              "e0d0",
+              "f1e1",
+              "g0i2",
+              "e8d8"
+            ],
+            "depth": 38,
+            "nodes": 22602253
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 19
+            },
+            "pvUci": [
+              "f8f2",
+              "e0d0",
+              "f2f6",
+              "c0e2",
+              "f6e6",
+              "d0d1",
+              "g2g1",
+              "e2c4",
+              "e6h6",
+              "e1f0",
+              "g1f1",
+              "g4e2",
+              "h6h2",
+              "f0e1",
+              "h2h1",
+              "c4a2",
+              "h1e1",
+              "d1d0",
+              "e1b1",
+              "d0e0",
+              "b1b8",
+              "a2c4",
+              "b8e8",
+              "e2c0",
+              "e9d9",
+              "c0a2",
+              "g5e7",
+              "c4e2",
+              "e8e2",
+              "a2c4",
+              "e2e6",
+              "c4a2",
+              "e7g9",
+              "a2c4",
+              "e6e8",
+              "c4a2",
+              "c9e7"
+            ],
+            "depth": 38,
+            "nodes": 22602253
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 401,
+              "mate": null
+            },
+            "pvUci": [
+              "e9d9",
+              "g4e2",
+              "d9d8",
+              "e2c4",
+              "d8d7",
+              "e0f0",
+              "f7e8",
+              "f0e0",
+              "f8f5",
+              "c4e2",
+              "f5e5",
+              "e0f0",
+              "d7e7",
+              "c0a2",
+              "e7f7",
+              "e2c0",
+              "e8d7",
+              "a2c4",
+              "e5e8",
+              "c0e2",
+              "e8e1",
+              "f0e0",
+              "e1b1",
+              "f2e1",
+              "b1b8",
+              "e2g0",
+              "b8d8",
+              "e1f0",
+              "d8e8",
+              "c4a2",
+              "e8h8",
+              "a2c4",
+              "h8h0",
+              "e0e1",
+              "h0f0",
+              "g0i2"
+            ],
+            "depth": 38,
+            "nodes": 22602253
+          }
+        ],
+        "best": {
+          "scoreCp": 29985,
+          "mate": 15
+        },
+        "second": {
+          "scoreCp": 29981,
+          "mate": 19
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 20,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      }
+    ]
+  },
+  {
+    "code": "Kb3KH",
+    "initial": {
+      "id": "xq-mined-hxq_58d271852516acdd2ec70bb6-24",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "b5": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "b9": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c3": {
+          "role": "horse",
+          "color": "red"
+        },
+        "c4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e5": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "e7": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e8": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "e9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g3": {
+          "role": "horse",
+          "color": "red"
+        },
+        "g4": {
+          "role": "horse",
+          "color": "black"
+        },
+        "g5": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i2": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i8": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "b10": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g10": {
+          "role": "elephant",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveNumber": 13,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rs,a7bs,b10bc,b5rc,b9rc,c1re,c10be,c3rh,c4rs,c6bs,d1ra,d10ba,e1rg,e10bg,e5rs,e7rc,e8bc,e9bh,f1ra,f10ba,g1re,g10be,g3rh,g4bh,g5bs,i2rc,i4rs,i7bs,i8bc": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "d2",
+        "from": "i2"
+      },
+      {
+        "to": "c5",
+        "from": "c6"
+      },
+      {
+        "to": "e2",
+        "from": "d1"
+      },
+      {
+        "to": "b9",
+        "from": "b10"
+      },
+      {
+        "to": "d1",
+        "from": "e1"
+      }
+    ],
+    "searches": [
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 7
+            },
+            "pvUci": [
+              "b4d4",
+              "g3e4",
+              "d0e1",
+              "c5c4",
+              "c3c4",
+              "b9b8",
+              "e0d0",
+              "b8d8",
+              "d4d8",
+              "e4d2",
+              "d8d2",
+              "g4g3",
+              "d2d9"
+            ],
+            "depth": 22,
+            "nodes": 5000553
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 7
+            },
+            "pvUci": [
+              "i1d1",
+              "g3e4",
+              "d0e1",
+              "e4f2",
+              "e0d0",
+              "f2d1",
+              "b4d4",
+              "b9b8",
+              "d4d1",
+              "b8d8",
+              "d1d8",
+              "i7f7",
+              "d8d9"
+            ],
+            "depth": 22,
+            "nodes": 5000553
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": null,
+              "mate": 10
+            },
+            "pvUci": [
+              "e4e5",
+              "b9b8",
+              "b4b8",
+              "g3e4",
+              "b8d8",
+              "e4f2",
+              "i1f1",
+              "i7f7",
+              "d0e1",
+              "f2d1",
+              "f1f7",
+              "d1e3",
+              "g2e3",
+              "c5c4",
+              "e0d0",
+              "c4d4",
+              "d8d4",
+              "c9a7",
+              "d4d9"
+            ],
+            "depth": 22,
+            "nodes": 5000553
+          }
+        ],
+        "best": {
+          "scoreCp": 29993,
+          "mate": 7
+        },
+        "second": {
+          "scoreCp": 29993,
+          "mate": 7
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 45,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      },
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 7
+            },
+            "pvUci": [
+              "b4d4",
+              "g3e4",
+              "d0e1",
+              "c5c4",
+              "c3c4",
+              "b9b8",
+              "e0d0",
+              "b8d8",
+              "d4d8",
+              "e4d2",
+              "d8d2",
+              "g4g3",
+              "d2d9"
+            ],
+            "depth": 48,
+            "nodes": 25000002
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 7
+            },
+            "pvUci": [
+              "i1d1",
+              "g3e4",
+              "d0e1",
+              "e4f2",
+              "e0d0",
+              "f2d1",
+              "b4d4",
+              "b9b8",
+              "d4d1",
+              "b8d8",
+              "d1d8",
+              "i7f7",
+              "d8d9"
+            ],
+            "depth": 48,
+            "nodes": 25000002
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": null,
+              "mate": 9
+            },
+            "pvUci": [
+              "c2e3",
+              "b9b8",
+              "b4b8",
+              "g3e4",
+              "i1d1",
+              "e4c3",
+              "d1d6",
+              "c3b5",
+              "b8b5",
+              "i7g7",
+              "b5b9",
+              "g7f7",
+              "b9c9",
+              "f7f0",
+              "g2f0",
+              "c5c4",
+              "d6d9"
+            ],
+            "depth": 48,
+            "nodes": 25000002
+          }
+        ],
+        "best": {
+          "scoreCp": 29993,
+          "mate": 7
+        },
+        "second": {
+          "scoreCp": 29993,
+          "mate": 7
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 45,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      }
+    ]
+  },
+  {
+    "code": "isxzW",
+    "initial": {
+      "id": "xq-mined-hxq_8b62d9f240ef1fb84b4e705e-43",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "b2": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "c4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c8": {
+          "role": "horse",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "d8": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e3": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "e9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g4": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "i1": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "h10": {
+          "role": "horse",
+          "color": "red"
+        }
+      },
+      "status": {
+        "turn": "black",
+        "type": "playing"
+      },
+      "moveNumber": 22,
+      "progressClock": 0,
+      "positionCounts": {
+        "black|a4rs,a7bs,b2bc,c10be,c4rs,c6bs,c8bh,d1ra,d10ba,d8rc,e1rg,e10bg,e3rc,e7bs,e9bh,f1ra,f10ba,g1re,g4bc,h10rh,i1bc,i4rs,i7bs": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "f2",
+        "from": "b2"
+      },
+      {
+        "to": "f8",
+        "from": "d8"
+      },
+      {
+        "to": "f8",
+        "from": "f2"
+      }
+    ],
+    "searches": [
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 6
+            },
+            "pvUci": [
+              "g3f3",
+              "d0e1",
+              "f3f1",
+              "e2e8",
+              "d9e8",
+              "e0d0",
+              "b1e1",
+              "d7f7",
+              "f1f7",
+              "a3a4",
+              "f7f0"
+            ],
+            "depth": 25,
+            "nodes": 5000229
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 8
+            },
+            "pvUci": [
+              "b1f1",
+              "d7f7",
+              "f1f7",
+              "d0e1",
+              "g3e3",
+              "e0d0",
+              "e3e2",
+              "h9i7",
+              "e8g7",
+              "i7g8",
+              "e9e8",
+              "d0d1",
+              "f7d7",
+              "e1d2",
+              "d7d2"
+            ],
+            "depth": 25,
+            "nodes": 5000229
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 909,
+              "mate": null
+            },
+            "pvUci": [
+              "g3g0",
+              "d7f7",
+              "g0g7",
+              "f0e1",
+              "g7f7",
+              "e2f2",
+              "e8g9",
+              "a3a4",
+              "d9e8",
+              "h9i7",
+              "f7i7",
+              "a4a5",
+              "a6a5",
+              "f2f5",
+              "i7h7",
+              "f5a5",
+              "h7h0",
+              "e1f0",
+              "i0f0",
+              "a5a9",
+              "c9e7"
+            ],
+            "depth": 25,
+            "nodes": 5000229
+          }
+        ],
+        "best": {
+          "scoreCp": 29994,
+          "mate": 6
+        },
+        "second": {
+          "scoreCp": 29992,
+          "mate": 8
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 46,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      },
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 6
+            },
+            "pvUci": [
+              "g3f3",
+              "d0e1",
+              "f3f1",
+              "e2e8",
+              "d9e8",
+              "e0d0",
+              "b1e1",
+              "d7f7",
+              "f1f7",
+              "a3a4",
+              "f7f0"
+            ],
+            "depth": 28,
+            "nodes": 20241887
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": null,
+              "mate": 8
+            },
+            "pvUci": [
+              "b1f1",
+              "d7f7",
+              "f1f7",
+              "d0e1",
+              "g3e3",
+              "e0d0",
+              "e3e2",
+              "h9i7",
+              "e8g7",
+              "i7g8",
+              "e9e8",
+              "d0d1",
+              "f7d7",
+              "e1d2",
+              "d7d2"
+            ],
+            "depth": 28,
+            "nodes": 20241887
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 959,
+              "mate": null
+            },
+            "pvUci": [
+              "g3g0",
+              "d7f7",
+              "g0g7",
+              "f0e1",
+              "g7f7",
+              "e2f2",
+              "b1b2",
+              "e0f0",
+              "e8g9",
+              "a3a4",
+              "f7h7",
+              "c3c4",
+              "c5c4",
+              "e1d2",
+              "b2d2",
+              "d0e1",
+              "d2b2",
+              "f2d2",
+              "h7h0",
+              "f0f1",
+              "h0h1",
+              "f1f2",
+              "h1h9"
+            ],
+            "depth": 28,
+            "nodes": 20241887
+          }
+        ],
+        "best": {
+          "scoreCp": 29994,
+          "mate": 6
+        },
+        "second": {
+          "scoreCp": 29992,
+          "mate": 8
+        },
+        "unique": false,
+        "reason": "mate-not-unique",
+        "moveCoverage": {
+          "legalMoveCount": 46,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      }
+    ]
+  },
+  {
+    "code": "EVOHR",
+    "initial": {
+      "id": "xq-mined-hxq_55d9d88c0587396283b6ad5e-38",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "d9": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e3": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e5": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "e6": {
+          "role": "horse",
+          "color": "red"
+        },
+        "e8": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "e9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "f6": {
+          "role": "horse",
+          "color": "black"
+        },
+        "f7": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g7": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "h1": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "h8": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "h9": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i8": {
+          "role": "horse",
+          "color": "red"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveNumber": 20,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4bs,c1re,c10be,c4rs,c6bs,d1ra,d10ba,d9rc,e1rg,e10bg,e3rc,e5bs,e6rh,e8be,e9bh,f1ra,f10ba,f6bh,f7bc,g1re,g7rs,h1rc,h8bc,h9bc,i4rs,i7bs,i8rh": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "f7",
+        "from": "g7"
+      },
+      {
+        "to": "g10",
+        "from": "e9"
+      },
+      {
+        "to": "h9",
+        "from": "d9"
+      }
+    ],
+    "searches": [
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": 778,
+              "mate": null
+            },
+            "pvUci": [
+              "g6f6",
+              "e8g9",
+              "d8h8",
+              "d9e8",
+              "h8g8",
+              "h7h4",
+              "g8g5",
+              "h4h7",
+              "g5f5",
+              "i6i5",
+              "e2e1",
+              "a3b3",
+              "f5g5",
+              "b3b2",
+              "g5g8",
+              "b2c2",
+              "h0h7",
+              "c2c1",
+              "g0e2",
+              "e4d4",
+              "f6f7",
+              "c1d1"
+            ],
+            "depth": 25,
+            "nodes": 5000599
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": 570,
+              "mate": null
+            },
+            "pvUci": [
+              "h0h3",
+              "e8g9",
+              "d8h8",
+              "f6d6",
+              "h8g8",
+              "d9e8",
+              "h3h7",
+              "e4e3",
+              "e2g2",
+              "e9d9",
+              "f0e1",
+              "d6e6",
+              "g6g7",
+              "f5h6",
+              "c3c4",
+              "h6f5",
+              "h7h5",
+              "e6e5"
+            ],
+            "depth": 25,
+            "nodes": 5000599
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 518,
+              "mate": null
+            },
+            "pvUci": [
+              "h0h1",
+              "f5g3",
+              "g6f6",
+              "g3h1",
+              "d0e1",
+              "e8g9",
+              "d8h8",
+              "d9e8",
+              "e2g2",
+              "h1g3",
+              "f6f7",
+              "g3h5",
+              "g2g8",
+              "h5i7",
+              "h8h7",
+              "e7g5",
+              "f7f8",
+              "c9e7",
+              "e0d0",
+              "e4e3",
+              "c3c4",
+              "c5c4"
+            ],
+            "depth": 25,
+            "nodes": 5000599
+          }
+        ],
+        "best": {
+          "scoreCp": 778,
+          "mate": null
+        },
+        "second": {
+          "scoreCp": 570,
+          "mate": null
+        },
+        "unique": false,
+        "reason": "insufficient-separation",
+        "moveCoverage": {
+          "legalMoveCount": 45,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      },
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": 836,
+              "mate": null
+            },
+            "pvUci": [
+              "g6f6",
+              "e8g9",
+              "d8h8",
+              "d9e8",
+              "h8g8",
+              "h7h4",
+              "g8g5",
+              "h4h7",
+              "g5f5",
+              "a3b3",
+              "f5g5",
+              "e4e3",
+              "e2e1",
+              "b3c3",
+              "g5g8",
+              "c3c2",
+              "h0h7",
+              "c2c1",
+              "c0e2",
+              "e3f3",
+              "e5f3",
+              "c1d1",
+              "f3e5",
+              "i6i5",
+              "i7h5",
+              "d1c1"
+            ],
+            "depth": 30,
+            "nodes": 25000202
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": 604,
+              "mate": null
+            },
+            "pvUci": [
+              "h0h3",
+              "e8g9",
+              "d8h8",
+              "f6d6",
+              "h8g8",
+              "d9e8",
+              "h3h7",
+              "e4e3",
+              "e2h2",
+              "e7g5",
+              "h7h5",
+              "e9d9",
+              "f0e1",
+              "d6d5",
+              "g6g7",
+              "d5e5",
+              "h5g5",
+              "c9e7",
+              "g5g4",
+              "f5h6",
+              "g4d4",
+              "d9e9",
+              "d4d6",
+              "h6g4",
+              "h2h9",
+              "e5g5",
+              "d6f6"
+            ],
+            "depth": 30,
+            "nodes": 25000202
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 593,
+              "mate": null
+            },
+            "pvUci": [
+              "h0h1",
+              "e8g9",
+              "d8h8",
+              "f6e6",
+              "g6f6",
+              "f5g3",
+              "h1h7",
+              "g9h7",
+              "f6e6",
+              "g3e2",
+              "c0e2",
+              "e7g9",
+              "e6f6",
+              "d9e8",
+              "h8h7",
+              "g9i7",
+              "h7c7",
+              "c9e7",
+              "c7e7",
+              "i7g9",
+              "e7c7",
+              "g9e7",
+              "c7e7",
+              "a3b3"
+            ],
+            "depth": 30,
+            "nodes": 25000202
+          }
+        ],
+        "best": {
+          "scoreCp": 836,
+          "mate": null
+        },
+        "second": {
+          "scoreCp": 604,
+          "mate": null
+        },
+        "unique": false,
+        "reason": "insufficient-separation",
+        "moveCoverage": {
+          "legalMoveCount": 45,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      }
+    ]
+  },
+  {
+    "code": "2QrZY",
+    "initial": {
+      "id": "xq-mined-hxq_7a82636622fcec439ca16bdf-32",
+      "board": {
+        "a1": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "b6": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c3": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "c4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e2": {
+          "role": "general",
+          "color": "red"
+        },
+        "e4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "e9": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "g4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "g7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i3": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "i5": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i8": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "a10": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "b10": {
+          "role": "horse",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "h10": {
+          "role": "chariot",
+          "color": "red"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveNumber": 17,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a1rc,a10bc,a4rs,b10bh,b6rc,c1re,c10be,c3bc,c4rs,c6bs,d1ra,e10bg,e2rg,e4rs,e9ba,f1ra,f10rc,g4rs,g7bs,h10rc,i3bc,i5rs,i8be": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "c10",
+        "from": "f10"
+      },
+      {
+        "to": "f10",
+        "from": "e9"
+      },
+      {
+        "to": "a10",
+        "from": "c10"
+      }
+    ],
+    "searches": [
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 11
+            },
+            "pvUci": [
+              "f9c9",
+              "e8f9",
+              "c9a9",
+              "e9e8",
+              "h9h8",
+              "e8e7",
+              "a0b0",
+              "c2f2",
+              "b5b8",
+              "f2f7",
+              "a9a7",
+              "i2b2",
+              "b0b2",
+              "f7f8",
+              "b2b7",
+              "e7e8",
+              "h8f8",
+              "e8e9",
+              "a7a9",
+              "b9d8",
+              "b8b9"
+            ],
+            "depth": 25,
+            "nodes": 4291448
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": 518,
+              "mate": null
+            },
+            "pvUci": [
+              "f9f4",
+              "e8f9",
+              "f4e4",
+              "a9a6",
+              "a0b0",
+              "a6f6",
+              "h9h2",
+              "i2i3",
+              "h2c2",
+              "i3e3",
+              "b5b6",
+              "f6d6",
+              "c2f2",
+              "b9c7",
+              "b6b9",
+              "c7b9",
+              "b0b9",
+              "d6c6",
+              "f2d2",
+              "e3a3",
+              "b9b7",
+              "c6c8"
+            ],
+            "depth": 25,
+            "nodes": 4291448
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 514,
+              "mate": null
+            },
+            "pvUci": [
+              "f9f5",
+              "e8f9",
+              "h9h2",
+              "i2i0",
+              "h2c2",
+              "a9a6",
+              "a0a2",
+              "b9c7",
+              "b5b4",
+              "c5c4",
+              "c3c4",
+              "a6b6",
+              "a2b2",
+              "c7d5",
+              "b4a4",
+              "b6b2",
+              "c2b2",
+              "d5e3",
+              "a4a9",
+              "e9e8",
+              "b2b8",
+              "e8e7",
+              "b8b7",
+              "e7e8"
+            ],
+            "depth": 25,
+            "nodes": 4291448
+          }
+        ],
+        "best": {
+          "scoreCp": 29989,
+          "mate": 11
+        },
+        "second": {
+          "scoreCp": 518,
+          "mate": null
+        },
+        "unique": false,
+        "reason": "insufficient-separation",
+        "moveCoverage": {
+          "legalMoveCount": 44,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      },
+      {
+        "lines": [
+          {
+            "rank": 1,
+            "score": {
+              "cp": null,
+              "mate": 11
+            },
+            "pvUci": [
+              "f9c9",
+              "e8f9",
+              "c9a9",
+              "e9e8",
+              "h9h8",
+              "e8e7",
+              "a0b0",
+              "c2f2",
+              "b5b8",
+              "f2f7",
+              "a9a7",
+              "i2b2",
+              "b0b2",
+              "f7f8",
+              "b2b7",
+              "e7e8",
+              "h8f8",
+              "e8e9",
+              "a7a9",
+              "b9d8",
+              "b8b9"
+            ],
+            "depth": 30,
+            "nodes": 19716754
+          },
+          {
+            "rank": 2,
+            "score": {
+              "cp": 565,
+              "mate": null
+            },
+            "pvUci": [
+              "f9f4",
+              "e8f9",
+              "f4e4",
+              "a9a6",
+              "a0b0",
+              "a6f6",
+              "h9h2",
+              "f6f3",
+              "h2i2",
+              "f3e3",
+              "i2e2",
+              "e3e2",
+              "c0e2",
+              "c2d2",
+              "b5b8",
+              "d2d3",
+              "b0b5",
+              "d3a3",
+              "b5c5",
+              "a3a7",
+              "c5c9",
+              "e9e8",
+              "c9b9",
+              "e8d8",
+              "b9f9"
+            ],
+            "depth": 30,
+            "nodes": 19716754
+          },
+          {
+            "rank": 3,
+            "score": {
+              "cp": 530,
+              "mate": null
+            },
+            "pvUci": [
+              "f9f5",
+              "e8f9",
+              "h9h2",
+              "i2i3",
+              "f5e5",
+              "c5c4",
+              "h2c2",
+              "a9a8",
+              "c3c4",
+              "a8h8",
+              "b5b1",
+              "b9c7",
+              "c4c5",
+              "h8b8",
+              "a0b0",
+              "b8b3",
+              "c2f2",
+              "c7a6",
+              "c5d5",
+              "i3e3",
+              "e1f1",
+              "e3f3",
+              "f2a2",
+              "f3e3"
+            ],
+            "depth": 30,
+            "nodes": 19716754
+          }
+        ],
+        "best": {
+          "scoreCp": 29989,
+          "mate": 11
+        },
+        "second": {
+          "scoreCp": 565,
+          "mate": null
+        },
+        "unique": false,
+        "reason": "insufficient-separation",
+        "moveCoverage": {
+          "legalMoveCount": 44,
+          "immediateWins": [],
+          "requiredMultiPv": 2
+        }
+      }
+    ]
+  }
+]
