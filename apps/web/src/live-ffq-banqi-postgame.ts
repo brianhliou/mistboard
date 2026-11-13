@@ -16,6 +16,10 @@ import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
 import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
+import {
+  fetchCachedFFQBanqiDecisions,
+  requestFFQBanqiDecisions,
+} from './review/ffq-banqi-decisions.js';
 import { mountFFQBanqiReview } from './review/ffq-banqi-review.js';
 import type { FFQBanqiReviewSnapshot } from './review/ffq-banqi-tree-adapter.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
@@ -196,6 +200,11 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
     urlPly: true,
+    decisions: {
+      canRun: isLikelySignedIn(),
+      fetchCached: (options) => fetchCachedFFQBanqiDecisions(postgame.game.roomId, options),
+      run: (options) => requestFFQBanqiDecisions(postgame.game.roomId, options),
+    },
     analysis: {
       requestLabel: isLikelySignedIn()
         ? t('replay.requestComputerAnalysis')

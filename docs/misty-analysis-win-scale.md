@@ -69,3 +69,13 @@ MISTBOARD_FFQ_BANQI_ENGINE_PATH=/path/to/ffq-banqi-engine \
 
 The script resumes an existing sample file; remove or move that file to run
 fresh games. No stored deal or covered-square identity enters the data file.
+
+Decided 2026-11-13: FFQ luck averages each public pool identity's win chance
+in canonical identity order, weighted by multiplicity. Both flips and covered
+cannon captures are chance moves; a friendly covered victim damages its own
+ink's HP. Terminal HP outcomes are exact and require no search. The ceiling
+considers the engine's top move plus the played move, so decision loss may be
+under-counted. Both analysis passes share bounded public-FEN search caching,
+25,000 nodes and at most two analysis search slots. The finished-game route
+retains FFQ's admin admission policy. Review totals cover chance decisions;
+ordinary moves retain their standard analysis grades.

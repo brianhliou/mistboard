@@ -99,6 +99,7 @@ export const ZH_HANT_REVIEW = {
   'replay.start': '開始',
   'replay.previous': '上一步',
   'replay.next': '下一步',
+  'review.chanceTotals': '{side}：運氣 {luck} 個百分點 · 隨機著法決策損失 {loss} 個百分點',
   'replay.red': '紅方',
   'replay.black': '黑方',
   'replay.white': '白方',

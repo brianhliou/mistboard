@@ -326,7 +326,12 @@ test('FFQ analysis refuses non-admin and flag-off callers before any read, compu
             analyze: forbidden,
           },
         );
-        for (const path of [analysisPath, `${analysisPath}/jobs/private-job`]) {
+        for (const path of [
+          analysisPath,
+          `${analysisPath}/jobs/private-job`,
+          analysisPath.replace('/analysis', '/decisions'),
+          `${analysisPath.replace('/analysis', '/decisions')}/jobs/private-job`,
+        ]) {
           for (const method of ['GET', 'POST']) {
             const res = fakeResponse();
             assert.equal(
@@ -455,4 +460,94 @@ test('FFQ analysis rejects unfinished, aborted, foreign and missing games and mi
   await handler({ ...GET, method: 'POST' } as IncomingMessage, unavailable.response, analysisPath);
   assert.equal(unavailable.captured.status, 503);
   assert.deepEqual(unavailable.captured.body, { error: 'analysis_engine_unavailable' });
+});
+
+test('FFQ decisions are finished-only, cache-first and checkpoint-job compatible behind the same gate', async () => {
+  await resetAnalysisJobsForTests();
+  const { analyzeFFQBanqiDecisions, ffqBanqiPublicTrack, FFQ_BANQI_DECISIONS_ENGINE_ID } =
+    await import('../ffq-banqi-decisions.js');
+  const { ffqBanqiMoveToUci } = await import('../ffq-banqi-engine.js');
+  const path = analysisPath.replace('/analysis', '/decisions');
+  for (const log of [
+    events().slice(0, 4),
+    [
+      ...events().slice(0, 4),
+      { type: 'game-aborted', at: 90, roomId: ROOM, reason: 'user-abort' } as FFQBanqiEvent,
+    ],
+  ]) {
+    const handler = createFFQBanqiAnalysisRoutes(deps(log));
+    for (const endpoint of [path, `${path}/jobs/private-job`]) {
+      const response = fakeResponse();
+      assert.equal(await handler(GET, response.response, endpoint), true);
+      assert.equal(response.captured.status, 404);
+    }
+  }
+  const results: string[] = [];
+  try {
+    for (const log of [events(), events(swapped)]) {
+      let stored: import('../banqi-analysis.js').BanqiDecision[] | null = null;
+      let computes = 0;
+      const handler = createFFQBanqiAnalysisRoutes(deps(log), {
+        route: { currentUser: async () => ({ id: 'ffq-decisions-admin' }) },
+        engineAvailable: () => true,
+        cache: {
+          get: async () => [{ ply: 0, cp: 0, mate: null, best: null }],
+          save: async () => {},
+        },
+        decisionsCache: {
+          get: async () => stored,
+          save: async (_r, _e, _d, rows) => {
+            stored = rows;
+          },
+        },
+        analyzeDecisions: async (track) => {
+          computes++;
+          assert.deepEqual(track, ffqBanqiPublicTrack(log));
+          const best = new Map(
+            track.moves.map((move, i) => [track.frames[i]!.fen, ffqBanqiMoveToUci(move)]),
+          );
+          return analyzeFFQBanqiDecisions(track, async (fen) => ({
+            cp: 10,
+            mate: null,
+            best: best.get(fen) ?? 'a0a0',
+          }));
+        },
+      });
+      const miss = fakeResponse();
+      await handler(GET, miss.response, path);
+      assert.equal(miss.captured.status, 204);
+      assert.equal(computes, 0);
+      const post = fakeResponse();
+      await handler(
+        { method: 'POST', headers: {}, socket: { remoteAddress: '127.0.0.1' } } as IncomingMessage,
+        post.response,
+        path,
+      );
+      assert.equal(post.captured.status, 202);
+      const jobId = (post.captured.body as { jobId: string }).jobId;
+      for (let n = 0; n < 100 && getAnalysisJob(jobId)?.status === 'pending'; n++)
+        await new Promise((resolve) => setImmediate(resolve));
+      const poll = fakeResponse();
+      await handler(GET, poll.response, `${path}/jobs/${jobId}`);
+      assert.equal(poll.captured.status, 200);
+      assert.equal((poll.captured.body as { status: string }).status, 'done');
+      const reload = fakeResponse();
+      await handler(GET, reload.response, path);
+      assert.equal(reload.captured.status, 200);
+      assert.equal(computes, 1);
+      const body = reload.captured.body as { engineId: string; decisions: unknown[] };
+      assert.equal(body.engineId, FFQ_BANQI_DECISIONS_ENGINE_ID);
+      assert.ok(body.decisions.length > 0);
+      serialized(body);
+      results.push(JSON.stringify(body));
+      await resetAnalysisJobsForTests();
+    }
+    assert.equal(
+      results[0],
+      results[1],
+      'named planted never-visible deal swap survives the whole decisions route',
+    );
+  } finally {
+    await resetAnalysisJobsForTests();
+  }
 });

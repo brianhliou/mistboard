@@ -71,6 +71,8 @@ export type DecisionPlayerSummary = {
 };
 
 export type DecisionOverlay = {
+  /** Optional totals for the graded chance decisions, in win-chance points. */
+  totals?: Record<'red' | 'black', { luck: number; decisionLoss: number }>;
   /** Per-reveal info keyed by ply, for move-list glyphs + the advice line. */
   byPly: Map<number, DecisionMoveInfo>;
   red: DecisionPlayerSummary;

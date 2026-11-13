@@ -99,6 +99,7 @@ export const ZH_HANS_REVIEW = {
   'replay.start': '开始',
   'replay.previous': '上一步',
   'replay.next': '下一步',
+  'review.chanceTotals': '{side}：运气 {luck} 个百分点 · 随机着法决策损失 {loss} 个百分点',
   'replay.red': '红方',
   'replay.black': '黑方',
   'replay.white': '白方',

@@ -1434,3 +1434,12 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `services/banqi-provider/`: isolated Linux host package: nonroot pinned-release Dockerfile and strict context ignore, external status/auth listener over loopback bridge, bounded private GitHub model loader with a clean exec environment, lightweight tests, MIT engine notice and direct Railway settings reference. `scripts/banqi-host-context.mjs` builds its exact public context; `scripts/banqi-host.test.mjs` joins lightweight checks to tooling; `scripts/banqi-host-smoke.mjs` runs the opt-in Linux container/full-game proof.
 
 `scripts/banqi-provider-game.mjs --endpoint`: complete local HTTP/WebSocket rehearsal through an independently hosted loopback worker; existing native subprocess mode is preserved. `scripts/banqi-provider-store-token.mjs` + `.test.mjs`: human-only interactive macOS Keychain creation of the dedicated worker token, with no display, reads or overwrite; the helper is not executed by package preparation.
+
+
+`apps/server/src/ffq-banqi-public-analysis.ts`: bounded two-slot public-FEN level-7 searches shared by FFQ review charts and chance decisions.
+
+`apps/server/src/ffq-banqi-decisions.ts` + `.test.ts`: public-FEN flip and covered-capture pool means, exact terminal HP scoring, top-plus-played ceiling, hidden-deal invariance and resumable checkpoints (#1092).
+
+`apps/web/src/review/ffq-banqi-decisions.ts`: FFQ decisions polling, move-list luck overlay and per-seat chance totals.
+
+`scripts/ffq-win-calibration.mjs` and `docs/ffq-win-calibration-2026-11-13.json`: reproducible 300-game level-7 self-play sample and logistic fit; scale documentation in `docs/misty-analysis-win-scale.md`.
