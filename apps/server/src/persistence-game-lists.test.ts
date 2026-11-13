@@ -1,6 +1,7 @@
 import type { GameEvent } from '@mistboard/game';
 import {
   countWatchSealedGames,
+  createUser,
   getGameSummary,
   listCompletedGames,
   listCorpusGames,
@@ -9,6 +10,7 @@ import {
   listWatchUnlockedGames,
   recordGameEnd,
 } from './persistence.js';
+import { getPool } from './persistence-db.js';
 import {
   assert,
   definePersistenceTests,
@@ -18,6 +20,90 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('game lists', () => {
+  test('completed-game participants carry gated title/flair only from linkable user accounts', async () => {
+    const now = new Date('2026-11-13T12:00:00Z');
+    const accounts = ['public', 'unlisted', 'private', 'closed', 'plain'];
+    for (const privacy of accounts) {
+      const id = `identity-${privacy}`;
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id,
+        displayName: privacy,
+        now,
+      });
+      if (privacy !== 'plain') {
+        await getPool().query(
+          `UPDATE users SET title = 'xgm', flair = 'variant-xiangqi',
+          profile_visibility = $2, closed_at = $3 WHERE id = $1`,
+          [id, privacy === 'closed' ? 'public' : privacy, privacy === 'closed' ? now : null],
+        );
+      }
+      await recordGameEnd(`identity-${privacy}`, {
+        variant: 'dark-chess',
+        mode: 'pvp',
+        result: 'draw',
+        termination: 'draw',
+        plyCount: 20,
+        startedAt: now,
+        endedAt: now,
+        whiteClient: null,
+        blackClient: null,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            displayName: privacy,
+            subjectType: 'user',
+            subjectId: id,
+            visibility: 'public',
+          },
+          // A non-user subject id matching a titled account must not join it.
+          {
+            color: 'black',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: 'identity-public',
+            visibility: 'public',
+          },
+        ],
+      });
+    }
+    for (const privacy of accounts) {
+      const game = await getGameSummary(`identity-${privacy}`);
+      assert.ok(game);
+      const [account, guest] = game.participants;
+      assert.ok(account);
+      if (privacy === 'public' || privacy === 'unlisted') {
+        assert.equal(account.title, 'xgm');
+        assert.equal(account.flair, 'variant-xiangqi');
+      } else {
+        assert.doesNotMatch(JSON.stringify(account), /"(?:title|flair)"|xgm|variant-xiangqi/);
+      }
+      assert.doesNotMatch(JSON.stringify(guest), /"(?:title|flair)"|xgm|variant-xiangqi/);
+      assert.equal(game.participants.length, 2, 'privacy gates must preserve both seats');
+    }
+    await getPool().query(`UPDATE game_participants SET visibility = 'private'
+      WHERE game_id = 'identity-unlisted' AND color = 'white'`);
+    const privateSeat = await getGameSummary('identity-unlisted');
+    assert.ok(privateSeat);
+    assert.doesNotMatch(JSON.stringify(privateSeat), /"(?:title|flair)"|xgm|variant-xiangqi/);
+    const listed = await listCompletedGames({
+      endedFrom: now,
+      endedTo: new Date(now.getTime() + 1),
+    });
+    assert.equal(listed.length, accounts.length);
+    const publicSeat = listed.find((game) => game.roomId === 'identity-public')?.participants[0];
+    assert.equal(publicSeat?.title, 'xgm');
+    for (const game of listed.filter((game) => /private|closed/.test(game.roomId))) {
+      assert.doesNotMatch(JSON.stringify(game), /"(?:title|flair)"|xgm|variant-xiangqi/);
+    }
+  });
+
   test('listRecentEveGames returns completed EvE games newest first', async () => {
     const now = new Date();
     const older = new Date(now.getTime() - 60_000);

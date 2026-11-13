@@ -126,6 +126,8 @@ export type PostgamePlayer = {
   // them, name-redacted private seats, and closed or private-profile accounts.
   handle: string | null;
   botId: string | null;
+  title?: persistence.GameParticipant['title'];
+  flair?: persistence.GameParticipant['flair'];
 };
 
 export type PostgameGameSummary = {
@@ -179,6 +181,7 @@ export function postgamePlayers(
     // the account behind it. Gating both ids on the same condition as the name
     // keeps the two from ever disagreeing.
     const redacted = participant.visibility === 'private';
+    const linkableUser = !redacted && participant.subjectType === 'user' && !!participant.handle;
     return {
       color: participant.color,
       name: corpusName ?? (redacted ? 'Anonymous' : participant.displayName),
@@ -186,6 +189,8 @@ export function postgamePlayers(
       kind,
       handle: !redacted && participant.subjectType === 'user' ? (participant.handle ?? null) : null,
       botId: !redacted && participant.subjectType === 'bot' ? participant.subjectId : null,
+      ...(linkableUser && participant.title != null ? { title: participant.title } : {}),
+      ...(linkableUser && participant.flair != null ? { flair: participant.flair } : {}),
     };
   });
 }

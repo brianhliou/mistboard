@@ -75,6 +75,12 @@ export async function correspondenceGamesForUser(
         // Linkable handle or null (closed/private account, no account): the
         // client links the name only from this, never from the display name.
         opponentHandle: game.opponentHandle ?? null,
+        ...(game.opponentHandle && game.opponentTitle != null
+          ? { opponentTitle: game.opponentTitle }
+          : {}),
+        ...(game.opponentHandle && game.opponentFlair != null
+          ? { opponentFlair: game.opponentFlair }
+          : {}),
         dueAt: game.dueAt.toISOString(),
         rated: game.rated === true,
         ...(board !== null && board !== undefined ? { seatBoard: board } : {}),
