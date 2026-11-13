@@ -234,3 +234,20 @@ test('CC0 Xiangqi @6 uses its paired curve while historical and unrelated ids st
   assert.ok(winPercent(null, 1, id) > winPercent(1000, null, id));
   assert.ok(Math.abs(winPercent(-90, null, id) + winPercent(90, null, id) - 100) < 1e-9);
 });
+
+test('FFQ fitted review and decision ids select the 2026-11-13 self-play curve', () => {
+  const k = 0.00518009;
+  for (const kind of ['analysis', 'decisions']) {
+    const id = `misty-ffq-banqi-${kind}@0.1.0+misty-ffq-banqi-level-7-n25000-classical-ms3000-masked2-winfit20261113${kind === 'decisions' ? '-d1-top-played' : ''}`;
+    assert.equal(winPercentK(id), k);
+    assert.ok(Math.abs(winPercent(360, null, id) - 86.5858) < 0.01);
+    assert.ok(Math.abs(winPercent(-360, null, id) + winPercent(360, null, id) - 100) < 1e-10);
+  }
+  assert.equal(
+    winPercentK(
+      'misty-ffq-banqi-analysis@0.1.0+misty-ffq-banqi-level-7-n25000-classical-ms3000-masked1',
+    ),
+    WIN_PCT_K,
+  );
+  assert.equal(winPercentK('misty-banqi-analysis@0.1.0'), WIN_PCT_K);
+});

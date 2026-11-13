@@ -1458,3 +1458,11 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `scripts/broadcast-push-sim.mjs` + `.test.mjs`: fetch-only growing-game reference client with bounded retries. `scripts/broadcast-push-local-smoke.mjs` + `.test.mjs`: local token CLI replay and authoritative board/noindex-page checks. Public contract: `docs/broadcast-push-api.md`.
 
 `apps/server/src/fair-play.ts` + `fair-play.test.ts` + `persistence-fair-play.test.ts`: admin fair-play marks, bounded opponent rating refunds, repeat/dry-run safety and leaderboard exclusion; migration 197 adds the mark and refund ledger. `scripts/account-flags.mjs --mark-fair-play [--dry-run]` / `--unmark-fair-play` operates it (#1077).
+
+`apps/server/src/ffq-banqi-public-analysis.ts`: bounded two-slot public-FEN level-7 searches shared by FFQ review charts and chance decisions.
+
+`apps/server/src/ffq-banqi-decisions.ts` + `.test.ts`: public-FEN flip and covered-capture pool means, exact terminal HP scoring, top-plus-played ceiling, hidden-deal invariance and resumable checkpoints (#1092).
+
+`apps/web/src/review/ffq-banqi-decisions.ts`: FFQ decisions polling, move-list luck overlay and per-seat chance totals.
+
+`scripts/ffq-win-calibration.mjs` and `docs/ffq-win-calibration-2026-11-13.json`: reproducible 300-game level-7 self-play sample and logistic fit; scale documentation in `docs/misty-analysis-win-scale.md`.

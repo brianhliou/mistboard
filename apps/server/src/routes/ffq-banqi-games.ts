@@ -6,6 +6,7 @@ import {
   oppositeBanqiSeat,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import type { BanqiDecision } from '../banqi-analysis.js';
 import { ffqBanqiAdmits } from './../ffq-banqi-access.js';
 import {
   FFQ_BANQI_ANALYSIS_TIER,
@@ -13,6 +14,11 @@ import {
   type FFQBanqiGameAnalysis,
   resolveFFQBanqiAnalysis,
 } from '../ffq-banqi-analysis.js';
+import {
+  type FFQBanqiDecisionsCache,
+  type FFQPublicTrack,
+  resolveFFQBanqiDecisions,
+} from '../ffq-banqi-decisions.js';
 import { ffqBanqiEngineAvailable } from '../ffq-banqi-engine.js';
 import { ffqBanqiPostgameHistory } from '../ffq-banqi-replay.js';
 import { type FFQBanqiEvent, ffqBanqiTenant } from './../ffq-banqi-tenant.js';
@@ -58,12 +64,14 @@ const defaultDeps: FFQBanqiPostgameRouteDeps = {
 
 const POSTGAME_ROUTE = /^\/api\/ffq-banqi\/games\/([^/]+)$/;
 
-const ANALYSIS_ROUTE = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis(?:\/jobs\/[^/]+)?$/;
+const ANALYSIS_ROUTE = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)(?:\/jobs\/[^/]+)?$/;
 
 export function createFFQBanqiAnalysisRoutes(
   deps: FFQBanqiPostgameRouteDeps = defaultDeps,
   options: {
     cache?: FFQBanqiAnalysisCache;
+    decisionsCache?: FFQBanqiDecisionsCache;
+    analyzeDecisions?: (track: FFQPublicTrack) => Promise<BanqiDecision[]>;
     analyze?: (events: readonly FFQBanqiEvent[]) => Promise<FFQBanqiGameAnalysis>;
     engineAvailable?: () => boolean;
     route?: GameAnalysisRouteDeps;
@@ -85,6 +93,14 @@ export function createFFQBanqiAnalysisRoutes(
       countPlies: (events) => events.filter((event) => event.type === 'move-played').length,
       resolveAnalysis: (roomId, events, computeIfMissing) =>
         resolveFFQBanqiAnalysis(roomId, events, options.cache, options.analyze, computeIfMissing),
+      resolveDecisions: (roomId, events, computeIfMissing) =>
+        resolveFFQBanqiDecisions(
+          roomId,
+          events,
+          options.decisionsCache,
+          options.analyzeDecisions,
+          computeIfMissing,
+        ),
       // Flips AND captures of covered pieces resolve chance. Neither raw swing
       // should be graded as a player's mistake.
       analysisExtras: (events) => {

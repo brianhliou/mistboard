@@ -127,7 +127,7 @@ beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) =>
-      String(input).endsWith('/analysis')
+      /\/(analysis|decisions)$/.test(String(input))
         ? new Response(null, { status: 204 })
         : new Response(JSON.stringify(record), { headers: { 'content-type': 'application/json' } }),
     ),
@@ -261,6 +261,10 @@ describe('FFQ masked review', () => {
       chancePlies,
     };
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/decisions'))
+        return new Response(
+          JSON.stringify({ engineId: 'misty-ffq-banqi-decisions@test', depth: 12, decisions: [] }),
+        );
       if (!String(input).endsWith('/analysis')) return new Response(JSON.stringify(record));
       if (init?.method === 'POST') cached = true;
       return cached ? new Response(JSON.stringify(analysis)) : new Response(null, { status: 204 });
@@ -281,6 +285,71 @@ describe('FFQ masked review', () => {
     await vi.waitFor(() => expect(reloaded.querySelector('.advantage-chart__line')).not.toBeNull());
     expect(reloaded.querySelector('.xiangqi-review__analyse')).toBeNull();
     expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
+  });
+
+  it('shows luck on flips and covered captures plus both seat totals from cached decisions without POST', async () => {
+    const chance = record.timeline.flatMap(({ move, color }, i) =>
+      record.history.truth[i]!.view.board[move!.to]?.faceDown
+        ? [{ ply: i + 1, color, capture: move!.from !== move!.to }]
+        : [],
+    );
+    const flip = chance.find((row) => !row.capture)!;
+    const capture = chance.find((row) => row.capture)!;
+    expect(capture).toBeDefined();
+    const decisions = [
+      {
+        ply: flip.ply,
+        mover: flip.color!,
+        bestWin: 70,
+        playedWin: 50,
+        realizedWin: 80,
+        playedRank: 2,
+      },
+      {
+        ply: capture.ply,
+        mover: capture.color!,
+        bestWin: 60,
+        playedWin: 60,
+        realizedWin: 30,
+        playedRank: 1,
+      },
+    ];
+    const analysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      plies: record.history.truth.map(({ ply }) => ({ ply, cp: 0, mate: null, best: null })),
+      chancePlies: chance.map((row) => row.ply),
+    };
+    const spy = vi.fn(
+      async (input: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            String(input).endsWith('/analysis')
+              ? analysis
+              : String(input).endsWith('/decisions')
+                ? { engineId: 'misty-ffq-banqi-decisions@test', depth: 12, decisions }
+                : record,
+          ),
+        ),
+    );
+    vi.stubGlobal('fetch', spy);
+    const host = root();
+    mountFFQBanqiPostgame(host, ROOM);
+    await vi.waitFor(() =>
+      expect(host.querySelectorAll('.review-decision-totals')).toHaveLength(2),
+    );
+    expect(host.textContent).toContain('🎲 +30%');
+    expect(host.textContent).toContain('🎲 -30%');
+    for (const side of ['red', 'black']) {
+      const mine = decisions.filter((d) => d.mover === side);
+      const luck = mine.reduce((sum, d) => sum + d.realizedWin - d.playedWin, 0);
+      const loss = mine.reduce((sum, d) => sum + d.bestWin - d.playedWin, 0);
+      const row = host.querySelector(`.review-decision-totals[data-side="${side}"]`)!;
+      expect(row.textContent).toContain(`luck ${luck > 0 ? '+' : ''}${luck.toFixed(1)} pp`);
+      expect(row.textContent).toContain(`decision loss ${loss.toFixed(1)} pp`);
+    }
+    expect(spy.mock.calls).toHaveLength(3);
+    assertMasked(decisions);
   });
 
   it('translates native FFQ engine coordinates only into the recorded continuation', () => {
