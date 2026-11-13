@@ -35,3 +35,37 @@ Regression coverage lives in `packages/game/src/analysis.test.ts` (conversion
 table, decisive scores, curve compatibility and judgment thresholds) and
 `apps/web/src/review/game-analysis.test.ts` (normal moves, Black-first POV,
 best-played regrading, decision overlay merging and aggregate accuracy).
+
+
+## Fanfanqi calibration, 2026-11-13 (#1092)
+
+Decided 2026-11-13: FFQ reviews use a fitted logistic curve, with
+`K = 0.00518009` (unrounded fit: `0.005180085216522089`). The analysis and
+decisions ids carry `winfit20261113`; the analysis cache id advances from
+`masked1` to `masked2-winfit20261113`. Historical ids retain their old curve.
+
+The fit uses **300 completed level-7 self-play games, 2,004 public evaluations**
+from MistyFFQ 0.1.0 at 25,000 nodes and a 3,000 ms move cap. The existing FFQ
+`VariantEveAdapter` drives the games. Deals use seeds 1092000 through 1092299.
+Only public side-to-move scores enter the sample, normalized to Red's POV.
+Samples are taken at plies 8, 16, ... 120, excluding mate scores and scores
+outside [-1000, 1000], the range consumed by `winPercent`.
+
+The fit minimizes zero-intercept logistic cross-entropy with wins = 1,
+draws = 0.5 and losses = 0. Each sampled game has equal total weight, so a
+long game contributes no more than a short one. Bisection finds the zero of
+the derivative over K in [0, 0.1]. This estimates expected score against the
+same level-7 engine, including half credit for draws; it is not a trained net
+or a claim about play against humans. At +360 evaluation units the fitted
+curve reads about 86.6%, compared with about 79% on the previous curve.
+
+[The committed sample and fit](ffq-win-calibration-2026-11-13.json) contain
+per-game seeds, outcomes, lengths and public score samples. Reproduce with:
+
+```sh
+MISTBOARD_FFQ_BANQI_ENGINE_PATH=/path/to/ffq-banqi-engine \
+  node --import tsx scripts/ffq-win-calibration.mjs 300
+```
+
+The script resumes an existing sample file; remove or move that file to run
+fresh games. No stored deal or covered-square identity enters the data file.

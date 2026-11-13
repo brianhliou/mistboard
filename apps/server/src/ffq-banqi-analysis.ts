@@ -1,6 +1,6 @@
 // Whole-game FFQ analysis replays the deal server-side. Each engine request
 // is the live side-to-move masked view; scores are normalized to Red's POV.
-import type { FFQBanqiState } from '@mistboard/game';
+import { type FFQBanqiState, ffqBanqiStateToFen } from '@mistboard/game';
 import {
   FFQ_BANQI_ENGINE_MOVETIME_CAP_MS,
   FFQ_BANQI_ENGINE_VERSION,
@@ -9,6 +9,7 @@ import {
   ffqBanqiLiveEngineMove,
   ffqBanqiMoveToUci,
 } from './ffq-banqi-engine.js';
+import { searchFFQPublicFen } from './ffq-banqi-public-analysis.js';
 import { type FFQBanqiEvent, ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import {
   type AnalysisProgressStore,
@@ -30,7 +31,7 @@ export const FFQ_BANQI_ANALYSIS_TIER = 'misty-ffq-banqi-level-7';
 export const FFQ_BANQI_ANALYSIS_DEPTH = 12;
 const tier = ffqBanqiEngineTierFor(FFQ_BANQI_ANALYSIS_TIER)!;
 // Tier budget and evaluator changes invalidate cached results.
-export const FFQ_BANQI_ANALYSIS_ENGINE_ID = `misty-ffq-banqi-analysis@${FFQ_BANQI_ENGINE_VERSION}+${tier.id}-n${tier.nodes}-${tier.evaluation}-ms${tier.movetimeCapMs}-masked1`;
+export const FFQ_BANQI_ANALYSIS_ENGINE_ID = `misty-ffq-banqi-analysis@${FFQ_BANQI_ENGINE_VERSION}+${tier.id}-n${tier.nodes}-${tier.evaluation}-ms${tier.movetimeCapMs}-masked2-winfit20261113`;
 
 export type FFQBanqiGameAnalysis = {
   engineId: string;
@@ -53,14 +54,17 @@ export async function evaluateFFQBanqiPosition(
   if (state.status.type !== 'playing') {
     throw new Error('ffq_banqi_analysis_position_not_playing');
   }
-  const evaluation = await provider(
-    ffqBanqiTierRequestFor(state, FFQ_BANQI_ANALYSIS_TIER, FFQ_BANQI_ENGINE_MOVETIME_CAP_MS),
-  );
+  const evaluation =
+    provider === ffqBanqiLiveEngineMove
+      ? await searchFFQPublicFen(ffqBanqiStateToFen(state))
+      : await provider(
+          ffqBanqiTierRequestFor(state, FFQ_BANQI_ANALYSIS_TIER, FFQ_BANQI_ENGINE_MOVETIME_CAP_MS),
+        );
   const sign = state.status.turn === 'red' ? 1 : -1;
   return {
     cp: evaluation.cp == null ? null : evaluation.cp * sign,
     mate: evaluation.mate == null ? null : evaluation.mate * sign,
-    best: ffqBanqiMoveToUci(evaluation.move),
+    best: 'best' in evaluation ? evaluation.best : ffqBanqiMoveToUci(evaluation.move),
   };
 }
 
