@@ -4,10 +4,12 @@ import type pg from 'pg';
 import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
+  BOT_TIME_LOSS_ROOM_ID_CAP,
   buildMistboardReadout,
   deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
   isDisruptiveDrain,
+  type MistboardReadoutBotTiming,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
   type MistboardReadoutComparison,
@@ -26,13 +28,17 @@ import {
   SUPPORTED_MISTBOARD_READOUT_SCHEMA_VERSIONS,
 } from './mistboard-readout.js';
 import {
+  botLostOnTime,
+  botSeat,
   COUNTED_USER,
   countedAbortedGame,
   countedHumanGame,
   countedPlayerSeat,
+  liveClockGame,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
 import { getWeeklyGuestSignIns } from './persistence-sessions.js';
 import {
@@ -317,6 +323,7 @@ export async function collectMistboardReadoutFacts(
       collectFeedback(db),
       collectDeploys(db, now),
       collectLoginEmailDelivery(db, now),
+      collectBotTiming(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -332,6 +339,7 @@ export async function collectMistboardReadoutFacts(
     'feedback',
     'deploys',
     'loginEmailDelivery',
+    'botTiming',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -347,6 +355,7 @@ export async function collectMistboardReadoutFacts(
     feedback: settledValue(collectors[5]),
     deploys: settledValue(collectors[6]),
     loginEmailDelivery: settledValue(collectors[7]),
+    botTiming: settledValue(collectors[8]),
     collectorErrors,
     trend,
     comparison,
@@ -693,6 +702,102 @@ export async function collectDeploys(db: Queryable, now: Date): Promise<Mistboar
     windowDays: DEPLOY_WINDOW_DAYS,
     drains: drains.length,
     disruptive: drains.filter(isDisruptiveDrain),
+  };
+}
+
+// Per-variant bot timing over the report window (#1065). Games are counted PvE
+// games (countedHumanGame, so no bot-vs-bot, imported or stats-excluded rows)
+// with a bot seat. Replies are their live-engine-decision artifacts, written at
+// game end, in games on a live clock: a correspondence reply has days, and its
+// compute would only blur the live percentile. A reply is the wall time the
+// engine took (think_time_ms, every attempt) plus the pacing wait added before
+// the move went out (pace_wait_ms, absent on unpaced variants and on decisions
+// from before #1061). Nearest-rank p95 (percentile_disc), so the figure is a
+// reply that happened.
+export async function collectBotTiming(
+  db: Queryable,
+  now: Date,
+): Promise<MistboardReadoutBotTiming> {
+  const { periodStart, periodEnd } = readoutPeriods(now);
+  const [games, replies] = await Promise.all([
+    db.query<{ variant: string; bot_games: number; time_losses: number; room_ids: string[] }>(
+      `SELECT g.variant,
+              count(*)::int AS bot_games,
+              count(*) FILTER (WHERE ${botLostOnTime('g')})::int AS time_losses,
+              COALESCE(
+                array_agg(g.room_id ORDER BY g.ended_at DESC, g.room_id DESC)
+                  FILTER (WHERE ${botLostOnTime('g')}),
+                '{}'
+              ) AS room_ids
+       FROM games g
+       WHERE ${COUNTED_GAME} AND g.mode = 'pve'
+         AND g.ended_at >= $1 AND g.ended_at < $2
+         AND EXISTS (
+           SELECT 1 FROM game_participants bp
+           WHERE bp.game_id = g.room_id AND ${botSeat('bp')}
+         )
+       GROUP BY g.variant
+       ORDER BY g.variant`,
+      [periodStart, periodEnd],
+    ),
+    db.query<{ variant: string; replies: number; p95_ms: number | null; paced: number }>(
+      `SELECT g.variant,
+              count(*)::int AS replies,
+              round(percentile_disc(0.95) WITHIN GROUP (ORDER BY r.reply_ms))::int AS p95_ms,
+              count(*) FILTER (WHERE r.wait_ms > 0)::int AS paced
+       FROM games g
+       JOIN game_debug_artifacts a
+         ON a.game_id = g.room_id AND a.artifact_type = $3
+       CROSS JOIN LATERAL (
+         SELECT
+           CASE WHEN jsonb_typeof(a.payload->'pace_wait_ms') = 'number'
+             THEN (a.payload->>'pace_wait_ms')::numeric ELSE 0 END AS wait_ms
+       ) w
+       CROSS JOIN LATERAL (
+         SELECT (a.payload->>'think_time_ms')::numeric + w.wait_ms AS reply_ms, w.wait_ms
+       ) r
+       WHERE ${COUNTED_GAME} AND g.mode = 'pve'
+         AND g.ended_at >= $1 AND g.ended_at < $2
+         AND ${liveClockGame('g')}
+         AND jsonb_typeof(a.payload->'think_time_ms') = 'number'
+       GROUP BY g.variant
+       ORDER BY g.variant`,
+      [periodStart, periodEnd, LIVE_ENGINE_DECISION_ARTIFACT_TYPE],
+    ),
+  ]);
+  const byVariant = new Map<string, MistboardReadoutBotTiming['variants'][number]>();
+  const entry = (variant: string) => {
+    let value = byVariant.get(variant);
+    if (!value) {
+      value = {
+        variant,
+        botGames: 0,
+        timeLosses: 0,
+        timeLossRoomIds: [],
+        replies: 0,
+        p95ReplyMs: null,
+        pacedReplies: 0,
+      };
+      byVariant.set(variant, value);
+    }
+    return value;
+  };
+  for (const row of games.rows) {
+    const value = entry(row.variant);
+    value.botGames = row.bot_games;
+    value.timeLosses = row.time_losses;
+    // Keep the newest past the cap, so a new loss is always listed (and so
+    // always reported); the ones cut were reported by earlier readouts.
+    value.timeLossRoomIds = row.room_ids.slice(0, BOT_TIME_LOSS_ROOM_ID_CAP).reverse();
+  }
+  for (const row of replies.rows) {
+    const value = entry(row.variant);
+    value.replies = row.replies;
+    value.p95ReplyMs = row.p95_ms;
+    value.pacedReplies = row.paced;
+  }
+  return {
+    variants: [...byVariant.values()].sort((a, b) => a.variant.localeCompare(b.variant)),
   };
 }
 
