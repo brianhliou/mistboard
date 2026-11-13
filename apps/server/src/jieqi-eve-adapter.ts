@@ -13,7 +13,6 @@
 import {
   createJieqiDeal,
   getJieqiLegalMoves,
-  JIEQI_ADJUDICATION_RULE,
   JIEQI_SPEC_ID,
   type JieqiColor,
   type JieqiGameState,
@@ -52,12 +51,7 @@ export const jieqiEveAdapter: VariantEveAdapter<
     return tier && !tier.retired ? tier : null;
   },
   randomEngineId: JIEQI_RANDOM_ENGINE_ID,
-  // The live room's rule stamps ride on the deal, or the game replays under legacy rules.
-  createSetup: (seed) => ({
-    ...createJieqiDeal(seededUnitRng(seed)),
-    repetition: true,
-    adjudicationRule: JIEQI_ADJUDICATION_RULE,
-  }),
+  createSetup: (seed) => createJieqiDeal(seededUnitRng(seed)),
   legalMoves: getJieqiLegalMoves,
   moveToUci: jieqiMoveToPikafishUci,
   legalMoveForUci: (legalMoves, uci) => {
