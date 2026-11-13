@@ -909,7 +909,11 @@
     "description": "We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.",
     "status": "published",
     "publishedAt": "2026-11-24",
-    "liveAt": 1795536000000
+    "liveAt": 1795536000000,
+    "zhTitles": {
+      "zh-hans": "为皮卡鱼训练我们自己的象棋网络",
+      "zh-hant": "為皮卡魚訓練我們自己的象棋網路"
+    }
   },
   "xiangqi-world-championship": {
     "title": "The Xiangqi World Championship",
