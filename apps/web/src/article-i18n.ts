@@ -34,6 +34,8 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'xiangqi-nnue-training',
   // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
   // off that day. Badge names follow the legacy badge catalog.
   'fog-future',
@@ -284,6 +286,106 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
+  'Training our own xiangqi net': '训练我们自己的象棋网络',
+  'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
+    '为皮卡鱼微调公有领域的象棋 NNUE 网络',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.':
+    '我们先让皮卡鱼适配一个公有领域的象棋网络，再尝试用 Px0 的评分训练出更强的网络。',
+  'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
+    '面向开发或训练象棋引擎的人，以及想了解象棋电脑背后技术的棋友。',
+  "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
+    '皮卡鱼在搜索前，会把网络输出乘以一个缩放系数。针对我们使用的公有领域网络拟合这个系数后，棋力提高了 55 Elo。',
+  'Fine-tuning that net with settings meant for training from scratch cost 171 to 278 Elo. A small learning rate and a frozen first layer kept its strength.':
+    '用从零训练的设置微调这个网络，棋力下降了 171 至 278 Elo。降低学习率并冻结第一层，则保住了原有棋力。',
+  'Scores from Px0, another open engine, predicted game results better, and a net trained on them beat the original by 10.8 Elo at 100,000 nodes a move.':
+    '另一个开放引擎 Px0 的评分能更准确地预测对局结果。用这些评分训练的网络，在每步 100,000 节点的比赛中比原网络高出 10.8 Elo。',
+  'At one second a move the gain was 2.7 Elo, within noise, so the site still runs the public-domain net.':
+    '每步一秒时，提升只有 2.7 Elo，仍在随机波动范围内，所以网站继续使用公有领域网络。',
+  'Every match plays each opening twice with colours swapped, from a fixed opening book, and reports Elo with a 95% interval.':
+    '每场比赛使用固定开局库，每个开局红黑互换下两盘，并报告 Elo 及其 95% 区间。',
+  'Training screens run at 100,000 nodes a move; the final test ran at one second a move.':
+    '训练筛选赛采用每步 100,000 节点；最终测试采用每步一秒。',
+  'Predictions are scored by log loss on 27,705 positions from 200 games.':
+    '用来自 200 盘对局的 27,705 个局面，以对数损失衡量预测表现。',
+  "Pikafish plays the site's xiangqi bots and analyses finished games. Like Stockfish in chess, it judges the positions it searches with a small neural network, an NNUE net.":
+    '网站的象棋电脑对弈和已完成对局分析都由皮卡鱼驱动。它和国际象棋中的 Stockfish 一样，用一个小型神经网络，也就是 NNUE 网络，评估搜索中的局面。',
+  "Pikafish's own nets are not licensed for commercial use, so since November 10 the site runs Pikafish with the public-domain xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE). We call it the CC0 net, after its licence. It was trained for a different engine, so we first fitted Pikafish to it, then tried to train a stronger net from it.":
+    '皮卡鱼自带的网络未授权商业使用，所以从 11 月 10 日起，网站的皮卡鱼改用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的公有领域象棋网络。我们按其许可证称它为 CC0 网络。它原本为另一个引擎训练，因此我们先让皮卡鱼适配它，再尝试以它为基础训练更强的网络。',
+  'The right scale was worth 55 Elo': '合适的缩放系数带来了 55 Elo',
+  "Pikafish multiplies the net's score by a scale before the search uses it. Its search margins assume the units of its own nets, so a net from another engine needs a scale of its own. Our first port used 1.70. Fitted to the results of 2,000 Pikafish self-play games, it came out at 0.79.":
+    '皮卡鱼在搜索使用网络评分前，会先乘以一个缩放系数。搜索中的裕量以自带网络的评分单位为基准，因此来自其他引擎的网络需要单独的缩放系数。我们最初移植时用了 1.70。根据 2,000 盘皮卡鱼自我对弈的结果拟合后，得到的系数是 0.79。',
+  Match: '对阵',
+  'Per move': '每步用量',
+  Won: '胜',
+  Drawn: '和',
+  'Elo (95%)': 'Elo（95%）',
+  'Pikafish at 0.79 vs Pikafish at 1.70': '皮卡鱼 0.79 对皮卡鱼 1.70',
+  '100,000 nodes': '100,000 节点',
+  'Pikafish at 1.70 vs Fairy-Stockfish': '皮卡鱼 1.70 对 Fairy-Stockfish',
+  '1 second': '1 秒',
+  'Pikafish at 0.79 vs Fairy-Stockfish': '皮卡鱼 0.79 对 Fairy-Stockfish',
+  'In both Fairy-Stockfish matches each side ran the CC0 net, so they compare the two searches. Every Pikafish on the site now runs at the fitted scale.':
+    '对阵 Fairy-Stockfish 的两场比赛中，双方都使用 CC0 网络，因此比较的是两种搜索。网站上所有皮卡鱼现在都使用拟合后的缩放系数。',
+  'Checking the match rig': '检查对弈测试系统',
+  'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
+    '在采信任何结果前，我们先让 CC0 网络自我对弈了 1,000 对对局，得到 0.0 Elo。另一个被我们刻意削弱的副本，在 2,000 盘中输了 1,974 盘。',
+  'Fine-tuning needs gentler settings than training from scratch': '微调需要比从零训练更温和的设置',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微调从 CC0 网络出发，用更深搜索评过分的局面来训练。第一轮用了 20 百万个局面，每个局面都由 Fairy-Stockfish 搭配 CC0 网络搜索 20,000 节点来评分。训练出的五个网络，相比起点网络都下降了 171 至 278 Elo。训练器的默认设置原本面向从随机权重开始的网络：',
+  'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
+    '学习率 1.5e-3 和 5e-4 是按随机权重设定的。',
+  "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
+    '训练器假设输出尺度为 361。CC0 网络自身评分的实测尺度约为 490，所以训练会把学到的每个评分都缩小。',
+  'Every weight was trainable, including the first layer, which holds most of the net.':
+    '所有权重都参与训练，包括容纳了网络大部分参数的第一层。',
+  'To test the settings alone, we retrained the CC0 net on its own scores at the measured scale. Those scores hold nothing the net does not already know, so the best a recipe can do is keep its strength.':
+    '为了单独测试设置，我们按实测尺度，用 CC0 网络自己的评分重新训练它。这些评分没有网络尚不知道的信息，因此一套训练方案最好的结果就是保住原有棋力。',
+  'Learning rate, layers trained': '学习率、训练层',
+  'Elo vs CC0 (95%)': '相对 CC0 的 Elo（95%）',
+  '2e-5, first layer frozen': '2e-5，冻结第一层',
+  '2e-5, all layers': '2e-5，所有层',
+  '1e-4, first layer frozen': '1e-4，冻结第一层',
+  '1e-4, all layers': '1e-4，所有层',
+  'The small rate with the first layer frozen stayed level. The large rate on every layer lost 33.':
+    '小学习率配合冻结第一层，棋力保持不变。所有层都用大学习率训练，则下降了 33。',
+  "Px0 predicted game results better than the CC0 net's search":
+    'Px0 比 CC0 网络的搜索更能预测对局结果',
+  'A net only gains from scores that know more than it does. [Px0](https://px0.org/) is an open-source xiangqi engine trained by self-play, which its site describes as "Xiangqi learned from scratch". Its networks are public domain ([CC0](https://github.com/official-pikafish/pxzero-networks)) and separate from Pikafish\'s own. Px0 runs a much larger network on a graphics card, so it is slow: about 91 positions a second at one node on ours.':
+    '只有评分包含网络尚不知道的信息，网络才能从中获益。[Px0](https://px0.org/) 是通过自我对弈训练的开源象棋引擎，其网站称之为“从零学会象棋”。它的网络属于公有领域（[CC0](https://github.com/official-pikafish/pxzero-networks)），与皮卡鱼自带的网络不同。Px0 在显卡上运行大得多的网络，因此速度较慢：在我们的显卡上，单节点评估每秒约处理 91 个局面。',
+  "We took 27,705 positions from 200 games between Px0 and Pikafish with the CC0 net, so each source had played one side of every game. Each source's scores were turned into a win chance with its own best-fitting curve, and log loss measures how far those chances were from the results. Lower is better.":
+    '我们从 Px0 与使用 CC0 网络的皮卡鱼之间的 200 盘对局中，取出 27,705 个局面，因此每盘棋都有双方评分来源各执一方。我们为每个来源分别拟合最合适的曲线，把评分换算成胜率，再用对数损失衡量这些胜率与实际结果的差距。数值越低越好。',
+  'Scores from': '评分来源',
+  Nodes: '节点数',
+  'Log loss': '对数损失',
+  'No information (50%)': '无信息（50%）',
+  'Fairy-Stockfish, CC0 net': 'Fairy-Stockfish，CC0 网络',
+  Px0: 'Px0',
+  'Even at one node, Px0 predicted the results better than a 20,000-node search. Its edge came from the decisive games. In drawn games, 85% of the positions, the two were level.':
+    '即使只用一个节点，Px0 预测结果也比搜索 20,000 节点更准确。优势来自分出胜负的对局。来自和棋的局面占 85%，在这些局面上，两者表现相当。',
+  "Px0's scores made a stronger net at 100,000 nodes":
+    '用 Px0 评分训练的网络，在 100,000 节点下更强',
+  "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
+    '我们把同样的 2 百万个局面评了两次分，一次用 Px0 的单节点评估，一次用 CC0 网络的搜索，再用温和的设置，从 CC0 微调出四个网络。每个用 Px0 评分的网络，都有一个仅评分来源不同的对应网络。',
+  Net: '网络',
+  'Px0 scores, first layer frozen': 'Px0 评分，冻结第一层',
+  CC0: 'CC0',
+  'CC0 scores, first layer frozen': 'CC0 评分，冻结第一层',
+  'Px0 scores, all layers': 'Px0 评分，所有层',
+  'CC0 scores, all layers': 'CC0 评分，所有层',
+  'Its CC0-scored twin': '对应的 CC0 评分网络',
+  'The Px0 net with every layer trained is the first of ours whose interval against CC0 sits above zero. The two frozen twins also played each other, and the Px0 one won.':
+    '所有层都参与训练的 Px0 网络，是我们第一个对阵 CC0 时整个区间都高于零的网络。两个冻结第一层的对应网络也互相对弈，用 Px0 评分的那个获胜。',
+  'At one second a move the gain was 2.7 Elo': '每步一秒时，提升为 2.7 Elo',
+  'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
+    '最后一场测试让这个网络以每步一秒对阵 CC0，并遵循事先定好的规则：一旦对局证实或排除了 10 Elo 的提升，就停止测试。比赛在 894 盘后停止，其中 853 盘和棋，排除了这一提升。区间从 −2.2 到 +7.6。',
+  "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
+    'Px0 的评分比 CC0 网络的评分包含更多信息，但 2 百万个这样的评分，并没有在实际每步限时下转化为棋力。网站的皮卡鱼继续使用 CC0 网络和拟合后的缩放系数。',
+  'Play the xiangqi bot': '与象棋电脑对弈',
+  NNUE: 'NNUE',
+  'TRAINING A NET FOR PIKAFISH': '为皮卡鱼训练网络',
+  'A card reading NNUE, training a net for Pikafish': '卡片写着 NNUE，为皮卡鱼训练网络',
   // Rules landing taglines, decided 2026-11-08 (#971).
   'A river, a palace, and cannons that jump to capture.': '有河界、九宫，炮靠炮架吃子。',
   'Xiangqi with every piece but the general face-down.': '除将帅外全是暗子，走出才揭晓。',
@@ -7097,6 +7199,106 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
+  'Training our own xiangqi net': '訓練我們自己的象棋網路',
+  'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
+    '為皮卡魚微調公有領域的象棋 NNUE 網路',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.':
+    '我們先讓皮卡魚適配一個公有領域的象棋網路，再嘗試用 Px0 的評分訓練出更強的網路。',
+  'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
+    '面向開發或訓練象棋引擎的人，以及想了解象棋電腦背後技術的棋友。',
+  "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
+    '皮卡魚在搜尋前，會把網路輸出乘以一個縮放係數。針對我們使用的公有領域網路擬合這個係數後，棋力提高了 55 Elo。',
+  'Fine-tuning that net with settings meant for training from scratch cost 171 to 278 Elo. A small learning rate and a frozen first layer kept its strength.':
+    '用從零訓練的設定微調這個網路，棋力下降了 171 至 278 Elo。降低學習率並凍結第一層，則保住了原有棋力。',
+  'Scores from Px0, another open engine, predicted game results better, and a net trained on them beat the original by 10.8 Elo at 100,000 nodes a move.':
+    '另一個開放引擎 Px0 的評分能更準確地預測對局結果。用這些評分訓練的網路，在每步 100,000 節點的比賽中比原網路高出 10.8 Elo。',
+  'At one second a move the gain was 2.7 Elo, within noise, so the site still runs the public-domain net.':
+    '每步一秒時，提升只有 2.7 Elo，仍在隨機波動範圍內，所以網站繼續使用公有領域網路。',
+  'Every match plays each opening twice with colours swapped, from a fixed opening book, and reports Elo with a 95% interval.':
+    '每場比賽使用固定開局庫，每個開局紅黑互換下兩盤，並報告 Elo 及其 95% 區間。',
+  'Training screens run at 100,000 nodes a move; the final test ran at one second a move.':
+    '訓練篩選賽採用每步 100,000 節點；最終測試採用每步一秒。',
+  'Predictions are scored by log loss on 27,705 positions from 200 games.':
+    '用來自 200 盤對局的 27,705 個局面，以對數損失衡量預測表現。',
+  "Pikafish plays the site's xiangqi bots and analyses finished games. Like Stockfish in chess, it judges the positions it searches with a small neural network, an NNUE net.":
+    '網站的象棋電腦對弈和已完成對局分析都由皮卡魚驅動。它和西洋棋中的 Stockfish 一樣，用一個小型神經網路，也就是 NNUE 網路，評估搜尋中的局面。',
+  "Pikafish's own nets are not licensed for commercial use, so since November 10 the site runs Pikafish with the public-domain xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE). We call it the CC0 net, after its licence. It was trained for a different engine, so we first fitted Pikafish to it, then tried to train a stronger net from it.":
+    '皮卡魚自帶的網路未授權商業使用，所以從 11 月 10 日起，網站的皮卡魚改用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的公有領域象棋網路。我們按其授權條款稱它為 CC0 網路。它原本為另一個引擎訓練，因此我們先讓皮卡魚適配它，再嘗試以它為基礎訓練更強的網路。',
+  'The right scale was worth 55 Elo': '合適的縮放係數帶來了 55 Elo',
+  "Pikafish multiplies the net's score by a scale before the search uses it. Its search margins assume the units of its own nets, so a net from another engine needs a scale of its own. Our first port used 1.70. Fitted to the results of 2,000 Pikafish self-play games, it came out at 0.79.":
+    '皮卡魚在搜尋使用網路評分前，會先乘以一個縮放係數。搜尋中的裕量以自帶網路的評分單位為基準，因此來自其他引擎的網路需要單獨的縮放係數。我們最初移植時用了 1.70。根據 2,000 盤皮卡魚自我對弈的結果擬合後，得到的係數是 0.79。',
+  Match: '對陣',
+  'Per move': '每步用量',
+  Won: '勝',
+  Drawn: '和',
+  'Elo (95%)': 'Elo（95%）',
+  'Pikafish at 0.79 vs Pikafish at 1.70': '皮卡魚 0.79 對皮卡魚 1.70',
+  '100,000 nodes': '100,000 節點',
+  'Pikafish at 1.70 vs Fairy-Stockfish': '皮卡魚 1.70 對 Fairy-Stockfish',
+  '1 second': '1 秒',
+  'Pikafish at 0.79 vs Fairy-Stockfish': '皮卡魚 0.79 對 Fairy-Stockfish',
+  'In both Fairy-Stockfish matches each side ran the CC0 net, so they compare the two searches. Every Pikafish on the site now runs at the fitted scale.':
+    '對陣 Fairy-Stockfish 的兩場比賽中，雙方都使用 CC0 網路，因此比較的是兩種搜尋。網站上所有皮卡魚現在都使用擬合後的縮放係數。',
+  'Checking the match rig': '檢查對弈測試系統',
+  'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
+    '在採信任何結果前，我們先讓 CC0 網路自我對弈了 1,000 對對局，得到 0.0 Elo。另一個被我們刻意削弱的副本，在 2,000 盤中輸了 1,974 盤。',
+  'Fine-tuning needs gentler settings than training from scratch': '微調需要比從零訓練更溫和的設定',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微調從 CC0 網路出發，用更深搜尋評過分的局面來訓練。第一輪用了 20 百萬個局面，每個局面都由 Fairy-Stockfish 搭配 CC0 網路搜尋 20,000 節點來評分。訓練出的五個網路，相比起點網路都下降了 171 至 278 Elo。訓練器的預設值原本面向從隨機權重開始的網路：',
+  'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
+    '學習率 1.5e-3 和 5e-4 是按隨機權重設定的。',
+  "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
+    '訓練器假設輸出尺度為 361。CC0 網路自身評分的實測尺度約為 490，所以訓練會把學到的每個評分都縮小。',
+  'Every weight was trainable, including the first layer, which holds most of the net.':
+    '所有權重都參與訓練，包括容納了網路大部分參數的第一層。',
+  'To test the settings alone, we retrained the CC0 net on its own scores at the measured scale. Those scores hold nothing the net does not already know, so the best a recipe can do is keep its strength.':
+    '為了單獨測試設定，我們按實測尺度，用 CC0 網路自己的評分重新訓練它。這些評分沒有網路尚不知道的資訊，因此一套訓練方案最好的結果就是保住原有棋力。',
+  'Learning rate, layers trained': '學習率、訓練層',
+  'Elo vs CC0 (95%)': '相對 CC0 的 Elo（95%）',
+  '2e-5, first layer frozen': '2e-5，凍結第一層',
+  '2e-5, all layers': '2e-5，所有層',
+  '1e-4, first layer frozen': '1e-4，凍結第一層',
+  '1e-4, all layers': '1e-4，所有層',
+  'The small rate with the first layer frozen stayed level. The large rate on every layer lost 33.':
+    '小學習率配合凍結第一層，棋力保持不變。所有層都用大學習率訓練，則下降了 33。',
+  "Px0 predicted game results better than the CC0 net's search":
+    'Px0 比 CC0 網路的搜尋更能預測對局結果',
+  'A net only gains from scores that know more than it does. [Px0](https://px0.org/) is an open-source xiangqi engine trained by self-play, which its site describes as "Xiangqi learned from scratch". Its networks are public domain ([CC0](https://github.com/official-pikafish/pxzero-networks)) and separate from Pikafish\'s own. Px0 runs a much larger network on a graphics card, so it is slow: about 91 positions a second at one node on ours.':
+    '只有評分包含網路尚不知道的資訊，網路才能從中獲益。[Px0](https://px0.org/) 是透過自我對弈訓練的開源象棋引擎，其網站稱之為「從零學會象棋」。它的網路屬於公有領域（[CC0](https://github.com/official-pikafish/pxzero-networks)），與皮卡魚自帶的網路不同。Px0 在顯示卡上執行大得多的網路，因此速度較慢：在我們的顯示卡上，單節點評估每秒約處理 91 個局面。',
+  "We took 27,705 positions from 200 games between Px0 and Pikafish with the CC0 net, so each source had played one side of every game. Each source's scores were turned into a win chance with its own best-fitting curve, and log loss measures how far those chances were from the results. Lower is better.":
+    '我們從 Px0 與使用 CC0 網路的皮卡魚之間的 200 盤對局中，取出 27,705 個局面，因此每盤棋都有雙方評分來源各執一方。我們為每個來源分別擬合最合適的曲線，把評分換算成勝率，再用對數損失衡量這些勝率與實際結果的差距。數值越低越好。',
+  'Scores from': '評分來源',
+  Nodes: '節點數',
+  'Log loss': '對數損失',
+  'No information (50%)': '無資訊（50%）',
+  'Fairy-Stockfish, CC0 net': 'Fairy-Stockfish，CC0 網路',
+  Px0: 'Px0',
+  'Even at one node, Px0 predicted the results better than a 20,000-node search. Its edge came from the decisive games. In drawn games, 85% of the positions, the two were level.':
+    '即使只用一個節點，Px0 預測結果也比搜尋 20,000 節點更準確。優勢來自分出勝負的對局。來自和棋的局面占 85%，在這些局面上，兩者表現相當。',
+  "Px0's scores made a stronger net at 100,000 nodes":
+    '用 Px0 評分訓練的網路，在 100,000 節點下更強',
+  "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
+    '我們把同樣的 2 百萬個局面評了兩次分，一次用 Px0 的單節點評估，一次用 CC0 網路的搜尋，再用溫和的設定，從 CC0 微調出四個網路。每個用 Px0 評分的網路，都有一個僅評分來源不同的對應網路。',
+  Net: '網路',
+  'Px0 scores, first layer frozen': 'Px0 評分，凍結第一層',
+  CC0: 'CC0',
+  'CC0 scores, first layer frozen': 'CC0 評分，凍結第一層',
+  'Px0 scores, all layers': 'Px0 評分，所有層',
+  'CC0 scores, all layers': 'CC0 評分，所有層',
+  'Its CC0-scored twin': '對應的 CC0 評分網路',
+  'The Px0 net with every layer trained is the first of ours whose interval against CC0 sits above zero. The two frozen twins also played each other, and the Px0 one won.':
+    '所有層都參與訓練的 Px0 網路，是我們第一個對陣 CC0 時整個區間都高於零的網路。兩個凍結第一層的對應網路也互相對弈，用 Px0 評分的那個獲勝。',
+  'At one second a move the gain was 2.7 Elo': '每步一秒時，提升為 2.7 Elo',
+  'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
+    '最後一場測試讓這個網路以每步一秒對陣 CC0，並遵循事先定好的規則：一旦對局證實或排除了 10 Elo 的提升，就停止測試。比賽在 894 盤後停止，其中 853 盤和棋，排除了這一提升。區間從 −2.2 到 +7.6。',
+  "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
+    'Px0 的評分比 CC0 網路的評分包含更多資訊，但 2 百萬個這樣的評分，並沒有在實際每步限時下轉化為棋力。網站的皮卡魚繼續使用 CC0 網路和擬合後的縮放係數。',
+  'Play the xiangqi bot': '與象棋電腦對弈',
+  NNUE: 'NNUE',
+  'TRAINING A NET FOR PIKAFISH': '為皮卡魚訓練網路',
+  'A card reading NNUE, training a net for Pikafish': '卡片寫著 NNUE，為皮卡魚訓練網路',
   // Rules landing taglines, decided 2026-11-08 (#971).
   'A river, a palace, and cannons that jump to capture.': '有河界、九宮，炮靠炮架吃子。',
   'Xiangqi with every piece but the general face-down.': '除將帥外全是暗子，走出才揭曉。',
