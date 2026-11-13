@@ -33,6 +33,7 @@ describe('renderClockPanel', () => {
     plyCount: 8,
     result: 'white-wins',
     termination: 'king-captured',
+    variant: null,
     timeControl: { kind: 'per-move', milliseconds: 5_000 },
     whiteName: 'Guest',
   };

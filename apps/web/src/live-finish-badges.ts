@@ -30,6 +30,7 @@
 // stacking them; there are no timers to cancel. A new game in the room forgets it.
 
 import './live-finish-badges.css';
+import type { GameSpecId } from '@mistboard/game';
 import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 
@@ -57,6 +58,8 @@ const LOSER_ICONS: Record<string, FinishBadgeIcon> = {
  * A checkmate marks only the mated general, with the slash and no label.
  */
 export function finishBadgesForResult<C extends string>(result: {
+  // Which game ended: a reason code can name different endings per variant.
+  variant: GameSpecId;
   colors: readonly C[];
   winner: C | null;
   reason: string;
@@ -68,7 +71,7 @@ export function finishBadgesForResult<C extends string>(result: {
     return square ? [{ square, kind: 'mated', icon: 'slash', label: '' }] : [];
   }
   const badges: FinishBadge[] = [];
-  const reasonLabel = terminationLabel(result.reason);
+  const reasonLabel = terminationLabel(result.reason, result.variant);
   for (const color of result.colors) {
     const square = result.generalSquare(color);
     if (!square) continue;
@@ -100,7 +103,7 @@ export function jungleFinishBadges(result: {
   lastMove?: { to: string } | undefined;
   previousLastMove?: { to: string } | undefined;
 }): FinishBadge[] {
-  const label = terminationLabel(result.reason);
+  const label = terminationLabel(result.reason, 'jungle');
   if (result.reason === 'den-entered' && result.winner !== null && result.lastMove) {
     return [{ square: result.lastMove.to, kind: 'winner', icon: 'crown', label }];
   }

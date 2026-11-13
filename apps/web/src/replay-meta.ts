@@ -1,4 +1,4 @@
-import { type GameEvent, officialCorrespondenceDays } from '@mistboard/game';
+import { type GameEvent, type GameSpecId, officialCorrespondenceDays } from '@mistboard/game';
 import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { escapeHtml, formatClock } from './web-utils.js';
@@ -11,6 +11,9 @@ export type GameMeta = {
   result: string;
   timeControl?: Record<string, unknown> | null;
   termination: string;
+  // The game's spec id: a stored termination code can mean different endings in
+  // different variants (`race`), so the label needs it (terminationLabel).
+  variant: GameSpecId | null;
   plyCount: number;
 };
 
@@ -117,7 +120,7 @@ export function renderGameHeader(
 
   const resultSide = winningSideFromResult(meta.result);
   const resultText = resultLabel(meta.result);
-  const terminationText = terminationDetailLabel(meta.termination);
+  const terminationText = terminationDetailLabel(meta.termination, meta.variant);
   handle.result.replaceChildren();
   const chip = document.createElement('span');
   chip.className = `replay-game-header-result-chip replay-game-header-result-${resultSide}`;
@@ -201,7 +204,7 @@ export function renderGameMetaPanel(
       : [
           { label: t('replay.modeLabel'), value: meta.modeLabel ?? t('replay.replayMode') },
           { label: t('replay.resultLabel'), value: resultLabel(meta.result) },
-          { label: t('replay.endLabel'), value: terminationLabel(meta.termination) },
+          { label: t('replay.endLabel'), value: terminationLabel(meta.termination, meta.variant) },
           ...(timeControl ? [{ label: t('replay.timeLabel'), value: timeControl }] : []),
           { label: t('replay.pliesLabel'), value: String(meta.plyCount) },
           { label: t('replay.game'), value: activeSample },
@@ -321,8 +324,8 @@ function winningSideFromResult(result: string): 'white' | 'black' | 'draw' {
   return 'draw';
 }
 
-function terminationDetailLabel(termination: string): string | null {
-  const label = terminationLabel(termination).toLowerCase();
+function terminationDetailLabel(termination: string, variant: GameSpecId | null): string | null {
+  const label = terminationLabel(termination, variant).toLowerCase();
   if (!label || label === 'unknown') return null;
   return t('replay.byTermination', { termination: label });
 }

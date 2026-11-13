@@ -21,6 +21,8 @@ import {
   seatNameForGame,
   secondMoverColorName,
   terminationLabel,
+  terminationReason,
+  terminationVariant,
   variantDisplayLabel,
   variantNameKeyForSpecId,
   watchChannelLabel,
@@ -242,32 +244,48 @@ describe('gameOutcome for wind seats', () => {
 // locale; every persisted GameTermination now has a catalog entry.
 describe('terminationLabel', () => {
   it('resolves the shared race code by variant without a Jungle fallback', () => {
-    expect(terminationLabel('race', 'en', 'gomoku')).toBe('Five in a row');
-    expect(terminationLabel('race', 'en', 'jungle')).toBe('Den entered');
-    expect(terminationLabel('race', 'en', 'jungle-flip')).toBe('Den entered');
-    expect(() => terminationLabel('race', 'en', 'xiangqi')).toThrow();
+    expect(terminationLabel('race', 'gomoku', 'en')).toBe('Five in a row');
+    expect(terminationLabel('race', 'jungle', 'en')).toBe('Den entered');
+    expect(terminationLabel('race', 'jungle-flip', 'en')).toBe('Den entered');
+    expect(terminationReason('race', 'gomoku', 'en')).toBe('five in a row');
+    expect(() => terminationLabel('race', 'xiangqi', 'en')).toThrow();
     // A wire value can be newer than this client, so runtime dispatch also rejects it.
-    expect(() => terminationLabel('race', 'en', 'future-variant' as 'gomoku')).toThrow();
+    expect(() => terminationLabel('race', 'future-variant' as 'gomoku', 'en')).toThrow();
+  });
+
+  // A list with no single variant gets the bare code, never one variant's goal.
+  it('reads race as the bare code when no variant is known', () => {
+    expect(terminationLabel('race', null, 'en')).toBe('Race');
+    expect(terminationLabel('race', terminationVariant('not-a-variant'), 'en')).toBe('Race');
+    expect(terminationLabel('race', terminationVariant('gomoku'), 'en')).toBe('Five in a row');
+  });
+
+  it('requires the variant at the type level', () => {
+    // The planted failure for the type guard: if the variant ever becomes
+    // optional again, this directive is unused and the typecheck fails.
+    // @ts-expect-error the variant is required: a shared code has no default meaning
+    expect(terminationLabel('checkmate')).toBe('Checkmate');
+    // @ts-expect-error the variant is required on the mid-sentence form too
+    expect(terminationReason('checkmate')).toBe('checkmate');
   });
 
   it('names every persisted termination in English', () => {
-    expect(terminationLabel('general-captured')).toBe('General captured');
-    expect(terminationLabel('king-captured')).toBe('King captured');
-    expect(terminationLabel('progress-clock')).toBe('Progress clock');
-    expect(terminationLabel('race')).toBe('Den entered');
+    expect(terminationLabel('general-captured', null)).toBe('General captured');
+    expect(terminationLabel('king-captured', null)).toBe('King captured');
+    expect(terminationLabel('progress-clock', null)).toBe('Progress clock');
     // Xiangqi Mahjong's match win (migration 169), once printed as Checkmate.
-    expect(terminationLabel('points')).toBe('On points');
-    expect(terminationLabel('')).toBe('');
+    expect(terminationLabel('points', null)).toBe('On points');
+    expect(terminationLabel('', null)).toBe('');
   });
 
   it('translates through the catalog for a zh locale', async () => {
     await ensureLocaleCatalog('zh-Hans');
-    expect(terminationLabel('general-captured', 'zh-Hans')).toBe('将帅被擒');
-    expect(terminationLabel('timeout', 'zh-Hans')).toBe('超时');
+    expect(terminationLabel('general-captured', null, 'zh-Hans')).toBe('将帅被擒');
+    expect(terminationLabel('timeout', null, 'zh-Hans')).toBe('超时');
   });
 
   it('humanizes an unknown code instead of throwing', () => {
-    expect(terminationLabel('some-future-code')).toBe('Some future code');
+    expect(terminationLabel('some-future-code', null)).toBe('Some future code');
   });
 });
 

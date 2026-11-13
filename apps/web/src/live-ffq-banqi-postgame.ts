@@ -154,6 +154,7 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
   const status = reviewOutcomeLine(
     banqiOutcome(postgame.game.result, 'red'),
     postgame.game.termination,
+    VARIANT,
   );
   const variantName = variantDisplayLabel(VARIANT);
   const { metaCard, details } = buildReviewMeta({

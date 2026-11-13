@@ -140,6 +140,7 @@ const client = createTenantLiveClient<
   finishBadges: (view, previous) =>
     view.status.type === 'finished'
       ? finishBadgesForResult({
+          variant: ATOMIC_XIANGQI_SPEC_ID,
           colors: atomicXiangqiWebTenant.colors,
           winner: view.status.winner,
           reason: view.status.reason,

@@ -34,6 +34,7 @@ export function mountFortressXiangqiWatchReplay(
     FortressXiangqiPlayerView,
     'truth'
   >(root, roomId, options, {
+    variant: 'fortress-xiangqi',
     installStyles: installFortressXiangqiBoardStyles,
     // Piece-set / board-theme changes repaint the board in place (the homepage
     // TV sits frozen on one ply, so nothing else would re-render it).

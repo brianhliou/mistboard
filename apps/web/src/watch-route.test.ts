@@ -244,6 +244,34 @@ describe('watch route copy helpers', () => {
     );
   });
 
+  // Gomoku's five in a row and Jungle's den entry share the stored code `race`;
+  // the watch page read "White wins by den entered" for a finished Gomoku game.
+  it('names a Gomoku race win five in a row, never den entered', () => {
+    const game: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 31,
+      result: 'white-wins',
+      roomId: 'gomoku_race',
+      termination: 'race',
+      variant: 'gomoku',
+      whiteName: null,
+      participants: [],
+    };
+    const line = watchGameStatusLine(game);
+    expect(line).toContain('by five in a row');
+    expect(line).not.toContain('den entered');
+    expect(
+      watchGameStatusLine({
+        ...game,
+        roomId: 'jungle_race',
+        variant: 'jungle',
+        result: 'red-wins',
+      }),
+    ).toContain('by den entered');
+  });
+
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {
     const base: FeaturedGame = {
       blackName: null,

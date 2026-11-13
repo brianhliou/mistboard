@@ -6,6 +6,7 @@ import {
   matchupSeats,
   participantForColor,
   sourceLabel,
+  terminationVariant,
 } from './game-display.js';
 import type { GameMeta } from './replay.js';
 import { correspondenceLabelFromMs, timeControlLabelFromMeta } from './replay-meta.js';
@@ -29,6 +30,7 @@ export function gameMetaForGame(game: FeaturedGame): GameMeta {
     result: game.result,
     timeControl: game.timeControl ?? clockTimeControlFromGame(game),
     termination: game.termination,
+    variant: terminationVariant(game.variant),
     plyCount: game.plyCount,
   };
 }

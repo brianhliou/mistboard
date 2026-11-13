@@ -282,7 +282,11 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
 
 function resultStatus(game: HistoricalXiangqiGameDetail): string {
   if (!game.termination) return historicalXiangqiOutcomeLabel(game.result);
-  return reviewOutcomeLine(historicalXiangqiOutcome(game.result), game.termination);
+  return reviewOutcomeLine(
+    historicalXiangqiOutcome(game.result),
+    game.termination,
+    XIANGQI_SPEC_ID,
+  );
 }
 
 function historicalXiangqiOutcome(result: HistoricalXiangqiResult): GameOutcome {

@@ -36,6 +36,7 @@ export function mountJungleWatchReplay(
     roomId,
     options,
     {
+      variant: 'jungle',
       installStyles: () => {},
       loadPostgame: loadJunglePostgame,
       maxPly: junglePostgameMaxPly,

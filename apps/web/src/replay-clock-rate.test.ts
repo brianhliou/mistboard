@@ -533,6 +533,7 @@ function budgetMeta() {
     blackName: 'Misty',
     result: '1-0',
     termination: 'king-captured',
+    variant: null,
     plyCount: 2,
     timeControl: { kind: 'per-move', milliseconds: 5_000 },
   };

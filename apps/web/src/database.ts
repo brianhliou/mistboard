@@ -10,6 +10,8 @@ import {
   type FeaturedGame,
   matchupLabel,
   sourceLabel,
+  terminationLabel,
+  terminationVariant,
   variantDisplayLabel,
 } from './game-display.js';
 import { buildNav } from './site-shell.js';
@@ -233,7 +235,9 @@ function buildFilterForm(
   ]);
   addSelect('termination', 'Termination', [
     { value: '', label: 'Any ending' },
-    ...facets.terminations.map((t) => ({ value: t, label: terminationLabel(t) })),
+    // The facet list spans every variant (gameFacets ignores the filters), so it
+    // has no one variant to name a shared code by: `race` reads "Race" here.
+    ...facets.terminations.map((t) => ({ value: t, label: terminationLabel(t, null) })),
   ]);
   addSelect('rated', 'Rated', [
     { value: '', label: 'Any' },
@@ -468,7 +472,7 @@ function buildSummary(aggregates: Aggregates, variant: string): HTMLElement {
     for (const term of aggregates.terminations) {
       const chip = document.createElement('span');
       chip.className = 'database-term-chip';
-      chip.textContent = `${terminationLabel(term.termination)} · ${term.count}`;
+      chip.textContent = `${terminationLabel(term.termination, terminationVariant(variant))} · ${term.count}`;
       terms.append(chip);
     }
     wrap.append(terms);
@@ -678,13 +682,6 @@ function resultLabel(result: string): string {
 
 // Variant labelling lives in game-display.ts (variantDisplayLabel), shared with
 // the homepage showcase caption.
-
-function terminationLabel(termination: string): string {
-  return termination
-    .split('-')
-    .map((part) => (part.length > 0 ? part[0]!.toUpperCase() + part.slice(1) : part))
-    .join(' ');
-}
 
 function timeControlLabel(game: GameRow): string {
   const spec = findTimeControl(game.initialMs ?? undefined, game.incrementMs ?? undefined);

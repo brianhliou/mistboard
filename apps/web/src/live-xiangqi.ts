@@ -178,6 +178,7 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   finishBadges: (view) =>
     view.status.type === 'finished'
       ? finishBadgesForResult({
+          variant: XIANGQI_SPEC_ID,
           colors: xiangqiWebTenant.colors,
           winner: view.status.winner,
           reason: view.status.reason,

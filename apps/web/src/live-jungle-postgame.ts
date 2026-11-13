@@ -144,6 +144,7 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
   const status = reviewOutcomeLine(
     gameOutcome(postgame.game.result, 'jungle'),
     postgame.game.termination,
+    JUNGLE_SPEC_ID,
   );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: JUNGLE_SPEC_ID,

@@ -34,6 +34,7 @@ export function mountDuckXiangqiWatchReplay(
     roomId,
     options,
     {
+      variant: 'duck-xiangqi',
       installStyles: () => {},
       appearanceEvent: xiangqiAppearanceChangedEvent,
       loadPostgame: loadDuckXiangqiPostgame,

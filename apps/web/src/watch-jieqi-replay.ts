@@ -85,6 +85,7 @@ export function mountJieqiWatchReplay(
     roomId,
     options,
     {
+      variant: 'jieqi',
       installStyles: installJieqiBoardStyles,
       // Piece-set / board-theme changes repaint the board in place (the homepage
       // TV sits frozen on one ply, so nothing else would re-render it).

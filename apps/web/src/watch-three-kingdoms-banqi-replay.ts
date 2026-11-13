@@ -34,6 +34,7 @@ export function mountThreeKingdomsBanqiWatchReplay(
     ThreeKingdomsBanqiPlayerView,
     'truth'
   >(root, roomId, options, {
+    variant: 'three-kingdoms-banqi',
     installStyles: installBanqiBoardStyles,
     appearanceEvent: xiangqiAppearanceChangedEvent,
     loadPostgame: loadThreeKingdomsBanqiPostgame,
