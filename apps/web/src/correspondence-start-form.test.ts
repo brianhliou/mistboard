@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildStartForm } from './correspondence.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedAdmin } from './signed-in-state.js';
@@ -19,6 +19,11 @@ function postedBody(form: HTMLElement, fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 describe('correspondence Start a game: Casual/Rated', () => {
+  // The last pick is remembered in browser storage, so every test starts from a
+  // player who never chose.
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
     setRatedModeEnabled(false);
@@ -43,6 +48,50 @@ describe('correspondence Start a game: Casual/Rated', () => {
     const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetchMock);
     expect(postedBody(panel, fetchMock).rated).toBe(true);
+  });
+
+  // Decided 2026-11-12: rated is a choice the player makes, so with rated
+  // correspondence on, a form nobody touched still posts casual.
+  it('posts casual unless the player picks Rated, with rated correspondence on', () => {
+    setRatedModeEnabled(true, true);
+    for (const gameSpecId of ['jieqi', 'xiangqi']) {
+      const panel = buildStartForm(() => {}, { gameSpecId });
+      expect(gameTypeField(panel)?.hidden).toBe(false);
+      const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+      vi.stubGlobal('fetch', fetchMock);
+      expect(postedBody(panel, fetchMock).rated).not.toBe(true);
+    }
+  });
+
+  // Decided 2026-11-12: once the player picks, the form opens on their last pick.
+  it('opens on the last pick, and a forced Casual on an unratable variant is not saved', () => {
+    setRatedModeEnabled(true, true);
+    const pick = (panel: HTMLElement, label: string) =>
+      [...(gameTypeField(panel)?.querySelectorAll('button') ?? [])]
+        .find((b) => b.textContent === label)
+        ?.click();
+    const opensOn = (panel: HTMLElement) =>
+      gameTypeField(panel)?.querySelector('button.is-on')?.textContent;
+
+    pick(
+      buildStartForm(() => {}, { gameSpecId: 'jieqi' }),
+      'Rated',
+    );
+    const again = buildStartForm(() => {}, { gameSpecId: 'jieqi' });
+    expect(opensOn(again)).toBe('Rated');
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(postedBody(again, fetchMock).rated).toBe(true);
+
+    // Gomoku cannot rate: it opens on Casual, and that does not overwrite the pick.
+    expect(opensOn(buildStartForm(() => {}, { gameSpecId: 'gomoku' }))).toBe('Casual');
+    expect(opensOn(buildStartForm(() => {}, { gameSpecId: 'xiangqi' }))).toBe('Rated');
+
+    pick(
+      buildStartForm(() => {}, { gameSpecId: 'xiangqi' }),
+      'Casual',
+    );
+    expect(opensOn(buildStartForm(() => {}, { gameSpecId: 'jieqi' }))).toBe('Casual');
   });
 
   it('offers Gomoku with Black/White sides and keeps it casual when rated correspondence is on', () => {
@@ -146,3 +195,18 @@ describe('correspondence Start a game: restricted banqi', () => {
     }
   });
 });
+
+// The test DOM has no browser storage; give each test an empty one.
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
+}

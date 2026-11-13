@@ -47,6 +47,11 @@ import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import {
+  type CorrespondenceGameType,
+  rememberCorrespondenceGameType,
+  storedCorrespondenceGameType,
+} from './correspondence-game-type.js';
+import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
   correspondenceInProgress,
@@ -812,14 +817,21 @@ export function buildStartForm(
 
   // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
   // never a live one. Offered only where correspondenceRatedAvailable says so; anywhere
-  // else Rated is shown disabled and the seek posts casual.
-  const rated = buildSegmented<'casual' | 'rated'>(
+  // else Rated is shown disabled and the seek posts casual. It opens on the player's
+  // last pick, Casual until they make one (correspondence-game-type.ts).
+  let wantedGameType: CorrespondenceGameType =
+    prefill?.rated === true ? 'rated' : storedCorrespondenceGameType();
+  const rated = buildSegmented<CorrespondenceGameType>(
     t('setup.gameType'),
     [
       { value: 'casual', label: t('play.casual') },
       { value: 'rated', label: t('play.rated') },
     ],
-    prefill?.rated === true ? 'rated' : 'casual',
+    wantedGameType,
+    (value) => {
+      wantedGameType = value;
+      rememberCorrespondenceGameType(value);
+    },
   );
   const syncRated = (): void => {
     // The whole control is absent while rated correspondence is held (flag off).
@@ -829,7 +841,7 @@ export function buildStartForm(
       !isLikelyStatsExcluded() &&
       correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled());
     rated.setDisabled('rated', !available);
-    if (!available) rated.select('casual');
+    rated.select(available ? wantedGameType : 'casual');
   };
   syncRated();
   onRatedModeChange(syncRated);
