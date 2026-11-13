@@ -719,6 +719,15 @@
     min-height: var(--pp-row-height);
   }
 
+  /* A name with its "N playing" line needs 40.5px (two line boxes at 1.5),
+     more than the 39px inside a 40px row's bottom border, so those rows stood
+     1.5px taller than the rest. The excess is line spacing, never glyph
+     (#543 keeps the line boxes), so the name overhangs the row edge by it
+     instead of growing the row. */
+  .landing-demo .pp-view-computer .pp-row-bot > .pp-name {
+    margin-block: -1px;
+  }
+
   .landing-demo .pp-feature {
     padding-block: 4px;
   }
