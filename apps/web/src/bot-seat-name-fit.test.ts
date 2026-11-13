@@ -28,6 +28,8 @@ import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 //   1440 x 900     >=106.94px (250px card min)  139.66px     197.19px
 // The live grid can shrink to a 250px card between column breakpoints. Its
 // 106.94px at 13.6px is tighter than the phone's finished row at 12.48px.
+// Since 2026-11-12 a /games live name wraps onto a second line rather than
+// cut, so the guard now binds the finished and meta rows; the budget stays.
 // Guard the measured minimum, rounded DOWN. Proportional glyphs mean there is
 // no honest universal character limit: e.g. 12 W's overflow, 12 i's fit.
 const NAME_BUDGET_PX = 106;

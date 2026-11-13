@@ -66,10 +66,11 @@ export type CurrentGamesResponse = {
 
 // ---- Seat names -------------------------------------------------------------
 
-// A card's seat line has room for about 130px beside the BOT tag and the clock,
+// A Just finished card's seat line has room for about 130px beside the BOT tag,
 // and "Fairy-Stockfish Level 8" needs 147, so its level was cut to an ellipsis
-// (2026-10-21). On the cards only, the engine goes by its usual short name; the
-// full name stays in the tooltip, and bot and game pages keep it.
+// (2026-10-21). On those cards only, the engine goes by its usual short name;
+// the full name stays in the tooltip. Playing now cards wrap the full name onto
+// a second line instead (decided 2026-11-12), and bot and game pages keep it.
 export function cardSeatName(name: string): string {
   return name.replace(/^Fairy-Stockfish(?= Level \d+$)/, 'FSF');
 }
