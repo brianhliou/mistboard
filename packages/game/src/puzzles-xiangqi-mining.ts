@@ -11,8 +11,8 @@
 //   - Blunder detection over a per-position eval walk: position i's best eval
 //     is mover-POV, so the value of the move actually played from position i
 //     is MINUS position i+1's best eval (i+1's mover is the other side).
-//   - The uniqueness rule for the verify pass (best must win AND clear the
-//     second line by a gap, or be the only mate).
+//   - The shared separation rule for mating and non-mating best moves, plus
+//     explicit coverage of alternatives to immediate mates.
 //   - PV -> solution-line building: kernel-replay for legality, truncation to
 //     an odd length (lines end on the solver's move), mate/terminal handling.
 //   - Deterministic theme tagging + title, and final puzzle assembly, which is
@@ -26,7 +26,11 @@ import {
   type XiangqiPuzzleTheme,
 } from './puzzles-xiangqi.js';
 import { xiangqiSourceAttribution } from './puzzles-xiangqi-attribution.js';
-import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
+import {
+  XIANGQI_PUZZLE_ENDPOINT_VERSION,
+  xiangqiPuzzleSolutionEndpoint,
+} from './puzzles-xiangqi-endpoint.js';
+import { XIANGQI_MATE_GOAL_PROFILE } from './puzzles-xiangqi-mate.js';
 import {
   positionRepetitionKey,
   type XiangqiColor,
@@ -35,6 +39,7 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  getStandardXiangqiLegalMoves,
   isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
@@ -126,133 +131,199 @@ export type XiangqiVerifyLine = {
   mate: number | null;
 };
 
-export type XiangqiUniquenessOptions = {
-  winCp: number;
-  uniqueGapCp: number;
-};
-
-/** MultiPV(2) verify rule: the best line must still be winning AND uniquely
- *  best — either it is the only legal move (no second line), it mates while
- *  the second line does not, or it clears the second line by uniqueGapCp. */
-export function isXiangqiUniquelyWinning(
-  lines: readonly XiangqiVerifyLine[],
-  opts: XiangqiUniquenessOptions,
-): boolean {
-  const best = lines[0];
-  if (!best) return false;
-  if (best.scoreCp < opts.winCp) return false;
-  const second = lines[1];
-  if (!second) return true; // only move
-  const bestMates = best.mate !== null && best.mate > 0;
-  const secondMates = second.mate !== null && second.mate > 0;
-  if (bestMates && !secondMates) return true;
-  return best.scoreCp - second.scoreCp >= opts.uniqueGapCp;
-}
-
-// ── Winning-floor uniqueness (per-ply gate for the gated re-mine) ────────────
-//
-// A relative cp gap is the wrong test for a puzzle move: two moves 50cp apart
-// are both good, so forcing one is unfair. What makes a solver move THE answer
-// is that every alternative is actually wrong — it loses the win, or it wins a
-// whole piece less. This gate encodes that: best must keep a clear win, and the
-// runner-up must either drop out of "winning" or trail by a decisive material
-// margin. Mates bypass cp/win% (both saturate): unique only when nothing else mates.
-//
-// win% is a logistic map of cp; K is the eval scale (matches the audit tool's
-// mapping, so the miner and the audit agree on "unique"). The knobs are win%
-// thresholds plus one cp material margin.
-//
-// The 400 was set on the old net's cp scale. The engine now reads the CC0 net,
-// whose cp sit on a different scale, so K is re-derived after the K refit in
-// #986; the value stays until then so the miner and the audit keep agreeing.
-
-const XIANGQI_WINRATE_K = 400;
-
-/** Logistic cp -> win probability for the side to move. */
-export function xiangqiWinRate(cp: number): number {
-  return 1 / (1 + 10 ** (-cp / XIANGQI_WINRATE_K));
-}
+/** Frozen CC0 score scale, matching analysis @6's paired-scale fit. This is a
+ * reproducible score transform, not an independently fitted human win model. */
+export const XIANGQI_SOLVER_SCORE_PROFILE = {
+  id: 'pikafish-cc0-analysis-scale-v1',
+  networkSha256: 'c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11',
+  winRateK: 0.00465696,
+} as const;
 
 export type XiangqiSolverUniquenessOptions = {
-  /** Best line must reach at least this win probability to be a puzzle move. */
   winHi: number;
-  /** A runner-up at or below this win probability has lost the win (=> wrong). */
-  winLo: number;
-  /** Hard stability floor: reject any non-mate runner-up closer than this even
-   *  when it happens to straddle the winLo boundary in one engine process. */
-  minGapCp: number;
+  /** Required best-versus-alternative separation on a [0,1] scale. */
+  minWinRateGap: number;
+  /** Mate-in-one admission still checks the strongest non-immediate answer. */
+  mateInOneMaxWinRate: number;
+  winRateK: number;
 };
+
+export const XIANGQI_SOLVER_GATE_DEFAULTS: XiangqiSolverUniquenessOptions = {
+  winHi: 0.8,
+  minWinRateGap: 0.35,
+  mateInOneMaxWinRate: 0.8,
+  winRateK: XIANGQI_SOLVER_SCORE_PROFILE.winRateK,
+};
+
+export const XIANGQI_SOLVER_GATE_VERSION = 'cc0-winning-chance-separation-v3';
+
+export const XIANGQI_PUZZLE_ROOT_CHOICE_VERSION = 'root-choice-v1';
+export const XIANGQI_PUZZLE_MINIMUM_ROOT_MOVES = 2;
+
+/** Forced follow-ups may belong to a tactic; its initial move needs a choice. */
+export function xiangqiPuzzleHasStartingChoice(state: XiangqiGameState): boolean {
+  return (
+    state.status.type === 'playing' &&
+    getStandardXiangqiLegalMoves(state).length >= XIANGQI_PUZZLE_MINIMUM_ROOT_MOVES
+  );
+}
+
+export const XIANGQI_PUZZLE_ADMISSION_PROFILE = {
+  mateGoalVersion: XIANGQI_MATE_GOAL_PROFILE.version,
+  solverGateVersion: XIANGQI_SOLVER_GATE_VERSION,
+  scoreProfileId: XIANGQI_SOLVER_SCORE_PROFILE.id,
+  endpointVersion: XIANGQI_PUZZLE_ENDPOINT_VERSION,
+  rootChoiceVersion: XIANGQI_PUZZLE_ROOT_CHOICE_VERSION,
+  minimumRootLegalMoves: XIANGQI_PUZZLE_MINIMUM_ROOT_MOVES,
+  ...XIANGQI_SOLVER_GATE_DEFAULTS,
+} as const;
+
+export function assertXiangqiPuzzleAdmissionProfile(profile: Record<string, unknown>): void {
+  for (const [name, expected] of Object.entries(XIANGQI_PUZZLE_ADMISSION_PROFILE)) {
+    if (profile[name] !== expected)
+      throw new Error(`Xiangqi puzzle admission profile mismatch: ${name}`);
+  }
+}
+
+export function assertXiangqiSolverGateVersion(version: unknown): void {
+  if (version !== XIANGQI_SOLVER_GATE_VERSION) {
+    throw new Error(`Xiangqi puzzle evidence requires solver gate ${XIANGQI_SOLVER_GATE_VERSION}`);
+  }
+}
+
+/** Score-based winning chance on the producing network's scale. */
+export function xiangqiWinRate(
+  cp: number,
+  k: number = XIANGQI_SOLVER_SCORE_PROFILE.winRateK,
+): number {
+  return 1 / (1 + Math.exp(-k * cp));
+}
+
+export function xiangqiSolverLineWinRate(line: XiangqiVerifyLine, k: number): number {
+  return line.mate === null ? xiangqiWinRate(line.scoreCp, k) : line.mate > 0 ? 1 : 0;
+}
 
 export type XiangqiSolverUniquenessReason =
   | 'missing-best'
-  | 'only-mate'
+  | 'invalid-score'
+  | 'missing-alternative'
+  | 'immediate-mate-alternatives-unchecked'
   | 'mate-in-one'
   | 'mate-not-unique'
   | 'best-not-winning'
   | 'only-move'
   | 'runner-up-mates'
-  | 'near-tie'
-  | 'runner-up-loses-win'
-  | 'alternative-still-good';
+  | 'insufficient-separation'
+  | 'winning-chance-separation';
 
 export type XiangqiSolverUniquenessVerdict = {
   unique: boolean;
   reason: XiangqiSolverUniquenessReason;
 };
 
-/** Per-ply gate for a solver move: is the best line uniquely correct? True when
- *  best keeps a clear win AND the runner-up has lost the win. A runner-up that
- *  still wins is a second answer however much less it wins, so the position is
- *  not a puzzle (Brian, 2026-10-28: failing a solver for a move that still wins
- *  is unfair; the old "material gap" exception admitted 85 of 335 hard lines
- *  with a +594 runner-up beside a +870 best). Mates: unique iff no other move mates at all,
- *  whatever its length, except that a mate-in-one ply is always unique. This
- *  is the lichess rule (adopted 2026-09-11): the grader accepts a stored line
- *  plus any move that mates on the spot, nothing else, so a position with a
- *  second, slower mate is a trap and not a puzzle, while a second mate-in-one
- *  is simply another accepted answer. Before this
- *  the branch admitted "strictly fastest of two mates", which put 237 puzzles
- *  with a known second answer on the site. MultiPV 2 is sufficient: if the
- *  runner-up does not mate, no lower line does. No runner-up => the only move
- *  => unique. */
+/** Kernel-verified immediate wins define equivalent answers accepted by the
+ * grader, and how many MultiPV ranks admission must inspect beyond them. */
+export function xiangqiSolverMoveCoverage(state: XiangqiGameState): {
+  legalMoveCount: number;
+  immediateWins: XiangqiMove[];
+  requiredMultiPv: number;
+} {
+  if (state.status.type !== 'playing')
+    return { legalMoveCount: 0, immediateWins: [], requiredMultiPv: 0 };
+  const solver = state.status.turn;
+  const legal = getStandardXiangqiLegalMoves(state);
+  const immediateWins = legal.filter((move) => {
+    const after = applyStandardXiangqiMove(state, move);
+    return after.status.type === 'finished' && after.status.winner === solver;
+  });
+  return {
+    legalMoveCount: legal.length,
+    immediateWins,
+    requiredMultiPv: Math.min(legal.length, Math.max(2, immediateWins.length + 1)),
+  };
+}
+
+export type XiangqiSolverAlternativeCoverage = {
+  /** Complete ranked lines from one search; enough ranks to pass all mate-in-ones. */
+  lines: readonly XiangqiVerifyLine[];
+  legalMoveCount: number;
+};
+
+/** One admission rule for mating and non-mating best moves. A mate is certainty
+ * in the score comparison, not a bypass around a winning alternative.
+ *
+ * The grader's immediate-mate exception is separate from mining admission.
+ * When multiple moves mate immediately, inspect the strongest remaining move;
+ * a truncated MultiPV list cannot certify its absence. Only when all legal
+ * moves were covered can a list containing nothing but immediate mates pass.
+ */
 export function classifyXiangqiSolverMoveUniqueness(
   best: XiangqiVerifyLine | undefined,
   second: XiangqiVerifyLine | undefined,
   opts: XiangqiSolverUniquenessOptions,
+  coverage?: XiangqiSolverAlternativeCoverage,
 ): XiangqiSolverUniquenessVerdict {
+  if (
+    !Number.isFinite(opts.winRateK) ||
+    opts.winRateK <= 0 ||
+    !Number.isFinite(opts.winHi) ||
+    opts.winHi <= 0.5 ||
+    opts.winHi > 1 ||
+    !Number.isFinite(opts.minWinRateGap) ||
+    opts.minWinRateGap <= 0 ||
+    opts.minWinRateGap >= 1 ||
+    !Number.isFinite(opts.mateInOneMaxWinRate) ||
+    opts.mateInOneMaxWinRate < 0.5 ||
+    opts.mateInOneMaxWinRate >= 1
+  )
+    throw new Error('Invalid xiangqi solver separation options');
   if (!best) return { unique: false, reason: 'missing-best' };
-  const bestMates = best.mate !== null && best.mate > 0;
-  if (bestMates) {
-    // The grader accepts any move that mates on the spot, so a mate-in-one ply
-    // is unique whatever else mates: every alternative the solver could pick is
-    // either accepted (mates now) or genuinely worse (mates later).
-    if (best.mate === 1) return { unique: true, reason: 'mate-in-one' };
-    if (!second) return { unique: true, reason: 'only-mate' };
-    const secondMate = second.mate;
-    if (secondMate === null || secondMate <= 0) return { unique: true, reason: 'only-mate' };
-    return { unique: false, reason: 'mate-not-unique' };
+  const valid = (line: XiangqiVerifyLine) =>
+    Number.isFinite(line.scoreCp) && (line.mate === null || Number.isInteger(line.mate));
+  if (!valid(best) || (second && !valid(second))) return { unique: false, reason: 'invalid-score' };
+  const bestRate = xiangqiSolverLineWinRate(best, opts.winRateK);
+  if (bestRate < opts.winHi) return { unique: false, reason: 'best-not-winning' };
+  if (!second) {
+    if (coverage && coverage.legalMoveCount > 1)
+      return { unique: false, reason: 'missing-alternative' };
+    return { unique: true, reason: best.mate === 1 ? 'mate-in-one' : 'only-move' };
   }
-  if (xiangqiWinRate(best.scoreCp) < opts.winHi) {
-    return { unique: false, reason: 'best-not-winning' };
+  if (best.mate === 1) {
+    let alternative: XiangqiVerifyLine | undefined = second;
+    if (second.mate === 1) {
+      if (!coverage) return { unique: false, reason: 'immediate-mate-alternatives-unchecked' };
+      alternative = coverage.lines.find((line) => line.mate !== 1);
+      if (!alternative) {
+        return coverage.lines.length >= coverage.legalMoveCount
+          ? { unique: true, reason: 'mate-in-one' }
+          : { unique: false, reason: 'immediate-mate-alternatives-unchecked' };
+      }
+    }
+    if (!valid(alternative)) return { unique: false, reason: 'invalid-score' };
+    if (alternative.mate !== null && alternative.mate > 0)
+      return { unique: false, reason: 'mate-not-unique' };
+    return xiangqiSolverLineWinRate(alternative, opts.winRateK) <= opts.mateInOneMaxWinRate
+      ? { unique: true, reason: 'mate-in-one' }
+      : { unique: false, reason: 'insufficient-separation' };
   }
-  if (!second) return { unique: true, reason: 'only-move' };
   if (second.mate !== null && second.mate > 0) {
-    return { unique: false, reason: 'runner-up-mates' };
+    return {
+      unique: false,
+      reason: best.mate !== null && best.mate > 0 ? 'mate-not-unique' : 'runner-up-mates',
+    };
   }
-  const gapCp = best.scoreCp - second.scoreCp;
-  if (gapCp < opts.minGapCp) return { unique: false, reason: 'near-tie' };
-  if (xiangqiWinRate(second.scoreCp) <= opts.winLo) {
-    return { unique: true, reason: 'runner-up-loses-win' };
-  }
-  return { unique: false, reason: 'alternative-still-good' };
+  return bestRate - xiangqiSolverLineWinRate(second, opts.winRateK) > opts.minWinRateGap
+    ? { unique: true, reason: 'winning-chance-separation' }
+    : { unique: false, reason: 'insufficient-separation' };
 }
 
 export function isXiangqiSolverMoveUnique(
   best: XiangqiVerifyLine | undefined,
   second: XiangqiVerifyLine | undefined,
   opts: XiangqiSolverUniquenessOptions,
+  coverage?: XiangqiSolverAlternativeCoverage,
 ): boolean {
-  return classifyXiangqiSolverMoveUniqueness(best, second, opts).unique;
+  return classifyXiangqiSolverMoveUniqueness(best, second, opts, coverage).unique;
 }
 
 // ── Puzzle initial state ─────────────────────────────────────────────────────
@@ -431,9 +502,11 @@ export type XiangqiMineCandidateInput = {
 export type XiangqiMineReject =
   | XiangqiSolutionBuildReject
   | 'not-playing'
+  | 'no-choice-at-root'
   | 'validation-failed'
   | 'loud-key'
   | 'too-short-after-trim'
+  | 'no-tactical-endpoint'
   | 'missing-attribution';
 
 /** Assembly knobs on top of the solution-length window (#712, harder puzzles). */
@@ -442,9 +515,8 @@ export type XiangqiMineAssembleOptions = Omit<XiangqiSolutionBuildOptions, 'mate
    *  gives check (isXiangqiQuietKeyMove). A capture or a check announces
    *  itself; a quiet key is the move a player has to find. */
   quietKey?: boolean;
-  /** Apply minSolutionPlies again after a winning-advantage line is trimmed to
-   *  its last capture. Without it the trim can cut a 5-ply line back to a bare
-   *  1-ply capture under any floor. */
+  /** Retained for older callers. The configured minimum always applies after
+   * trimming; this flag can no longer bypass it. */
   floorAfterTrim?: boolean;
 };
 
@@ -473,6 +545,8 @@ export function assembleMinedXiangqiPuzzle(
   if (input.postBlunderState.status.type !== 'playing') {
     return { ok: false, reason: 'not-playing' };
   }
+  if (!xiangqiPuzzleHasStartingChoice(input.postBlunderState))
+    return { ok: false, reason: 'no-choice-at-root' };
   const credit = xiangqiSourceAttribution({
     sourceSlug: input.sourceMeta?.sourceSlug,
     sourceUrl: input.sourceMeta?.sourceUrl,
@@ -498,16 +572,15 @@ export function assembleMinedXiangqiPuzzle(
     ? { type: 'checkmate', winner: solver }
     : { type: 'winning-advantage', winner: solver, centipawns: input.verifyScore.scoreCp };
   // A winning-advantage line ends on its payoff: trim the quiet PV tail back to
-  // the solver's last capture. This can leave a bare 1-ply capture ("win the
-  // hanging piece"), kept as a legitimate easy puzzle unless floorAfterTrim
-  // asks for the floor to hold after the trim too (#712 harder mining).
-  const solution =
-    goal.type === 'winning-advantage'
-      ? trimXiangqiWinningAdvantageMoves(initial, built.moves)
-      : built.moves;
-  if (opts.floorAfterTrim && solution.length < opts.minSolutionPlies) {
-    return { ok: false, reason: 'too-short-after-trim' };
-  }
+  // the solver's last capture. Re-apply the requested minimum afterward: a
+  // long quiet PV must not turn a 5-ply candidate into a 1-ply published line.
+  const endpoint = xiangqiPuzzleSolutionEndpoint(initial, built.moves, goal, opts.minSolutionPlies);
+  if (!endpoint.ok)
+    return {
+      ok: false,
+      reason: endpoint.reason === 'too-short' ? 'too-short-after-trim' : 'no-tactical-endpoint',
+    };
+  const solution = endpoint.moves;
   const puzzle: XiangqiPuzzle = {
     id,
     variant: XIANGQI_SPEC_ID,

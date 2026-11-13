@@ -3,6 +3,7 @@
 // check without touching the database.
 
 import { parseArgs } from 'node:util';
+import { XIANGQI_PUZZLE_ADMISSION_PROFILE, XIANGQI_SOLVER_SCORE_PROFILE } from '@mistboard/game';
 import {
   probePikafishUciIdentity,
   readPinnedArtifact,
@@ -35,7 +36,7 @@ const { values } = parseArgs({
     net: { type: 'string' },
     'net-sha256': { type: 'string' },
     'engine-id': { type: 'string' },
-    'profile-version': { type: 'string', default: 'elephantchess-pilot-2026-07-v1' },
+    'profile-version': { type: 'string', default: 'xiangqi-cc0-separation-2026-11-v3' },
     'shard-size': { type: 'string', default: '25' },
     'scan-nodes': { type: 'string', default: '60000' },
     'verify-nodes': { type: 'string', default: '600000' },
@@ -72,6 +73,9 @@ const net = await readPinnedArtifact({
   expectedSha256: required(values['net-sha256'], '--net-sha256'),
   label: 'Pikafish network',
 });
+if (net.sha256 !== XIANGQI_SOLVER_SCORE_PROFILE.networkSha256) {
+  throw new Error('Mining score profile requires the pinned CC0 network');
+}
 const expectedEngineId = required(values['engine-id'], '--engine-id');
 const identity = await probePikafishUciIdentity(binary.path);
 if (identity.name !== expectedEngineId) {
@@ -90,17 +94,18 @@ const engineProfile = {
   identity,
   binary: { name: binary.name, sha256: binary.sha256 },
   network: { name: net.name, sha256: net.sha256 },
-  options: { threads: 1, hashMb: 16, multiPv: 2 },
+  options: { threads: 1, hashMb: 16, minimumMultiPv: 2, expandPastImmediateWins: true },
 };
 const scanProfile = {
   profileVersion,
+  ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
   scanNodes,
   verifyNodes,
   verifyDepth,
-  swingCp: 250,
-  winCp: 250,
-  decidedCp: 800,
-  initialUniqueGapCp: 150,
+  swingCp: 199,
+  winCp: 199,
+  decidedCp: 635,
+  initialUniqueGapCp: 119,
   minPly: 8,
   solutionPlies: { min: 3, max: 7 },
   perGame: 3,
@@ -108,11 +113,9 @@ const scanProfile = {
 };
 const auditProfile = {
   profileVersion,
+  ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
   depth: auditDepth,
   multiPv: 2,
-  winHi: 0.8,
-  winLo: 0.6,
-  minGapCp: 200,
   clearHashBeforeStandaloneSearch: true,
 };
 

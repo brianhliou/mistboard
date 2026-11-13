@@ -11,6 +11,7 @@ import { close, getPool, init } from '../../apps/server/src/persistence-db.ts';
 import { getXiangqiPuzzleMiningRun } from '../../apps/server/src/persistence-xiangqi-puzzle-mining.ts';
 import { processNextXiangqiPuzzleAuditCandidate } from '../../apps/server/src/xiangqi-puzzle-audit-worker.ts';
 import {
+  assertXiangqiPuzzleAdmissionProfile,
   validateStandardXiangqiPuzzle,
   type XiangqiPuzzle,
 } from '../../packages/game/src/index.ts';
@@ -117,6 +118,7 @@ try {
     );
   }
   const auditProfile = record(run.auditProfile, 'auditProfile');
+  assertXiangqiPuzzleAdmissionProfile(auditProfile);
   const profileVersion = text(auditProfile.profileVersion, 'auditProfile.profileVersion');
   if (profileVersion !== text(engineProfile.profileVersion, 'engineProfile.profileVersion')) {
     throw new Error('engine and audit profile versions do not match');
@@ -125,8 +127,12 @@ try {
     depth: number(auditProfile.depth, 'auditProfile.depth'),
     nodes: null,
     winHi: number(auditProfile.winHi, 'auditProfile.winHi'),
-    winLo: number(auditProfile.winLo, 'auditProfile.winLo'),
-    minGapCp: number(auditProfile.minGapCp, 'auditProfile.minGapCp'),
+    winRateK: number(auditProfile.winRateK, 'auditProfile.winRateK'),
+    minWinRateGap: number(auditProfile.minWinRateGap, 'auditProfile.minWinRateGap'),
+    mateInOneMaxWinRate: number(
+      auditProfile.mateInOneMaxWinRate,
+      'auditProfile.mateInOneMaxWinRate',
+    ),
     limit: 0,
     ids: null,
     out: null,

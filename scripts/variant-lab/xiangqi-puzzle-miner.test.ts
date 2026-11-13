@@ -1,175 +1,129 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import test from 'node:test';
-import { promisify } from 'node:util';
 import {
-  validateStandardXiangqiPuzzle,
-  type XiangqiPuzzle,
-} from '../../packages/game/src/index.ts';
-import { dhtmlxqMeta, loadJsonGames } from './xiangqi-puzzle-miner.ts';
+  assembleMinedXiangqiPuzzle,
+  XIANGQI_SOLVER_GATE_DEFAULTS,
+} from '../../packages/game/src/puzzles-xiangqi-mining.ts';
+import type { XiangqiGameState } from '../../packages/game/src/variants-xiangqi.ts';
+import { parseXiangqiScoredLines } from './xiangqi-pikafish-uci.ts';
+import {
+  buildGatedLine,
+  dhtmlxqMeta,
+  loadJsonGames,
+  mineXiangqiPuzzleGame,
+  type XiangqiPuzzleMinerMetrics,
+  type XiangqiPuzzleMinerOptions,
+} from './xiangqi-puzzle-miner.ts';
 
-const execFileAsync = promisify(execFile);
-const miner = resolve(import.meta.dirname, 'xiangqi-puzzle-miner.ts');
-
-// A legal opening leaves Red a cannon capture on e7. The canned UCI searches
-// isolate verification outcomes without requiring Pikafish, a net or a DB.
-async function mineFixture(mode: 'short' | 'near-tie' | 'illegal' | 'unfinished-mate' | 'long') {
-  const dir = mkdtempSync(join(tmpdir(), 'xq-miner-short-'));
-  const games = join(dir, 'games');
-  mkdirSync(games);
-  writeFileSync(join(games, 'fixture.txt'), 'h3e3 h10g8');
-  const binary = join(dir, 'engine.mjs');
-  writeFileSync(
-    binary,
-    `#!${process.execPath}
-import { createInterface } from 'node:readline';
-const mode = ${JSON.stringify(mode)};
-let position = '';
-let multipv = 1;
-let solverSearches = 0;
-for await (const command of createInterface({ input: process.stdin })) {
-  if (command === 'uci') console.log('uciok');
-  else if (command === 'isready') console.log('readyok');
-  else if (command.startsWith('setoption name MultiPV')) multipv = Number(command.split(' ').at(-1));
-  else if (command.startsWith('position ')) position = command;
-  else if (command.startsWith('go ')) {
-    let score = 'cp 0';
-    let second = 'cp 40';
-    let move = 'e2e6';
-    if (position.startsWith('position startpos')) {
-      // Only the second recorded move is a blunder: scans [0, 0, 600].
-      if (position === 'position startpos moves h2e2 h9g7') score = 'cp 600';
-    } else if (multipv === 1) {
-      score = 'cp -600';
-      move = 'b9c7';
-    } else {
-      solverSearches += 1;
-      score = mode === 'unfinished-mate' ? 'mate 2' : 'cp 600';
-      if (mode === 'near-tie' || (solverSearches > 1 && mode !== 'long')) second = 'cp 550';
-      if (mode === 'illegal') move = 'e2f3';
-      else if (solverSearches > 1) move = 'h0g2';
-    }
-    console.log('info depth 20 multipv 1 score ' + score + ' pv ' + move);
-    if (multipv === 2) console.log('info depth 20 multipv 2 score ' + second + ' pv b2e2');
-    console.log('bestmove ' + move);
-  } else if (command === 'quit') break;
-}
-`,
-  );
-  chmodSync(binary, 0o755);
-  const jsonl = join(dir, 'mine.jsonl');
-  const seed = join(dir, 'seed.json');
-  const { stdout } = await execFileAsync(
-    process.execPath,
-    [
-      '--import',
-      'tsx',
-      miner,
-      '--source',
-      'dir',
-      '--dir',
-      games,
-      '--binary',
-      binary,
-      '--net',
-      join(dir, 'unused.nnue'),
-      '--concurrency',
-      '1',
-      '--ply-min',
-      '0',
-      '--min-ply',
-      '0',
-      '--max-solution-plies',
-      '3',
-      '--jsonl',
-      jsonl,
-      '--emit-seed',
-      '--seed-path',
-      seed,
-    ],
-    { timeout: 30_000 },
-  );
+const initial: XiangqiGameState = {
+  id: 'miner-endpoint',
+  moveNumber: 1,
+  progressClock: 0,
+  positionCounts: {},
+  status: { type: 'playing', turn: 'red' },
+  board: {
+    d1: { color: 'red', role: 'general' },
+    a1: { color: 'red', role: 'chariot' },
+    e10: { color: 'black', role: 'general' },
+    a5: { color: 'black', role: 'horse' },
+    a8: { color: 'black', role: 'cannon' },
+  },
+};
+const options = (maxSolutionPlies = 3) =>
+  ({
+    ...XIANGQI_SOLVER_GATE_DEFAULTS,
+    verifyNodes: 25_000_000,
+    verifyDepth: 0,
+    maxSolutionPlies,
+    quietKey: false,
+  }) as XiangqiPuzzleMinerOptions;
+function fake(mode: 'normal' | 'near-tie' | 'illegal' | 'unfinished-mate' | 'ambiguous-followup') {
+  let calls = 0;
   return {
-    sidecar: readFileSync(jsonl, 'utf8')
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => JSON.parse(line)),
-    seed: JSON.parse(readFileSync(seed, 'utf8')) as { puzzles: XiangqiPuzzle[] },
-    metrics: JSON.parse(stdout.trim().split('\n').at(-1)!) as {
-      games: { scanned: number; failed: number };
-      candidates: number;
-      verified: number;
-      verifiedShort: number;
-      rejects: Record<string, number>;
+    newGame: async () => {},
+    analyzeFen: async (_fen: string, _limits: unknown, ranks: number) => {
+      if (ranks === 1)
+        return parseXiangqiScoredLines(['info depth 30 multipv 1 score cp -600 pv e9e8'], 1);
+      const ply = Math.floor(calls++ / 2) * 2;
+      const best = mode === 'unfinished-mate' ? 'mate 2' : 'cp 600';
+      const second = mode === 'near-tie' || (mode === 'ambiguous-followup' && ply > 0) ? 550 : -400;
+      const token = mode === 'illegal' ? 'a0b1' : ply === 0 ? 'a0a4' : 'a4a7';
+      return parseXiangqiScoredLines(
+        [
+          `info depth 30 multipv 1 score ${best} pv ${token}`,
+          `info depth 30 multipv 2 score cp ${second} pv ${ply === 0 ? 'a0b0' : 'a4b4'}`,
+          `info depth 30 multipv 3 score cp -500 pv ${ply === 0 ? 'a0a1' : 'a4a5'}`,
+        ],
+        3,
+      );
     },
   };
 }
-
-test('offline output retains a verified one-ply line without publishing it', async () => {
-  const { sidecar, seed, metrics } = await mineFixture('short');
-  assert.deepEqual(metrics.games, {
-    requested: 50,
-    loaded: 1,
-    scanned: 1,
-    failed: 0,
-    illegalReplayTruncated: 0,
-  });
-  assert.equal(metrics.candidates, 1);
-  assert.equal(sidecar.length, 1, 'a verified short candidate must survive in offline output');
-  const record = sidecar[0];
-  assert.equal(record.disposition, 'verified-short');
-  assert.equal(record.minSolutionPlies, 3);
-  assert.equal(record.solutionPlyCount, 1);
-  assert.deepEqual(record.solution, ['e3-e7']);
-  assert.equal(record.gameId, 'fixture');
-  assert.equal(record.ply, 2);
-  assert.equal(record.swingCp, 600);
-  assert.equal(record.verifyBestCp, 600);
-  assert.equal(record.verifySecondCp, 40);
-  assert.deepEqual(record.puzzle.solution, [{ from: 'e3', to: 'e7' }]);
-  assert.deepEqual(record.puzzle.sourceGame, { gameId: 'fixture', ply: 2 });
-  assert.equal(validateStandardXiangqiPuzzle(record.puzzle).ok, true);
-  assert.equal(metrics.verifiedShort, 1);
-  assert.equal(metrics.verified, 0);
-  assert.deepEqual(metrics.rejects, { 'too-short': 1 });
-  assert.deepEqual(seed.puzzles, [], 'retained candidates must not enter the serving seed');
-});
-
-for (const mode of ['near-tie', 'illegal', 'unfinished-mate'] as const) {
-  test(`offline output does not retain a ${mode} line as a verified short candidate`, async () => {
-    const { sidecar, seed, metrics } = await mineFixture(mode);
-    assert.equal(metrics.games.scanned, 1);
-    assert.equal(metrics.games.failed, 0);
-    assert.equal(metrics.candidates, 1);
-    assert.equal(metrics.verified, 0);
-    assert.equal(metrics.verifiedShort, 0);
-    assert.deepEqual(sidecar, []);
-    assert.deepEqual(seed.puzzles, []);
-    assert.deepEqual(metrics.rejects, {
-      [mode === 'near-tie' ? 'near-tie' : mode === 'illegal' ? 'pv-illegal' : 'mate-not-reached']:
-        1,
-    });
-  });
+function assemble(
+  built: Extract<Awaited<ReturnType<typeof buildGatedLine>>, { ok: true }>,
+  minSolutionPlies: number,
+) {
+  return assembleMinedXiangqiPuzzle(
+    {
+      gameId: 'fixture',
+      blunderPly: 1,
+      postBlunderState: initial,
+      pv: built.pv,
+      verifyScore: built.verifyScore,
+      swingCp: 600,
+    },
+    { maxSolutionPlies: 3, minSolutionPlies, floorAfterTrim: true },
+  );
 }
 
-test('normal candidates still publish when their verified line meets the minimum', async () => {
-  const { sidecar, seed, metrics } = await mineFixture('long');
-  assert.equal(metrics.games.failed, 0);
-  assert.equal(metrics.verified, 1);
-  assert.equal(metrics.verifiedShort, 0);
-  assert.deepEqual(metrics.rejects, {});
-  assert.equal(sidecar.length, 1);
-  assert.equal(sidecar[0].disposition, undefined);
-  assert.equal(sidecar[0].puzzle, undefined);
-  // Existing payoff trimming remains allowed to reduce an accepted 3-ply line
-  // to a one-ply capture. Only lines rejected by the minimum get retained.
-  assert.equal(seed.puzzles.length, 1);
-  assert.equal(seed.puzzles[0]?.solution.length, 1);
-  assert.equal(validateStandardXiangqiPuzzle(seed.puzzles[0]!).ok, true);
+test('a short verified key remains offline when it misses the final length floor', async () => {
+  const built = await buildGatedLine(fake('normal'), initial, options(1));
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(assemble(built, 3), { ok: false, reason: 'too-short' });
+  assert.equal(assemble(built, 1).ok, true);
+});
+
+test('a near-tie root is rejected by the shared multi-budget verifier', async () => {
+  const built = await buildGatedLine(fake('near-tie'), initial, options());
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.reason, 'near-tie');
+});
+
+test('an illegal engine continuation cannot produce a mined puzzle', async () => {
+  const built = await buildGatedLine(fake('illegal'), initial, options());
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.reason, 'illegal-engine-pv');
+});
+
+test('an engine mate score without a forced board mate is rejected before assembly', async () => {
+  const built = await buildGatedLine(fake('unfinished-mate'), initial, options(1));
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.reason, 'mate-goal-not-forced');
+});
+
+test('a complete uniquely verified material payoff remains mineable', async () => {
+  const built = await buildGatedLine(fake('normal'), initial, options());
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.equal(built.pv.length, 3);
+  const result = assemble(built, 3);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.puzzle.solution.length, 3);
+});
+
+test('an ambiguous follow-up cannot publish only its earlier preparation capture', async () => {
+  const built = await buildGatedLine(fake('ambiguous-followup'), initial, options());
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.reason, 'followup-not-unique');
 });
 
 test('DhtmlXQ metadata carries the archive page the source credit needs (#712)', () => {
@@ -213,4 +167,85 @@ test('a JSON games export loads in order, skips short games and honours offset a
     games.map((game) => [game.id, game.meta?.sourceSlug]),
     [['b', 'elephantchess-pvp']],
   );
+});
+
+test('the mining path retains verified short candidates through its offline hook only', async () => {
+  const retained: unknown[] = [];
+  const metrics = {
+    gamesRequested: 1,
+    gamesLoaded: 1,
+    gamesScanned: 0,
+    gamesFailed: 0,
+    gamesIllegalReplay: 0,
+    positionsEvaluated: 0,
+    verifyEvals: 0,
+    candidates: 0,
+    verified: 0,
+    rejects: {},
+    themes: {},
+  } as XiangqiPuzzleMinerMetrics;
+  const records = await mineXiangqiPuzzleGame(
+    {
+      newGame: async () => {},
+      analyzeMoves: async (moves) => [
+        { rank: 1, score: { cp: moves.length === 2 ? 600 : 0, mate: null }, pvUci: ['h2e2'] },
+      ],
+      analyzeFen: async () =>
+        parseXiangqiScoredLines(
+          [
+            'info depth 30 multipv 1 score cp 600 pv e2e6',
+            'info depth 30 multipv 2 score cp -300 pv h0g2',
+            'info depth 30 multipv 3 score cp -400 pv a0a1',
+          ],
+          3,
+        ),
+    },
+    {
+      id: 'fixture',
+      moves: [
+        { from: 'h3', to: 'e3' },
+        { from: 'h10', to: 'g8' },
+      ],
+    },
+    {
+      ...options(1),
+      minSolutionPlies: 3,
+      floorAfterTrim: true,
+      minPly: 0,
+      scanNodes: 100,
+      swingCp: 199,
+      winCp: 199,
+      decidedCp: 635,
+      perGame: 3,
+    },
+    metrics,
+    new Set(),
+    {
+      shortCandidateVerified: async (record) => {
+        retained.push(record);
+      },
+    },
+  );
+  assert.deepEqual(records, []);
+  assert.equal(retained.length, 1);
+  assert.equal(metrics.verified, 0);
+  assert.deepEqual(metrics.rejects, { 'too-short': 1 });
+});
+
+test('verification starts with fresh puzzle history rather than the source-game clock', async () => {
+  const engine = fake('normal');
+  const seen: string[] = [];
+  const result = await buildGatedLine(
+    {
+      newGame: engine.newGame,
+      analyzeFen: async (fen, limits, ranks) => {
+        seen.push(fen);
+        return engine.analyzeFen(fen, limits, ranks);
+      },
+    },
+    { ...initial, progressClock: 59, positionCounts: { stale: 3 } },
+    options(1),
+  );
+  assert.equal(result.ok, true);
+  assert.ok(seen.length === 2 && seen.every((fen) => fen.endsWith(' - - 0 1')));
 });
