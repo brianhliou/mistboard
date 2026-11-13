@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
 import type { Locale } from './i18n/locale.js';
+import { playSound, playTerminalPlan } from './live-sound.js';
 import type {
   TenantSocketClientOptions,
   TenantSocketFrame,
@@ -44,6 +45,11 @@ vi.mock('./board-anim.js', async (original) => ({
   ...(await original<typeof import('./board-anim.js')>()),
   pieceAnimationDurationMs: () => 0,
   pieceFlipDurationMs: () => 0,
+}));
+vi.mock('./live-sound.js', async (original) => ({
+  ...(await original<typeof import('./live-sound.js')>()),
+  playSound: vi.fn(),
+  playTerminalPlan: vi.fn(),
 }));
 
 const ROOM = 'ffqb_webtest';
@@ -99,6 +105,7 @@ function resultText(): string | null | undefined {
   return document.querySelector('[data-game-result]')?.textContent;
 }
 beforeEach(() => {
+  vi.clearAllMocks();
   socket.options = null;
   socket.sent = [];
   socket.connection = 'connected';
@@ -129,6 +136,60 @@ afterEach(() => {
 });
 
 describe('FFQ banqi live room', () => {
+  it('plays the move sound when sending a click move', async () => {
+    const view = initial();
+    view.board[0] = { color: 'red', role: 'chariot', faceDown: false };
+    view.board[1] = null;
+    view.legalMoves = [{ from: 0, to: 1 }];
+    await mount(view);
+    click(0);
+    expect(playSound).not.toHaveBeenCalled();
+    click(1);
+    expect(moves()).toEqual([{ type: 'move', from: 0, to: 1 }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('move');
+  });
+
+  it.each(['snapshot', 'event-appended'] as const)(
+    'hears the first opponent flip from %s and stays quiet on reconnect',
+    async (type) => {
+      const state = createInitialFFQBanqiState(ROOM, 7);
+      const options = await mount(getFFQBanqiPlayerView(state, 'black'), 'black');
+      const move = getFFQBanqiPlayerView(state, 'red').legalMoves.find((m) => m.from === m.to)!;
+      const next = applyFFQBanqiMove(state, move);
+      const frame = {
+        type,
+        seat: 'black',
+        state: getFFQBanqiPlayerView(next, 'black'),
+        event: { type: 'move-played', color: 'red', move, at: 1, ply: 1 },
+      };
+      expect(playSound).not.toHaveBeenCalled();
+      if (type === 'snapshot') options.applySnapshot(frame);
+      else options.applyEvent(frame);
+      expect(playSound).toHaveBeenCalledExactlyOnceWith('flip');
+      options.applySnapshot({ ...structuredClone(frame), type: 'snapshot' });
+      options.applyHello({ ...structuredClone(frame), type: 'hello' });
+      expect(playSound).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('sounds a spectator result once from a finished snapshot', async () => {
+    const view = initial();
+    const options = await mount(view, 'spectator');
+    view.status = { type: 'finished', winner: 'red', reason: 'resignation' };
+    options.applySnapshot({
+      type: 'snapshot',
+      seat: 'spectator',
+      state: view,
+    } as TenantSocketFrame);
+    options.applySnapshot({
+      type: 'snapshot',
+      seat: 'spectator',
+      state: view,
+    } as TenantSocketFrame);
+    expect(playTerminalPlan).toHaveBeenCalledExactlyOnceWith('draw', null);
+    expect(playSound).not.toHaveBeenCalled();
+  });
+
   it('draws all 32 hit targets, four open tiles, fixed seats and the HP seat panel', async () => {
     await mount();
     expect(document.querySelector('#app.live-route--banqi.live-route--ffq-banqi')).not.toBeNull();
@@ -179,6 +240,7 @@ describe('FFQ banqi live room', () => {
     const options = await mount();
     click(target);
     expect(moves()).toEqual([{ type: 'move', from: target, to: target }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('flip');
     const next = applyFFQBanqiMove(state, { from: target, to: target });
     options.applyHello({
       type: 'hello',
@@ -213,6 +275,7 @@ describe('FFQ banqi live room', () => {
     expect(moves()).toEqual([{ type: 'move', from: 0, to: 2 }]);
     click(15);
     expect(moves()).toHaveLength(1);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('capture');
   });
 
   it.each<[Locale, string]>([
@@ -419,6 +482,7 @@ describe('FFQ banqi live room', () => {
       new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 60 }),
     );
     expect(moves()).toEqual([{ type: 'move', from: 0, to: 1 }]);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('move');
     expect(document.querySelector('.banqi-selection')).toBeNull();
   });
 
@@ -438,6 +502,7 @@ describe('FFQ banqi live room', () => {
       new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 60 }),
     );
     expect(moves()).toEqual([]);
+    expect(playSound).not.toHaveBeenCalled();
     expect(document.querySelector('[data-forbidden-move]')).not.toBeNull();
     expect(document.querySelector('[data-banqi-chase-notice]')?.textContent).toContain(
       'four chases in a row',
