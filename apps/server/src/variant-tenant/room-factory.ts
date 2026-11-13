@@ -9,6 +9,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
 import * as persistence from '../persistence.js';
+import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
 import { appendTenantSeatAssigned } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
 import { mintTenantSeatToken } from './seat-session.js';
@@ -32,7 +33,7 @@ export function createAsLobbyMatch<T>(create: () => Promise<T>): Promise<T> {
   return lobbyMatchScope.run(true, create);
 }
 
-/** PvE: seat an engine in `seat` at creation (its clientId is the engine id),
+/** Seat an engine in `seat` at creation (its clientId is the engine id),
  * holding the given engine-service seat reservation for the game. Omit
  * reservationId for tenants whose engines run in-process with no seat
  * reservation system (an in-process Fairy-Stockfish). */
@@ -70,6 +71,7 @@ export type TenantLiveRoomFactoryContext<
   // Omit for tenants that don't record running games (Dark Xiangqi).
   recordGameStart?(roomId: string, summary: persistence.RunningGameSummary): Promise<void>;
   recordPersistenceError(roomId: string, seq: number, eventType: string, err: Error): void;
+  releaseEngineReservation?(reservationId: string, reason: string): void;
 };
 
 export async function createTenantLiveRoom<
@@ -87,7 +89,8 @@ export async function createTenantLiveRoom<
     creatorPreference?: C | 'random';
     engine?: TenantRoomEngineSeat<C>;
     /**
-     * PvE at a table of more than two: every seat the humans are not taking.
+     * Engines at any table: every seat the humans are not taking, or every
+     * seat for an EvE room (scheduling stays disabled in this lifecycle slice).
      *
      * `engine` seats one opponent, which is the whole story for a two-player
      * game. A mahjong room against bots needs three, so this takes a list.
@@ -107,77 +110,117 @@ export async function createTenantLiveRoom<
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
   const lobbyMatch = options.lobbyMatch ?? lobbyMatchScope.getStore() === true;
-  if (engine && engines) {
-    throw new Error('pass either engine or engines, not both');
-  }
-  const engineSeats: readonly TenantRoomEngineSeat<C>[] = engines ?? (engine ? [engine] : []);
-  const firstEngine = engineSeats[0];
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const roomId = ctx.createRoomId?.() ?? `${tenant.roomIdPrefix}${randomUUID()}`;
-    if (ctx.rooms.has(roomId) || ctx.isRoomIdTaken(roomId)) {
-      continue;
+  // Passing reservations transfers their ownership to this creation attempt.
+  // Until the room is published, every failure must return all admitted seats.
+  const admitted = [...(engines ?? []), ...(engine ? [engine] : [])];
+  let published = false;
+  try {
+    if (engine && engines) {
+      throw new Error('pass either engine or engines, not both');
     }
-    const created = createTenantRuntimeRoom(tenant, roomId, {
-      creatorPreference,
-      internalEngineTest: options.internalEngineTest,
-      pveBotId: firstEngine?.botId,
-      rated,
-      timeControl,
-      lobbyMatch: lobbyMatch && engineSeats.length === 0,
-      ...(options.sideChosen ? { sideChosen: true } : {}),
-    });
-    if (!created.ok) return created;
-    const room = created.room;
-    // PvE: seat the engine before persistence so the seat-assigned event is part
-    // of the room's initial event log (durable + replays on hydration). The human
-    // then takes the only empty seat on connect.
+    const engineSeats: readonly TenantRoomEngineSeat<C>[] = engines ?? (engine ? [engine] : []);
+    const firstEngine = engineSeats[0];
+    const seats = new Set<C>();
+    const reservations = new Set<string>();
+    const engineBotIds: Partial<Record<C, string>> = {};
     for (const seated of engineSeats) {
-      appendTenantRuntimeEvent(tenant, room, {
-        type: 'seat-assigned',
-        at: Date.now(),
-        roomId,
-        clientId: seated.engineId,
-        seat: seated.seat,
-      });
+      if (
+        !tenant.colors.includes(seated.seat) ||
+        seats.has(seated.seat) ||
+        !tenant.engine?.isEngineClientId(seated.engineId) ||
+        (seated.reservationId && reservations.has(seated.reservationId))
+      ) {
+        throw new Error('invalid or duplicate engine seat');
+      }
+      seats.add(seated.seat);
+      if (seated.reservationId) reservations.add(seated.reservationId);
+      if (seated.botId) engineBotIds[seated.seat] = seated.botId;
     }
-    // One reservation per room, which is what the engine service issues. Bots
-    // that run in-process (mahjong) hold none, and leave this null.
-    room.engineReservationId = firstEngine?.reservationId ?? null;
-    if (ctx.isPersistenceEnabled()) {
-      let writingSeq = 0;
-      let writingEventType = 'room-created';
-      try {
-        for (const [seq, event] of room.events.entries()) {
-          writingSeq = seq;
-          writingEventType = event.type;
-          await ctx.appendRoomEvent(roomId, seq, event);
+    const mode =
+      engineSeats.length === 0
+        ? 'pvp'
+        : engineSeats.length === tenant.colors.length
+          ? 'eve'
+          : 'pve';
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const roomId = ctx.createRoomId?.() ?? `${tenant.roomIdPrefix}${randomUUID()}`;
+      if (ctx.rooms.has(roomId) || ctx.isRoomIdTaken(roomId)) {
+        continue;
+      }
+      const created = createTenantRuntimeRoom(tenant, roomId, {
+        creatorPreference,
+        internalEngineTest: options.internalEngineTest,
+        pveBotId: engineSeats.length === 1 ? firstEngine?.botId : undefined,
+        engineBotIds: engineSeats.length > 1 ? engineBotIds : undefined,
+        rated: rated && mode === 'pvp',
+        timeControl,
+        lobbyMatch: lobbyMatch && engineSeats.length === 0,
+        ...(options.sideChosen ? { sideChosen: true } : {}),
+      });
+      if (!created.ok) return created;
+      const room = created.room;
+      // PvE: seat the engine before persistence so the seat-assigned event is part
+      // of the room's initial event log (durable + replays on hydration). The human
+      // then takes the only empty seat on connect.
+      for (const seated of engineSeats) {
+        appendTenantRuntimeEvent(tenant, room, {
+          type: 'seat-assigned',
+          at: Date.now(),
+          roomId,
+          clientId: seated.engineId,
+          seat: seated.seat,
+        });
+      }
+      for (const seated of engineSeats) {
+        room.engineReservationIds[seated.seat] = seated.reservationId ?? null;
+      }
+      // Compatibility for the existing PvE callers. EvE has no single seat.
+      room.engineReservationId =
+        engineSeats.length === 1 ? (firstEngine?.reservationId ?? null) : null;
+      if (ctx.isPersistenceEnabled()) {
+        let writingSeq = 0;
+        let writingEventType = 'room-created';
+        try {
+          for (const [seq, event] of room.events.entries()) {
+            writingSeq = seq;
+            writingEventType = event.type;
+            await ctx.appendRoomEvent(roomId, seq, event);
+          }
+          if (ctx.recordGameStart) {
+            writingSeq = room.events.length;
+            writingEventType = 'game-start';
+            await ctx.recordGameStart(roomId, {
+              variant: tenant.gameSpecId,
+              mode,
+              startedAt: new Date(room.events[0]?.at ?? Date.now()),
+              whiteClient: null,
+              blackClient: null,
+              whiteName: null,
+              blackName: null,
+              corpusId: null,
+              // Public from the start (lichess model): human games are no longer
+              // private. Fog live-spectate stays gated separately.
+              visibility: 'public',
+            });
+          }
+        } catch (err) {
+          ctx.recordPersistenceError(roomId, writingSeq, writingEventType, err as Error);
+          return { ok: false, error: 'persistence_failure' };
         }
-        if (ctx.recordGameStart) {
-          writingSeq = room.events.length;
-          writingEventType = 'game-start';
-          await ctx.recordGameStart(roomId, {
-            variant: tenant.gameSpecId,
-            mode: engineSeats.length > 0 ? 'pve' : 'pvp',
-            startedAt: new Date(room.events[0]?.at ?? Date.now()),
-            whiteClient: null,
-            blackClient: null,
-            whiteName: null,
-            blackName: null,
-            corpusId: null,
-            // Public from the start (lichess model): human games are no longer
-            // private. Fog live-spectate stays gated separately.
-            visibility: 'public',
-          });
-        }
-      } catch (err) {
-        ctx.recordPersistenceError(roomId, writingSeq, writingEventType, err as Error);
-        return { ok: false, error: 'persistence_failure' };
+      }
+      ctx.rooms.set(roomId, room);
+      published = true;
+      return { ok: true, room };
+    }
+    return { ok: false, error: 'room_id_collision' };
+  } finally {
+    if (!published) {
+      const release = ctx.releaseEngineReservation ?? releaseLiveEngineReservation;
+      for (const id of new Set(admitted.map((seated) => seated.reservationId))) {
+        if (id) release(id, 'room-create-failed');
       }
     }
-    ctx.rooms.set(roomId, room);
-    return { ok: true, room };
   }
-  return { ok: false, error: 'room_id_collision' };
 }
 
 /**
