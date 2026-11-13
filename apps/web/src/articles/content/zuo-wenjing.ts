@@ -318,11 +318,13 @@ export const zuoWenjingArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'vx8oxfxi/rMCwQqzg',
           spec: { ...G_WXC22W_R06, startPly: 19, perspective: 'black' },
           caption: "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.",
         },
         {
           kind: 'xq-replay',
+          study: 'vx8oxfxi/d0tvciWD',
           spec: { ...G_WXC22W_R07, startPly: 34, perspective: 'red' },
           caption: "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.",
         },
@@ -360,6 +362,7 @@ export const zuoWenjingArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'vx8oxfxi/Z532UN1g',
           spec: { ...G_M_140875, startPly: 18, perspective: 'red' },
           caption: "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.",
         },
@@ -377,6 +380,7 @@ export const zuoWenjingArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'vx8oxfxi/Ag6wUdZb',
           spec: { ...G_M_144151, startPly: 48, perspective: 'red' },
           caption: "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.",
         },
@@ -390,6 +394,7 @@ export const zuoWenjingArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'vx8oxfxi/YA0Ncgm7',
           spec: { ...G_M_144890, startPly: 10, perspective: 'red' },
           caption: "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.",
         },

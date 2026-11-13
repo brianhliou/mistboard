@@ -83,6 +83,12 @@ export type XiangqiReplayBlock = {
   /** Element id for the figure, so a page that links out of the game (a
    *  practice link's way back) can return the reader to it with #id. */
   id?: string;
+  /** `<studyId>/<chapterId>` of a public study chapter holding this same game
+   *  and its annotations: the page shows that chapter's embed (engine chart,
+   *  notes, free analysis) at the spec's `startPly`, titled with its event,
+   *  instead of the inline stepper. The spec stays as the page's own record,
+   *  which its claim tests, line evals and translations read. */
+  study?: string;
 };
 
 // Chess analogue of XiangqiReplayBlock: the game ships as a compact UCI string

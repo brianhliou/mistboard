@@ -1874,7 +1874,11 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'list') return renderListBlock(block);
   if (block.kind === 'image-row') return renderImageRowBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
-  if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
+  if (block.kind === 'xq-replay') {
+    return block.study
+      ? renderEmbedBlock(xiangqiReplayStudyEmbed(block))
+      : renderXiangqiReplayBlock(block, lang);
+  }
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'crazyhouse-xiangqi-replay')
@@ -2684,6 +2688,26 @@ function renderImageRowBlock(block: ImageRowBlock): HTMLElement {
     figure.append(cap);
   }
   return figure;
+}
+
+const STUDY_CHAPTER_REF = /^[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/;
+
+/** A game board that names its study chapter, as that chapter's embed: the
+ *  frame the rules pages use, opened on the move the stepper would have.
+ *  Exported for tests. */
+export function xiangqiReplayStudyEmbed(block: XiangqiReplayBlock): EmbedBlock {
+  const ref = block.study ?? '';
+  if (!STUDY_CHAPTER_REF.test(ref)) {
+    throw new Error(`xq-replay study must be studyId/chapterId: ${ref}`);
+  }
+  const ply = block.spec.startPly ? `?ply=${block.spec.startPly}` : '';
+  return {
+    kind: 'embed',
+    path: `/embed/study/${ref}${ply}`,
+    title: block.spec.event ?? `${block.spec.red} vs ${block.spec.black}`,
+    caption: block.caption,
+    aspect: [702, 800],
+  };
 }
 
 function renderEmbedBlock(block: EmbedBlock): HTMLElement {

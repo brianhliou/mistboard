@@ -58,6 +58,10 @@
 //                                    the caption as "Photo: <a>Site</a>"
 //   [board key=m_139844 ply=24]      const name defaults to G_<key>;
 //                                    perspective=red|black overrides `player:`;
+//                                    study=<studyId>/<chapterId> shows the game as
+//                                    that public study chapter's embed (chart,
+//                                    notes) in place of the stepper; the record
+//                                    still ships, for the tests and the caption
 //                                    the caption is generated from the record
 //                                    (players, event, date, result, length, the
 //                                    opening position); a written one refuses
@@ -200,12 +204,15 @@ for (const chunk of chunks) {
     });
   } else if (name === 'board') {
     if (!a.key) fail(`[board] needs key: ${head}`);
+    if (a.study != null && !/^[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/.test(a.study))
+      fail(`[board] study= must be studyId/chapterId: ${head}`);
     const constName = a.const ?? `G_${a.key.toUpperCase()}`;
     boards.push({ key: a.key, constName });
     target.push({
       kind: 'xq-replay',
       constName,
       key: a.key,
+      ...(a.study ? { study: a.study } : {}),
       ...(a.perspective ? { perspective: a.perspective } : {}),
       ...(a.ply != null ? { startPly: Number(a.ply) } : {}),
       ...(caption ? { caption } : {}),
@@ -467,7 +474,8 @@ function emitBlock(b, n) {
       ...(b.perspective ? [`perspective: '${b.perspective}'`] : []),
     ];
     const spec = extra.length ? `{ ...${b.constName}, ${extra.join(', ')} }` : b.constName;
-    return `${i}{\n${j}kind: 'xq-replay',\n${j}spec: ${spec},\n${b.caption ? `${j}caption: ${q(b.caption)},\n` : ''}${i}},\n`;
+    const study = b.study ? `${j}study: '${b.study}',\n` : '';
+    return `${i}{\n${j}kind: 'xq-replay',\n${study}${j}spec: ${spec},\n${b.caption ? `${j}caption: ${q(b.caption)},\n` : ''}${i}},\n`;
   }
   const body = Object.entries(b)
     .map(([k, v]) => `${j}${k}: ${k === 'kind' ? `'${v}'` : JSON.stringify(v)},\n`)
@@ -549,7 +557,8 @@ import type { Article } from '../types.js';
 // there (annotated-game-to-spec.mjs over deep annotate-game.mjs runs), with
 // reviewed positives from positives.json and line verdicts from
 // scripts/data/article-line-evals.json. Baked, not fetched: the page must not
-// depend on a study still existing.
+// depend on a study still existing; a board that names its study (study=) shows
+// that chapter's embed, and its record here stays the page's own.
 
 ${specConsts.join('\n\n')}${thumbConst}
 

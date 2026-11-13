@@ -318,6 +318,7 @@ export const tangDanArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'seWoqIwz/nK8JakzT',
           spec: { ...G_M_135577, startPly: 45, perspective: 'black' },
           caption: "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.",
         },
@@ -335,6 +336,7 @@ export const tangDanArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'seWoqIwz/3eBGxPjD',
           spec: { ...G_M_138545, startPly: 65, perspective: 'black' },
           caption: "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.",
         },
@@ -353,6 +355,7 @@ export const tangDanArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'seWoqIwz/tHFP9bCM',
           spec: { ...G_M_139685, startPly: 42, perspective: 'red' },
           caption: "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.",
         },
@@ -374,6 +377,7 @@ export const tangDanArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'seWoqIwz/eNmUVunm',
           spec: { ...G_M_145115, startPly: 26, perspective: 'red' },
           caption: "Tang Dan vs Tang Sinan, 2026 Women's Xiangqi League, 23 September 2026. Tang Dan won with red in 42 moves. The board opens after black's move 13, with Tang Dan to move.",
         },
@@ -387,6 +391,7 @@ export const tangDanArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'seWoqIwz/NiDEQxWX',
           spec: { ...G_M_144949, startPly: 47, perspective: 'black' },
           caption: "Hong Qianhui vs Tang Dan, 2026 Asian Xiangqi Individual Championship, women, 6 October 2026. Tang Dan won with black in 49 moves. The board opens after red's move 24, with Tang Dan to move.",
         },
