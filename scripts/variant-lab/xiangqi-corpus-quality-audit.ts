@@ -11,6 +11,7 @@ import {
 import {
   decideXiangqiPuzzleAudit,
   XIANGQI_PUZZLE_ENDPOINT_VERSION,
+  XIANGQI_PUZZLE_REVIEW_VERSION,
   type XiangqiPuzzleSolverJudgment,
 } from '../../packages/game/src/puzzles-xiangqi-endpoint.ts';
 import {
@@ -173,6 +174,7 @@ async function main() {
     minimumRootLegalMoves: XIANGQI_PUZZLE_MINIMUM_ROOT_MOVES,
     solverGateVersion: XIANGQI_SOLVER_GATE_VERSION,
     endpointVersion: XIANGQI_PUZZLE_ENDPOINT_VERSION,
+    reviewVersion: XIANGQI_PUZZLE_REVIEW_VERSION,
     scoreProfile: XIANGQI_SOLVER_SCORE_PROFILE,
     gateOptions: XIANGQI_SOLVER_GATE_DEFAULTS,
     budgets: XIANGQI_PUZZLE_VERIFICATION_PROFILE,

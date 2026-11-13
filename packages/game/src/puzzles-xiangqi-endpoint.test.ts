@@ -155,3 +155,26 @@ test('a concrete complete line is kept and a failed starting choice is flagged',
     'withhold-candidate',
   );
 });
+
+test('root score ambiguity is review of an advantage exercise, not proof it should be withheld', () => {
+  for (const reason of [
+    'mate-not-unique',
+    'runner-up-mates',
+    'insufficient-separation',
+    'stored-answer-mismatch',
+  ]) {
+    const before = JSON.stringify(puzzle);
+    const result = decideXiangqiPuzzleAudit(puzzle, [{ solutionPly: 0, verdict: 'fail', reason }]);
+    assert.equal(result.disposition, 'needs-review', reason);
+    assert.equal(result.reason, reason);
+    assert.equal(result.replacement, undefined);
+    assert.equal(JSON.stringify(puzzle), before);
+  }
+  const actualMate = { ...puzzle, goal: { type: 'checkmate' } as const };
+  assert.equal(
+    decideXiangqiPuzzleAudit(actualMate, [
+      { solutionPly: 0, verdict: 'fail', reason: 'multiple-within-goal' },
+    ]).disposition,
+    'withhold-candidate',
+  );
+});

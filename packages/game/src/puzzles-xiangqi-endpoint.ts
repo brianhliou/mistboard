@@ -8,6 +8,7 @@ import {
 } from './variants-xiangqi-standard.js';
 
 export const XIANGQI_PUZZLE_ENDPOINT_VERSION = 'tactical-endpoint-v2';
+export const XIANGQI_PUZZLE_REVIEW_VERSION = 'advantage-ambiguity-review-v1';
 
 export type XiangqiPuzzleEndpoint =
   | {
@@ -104,6 +105,20 @@ export function decideXiangqiPuzzleAudit(
       reason: problem.reason,
       firstProblemPly: problem.solutionPly,
     };
+  // A score comparison can reject a new single-answer candidate without
+  // establishing that an existing tactical position has no teaching value.
+  // Keep the admission failure and require editorial review of these roots.
+  if (
+    problem?.solutionPly === 0 &&
+    puzzle.goal.type === 'winning-advantage' &&
+    [
+      'mate-not-unique',
+      'runner-up-mates',
+      'insufficient-separation',
+      'stored-answer-mismatch',
+    ].includes(problem.reason)
+  )
+    return { disposition: 'needs-review', reason: problem.reason, firstProblemPly: 0 };
   if (problem?.solutionPly === 0)
     return { disposition: 'withhold-candidate', reason: problem.reason, firstProblemPly: 0 };
   if (!problem && passed !== Math.ceil(puzzle.solution.length / 2))

@@ -5,6 +5,7 @@ import type { XiangqiPuzzle } from '../../packages/game/src/puzzles-xiangqi.ts';
 import {
   proveXiangqiMateGoal,
   proveXiangqiMateGoalWithRetry,
+  proveXiangqiMateMove,
 } from '../../packages/game/src/puzzles-xiangqi-mate.ts';
 import { XIANGQI_SOLVER_GATE_DEFAULTS } from '../../packages/game/src/puzzles-xiangqi-mining.ts';
 import {
@@ -65,6 +66,9 @@ test('two moves within the stated bound fail even when both mate immediately', a
   const proof = proveXiangqiMateGoal(state, 1);
   assert.equal(proof.verdict, 'ambiguous');
   assert.equal(proof.winningMoves.length, 2);
+  for (const move of proof.winningMoves) {
+    assert.equal(proveXiangqiMateMove(state, move, 1).verdict, 'proved');
+  }
   const result = await verifyXiangqiSolverTurn(
     noEngine,
     state,
@@ -280,4 +284,43 @@ test('a subsequent board proof retains why its engine evidence was escalated', a
   assert.equal(result.judgment.verdict, 'pass');
   assert.ok(result.escalationReasons.includes('near-separation-cutoff'));
   assert.deepEqual(result.budgets, [5_000_000, 25_000_000, 100_000_000]);
+});
+
+test('partitioned move proofs cover the same mate objective without asserting uniqueness', () => {
+  const p = fixtures.n6sE3!;
+  const before = JSON.stringify(p.initial);
+  const legal = getStandardXiangqiLegalMoves(p.initial);
+  const proofs = legal.map((move) => proveXiangqiMateMove(p.initial, move, 2));
+  assert(proofs.every((proof) => proof.complete && proof.verdict !== 'unresolved'));
+  assert.deepEqual(
+    proofs.filter((proof) => proof.verdict === 'proved').map((proof) => proof.move),
+    [p.solution[0]],
+  );
+  assert.equal(JSON.stringify(p.initial), before);
+  assert(proofs.every((proof) => proof.legalMoveCount === legal.length));
+});
+
+test('one-move proof fails closed on illegal keys, exhausted budgets and history-based draws', () => {
+  const p = fixtures.n6sE3!;
+  assert.equal(
+    proveXiangqiMateMove(p.initial, { from: 'a1', to: 'i10' }, 2).reason,
+    'invalid-root-move',
+  );
+  const exhausted = proveXiangqiMateMove(p.initial, p.solution[0]!, 2, { maxNodes: 1 });
+  assert.equal(exhausted.verdict, 'unresolved');
+  assert.equal(exhausted.complete, false);
+  const expired = proveXiangqiMateMove(p.initial, p.solution[0]!, 2, {
+    maxTimeMs: Number.MIN_VALUE,
+  });
+  assert.equal(expired.verdict, 'unresolved');
+  const child = applyStandardXiangqiMove(p.initial, p.solution[0]!);
+  const repeated = {
+    ...p.initial,
+    positionCounts: { ...p.initial.positionCounts, [positionRepetitionKey(child)]: 2 },
+  };
+  assert.equal(proveXiangqiMateMove(repeated, p.solution[0]!, 2).verdict, 'refuted');
+  assert.equal(
+    proveXiangqiMateMove({ ...p.initial, progressClock: 119 }, p.solution[0]!, 2).verdict,
+    'refuted',
+  );
 });

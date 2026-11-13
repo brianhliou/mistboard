@@ -36,10 +36,63 @@ export type XiangqiMateGoalEvidence = {
  * Keep the actual path's repetition/progress history: a position-only cache
  * would conflate states with different draw rights. No engine mate score or
  * repetition/perpetual-check forfeit is treated as a board-mate proof. */
+export type XiangqiMateProofLimits = {
+  maxNodes?: number;
+  maxTimeMs?: number;
+  maxPlies?: number;
+};
+
 export function proveXiangqiMateGoal(
   state: XiangqiGameState,
   mateIn: number,
-  limits: { maxNodes?: number; maxTimeMs?: number; maxPlies?: number } = {},
+  limits: XiangqiMateProofLimits = {},
+): XiangqiMateGoalEvidence {
+  return proveMateGoal(state, mateIn, limits);
+}
+
+export type XiangqiMateMoveEvidence = Omit<
+  XiangqiMateGoalEvidence,
+  'version' | 'verdict' | 'winningMoves'
+> & {
+  version: 'kernel-mate-move-v1';
+  move: XiangqiMove;
+  verdict: 'proved' | 'refuted' | 'unresolved';
+};
+
+/** Prove or refute one first move against every defence. This receipt says
+ * nothing about other first moves; uniqueness requires complete root coverage. */
+export function proveXiangqiMateMove(
+  state: XiangqiGameState,
+  move: XiangqiMove,
+  mateIn: number,
+  limits: XiangqiMateProofLimits = {},
+): XiangqiMateMoveEvidence {
+  if (!move) throw new Error('A root move is required');
+  const proof = proveMateGoal(state, mateIn, limits, move);
+  const { winningMoves: _winningMoves, ...rest } = proof;
+  return {
+    ...rest,
+    version: 'kernel-mate-move-v1',
+    move,
+    reason: proof.complete
+      ? proof.verdict === 'unique'
+        ? 'move-forces-mate-within-goal'
+        : 'move-does-not-force-mate-within-goal'
+      : proof.reason,
+    verdict:
+      proof.complete && proof.verdict === 'unique'
+        ? 'proved'
+        : proof.complete && proof.verdict === 'no-mate'
+          ? 'refuted'
+          : 'unresolved',
+  };
+}
+
+function proveMateGoal(
+  state: XiangqiGameState,
+  mateIn: number,
+  limits: XiangqiMateProofLimits,
+  rootMove?: XiangqiMove,
 ): XiangqiMateGoalEvidence {
   const budget = { ...XIANGQI_MATE_GOAL_PROFILE, ...limits };
   const winningMoves: XiangqiMove[] = [];
@@ -72,6 +125,10 @@ export function proveXiangqiMateGoal(
     budget.maxPlies < 1
   )
     return result('unresolved', 'invalid-mate-goal', false);
+  const roots = rootMove
+    ? legal.filter((move) => move.from === rootMove.from && move.to === rootMove.to)
+    : legal;
+  if (rootMove && roots.length !== 1) return result('unresolved', 'invalid-root-move', false);
   const plies = 2 * mateIn - 1;
   if (plies > budget.maxPlies) return result('unresolved', 'mate-goal-ply-limit', false);
   const solver = state.status.turn;
@@ -134,7 +191,7 @@ export function proveXiangqiMateGoal(
     return children.some(({ after }) => wins(after, remaining - 1));
   }
   try {
-    for (const move of legal) {
+    for (const move of roots) {
       if (wins(applyStandardXiangqiMove(state, move), plies - 1)) winningMoves.push(move);
       // Two complete positive proofs suffice to disprove uniqueness. Do not
       // spend the rest of the budget enumerating other equivalent answers.

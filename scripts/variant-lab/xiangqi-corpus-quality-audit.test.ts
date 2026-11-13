@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { XiangqiPuzzle } from '../../packages/game/src/puzzles-xiangqi.ts';
 import { xiangqiSolverMoveCoverage } from '../../packages/game/src/puzzles-xiangqi-mining.ts';
@@ -141,3 +142,44 @@ test('fresh corpus workers reject forced starts before engine analysis', async (
   assert.equal(result.decision.reason, 'no-choice-at-root');
   assert.deepEqual(result.evidence, []);
 });
+
+const readerTactics = JSON.parse(
+  readFileSync(new URL('./fixtures/advantage-review-regressions.json', import.meta.url), 'utf8'),
+) as {
+  code: string;
+  initial: XiangqiPuzzle['initial'];
+  solution: XiangqiPuzzle['solution'];
+  searches: XiangqiSolverPlyAnalysis[];
+}[];
+for (const example of readerTactics) {
+  test(`${example.code}: a useful advantage tactic remains a review case while its admission key still fails`, async () => {
+    const p: XiangqiPuzzle = {
+      id: `review-${example.code}`,
+      variant: 'xiangqi',
+      title: 'Advantage review regression',
+      themes: ['winning'],
+      goal: { type: 'winning-advantage' },
+      initial: example.initial,
+      solution: example.solution,
+    };
+    const before = JSON.stringify(p);
+    let i = 0;
+    const result = await auditXiangqiCorpusPuzzle(
+      {
+        newGame: async () => {},
+        analyzeFen: async () => {
+          const s = example.searches[i++];
+          assert(s);
+          return s.lines;
+        },
+      },
+      p,
+    );
+    assert.equal(i, 2);
+    assert.equal(result.judgments[0]?.verdict, 'fail');
+    assert.equal(result.decision.disposition, 'needs-review');
+    assert.equal(result.decision.reason, result.judgments[0]?.reason);
+    assert.equal(result.decision.replacement, undefined);
+    assert.equal(JSON.stringify(p), before);
+  });
+}
