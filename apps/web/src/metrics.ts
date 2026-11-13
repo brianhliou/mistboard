@@ -12,12 +12,7 @@ import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
-import {
-  formatStatNumber,
-  type PublicSiteStats,
-  type PublicStatsMode,
-  type PublicStatsWeek,
-} from './stats-charts.js';
+import { formatStatNumber, type PublicSiteStats, type PublicStatsMode } from './stats-charts.js';
 import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
 // The live variants shown on the public /stats surface: the public shelf
@@ -193,13 +188,7 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
 
   const weekly = publicStats.weeklyCompletedGames ?? [];
   if (weekly.length > 0) {
-    parts.push(
-      buildChartSection(
-        t('stats.gamesPerWeek', {}, locale),
-        buildPublicWeeklyChart(weekly, locale),
-        'metrics-weekly-section',
-      ),
-    );
+    parts.push(buildPublicWeeklyChart(publicStats, locale));
   }
 
   const variantEntries = publicVariantEntries(publicStats, locale);
@@ -672,11 +661,6 @@ function buildChartSection(title: string, chart: HTMLElement, extraClass?: strin
   return section;
 }
 
-// The public weekly chart: one line, all games. It carried a chip per variant
-// until 2026-10-17 (Brian: "simplifying this page"); the variant split is the
-// breakdown below it. Full weeks only. The current week used to end the line as
-// a dashed dive on the day people look, since a Monday's week is one day of
-// games; it is a line of text under the chart instead.
 export function publicVariantEntries(
   publicStats: PublicSiteStats,
   locale: Locale,
@@ -692,41 +676,111 @@ export function completedWeeks<T>(weeks: T[]): T[] {
   return weeks.length > 1 ? weeks.slice(0, -1) : weeks;
 }
 
-function buildPublicWeeklyChart(weeks: PublicStatsWeek[], locale: Locale): HTMLElement {
+// The public weekly chart opens on one line, all games. It carried a chip per
+// variant until 2026-10-17, when the page was simplified; the variant split is
+// the breakdown below it. The second view, versus people, splits games between
+// people into casual and rated (decided 2026-11-12) on its own scale. Full weeks
+// only. The current week used to end the line as a dashed dive on the day people
+// look, since a Monday's week is one day of games; it is a line of text under the
+// chart instead. The view is not stored: the page always opens on all games.
+function buildPublicWeeklyChart(stats: PublicSiteStats, locale: Locale): HTMLElement {
+  const weeks = stats.weeklyCompletedGames ?? [];
+  const plotted = completedWeeks(weeks);
+  const all: WeeklySeries[] = [
+    {
+      key: 'games',
+      label: t('stats.gamesPerWeekSeries', {}, locale),
+      values: weeks.map((week) => week.completedGames),
+    },
+  ];
+  const playByWeek = new Map((stats.weeklyByPlay ?? []).map((week) => [week.weekStart, week]));
+  const people: WeeklySeries[] = [
+    {
+      key: 'casual',
+      label: t('stats.casual', {}, locale),
+      values: weeks.map((week) => {
+        const play = playByWeek.get(week.weekStart);
+        return (play?.casualLive ?? 0) + (play?.casualCorrespondence ?? 0);
+      }),
+    },
+    {
+      key: 'rated',
+      label: t('stats.rated', {}, locale),
+      values: weeks.map((week) => {
+        const play = playByWeek.get(week.weekStart);
+        return (play?.ratedLive ?? 0) + (play?.ratedCorrespondence ?? 0);
+      }),
+    },
+  ];
+  const views = [
+    { key: 'all', label: t('stats.allGames', {}, locale), series: all },
+    { key: 'people', label: t('stats.versusPeople', {}, locale), series: people },
+  ];
   const figure = document.createElement('div');
   figure.className = 'stats-weekly';
   const plot = document.createElement('div');
   plot.className = 'stats-weekly-plot';
-  const plotted = completedWeeks(weeks);
-  plot.append(
-    buildWeeklyChart({
-      weeks: plotted.map((week) => week.weekStart),
-      series: [
-        {
-          key: 'games',
-          label: t('stats.gamesPerWeekSeries', {}, locale),
-          values: plotted.map((week) => week.completedGames),
-        },
-      ],
-      ariaLabel: t('stats.gamesPerWeekLabel', { count: String(plotted.length) }, locale),
-      partialLast: false,
-      locale,
-      table: false,
-    }),
-  );
+  const soFar = document.createElement('p');
+  soFar.className = 'stats-weekly-so-far';
   figure.append(plot);
-  const current = weeks.length > 1 ? weeks.at(-1) : undefined;
-  if (current) {
-    const soFar = document.createElement('p');
-    soFar.className = 'stats-weekly-so-far';
-    soFar.textContent = t(
-      'stats.thisWeekSoFar',
-      { count: formatStatNumber(current.completedGames, locale) },
-      locale,
+  if (weeks.length > 1) figure.append(soFar);
+  const section = buildChartSection(
+    t('stats.gamesPerWeek', {}, locale),
+    figure,
+    'metrics-weekly-section',
+  );
+  const control = document.createElement('div');
+  control.className = 'stats-weekly-view';
+  control.setAttribute('role', 'group');
+  control.setAttribute('aria-label', t('stats.chartView', {}, locale));
+  const buttons: HTMLButtonElement[] = [];
+  function select(view: (typeof views)[number]): void {
+    buttons.forEach((button, index) => {
+      button.setAttribute('aria-pressed', String(views[index] === view));
+    });
+    plot.replaceChildren(
+      buildWeeklyChart({
+        weeks: plotted.map((week) => week.weekStart),
+        series: view.series.map((series) => ({ ...series, values: completedWeeks(series.values) })),
+        ariaLabel: t('stats.gamesPerWeekLabel', { count: String(plotted.length) }, locale),
+        partialLast: false,
+        locale,
+        table: false,
+      }),
     );
-    figure.append(soFar);
+    const current = weeks.at(-1);
+    if (!current || weeks.length <= 1) return;
+    soFar.textContent =
+      view.key === 'all'
+        ? t(
+            'stats.thisWeekSoFar',
+            { count: formatStatNumber(current.completedGames, locale) },
+            locale,
+          )
+        : t(
+            'stats.thisWeekSeriesSoFar',
+            {
+              series: view.series
+                .map(
+                  (series) =>
+                    `${series.label}: ${formatStatNumber(series.values.at(-1) ?? 0, locale)}`,
+                )
+                .join(' · '),
+            },
+            locale,
+          );
   }
-  return figure;
+  for (const view of views) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = view.label;
+    button.addEventListener('click', () => select(view));
+    buttons.push(button);
+    control.append(button);
+  }
+  section.prepend(control);
+  select(views[0]!);
+  return section;
 }
 
 // ── weekly series (admin) ────────────────────────────────────────────────────

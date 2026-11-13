@@ -17,6 +17,14 @@ export const DATA_STATS_FIXTURE: PublicSiteStats = {
     completedGames: i + 10,
   })),
   weeklyByVariant: [],
+  weeklyByPlay: Array.from({ length: 12 }, (_, i) => ({
+    weekStart: new Date(Date.UTC(2026, 7, 17 + i * 7)).toISOString().slice(0, 10),
+    vsBot: i + 5,
+    casualLive: 2,
+    ratedLive: 1,
+    casualCorrespondence: 1,
+    ratedCorrespondence: 1,
+  })),
   modeTotals: { pvp: 400, pve: 800, eve: 5000 },
   variantTotals: [
     { variant: 'xiangqi', count: 800 },

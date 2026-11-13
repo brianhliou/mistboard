@@ -32,6 +32,8 @@
 // 2026-09-12. Set 2026-09-12.
 
 import {
+  DAY_MS,
+  DAYS_PER_MOVE_OPTIONS,
   FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
@@ -39,6 +41,13 @@ import {
   RETIRED_GAME_SPEC_IDS,
 } from '@mistboard/game';
 import type { GameParticipantColor, GameResult } from './persistence-games.js';
+
+// SQL counterpart of officialCorrespondenceDays, the pace check in bucketForGame.
+// Missing or unofficial paces are live for this aggregate, never correspondence.
+export function correspondenceGame(gamesAlias = 'g'): string {
+  const allowances = DAYS_PER_MOVE_OPTIONS.map((days) => days * DAY_MS).join(', ');
+  return `((${gamesAlias}.increment_ms = 0 AND ${gamesAlias}.initial_ms IN (${allowances})) IS TRUE)`;
+}
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;

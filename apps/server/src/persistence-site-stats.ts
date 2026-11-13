@@ -1,4 +1,9 @@
-import { COUNTED_USER, countedPublicGame, publicVariant } from './persistence-counted-games.js';
+import {
+  COUNTED_USER,
+  correspondenceGame,
+  countedPublicGame,
+  publicVariant,
+} from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -36,6 +41,15 @@ export interface PublicStatsWeek {
   completedGames: number;
 }
 
+export interface PublicStatsPlayWeek {
+  weekStart: string;
+  vsBot: number;
+  casualLive: number;
+  ratedLive: number;
+  casualCorrespondence: number;
+  ratedCorrespondence: number;
+}
+
 export interface PublicVariantWeeks {
   variant: string;
   total: number;
@@ -63,6 +77,8 @@ export interface PublicSiteStats {
   // Per-variant weekly series (most-played first) for the chart's variant
   // filter. Same scope as variantTotals; the client decides which to show.
   weeklyByVariant: PublicVariantWeeks[];
+  // The five categories partition weeklyCompletedGames on its Pacific week axis.
+  weeklyByPlay: PublicStatsPlayWeek[];
   modeTotals: Record<PublicStatsMode, number>;
   // Completed pvp/pve games by variant id, most-played first. Aggregate counts,
   // safe for the public /stats surface.
@@ -239,7 +255,16 @@ export async function getPublicSiteStats(
   // so the process time zone cannot shift them.
   // Starts on the first counted game's week (the daily series' origin) and
   // never earlier than PUBLIC_STATS_WEEKS back.
-  const weekly = await pool.query<{ week: string; n: number }>(
+  const correspondence = correspondenceGame('g');
+  const weekly = await pool.query<{
+    week: string;
+    n: number;
+    vs_bot: number;
+    casual_live: number;
+    rated_live: number;
+    casual_correspondence: number;
+    rated_correspondence: number;
+  }>(
     `WITH bounds AS (
        SELECT date_trunc('week', min(${LOCAL_ENDED})) AS first_week
        FROM games g
@@ -257,11 +282,17 @@ export async function getPublicSiteStats(
        FROM bounds
      )
      SELECT weeks.week_start::date::text AS week,
-       (SELECT count(*) FROM games g
-          WHERE ${COUNTED}
-            AND g.ended_at >= (weeks.week_start AT TIME ZONE ${TZ})
-            AND g.ended_at < LEAST((weeks.week_start + INTERVAL '1 week') AT TIME ZONE ${TZ}, $1::timestamptz))::int AS n
+       count(g.room_id)::int AS n,
+       count(*) FILTER (WHERE g.mode = 'pve')::int AS vs_bot,
+       count(*) FILTER (WHERE g.mode = 'pvp' AND g.rated IS NOT TRUE AND NOT ${correspondence})::int AS casual_live,
+       count(*) FILTER (WHERE g.mode = 'pvp' AND g.rated IS TRUE AND NOT ${correspondence})::int AS rated_live,
+       count(*) FILTER (WHERE g.mode = 'pvp' AND g.rated IS NOT TRUE AND ${correspondence})::int AS casual_correspondence,
+       count(*) FILTER (WHERE g.mode = 'pvp' AND g.rated IS TRUE AND ${correspondence})::int AS rated_correspondence
      FROM weeks
+     LEFT JOIN games g ON ${COUNTED}
+       AND g.ended_at >= (weeks.week_start AT TIME ZONE ${TZ})
+       AND g.ended_at < LEAST((weeks.week_start + INTERVAL '1 week') AT TIME ZONE ${TZ}, $1::timestamptz)
+     GROUP BY weeks.week_start
      ORDER BY weeks.week_start`,
     [now, PUBLIC_STATS_WEEKS],
   );
@@ -270,14 +301,24 @@ export async function getPublicSiteStats(
     completedGames: row.n,
   }));
 
+  const weeklyByPlay: PublicStatsPlayWeek[] = weekly.rows.map((row) => ({
+    weekStart: row.week,
+    vsBot: row.vs_bot,
+    casualLive: row.casual_live,
+    ratedLive: row.rated_live,
+    casualCorrespondence: row.casual_correspondence,
+    ratedCorrespondence: row.rated_correspondence,
+  }));
+
   // Per-(week, variant) counts projected onto the weekly axis above. The week
   // key is truncated and cast in SQL exactly as the axis is, so the two agree
   // whatever the process time zone.
   const weeklyByVariantRows = await pool.query<{ week: string; variant: string; n: number }>(
     `SELECT date_trunc('week', ${LOCAL_ENDED})::date::text AS week, g.variant, count(*)::int AS n
      FROM games g
-     WHERE ${COUNTED}
+     WHERE ${COUNTED} AND g.ended_at < $1::timestamptz
      GROUP BY week, g.variant`,
+    [now],
   );
   const perVariantByWeek = new Map<string, Map<string, number>>();
   for (const r of weeklyByVariantRows.rows) {
@@ -349,6 +390,7 @@ export async function getPublicSiteStats(
     accounts: row?.accounts ?? 0,
     weeklyCompletedGames,
     weeklyByVariant,
+    weeklyByPlay,
     modeTotals: {
       pvp: 0,
       pve: 0,

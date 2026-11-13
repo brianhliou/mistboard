@@ -1,4 +1,11 @@
-import { isPublicGameSpec, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
+import {
+  DAY_MS,
+  DAYS_PER_MOVE_OPTIONS,
+  isPublicGameSpec,
+  officialCorrespondenceDays,
+  TIME_CONTROLS,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
 import {
   createUser,
   getPublicSiteStats,
@@ -6,6 +13,7 @@ import {
   getSiteGameTotals,
   getSiteStats,
 } from './persistence.js';
+import { correspondenceGame } from './persistence-counted-games.js';
 import {
   assert,
   definePersistenceTests,
@@ -15,6 +23,113 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('site stats', () => {
+  test('weekly play categories partition counted games on the Pacific week axis', async () => {
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(`INSERT INTO users (id, email, handle, display_name, stats_excluded_at)
+        VALUES ('play-operator', 'play-op@example.com', 'play-operator', 'Operator', now())`);
+      // Sunday evening Pacific still belongs to the preceding week. The last
+      // row is later than now, so neither weekly aggregate may include it.
+      const cases = [
+        ['bot', 'pve', false, 300000, 5000, '2026-11-09T04:00:00Z'],
+        ['casual', 'pvp', false, 300000, 5000, '2026-11-09T04:00:00Z'],
+        ['rated', 'pvp', true, 300000, 5000, '2026-11-09T04:00:00Z'],
+        ['casual-corr', 'pvp', false, DAY_MS, 0, '2026-11-09T04:00:00Z'],
+        ['rated-corr', 'pvp', true, DAY_MS * 7, 0, '2026-11-09T04:00:00Z'],
+        ['excluded', 'pvp', true, DAY_MS, 0, '2026-11-09T04:00:00Z'],
+        ['current', 'pvp', false, null, null, '2026-11-09T09:00:00Z'],
+        ['future', 'pvp', true, DAY_MS, 0, '2026-11-09T11:00:00Z'],
+      ];
+      for (const [id, mode, rated, initial, increment, ended] of cases) {
+        await client.query(
+          `INSERT INTO games
+          (room_id, variant, mode, rated, initial_ms, increment_ms, result, termination,
+           ply_count, started_at, ended_at, white_client, black_client, status, visibility)
+          VALUES ($1, 'xiangqi', $2, $3, $4, $5, 'red-wins', 'resignation', 12,
+                  $6, $6, 'red', 'black', 'completed', 'public')`,
+          [`play-${id}`, mode, rated, initial, increment, ended],
+        );
+      }
+      await client.query(`INSERT INTO game_participants
+        (game_id, color, subject_type, subject_id, display_name)
+        VALUES ('play-excluded', 'red', 'user', 'play-operator', 'Operator')`);
+      // Execute the SQL predicate itself for every official option and live
+      // preset, plus unofficial and missing paces. It must match rating buckets.
+      const paces = [
+        ...DAYS_PER_MOVE_OPTIONS.map((days) => ({ initialMs: days * DAY_MS, incrementMs: 0 })),
+        ...TIME_CONTROLS,
+        { initialMs: DAY_MS * 4, incrementMs: 0 },
+        { initialMs: DAY_MS, incrementMs: 1 },
+        { initialMs: 1000, incrementMs: 0 },
+        { initialMs: null, incrementMs: null },
+        { initialMs: DAY_MS, incrementMs: null },
+      ];
+      for (const pace of paces) {
+        const { rows } = await client.query<{ correspondence: boolean }>(
+          `SELECT ${correspondenceGame('g')} AS correspondence
+           FROM (SELECT $1::int AS initial_ms, $2::int AS increment_ms) g`,
+          [pace.initialMs, pace.incrementMs],
+        );
+        assert.equal(
+          rows[0]?.correspondence,
+          officialCorrespondenceDays(pace.initialMs, pace.incrementMs) !== null,
+        );
+      }
+    } finally {
+      await client.end();
+    }
+    const stats = await getPublicSiteStats({ now: new Date('2026-11-09T10:00:00Z') });
+    assert.deepEqual(stats.weeklyCompletedGames, [
+      { weekStart: '2026-11-02', completedGames: 5 },
+      { weekStart: '2026-11-09', completedGames: 1 },
+    ]);
+    for (const [index, week] of stats.weeklyCompletedGames.entries()) {
+      assert.equal(
+        stats.weeklyByVariant.reduce(
+          (sum, variant) => sum + (variant.weeks[index]?.completedGames ?? 0),
+          0,
+        ),
+        week.completedGames,
+      );
+    }
+    assert.deepEqual(stats.weeklyByPlay, [
+      {
+        weekStart: '2026-11-02',
+        vsBot: 1,
+        casualLive: 1,
+        ratedLive: 1,
+        casualCorrespondence: 1,
+        ratedCorrespondence: 1,
+      },
+      {
+        weekStart: '2026-11-09',
+        vsBot: 0,
+        casualLive: 1,
+        ratedLive: 0,
+        casualCorrespondence: 0,
+        ratedCorrespondence: 0,
+      },
+    ]);
+    assert.deepEqual(
+      stats.weeklyByPlay.map(
+        ({
+          weekStart,
+          vsBot,
+          casualLive,
+          ratedLive,
+          casualCorrespondence,
+          ratedCorrespondence,
+        }) => ({
+          weekStart,
+          completedGames:
+            vsBot + casualLive + ratedLive + casualCorrespondence + ratedCorrespondence,
+        }),
+      ),
+      stats.weeklyCompletedGames,
+    );
+  });
+
   test('getPublicSiteStats returns public-safe completed game aggregates', async () => {
     // Every date sits after STATS_COUNTED_FROM (2026-06-01); one game before
     // it proves the launch date filter. Two completed games under
@@ -98,6 +213,14 @@ definePersistenceTests('site stats', () => {
         { weekStart: '2026-06-08', completedGames: 2 },
         { weekStart: '2026-07-27', completedGames: 2 },
       ],
+    );
+    // Quiet weeks stay on both axes, with five zeroes in the play split.
+    assert.deepEqual(
+      stats.weeklyByPlay.map(({ weekStart, ...counts }) => ({
+        weekStart,
+        completedGames: Object.values(counts).reduce((sum, count) => sum + count, 0),
+      })),
+      stats.weeklyCompletedGames,
     );
     // The per-variant weekly series share the axis and sum to the total row.
     assert.deepEqual(

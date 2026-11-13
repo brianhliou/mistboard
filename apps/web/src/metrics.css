@@ -194,10 +194,43 @@
   font-size: 13px;
 }
 
-/* Public /stats weekly chart: variant chips above the weekly primitive, the
+/* Public /stats weekly chart: view selector above the weekly primitive, the
    in-progress week as a line of text below it instead of a dashed dive. */
-.stats-weekly .stats-chart-filter {
+.stats-weekly-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  background: var(--site-panel-soft);
   margin-bottom: 0.75rem;
+  padding: 3px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+.stats-weekly-view button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.stats-weekly-view button[aria-pressed="true"] {
+  background: var(--site-panel);
+  color: var(--site-text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+}
+.stats-weekly-view button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
 }
 .stats-weekly-so-far {
   margin: 0.5rem 0 0;
