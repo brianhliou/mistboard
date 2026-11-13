@@ -31,6 +31,12 @@ import {
   installBanqiBoardStyles,
 } from './live-banqi-render.js';
 import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
+import {
+  maybePlayFFQBanqiSound,
+  resetFFQBanqiSoundState,
+  soundForOwnFFQBanqiMove,
+} from './live-ffq-banqi-sound.js';
+import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -101,6 +107,9 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+    // Hello bypasses the snapshot hook. Seed the initial diff baseline here;
+    // reconnect hellos of the same ply stay silent in the sound policy.
+    if (frame.type === 'hello' && core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
   },
   playAgainRequestBody: (state) => ({
     gameSpecId: FFQ_BANQI_SPEC_ID,
@@ -119,15 +128,18 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   },
   // A new view may revoke the selection's moves, including a turn change.
   onSnapshotApplied: () => {
+    if (core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
     clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
   onEventApplied: () => {
+    if (core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
     clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
+  resetSounds: resetFFQBanqiSoundState,
   renderBoard,
   renderExtras: renderSeatPanel,
   animateBoard: (refs, view, takePending) => {
@@ -180,8 +192,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
         else if (result.kind === 'clear') selectedSquare = null;
         else if (result.kind === 'move') {
           selectedSquare = null;
-          core?.send({
-            type: 'move',
+          sendMove(view, {
             from: ffqBanqiIndex(result.move.from),
             to: ffqBanqiIndex(result.move.to),
           });
@@ -228,7 +239,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
           const move = view.legalMoves.find(
             (m) => m.from === ffqBanqiIndex(from) && m.to === ffqBanqiIndex(to) && m.from !== m.to,
           );
-          if (move) core?.send({ type: 'move', ...move });
+          if (move) sendMove(view, move);
         }
         selectedSquare = draggingFrom = null;
         renderBoard(ctx.refs, view ?? null);
@@ -270,6 +281,11 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
 
 export function bootstrapFFQBanqiLiveRoom(): void {
   client.bootstrap();
+}
+
+function sendMove(view: FFQBanqiWireView, move: FFQBanqiMove): void {
+  core?.send({ type: 'move', ...move });
+  playSound(soundForOwnFFQBanqiMove(view, move));
 }
 
 function canInteract(): boolean {
