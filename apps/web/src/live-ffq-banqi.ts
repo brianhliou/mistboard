@@ -3,20 +3,18 @@
 import {
   type BanqiColor,
   type BanqiSquare,
-  FFQ_BANQI_CHASE_LIMIT,
-  FFQ_BANQI_DAMAGE,
-  FFQ_BANQI_NO_PROGRESS_LIMIT,
   FFQ_BANQI_SPEC_ID,
   type FFQBanqiMove,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './live-ffq-banqi.css';
+import { seatPanelBlock, seatPanelLine, seatPanelPieces } from './banqi-seat-panel.js';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
-import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
+import { createFFQBanqiHpMeter } from './ffq-banqi-hp.js';
 import { variantDisplayLabel } from './game-display.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
@@ -34,6 +32,7 @@ import {
 } from './live-banqi-render.js';
 import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
 import type { LiveRefs } from './live-state.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
@@ -130,7 +129,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
     draggingFrom = null;
   },
   renderBoard,
-  renderExtras: renderProgress,
+  renderExtras: renderSeatPanel,
   animateBoard: (refs, view, takePending) => {
     if (!view || draggingFrom) return;
     const pending = takePending();
@@ -324,42 +323,44 @@ function clearChaseNotice(): void {
   chaseBubble?.clear();
 }
 
-function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
-  refs.hiddenPool.replaceChildren();
+// The seat panel under the board, Three Kingdoms banqi's layout
+// (banqi-seat-panel.ts): one block per seat, the top seat's first like the
+// board, its name and HP bar where Three Kingdoms shows points, then the pieces
+// it took. Every capture is public in Fanfanqi, a covered one included, and
+// the panel reads only the viewer's view, never the deal. A cannon can
+// take a covered piece of its own colour, so a seat's line can hold both inks;
+// a covered capture is shaded as banqi shades one. The no-progress and chase
+// counts stay rules, not readouts: the chase limit shows as a cross and a
+// bubble on the board when a move would break it.
+function renderSeatPanel(refs: LiveRefs, view: FFQBanqiWireView | null): void {
+  const host = refs.hiddenPool;
+  host.replaceChildren();
   if (!view) return;
-  const panel = document.createElement('div');
-  panel.className = 'ffq-banqi-progress';
-  for (const side of tenant.colors) {
-    panel.append(createFFQBanqiHpRow(view, side));
-  }
-  const counters = document.createElement('div');
-  counters.className = 'ffq-banqi-counters';
-  counters.textContent = [
-    t('live.ffq.noProgress', { count: view.noProgressClock, limit: FFQ_BANQI_NO_PROGRESS_LIMIT }),
-    ...tenant.colors.map((side) =>
-      t('live.ffq.chase', {
-        side: t(side === 'red' ? 'setup.red' : 'setup.black'),
-        count: view.chaseCounts[side],
-        limit: FFQ_BANQI_CHASE_LIMIT,
-      }),
-    ),
-  ].join(' · ');
-  panel.append(counters);
-  const captures = document.createElement('ol');
-  captures.className = 'ffq-banqi-captures';
-  for (const capture of view.captured) {
-    if (capture.role === null) continue;
-    const entry = document.createElement('li');
-    entry.textContent = t('live.ffq.captureDamage', {
-      capturer: t(capture.capturedBy === 'red' ? 'setup.red' : 'setup.black'),
-      owner: t(capture.owner === 'red' ? 'setup.red' : 'setup.black'),
-      piece: t(`review.luckCard.role.${capture.role}`),
-      damage: FFQ_BANQI_DAMAGE[capture.role],
-    });
-    captures.append(entry);
-  }
-  panel.append(captures);
-  refs.hiddenPool.append(panel);
+  const bottom: BanqiColor = core?.orientation() ?? 'red';
+  const top: BanqiColor = bottom === 'red' ? 'black' : 'red';
+  for (const side of [top, bottom]) host.append(seatBlock(view, side));
+}
+
+function seatBlock(view: FFQBanqiWireView, side: BanqiColor): HTMLElement {
+  const block = seatPanelBlock({
+    name: t(side === 'red' ? 'setup.red' : 'setup.black'),
+    score: createFFQBanqiHpMeter(view, side),
+    seat: side,
+    ink: side,
+    className: 'tk-seat--hp',
+  });
+  const taken = view.captured
+    .filter((capture) => capture.capturedBy === side)
+    .map((capture) => ({
+      owner: capture.owner,
+      role: capture.role,
+      takenFaceDown: capture.wasFaceDown,
+    }));
+  const pieces = document.createElement('div');
+  for (const owner of [tenant.oppositeColor(side), side])
+    fillCapturedPoolWith(pieces, taken, owner, banqiPieceGhostSvg);
+  block.append(seatPanelLine('captured', t('live.tk.captured'), seatPanelPieces(pieces)));
+  return block;
 }
 
 function isMoveEvent(event: TenantLiveEvent): event is MoveEvent {

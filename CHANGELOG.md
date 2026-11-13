@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Three Kingdoms Banqi games between two signed-in players can be rated, with their own leaderboard and a rating on the profile ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
+- Duck Xiangqi, Crazyhouse Xiangqi, Three Kingdoms banqi and Gomoku bots take their time like the others, mostly a few seconds with an occasional long think ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
 - The bots page lists every game, including Three Kingdoms Banqi and Flip Jungle, with one card per opponent, its levels inside, and Misty named after the game it plays ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Play a person on the homepage shows open games and every variant under one pace ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - On desktop, correspondence games waiting on your move appear as a Your move tab in the homepage Play panel ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
@@ -74,6 +76,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Duck Xiangqi study embeds show the engine's move marks, its lines and where it would have put the duck ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
 - Three Kingdoms Banqi games download as PGN and JSON, naming each piece only when it was turned over ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Banqi analysis reuses exact evaluations and overlaps position searches without weakening them ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Banqi and Three Kingdoms Banqi review keep their controls at the bottom of a phone screen ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
@@ -109,6 +112,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Pikafish holds the xiangqi title on the Champions page after a 40-game match against Fairy-Stockfish ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
 - The data page filters games by any bot at all its levels and says which variants have no file yet ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - The homepage Play table's arrows look like buttons, and fade out at the end of their list ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))
 - Flair offers every piece from every piece set, plus Jungle animals and chess pieces ([771dd11c](https://github.com/brianhliou/mistboard/commit/771dd11c))

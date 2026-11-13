@@ -218,6 +218,7 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   dark_xiangqi: 'variant.darkXiangqi.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
+  three_kingdoms_banqi: 'variant.threeKingdomsBanqi.name',
   jungle: 'variant.jungle.name',
   jungle_flip: 'variant.jungleFlip.name',
   fortress_xiangqi: 'variant.fortressXiangqi.name',

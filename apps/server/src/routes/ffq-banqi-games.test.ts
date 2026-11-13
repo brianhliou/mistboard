@@ -11,8 +11,16 @@ import {
   type FFQBanqiMove,
   getFFQBanqiLegalMoves,
 } from '@mistboard/game';
+import { ffqBanqiAdmits } from '../ffq-banqi-access.js';
+import {
+  FFQ_BANQI_ANALYSIS_DEPTH,
+  FFQ_BANQI_ANALYSIS_ENGINE_ID,
+  type FFQBanqiGameAnalysis,
+} from '../ffq-banqi-analysis.js';
 import { ffqBanqiCardFen } from '../ffq-banqi-publication.js';
+import { ffqBanqiPostgameHistory } from '../ffq-banqi-replay.js';
 import { type FFQBanqiEvent, ffqBanqiTenant } from '../ffq-banqi-tenant.js';
+import { getAnalysisJob, resetAnalysisJobsForTests } from '../game-analysis-jobs.js';
 import { resolveGameExport } from '../game-export-tenant.js';
 import { type TenantGameCardStore, tenantGameCard, tenantGamePageMeta } from '../og-game-tenant.js';
 import { resolvePositionOg } from '../og-position.js';
@@ -21,9 +29,11 @@ import { variantTenantForRoomId } from '../variant-tenant/registry.js';
 import { replayTenantEvents } from '../variant-tenant/runtime.js';
 import '../ffq-banqi-registration.js';
 import {
+  createFFQBanqiAnalysisRoutes,
   type FFQBanqiPostgameRouteDeps,
   ffqBanqiPostgameForApi,
   handleFFQBanqiPostgame,
+  tryHandle,
 } from './ffq-banqi-games.js';
 
 const ROOM = 'ffq_review';
@@ -266,4 +276,183 @@ test('FFQ route gates before reads and rejects live, aborted, foreign and missin
     }),
     null,
   );
+});
+
+function fakeResponse() {
+  const captured = { status: 0, body: undefined as unknown };
+  const response = {
+    setHeader: () => {},
+    writeHead: (code: number) => {
+      captured.status = code;
+      return response;
+    },
+    end: (body?: string) => {
+      captured.body = body ? JSON.parse(body) : undefined;
+    },
+  } as unknown as ServerResponse;
+  return { response, captured };
+}
+const analysisPath = `/api/ffq-banqi/games/${ROOM}/analysis`;
+const GET = { method: 'GET', headers: {} } as IncomingMessage;
+
+test('FFQ analysis refuses non-admin and flag-off callers before any read, compute or job poll', async () => {
+  const flag = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+  try {
+    for (const enabled of [false, true]) {
+      process.env.MISTBOARD_FFQ_BANQI_ENABLED = String(enabled);
+      for (const account of [
+        null,
+        { accountRole: 'player' as const },
+        { accountRole: 'admin' as const },
+      ]) {
+        if (enabled && account?.accountRole === 'admin') continue;
+        const forbidden = async (): Promise<never> => {
+          throw new Error('denied request reached dependency');
+        };
+        const handler = createFFQBanqiAnalysisRoutes(
+          {
+            ...deps(),
+            admits: async () => ffqBanqiAdmits(account),
+            persistenceReady: () => {
+              throw new Error('denied request checked persistence');
+            },
+            getGameSummary: forbidden,
+            loadRoomEvents: forbidden,
+          },
+          {
+            engineAvailable: () => {
+              throw new Error('denied request checked engine');
+            },
+            analyze: forbidden,
+          },
+        );
+        for (const path of [analysisPath, `${analysisPath}/jobs/private-job`]) {
+          for (const method of ['GET', 'POST']) {
+            const res = fakeResponse();
+            assert.equal(
+              await handler({ ...GET, method } as IncomingMessage, res.response, path),
+              true,
+            );
+            assert.equal(res.captured.status, 404);
+            assert.deepEqual(res.captured.body, { error: 'not_found' });
+          }
+        }
+      }
+    }
+    // Exercise the real tryHandle dispatch/default admission with flag on as a guest.
+    const res = fakeResponse();
+    await tryHandle(
+      {} as Parameters<typeof tryHandle>[0],
+      GET,
+      res.response,
+      analysisPath,
+      new URL(analysisPath, 'http://local'),
+    );
+    assert.equal(res.captured.status, 404);
+  } finally {
+    if (flag === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+    else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
+  }
+});
+
+test('FFQ analysis GET is cache-only, POST queues, poll completes, reload uses the cache', async () => {
+  await resetAnalysisJobsForTests();
+  const analysis: FFQBanqiGameAnalysis = {
+    engineId: FFQ_BANQI_ANALYSIS_ENGINE_ID,
+    depth: FFQ_BANQI_ANALYSIS_DEPTH,
+    plies: Array.from({ length: moves.length + 1 }, (_, ply) => ({
+      ply,
+      cp: 42,
+      mate: null,
+      best: null,
+    })),
+  };
+  let cached: typeof analysis.plies | null = null;
+  let computes = 0;
+  const handler = createFFQBanqiAnalysisRoutes(deps(), {
+    route: { currentUser: async () => ({ id: 'ffq-admin' }) },
+    engineAvailable: () => true,
+    cache: {
+      get: async () => cached,
+      save: async (_room, _engine, _depth, plies) => {
+        cached = plies;
+      },
+    },
+    analyze: async (log) => {
+      computes++;
+      assert.deepEqual(log, events());
+      return analysis;
+    },
+  });
+  try {
+    const miss = fakeResponse();
+    await handler(GET, miss.response, analysisPath);
+    assert.equal(miss.captured.status, 204);
+    assert.equal(computes, 0);
+    const post = fakeResponse();
+    await handler(
+      { method: 'POST', headers: {}, socket: { remoteAddress: '127.0.0.1' } } as IncomingMessage,
+      post.response,
+      analysisPath,
+    );
+    assert.equal(post.captured.status, 202);
+    const jobId = (post.captured.body as { jobId: string }).jobId;
+    for (let i = 0; i < 30 && getAnalysisJob(jobId)?.status === 'pending'; i++)
+      await new Promise((resolve) => setImmediate(resolve));
+    const poll = fakeResponse();
+    await handler(GET, poll.response, `${analysisPath}/jobs/${jobId}`);
+    assert.equal(poll.captured.status, 200);
+    const frames = ffqBanqiPostgameHistory(events()).truth;
+    const chancePlies = moves.flatMap((move, i) =>
+      frames[i]!.view.board[move.to]?.faceDown ? [i + 1] : [],
+    );
+    assert.ok(
+      moves.some((move, i) => move.from !== move.to && chancePlies.includes(i + 1)),
+      'covered capture fixture',
+    );
+    assert.deepEqual(poll.captured.body, { status: 'done', result: { ...analysis, chancePlies } });
+    serialized(poll.captured.body);
+    const reload = fakeResponse();
+    await handler(GET, reload.response, analysisPath);
+    assert.equal(reload.captured.status, 200);
+    assert.deepEqual(reload.captured.body, (poll.captured.body as { result: unknown }).result);
+    assert.equal(computes, 1);
+    const wrongGame = fakeResponse();
+    await handler(
+      GET,
+      wrongGame.response,
+      `${analysisPath.replace(ROOM, 'ffq_other')}/jobs/${jobId}`,
+    );
+    assert.equal(wrongGame.captured.status, 404);
+  } finally {
+    await resetAnalysisJobsForTests();
+  }
+});
+
+test('FFQ analysis rejects unfinished, aborted, foreign and missing games and missing engine', async () => {
+  for (const routeDeps of [
+    deps(events().slice(0, 4)),
+    deps([
+      ...events().slice(0, 4),
+      { type: 'game-aborted', at: 90, roomId: ROOM, reason: 'user-abort' },
+    ]),
+    { ...deps(), getGameSummary: async () => null },
+    {
+      ...deps(),
+      getGameSummary: async () => ({ ...(await deps().getGameSummary(ROOM))!, variant: 'banqi' }),
+    },
+  ]) {
+    const handler = createFFQBanqiAnalysisRoutes(routeDeps);
+    const res = fakeResponse();
+    await handler(GET, res.response, analysisPath);
+    assert.equal(res.captured.status, 404);
+  }
+  const handler = createFFQBanqiAnalysisRoutes(deps(), {
+    route: { currentUser: async () => ({ id: 'ffq-admin' }) },
+    engineAvailable: () => false,
+  });
+  const unavailable = fakeResponse();
+  await handler({ ...GET, method: 'POST' } as IncomingMessage, unavailable.response, analysisPath);
+  assert.equal(unavailable.captured.status, 503);
+  assert.deepEqual(unavailable.captured.body, { error: 'analysis_engine_unavailable' });
 });

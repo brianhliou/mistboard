@@ -1,11 +1,3 @@
-.ffq-banqi-progress {
-  display: grid;
-  gap: 0.5rem;
-  width: 100%;
-  font-size: 0.875rem;
-  grid-column: 1 / -1;
-}
-
 .ffq-banqi-hp {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -13,28 +5,88 @@
   gap: 0.6rem;
 }
 
-.ffq-banqi-hp progress {
+.ffq-banqi-hp progress,
+.ffq-banqi-hp-meter progress {
   width: 100%;
   min-width: 0;
   accent-color: var(--accent, #1f6f5b);
 }
 
-.review-seat .review-seat__material:has(> .ffq-banqi-hp) {
+/* A seat's HP: the bar, then "58/60 HP". In the room's seat panel it stands
+   where Three Kingdoms banqi shows points (banqi-seat-panel.css); in a review
+   seat row it follows the seat's captures. */
+.ffq-banqi-hp-meter {
+  display: flex;
   flex: 1 1 auto;
-}
-
-.review-seat__material > .ffq-banqi-hp {
-  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
-
-.ffq-banqi-counters,
-.ffq-banqi-captures {
-  color: var(--muted);
-  font-size: 0.8rem;
+.ffq-banqi-hp-meter progress {
+  flex: 1 1 auto;
+  height: 10px;
+}
+.ffq-banqi-hp-meter__value {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--site-text);
 }
 
-.ffq-banqi-captures {
-  margin: 0;
-  padding-left: 1.25rem;
+/* Room seat panel: the head is one line across the block (the name in the
+   label column, the HP bar over the pieces), then the Captured line. Five
+   classes, one above banqi-seat-panel.css, in every layout it sets. */
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat.tk-seat--hp {
+  grid-template-columns: var(--tk-key) minmax(0, 1fr);
+}
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__head {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__name {
+  flex: 0 0 calc(var(--tk-key) - 8px);
+}
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__key {
+  grid-column: 1;
+}
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__pieces {
+  grid-column: 2;
+}
+.live-route--ffq-banqi .live-review__cluster .hidden-pool .ffq-banqi-hp-meter__value {
+  font-size: 1rem;
+}
+
+/* Side by side (as banqi-seat-panel.css): each half is its head over the key
+   over the discs, so the bar and the discs keep the half's full width. */
+@media (min-width: 601px) {
+  @container hidden-pool (width >= 560px) {
+    .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat.tk-seat--hp {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__name {
+      flex: 0 0 auto;
+    }
+    .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__pieces {
+      grid-column: 1;
+    }
+  }
+}
+
+/* Review seat row: the seat's captures, then its HP meter, which takes the
+   rest of the row. */
+.review-seat .review-seat__material:has(> .ffq-banqi-hp-meter) {
+  flex: 1 1 auto;
+}
+.review-seat__material > .ffq-banqi-hp-meter {
+  margin-left: 6px;
+  font-size: 11px;
+}
+.review-seat__material > .ffq-banqi-hp-meter progress {
+  min-width: 48px;
+  max-width: 160px;
+  height: 8px;
 }

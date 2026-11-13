@@ -56,9 +56,9 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -237,6 +237,15 @@ export async function playDuckXiangqiEngineMoveIfReady(
     return;
   }
   const engineId = room.projection.seats[seat]!;
+  const startedAt = Date.now();
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
   const tier = duckXiangqiEngineTierFor(engineId);
   if (!tier) {
     logDuckXiangqiEngineSkip(room, 'unknown-tier');
@@ -267,14 +276,6 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // Clock-aware per-move budget (shared allocator). The tier's NODE budget is the
   // CPU-independent strength anchor and binds first on a healthy clock; this
   // movetime is the latency ceiling + time-pressure guard.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
-    remainingMs,
-    incrementMs,
-    ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
-    floorMs: MIN_MOVETIME_MS,
-  });
-
   // Materialised ONCE per engine move, not per attempt. The legal set here runs
   // to thousands of turns (~2,554 from the opening array, peaking near 4,901),
   // and the kernel is explicit that building it is the expensive operation. It is
@@ -282,6 +283,30 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // `validate` while `stillOnTurn()` holds, and the only thing that flips the
   // turn is a move being appended.
   const legalTurns = getDuckXiangqiLegalTurns(room.projection.state);
+
+  const paceInput = {
+    variant: 'duck-xiangqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: history.length,
+    legalCount: legalTurns.length,
+    remainingMs,
+    incrementMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isDuckXiangqiEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
+    ceilingMs: tier.movetimeMs,
+    flatReserveMs: CLOCK_SAFETY_MS,
+    floorMs: MIN_MOVETIME_MS,
+  };
+  let movetimeMs = liveBotMoveTime(budgetInput).movetimeMs;
+  let budgetExhausted = false;
+  if (movetimeMs <= 0 || !turn.current()) return;
 
   // TAKE THE WIN. Capturing the general ends the game, and a rung is weakened by
   // Skill Level, which works by choosing a move OTHER than the best one it found.
@@ -307,48 +332,47 @@ export async function playDuckXiangqiEngineMoveIfReady(
       },
       'Duck Xiangqi engine captured the general without searching',
     );
-    const win: TenantRoomEvent<DuckXiangqiColor, DuckXiangqiTurn, typeof DUCK_XIANGQI_SPEC_ID> = {
-      type: 'move-played',
-      at: Date.now(),
-      roomId: room.id,
-      color: seat,
-      move: winning,
-    };
-    const winSeq = await ctx.appendEvent(room, win);
-    ctx.broadcastEventAppended(room, win, winSeq);
-    return;
   }
 
-  const startedAt = Date.now();
   let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
-  } = await resolveValidatedEngineMove({
-    maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: async () => {
-      const search = await moveProvider(engineId, history, { movetimeMs });
-      lastSearch = search;
-      return search.best;
-    },
-    validate: (uci) => legalTurnForUci(legalTurns, uci),
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
-    onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
-      logger.warn(
-        {
-          kind: 'duck_xiangqi_engine_move_rejected',
-          room_id: room.id,
-          engine_id: engineId,
-          attempt,
-          max_attempts: maxAttempts,
-          uci,
-          reject_reason: reason,
-          error,
+  } = winning
+    ? { chosen: winning, attempts: [], aborted: false }
+    : await resolveValidatedEngineMove({
+        maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
+        requestMove: async () => {
+          movetimeMs = liveBotMoveTime({
+            ...budgetInput,
+            waitedMs: Date.now() - startedAt,
+          }).movetimeMs;
+          if (movetimeMs <= 0) {
+            budgetExhausted = true;
+            return null;
+          }
+          const search = await moveProvider(engineId, history, { movetimeMs });
+          lastSearch = search;
+          return search.best;
         },
-        'Duck Xiangqi engine output rejected by kernel; retrying',
-      ),
-  });
+        validate: (uci) => legalTurnForUci(legalTurns, uci),
+        stillOnTurn: () => !budgetExhausted && turn.current(),
+        onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
+          logger.warn(
+            {
+              kind: 'duck_xiangqi_engine_move_rejected',
+              room_id: room.id,
+              engine_id: engineId,
+              attempt,
+              max_attempts: maxAttempts,
+              uci,
+              reject_reason: reason,
+              error,
+            },
+            'Duck Xiangqi engine output rejected by kernel; retrying',
+          ),
+      });
   logger.info(
     {
       kind: 'duck_xiangqi_engine_answered',
@@ -360,10 +384,17 @@ export async function playDuckXiangqiEngineMoveIfReady(
     },
     'Duck Xiangqi engine call returned',
   );
-  if (aborted || !engineToMove(room, seat)) {
+  if (aborted || !turn.current()) {
     logDuckXiangqiEngineSkip(room, 'aborted-mid-search');
     return;
   }
+
+  let writes: Promise<void>;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
 
   if (validated === null) {
     const record = buildEngineDecisionRecord({
@@ -410,6 +441,34 @@ export async function playDuckXiangqiEngineMoveIfReady(
     > = abortable
       ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'engine-unavailable' }
       : { type: 'seat-resigned', at: Date.now(), roomId: room.id, color: seat };
+    queueEngineDecision(room, {
+      ...buildLiveEngineDecisionPayload({
+        variant: 'duck-xiangqi',
+        roomId: room.id,
+        engineId,
+        engineVersion: DUCK_XIANGQI_FSF_ENGINE_VERSION,
+        seat,
+        ply: history.length,
+        budgetMs: movetimeMs,
+        remainingMs,
+        incrementMs,
+        tier,
+        search: lastSearch,
+        thinkTimeMs: Date.now() - startedAt,
+        attempts,
+        move: null,
+        legalCount: paceInput.legalCount,
+      }),
+      ...replyPacePayload(
+        replyPace({
+          ...paceInput,
+          cp: null,
+          mate: null,
+          computeMs: Date.now() - startedAt,
+          enabled: false,
+        }),
+      ),
+    });
     const seq = await ctx.appendEvent(room, terminal);
     ctx.broadcastEventAppended(room, terminal, seq);
     return;
@@ -421,6 +480,20 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // thousands of turns times thousands of replies per ply, which would cost more
   // than the search it is protecting. The node-anchored rungs are the strength
   // control instead.
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: winning ? 1 : (search?.mate ?? null),
+    computeMs: thinkTimeMs,
+  });
+  if (!(await turn.wait(pace.waitMs))) return;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
   const event: TenantRoomEvent<DuckXiangqiColor, DuckXiangqiTurn, typeof DUCK_XIANGQI_SPEC_ID> = {
     type: 'move-played',
     at: Date.now(),
@@ -431,9 +504,8 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // Queue BEFORE the append: if this turn captures the general, the tenant event
   // writer records the game end and flushes the queue inside that same append,
   // and a decision queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'duck-xiangqi',
       roomId: room.id,
       engineId,
@@ -445,12 +517,13 @@ export async function playDuckXiangqiEngineMoveIfReady(
       incrementMs,
       tier,
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts,
       move: duckXiangqiTurnToFsfUci(validated),
       legalCount: legalTurns.length,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

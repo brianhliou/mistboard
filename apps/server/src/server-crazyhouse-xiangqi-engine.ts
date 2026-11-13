@@ -38,9 +38,9 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -142,6 +142,15 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
   const seat = crazyhouseXiangqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
+  const startedAt = Date.now();
   const tier = crazyhouseXiangqiEngineTierFor(engineId);
   if (!tier) return;
 
@@ -155,15 +164,29 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
   // Clock-aware per-move budget (shared allocator). The tier's NODE budget is the
   // CPU-independent strength anchor and binds first on a healthy clock; this
   // movetime is the latency ceiling + time-pressure guard.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
+  const paceInput = {
+    variant: 'crazyhouse-xiangqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: history.length,
+    legalCount: getCrazyhouseXiangqiLegalMoves(room.projection.state).length,
     remainingMs,
     incrementMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isCrazyhouseXiangqiEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
-
-  const startedAt = Date.now();
+  };
+  let movetimeMs = liveBotMoveTime(budgetInput).movetimeMs;
+  let budgetExhausted = false;
+  if (movetimeMs <= 0 || !turn.current()) return;
   let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
@@ -172,12 +195,17 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      movetimeMs = liveBotMoveTime({ ...budgetInput, waitedMs: Date.now() - startedAt }).movetimeMs;
+      if (movetimeMs <= 0) {
+        budgetExhausted = true;
+        return null;
+      }
       const search = await moveProvider(engineId, history, { movetimeMs });
       lastSearch = search;
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getCrazyhouseXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+    stillOnTurn: () => !budgetExhausted && turn.current(),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -193,7 +221,13 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
         'Crazyhouse Xiangqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !turn.current()) return;
+  let writes: Promise<void>;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
 
   if (validated === null) {
     const record = buildEngineDecisionRecord({
@@ -219,6 +253,34 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
       roomId: room.id,
       color: seat,
     };
+    queueEngineDecision(room, {
+      ...buildLiveEngineDecisionPayload({
+        variant: 'crazyhouse-xiangqi',
+        roomId: room.id,
+        engineId,
+        engineVersion: CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
+        seat,
+        ply: history.length,
+        budgetMs: movetimeMs,
+        remainingMs,
+        incrementMs,
+        tier,
+        search: lastSearch,
+        thinkTimeMs: Date.now() - startedAt,
+        attempts,
+        move: null,
+        legalCount: paceInput.legalCount,
+      }),
+      ...replyPacePayload(
+        replyPace({
+          ...paceInput,
+          cp: null,
+          mate: null,
+          computeMs: Date.now() - startedAt,
+          enabled: false,
+        }),
+      ),
+    });
     const seq = await ctx.appendEvent(room, resign);
     ctx.broadcastEventAppended(room, resign, seq);
     return;
@@ -240,6 +302,20 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
     );
   }
 
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+  });
+  if (!(await turn.wait(pace.waitMs))) return;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
   const event: CrazyhouseXiangqiEvent = {
     type: 'move-played',
     at: Date.now(),
@@ -250,9 +326,8 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
   // Queue BEFORE the append: if this move mates, the tenant event writer records
   // the game end and flushes the queue inside that same append, and a decision
   // queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'crazyhouse-xiangqi',
       roomId: room.id,
       engineId,
@@ -264,13 +339,14 @@ export async function playCrazyhouseXiangqiEngineMoveIfReady(
       incrementMs,
       tier,
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts,
       move: crazyhouseXiangqiMoveToUci(guarded),
       legalCount: legalMoves.length,
       guardReplaced: guarded !== validated,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

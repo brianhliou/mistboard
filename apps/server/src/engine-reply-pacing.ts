@@ -86,6 +86,7 @@ export const PACING_LEGAL_MEDIANS = {
   'duck-xiangqi': 2210.5,
   'crazyhouse-xiangqi': 42,
   'three-kingdoms-banqi': 31,
+  gomoku: 187,
 } as const;
 
 export function botPacingEnabled(env: NodeJS.ProcessEnv, variant: string): boolean {
@@ -233,11 +234,16 @@ export function cancelReplyWait(room: object): void {
   replyTurns.delete(room);
 }
 
-/** Capture before searching: a takeback, pause/resume or cleanup invalidates the result too. */
+/**
+ * Capture before searching: a takeback, pause/resume or cleanup invalidates the result too.
+ * A rules-specific state predicate may preserve equivalent reconnect projections;
+ * clock identity and disposal are still checked independently.
+ */
 export function createReplyTurn(
   room: { projection: { state: unknown; clock?: unknown }; stopping?: boolean },
   onTurn: () => boolean,
-): { current: () => boolean; wait: (ms: number) => Promise<boolean> } {
+  stateIsCurrent?: () => boolean,
+): { current: () => boolean; cancelled: () => boolean; wait: (ms: number) => Promise<boolean> } {
   cancelReplyWait(room);
   const controller = new AbortController();
   replyTurns.set(room, controller);
@@ -245,11 +251,12 @@ export function createReplyTurn(
   const current = () =>
     !controller.signal.aborted &&
     !room.stopping &&
-    room.projection.state === state &&
+    (stateIsCurrent ? stateIsCurrent() : room.projection.state === state) &&
     room.projection.clock === clock &&
     onTurn();
   return {
     current,
+    cancelled: () => controller.signal.aborted || Boolean(room.stopping),
     wait: (ms) =>
       new Promise((resolve) => {
         if (!current()) return resolve(false);

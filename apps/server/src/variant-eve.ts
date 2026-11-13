@@ -126,6 +126,11 @@ export type VariantEveGameInput<C extends string, M, Spec extends string> = {
   onEvent?: (event: TenantRoomEvent<C, M, Spec>, seq: number) => Promise<void>;
   openingPolicy?: Record<string, unknown>;
   roomId: string;
+  /**
+   * The game's own seed (eve_games.seed). It deals the hidden setup when the
+   * opening policy names no seed, so every game of a ladder gets its own deal.
+   */
+  seed?: string;
   startedAt?: number;
   /** Uniform random source for the random mover; injectable for deterministic tests. */
   rng?: () => number;
@@ -147,7 +152,7 @@ export async function playVariantEngineGame<
   const moveProvider = input.moveProvider ?? defaultMoveProvider(adapter);
   const rng = input.rng ?? Math.random;
   type Event = TenantRoomEvent<C, M, Spec>;
-  const setup = adapter.createSetup?.(seedFrom(input.openingPolicy?.seed));
+  const setup = adapter.createSetup?.(seedFrom(input.openingPolicy?.seed ?? input.seed));
   const events: Event[] = [
     {
       type: 'room-created',

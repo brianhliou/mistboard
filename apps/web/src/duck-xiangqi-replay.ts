@@ -24,8 +24,17 @@ import {
 import type { ArticleLang } from './article-i18n.js';
 import { animateDuckXiangqiTurn, duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
-import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
+import { BEST_STYLE, bestMoveArrow } from './review/engine/engine-arrows.js';
+import { moveGlyphTone } from './review/move-glyph.js';
+import {
+  type ChapterShape,
+  type ChapterSideline,
+  GLYPH_SUFFIX_CLASS,
+} from './study-chapter-annotations.js';
+import type { XiangqiBoardArrow, XiangqiBoardMarker } from './xiangqi-board.js';
+import './board-glyph-marker.css';
 import './live-xiangqi.css';
+import './variant-tenant/board-annotations.css';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
@@ -45,6 +54,12 @@ export type DuckXiangqiReplaySpec = {
    *  comment, listed under the move the way the jieqi board lists them. */
   glyphs?: Readonly<Record<number, string>>;
   notes?: Readonly<Record<number, string>>;
+  /** First sideline from the position before each 1-based mainline ply. */
+  lines?: Readonly<Record<number, ChapterSideline>>;
+  /** Position verdicts in the move list's eval slot. */
+  assessments?: Readonly<Record<number, string>>;
+  /** Drawn on the position after this many mainline turns (0 = root). */
+  shapes?: Readonly<Record<number, ChapterShape[]>>;
 };
 
 export type DuckXiangqiReplayController = { destroy: () => void };
@@ -274,6 +289,7 @@ export function mountDuckXiangqiReplayBoard(
 ): {
   destroy: () => void;
   jumpToPly: (ply: number) => void;
+  jumpToLine: (atPly: number, cursor: number) => void;
   plyCount: () => number;
   moveEntries: () => Array<{
     ply: number;
@@ -281,21 +297,102 @@ export function mountDuckXiangqiReplayBoard(
     suffix?: string;
     suffixClass?: string;
     note?: string;
+    assessment?: string;
+    line?: ChapterSideline;
   }>;
   bottomSeat: () => 'first' | 'second';
 } {
   const perspective = spec.perspective ?? 'red';
   const { turns, states } = replayDuckXiangqiNotation(spec.moves);
   const total = turns.length;
+  // A variation replaces its marked mainline move. Replaying from that move's
+  // BEFORE state is essential: both the piece move and duck placement matter.
+  const lines = new Map<number, DuckXiangqiReplayRecord>();
+  for (const [key, side] of Object.entries(spec.lines ?? {})) {
+    const ply = Number(key);
+    const start = states[ply - 1];
+    if (!start || ply > total) continue;
+    const replayed: DuckXiangqiReplayRecord = { turns: [], states: [start] };
+    for (const token of side.moves) {
+      const before = replayed.states[replayed.states.length - 1]!;
+      let turn: DuckXiangqiTurn;
+      try {
+        turn = turnForToken(before, token, ply - 1 + replayed.turns.length);
+      } catch {
+        // A malformed or illegal token ends a stored line at its last real
+        // position, as on the jieqi embed. Never show a silently wrong board.
+        break;
+      }
+      replayed.turns.push(turn);
+      replayed.states.push(applyDuckXiangqiTurn(before, turn));
+    }
+    if (replayed.turns.length) lines.set(ply, replayed);
+  }
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
   host.replaceChildren(frame);
 
   let index = 0;
+  let inLine: { atPly: number; cursor: number } | null = null;
   // `from` is the ply a one-ply step left: the turn between them glides.
   const render = (from?: number): void => {
-    const state = states[index]!;
+    const side = inLine ? lines.get(inLine.atPly)! : null;
+    const shownStates = side?.states ?? states;
+    const cursor = inLine?.cursor ?? index;
+    const state = shownStates[cursor]!;
+    const arrows: XiangqiBoardArrow[] = [];
+    const markers: XiangqiBoardMarker[] = [];
+    let ghostDuck: { square: DuckXiangqiSquare; className?: string; color?: string } | undefined;
+    if (!inLine) {
+      // The same shape mapping and destination badge as the review and jieqi
+      // embed, using the shared glyph tone and BEST_STYLE arrow helpers.
+      for (const shape of spec.shapes?.[index] ?? []) {
+        if (shape.dest && shape.dest !== shape.orig) {
+          arrows.push({
+            from: shape.orig as DuckXiangqiSquare,
+            to: shape.dest as DuckXiangqiSquare,
+            className: `xq-arrow--draw xq-shape--${shape.brush}`,
+          });
+        } else {
+          markers.push({
+            square: shape.orig as DuckXiangqiSquare,
+            kind: 'circle',
+            className: `xq-shape--${shape.brush}`,
+          });
+        }
+      }
+      const last = turns[index - 1];
+      const glyph = spec.glyphs?.[index];
+      const tone = glyph ? moveGlyphTone(glyph, GLYPH_SUFFIX_CLASS[glyph]) : null;
+      if (last && glyph && tone) {
+        markers.push({
+          square: last.to,
+          kind: 'glyph',
+          text: glyph,
+          className: `xq-marker--${tone}`,
+        });
+      }
+      const alternative = lines.get(index + 1)?.turns[0];
+      if (alternative) {
+        // Keep the chapter's brush when it already draws this alternative;
+        // otherwise show the engine's usual best-move arrow. Its duck square
+        // is available only on the turn token, never on the stored shape.
+        let arrow = arrows.find((a) => a.from === alternative.from && a.to === alternative.to);
+        if (arrow) Object.assign(arrow, BEST_STYLE);
+        else {
+          arrow = bestMoveArrow(`${alternative.from}${alternative.to}`)[0]!;
+          arrows.push(arrow);
+        }
+        if (alternative.duckTo) {
+          ghostDuck = {
+            square: alternative.duckTo,
+            className: arrow.className,
+            color: arrow.color,
+          };
+        }
+      }
+    }
     frame.innerHTML = duckXiangqiBoardSvg(
       getDuckXiangqiPlayerView(state, perspective),
       perspective,
@@ -303,18 +400,29 @@ export function mountDuckXiangqiReplayBoard(
         interactive: false,
         phase: { kind: 'piece', selected: null },
         targets: [],
+        arrows,
+        markers,
+        ghostDuck,
       },
     );
-    animateDuckStep(frame, states, from, index, perspective);
-    hooks.onPlyChange?.(index, total);
+    animateDuckStep(frame, shownStates, from, cursor, perspective);
+    if (!inLine) hooks.onPlyChange?.(index, total);
   };
   render();
 
   return {
     destroy: () => host.replaceChildren(),
     jumpToPly: (ply: number) => {
-      const from = index;
+      const from = inLine ? undefined : index;
+      inLine = null;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
+      render(from);
+    },
+    jumpToLine: (atPly: number, cursor: number) => {
+      const side = lines.get(atPly);
+      if (!side) return;
+      const from = inLine?.atPly === atPly ? inLine.cursor : undefined;
+      inLine = { atPly, cursor: Math.max(1, Math.min(side.turns.length, Math.trunc(cursor))) };
       render(from);
     },
     plyCount: () => total,
@@ -322,11 +430,24 @@ export function mountDuckXiangqiReplayBoard(
       turns.map((turn, i) => {
         const glyph = spec.glyphs?.[i + 1];
         const note = spec.notes?.[i + 1];
+        const assessment = spec.assessments?.[i + 1];
+        const side = lines.get(i + 1);
+        const meta = spec.lines?.[i + 1];
         return {
           ply: i + 1,
           label: duckXiangqiTurnLabel(turn),
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
+          ...(assessment ? { assessment } : {}),
+          ...(side
+            ? {
+                line: {
+                  moves: side.turns.map(duckXiangqiTurnLabel),
+                  ...(meta?.verdict ? { verdict: meta.verdict } : {}),
+                  ...(meta?.note ? { note: meta.note } : {}),
+                },
+              }
+            : {}),
         };
       }),
     // Red is the first mover in xiangqi, so a red-perspective board puts the
