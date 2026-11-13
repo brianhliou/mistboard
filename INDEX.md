@@ -1438,3 +1438,9 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `scripts/banqi-provider-game.mjs --endpoint`: complete local HTTP/WebSocket rehearsal through an independently hosted loopback worker; existing native subprocess mode is preserved. `scripts/banqi-provider-store-token.mjs` + `.test.mjs`: human-only interactive macOS Keychain creation of the dedicated worker token, with no display, reads or overwrite; the helper is not executed by package preparation.
 
 `scripts/broadcast-push-token.mjs` + `.test.mjs`: admin CLI for unlisted test events, exclusive 0600 token issuance, revocation, safe metadata listings and tour listing control (`npm run broadcast:push-token`).
+
+`apps/server/src/routes/xiangqi-broadcast-push.ts` + `.test.ts`: event-token broadcast push and read-only status, bounded JSON/PGN imports, limits and credential-safe errors (#1097).
+
+`apps/server/src/xiangqi-broadcast-push-store.ts` + `.test.ts`: transactional round creation, initial-player validation and shared sequence-aware writer adapter; persistent HTTP retry/correction and isolation tests.
+
+`scripts/broadcast-push-sim.mjs` + `.test.mjs`: fetch-only growing-game reference client with bounded retries. `scripts/broadcast-push-local-smoke.mjs` + `.test.mjs`: local token CLI replay and authoritative board/noindex-page checks. Public contract: `docs/broadcast-push-api.md`.

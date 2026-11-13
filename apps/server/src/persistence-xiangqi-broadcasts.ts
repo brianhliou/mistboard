@@ -893,6 +893,13 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
       }
     }
 
+    // A lower sequence is an old post arriving late: applying it would undo a
+    // later correction, takeback or metadata change. An equal one still applies,
+    // so a client counting moves can correct or finish at the same count.
+    if (options.push && seq !== null && previousSeq !== null && seq < previousSeq) {
+      return await unchanged(!sameMoves || !boardTagsEqual(existing, board));
+    }
+
     if (options.push && existing.status === 'complete') {
       if (!newerSeq) return await unchanged(!sameMoves);
       // A correction may change the record/result, but cannot reopen a game.

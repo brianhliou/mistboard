@@ -92,6 +92,40 @@ test('push writer ignores shorter posts without a newer sequence and accepts exp
   assert.equal(state.seq, 5);
 });
 
+test('a post with a lower sequence changes nothing: no correction, extension or metadata', async () => {
+  const third = { from: 'h1', to: 'g3' };
+  const cases = [
+    { ...board, moves: [board.moves[0]!, { from: 'b10', to: 'c8' }] },
+    { ...board, moves: [...board.moves, third] },
+    { ...board, red: { name: 'Renamed' } },
+    { ...board, clock: { redMs: 1, blackMs: 2, at: 3 } },
+  ];
+  for (const late of cases) {
+    const { state, client } = database(board, 4);
+    const result = await applyXiangqiBroadcastBoardUpdateOn(client, late, push(3));
+    assert.equal(result.ok && result.status, 'unchanged');
+    assert.equal(result.ok && 'stale' in result && result.stale, true);
+    assert.equal(state.writes, 0);
+    assert.deepEqual(state.board, board);
+    assert.equal(state.seq, 4);
+  }
+  // An identical late retry is a plain duplicate, not stale.
+  const { client: same } = database(board, 4);
+  const duplicate = await applyXiangqiBroadcastBoardUpdateOn(same, board, push(3));
+  assert.equal(duplicate.ok && 'stale' in duplicate && duplicate.stale, false);
+  // A client that sends the move count as seq can still correct or finish at the same count.
+  const { state, client } = database(board, 2);
+  const corrected = await applyXiangqiBroadcastBoardUpdateOn(client, cases[0]!, push(2));
+  assert.equal(corrected.ok && corrected.status, 'corrected');
+  const finished = { ...cases[0]!, status: 'complete' as const, result: '0-1' as const };
+  await applyXiangqiBroadcastBoardUpdateOn(client, finished, push(2));
+  assert.equal(state.board.status, 'complete');
+  // Without seq, extensions and corrections still apply.
+  const { state: unsequenced, client: plain } = database(board, 4);
+  await applyXiangqiBroadcastBoardUpdateOn(plain, cases[1]!, push());
+  assert.equal(unsequenced.board.moves.length, 3);
+});
+
 test('finished push boards stay finished; only a newer sequence can correct them', async () => {
   const finished = { ...board, status: 'complete' as const, result: '1-0' as const };
   const { state, client } = database(finished, 4);

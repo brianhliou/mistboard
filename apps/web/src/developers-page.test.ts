@@ -146,3 +146,17 @@ describe('the developers page documents something real', () => {
     }
   });
 });
+
+it('links the authenticated broadcast push guide from HTTP API documentation', () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(null, { status: 503 })),
+  );
+  const root = document.createElement('main');
+  mountDevelopers(root);
+  expect(
+    root.querySelector(
+      'a[href="https://github.com/brianhliou/mistboard/blob/main/docs/broadcast-push-api.md"]',
+    )?.textContent,
+  ).toBe('broadcast push guide');
+});

@@ -354,3 +354,12 @@ test('a "?" placeholder is an absent name, not a player called "?"', () => {
   });
   assert.equal(xiangqiPgnPlayers({ White: '?', Black: 'Yang Guanlin' }).black, 'Yang Guanlin');
 });
+
+test('push mainline ply limit rejects before replay and ignores comments and variations', () => {
+  const [game] = parseXiangqiPgn(`${Array(1001).fill('h2e2').join(' ')} *`, { maxPlies: 1000 });
+  assert.deepEqual(game?.failure, { code: 'too_large' });
+  assert.deepEqual(game?.children, []);
+  const [small] = parseXiangqiPgn('1. h2e2 { a b c } (1. b2e2) h9g7 *', { maxPlies: 2 });
+  assert.equal(small?.error, undefined);
+  assert.equal(small?.plyCount, 2);
+});

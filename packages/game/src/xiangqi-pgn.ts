@@ -65,10 +65,12 @@ export interface XiangqiPgnGame {
   /** Mainline import diagnostics, or an opt-in standard-start rejection.
    *  A failed mainline has no children and zero plies; study variations keep
    *  their existing best-effort import behavior. */
-  failure?: XiangqiImportFailure | { code: 'unsupported_start_position' };
+  failure?: XiangqiImportFailure | { code: 'unsupported_start_position' | 'too_large' };
 }
 
 export interface XiangqiPgnOptions {
+  /** Optional ingest cap, checked before building/replaying the mainline. */
+  maxPlies?: number;
   format?: XiangqiImportOptions['format'];
   /** Broadcast push only accepts the opening array with red to move. The
    *  default still permits custom-start studies and endgame compositions. */
@@ -282,8 +284,19 @@ function readGame(raw: string, options: XiangqiPgnOptions): XiangqiPgnGame {
   const { tags, movetext } = readTags(raw);
   const tokenizer: Tokenizer = { text: movetext, pos: 0 };
   const parsed = readSequence(tokenizer, 0);
-  const spine = buildNodes(parsed.steps);
   const result = readResult(movetext, tags);
+  if (options.maxPlies !== undefined && parsed.steps.length > options.maxPlies) {
+    return {
+      tags,
+      result,
+      children: [],
+      format: null,
+      plyCount: 0,
+      error: 'The game exceeds the mainline ply limit.',
+      failure: { code: 'too_large' },
+    };
+  }
+  const spine = buildNodes(parsed.steps);
 
   const start = startState(tags);
   if (

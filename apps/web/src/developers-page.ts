@@ -590,6 +590,15 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
       '. It is version 0 and may change; the reference says what is stable.',
     ]),
 
+    proseParagraph([
+      'Recording clocks and scoring apps can send live xiangqi games with an event token; see the ',
+      proseExternalLink(
+        'broadcast push guide',
+        'https://github.com/brianhliou/mistboard/blob/main/docs/broadcast-push-api.md',
+      ),
+      '.',
+    ]),
+
     proseSubheading('Everything else'),
     proseParagraph([
       'Mistboard is AGPL-3.0 and the whole site is on ',
