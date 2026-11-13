@@ -87,6 +87,7 @@ export const PACING_LEGAL_MEDIANS = {
   'crazyhouse-xiangqi': 42,
   'three-kingdoms-banqi': 31,
   gomoku: 187,
+  'ffq-banqi': 18,
 } as const;
 
 export function botPacingEnabled(env: NodeJS.ProcessEnv, variant: string): boolean {

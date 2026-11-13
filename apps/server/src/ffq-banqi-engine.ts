@@ -8,7 +8,7 @@ import type {
   FFQBanqiPlayerView,
 } from '@mistboard/game';
 import type { EngineId } from './engines/types.js';
-import { runUciEval, UciEnginePool } from './uci-engine-harness.js';
+import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 export const FFQ_BANQI_ENGINE_ID = 'misty-ffq-banqi';
 export const FFQ_BANQI_ENGINE_NAME = 'MistyFFQ';
@@ -81,6 +81,8 @@ export type FFQBanqiEngineResponse = EngineTurnResponse<FFQBanqiMove> & {
   /** UCI score, from the side to move's POV; absent for scoreless providers. */
   cp?: number | null;
   mate?: number | null;
+  /** The whole search report (depth, nodes, PV) for the engine-decision artifact. */
+  search?: UciEval;
 };
 export type FFQBanqiEngineProvider = (
   request: FFQBanqiEngineRequest,
@@ -137,6 +139,7 @@ export const ffqBanqiLiveEngineMove: FFQBanqiEngineProvider = async (request) =>
       move,
       cp: result.cp,
       mate: result.mate,
+      search: result,
     };
   } finally {
     release();

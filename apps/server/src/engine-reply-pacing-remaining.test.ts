@@ -4,11 +4,14 @@ import {
   crazyhouseXiangqiMoveToUci,
   getCrazyhouseXiangqiLegalMoves,
   getDuckXiangqiLegalTurns,
+  getFFQBanqiLegalMoves,
   getGomokuLegalMoves,
   getThreeKingdomsBanqiLegalMoves,
 } from '@mistboard/game';
 import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiMoveToUci, uciToFFQBanqiMove } from './ffq-banqi-engine.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { playGomokuEngineMoveIfReady } from './gomoku-engine.js';
 import { gomokuTenant } from './gomoku-tenant.js';
 import { playCrazyhouseXiangqiEngineMoveIfReady } from './server-crazyhouse-xiangqi-engine.js';
@@ -16,6 +19,7 @@ import {
   duckXiangqiTurnToFsfUci,
   playDuckXiangqiEngineMoveIfReady,
 } from './server-duck-xiangqi-engine.js';
+import { playFFQBanqiEngineMoveIfReady } from './server-ffq-banqi-engine.js';
 import {
   playThreeKingdomsBanqiEngineMoveIfReady,
   threeKingdomsBanqiMoveToUci,
@@ -29,7 +33,13 @@ import {
   tenantResumeEventFor,
 } from './variant-tenant/runtime.js';
 
-const CASES = ['duck-xiangqi', 'crazyhouse-xiangqi', 'three-kingdoms-banqi', 'gomoku'] as const;
+const CASES = [
+  'duck-xiangqi',
+  'crazyhouse-xiangqi',
+  'three-kingdoms-banqi',
+  'gomoku',
+  'ffq-banqi',
+] as const;
 type Variant = (typeof CASES)[number];
 function env(t: TestContext, key: string, value: string) {
   const old = process.env[key];
@@ -44,6 +54,7 @@ function fixture(t: TestContext, variant: Variant) {
   env(t, 'MISTBOARD_BOT_PACING', 'true');
   env(t, 'MISTBOARD_DUCK_XIANGQI_ENABLED', 'true');
   env(t, 'MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED', 'true');
+  env(t, 'MISTBOARD_FFQ_BANQI_ENABLED', 'true');
   env(t, 'MISTBOARD_BOT_PACING_VARIANTS', CASES.join(','));
   const tenant =
     variant === 'duck-xiangqi'
@@ -52,7 +63,9 @@ function fixture(t: TestContext, variant: Variant) {
         ? crazyhouseXiangqiTenant
         : variant === 'gomoku'
           ? gomokuTenant
-          : threeKingdomsBanqiTenant;
+          : variant === 'ffq-banqi'
+            ? ffqBanqiTenant
+            : threeKingdomsBanqiTenant;
   const fixtureTenant =
     variant === 'gomoku'
       ? {
@@ -70,7 +83,9 @@ function fixture(t: TestContext, variant: Variant) {
         ? 'fairy-stockfish-crazyhouse-xiangqi-level-1'
         : variant === 'gomoku'
           ? 'rapfi-level-1'
-          : 'misty-three-kingdoms-banqi-level-2';
+          : variant === 'ffq-banqi'
+            ? 'misty-ffq-banqi-level-2'
+            : 'misty-three-kingdoms-banqi-level-2';
   const seat = variant === 'gomoku' ? 'black' : 'red';
   const human = variant === 'gomoku' ? 'white' : 'black';
   // The same runtime protocol, with variant-specific state kept opaque at the boundary.
@@ -109,7 +124,9 @@ function fixture(t: TestContext, variant: Variant) {
         ? getCrazyhouseXiangqiLegalMoves(room.projection.state as never)
         : variant === 'gomoku'
           ? getGomokuLegalMoves(room.projection.state as never)
-          : getThreeKingdomsBanqiLegalMoves(room.projection.state as never);
+          : variant === 'ffq-banqi'
+            ? getFFQBanqiLegalMoves(room.projection.state as never)
+            : getThreeKingdomsBanqiLegalMoves(room.projection.state as never);
   const uci = () =>
     variant === 'duck-xiangqi'
       ? duckXiangqiTurnToFsfUci(legal()[0] as never)
@@ -117,7 +134,9 @@ function fixture(t: TestContext, variant: Variant) {
         ? crazyhouseXiangqiMoveToUci(legal()[0] as never)
         : variant === 'gomoku'
           ? (legal()[0] as { to: string }).to
-          : threeKingdomsBanqiMoveToUci(legal()[0] as never);
+          : variant === 'ffq-banqi'
+            ? ffqBanqiMoveToUci(legal()[0] as never)
+            : threeKingdomsBanqiMoveToUci(legal()[0] as never);
   const caps: number[] = [];
   let hook: () => string | null | undefined = () => undefined;
   const result = () => {
@@ -145,14 +164,30 @@ function fixture(t: TestContext, variant: Variant) {
               const r = result();
               return r.best ? { to: r.best as never } : null;
             })
-          : playThreeKingdomsBanqiEngineMoveIfReady(
-              ctx as never,
-              room as never,
-              async (request) => {
+          : variant === 'ffq-banqi'
+            ? playFFQBanqiEngineMoveIfReady(ctx as never, room as never, async (request) => {
                 caps.push(request.movetimeCapMs);
-                return result();
-              },
-            );
+                const r = result();
+                const move = r.best ? uciToFFQBanqiMove(r.best) : null;
+                // The live provider throws when the engine names no legal move.
+                if (!move) throw new Error('FFQ banqi engine returned no legal move');
+                return {
+                  protocolVersion: request.protocolVersion,
+                  gameId: request.gameId,
+                  sessionId: request.sessionId,
+                  move,
+                  cp: r.cp,
+                  mate: r.mate,
+                };
+              })
+            : playThreeKingdomsBanqiEngineMoveIfReady(
+                ctx as never,
+                room as never,
+                async (request) => {
+                  caps.push(request.movetimeCapMs);
+                  return result();
+                },
+              );
   t.after(() => clearTenantRuntimeTimers(room as never));
   return {
     room,
@@ -383,4 +418,43 @@ test('Three Kingdoms: the whole decision payload hides covered identities', asyn
   f.room.events = f.room.events.filter((event) => event.type !== 'move-played');
   assert.equal(await run(), original);
   assert.doesNotMatch(original, /"(?:board|deal|setup)":/);
+});
+
+test('FFQ: the process-free random tier uses the same pacing and artifact', async (t) => {
+  const f = fixture(t, 'ffq-banqi');
+  f.room.projection.seats.red = 'misty-ffq-banqi-level-1';
+  const pending = f.play();
+  await flush();
+  assert.deepEqual(f.appended, []);
+  t.mock.timers.tick(12_000);
+  await pending;
+  assert.equal(f.caps.length, 0);
+  assert.equal(f.room.pendingDebugArtifacts?.[0]?.payload.pace_reason, 'paced');
+  assert.equal(f.room.pendingDebugArtifacts?.[0]?.payload.movetime_ms, null);
+});
+
+test('FFQ: the whole decision payload hides covered identities', async (t) => {
+  const f = fixture(t, 'ffq-banqi');
+  const run = async () => {
+    const pending = f.play();
+    await flush();
+    t.mock.timers.tick(12_000);
+    await pending;
+    return JSON.stringify(f.room.pendingDebugArtifacts?.[0]?.payload);
+  };
+  const initial = f.room.projection.state;
+  const clock = structuredClone(f.room.projection.clock);
+  const original = await run();
+  // Every tile starts face down: swap two that differ and the payload must not move.
+  const board = [...(initial.board as unknown as unknown[])];
+  const b = board.findIndex((piece) => JSON.stringify(piece) !== JSON.stringify(board[0]));
+  assert.ok(b > 0);
+  [board[0], board[b]] = [board[b], board[0]];
+  f.room.projection.state = { ...initial, board } as never;
+  t.mock.timers.setTime(1_800_000_000_000);
+  f.room.projection.clock = clock;
+  f.room.pendingDebugArtifacts = [];
+  f.room.events = f.room.events.filter((event) => event.type !== 'move-played');
+  assert.equal(await run(), original);
+  assert.doesNotMatch(original, /"(?:board|deal|setup|view)":/);
 });

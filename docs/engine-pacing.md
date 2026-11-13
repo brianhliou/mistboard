@@ -10,9 +10,10 @@ time is subtracted from the target; the hold consumes real bot clock time.
 `MISTBOARD_BOT_PACING=true` is the master switch.
 `MISTBOARD_BOT_PACING_VARIANTS` is a comma-separated list of exact variant ids.
 Unset paces every variant with a median; an empty list enables none. Unknown ids fail closed.
-The policy supports ten calibrated variants. Live loops are integrated for
+The policy supports eleven calibrated variants. Live loops are integrated for
 xiangqi, jieqi, Banqi, Jungle and Flip Jungle (#1063), plus Duck Xiangqi,
-Crazyhouse Xiangqi, Three Kingdoms Banqi and Gomoku (#1064). Fortress has a
+Crazyhouse Xiangqi, Three Kingdoms Banqi and Gomoku (#1064), and Fanfanqi
+banqi (`ffq-banqi`). Fortress has a
 median but is not wired into pacing. Fog/dark chess, Fog Xiangqi and
 xiangqi-mahjong have no median and are never paced.
 Correspondence and engine-vs-engine turns never receive a hold or pacing reserve.
@@ -22,8 +23,8 @@ Correspondence and engine-vs-engine turns never receive a hold or pacing reserve
 `apps/server/src/engine-pacing-fixtures.ts` defines a reproducible synthetic
 corpus using the existing `variant-postgame-fixtures.ts` legal random-self-play
 generator at base revision `385d23599`. These are kernel fixtures, not measured
-human games or engine-quality positions. The Three Kingdoms Banqi fixture adds
-its kernel enumerator and seeded setup to the same generator. Gomoku uses the
+human games or engine-quality positions. The Three Kingdoms Banqi and Fanfanqi
+fixtures add their kernel enumerators and seeded setups to the same generator. Gomoku uses the
 generator's seeded public dealt openings and legal empty-point placements.
 
 Seeds are the explicitly listed integers 7–22, in order, with an 80-ply cap per
@@ -47,10 +48,22 @@ from the pinned seeds during tests; no network, database or native engine is use
 | crazyhouse-xiangqi | 200 | 42 |
 | three-kingdoms-banqi | 200 | 31 |
 | gomoku | 200 | 187 |
+| ffq-banqi | 200 | 18 |
 
-The calibration test regenerates and deduplicates the corpus, checks all ten
+The calibration test regenerates and deduplicates the corpus, checks all eleven
 medians exactly, and checks reply-time variation. Duck counts full legal turns
 (piece move plus duck placement), matching the enumerator's decision unit.
+
+## Fanfanqi banqi
+
+The FFQ loop (`server-ffq-banqi-engine.ts`) follows the Three Kingdoms pattern:
+a cancellable turn before search, the shared starting-clock reserve, earlier
+attempts deducted before a retry, the pending-write drain before and after the
+hold, and the decision queued before append. The provider now returns its whole
+search report so the artifact carries depth and nodes. The random level-1 tier
+is paced like the searched tiers. The artifact records only the masked public
+FEN; the whole-payload regression in `engine-reply-pacing-remaining.test.ts`
+swaps two covered tiles and asserts the payload does not change.
 
 ## Clock safety and cancellation
 
@@ -136,7 +149,7 @@ preserves node anchors and seeded candidate choice. Equivalent Gomoku reconnect
 projections preserve the current search while clock changes still cancel it.
 Failure outcomes stay immediate and retain their existing resign/abort behavior.
 
-`engine-reply-pacing-remaining.test.ts` covers the four loops, interruption during
+`engine-reply-pacing-remaining.test.ts` covers the four loops and FFQ, interruption during
 search and hold, queued-write ordering, rollout switches, exclusions, retry
 reserves and decision payloads. The calibration clock simulation includes Gomoku
 under every existing time control and 1+0, with full search budgets plus holds.
