@@ -9,13 +9,20 @@ import {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './live-ffq-banqi.css';
-import { seatPanelBlock, seatPanelLine, seatPanelPieces } from './banqi-seat-panel.js';
+import { banqiRevealOdds } from './banqi-reveal-odds.js';
+import {
+  seatPanelBlock,
+  seatPanelLine,
+  seatPanelNone,
+  seatPanelPieces,
+} from './banqi-seat-panel.js';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
 import { createFFQBanqiHpMeter } from './ffq-banqi-hp.js';
 import { variantDisplayLabel } from './game-display.js';
+import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -326,7 +333,8 @@ function clearChaseNotice(): void {
 // The seat panel under the board, Three Kingdoms banqi's layout
 // (banqi-seat-panel.ts): one block per seat, the top seat's first like the
 // board, its name and HP bar where Three Kingdoms shows points, then the pieces
-// it took. Every capture is public in Fanfanqi, a covered one included, and
+// it took, then its ink's remaining face-down pool and reveal odds. Every
+// capture is public in Fanfanqi, a covered one included, and
 // the panel reads only the viewer's view, never the deal. A cannon can
 // take a covered piece of its own colour, so a seat's line can hold both inks;
 // a covered capture is shaded as banqi shades one. The no-progress and chase
@@ -338,10 +346,31 @@ function renderSeatPanel(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   if (!view) return;
   const bottom: BanqiColor = core?.orientation() ?? 'red';
   const top: BanqiColor = bottom === 'red' ? 'black' : 'red';
-  for (const side of [top, bottom]) host.append(seatBlock(view, side));
+  // The final view stays masked and carries the same exact public pool, so
+  // finished odds need no move-log reconstruction.
+  const odds = banqiRevealOdds({ pool: view.pool });
+  const pool = document.createElement('div');
+  renderHiddenPoolPanel(
+    pool,
+    [top, bottom].map((color) => ({
+      color,
+      label: t(color === 'red' ? 'setup.red' : 'setup.black'),
+      side: odds.pool[color],
+    })),
+    banqiPieceGhostSvg,
+    { odds },
+  );
+  for (const side of [top, bottom]) {
+    const pieces = pool.querySelector<HTMLElement>(
+      `.hidden-pool__row[data-ink="${side}"] .hidden-pool__pieces`,
+    )!;
+    pieces.classList.add('tk-seat__pieces');
+    if (pieces.querySelector('.hidden-pool__none')) pieces.replaceChildren(seatPanelNone());
+    host.append(seatBlock(view, side, pieces));
+  }
 }
 
-function seatBlock(view: FFQBanqiWireView, side: BanqiColor): HTMLElement {
+function seatBlock(view: FFQBanqiWireView, side: BanqiColor, faceDown: HTMLElement): HTMLElement {
   const block = seatPanelBlock({
     name: t(side === 'red' ? 'setup.red' : 'setup.black'),
     score: createFFQBanqiHpMeter(view, side),
@@ -360,6 +389,7 @@ function seatBlock(view: FFQBanqiWireView, side: BanqiColor): HTMLElement {
   for (const owner of [tenant.oppositeColor(side), side])
     fillCapturedPoolWith(pieces, taken, owner, banqiPieceGhostSvg);
   block.append(seatPanelLine('captured', t('live.tk.captured'), seatPanelPieces(pieces)));
+  block.append(seatPanelLine('face-down', t('live.stillFaceDown'), faceDown));
   return block;
 }
 

@@ -35,7 +35,7 @@
 }
 
 /* Room seat panel: the head is one line across the block (the name in the
-   label column, the HP bar over the pieces), then the Captured line. Five
+   label column, the HP bar over the pieces), then Captured and Still face-down. Five
    classes, one above banqi-seat-panel.css, in every layout it sets. */
 .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat.tk-seat--hp {
   grid-template-columns: var(--tk-key) minmax(0, 1fr);
@@ -64,8 +64,15 @@
    over the discs, so the bar and the discs keep the half's full width. */
 @media (min-width: 601px) {
   @container hidden-pool (width >= 560px) {
+    /* The two seats share the pool's five rows (head, two keys, two piece
+       lines), as Three Kingdoms seats do, so when one seat's captures wrap its
+       face-down line does not drop below the other seat's. Each line sits at
+       the top of its row, so a short one ("None") stays under its key. */
     .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat.tk-seat--hp {
       grid-template-columns: minmax(0, 1fr);
+      grid-row: span 5;
+      grid-template-rows: subgrid;
+      align-items: start;
     }
     .live-route--ffq-banqi .live-review__cluster .hidden-pool .tk-seat--hp .tk-seat__name {
       flex: 0 0 auto;
