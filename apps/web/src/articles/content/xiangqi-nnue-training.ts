@@ -62,7 +62,7 @@ export const xiangqiNnueTrainingArticle: Article = {
   cardTitle: 'Training our own xiangqi net',
   seoTitle: 'Fine-tuning a public-domain xiangqi NNUE net for Pikafish',
   summary:
-    'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.',
+    'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0. The new net won at 100,000 nodes a move but not at one second, so the site keeps the public-domain net.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-24',

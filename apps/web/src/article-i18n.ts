@@ -291,8 +291,8 @@ const ZH_HANS: Record<string, string> = {
   'Training our own xiangqi net': '训练我们自己的象棋网络',
   'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
     '为皮卡鱼微调公有领域的象棋 NNUE 网络',
-  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.':
-    '我们先让皮卡鱼适配一个公有领域的象棋网络，再尝试用 Px0 的评分训练出更强的网络。',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0. The new net won at 100,000 nodes a move but not at one second, so the site keeps the public-domain net.':
+    '我们先让皮卡鱼适配一个公有领域的象棋网络，再尝试用 Px0 的评分训练出更强的网络。新网络在每步 100,000 节点时胜出，在每步一秒时却没有，所以网站继续使用公有领域网络。',
   'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
     '面向开发或训练象棋引擎的人，以及想了解象棋电脑背后技术的棋友。',
   "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
@@ -7200,8 +7200,8 @@ const ZH_HANT: Record<string, string> = {
   'Training our own xiangqi net': '訓練我們自己的象棋網路',
   'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
     '為皮卡魚微調公有領域的象棋 NNUE 網路',
-  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.':
-    '我們先讓皮卡魚適配一個公有領域的象棋網路，再嘗試用 Px0 的評分訓練出更強的網路。',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0. The new net won at 100,000 nodes a move but not at one second, so the site keeps the public-domain net.':
+    '我們先讓皮卡魚適配一個公有領域的象棋網路，再嘗試用 Px0 的評分訓練出更強的網路。新網路在每步 100,000 節點時勝出，在每步一秒時卻沒有，所以網站繼續使用公有領域網路。',
   'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
     '面向開發或訓練象棋引擎的人，以及想了解象棋電腦背後技術的棋友。',
   "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
