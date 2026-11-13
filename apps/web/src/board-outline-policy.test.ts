@@ -3,6 +3,7 @@ import { type Article, type ArticleBlock, articles, findArticle } from './articl
 import { mountBanqiReplay } from './banqi-replay.js';
 import type { Locale } from './i18n/locale.js';
 import { mountJieqiReplay } from './jieqi-replay.js';
+import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
 
 type SvgSample = { label: string; svg: string };
 
@@ -86,16 +87,22 @@ describe('board outer-outline policy', () => {
   });
 
   it('keeps the Reveal and Banqi replay widgets outline-free', () => {
-    // The jieqi and banqi rules pages no longer carry replay blocks (their
-    // sample games are study embeds), so the Reveal replay is exercised on the
-    // Vietnamese rules article's block and the Banqi replay on the one the
-    // skill-vs-luck post holds (the MistyBanqi post's games are study embeds now).
-    const reveal = findArticle('luat-co-up');
+    // No article carries a Reveal replay block any more (the jieqi pages' sample
+    // games are study embeds), so the widget is mounted on the sample game it was
+    // built around; the Banqi replay is exercised on the one the skill-vs-luck post
+    // holds (the MistyBanqi post's games are study embeds now).
     const flip = findArticle('skill-vs-luck');
-    const revealBlock =
-      reveal && articleBlocks(reveal).find((block) => block.kind === 'jieqi-replay');
+    const revealBlock = {
+      spec: {
+        red: JIEQI_SAMPLE_GAME.red,
+        black: JIEQI_SAMPLE_GAME.black,
+        event: JIEQI_SAMPLE_GAME.event,
+        resultText: JIEQI_SAMPLE_GAME.result,
+        deal: JIEQI_SAMPLE_GAME.deal,
+        moves: JIEQI_SAMPLE_GAME.moves,
+      },
+    };
     const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');
-    if (revealBlock?.kind !== 'jieqi-replay') throw new Error('missing Jieqi replay');
     if (flipBlock?.kind !== 'banqi-replay') throw new Error('missing Banqi replay');
 
     const revealHost = document.createElement('div');

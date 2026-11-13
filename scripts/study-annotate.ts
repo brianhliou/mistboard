@@ -43,6 +43,7 @@ const GLYPH_FOR: Record<'inaccuracy' | 'mistake' | 'blunder', MoveGlyph> = {
   mistake: '?',
   blunder: '??',
 };
+const GLYPH_RANK: Record<MoveGlyph, number> = { '?!': 0, '?': 1, '??': 2 };
 const NAG_FOR_ASSESSMENT: Record<string, number> = Object.fromEntries(
   Object.entries(ASSESSMENT_GLYPH).map(([nag, symbol]) => [symbol, Number(nag)]),
 );
@@ -122,6 +123,9 @@ export type EngineAnnotationInput = {
   scoreByMover?: { red: readonly number[]; black: readonly number[] };
   /** Whose moves are judged; both by default. */
   judge?: 'red' | 'black' | 'both';
+  /** The mildest glyph emitted; `?` drops the inaccuracies, for an engine whose search
+   *  noise is as wide as the inaccuracy band (duck xiangqi's Fairy-Stockfish). */
+  floor?: MoveGlyph;
   /** Extra arrows on the position after N plies (0 = the root). */
   shapes?: Readonly<Record<number, readonly StudyArrow[]>>;
   sidelines?: readonly EngineSideline[];
@@ -166,6 +170,7 @@ export function judgedMoves(input: EngineAnnotationInput): JudgedMove[] {
     const before = forMover(series[i]!);
     const after = forMover(input.moveScore?.[i] ?? series[i + 1]!);
     const g = moveGlyphFor(before, after);
+    if (g && input.floor && GLYPH_RANK[g] < GLYPH_RANK[input.floor]) continue;
     if (g) out.push({ ply: i + 1, uci, mover, glyph: g, before, after, best });
   }
   return out;
@@ -219,9 +224,13 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
       if (side.comment) comment(head!, side.comment);
       if (side.redScoreEnd != null) glyph(tail!, assessmentForRedScore(side.redScoreEnd).nag);
       cursor.children.push(head!);
-      arrows(cursor, [
-        { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
-      ]);
+      // A drop (`R@d8`) has no origin square, so it gets no arrow; a duck move
+      // (`b3b5@d9`) has one.
+      if (!/^[A-Za-z]@/.test(side.moves[0]!)) {
+        arrows(cursor, [
+          { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
+        ]);
+      }
     }
     cursor = node;
   });
