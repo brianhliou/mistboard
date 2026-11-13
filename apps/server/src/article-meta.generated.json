@@ -903,6 +903,14 @@
       "zh-hant": "象棋假棋案"
     }
   },
+  "xiangqi-nnue-training": {
+    "title": "Training our own xiangqi net for Pikafish",
+    "kind": "article",
+    "description": "We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0.",
+    "status": "published",
+    "publishedAt": "2026-11-24",
+    "liveAt": 1795536000000
+  },
   "xiangqi-world-championship": {
     "title": "The Xiangqi World Championship",
     "kind": "article",
