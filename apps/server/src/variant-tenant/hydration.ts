@@ -11,7 +11,11 @@ import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { hydrateRoomOnce } from '../room-hydration.js';
 import { serverConfig } from '../server-config.js';
-import { reserveHydratedLiveEngineSeat } from '../server-live-engine-reservations.js';
+import {
+  releaseLiveEngineReservation,
+  releaseLiveEngineReservations,
+  reserveHydratedLiveEngineSeat,
+} from '../server-live-engine-reservations.js';
 import { recordTenantPersistenceError } from './events.js';
 import {
   appendTenantRuntimeEvent,
@@ -167,22 +171,34 @@ export async function restoreHydratedTenantEngineReservation<
     engineId: string;
     roomId: string;
   }) => Promise<string | null>,
+  release = releaseLiveEngineReservation,
 ): Promise<boolean> {
   const reservationColor = tenant.engine?.reservationColor;
   const status = room.projection.state.status;
   if (!reservationColor || status.type === 'finished' || status.type === 'aborted') return true;
 
-  for (const color of tenant.colors) {
-    const engineId = room.projection.seats[color];
-    if (!engineId || !tenant.engine?.isEngineClientId(engineId)) continue;
-    const reservationId = await reserve({
-      color: reservationColor(color),
-      engineId,
-      roomId: room.id,
-    });
-    if (!reservationId) return false;
-    room.engineReservationId = reservationId;
+  const engines = tenant.colors.filter((color) =>
+    tenant.engine?.isEngineClientId(room.projection.seats[color]),
+  );
+  try {
+    for (const color of engines) {
+      const engineId = room.projection.seats[color];
+      if (!engineId || room.engineReservationIds[color]) continue;
+      const reservationId = await reserve({
+        color: reservationColor(color),
+        engineId,
+        roomId: room.id,
+      });
+      if (!reservationId) {
+        releaseLiveEngineReservations(room, 'hydrate-reservation-failed', release);
+        return false;
+      }
+      room.engineReservationIds[color] = reservationId;
+      if (engines.length === 1) room.engineReservationId = reservationId;
+    }
     return true;
+  } catch {
+    releaseLiveEngineReservations(room, 'hydrate-reservation-failed', release);
+    return false;
   }
-  return true;
 }

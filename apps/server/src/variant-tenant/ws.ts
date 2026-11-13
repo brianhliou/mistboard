@@ -62,6 +62,7 @@ import {
   tenantClockRemainingMs,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantRoomMode,
   tenantRoomOffersRematch,
   tenantSnapshotPayload,
 } from './runtime.js';
@@ -248,7 +249,7 @@ export function createTenantWsRuntime<
     // A paused game takes no moves, and an engine move refused mid-think reads
     // to the engine loop as a failure it answers by resigning the bot's seat.
     // The resume event runs this again once the clock is back.
-    if (room.projection.paused) return;
+    if (room.projection.paused || tenantRoomMode(tenant, room) === 'eve') return;
     options.scheduleEngineMove?.(lifecycleCtx, room);
   }
 

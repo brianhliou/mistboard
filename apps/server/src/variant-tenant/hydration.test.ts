@@ -72,3 +72,80 @@ test('Fog Xiangqi hydration stays unavailable rather than resuming without a res
   assert.equal(ready, false);
   assert.equal(room.engineReservationId, null);
 });
+
+function hydratedEveRoom() {
+  const room = hydratedDarkXiangqiPveRoom();
+  room.projection.seats.red = DARK_XIANGQI_DEFAULT_ENGINE_ID;
+  return room;
+}
+
+test('EvE hydration acquires distinct reservations for identical engines in different seats', async () => {
+  const room = hydratedEveRoom();
+  const requests: string[] = [];
+  const reserve = async ({ color }: { color: string }) => {
+    requests.push(color);
+    return `restored-${color}`;
+  };
+  assert.equal(
+    await restoreHydratedTenantEngineReservation(darkXiangqiTenant, room, reserve),
+    true,
+  );
+  assert.deepEqual(requests, ['white', 'black']);
+  assert.deepEqual(room.engineReservationIds, { red: 'restored-white', black: 'restored-black' });
+  assert.equal(room.engineReservationId, null, 'EvE has no single-seat alias');
+  assert.equal(
+    await restoreHydratedTenantEngineReservation(darkXiangqiTenant, room, reserve),
+    true,
+  );
+  assert.deepEqual(requests, ['white', 'black'], 'an already restored seat is not reserved twice');
+});
+
+test('partial EvE hydration releases admitted seats on refusal or exception and can retry cleanly', async () => {
+  for (const throws of [false, true]) {
+    const room = hydratedEveRoom();
+    const released: string[] = [];
+    assert.equal(
+      await restoreHydratedTenantEngineReservation(
+        darkXiangqiTenant,
+        room,
+        async ({ color }) => {
+          if (color === 'white') return 'first-seat';
+          if (throws) throw new Error('worker unavailable');
+          return null;
+        },
+        (id) => {
+          released.push(id);
+        },
+      ),
+      false,
+    );
+    assert.deepEqual(released, ['first-seat']);
+    assert.deepEqual(room.engineReservationIds, {});
+    assert.equal(room.engineReservationId, null);
+    assert.equal(
+      await restoreHydratedTenantEngineReservation(
+        darkXiangqiTenant,
+        room,
+        async ({ color }) => `retry-${color}`,
+      ),
+      true,
+    );
+    assert.deepEqual(room.engineReservationIds, { red: 'retry-white', black: 'retry-black' });
+  }
+});
+
+test('finished and aborted EvE rooms never reacquire worker capacity', async () => {
+  for (const status of [
+    { type: 'finished' as const, winner: null, reason: 'agreement' as const },
+    { type: 'aborted' as const, reason: 'user-abort' as const },
+  ]) {
+    const room = hydratedEveRoom();
+    room.projection.state.status = status;
+    assert.equal(
+      await restoreHydratedTenantEngineReservation(darkXiangqiTenant, room, async () => {
+        assert.fail('terminal game attempted admission');
+      }),
+      true,
+    );
+  }
+});

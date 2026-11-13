@@ -29,7 +29,10 @@ import { buildXiangqiEngineTurnRequest } from './engine-protocol/build-xiangqi.j
 import { isDarkXiangqiEngineClientId, loadEngine } from './engines/registry.js';
 import { engineCounters, logger } from './obs.js';
 import type { DarkXiangqiLiveRoom } from './server-dark-xiangqi-types.js';
-import { requestLiveEngineTurnWithRenewal } from './server-live-engine-reservations.js';
+import {
+  liveEngineReservationForSeat,
+  requestLiveEngineTurnWithRenewal,
+} from './server-live-engine-reservations.js';
 import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 
@@ -144,7 +147,7 @@ export async function playDarkXiangqiEngineMoveIfReady(
   const turnStartedAt = Date.now();
   try {
     response = await requestLiveEngineTurnWithRenewal({
-      holder: room,
+      holder: liveEngineReservationForSeat(room, seat),
       request,
       budget: { computeBudgetMs, watchdogTimeoutMs },
       // Re-derive from the clock left now: an outage spends the engine's time.

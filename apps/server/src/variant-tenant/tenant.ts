@@ -148,6 +148,7 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       creatorPreference?: C | 'random';
       rated?: boolean;
       pveBotId?: string;
+      engineBotIds?: Partial<Record<C, string>>;
       internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
       timeControl?: RoomTimeControl;
       // Server-secret per-game setup (e.g. a jieqi deal). Produced by
@@ -369,10 +370,14 @@ export type TenantRuntimeRoom<
   // itself is derived from projection.seats (its slot holds an engine clientId),
   // so it survives hydration without a dedicated field.
   engineTimer: ReturnType<typeof setTimeout> | null;
-  // PvE: the engine HTTP service's seat reservation for this game. Reserved at
-  // creation, sent on every engine turn (the service 409s without it), released
-  // on game end. Null for PvP and until reserved.
+  // Legacy single-engine alias. Seat-aware callers use engineReservationIds;
+  // EvE never has a single reservation. Kept current by seat-scoped renewal.
   engineReservationId: string | null;
+  // Memory-only worker reservations, keyed by the tenant seat (not engine id:
+  // the same executable can play both sides).
+  engineReservationIds: Partial<Record<C, string | null>>;
+  // Durable bot identities from room-created. Legacy rooms use pveBotId.
+  engineBotIds: Partial<Record<C, string>>;
   // PvE: bot profile that requested the engine seat. Hydrated from the initial
   // room-created event; the engine seat itself remains the executable engine id.
   pveBotId: string | null;

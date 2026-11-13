@@ -96,6 +96,56 @@ export function releaseLiveEngineReservation(reservationId: string, reason: stri
   });
 }
 
+export type LiveEngineReservationSet = {
+  readonly id: string;
+  engineReservationId?: string | null;
+  engineReservationIds?: Partial<Record<string, string | null>>;
+};
+
+/** Clear first so terminal events, shutdown and an in-flight renewal cannot
+ * hand the same reservation back twice. Includes the legacy PvE alias. */
+export function takeLiveEngineReservations(holder: LiveEngineReservationSet): string[] {
+  const ids = new Set<string>();
+  if (holder.engineReservationId) ids.add(holder.engineReservationId);
+  for (const id of Object.values(holder.engineReservationIds ?? {})) {
+    if (id) ids.add(id);
+  }
+  holder.engineReservationId = null;
+  if (holder.engineReservationIds) holder.engineReservationIds = {};
+  return [...ids];
+}
+
+export function releaseLiveEngineReservations(
+  holder: LiveEngineReservationSet,
+  reason: string,
+  release = releaseLiveEngineReservation,
+): void {
+  for (const id of takeLiveEngineReservations(holder)) release(id, reason);
+}
+
+/** A write-through seat holder: renewal replaces only this seat's reservation.
+ * The legacy single-seat alias stays current for existing PvE callers. */
+export function liveEngineReservationForSeat(
+  holder: LiveEngineReservationSet,
+  seat: string,
+): LiveEngineReservationHolder {
+  return {
+    id: holder.id,
+    get engineReservationId() {
+      return holder.engineReservationIds && Object.keys(holder.engineReservationIds).length > 0
+        ? (holder.engineReservationIds[seat] ?? null)
+        : (holder.engineReservationId ?? null);
+    },
+    set engineReservationId(id) {
+      const previous = this.engineReservationId;
+      holder.engineReservationIds ??= {};
+      holder.engineReservationIds[seat] = id;
+      if (holder.engineReservationId != null && holder.engineReservationId === previous)
+        holder.engineReservationId = id;
+    },
+  };
+}
+
 /**
  * A stopping server hands back every engine-service seat its rooms hold (#567).
  * Seats live only in the worker's memory and this process's rooms; nothing
@@ -108,32 +158,31 @@ export function releaseLiveEngineReservation(reservationId: string, reason: stri
  * release is logged and the TTL frees that seat as before.
  */
 export async function releaseLiveEngineSeatsOnShutdown(
-  holders: Iterable<{ id: string; engineReservationId?: string | null }>,
+  holders: Iterable<LiveEngineReservationSet>,
 ): Promise<{ released: number; failed: number }> {
   const releases: Array<Promise<void>> = [];
   for (const holder of holders) {
-    const reservationId = holder.engineReservationId;
-    if (!reservationId) continue;
-    holder.engineReservationId = null;
-    releases.push(
-      releaseInternalEngineReservation(reservationId, 'server-shutdown').catch((err) => {
-        engineCounters.recordReservationReleaseFailure();
-        logger.warn(
-          {
-            kind: 'live_engine_reservation_release_failed',
-            reservation_id: reservationId,
-            room_id: holder.id,
-            reason: 'server-shutdown',
-            error: err instanceof Error ? err.message : String(err),
-            ...(err instanceof InternalEngineClientError
-              ? { engine_error_reason: err.reason }
-              : {}),
-          },
-          'live engine reservation release failed',
-        );
-        throw err;
-      }),
-    );
+    for (const reservationId of takeLiveEngineReservations(holder)) {
+      releases.push(
+        releaseInternalEngineReservation(reservationId, 'server-shutdown').catch((err) => {
+          engineCounters.recordReservationReleaseFailure();
+          logger.warn(
+            {
+              kind: 'live_engine_reservation_release_failed',
+              reservation_id: reservationId,
+              room_id: holder.id,
+              reason: 'server-shutdown',
+              error: err instanceof Error ? err.message : String(err),
+              ...(err instanceof InternalEngineClientError
+                ? { engine_error_reason: err.reason }
+                : {}),
+            },
+            'live engine reservation release failed',
+          );
+          throw err;
+        }),
+      );
+    }
   }
   const results = await Promise.allSettled(releases);
   const failed = results.filter((result) => result.status === 'rejected').length;
