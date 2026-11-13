@@ -10,7 +10,11 @@
 // Dark chess stays on the chessground path in replay.ts; this generic
 // is for the xiangqi-style SVG tenants only.
 
-import { terminationLabel as sharedTerminationLabel } from './game-display.js';
+import type { GameSpecId } from '@mistboard/game';
+import {
+  terminationLabel as sharedTerminationLabel,
+  terminationReason as sharedTerminationReason,
+} from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import type { SoundKind } from './live-state.js';
@@ -90,6 +94,9 @@ export type WatchPostgameMeta = {
 
 // The variant-specific surface. The generic owns everything else.
 export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey extends string> = {
+  // The variant this adapter replays: a stored termination code can name a
+  // different ending per variant (`race`), so the header's reason line needs it.
+  variant: GameSpecId;
   installStyles(): void;
   /** Appearance event that repaints the current ply without changing replay state. */
   appearanceEvent?: string;
@@ -340,10 +347,13 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
 
 // English reads the token mid-sentence ("by resignation"); the zh locales go
 // through the shared, total termination map (the old four-case switch here let
-// "General Captured" and "No Legal Moves" through untranslated).
-function terminationLabel(reason: string, locale: Locale): string {
+// "General Captured" and "No Legal Moves" through untranslated). `race` is not
+// its own wording in any variant (Jungle's den entry, Gomoku's five in a row),
+// so it always goes through the shared map with the variant, which is required.
+function terminationLabel(reason: string, variant: GameSpecId, locale: Locale): string {
+  if (reason === 'race') return sharedTerminationReason(reason, variant, locale);
   if (locale === 'en') return labelize(reason).toLowerCase();
-  return sharedTerminationLabel(reason, locale);
+  return sharedTerminationLabel(reason, variant, locale);
 }
 
 function localizePaneLabel(label: string, locale: Locale): string {
@@ -1072,7 +1082,7 @@ export async function mountTenantWatchReplay<
     detail.className = 'replay-game-header-result-detail';
     detail.textContent = t(
       'watch.byReason',
-      { reason: terminationLabel(postgame.game.termination, locale) },
+      { reason: terminationLabel(postgame.game.termination, adapter.variant, locale) },
       locale,
     );
     header.result.append(chip, detail);

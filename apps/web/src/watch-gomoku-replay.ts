@@ -354,7 +354,7 @@ export async function mountGomokuWatchReplay(
             ? t('result.boardFull', {}, locale)
             : reason === 'agreement'
               ? t('result.agreement', {}, locale)
-              : terminationLabel(reason, locale);
+              : terminationLabel(reason, 'gomoku', locale);
       detail.textContent = t('watch.byReason', { reason: label }, locale);
       header.result.append(detail);
     }

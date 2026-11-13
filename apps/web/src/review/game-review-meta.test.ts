@@ -77,24 +77,33 @@ describe('reviewResultLabel', () => {
 
 describe('reviewOutcomeLine', () => {
   it('reads like the live room meta card for a decisive result', () => {
-    expect(reviewOutcomeLine({ winner: 'Black' }, 'checkmate')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'checkmate', null)).toBe(
       'Checkmate • Black is victorious',
     );
-    expect(reviewOutcomeLine({ winner: 'Red' }, 'king-captured')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'king-captured', null)).toBe(
       'King captured • Red is victorious',
     );
-    expect(reviewOutcomeLine({ winner: 'Blue' }, 'elimination')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Blue' }, 'elimination', null)).toBe(
       'Elimination • Blue is victorious',
     );
   });
 
   it('formats draws as "Draw • <reason>"', () => {
-    expect(reviewOutcomeLine({ draw: true }, 'no-progress')).toBe('Draw • No progress');
-    expect(reviewOutcomeLine({ draw: true }, '')).toBe('Draw');
+    expect(reviewOutcomeLine({ draw: true }, 'no-progress', null)).toBe('Draw • No progress');
+    expect(reviewOutcomeLine({ draw: true }, '', null)).toBe('Draw');
+  });
+
+  it('names the shared race code by the variant it was played in', () => {
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'race', 'gomoku')).toBe(
+      'Five in a row • Black is victorious',
+    );
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'race', 'jungle')).toBe(
+      'Den entered • Red is victorious',
+    );
   });
 
   it('degrades gracefully when the termination is missing', () => {
-    expect(reviewOutcomeLine({ winner: 'Black' }, '')).toBe('Black is victorious');
+    expect(reviewOutcomeLine({ winner: 'Black' }, '', null)).toBe('Black is victorious');
   });
 
   // The old signature took the English label and stripped " wins" to recover
@@ -104,8 +113,8 @@ describe('reviewOutcomeLine', () => {
     await ensureLocaleCatalog('zh-Hans');
     window.history.pushState(null, '', '/zh-hans/');
     try {
-      expect(reviewOutcomeLine(gameOutcome('red-wins'), 'checkmate')).toBe('将死 • 红方获胜');
-      expect(reviewOutcomeLine(gameOutcome('draw'), 'repetition')).toBe('和棋 • 重复局面');
+      expect(reviewOutcomeLine(gameOutcome('red-wins'), 'checkmate', null)).toBe('将死 • 红方获胜');
+      expect(reviewOutcomeLine(gameOutcome('draw'), 'repetition', null)).toBe('和棋 • 重复局面');
     } finally {
       window.history.pushState(null, '', '/');
     }

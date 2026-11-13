@@ -167,7 +167,11 @@ export function crazyhouseXiangqiReviewConfig(
   const hasMoveTimes = moveTimes.some((ms) => ms > 0);
 
   const gamePlayers = postgame.game.players ?? [];
-  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
+  const status = reviewOutcomeLine(
+    gameOutcome(postgame.game.result),
+    postgame.game.termination,
+    CRAZYHOUSE_XIANGQI_SPEC_ID,
+  );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: CRAZYHOUSE_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID),

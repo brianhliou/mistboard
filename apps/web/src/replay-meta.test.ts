@@ -71,8 +71,23 @@ describe('replay metadata rendering', () => {
     result: 'white-wins',
     termination: 'king-captured',
     timeControl: { initial_seconds: 300, increment_seconds: 2 },
+    variant: 'dark-chess' as const,
     whiteName: 'Guest',
   };
+
+  // `race` is Gomoku's five in a row and Jungle's den entry; the header names
+  // the one this game was played under.
+  it('names the shared race ending by the game variant', () => {
+    const header = createGameHeaderStrip();
+    renderGameHeader(header, { ...meta, termination: 'race', variant: 'gomoku' });
+    expect(header.result.querySelector('.replay-game-header-result-detail')?.textContent).toBe(
+      'by five in a row',
+    );
+    renderGameHeader(header, { ...meta, termination: 'race', variant: 'jungle' });
+    expect(header.result.querySelector('.replay-game-header-result-detail')?.textContent).toBe(
+      'by den entered',
+    );
+  });
 
   it('renders header metadata from the extracted module', () => {
     const header = createGameHeaderStrip();

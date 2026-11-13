@@ -59,7 +59,7 @@ function finishedStatusLine(status: Extract<XiangqiGameStatus, { type: 'finished
     : { draw: true };
   return t('watch.resultByReason', {
     result: outcomeLabel(outcome),
-    reason: terminationReason(status.reason),
+    reason: terminationReason(status.reason, XIANGQI_SPEC_ID),
   });
 }
 

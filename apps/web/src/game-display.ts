@@ -475,7 +475,6 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   repetition: 'replay.endRepetition',
   'progress-clock': 'replay.endProgressClock',
   truncated: 'replay.endTruncated',
-  race: 'replay.endRace',
   chasing: 'replay.endChasing',
   'perpetual-chase': 'replay.endPerpetualChase',
   'dead-position': 'replay.endDeadPosition',
@@ -484,21 +483,36 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   'pieces-captured': 'replay.endPiecesCaptured',
 };
 
-// The persisted goal-win code is shared by two different rules. A scoped
-// lookup must name the variant explicitly, never borrow another game's goal.
+// The persisted goal-win code `race` is shared by two different rules: Gomoku's
+// five in a row and Jungle's den entry. Its label depends on the variant, so the
+// variant is a REQUIRED argument of terminationLabel/terminationReason and every
+// caller decides at compile time. It used to be optional with Jungle's "Den
+// entered" as the default, and every Gomoku game list read "by den entered". A
+// variant with no race meaning throws (fail closed); `null` (a genuinely
+// cross-variant list: the admin database's termination facet) gets the bare
+// humanized code, never one variant's label. `race` has no entry in
+// TERMINATION_KEYS on purpose.
 const RACE_TERMINATION_KEYS = new Map<GameSpecId, I18nKey>([
   ['gomoku', 'replay.endFive'],
   ['jungle', 'replay.endRace'],
   ['jungle-flip', 'replay.endRace'],
 ]);
 
+/** The spec id for a persisted games.variant value (aliases resolve), or null
+ *  when the catalog does not know it: the usual second argument to
+ *  terminationLabel for a game row. */
+export function terminationVariant(variant: string | null | undefined): GameSpecId | null {
+  return variant ? (maybeGameSpecForId(variant)?.id ?? null) : null;
+}
+
 export function terminationLabel(
   termination: string,
+  variant: GameSpecId | null,
   locale?: Locale,
-  variant?: GameSpecId,
 ): string {
   if (!termination) return '';
-  if (termination === 'race' && variant !== undefined) {
+  if (termination === 'race') {
+    if (variant === null) return humanizeToken(termination);
     const key = RACE_TERMINATION_KEYS.get(variant);
     if (!key) throw new Error(`Unsupported race termination for ${variant}`);
     return t(key, {}, locale);
@@ -509,8 +523,12 @@ export function terminationLabel(
 }
 
 /** The ending as it reads mid-sentence ("Red wins by timeout"): the label lowercased. */
-export function terminationReason(termination: string, locale?: Locale): string {
-  return terminationLabel(termination, locale).toLowerCase();
+export function terminationReason(
+  termination: string,
+  variant: GameSpecId | null,
+  locale?: Locale,
+): string {
+  return terminationLabel(termination, variant, locale).toLowerCase();
 }
 
 // A watch/games rail channel's name in the page locale. The server's `label` is

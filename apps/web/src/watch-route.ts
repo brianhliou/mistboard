@@ -28,6 +28,7 @@ import {
   namesMatchupLabel,
   participantForColor,
   terminationReason,
+  terminationVariant,
   variantDisplayLabel,
   watchChannelLabel,
 } from './game-display.js';
@@ -1958,7 +1959,7 @@ export function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
   // "On points" is already a phrase; "wins by On points" is not a sentence.
   if (game.termination === 'points') return t('watch.resultOnPoints', { result });
-  const reason = terminationReason(game.termination);
+  const reason = terminationReason(game.termination, terminationVariant(game.variant));
   return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 

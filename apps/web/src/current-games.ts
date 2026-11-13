@@ -34,7 +34,7 @@
 // Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
 import {
   type BoardSeat,
   type CurrentGame,
@@ -74,6 +74,7 @@ import {
   matchupSeats,
   namesMatchupLabel,
   terminationLabel,
+  terminationVariant,
   variantDisplayLabel,
 } from './game-display.js';
 import { gameMetaForGame, timeControlLabelForGame } from './game-meta.js';
@@ -625,7 +626,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           winner === 'east' || winner === 'west' ? winner : null,
           readStoredXiangqiPieceSet(),
           t('games.finalHands'),
-          terminationLabel(final.reason === 'tie' ? 'draw' : final.reason) || null,
+          terminationLabel(
+            final.reason === 'tie' ? 'draw' : final.reason,
+            XIANGQI_MAHJONG_SPEC_ID,
+          ) || null,
         );
         drawn = true;
       }
@@ -1027,7 +1031,7 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const result = document.createElement('span');
   result.className = 'current-game-result';
   result.textContent = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination);
+  const reason = terminationLabel(game.termination, terminationVariant(game.variant));
   if (reason) result.title = reason;
   const when = document.createElement('time');
   when.className = 'current-game-finished-when';

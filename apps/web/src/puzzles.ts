@@ -1701,6 +1701,7 @@ function paintMateSlash(column: HTMLElement, session: PuzzleSession, shown: Puzz
     ...new Set(Object.values(board).flatMap((piece) => (piece ? [piece.color] : []))),
   ];
   const badges = finishBadgesForResult({
+    variant: session.puzzle.variant,
     colors,
     winner: status.winner,
     reason: 'checkmate',

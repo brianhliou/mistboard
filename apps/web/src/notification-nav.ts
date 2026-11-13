@@ -1,7 +1,7 @@
 import './notification-nav.css';
 import { readAccountPreferences } from './account-preferences.js';
 import { startFormPrefillHref } from './correspondence-model.js';
-import { terminationLabel, variantDisplayLabel } from './game-display.js';
+import { terminationLabel, terminationVariant, variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { finishedGameHref } from './variant-tenant/registry.js';
 
@@ -361,7 +361,7 @@ export const correspondenceFinishedNotificationSource: NotificationSource = {
             : game.outcome === 'lost'
               ? 'correspondence.bellEndedLost'
               : 'correspondence.bellEndedDraw';
-        const reason = terminationLabel(game.termination);
+        const reason = terminationLabel(game.termination, terminationVariant(game.gameSpecId));
         const variant = variantDisplayLabel(game.gameSpecId);
         return {
           label: t(key, { opponent }),

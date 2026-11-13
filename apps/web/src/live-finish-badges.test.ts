@@ -13,6 +13,7 @@ const GENERALS: Record<string, string> = { red: 'e1', black: 'd10' };
 describe('finishBadgesForResult', () => {
   it('marks the loser with the reason and the winner with a crown', () => {
     const badges = finishBadgesForResult({
+      variant: 'xiangqi',
       colors: COLORS,
       winner: 'red',
       reason: 'resignation',
@@ -27,6 +28,7 @@ describe('finishBadgesForResult', () => {
   it('slashes only the mated general on a checkmate: no crown, no pill', () => {
     for (const winner of COLORS) {
       const badges = finishBadgesForResult({
+        variant: 'xiangqi',
         colors: COLORS,
         winner,
         reason: 'checkmate',
@@ -39,6 +41,7 @@ describe('finishBadgesForResult', () => {
 
   it('keeps both badges on a timeout', () => {
     const badges = finishBadgesForResult({
+      variant: 'xiangqi',
       colors: COLORS,
       winner: 'black',
       reason: 'timeout',
@@ -52,6 +55,7 @@ describe('finishBadgesForResult', () => {
 
   it('keeps the badges for a captured general (duck, atomic)', () => {
     const badges = finishBadgesForResult({
+      variant: 'xiangqi',
       colors: COLORS,
       winner: 'red',
       reason: 'general-captured',
@@ -66,6 +70,7 @@ describe('finishBadgesForResult', () => {
   it('picks the loser icon by reason, with a generic one for the rest', () => {
     const icon = (reason: string) =>
       finishBadgesForResult({
+        variant: 'xiangqi',
         colors: COLORS,
         winner: 'black',
         reason,
@@ -79,6 +84,7 @@ describe('finishBadgesForResult', () => {
 
   it('marks both generals grey on a draw', () => {
     const badges = finishBadgesForResult({
+      variant: 'xiangqi',
       colors: COLORS,
       winner: null,
       reason: 'repetition',
@@ -92,6 +98,7 @@ describe('finishBadgesForResult', () => {
 
   it('skips a general that is off the board', () => {
     const badges = finishBadgesForResult({
+      variant: 'xiangqi',
       colors: COLORS,
       winner: 'red',
       reason: 'general-captured',
@@ -128,6 +135,7 @@ describe('generalSquareIn', () => {
   it('labels a captured general and a jungle den ending', () => {
     const label = (reason: string) =>
       finishBadgesForResult({
+        variant: 'xiangqi',
         colors: COLORS,
         winner: 'red',
         reason,
@@ -185,6 +193,7 @@ describe('createLiveFinishBadges', () => {
   }
 
   const played = finishBadgesForResult({
+    variant: 'xiangqi',
     colors: COLORS,
     winner: 'red',
     reason: 'resignation',
@@ -272,6 +281,7 @@ describe('createLiveFinishBadges', () => {
   });
 
   const mated = finishBadgesForResult({
+    variant: 'xiangqi',
     colors: COLORS,
     winner: 'red',
     reason: 'checkmate',

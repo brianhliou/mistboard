@@ -68,6 +68,7 @@ export function mountAtomicXiangqiWatchReplay(
     roomId,
     options,
     {
+      variant: 'atomic-xiangqi',
       installStyles: () => {},
       appearanceEvent: xiangqiAppearanceChangedEvent,
       loadPostgame: loadAtomicXiangqiPostgame,

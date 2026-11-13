@@ -304,9 +304,9 @@ export function reviewResultLabel(result: string, variant?: string): string {
 export function reviewOutcomeLine(
   outcome: GameOutcome,
   termination: string,
-  variant?: GameSpecId,
+  variant: GameSpecId | null,
 ): string {
-  const reason = terminationLabel(termination, undefined, variant);
+  const reason = terminationLabel(termination, variant);
   if ('draw' in outcome) return reason ? t('result.drawByReason', { reason }) : t('watch.draw');
   if ('winner' in outcome) {
     return reason

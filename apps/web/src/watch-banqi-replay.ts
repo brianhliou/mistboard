@@ -53,6 +53,7 @@ export function mountBanqiWatchReplay(
     roomId,
     options,
     {
+      variant: 'banqi',
       installStyles: installBanqiBoardStyles,
       // Piece-set / board-theme changes repaint the board in place (the homepage
       // TV sits frozen on one ply, so nothing else would re-render it).
