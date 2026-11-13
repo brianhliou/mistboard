@@ -2263,8 +2263,10 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // Rated correspondence (2026-10-02) is an open seek only (Find opponent): a rated
   // pick keeps the segment only where correspondence can be rated, and Challenge a
   // friend's link challenge stays casual.
+  // A seek and a friend's link challenge both rate (the server takes `rated` on
+  // either); a guest's direct room never does, and ratedDisabled covers that.
   const correspondenceRatedOffered = () =>
-    choice.mode === 'lobby' &&
+    (choice.mode === 'lobby' || choice.mode === 'pvp') &&
     correspondenceRatedAvailable(selectedGameSpecId, isCorrespondenceRatedModeEnabled());
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
@@ -2373,6 +2375,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           selectedCorrespondenceDays,
           selectedGameSpecId,
           preferredColor,
+          rated && !choice.ratedDisabled && correspondenceRatedOffered(),
           locale,
         );
       }
@@ -2475,7 +2478,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           : t('setup.ratedComingSoon', {}, locale);
       }
       if (selectedTimeMode === 'correspondence') {
-        return correspondenceRatedOffered() ? null : t('setup.ratedComingSoon', {}, locale);
+        if (correspondenceRatedOffered()) return null;
+        // "Coming soon" only while rated correspondence is switched off; a variant
+        // that never rates by post (Gomoku, Three Kingdoms Banqi) says unavailable.
+        return isCorrespondenceRatedModeEnabled()
+          ? t('setup.ratedUnavailable', {}, locale)
+          : t('setup.ratedComingSoon', {}, locale);
       }
       return landingGameSpecCapabilities(selectedGameSpecId).supportsRated
         ? null
@@ -2914,6 +2922,7 @@ async function createCorrespondenceFromPlay(
   daysPerMove: number,
   gameSpecId: LandingGameSpecId,
   preferredColor: LandingColorPreference,
+  rated: boolean,
   locale: Locale,
 ): Promise<void> {
   button.disabled = true;
@@ -2939,6 +2948,7 @@ async function createCorrespondenceFromPlay(
       daysPerMove,
       preferredColor: correspondenceSeat(gameSpecId, preferredColor),
       kind: 'link',
+      rated,
     });
     if (!request.ok) throw new Error(request.error);
     const response = await postThroughRestart('/api/correspondence/seeks', {
