@@ -114,23 +114,30 @@ export async function baselineAnalysis(ref) {
 
 async function main() {
   const label = process.argv[2];
-  assert.ok(['before', 'after'].includes(label), 'expected before or after');
+  assert.ok(
+    ['before', 'after', 'pass2-20k', 'pass2-50k', 'pass2-100k', 'pass2-200k'].includes(label),
+    'expected before, after, or pass2-{20,50,100,200}k',
+  );
+  const rankingNodes = label.startsWith('pass2-') ? Number(label.slice(6, -1)) * 1000 : null;
   assert.ok(banqiEngineAvailable('misty-banqi-level-8'), 'Level 8 unavailable');
-  const baselineRef = process.argv[3] ?? 'a90cc8a20';
-  const analysis = label === 'before' ? await baselineAnalysis(baselineRef) : currentAnalysis;
+  const baselineRef = process.argv[3] ?? (label === 'before' ? 'a90cc8a20' : null);
+  const analysis = baselineRef ? await baselineAnalysis(baselineRef) : currentAnalysis;
   const report = {
     label,
     startedAt: new Date().toISOString(),
     machine: await machine(),
-    engineId: analysis.BANQI_DECISIONS_ENGINE_ID,
+    engineId: rankingNodes
+      ? analysis.BANQI_DECISIONS_ENGINE_ID.replace(/\+rank\d+/, `+rank${rankingNodes}`)
+      : analysis.BANQI_DECISIONS_ENGINE_ID,
+    ...(rankingNodes ? { rankingNodes } : {}),
     implementationSha256: createHash('sha256')
       .update(
-        label === 'before'
+        baselineRef
           ? execFileSync('git', ['show', `${baselineRef}:apps/server/src/banqi-analysis.ts`])
           : await readFile(new URL('../../apps/server/src/banqi-analysis.ts', import.meta.url)),
       )
       .digest('hex'),
-    ...(label === 'before' ? { baselineRef } : {}),
+    ...(baselineRef ? { baselineRef } : {}),
     method:
       'Full finished games; cold exact-query cache per game, normal reuse within game; two analysis slots.',
     games: [],
@@ -182,6 +189,9 @@ async function main() {
           calls++;
           if (rankingPhase) rankCalls++;
           else baselineCalls++;
+          if (rankingPhase && rankingNodes) {
+            args[2] = { ...args[2], nodes: rankingNodes };
+          }
           logicalNodes += args[2].nodes;
           return base.evalPosition(...args);
         },

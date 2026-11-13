@@ -298,8 +298,9 @@ export async function resolveBanqiAnalysis(
 // that bias, so 0 luck is exactly "the average outcome" and realized is one term of the same mean.
 
 // Rank every legal move, then spend the baseline budget only on the shortlist.
-// Hidden identities share each budget; the per-identity floor can exceed it.
-export const BANQI_DECISION_RANK_NODES = 50_000;
+// Ranking searches each public root move once. Only baseline identities share a
+// budget; their per-identity floor can exceed it.
+export const BANQI_DECISION_RANK_NODES = 200_000;
 export const BANQI_DECISION_BASELINE_NODES = 200_000;
 export const BANQI_DECISION_MIN_NODES = 200_000;
 // Bound each game's fan-out to the default analysis pool size. Concurrent reviews
@@ -327,7 +328,7 @@ export type BanqiDecision = {
 
 export type BanqiDecisionCandidate = {
   move: string;
-  /** Pool-mean win%, mover POV. */
+  /** Mover-POV win%: pool mean in published candidates, root estimate during ranking. */
   win: number;
   played?: boolean;
 };
@@ -494,40 +495,30 @@ async function poolMeanWin(
   return { baseline, realized };
 }
 
-/** Cheap public-information ranking. Flip scores average all possible identities;
- * quiet moves need one search. Scores here are used only to select the shortlist. */
+/** Cheap public-information ranking: one restricted root search per legal move.
+ * The engine handles flips as pool-weighted chance nodes. Its mover-POV scores
+ * select the shortlist only; published grades still use per-identity win% means. */
 export async function rankBanqiDecisionMoves(
   state: BanqiGameState,
-  mover: BanqiSeat,
+  _mover: BanqiSeat,
   evalPosition: BanqiDecisionDeps['evalPosition'],
   repetitionWindow: BanqiRepetitionWindow,
 ): Promise<BanqiDecisionCandidate[]> {
-  const ranked: BanqiDecisionCandidate[] = [];
-  // Serial candidates keep each game's inner identity fan-out bounded.
-  for (const move of getBanqiLegalMoves(state)) {
-    let win: number;
-    if (move.from === move.to) {
-      const { baseline } = await poolMeanWin(
-        state,
-        move,
-        mover,
-        evalPosition,
-        repetitionWindow,
-        BANQI_DECISION_RANK_NODES,
-      );
-      win = baseline;
-    } else {
-      const post = applyBanqiMove(state, move);
-      win = await moverWinAfter(
-        post,
-        mover,
-        evalPosition,
-        banqiRepetitionWindowAfterMove(state, move, post, repetitionWindow),
-        BANQI_DECISION_RANK_NODES,
-      );
-    }
-    ranked.push({ move: banqiMoveToEngineUci(move), win });
-  }
+  const fen = banqiStateToEngineFen(state);
+  const ranked = await mapWithConcurrency(
+    getBanqiLegalMoves(state),
+    BANQI_DECISION_EVAL_CONCURRENCY,
+    async (move) => {
+      const uci = banqiMoveToEngineUci(move);
+      // Restrict only the root, retaining the public pre-move repetition window.
+      // No reveal is applied here, so neither flip identity nor seat binding leaks.
+      const { cp, mate } = await evalPosition(fen, repetitionWindow, {
+        nodes: BANQI_DECISION_RANK_NODES,
+        searchMoves: [uci],
+      });
+      return { move: uci, win: winPercent(cp, mate, BANQI_DECISIONS_ENGINE_ID) };
+    },
+  );
   return ranked.sort((a, b) => b.win - a.win);
 }
 
@@ -628,12 +619,13 @@ export async function analyzeBanqiDecisions(
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
 // to invalidate cached decisions when the algorithm changes without an engine change.
-// d6 ranks at 50K and true-baselines only three plus played at 200K shared, with a
+// d7 ranks each legal root move with one chance-aware search.
+// d6 true-baselines only three plus played at 200K shared, with a
 // 200K per-term floor. d4 adds
 // ranked alternatives selected by pool mean. d5 uses L8 NNUE, split flip budgets and legal roots,
 // invalidating both old results and checkpoints. d3 adds
 // the live repetition window; d2 fixed counterfactual hidden-multiset preservation.
-export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+nnue+rank${BANQI_DECISION_RANK_NODES}+baseline${BANQI_DECISION_BASELINE_NODES}+floor${BANQI_DECISION_MIN_NODES}+d6`;
+export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+nnue+rank${BANQI_DECISION_RANK_NODES}+baseline${BANQI_DECISION_BASELINE_NODES}+floor${BANQI_DECISION_MIN_NODES}+d7`;
 
 export type BanqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<BanqiDecision[] | null>;

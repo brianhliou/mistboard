@@ -20,6 +20,7 @@ import {
   BANQI_DECISIONS_ENGINE_ID,
   banqiAnalysisRepetitionWindow,
   evaluateBanqiPosition,
+  rankBanqiDecisionMoves,
 } from './banqi-analysis.js';
 import { banqiEngineTierFor, evaluateBanqiFenNodes } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen } from './banqi-fen.js';
@@ -238,7 +239,43 @@ test('grading excludes a forbidden third chase from root searchmoves', async () 
   });
 });
 
-test('ranking and baseline flip terms keep the 200K floor for early, middle and late pools', async () => {
+test('ranking keeps the pre-move repetition window and restricts each root to one legal move', async () => {
+  let state = createBanqiStateFromSetup('root-history', fixture.setup);
+  const prefix = fixture.moves.slice(0, 83);
+  const states = [state];
+  for (const move of prefix) {
+    state = applyBanqiMove(state, move);
+    states.push(state);
+  }
+  const window = banqiAnalysisRepetitionWindow(states, prefix, prefix.length);
+  assert.deepEqual(state.status, { type: 'playing', turn: 'black' });
+  assert.ok(window.moves.length > 0);
+  const legal = getBanqiLegalMoves(state).map(banqiMoveToEngineUci);
+  assert.ok(legal.some((m) => m.slice(0, 2) !== m.slice(2)));
+  assert.ok(legal.some((m) => m.slice(0, 2) === m.slice(2)));
+  const seen: string[] = [];
+  const ranked = await rankBanqiDecisionMoves(
+    state,
+    'black',
+    async (fen, history, search) => {
+      assert.equal(fen, banqiStateToEngineFen(state));
+      assert.deepEqual(history, window);
+      assert.equal(search?.nodes, 200_000);
+      assert.equal(search.searchMoves?.length, 1);
+      seen.push(search.searchMoves[0]!);
+      return { cp: seen.length * 10, mate: null };
+    },
+    window,
+  );
+  assert.deepEqual(seen, legal);
+  assert.deepEqual(
+    ranked.map((row) => row.move),
+    [...legal].reverse(),
+    'black mover scores stay positive',
+  );
+});
+
+test('baseline flip terms keep the 200K floor for early, middle and late pools', async () => {
   const setup: BanqiSetup = {
     deal: STANDARD_BANQI_DEAL,
     chaseRule: 'repetition',
@@ -280,7 +317,7 @@ test('ranking and baseline flip terms keep the 200K floor for early, middle and 
       seenNodes.every((nodes) => nodes === 200_000),
       `N=${n}, got ${seenNodes}`,
     );
-    assert.ok(quietNodes.every((nodes) => nodes === 50_000 || nodes === 200_000));
+    assert.ok(quietNodes.every((nodes) => nodes === 200_000));
   }
   assert.deepEqual(distinctCounts, [14, 2, 1]);
 });
@@ -289,10 +326,11 @@ test('new grading identities invalidate classical sweeps, decisions and checkpoi
   assert.notEqual(BANQI_ANALYSIS_ENGINE_ID, 'misty-banqi-analysis@0.3.0+history1');
   assert.notEqual(BANQI_DECISIONS_ENGINE_ID, 'misty-banqi-decisions@0.3.0+d4');
   assert.notEqual(BANQI_DECISIONS_ENGINE_ID, 'misty-banqi-decisions@0.3.0+nnue-nodes-2000000+d5');
-  assert.match(BANQI_DECISIONS_ENGINE_ID, /rank50000\+baseline200000\+floor200000\+d6$/);
+  assert.ok(!BANQI_DECISIONS_ENGINE_ID.endsWith('+d6'));
+  assert.match(BANQI_DECISIONS_ENGINE_ID, /rank200000\+baseline200000\+floor200000\+d7$/);
 });
 
-test('live flip grading requests NNUE, 200K identity terms and 50K quiet ranking', async () => {
+test('live flip grading requests NNUE, 200K identity terms and 200K restricted root ranking', async () => {
   const prefix = fixture.moves.slice(0, 90);
   let state = createBanqiStateFromSetup('decision-request', fixture.setup);
   for (const move of prefix) state = applyBanqiMove(state, move);
@@ -304,7 +342,12 @@ test('live flip grading requests NNUE, 200K identity terms and 50K quiet ranking
     const commands = engine.commands();
     const go = commands.filter((line) => line.startsWith('go '));
     assert.ok(go.some((line) => line.startsWith('go nodes 200000 ')));
-    assert.ok(go.some((line) => line.startsWith('go nodes 50000 ')));
+    assert.ok(
+      go.some((line) =>
+        line.endsWith(`searchmoves ${getBanqiLegalMoves(state).map(banqiMoveToEngineUci)[0]}`),
+      ),
+    );
+    assert.ok(go.every((line) => line.startsWith('go nodes 200000 ')));
     assert.ok(go.every((line) => !line.startsWith('go nodes 2000000 ')));
     assert.equal(
       commands.filter((line) => line === `setoption name EvalFile value ${engine.net}`).length,

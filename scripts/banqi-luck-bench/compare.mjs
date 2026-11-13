@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 
 const before = JSON.parse(await readFile(new URL('./before.json', import.meta.url)));
-const after = JSON.parse(await readFile(new URL('./after.json', import.meta.url)));
+const label = process.argv[2] ?? 'after';
+assert.match(label, /^(after|pass2-(20|50|100|200)k)$/);
+const after = JSON.parse(await readFile(new URL(`./${label}.json`, import.meta.url)));
 assert.ok(before.finishedAt && after.finishedAt, 'both benchmark runs must be complete');
 assert.equal(before.machine.engineSha256, after.machine.engineSha256);
 assert.equal(before.machine.netSha256, after.machine.netSha256);
@@ -93,7 +95,7 @@ summary.speedup = summary.beforeTotalMs / summary.afterTotalMs;
 summary.beforeMeanFlipMs = summary.beforeTotalMs / summary.flipCount;
 summary.afterMeanFlipMs = summary.afterTotalMs / summary.flipCount;
 await writeFile(
-  new URL('./comparison.json', import.meta.url),
+  new URL(label === 'after' ? './comparison.json' : `./comparison-${label}.json`, import.meta.url),
   `${JSON.stringify(
     {
       units: 'Win percentage points; deltas are new minus old; wall times in milliseconds.',

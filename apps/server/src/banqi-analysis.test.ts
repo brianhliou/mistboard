@@ -22,6 +22,7 @@ import {
   type BanqiDecisionsCache,
   type BanqiGameAnalysis,
   banqiAnalysisRepetitionWindow,
+  rankBanqiDecisionMoves,
   resolveBanqiAnalysis,
   resolveBanqiDecisions,
 } from './banqi-analysis.js';
@@ -359,7 +360,16 @@ test('analyzeBanqiDecisions: a better candidate flip lifts bestWin above playedW
     betterFens.add(banqiStateToEngineFen(applyBanqiMove(cf, better)));
   }
   const decisions = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: betterFens.has(fen) ? -400 : -50, mate: null }),
+    evalPosition: async (fen, _history, search) => ({
+      cp: search?.searchMoves
+        ? search.searchMoves[0] === banqiMoveToEngineUci(better)
+          ? 400
+          : 50
+        : betterFens.has(fen)
+          ? -400
+          : -50,
+      mate: null,
+    }),
   });
   const d = decisions[0]!;
   assert.ok(d.bestWin > d.playedWin, `best ${d.bestWin} should beat played ${d.playedWin}`);
@@ -368,7 +378,7 @@ test('analyzeBanqiDecisions: a better candidate flip lifts bestWin above playedW
   assert.equal(d.playedRank, 2); // one candidate strictly beat the played move
 });
 
-test('analyzeBanqiDecisions: ranks three alternatives plus played by pool mean, without hidden identities', async () => {
+test('analyzeBanqiDecisions: true-baselines three root ranks plus played, without hidden identities', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state = createInitialBanqiState('t', deal);
   const flips = getBanqiLegalMoves(state).filter((m) => m.from === m.to);
@@ -382,7 +392,13 @@ test('analyzeBanqiDecisions: ranks three alternatives plus played by pool mean, 
     }
   }
   const decisions = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 100, mate: null }),
+    evalPosition: async (fen, _history, search) => {
+      const rank = top.findIndex((move) => banqiMoveToEngineUci(move) === search?.searchMoves?.[0]);
+      return {
+        cp: search?.searchMoves ? (rank < 0 ? -100 : 600 - rank * 150) : (scores.get(fen) ?? 100),
+        mate: null,
+      };
+    },
   });
   const d = decisions[0]!;
   assert.equal(d.playedRank, 4);
@@ -440,6 +456,12 @@ test('analyzeBanqiDecisions: shortlists quiet moves with the live repetition his
     deal,
     {
       evalPosition: async (fen, history, search) => {
+        if (search?.searchMoves?.[0] === quietUci) {
+          quietBudgets.add(search.nodes);
+          assert.equal(fen, banqiStateToEngineFen(state));
+          assert.ok(!history?.moves.includes(quietUci));
+          return { cp: 800, mate: null };
+        }
         if (fen === quietFen) {
           quietBudgets.add(search!.nodes);
           assert.equal(history?.moves.at(-1), quietUci);
@@ -452,12 +474,45 @@ test('analyzeBanqiDecisions: shortlists quiet moves with the live repetition his
       save: async () => {},
     },
   );
-  assert.deepEqual([...quietBudgets], [50_000, 200_000]);
+  assert.deepEqual([...quietBudgets], [200_000]);
   const d = decisions[0]!;
   assert.equal(d.ply, prefix.length + 1);
   assert.equal(d.candidates![0]!.move, quietUci);
   assert.ok(Math.abs(d.bestWin - winPercent(800, null)) < 1e-6);
   assert.ok(d.bestWin > d.playedWin);
+});
+
+test('ranking searches each legal move once at the public pre-move root, with at most two slots', async () => {
+  const state = createInitialBanqiState('root-ranking', STANDARD_BANQI_DEAL);
+  const fen = banqiStateToEngineFen(state);
+  const legal = getBanqiLegalMoves(state).map(banqiMoveToEngineUci);
+  const history = { fen, moves: [] };
+  const seen: string[] = [];
+  let active = 0;
+  let peak = 0;
+  const ranked = await rankBanqiDecisionMoves(
+    state,
+    'red',
+    async (rootFen, window, search) => {
+      assert.equal(rootFen, fen, 'no hidden identity is revealed before ranking');
+      assert.deepEqual(window, history);
+      assert.equal(search?.nodes, 200_000);
+      assert.equal(search.searchMoves?.length, 1);
+      seen.push(search.searchMoves[0]!);
+      const index = seen.length;
+      peak = Math.max(peak, ++active);
+      await Promise.resolve();
+      active--;
+      // Root scores already use the mover POV: keep both cp and mate signs.
+      return index <= 2 ? { cp: null, mate: 1 } : { cp: 100, mate: null };
+    },
+    history,
+  );
+  assert.deepEqual(seen, legal, 'exactly one root search for every legal move');
+  assert.equal(peak, 2);
+  assert.equal(ranked.length, legal.length);
+  assert.equal(ranked[0]!.win, winPercent(null, 1, BANQI_DECISIONS_ENGINE_ID));
+  assert.equal(ranked.at(-1)!.win, winPercent(100, null, BANQI_DECISIONS_ENGINE_ID));
 });
 
 test('analyzeBanqiDecisions: deduplicates played and bounds pool fan-out while scoring every legal move', async () => {
@@ -481,11 +536,11 @@ test('analyzeBanqiDecisions: deduplicates played and bounds pool fan-out while s
   assert.equal(d!.candidates!.length, 3);
   assert.equal(d!.candidates!.filter((c) => c.played).length, 1);
   assert.equal(d!.playedRank, 1);
-  assert.equal(calls, (legal.length + 3) * flipPool(deal).size);
+  assert.equal(calls, legal.length + 3 * flipPool(deal).size);
   assert.equal(peak, 2);
 });
 
-test('analyzeBanqiDecisions: lucky reveals cannot crowd out a better pool-mean flip', async () => {
+test('analyzeBanqiDecisions: root chance ranks select a better average flip despite its unlucky actual reveal', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state = createInitialBanqiState('t', deal);
   const flips = getBanqiLegalMoves(state).filter((m) => m.from === m.to);
@@ -510,7 +565,16 @@ test('analyzeBanqiDecisions: lucky reveals cannot crowd out a better pool-mean f
     scores.set(banqiStateToEngineFen(applyBanqiMove(state, move)), move === better ? 1200 : -1200);
   }
   const [d] = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 0, mate: null }),
+    evalPosition: async (fen, _history, search) => ({
+      cp: search?.searchMoves
+        ? search.searchMoves[0] === banqiMoveToEngineUci(better)
+          ? 500
+          : lucky.some((move) => banqiMoveToEngineUci(move) === search.searchMoves![0])
+            ? -500
+            : 0
+        : (scores.get(fen) ?? 0),
+      mate: null,
+    }),
   });
   assert.ok(d!.bestWin > d!.playedWin);
   assert.equal(d!.playedRank, 2);
@@ -564,9 +628,9 @@ test('resolveBanqiDecisions: pure cache read misses without computing', async ()
   assert.equal(cache.saves, 0);
 });
 
-test('resolveBanqiDecisions invalidates legacy d3 decisions before computing ranked candidates', async () => {
+test('resolveBanqiDecisions invalidates pass 1 d6 decisions before computing ranked candidates', async () => {
   const cache = decisionsMemoryCache();
-  const legacyEngineId = BANQI_DECISIONS_ENGINE_ID.replace(/\+d\d+$/, '+d3');
+  const legacyEngineId = 'misty-banqi-decisions@0.3.0+nnue+rank50000+baseline200000+floor200000+d6';
   await cache.save('room-legacy', legacyEngineId, 12, [sampleDecision(1)]);
   let computes = 0;
   const fresh = [{ ...sampleDecision(1), candidates: [{ move: 'a0a0', win: 55, played: true }] }];
