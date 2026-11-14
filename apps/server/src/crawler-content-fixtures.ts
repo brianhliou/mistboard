@@ -279,6 +279,7 @@ export const CRAWLER_PUBLIC_GAME: ProfileGameRecord = {
 };
 export const CRAWLER_PROFILE: UserProfile = {
   user: {
+    champions: [],
     handle: 'crawler-player',
     displayName: 'Crawler player',
     bio: '',

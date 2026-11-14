@@ -5,7 +5,7 @@
 import { RATED_POOL_BASES } from '@mistboard/game';
 import { PROVISIONAL_RD } from './glicko.js';
 import { COUNTED_USER, countedAccountSeat, fairPlayEligible } from './persistence-counted-games.js';
-import { getPool } from './persistence-db.js';
+import { getPool, isInitialized } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
   PUBLIC_RATING_TIME_CLASSES,
@@ -106,6 +106,42 @@ function championsForHandle(champions: LadderChampion[], handle: string): Champi
   return champions
     .filter((entry) => entry.handle === handle)
     .map(({ variant, timeClass }) => ({ variant, timeClass }));
+}
+
+// Match both stable account identity and its current public handle. Never copy
+// internal ids out of the shared read model into a public payload.
+export function championsForUser(
+  champions: readonly LadderChampion[],
+  userId: string | null,
+  handle: string | null,
+): Champion[] {
+  return champions
+    .filter((entry) => entry.userId === userId && entry.handle === handle)
+    .map(({ variant, timeClass }) => ({ variant, timeClass }));
+}
+
+// Decoration must not interrupt game delivery when persistence is unavailable.
+// Connections await this once so their first snapshot can include crowns.
+export async function refreshSeatChampions(): Promise<void> {
+  if (!isInitialized()) return;
+  try {
+    await getChampions();
+  } catch {
+    // Seat reads stay fail-closed and retry on the next read.
+  }
+}
+
+// Broadcast payload builders are synchronous. A cold/expired read kicks off
+// the same coalesced query used by profiles/ladders and returns no stale crown.
+// The next snapshot picks up the refreshed result, without client API fanout.
+export function cachedSeatChampions(userId: string, handle: string): Champion[] {
+  if (!isInitialized()) return [];
+  const cache = championCaches.get(getPool());
+  if (!cache?.value || Date.now() >= cache.expiresAt) {
+    void refreshSeatChampions();
+    return [];
+  }
+  return championsForUser(cache.value, userId, handle);
 }
 
 export type LeaderboardEntry = {

@@ -5,9 +5,11 @@ import {
   clearChampionsCache,
   createUser,
   getChampions,
+  getGameSummary,
   getLeaderboard,
   getLeaderboardSummary,
   getUserProfileByHandle,
+  recordGameEnd,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -17,6 +19,7 @@ import {
   type RatingTimeClass,
   type RatingVariant,
 } from './rating-buckets.js';
+import { postgamePlayers } from './routes/lib.js';
 
 definePersistenceTests('champions', () => {
   beforeEach(clearChampionsCache);
@@ -55,6 +58,126 @@ definePersistenceTests('champions', () => {
       await rating(`player${i}`, 1800 - i * 10);
     }
   }
+
+  test('profiles and finished participants share current crowns and preserve identity gates', async (t) => {
+    await ladder();
+    const expected = [{ variant: 'xiangqi', timeClass: 'blitz' }];
+    t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+    for (const subjectType of [
+      'user',
+      'guest',
+      'bot',
+      'engine-version',
+      'manual',
+      'imported',
+    ] as const) {
+      const now = new Date();
+      await recordGameEnd(`crowns-${subjectType}`, {
+        variant: 'xiangqi',
+        mode: 'pvp',
+        result: 'draw',
+        termination: 'draw',
+        plyCount: 20,
+        startedAt: now,
+        endedAt: now,
+        whiteClient: null,
+        blackClient: null,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            subjectType,
+            subjectId: 'player0',
+            displayName: 'Seat',
+            visibility: 'public',
+          },
+        ],
+      });
+      const game = await getGameSummary(`crowns-${subjectType}`);
+      assert.ok(game);
+      if (subjectType === 'user') {
+        assert.equal(game.participants[0]?.handle, 'player0');
+        assert.deepEqual(game.participants[0]?.champions, expected);
+        assert.deepEqual(postgamePlayers(game.participants)[0]?.champions, expected);
+      } else {
+        assert.doesNotMatch(JSON.stringify(game.participants), /"champions"|"handle"/);
+        assert.doesNotMatch(
+          JSON.stringify(postgamePlayers(game.participants)),
+          /"champions"|"handle":"player0"/,
+        );
+      }
+    }
+    assert.deepEqual((await getUserProfileByHandle('player0', null))?.user.champions, expected);
+    await getPool().query(`UPDATE user_ratings SET elo_rating = 2200 WHERE user_id = 'player1'`);
+    t.mock.timers.tick(30_001);
+    assert.deepEqual((await getGameSummary('crowns-user'))?.participants[0]?.champions, []);
+    assert.deepEqual((await getUserProfileByHandle('player1', null))?.user.champions, expected);
+    await getPool().query(
+      `UPDATE game_participants SET subject_id = 'player1' WHERE game_id = 'crowns-user'`,
+    );
+    assert.deepEqual((await getGameSummary('crowns-user'))?.participants[0]?.champions, expected);
+    await getPool().query(
+      `UPDATE user_ratings SET last_rated_at = now() - interval '91 days' WHERE user_id = 'player1'`,
+    );
+    t.mock.timers.tick(30_001);
+    assert.deepEqual((await getGameSummary('crowns-user'))?.participants[0]?.champions, []);
+  });
+
+  test('finished private seats and private or closed profiles expose no account metadata even with a warm crown', async () => {
+    await ladder();
+    await getChampions();
+    const now = new Date();
+    await recordGameEnd('crowns-privacy', {
+      variant: 'xiangqi',
+      mode: 'pvp',
+      result: 'draw',
+      termination: 'draw',
+      plyCount: 20,
+      startedAt: now,
+      endedAt: now,
+      whiteClient: null,
+      blackClient: null,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      visibility: 'public',
+      participants: [
+        {
+          color: 'white',
+          subjectType: 'user',
+          subjectId: 'player0',
+          displayName: 'Seat',
+          visibility: 'public',
+        },
+      ],
+    });
+    for (const privacy of ['unlisted', 'private', 'closed', 'seat-private']) {
+      await getPool().query(
+        `UPDATE users SET profile_visibility = $1, closed_at = $2 WHERE id = 'player0'`,
+        [privacy === 'private' ? 'private' : 'unlisted', privacy === 'closed' ? now : null],
+      );
+      await getPool().query(
+        `UPDATE game_participants SET visibility = $1 WHERE game_id = 'crowns-privacy'`,
+        [privacy === 'seat-private' ? 'private' : 'public'],
+      );
+      const game = await getGameSummary('crowns-privacy');
+      assert.ok(game);
+      if (privacy === 'unlisted') {
+        assert.deepEqual(game.participants[0]?.champions, [
+          { variant: 'xiangqi', timeClass: 'blitz' },
+        ]);
+      } else {
+        assert.doesNotMatch(JSON.stringify(game.participants), /"champions"|"title"|"flair"/);
+        assert.doesNotMatch(
+          JSON.stringify(postgamePlayers(game.participants)),
+          /"champions"|"handle":"player0"/,
+        );
+      }
+    }
+  });
 
   test('only ratings active within 90 days appear on ladders; profile ratings survive', async () => {
     const now = new Date();

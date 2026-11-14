@@ -2916,6 +2916,7 @@ test('an unlisted study previews with its own title but stays noindex and cardle
 function profilePreviewFixture(): UserProfile {
   return {
     user: {
+      champions: [],
       handle: 'Player_1',
       displayName: 'Lin & "棋" <player>',
       bio: 'PROFILE_BIO_SENTINEL',

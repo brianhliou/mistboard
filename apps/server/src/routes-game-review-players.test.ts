@@ -150,7 +150,7 @@ async function call(
   return response;
 }
 
-test('review and summary carry gated title/flair and omit them for redacted or unlinkable seats', async () => {
+test('review and summary gate all account metadata for redacted or unlinkable seats', async () => {
   const account = {
     color: 'white',
     displayName: 'Alice',
@@ -160,6 +160,7 @@ test('review and summary carry gated title/flair and omit them for redacted or u
     handle: 'alice',
     title: 'xgm',
     flair: 'variant-xiangqi',
+    champions: [{ variant: 'xiangqi', timeClass: 'blitz' }],
   } satisfies persistence.GameParticipant;
   for (const path of ['', '/review']) {
     const response = await call(`/api/games/${ROOM_ID}${path}`, [account]);
@@ -173,17 +174,24 @@ test('review and summary carry gated title/flair and omit them for redacted or u
       botId: null,
       title: 'xgm',
       flair: 'variant-xiangqi',
+      champions: account.champions,
     });
     for (const participant of [
       { ...account, visibility: 'private' as const },
       { ...account, handle: null }, // Closed/private accounts have no linkable handle.
-      ...PARTICIPANTS.map((seat) => ({ ...seat, title: account.title, flair: account.flair })),
+      ...PARTICIPANTS.map((seat) => ({
+        ...seat,
+        title: account.title,
+        flair: account.flair,
+        champions: account.champions,
+      })),
     ]) {
       const redacted = await call(`/api/games/${ROOM_ID}${path}`, [participant]);
       assert.equal(redacted.status, 200);
-      assert.doesNotMatch(redacted.body, /"(?:title|flair)"|xgm|variant-xiangqi/);
+      assert.doesNotMatch(redacted.body, /"(?:title|flair|champions)"|xgm|variant-xiangqi/);
       if (participant.visibility === 'private') {
         assert.equal(JSON.parse(redacted.body).game.players[0].name, 'Anonymous');
+        assert.doesNotMatch(redacted.body, /"handle":"alice"/);
       }
     }
   }

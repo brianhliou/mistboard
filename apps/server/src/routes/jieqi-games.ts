@@ -184,22 +184,26 @@ export async function jieqiWatchPostgameForApi(
   roomId: string,
   deps: JieqiPostgamePersistence = defaultPersistence,
 ) {
+  // Player metadata changes after a game ends. Re-read that small envelope
+  // even while the expensive, immutable replay stays cached.
+  const game = await deps.getGameSummary(roomId);
+  if (!game || game.variant !== JIEQI_SPEC_ID) return null;
   const useCache = deps === defaultPersistence;
   if (useCache) {
     const cached = jieqiWatchPostgameCache.get(roomId);
-    if (cached) return cached;
+    if (cached) return { ...cached, game: postgameGameSummary(game) };
   }
-  const payload = await buildJieqiWatchPostgame(roomId, deps);
+  const payload = await buildJieqiWatchPostgame(roomId, deps, game);
   if (payload && useCache) jieqiWatchPostgameCache.set(roomId, payload);
   return payload;
 }
 
-async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersistence) {
-  const [game, events] = await Promise.all([
-    deps.getGameSummary(roomId),
-    deps.loadRoomEvents(roomId),
-  ]);
-  if (!game || game.variant !== JIEQI_SPEC_ID) return null;
+async function buildJieqiWatchPostgame(
+  roomId: string,
+  deps: JieqiPostgamePersistence,
+  game: persistence.RecentEveGameRecord,
+) {
+  const events = await deps.loadRoomEvents(roomId);
   if (!events || !isTenantEventLog(jieqiTenant, events, roomId)) return null;
 
   const created = events[0];
