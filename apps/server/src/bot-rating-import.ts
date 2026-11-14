@@ -1,6 +1,11 @@
 import { findTimeControl, type TimeClass } from '@mistboard/game';
 import pg from 'pg';
 import {
+  type BotRatingPins,
+  loadBotRatingPins,
+  stampBotRatingSourceRef,
+} from './bot-rating-provenance.js';
+import {
   buildEngineEloMleReport,
   buildEngineEloReport,
   type EngineEloReport,
@@ -39,6 +44,8 @@ export type BotRatingImportPlan = {
 };
 
 export type BotRatingImportOptions = {
+  /** Already verified against worker-stamped games by automatic calibration. */
+  pins?: BotRatingPins;
   anchorRating?: number;
   published?: boolean;
   sourceRef?: string | null;
@@ -63,7 +70,8 @@ export function buildBotRatingSnapshotPlan(
   }
 
   const anchorRating = options.anchorRating ?? DEFAULT_RATING;
-  const sourceRef = options.sourceRef ?? defaultSourceRef(report, anchorRating);
+  const reportRef = defaultSourceRef(report, anchorRating);
+  const baseSourceRef = options.sourceRef ? `${options.sourceRef};${reportRef}` : reportRef;
   // Engine -> bot. A CANONICAL first-party row (its id is the profile id, not
   // a legacy alias) claims its per-variant engine from the first-party engines
   // map, so a multi-variant bot like fairy-stockfish-level-N matches its
@@ -105,11 +113,24 @@ export function buildBotRatingSnapshotPlan(
       rating: Math.round(anchorRating + row.elo),
       ratingDeviation: ratingDeviationFromEngineRow(row),
       games: row.games,
-      sourceRef,
+      sourceRef: baseSourceRef,
       published: options.published ?? false,
     });
   }
 
+  const sourceRef =
+    drafts.length > 0
+      ? stampBotRatingSourceRef(
+          baseSourceRef,
+          options.pins ?? loadBotRatingPins(drafts.map((draft) => draft.engineId)),
+        )
+      : baseSourceRef;
+  for (const draft of drafts) {
+    if (!sourceRef.includes(`;netSha256.${encodeURIComponent(draft.engineId)}=`)) {
+      throw new Error(`no engine pin for bot rating import: ${draft.engineId}`);
+    }
+    draft.sourceRef = sourceRef;
+  }
   return {
     sourceRef,
     drafts,
@@ -138,25 +159,7 @@ export async function insertBotRatingSnapshotDrafts(
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    for (const draft of drafts) {
-      await client.query(
-        `INSERT INTO bot_rating_snapshots
-           (bot_id, game_spec_id, time_class, rating, rating_deviation, games,
-            source, source_ref, published, published_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 'eve-anchor', $7, $8,
-                 CASE WHEN $8::boolean THEN now() ELSE NULL::timestamptz END)`,
-        [
-          draft.botId,
-          draft.gameSpecId,
-          draft.timeClass,
-          draft.rating,
-          draft.ratingDeviation,
-          draft.games,
-          draft.sourceRef,
-          draft.published,
-        ],
-      );
-    }
+    await insertBotRatingSnapshotDraftsOn(client, drafts);
     await client.query('COMMIT');
     return drafts.length;
   } catch (err) {
@@ -167,7 +170,35 @@ export async function insertBotRatingSnapshotDrafts(
   }
 }
 
-async function loadBotRatingImportBots(db: pg.Pool): Promise<BotRatingImportBot[]> {
+/** Use an existing transaction (the daily readout's lock and snapshot commit). */
+export async function insertBotRatingSnapshotDraftsOn(
+  db: Pick<pg.Pool, 'query'>,
+  drafts: readonly BotRatingSnapshotDraft[],
+): Promise<void> {
+  for (const draft of drafts) {
+    await db.query(
+      `INSERT INTO bot_rating_snapshots
+           (bot_id, game_spec_id, time_class, rating, rating_deviation, games,
+            source, source_ref, published, published_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'eve-anchor', $7, $8,
+                 CASE WHEN $8::boolean THEN now() ELSE NULL::timestamptz END)`,
+      [
+        draft.botId,
+        draft.gameSpecId,
+        draft.timeClass,
+        draft.rating,
+        draft.ratingDeviation,
+        draft.games,
+        draft.sourceRef,
+        draft.published,
+      ],
+    );
+  }
+}
+
+export async function loadBotRatingImportBots(
+  db: Pick<pg.Pool, 'query'>,
+): Promise<BotRatingImportBot[]> {
   const { rows } = await db.query<{
     active_engine_id: string;
     default_game_spec_id: string;

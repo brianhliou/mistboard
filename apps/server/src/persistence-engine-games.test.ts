@@ -12,6 +12,7 @@ import {
   replayHiddenPieceRecord,
 } from '@mistboard/game';
 import './variant-tenant/register-tenants.js';
+import { loadBotRatingPins } from './bot-rating-provenance.js';
 import {
   type BotVsBotVariantPlan,
   botVsBotConfigFromEnv,
@@ -84,6 +85,23 @@ async function playNextTask(
   assert.ok(task, 'a queued task');
   const result = await runRandomLegalEngineGame(getPool(), task);
   assert.equal(result.status, 'completed');
+  const { rows: metadata } = await getPool().query<{ payload: unknown }>(
+    `SELECT payload FROM game_debug_artifacts WHERE game_id = $1 AND artifact_type = 'engine-rating-stamp'`,
+    [result.gameId],
+  );
+  assert.equal(metadata.length, 1, 'the real worker persists the build stamp');
+  if (
+    task.whiteEngineId === JIEQI_RANDOM_ENGINE_ID &&
+    task.blackEngineId === JIEQI_RANDOM_ENGINE_ID
+  ) {
+    const side = { recipe: loadBotRatingPins([]).recipe, netSha256: null };
+    // Serialize the entire stored metadata, not a selection that could hide a deal leak.
+    assert.deepEqual(JSON.parse(JSON.stringify(metadata[0]!.payload)), {
+      white: side,
+      black: side,
+    });
+  }
+  assert.doesNotMatch(JSON.stringify(metadata), /board|pieces|hidden|setup|seed/);
   await getPool().query(
     `UPDATE games SET started_at = $2::timestamptz - INTERVAL '5 minutes', ended_at = $2
      WHERE room_id = $1`,
@@ -120,6 +138,10 @@ function defaultPlan(variant: string): BotVsBotVariantPlan {
 async function withStubEngine<T>(adapter: AnyVariantEveAdapter, fn: () => Promise<T>): Promise<T> {
   const search = adapter.search;
   const available = adapter.available;
+  // Stubbed neural searches need a readable test asset for worker provenance too.
+  const netVars = ['MISTBOARD_BANQI_NET', 'MISTBOARD_KATAGO_JUNGLE_NET_PATH'] as const;
+  const savedNets = netVars.map((name) => process.env[name]);
+  for (const name of netVars) process.env[name] = process.execPath;
   const rng = seededUnitRng(20261001n);
   adapter.available = () => true;
   adapter.search = async (_engineId, _history, _opts, context) => {
@@ -132,6 +154,10 @@ async function withStubEngine<T>(adapter: AnyVariantEveAdapter, fn: () => Promis
   } finally {
     adapter.search = search;
     adapter.available = available;
+    netVars.forEach((name, i) => {
+      if (savedNets[i] === undefined) delete process.env[name];
+      else process.env[name] = savedNets[i];
+    });
   }
 }
 

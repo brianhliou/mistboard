@@ -53,10 +53,11 @@ test('builds published bot rating drafts from rated engine Elo rows', () => {
     rating: 1812,
     ratingDeviation: 77,
     games: 32,
-    sourceRef: 'tournament:test-cup',
+    sourceRef: plan.sourceRef,
     published: true,
   });
   assert.deepEqual(plan.unmatchedEngineIds, ['private-engine']);
+  assert.ok(plan.sourceRef.startsWith('tournament:test-cup;engine-elo;variant=dark-chess;'));
   assert.deepEqual(plan.skippedEngineIds, ['below-floor']);
 });
 
@@ -115,6 +116,24 @@ test('rejects ambiguous bot rating import reports', () => {
     () => buildBotRatingSnapshotPlan(report({ timeControlBucket: 'untimed' }), []),
     /requires an official time-control bucket/,
   );
+});
+
+test('stamps the engine recipe and measured net alongside report provenance', () => {
+  const plan = buildBotRatingSnapshotPlan(
+    report({
+      variant: 'xiangqi',
+      rows: [row({ engineId: 'pikafish-xiangqi-level-8' })],
+    }),
+    [{ id: 'pikafish', activeEngineId: 'pikafish-xiangqi-level-8', defaultGameSpecId: 'xiangqi' }],
+  );
+  assert.equal(plan.drafts.length, 1);
+  assert.match(plan.drafts[0]!.sourceRef, /;recipe=engines-[0-9a-f]{12}(?:;|$)/);
+  assert.match(
+    plan.drafts[0]!.sourceRef,
+    /;netSha256\.pikafish-xiangqi-level-8=c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11(?:;|$)/,
+  );
+  assert.match(plan.sourceRef, /variant=xiangqi;time=tc-180\+2;anchor=python-random-legal/);
+  assert.equal(plan.sourceRef, plan.drafts[0]!.sourceRef);
 });
 
 function report(overrides: Partial<EngineEloReport> = {}): EngineEloReport {

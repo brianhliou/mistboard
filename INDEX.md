@@ -263,6 +263,9 @@ Edit task → find file → open only that file.
 | `rating-store.ts` | Rating persistence/store helpers |
 | `first-party-bots.ts` | Static first-party bot profile registry mapping public bot ids to active engine ids and default variants |
 | `bot-rating-import.ts` | Converts engine Elo reports into draft bot rating snapshot plans for first-party bot profiles |
+| `bot-rating-provenance.ts` | Recipe/net stamps for reviewed bot-rating imports, current-pin comparison over public published snapshots, and stale-rating readout edges; pin-bump steps in `docs/engine-pin-bumps.md` |
+| `bot-rating-refresh.ts` | Daily calibration refresh through the existing Elo/import path, current worker-stamp filtering, precision/age gates and large-move holds |
+| `engine-game-provenance.ts` | Worker-local recipe and actual net hashes stored as board-free EvE metadata |
 | `bot-rating-snapshots.ts` | Bot rating snapshot list/promotion helpers and audit-row rendering |
 | `bot-rating-promote.ts` | CLI for promoting draft bot rating snapshots to published bot ratings |
 | `migrate.ts` | Schema migrations — run once on startup |

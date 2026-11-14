@@ -67,6 +67,87 @@ function reportWith(
   });
 }
 
+test('a held calibration move raises an action once and keeps the edge across collector failure', () => {
+  const held = {
+    botId: 'pikafish',
+    engineId: 'pikafish-xiangqi-level-8',
+    gameSpecId: 'xiangqi',
+    timeClass: 'blitz' as const,
+    recipe: 'engines-111111111111',
+    netSha256: 'a'.repeat(64),
+    previousRating: 1800,
+    estimatedRating: 1500,
+  };
+  const facts = { ...emptyFacts, engines: { ...emptyFacts.engines!, heldRatings: [held] } };
+  const first = reportWith(facts);
+  assert.ok(first.actions.some((action) => action.code === 'bot-ratings-calibration-held'));
+  const repeated = reportWith(
+    { ...facts, engines: { ...facts.engines, heldRatings: [{ ...held, estimatedRating: 1490 }] } },
+    first,
+  );
+  assert.ok(!repeated.actions.some((action) => action.code === 'bot-ratings-calibration-held'));
+  assert.match(renderMistboardReadoutMarkdown(repeated), /calibration rating held/);
+  const unavailable = reportWith({ ...emptyFacts, engines: null }, repeated);
+  assert.ok(
+    !reportWith(facts, unavailable).actions.some(
+      (action) => action.code === 'bot-ratings-calibration-held',
+    ),
+  );
+  const cleared = reportWith(
+    { ...emptyFacts, engines: { ...emptyFacts.engines!, heldRatings: [] } },
+    repeated,
+  );
+  assert.ok(
+    reportWith(facts, cleared).actions.some(
+      (action) => action.code === 'bot-ratings-calibration-held',
+    ),
+  );
+});
+
+test('a planted stale bot rating triggers once, and remains listed until re-rated', () => {
+  const stale = {
+    botId: 'pikafish',
+    gameSpecId: 'xiangqi',
+    timeClass: 'blitz' as const,
+    engineId: 'pikafish-xiangqi-level-8',
+    measured: { recipe: 'engines-000000000000', netSha256: 'a'.repeat(64) },
+    current: { recipe: 'engines-111111111111', netSha256: 'b'.repeat(64) },
+  };
+  const facts = {
+    ...emptyFacts,
+    engines: { ...emptyFacts.engines!, staleRatings: [stale] },
+  };
+  const first = reportWith(facts);
+  const action = first.actions.find((entry) => entry.code === 'bot-ratings-stale');
+  assert.ok(action, 'must flag a rating measured on a different engine build or net');
+  assert.match(action.text, /pikafish.*xiangqi.*rating measured on an older build/);
+  const repeated = reportWith(facts, first);
+  assert.ok(!repeated.actions.some((entry) => entry.code === 'bot-ratings-stale'));
+  assert.match(renderMistboardReadoutMarkdown(repeated), /pikafish.*older build/);
+  const unavailable = reportWith({ ...emptyFacts, engines: null }, repeated);
+  assert.ok(
+    !reportWith(facts, unavailable).actions.some((entry) => entry.code === 'bot-ratings-stale'),
+  );
+  const bumped = reportWith(
+    {
+      ...facts,
+      engines: {
+        ...facts.engines,
+        staleRatings: [{ ...stale, current: { ...stale.current, recipe: 'engines-222222222222' } }],
+      },
+    },
+    first,
+  );
+  assert.ok(bumped.actions.some((entry) => entry.code === 'bot-ratings-stale'));
+  assert.notEqual(bumped.alertKey, first.alertKey);
+  const clear = reportWith(
+    { ...emptyFacts, engines: { ...emptyFacts.engines!, staleRatings: [] } },
+    repeated,
+  );
+  assert.ok(!clear.actions.some((entry) => entry.code === 'bot-ratings-stale'));
+  assert.ok(reportWith(facts, clear).actions.some((entry) => entry.code === 'bot-ratings-stale'));
+});
+
 test('readout periods use complete UTC days and a previous comparison week', () => {
   assert.deepEqual(readoutPeriods(new Date('2026-07-22T18:30:00Z')), {
     periodStart: new Date('2026-07-15T00:00:00Z'),
