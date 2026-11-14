@@ -59,7 +59,7 @@ test('the Pikafish licence is copied from the file upstream ships at the pin', (
 });
 
 test('the CC0 patch is hashed and watched by the release workflow and all Railway services', () => {
-  assert.match(recipe, /^RECIPE_VERSION=4$/m);
+  assert.match(recipe, /^RECIPE_VERSION=5$/m);
   assert.ok(recipeInputs().includes(pikafishPatch));
   assert.ok(workflow.includes(`      - ${pikafishPatch}\n`));
   for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
@@ -190,6 +190,21 @@ test('the recipe builds and verifies the same ten binaries the image expects', (
   assert.match(recipe, /echo "kata-cmake=\$KATA_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
 });
 
+test('jieqi NNUE builds the renamed binary and ships the embedded net license', () => {
+  const ref = readFileSync(resolve(repoRoot, 'pikafish-jieqi.ref'), 'utf8').split('\n')[0];
+  assert.equal(ref, 'fd1a6f825ebfd57dc2994ea9ee0d9f5408e49d83');
+  const step = recipe.slice(
+    recipe.indexOf('  ref=$(pin pikafish-jieqi.ref)'),
+    recipe.indexOf('  ref=$(pin pikafish.ref)'),
+  );
+  assert.match(step, /cp "\$work\/pikafish-jieqi\/src\/pikafish" "\$bin\/pikafish-jieqi"/);
+  assert.match(
+    step,
+    /cp "\$work\/pikafish-jieqi\/src\/jieqi-net-LICENSE" "\$bin\/jieqi-net-LICENSE"/,
+  );
+  assert.doesNotMatch(step, /src\/PikaJieQi|curl|wget/);
+});
+
 test('Rapfi pins its native recipe, data extractor and full source SHA', async () => {
   assert.ok(recipeInputs().includes('rapfi.ref'));
   assert.ok(recipeInputs().includes('scripts/rapfi-assets.mjs'));
@@ -306,6 +321,7 @@ test('Rapfi native data and licences enter the tarball and checksum manifest', a
     }
     writeFileSync(resolve(bin, 'pikafish.nnue'), 'fixture net');
     writeFileSync(resolve(bin, 'COPYING'), 'fixture Pikafish licence');
+    writeFileSync(resolve(bin, 'jieqi-net-LICENSE'), 'fixture jieqi MIT net license');
     writeFileSync(resolve(bin, 'it014.jqn'), 'fixture net');
     const out = resolve(bin, 'dist');
     run('package', bin, out);
@@ -672,6 +688,7 @@ test('the actual archive file list excludes Pikafish even when the net is staged
       'xiangqi-c07e94a5c7cb.nnue',
       'fixture-rapfi.bin',
       'COPYING',
+      'jieqi-net-LICENSE',
     ]) {
       writeFileSync(resolve(bin, file), 'fixture');
     }
@@ -702,6 +719,7 @@ if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
       'it014.jqn',
       'fixture-rapfi.bin',
       'COPYING',
+      'jieqi-net-LICENSE',
       pikafishPatch,
     ]);
     assert.ok(!files.includes('pikafish.nnue'));

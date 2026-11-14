@@ -318,7 +318,7 @@ export const EN_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi levels and browser analysis, with AB-JChess grading reviews, GPL-3.0.",
+    "Pikafish's jieqi NNUE branch: the jieqi levels and browser analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed. AB-JChess grades reviews.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':
@@ -509,8 +509,9 @@ export const EN_CONTENT = {
     "Much of Mistboard rests on other people's work: the engines you play against, the games and photos other sites let us show, and the players who told us what was broken. This page thanks them by name.",
   'thanks.enginesHeading': 'The engines you play',
   'thanks.pikafishAuthors': 'The Pikafish developers',
+  'thanks.pikafishJieqiBuild': 'Jieqi NNUE build with an MIT net trained on jqe labels',
   'thanks.pikafishBody':
-    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi branch runs the jieqi bots and jieqi analysis.",
+    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi NNUE branch runs the jieqi levels and browser analysis, with an MIT net trained on jqe labels.",
   'thanks.fairyStockfishAuthors': 'Fabian Fichter and the Fairy-Stockfish contributors',
   'thanks.fairyStockfishBody':
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',

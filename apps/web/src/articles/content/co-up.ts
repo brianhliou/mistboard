@@ -23,6 +23,7 @@ import { deriveTranslation } from '../derived-translation.js';
 import { jieqiPlatformArticle } from './jieqi-platform.js';
 
 export const CO_UP_VI: Record<string, string> = {
+  "Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.": "Đã cập nhật các cấp cờ úp và phân tích trên trình duyệt sang Pikafish NNUE với mạng được huấn luyện bằng nhãn jqe, cấp phép MIT.",
   "Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.": "Đã bổ sung cách phần xem lại chấm điểm nước lật quân và đo may rủi, đồng thời làm rõ rằng AB-JChess chấm điểm phần xem lại.",
   "Sign in to request full-game analysis, then try different moves from your own game.": "Đăng nhập để yêu cầu phân tích cả ván, rồi thử những nước khác từ chính ván của bạn.",
   "Open [the full review](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf) to play through alternative moves. New to jieqi? Read the [rules](/rules/jieqi), or explore [how strong players approach the opening](/blog/jieqi-openings).": "Mở [trang xem lại đầy đủ](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf) để thử các nước thay thế. Mới chơi cờ úp? Đọc [luật](/blog/luat-co-up), hoặc tìm hiểu [cách người chơi giỏi tiếp cận khai cuộc](/blog/khai-cuoc-co-up).",

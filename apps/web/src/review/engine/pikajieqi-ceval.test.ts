@@ -7,11 +7,14 @@ type FakeMessage = { type: string; line?: string };
 class FakeWorker {
   static latest: FakeWorker | null = null;
   readonly commands: string[] = [];
+  readonly url: string;
+  init: { jsUrl?: string; wasmUrl?: string } | null = null;
   onmessage: ((event: MessageEvent<FakeMessage>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   private messageListeners = new Set<(event: MessageEvent<FakeMessage>) => void>();
 
-  constructor(_url: string | URL) {
+  constructor(url: string | URL) {
+    this.url = String(url);
     FakeWorker.latest = this;
   }
 
@@ -23,13 +26,20 @@ class FakeWorker {
     this.messageListeners.delete(listener as (event: MessageEvent<FakeMessage>) => void);
   }
 
-  postMessage(message: { type: string; command?: string }): void {
+  postMessage(message: { type: string; command?: string; jsUrl?: string; wasmUrl?: string }): void {
     if (message.type === 'init') {
+      this.init = message;
       queueMicrotask(() => this.emit({ type: 'ready' }));
       return;
     }
     if (message.type !== 'command' || !message.command) return;
     this.commands.push(message.command);
+    const option = /^setoption name (.*?) value /.exec(message.command)?.[1];
+    // These are the options exposed by the pinned NNUE build. In particular,
+    // UCI_AnalyseMode from the classical build would fail its handshake.
+    if (option && !['Hash', 'MultiPV', 'ChanceMix', 'EvalFile'].includes(option)) {
+      throw new Error(`unsupported NNUE browser option: ${option}`);
+    }
     if (message.command === 'uci') {
       queueMicrotask(() => this.emit({ type: 'line', line: 'uciok' }));
     } else if (message.command === 'isready') {
@@ -96,6 +106,13 @@ describe('PikaJieQi ceval dispatch', () => {
     vi.stubGlobal('Worker', FakeWorker);
     const handle = new PikaJieQiCeval('jieqi');
     await handle.preload();
+    expect(FakeWorker.latest?.url).toBe(
+      '/engine/pikafish-jieqi/worker.js?v=fd1a6f82-emsdk3174-nnue1',
+    );
+    expect(FakeWorker.latest?.init).toMatchObject({
+      jsUrl: '/engine/pikafish-jieqi/pikajieqi.js?v=fd1a6f82-emsdk3174-nnue1',
+      wasmUrl: '/engine/pikafish-jieqi/pikajieqi.wasm?v=fd1a6f82-emsdk3174-nnue1',
+    });
     expect(FakeWorker.latest?.commands).toContain('setoption name Hash value 32');
     expect(FakeWorker.latest?.commands.some((command) => command.includes('Threads'))).toBe(false);
     handle.dispose();

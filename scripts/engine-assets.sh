@@ -31,7 +31,7 @@ set -eu
 
 # Bump when the make flags, the packaged file set or the layout change; the
 # pins and patches are hashed on their own.
-RECIPE_VERSION=4
+RECIPE_VERSION=5
 # The ISA every server engine targets. Do not swap in avx2 without confirming
 # the container's CPU flags (stockfish.ref).
 ARCH=x86-64-sse41-popcnt
@@ -193,7 +193,8 @@ build() {
   log "pikafish-jieqi @ $ref (brianhliou/pikafish-jieqi-wasm)"
   fetch_source "$work/pikafish-jieqi" https://github.com/brianhliou/pikafish-jieqi-wasm.git "$ref"
   sf_make "$work/pikafish-jieqi/src"
-  cp "$work/pikafish-jieqi/src/PikaJieQi" "$bin/pikafish-jieqi"
+  cp "$work/pikafish-jieqi/src/pikafish" "$bin/pikafish-jieqi"
+  cp "$work/pikafish-jieqi/src/jieqi-net-LICENSE" "$bin/jieqi-net-LICENSE"
 
   ref=$(pin pikafish.ref)
   log "pikafish @ $ref + pikafish-cc0-net.patch"
@@ -425,7 +426,7 @@ package() {
     done
   } > "$out/MANIFEST"
   # shellcheck disable=SC2086
-  tar -C "$bin" -czf "$out/$ASSET" $BINARIES "$JQE_NET" $rapfi_files COPYING -C "$ROOT" pikafish-cc0-net.patch
+  tar -C "$bin" -czf "$out/$ASSET" $BINARIES "$JQE_NET" $rapfi_files COPYING jieqi-net-LICENSE -C "$ROOT" pikafish-cc0-net.patch
   # Ship the source pin and provenance beside the licence texts.
   cp "$ROOT/rapfi.ref" "$out/rapfi.ref"
   (cd "$out" && sha256 "$ASSET" > SHA256SUMS)

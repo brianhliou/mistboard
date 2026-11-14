@@ -6700,6 +6700,8 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等级机器人和浏览器分析已更新为 Pikafish NNUE，使用以 jqe 标注数据训练的 MIT 许可网络。',
   'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
     '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
@@ -13425,6 +13427,8 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等級機器人和瀏覽器分析已更新為 Pikafish NNUE，使用以 jqe 標註資料訓練的 MIT 授權網路。',
   'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
     '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':

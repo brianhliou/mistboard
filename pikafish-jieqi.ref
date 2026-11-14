@@ -1,53 +1,16 @@
-bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9
-# ^ The commit the prod image runs (scripts/engine-assets.sh reads the first line;
-# this comment is ignored).
+fd1a6f825ebfd57dc2994ea9ee0d9f5408e49d83
+# Pikafish's official jieqi NNUE branch with ChanceMix (default on).
+# Source: https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard
+# The 256-wide embedded net was trained from random initialization on jqe labels.
+# It contains no Pikafish weights and is MIT licensed (src/jieqi-net-LICENSE).
+# Embedded net: src/jieqi-b395f77e3ee9.nnue.zst; native default bench: 469838 nodes.
+# Decided 2026-11-13 (#1104): replaces the classical jieqi_old build.
+# 400 games, 4 s/move, 4 threads, Hash 256: 292 wins, 61 losses, 47 draws,
+# +248 Elo [+213, +287] (pentanomial) against the previous Level 8 build.
 #
-# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus our
-# patches (dated below), carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
-# `jieqi_old-mistboard`, and the Build engines workflow fetches it from THAT repo
-# rather than official-pikafish/Pikafish. The upstream base is unchanged, so moving to a newer
-# upstream jieqi_old is a cherry-pick, not a merge. The pinned commit must be
-# reachable from that branch: the build clones it --single-branch.
-#
-# bcc83f88 (2026-10-02, #497): reveals are scored honestly. ScoreCalc flipped each
-# revealed identity's score for Black (keyed on a never-assigned firstSideMove), so
-# Black's reveals took the best identity instead of the worst; and an identity whose
-# PV search failed low returned the window edge, which the average took as exact.
-# Fail-lows at the root are now re-searched. Self-play vs e75cee3a at 1M nodes/move,
-# 600 games: -21 Elo [-48, +6]; over-rated decisive reveals 16 -> 3 of 71 (#497).
-#
-# e75cee3a (2026-09-03): a Threads.stop check and a main-thread check_time() at
-# qsearch entry (src/search.cpp). qsearch had neither, and the dark-piece recursion
-# re-enters it at depth 0, so `go movetime` could not stop a thread inside those
-# tails and bestmove waited on the slowest helper. Found while root-causing #335.
-#
-# The patch stops ScoreCalc averaging a forced loss away at dark-piece flip nodes: a
-# mate was clamped to +/-DARKVALRATE (2862) and then diluted by the other revealed
-# identities, so the engine could score itself comfortably ahead while being mated.
-# Measured on 30 mate-decided positions: mates seen behind a dark root move went from
-# 39/47 to 44/47, none lost, and 4 of 89 non-mate evals moved (max 50 cp). Rig and raw
-# transcripts: mistboard-engine lab/jieqi-darkmove-2026-08-31/.
-#
-# Pinned 2026-08-28. Before this, the build was `git clone --depth 1 -b jieqi_old`,
-# so every deploy rebuilt the analysis engine from whatever branch tip existed that
-# day. That is a reproducibility hole with teeth: whole-game analysis is cached by
-# (room, engine, depth), and the engine component was a hand-maintained version
-# string that knew nothing about the binary. Two deploys either side of an upstream
-# commit would therefore file evals from two different engines under one identical
-# key, with nothing to detect it. The xiangqi Pikafish build had the same hole
-# until 2026-09-23, when pikafish.ref pinned it to the commit production was
-# already running.
-#
-# The short form of this SHA is part of JIEQI_ANALYSIS_ENGINE_ID, so moving this pin
-# invalidates jieqi analysis caches on purpose rather than silently reusing them.
-# jieqi-engine-ref.test.ts fails if the two drift apart.
-#
-# Bumping: check out the new ref, rebuild, and expect a full recompute of every
-# jieqi review. There is no way to keep the old rows: they were produced by a
-# different engine, which is the whole point of keying on this.
-#
-# The browser WASM analysis build must move WITH this pin, or the analysis board and
-# the server run different engines while the articles tell readers they are the same
-# one. Its source of truth is apps/web/public/engine/pikafish-jieqi/ (source.patch +
-# pikajieqi-source-<short>.tar.gz) and its cache-buster is ENGINE_ASSET_VERSION in
-# apps/web/src/review/engine/pikajieqi-ceval.ts.
+# scripts/engine-assets.sh copies src/pikafish to bin/pikafish-jieqi.
+# Python 3 embeds the checked-in net at build time; no net download is needed.
+# Move PIKAFISH_JIEQI_ENGINE_REF and both engine versions with this pin: every
+# evaluation can change. jieqi-engine-ref.test.ts guards the analysis cache keys.
+# Browser artifacts and corresponding source live in
+# apps/web/public/engine/pikafish-jieqi/; move ENGINE_ASSET_VERSION with this pin.

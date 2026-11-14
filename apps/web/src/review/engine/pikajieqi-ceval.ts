@@ -1,6 +1,6 @@
-// Client-side Jieqi analysis powered by the classical-evaluation
-// PikaJieQi WebAssembly build. The engine runs as a persistent UCI session in a
-// dedicated worker and streams iterative-deepening MultiPV updates.
+// Client-side Jieqi analysis powered by Pikafish jieqi NNUE + ChanceMix
+// with an embedded MIT net trained on jqe labels. A persistent UCI session in a
+// dedicated worker streams iterative-deepening MultiPV updates.
 import type {
   CevalHandle,
   CevalLine,
@@ -13,7 +13,7 @@ import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-b
 import { parseInfo } from './uci-info.js';
 
 const ENGINE_BASE = '/engine/pikafish-jieqi/';
-const ENGINE_ASSET_VERSION = 'bcc83f8-emsdk3174-coep1';
+const ENGINE_ASSET_VERSION = 'fd1a6f82-emsdk3174-nnue1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 const EMIT_THROTTLE_MS = 80;
 const EMPTY_UPDATE: CevalUpdate = {
@@ -97,10 +97,9 @@ export class PikaJieQiCeval implements CevalHandle {
 
     // Keep the branch default of one search thread. Changing Threads from
     // inside the dedicated worker blocks while Emscripten provisions another
-    // pthread, so it can deadlock before `readyok`; the single thread still
-    // searches comfortably above one million nodes/second in Chromium.
+    // pthread, so it can deadlock before `readyok`.
     this.send('setoption name Hash value 32');
-    this.send('setoption name UCI_AnalyseMode value true');
+    // ChanceMix defaults on. This build has no UCI_AnalyseMode option.
     const ready = this.waitFor((line) => line === 'readyok');
     this.send('isready');
     await ready;

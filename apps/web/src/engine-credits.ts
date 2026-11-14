@@ -32,6 +32,10 @@ export type EngineCredit = {
 const levels = (prefix: string, count: number): string[] =>
   Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`);
 
+export const PIKAFISH_JIEQI_BUILD_URL =
+  'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard';
+export const PIKAFISH_JIEQI_NET_LICENSE_URL = '/engine/pikafish-jieqi/jieqi-net-LICENSE';
+
 export const RAPFI_REPO_URL = 'https://github.com/dhbloo/rapfi';
 export const RAPFI_NETWORKS_LICENSE_URL = '/engine/rapfi/NETWORKS-CC0.txt';
 export const RAPFI_BUILD_URL = 'https://github.com/brianhliou/rapfi-wasm';
@@ -40,7 +44,10 @@ const ENGINE_CREDITS: readonly EngineCredit[] = [
   {
     id: 'pikafish',
     engine: 'Pikafish',
-    authors: [{ name: 'thanks.pikafishAuthors', href: 'https://www.pikafish.com/' }],
+    authors: [
+      { name: 'thanks.pikafishAuthors', href: 'https://www.pikafish.com/' },
+      { name: 'thanks.pikafishJieqiBuild', href: PIKAFISH_JIEQI_BUILD_URL },
+    ],
     body: 'thanks.pikafishBody',
     gameSpecIds: ['xiangqi', 'jieqi'],
     botIds: ['pikafish', ...levels('pikafish-level-', 7)],
@@ -102,9 +109,9 @@ export function enabledEngineCredits(): readonly EngineCredit[] {
 }
 
 // Pikafish's code and home page. Its own NNUE weights carry a licence with no
-// commercial use without permission, so since 2026-11-10 every Pikafish here
-// (bots, review, the browser board) runs the CC0 Fairy-Stockfish xiangqi net
-// instead. /source and /champions credit the engine and that net from here.
+// commercial use without permission. Xiangqi uses the CC0 Fairy-Stockfish net;
+// jieqi uses an independent MIT net trained on jqe labels. /source and
+// /champions credit the engine and its net from here.
 export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
 export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
 export const XIANGQI_CC0_NET_URL = 'https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE';
