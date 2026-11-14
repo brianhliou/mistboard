@@ -34,6 +34,7 @@ import {
   siteThemeChangedEvent,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
+import { TRANSLATE_ICON_SVG } from './translate-icon.js';
 import { isBlockedForViewer } from './viewer-geo.js';
 import { type XiangqiPieceSet, xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
@@ -410,7 +411,7 @@ function buildNavQuickControls(locale: Locale): HTMLElement {
       ? `${t('nav.language', {}, locale)}: ${languageName}`
       : t('nav.language', {}, locale),
   );
-  language.innerHTML = QUICK_GLOBE_ICON;
+  language.innerHTML = TRANSLATE_ICON_SVG;
   language.setAttribute('aria-haspopup', 'dialog');
   language.setAttribute('aria-expanded', 'false');
   language.addEventListener('click', () => toggleQuickPicker(language, 'language', locale));
@@ -789,7 +790,6 @@ let openSiteMenuState: OpenSiteMenuState | null = null;
 const SVG_ATTRS =
   'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
 const CLOSE_ICON = `<svg ${SVG_ATTRS} width="24" height="24"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
-const QUICK_GLOBE_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`;
 const QUICK_MOON_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
 
 // A settings view to open the menu on (a drill-in key of the appearance menu,
