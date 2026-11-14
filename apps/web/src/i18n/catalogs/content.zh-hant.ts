@@ -285,7 +285,7 @@ export const ZH_HANT_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
   'source.pikafishJieqi':
-    '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋分級機器人和瀏覽器分析，復盤由 AB-JChess 評分，GPL-3.0。',
+    '皮卡魚的揭棋 NNUE 分支：揭棋分級機器人和瀏覽器分析，GPL-3.0。其網路以 jqe 標註資料訓練，採用 MIT 授權。復盤由 AB-JChess 評分。',
   'source.chessPieceSets':
     '西洋棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
@@ -582,8 +582,9 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 的很多部分建立在別人的工作之上：你對弈的引擎、其他網站允許我們展示的棋譜和照片，以及告訴我們哪裡出了問題的玩家。本頁逐一具名致謝。',
   'thanks.enginesHeading': '你對弈的引擎',
   'thanks.pikafishAuthors': '皮卡魚開發團隊',
+  'thanks.pikafishJieqiBuild': '揭棋 NNUE 建置版本，使用以 jqe 標註資料訓練的 MIT 授權網路',
   'thanks.pikafishBody':
-    '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋分支驅動揭棋機器人和揭棋分析。',
+    '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋 NNUE 分支驅動揭棋分級機器人和瀏覽器分析，使用以 jqe 標註資料訓練的 MIT 授權網路。',
   'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的貢獻者',
   'thanks.fairyStockfishBody': '為難度低於皮卡魚的各級象棋機器人和鴨子象棋機器人提供引擎支援。',
   'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',

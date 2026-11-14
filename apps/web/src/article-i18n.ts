@@ -4898,8 +4898,8 @@ const ZH_HANS: Record<string, string> = {
     '从自己的对局中尝试另一条变化，与原来的走法比较。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已结束的揭棋对局中的一条变化，复盘页面已开启浏览器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分为八级。前七级限制搜索，并允许引擎选择较弱着法；第 8 级使用完整搜索预算。我们通过机器人之间以及与随机走棋基准的对局，测量各级的实力。[等级如何建立](/blog/jieqi-bot-wins)介绍了这些级别。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八个 Pikafish 等级和浏览器分析棋盘，运行的都是 Pikafish 揭棋 NNUE 分支的[本站构建版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我们用 [jqe](https://github.com/devinokeefe/jieqi) 评分的局面训练的网络。该网络不含任何 Pikafish 权重，采用 [MIT 许可](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身为 GPL-3.0。前七级限制搜索，并可能选择较弱着法；第 8 级使用完整搜索预算。[等级如何建立](/blog/jieqi-bot-wins)介绍了各级设置。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盘对抗中以 248 比 136 获胜，取得高于 Pikafish 的位置。可以[了解这位冠军](/blog/ab-jchess)，或查看[当前机器人和等级分](/bots)，认识最新挑战者。每个机器人只能使用自己这一方有权看到的信息，绝不会获得隐藏的暗子布局。',
   'Explore your own games': '探索自己的对局',
@@ -6702,8 +6702,6 @@ const ZH_HANS: Record<string, string> = {
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
   'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
     '揭棋等级机器人和浏览器分析已更新为 Pikafish NNUE，使用以 jqe 标注数据训练的 MIT 许可网络。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -11845,8 +11843,8 @@ const ZH_HANT: Record<string, string> = {
     '從自己的對局中嘗試另一條變化，與原來的走法比較。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已結束的揭棋對局中的一條變化，復盤頁面已開啓瀏覽器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分為八級。前七級限制搜索，並允許引擎選擇較弱著法；第 8 級使用完整搜索預算。我們通過機器人之間以及與隨機走棋基準的對局，測量各級的實力。[等級如何建立](/blog/jieqi-bot-wins)介紹了這些級別。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八個 Pikafish 等級和瀏覽器分析棋盤，運行的都是 Pikafish 揭棋 NNUE 分支的[本站建置版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我們用 [jqe](https://github.com/devinokeefe/jieqi) 評分的局面訓練的網路。該網路不含任何 Pikafish 權重，採用 [MIT 授權](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身為 GPL-3.0。前七級限制搜索，並可能選擇較弱著法；第 8 級使用完整搜索預算。[等級如何建立](/blog/jieqi-bot-wins)介紹了各級設定。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盤對抗中以 248 比 136 獲勝，取得高於 Pikafish 的位置。可以[瞭解這位冠軍](/blog/ab-jchess)，或查看[當前機器人和等級分](/bots)，認識最新挑戰者。每個機器人只能使用自己這一方有權看到的信息，絕不會獲得隱藏的暗子佈局。',
   'Explore your own games': '探索自己的對局',
@@ -13429,8 +13427,6 @@ const ZH_HANT: Record<string, string> = {
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
   'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
     '揭棋等級機器人和瀏覽器分析已更新為 Pikafish NNUE，使用以 jqe 標註資料訓練的 MIT 授權網路。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
