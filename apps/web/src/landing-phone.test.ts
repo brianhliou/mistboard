@@ -84,10 +84,11 @@ describe('phone home widget set', () => {
         url,
       ).toBe(false);
     }
-    // What the phone home keeps: TV, Play with its two buttons and the
+    // What the phone home keeps: TV, a single Play button and the
     // games-played line, tiles, both article rows, the chat room and the footer.
     expect(stage.el.querySelector('.landing-tv-strip')).not.toBeNull();
-    expect(stage.el.querySelector('.landing-play-quick')).not.toBeNull();
+    expect(stage.el.querySelector('.landing-play-quick')).toBeNull();
+    expect(stage.el.querySelectorAll('.landing-play-action')).toHaveLength(1);
     expect(stage.el.querySelector('.landing-phone-tiles')).not.toBeNull();
     // Both article rows: the newest posts, then the deep dives (2026-10-17).
     expect(stage.el.querySelector('.landing-articles-row:not(.landing-dives-row)')).not.toBeNull();
