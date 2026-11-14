@@ -1,6 +1,7 @@
 // Community translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_COMMUNITY = {
+  'profile.championLabel': '{variant} {pace} champion',
   'inbox.searchPlaceholder': 'Search or start new conversation',
   'profile.chartRange1M': '1M',
   'profile.chartRange3M': '3M',

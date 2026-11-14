@@ -14,6 +14,110 @@ describe('profile ratings rail', () => {
   });
 
   it.each([
+    ['en', ['Xiangqi blitz champion', 'Flip Jungle correspondence champion']],
+    ['zh-Hans', ['象棋闪电冠军', '翻翻兽棋通信对局冠军']],
+    ['zh-Hant', ['象棋閃電冠軍', '翻翻獸棋通信對局冠軍']],
+  ] as const)('shows labelled profile champion ladders in %s', async (locale, labels) => {
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    await ensureLocaleCatalog(locale);
+    const { buildProfileOverview } = await import('./profile.js');
+    const profile: Parameters<typeof buildProfileOverview>[0] = {
+      user: {
+        handle: 'alice',
+        displayName: 'Alice',
+        accountRole: 'player',
+        profileVisibility: 'public',
+        createdAt: '2026-01-01T00:00:00Z',
+        champions: [
+          { variant: 'xiangqi', timeClass: 'blitz' },
+          { variant: 'jungle_flip', timeClass: 'correspondence' },
+        ],
+      },
+      ratings: [],
+      games: [],
+      gamesTotal: 0,
+    };
+    const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+    const items = [...overview.querySelectorAll('.profile-championship')];
+    expect(items.map((item) => item.textContent)).toEqual(labels);
+    expect(items.map((item) => item.querySelector('img')?.getAttribute('alt'))).toEqual(labels);
+    for (const champions of [undefined, []]) {
+      profile.user.champions = champions;
+      const empty = buildProfileOverview(profile, document.createElement('div'), locale);
+      expect(empty.querySelector('.profile-championships')).toBeNull();
+      expect(empty.textContent).not.toContain('vacant');
+    }
+  });
+
+  it('carries multiple champion crowns from leaderboard summaries into variant rows', async () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      return new Response(
+        JSON.stringify(
+          url.pathname === '/api/leaderboard/summary'
+            ? {
+                ladders: [
+                  {
+                    variant: 'xiangqi',
+                    leaderboard: [
+                      {
+                        rank: 1,
+                        handle: 'alice',
+                        displayName: 'Alice',
+                        eloRating: 2000,
+                        provisional: false,
+                        champions: [
+                          { variant: 'xiangqi', timeClass: 'blitz' },
+                          { variant: 'banqi', timeClass: 'rapid' },
+                        ],
+                      },
+                      {
+                        rank: 2,
+                        handle: 'bob',
+                        displayName: 'Bob',
+                        eloRating: 1900,
+                        provisional: false,
+                        champions: [],
+                      },
+                      {
+                        rank: 3,
+                        handle: 'guest',
+                        displayName: 'Guest',
+                        eloRating: 1800,
+                        provisional: false,
+                      },
+                    ],
+                  },
+                ],
+              }
+            : { players: [] },
+        ),
+      );
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    const rows = [
+      ...root.querySelectorAll(
+        '.leaderboard-pace-section[data-time-class="blitz"] .leaderboard-table tr',
+      ),
+    ];
+    expect(rows).toHaveLength(3);
+    const crowns = [...rows[0]!.querySelectorAll<HTMLImageElement>('.champion-crown')];
+    expect(crowns.map((icon) => icon.alt)).toEqual([
+      'Xiangqi blitz champion',
+      'Banqi rapid champion',
+    ]);
+    expect(crowns.map((icon) => icon.width)).toEqual([16, 16]);
+    expect(crowns.map((icon) => icon.title)).toEqual(
+      crowns.map((icon) => icon.getAttribute('aria-label')),
+    );
+    expect(rows[1]!.querySelector('.champion-crowns')).toBeNull();
+    expect(rows[2]!.querySelector('.champion-crowns')).toBeNull();
+  });
+
+  it.each([
     ['/player', '/'],
     ['/zh-hans', '/zh-hans/'],
     ['/zh-hant', '/zh-hant/'],

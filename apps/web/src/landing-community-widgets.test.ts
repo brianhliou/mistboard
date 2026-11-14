@@ -276,3 +276,62 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+describe('top-player champion crowns', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+  it('renders summary championships at 16px and hides empty or missing arrays', async () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    const { buildTopPlayersWidget } = await import('./landing-community-widgets.js');
+    for (const champions of [
+      [
+        { variant: 'xiangqi', timeClass: 'blitz' },
+        { variant: 'banqi', timeClass: 'rapid' },
+      ],
+      [],
+      undefined,
+    ]) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(
+              JSON.stringify({
+                ladders: [
+                  {
+                    variant: 'xiangqi',
+                    leaderboard: [
+                      {
+                        handle: 'alice',
+                        displayName: 'Alice',
+                        eloRating: 2000,
+                        provisional: false,
+                        champions,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ),
+        ),
+      );
+      const widget = buildTopPlayersWidget();
+      await vi.waitFor(() => expect(widget.querySelector('a[href="/@/alice"]')).not.toBeNull());
+      const icons = [...widget.querySelectorAll<HTMLImageElement>('.champion-crown')];
+      expect(icons.map((icon) => icon.alt)).toEqual(
+        champions?.length ? ['Xiangqi blitz champion', 'Banqi rapid champion'] : [],
+      );
+      expect(
+        icons.every(
+          (icon) =>
+            icon.width === 16 &&
+            icon.title === icon.alt &&
+            icon.getAttribute('aria-label') === icon.alt,
+        ),
+      ).toBe(true);
+    }
+  });
+});

@@ -7,6 +7,7 @@
 import type { CommunityI18nKey } from './community.js';
 
 export const ZH_HANS_COMMUNITY = {
+  'profile.championLabel': '{variant}{pace}冠军',
   'inbox.searchPlaceholder': '搜索或发起新对话',
   'profile.chartRange1M': '1个月',
   'profile.chartRange3M': '3个月',

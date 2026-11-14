@@ -1033,3 +1033,62 @@ describe('setWatchSeatInkFamily', () => {
     expect(el.dataset.seatInkFamily).toBeUndefined();
   });
 });
+
+describe('watch seat championships', () => {
+  it('keeps multiple crowns with the named participant and removes missing or empty championships', async () => {
+    const { renderWatchPlayers } = await import('./watch-route.js');
+    const top = document.createElement('div');
+    const bottom = document.createElement('div');
+    for (const champions of [
+      [
+        { variant: 'xiangqi', timeClass: 'blitz' },
+        { variant: 'banqi', timeClass: 'rapid' },
+      ] as const,
+      [],
+      undefined,
+    ]) {
+      const game: FeaturedGame = {
+        roomId: 'watch-crowns',
+        variant: 'xiangqi',
+        result: 'red-wins',
+        termination: 'resignation',
+        plyCount: 1,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: 'red',
+            displayName: 'Alice',
+            subjectType: 'user',
+            subjectId: 'u1',
+            handle: 'alice',
+            visibility: 'public',
+            champions: champions ? [...champions] : undefined,
+          },
+          {
+            color: 'black',
+            displayName: 'Bob',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+        ],
+      };
+      renderWatchPlayers(top, bottom, game);
+      const icons = [...bottom.querySelectorAll<HTMLImageElement>('.champion-crown')];
+      expect(icons.map((icon) => icon.alt)).toEqual(
+        champions?.length ? ['Xiangqi blitz champion', 'Banqi rapid champion'] : [],
+      );
+      expect(
+        icons.every(
+          (icon) =>
+            icon.title === icon.alt &&
+            icon.getAttribute('aria-label') === icon.alt &&
+            icon.width === 20,
+        ),
+      ).toBe(true);
+      expect(top.querySelector('.champion-crowns')).toBeNull();
+    }
+  });
+});

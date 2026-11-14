@@ -83,6 +83,21 @@ function frame(
     seat,
     seats: Object.fromEntries(colors.map((color) => [color, `client-${color}`])),
     seatDisplayNames: Object.fromEntries(colors.map((color) => [color, `Player ${color}`])),
+    seatProfiles: Object.fromEntries(
+      colors.map((color, index) => [
+        color,
+        {
+          handle: `player-${color}`,
+          champions:
+            index === 0
+              ? [
+                  { variant: 'xiangqi', timeClass: 'blitz' },
+                  { variant: 'banqi', timeClass: 'correspondence' },
+                ]
+              : [],
+        },
+      ]),
+    ),
     state: view,
     events: [],
     timeControl,
@@ -101,6 +116,25 @@ function frame(
 function assertDiscs(inks: readonly string[], family?: string) {
   const rows = [...document.querySelectorAll('.clock-player-line')];
   expect(rows).toHaveLength(2);
+  const crownRows = rows.filter((row) => row.querySelector('.champion-crown'));
+  expect(crownRows).toHaveLength(1);
+  const crownName = crownRows[0]!.querySelector('a.clock-name');
+  expect(crownName?.getAttribute('href')).toBe(
+    `/@/player-${inks.includes('white') ? 'black' : 'red'}`,
+  );
+  const crowns = [...crownName!.querySelectorAll<HTMLImageElement>('.champion-crown')];
+  expect(crowns.map((icon) => icon.alt)).toEqual([
+    'Xiangqi blitz champion',
+    'Banqi correspondence champion',
+  ]);
+  expect(
+    crowns.every(
+      (icon) =>
+        icon.title === icon.alt &&
+        icon.getAttribute('aria-label') === icon.alt &&
+        icon.width === 20,
+    ),
+  ).toBe(true);
   const discs = rows.map((row) => row.querySelector('.clock-seat-disc'));
   expect(discs.map((disc) => disc?.className)).toEqual(
     inks.map((ink) => `clock-seat-disc seat-disc seat-disc--${ink}`),
@@ -126,6 +160,30 @@ const openView = {
 };
 
 describe('live room shared seat discs', () => {
+  it.each([
+    { state: 'missing', champions: undefined },
+    { state: 'empty', champions: [] },
+  ])('clears tenant crowns when championships become $state', async ({ champions }) => {
+    const options = await mount(async () => {
+      const { bootstrapXiangqiLiveRoom } = await import('./live-xiangqi.js');
+      bootstrapXiangqiLiveRoom();
+    });
+    const payload = frame(openView, 'red', ['red', 'black'], true);
+    options.applyHello(payload);
+    options.render();
+    expect(document.querySelectorAll('.clock-name .champion-crown')).toHaveLength(2);
+    const nextPayload = {
+      ...payload,
+      seatProfiles: {
+        red: { handle: 'player-red', champions },
+        black: { handle: 'player-black' },
+      },
+    };
+    options.applyHello(nextPayload);
+    options.render();
+    expect(document.querySelector('.clock-name .champion-crowns')).toBeNull();
+  });
+
   it.each(['red', 'spectator'])(
     'shows Xiangqi red/black beside names for %s before and after clocks arm',
     async (seat) => {
