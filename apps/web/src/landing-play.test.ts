@@ -77,8 +77,9 @@ describe('landing play panel', () => {
       setResolvedSignedIn(false);
       const fetchSpy = vi.fn();
       vi.stubGlobal('fetch', fetchSpy);
+      // Find opponent posts an open seek, which needs an account.
       openLandingSetupDialog({
-        mode: 'pvp',
+        mode: 'lobby',
         initialGameSpecId: 'jieqi',
         initialRated: false,
         locale,
@@ -109,6 +110,25 @@ describe('landing play panel', () => {
       expect(ratedNotice?.textContent).toBe(t('lobby.panelRatedSignIn', {}, locale));
       expect(signIn()?.hidden).toBe(false);
       expect(fetchSpy).not.toHaveBeenCalled();
+
+      // A guest's casual friend invite opens a direct room (#1059): no wall.
+      document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
+      openLandingSetupDialog({
+        mode: 'pvp',
+        initialGameSpecId: 'jieqi',
+        initialRated: false,
+        initialTimeMode: 'correspondence',
+        locale,
+      });
+      expect(signIn()?.hidden).toBe(true);
+      expect(document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden).toBe(
+        false,
+      );
+      expect(
+        [...document.querySelectorAll<HTMLElement>('.landing-setup-account-notice')].every(
+          (el) => el.hidden,
+        ),
+      ).toBe(true);
 
       document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
       setResolvedSignedIn(true);
@@ -1443,36 +1463,52 @@ describe('landing play panel', () => {
     });
   });
 
+  // #1059: signed out, Challenge a friend creates a direct invite room the guest
+  // sits in at once, instead of a sign-in wall. The side goes as the variant's
+  // own color, and no link challenge is posted.
   for (const { gameSpecId, color, sent } of [
     { gameSpecId: 'xiangqi', color: 'Black', sent: 'black' },
     { gameSpecId: 'jieqi', color: 'Red', sent: 'red' },
     { gameSpecId: 'dark-chess', color: 'White', sent: 'white' },
     { gameSpecId: 'dark-chess', color: 'Random', sent: 'random' },
   ]) {
-    it(`a guest correspondence invite on ${gameSpecId} as ${color} asks for sign-in before create`, () => {
+    it(`signed out, a correspondence friend invite on ${gameSpecId} as ${color} opens a room`, async () => {
       vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
       setResolvedSignedIn(false);
-      const fetchSpy = vi.fn(async (_input: RequestInfo | URL) =>
-        jsonResponse({ playing: 0, online: 0 }),
-      );
+      const navigated: string[] = [];
+      setRoomNavigator((url) => {
+        navigated.push(url);
+      });
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/rooms') {
+          return jsonResponse({ roomId: 'xq_guest', url: '/room/xq_guest' }, { status: 201 });
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      });
       vi.stubGlobal('fetch', fetchSpy);
       const panel = buildLandingPlayPanel([]);
       document.body.append(panel);
+
       openPlaySetup(panel, 'Challenge a friend');
       selectModalVariant(gameSpecId);
       clickModalButton('Correspondence');
       clickModalTimeControl('3');
       clickModalColor(color);
-      const link = document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
-      expect(link?.hidden).toBe(false);
-      expect(new URL(link!.href).searchParams.get('referrer')).toBe(
-        `/?play=friend&variant=${gameSpecId}&tc=corr&days=3&rated=0&side=${sent}`,
+      clickModalButton('Create room');
+      await flushPromises();
+
+      expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/correspondence/seeks')).toBe(
+        false,
       );
-      expect(
-        fetchSpy.mock.calls.some(([url]) =>
-          ['/api/rooms', '/api/correspondence/seeks'].includes(String(url)),
-        ),
-      ).toBe(false);
+      const roomPost = fetchSpy.mock.calls.find(([url]) => String(url) === '/api/rooms');
+      expect(JSON.parse(String(roomPost?.[1]?.body))).toEqual({
+        gameSpecId,
+        mode: 'correspondence',
+        daysPerMove: 3,
+        preferredColor: sent,
+      });
+      expect(navigated).toEqual(['/room/xq_guest']);
+      expect(document.querySelector('.landing-setup-status')?.textContent ?? '').toBe('');
     });
   }
 
