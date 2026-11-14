@@ -1467,4 +1467,8 @@ The provider guide's postgame section separates existing grading/luck algorithms
 
 `scripts/ffq-win-calibration.mjs` and `docs/ffq-win-calibration-2026-11-13.json`: reproducible 300-game level-7 self-play sample and logistic fit; scale documentation in `docs/misty-analysis-win-scale.md`.
 
-`apps/server/src/account-username.test.ts`: email-independent signup handles, server-only legacy username detection, and per-account suggestion dismissal through auth and profile routes (#1110). Migration `201_username_prompt_dismissed.sql` stores dismissal; `persistence-profiles.test.ts` covers the session round trip. `apps/web/src/account.test.ts` covers username choice, validation, dismissal and forgiving code paste.
+`apps/server/src/account-username.test.ts`: email-independent signup handles, server-only legacy username detection, and per-account suggestion dismissal through auth and profile routes (#1110). Migration `202_username_prompt_dismissed.sql` stores dismissal; `persistence-profiles.test.ts` covers the session round trip. `apps/web/src/account.test.ts` covers username choice, validation, dismissal and forgiving code paste.
+
+`apps/server/src/routes/account-broadcast-push.ts` + `.test.ts`: session-owned broadcast push grant/token APIs, one-time issuance, ownership checks, creation limits and origin protection; dispatched by the account route.
+
+`apps/web/src/account-broadcast-push.ts`: grant-only Broadcast push section within Email and sign-in settings, one-time copy, safe token metadata and revocation; interaction regressions live in `account.test.ts`.

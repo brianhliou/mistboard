@@ -8,6 +8,7 @@
 // landing.ts.
 
 import './account-profile.css';
+import { buildBroadcastPushSettings } from './account-broadcast-push.js';
 import { setAccountNavUser } from './account-nav.js';
 import {
   type AccountPreferenceId,
@@ -1328,7 +1329,7 @@ function buildAccountAccessSettings(user: AuthUser, locale: Locale = currentLoca
   });
 
   form.append(newEmail.wrap, code.wrap, submit, status);
-  panel.append(list, form);
+  panel.append(list, form, buildBroadcastPushSettings(locale));
   return panel;
 }
 

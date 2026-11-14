@@ -14,7 +14,11 @@ import {
   test,
 } from './persistence-test-support.js';
 import {
+  createAccountBroadcastPushToken,
+  createAccountBroadcastPushTokenOn,
   findXiangqiBroadcastPushToken,
+  listAccountBroadcastPushGrants,
+  revokeAccountBroadcastPushToken,
   revokeXiangqiBroadcastPushTokenOn,
   touchXiangqiBroadcastPushToken,
 } from './persistence-xiangqi-broadcast-push.js';
@@ -25,6 +29,10 @@ import {
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
 } from './persistence-xiangqi-broadcasts.js';
+import {
+  xiangqiBroadcastRoundForApi,
+  xiangqiBroadcastTourForApi,
+} from './routes/xiangqi-broadcasts.js';
 
 const tour = { schema: 'mistboard.xiangqi.broadcast.v1', slug: 'push-test', name: 'Push test' };
 const round = { schema: tour.schema, id: 'push-test-r1', tourSlug: tour.slug, name: 'Round 1' };
@@ -71,13 +79,91 @@ async function cli(...args: string[]) {
 }
 
 definePersistenceTests('xiangqi broadcast push', () => {
+  test('account tokens persist hashes only, enforce ownership and serialize the five-token limit', async () => {
+    await seed();
+    await getPool().query(`INSERT INTO users (id, email, handle, display_name)
+      VALUES ('owner', 'owner@example.test', 'clockmaker', 'Clock maker'),
+             ('other', 'other@example.test', 'other', 'Other')`);
+    await cli('grant', '--account', '@clockmaker', '--tour', tour.slug);
+    await cli('grant', '--account', 'OWNER@example.test', '--tour', tour.slug);
+    assert.equal(
+      (
+        await getPool().query(
+          'SELECT id FROM xiangqi_broadcast_push_grants WHERE revoked_at IS NULL',
+        )
+      ).rowCount,
+      1,
+    );
+    assert.equal(
+      await createAccountBroadcastPushToken('other', tour.slug, 'No access'),
+      'not_found',
+    );
+    const outcomes = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        createAccountBroadcastPushToken('owner', tour.slug, `Clock ${i}`),
+      ),
+    );
+    const created = outcomes.filter((r) => typeof r !== 'string');
+    assert.equal(created.length, 5);
+    assert.equal(outcomes.filter((r) => r === 'token_limit').length, 3);
+    const first = created[0]!;
+    const hash = createHash('sha256').update(first.token).digest('hex');
+    const stored = (
+      await getPool().query('SELECT * FROM xiangqi_broadcast_push_tokens WHERE id = $1', [
+        first.metadata.id,
+      ])
+    ).rows[0];
+    assert.equal(stored.token_hash === hash, true);
+    assert.equal(JSON.stringify(stored).includes(first.token), false);
+    const listed = JSON.stringify(await listAccountBroadcastPushGrants('owner'));
+    assert.equal(
+      listed.includes(hash) || listed.includes(first.token) || listed.includes('token_hash'),
+      false,
+    );
+    assert.deepEqual(await listAccountBroadcastPushGrants('other'), []);
+    assert.equal(
+      await revokeAccountBroadcastPushToken('other', tour.slug, first.metadata.id),
+      false,
+    );
+    assert.equal(
+      await revokeAccountBroadcastPushToken('owner', 'ungranted', first.metadata.id),
+      false,
+    );
+    assert.equal(
+      await revokeAccountBroadcastPushToken('owner', tour.slug, first.metadata.id),
+      true,
+    );
+    await cli('revoke-grant', '--account', '@clockmaker', '--tour', tour.slug);
+    assert.deepEqual(await listAccountBroadcastPushGrants('owner'), []);
+    assert.equal(
+      (
+        await getPool().query(
+          'SELECT id FROM xiangqi_broadcast_push_tokens WHERE revoked_at IS NULL',
+        )
+      ).rowCount,
+      0,
+    );
+    await cli('grant', '--account', '@clockmaker', '--tour', tour.slug);
+    // Regranting must never revive previously revoked credentials.
+    assert.ok((await findXiangqiBroadcastPushToken(first.token))?.revokedAt);
+  });
+
   test('migration 199 installs exact token columns, FK cascade, unique hash and durable nullable sequence', async () => {
     const { rows } = await getPool().query(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'xiangqi_broadcast_push_tokens' ORDER BY ordinal_position`,
     );
     assert.deepEqual(
       rows.map((r) => r.column_name),
-      ['id', 'tour_slug', 'label', 'token_hash', 'created_at', 'revoked_at', 'last_used_at'],
+      [
+        'id',
+        'tour_slug',
+        'label',
+        'token_hash',
+        'created_at',
+        'revoked_at',
+        'last_used_at',
+        'account_id',
+      ],
     );
     await seed();
     assert.equal((await getXiangqiBroadcastTour(tour.slug))?.listed, true);
@@ -215,8 +301,128 @@ definePersistenceTests('xiangqi broadcast push', () => {
     assert.equal((await getXiangqiBroadcastBoard(board.id))?.result, '0-1');
   });
 
+  test('CLI sets device credit without enabling polling; board detail prefers board, round, then tour', async () => {
+    await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET poll_mode = 'auto', poll_enabled = true WHERE slug = $1`,
+      [tour.slug],
+    );
+    const sourceUrl = 'https://device.example/event';
+    assert.deepEqual(await cli('set-source', '--tour', tour.slug, '--url', sourceUrl), {
+      ok: true,
+      tour: tour.slug,
+      sourceUrl,
+      pollMode: 'off',
+    });
+    const event = await getXiangqiBroadcastTour(tour.slug);
+    assert.equal(event?.sourceUrl, sourceUrl);
+    assert.equal(event?.pollMode, 'off');
+    assert.equal(event?.pollEnabled, false);
+    assert.equal((await applyXiangqiBroadcastBoardUpdate(board, options(1))).ok, true);
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, sourceUrl);
+    const roundUrl = 'https://device.example/round';
+    await getPool().query(`UPDATE xiangqi_broadcast_rounds SET source_url = $2 WHERE id = $1`, [
+      round.id,
+      roundUrl,
+    ]);
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, roundUrl);
+    const boardUrl = 'https://device.example/game';
+    assert.equal(
+      (await applyXiangqiBroadcastBoardUpdate({ ...board, sourceUrl: boardUrl }, options(2))).ok,
+      true,
+    );
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, boardUrl);
+    assert.equal(await getXiangqiBroadcastBoard('missing-board'), null);
+  });
+
+  test('device credit survives CLI storage and board, tour and round API reads', async () => {
+    await seed();
+    await applyXiangqiBroadcastBoardUpdate(board, options(1));
+    const assertCredit = async (expected?: { name: string; url: string }) => {
+      const tours = [
+        await getXiangqiBroadcastTour(tour.slug),
+        (await xiangqiBroadcastTourForApi(tour.slug))?.tour,
+        (await xiangqiBroadcastRoundForApi(tour.slug, round.id))?.tour,
+      ];
+      for (const event of tours) {
+        assert.ok(event);
+        assert.deepEqual(event.deviceCredit, expected);
+        assert.equal(Object.hasOwn(event, 'deviceCredit'), expected !== undefined);
+      }
+    };
+    await assertCredit();
+    const url = 'https://device.example/event';
+    const name = 'Recording Clock';
+    const report = await cli(
+      'set-source',
+      '--tour',
+      tour.slug,
+      '--url',
+      url,
+      '--device',
+      ` ${name} `,
+    );
+    assert.equal(report.device, name);
+    const { rows } = await getPool().query(
+      'SELECT payload FROM xiangqi_broadcast_tours WHERE slug = $1',
+      [tour.slug],
+    );
+    assert.deepEqual(rows[0].payload.deviceCredit, { name, url });
+    await assertCredit({ name, url });
+    // Even a source-only edit keeps the existing device credit.
+    await cli('set-source', '--tour', tour.slug, '--url', url);
+    await assertCredit({ name, url });
+    for (const invalid of [
+      { name, url: 'http://device.example' },
+      { name: '', url },
+      { name: '  ', url },
+      { name, url: 'not-a-url' },
+      { name: 12, url },
+      'malformed',
+    ]) {
+      await getPool().query(
+        "UPDATE xiangqi_broadcast_tours SET payload = jsonb_set(payload, '{deviceCredit}', $2::jsonb) WHERE slug = $1",
+        [tour.slug, JSON.stringify(invalid)],
+      );
+      await assertCredit();
+    }
+  });
+
+  test('CLI set-source refuses an event the poller fills and leaves its polling on', async () => {
+    await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET source_url = 'https://source.invalid', poll_mode = 'auto', poll_enabled = true WHERE slug = $1`,
+      [tour.slug],
+    );
+    await assert.rejects(
+      cli(
+        'set-source',
+        '--tour',
+        tour.slug,
+        '--url',
+        'https://device.example/event',
+        '--device',
+        'Clock',
+      ),
+      /polled event keeps its own source/,
+    );
+    const { rows } = await getPool().query(
+      'SELECT source_url, poll_mode, poll_enabled FROM xiangqi_broadcast_tours WHERE slug = $1',
+      [tour.slug],
+    );
+    assert.deepEqual(rows[0], {
+      source_url: 'https://source.invalid',
+      poll_mode: 'auto',
+      poll_enabled: true,
+    });
+  });
+
   test('illegal/rejected writes and failed transactions leave board and sequence together unchanged', async () => {
     await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET source_url = 'https://source.invalid', poll_mode = 'off' WHERE slug = $1`,
+      [tour.slug],
+    );
     await applyXiangqiBroadcastBoardUpdate(board, options(4));
     const before = await getXiangqiBroadcastBoard(board.id);
     const invalid = await applyXiangqiBroadcastBoardUpdate(
@@ -261,4 +467,51 @@ definePersistenceTests('xiangqi broadcast push', () => {
     assert.deepEqual((await getXiangqiBroadcastBoard(board.id))?.moves, board.moves);
     assert.equal(await seq(), 2);
   });
+});
+
+// Offline contract proof: no bearer value crosses the database boundary.
+test('account token insertion sends only a hash and never issues without a grant or above the cap', async () => {
+  const calls: { sql: string; args: unknown[] }[] = [];
+  let granted = true;
+  let count = 0;
+  const client = {
+    query: async (sql: string, args: unknown[] = []) => {
+      calls.push({ sql, args });
+      if (sql.includes('FROM users')) return { rows: [{ id: 'owner' }] };
+      if (sql.includes('FROM xiangqi_broadcast_push_grants'))
+        return { rows: granted ? [{ id: 'grant' }] : [] };
+      if (sql.includes('count(*)')) return { rows: [{ count: String(count) }] };
+      if (sql.includes('INSERT INTO'))
+        return {
+          rows: [
+            {
+              id: args[0],
+              tour_slug: args[2],
+              label: args[3],
+              created_at: new Date(),
+              revoked_at: null,
+              last_used_at: null,
+            },
+          ],
+        };
+      throw new Error('unexpected query');
+    },
+  } as unknown as Parameters<typeof createAccountBroadcastPushTokenOn>[0];
+  const result = await createAccountBroadcastPushTokenOn(client, 'owner', 'test', 'Clock');
+  assert.ok(typeof result !== 'string');
+  assert.match(result.token, /^mbpush_[A-Za-z0-9_-]{43}$/);
+  assert.equal(JSON.stringify(calls).includes(result.token), false);
+  const insert = calls.find((c) => c.sql.includes('INSERT INTO'))!;
+  assert.equal(insert.args[4] === createHash('sha256').update(result.token).digest('hex'), true);
+  count = 5;
+  assert.equal(
+    await createAccountBroadcastPushTokenOn(client, 'owner', 'test', 'Clock'),
+    'token_limit',
+  );
+  granted = false;
+  assert.equal(
+    await createAccountBroadcastPushTokenOn(client, 'owner', 'test', 'Clock'),
+    'not_found',
+  );
+  assert.equal(calls.filter((c) => c.sql.includes('INSERT INTO')).length, 1);
 });
