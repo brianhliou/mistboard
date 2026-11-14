@@ -29,6 +29,7 @@ const booleanAccountPreferenceKeys = new Set<persistence.AccountPreferenceKey>([
   'lowTimeSound',
   'premoves',
   'confirmGameActions',
+  'confirmCorrespondenceMoves',
   'inboxBell',
   'inboxEmail',
   'correspondenceBell',

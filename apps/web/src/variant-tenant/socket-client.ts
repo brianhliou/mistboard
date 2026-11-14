@@ -17,6 +17,7 @@
  */
 
 import { track } from '../analytics.js';
+import { createCorrespondenceRoom } from '../correspondence-room.js';
 import {
   clientIdForRoom,
   deviceIdForBrowser,
@@ -159,9 +160,11 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   let lastLatencySampleSentAt = 0;
   let pingTimer: number | null = null;
   let closed = false;
+  const correspondence = createCorrespondenceRoom(options.room, sendImmediately, options.render);
 
   function connect(): void {
     if (closed) return;
+    correspondence.reset();
     if (reconnectTimer) {
       window.clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -223,6 +226,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     });
     next.addEventListener('close', (event) => {
       if (socket !== next) return;
+      correspondence.reset();
       clearOpenTimer();
       closeReason = event.reason;
       if (event.code === 4000 && event.reason === 'duplicate session') {
@@ -294,6 +298,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function close(): void {
+    correspondence.close();
     closed = true;
     document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('online', onWake);
@@ -373,6 +378,14 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function send(payload: unknown): boolean {
+    if (!closed && connectionState === 'connected' && socket?.readyState === WebSocket.OPEN) {
+      const intercepted = correspondence.intercept(payload);
+      if (intercepted !== undefined) return intercepted;
+    }
+    return sendImmediately(payload);
+  }
+
+  function sendImmediately(payload: unknown): boolean {
     if (closed) return false;
     if (connectionState === 'displaced' || connectionState === 'rejected') return false;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -418,6 +431,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
 
     if (message.type === 'hello') {
+      correspondence.update(message);
       reconnectAttempt = 0;
       clearRestartingBanner();
       connectionState = 'connected';
@@ -430,6 +444,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       options.applyHello(message);
       lastSeq = null;
     } else if (message.type === 'snapshot') {
+      correspondence.update(message);
       reconnectAttempt = 0;
       connectionState = 'connected';
       clearNoticeTiers();
@@ -443,12 +458,14 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       }
       connectionState = 'connected';
       clearNoticeTiers();
+      correspondence.update(message);
       options.applyEvent(message);
       if (message.seq !== undefined) lastSeq = message.seq;
     } else {
       options.onServerMessage?.(message as unknown as { type: string; [key: string]: unknown });
     }
     options.render();
+    correspondence.render();
   }
 
   function maybeSendLatencySample(rttMs: number): void {

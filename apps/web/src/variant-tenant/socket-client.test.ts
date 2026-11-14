@@ -1,5 +1,13 @@
+import {
+  createInitialBanqiState,
+  createInitialJieqiState,
+  getBanqiPlayerView,
+  getJieqiPlayerView,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { writeAccountPreference } from '../account-preferences.js';
 import { track } from '../analytics.js';
+import { correspondencePreview, nextCorrespondenceGame } from '../correspondence-room.js';
 import { clearRestartingBanner, setRestartBanner } from '../restart-banner.js';
 import {
   createTenantSocketClient,
@@ -118,6 +126,7 @@ function memoryStorage(): Storage {
 
 describe('tenant socket client', () => {
   beforeEach(() => {
+    document.body.innerHTML = '<div class="board-shell"><div data-board></div></div>';
     FakeWebSocket.instances = [];
     vi.stubGlobal('WebSocket', FakeWebSocket);
     // Fake Date too: the latency-sample throttle compares Date.now() deltas.
@@ -147,6 +156,298 @@ describe('tenant socket client', () => {
     expect([1, 2, 3, 4, 5, 6, 9].map(tenantReconnectDelayMs)).toEqual([
       750, 1_500, 3_000, 6_000, 10_000, 10_000, 10_000,
     ]);
+  });
+
+  function correspondence(
+    view = {
+      id: 'confirmation',
+      board: { a1: { color: 'red', role: 'chariot' } },
+      legalMoves: [{ from: 'a1', to: 'a2' }],
+      status: { type: 'playing', turn: 'red' },
+    },
+    mode = 'correspondence',
+  ) {
+    const { client } = makeClient();
+    client.connect();
+    const socket = lastSocket();
+    socket.open();
+    socket.message({ type: 'hello', mode, seat: 'red', state: view });
+    return { client, socket };
+  }
+
+  function action(which: 'confirm' | 'cancel') {
+    const button = document.querySelector<HTMLButtonElement>(`[data-correspondence-${which}]`);
+    if (!button) throw new Error(`missing ${which}`);
+    return button;
+  }
+
+  it('holds a correspondence move until the player confirms it', () => {
+    const { client, socket } = correspondence();
+    const move = { type: 'move', from: 'a1', to: 'a2' };
+    expect(client.send(move)).toBe(false);
+    expect(socket.sent).toEqual([]);
+    const confirm = action('confirm');
+    confirm.click();
+    confirm.click();
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([move]);
+  });
+
+  it('previews the visible piece without changing canonical state and Cancel restores it', () => {
+    const { client, socket, calls } = (() => {
+      const made = makeClient();
+      made.client.connect();
+      const socket = lastSocket();
+      socket.open();
+      return { ...made, socket };
+    })();
+    socket.message({
+      type: 'hello',
+      mode: 'correspondence',
+      seat: 'red',
+      state: {
+        id: 'cancel',
+        board: { a1: { color: 'red', role: 'chariot' } },
+        status: { type: 'playing', turn: 'red' },
+        legalMoves: [{ from: 'a1', to: 'a2' }],
+      },
+    });
+    const view = (calls.hello[0] as { state: { board: Record<string, unknown> } }).state;
+    const original = JSON.stringify(view);
+    client.send({ type: 'move', from: 'a1', to: 'a2' });
+    expect(correspondencePreview('dchess_socket-test', view).board).toEqual({ a2: view.board.a1 });
+    expect(JSON.stringify(view)).toBe(original);
+    expect(document.querySelector<HTMLElement>('[data-board]')!.inert).toBe(true);
+    const staleConfirm = action('confirm');
+    action('cancel').click();
+    staleConfirm.click();
+    expect(correspondencePreview('dchess_socket-test', view)).toBe(view);
+    expect(document.querySelector<HTMLElement>('[data-board]')!.inert).toBe(false);
+    expect(socket.sent).toEqual([]);
+  });
+
+  it.each(['banqi', 'jieqi'])('never reveals a hidden %s piece in the whole preview', (spec) => {
+    const view =
+      spec === 'banqi'
+        ? getBanqiPlayerView(createInitialBanqiState('masked'), 'red')
+        : getJieqiPlayerView(createInitialJieqiState('masked'), 'red');
+    const { client, calls } = makeClient();
+    client.connect();
+    const socket = lastSocket();
+    socket.open();
+    socket.message({
+      type: 'hello',
+      mode: 'correspondence',
+      gameSpecId: spec,
+      seat: 'red',
+      state: view,
+    });
+    const received = (calls.hello[0] as { state: typeof view }).state;
+    const move = spec === 'banqi' ? { from: 'a1', to: 'a1' } : view.legalMoves[0];
+    const original = JSON.stringify(received);
+    client.send({ type: 'move', ...move });
+    const preview = correspondencePreview('dchess_socket-test', received);
+    const board: Record<string, unknown> = { ...received.board };
+    if (move.from !== move.to) {
+      board[move.to] = board[move.from];
+      delete board[move.from];
+    }
+    expect(JSON.parse(JSON.stringify(preview))).toEqual(
+      JSON.parse(
+        JSON.stringify({
+          ...received,
+          board,
+          legalMoves: [],
+          lastMove: move,
+        }),
+      ),
+    );
+    expect(JSON.stringify(received)).toBe(original);
+    expect(socket.sent).toEqual([]);
+    action('confirm').click();
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([{ type: 'move', ...move }]);
+  });
+
+  it.each(['preference off', 'timed'])('sends immediately for %s', (kind) => {
+    if (kind === 'preference off') writeAccountPreference('confirmCorrespondenceMoves', false);
+    const { client, socket } = correspondence(
+      undefined,
+      kind === 'timed' ? 'pvp' : 'correspondence',
+    );
+    const move = { type: 'move', from: 'a1', to: 'a2' };
+    expect(client.send(move)).toBe(true);
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([move]);
+    expect(document.querySelector('[data-correspondence-confirm]')).toBeNull();
+  });
+
+  it.each([
+    {
+      name: 'Gomoku placement',
+      board: Array(225).fill(null),
+      move: { to: 'b2' },
+      expected: { 16: 'red' },
+    },
+    {
+      name: 'pocket drop',
+      board: {},
+      move: { drop: 'horse', to: 'b2' },
+      expected: { b2: { color: 'red', role: 'horse' } },
+    },
+    {
+      name: 'Duck turn',
+      board: { a1: { color: 'red', role: 'chariot' } },
+      move: { from: 'a1', to: 'a2', duckTo: 'b2' },
+      expected: { a2: { color: 'red', role: 'chariot' } },
+    },
+    {
+      name: 'FFQ flip',
+      board: [{ faceDown: true }],
+      move: { from: 0, to: 0 },
+      expected: { 0: { faceDown: true } },
+    },
+    {
+      name: 'FFQ move',
+      board: [{ faceDown: false, color: 'red', role: 'horse' }, null],
+      move: { from: 0, to: 1 },
+      expected: { 0: null, 1: { faceDown: false, color: 'red', role: 'horse' } },
+    },
+  ])('previews $name on the shared path', ({ board, move, expected }) => {
+    const { client, calls } = makeClient();
+    client.connect();
+    const socket = lastSocket();
+    socket.open();
+    socket.message({
+      type: 'hello',
+      mode: 'correspondence',
+      seat: 'red',
+      state: {
+        id: 'shapes',
+        board,
+        status: { type: 'playing', turn: 'red' },
+        legalMoves: [move],
+      },
+    });
+    const view = (calls.hello[0] as { state: { board: typeof board; duck?: string } }).state;
+    client.send({ type: 'move', ...move });
+    const preview = correspondencePreview('dchess_socket-test', view);
+    expect(preview.board).toMatchObject(expected);
+    if ('duckTo' in move) expect(preview.duck).toBe(move.duckTo);
+    expect(socket.sent).toEqual([]);
+    action('cancel').click();
+    expect(correspondencePreview('dchess_socket-test', view)).toBe(view);
+  });
+
+  it('renders a Fog Chess move into fog without revealing any other point', () => {
+    const { client, calls } = makeClient();
+    client.connect();
+    const socket = lastSocket();
+    socket.open();
+    socket.message({
+      type: 'hello',
+      mode: 'correspondence',
+      seat: 'white',
+      state: {
+        id: 'fog',
+        variant: 'dark-chess',
+        board: { a1: { role: 'rook', color: 'white' } },
+        visibleSquares: ['a1'],
+        legalMoves: [{ from: 'a1', to: 'a8' }],
+        status: { type: 'playing', turn: 'white' },
+      },
+    });
+    const view = (calls.hello[0] as { state: unknown }).state;
+    client.send({ type: 'move', from: 'a1', to: 'a8' });
+    expect(JSON.parse(JSON.stringify(correspondencePreview('dchess_socket-test', view)))).toEqual({
+      id: 'fog',
+      variant: 'dark-chess',
+      board: { a8: { role: 'rook', color: 'white' } },
+      visibleSquares: ['a1', 'a8'],
+      legalMoves: [],
+      status: { type: 'playing', turn: 'white' },
+      lastMove: { from: 'a1', to: 'a8' },
+    });
+    expect(socket.sent).toEqual([]);
+  });
+
+  it('does not let a detached confirm button send a later selection', () => {
+    const { client, socket } = correspondence();
+    client.send({ type: 'move', from: 'a1', to: 'a2' });
+    const stale = action('confirm');
+    action('cancel').click();
+    client.send({ type: 'move', from: 'a1', to: 'a3' });
+    stale.click();
+    expect(socket.sent).toEqual([]);
+    action('confirm').click();
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([
+      { type: 'move', from: 'a1', to: 'a3' },
+    ]);
+  });
+
+  it.each(['snapshot', 'disconnect', 'close'])('invalidates a pending confirm on %s', (change) => {
+    const { client, socket } = correspondence();
+    client.send({ type: 'move', from: 'a1', to: 'a2' });
+    const confirm = action('confirm');
+    if (change === 'snapshot') socket.message({ type: 'snapshot', seat: 'red', paused: true });
+    else if (change === 'disconnect') socket.closeWith(1006, '');
+    else client.close();
+    confirm.click();
+    expect(socket.sent).toEqual([]);
+  });
+
+  it('refreshes the next-game link after the move is accepted, excluding this room', async () => {
+    const game = (roomId: string, isYourMove: boolean, dueAt: string) => ({
+      roomId,
+      isYourMove,
+      dueAt,
+      url: `/room/${roomId}`,
+      gameSpecId: 'xiangqi',
+      mySeat: 'red',
+      opponentName: null,
+    });
+    const games = [
+      game('later', true, '2026-11-16'),
+      game('not-mine', false, '2026-11-13'),
+      game('oldest', true, '2026-11-14'),
+      game('dchess_socket-test', true, '2026-11-12'),
+    ];
+    expect(nextCorrespondenceGame(games, 'dchess_socket-test')).toEqual({
+      next: games[2],
+      count: 2,
+    });
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ games, yourMoveCount: 3 }),
+    }));
+    vi.stubGlobal('fetch', fetch);
+    const { client, socket } = correspondence();
+    client.send({ type: 'move', from: 'a1', to: 'a2' });
+    action('confirm').click();
+    expect(fetch).not.toHaveBeenCalled();
+    // A presence-only snapshot cannot acknowledge the move.
+    socket.message({ type: 'snapshot', seat: 'red' });
+    expect(fetch).not.toHaveBeenCalled();
+    socket.message({
+      type: 'snapshot',
+      seat: 'red',
+      state: {
+        id: 'confirmation',
+        board: { a2: { color: 'red', role: 'chariot' } },
+        legalMoves: [],
+        status: { type: 'playing', turn: 'black' },
+      },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(
+      document.querySelector<HTMLAnchorElement>('.correspondence-room a')?.getAttribute('href'),
+    ).toBe('/room/oldest');
+    expect(document.querySelector('.correspondence-room')?.textContent).toContain(
+      'Next game (2 waiting)',
+    );
+    expect(nextCorrespondenceGame([games[1], games[3]], 'dchess_socket-test')).toEqual({
+      next: null,
+      count: 0,
+    });
+    expect(document.querySelector('a[href="/correspondence"]')).not.toBeNull();
   });
 
   it('connects, flips to connected on open, and sends only while open', () => {

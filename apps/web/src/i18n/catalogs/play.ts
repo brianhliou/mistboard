@@ -281,6 +281,11 @@ export const EN_PLAY = {
   'result.colorVictorious': '{reason} • {color} is victorious',
   'result.drawByReason': 'Draw • {reason}',
   // /correspondence (correspondence.ts): the inbox, Start a game, open seeks, your challenges.
+  'correspondence.confirmMove': 'Confirm',
+  'correspondence.cancelMove': 'Cancel',
+  'correspondence.pendingMove': 'Move preview. Confirm to send.',
+  'correspondence.nextGame': 'Next game ({count} waiting)',
+  'correspondence.backToGames': 'Correspondence games',
   'correspondence.loadingGames': 'Loading your games',
   'correspondence.gamesUnavailable': 'Games unavailable',
   'correspondence.gamesUnavailableBody': 'Your correspondence games could not be loaded right now.',
