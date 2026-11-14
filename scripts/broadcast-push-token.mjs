@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Admin-only token management. DATABASE_URL is supplied locally or by prod:db.
 // Never print database errors: constraint details can contain credential hashes.
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,10 +10,12 @@ import pg from 'pg';
 
 class CommandError extends Error {}
 const usage =
-  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false';
+  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | grant --account <@handle|email> --tour <slug> | revoke-grant --account <@handle|email> --tour <slug> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false';
 const flags = {
   'create-test-event': ['slug', 'name'],
   issue: ['tour', 'label', 'out'],
+  grant: ['account', 'tour'],
+  'revoke-grant': ['account', 'tour'],
   revoke: ['id'],
   list: ['tour'],
   'set-listed': ['tour', 'listed'],
@@ -48,26 +50,78 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
   try {
     if (command === 'list') {
       const { rows } = await client.query(
-        `SELECT id, tour_slug, label, created_at, revoked_at, last_used_at
-           FROM xiangqi_broadcast_push_tokens WHERE ($1::text IS NULL OR tour_slug = $1)
+        `SELECT id, tour_slug, label, created_at, revoked_at, last_used_at, account_id,
+                (SELECT handle FROM users WHERE users.id = t.account_id) AS owner
+           FROM xiangqi_broadcast_push_tokens t WHERE ($1::text IS NULL OR tour_slug = $1)
           ORDER BY created_at, id`,
         [v.tour ?? null],
       );
       log(
         JSON.stringify(
-          rows.map(({ id, tour_slug, label, created_at, revoked_at, last_used_at }) => ({
-            id,
-            tour_slug,
-            label,
-            created_at,
-            revoked_at,
-            last_used_at,
-          })),
+          rows.map(
+            ({
+              id,
+              tour_slug,
+              label,
+              created_at,
+              revoked_at,
+              last_used_at,
+              account_id,
+              owner,
+            }) => ({
+              id,
+              tour_slug,
+              label,
+              created_at,
+              revoked_at,
+              last_used_at,
+              account_id: account_id ?? null,
+              owner: owner ?? null,
+            }),
+          ),
         ),
       );
       return;
     }
     await client.query('BEGIN');
+    if (command === 'grant' || command === 'revoke-grant') {
+      const byHandle = v.account.startsWith('@');
+      const { rows: accounts } = await client.query(
+        `SELECT id FROM users WHERE ${byHandle ? 'lower(handle)' : 'lower(email)'} = lower($1) FOR UPDATE`,
+        [byHandle ? v.account.slice(1) : v.account],
+      );
+      if (!accounts[0]) throw new CommandError('unknown account');
+      const accountId = accounts[0].id;
+      const { rows: tours } = await client.query(
+        'SELECT source_url, poll_mode FROM xiangqi_broadcast_tours WHERE slug = $1 FOR SHARE',
+        [v.tour],
+      );
+      if (!tours[0]) throw new CommandError('unknown tour');
+      if (command === 'grant') {
+        if (tours[0].source_url !== null && tours[0].poll_mode !== 'off')
+          throw new CommandError('event_not_pushable');
+        await client.query(
+          `INSERT INTO xiangqi_broadcast_push_grants (id, account_id, tour_slug)
+            VALUES ($1, $2, $3) ON CONFLICT (account_id, tour_slug) WHERE revoked_at IS NULL DO NOTHING`,
+          [randomUUID(), accountId, v.tour],
+        );
+      } else {
+        await client.query(
+          `UPDATE xiangqi_broadcast_push_grants SET revoked_at = now()
+            WHERE account_id = $1 AND tour_slug = $2 AND revoked_at IS NULL`,
+          [accountId, v.tour],
+        );
+        await client.query(
+          `UPDATE xiangqi_broadcast_push_tokens SET revoked_at = COALESCE(revoked_at, now())
+            WHERE account_id = $1 AND tour_slug = $2`,
+          [accountId, v.tour],
+        );
+      }
+      await client.query('COMMIT');
+      committed = true;
+      log(JSON.stringify({ ok: true }));
+      return;
+    }
     if (command === 'issue') {
       const { rows } = await client.query(
         `SELECT source_url, poll_mode FROM xiangqi_broadcast_tours WHERE slug = $1 FOR UPDATE`,

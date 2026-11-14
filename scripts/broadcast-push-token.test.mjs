@@ -6,6 +6,40 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+test('grant resolves an account and revoke-grant revokes its event tokens atomically', async () => {
+  const { runBroadcastPushToken } = await import('./broadcast-push-token.mjs');
+  const calls = [];
+  const client = {
+    async query(sql, args) {
+      calls.push({ sql, args });
+      if (sql.includes('FROM users')) return { rows: [{ id: 'owner' }], rowCount: 1 };
+      if (sql.includes('SELECT source_url'))
+        return { rows: [{ source_url: null, poll_mode: 'off' }], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    },
+  };
+  const output = [];
+  for (const command of ['grant', 'revoke-grant']) {
+    await runBroadcastPushToken(
+      [command, '--account', '@ClockMaker', '--tour', 'test'],
+      client,
+      (line) => output.push(line),
+    );
+  }
+  assert.ok(calls.some((c) => c.sql.includes('INSERT INTO xiangqi_broadcast_push_grants')));
+  assert.ok(
+    calls.some(
+      (c) =>
+        c.sql.includes('UPDATE xiangqi_broadcast_push_tokens') &&
+        c.sql.includes('account_id') &&
+        c.args.includes('owner') &&
+        c.args.includes('test'),
+    ),
+  );
+  assert.equal(calls.filter((c) => c.sql === 'COMMIT').length, 2);
+  assert.deepEqual(output.map(JSON.parse), [{ ok: true }, { ok: true }]);
+});
+
 async function setup(t) {
   const mod = await import('./broadcast-push-token.mjs');
   const dir = await mkdtemp(join(tmpdir(), 'mbpush-test-'));
@@ -31,6 +65,8 @@ async function setup(t) {
               created_at: 'now',
               revoked_at: null,
               last_used_at: null,
+              account_id: 'clock-owner',
+              owner: 'clockmaker',
               token_hash: 'must-not-escape',
             },
           ],
@@ -121,6 +157,9 @@ test('admin commands create an unlisted nonpolling tour, revoke, list safely and
   await s.runBroadcastPushToken(['revoke', '--id', 'bpt_12345678'], s.client, s.log);
   assert.ok(s.calls.some((c) => /revoked_at = COALESCE/.test(c.sql)));
   await s.runBroadcastPushToken(['list', '--tour', 'test'], s.client, s.log);
+  const listed = JSON.parse(s.output.at(-1));
+  assert.equal(listed[0].account_id, 'clock-owner');
+  assert.equal(listed[0].owner, 'clockmaker');
   assert.equal(
     s.output.join('\n').includes('token_hash') || s.output.join('\n').includes('must-not-escape'),
     false,
