@@ -56,8 +56,8 @@ export const jieqiPlatformArticle: Article = {
   // The date ring used to lead with the puzzle-mining post; with that one an
   // engineering post, it handed this page three xiangqi posts, yin-sheng's trio.
   readNext: ['jieqi-openings', 'jieqi-bot-wins', 'jieqi-puzzle-search'],
-  updatedAt: '2026-11-09',
-  updateNote: 'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.',
+  updatedAt: '2026-11-13',
+  updateNote: 'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.',
   tldr: [
     'Play Level 1 or invite a friend, with no account needed for casual games.',
     'Full-game analysis grades your moves and measures reveal luck separately.',
@@ -214,7 +214,7 @@ export const jieqiPlatformArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.',
+          text: 'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.',
         },
         {
           kind: 'paragraph',

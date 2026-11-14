@@ -7,6 +7,7 @@ import { track } from './analytics.js';
 import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
 import {
+  PIKAFISH_JIEQI_BUILD_URL,
   PIKAFISH_REPO_URL,
   PIKAFISH_SITE_URL,
   RAPFI_BUILD_URL,
@@ -696,12 +697,8 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ...(jqeEnabled()
       ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
       : []),
-    // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
-    // fork that carries our patches.
-    linkLine(
-      t('source.pikafishJieqi', {}, locale),
-      'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi_old-mistboard',
-    ),
+    // Pinned jieqi NNUE fork and its independently trained MIT net.
+    linkLine(t('source.pikafishJieqi', {}, locale), PIKAFISH_JIEQI_BUILD_URL),
     // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
     ...(gomokuEnabled()
       ? [
