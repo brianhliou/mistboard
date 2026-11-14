@@ -94,8 +94,12 @@ export async function guardFFQBanqiHttpRead(
   const path = url.pathname;
   const review = /^\/ffq-banqi\/game\/[^/]+\/?$/.test(path);
   const replay = /^\/api\/ffq-banqi\/games\/[^/]+$/.test(path);
-  const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis$/.test(path);
-  const analysisPoll = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis\/jobs\/[^/]+$/.test(path);
+  // Reveal grading (/decisions) shares the analysis job shape, so it opens
+  // the same way: the base path on GET and POST, its job poll on GET.
+  const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)$/.test(path);
+  const analysisPoll = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)\/jobs\/[^/]+$/.test(
+    path,
+  );
   const allowedRead =
     (target.summary || target.shell || review || replay || analysisPoll) &&
     request.method === 'GET';

@@ -47,6 +47,9 @@ function reads(id: string): Array<[string, string]> {
       '/analysis/jobs/job/extra',
       '/analysis/extra',
       '/decisions',
+      '/decisions/jobs/job',
+      '/decisions/jobs/job/extra',
+      '/decisions/extra',
       '/watch',
       '/crosstable',
       '/favorite',
@@ -56,6 +59,8 @@ function reads(id: string): Array<[string, string]> {
     paths.push(['POST', `/api/${prefix}games/${id}/analysis`]);
     paths.push(['POST', `/api/${prefix}games/${id}/analysis/jobs/job`]);
     paths.push(['HEAD', `/api/${prefix}games/${id}/analysis`]);
+    paths.push(['POST', `/api/${prefix}games/${id}/decisions`]);
+    paths.push(['POST', `/api/${prefix}games/${id}/decisions/jobs/job`]);
     paths.push(['POST', `/api/${prefix}games/${id}/favorite`]);
     paths.push(['DELETE', `/api/${prefix}games/${id}/favorite`]);
     paths.push(['GET', `/${prefix}game/${id}`]);
@@ -239,10 +244,12 @@ for (const flag of [undefined, 'false', 'true']) {
             method === 'GET' &&
             (path === `/api/ffq-banqi/games/${id}` ||
               path === `/ffq-banqi/game/${id}` ||
-              path === `/api/ffq-banqi/games/${id}/analysis/jobs/job`);
+              path === `/api/ffq-banqi/games/${id}/analysis/jobs/job` ||
+              path === `/api/ffq-banqi/games/${id}/decisions/jobs/job`);
           const ownedAnalysis =
             (method === 'GET' || method === 'POST') &&
-            path === `/api/ffq-banqi/games/${id}/analysis`;
+            (path === `/api/ffq-banqi/games/${id}/analysis` ||
+              path === `/api/ffq-banqi/games/${id}/decisions`);
           if (admitted && (ownedRead || ownedAnalysis)) {
             const headers = new Map();
             const response = {
