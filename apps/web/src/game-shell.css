@@ -1397,3 +1397,53 @@ a.clock-name.player-name-link {
   color: var(--clock-emerg-text);
   box-shadow: inset 0 0 0 1px var(--clock-emerg-border);
 }
+.correspondence-room {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.correspondence-room p {
+  margin: 0;
+}
+
+.correspondence-room__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Confirm is the primary action; Cancel and the links are secondary. All of
+   them stay styled buttons, never bare links, at a 44px touch height. */
+.correspondence-room button,
+.correspondence-room a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: transparent;
+  color: var(--site-heading);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.correspondence-room__actions > * {
+  flex: 1;
+}
+
+/* While a move waits for Confirm, the box stands in for the "Your move" row
+   (its label says what to do), so the phone room keeps its height. */
+.live-review__cluster:has(.correspondence-room [data-correspondence-confirm])
+[data-action-section] {
+  display: none;
+}
+
+.correspondence-room :is([data-correspondence-confirm], [data-correspondence-next]) {
+  border-color: transparent;
+  background: var(--site-accent);
+  color: #fff;
+}

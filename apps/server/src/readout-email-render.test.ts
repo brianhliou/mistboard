@@ -200,3 +200,17 @@ test('email evidence and history links point into the consolidated Ops area', ()
   assert.match(rendered.html, /\/ops/);
   assert.doesNotMatch(rendered.html, /\/readouts|\/metrics/);
 });
+
+test('readout includes guest conversion counts and labels open windows without browser identities', () => {
+  const value = report();
+  value.product!.guestSignInConversion = [
+    { weekStart: '2026-10-12', guests: 4, signedInWithin7d: 1, complete: true },
+    { weekStart: '2026-10-19', guests: 2, signedInWithin7d: 0, complete: false },
+  ];
+  const { text, html } = renderReadoutEmail(value);
+  for (const body of [text, html]) {
+    assert.match(body, /2026-10-12: 1\/4/);
+    assert.match(body, /2026-10-19: 0\/2 \(window still open\)/);
+    assert.match(body, /earlier sign-ins cannot be backfilled/);
+  }
+});

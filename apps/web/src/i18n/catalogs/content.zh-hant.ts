@@ -7,6 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANT_CONTENT = {
+  'articles.replay.round': '輪次',
+  'articles.replay.roundN': '第{n}輪',
+  'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
   'videos.heading': '影片庫',
   'videos.intro': '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
   'videos.introMainland': '精選象棋與揭棋中文影片：規則、開局、戰術與思路。',
@@ -227,6 +230,11 @@ export const ZH_HANT_CONTENT = {
   'stats.gamesPerWeekLabel': '最近 {count} 週每週完成的對局數',
   'stats.gamesPerWeekSeries': '對局',
   'stats.allGames': '全部對局',
+  'stats.chartView': '每週對局圖表檢視',
+  'stats.versusPeople': '玩家對局',
+  'stats.casual': '休閒',
+  'stats.rated': '積分',
+  'stats.thisWeekSeriesSoFar': '本週已完成：{series}',
   'stats.thisWeekSoFar': '本週已完成 {count} 局',
   'stats.byVariant': '按變體統計',
   'stats.byMode': '按模式統計',
@@ -277,7 +285,7 @@ export const ZH_HANT_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
   'source.pikafishJieqi':
-    '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋分級機器人和瀏覽器分析，復盤由 AB-JChess 評分，GPL-3.0。',
+    '皮卡魚的揭棋 NNUE 分支：揭棋分級機器人和瀏覽器分析，GPL-3.0。其網路以 jqe 標註資料訓練，採用 MIT 授權。復盤由 AB-JChess 評分。',
   'source.chessPieceSets':
     '西洋棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
@@ -527,6 +535,10 @@ export const ZH_HANT_CONTENT = {
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
+  'champions.tookPikafish':
+    '2026-11-11 在對 Fairy-Stockfish 8 級的頭銜賽中獲勝，共 40 局，得分率 61%。',
+  'champions.aboutPikafish':
+    '源自 Stockfish 的開源象棋引擎。在這裡它使用公開的 CC0 Fairy-Stockfish 象棋網路。',
   'champions.tookAbJchess2': '2026-10-31 從 jqe 手中奪回頭銜，共 600 局，得分率 57%。',
   'champions.aboutAbJchess2':
     "作者 Huorongrong 和 Laoxu（Kouza），基於 Devin O'Keefe 的開源引擎 jqe 的程式碼，帶有自己的神經網路。在本站每步 4 秒，4 執行緒。",
@@ -570,8 +582,9 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 的很多部分建立在別人的工作之上：你對弈的引擎、其他網站允許我們展示的棋譜和照片，以及告訴我們哪裡出了問題的玩家。本頁逐一具名致謝。',
   'thanks.enginesHeading': '你對弈的引擎',
   'thanks.pikafishAuthors': '皮卡魚開發團隊',
+  'thanks.pikafishJieqiBuild': '揭棋 NNUE 建置版本，使用以 jqe 標註資料訓練的 MIT 授權網路',
   'thanks.pikafishBody':
-    '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋分支驅動揭棋機器人和揭棋分析。',
+    '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋 NNUE 分支驅動揭棋分級機器人和瀏覽器分析，使用以 jqe 標註資料訓練的 MIT 授權網路。',
   'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的貢獻者',
   'thanks.fairyStockfishBody': '為難度低於皮卡魚的各級象棋機器人和鴨子象棋機器人提供引擎支援。',
   'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',
@@ -654,6 +667,13 @@ export const ZH_HANT_CONTENT = {
   'data.countOneMonth': '{months} 個月，{games}',
   'data.countManyMonths': '{months} 個月，{games}',
   'data.noMonths': '還沒有已結束且有對局的月份。',
+  'data.levelFilter': '等級',
+  'data.allLevels': '全部等級',
+  'data.notBuilt': '首次下載時產生，之後顯示大小和校驗和。',
+  'data.notBuiltFormat': '{format}：首次下載時產生',
+  'data.unavailableNone': '{variant}暫不提供下載。',
+  'data.firstArchive': '首批{variant}對局下於{month}。該月結束後，即{date}，會出現它們的檔案。',
+  'data.searchLink': '在對局搜尋中逐局瀏覽這些對局',
   'data.currentMonthNote': '{month}結束後會加入。',
   'data.downloadLabel': '下載 {format}：{file}',
   'data.aboutHeading': '關於資料',

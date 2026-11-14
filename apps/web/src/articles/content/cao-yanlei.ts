@@ -379,6 +379,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/PEBBZNtB',
           spec: { ...G_M_139841, startPly: 49, perspective: 'black' },
           caption: "Lại Lý Huynh vs Cao Yanlei, 4 January 2026. The board opens after red's 25th move, with Cao to play as black.",
         },
@@ -388,6 +389,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/ggyctfSB',
           spec: { ...G_M_139844, startPly: 24, perspective: 'red' },
           caption: "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, the last game. The board opens after black's 12th, with red to move.",
         },
@@ -402,6 +404,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/KlypKSEj',
           spec: { ...G_M_139982, startPly: 22, perspective: 'red' },
           caption: "Cao Yanlei vs Wang Yongqiang, 6 January 2026. The board opens after black's 11th, with red to move.",
         },
@@ -420,6 +423,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/vKEBUGBb',
           spec: { ...G_M_140450, startPly: 35, perspective: 'black' },
           caption: "Zhao Panwei vs Cao Yanlei, 4 April 2026. The board opens after red's 18th, with Cao to play as black.",
         },
@@ -429,6 +433,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/GYFVhfXs',
           spec: { ...G_M_140455, startPly: 28, perspective: 'red' },
           caption: "Cao Yanlei vs He Wenzhe, 5 April 2026. The board opens after black's 14th, with Cao to move.",
         },
@@ -447,6 +452,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'OI2crC9X/yD3TsmTh',
           spec: { ...G_M_143937, startPly: 24, perspective: 'red' },
           caption: "Cao Yanlei vs Meng Chen, 17 September 2026. The board opens after black's 12th, with red to move.",
         },

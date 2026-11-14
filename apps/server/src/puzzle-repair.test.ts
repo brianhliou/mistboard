@@ -39,13 +39,16 @@ function database(
   const query = async (sql: string, values: unknown[] = []) => {
     queries.push({ sql, values });
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    if (sql.includes('SELECT data FROM puzzles')) {
+    if (sql.includes('SELECT data, position_only FROM puzzles')) {
       return {
         rows: [
-          { data: puzzle },
-          { data: junglePuzzle },
+          { data: puzzle, position_only: false },
+          { data: junglePuzzle, position_only: false },
           // Retired rows can remain in the database; the store withholds them.
-          { data: { ...puzzle, id: 'retired-puzzle', variant: 'fortress-xiangqi' } },
+          {
+            data: { ...puzzle, id: 'retired-puzzle', variant: 'fortress-xiangqi' },
+            position_only: false,
+          },
         ],
       };
     }

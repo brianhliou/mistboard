@@ -21,6 +21,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -66,6 +67,143 @@ describe('landing play panel', () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    '#1111 shows account requirements and a primary sign-in action before any press (%s)',
+    async (locale) => {
+      await ensureLocaleCatalog(locale);
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setRatedModeEnabled(true, true);
+      setResolvedSignedIn(false);
+      const fetchSpy = vi.fn();
+      vi.stubGlobal('fetch', fetchSpy);
+      // Find opponent posts an open seek, which needs an account.
+      openLandingSetupDialog({
+        mode: 'lobby',
+        initialGameSpecId: 'jieqi',
+        initialRated: false,
+        locale,
+      });
+
+      clickModalButton(t('setup.correspondence', {}, locale));
+      const notice = document.querySelector<HTMLElement>(
+        '[data-setup-section="time"] .landing-setup-account-notice',
+      );
+      expect(notice?.hidden).toBe(false);
+      expect(notice?.textContent).toBe(t('setup.correspondenceNeedsAccount', {}, locale));
+      const signIn = () => document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
+      expect(signIn()?.hidden).toBe(false);
+      expect(signIn()?.textContent).toBe(t('correspondence.hostSignIn', {}, locale));
+      expect(document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden).toBe(
+        true,
+      );
+      expect(document.querySelector('.landing-setup-status a')).toBeNull();
+
+      clickModalButton(t('setup.realTime', {}, locale));
+      expect(notice?.hidden).toBe(true);
+      expect(signIn()?.hidden).toBe(true);
+      clickModalButton(t('play.rated', {}, locale));
+      const ratedNotice = document.querySelector<HTMLElement>(
+        '[data-setup-section="gameType"] .landing-setup-account-notice',
+      );
+      expect(ratedNotice?.hidden).toBe(false);
+      expect(ratedNotice?.textContent).toBe(t('lobby.panelRatedSignIn', {}, locale));
+      expect(signIn()?.hidden).toBe(false);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      // A guest's casual friend invite opens a direct room (#1059): no wall.
+      document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
+      openLandingSetupDialog({
+        mode: 'pvp',
+        initialGameSpecId: 'jieqi',
+        initialRated: false,
+        initialTimeMode: 'correspondence',
+        locale,
+      });
+      expect(signIn()?.hidden).toBe(true);
+      expect(document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden).toBe(
+        false,
+      );
+      expect(
+        [...document.querySelectorAll<HTMLElement>('.landing-setup-account-notice')].every(
+          (el) => el.hidden,
+        ),
+      ).toBe(true);
+
+      document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
+      setResolvedSignedIn(true);
+      openLandingSetupDialog({
+        mode: 'pvp',
+        initialGameSpecId: 'jieqi',
+        initialRated: true,
+        initialTimeMode: 'correspondence',
+        locale,
+      });
+      expect(signIn()?.hidden).toBe(true);
+      expect(document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden).toBe(
+        false,
+      );
+      expect(
+        [...document.querySelectorAll<HTMLElement>('.landing-setup-account-notice')].every(
+          (el) => el.hidden,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(['friend', 'lobby'] as const)(
+    '#1111 returns from sign-in with every rated setup choice kept (%s)',
+    (play) => {
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setRatedModeEnabled(true, true);
+      setResolvedSignedIn(false);
+      for (const correspondence of [false, true]) {
+        openLandingSetupDialog({
+          mode: play === 'friend' ? 'pvp' : 'lobby',
+          initialGameSpecId: 'jieqi',
+          initialRated: false,
+        });
+        if (correspondence) {
+          clickModalButton('Correspondence');
+          clickModalTimeControl('7');
+        } else {
+          clickModalTimeControl('5 + 5');
+        }
+        if (play === 'friend') clickModalColor('Black');
+        clickModalButton('Rated');
+        const link = document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
+        expect(link?.hidden).toBe(false);
+        const href = new URL(link!.href);
+        expect(href.pathname).toBe('/account');
+        const referrer = href.searchParams.get('referrer')!;
+        const params = new URL(referrer, window.location.origin).searchParams;
+        expect(params.get('rated')).toBe('1');
+        expect(params.get('tc')).toBe(correspondence ? 'corr' : '5m5');
+        if (correspondence) expect(params.get('days')).toBe('7');
+        document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
+        window.localStorage.clear();
+        setResolvedSignedIn(true);
+        window.history.replaceState(null, '', referrer);
+        maybeOpenPlayDeepLink([]);
+        expect(selectedVariantSpec()).toBe('jieqi');
+        expect(
+          document.querySelector('[data-setup-section="gameType"] button[aria-checked="true"]')
+            ?.textContent,
+        ).toBe('Rated');
+        expect(selectedModalTimeControl()).toBe(correspondence ? '7' : '5 + 5');
+        if (play === 'friend') expect(selectedModalColor()).toBe('Black');
+        expect(
+          document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden,
+        ).toBe(false);
+        expect(document.querySelector<HTMLAnchorElement>('a.landing-setup-start')?.hidden).toBe(
+          true,
+        );
+        expect(window.location.search).toBe('');
+        document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
+        setResolvedSignedIn(false);
+      }
+    },
+  );
 
   it.each(['true', 'false'])(
     'keeps fog bots out of all hero lobby buckets and backfills (xiangqi mahjong enabled: %s)',
@@ -676,8 +814,10 @@ describe('landing play panel', () => {
     setResolvedSignedIn(false);
     window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
     maybeOpenPlayDeepLink([]);
-    expect(ratedOption()?.textContent).toBe('Ratedsign in');
-    expect(ratedOption()?.disabled).toBe(true);
+    expect(ratedOption()?.textContent).toBe('Rated');
+    expect(ratedOption()?.disabled).toBe(false);
+    ratedOption()?.click();
+    expect(document.querySelector('a.landing-setup-start')?.textContent).toBe('Sign in to play');
   });
 
   // Sides are variant-declared, so an untouched default must not persist as if it
@@ -757,6 +897,51 @@ describe('landing play panel', () => {
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
       'misty-jungle-flip-level-1',
     );
+  });
+
+  it('offers Three Kingdoms Banqi in the open Play dialog as soon as its roster lands', () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setThreeKingdomsBanqiEngineOptions([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    try {
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+      openPlaySetup(panel, 'Play a bot');
+      const tkCard = () =>
+        document.querySelector<HTMLButtonElement>(
+          '.landing-variant-card[data-game-spec="three-kingdoms-banqi"]',
+        );
+      const soon = t('setup.soon', {}, 'en');
+      // No roster yet: the bot flow greys Three Kingdoms out.
+      expect(tkCard()?.disabled).toBe(true);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')?.textContent).toBe(soon);
+      const selectedBefore = selectedVariantSpec();
+
+      setThreeKingdomsBanqiEngineOptions(
+        Array.from({ length: 8 }, (_, i) => ({
+          id: `misty-three-kingdoms-banqi-level-${i + 1}`,
+          name: `Misty Level ${i + 1}`,
+          familyName: 'Misty',
+          kind: 'container',
+        })),
+      );
+
+      // Same dialog, no Lobby/Bot toggle: the card is playable and the pick kept.
+      expect(tkCard()?.disabled).toBe(false);
+      expect(tkCard()?.classList.contains('landing-variant-card-disabled')).toBe(false);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')).toBeNull();
+      expect(selectedVariantSpec()).toBe(selectedBefore);
+      selectModalVariant('three-kingdoms-banqi');
+      expect(selectedVariantSpec()).toBe('three-kingdoms-banqi');
+      expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+        'misty-three-kingdoms-banqi-level-4',
+      );
+    } finally {
+      setThreeKingdomsBanqiEngineOptions([]);
+    }
   });
 
   it('hides neural Flip Jungle L8 when runtime net confirmation is absent, missing or lost', async () => {
@@ -1243,6 +1428,41 @@ describe('landing play panel', () => {
     });
   }
 
+  it('offers Rated on a correspondence friend invite and posts it rated', async () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setRatedModeEnabled(true, true);
+    setResolvedSignedIn(true);
+    setRoomNavigator(() => {});
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/correspondence/seeks') {
+        return jsonResponse(
+          { seek: { id: 'seek_r', gameSpecId: 'jieqi' }, challengeUrl: '/challenge/seek_r' },
+          { status: 201 },
+        );
+      }
+      return jsonResponse({ playing: 0, online: 0 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+    clickModalButton('Correspondence');
+    clickModalTimeControl('2');
+    expect(document.body.textContent).not.toContain('coming soon');
+    clickModalButton('Rated');
+    clickModalButton('Create room');
+    await flushPromises();
+
+    expect(seekPostBody(fetchSpy)).toMatchObject({
+      gameSpecId: 'jieqi',
+      daysPerMove: 2,
+      visibility: 'private',
+      rated: true,
+    });
+  });
+
   // #1059: signed out, Challenge a friend creates a direct invite room the guest
   // sits in at once, instead of a sign-in wall. The side goes as the variant's
   // own color, and no link challenge is posted.
@@ -1318,14 +1538,17 @@ describe('landing play panel', () => {
     clickModalButton('Create room');
     await flushPromises();
 
-    const status = document.querySelector<HTMLElement>('.landing-setup-status');
-    expect(status?.textContent).toContain('Correspondence games need an account.');
-    const link = status?.querySelector<HTMLAnchorElement>('a');
+    expect(document.querySelector('.landing-setup-account-notice')?.textContent).toContain(
+      'Correspondence games need an account.',
+    );
+    expect(document.querySelector('.landing-setup-status')?.textContent).toBe('');
+    expect(document.body.textContent).not.toContain('Try again');
+    const link = document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
     expect(link).not.toBeNull();
     const href = new URL(link!.getAttribute('href')!, 'https://mistboard.test');
     expect(href.pathname).toBe('/account');
     const referrer = href.searchParams.get('referrer');
-    expect(referrer).toBe('/?play=friend&variant=jieqi&tc=corr&days=7&side=black');
+    expect(referrer).toBe('/?play=friend&variant=jieqi&tc=corr&days=7&rated=0&side=black');
 
     // Sign-in returns to the referrer: the dialog reopens with every pick intact.
     document.querySelector('.landing-setup-overlay')?.remove();
@@ -1369,9 +1592,10 @@ describe('landing play panel', () => {
       });
       clickModalButton(t('setup.createRoom', {}, locale));
       await flushPromises();
-      const status = document.querySelector<HTMLElement>('.landing-setup-status');
-      expect(status?.textContent).toContain(expected);
-      expect(status?.textContent).not.toMatch(/[A-Za-z]{4}/);
+      const notice = document.querySelector<HTMLElement>('.landing-setup-account-notice');
+      expect(notice?.hidden).toBe(false);
+      expect(notice?.textContent).toContain(expected);
+      expect(notice?.textContent).not.toMatch(/[A-Za-z]{4}/);
       document.querySelector('.landing-setup-overlay')?.remove();
     }
   });
@@ -1427,7 +1651,7 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('keeps rated setup disabled for signed-out players', () => {
+  it('lets signed-out players select Rated before signing in', () => {
     setRatedModeEnabled(true);
     setResolvedSignedIn(false);
     vi.stubGlobal(
@@ -1439,9 +1663,10 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Find opponent');
 
-    expect(document.body.textContent).toContain('Ratedsign in');
+    clickModalButton('Rated');
+    expect(document.querySelector('a.landing-setup-start')?.textContent).toBe('Sign in to play');
     expect(document.body.textContent).not.toContain('coming soon');
-    // Signed out is casual, so xiangqi's casual-only 10+5 rung shows here.
+    // Rated keeps the officially supported real-time clocks.
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
@@ -1528,8 +1753,10 @@ describe('landing play panel', () => {
     const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
       (button) => button.textContent?.startsWith('Rated'),
     );
-    expect(rated?.textContent).toBe('Ratedsign in');
-    expect(rated?.disabled).toBe(true);
+    expect(rated?.textContent).toBe('Rated');
+    expect(rated?.disabled).toBe(false);
+    rated?.click();
+    expect(document.querySelector('a.landing-setup-start')?.textContent).toBe('Sign in to play');
   });
 
   it("a bot dialog's Rated switches the player to Find opponent, rated, with a note", () => {
@@ -1568,7 +1795,7 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('a signed-out player who picks Rated in a bot dialog is sent to sign in', () => {
+  it('a guest picking Rated in a bot dialog sees the lobby setup before sign-in', () => {
     setRatedModeEnabled(true);
     setResolvedSignedIn(false);
     vi.stubGlobal(
@@ -1583,7 +1810,12 @@ describe('landing play panel', () => {
       .find((button) => button.textContent === 'Rated')
       ?.click();
 
-    expect(window.location.href).toContain('/account?tab=login');
+    expect(document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden).toBe(
+      true,
+    );
+    const link = document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
+    expect(link?.hidden).toBe(false);
+    expect(new URL(link!.href).searchParams.get('referrer')).toContain('play=lobby');
   });
 
   it('keeps "coming soon" only while the rated switch is off', () => {

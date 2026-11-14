@@ -319,6 +319,7 @@ type OnlinePlayers = {
     displayName: string;
     rating: { variant: string; eloRating: number; provisional: boolean } | null;
     playing: boolean;
+    champions: Array<{ variant: string; timeClass: string }>;
   }>;
   count: number;
   anonymousOnline: number;
@@ -358,6 +359,8 @@ test('players/online lists recently seen users sorted by handle', async () => {
   assert.equal(result.count, 2);
   // Without persistence there is no rating lookup; the field is still present.
   assert.equal(result.players[0]!.rating, null);
+  // Nor a champion lookup: the crown field is present and empty, never missing.
+  assert.deepEqual(result.players[0]!.champions, []);
 });
 
 test('players/online drops users past the presence TTL', async () => {

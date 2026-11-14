@@ -988,6 +988,40 @@
     order: 35;
   }
 
+  /* A correspondence move waiting for Confirm stands where the status row
+     was, above the game bar. Three classes: `.round-table__box > *` (order
+     50) has the specificity of a two-class rule and loads after
+     game-shell.css, so a two-class rule here would lose to it. */
+  .live-review__cluster .round-table__row.correspondence-room {
+    order: 36;
+  }
+
+  /* The board was sized for one status row (--phone-room-notice), so the box
+     fits in that row's place: one line of buttons. While a move waits, its
+     "Confirm to send" line is left to screen readers (the moved piece and
+     the two buttons say it). After the move, the buttons replace the
+     "Waiting on" notice (the clocks show whose move it is) unless that row
+     has something to press, and Next game stands alone without the inbox. */
+  .live-review__cluster .correspondence-room > p {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .live-review__cluster:has(.correspondence-room[data-state="moved"])
+    [data-action-section]:not(:has(button, input, select)) {
+    display: none;
+  }
+
+  .live-review__cluster
+    .correspondence-room:has([data-correspondence-next])
+    [data-correspondence-inbox] {
+    display: none;
+  }
+
   /* A plain notice with nothing to press (a spectator's "Watching" and why,
      a tenant's "Red to move") is a fixed band the board gives up: title over
      at most two lines of body. Unbudgeted, it scrolled every live spectator

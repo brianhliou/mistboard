@@ -22,6 +22,7 @@ import {
   setSiteThemePreference,
   setXiangqiPieceSetPreference,
 } from './theme.js';
+import { TRANSLATE_ICON_PATH } from './translate-icon.js';
 import { xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
 type Viewport = 'desktop' | 'tablet' | 'phone';
@@ -724,9 +725,10 @@ describe('site shell phone menu', () => {
               link.textContent,
             ]),
           ).toEqual(
+            // The rail's trailing arrow (a page without the rail) is rail-only.
             [...rail.querySelectorAll('.static-page-rail-link')].map((link) => [
               link.getAttribute('href'),
-              link.textContent,
+              link.firstChild?.textContent,
             ]),
           );
           expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
@@ -810,6 +812,9 @@ describe('site shell phone menu', () => {
   it('opens the language list straight away in a dropdown under the bar; Escape closes it', async () => {
     const { nav } = phoneNav();
     const language = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="language"]');
+    // The 文A mark, not a globe.
+    expect(language?.querySelector('svg path')?.getAttribute('d')).toBe(TRANSLATE_ICON_PATH);
+    expect(language?.querySelector('circle')).toBeNull();
     language?.click();
     const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
     expect(panel?.dataset.siteNavQuickPanel).toBe('language');

@@ -5,10 +5,10 @@
 //
 // Kept in code rather than on the tour record because the grade is the
 // broadcast calendar's judgment (docs-private/broadcast-calendar.md), it does
-// not change, and the seed scripts are run by hand: a map here is reviewed in
-// the same diff as the tour it grades. A tour missing from the map is ungraded
-// and does not qualify anyone, which is the safe default for a page that
-// exists because games exist.
+// not change. Automatically seeded sibling groups inherit the parent's grade;
+// an explicit entry always wins. Other missing tours stay ungraded.
+import { xiangqiBroadcastParentSlug } from './xiangqi-broadcast-groups.js';
+
 export type XiangqiBroadcastTourLevel = 'A' | 'B' | 'C';
 
 export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroadcastTourLevel>> = {
@@ -75,5 +75,11 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
 };
 
 export function xiangqiBroadcastTourLevel(slug: string): XiangqiBroadcastTourLevel | null {
-  return XIANGQI_BROADCAST_TOUR_LEVELS[slug] ?? null;
+  let current: string | null = slug;
+  while (current) {
+    const level = XIANGQI_BROADCAST_TOUR_LEVELS[current];
+    if (level) return level;
+    current = xiangqiBroadcastParentSlug(current);
+  }
+  return null;
 }

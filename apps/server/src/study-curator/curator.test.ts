@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { seedBroadcastDiscoveryFixture } from '../broadcast-discovery-test-support.js';
+import { createUser } from '../persistence-accounts.js';
 import type { StudyChapterRecord, StudyWithChapters } from '../persistence-studies.js';
+import { definePersistenceTests } from '../persistence-test-support.js';
 import type { CuratorGame } from './annotate.js';
 import {
   type CuratorDeps,
   type CuratorStudyStore,
+  liveCuratorDeps,
   runStudyCurator,
+  STUDY_CURATOR_OWNER_HANDLE,
   startStudyCurator,
 } from './curator.js';
 import {
@@ -17,6 +22,31 @@ import {
 } from './fixtures.js';
 import type { CuratorPlyEval } from './moments.js';
 import { readCuratorMark } from './plan.js';
+
+definePersistenceTests('study curator broadcast discovery', () => {
+  test('the live curator candidate query omits unlisted games even with an explicit event filter', async () => {
+    const { tours, boards } = await seedBroadcastDiscoveryFixture();
+    await createUser({
+      id: 'curator-discovery-owner',
+      email: 'curator-discovery@example.test',
+      emailVerifiedAt: null,
+      handle: STUDY_CURATOR_OWNER_HANDLE,
+      displayName: 'Curator',
+      now: new Date(),
+    });
+    const deps = await liveCuratorDeps();
+    const candidates = await deps.listCandidates(recipeOf());
+    assert.deepEqual(
+      candidates.map((game) => game.id),
+      [boards[0]!.id],
+    );
+    assert.deepEqual(
+      await deps.listCandidates(recipeOf({ source: { events: [tours[1]!.name] } })),
+      [],
+    );
+    assert.ok(!JSON.stringify(candidates).includes(tours[1]!.slug));
+  });
+});
 
 /** An in-memory study store that behaves like the persistence functions the curator calls. */
 function fakeStudies() {

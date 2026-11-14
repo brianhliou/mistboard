@@ -172,4 +172,32 @@ describe('profile summary cards', () => {
     expect(play?.classList.contains('profile-summary-card-action-primary')).toBe(true);
     expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
   });
+
+  it('shows only the build of a multi-pin engine version, keeping the rest on hover', () => {
+    const bot: BotSummaryProfile = {
+      id: 'pikafish-xiangqi',
+      displayName: 'Pikafish',
+      bio: 'Open source.',
+      ownerType: 'system',
+      defaultGameSpecId: 'xiangqi',
+      activeEngineId: 'pikafish-xiangqi',
+      supportedGameSpecIds: ['xiangqi'],
+      playOptions: [
+        {
+          gameSpecId: 'xiangqi',
+          engineId: 'pikafish-xiangqi',
+          playable: true,
+          version: '6a59ee2f · cc0-790609318c02 · xiangqi-c07e94a5c7cb',
+        },
+      ],
+      gamesTotal: 0,
+      record: { games: 0, wins: 0, losses: 0, draws: 0 },
+      rating: null,
+    };
+    const card = buildBotSummaryCard(bot);
+
+    const version = card.querySelector<HTMLElement>('.profile-summary-card-version');
+    expect(version?.textContent).toBe('Version 6a59ee2f');
+    expect(version?.title).toContain('cc0-790609318c02');
+  });
 });

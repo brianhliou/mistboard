@@ -7,6 +7,7 @@ import {
   firstPartyBotForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
+import type { FlairKey } from './flair.js';
 import { notFFQBanqiGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { scheduledEngineGame } from './persistence-game-data.js';
@@ -17,6 +18,8 @@ import type {
   GameVisibility,
 } from './persistence-game-lifecycle.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
+import type { PlayerTitle } from './persistence-titles.js';
 import { bucketForGame } from './rating-buckets.js';
 import {
   applyRatedGameResult,
@@ -87,6 +90,11 @@ export type GameParticipant = {
   // subject type, and for a linkable-in-principle user whose profile is closed or
   // private, so a client rule of "handle present => render a link" is fail-closed.
   handle?: string | null;
+  // Account metadata from the same gated users join as handle. Omitted for
+  // closed/private accounts, non-user seats and unset values.
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
+  champions?: Champion[];
   // Engine build version for engine-version seats whose subject_id is version-less (the
   // variant-tenant UCI engines — jieqi/banqi, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
@@ -1705,6 +1713,8 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     elo_before: number | null;
     elo_after: number | null;
     handle: string | null;
+    title: PlayerTitle | null;
+    flair: FlairKey | null;
   }>(
     // The users join resolves a `user` seat's linkable handle. It is filtered in
     // the JOIN rather than in a WHERE so a private/closed account still yields its
@@ -1714,7 +1724,7 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
             game_participants.display_name, game_participants.visibility,
             game_participants.engine_id,
             game_participants.engine_version, game_participants.elo_before,
-            game_participants.elo_after, users.handle
+            game_participants.elo_after, users.handle, users.title, users.flair
      FROM game_participants
      LEFT JOIN users
        ON game_participants.subject_type = 'user'
@@ -1726,8 +1736,15 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
               CASE game_participants.color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
     [roomIds],
   );
+  const champions = rows.some(
+    (row) => row.visibility !== 'private' && row.subject_type === 'user' && !!row.handle,
+  )
+    ? await getChampions()
+    : [];
   const byGame = new Map<string, GameParticipant[]>();
   for (const row of rows) {
+    const linkableUser =
+      row.visibility !== 'private' && row.subject_type === 'user' && !!row.handle;
     const participant: GameParticipant = {
       color: row.color,
       // A bot seat stored with its bare profile name before the writers named the
@@ -1749,6 +1766,13 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
       // participant shape, same convention as the fields below.
       ...(row.handle != null ? { handle: row.handle } : {}),
+      // Crowns follow the same gate as title/flair; server-side readers keep the
+      // handle, and the public game envelope strips it for private seats.
+      ...(linkableUser
+        ? { champions: championsForUser(champions, row.subject_id, row.handle) }
+        : {}),
+      ...(linkableUser && row.title != null ? { title: row.title } : {}),
+      ...(linkableUser && row.flair != null ? { flair: row.flair } : {}),
       // Omitted-when-null so the participant shape is unchanged for games without a
       // recorded engine build (humans, pre-versioning rows, version-in-id engines).
       ...(row.engine_version != null ? { engineVersion: row.engine_version } : {}),

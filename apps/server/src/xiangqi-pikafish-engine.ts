@@ -218,6 +218,7 @@ export async function xiangqiLiveEngineMove(
   const release = await enginePool.acquire();
   try {
     return await xiangqiEngineMove(moves, {
+      tierId: tier.id,
       nodes: tier.nodes,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
       ...(opts.clock ? { clock: opts.clock } : {}),
@@ -229,7 +230,7 @@ export async function xiangqiLiveEngineMove(
 
 export function xiangqiEngineMove(
   moves: string[],
-  opts: { nodes: number; movetimeMs: number; clock?: EngineClock },
+  opts: { nodes: number; movetimeMs: number; clock?: EngineClock; tierId?: string },
 ): Promise<UciEval> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
@@ -237,17 +238,28 @@ export function xiangqiEngineMove(
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs));
   const position =
     moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
+  const line = moves.join(' ');
   // Warm sessions keep the ~11 MB CC0 net loaded between moves, so net loading
   // and process startup are not charged to the bot's clock on every ply.
   return warmSessions.withSession(
     {
       bin,
       initCommands: ['uci', `setoption name EvalFile value ${net}`, 'ucinewgame', 'isready'],
+      // Every tier has the same init block; strength is only the per-move node
+      // budget. One process per tier keeps a weak tier off a strong tier's hash.
+      sessionKey: opts.tierId ?? `nodes=${nodes}`,
       name: 'pikafish-xiangqi',
     },
-    (session) =>
-      session.evalPosition({
-        positionCommand: position,
+    (session) => {
+      // A position that does not continue the last one this process searched is
+      // another game (or a game that opened from a pre-played book line), so clear
+      // the hash it left before searching.
+      const last = lastLineBySession.get(session);
+      const continues =
+        moves.length > 1 && last !== undefined && (line === last || line.startsWith(`${last} `));
+      lastLineBySession.set(session, line);
+      return session.evalPosition({
+        positionCommand: continues ? position : `ucinewgame\n${position}`,
         // `go nodes N movetime T` halts at whichever binds first: the node budget
         // is the reproducible strength anchor; the movetime is the latency ceiling.
         // With a clock (MISTBOARD_BOT_TIME_RULE=native) the engine's own time
@@ -258,12 +270,16 @@ export function xiangqiEngineMove(
           : `go nodes ${nodes} movetime ${movetimeMs}`,
         timeoutMs: opts.clock ? nativeWatchdogMs(opts.clock) : movetimeMs + 4000,
         timeoutMessage: 'pikafish-xiangqi move timed out',
-      }),
+      });
+    },
   );
 }
 
 // Parked live-move engine processes; enginePool above still caps concurrency.
 const warmSessions = new UciWarmSessionCache({ name: 'pikafish-xiangqi' });
+// The move list each parked process last searched, to tell a game's next move
+// from the start of another game.
+const lastLineBySession = new WeakMap<UciEngineSession, string>();
 
 /** Point-in-time warm-session counters (spawned/reused/idle) for diagnostics. */
 export function pikafishXiangqiWarmSessionStats() {

@@ -576,6 +576,24 @@
   color: var(--site-accent-strong);
 }
 
+/* A live seat's whole name, wrapping onto a second line rather than cut
+   (buildSeatRow, decided 2026-11-12); the BOT tag follows its last word. */
+.current-game-seat-label {
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+.current-game-seat-label > .current-game-seat-name {
+  white-space: normal;
+}
+
+.current-game-seat-label > .current-game-bot {
+  display: inline-block;
+  vertical-align: 0.1em;
+  line-height: 1.3;
+}
+
 .current-game-seat-clock {
   flex: none;
   padding: 3px 9px;
@@ -931,6 +949,72 @@
   background: var(--site-panel-soft);
   color: var(--site-text);
   white-space: nowrap;
+}
+
+/* Playing now on /games: every card is one shape, so the seat rows, time bar,
+   meta and buttons sit at the same height in every card of a grid row (decided
+   2026-11-12). The board runs edge to edge, as on the Just finished cards, in
+   one xiangqi-shaped box whatever the variant; a square, wide or tall board
+   sits centred in it. Each card spans seven rows of the grid and puts its parts
+   on them (subgrid): the seat above the board, the board, the seat below it,
+   the correspondence time bar, the meta, a seek's Accept button and its status
+   line. A row is as tall as that part's tallest card, so a bot name that wraps
+   moves every board in its row down together. Spacing is margins rather than
+   gaps, so a part no card in the row has takes no room. The seat rows, bar,
+   meta and buttons keep a 10px inset. The correspondence inbox and the
+   homepage keep the inset card. */
+.current-games-section[data-section="playing"] .current-games-grid {
+  row-gap: 0;
+}
+
+.current-games-section[data-section="playing"] .current-game-card {
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  margin-bottom: 18px;
+  padding: 8px 0 10px;
+}
+
+.current-games-section[data-section="playing"]
+  .current-game-card
+  > :not(.current-game-board, .current-game-open) {
+  margin-inline: 10px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > :has(+ .current-game-board) {
+  grid-row: 1;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-board {
+  grid-row: 2;
+  aspect-ratio: 552 / 612;
+  margin-block: 6px;
+  border-radius: 0;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-board + * {
+  grid-row: 3;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-bar {
+  grid-row: 4;
+  margin-top: 6px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-meta {
+  grid-row: 5;
+  margin-top: 6px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-actions {
+  grid-row: 6;
+  margin-top: 6px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-status {
+  grid-row: 7;
+  margin-top: 6px;
 }
 
 /* Just finished: a smaller grid of final positions, every card one cell (a

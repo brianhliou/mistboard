@@ -133,9 +133,9 @@ for (const surface of [
   'GAME_VARIANTS_BY_RATING_POOL',
   'latest user_ratings CHECK',
 ] as const) {
-  test(`variant parity rejects planted Three Kingdoms rated on: ${surface}`, () => {
+  test(`variant parity rejects planted Three Kingdoms rated off: ${surface}`, () => {
     const planted = declarations.map((spec) =>
-      spec.id === 'three-kingdoms-banqi' ? { ...spec, rated: true } : spec,
+      spec.id === 'three-kingdoms-banqi' ? { ...spec, rated: false } : spec,
     );
     assert.throws(() => assertParity(planted, surface), {
       code: 'ERR_ASSERTION',

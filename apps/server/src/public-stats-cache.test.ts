@@ -7,7 +7,20 @@ import {
   PUBLIC_STATS_CACHE_MS,
 } from './public-stats-cache.js';
 
-const stats = (total: number) => ({ totalCompletedGames: total }) as unknown as PublicSiteStats;
+const stats = (total: number) =>
+  ({
+    totalCompletedGames: total,
+    weeklyByPlay: [
+      {
+        weekStart: '2026-11-02',
+        vsBot: total - 4,
+        casualLive: 1,
+        ratedLive: 1,
+        casualCorrespondence: 1,
+        ratedCorrespondence: 1,
+      },
+    ],
+  }) as unknown as PublicSiteStats;
 
 beforeEach(() => clearPublicStatsCache());
 

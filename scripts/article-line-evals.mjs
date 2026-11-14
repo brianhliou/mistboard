@@ -36,9 +36,9 @@
  * the run only measures, which is what you want when checking a threshold
  * change. Re-running is safe: a `lineEval` already present is replaced.
  *
- * The default budget matches the article's stated methodology (Pikafish at a
- * million nodes a position), so the symbols and the annotations are the same
- * engine at the same strength.
+ * The default budget is one million nodes a position. Pass --nodes to match
+ * deeper annotations, or reuse a verified cached ROOT score with the shared
+ * article-line-assessment helper instead of repeating the search.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -48,6 +48,7 @@ import {
   pikafishXiangqiPath,
 } from '../apps/server/src/xiangqi-pikafish-paths.ts';
 import { parseStandardXiangqiFen, standardXiangqiEngineFen } from '../packages/game/dist/index.js';
+import { articleLineAssessment as symbolFor } from './lib/article-line-assessment.mjs';
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
 // The site's own engine: the patched pikafish.ref build on the CC0 net, found the
@@ -117,22 +118,6 @@ function engineFen(startFen) {
 function positionCommand(fen, moves) {
   const base = fen ? `position fen ${fen.fen}` : 'position startpos';
   return moves.length ? `${base} moves ${moves.join(' ')}` : base;
-}
-
-/**
- * Assessment symbols, in the notation the reader already knows from chess
- * literature. Thresholds are the conventional ones; a xiangqi pawn is worth
- * about what a chess pawn is to these engines, so the scale carries over.
- */
-function symbolFor({ cp, mate }) {
-  if (mate != null && mate !== 0) return mate > 0 ? '+−' : '−+';
-  if (cp == null) return null;
-  const a = Math.abs(cp);
-  if (a < 30) return '=';
-  const sign = cp > 0;
-  if (a < 90) return sign ? '⩲' : '⩱';
-  if (a < 250) return sign ? '±' : '∓';
-  return sign ? '+−' : '−+';
 }
 
 function openEngine() {

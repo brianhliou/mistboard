@@ -1,3 +1,4 @@
+import { isUserIdFairPlayMarked } from '../fair-play.js';
 /**
  * The rematch context every tenant gets by default (rematch.ts): the new room is
  * made by the tenant registration's own lobby factory, the same one a lobby
@@ -82,7 +83,9 @@ export function registeredTenantRematchContext<
       return persistence.mayPlayVariantByUserId(userId, registration.gameSpecId);
     },
     accountMayRate: async (userId) =>
-      !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
+      !persistence.isInitialized() ||
+      (!(await persistence.isUserIdStatsExcluded(userId)) &&
+        !(await isUserIdFairPlayMarked(userId))),
     issueSeatToken: async (room, seat, identity) => {
       const minted = mintTenantSeatToken(room, seat, identity);
       if (persistence.isInitialized()) {

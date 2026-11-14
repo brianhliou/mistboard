@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
-import { maxHandleLength, normalizeProfileHandle } from './account-identity.js';
 
 process.env.RESEND_API_KEY = 're_placeholder_for_tests';
 process.env.MISTBOARD_AUTH_EMAIL_FROM = 'Mistboard <play@example.com>';
@@ -10,7 +9,6 @@ const {
   accountSessionCookie,
   accountSessionsFromRequest,
   expiredAccountSessionCookie,
-  handleCollisionAttempt,
   legacyHostOnlyAccountSessionEviction,
   sendEmailLoginCode,
   sendEmailChangeCode,
@@ -32,23 +30,6 @@ function withCookieDomain<T>(value: string | undefined, fn: () => T): T {
     else process.env.MISTBOARD_COOKIE_DOMAIN = prev;
   }
 }
-
-test('handleCollisionAttempt keeps signup retry handles within the public handle cap', () => {
-  const baseHandle = 'a'.repeat(maxHandleLength);
-
-  for (let i = 0; i < 20; i += 1) {
-    const handle = handleCollisionAttempt(baseHandle);
-    assert.equal(handle.length, maxHandleLength);
-    assert.equal(normalizeProfileHandle(handle), handle);
-    assert.match(handle, /^a+-\d{5}$/);
-  }
-});
-
-test('handleCollisionAttempt separates the suffix from a short base with a hyphen', () => {
-  for (let i = 0; i < 20; i += 1) {
-    assert.match(handleCollisionAttempt('brian'), /^brian-\d{5}$/);
-  }
-});
 
 test('session cookie scopes to Domain when MISTBOARD_COOKIE_DOMAIN is set (cross-subdomain WS auth)', () => {
   const cookie = withCookieDomain('mistboard.com', () =>

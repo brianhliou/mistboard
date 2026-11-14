@@ -124,8 +124,8 @@
     "updatedAt": "2026-10-28"
   },
   "jieqi": {
-    "hash": "5abf9eda043a33ba",
-    "updatedAt": "2026-11-07"
+    "hash": "c4d7bcc8343abef8",
+    "updatedAt": "2026-11-12"
   },
   "jieqi-bot-wins": {
     "hash": "9afdcafc6219f322",
@@ -136,8 +136,8 @@
     "updatedAt": null
   },
   "jieqi-platform": {
-    "hash": "7eb1ee5272d6d934",
-    "updatedAt": "2026-11-09"
+    "hash": "a1a4a3f6b245c0c1",
+    "updatedAt": "2026-11-13"
   },
   "jieqi-puzzle-search": {
     "hash": "32b508e6f756c6d1",
@@ -178,6 +178,10 @@
   "mahjong": {
     "hash": "83d992e11d94b497",
     "updatedAt": "2026-11-06"
+  },
+  "meng-fanrui": {
+    "hash": "7788cf6a3869bc7a",
+    "updatedAt": null
   },
   "misty": {
     "hash": "ef5f445b2e398541",
@@ -260,8 +264,8 @@
     "updatedAt": null
   },
   "xiangqi": {
-    "hash": "310d055ac9d401e0",
-    "updatedAt": "2026-11-10"
+    "hash": "a4987c4241f8f412",
+    "updatedAt": "2026-11-12"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",
@@ -277,6 +281,10 @@
   },
   "xiangqi-match-fixing": {
     "hash": "f55a00f41e970dc6",
+    "updatedAt": null
+  },
+  "xiangqi-nnue-training": {
+    "hash": "3e28c8de3400564d",
     "updatedAt": null
   },
   "xiangqi-world-championship": {

@@ -1,6 +1,7 @@
 // Community translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_COMMUNITY = {
+  'profile.championLabel': '{variant} {pace} champion',
   'inbox.searchPlaceholder': 'Search or start new conversation',
   'profile.chartRange1M': '1M',
   'profile.chartRange3M': '3M',
@@ -31,7 +32,7 @@ export const EN_COMMUNITY = {
   'bots.noCompletedGames': 'No completed {variant} games yet.',
   'bots.engineGameOne': '{count} engine game',
   'bots.engineGameMany': '{count} engine games',
-  'bots.eloFromSample': 'Elo from {sample}',
+  'bots.eloFromSample': 'Elo from {sample} · {date}',
   'bots.timeControlSeconds': '{initial}s + {increment}s',
   'bots.fairyStockfishLevelBio':
     "Level {level} of Mistboard's eight-level ladder, backed by Fairy-Stockfish.",
@@ -427,6 +428,9 @@ export const EN_COMMUNITY = {
   'challenge.signIn': 'Sign in',
   'challenge.notFound': 'This game offer is no longer open',
   'challenge.notFoundBody': 'Someone may have taken it, or it was withdrawn or expired.',
+  'challenge.sentTo': 'Sent to {name}',
+  'challenge.withdraw': 'Withdraw',
+  'challenge.share': 'Share',
   'challenge.yourChallenge': 'Your challenge',
   'challenge.nameChallengedYou': '{name} challenged you',
   'challenge.youHaveBeenChallenged': 'You have been challenged',
@@ -670,21 +674,11 @@ export const EN_COMMUNITY = {
   'forum.etiquetteFaqLink': 'FAQ',
   'forum.etiquetteModerationAfter': ' if you are unsure how something on Mistboard works.',
   'bots.tabTitle': 'Play xiangqi against the computer',
-  'bots.eyebrow': 'Play against the computer',
   'bots.heading': 'Play xiangqi against the computer',
-  'bots.sub': 'Eight levels from beginner to strong, with Pikafish at the top.',
   'bots.metaFree': 'Free',
   'bots.metaNoAccount': 'No account needed',
-  'bots.metaLevels': 'Eight levels',
-  'bots.ladderTitle': 'Xiangqi, level by level',
   'bots.ladderIntro': 'New to xiangqi? Start at level 2. Win a few games, then move up a level.',
-  'bots.jieqiLadderTitle': 'Jieqi, level by level',
   'bots.jieqiLadderIntro': 'New to jieqi? Start at level 2. Win a few games, then move up a level.',
-  'bots.mistyTitle': 'Misty, the house bot',
-  'bots.mistyIntro':
-    "Mistboard's own engine, one bot for the fog games, banqi, Jungle and Xiangqi Mahjong.",
-  'bots.otherTitle': 'Other games',
-  'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':
     'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
   'bots.abJchessBio':
@@ -701,12 +695,13 @@ export const EN_COMMUNITY = {
   'bots.mistyBio':
     "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
+  'bots.hosted': 'Hosted bot',
+  'bots.mistyGameBio': "Mistboard's own {variant} engine.",
   'bots.gameCountOne': '{count} game',
   'bots.gameCountMany': '{count} games',
   'bots.communityTitle': 'Community bots',
   'bots.communityIntro': 'Engines shared by the Mistboard community.',
   'bots.levelName': 'Level {level}',
-  'bots.ladderSubtitle': 'Fairy-Stockfish',
   'bots.startHere': 'Start here',
   'bots.strongest': 'Strongest',
   'bots.playVariant': 'Play {variant}',
@@ -722,6 +717,13 @@ export const EN_COMMUNITY = {
   'bots.unavailableTitle': 'Bots unavailable',
   'bots.unavailableBody': 'The bot directory could not load.',
   'bots.none': 'No bots available.',
+  'bots.directoryHeading': 'Play against the computer',
+  'bots.directorySub': 'Choose a game, then an opponent. Some opponents come in levels.',
+  'bots.gamesLabel': 'Games',
+  'bots.levelPicker': '{name} level',
+  'bots.mistyThreeKingdomsBio': "Mistboard's own engine, playing Three Kingdoms Banqi.",
+  'bots.mistyThreeKingdomsLevelBio':
+    "Level {level} of Misty, Mistboard's own engine, playing Three Kingdoms Banqi.",
 } as const;
 
 export type CommunityI18nKey = keyof typeof EN_COMMUNITY;
@@ -763,20 +765,11 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.pikafishLevelBio',
   'bots.generalBlunderBio',
   'bots.tabTitle',
-  'bots.eyebrow',
   'bots.heading',
-  'bots.sub',
   'bots.metaFree',
   'bots.metaNoAccount',
-  'bots.metaLevels',
-  'bots.ladderTitle',
   'bots.ladderIntro',
-  'bots.jieqiLadderTitle',
   'bots.jieqiLadderIntro',
-  'bots.mistyTitle',
-  'bots.mistyIntro',
-  'bots.otherTitle',
-  'bots.otherIntro',
   'bots.pikafishBio',
   'bots.abJchessBio',
   'bots.jqeBio',

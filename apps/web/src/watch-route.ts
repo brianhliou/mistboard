@@ -28,6 +28,7 @@ import {
   namesMatchupLabel,
   participantForColor,
   terminationReason,
+  terminationVariant,
   variantDisplayLabel,
   watchChannelLabel,
 } from './game-display.js';
@@ -923,7 +924,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
       noDisc: !variantSeatsHaveInk(featured.gameSpecId),
-      name: displayLiveName(p.name, t('watch.guest')),
+      name: displayLiveName(p.name, t('watch.guest'), { ...p, gameSpecId: featured.gameSpecId }),
       rating: null,
       isEngine: p.isEngine,
       profile: profileTargetFor(p),
@@ -1958,7 +1959,7 @@ export function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
   // "On points" is already a phrase; "wins by On points" is not a sentence.
   if (game.termination === 'points') return t('watch.resultOnPoints', { result });
-  const reason = terminationReason(game.termination);
+  const reason = terminationReason(game.termination, terminationVariant(game.variant));
   return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 

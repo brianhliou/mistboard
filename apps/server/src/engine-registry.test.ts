@@ -88,8 +88,8 @@ test('standard Xiangqi FSF ladder preserves the PlayStrategy weakening parameter
   });
   assert.match(
     level8.configHash,
-    /^fsf-xiangqi-0\.2\.0-[0-9a-f]{8}-skill-20-nodes-1000000-xiangqi-c07e94a5c7cb$/,
+    /^fsf-xiangqi-0\.2\.2-[0-9a-f]{8}-skill-20-nodes-1000000-xiangqi-c07e94a5c7cb$/,
   );
-  assert.match(level1.configHash, /^fsf-xiangqi-0\.2\.0-[0-9a-f]{8}-skill--9-depth-5$/);
+  assert.match(level1.configHash, /^fsf-xiangqi-0\.2\.2-[0-9a-f]{8}-skill--9-depth-5$/);
   assert.equal(level8.configHash, level8.playSignature);
 });

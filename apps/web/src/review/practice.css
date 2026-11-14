@@ -400,3 +400,176 @@
   background: color-mix(in srgb, #4d8a3d 70%, transparent);
   color: #eaf5e6;
 }
+
+/* ── Single position (/practice/position) ──────────────────────────────────
+   Desktop keeps the study practice layout: the card takes the rail's slot,
+   sized to what it holds as the puzzle page's cards are. On a phone the card
+   and the generic heading go, so board, goal and coach fit one screen. */
+@media (max-width: 60rem) {
+  .gamebook.practice--single {
+    gap: 0.5rem;
+    --gamebook-board-fit: min(
+      calc(100vw - 2rem),
+      calc((100dvh - var(--gamebook-page-top, 5rem) - 13rem) * 0.89),
+      30rem
+    );
+  }
+  .practice--single .practice__board-col {
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .practice--single .practice__brief {
+    padding: 0.35rem 0.75rem;
+  }
+  .practice--single .practice__side {
+    width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
+    max-width: 100%;
+    justify-self: center;
+  }
+  .practice--single .practice__side {
+    padding-top: 0;
+  }
+  /* The played line as one row that scrolls sideways, so a long game never
+     pushes the coach below the screen. */
+  .practice--single .practice__moves:not([hidden]) {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--site-border-soft, var(--site-border));
+  }
+  .practice--single .practice__coach-strip {
+    display: none;
+  }
+  .practice--single .practice__coach {
+    border-top: 0;
+  }
+  .practice--single .practice__coach-body {
+    align-items: center;
+    padding: 0.4rem 14px 0.3rem;
+  }
+  .practice--single .gamebook__feedback {
+    font-size: 0.9rem;
+  }
+  .practice--single .practice__coach .gamebook__controls {
+    flex-wrap: nowrap;
+    padding: 0 14px 0.5rem;
+  }
+  .practice--single .practice__coach .gamebook__btn {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+    padding-inline: 0.4rem;
+    white-space: nowrap;
+  }
+  /* The page heading is generic ("Play out a position"); the goal under the
+     board says what to do, so on a phone the heading is for screen readers. */
+  .gamebook.practice--single {
+    margin-top: 0.75rem;
+  }
+}
+
+.practice__position-card {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: 100%;
+  padding-bottom: 0;
+}
+.gamebook__aside:has(> .practice__position-card) {
+  align-self: start;
+}
+.practice__position-back {
+  display: block;
+  padding: 0.6rem 14px;
+  font-size: 0.85rem;
+  color: var(--site-accent);
+}
+@media (max-width: 60rem) {
+  .practice--single .gamebook__aside {
+    display: none;
+  }
+}
+/* The card carries the title, so the heading above the grid only repeats it.
+   Screen readers keep it. */
+.gamebook__header:has(+ .practice--single) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Each played move is a button: click one to see the board as it stood then.
+   The board is read-only while looking back; the next move returns it live. */
+.practice__move-button {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.practice__move-button:hover {
+  background: color-mix(in srgb, var(--site-text) 8%, transparent);
+}
+.practice__move-button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+.practice__move.is-current .practice__move-button {
+  background: color-mix(in srgb, var(--site-accent) 22%, transparent);
+  color: var(--site-text);
+}
+
+.practice__stepper {
+  display: flex;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+.practice__stepper[hidden] {
+  display: none;
+}
+.practice__step {
+  flex: 1 1 0;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.practice__step:hover:not(:disabled) {
+  color: var(--site-text);
+  background: color-mix(in srgb, var(--site-text) 6%, transparent);
+}
+.practice__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.practice__step + .practice__step {
+  border-left: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+/* A position page's right column is as tall as what it holds, up to the
+   board's height; a long attempt scrolls inside the move list. */
+@media (min-width: 60.01rem) {
+  .practice--single .practice__side {
+    align-self: start;
+    max-height: 100%;
+  }
+}
+
+/* The small print under a position from an article: who to ask about it. */
+.practice-position__contact {
+  margin: 0.75rem auto 1.5rem;
+  max-width: 60rem;
+  padding: 0 1rem;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  text-align: center;
+}
+.practice-position__contact a {
+  color: inherit;
+}

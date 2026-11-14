@@ -115,6 +115,92 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_finished')).toHaveLength(0);
   });
 
+  it.each(['correspondence', 'blitz'])(
+    'counts one %s finish across three deliveries, a reconnect and a page revisit',
+    (timeClass) => {
+      const finished = {
+        statusType: 'finished',
+        baseProps: { ...base, time_class: timeClass },
+        outcome: { winner: 'red', reason: 'timeout', moveNumber: 12 },
+      } as const;
+      const t = createGameLifecycleTracker();
+      t.update({ ...finished, statusType: 'playing', outcome: null });
+      for (let i = 0; i < 3; i++) t.update(finished);
+      t.reset();
+      t.update(finished);
+      // A new document loses module memory but keeps this viewer's storage.
+      resetTrackedGameStartsForTests();
+      createGameLifecycleTracker().update(finished);
+      expect(named('game_finished')).toHaveLength(1);
+      expect(named('game_finished')[0][1]).toMatchObject({
+        ...finished.baseProps,
+        ...finished.outcome,
+        durationMs: expect.any(Number),
+      });
+    },
+  );
+
+  it('counts a different finished room even when the previous room was also finished', () => {
+    const t = createGameLifecycleTracker();
+    const finished = {
+      statusType: 'finished',
+      baseProps: base,
+      outcome: { winner: 'red', reason: 'timeout', moveNumber: 12 },
+    } as const;
+    t.update(finished);
+    t.update({ ...finished, baseProps: { ...base, gameId: 'g2' } });
+    expect(named('game_finished').map(([, props]) => props.gameId)).toEqual(['g1', 'g2']);
+  });
+
+  it('counts a finish when its outcome arrives after the finished status', () => {
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'finished', baseProps: base, outcome: null });
+    t.update({
+      statusType: 'finished',
+      baseProps: base,
+      outcome: { winner: null, reason: 'draw', moveNumber: 12 },
+    });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1].durationMs).toBeNull();
+  });
+
+  it.each(['getItem', 'setItem'] as const)(
+    'dedupes finishes across resets and trackers when storage %s throws',
+    (method) => {
+      vi.spyOn(window.localStorage, method).mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      try {
+        const finished = {
+          statusType: 'finished',
+          baseProps: base,
+          outcome: { winner: 'red', reason: 'timeout', moveNumber: 12 },
+        } as const;
+        const t = createGameLifecycleTracker();
+        t.update(finished);
+        t.reset();
+        t.update(finished);
+        createGameLifecycleTracker().update(finished);
+        expect(named('game_finished')).toHaveLength(1);
+      } finally {
+        vi.restoreAllMocks();
+      }
+    },
+  );
+
+  it('counts the same room independently for another browser viewer', () => {
+    const finished = {
+      statusType: 'finished',
+      baseProps: base,
+      outcome: { winner: 'red', reason: 'timeout', moveNumber: 12 },
+    } as const;
+    createGameLifecycleTracker().update(finished);
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
+    createGameLifecycleTracker().update(finished);
+    expect(named('game_finished')).toHaveLength(2);
+  });
+
   it('re-arms the start transition after reset, for the next game', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });

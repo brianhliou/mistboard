@@ -32,6 +32,8 @@
 // 2026-09-12. Set 2026-09-12.
 
 import {
+  DAY_MS,
+  DAYS_PER_MOVE_OPTIONS,
   FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
@@ -39,6 +41,13 @@ import {
   RETIRED_GAME_SPEC_IDS,
 } from '@mistboard/game';
 import type { GameParticipantColor, GameResult } from './persistence-games.js';
+
+// SQL counterpart of officialCorrespondenceDays, the pace check in bucketForGame.
+// Missing or unofficial paces are live for this aggregate, never correspondence.
+export function correspondenceGame(gamesAlias = 'g'): string {
+  const allowances = DAYS_PER_MOVE_OPTIONS.map((days) => days * DAY_MS).join(', ');
+  return `((${gamesAlias}.increment_ms = 0 AND ${gamesAlias}.initial_ms IN (${allowances})) IS TRUE)`;
+}
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
@@ -327,6 +336,11 @@ export function puzzlePlayerId(sessionsAlias = 'q'): string {
 // Row filter for counts over the users table itself.
 export const COUNTED_USER = `stats_excluded_at IS NULL`;
 
+// One eligibility filter for every public rating/leaderboard read.
+export function fairPlayEligible(usersAlias: string): string {
+  return `${usersAlias}.fair_play_marked_at IS NULL`;
+}
+
 // Row filter for rows an account wrote (chat lines): counted unless the author
 // is excluded. A NULL author (the account was deleted) still counts; the line
 // was a person's.
@@ -363,6 +377,44 @@ export const SEAT_WIN_RESULT = {
   west: 'west-wins',
   north: 'north-wins',
 } as const satisfies Record<GameParticipantColor, GameResult>;
+
+// A seat the server's engine played: a first-party bot ('bot', as
+// persistence-bots.ts reads it) or an engine with no bot profile, which
+// room-manager.ts records as 'engine-version'. Participants alias as above.
+export function botSeat(participantsAlias = 'p'): string {
+  return `${participantsAlias}.subject_type IN ('bot', 'engine-version')`;
+}
+
+// A game on a live clock: not days-per-move correspondence. The room-created
+// event (seq 0) is the durable home of the time control, as in
+// persistence-games.ts's NOT_CORRESPONDENCE_SQL. Games alias as above.
+export function liveClockGame(gamesAlias = 'g'): string {
+  return `NOT EXISTS (
+    SELECT 1 FROM events lc
+    WHERE lc.room_id = ${gamesAlias}.room_id AND lc.seq = 0
+      AND lc.payload->'timeControl' ? 'daysPerMove'
+  )`;
+}
+
+// A bot seat ran out of time and that ended the game. The flagged seat is the
+// colour on the room's last clock-expired event (room-manager.ts and the tenant
+// lifecycle both write it); a game with no such event falls back to "the bot
+// seat neither won nor drew", which is the same seat in a two-player game. A
+// flag the rules scored as a draw (no mating material) still counts: the bot
+// ran out of time either way. Games alias as above (#1065).
+export function botLostOnTime(gamesAlias = 'g'): string {
+  const g = gamesAlias;
+  return `(${g}.termination = 'timeout' AND EXISTS (
+    SELECT 1 FROM game_participants tp
+    WHERE tp.game_id = ${g}.room_id AND ${botSeat('tp')}
+      AND COALESCE(
+        (SELECT ce.payload->>'color' FROM events ce
+         WHERE ce.room_id = ${g}.room_id AND ce.type = 'clock-expired'
+         ORDER BY ce.seq DESC LIMIT 1) = tp.color,
+        ${g}.result IS DISTINCT FROM 'draw' AND NOT ${seatWonGame('tp', g)}
+      )
+  ))`;
+}
 
 // The seat won the game: the seat's colour matches the result (SEAT_WIN_RESULT).
 // The profile's Wins filter and row tone (persistence-profiles.ts,

@@ -1033,10 +1033,9 @@ function renderStudy(
       onPlyChange: (ply) => scoreChart?.setPly(ply),
       analysisExtra: scoreChart?.el,
       storedAnalysis,
-      storedDecisions:
-        variant === 'jieqi' && chapter.hasDecisions
-          ? fetchStudyChapterDecisions(study.id, chapter.id, chapter.root, mountedTree)
-          : null,
+      storedDecisions: chapter.hasDecisions
+        ? fetchStudyChapterDecisions(variant, study.id, chapter.id, chapter.root, mountedTree)
+        : null,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),

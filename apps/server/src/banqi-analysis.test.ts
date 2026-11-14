@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ALL_BANQI_SQUARES,
   applyBanqiMove,
   type BanqiColor,
   type BanqiDeal,
@@ -21,6 +22,7 @@ import {
   type BanqiDecisionsCache,
   type BanqiGameAnalysis,
   banqiAnalysisRepetitionWindow,
+  rankBanqiDecisionMoves,
   resolveBanqiAnalysis,
   resolveBanqiDecisions,
 } from './banqi-analysis.js';
@@ -358,7 +360,16 @@ test('analyzeBanqiDecisions: a better candidate flip lifts bestWin above playedW
     betterFens.add(banqiStateToEngineFen(applyBanqiMove(cf, better)));
   }
   const decisions = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: betterFens.has(fen) ? -400 : -50, mate: null }),
+    evalPosition: async (fen, _history, search) => ({
+      cp: search?.searchMoves
+        ? search.searchMoves[0] === banqiMoveToEngineUci(better)
+          ? 400
+          : 50
+        : betterFens.has(fen)
+          ? -400
+          : -50,
+      mate: null,
+    }),
   });
   const d = decisions[0]!;
   assert.ok(d.bestWin > d.playedWin, `best ${d.bestWin} should beat played ${d.playedWin}`);
@@ -367,7 +378,7 @@ test('analyzeBanqiDecisions: a better candidate flip lifts bestWin above playedW
   assert.equal(d.playedRank, 2); // one candidate strictly beat the played move
 });
 
-test('analyzeBanqiDecisions: ranks three alternatives plus played by pool mean, without hidden identities', async () => {
+test('analyzeBanqiDecisions: true-baselines three root ranks plus played, without hidden identities', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state = createInitialBanqiState('t', deal);
   const flips = getBanqiLegalMoves(state).filter((m) => m.from === m.to);
@@ -381,7 +392,13 @@ test('analyzeBanqiDecisions: ranks three alternatives plus played by pool mean, 
     }
   }
   const decisions = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 100, mate: null }),
+    evalPosition: async (fen, _history, search) => {
+      const rank = top.findIndex((move) => banqiMoveToEngineUci(move) === search?.searchMoves?.[0]);
+      return {
+        cp: search?.searchMoves ? (rank < 0 ? -100 : 600 - rank * 150) : (scores.get(fen) ?? 100),
+        mate: null,
+      };
+    },
   });
   const d = decisions[0]!;
   assert.equal(d.playedRank, 4);
@@ -433,14 +450,20 @@ test('analyzeBanqiDecisions: shortlists quiet moves with the live repetition his
   const luckyFlips = legal.filter((m) => m.from === m.to && m.from !== played.from).slice(0, 3);
   assert.equal(luckyFlips.length, 3);
   const luckyFens = new Set(luckyFlips.map((m) => banqiStateToEngineFen(applyBanqiMove(state, m))));
-  let sawQuiet = false;
+  const quietBudgets = new Set<number>();
   const decisions = await analyzeBanqiDecisions(
     [...prefix, played],
     deal,
     {
-      evalPosition: async (fen, history) => {
+      evalPosition: async (fen, history, search) => {
+        if (search?.searchMoves?.[0] === quietUci) {
+          quietBudgets.add(search.nodes);
+          assert.equal(fen, banqiStateToEngineFen(state));
+          assert.ok(!history?.moves.includes(quietUci));
+          return { cp: 800, mate: null };
+        }
         if (fen === quietFen) {
-          sawQuiet = true;
+          quietBudgets.add(search!.nodes);
           assert.equal(history?.moves.at(-1), quietUci);
         }
         return { cp: fen === quietFen ? -800 : luckyFens.has(fen) ? -1200 : 100, mate: null };
@@ -451,12 +474,45 @@ test('analyzeBanqiDecisions: shortlists quiet moves with the live repetition his
       save: async () => {},
     },
   );
-  assert.ok(sawQuiet);
+  assert.deepEqual([...quietBudgets], [200_000]);
   const d = decisions[0]!;
   assert.equal(d.ply, prefix.length + 1);
   assert.equal(d.candidates![0]!.move, quietUci);
   assert.ok(Math.abs(d.bestWin - winPercent(800, null)) < 1e-6);
   assert.ok(d.bestWin > d.playedWin);
+});
+
+test('ranking searches each legal move once at the public pre-move root, with at most two slots', async () => {
+  const state = createInitialBanqiState('root-ranking', STANDARD_BANQI_DEAL);
+  const fen = banqiStateToEngineFen(state);
+  const legal = getBanqiLegalMoves(state).map(banqiMoveToEngineUci);
+  const history = { fen, moves: [] };
+  const seen: string[] = [];
+  let active = 0;
+  let peak = 0;
+  const ranked = await rankBanqiDecisionMoves(
+    state,
+    'red',
+    async (rootFen, window, search) => {
+      assert.equal(rootFen, fen, 'no hidden identity is revealed before ranking');
+      assert.deepEqual(window, history);
+      assert.equal(search?.nodes, 200_000);
+      assert.equal(search.searchMoves?.length, 1);
+      seen.push(search.searchMoves[0]!);
+      const index = seen.length;
+      peak = Math.max(peak, ++active);
+      await Promise.resolve();
+      active--;
+      // Root scores already use the mover POV: keep both cp and mate signs.
+      return index <= 2 ? { cp: null, mate: 1 } : { cp: 100, mate: null };
+    },
+    history,
+  );
+  assert.deepEqual(seen, legal, 'exactly one root search for every legal move');
+  assert.equal(peak, 2);
+  assert.equal(ranked.length, legal.length);
+  assert.equal(ranked[0]!.win, winPercent(null, 1, BANQI_DECISIONS_ENGINE_ID));
+  assert.equal(ranked.at(-1)!.win, winPercent(100, null, BANQI_DECISIONS_ENGINE_ID));
 });
 
 test('analyzeBanqiDecisions: deduplicates played and bounds pool fan-out while scoring every legal move', async () => {
@@ -480,11 +536,11 @@ test('analyzeBanqiDecisions: deduplicates played and bounds pool fan-out while s
   assert.equal(d!.candidates!.length, 3);
   assert.equal(d!.candidates!.filter((c) => c.played).length, 1);
   assert.equal(d!.playedRank, 1);
-  assert.equal(calls, legal.length * flipPool(deal).size);
+  assert.equal(calls, legal.length + 3 * flipPool(deal).size);
   assert.equal(peak, 2);
 });
 
-test('analyzeBanqiDecisions: lucky reveals cannot crowd out a better pool-mean flip', async () => {
+test('analyzeBanqiDecisions: root chance ranks select a better average flip despite its unlucky actual reveal', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state = createInitialBanqiState('t', deal);
   const flips = getBanqiLegalMoves(state).filter((m) => m.from === m.to);
@@ -509,7 +565,16 @@ test('analyzeBanqiDecisions: lucky reveals cannot crowd out a better pool-mean f
     scores.set(banqiStateToEngineFen(applyBanqiMove(state, move)), move === better ? 1200 : -1200);
   }
   const [d] = await analyzeBanqiDecisions([played], deal, {
-    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 0, mate: null }),
+    evalPosition: async (fen, _history, search) => ({
+      cp: search?.searchMoves
+        ? search.searchMoves[0] === banqiMoveToEngineUci(better)
+          ? 500
+          : lucky.some((move) => banqiMoveToEngineUci(move) === search.searchMoves![0])
+            ? -500
+            : 0
+        : (scores.get(fen) ?? 0),
+      mate: null,
+    }),
   });
   assert.ok(d!.bestWin > d!.playedWin);
   assert.equal(d!.playedRank, 2);
@@ -563,9 +628,9 @@ test('resolveBanqiDecisions: pure cache read misses without computing', async ()
   assert.equal(cache.saves, 0);
 });
 
-test('resolveBanqiDecisions invalidates legacy d3 decisions before computing ranked candidates', async () => {
+test('resolveBanqiDecisions invalidates pass 1 d6 decisions before computing ranked candidates', async () => {
   const cache = decisionsMemoryCache();
-  const legacyEngineId = BANQI_DECISIONS_ENGINE_ID.replace(/\+d\d+$/, '+d3');
+  const legacyEngineId = 'misty-banqi-decisions@0.3.0+nnue+rank50000+baseline200000+floor200000+d6';
   await cache.save('room-legacy', legacyEngineId, 12, [sampleDecision(1)]);
   let computes = 0;
   const fresh = [{ ...sampleDecision(1), candidates: [{ move: 'a0a0', win: 55, played: true }] }];
@@ -655,4 +720,96 @@ test('resolveBanqiDecisions caches an empty result (a game with no flip plies)',
 test('BANQI_DECISIONS_ENGINE_ID is a stable, version-tagged identifier distinct from the sweep', () => {
   assert.match(BANQI_DECISIONS_ENGINE_ID, /^misty-banqi-decisions@/);
   assert.notEqual(BANQI_DECISIONS_ENGINE_ID, BANQI_ANALYSIS_ENGINE_ID);
+});
+
+test('decision baselines evaluate only the three cheap ranks plus played, ignoring ranking scores', async () => {
+  const state = createInitialBanqiState('shortlist', STANDARD_BANQI_DEAL);
+  const legal = getBanqiLegalMoves(state);
+  const top = legal.slice(0, 3);
+  const played = legal.at(-1)!;
+  const expectedFens = new Set<string>();
+  for (const move of [...top, played]) {
+    for (const entry of flipPool(STANDARD_BANQI_DEAL).values()) {
+      const cf = banqiCounterfactualCf(state, move.from, entry, state.board[move.from]!);
+      expectedFens.add(banqiStateToEngineFen(applyBanqiMove(cf, move)));
+    }
+  }
+  let calls = 0;
+  let rankingCalls = 0;
+  const [decision] = await analyzeBanqiDecisions([played], STANDARD_BANQI_DEAL, {
+    rankMoves: async (before, mover, _evaluate, history) => {
+      rankingCalls++;
+      assert.equal(mover, 'red');
+      assert.equal(banqiStateToEngineFen(before), banqiStateToEngineFen(state));
+      assert.deepEqual(history, { fen: banqiStateToEngineFen(state), moves: [] });
+      // Deliberately impossible win% values must never enter the published grades.
+      return legal.map((move, i) => ({ move: banqiMoveToEngineUci(move), win: 1000 - i }));
+    },
+    evalPosition: async (fen, _history, search) => {
+      calls++;
+      assert.ok(expectedFens.delete(fen), 'only shortlisted counterfactuals, exactly once');
+      assert.equal(search?.nodes, 200_000);
+      return { cp: -100, mate: null };
+    },
+  });
+  assert.equal(rankingCalls, 1);
+  assert.equal(calls, 4 * flipPool(STANDARD_BANQI_DEAL).size);
+  assert.equal(expectedFens.size, 0);
+  assert.deepEqual(
+    decision!.candidates!.map((c) => c.move),
+    [...top, played].map(banqiMoveToEngineUci),
+  );
+  assert.equal(decision!.candidates!.filter((c) => c.played).length, 1);
+  assert.ok(Math.abs(decision!.bestWin - winPercent(100, null)) < 1e-6);
+  assert.equal(decision!.playedWin, decision!.realizedWin);
+});
+
+test('permuting unrevealed tiles preserves ranking, every baseline and all knowable graded output', async () => {
+  const played: BanqiMove = { from: 'a1', to: 'a1' };
+  const deal = STANDARD_BANQI_DEAL;
+  const playedIndex = ALL_BANQI_SQUARES.indexOf(played.from);
+  const different = deal.findIndex(
+    (piece, i) =>
+      i !== playedIndex &&
+      (piece.color !== deal[playedIndex]!.color || piece.role !== deal[playedIndex]!.role),
+  );
+  assert.ok(different >= 0);
+  const requests: string[][] = [];
+  async function grade(swapped: boolean, includePlayed: boolean) {
+    const copy = [...deal];
+    if (swapped) {
+      const first = includePlayed ? playedIndex : different;
+      const second = copy.findIndex(
+        (piece, i) =>
+          i !== playedIndex &&
+          i !== first &&
+          (piece.color !== copy[first]!.color || piece.role !== copy[first]!.role),
+      );
+      assert.ok(second >= 0);
+      [copy[first], copy[second]] = [copy[second]!, copy[first]!];
+    }
+    const seen: string[] = [];
+    requests.push(seen);
+    return (
+      await analyzeBanqiDecisions([played], copy, {
+        evalPosition: async (fen, history, search) => {
+          seen.push(JSON.stringify({ fen, history, search }));
+          // A nonconstant public-FEN score exercises summation and candidate ties.
+          let hash = 0;
+          for (const ch of fen) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+          return { cp: hash - 498, mate: null };
+        },
+      })
+    )[0]!;
+  }
+  const original = await grade(false, false);
+  const unplayedSwap = await grade(true, false);
+  assert.deepEqual(unplayedSwap, original, 'unrevealed, unplayed tiles cannot affect any output');
+  assert.deepEqual(requests[1], requests[0], 'ranking and baseline requests have canonical order');
+  const playedSwap = await grade(true, true);
+  const { realizedWin: _originalRealized, ...originalKnown } = original;
+  const { realizedWin: _swappedRealized, ...swappedKnown } = playedSwap;
+  assert.deepEqual(swappedKnown, originalKnown, 'only the observed draw may change');
+  assert.notEqual(playedSwap.realizedWin, original.realizedWin, 'the new actual draw changes luck');
+  assert.deepEqual(requests[2], requests[0]);
 });

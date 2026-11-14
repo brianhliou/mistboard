@@ -15,6 +15,7 @@ import { resetGameStartSoundForTests } from '../live-game-start-sound.js';
 import { playSoundWhenUnlocked } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import {
+  brandSeatDisplayNames,
   createTenantLiveClient,
   type TenantLiveClient,
   type TenantLiveClientConfig,
@@ -1509,5 +1510,18 @@ describe('tenant live client playing back a recording', () => {
     expect(document.querySelector('.room-actions-row, .postgame-actions')).toBeNull();
     const analysis = document.querySelector<HTMLAnchorElement>('[data-replay-analysis]');
     expect(analysis === null || analysis.hidden).toBe(true);
+  });
+});
+
+describe('room seat names', () => {
+  it('names a Three Kingdoms engine seat after its game, with no bot profile on the wire', () => {
+    const names = brandSeatDisplayNames(
+      { red: 'MistyThreeKingdomsBanqi level 7', black: 'Misty' },
+      'three-kingdoms-banqi',
+      { black: { handle: 'misty' } },
+    );
+    expect(names.red).toBe('Misty Three Kingdoms Banqi Level 7');
+    // A member who calls themselves Misty keeps the name.
+    expect(names.black).toBe('Misty');
   });
 });

@@ -77,24 +77,33 @@ describe('reviewResultLabel', () => {
 
 describe('reviewOutcomeLine', () => {
   it('reads like the live room meta card for a decisive result', () => {
-    expect(reviewOutcomeLine({ winner: 'Black' }, 'checkmate')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'checkmate', null)).toBe(
       'Checkmate • Black is victorious',
     );
-    expect(reviewOutcomeLine({ winner: 'Red' }, 'king-captured')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'king-captured', null)).toBe(
       'King captured • Red is victorious',
     );
-    expect(reviewOutcomeLine({ winner: 'Blue' }, 'elimination')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Blue' }, 'elimination', null)).toBe(
       'Elimination • Blue is victorious',
     );
   });
 
   it('formats draws as "Draw • <reason>"', () => {
-    expect(reviewOutcomeLine({ draw: true }, 'no-progress')).toBe('Draw • No progress');
-    expect(reviewOutcomeLine({ draw: true }, '')).toBe('Draw');
+    expect(reviewOutcomeLine({ draw: true }, 'no-progress', null)).toBe('Draw • No progress');
+    expect(reviewOutcomeLine({ draw: true }, '', null)).toBe('Draw');
+  });
+
+  it('names the shared race code by the variant it was played in', () => {
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'race', 'gomoku')).toBe(
+      'Five in a row • Black is victorious',
+    );
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'race', 'jungle')).toBe(
+      'Den entered • Red is victorious',
+    );
   });
 
   it('degrades gracefully when the termination is missing', () => {
-    expect(reviewOutcomeLine({ winner: 'Black' }, '')).toBe('Black is victorious');
+    expect(reviewOutcomeLine({ winner: 'Black' }, '', null)).toBe('Black is victorious');
   });
 
   // The old signature took the English label and stripped " wins" to recover
@@ -104,8 +113,8 @@ describe('reviewOutcomeLine', () => {
     await ensureLocaleCatalog('zh-Hans');
     window.history.pushState(null, '', '/zh-hans/');
     try {
-      expect(reviewOutcomeLine(gameOutcome('red-wins'), 'checkmate')).toBe('将死 • 红方获胜');
-      expect(reviewOutcomeLine(gameOutcome('draw'), 'repetition')).toBe('和棋 • 重复局面');
+      expect(reviewOutcomeLine(gameOutcome('red-wins'), 'checkmate', null)).toBe('将死 • 红方获胜');
+      expect(reviewOutcomeLine(gameOutcome('draw'), 'repetition', null)).toBe('和棋 • 重复局面');
     } finally {
       window.history.pushState(null, '', '/');
     }
@@ -130,6 +139,21 @@ describe('reviewMetaPlayers', () => {
         profile: null,
       },
     ]);
+  });
+
+  it('names Misty after the game in one game, and only Misty', () => {
+    const names = reviewMetaPlayers(
+      [
+        { color: 'red', name: 'Misty', rating: null, kind: 'account', handle: 'misty' },
+        { color: 'black', name: 'Misty Level 4', rating: null, kind: 'account', botId: 'misty' },
+      ],
+      undefined,
+      null,
+      'banqi',
+    ).map((player) => player.name);
+    // A person who calls themselves Misty keeps the name; the bot seat is
+    // "Misty Banqi" with its level.
+    expect(names).toEqual(['Misty', 'Misty Banqi Level 4']);
   });
 
   it('links a user seat by handle and a bot seat by bot id, and leaves the rest plain', () => {
@@ -379,5 +403,65 @@ describe('buildReviewMeta', () => {
       [...rows].map((row) => row.querySelector('.game-meta-card__score')?.textContent),
     ).toEqual(['½', '½']);
     expect(metaCard.querySelectorAll('.game-meta-card__player--won')).toHaveLength(0);
+  });
+});
+
+describe('finished seat championships', () => {
+  it('renders one crown labelled with every title in the postgame meta card and review strips', async () => {
+    const { reviewSeatProfiles } = await import('../profile-link.js');
+    const { mountFortressXiangqiReview } = await import('./fortress-xiangqi-review.js');
+    const players = [
+      {
+        color: 'red',
+        name: 'Alice',
+        handle: 'alice',
+        champions: [
+          { variant: 'xiangqi', timeClass: 'blitz' },
+          { variant: 'banqi', timeClass: 'rapid' },
+        ] as const,
+      },
+      { color: 'black', name: 'Bob', handle: 'bob', champions: [] },
+    ];
+    for (const championships of [true, false]) {
+      const roster = players.map((player) => ({
+        ...player,
+        champions: championships ? player.champions : undefined,
+      }));
+      const { metaCard } = buildReviewMeta({
+        gameSpecId: 'xiangqi',
+        variantName: 'Xiangqi',
+        status: 'Done',
+        game: { roomId: 'crowns', players: roster },
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      const review = mountFortressXiangqiReview(root, {
+        ariaLabel: 'Review',
+        title: 'Review',
+        summary: '',
+        moves: [],
+        analysis: null,
+        seatLabels: true,
+        players: { red: 'Alice', black: 'Bob' },
+        playerProfiles: reviewSeatProfiles(roster),
+      });
+      for (const host of [metaCard, root]) {
+        const icons = [...host.querySelectorAll<HTMLImageElement>('.champion-crown')];
+        expect(icons.map((icon) => icon.alt)).toEqual(
+          championships ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
+        );
+        expect(
+          icons.every(
+            (icon) =>
+              icon.title === icon.alt &&
+              icon.getAttribute('aria-label') === icon.alt &&
+              icon.width === 20,
+          ),
+        ).toBe(true);
+        expect(host.querySelector('a[href="/@/bob"] .champion-crown')).toBeNull();
+      }
+      review.destroy();
+      root.remove();
+    }
   });
 });

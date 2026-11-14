@@ -36,6 +36,7 @@ export type AccountPreferenceKey =
   | 'lowTimeSound'
   | 'premoves'
   | 'confirmGameActions'
+  | 'confirmCorrespondenceMoves'
   | 'inboxBell'
   | 'inboxEmail'
   | 'correspondenceBell'
@@ -51,6 +52,7 @@ export type AccountPreferences = {
   lowTimeSound: boolean;
   premoves: boolean;
   confirmGameActions: boolean;
+  confirmCorrespondenceMoves: boolean;
   inboxBell: boolean;
   inboxEmail: boolean;
   correspondenceBell: boolean;
@@ -77,6 +79,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   lowTimeSound: true,
   premoves: true,
   confirmGameActions: true,
+  confirmCorrespondenceMoves: true,
   inboxBell: true,
   inboxEmail: true,
   correspondenceBell: true,
@@ -124,6 +127,7 @@ export type UserAccount = {
   emailVerifiedAt: Date | null;
   handle: string;
   handleChangedAt: Date | null;
+  usernamePromptDismissedAt?: Date | null;
   displayName: string;
   displayNameChangedAt: Date | null;
   bio: string;
@@ -141,6 +145,7 @@ export type UserAccount = {
   // Statistics exclusion (136): this account's games are not site activity.
   // Optional so fixtures that build accounts by hand keep compiling.
   statsExcludedAt?: Date | null;
+  fairPlayMarkedAt?: Date | null;
   // Verified player title (088), granted only through the title-verification
   // pipeline (routes/titles.ts). NULL = untitled. Closed vocabulary; see
   // persistence-titles.ts.
@@ -190,6 +195,7 @@ export const USER_COLUMNS = [
   'email_verified_at',
   'handle',
   'handle_changed_at',
+  'username_prompt_dismissed_at',
   'display_name',
   'display_name_changed_at',
   'bio',
@@ -201,6 +207,7 @@ export const USER_COLUMNS = [
   'account_role',
   'play_disabled_at',
   'stats_excluded_at',
+  'fair_play_marked_at',
   'title',
   'flair',
   'locale',
@@ -334,6 +341,7 @@ export type UserRow = {
   email_verified_at: Date | null;
   handle: string;
   handle_changed_at: Date | null;
+  username_prompt_dismissed_at?: Date | null;
   display_name: string;
   display_name_changed_at: Date | null;
   bio: string;
@@ -345,6 +353,7 @@ export type UserRow = {
   account_role: AccountRole;
   play_disabled_at: Date | null;
   stats_excluded_at: Date | null;
+  fair_play_marked_at?: Date | null;
   title: PlayerTitle | null;
   flair: FlairKey | null;
   locale: AccountLocale | null;
@@ -364,6 +373,7 @@ export function userFromRow(row: UserRow): UserAccount {
     emailVerifiedAt: row.email_verified_at,
     handle: row.handle,
     handleChangedAt: row.handle_changed_at,
+    usernamePromptDismissedAt: row.username_prompt_dismissed_at ?? null,
     displayName: row.display_name,
     displayNameChangedAt: row.display_name_changed_at,
     bio: row.bio,
@@ -375,6 +385,7 @@ export function userFromRow(row: UserRow): UserAccount {
     accountRole: row.account_role,
     playDisabledAt: row.play_disabled_at,
     statsExcludedAt: row.stats_excluded_at,
+    fairPlayMarkedAt: row.fair_play_marked_at ?? null,
     title: row.title,
     flair: row.flair,
     locale: row.locale,
@@ -405,6 +416,10 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       : DEFAULT_ACCOUNT_PREFERENCES.clockTenths,
     lowTimeSound: booleanOrDefault(parsed.lowTimeSound, DEFAULT_ACCOUNT_PREFERENCES.lowTimeSound),
     premoves: booleanOrDefault(parsed.premoves, DEFAULT_ACCOUNT_PREFERENCES.premoves),
+    confirmCorrespondenceMoves: booleanOrDefault(
+      parsed.confirmCorrespondenceMoves,
+      DEFAULT_ACCOUNT_PREFERENCES.confirmCorrespondenceMoves,
+    ),
     confirmGameActions: booleanOrDefault(
       parsed.confirmGameActions,
       DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,

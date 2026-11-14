@@ -10,6 +10,7 @@ import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
 import { snapshotPayload } from './payloads.js';
 import type { UserAccount } from './persistence.js';
+import { refreshSeatChampions } from './persistence-leaderboards.js';
 import {
   cancelRematch,
   declineRematch,
@@ -218,6 +219,10 @@ export async function handleWebSocketConnection(
     socket.close(1008, 'rated requires counted account');
     return;
   }
+  if (assignment.deniedReason === 'rated_account_marked') {
+    socket.close(1008, 'rated_account_marked');
+    return;
+  }
   if (assignment.deniedReason === 'play-disabled') {
     // The account is an identity, not a player (126). Distinct close reason so
     // the client explains the lock instead of showing the generic spectator or
@@ -288,6 +293,7 @@ export async function handleWebSocketConnection(
     }
   }
 
+  await refreshSeatChampions();
   const snapshot = snapshotPayload(
     {
       ...room,

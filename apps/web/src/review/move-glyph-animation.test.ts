@@ -44,6 +44,12 @@ function expectLandingFade(fade: Effect, duration: number, delay = duration): vo
   expect(fade.frames).toEqual([{ opacity: 0 }, { opacity: 1 }]);
   expect(fade.timing).toEqual({ duration, delay, fill: 'backwards', easing: PIECE_GLIDE_EASING });
 }
+/** A glided move's badge: a fade of at most 100ms that ends as the piece lands. */
+function expectGlideLanding(fade: Effect): void {
+  const glide = pieceAnimationDurationMs();
+  const length = Math.min(100, glide);
+  expectLandingFade(fade, length, glide - length);
+}
 beforeEach(() => {
   effects = new Map();
   vi.spyOn(window, 'localStorage', 'get').mockReturnValue({
@@ -106,14 +112,14 @@ describe('board glyph arrival', () => {
     const glide = effects.get(host.querySelector('[data-piece-square]')!)![0]!;
     const duration = Number(glide.timing.duration);
     expect(duration).toBeGreaterThan(0);
-    const fadeDuration = _name === 'jieqi' ? Math.min(100, duration) : duration;
-    const delay = _name === 'jieqi' ? duration - fadeDuration : duration;
+    // Every board: a short fade that ends as the piece lands.
+    const fadeDuration = Math.min(100, duration);
+    const delay = duration - fadeDuration;
     expectLandingFade(fadeFor(host), fadeDuration, delay);
     expectLandingFade(fadeFor(host, '.luck-mark'), fadeDuration, delay);
     const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     drawMarkerOnArrival(marker, pieceAnimationDurationMs());
     const highlight = effects.get(marker)![0]!;
-    if (_name !== 'jieqi') expect(fadeFor(host).timing.duration).toBe(highlight.timing.duration);
     expect(fadeFor(host).timing.easing).toBe(highlight.timing.easing);
   });
   it.each(['fast', 'normal', 'slow'] as const)(
@@ -144,7 +150,7 @@ describe('board glyph arrival', () => {
   it('also holds the prior move’s glyph during a reverse step', () => {
     const host = board('a1');
     movers[0]![1](host, true);
-    expectLandingFade(fadeFor(host), pieceAnimationDurationMs());
+    expectGlideLanding(fadeFor(host));
   });
   it('cancels pending glyphs when a new move supersedes them', () => {
     const host = board();
@@ -155,7 +161,7 @@ describe('board glyph arrival', () => {
     animateXiangqiBoardMove(host, { from: 'a2', to: 'a3' }, 'red');
     expect(oldGlyph.cancel).toHaveBeenCalledOnce();
     expect(oldLuck.cancel).toHaveBeenCalledOnce();
-    expectLandingFade(fadeFor(host), pieceAnimationDurationMs());
+    expectGlideLanding(fadeFor(host));
   });
   it('keeps engine-patched badges on the same fade timeline and cancels on a board repaint', () => {
     const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
@@ -167,7 +173,7 @@ describe('board glyph arrival', () => {
     clock.mockReturnValue(1100);
     refreshMoveGlyphs(host);
     expect(old.cancel).toHaveBeenCalledOnce();
-    expectLandingFade(fadeFor(host), pieceAnimationDurationMs());
+    expectGlideLanding(fadeFor(host));
     expect((fadeFor(host) as unknown as Animation).currentTime).toBe(100);
     const patched = fadeFor(host);
     host.innerHTML = board('a8').innerHTML;

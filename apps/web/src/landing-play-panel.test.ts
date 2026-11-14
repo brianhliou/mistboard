@@ -674,6 +674,32 @@ describe('homepage play panel', () => {
     }
   });
 
+  // A row showing "N playing" stood 41.5px beside 40px rows in the
+  // three-column hero: the name's two line boxes outgrew the row.
+  it('keeps a row with a playing count as tall as the rows without one', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const rule = (selector: string, source = css) =>
+      source.match(
+        new RegExp(`^\\s*${selector.replace(/[.>]/g, '\\$&')} \\{([^}]*)\\}`, 'm'),
+      )?.[1] ?? '';
+    const px = (block: string, prop: string) =>
+      Number(block.match(new RegExp(`(?:^|\\s)${prop}: (-?[\\d.]+)(?:px)?;`))?.[1] ?? 0);
+    const desktop = css.match(/@media \(min-width: 1241px\) \{([\s\S]*?)^\}/m)?.[1] ?? '';
+    const rowHeight = px(desktop, '--pp-row-height');
+    const rowBorder = Number(rule('.pp-row').match(/border-bottom: (\d+)px/)?.[1]);
+    const labelFont = px(rule('.pp-name'), 'font-size');
+    const playing = rule('.pp-playing');
+    const nameLines =
+      labelFont * px(rule('.pp-name-label'), 'line-height') +
+      px(playing, 'font-size') * px(playing, 'line-height');
+    const margin = px(
+      rule('.landing-demo .pp-view-computer .pp-row-bot > .pp-name', desktop),
+      'margin-block',
+    );
+    expect(rowHeight).toBe(40);
+    expect(nameLines + 2 * margin).toBeLessThanOrEqual(rowHeight - rowBorder);
+  });
+
   it('covers the bot list on the person tab instead of removing it', () => {
     // The bot list sets the panel's height for both tabs, so it must stay in
     // flow: [hidden] is display:none !important site-wide.

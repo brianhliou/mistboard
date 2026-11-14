@@ -140,7 +140,7 @@ test('the registration is wired to the admit rule and stays unlisted with the fl
   await withFlag(undefined, async () => {
     // Every listing surface (TV, current games, lobby, bot profiles) reads this.
     assert.equal(reg.enabled(), false);
-    assert.equal(reg.lobby?.supportsRated, false, 'casual Find opponent');
+    assert.equal(reg.lobby?.supportsRated, true, 'rated capability still requires admission');
     assert.equal(typeof reg.createCorrespondenceGameForSeek, 'function');
     assert.equal(typeof reg.sweepDueDeadline, 'function');
     assert.equal(await mayPlayCorrespondence(null, THREE_KINGDOMS_BANQI_SPEC_ID), false);
@@ -163,7 +163,7 @@ test('create: a guest and a non-admin are refused with the old 404 and no room',
   });
 });
 
-test('create: an admin gets a casual TK room with the flag off, never a rated one', async () => {
+test('create: an admin gets a casual TK room with the flag off; rated requires its own flag', async () => {
   await withFlag(undefined, async () => {
     const result = await create(ADMIN);
     assert.equal(result.status, 201, result.body);
@@ -172,9 +172,17 @@ test('create: an admin gets a casual TK room with the flag off, never a rated on
     assert.ok(created.roomId.startsWith('tkb_'), created.roomId);
     assert.equal(result.roomsAdded, 1);
 
-    const rated = await create(ADMIN, { rated: true });
-    assert.notEqual(rated.status, 201, `rated must be refused: ${rated.body}`);
-    assert.equal(rated.roomsAdded, 0);
+    const previous = process.env.MISTBOARD_RATED_ENABLED;
+    process.env.MISTBOARD_RATED_ENABLED = 'false';
+    try {
+      const rated = await create(ADMIN, { rated: true });
+      assert.equal(rated.status, 403);
+      assert.deepEqual(JSON.parse(rated.body), { error: 'rated_disabled' });
+      assert.equal(rated.roomsAdded, 0);
+    } finally {
+      if (previous === undefined) delete process.env.MISTBOARD_RATED_ENABLED;
+      else process.env.MISTBOARD_RATED_ENABLED = previous;
+    }
   });
 });
 

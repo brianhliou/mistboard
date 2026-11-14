@@ -213,13 +213,13 @@ describe('loadReplayChartAnalysis (precomputed file)', () => {
 });
 
 describe('article board advantage chart (precomputed file, mount)', () => {
-  // A real article record with a shipped file: the manual line on the xiangqi
-  // rules page (25 plies). No boardId, so no network.
+  // A real article record with a shipped file: Zuo Wenjing vs Wu Dan on the
+  // zuo-wenjing player page (41 plies). No boardId, so no network.
   const manualLine: XiangqiReplaySpec = {
-    iccs: 'h2e2 h7e7 h0g2 h9g7 i0i1 i9h9 i1d1 h9h3 d1d8 b9a7 a0a1 b7b0 b2b7 g7h9 e2e6 f9e8 a1d1 e9f9 d8d9 e8d9 d1f1 e7f7 f1f7 f9e9 b7e7',
-    red: 'Red',
-    black: 'Black',
-    event: 'Classic manual, 1632',
+    iccs: 'b0c2 c6c5 g0e2 b9c7 h0f1 h7f7 f1d2 g9e7 c3c4 f7f2 c4c5 f2d2 b2d2 e7c5 a0b0 b7a7 b0b6 c9e7 b6c6 a9c9 c2d4 h9f8 i0i1 c7a8 c6a6 c9c7 i1f1 i9i8 f1f6 f8d7 d4e6 c7b7 h2h9 f9e8 f6g6 e9f9 g6g9 f9f8 e6g7 i8h8 g9f9',
+    red: 'Zuo Wenjing',
+    black: 'Wu Dan',
+    event: "2026 Women's League qualifier",
     resultText: '1-0',
     annotations: { byPly: {} },
   };
@@ -237,7 +237,7 @@ describe('article board advantage chart (precomputed file, mount)', () => {
   });
 
   it('gets no slot when the record differs from the analysed one by a single move', () => {
-    const changed = { ...manualLine, iccs: manualLine.iccs.replace(/ b7e7$/, ' b7b9') };
+    const changed = { ...manualLine, iccs: manualLine.iccs.replace(/ g9f9$/, ' g9g8') };
     expect(articleAnalysisLoader(changed)).toBeNull();
     mount(host, changed);
     expect(slot()).toBeNull();

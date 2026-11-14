@@ -61,6 +61,7 @@ import {
   discoverablePuzzles,
   getPuzzleStore,
   listPuzzleReports,
+  loadPuzzlesOutsideServingSet,
   PUZZLE_REPORT_REASONS,
   type PuzzleReportReason,
   type PuzzleStoreSnapshot,
@@ -674,13 +675,26 @@ export async function tryHandle(
     const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset, order, cursor);
     const rating = variant ? await getUserPuzzleRating(user.id, variant) : null;
     const store = history.attempts.length ? await getPuzzleStore() : null;
+    // A puzzle withheld after the attempt (reported and retired, or held by a
+    // review) is gone from the store but still in the player's history: read its
+    // starting position from the table so the card keeps its board.
+    const outside = await loadPuzzlesOutsideServingSet(
+      history.attempts
+        .filter(
+          (entry) =>
+            !store?.byId.has(entry.puzzleId) &&
+            (entry.variant === XIANGQI_SPEC_ID || entry.variant === JUNGLE_SPEC_ID),
+        )
+        .map((entry) => entry.puzzleId),
+    );
     writeJson(
       response,
       200,
       {
         ...history,
         attempts: history.attempts.map((entry) => {
-          const puzzle = store?.byId.get(entry.puzzleId);
+          const served = store?.byId.get(entry.puzzleId);
+          const puzzle = served ?? outside.get(entry.puzzleId);
           // Only these two perfect-information variants may export a full FEN.
           // A future hidden-info puzzle needs a solver-view serializer here.
           let fen: string | null = null;
@@ -697,7 +711,8 @@ export async function tryHandle(
                 break;
             }
           }
-          return { ...entry, fen, sideToMove };
+          // `available: false` tells the card not to link to a puzzle page that 404s.
+          return { ...entry, fen, sideToMove, available: Boolean(served) };
         }),
         progress: rating
           ? {

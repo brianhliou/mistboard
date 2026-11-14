@@ -151,7 +151,11 @@ function renderPostgame(
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
+  const status = reviewOutcomeLine(
+    gameOutcome(postgame.game.result),
+    postgame.game.termination,
+    XIANGQI_SPEC_ID,
+  );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),

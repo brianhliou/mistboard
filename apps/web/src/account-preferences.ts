@@ -8,6 +8,7 @@ export type AccountPreferences = {
   lowTimeSound: boolean;
   premoves: boolean;
   confirmGameActions: boolean;
+  confirmCorrespondenceMoves: boolean;
   inboxBell: boolean;
   inboxEmail: boolean;
   correspondenceBell: boolean;
@@ -25,6 +26,7 @@ export const defaultAccountPreferences: AccountPreferences = {
   lowTimeSound: true,
   premoves: true,
   confirmGameActions: true,
+  confirmCorrespondenceMoves: true,
   inboxBell: true,
   inboxEmail: true,
   correspondenceBell: true,
@@ -86,6 +88,10 @@ export function normalizeAccountPreferences(value: unknown): AccountPreferences 
       : defaultAccountPreferences.clockTenths,
     lowTimeSound: booleanOrDefault(parsed.lowTimeSound, defaultAccountPreferences.lowTimeSound),
     premoves: booleanOrDefault(parsed.premoves, defaultAccountPreferences.premoves),
+    confirmCorrespondenceMoves: booleanOrDefault(
+      parsed.confirmCorrespondenceMoves,
+      defaultAccountPreferences.confirmCorrespondenceMoves,
+    ),
     confirmGameActions: booleanOrDefault(
       parsed.confirmGameActions,
       defaultAccountPreferences.confirmGameActions,

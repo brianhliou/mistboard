@@ -115,6 +115,7 @@ const player: XiangqiPlayerRecord = {
 };
 const at = new Date('2026-11-07');
 const tour = {
+  listed: true,
   schema: XIANGQI_BROADCAST_SCHEMA,
   slug: 'crawler-cup',
   name: '象棋邀请赛',
@@ -278,6 +279,7 @@ export const CRAWLER_PUBLIC_GAME: ProfileGameRecord = {
 };
 export const CRAWLER_PROFILE: UserProfile = {
   user: {
+    champions: [],
     handle: 'crawler-player',
     displayName: 'Crawler player',
     bio: '',

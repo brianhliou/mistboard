@@ -26,6 +26,7 @@ import {
   banqiEngineTierFor,
 } from './banqi-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import type { Champion } from './persistence-leaderboards.js';
 import {
   threeKingdomsBanqiEngineDisplayName,
   threeKingdomsBanqiEngineTierFor,
@@ -382,7 +383,7 @@ export function botEngineAttributions(): BotEngineAttribution[] {
  * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
  * cannot be linkable on /watch and plain on /games.
  */
-export type LiveSeatProfile = { handle?: string; botId?: string };
+export type LiveSeatProfile = { handle?: string; botId?: string; champions?: Champion[] };
 
 export function liveSeatProfileIdentity(
   engineClientId: string | null,

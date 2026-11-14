@@ -34,6 +34,8 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'xiangqi-nnue-training',
   // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
   // off that day. Badge names follow the legacy badge catalog.
   'fog-future',
@@ -153,6 +155,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // signed off that day. The sixth player page; terms and names follow
   // zuo-wenjing. Taiwan is 中华台北 in zh-Hans and 台灣 in zh-Hant.
   'tang-dan',
+  // Machine-drafted 2026-11-11, not native-reviewed, from the English signed
+  // off that day. Opponents' names from the DPXQ records (骆航远, 巨龙飞);
+  // zh-Hant uses 盃 as the other player pages do.
+  'meng-fanrui',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -280,6 +286,106 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
+  'Training our own xiangqi net': '训练我们自己的象棋网络',
+  'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
+    '为皮卡鱼微调公有领域的象棋 NNUE 网络',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0. The new net won at 100,000 nodes a move but not at one second, so the site keeps the public-domain net.':
+    '我们先让皮卡鱼适配一个公有领域的象棋网络，再尝试用 Px0 的评分训练出更强的网络。新网络在每步 100,000 节点时胜出，在每步一秒时却没有，所以网站继续使用公有领域网络。',
+  'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
+    '面向开发或训练象棋引擎的人，以及想了解象棋电脑背后技术的棋友。',
+  "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
+    '皮卡鱼在搜索前，会把网络输出乘以一个缩放系数。针对我们使用的公有领域网络拟合这个系数后，棋力提高了 55 Elo。',
+  'Fine-tuning that net with settings meant for training from scratch cost 171 to 278 Elo. A small learning rate and a frozen first layer kept its strength.':
+    '用从零训练的设置微调这个网络，棋力下降了 171 至 278 Elo。降低学习率并冻结第一层，则保住了原有棋力。',
+  'Scores from Px0, another open engine, predicted game results better, and a net trained on them beat the original by 10.8 Elo at 100,000 nodes a move.':
+    '另一个开放引擎 Px0 的评分能更准确地预测对局结果。用这些评分训练的网络，在每步 100,000 节点的比赛中比原网络高出 10.8 Elo。',
+  'At one second a move the gain was 2.7 Elo, within noise, so the site still runs the public-domain net.':
+    '每步一秒时，提升只有 2.7 Elo，仍在随机波动范围内，所以网站继续使用公有领域网络。',
+  'Every match plays each opening twice with colours swapped, from a fixed opening book, and reports Elo with a 95% interval.':
+    '每场比赛使用固定开局库，每个开局红黑互换下两盘，并报告 Elo 及其 95% 区间。',
+  'Training screens run at 100,000 nodes a move; the final test ran at one second a move.':
+    '训练筛选赛采用每步 100,000 节点；最终测试采用每步一秒。',
+  'Predictions are scored by log loss on 27,705 positions from 200 games.':
+    '用来自 200 盘对局的 27,705 个局面，以对数损失衡量预测表现。',
+  "Pikafish plays the site's xiangqi bots and analyses finished games. Like Stockfish in chess, it judges the positions it searches with a small neural network, an NNUE net.":
+    '网站的象棋电脑对弈和已完成对局分析都由皮卡鱼驱动。它和国际象棋中的 Stockfish 一样，用一个小型神经网络，也就是 NNUE 网络，评估搜索中的局面。',
+  "Pikafish's own nets are not licensed for commercial use, so since November 10 the site runs Pikafish with the public-domain xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE). We call it the CC0 net, after its licence. It was trained for a different engine, so we first fitted Pikafish to it, then tried to train a stronger net from it.":
+    '皮卡鱼自带的网络未授权商业使用，所以从 11 月 10 日起，网站的皮卡鱼改用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的公有领域象棋网络。我们按其许可证称它为 CC0 网络。它原本为另一个引擎训练，因此我们先让皮卡鱼适配它，再尝试以它为基础训练更强的网络。',
+  'The right scale was worth 55 Elo': '合适的缩放系数带来了 55 Elo',
+  "Pikafish multiplies the net's score by a scale before the search uses it. Its search margins assume the units of its own nets, so a net from another engine needs a scale of its own. Our first port used 1.70. Fitted to the results of 2,000 Pikafish self-play games, it came out at 0.79.":
+    '皮卡鱼在搜索使用网络评分前，会先乘以一个缩放系数。搜索中的裕量以自带网络的评分单位为基准，因此来自其他引擎的网络需要单独的缩放系数。我们最初移植时用了 1.70。根据 2,000 盘皮卡鱼自我对弈的结果拟合后，得到的系数是 0.79。',
+  Match: '对阵',
+  'Per move': '每步用量',
+  Won: '胜',
+  Drawn: '和',
+  'Elo (95%)': 'Elo（95%）',
+  'Pikafish at 0.79 vs Pikafish at 1.70': '皮卡鱼 0.79 对皮卡鱼 1.70',
+  '100,000 nodes': '100,000 节点',
+  'Pikafish at 1.70 vs Fairy-Stockfish': '皮卡鱼 1.70 对 Fairy-Stockfish',
+  '1 second': '1 秒',
+  'Pikafish at 0.79 vs Fairy-Stockfish': '皮卡鱼 0.79 对 Fairy-Stockfish',
+  'In both Fairy-Stockfish matches each side ran the CC0 net, so they compare the two searches. Every Pikafish on the site now runs at the fitted scale.':
+    '对阵 Fairy-Stockfish 的两场比赛中，双方都使用 CC0 网络，因此比较的是两种搜索。网站上所有皮卡鱼现在都使用拟合后的缩放系数。',
+  'Checking the match rig': '检查对弈测试系统',
+  'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
+    '在采信任何结果前，我们先让 CC0 网络自我对弈了 1,000 对对局，得到 0.0 Elo。另一个被我们刻意削弱的副本，在 2,000 盘中输了 1,974 盘。',
+  'Fine-tuning needs gentler settings than training from scratch': '微调需要比从零训练更温和的设置',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微调从 CC0 网络出发，用更深搜索评过分的局面来训练。第一轮用了 20 百万个局面，每个局面都由 Fairy-Stockfish 搭配 CC0 网络搜索 20,000 节点来评分。训练出的五个网络，相比起点网络都下降了 171 至 278 Elo。训练器的默认设置原本面向从随机权重开始的网络：',
+  'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
+    '学习率 1.5e-3 和 5e-4 是按随机权重设定的。',
+  "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
+    '训练器假设输出尺度为 361。CC0 网络自身评分的实测尺度约为 490，所以训练会把学到的每个评分都缩小。',
+  'Every weight was trainable, including the first layer, which holds most of the net.':
+    '所有权重都参与训练，包括容纳了网络大部分参数的第一层。',
+  'To test the settings alone, we retrained the CC0 net on its own scores at the measured scale. Those scores hold nothing the net does not already know, so the best a recipe can do is keep its strength.':
+    '为了单独测试设置，我们按实测尺度，用 CC0 网络自己的评分重新训练它。这些评分没有网络尚不知道的信息，因此一套训练方案最好的结果就是保住原有棋力。',
+  'Learning rate, layers trained': '学习率、训练层',
+  'Elo vs CC0 (95%)': '相对 CC0 的 Elo（95%）',
+  '2e-5, first layer frozen': '2e-5，冻结第一层',
+  '2e-5, all layers': '2e-5，所有层',
+  '1e-4, first layer frozen': '1e-4，冻结第一层',
+  '1e-4, all layers': '1e-4，所有层',
+  'The small rate with the first layer frozen stayed level. The large rate on every layer lost 33.':
+    '小学习率配合冻结第一层，棋力保持不变。所有层都用大学习率训练，则下降了 33。',
+  "Px0 predicted game results better than the CC0 net's search":
+    'Px0 比 CC0 网络的搜索更能预测对局结果',
+  'A net only gains from scores that know more than it does. [Px0](https://px0.org/) is an open-source xiangqi engine trained by self-play, which its site describes as "Xiangqi learned from scratch". Its networks are public domain ([CC0](https://github.com/official-pikafish/pxzero-networks)) and separate from Pikafish\'s own. Px0 runs a much larger network on a graphics card, so it is slow: about 91 positions a second at one node on ours.':
+    '只有评分包含网络尚不知道的信息，网络才能从中获益。[Px0](https://px0.org/) 是通过自我对弈训练的开源象棋引擎，其网站称之为“从零学会象棋”。它的网络属于公有领域（[CC0](https://github.com/official-pikafish/pxzero-networks)），与皮卡鱼自带的网络不同。Px0 在显卡上运行大得多的网络，因此速度较慢：在我们的显卡上，单节点评估每秒约处理 91 个局面。',
+  "We took 27,705 positions from 200 games between Px0 and Pikafish with the CC0 net, so each source had played one side of every game. Each source's scores were turned into a win chance with its own best-fitting curve, and log loss measures how far those chances were from the results. Lower is better.":
+    '我们从 Px0 与使用 CC0 网络的皮卡鱼之间的 200 盘对局中，取出 27,705 个局面，因此每盘棋都有双方评分来源各执一方。我们为每个来源分别拟合最合适的曲线，把评分换算成胜率，再用对数损失衡量这些胜率与实际结果的差距。数值越低越好。',
+  'Scores from': '评分来源',
+  Nodes: '节点数',
+  'Log loss': '对数损失',
+  'No information (50%)': '无信息（50%）',
+  'Fairy-Stockfish, CC0 net': 'Fairy-Stockfish，CC0 网络',
+  Px0: 'Px0',
+  'Even at one node, Px0 predicted the results better than a 20,000-node search. Its edge came from the decisive games. In drawn games, 85% of the positions, the two were level.':
+    '即使只用一个节点，Px0 预测结果也比搜索 20,000 节点更准确。优势来自分出胜负的对局。来自和棋的局面占 85%，在这些局面上，两者表现相当。',
+  "Px0's scores made a stronger net at 100,000 nodes":
+    '用 Px0 评分训练的网络，在 100,000 节点下更强',
+  "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
+    '我们把同样的 2 百万个局面评了两次分，一次用 Px0 的单节点评估，一次用 CC0 网络的搜索，再用温和的设置，从 CC0 微调出四个网络。每个用 Px0 评分的网络，都有一个仅评分来源不同的对应网络。',
+  Net: '网络',
+  'Px0 scores, first layer frozen': 'Px0 评分，冻结第一层',
+  CC0: 'CC0',
+  'CC0 scores, first layer frozen': 'CC0 评分，冻结第一层',
+  'Px0 scores, all layers': 'Px0 评分，所有层',
+  'CC0 scores, all layers': 'CC0 评分，所有层',
+  'Its CC0-scored twin': '对应的 CC0 评分网络',
+  'The Px0 net with every layer trained is the first of ours whose interval against CC0 sits above zero. The two frozen twins also played each other, and the Px0 one won.':
+    '所有层都参与训练的 Px0 网络，是我们第一个对阵 CC0 时整个区间都高于零的网络。两个冻结第一层的对应网络也互相对弈，用 Px0 评分的那个获胜。',
+  'At one second a move the gain was 2.7 Elo': '每步一秒时，提升为 2.7 Elo',
+  'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
+    '最后一场测试让这个网络以每步一秒对阵 CC0，并遵循事先定好的规则：一旦对局证实或排除了 10 Elo 的提升，就停止测试。比赛在 894 盘后停止，其中 853 盘和棋，排除了这一提升。区间从 −2.2 到 +7.6。',
+  "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
+    'Px0 的评分比 CC0 网络的评分包含更多信息，但 2 百万个这样的评分，并没有在实际每步限时下转化为棋力。网站的皮卡鱼继续使用 CC0 网络和拟合后的缩放系数。',
+  'Play the xiangqi bot': '与象棋电脑对弈',
+  NNUE: 'NNUE',
+  'TRAINING A NET FOR PIKAFISH': '为皮卡鱼训练网络',
+  'A card reading NNUE, training a net for Pikafish': '卡片写着 NNUE，为皮卡鱼训练网络',
   // Rules landing taglines, decided 2026-11-08 (#971).
   'A river, a palace, and cannons that jump to capture.': '有河界、九宫，炮靠炮架吃子。',
   'Xiangqi with every piece but the general face-down.': '除将帅外全是暗子，走出才揭晓。',
@@ -469,12 +575,12 @@ const ZH_HANS: Record<string, string> = {
     '重复循环中，每一步都将军的一方判负。若循环中没有任何将军，且只有一方每一步都捉子，则该方判负。其余情况判和。',
   'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
     '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子，攻击能反吃回来的同种棋子也不算。马或炮攻击车，或士、象攻击车、马、炮，即使对方有保护也算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
-  'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
-    'AB-JChess 执红对 jqe，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，过河后于第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到红帅身旁的 d3。红方的翻子却不顺利：c5 的车在第 20 回合刚翻出就被吃掉，a1 角位藏的则是兵。黑方在第 30 回合将死红方。',
-  'Jieqi: AB-JChess against jqe, Black mates on move 30':
-    '揭棋：AB-JChess 对 jqe，黑方第 30 回合将死',
-  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
-    '想看更多好棋，[对抗赛文章](/blog/ab-jchess-vs-jqe)讲解了这一盘及另外四盘，[战胜我们揭棋电脑的 14 盘棋](/blog/jieqi-bot-wins)则展示了玩家如何赢过它。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
+    'jqe 执红对 AB-JChess，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。红方在前 11 回合吃掉六枚棋子，但黑方有两枚暗子在第 11 和第 13 回合翻出车，局势转向黑方。第 17 回合双方各失误一次。第 23 回合红方翻开帅旁的棋子，翻出的是兵，黑方的双车在第 25 回合将死红方。标记和变着是 AB-JChess 对这盘棋的解读，翻子旁的骰子评估这次翻子的运气。',
+  'Jieqi: jqe against AB-JChess, Black mates on move 25':
+    '揭棋：jqe 对 AB-JChess，黑方第 25 回合将死',
+  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
+    '想看更多好棋，[对抗赛文章](/blog/ab-jchess-vs-jqe)另外讲解了六盘，[战胜我们揭棋电脑的 14 盘棋](/blog/jieqi-bot-wins)则展示了玩家如何赢过它。',
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻开自己的暗子吗？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
@@ -489,8 +595,8 @@ const ZH_HANS: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
   'Play a bot': '与电脑对弈',
-  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
-    '重复局面现在也判长捉，无吃子判和从双方各走 60 步改为 40 步。',
+  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
+    '示例对局换成了新的一盘，每步棋都由 AB-JChess 评分，并评估了每次翻子的运气。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想学揭棋的玩家，无论是否下过象棋。',
   'START: RED AT THE BOTTOM': '开局：红方在下',
@@ -2411,6 +2517,71 @@ const ZH_HANS: Record<string, string> = {
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
+  // Meng Fanrui, machine-drafted 2026-11-11.
+  'Luo Hangyuan': '骆航远',
+  'Ju Longfei': '巨龙飞',
+  'Li Hanlin': '李翰林',
+  "Play Meng's side from move 27": '从第 27 回合起执孟繁睿一方下',
+  'Meng Fanrui 孟繁睿': '孟繁睿',
+  "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.":
+    '2025 年中国象棋协会年终总决赛冠军、男子积分榜第一。完整呈现他 2026 年的三盘胜局，其中一盘是 5+3 快棋加赛，每个转折点都分出引擎的候选变化。',
+  "Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.":
+    '孟繁睿夺得 2025 年中国象棋协会男子年终总决赛冠军，并以竞赛积分榜第一结束全年。',
+  'In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.':
+    '本站收录他 2026 年四项赛事的 39 盘对局：七胜、三十和、两负。',
+  "Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them.":
+    '三盘完整胜局，红黑都有。在每个标记的着法上，引擎的最佳候选从实战分出，对手相近的应着嵌在其下。',
+  'Meng Fanrui at the 2025 year-end finals in Chengmai, December 2025.':
+    '2025 年 12 月，澄迈年终总决赛上的孟繁睿。',
+  'Meng Fanrui in a black jacket at the board, studying the position.':
+    '身穿黑色外套的孟繁睿坐在棋盘前，凝神看棋。',
+  'Chinese Xiangqi Association': '中国象棋协会',
+  "Meng Fanrui is the Chinese Xiangqi Association's 2025 men's champion. He won the year-end final against He Wenzhe in a fast tiebreak game, and finished the year first on the association's points list.":
+    '孟繁睿是中国象棋协会 2025 年男子冠军。他在年终总决赛的决赛中通过快棋加赛战胜何文哲，并以协会积分榜第一结束全年。',
+  "Below are three of his 2026 wins, two with black and one with red. Where a game turned, the move list branches into the engine's best alternatives. The branches are Pikafish lines, not moves from the game.":
+    '下面是他 2026 年的三盘胜局，两盘执黑，一盘执红。在棋局转折处，着法列表会分出引擎的最佳替代着法。这些分支是皮卡鱼的变化，不是实战着法。',
+  'The year-end champion': '年终总冠军',
+  "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat Yin Sheng in the semifinal tiebreak and met He in the final. Tang Dan won the women's title at the same event.":
+    '总决赛汇集了全年竞赛积分榜前列的棋手，外加两名世锦赛外卡。孟繁睿从小组出线，在半决赛快棋加赛中击败尹昇，决赛对上何文哲。唐丹在同一项赛事中夺得女子冠军。',
+  "The points accumulate across the association's competition calendar. The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both the title and the points lead.":
+    '积分在协会全年的各项比赛中累计。[主管机构的报道](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html)同时记载了这个冠军和积分第一。',
+  "Hebei won the men's national team championship on 2 April 2026. Meng played alongside Yang Shizhe, Lu Weitao and Zhang Bojia. His nine games in our archive contain two wins and seven draws.":
+    '2026 年 4 月 2 日，河北队夺得全国象棋男子团体赛冠军。孟繁睿与杨世哲、陆伟韬、张博嘉并肩出战。我们档案里他的九盘对局是两胜七和。',
+  "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points ([event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)).":
+    '河北与广东同积 15 个场分，河北凭对手分夺冠（[赛事报道](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)）。',
+  "On 9 September, Meng beat Luo Hangyuan twice in the first round of the Shanghai Cup, once with each colour. The replay is the win with black. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.":
+    '9 月 9 日，孟繁睿在上海杯首轮两胜骆航远，红黑各胜一盘。这里的复盘是执黑那盘。在红方第 27 回合，分支把骆航远的选择和引擎的候选并列；从那里接着看孟繁睿的应着。',
+  "Luo Hangyuan vs Meng Fanrui, 2026 Shanghai Cup, 9 September 2026. Meng won with black in 64 moves. The board opens after red's move 27, with Meng to move.":
+    '骆航远对孟繁睿，2026 上海杯，2026 年 9 月 9 日。孟繁睿执黑 64 回合取胜。棋盘从红方第 27 回合之后开始，轮到孟繁睿走。',
+  'Meng reached the quarterfinal, where Yin Sheng beat him after a seven-game match and went on to win the event.':
+    '孟繁睿打进四分之一决赛，在一场七盘的对抗后负于尹昇，尹昇随后夺得冠军。',
+  'Division A League, Hangzhou': '象甲联赛，杭州',
+  "The league records here run from 14 to 18 September. Meng's three wins came against Li Hanlin, Ju Longfei and Yang Siyuan. The games against Ju and Yang were slow games; the win over Li was a 5+3 tiebreak.":
+    '这里的联赛记录从 9 月 14 日到 18 日。孟繁睿的三盘胜局分别对李翰林、巨龙飞和杨思远。对巨龙飞和杨思远是慢棋，胜李翰林的是一盘 5+3 快棋加赛。',
+  "Start with the slow game against Ju. The board opens after Ju's 27th move, where Pikafish rates Meng's black clearly better but not yet winning. Play on from there as Meng against the bot, or follow the evaluation through the rest of the game.":
+    '先看对巨龙飞的慢棋。棋盘从巨龙飞第 27 回合之后开始，此时皮卡鱼判断孟繁睿的黑方明显占优，但还没有胜定。你可以从这里扮演孟繁睿和电脑接着下，也可以顺着评估看完余下的棋。',
+  'Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves.':
+    '巨龙飞对孟繁睿，2026 全国象棋男子甲级联赛，2026 年 9 月 17 日。孟繁睿执黑 63 回合取胜。',
+  '2026 National Xiangqi Men’s Division A League': '2026 全国象棋男子甲级联赛',
+  "Then look at the 5+3 game against Li. Click a sharp change on its graph, open the branches at the nearby marked move, and replay Meng's reply from there.":
+    '再看对李翰林的 5+3 快棋。点击曲线上一处急剧的变化，打开附近标记着法的分支，从那里重走孟繁睿的应着。',
+  'Meng Fanrui vs Li Hanlin, 2026 National Xiangqi Men’s Division A League, 15 September 2026. Meng won with red in 60 moves. The board opens at the start.':
+    '孟繁睿对李翰林，2026 全国象棋男子甲级联赛，2026 年 9 月 15 日。孟繁睿执红 60 回合取胜。棋盘从开局开始。',
+  'His games in this set': '这里收录的他的对局',
+  'These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins replayed above.':
+    '这 39 盘是他 2026 赛季的一部分，从 2 月 25 日到 9 月 18 日。表中统计下面四项赛事里有着法记录的对局，除了上面复盘的三盘胜局，也包括和棋和负局。',
+  'Five Rams Cup': '五羊杯',
+  'National Team Championship': '全国象棋团体赛',
+  'Division A League': '象甲联赛',
+  "Meng's record in the 39 games held here": '孟繁睿在这里 39 盘对局中的战绩',
+  'Game records are credited to [DPXQ](https://www.dpxq.com). His full record is on his player page.':
+    '棋谱来自 [DPXQ](https://www.dpxq.com)。他的完整战绩在他的棋手页上。',
+  "Meng Fanrui's games": '孟繁睿的对局',
+  'The 2026 Division A League': '2026 象甲联赛',
+  'Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis':
+    '孟繁睿：2025 年终总冠军，对局与分析',
+  'Meng Fanrui in glasses and a black jacket at the board.':
+    '戴眼镜、身穿黑色外套的孟繁睿坐在棋盘前。',
   'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省运动会上的尹昇。',
   'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
     '2022 年浙江省第十七届运动会赛后，身穿红白色浙江队队服、戴眼镜的尹昇在赞助商背景板前微笑。',
@@ -2511,9 +2682,6 @@ const ZH_HANS: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'PikaJieQi self-play': 'PikaJieQi 自对弈',
-  'Red works through the reveals and delivers checkmate on move 36.':
-    '红方在一次次揭子中推进，第 36 回合将死。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -3044,8 +3212,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'Added diagrams of how the soldier moves, for chess players.':
-    '为国际象棋棋手添加了兵卒走法的图示。',
+  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
+    '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -4730,8 +4898,8 @@ const ZH_HANS: Record<string, string> = {
     '从自己的对局中尝试另一条变化，与原来的走法比较。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已结束的揭棋对局中的一条变化，复盘页面已开启浏览器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分为八级。前七级限制搜索，并允许引擎选择较弱着法；第 8 级使用完整搜索预算。我们通过机器人之间以及与随机走棋基准的对局，测量各级的实力。[等级如何建立](/blog/jieqi-bot-wins)介绍了这些级别。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八个 Pikafish 等级和浏览器分析棋盘，运行的都是 Pikafish 揭棋 NNUE 分支的[本站构建版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我们用 [jqe](https://github.com/devinokeefe/jieqi) 评分的局面训练的网络。该网络不含任何 Pikafish 权重，采用 [MIT 许可](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身为 GPL-3.0。前七级限制搜索，并可能选择较弱着法；第 8 级使用完整搜索预算。[等级如何建立](/blog/jieqi-bot-wins)介绍了各级设置。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盘对抗中以 248 比 136 获胜，取得高于 Pikafish 的位置。可以[了解这位冠军](/blog/ab-jchess)，或查看[当前机器人和等级分](/bots)，认识最新挑战者。每个机器人只能使用自己这一方有权看到的信息，绝不会获得隐藏的暗子布局。',
   'Explore your own games': '探索自己的对局',
@@ -6032,7 +6200,6 @@ const ZH_HANS: Record<string, string> = {
     '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
   'Sacrifice the Horse in 13': '弃马十三着',
-  'Classic manual, 1632': '古谱，1632 年',
   'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
   'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
@@ -6533,8 +6700,8 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等级机器人和浏览器分析已更新为 Pikafish NNUE，使用以 jqe 标注数据训练的 MIT 许可网络。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -7028,6 +7195,106 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
+  'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
+  'Training our own xiangqi net': '訓練我們自己的象棋網路',
+  'Fine-tuning a public-domain xiangqi NNUE net for Pikafish':
+    '為皮卡魚微調公有領域的象棋 NNUE 網路',
+  'We fitted Pikafish to a public-domain xiangqi net, then tried to train a stronger one with scores from Px0. The new net won at 100,000 nodes a move but not at one second, so the site keeps the public-domain net.':
+    '我們先讓皮卡魚適配一個公有領域的象棋網路，再嘗試用 Px0 的評分訓練出更強的網路。新網路在每步 100,000 節點時勝出，在每步一秒時卻沒有，所以網站繼續使用公有領域網路。',
+  'People who build or train xiangqi engines, and players who want to know what runs the xiangqi bot.':
+    '面向開發或訓練象棋引擎的人，以及想了解象棋電腦背後技術的棋友。',
+  "Pikafish multiplies a net's output by a scale before searching with it. Fitted to the public-domain net we run, the scale gained 55 Elo.":
+    '皮卡魚在搜尋前，會把網路輸出乘以一個縮放係數。針對我們使用的公有領域網路擬合這個係數後，棋力提高了 55 Elo。',
+  'Fine-tuning that net with settings meant for training from scratch cost 171 to 278 Elo. A small learning rate and a frozen first layer kept its strength.':
+    '用從零訓練的設定微調這個網路，棋力下降了 171 至 278 Elo。降低學習率並凍結第一層，則保住了原有棋力。',
+  'Scores from Px0, another open engine, predicted game results better, and a net trained on them beat the original by 10.8 Elo at 100,000 nodes a move.':
+    '另一個開放引擎 Px0 的評分能更準確地預測對局結果。用這些評分訓練的網路，在每步 100,000 節點的比賽中比原網路高出 10.8 Elo。',
+  'At one second a move the gain was 2.7 Elo, within noise, so the site still runs the public-domain net.':
+    '每步一秒時，提升只有 2.7 Elo，仍在隨機波動範圍內，所以網站繼續使用公有領域網路。',
+  'Every match plays each opening twice with colours swapped, from a fixed opening book, and reports Elo with a 95% interval.':
+    '每場比賽使用固定開局庫，每個開局紅黑互換下兩盤，並報告 Elo 及其 95% 區間。',
+  'Training screens run at 100,000 nodes a move; the final test ran at one second a move.':
+    '訓練篩選賽採用每步 100,000 節點；最終測試採用每步一秒。',
+  'Predictions are scored by log loss on 27,705 positions from 200 games.':
+    '用來自 200 盤對局的 27,705 個局面，以對數損失衡量預測表現。',
+  "Pikafish plays the site's xiangqi bots and analyses finished games. Like Stockfish in chess, it judges the positions it searches with a small neural network, an NNUE net.":
+    '網站的象棋電腦對弈和已完成對局分析都由皮卡魚驅動。它和西洋棋中的 Stockfish 一樣，用一個小型神經網路，也就是 NNUE 網路，評估搜尋中的局面。',
+  "Pikafish's own nets are not licensed for commercial use, so since November 10 the site runs Pikafish with the public-domain xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE). We call it the CC0 net, after its licence. It was trained for a different engine, so we first fitted Pikafish to it, then tried to train a stronger net from it.":
+    '皮卡魚自帶的網路未授權商業使用，所以從 11 月 10 日起，網站的皮卡魚改用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的公有領域象棋網路。我們按其授權條款稱它為 CC0 網路。它原本為另一個引擎訓練，因此我們先讓皮卡魚適配它，再嘗試以它為基礎訓練更強的網路。',
+  'The right scale was worth 55 Elo': '合適的縮放係數帶來了 55 Elo',
+  "Pikafish multiplies the net's score by a scale before the search uses it. Its search margins assume the units of its own nets, so a net from another engine needs a scale of its own. Our first port used 1.70. Fitted to the results of 2,000 Pikafish self-play games, it came out at 0.79.":
+    '皮卡魚在搜尋使用網路評分前，會先乘以一個縮放係數。搜尋中的裕量以自帶網路的評分單位為基準，因此來自其他引擎的網路需要單獨的縮放係數。我們最初移植時用了 1.70。根據 2,000 盤皮卡魚自我對弈的結果擬合後，得到的係數是 0.79。',
+  Match: '對陣',
+  'Per move': '每步用量',
+  Won: '勝',
+  Drawn: '和',
+  'Elo (95%)': 'Elo（95%）',
+  'Pikafish at 0.79 vs Pikafish at 1.70': '皮卡魚 0.79 對皮卡魚 1.70',
+  '100,000 nodes': '100,000 節點',
+  'Pikafish at 1.70 vs Fairy-Stockfish': '皮卡魚 1.70 對 Fairy-Stockfish',
+  '1 second': '1 秒',
+  'Pikafish at 0.79 vs Fairy-Stockfish': '皮卡魚 0.79 對 Fairy-Stockfish',
+  'In both Fairy-Stockfish matches each side ran the CC0 net, so they compare the two searches. Every Pikafish on the site now runs at the fitted scale.':
+    '對陣 Fairy-Stockfish 的兩場比賽中，雙方都使用 CC0 網路，因此比較的是兩種搜尋。網站上所有皮卡魚現在都使用擬合後的縮放係數。',
+  'Checking the match rig': '檢查對弈測試系統',
+  'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
+    '在採信任何結果前，我們先讓 CC0 網路自我對弈了 1,000 對對局，得到 0.0 Elo。另一個被我們刻意削弱的副本，在 2,000 盤中輸了 1,974 盤。',
+  'Fine-tuning needs gentler settings than training from scratch': '微調需要比從零訓練更溫和的設定',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微調從 CC0 網路出發，用更深搜尋評過分的局面來訓練。第一輪用了 20 百萬個局面，每個局面都由 Fairy-Stockfish 搭配 CC0 網路搜尋 20,000 節點來評分。訓練出的五個網路，相比起點網路都下降了 171 至 278 Elo。訓練器的預設值原本面向從隨機權重開始的網路：',
+  'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
+    '學習率 1.5e-3 和 5e-4 是按隨機權重設定的。',
+  "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
+    '訓練器假設輸出尺度為 361。CC0 網路自身評分的實測尺度約為 490，所以訓練會把學到的每個評分都縮小。',
+  'Every weight was trainable, including the first layer, which holds most of the net.':
+    '所有權重都參與訓練，包括容納了網路大部分參數的第一層。',
+  'To test the settings alone, we retrained the CC0 net on its own scores at the measured scale. Those scores hold nothing the net does not already know, so the best a recipe can do is keep its strength.':
+    '為了單獨測試設定，我們按實測尺度，用 CC0 網路自己的評分重新訓練它。這些評分沒有網路尚不知道的資訊，因此一套訓練方案最好的結果就是保住原有棋力。',
+  'Learning rate, layers trained': '學習率、訓練層',
+  'Elo vs CC0 (95%)': '相對 CC0 的 Elo（95%）',
+  '2e-5, first layer frozen': '2e-5，凍結第一層',
+  '2e-5, all layers': '2e-5，所有層',
+  '1e-4, first layer frozen': '1e-4，凍結第一層',
+  '1e-4, all layers': '1e-4，所有層',
+  'The small rate with the first layer frozen stayed level. The large rate on every layer lost 33.':
+    '小學習率配合凍結第一層，棋力保持不變。所有層都用大學習率訓練，則下降了 33。',
+  "Px0 predicted game results better than the CC0 net's search":
+    'Px0 比 CC0 網路的搜尋更能預測對局結果',
+  'A net only gains from scores that know more than it does. [Px0](https://px0.org/) is an open-source xiangqi engine trained by self-play, which its site describes as "Xiangqi learned from scratch". Its networks are public domain ([CC0](https://github.com/official-pikafish/pxzero-networks)) and separate from Pikafish\'s own. Px0 runs a much larger network on a graphics card, so it is slow: about 91 positions a second at one node on ours.':
+    '只有評分包含網路尚不知道的資訊，網路才能從中獲益。[Px0](https://px0.org/) 是透過自我對弈訓練的開源象棋引擎，其網站稱之為「從零學會象棋」。它的網路屬於公有領域（[CC0](https://github.com/official-pikafish/pxzero-networks)），與皮卡魚自帶的網路不同。Px0 在顯示卡上執行大得多的網路，因此速度較慢：在我們的顯示卡上，單節點評估每秒約處理 91 個局面。',
+  "We took 27,705 positions from 200 games between Px0 and Pikafish with the CC0 net, so each source had played one side of every game. Each source's scores were turned into a win chance with its own best-fitting curve, and log loss measures how far those chances were from the results. Lower is better.":
+    '我們從 Px0 與使用 CC0 網路的皮卡魚之間的 200 盤對局中，取出 27,705 個局面，因此每盤棋都有雙方評分來源各執一方。我們為每個來源分別擬合最合適的曲線，把評分換算成勝率，再用對數損失衡量這些勝率與實際結果的差距。數值越低越好。',
+  'Scores from': '評分來源',
+  Nodes: '節點數',
+  'Log loss': '對數損失',
+  'No information (50%)': '無資訊（50%）',
+  'Fairy-Stockfish, CC0 net': 'Fairy-Stockfish，CC0 網路',
+  Px0: 'Px0',
+  'Even at one node, Px0 predicted the results better than a 20,000-node search. Its edge came from the decisive games. In drawn games, 85% of the positions, the two were level.':
+    '即使只用一個節點，Px0 預測結果也比搜尋 20,000 節點更準確。優勢來自分出勝負的對局。來自和棋的局面占 85%，在這些局面上，兩者表現相當。',
+  "Px0's scores made a stronger net at 100,000 nodes":
+    '用 Px0 評分訓練的網路，在 100,000 節點下更強',
+  "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
+    '我們把同樣的 2 百萬個局面評了兩次分，一次用 Px0 的單節點評估，一次用 CC0 網路的搜尋，再用溫和的設定，從 CC0 微調出四個網路。每個用 Px0 評分的網路，都有一個僅評分來源不同的對應網路。',
+  Net: '網路',
+  'Px0 scores, first layer frozen': 'Px0 評分，凍結第一層',
+  CC0: 'CC0',
+  'CC0 scores, first layer frozen': 'CC0 評分，凍結第一層',
+  'Px0 scores, all layers': 'Px0 評分，所有層',
+  'CC0 scores, all layers': 'CC0 評分，所有層',
+  'Its CC0-scored twin': '對應的 CC0 評分網路',
+  'The Px0 net with every layer trained is the first of ours whose interval against CC0 sits above zero. The two frozen twins also played each other, and the Px0 one won.':
+    '所有層都參與訓練的 Px0 網路，是我們第一個對陣 CC0 時整個區間都高於零的網路。兩個凍結第一層的對應網路也互相對弈，用 Px0 評分的那個獲勝。',
+  'At one second a move the gain was 2.7 Elo': '每步一秒時，提升為 2.7 Elo',
+  'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
+    '最後一場測試讓這個網路以每步一秒對陣 CC0，並遵循事先定好的規則：一旦對局證實或排除了 10 Elo 的提升，就停止測試。比賽在 894 盤後停止，其中 853 盤和棋，排除了這一提升。區間從 −2.2 到 +7.6。',
+  "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
+    'Px0 的評分比 CC0 網路的評分包含更多資訊，但 2 百萬個這樣的評分，並沒有在實際每步限時下轉化為棋力。網站的皮卡魚繼續使用 CC0 網路和擬合後的縮放係數。',
+  'Play the xiangqi bot': '與象棋電腦對弈',
+  NNUE: 'NNUE',
+  'TRAINING A NET FOR PIKAFISH': '為皮卡魚訓練網路',
+  'A card reading NNUE, training a net for Pikafish': '卡片寫著 NNUE，為皮卡魚訓練網路',
   // Rules landing taglines, decided 2026-11-08 (#971).
   'A river, a palace, and cannons that jump to capture.': '有河界、九宮，炮靠炮架吃子。',
   'Xiangqi with every piece but the general face-down.': '除將帥外全是暗子，走出才揭曉。',
@@ -7217,12 +7484,12 @@ const ZH_HANT: Record<string, string> = {
     '重複循環中，每一步都將軍的一方判負。若循環中沒有任何將軍，且只有一方每一步都捉子，則該方判負。其餘情況判和。',
   'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
     '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子，攻擊能反吃回來的同種棋子也不算。馬或炮攻擊車，或士、象攻擊車、馬、炮，即使對方有保護也算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
-  'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
-    'AB-JChess 執紅對 jqe，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，過河後於第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到紅帥身旁的 d3。紅方的翻子卻不順利：c5 的車在第 20 回合剛翻出就被吃掉，a1 角位藏的則是兵。黑方在第 30 回合將死紅方。',
-  'Jieqi: AB-JChess against jqe, Black mates on move 30':
-    '揭棋：AB-JChess 對 jqe，黑方第 30 回合將死',
-  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
-    '想看更多好棋，[對抗賽文章](/blog/ab-jchess-vs-jqe)講解了這一盤及另外四盤，[戰勝我們揭棋電腦的 14 盤棋](/blog/jieqi-bot-wins)則展示了玩家如何贏過它。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
+    'jqe 執紅對 AB-JChess，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。紅方在前 11 回合吃掉六枚棋子，但黑方有兩枚暗子在第 11 和第 13 回合翻出車，局勢轉向黑方。第 17 回合雙方各失誤一次。第 23 回合紅方翻開帥旁的棋子，翻出的是兵，黑方的雙車在第 25 回合將死紅方。標記和變著是 AB-JChess 對這盤棋的解讀，翻子旁的骰子評估這次翻子的運氣。',
+  'Jieqi: jqe against AB-JChess, Black mates on move 25':
+    '揭棋：jqe 對 AB-JChess，黑方第 25 回合將死',
+  'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
+    '想看更多好棋，[對抗賽文章](/blog/ab-jchess-vs-jqe)另外講解了六盤，[戰勝我們揭棋電腦的 14 盤棋](/blog/jieqi-bot-wins)則展示了玩家如何贏過它。',
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻開自己的暗子嗎？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
@@ -7237,8 +7504,8 @@ const ZH_HANT: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
   'Play a bot': '與電腦對弈',
-  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
-    '重複局面現在也判長捉，無吃子判和從雙方各走 60 步改為 40 步。',
+  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
+    '示例對局換成了新的一盤，每步棋都由 AB-JChess 評分，並評估了每次翻子的運氣。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想學揭棋的玩家，無論是否下過象棋。',
   'START: RED AT THE BOTTOM': '開局：紅方在下',
@@ -9337,6 +9604,71 @@ const ZH_HANT: Record<string, string> = {
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
+  // Meng Fanrui, machine-drafted 2026-11-11.
+  'Luo Hangyuan': '駱航遠',
+  'Ju Longfei': '巨龍飛',
+  'Li Hanlin': '李翰林',
+  "Play Meng's side from move 27": '從第 27 回合起執孟繁睿一方下',
+  'Meng Fanrui 孟繁睿': '孟繁睿',
+  "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.":
+    '2025 年中國象棋協會年終總決賽冠軍、男子積分榜第一。完整呈現他 2026 年的三盤勝局，其中一盤是 5+3 快棋加賽，每個轉折點都分出引擎的候選變化。',
+  "Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.":
+    '孟繁睿奪得 2025 年中國象棋協會男子年終總決賽冠軍，並以競賽積分榜第一結束全年。',
+  'In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.':
+    '本站收錄他 2026 年四項賽事的 39 盤對局：七勝、三十和、兩負。',
+  "Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them.":
+    '三盤完整勝局，紅黑都有。在每個標記的著法上，引擎的最佳候選從實戰分出，對手相近的應著嵌在其下。',
+  'Meng Fanrui at the 2025 year-end finals in Chengmai, December 2025.':
+    '2025 年 12 月，澄邁年終總決賽上的孟繁睿。',
+  'Meng Fanrui in a black jacket at the board, studying the position.':
+    '身穿黑色外套的孟繁睿坐在棋盤前，凝神看棋。',
+  'Chinese Xiangqi Association': '中國象棋協會',
+  "Meng Fanrui is the Chinese Xiangqi Association's 2025 men's champion. He won the year-end final against He Wenzhe in a fast tiebreak game, and finished the year first on the association's points list.":
+    '孟繁睿是中國象棋協會 2025 年男子冠軍。他在年終總決賽的決賽中通過快棋加賽戰勝何文哲，並以協會積分榜第一結束全年。',
+  "Below are three of his 2026 wins, two with black and one with red. Where a game turned, the move list branches into the engine's best alternatives. The branches are Pikafish lines, not moves from the game.":
+    '下面是他 2026 年的三盤勝局，兩盤執黑，一盤執紅。在棋局轉折處，著法列表會分出引擎的最佳替代著法。這些分支是皮卡魚的變化，不是實戰著法。',
+  'The year-end champion': '年終總冠軍',
+  "The finals brought together the leading players from the year's competition-points standings and two world-championship wildcards. Meng came through his group, beat Yin Sheng in the semifinal tiebreak and met He in the final. Tang Dan won the women's title at the same event.":
+    '總決賽匯集了全年競賽積分榜前列的棋手，外加兩名世錦賽外卡。孟繁睿從小組出線，在半決賽快棋加賽中擊敗尹昇，決賽對上何文哲。唐丹在同一項賽事中奪得女子冠軍。',
+  "The points accumulate across the association's competition calendar. The [governing body's report](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html) records both the title and the points lead.":
+    '積分在協會全年的各項比賽中累計。[主管機構的報導](https://www.sport.gov.cn/qpzx/n27319120/c29332503/content.html)同時記載了這個冠軍和積分第一。',
+  "Hebei won the men's national team championship on 2 April 2026. Meng played alongside Yang Shizhe, Lu Weitao and Zhang Bojia. His nine games in our archive contain two wins and seven draws.":
+    '2026 年 4 月 2 日，河北隊奪得全國象棋男子團體賽冠軍。孟繁睿與楊世哲、陸偉韜、張博嘉並肩出戰。我們檔案裡他的九盤對局是兩勝七和。',
+  "Hebei and Guangdong both finished with 15 match points; Hebei took the title on opponents' points ([event report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)).":
+    '河北與廣東同積 15 個場分，河北憑對手分奪冠（[賽事報導](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c29516037/content.html)）。',
+  "On 9 September, Meng beat Luo Hangyuan twice in the first round of the Shanghai Cup, once with each colour. The replay is the win with black. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.":
+    '9 月 9 日，孟繁睿在上海盃首輪兩勝駱航遠，紅黑各勝一盤。這裡的復盤是執黑那盤。在紅方第 27 回合，分支把駱航遠的選擇和引擎的候選並列；從那裡接著看孟繁睿的應著。',
+  "Luo Hangyuan vs Meng Fanrui, 2026 Shanghai Cup, 9 September 2026. Meng won with black in 64 moves. The board opens after red's move 27, with Meng to move.":
+    '駱航遠對孟繁睿，2026 上海盃，2026 年 9 月 9 日。孟繁睿執黑 64 回合取勝。棋盤從紅方第 27 回合之後開始，輪到孟繁睿走。',
+  'Meng reached the quarterfinal, where Yin Sheng beat him after a seven-game match and went on to win the event.':
+    '孟繁睿打進四分之一決賽，在一場七盤的對抗後負於尹昇，尹昇隨後奪得冠軍。',
+  'Division A League, Hangzhou': '象甲聯賽，杭州',
+  "The league records here run from 14 to 18 September. Meng's three wins came against Li Hanlin, Ju Longfei and Yang Siyuan. The games against Ju and Yang were slow games; the win over Li was a 5+3 tiebreak.":
+    '這裡的聯賽記錄從 9 月 14 日到 18 日。孟繁睿的三盤勝局分別對李翰林、巨龍飛和楊思遠。對巨龍飛和楊思遠是慢棋，勝李翰林的是一盤 5+3 快棋加賽。',
+  "Start with the slow game against Ju. The board opens after Ju's 27th move, where Pikafish rates Meng's black clearly better but not yet winning. Play on from there as Meng against the bot, or follow the evaluation through the rest of the game.":
+    '先看對巨龍飛的慢棋。棋盤從巨龍飛第 27 回合之後開始，此時皮卡魚判斷孟繁睿的黑方明顯佔優，但還沒有勝定。你可以從這裡扮演孟繁睿和電腦接著下，也可以順著評估看完餘下的棋。',
+  'Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves.':
+    '巨龍飛對孟繁睿，2026 全國象棋男子甲級聯賽，2026 年 9 月 17 日。孟繁睿執黑 63 回合取勝。',
+  '2026 National Xiangqi Men’s Division A League': '2026 全國象棋男子甲級聯賽',
+  "Then look at the 5+3 game against Li. Click a sharp change on its graph, open the branches at the nearby marked move, and replay Meng's reply from there.":
+    '再看對李翰林的 5+3 快棋。點擊曲線上一處急劇的變化，打開附近標記著法的分支，從那裡重走孟繁睿的應著。',
+  'Meng Fanrui vs Li Hanlin, 2026 National Xiangqi Men’s Division A League, 15 September 2026. Meng won with red in 60 moves. The board opens at the start.':
+    '孟繁睿對李翰林，2026 全國象棋男子甲級聯賽，2026 年 9 月 15 日。孟繁睿執紅 60 回合取勝。棋盤從開局開始。',
+  'His games in this set': '這裡收錄的他的對局',
+  'These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins replayed above.':
+    '這 39 盤是他 2026 賽季的一部分，從 2 月 25 日到 9 月 18 日。表中統計下面四項賽事裡有著法記錄的對局，除了上面復盤的三盤勝局，也包括和棋和負局。',
+  'Five Rams Cup': '五羊盃',
+  'National Team Championship': '全國象棋團體賽',
+  'Division A League': '象甲聯賽',
+  "Meng's record in the 39 games held here": '孟繁睿在這裡 39 盤對局中的戰績',
+  'Game records are credited to [DPXQ](https://www.dpxq.com). His full record is on his player page.':
+    '棋譜來自 [DPXQ](https://www.dpxq.com)。他的完整戰績在他的棋手頁上。',
+  "Meng Fanrui's games": '孟繁睿的對局',
+  'The 2026 Division A League': '2026 象甲聯賽',
+  'Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis':
+    '孟繁睿：2025 年終總冠軍，對局與分析',
+  'Meng Fanrui in glasses and a black jacket at the board.':
+    '戴眼鏡、身穿黑色外套的孟繁睿坐在棋盤前。',
   'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省運動會上的尹昇。',
   'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
     '2022 年浙江省第十七屆運動會賽後，身穿紅白色浙江隊隊服、戴眼鏡的尹昇在贊助商背景板前微笑。',
@@ -9437,9 +9769,6 @@ const ZH_HANT: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'PikaJieQi self-play': 'PikaJieQi 自對弈',
-  'Red works through the reveals and delivers checkmate on move 36.':
-    '紅方在一次次揭子中推進，第 36 回合將死。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
@@ -10157,8 +10486,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'Added diagrams of how the soldier moves, for chess players.':
-    '為西洋棋棋手添加了兵卒走法的圖示。',
+  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
+    '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -11514,8 +11843,8 @@ const ZH_HANT: Record<string, string> = {
     '從自己的對局中嘗試另一條變化，與原來的走法比較。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已結束的揭棋對局中的一條變化，復盤頁面已開啓瀏覽器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分為八級。前七級限制搜索，並允許引擎選擇較弱著法；第 8 級使用完整搜索預算。我們通過機器人之間以及與隨機走棋基準的對局，測量各級的實力。[等級如何建立](/blog/jieqi-bot-wins)介紹了這些級別。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八個 Pikafish 等級和瀏覽器分析棋盤，運行的都是 Pikafish 揭棋 NNUE 分支的[本站建置版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我們用 [jqe](https://github.com/devinokeefe/jieqi) 評分的局面訓練的網路。該網路不含任何 Pikafish 權重，採用 [MIT 授權](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身為 GPL-3.0。前七級限制搜索，並可能選擇較弱著法；第 8 級使用完整搜索預算。[等級如何建立](/blog/jieqi-bot-wins)介紹了各級設定。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盤對抗中以 248 比 136 獲勝，取得高於 Pikafish 的位置。可以[瞭解這位冠軍](/blog/ab-jchess)，或查看[當前機器人和等級分](/bots)，認識最新挑戰者。每個機器人只能使用自己這一方有權看到的信息，絕不會獲得隱藏的暗子佈局。',
   'Explore your own games': '探索自己的對局',
@@ -12812,7 +13141,6 @@ const ZH_HANT: Record<string, string> = {
     '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
   'Sacrifice the Horse in 13': '棄馬十三著',
-  'Classic manual, 1632': '古譜，1632 年',
   'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
   'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
@@ -13097,8 +13425,8 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等級機器人和瀏覽器分析已更新為 Pikafish NNUE，使用以 jqe 標註資料訓練的 MIT 授權網路。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':

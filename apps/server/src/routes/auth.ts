@@ -16,12 +16,14 @@ import {
   publicUser,
   randomEmailLoginCode,
   sendEmailLoginCode,
+  shouldSuggestUsername,
 } from './../account-session.js';
 import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { emailDomainAcceptsMail } from './../email-domain.js';
 import { authCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { parsePuzzleDeviceId } from './../persistence-puzzle-quality.js';
 import { emailLocale } from './../player-email.js';
 import { isProductionLikeRuntime } from './../server-policy.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
@@ -275,6 +277,8 @@ export async function tryHandle(
       tokenHash: hashSecret(sessionToken),
       expiresAt,
       userAgent: sessionUserAgent(request),
+      deviceId: parsePuzzleDeviceId(request.headers['x-mistboard-device-id']),
+      createdAt: now,
     });
     try {
       await persistence.completeLoginEmailRequest(loginId, now);
@@ -303,7 +307,11 @@ export async function tryHandle(
     writeJson(
       response,
       200,
-      { user: publicUser(user), isNewUser: isNew },
+      {
+        user: publicUser(user),
+        isNewUser: isNew,
+        suggestUsername: !isNew && shouldSuggestUsername(user),
+      },
       {
         // Issue the canonical cookie and, when a Domain is configured, evict any
         // legacy host-only `mistboard_session` duplicate so the browser stops

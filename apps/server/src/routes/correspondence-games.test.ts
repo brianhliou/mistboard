@@ -30,6 +30,7 @@ import { appendTenantRuntimeEvent, tenantSnapshotPayload } from '../variant-tena
 import {
   type CorrespondenceGamesDeps,
   correspondenceGamesForUser,
+  correspondenceMoveNumber,
   correspondenceSeatBoard,
 } from './correspondence-games.js';
 
@@ -107,6 +108,70 @@ function seatSnapshotState(
 }
 
 const json = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
+
+test('homepage gets the canonical move number without a hidden position', async () => {
+  const room = await seatedGameWithMoves();
+  try {
+    const payload = await correspondenceGamesForUser(ALICE, {
+      list: listFromRoom(room),
+      seatBoard: async () => null,
+      moveNumber: correspondenceMoveNumber,
+    });
+    assert.equal(payload.games[0]?.moveNumber, room.projection.state.moveNumber);
+    assert.ok((payload.games[0]?.moveNumber as number) > 1);
+    const serialized = JSON.stringify(payload);
+    assert.doesNotMatch(serialized, /board|visibleSquares|lastMove|captures|legalMoves/);
+    assert.deepEqual(
+      Object.keys(payload.games[0]!).sort(),
+      [
+        'dueAt',
+        'gameSpecId',
+        'isYourMove',
+        'moveNumber',
+        'mySeat',
+        'opponentHandle',
+        'opponentName',
+        'rated',
+        'roomId',
+        'url',
+      ].sort(),
+    );
+  } finally {
+    darkChessTenantRooms.clear();
+  }
+});
+
+test('inbox carries gated opponent title/flair and omits absent or unlinkable metadata', async () => {
+  const base = {
+    roomId: 'xq_identity',
+    gameSpecId: 'xiangqi',
+    mySeat: 'red',
+    isYourMove: true,
+    dueAt: new Date('2026-11-13T12:00:00Z'),
+    opponentName: 'Bob',
+    opponentHandle: 'bob',
+    opponentTitle: 'xgm',
+    opponentFlair: 'variant-xiangqi',
+  } satisfies CorrespondenceGameSummary;
+  const payload = await correspondenceGamesForUser(ALICE, {
+    list: async () => [base],
+    seatBoard: async () => null,
+  });
+  assert.equal(payload.games[0]?.opponentTitle, 'xgm');
+  assert.equal(payload.games[0]?.opponentFlair, 'variant-xiangqi');
+  for (const game of [
+    { ...base, opponentHandle: null },
+    { ...base, opponentHandle: undefined },
+    { ...base, opponentTitle: null, opponentFlair: null },
+  ]) {
+    const hidden = await correspondenceGamesForUser(ALICE, {
+      list: async () => [game],
+      seatBoard: async () => null,
+    });
+    assert.doesNotMatch(JSON.stringify(hidden), /opponentTitle|opponentFlair|xgm|variant-xiangqi/);
+    assert.equal(hidden.games[0]?.opponentName, 'Bob');
+  }
+});
 
 test('inbox seat board for seat A is exactly A’s room PlayerView and holds nothing hidden from A', async () => {
   const room = await seatedGameWithMoves();

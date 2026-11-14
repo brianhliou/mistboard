@@ -8,6 +8,7 @@
 // landing.ts.
 
 import './account-profile.css';
+import { buildBroadcastPushSettings } from './account-broadcast-push.js';
 import { setAccountNavUser } from './account-nav.js';
 import {
   type AccountPreferenceId,
@@ -16,7 +17,7 @@ import {
   replaceAccountPreferences,
 } from './account-preferences.js';
 import { identify, resetIdentity, track } from './analytics.js';
-import { requestedAuthReferrer } from './auth-redirect.js';
+import { authContextForOpen, requestedAuthReferrer } from './auth-redirect.js';
 import {
   DISPLAY_PREFERENCE_DEFINITIONS,
   type DisplayPreferenceId,
@@ -30,6 +31,7 @@ import { buildFlairIcon, flairLabel, flairOfferedInPicker, flairPickerGroups } f
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
+import { postWithBrowserIdentity } from './room-create-retry.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
 import { setBoardCoordinatesPreference } from './theme.js';
 
@@ -780,6 +782,13 @@ function buildGameBehaviorSettings(user: AuthUser, locale: Locale = currentLocal
     ),
     buildBooleanAccountPreference(
       user,
+      'confirmCorrespondenceMoves',
+      t('account.confirmCorrespondenceMoves', {}, locale),
+      t('account.confirmCorrespondenceMovesHelp', {}, locale),
+      locale,
+    ),
+    buildBooleanAccountPreference(
+      user,
       'confirmGameActions',
       t('account.confirmGameActions', {}, locale),
       t('account.confirmGameActionsHelp', {}, locale),
@@ -794,7 +803,11 @@ function buildBooleanAccountPreference(
   user: AuthUser,
   id: Extract<
     AccountPreferenceId,
-    'lowTimeSound' | 'premoves' | 'confirmGameActions' | 'forumAutoTranslate'
+    | 'lowTimeSound'
+    | 'premoves'
+    | 'confirmGameActions'
+    | 'confirmCorrespondenceMoves'
+    | 'forumAutoTranslate'
   >,
   title: string,
   help: string,
@@ -1316,7 +1329,7 @@ function buildAccountAccessSettings(user: AuthUser, locale: Locale = currentLoca
   });
 
   form.append(newEmail.wrap, code.wrap, submit, status);
-  panel.append(list, form);
+  panel.append(list, form, buildBroadcastPushSettings(locale));
   return panel;
 }
 
@@ -1842,6 +1855,97 @@ function formatAccountDate(date: Date, locale: Locale): string {
   return date.toLocaleDateString(LOCALE_META[locale].dateLocale);
 }
 
+function buildChooseUsername(
+  user: AuthUser,
+  suggestion: boolean,
+  onContinue: (user: AuthUser) => void,
+  locale: Locale,
+): HTMLElement {
+  const step = document.createElement('div');
+  step.className = 'account-username-step';
+  const title = document.createElement('h1');
+  title.className = 'site-section-heading';
+  title.textContent = t('account.chooseUsername', {}, locale);
+  const copy = document.createElement('p');
+  copy.className = 'account-copy';
+  copy.textContent = t(
+    suggestion ? 'account.suggestUsernameCopy' : 'account.chooseUsernameCopy',
+    {},
+    locale,
+  );
+  const form = document.createElement('form');
+  form.className = 'account-form';
+  const handle = labeledInput(t('account.username', {}, locale), 'handle', user.handle, '');
+  handle.input.autocomplete = 'username';
+  handle.input.maxLength = 24;
+  handle.input.pattern = '[a-zA-Z0-9][a-zA-Z0-9_-]{1,22}[a-zA-Z0-9]';
+  handle.input.required = true;
+  handle.help.textContent = handleHelpText(user, locale);
+  const status = document.createElement('p');
+  status.className = 'account-status';
+  status.setAttribute('aria-live', 'polite');
+  const actions = document.createElement('div');
+  actions.className = 'account-actions';
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'landing-setup-start';
+  submit.textContent = t('account.usernameContinue', {}, locale);
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'landing-setup-back account-username-dismiss';
+  dismiss.textContent = t('account.usernameNotNow', {}, locale);
+  let busy = false;
+  const save = async (dismissOnly: boolean): Promise<void> => {
+    if (busy) return;
+    busy = true;
+    submit.disabled = true;
+    dismiss.disabled = true;
+    handle.input.disabled = true;
+    status.textContent = '';
+    handle.input.removeAttribute('aria-invalid');
+    try {
+      const { data, resp } = await fetchAuthJson<{
+        user?: AuthUser;
+        error?: string;
+        availableAt?: string;
+      }>('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ...(!dismissOnly ? { handle: handle.input.value } : {}),
+          usernamePromptHandled: true,
+        }),
+      });
+      if (!resp.ok || !data.user) {
+        throw new Error(accountSettingsErrorMessage(data.error, data.availableAt, locale));
+      }
+      setAccountNavUser(data.user);
+      onContinue(data.user);
+    } catch (err) {
+      status.textContent = err instanceof Error ? err.message : t('account.saveFailed', {}, locale);
+      if (!dismissOnly) handle.input.setAttribute('aria-invalid', 'true');
+    } finally {
+      busy = false;
+      submit.disabled = false;
+      dismiss.disabled = false;
+      handle.input.disabled = false;
+    }
+  };
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void save(false);
+  });
+  dismiss.addEventListener('click', () => {
+    void save(true);
+  });
+  actions.append(submit);
+  if (suggestion) actions.append(dismiss);
+  form.append(handle.wrap, actions, status);
+  step.append(title, copy, form);
+  // Keep Continue as one tap on phones without opening the keyboard on arrival.
+  return step;
+}
+
 // ── Login / register form ────────────────────────────────────────────────────
 
 function buildLoginForm(
@@ -1850,6 +1954,8 @@ function buildLoginForm(
   locale: Locale = currentLocale(),
   options: { redirectOnSuccess: boolean } = { redirectOnSuccess: true },
 ): HTMLElement {
+  const authContext = authContextForOpen();
+  track('auth_opened', authContext);
   const panel = document.createElement('section');
   panel.className = 'account-panel account-auth-panel';
   panel.dataset.entryPoint = tab;
@@ -1943,8 +2049,17 @@ function buildLoginForm(
   code.inputMode = 'numeric';
   code.autocomplete = 'one-time-code';
   code.placeholder = t('account.loginCode', {}, locale);
-  code.maxLength = 8;
   code.pattern = '[0-9]{8}';
+  const cleanCode = (value: string): string => value.replace(/\D/g, '').slice(0, 8);
+  code.addEventListener('input', () => {
+    code.value = cleanCode(code.value);
+  });
+  code.addEventListener('paste', (event) => {
+    if (!event.clipboardData) return;
+    event.preventDefault();
+    code.value = cleanCode(event.clipboardData.getData('text'));
+    code.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   code.setAttribute('aria-describedby', 'account-auth-status');
   codeField.append(codeLabel, code);
 
@@ -2086,6 +2201,7 @@ function buildLoginForm(
       if (!Number.isFinite(expiresAt) || !Number.isFinite(resendAvailableAt)) {
         throw new Error('auth_bad_response');
       }
+      track('auth_code_sent', { source: authContext.source });
       email.readOnly = true;
       emailStage.hidden = true;
       codeStage.hidden = false;
@@ -2134,6 +2250,11 @@ function buildLoginForm(
       code.setAttribute('aria-invalid', 'true');
       return;
     }
+    if (!/^[0-9]{8}$/.test(code.value)) {
+      showStatus(t('account.invalidLoginCode', {}, locale), 'error');
+      code.setAttribute('aria-invalid', 'true');
+      return;
+    }
     if (authBusy) return;
     authBusy = true;
     submit.disabled = true;
@@ -2146,6 +2267,7 @@ function buildLoginForm(
       const { data, resp } = await fetchAuthJson<{
         user?: AuthUser;
         isNewUser?: boolean;
+        suggestUsername?: boolean;
         error?: string;
       }>('/api/auth/email/confirm', {
         method: 'POST',
@@ -2161,15 +2283,28 @@ function buildLoginForm(
         account_role: data.user.accountRole,
         email_verified: data.user.emailVerified,
       });
+      track('auth_signed_in', {
+        source: authContext.source,
+        is_new_account: data.isNewUser === true,
+      });
       // signup_completed is fired by the server on account creation (it
       // reaches PostHog even when the browser blocks analytics); firing it
       // here too would double-count the unblocked signups.
       setAccountNavUser(data.user);
-      if (options.redirectOnSuccess) {
-        window.location.href = requestedAuthReferrer() ?? localizedHref('/', locale);
+      const finish = (user: AuthUser): void => {
+        if (options.redirectOnSuccess) {
+          window.location.href = requestedAuthReferrer() ?? localizedHref('/', locale);
+          return;
+        }
+        onAuth(user);
+      };
+      if (data.isNewUser || data.suggestUsername) {
+        panel.replaceChildren(
+          buildChooseUsername(data.user, data.suggestUsername === true, finish, locale),
+        );
         return;
       }
-      onAuth(data.user);
+      finish(data.user);
     } catch (err) {
       showStatus(
         err instanceof Error
@@ -2244,7 +2379,10 @@ async function fetchAuthJson<T>(
 ): Promise<{ data: T; resp: Response }> {
   let resp: Response;
   try {
-    resp = await fetch(input, init);
+    resp =
+      input === '/api/auth/email/confirm'
+        ? await postWithBrowserIdentity(input, init)
+        : await fetch(input, init);
   } catch {
     throw new Error('auth_request_failed');
   }

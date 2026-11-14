@@ -98,6 +98,8 @@ export type PostGameActionsInput = {
   seated: boolean;
   /** The caller's rematch control (PvP offer widget or PvE new-game button), seated only. */
   rematch: HTMLElement | null;
+  /** Days-per-move game: keep its own way to play again first. */
+  correspondence?: boolean;
   reviewHref: string | null;
   /** The "play again by correspondence" offer (finishedGameCorrespondenceOffer),
    *  or null/absent when this game earns none. Seated players only. */
@@ -271,7 +273,8 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     });
     again.classList.add('postgame-actions__correspondence');
     again.addEventListener('click', report('correspondence_again'));
-    box.append(again);
+    if (input.correspondence || input.mode === 'correspondence') box.prepend(again);
+    else box.append(again);
   }
 
   const opponentHref = input.seated ? newOpponentHref(input.variant, input.mode) : null;

@@ -852,6 +852,7 @@ export function createTenantRoomChrome<C extends string>(
         mode,
         seated,
         rematch,
+        correspondence: ctx.timeControl()?.daysPerMove !== undefined,
         reviewHref: tenant.reviewUrl(ctx.room()),
         correspondenceAgain: correspondenceAgain(),
       });

@@ -42,6 +42,7 @@ export function mountDarkXiangqiWatchReplay(
     DarkXiangqiWireView,
     DarkXiangqiPostgameViewKey
   >(root, roomId, options, {
+    variant: 'dark-xiangqi',
     installStyles: () => {},
     // Piece-set / board-theme changes repaint the board in place (the homepage
     // TV sits frozen on one ply, so nothing else would re-render it).

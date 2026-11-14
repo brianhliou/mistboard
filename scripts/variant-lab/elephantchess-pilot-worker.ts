@@ -21,6 +21,10 @@ import {
   xiangqiPuzzleMiningCandidateId,
 } from '../../apps/server/src/persistence-xiangqi-puzzle-mining.ts';
 import { processNextXiangqiPuzzleMiningShard } from '../../apps/server/src/xiangqi-puzzle-mining-worker.ts';
+import {
+  assertXiangqiPuzzleAdmissionProfile,
+  XIANGQI_PUZZLE_ADMISSION_PROFILE,
+} from '../../packages/game/src/index.ts';
 import { PikafishEngine } from './xiangqi-pikafish-uci.ts';
 import {
   mineXiangqiPuzzleGame,
@@ -134,6 +138,8 @@ try {
     );
   }
   const scan = record(run.scanProfile, 'scanProfile');
+  assertXiangqiPuzzleAdmissionProfile(scan);
+  assertXiangqiPuzzleAdmissionProfile(run.auditProfile);
   const solutionPlies = record(scan.solutionPlies, 'scanProfile.solutionPlies');
   const profileVersion = text(scan.profileVersion, 'scanProfile.profileVersion');
   if (profileVersion !== text(engineProfile.profileVersion, 'engineProfile.profileVersion')) {
@@ -156,8 +162,12 @@ try {
     uniqueGapCp: number(scan.initialUniqueGapCp, 'scanProfile.initialUniqueGapCp'),
     verifyDepth: number(scan.verifyDepth, 'scanProfile.verifyDepth'),
     winHi: number(run.auditProfile.winHi, 'auditProfile.winHi'),
-    winLo: number(run.auditProfile.winLo, 'auditProfile.winLo'),
-    minGapCp: number(run.auditProfile.minGapCp, 'auditProfile.minGapCp'),
+    winRateK: number(run.auditProfile.winRateK, 'auditProfile.winRateK'),
+    minWinRateGap: number(run.auditProfile.minWinRateGap, 'auditProfile.minWinRateGap'),
+    mateInOneMaxWinRate: number(
+      run.auditProfile.mateInOneMaxWinRate,
+      'auditProfile.mateInOneMaxWinRate',
+    ),
     minPly: number(scan.minPly, 'scanProfile.minPly'),
     maxSolutionPlies: number(solutionPlies.max, 'scanProfile.solutionPlies.max'),
     minSolutionPlies: number(solutionPlies.min, 'scanProfile.solutionPlies.min'),
@@ -246,7 +256,7 @@ try {
                 verdict: judgment.verdict,
                 reason: judgment.reason,
                 engineProfile,
-                evidence: judgment.evidence,
+                evidence: { ...judgment.evidence, ...XIANGQI_PUZZLE_ADMISSION_PROFILE },
                 puzzleData: judgment.puzzle,
               });
             },

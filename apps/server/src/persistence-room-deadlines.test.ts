@@ -9,6 +9,7 @@ import {
   upsertRoomDeadline,
   upsertRoomSeatToken,
 } from './persistence.js';
+import { getPool } from './persistence-db.js';
 import {
   assert,
   definePersistenceTests,
@@ -19,6 +20,69 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('room deadlines', () => {
+  test('correspondence opponents carry title/flair only for linkable accounts', async () => {
+    const now = new Date('2026-11-13T12:00:00Z');
+    for (const id of ['identity-me', 'identity-opponent']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id,
+        displayName: id,
+        now,
+      });
+      await upsertRoomSeatToken('xq_identity', {
+        seat: id === 'identity-me' ? 'red' : 'black',
+        clientId: id,
+        tokenHash: sha256(id),
+        userId: id,
+        userHandle: null,
+        userDisplayName: null,
+        issuedAt: now,
+        lastSeenAt: now,
+      });
+    }
+    await upsertRoomDeadline({
+      roomId: 'xq_identity',
+      gameSpecId: 'xiangqi',
+      seat: 'red',
+      seatUserId: 'identity-me',
+      dueAt: now,
+    });
+    const read = () => listCorrespondenceGamesForUser('identity-me');
+    assert.doesNotMatch(JSON.stringify(await read()), /opponentTitle|opponentFlair/);
+    await getPool().query(
+      `UPDATE users SET title = 'xim', flair = 'variant-banqi' WHERE id = 'identity-opponent'`,
+    );
+    for (const visibility of ['public', 'unlisted']) {
+      await getPool().query(
+        `UPDATE users SET profile_visibility = $1 WHERE id = 'identity-opponent'`,
+        [visibility],
+      );
+      const games = await read();
+      assert.equal(games[0]?.opponentTitle, 'xim');
+      assert.equal(games[0]?.opponentFlair, 'variant-banqi');
+    }
+    for (const privacy of ['private', 'closed']) {
+      await getPool().query(
+        `UPDATE users SET profile_visibility = $1, closed_at = $2 WHERE id = 'identity-opponent'`,
+        [privacy === 'private' ? 'private' : 'public', privacy === 'closed' ? now : null],
+      );
+      const games = await read();
+      assert.equal(games.length, 1);
+      assert.equal(games[0]?.opponentName, 'identity-opponent');
+      assert.equal(games[0]?.opponentHandle, null);
+      assert.doesNotMatch(JSON.stringify(games), /opponentTitle|opponentFlair|xim|variant-banqi/);
+    }
+    await getPool().query(
+      `UPDATE room_seat_tokens SET user_id = NULL WHERE room_id = 'xq_identity' AND seat = 'black'`,
+    );
+    const unowned = await read();
+    assert.equal(unowned.length, 1);
+    assert.equal(unowned[0]?.opponentHandle, null);
+    assert.doesNotMatch(JSON.stringify(unowned), /opponentTitle|opponentFlair|xim|variant-banqi/);
+  });
+
   test('upsert + listDue roundtrip with due filtering, ordering, and limit', async () => {
     const now = new Date('2026-06-11T12:00:00Z');
     await upsertRoomDeadline({

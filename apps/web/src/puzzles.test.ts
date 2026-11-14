@@ -491,6 +491,30 @@ describe('puzzles route', () => {
     );
   });
 
+  it('draws a withdrawn puzzle and leaves its card without a link to the missing page', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          attempts: [
+            { ...historyEntry(RED_MATE, '2026-10-31T16:00:00Z'), available: false },
+            { ...historyEntry(BLACK_MATE, '2026-10-31T15:59:00Z'), available: true },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    const withdrawn = root.querySelector<HTMLAnchorElement>(`[data-puzzle-id="${RED_MATE.id}"]`)!;
+    const live = root.querySelector<HTMLAnchorElement>(`[data-puzzle-id="${BLACK_MATE.id}"]`)!;
+    expect(withdrawn.querySelector('.puzzle-history__board svg')).not.toBeNull();
+    expect(withdrawn.hasAttribute('href')).toBe(false);
+    expect(live.getAttribute('href')).toBe(`/puzzles/${encodeURIComponent(BLACK_MATE.id)}`);
+  });
+
   it('groups by successive one-hour gaps, including chained sessions lasting over an hour', () => {
     const at = (time: string) => historyEntry(RED_MATE, `2026-10-31T${time}:00Z`);
     expect(
@@ -1364,15 +1388,15 @@ describe('puzzles route', () => {
     expect(root.querySelector('.puzzles-sidebar')?.textContent).toContain('0 solved of 2');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain('All puzzles');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain(' / ');
-    // The feedback title is deliberately generic (the puzzle title would spoil the piece).
-    expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Red to move');
+    // State the bounded goal without disclosing the piece or key move.
+    expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2');
     expect(root.querySelector('.puzzle-xiangqi-board')).not.toBeNull();
     // Open information, no reserves: the board paints straight onto its host.
     expect(root.querySelector('.puzzle-board-shell')).toBeNull();
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
     expect(root.querySelector('.puzzle-reserves')).toBeNull();
-    // The goal (mate depth) is hidden while solving so it doesn't spoil the move.
-    expect(root.textContent).not.toContain('Mate in 1');
+    // The objective is visible while solving; tactical theme spoilers stay hidden.
+    expect(root.textContent).toContain('Mate in 2');
     expect(root.querySelector('.puzzle-moves h3')).toBeNull();
     expect(root.textContent).not.toContain(
       `${RED_MATE.solution[0]!.from}-${RED_MATE.solution[0]!.to}`,
@@ -1791,7 +1815,7 @@ describe('puzzles route', () => {
     nextButton?.click();
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${blackDrop.id}`);
   });
@@ -1846,7 +1870,7 @@ describe('puzzles route', () => {
     nextButton?.click();
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(window.location.pathname).toBe(`/puzzles/${blackDrop.id}`);
   });
@@ -1884,7 +1908,7 @@ describe('puzzles route', () => {
     nextButton?.click();
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${blackDrop.id}`);
     expect(window.location.pathname).toBe(`/puzzles/${blackDrop.id}`);
@@ -1934,7 +1958,7 @@ describe('puzzles route', () => {
     skipButton?.click();
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(qualityEvents.some((event) => event.event === 'abandon')).toBe(true);
     expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${blackDrop.id}`);
@@ -1981,7 +2005,7 @@ describe('puzzles route', () => {
     await solveLine(root, redDrop);
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(window.location.pathname).toBe(`/puzzles/${blackDrop.id}`);
   });
@@ -2009,7 +2033,7 @@ describe('puzzles route', () => {
     await mountPuzzles(root, null);
 
     await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Red to move'),
+      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Mate in 2'),
     );
     expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${redDrop.id}`);
     // Visiting a puzzle records it in the seen-set for the next visit's rotation.

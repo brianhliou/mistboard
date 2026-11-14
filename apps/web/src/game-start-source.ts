@@ -119,10 +119,14 @@ const LIVE_STARTED_CAP = 100;
 // reason as the starts above: the tracker is per page, the game is not.
 const FIRST_MOVE_KEY = 'mistboard.gameFirstMove';
 const FIRST_MOVE_CAP = 100;
+// A finished correspondence room can be revisited months later. Keep its
+// marker per room rather than evicting it from a recent-games list, which would
+// let an old finish count again. Like starts, this is scoped to this browser.
+const FINISHED_KEY_PREFIX = 'mistboard.gameFinished:';
 
 // Storage blocked: still dedupe within the page (a tracker reset re-renders the
 // same room), though a reload may count the start again.
-const startedInMemory = new Set<string>();
+const trackedInMemory = new Set<string>();
 
 function readStartedIds(key: string): string[] {
   try {
@@ -134,7 +138,7 @@ function readStartedIds(key: string): string[] {
 }
 
 function markStarted(key: string, cap: number, gameId: string): void {
-  startedInMemory.add(`${key}:${gameId}`);
+  trackedInMemory.add(`${key}:${gameId}`);
   try {
     const ids = readStartedIds(key).filter((id) => id !== gameId);
     ids.push(gameId);
@@ -145,7 +149,7 @@ function markStarted(key: string, cap: number, gameId: string): void {
 }
 
 function hasStarted(key: string, gameId: string): boolean {
-  return startedInMemory.has(`${key}:${gameId}`) || readStartedIds(key).includes(gameId);
+  return trackedInMemory.has(`${key}:${gameId}`) || readStartedIds(key).includes(gameId);
 }
 
 export function hasTrackedCorrespondenceStart(gameId: string): boolean {
@@ -172,7 +176,27 @@ export function markGameFirstMoveTracked(gameId: string): void {
   markStarted(FIRST_MOVE_KEY, FIRST_MOVE_CAP, gameId);
 }
 
+export function hasTrackedGameFinish(gameId: string): boolean {
+  const key = `${FINISHED_KEY_PREFIX}${gameId}`;
+  if (trackedInMemory.has(key)) return true;
+  try {
+    return window.localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markGameFinishTracked(gameId: string): void {
+  const key = `${FINISHED_KEY_PREFIX}${gameId}`;
+  trackedInMemory.add(key);
+  try {
+    window.localStorage.setItem(key, '1');
+  } catch {
+    // Storage blocked/full: still dedupe across tracker resets in this page.
+  }
+}
+
 // Tests only: forget the in-memory half so each case starts clean.
 export function resetTrackedGameStartsForTests(): void {
-  startedInMemory.clear();
+  trackedInMemory.clear();
 }

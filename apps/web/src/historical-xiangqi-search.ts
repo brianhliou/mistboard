@@ -13,7 +13,9 @@ import './current-games.css';
 import './seat-disc-ink.css';
 import './historical-xiangqi-search.css';
 import {
+  exportFormatsForVariant,
   GAMES_SEARCH_DEFAULT_MIN_PLIES,
+  isPublicGameSpec,
   maybeGameSpecForId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -239,6 +241,8 @@ export async function mountHistoricalXiangqiSearch(root: HTMLElement): Promise<v
         ),
       );
     }
+    const dataHref = dataPageHref(filters);
+    if (dataHref) summaryHost.append(dataLinkLine(dataHref));
     resultsHost.replaceChildren(buildResults(data, applyFilters));
     resultsHost.removeAttribute('aria-busy');
   };
@@ -852,6 +856,49 @@ function floorNote(plies: number, onShowAll: () => void): HTMLElement {
   button.textContent = t('historical.floorShowAll');
   button.addEventListener('click', onShowAll);
   p.append(text, ' ', button);
+  return p;
+}
+
+/** The /data page for the same games, only when /data can hold exactly what
+ *  the search names: games played on the site (never the archive, broadcasts
+ *  or imported engine matches), a variant with downloads, and no filter /data
+ *  lacks (player, event, result, dates, length). Null otherwise, so no link
+ *  promises a download that does not exist. */
+export function dataPageHref(filters: Filters): string | null {
+  if (!DATA_SOURCES.has(filters.source)) return null;
+  if (
+    filters.player ||
+    filters.event ||
+    filters.result ||
+    filters.from ||
+    filters.to ||
+    filters.plyMax ||
+    filters.plyMin !== DEFAULT_MIN_PLIES
+  ) {
+    return null;
+  }
+  if (!filters.variant) return '/data';
+  if (!isPublicGameSpec(filters.variant) || exportFormatsForVariant(filters.variant).length === 0) {
+    return null;
+  }
+  return `/data?variant=${encodeURIComponent(filters.variant)}`;
+}
+
+const DATA_SOURCES: ReadonlySet<string> = new Set([
+  '',
+  SOURCE_MISTBOARD,
+  SOURCE_PLAYED_PVP,
+  SOURCE_PLAYED_PVE,
+  SOURCE_ENGINE_GAME,
+]);
+
+function dataLinkLine(href: string): HTMLElement {
+  const p = document.createElement('p');
+  p.className = 'historical-xiangqi-data-link';
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = t('historical.dataLink');
+  p.append(a);
   return p;
 }
 

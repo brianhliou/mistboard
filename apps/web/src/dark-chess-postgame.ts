@@ -110,7 +110,7 @@ export function mountDarkChessPostgame(
   const moveEvents = events.filter(isMovePlayed);
   const moves: Move[] = moveEvents.map((event) => event.move);
 
-  const status = reviewOutcomeLine(gameOutcome(game.result), game.termination);
+  const status = reviewOutcomeLine(gameOutcome(game.result), game.termination, DARK_CHESS_SPEC_ID);
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: DARK_CHESS_SPEC_ID,
     variantName: variantDisplayLabel(DARK_CHESS_SPEC_ID),

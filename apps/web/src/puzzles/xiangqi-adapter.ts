@@ -50,7 +50,6 @@ import {
 import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from '../xiangqi-notation.js';
 import {
-  activeTurn,
   isReplayLive,
   type PuzzleAnalysisController,
   type PuzzleBoardAdapter,
@@ -63,7 +62,11 @@ import {
 function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
   const { session } = ctx;
   const perspective = xiangqiPerspective(session);
-  const view = getStandardXiangqiPlayerView(ctx.displayState as XiangqiGameState, perspective);
+  const displayed = ctx.displayState as XiangqiGameState;
+  const view = getStandardXiangqiPlayerView(
+    displayed,
+    ctx.exploreMove && displayed.status.type === 'playing' ? displayed.status.turn : perspective,
+  );
   const host = document.createElement('div');
   // xiangqi-live-board carries the canonical 552:612 aspect + corner clipping;
   // puzzle-xiangqi-board binds its footprint to the puzzle height budget.
@@ -72,7 +75,10 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     interactive: true,
     // The click layer derives target hints from the view + selection, so drop
     // the selection while scrubbing history instead of painting stale targets.
-    selectedSquare: isReplayLive(session) ? (session.selectedSquare as XiangqiSquare | null) : null,
+    selectedSquare:
+      isReplayLive(session) || ctx.exploreMove
+        ? (session.selectedSquare as XiangqiSquare | null)
+        : null,
     draggingFrom: session.draggingFrom as XiangqiSquare | null,
     markers: ctx.moveMarks.map(
       (mark): XiangqiBoardMarker => ({
@@ -88,10 +94,10 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     board: host,
     ghostSizePx: XIANGQI_PIECE_SIZE,
     onSquareClick: (square) => {
-      if (!isReplayLive(session)) return;
+      if (!ctx.exploreMove && !isReplayLive(session)) return;
       void handleXiangqiBoardClick(ctx, square as XiangqiSquare);
     },
-    canDragFrom: (square) => canDragXiangqiPiece(session, square as XiangqiSquare),
+    canDragFrom: (square) => canDragXiangqiPiece(ctx, square as XiangqiSquare),
     ghostHtml: (square) => {
       const piece = view.board[square as XiangqiSquare];
       if (!piece) return null;
@@ -116,28 +122,39 @@ function xiangqiPerspective(session: PuzzleSession): XiangqiColor {
   return session.puzzle.sideToMove ?? 'red';
 }
 
-function xiangqiLiveView(session: PuzzleSession): StandardXiangqiPlayerView {
+function xiangqiLiveView(ctx: PuzzleBoardContext): StandardXiangqiPlayerView {
+  const { session } = ctx;
+  const state = (ctx.exploreMove ? ctx.displayState : session.state) as XiangqiGameState;
   return getStandardXiangqiPlayerView(
-    session.state as XiangqiGameState,
-    xiangqiPerspective(session),
+    state,
+    ctx.exploreMove && state.status.type === 'playing'
+      ? state.status.turn
+      : xiangqiPerspective(session),
   );
 }
 
-function canDragXiangqiPiece(session: PuzzleSession, square: XiangqiSquare): boolean {
-  if (
-    session.submitting ||
-    session.revealed ||
-    session.state.status.type !== 'playing' ||
-    !isReplayLive(session)
-  ) {
-    return false;
-  }
-  const view = xiangqiLiveView(session);
+function canInteractXiangqi(ctx: PuzzleBoardContext): boolean {
+  const { session } = ctx;
+  const state = ctx.exploreMove ? ctx.displayState : session.state;
+  return (
+    !session.locked &&
+    !session.submitting &&
+    !session.setupIntro &&
+    !session.wrongPreview &&
+    state.status.type === 'playing' &&
+    (!!ctx.exploreMove || (!session.revealed && !session.solved && isReplayLive(session)))
+  );
+}
+
+function canDragXiangqiPiece(ctx: PuzzleBoardContext, square: XiangqiSquare): boolean {
+  if (!canInteractXiangqi(ctx)) return false;
+  const view = xiangqiLiveView(ctx);
   const piece = view.board[square];
   // Any of your pieces can be lifted on your turn, even one with no legal move:
   // it shows the origin highlight + faded source, no destination dots, and snaps
   // back on drop. The tap sibling lives in handleXiangqiBoardClick.
-  return !!piece && piece.color === activeTurn(session);
+  const status = (ctx.exploreMove ? ctx.displayState : ctx.session.state).status;
+  return !!piece && status.type === 'playing' && piece.color === status.turn;
 }
 
 async function handleXiangqiBoardClick(
@@ -145,45 +162,41 @@ async function handleXiangqiBoardClick(
   square: XiangqiSquare,
 ): Promise<void> {
   const { session } = ctx;
-  if (
-    session.submitting ||
-    session.revealed ||
-    session.state.status.type !== 'playing' ||
-    !isReplayLive(session)
-  ) {
-    return;
-  }
-  const view = xiangqiLiveView(session);
+  if (!canInteractXiangqi(ctx)) return;
+  const view = xiangqiLiveView(ctx);
+  const turn = (ctx.exploreMove ? ctx.displayState : session.state).status;
+  if (turn.type !== 'playing') return;
   const result = xiangqiClickResult(
     view,
-    activeTurn(session),
+    turn.turn,
     session.selectedSquare as XiangqiSquare | null,
     square,
   );
   if (result.kind === 'move') {
-    await ctx.submitMove(result.move);
+    if (ctx.exploreMove) ctx.exploreMove(result.move);
+    else await ctx.submitMove(result.move);
     return;
   }
   if (result.kind === 'select') {
     session.selectedSquare = result.square;
     session.selectedDrop = null;
-    session.feedback = { kind: 'neutral', text: `${result.square} selected.` };
+    if (!ctx.exploreMove)
+      session.feedback = { kind: 'neutral', text: `${result.square} selected.` };
   } else if (result.kind === 'clear') {
     // xiangqiClickResult only 'select's a piece that has a legal move. Let the
     // solver also tap-pick one of their pieces that has no legal move (origin
     // highlight, no dest dots) instead of clearing — the tap sibling of
     // canDragXiangqiPiece.
     const piece = view.board[square];
-    const ownDeadPiece =
-      !!piece && piece.color === activeTurn(session) && square !== session.selectedSquare;
+    const ownDeadPiece = !!piece && piece.color === turn.turn && square !== session.selectedSquare;
     if (ownDeadPiece) {
       session.selectedSquare = square;
       session.selectedDrop = null;
-      session.feedback = { kind: 'neutral', text: `${square} selected.` };
+      if (!ctx.exploreMove) session.feedback = { kind: 'neutral', text: `${square} selected.` };
     } else {
       session.selectedSquare = null;
       session.selectedDrop = null;
-      session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
+      if (!ctx.exploreMove) session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
     }
   }
   ctx.renderSession();
@@ -196,27 +209,23 @@ async function handleXiangqiBoardDrop(
 ): Promise<void> {
   const { session } = ctx;
   session.draggingFrom = null;
-  if (
-    session.submitting ||
-    session.state.status.type !== 'playing' ||
-    !to ||
-    !isReplayLive(session)
-  ) {
+  if (!to || !canInteractXiangqi(ctx)) {
     session.selectedSquare = null;
     session.selectedDrop = null;
     ctx.renderSession();
     return;
   }
-  const move = xiangqiLiveView(session).legalMoves.find(
+  const move = xiangqiLiveView(ctx).legalMoves.find(
     (candidate) => candidate.from === from && candidate.to === to,
   );
   if (move) {
-    await ctx.submitMove(move);
+    if (ctx.exploreMove) ctx.exploreMove(move);
+    else await ctx.submitMove(move);
     return;
   }
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
+  if (!ctx.exploreMove) session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 
@@ -305,7 +314,13 @@ function createPuzzleAnalysis(): PuzzleAnalysisController {
 // standard-xiangqi puzzle move is a board move ({from,to}), never a drop.
 function puzzleAnalysisHref(session: PuzzleSession): string {
   const fen = standardXiangqiEngineFen(session.puzzle.initial as XiangqiGameState);
-  const moves = session.playedMoves
+  const selectedLine = session.exploration
+    ? [
+        ...session.playedMoves.slice(0, session.exploration.rootPly),
+        ...session.exploration.moves.slice(0, session.exploration.cursor),
+      ]
+    : session.playedMoves;
+  const moves = selectedLine
     .map((move) => ('drop' in move ? '' : `${move.from}-${move.to}`))
     .filter(Boolean)
     .join(' ');

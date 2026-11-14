@@ -2294,7 +2294,7 @@ export { broadcastRecordsCredit };
 
 function recordsCreditLine(
   boards: readonly { sourceUrl?: string }[],
-  tour: { slug: string; sourceUrl?: string | null },
+  tour: Parameters<typeof broadcastRecordsCredit>[1],
 ): HTMLElement | null {
   return creditLineFrom(broadcastRecordsCredit(boards, tour));
 }
@@ -3053,6 +3053,14 @@ function sideRail(
     if (current) currentRow = row;
   }
   rail.append(heading, list);
+  // Beside an open game the list is the round's boards, so it carries the
+  // credit the round's grid carries. Only for a device partner's event
+  // (#1107): an imported event credits its archive on the event page alone.
+  const credit =
+    currentBoardId && context.tour.deviceCredit
+      ? recordsCreditLine(context.boards, context.tour)
+      : null;
+  if (credit) rail.append(credit);
   // A long round clips its last row at the list's foot; the News box's fade
   // there says the list scrolls (Brian, 2026-10-28).
   bindScrollFade(list, 'xqb-rail-list-more');

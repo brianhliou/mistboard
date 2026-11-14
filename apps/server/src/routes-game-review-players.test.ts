@@ -123,7 +123,10 @@ test('the summary endpoint carries the same shaped seat roster', async () => {
 
 // Both handlers read the same in-memory fallbacks (no Postgres needed): the
 // summary comes from ctx.inMemoryGameSummary and the events from ctx.rooms.
-async function call(url: string): Promise<ResponseCapture> {
+async function call(
+  url: string,
+  participants: persistence.GameParticipant[] = PARTICIPANTS,
+): Promise<ResponseCapture> {
   const request = Readable.from([]) as unknown as IncomingMessage;
   request.method = 'GET';
   request.url = url;
@@ -133,7 +136,8 @@ async function call(url: string): Promise<ResponseCapture> {
   const parsed = new URL(url, 'http://localhost');
   const ctx = {
     rooms: new Map([[ROOM_ID, { events: finishedEvents() }]]),
-    inMemoryGameSummary: (roomId: string) => (roomId === ROOM_ID ? gameRecord() : null),
+    inMemoryGameSummary: (roomId: string) =>
+      roomId === ROOM_ID ? { ...gameRecord(), participants } : null,
   } as unknown as HttpApiContext;
   const handled = await tryHandle(
     ctx,
@@ -145,6 +149,53 @@ async function call(url: string): Promise<ResponseCapture> {
   assert.equal(handled, true);
   return response;
 }
+
+test('review and summary gate all account metadata for redacted or unlinkable seats', async () => {
+  const account = {
+    color: 'white',
+    displayName: 'Alice',
+    subjectType: 'user',
+    subjectId: 'alice',
+    visibility: 'public',
+    handle: 'alice',
+    title: 'xgm',
+    flair: 'variant-xiangqi',
+    champions: [{ variant: 'xiangqi', timeClass: 'blitz' }],
+  } satisfies persistence.GameParticipant;
+  for (const path of ['', '/review']) {
+    const response = await call(`/api/games/${ROOM_ID}${path}`, [account]);
+    assert.equal(response.status, 200);
+    assert.deepEqual(JSON.parse(response.body).game.players[0], {
+      color: 'white',
+      name: 'Alice',
+      rating: null,
+      kind: 'account',
+      handle: 'alice',
+      botId: null,
+      title: 'xgm',
+      flair: 'variant-xiangqi',
+      champions: account.champions,
+    });
+    for (const participant of [
+      { ...account, visibility: 'private' as const },
+      { ...account, handle: null }, // Closed/private accounts have no linkable handle.
+      ...PARTICIPANTS.map((seat) => ({
+        ...seat,
+        title: account.title,
+        flair: account.flair,
+        champions: account.champions,
+      })),
+    ]) {
+      const redacted = await call(`/api/games/${ROOM_ID}${path}`, [participant]);
+      assert.equal(redacted.status, 200);
+      assert.doesNotMatch(redacted.body, /"(?:title|flair|champions)"|xgm|variant-xiangqi/);
+      if (participant.visibility === 'private') {
+        assert.equal(JSON.parse(redacted.body).game.players[0].name, 'Anonymous');
+        assert.doesNotMatch(redacted.body, /"handle":"alice"/);
+      }
+    }
+  }
+});
 
 function captureResponse(): ResponseCapture & ServerResponse {
   const capture = {

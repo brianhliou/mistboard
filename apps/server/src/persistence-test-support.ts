@@ -56,6 +56,7 @@ export function definePersistenceTests(area: string, registerTests: () => void):
       // more puzzles than the committed seed has, failing the seed round-trip.
       // Hosted CI never caught it: it starts from a fresh database every time,
       // while every local worktree shares one long-lived test DB.
+      await client.query(`DELETE FROM xiangqi_position_publications`);
       await client.query(`DELETE FROM puzzles WHERE source_kind <> 'seed'`);
       await client.query(`DELETE FROM xiangqi_puzzle_mining_runs`);
       // Keep the historical-library tables out of the CASCADE truncate below.

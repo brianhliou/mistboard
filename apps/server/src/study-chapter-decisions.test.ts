@@ -45,3 +45,61 @@ test('rejects other variants, root, non-mainline, non-reveal, duplicate and wron
   }
   assert.throws(() => validateStudyDecisions('jieqi', tree, { ...input, decisions: [row, row] }));
 });
+
+const banqiTree = {
+  version: 1,
+  rootFen: '8/8/8/XX6 r H1s1 0 1 Hs',
+  root: { children: [{ uci: 'a1a1', children: [{ uci: 'b1b1', children: [] }] }] },
+};
+const banqiInput = {
+  engineId: 'offline',
+  source: 'fixture',
+  decisions: [
+    {
+      ply: 1,
+      mover: 'red',
+      bestWin: 70,
+      playedWin: 50,
+      realizedWin: 62,
+      playedRank: 2,
+      candidates: [
+        { move: 'b0b0', win: 70 },
+        { move: 'a0a0', win: 50, played: true },
+      ],
+    },
+  ],
+};
+// Each planted rejection first proves the valid Banqi control is accepted.
+for (const [name, variant, data] of [
+  ['jieqi-shaped input', 'banqi', input],
+  [
+    'wrong ply count',
+    'banqi',
+    { ...banqiInput, decisions: [{ ...banqiInput.decisions[0], ply: 3 }] },
+  ],
+  ['unknown variant', 'future-banqi', banqiInput],
+  ['prototype variant', 'constructor', banqiInput],
+  [
+    'hidden identity',
+    'banqi',
+    { ...banqiInput, decisions: [{ ...banqiInput.decisions[0], capturedRole: 'horse' }] },
+  ],
+  [
+    'wrong mover',
+    'banqi',
+    { ...banqiInput, decisions: [{ ...banqiInput.decisions[0], mover: 'black' }] },
+  ],
+  [
+    'bad candidate UCI',
+    'banqi',
+    {
+      ...banqiInput,
+      decisions: [{ ...banqiInput.decisions[0], candidates: [{ move: 'i3i4', win: 70 }] }],
+    },
+  ],
+] as const) {
+  test(`accepts Banqi decomposition and rejects ${name}`, () => {
+    assert.deepEqual(validateStudyDecisions('banqi', banqiTree, banqiInput), banqiInput);
+    assert.throws(() => validateStudyDecisions(variant, banqiTree, data));
+  });
+}

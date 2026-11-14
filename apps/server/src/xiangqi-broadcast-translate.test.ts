@@ -104,6 +104,16 @@ test('translateXiangqiEventName names the 2026 exhibitions and opens', () => {
     translateXiangqiEventName('2026年首届“天长杯”全国象棋公开赛'),
     '2026 1st Tianchang Cup National Xiangqi Open',
   );
+  // dpxq files the World Open's groups as their own tours; a bare 团体 was
+  // romanized as "Tuanti" (2026-11-12).
+  assert.equal(
+    translateXiangqiEventName('2026年第五届世界象棋公开赛 女子团体'),
+    "2026 5th World Xiangqi Open Women's Team",
+  );
+  assert.equal(
+    translateXiangqiEventName('2026年第五届世界象棋公开赛男子团体'),
+    "2026 5th World Xiangqi Open Men's Team",
+  );
 });
 
 test('translateXiangqiEventName always yields fully Latin output for CJK input', () => {

@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { broadcastSitemapEntries } from './sitemap-broadcasts.js';
+import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
+import { definePersistenceTests } from './persistence-test-support.js';
+import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
+
+definePersistenceTests('broadcast sitemap discovery', () => {
+  test('unlisted live and completed boards never produce sitemap entries', async () => {
+    const { tours } = await seedBroadcastDiscoveryFixture();
+    const dates = await listBroadcastRoundDates();
+    assert.deepEqual(
+      dates.map((date) => date.tourSlug),
+      [tours[0]!.slug],
+    );
+    const entries = broadcastSitemapEntries(dates);
+    assert.ok(entries.some((entry) => entry.path.endsWith(tours[0]!.slug)));
+    assert.ok(!JSON.stringify(entries).includes(tours[1]!.slug));
+  });
+});
 
 test('the broadcasts sitemap lists each event and round, dated from its latest game', () => {
   const entries = broadcastSitemapEntries([

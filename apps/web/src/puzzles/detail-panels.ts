@@ -22,6 +22,8 @@ import {
   type PuzzleNavigation,
   type PuzzleSession,
   type PuzzleState,
+  puzzleGoalLabel,
+  puzzleSolvePrompt,
 } from './adapter.js';
 import { puzzleBoardAdapter } from './registry.js';
 
@@ -60,7 +62,12 @@ export function feedbackPanel(
   title.textContent = feedbackTitle(session);
   const body = document.createElement('span');
   body.className = 'puzzle-feedback-body';
-  body.textContent = session.feedback.text;
+  body.textContent =
+    session.feedback.kind === 'neutral' &&
+    session.puzzle.goal.type === 'checkmate' &&
+    session.selectedSquare === null
+      ? t('puzzle.toMove', { color: colorLabel(session.puzzle.sideToMove) })
+      : session.feedback.text;
   copy.append(title, body, assistRow(session, navigation, assist));
   panel.append(icon, copy);
   return panel;
@@ -407,9 +414,9 @@ function feedbackTitle(session: PuzzleSession): string {
     case 'pending':
       return t('puzzle.statusChecking');
     case 'neutral':
-      // Deliberately generic: the puzzle title names the piece + mate depth,
-      // which would give the solution away.
-      return t('puzzle.toMove', { color: colorLabel(session.puzzle.sideToMove) });
+      return session.puzzle.goal.type === 'checkmate'
+        ? puzzleGoalLabel(session.puzzle)
+        : puzzleSolvePrompt(session.puzzle);
   }
 }
 

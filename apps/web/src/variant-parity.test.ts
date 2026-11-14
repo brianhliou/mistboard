@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { GAME_SPECS, type GameSpec, type GameSpecId, publicSpecPredicate } from '@mistboard/game';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import { RATING_VARIANT_LABEL_KEY } from './champion-crowns.js';
 import { TITLES } from './champions-page.js';
 import { FLAIR_KEYS, flairOfferedInPicker } from './flair.js';
 import { type LandingGameSpecId, landingVariantSupportsRated } from './landing-play.js';
@@ -14,6 +12,7 @@ vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
 vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
 vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
 vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
 // landing-play imports variants too; reload its module after setting the flags.
 vi.resetModules();
 const { leaderboardVariants, profileRatingVariants, ratingVariantLabel } = await import(
@@ -48,21 +47,8 @@ const declarations: Declaration[] = GAME_SPECS.map((spec) => ({
   championsTitle: CHAMPIONS_TITLE_SPECS.has(spec.id),
 }));
 
-// This hand-list is private to profile.ts. Read its literal without exporting
-// it or importing the entire profile UI just for a test-only conformance pin.
-const profileSource = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), 'profile.ts'),
-  'utf8',
-);
-const profileLabelsLiteral = profileSource.match(
-  /const PROFILE_VARIANT_LABEL_KEY[^=]*=\s*\{([\s\S]*?)\n\};/,
-);
-expect(profileLabelsLiteral, 'profile label map must remain discoverable').not.toBeNull();
-const profileLabelPools = new Set(
-  [...(profileLabelsLiteral?.[1] ?? '').matchAll(/^\s*(\w+):\s*'variant\.[^']+\.name'/gm)].map(
-    (match) => match[1],
-  ),
-);
+// The rating-pool label map profile rows and champion crowns share.
+const profileLabelPools = new Set<string>(Object.keys(RATING_VARIANT_LABEL_KEY));
 
 // Study-only Chess borrows nominal `fog` metadata but owns no rating pool.
 const ownedPool = (spec: GameSpec) => (spec.id === 'chess' ? spec.id : spec.ratingPoolBase);
@@ -151,7 +137,7 @@ describe('variant parity', () => {
     'registry capabilities.supportsRated',
     'champions title presence',
   ] as const) {
-    it(`rejects planted Three Kingdoms capability on: ${surface}`, () => {
+    it(`rejects planted Three Kingdoms capability mismatch: ${surface}`, () => {
       const planted = declarations.map((spec) =>
         spec.id !== 'three-kingdoms-banqi'
           ? spec
@@ -159,7 +145,7 @@ describe('variant parity', () => {
               ...spec,
               ...(surface === 'champions title presence'
                 ? { championsTitle: true }
-                : { rated: true }),
+                : { rated: false }),
             },
       );
       expect(() => assertParity(planted, surface)).toThrow(/three-kingdoms-banqi/);

@@ -18,6 +18,19 @@ describe('account preferences', () => {
     });
   });
 
+  it('defaults correspondence confirmation on and syncs an explicit opt out', () => {
+    expect(normalizeAccountPreferences({}).confirmCorrespondenceMoves).toBe(true);
+    expect(
+      normalizeAccountPreferences({ confirmCorrespondenceMoves: 'false' })
+        .confirmCorrespondenceMoves,
+    ).toBe(true);
+    writeAccountPreference('confirmCorrespondenceMoves', false);
+    expect(readAccountPreferences().confirmCorrespondenceMoves).toBe(false);
+    expect(
+      replaceAccountPreferences({ confirmCorrespondenceMoves: false }).confirmCorrespondenceMoves,
+    ).toBe(false);
+  });
+
   it('defaults to the behavior users had before preferences were configurable', () => {
     expect(readAccountPreferences()).toEqual(defaultAccountPreferences);
   });

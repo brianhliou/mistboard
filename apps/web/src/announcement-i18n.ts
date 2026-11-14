@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-13 (rated correspondence) ── 计分 / 休闲 follow the play catalog's
+  // Casual/Rated switch, 外部协助 its fair-play pledge (account.registerFairPlay).
+  'Correspondence games can now be rated.': '通信对局现在可以计分了。',
+  'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.':
+    '发起通信对局或向他人发出通信挑战时，可以选择计分。每种棋各有独立的通信对局等级分，与实时对局的等级分分开计算，并显示在你的个人资料中。除非你选择计分，对局默认为休闲。计分对局中不得使用引擎或其他外部协助。',
   'Three Kingdoms Banqi is open to everyone.': '三国暗棋向所有人开放。',
   'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
     '与朋友休闲对弈，在大厅寻找对手，或挑战 Misty。在 9×5 棋盘上翻子，按象棋走法吃子，先得 100 分获胜。所有对局均不计分。',
@@ -188,6 +193,9 @@ const ZH_HANS: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'A player page for Meng Fanrui.': '孟繁睿有了自己的棋手页面。',
+  "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.":
+    '2025 年中国象棋协会男子冠军，在年终总决赛决赛中通过快棋加赛夺冠，并以积分榜第一结束全年。页面复盘他 2026 年的三盘胜局，每个转折点都从实战分出引擎的最佳变化，提供英文和中文版。',
   'A player page for Zuo Wenjing.': '左文静有了自己的棋手页面。',
   "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
     '2022 年女子世锦赛冠军，2023 年亚运会两枚金牌得主。页面讲述她在古晋的夺冠历程和 2026 赛季，棋盘上有她的五盘对局，提供英文和中文版。她的全部 32 盘对局都收在一个研习里，附引擎的判断和变化。',
@@ -590,6 +598,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-13 (rated correspondence) ──
+  'Correspondence games can now be rated.': '通信對局現在可以計分了。',
+  'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.':
+    '發起通信對局或向他人發出通信挑戰時，可以選擇計分。每種棋各有獨立的通信對局等級分，與即時對局的等級分分開計算，並顯示在你的個人資料中。除非你選擇計分，對局預設為休閒。計分對局中不得使用引擎或其他外部協助。',
   'Three Kingdoms Banqi is open to everyone.': '三國暗棋向所有人開放。',
   'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
     '與朋友休閒對弈，在大廳尋找對手，或挑戰 Misty。在 9×5 棋盤上翻子，按象棋走法吃子，先得 100 分獲勝。所有對局均不計分。',
@@ -743,6 +755,9 @@ const ZH_HANT: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局覆盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'A player page for Meng Fanrui.': '孟繁睿有了自己的棋手頁面。',
+  "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.":
+    '2025 年中國象棋協會男子冠軍，在年終總決賽決賽中通過快棋加賽奪冠，並以積分榜第一結束全年。頁面復盤他 2026 年的三盤勝局，每個轉折點都從實戰分出引擎的最佳變化，提供英文和中文版。',
   'A player page for Zuo Wenjing.': '左文静有了自己的棋手頁面。',
   "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
     '2022 年女子世錦賽冠軍，2023 年亞運會兩枚金牌得主。頁面講述她在古晉的奪冠歷程和 2026 賽季，棋盤上有她的五盤對局，提供英文和中文版。她的全部 32 盤對局都收在一個研習裡，附引擎的判斷和變化。',

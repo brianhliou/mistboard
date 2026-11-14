@@ -42,6 +42,7 @@ import { computeConnectedSeats, eventAppendedPayload, snapshotPayload } from './
 import type { GameSummary } from './persistence.js';
 import * as persistence from './persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
+import { cachedSeatChampions } from './persistence-leaderboards.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
 import { isServerEngineClient, modeForProjection } from './server-policy.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
@@ -464,7 +465,11 @@ export function seatProfilesForRoom(
         ? ctx.pveBuiltinEngineClientId
         : clientId
       : null;
-    const profile = liveSeatProfileIdentity(engineId, room.seatTokens[color]?.userHandle ?? null);
+    const token = room.seatTokens[color];
+    const profile = liveSeatProfileIdentity(engineId, token?.userId ? token.userHandle : null);
+    if (profile.handle && token?.userId) {
+      profile.champions = cachedSeatChampions(token.userId, profile.handle);
+    }
     if (profile.handle || profile.botId) profiles[color] = profile;
   }
   return profiles;

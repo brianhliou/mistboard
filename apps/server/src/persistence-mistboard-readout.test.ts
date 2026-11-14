@@ -1,5 +1,7 @@
+import { renderMistboardReadoutMarkdown } from './mistboard-readout.js';
 import { getPool } from './persistence-db.js';
 import {
+  collectBotTiming,
   collectDeploys,
   collectMistboardReadoutFacts,
   generateMistboardReadout,
@@ -8,8 +10,8 @@ import {
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 
 type ParticipantFixture = {
-  color: 'white' | 'black';
-  subjectType: 'guest' | 'user' | 'engine-version';
+  color: 'white' | 'black' | 'red';
+  subjectType: 'guest' | 'user' | 'engine-version' | 'bot';
   subjectId: string;
 };
 
@@ -19,6 +21,8 @@ async function insertGame(input: {
   mode: 'pvp' | 'pve' | 'eve';
   endedAt: string;
   status?: 'completed' | 'aborted';
+  result?: string;
+  termination?: string;
   participants: ParticipantFixture[];
 }): Promise<void> {
   const status = input.status ?? 'completed';
@@ -33,8 +37,8 @@ async function insertGame(input: {
       status,
       // games_status_shape_check: a completed row carries a result, an aborted
       // row carries a termination and no result.
-      status === 'completed' ? 'white-wins' : null,
-      status === 'completed' ? 'checkmate' : 'engine-failure',
+      status === 'completed' ? (input.result ?? 'white-wins') : null,
+      status === 'completed' ? (input.termination ?? 'checkmate') : 'engine-failure',
       input.endedAt,
     ],
   );
@@ -239,6 +243,191 @@ definePersistenceTests('Mistboard readout', () => {
     await deliveryEvent('new-complaint', 'provider-1', 'email.complained');
     const next = await deliveryReport();
     assert.ok(next.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+  });
+
+  // #1065: per-variant bot timing. Window for 2026-11-12: 11-05 to 11-12.
+  const botNow = new Date('2026-11-12T17:23:00Z');
+  const botReport = () =>
+    generateMistboardReadout({
+      trigger: 'manual',
+      now: botNow,
+      runtime: deliveryRuntime,
+      db: getPool(),
+    });
+  const human = { color: 'red' as const, subjectType: 'guest' as const, subjectId: 'guest-1' };
+  const bot = { color: 'black' as const, subjectType: 'bot' as const, subjectId: 'misty' };
+  async function event(roomId: string, seq: number, type: string, payload: object) {
+    await getPool().query(
+      'INSERT INTO events (room_id, seq, type, payload) VALUES ($1, $2, $3, $4::jsonb)',
+      [roomId, seq, type, JSON.stringify(payload)],
+    );
+  }
+  async function decision(
+    roomId: string,
+    ply: number,
+    payload: Record<string, unknown>,
+    type = 'live-engine-decision',
+  ) {
+    await getPool().query(
+      `INSERT INTO game_debug_artifacts (game_id, ply, artifact_type, payload)
+       VALUES ($1, $2, $3, $4::jsonb)`,
+      [roomId, ply, type, JSON.stringify(payload)],
+    );
+  }
+  async function seedBotTiming() {
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
+       VALUES ('owner', 'owner@example.com', 'owner', 'Owner', '2026-06-01T00:00:00Z', '2026-06-02T00:00:00Z')`,
+    );
+    const at = '2026-11-10T12:00:00Z';
+    const flag = (roomId: string, extra: Partial<Parameters<typeof insertGame>[0]> = {}) =>
+      insertGame({
+        roomId,
+        variant: 'xiangqi',
+        mode: 'pve',
+        endedAt: at,
+        result: 'red-wins',
+        termination: 'timeout',
+        participants: [human, bot],
+        ...extra,
+      });
+    // Planted: the bot's clock ran out (the clock-expired event names its seat).
+    await flag('bt-flag');
+    await event('bt-flag', 1, 'clock-expired', { color: 'black' });
+    // Planted: no clock-expired event, the bot seat (an unprofiled engine) lost.
+    await flag('bt-flag-noevent', {
+      variant: 'jieqi',
+      participants: [
+        human,
+        { color: 'black', subjectType: 'engine-version', subjectId: 'pikafish-jieqi' },
+      ],
+    });
+    // The human flagged: a timeout, but not the bot's.
+    await flag('bt-human-flag', { result: 'black-wins' });
+    await event('bt-human-flag', 1, 'clock-expired', { color: 'red' });
+    // A drawn timeout with no event names no flagged seat.
+    await flag('bt-draw-noevent', { result: 'draw' });
+    // Excluded game modes and accounts: bot-vs-bot, PvP, the operator's own game.
+    await flag('bt-eve', {
+      mode: 'eve',
+      participants: [{ ...bot, color: 'red' }, bot],
+    });
+    await event('bt-eve', 1, 'clock-expired', { color: 'black' });
+    await flag('bt-pvp', {
+      mode: 'pvp',
+      participants: [human, { color: 'black', subjectType: 'guest', subjectId: 'guest-2' }],
+    });
+    await flag('bt-owner', {
+      participants: [{ color: 'red', subjectType: 'user', subjectId: 'owner' }, bot],
+    });
+    await event('bt-owner', 1, 'clock-expired', { color: 'black' });
+    // Outside the window.
+    await flag('bt-old', { endedAt: '2026-10-30T12:00:00Z' });
+    await event('bt-old', 1, 'clock-expired', { color: 'black' });
+
+    // Replies: think 100..2000 ms, the even ones paced 1000 ms more. Compute
+    // alone has p95 1900; compute plus wait has p95 2800.
+    await insertGame({
+      roomId: 'bt-replies',
+      variant: 'xiangqi',
+      mode: 'pve',
+      endedAt: at,
+      participants: [human, bot],
+    });
+    for (let i = 1; i <= 20; i++) {
+      await decision('bt-replies', i, {
+        think_time_ms: i * 100,
+        ...(i % 2 === 0 ? { pace_wait_ms: 1000, pace_reason: 'paced' } : {}),
+      });
+    }
+    // Not replies the percentile may read: no think time, another artifact type,
+    // a correspondence game's day-long reply, the operator's game.
+    await decision('bt-replies', 21, { think_time_ms: null });
+    await decision('bt-replies', 22, { think_time_ms: 900_000 }, 'live-engine-fail-closed');
+    await insertGame({
+      roomId: 'bt-corr',
+      variant: 'xiangqi',
+      mode: 'pve',
+      endedAt: at,
+      participants: [human, bot],
+    });
+    await event('bt-corr', 0, 'room-created', { timeControl: { daysPerMove: 3 } });
+    await decision('bt-corr', 1, { think_time_ms: 900_000, pace_reason: 'correspondence' });
+    await decision('bt-owner', 1, { think_time_ms: 900_000 });
+  }
+
+  test('bot timing counts bot losses on time and p95 replies per variant over counted PvE games', async () => {
+    await seedBotTiming();
+    const timing = await collectBotTiming(getPool(), botNow);
+    assert.deepEqual(timing.variants, [
+      {
+        variant: 'jieqi',
+        botGames: 1,
+        timeLosses: 1,
+        timeLossRoomIds: ['bt-flag-noevent'],
+        replies: 0,
+        p95ReplyMs: null,
+        pacedReplies: 0,
+      },
+      {
+        variant: 'xiangqi',
+        // bt-flag, bt-human-flag, bt-draw-noevent, bt-replies, bt-corr.
+        botGames: 5,
+        timeLosses: 1,
+        timeLossRoomIds: ['bt-flag'],
+        replies: 20,
+        p95ReplyMs: 2800,
+        pacedReplies: 10,
+      },
+    ]);
+  });
+
+  test('a bot loss on time alerts once across stored readouts, survives a failed collector, and old snapshots', async (t) => {
+    await seedBotTiming();
+    const first = await botReport();
+    assert.deepEqual(
+      first.report.actions.filter((a) => a.code === 'bot-time-losses').map((a) => a.dedupeKey),
+      ['bot-time-losses:jieqi:bt-flag-noevent', 'bot-time-losses:xiangqi:bt-flag'],
+    );
+    assert.match(
+      renderMistboardReadoutMarkdown(first.report),
+      /- Bot timing, last 7 days[^\n]*xiangqi 5 games, 1 lost on time, p95 reply 2\.8 s/,
+    );
+    const again = await botReport();
+    assert.ok(!again.report.actions.some((a) => a.code === 'bot-time-losses'));
+
+    const pool = getPool();
+    const mock = t.mock.method(
+      pool,
+      'query',
+      new Proxy(pool.query, {
+        apply(target, self, args) {
+          if (typeof args[0] === 'string' && args[0].includes('JOIN game_debug_artifacts a')) {
+            throw new Error('collector test failure');
+          }
+          return Reflect.apply(target, self, args);
+        },
+      }),
+    );
+    try {
+      const facts = await collectMistboardReadoutFacts(pool, botNow);
+      assert.equal(facts.botTiming, null);
+      assert.ok(facts.collectorErrors?.some((e) => e.section === 'botTiming'));
+    } finally {
+      mock.mock.restore();
+    }
+
+    // A snapshot stored before the section existed: parses, and the next
+    // readout tells the window's losses (it cannot know they were told).
+    const stored = await latestMistboardReadout();
+    await getPool().query(
+      `UPDATE ops_readout_snapshots SET payload = payload - 'botTiming' WHERE id = $1`,
+      [stored?.snapshotId],
+    );
+    const old = await latestMistboardReadout();
+    assert.equal(old?.botTiming, undefined);
+    const afterOld = await botReport();
+    assert.equal(afterOld.report.actions.filter((a) => a.code === 'bot-time-losses').length, 2);
   });
 
   test('weekly generation is durable and idempotent', async () => {

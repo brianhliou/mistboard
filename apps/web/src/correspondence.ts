@@ -41,11 +41,22 @@
 
 import './current-games.css';
 import './account-profile.css';
+import './landing-play.css';
 import './correspondence.css';
-import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
+import {
+  canonicalVariantOrderIndex,
+  DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
+  type GameSpecId,
+} from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { openChallengeDialog } from './challenge-dialog.js';
+import {
+  type CorrespondenceGameType,
+  rememberCorrespondenceGameType,
+  storedCorrespondenceGameType,
+} from './correspondence-game-type.js';
 import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
@@ -100,10 +111,22 @@ import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-fla
 import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
-import { isLikelyStatsExcluded } from './signed-in-state.js';
+import {
+  buildSetupRowSection,
+  colorOptionButton,
+  landingGameSpecCapabilities,
+  type SetupColorPreference,
+  startOptionButton,
+  updateColorOptionButton,
+  updateStartOptionButtonLabel,
+  variantCardButton,
+} from './setup-panel-parts.js';
+import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
-import { formatDayClock } from './web-utils.js';
+import { variantMiniIdForGameSpec } from './variants.js';
+import { correspondenceTimeLeftLabel, formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
 // The "Challenges for you" section's id; the bell's challenge row links to it
@@ -311,6 +334,7 @@ function buildSignedIn(
       body: t('correspondence.seekTileBody'),
       buttonLabel: t('correspondence.seekTileButton'),
       panel: startForm,
+      dialogClass: 'correspondence-dialog--setup',
       onOpen: () => {
         if (formStatus) formStatus.hidden = true;
       },
@@ -476,7 +500,7 @@ export function buildInboxCard(
   const tick = (now: number): void => {
     const urgency = deadlineUrgency(game.dueAt, now);
     card.dataset.urgency = urgency;
-    onMove.clock.textContent = timeLeftLabel(game.dueAt, now);
+    onMove.clock.textContent = correspondenceTimeLeftLabel(game.dueAt, now);
     if (fill) {
       const fraction = deadlineFraction(game.dueAt, days, now) ?? 0;
       fill.style.width = `${Math.round(fraction * 1000) / 10}%`;
@@ -639,12 +663,6 @@ function cadenceLabel(days: number): string {
   return days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
 }
 
-function timeLeftLabel(dueAt: string, now: number): string {
-  const remaining = deadlineRemainingMs(dueAt, now);
-  if (remaining === null || remaining <= 0) return t('correspondence.dueNow');
-  return t('correspondence.timeLeft', { time: formatDayClock(remaining) });
-}
-
 // "Sat 1:30 AM" inside the coming week, else "Oct 8", in the site's locale.
 function formatDue(dueAt: string): string {
   const date = new Date(dueAt);
@@ -774,65 +792,192 @@ function buildSelect(
   return { root: field, value: () => select.value };
 }
 
+// A choice drawn as one of the Play a game panel's option groups (landing-play.css):
+// a bordered track whose picked option is a green tint with a green ring.
+type OptionGroup<T extends string> = {
+  root: HTMLElement;
+  value: () => T;
+  button: (value: T) => HTMLButtonElement | undefined;
+  // Select a value programmatically (no onChange), and disable one option.
+  select: (value: T) => void;
+  setDisabled: (value: T, disabled: boolean) => void;
+};
+
+function buildOptionGroup<T extends string>(
+  className: string,
+  label: string,
+  options: readonly { value: T; button: HTMLButtonElement }[],
+  initial: T,
+  onChange?: (value: T) => void,
+): OptionGroup<T> {
+  const group = document.createElement('div');
+  group.className = className;
+  group.setAttribute('role', 'radiogroup');
+  group.setAttribute('aria-label', label);
+  // As many equal columns as options (the shared rule is two).
+  group.style.gridTemplateColumns = `repeat(${options.length}, minmax(0, 1fr))`;
+  let current = initial;
+  const buttons = new Map<T, HTMLButtonElement>();
+  const paint = (): void => {
+    for (const [value, button] of buttons) {
+      const on = value === current;
+      button.classList.toggle('selected', on);
+      button.setAttribute('aria-checked', String(on));
+    }
+  };
+  for (const { value, button } of options) {
+    button.dataset.value = value;
+    button.addEventListener('click', () => {
+      if (current === value) return;
+      current = value;
+      paint();
+      onChange?.(current);
+    });
+    buttons.set(value, button);
+    group.append(button);
+  }
+  paint();
+  return {
+    root: group,
+    value: () => current,
+    button: (value) => buttons.get(value),
+    select: (value) => {
+      if (!buttons.has(value)) return;
+      current = value;
+      paint();
+    },
+    setDisabled: (value, disabled) => {
+      const button = buttons.get(value);
+      if (button) button.disabled = disabled;
+    },
+  };
+}
+
+// The side a seek asks for, as the piece colour the Play a game side buttons draw.
+function seekSideColor(preference: SeekPreferredColor, gameSpecId: string): SetupColorPreference {
+  if (preference === 'random') return 'random';
+  const capabilities = landingGameSpecCapabilities(gameSpecId as GameSpecId);
+  return preference === 'first' ? capabilities.firstColor : capabilities.secondColor;
+}
+
+function seekSideLabel(preference: SeekPreferredColor, gameSpecId: string): string {
+  if (preference === 'first') return firstMoverColorName(gameSpecId);
+  if (preference === 'second') return secondMoverColorName(gameSpecId);
+  return t('correspondence.sideRandom');
+}
+
+// The Post a seek form, laid out as the homepage Play a game panel (its open
+// layout): the variant grid, then a row per choice with its label beside it,
+// and one full-width Post button. On a phone the grid is one row naming the
+// variant over a native select, and each label sits above its control.
 export function buildStartForm(
   onChanged: () => void,
   prefill: StartFormPrefill | null = null,
 ): HTMLElement {
+  const locale = currentLocale();
   const panel = document.createElement('section');
-  panel.className = 'correspondence-panel correspondence-start';
+  panel.className = 'correspondence-panel correspondence-seek landing-setup-dialog--open';
   panel.id = 'start';
+  const header = document.createElement('div');
+  header.className = 'landing-setup-header';
   const heading = document.createElement('h2');
+  heading.className = 'landing-setup-title';
   heading.textContent = t('correspondence.startGame');
+  header.append(heading);
   const form = document.createElement('form');
-  form.className = 'correspondence-start-form';
+  form.className = 'correspondence-seek-form';
   form.noValidate = true;
 
-  // Public specs, plus a playtest variant for an account the menu offers it to.
-  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
-  const defaultVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
-  const variant = buildSelect(
-    t('correspondence.variantLabel'),
-    specIds.map((specId) => ({
-      value: specId,
-      label: variantDisplayLabel(specId),
-    })),
-    defaultVariant,
-    () => {
-      relabelSides();
-      syncRated();
-    },
+  // Public specs, plus a playtest variant for an account the menu offers it to,
+  // in the canonical shelf order so the tiles sit where Play a game puts them.
+  const specIds = [...correspondenceSpecIdsFor(webVariantOfferedInMenu)].sort(
+    (a, b) =>
+      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
   );
-  variant.root.hidden = specIds.length < 2;
+  let currentVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
+  if (!specIds.includes(currentVariant)) currentVariant = specIds[0] ?? currentVariant;
 
-  const days = buildSegmented<string>(
+  // The variant: a grid of the Play a game tiles, and for a phone one row over a
+  // native select (its own picker sheet). The select holds the value.
+  const variantSection = document.createElement('div');
+  variantSection.className = 'correspondence-seek-variant';
+  const grid = document.createElement('div');
+  grid.className = 'landing-variant-grid';
+  grid.setAttribute('role', 'radiogroup');
+  grid.setAttribute('aria-label', t('correspondence.variantLabel'));
+  const cards = new Map<string, HTMLButtonElement>();
+  for (const specId of specIds) {
+    const card = variantCardButton(specId as GameSpecId, variantDisplayLabel(specId), locale);
+    card.addEventListener('click', () => setVariant(specId));
+    cards.set(specId, card);
+    grid.append(card);
+  }
+  const variantRow = document.createElement('label');
+  variantRow.className = 'landing-variant-row correspondence-seek-variant-row';
+  const rowThumb = document.createElement('span');
+  rowThumb.className = 'landing-variant-row-thumb';
+  rowThumb.setAttribute('aria-hidden', 'true');
+  const rowName = document.createElement('span');
+  rowName.className = 'landing-variant-row-name';
+  const rowChevron = document.createElement('span');
+  rowChevron.className = 'landing-variant-row-chevron';
+  rowChevron.setAttribute('aria-hidden', 'true');
+  rowChevron.textContent = '›';
+  const variantSelect = document.createElement('select');
+  variantSelect.className = 'correspondence-seek-variant-select';
+  variantSelect.setAttribute('aria-label', t('correspondence.variantLabel'));
+  for (const specId of specIds) {
+    const option = document.createElement('option');
+    option.value = specId;
+    option.textContent = variantDisplayLabel(specId);
+    variantSelect.append(option);
+  }
+  variantSelect.value = currentVariant;
+  variantSelect.addEventListener('change', () => setVariant(variantSelect.value));
+  variantRow.append(rowThumb, rowName, rowChevron, variantSelect);
+  variantSection.append(grid, variantRow);
+  const paintVariant = (): void => {
+    for (const [specId, card] of cards) {
+      const on = specId === currentVariant;
+      card.classList.toggle('selected', on);
+      card.setAttribute('aria-checked', String(on));
+    }
+    const label = variantDisplayLabel(currentVariant);
+    rowName.textContent = label;
+    const miniId = variantMiniIdForGameSpec(currentVariant as GameSpecId);
+    rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 100, label }) : '';
+  };
+
+  // Days per move: bare numbers under a "days per move" hint, as Play a game
+  // shows correspondence.
+  const dayChoices = DAYS_PER_MOVE_OPTIONS.map(String);
+  const initialDays = String(prefill?.daysPerMove ?? DEFAULT_DAYS_PER_MOVE);
+  const days = buildOptionGroup<string>(
+    'landing-time-presets landing-correspondence-presets',
     t('correspondence.daysPerMoveLabel'),
-    DAYS_PER_MOVE_OPTIONS.map((option) => ({ value: String(option), label: String(option) })),
-    String(prefill?.daysPerMove ?? DEFAULT_DAYS_PER_MOVE),
+    dayChoices.map((value) => ({ value, button: startOptionButton(value, false) })),
+    dayChoices.includes(initialDays) ? initialDays : String(DEFAULT_DAYS_PER_MOVE),
   );
 
   // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
   // never a live one. Offered only where correspondenceRatedAvailable says so; anywhere
-  // else Rated is shown disabled and the seek posts casual.
-  const rated = buildSegmented<'casual' | 'rated'>(
+  // else Rated is shown disabled and the seek posts casual. It opens on the player's
+  // last pick, Casual until they make one (correspondence-game-type.ts).
+  let wantedGameType: CorrespondenceGameType =
+    prefill?.rated === true ? 'rated' : storedCorrespondenceGameType();
+  const rated = buildOptionGroup<CorrespondenceGameType>(
+    'landing-start-options',
     t('setup.gameType'),
     [
-      { value: 'casual', label: t('play.casual') },
-      { value: 'rated', label: t('play.rated') },
+      { value: 'casual', button: startOptionButton(t('play.casual'), false) },
+      { value: 'rated', button: startOptionButton(t('play.rated'), false) },
     ],
-    prefill?.rated === true ? 'rated' : 'casual',
+    wantedGameType,
+    (value) => {
+      wantedGameType = value;
+      rememberCorrespondenceGameType(value);
+    },
   );
-  const syncRated = (): void => {
-    // The whole control is absent while rated correspondence is held (flag off).
-    rated.root.hidden = !isCorrespondenceRatedModeEnabled();
-    // An account excluded from stats never rates (the server refuses it).
-    const available =
-      !isLikelyStatsExcluded() &&
-      correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled());
-    rated.setDisabled('rated', !available);
-    if (!available) rated.select('casual');
-  };
-  syncRated();
-  onRatedModeChange(syncRated);
 
   // Anyone or A link. A challenge to one player starts from that player's
   // profile (its Challenge button, challenge-dialog.ts), not from a typed
@@ -841,50 +986,113 @@ export function buildStartForm(
     link: 'correspondence.opponentLink',
     public: 'correspondence.opponentAnyone',
   };
-  const kind = buildSegmented<StartFormSeekKind>(
+  const kind = buildOptionGroup<StartFormSeekKind>(
+    'landing-start-options',
     t('correspondence.opponentLabel'),
-    START_FORM_SEEK_KINDS.map((value) => ({ value, label: t(kindLabels[value]) })),
+    START_FORM_SEEK_KINDS.map((value) => ({
+      value,
+      button: startOptionButton(t(kindLabels[value]), false),
+    })),
     'public',
     () => syncKind(),
   );
 
-  const side = buildSegmented<SeekPreferredColor>(
-    t('correspondence.yourSideLabel'),
-    [
-      { value: 'random', label: t('correspondence.sideRandom') },
-      { value: 'first', label: firstMoverColorName(defaultVariant) },
-      { value: 'second', label: secondMoverColorName(defaultVariant) },
-    ],
+  // The side buttons draw the variant's own pieces, first mover first, as Play a game.
+  const sideChoices: readonly SeekPreferredColor[] = ['first', 'random', 'second'];
+  const side = buildOptionGroup<SeekPreferredColor>(
+    'landing-start-options three',
+    t('setup.youPlay'),
+    sideChoices.map((value) => ({
+      value,
+      button: colorOptionButton(
+        seekSideColor(value, currentVariant),
+        seekSideLabel(value, currentVariant),
+        false,
+      ),
+    })),
     prefill?.preferredColor ?? 'random',
   );
   const relabelSides = (): void => {
-    side.relabel({
-      first: firstMoverColorName(variant.value()),
-      second: secondMoverColorName(variant.value()),
-    });
+    for (const value of sideChoices) {
+      const button = side.button(value);
+      if (!button) continue;
+      updateColorOptionButton(
+        button,
+        seekSideColor(value, currentVariant),
+        seekSideLabel(value, currentVariant),
+        currentVariant as GameSpecId,
+      );
+    }
   };
 
-  const hint = document.createElement('p');
-  hint.className = 'correspondence-hint';
+  const rows = {
+    variant: buildSetupRowSection('variant', t('correspondence.variantLabel'), variantSection, () =>
+      variantDisplayLabel(currentVariant),
+    ),
+    opponent: buildSetupRowSection('opponent', t('correspondence.opponentLabel'), kind.root, () =>
+      t(kindLabels[kind.value()]),
+    ),
+    days: buildSetupRowSection('time', t('setup.timeControl'), days.root, () => days.value(), {
+      hint: t('setup.dayUnits'),
+    }),
+    side: buildSetupRowSection('side', t('setup.youPlay'), side.root, () =>
+      seekSideLabel(side.value(), currentVariant),
+    ),
+    gameType: buildSetupRowSection('gameType', t('setup.gameType'), rated.root, () =>
+      t(rated.value() === 'rated' ? 'play.rated' : 'play.casual'),
+    ),
+  };
+  rows.variant.wrapper.hidden = specIds.length < 2;
+
+  const syncRated = (): void => {
+    // The whole row is absent while rated correspondence is held (flag off).
+    rows.gameType.wrapper.hidden = !isCorrespondenceRatedModeEnabled();
+    // An account excluded from stats never rates (the server refuses it), so its
+    // Rated button is disabled and says why, as in the challenge dialog.
+    const notCounted = isLikelyStatsExcluded();
+    const ratedButton = rated.button('rated');
+    if (ratedButton) {
+      updateStartOptionButtonLabel(
+        ratedButton,
+        t(notCounted ? 'setup.ratedNotCounted' : 'play.rated'),
+      );
+    }
+    const available =
+      !notCounted &&
+      correspondenceRatedAvailable(currentVariant, isCorrespondenceRatedModeEnabled());
+    rated.setDisabled('rated', !available);
+    rated.select(available ? wantedGameType : 'casual');
+  };
+
+  const setVariant = (specId: string): void => {
+    if (!specIds.includes(specId)) return;
+    currentVariant = specId;
+    variantSelect.value = specId;
+    paintVariant();
+    relabelSides();
+    syncRated();
+  };
+  paintVariant();
+  relabelSides();
+  syncRated();
+  onRatedModeChange(syncRated);
+  // The form may be drawn from the stored hint before /api/auth/me answers.
+  window.addEventListener(statsExcludedResolvedEvent, syncRated);
+
   const submit = document.createElement('button');
   submit.type = 'submit';
-  submit.className = 'correspondence-btn';
+  submit.className = 'landing-setup-start';
   const status = document.createElement('p');
   status.className = 'correspondence-form-status';
   status.setAttribute('role', 'status');
   status.hidden = true;
 
-  const hints: Record<StartFormSeekKind, I18nKey> = {
-    link: 'correspondence.kindHintLink',
-    public: 'correspondence.kindHintPublic',
-  };
   const submits: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.createLink',
     public: 'correspondence.postSeek',
   };
   const syncKind = (): void => {
     const value = kind.value();
-    hint.textContent = t(hints[value]);
     submit.textContent = t(submits[value]);
     status.hidden = true;
   };
@@ -901,12 +1109,12 @@ export function buildStartForm(
     const seekKind = kind.value();
     const request = seekRequestBody({
       daysPerMove: Number(days.value()),
-      gameSpecId: variant.value(),
+      gameSpecId: currentVariant,
       kind: seekKind,
       preferredColor: side.value(),
       rated:
         rated.value() === 'rated' &&
-        correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled()),
+        correspondenceRatedAvailable(currentVariant, isCorrespondenceRatedModeEnabled()),
     });
     if (!request.ok) return;
     submit.disabled = true;
@@ -930,7 +1138,7 @@ export function buildStartForm(
         if (res.status === 201) {
           trackCorrespondenceSeekPosted({
             daysPerMove: Number(days.value()),
-            gameSpecId: variant.value(),
+            gameSpecId: currentVariant,
             kind: seekKind,
             surface: 'correspondence',
           });
@@ -950,8 +1158,21 @@ export function buildStartForm(
       });
   });
 
-  form.append(variant.root, days.root, rated.root, kind.root, side.root, hint, submit, status);
-  panel.append(heading, form);
+  // Decision order, as Play a game: what to play, against whom, then the terms.
+  const accordion = document.createElement('div');
+  accordion.className = 'landing-setup-accordion';
+  accordion.append(
+    rows.variant.wrapper,
+    rows.opponent.wrapper,
+    rows.days.wrapper,
+    rows.side.wrapper,
+    rows.gameType.wrapper,
+  );
+  const actions = document.createElement('div');
+  actions.className = 'landing-setup-actions';
+  actions.append(submit, status);
+  form.append(accordion, actions);
+  panel.append(header, form);
   return panel;
 }
 
@@ -1421,11 +1642,15 @@ export async function renderIncomingChallenges(
   onCount?: (count: number) => void,
   options: IncomingChallengeOptions = {},
 ): Promise<void> {
-  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
-  const body = resp?.ok
-    ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
-    : null;
-  const challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  let challenges = options.challenges;
+  if (!challenges) {
+    const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+    const body = resp?.ok
+      ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
+      : null;
+    challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  }
+  if (options.isCurrent?.() === false) return;
   onCount?.(challenges.length);
   host.hidden = challenges.length === 0;
   if (challenges.length === 0) {
@@ -1463,6 +1688,11 @@ export async function renderIncomingChallenges(
 export type IncomingChallengeOptions = {
   // Test seam for Accept's navigation (seek-accept.ts).
   navigate?: (url: string) => void;
+  compact?: boolean;
+  isCurrent?: () => boolean;
+  // Already read by the caller (the homepage reads first, so it loads this
+  // module only when a challenge is waiting).
+  challenges?: IncomingChallenge[];
 };
 
 export function buildIncomingChallengeCard(
@@ -1528,6 +1758,26 @@ export function buildIncomingChallengeCard(
     details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
   }
   const challenger = displayLiveName(challenge.challengerName, t('games.anonymous'));
+  if (options.compact) {
+    card = document.createElement('article');
+    card.className = 'landing-corr-challenge';
+    card.dataset.seekId = challenge.id;
+    const who = document.createElement('a');
+    who.href = localizedHref(`/challenge/${encodeURIComponent(challenge.id)}`);
+    who.textContent = t('correspondence.challengeFrom', {
+      name: challenger,
+      variant: variantDisplayLabel(challenge.gameSpecId),
+    });
+    const terms = document.createElement('span');
+    terms.className = 'landing-corr-moves-meta';
+    terms.textContent = [
+      cadenceLabel(challenge.daysPerMove),
+      challenge.rated ? t('games.rated') : t('games.casual'),
+      ...details,
+    ].join(' · ');
+    card.append(who, terms, actions, error);
+    return card;
+  }
   card = buildSeekCard(
     {
       creatorHandle: challenge.challengerHandle ?? null,
@@ -1569,15 +1819,15 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     who.className = 'correspondence-own-target';
     appendWithNameNode(
       who,
-      (token) => t('correspondence.challengeTo', { name: token }),
+      (token) => t('challenge.sentTo', { name: token }),
       playerNameEl(
-        seek.targetName,
+        seek.targetHandle ? `@${seek.targetHandle}` : seek.targetName,
         profileTargetFor({ handle: seek.targetHandle }),
         'correspondence-own-target-name',
       ),
     );
     waiting = who;
-    ariaLabel = `${variant}, ${t('correspondence.challengeTo', { name: seek.targetName })}`;
+    ariaLabel = `${variant}, ${who.textContent}`;
   } else {
     const label =
       seek.visibility === 'private'
@@ -1618,11 +1868,14 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
   const cancel = document.createElement('button');
   cancel.type = 'button';
   cancel.className = 'correspondence-ghost is-quiet';
-  cancel.textContent = t('correspondence.cancel');
+  cancel.textContent = seek.targetName ? t('challenge.withdraw') : t('correspondence.cancel');
   cancel.addEventListener('click', () => {
     cancel.disabled = true;
     void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}`, { method: 'DELETE' })
-      .then(() => onChange())
+      .then((res) => {
+        if (!res.ok && res.status !== 404) throw new Error(`withdraw ${res.status}`);
+        onChange();
+      })
       .catch(() => {
         cancel.disabled = false;
       });
@@ -1688,6 +1941,8 @@ function buildLauncher(opts: {
   photo?: boolean;
   disabled?: boolean;
   onOpen?: () => void;
+  /** An extra class on the dialog, for a panel with its own layout. */
+  dialogClass?: string;
 }): Launcher {
   const tile = document.createElement('section');
   tile.className = 'correspondence-panel correspondence-launcher';
@@ -1709,7 +1964,9 @@ function buildLauncher(opts: {
   // The dialog lives inside the tile, so it goes when the page re-renders, and
   // closing it keeps the form's choices for the next open.
   const dialog = document.createElement('dialog');
-  dialog.className = 'correspondence-dialog';
+  dialog.className = opts.dialogClass
+    ? `correspondence-dialog ${opts.dialogClass}`
+    : 'correspondence-dialog';
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'correspondence-dialog-close';

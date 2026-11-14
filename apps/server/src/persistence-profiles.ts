@@ -26,6 +26,7 @@ import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
 import { attachGameParticipants } from './persistence-games.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
 import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
@@ -56,6 +57,7 @@ export const GAME_VARIANTS_BY_RATING_POOL = {
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
   banqi: ['banqi'],
+  three_kingdoms_banqi: ['three-kingdoms-banqi'],
   jungle: ['jungle'],
   jungle_flip: ['jungle-flip'],
   xiangqi: ['xiangqi'],
@@ -96,6 +98,7 @@ export type UpdateUserProfileResult =
 
 export type PublicProfileUser = {
   handle: string;
+  champions: Champion[];
   displayName: string;
   bio: string;
   location: string;
@@ -176,7 +179,9 @@ export type ProfileRatingHistory = {
 
 export async function updateUserProfile(
   userId: string,
-  updates: { handle: string; displayName: string },
+  updates:
+    | { handle: string; displayName: string; usernamePromptHandled?: boolean }
+    | { usernamePromptHandled: true },
   at: Date,
 ): Promise<UpdateUserProfileResult> {
   const handleCooldownMs = 30 * 24 * 60 * 60 * 1000;
@@ -193,8 +198,10 @@ export async function updateUserProfile(
       const current = rows[0] ? userFromRow(rows[0]) : null;
       if (!current) throw new Error(`missing user ${userId}`);
 
-      const nextHandle = updates.handle;
-      const nextDisplayName = updates.displayName;
+      // Dismissal keeps the identity loaded under this lock, even if another
+      // tab changed it after the route resolved the account session.
+      const nextHandle = 'handle' in updates ? updates.handle : current.handle;
+      const nextDisplayName = 'displayName' in updates ? updates.displayName : current.displayName;
       const handleChanged = nextHandle !== current.handle;
       const displayNameChanged = nextDisplayName !== current.displayName;
 
@@ -240,10 +247,19 @@ export async function updateUserProfile(
            handle_changed_at = CASE WHEN $4 THEN $6 ELSE handle_changed_at END,
            display_name = $3,
            display_name_changed_at = CASE WHEN $5 THEN $6 ELSE display_name_changed_at END,
+           username_prompt_dismissed_at = CASE WHEN $7 THEN COALESCE(username_prompt_dismissed_at, $6) ELSE username_prompt_dismissed_at END,
            updated_at = $6
        WHERE id = $1
        RETURNING ${USER_COLUMNS}`,
-        [userId, nextHandle, nextDisplayName, handleChanged, displayNameChanged, at],
+        [
+          userId,
+          nextHandle,
+          nextDisplayName,
+          handleChanged,
+          displayNameChanged,
+          at,
+          updates.usernamePromptHandled === true,
+        ],
       );
       return { ok: true, user: userFromRow(updatedRows[0]!) };
     });
@@ -792,14 +808,18 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const [puzzleStreak, achievements] = await Promise.all([
+  const [puzzleStreak, achievements, champions] = await Promise.all([
     getPuzzleStreak(user.id, { timeZone: options.timeZone }),
     getUserAchievements(user.id),
+    user.profileVisibility !== 'private' && !user.closedAt
+      ? getChampions().then((entries) => championsForUser(entries, user.id, user.handle))
+      : [],
   ]);
 
   return {
     user: {
       handle: user.handle,
+      champions,
       displayName: user.displayName,
       bio: user.bio,
       location: user.location,

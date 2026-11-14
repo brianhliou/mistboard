@@ -1,3 +1,8 @@
+import {
+  completesXiangqiMateGoal,
+  verifyXiangqiSolverTurn,
+  XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+} from './xiangqi-puzzle-verification.ts';
 // Standard-xiangqi (9x10) puzzle miner: lichess-style, mined from REAL games.
 //
 // Two-phase pipeline over a corpus of historical games (the historical_xiangqi
@@ -9,13 +14,12 @@
 //      POV) and leaves the opponent (the solver) winning (>= --win-cp or mate),
 //      skipping the opening (--min-ply) and already-decided positions
 //      (--decided-cp).
-//   2. VERIFY (expensive, candidates only): extend the solution ONE solver ply
-//      at a time, re-searching MultiPV(2) at a --verify-depth floor at each
-//      solver position. A solver move is kept only if it is uniquely correct by
-//      the winning-floor gate (isXiangqiSolverMoveUnique: best keeps a clear win
-//      AND the runner-up loses the win);
+//   2. VERIFY (expensive, candidates only): extend one solver turn at a time.
+//      Search at least two MultiPV ranks, expanding past immediate wins.
+//      Require a clear win and >35 percentage points of score separation;
+//      immediate mates separately check the strongest non-immediate answer;
 //      the defender reply is the engine's best (its uniqueness is not required).
-//      The line stops at the first non-unique solver move, at mate, or at the
+//      A later non-unique key rejects the candidate; accepted lines end at mate or the
 //      ply cap, always ending on the solver's move — so puzzles are born clean
 //      rather than trusting one PV. The whole line is then kernel-replayed and
 //      re-validated with validateStandardXiangqiPuzzle before it is accepted.
@@ -55,7 +59,7 @@
 //
 // Run (fixture smoke, no DB):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-miner.ts \
-//     --source dir --dir apps/server/fixtures/dpxq --scan-nodes 4000 --verify-nodes 20000
+//     --source dir --dir apps/server/fixtures/dpxq --scan-nodes 4000
 //
 // Run (1k-game calibration from the historical DB; the lead runs this):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-miner.ts \
@@ -75,29 +79,29 @@ import {
 import {
   applyStandardXiangqiMove,
   assembleMinedXiangqiPuzzle,
+  assertXiangqiPuzzleAdmissionProfile,
   createStandardXiangqiStateFromSetup,
   detectXiangqiBlunderCandidates,
+  getStandardXiangqiLegalMoves,
   importXiangqiGame,
   isStandardXiangqiLegalMove,
   isXiangqiQuietKeyMove,
+  makeXiangqiPuzzleInitial,
   pikafishUciToXiangqiSquares,
   positionRepetitionKey,
   standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveLabel,
-  trimXiangqiWinningAdvantageTail,
+  XIANGQI_PUZZLE_ADMISSION_PROFILE,
   type XiangqiBlunderCandidate,
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiPuzzle,
   type XiangqiVerifyLine,
   xiangqiMoveToPikafishUci,
+  xiangqiPuzzleHasStartingChoice,
   xiangqiUciScoreToCp,
 } from '../../packages/game/src/index.ts';
-import {
-  analyzeXiangqiSolverPly,
-  PikafishEngine,
-  XIANGQI_SOLVER_GATE_DEFAULTS,
-} from './xiangqi-pikafish-uci.ts';
+import { PikafishEngine, XIANGQI_SOLVER_GATE_DEFAULTS } from './xiangqi-pikafish-uci.ts';
 
 export type XiangqiPuzzleMinerOptions = {
   source: 'db' | 'dir' | 'json';
@@ -122,8 +126,9 @@ export type XiangqiPuzzleMinerOptions = {
   uniqueGapCp: number;
   verifyDepth: number;
   winHi: number;
-  winLo: number;
-  minGapCp: number;
+  minWinRateGap: number;
+  mateInOneMaxWinRate: number;
+  winRateK: number;
   minPly: number;
   maxSolutionPlies: number;
   minSolutionPlies: number;
@@ -225,19 +230,23 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
       seed: { type: 'string', default: '0' },
       concurrency: { type: 'string', default: '4' },
       'scan-nodes': { type: 'string', default: '60000' },
-      'verify-nodes': { type: 'string', default: '600000' },
-      'swing-cp': { type: 'string', default: '250' },
-      'win-cp': { type: 'string', default: '250' },
-      'decided-cp': { type: 'string', default: '800' },
-      'unique-gap-cp': { type: 'string', default: '150' },
-      'verify-depth': { type: 'string', default: '20' },
-      // Winning-floor gate knobs: defaults come from the module shared with the
+      'verify-nodes': { type: 'string', default: '25000000' },
+      'swing-cp': { type: 'string', default: '199' },
+      'win-cp': { type: 'string', default: '199' },
+      'decided-cp': { type: 'string', default: '635' },
+      'unique-gap-cp': { type: 'string', default: '119' },
+      'verify-depth': { type: 'string', default: '0' },
+      // Separation gate knobs: defaults come from the module shared with the
       // audit tool, so the two CLIs cannot drift apart on what "unique" means.
+      'win-rate-k': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winRateK) },
       'win-hi': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi) },
-      'win-lo': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo) },
-      'min-gap-cp': {
+      'min-win-rate-gap': {
         type: 'string',
-        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
+        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minWinRateGap),
+      },
+      'mate-in-one-max-win-rate': {
+        type: 'string',
+        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.mateInOneMaxWinRate),
       },
       'min-ply': { type: 'string', default: '8' },
       'max-solution-plies': { type: 'string', default: '7' },
@@ -245,7 +254,7 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
       'per-game': { type: 'string', default: '3' },
       // #712 harder puzzles: a quiet key and a floor that survives the trim.
       'quiet-key': { type: 'boolean', default: false },
-      'floor-after-trim': { type: 'boolean', default: false },
+      'floor-after-trim': { type: 'boolean', default: true },
       'emit-seed': { type: 'boolean', default: false },
       'seed-path': { type: 'string' },
       'insert-db': { type: 'boolean', default: false },
@@ -277,15 +286,23 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
     seed: parseNonNegativeInt(values.seed, 0),
     concurrency: parsePositiveInt(values.concurrency, 4),
     scanNodes: parsePositiveInt(values['scan-nodes'], 60_000),
-    verifyNodes: parsePositiveInt(values['verify-nodes'], 600_000),
-    swingCp: parsePositiveInt(values['swing-cp'], 250),
-    winCp: parsePositiveInt(values['win-cp'], 250),
-    decidedCp: parsePositiveInt(values['decided-cp'], 800),
-    uniqueGapCp: parsePositiveInt(values['unique-gap-cp'], 150),
-    verifyDepth: parsePositiveInt(values['verify-depth'], 20),
+    verifyNodes: parsePositiveInt(values['verify-nodes'], 25_000_000),
+    swingCp: parsePositiveInt(values['swing-cp'], 199),
+    winCp: parsePositiveInt(values['win-cp'], 199),
+    decidedCp: parsePositiveInt(values['decided-cp'], 635),
+    uniqueGapCp: parsePositiveInt(values['unique-gap-cp'], 119),
+    verifyDepth: parseNonNegativeInt(values['verify-depth'], 0),
+    winRateK: Number.parseFloat(
+      values['win-rate-k'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winRateK),
+    ),
     winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
-    winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
-    minGapCp: parsePositiveInt(values['min-gap-cp'], XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
+    minWinRateGap: Number.parseFloat(
+      values['min-win-rate-gap'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.minWinRateGap),
+    ),
+    mateInOneMaxWinRate: Number.parseFloat(
+      values['mate-in-one-max-win-rate'] ??
+        String(XIANGQI_SOLVER_GATE_DEFAULTS.mateInOneMaxWinRate),
+    ),
     minPly: parseNonNegativeInt(values['min-ply'], 8),
     maxSolutionPlies: parsePositiveInt(values['max-solution-plies'], 7),
     minSolutionPlies: parsePositiveInt(values['min-solution-plies'], 3),
@@ -315,6 +332,10 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
     );
     process.exit(1);
   }
+  if (options.verifyNodes !== 25_000_000 || options.verifyDepth !== 0)
+    throw new Error(
+      'Verification uses the shared 5M/25M/selective-100M profile; custom verify-nodes/depth are retired',
+    );
   return options;
 }
 
@@ -495,7 +516,7 @@ function createRng(seed: number): () => number {
 // ── Mining ───────────────────────────────────────────────────────────────────
 
 export async function mineXiangqiPuzzleGame(
-  engine: PikafishEngine,
+  engine: Pick<PikafishEngine, 'newGame' | 'analyzeFen' | 'analyzeMoves'>,
   game: XiangqiPuzzleMinerGame,
   opts: XiangqiPuzzleMinerOptions,
   metrics: XiangqiPuzzleMinerMetrics,
@@ -539,8 +560,7 @@ export async function mineXiangqiPuzzleGame(
   const candidates = detectXiangqiBlunderCandidates(scans, moveCount, opts);
   metrics.candidates += candidates.length;
 
-  // Phase 2: deep verify on candidates only, extending the solution one solver
-  // ply at a time and stopping at the first non-unique move (born-clean lines).
+  // Phase 2: shared bounded verification; ambiguous later keys reject the candidate.
   const records: MinedPuzzleRecord[] = [];
   for (const candidate of candidates) {
     if (records.length >= opts.perGame) break;
@@ -665,50 +685,92 @@ type GatedLineResult =
 
 // Extend a solution line from the post-blunder position, verifying uniqueness at
 // EVERY solver ply instead of trusting one PV. Each ply is judged by the shared
-// analyzeXiangqiSolverPly (history-free FEN, MultiPV 2 at a depth floor, the
-// winning-floor gate) — the SAME call the audit tool makes, so audit verdicts
+// verifyXiangqiSolverTurn (history-free FEN, adaptive MultiPV and the
+// shared separation gate) — the SAME call the audit tool makes, so audit verdicts
 // are definitionally consistent with what this gate enforced (#185). The
 // defender reply is the engine's best (its uniqueness is not required). The
-// line stops at the first non-unique solver move, at mate, or at the ply cap,
+// candidate rejects at a non-unique solver key; accepted lines end at mate or the ply cap,
 // and always ends on the solver's move.
-async function buildGatedLine(
-  engine: PikafishEngine,
+export async function buildGatedLine(
+  engine: Pick<PikafishEngine, 'newGame' | 'analyzeFen'>,
   postBlunderState: XiangqiGameState,
   opts: XiangqiPuzzleMinerOptions,
 ): Promise<GatedLineResult> {
+  if (!xiangqiPuzzleHasStartingChoice(postBlunderState))
+    return { ok: false, reason: 'no-choice-at-root', evals: 0 };
   const gate = {
     winHi: opts.winHi,
-    winLo: opts.winLo,
-    minGapCp: opts.minGapCp,
+    winRateK: opts.winRateK,
+    minWinRateGap: opts.minWinRateGap,
+    mateInOneMaxWinRate: opts.mateInOneMaxWinRate,
   };
-  const limits = { depth: opts.verifyDepth, nodes: opts.verifyNodes };
+  if (opts.verifyNodes !== 25_000_000 || opts.verifyDepth !== 0)
+    return { ok: false, reason: 'verification-profile-mismatch', evals: 0 };
+  const limits = { nodes: 25_000_000, movetimeMs: 90_000 };
   const pv: XiangqiMove[] = [];
-  let cur: XiangqiGameState = postBlunderState;
+  // Verify exactly the fresh puzzle the solver receives, not the source
+  // game's repetition or no-progress history. Subsequent plies accumulate
+  // only this solution's own history, just as in the trainer.
+  let cur: XiangqiGameState = makeXiangqiPuzzleInitial(postBlunderState, postBlunderState.id);
   let firstScore: XiangqiVerifyLine | null = null;
   let firstSecondCp: number | null = null;
   let evals = 0;
   while (pv.length < opts.maxSolutionPlies) {
     if (cur.status.type !== 'playing') break;
-    const ply = await analyzeXiangqiSolverPly(engine, cur, limits, gate);
-    evals += 1;
     const firstSolverPly = pv.length === 0;
-    if (firstSolverPly) {
-      firstScore = ply.best ?? null;
-      firstSecondCp = ply.second?.scoreCp ?? null;
+    const mateGoal =
+      firstScore?.mate && firstScore.mate > 0 ? { type: 'checkmate' as const } : undefined;
+    // After a unique mating key, an actual board mate completes the exercise;
+    // already winning material alternatives do not invalidate its final move.
+    const mateMove = mateGoal
+      ? getStandardXiangqiLegalMoves(cur).find((move) =>
+          completesXiangqiMateGoal(cur, move, pv.length, mateGoal),
+        )
+      : undefined;
+    if (mateMove) {
+      pv.push(mateMove);
+      cur = applyStandardXiangqiMove(cur, mateMove);
+      break;
     }
-    if (!ply.unique) {
-      if (firstSolverPly) {
+    let verified: Awaited<ReturnType<typeof verifyXiangqiSolverTurn>>;
+    try {
+      verified = await verifyXiangqiSolverTurn(
+        engine,
+        cur,
+        pv.length,
+        undefined,
+        mateGoal,
+        gate,
+        mateGoal && firstScore?.mate ? firstScore.mate - pv.length / 2 : undefined,
+      );
+    } catch (error) {
+      return { ok: false, reason: error instanceof Error ? error.message : 'search-error', evals };
+    }
+    evals += verified.searches.length;
+    const ply = verified.searches.at(-1);
+    if (!ply && !verified.mateGoalEvidence) return { ok: false, reason: 'missing-best', evals };
+    if (firstSolverPly) {
+      firstScore = ply?.best ?? null;
+      firstSecondCp = ply?.second?.scoreCp ?? null;
+    }
+    if (verified.judgment.verdict === 'unresolved')
+      return { ok: false, reason: verified.judgment.reason, evals };
+    if (verified.judgment.verdict !== 'pass') {
+      if (firstSolverPly)
         return {
           ok: false,
-          reason: ply.reason === 'near-tie' ? 'near-tie' : 'not-unique-or-not-winning',
+          reason: ply?.reason === 'insufficient-separation' ? 'near-tie' : verified.judgment.reason,
           evals,
         };
-      }
-      break; // line ends on the last committed solver move
+      // Never publish an earlier preparation capture as if it were the full
+      // payoff. A later ambiguous key requires review, not automatic cropping.
+      return { ok: false, reason: 'followup-not-unique', evals };
     }
-    const solverTok = ply.lines[0]?.pvUci[0];
-    const sq = solverTok ? pikafishUciToXiangqiSquares(solverTok) : null;
-    if (!sq || !solverTok) return { ok: false, reason: 'pv-parse', evals };
+    const solverTok = ply?.lines[0]?.pvUci[0];
+    const sq =
+      verified.mateGoalEvidence?.winningMoves[0] ??
+      (solverTok ? pikafishUciToXiangqiSquares(solverTok) : null);
+    if (!sq) return { ok: false, reason: 'pv-parse', evals };
     const solverMove: XiangqiMove = { from: sq.from, to: sq.to };
     if (!isStandardXiangqiLegalMove(cur, solverMove))
       return { ok: false, reason: 'pv-illegal', evals };
@@ -738,6 +800,10 @@ async function buildGatedLine(
   }
   if (pv.length % 2 === 0) pv.pop(); // guarantee the line ends on the solver's move
   if (pv.length < 1 || !firstScore) return { ok: false, reason: 'too-short', evals };
+  // A cooperative defence may shorten the displayed PV. Never publish that
+  // shorter title using a proof that only established the original larger N.
+  if (firstScore.mate !== null && firstScore.mate > 0 && pv.length !== 2 * firstScore.mate - 1)
+    return { ok: false, reason: 'mate-goal-length-mismatch', evals };
   return { ok: true, pv, verifyScore: firstScore, secondScoreCp: firstSecondCp, evals };
 }
 
@@ -853,6 +919,16 @@ function jsonlLine(record: MinedPuzzleRecord | VerifiedShortPuzzleRecord): strin
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
+  if (options.emitSeed || options.insertDb) {
+    assertXiangqiPuzzleAdmissionProfile({
+      ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+      winHi: options.winHi,
+      minWinRateGap: options.minWinRateGap,
+      mateInOneMaxWinRate: options.mateInOneMaxWinRate,
+      winRateK: options.winRateK,
+    });
+  }
+
   const startedAt = Date.now();
   const binary = options.binary ? resolve(options.binary) : pikafishXiangqiPath();
   const net = options.net ? resolve(options.net) : pikafishXiangqiNetPath(binary);
@@ -883,7 +959,7 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
   let cursor = 0;
   const workerCount = Math.max(1, Math.min(options.concurrency, Math.max(games.length, 1)));
   const workers = Array.from({ length: workerCount }, async () => {
-    let engine = new PikafishEngine(binary, net);
+    let engine = new PikafishEngine(binary, net, XIANGQI_PUZZLE_VERIFICATION_PROFILE.hashMb);
     await engine.init();
     try {
       while (true) {
@@ -903,7 +979,7 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
           metrics.gamesFailed += 1;
           console.error(`game ${game.id} failed: ${(err as Error).message}`);
           engine.kill();
-          engine = new PikafishEngine(binary, net);
+          engine = new PikafishEngine(binary, net, XIANGQI_PUZZLE_VERIFICATION_PROFILE.hashMb);
           await engine.init();
         }
         if ((index + 1) % 10 === 0 || index + 1 === games.length) {
@@ -921,10 +997,8 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
   // Deterministic output order regardless of worker interleaving.
   records.sort((a, b) => a.puzzle.id.localeCompare(b.puzzle.id));
 
-  // Serving normal form: winning-advantage lines end on the payoff capture
-  // (the pre-#183 aggregator applied this trim before serving; the seed and DB
-  // carry records already in normal form, and validation rejects filler tails).
-  const servedPuzzles = records.map((record) => trimXiangqiWinningAdvantageTail(record.puzzle));
+  // Assembly already applied the shared endpoint and final length floor.
+  const servedPuzzles = records.map((record) => record.puzzle);
 
   if (options.emitSeed) {
     const target = resolve(options.emitSeed);
@@ -949,6 +1023,14 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
   const wallClockMs = Date.now() - startedAt;
   const summary = {
     kind: 'xiangqi-puzzle-mine-metrics',
+    verificationProfile: XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+    admissionProfile: {
+      ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+      winHi: options.winHi,
+      minWinRateGap: options.minWinRateGap,
+      mateInOneMaxWinRate: options.mateInOneMaxWinRate,
+      winRateK: options.winRateK,
+    },
     source: options.source,
     games: {
       requested: metrics.gamesRequested,
@@ -982,13 +1064,14 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
       decidedCp: options.decidedCp,
       uniqueGapCp: options.uniqueGapCp,
       winHi: options.winHi,
-      winLo: options.winLo,
-      minGapCp: options.minGapCp,
+      winRateK: options.winRateK,
+      minWinRateGap: options.minWinRateGap,
+      mateInOneMaxWinRate: options.mateInOneMaxWinRate,
       minPly: options.minPly,
       maxSolutionPlies: options.maxSolutionPlies,
       minSolutionPlies: options.minSolutionPlies,
       quietKey: options.quietKey === true,
-      floorAfterTrim: options.floorAfterTrim === true,
+      floorAfterTrim: true,
       perGame: options.perGame,
     },
     concurrency: workerCount,
@@ -1028,19 +1111,20 @@ Corpus:
 Engine:
   --concurrency N         Parallel engine workers (per-game granularity). Default: 4.
   --scan-nodes N          Phase-1 node budget per position (MultiPV 2). Default: 60000.
-  --verify-nodes N        Phase-2 node budget per verify search (MultiPV 2). Default: 600000.
-  --verify-depth N        Phase-2 depth floor per solver ply (stable ordering). Default: 20.
+  --verify-nodes N        Shared verification budget; fixed at 25000000 (with 5M check and selective 100M).
+  --verify-depth N        Retired depth target; must be 0 (node budgets, completed depth checked).
   --binary PATH           Pikafish binary override (default: pikafishXiangqiPath()).
   --net PATH              NNUE net override (default: pikafish.nnue beside the binary).
 
 Detection:
-  --swing-cp N            Min eval the game move lost vs the engine best. Default: 250.
-  --win-cp N              Min post-blunder eval for the solver (or mate). Default: 250.
-  --decided-cp N          Skip positions already at |eval| >= N pre-blunder. Default: 800.
-  --unique-gap-cp N       (legacy) Min best-vs-second gap; the per-ply gate below supersedes it. Default: 150.
+  --swing-cp N            Min eval the game move lost vs the engine best. Default: 199.
+  --win-cp N              Min post-blunder eval for the solver (or mate). Default: 199.
+  --decided-cp N          Skip positions already at |eval| >= N pre-blunder. Default: 635.
+  --unique-gap-cp N       (legacy) Min best-vs-second gap; the per-ply gate below supersedes it. Default: 119.
   --win-hi F              Per-ply gate: min win prob for the best solver line. Default: 0.80.
-  --win-lo F              Per-ply gate: a runner-up at/below this win prob has lost the win. Default: 0.60.
-  --min-gap-cp N          Hard near-tie rejection floor for non-mate alternatives. Default: 200.
+  --min-win-rate-gap F    Required best-vs-runner-up chance gap. Default: 0.35.
+  --mate-in-one-max-win-rate F  Largest allowed non-immediate winning chance. Default: 0.80.
+  --win-rate-k F          Producing network's score curve. Default: 0.00465696.
   --min-ply N             Skip game plies before N (opening filter). Default: 8.
   --max-solution-plies N  Solution-line cap (normalized to odd). Default: 7.
   --min-solution-plies N  Minimum solution plies for seed/DB output. Default: 3.

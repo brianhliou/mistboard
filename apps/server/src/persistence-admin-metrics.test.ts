@@ -1,6 +1,11 @@
 import { createUser } from './persistence-accounts.js';
 import { getAdminMetrics } from './persistence-admin-metrics.js';
 import { getPool } from './persistence-db.js';
+import {
+  createAccountSession,
+  getWeeklyGuestSignIns,
+  listActiveAccountSessions,
+} from './persistence-sessions.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 
 type ParticipantFixture = {
@@ -40,6 +45,89 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('admin metrics', () => {
+  test('guest conversion counts browsers once per finish week and only qualifying sign-ins within seven days', async () => {
+    const now = new Date('2026-11-23T00:00:00Z');
+    await createUser({
+      id: 'converted-account',
+      email: 'converted@example.com',
+      emailVerifiedAt: now,
+      handle: 'converted',
+      displayName: 'Converted',
+      now,
+    });
+    let sequence = 0;
+    const game = async (
+      device: string | null,
+      endedAt = '2026-11-03T12:00:00Z',
+      mode: 'pvp' | 'pve' = 'pvp',
+      plyCount = 20,
+    ) =>
+      insertGame({
+        roomId: `conversion-${sequence++}`,
+        variant: 'jieqi',
+        mode,
+        endedAt,
+        plyCount,
+        participants: [
+          { color: 'white', subjectType: 'guest', subjectId: device },
+          {
+            color: 'black',
+            subjectType: mode === 'pvp' ? 'user' : 'engine-version',
+            subjectId: mode === 'pvp' ? 'converted-account' : 'bot',
+          },
+        ],
+      });
+    const signIn = async (deviceId: string, at: string) =>
+      createAccountSession({
+        id: `signin-${sequence++}`,
+        userId: 'converted-account',
+        tokenHash: `fixture-hash-${sequence}`,
+        expiresAt: new Date('2027-01-01'),
+        createdAt: new Date(at),
+        deviceId,
+      });
+    await game('converted-browser');
+    await game('converted-browser', '2026-11-04T12:00:00Z');
+    await signIn('converted-browser', '2026-11-05T12:00:00Z');
+    await signIn('converted-browser', '2026-11-06T12:00:00Z');
+    await game('unconverted-browser');
+    await game('too-late-browser');
+    await signIn('too-late-browser', '2026-11-10T12:00:00.001Z');
+    await game('signed-in-before');
+    await signIn('signed-in-before', '2026-11-03T11:59:59Z');
+    await game('boundary-browser');
+    await signIn('boundary-browser', '2026-11-10T12:00:00Z');
+    // A later game in the same week can still precede a qualifying sign-in.
+    await game('later-game-browser', '2026-11-02T00:00:00Z');
+    await game('later-game-browser', '2026-11-08T12:00:00Z');
+    await signIn('later-game-browser', '2026-11-15T12:00:00Z');
+    await game('bot-only-browser', undefined, 'pve');
+    await signIn('bot-only-browser', '2026-11-05T12:00:00Z');
+    await game('too-short-browser', undefined, 'pvp', 1);
+    await game(null);
+    await getPool().query(
+      "INSERT INTO stats_excluded_devices (device_id, account_id) VALUES ('excluded-browser', 'converted-account')",
+    );
+    await game('excluded-browser');
+    await game('current-browser', '2026-11-22T12:00:00Z');
+    await signIn('current-browser', '2026-11-23T12:00:00Z'); // after as-of
+    const weeks = await getWeeklyGuestSignIns({ now, weeks: 4 });
+    assert.deepEqual(
+      weeks.find((week) => week.weekStart === '2026-11-02'),
+      { weekStart: '2026-11-02', guests: 6, signedInWithin7d: 3, complete: true },
+    );
+    assert.deepEqual(
+      weeks.find((week) => week.weekStart === '2026-11-16'),
+      { weekStart: '2026-11-16', guests: 1, signedInWithin7d: 0, complete: false },
+    );
+    assert.deepEqual((await getAdminMetrics({ now, weeks: 4 })).guestSignInConversion, weeks);
+    assert.doesNotMatch(JSON.stringify(weeks), /browser|@|fixture-hash/);
+    assert.doesNotMatch(
+      JSON.stringify(await listActiveAccountSessions('converted-account', now)),
+      /browser|fixture-hash/,
+    );
+  });
+
   for (const scenario of [
     {
       name: 'ordinary Pacific week',

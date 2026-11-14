@@ -10,6 +10,7 @@ import { currentAccountUser } from './../account-session.js';
 import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
+import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from './../feature-flags.js';
 import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
@@ -163,6 +164,10 @@ export async function tryHandle(
     }
     // A stats-excluded account never rates: an explicit rated request is
     // refused, and the signed-in default (rated unless asked casual) is casual.
+    if (body.rated === true && isFairPlayMarked(accountUser)) {
+      writeJson(response, 403, { error: 'rated_account_marked' });
+      return true;
+    }
     const statsExcluded = persistence.isStatsExcluded(accountUser);
     if (body.rated === true && statsExcluded) {
       response.writeHead(403, { 'content-type': 'application/json' });
@@ -172,7 +177,11 @@ export async function tryHandle(
     const rated =
       mode === 'pve'
         ? false
-        : ratedEnabled() && body.rated !== false && accountUser !== null && !statsExcluded;
+        : ratedEnabled() &&
+          body.rated !== false &&
+          accountUser !== null &&
+          !statsExcluded &&
+          !isFairPlayMarked(accountUser);
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'invalid_time_control' }));

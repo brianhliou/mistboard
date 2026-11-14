@@ -1,5 +1,7 @@
+import { PRACTICE_WIN_CP } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  backPath,
   PRACTICE_POSITION_DRAW_MOVES,
   parsePracticePositionParams,
   practicePositionHref,
@@ -34,11 +36,19 @@ describe('parsePracticePositionParams', () => {
     expect(request.side).toBe('black');
   });
 
+  it('accepts a win exercise, unbounded, at the standard win threshold', () => {
+    const request = parse({ fen: LIVE, goal: 'win', side: 'red' });
+    expect(request.ok).toBe(true);
+    if (!request.ok) return;
+    expect(request.goalKind).toBe('win');
+    expect(request.goal).toEqual({ kind: 'win', centipawns: PRACTICE_WIN_CP });
+  });
+
   it.each([
     ['missing side', { fen: LIVE, goal: 'mate' }, 'side'],
     ['unknown side', { fen: LIVE, goal: 'mate', side: 'white' }, 'side'],
     ['missing goal', { fen: LIVE, side: 'red' }, 'goal'],
-    ['unknown goal', { fen: LIVE, goal: 'win', side: 'red' }, 'goal'],
+    ['unknown goal', { fen: LIVE, goal: 'survive', side: 'red' }, 'goal'],
     ['missing fen', { goal: 'mate', side: 'red' }, 'fen'],
     ['blank fen', { fen: '   ', goal: 'mate', side: 'red' }, 'fen'],
     ['garbage fen', { fen: 'not a fen', goal: 'mate', side: 'red' }, 'fen'],
@@ -61,5 +71,26 @@ describe('parsePracticePositionParams', () => {
     const again = practicePositionHref(request.fen, request.goalKind, request.side);
     const second = parsePracticePositionParams(new URL(again, 'https://x.test').searchParams);
     expect(second.ok && second.fen).toBe(request.fen);
+  });
+});
+
+describe('backPath', () => {
+  const read = (from: string): string | null => backPath(new URLSearchParams({ from }));
+  it('links back to a site article, in any served language', () => {
+    expect(read('/blog/meng-fanrui')).toBe('/blog/meng-fanrui');
+    expect(read('/zh-hant/blog/meng-fanrui')).toBe('/zh-hant/blog/meng-fanrui');
+  });
+  it('keeps a #fragment so the way back lands on the game the reader left', () => {
+    expect(read('/blog/meng-fanrui#ju-longfei-game')).toBe('/blog/meng-fanrui#ju-longfei-game');
+    expect(read('/blog/meng-fanrui#')).toBeNull();
+    expect(read('/blog/meng-fanrui#x"onmouseover=1')).toBeNull();
+    expect(read('/blog/meng-fanrui#a#b')).toBeNull();
+  });
+  it('refuses anything that is not an article path', () => {
+    expect(read('https://evil.example/blog/x')).toBeNull();
+    expect(read('//evil.example/blog/x')).toBeNull();
+    expect(read('/blog/x?next=//evil.example')).toBeNull();
+    expect(read('javascript:alert(1)')).toBeNull();
+    expect(backPath(new URLSearchParams())).toBeNull();
   });
 });

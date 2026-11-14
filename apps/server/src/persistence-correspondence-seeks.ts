@@ -117,8 +117,14 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
  * The display name is unaffected; only the link is withheld.
  */
 export function linkableHandleSql(alias: string): string {
+  return linkableIdentitySql(alias, 'handle');
+}
+
+// Account metadata must follow the handle's privacy gate. Callers supply only
+// static aliases and one of these account columns, never request input.
+export function linkableIdentitySql(alias: string, field: 'handle' | 'title' | 'flair'): string {
   return `CASE WHEN ${alias}.closed_at IS NULL AND ${alias}.profile_visibility <> 'private'
-               THEN ${alias}.handle END`;
+               THEN ${alias}.${field} END`;
 }
 
 const SEEK_COLUMNS = `s.id, s.creator_user_id, s.game_spec_id, s.days_per_move, s.preferred_color,

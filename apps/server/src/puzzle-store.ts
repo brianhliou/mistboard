@@ -23,6 +23,7 @@ import {
   isRetiredGameSpec,
   JUNGLE_SPEC_ID,
   type JunglePuzzle,
+  readXiangqiPositionOnlyPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiMotifId,
   type XiangqiPuzzle,
@@ -274,6 +275,32 @@ export async function getPuzzleStore(): Promise<PuzzleStoreSnapshot> {
   return inFlight;
 }
 
+// History thumbnails for puzzles that left the serving set (withheld after a
+// report or an editorial review). The player already saw the starting position;
+// this read never puts the puzzle back into play, and a retired variant's rows
+// stay out exactly as they do in the snapshot.
+export async function loadPuzzlesOutsideServingSet(
+  ids: readonly string[],
+): Promise<Map<string, StoredPuzzle>> {
+  const found = new Map<string, StoredPuzzle>();
+  if (!ids.length) return found;
+  if (!isInitialized()) {
+    for (const puzzle of loadAllSeedPuzzles() as readonly StoredPuzzle[])
+      if (ids.includes(puzzle.id)) found.set(puzzle.id, puzzle);
+    return found;
+  }
+  const { rows } = await getPool().query<{ data: StoredPuzzle }>(
+    'SELECT id, data FROM puzzles WHERE id = ANY($1::text[])',
+    [[...ids]],
+  );
+  for (const row of rows) {
+    if (isRetiredGameSpec(row.data.variant) || !KNOWN_PUZZLE_VARIANTS.has(row.data.variant))
+      continue;
+    found.set(row.data.id, row.data);
+  }
+  return found;
+}
+
 async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
   if (!seedSyncChecked) {
     await ensureSeedSynced();
@@ -283,11 +310,17 @@ async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
   // deleted (migration 129): the set this hides asks the solver nothing, which
   // no rating can fix, but re-mining to recover one is expensive and the reason
   // string is worth keeping. Clearing the column serves it again.
-  const { rows } = await getPool().query<{ data: StoredPuzzle }>(
-    'SELECT data FROM puzzles WHERE hidden_reason IS NULL ORDER BY seq, id',
+  const { rows } = await getPool().query<{ data: StoredPuzzle; position_only: boolean }>(
+    'SELECT data, position_only FROM puzzles WHERE hidden_reason IS NULL ORDER BY seq, id',
   );
   const puzzles: StoredPuzzle[] = [];
   for (const row of rows) {
+    if (row.position_only && (row.data.variant !== XIANGQI_SPEC_ID || !row.data.credit)) {
+      console.warn('puzzle-store: withholding position-only row without credit', {
+        id: row.data.id,
+      });
+      continue;
+    }
     // A retired variant's rows (Fortress Xiangqi's mined puzzles, 2026-10-11)
     // stay in the table but are never served: every route then answers their
     // ids with a clean 404. Skipped quietly, since they are expected, not a
@@ -309,9 +342,18 @@ async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
 }
 
 function buildSnapshot(
-  puzzles: readonly StoredPuzzle[],
+  inputPuzzles: readonly StoredPuzzle[],
   source: PuzzleStoreSnapshot['source'],
 ): PuzzleStoreSnapshot {
+  const puzzles: StoredPuzzle[] = inputPuzzles.flatMap((puzzle) => {
+    if (puzzle.variant !== XIANGQI_SPEC_ID || !('credit' in puzzle)) return [puzzle];
+    try {
+      return [readXiangqiPositionOnlyPuzzle(puzzle)];
+    } catch {
+      console.warn('puzzle-store: withholding invalid position-only puzzle', { id: puzzle.id });
+      return [];
+    }
+  });
   const difficultyById = new Map<string, number>();
   const motifsById = new Map<string, readonly XiangqiMotifId[]>();
   const tagsById = new Map<string, readonly PuzzleTagId[]>();

@@ -469,6 +469,155 @@
   align-self: stretch;
 }
 
+/* ---- Post a seek: the Play a game panel (landing-play.css, open layout) ----
+   The panel carries .landing-setup-dialog--open, so the shared rows, option
+   groups, variant tiles and side pieces style it; only the dialog frame, the
+   heading and the phone sheet are set here. */
+.correspondence-dialog.correspondence-dialog--setup {
+  width: min(660px, calc(100vw - 32px));
+  max-width: none;
+  border-color: color-mix(in srgb, var(--site-accent) 22%, transparent);
+}
+
+.correspondence-dialog > .correspondence-panel.correspondence-seek {
+  padding: 0;
+}
+
+.correspondence-seek .landing-setup-header > .landing-setup-title {
+  margin: 0;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.correspondence-seek-form {
+  display: grid;
+}
+
+/* The dialog scrolls as a whole when it must; no scroller inside it. */
+.correspondence-seek.landing-setup-dialog--open .landing-setup-accordion {
+  overflow: visible;
+}
+
+.correspondence-seek.landing-setup-dialog--open .landing-setup-actions {
+  gap: 10px;
+}
+
+.correspondence-seek .correspondence-form-status {
+  text-align: center;
+}
+
+/* Every variant shows: the seek list is short, and the dialog scrolls as a
+   whole on a short screen rather than nesting a scroller in the grid. */
+.correspondence-seek.landing-setup-dialog--open .landing-variant-grid {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* The phone's variant row: the Play a game row over a see-through native
+   select, so a tap opens the phone's own picker. Hidden on a larger screen,
+   where the tile grid picks. */
+.correspondence-seek .correspondence-seek-variant-row {
+  position: relative;
+  display: none;
+}
+
+.correspondence-seek-variant-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.correspondence-seek .correspondence-seek-variant-row:focus-within {
+  border-color: var(--site-accent);
+  outline: 2px solid var(--site-focus);
+}
+
+/* A phone gets the Play a game sheet: full width from the bottom edge, each
+   label above its control, the variant as one row. */
+@media (max-width: 600px) {
+  .correspondence-dialog.correspondence-dialog--setup {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .correspondence-seek .landing-variant-grid {
+    display: none;
+  }
+
+  .correspondence-seek .correspondence-seek-variant-row {
+    display: flex;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row:not(:first-child) {
+    grid-template-columns: none;
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-accordion {
+    padding: 2px 16px;
+  }
+
+  /* Side pieces at Play a game's phone sizes, so Random's pair and its word
+     fit a third of a 390px row. */
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph:has(.landing-color-piece) {
+    height: 28px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.jungle,
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.chess,
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.xiangqi {
+    width: 28px;
+    height: 28px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.jungle,
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.chess,
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.xiangqi {
+    width: 22px;
+    height: 22px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.stone {
+    width: 22px;
+    height: 22px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.stone {
+    width: 20px;
+    height: 20px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-actions {
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .correspondence-host-signin {
   align-self: flex-start;
 }

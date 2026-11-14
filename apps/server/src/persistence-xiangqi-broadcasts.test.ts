@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard, XiangqiBroadcastTour } from '@mistboard/game';
+import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { getPool } from './persistence-db.js';
 import { getGameAnalysis, saveGameAnalysis } from './persistence-game-analysis.js';
@@ -28,6 +29,7 @@ import {
   listXiangqiBroadcastTours,
   nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
+  seedXiangqiBroadcastSiblingTourOn,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
 import {
@@ -43,6 +45,7 @@ import {
   runXiangqiBroadcastTape,
   xiangqiBroadcastSourceResponse,
 } from './xiangqi-broadcast-sim.js';
+import { translateXiangqiEventName } from './xiangqi-broadcast-translate.js';
 
 const FIXTURE_DIR = fileURLToPath(
   new URL('../../../packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample', import.meta.url),
@@ -130,6 +133,49 @@ function timeoutFetch(): XiangqiBroadcastSourceFetch {
 }
 
 definePersistenceTests('xiangqi broadcasts', () => {
+  test('discovery excludes unlisted events while direct reads, polling and reimports preserve them', async () => {
+    const { tours, rounds, boards } = await seedBroadcastDiscoveryFixture();
+    const hidden = tours[1]!;
+    assert.deepEqual(
+      (await listXiangqiBroadcastTours()).map((tour) => tour.slug),
+      [tours[0]!.slug],
+    );
+    assert.equal((await listXiangqiBroadcastTours({ includeUnlisted: true })).length, 2);
+    assert.equal((await getXiangqiBroadcastTour(tours[0]!.slug))?.listed, true);
+    assert.equal((await getXiangqiBroadcastTour(hidden.slug))?.listed, false);
+    assert.equal((await listXiangqiBroadcastRounds(hidden.slug)).length, 1);
+    assert.equal((await listXiangqiBroadcastBoards(rounds[1]!.id)).length, 2);
+    for (const board of boards.filter((board) => board.tourSlug === hidden.slug)) {
+      assert.deepEqual((await getXiangqiBroadcastBoard(board.id))?.moves, board.moves);
+    }
+    const page = await queryCompletedXiangqiBroadcastBoards({});
+    assert.equal(page.total, 1);
+    assert.deepEqual(
+      page.boards.map((board) => board.tourSlug),
+      [tours[0]!.slug],
+    );
+    assert.deepEqual(await queryCompletedXiangqiBroadcastBoards({ event: hidden.name }), {
+      boards: [],
+      total: 0,
+    });
+    await importXiangqiBroadcastPack({ tour: hidden, rounds: [], boards: [] });
+    assert.equal((await getXiangqiBroadcastTour(hidden.slug))?.listed, false);
+    assert.ok(
+      (await listXiangqiBroadcastScheduledTours()).some((tour) => tour.slug === hidden.slug),
+    );
+    const sibling = { ...hidden, slug: `${hidden.slug}-women` };
+    assert.equal(
+      await seedXiangqiBroadcastSiblingTourOn(getPool(), {
+        parentSlug: hidden.slug,
+        tourId: '99999',
+        tour: sibling,
+        pollMode: 'auto',
+        pollIntervalMs: 30_000,
+      }),
+      true,
+    );
+    assert.equal((await getXiangqiBroadcastTour(sibling.slug))?.listed, false);
+  });
   test('a source that states no schedule does not erase the seeded one', async () => {
     // The seeded tour/round dates are what the calendar shows and what
     // resolveScheduledRound reads to pick a poll's round. A converted game page
@@ -336,6 +382,34 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(rejected.ok, false);
     assert.equal(rejected.ok ? '' : rejected.kind, 'illegal_move');
     assert.equal((await getXiangqiBroadcastBoard(fullBoard.id))?.moves.length, 2);
+  });
+
+  test('clock and timeControl metadata-only updates persist and duplicate reads stay unchanged', async () => {
+    const pack = await fixturePack();
+    const original = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    const board = { ...original, status: 'live' as const, result: '*' as const };
+    await importXiangqiBroadcastPack({ ...pack, boards: [board] });
+    const clock = { redMs: 90_000, blackMs: 80_000, at: 1234 };
+    const withClock = { ...board, clock };
+    const updated = await applyXiangqiBroadcastBoardUpdate(withClock);
+    assert.equal(updated.ok && updated.status, 'updated');
+    assert.deepEqual((await getXiangqiBroadcastBoard(board.id))?.clock, clock);
+    const withTimeControl = { ...withClock, details: { timeControl: '90+30' } };
+    const metadata = await applyXiangqiBroadcastBoardUpdate(withTimeControl);
+    assert.equal(metadata.ok && metadata.status, 'updated');
+    const stored = await getXiangqiBroadcastBoard(board.id);
+    assert.equal(stored?.details?.timeControl, '90+30');
+    assert.deepEqual(stored?.clock, clock);
+    const duplicate = await applyXiangqiBroadcastBoardUpdate(withTimeControl);
+    assert.equal(duplicate.ok && duplicate.status, 'unchanged');
+    assert.equal(
+      (await getXiangqiBroadcastBoard(board.id))?.updatedAt.getTime(),
+      stored?.updatedAt.getTime(),
+    );
+    assert.deepEqual(
+      (await xiangqiBroadcastBoardStreamForApi(board.id))?.payload.board.clock,
+      clock,
+    );
   });
 
   // #416 follow-through: the derived board key changed to include the source
@@ -1544,6 +1618,47 @@ definePersistenceTests('xiangqi broadcasts', () => {
       (await getXiangqiBroadcastTour('2025-wxc-sample'))?.endsAt,
       '2025-11-30T23:59:59+08:00',
     );
+  });
+
+  test('a sibling seed inserts its complete auto schedule once without changing an existing tour', async () => {
+    const tour: XiangqiBroadcastTour = {
+      schema: 'mistboard.xiangqi.broadcast.v1',
+      slug: '2026-world-xiangqi-open-women',
+      name: '2026年第五届世界象棋公开赛 女子团体',
+      location: 'Singapore',
+      sourceUrl: 'mistboard-discover://dpxq-tour?tour=12820&tourSlug=2026-world-xiangqi-open-women',
+      startsAt: '2026-11-10T00:00:00+08:00',
+      endsAt: '2026-11-15T23:59:59+08:00',
+    };
+    const seed = {
+      tour,
+      parentSlug: '2026-world-xiangqi-open',
+      tourId: '12820',
+      pollMode: 'auto' as const,
+      pollIntervalMs: 45_000,
+    };
+    const inserted = await Promise.all([
+      seedXiangqiBroadcastSiblingTourOn(getPool(), seed),
+      seedXiangqiBroadcastSiblingTourOn(getPool(), seed),
+    ]);
+    assert.equal(inserted.filter(Boolean).length, 1);
+    const stored = await getXiangqiBroadcastTour(tour.slug);
+    assert.equal(stored?.pollMode, 'auto');
+    assert.equal(stored?.pollIntervalMs, 45_000);
+    assert.equal(stored?.location, tour.location);
+    assert.equal(stored?.startsAt, tour.startsAt);
+    assert.equal(stored?.endsAt, tour.endsAt);
+    assert.equal(stored?.nameEn, translateXiangqiEventName(tour.name));
+    const listed = (await listXiangqiBroadcastTourSourcesOn(getPool())).find(
+      (item) => item.slug === tour.slug,
+    );
+    assert.equal(listed?.location, tour.location);
+    assert.equal(listed?.pollIntervalMs, 45_000);
+
+    await setXiangqiBroadcastTourSchedule(tour.slug, { pollMode: 'off', pollIntervalMs: 60_000 });
+    assert.equal(await seedXiangqiBroadcastSiblingTourOn(getPool(), seed), false);
+    assert.equal((await getXiangqiBroadcastTour(tour.slug))?.pollMode, 'off');
+    assert.equal((await getXiangqiBroadcastTour(tour.slug))?.pollIntervalMs, 60_000);
   });
 
   test('nested manifests are rejected as malformed manifest entries', async () => {
