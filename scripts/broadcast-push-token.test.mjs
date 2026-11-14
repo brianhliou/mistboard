@@ -173,6 +173,22 @@ test('set-source saves the device link with polling off and reports the change',
   });
 });
 
+test('set-source refuses an event filled by polling and leaves it untouched', async (t) => {
+  const s = await setup(t);
+  const query = s.client.query;
+  s.client.query = async (sql, args = []) => {
+    if (!sql.includes('UPDATE xiangqi_broadcast_tours')) return query(sql, args);
+    s.calls.push({ sql, args });
+    return { rows: [], rowCount: 0 };
+  };
+  const args = ['set-source', '--tour', 'dpxq-event', '--url', 'https://device.example'];
+  await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /polled event/);
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.match(update.sql, /WHERE slug = \$1 AND poll_mode = 'off'/);
+  assert.equal(s.calls.at(-1).sql, 'ROLLBACK');
+  assert.equal(s.output.length, 0);
+});
+
 test('set-source rejects non-HTTPS or invalid URLs before any database access', async (t) => {
   const s = await setup(t);
   const cli = new URL('./broadcast-push-token.mjs', import.meta.url);

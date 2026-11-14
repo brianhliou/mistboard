@@ -127,8 +127,8 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
       result = await client.query(
         `UPDATE xiangqi_broadcast_tours
             SET source_url = $2, payload = jsonb_set(payload, '{sourceUrl}', to_jsonb($2::text)),
-                poll_mode = 'off', poll_enabled = false, updated_at = now()
-          WHERE slug = $1`,
+                poll_enabled = false, updated_at = now()
+          WHERE slug = $1 AND poll_mode = 'off'`,
         [v.tour, v.url],
       );
     } else {
@@ -137,6 +137,8 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
         [v.tour, v.listed === 'true'],
       );
     }
+    if (!result.rowCount && command === 'set-source')
+      throw new CommandError('no push event with that slug; a polled event keeps its own source');
     if (!result.rowCount) throw new CommandError('no matching event or token');
     await client.query('COMMIT');
     committed = true;
