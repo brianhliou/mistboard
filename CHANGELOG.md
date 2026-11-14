@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Picking correspondence or Rated as a guest says it needs an account before you start, and signing in brings back the variant, pace and side you chose ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
+- Correspondence moves wait for Confirm before they are sent, on by default and switchable in settings, and after your move the game links to the next one waiting on you ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
+- Sent correspondence challenges show who they went to with a Withdraw button, challenges waiting on you have Accept and Decline on the homepage, and Share opens the phone's share sheet ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Ladder champions now have crowns on rankings, profiles and game seats ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - The Pikafish jieqi bot at every level and the jieqi analysis board now run an NNUE build with our own MIT-licensed net ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Accounts marked for outside help in rated games leave the leaderboards and lose rated play, and their recent opponents get back the rating points they lost ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
@@ -83,6 +86,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- A recording clock's credit shows beside every board, worded like the site's other game sources ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Games sent from a recording clock credit the device with a link on every board ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Recording clocks and event software can post xiangqi games straight to a broadcast page through the new broadcast push API ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Playing now cards on /games show full bot names, and their boards, names and buttons line up across each row ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
@@ -123,6 +127,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- New accounts get a random username to keep or change instead of one made from the email address, accounts with an email-based username are offered a new one once, and sign-in codes paste in with spaces ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Broadcast partners create and revoke their own push tokens in settings ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Bot pages show the month each engine-ladder rating was measured ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - The language menu uses a 文A translate icon instead of a globe ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
