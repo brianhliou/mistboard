@@ -8,13 +8,17 @@ import {
   UciWarmSessionCache,
   type WarmSessionSpec,
 } from './uci-engine-harness.js';
+import { XIANGQI_WORST_ENGINE_ID, xiangqiLiveEngineMove } from './xiangqi-engine-catalog.js';
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
+  standardXiangqiFsfRules,
   XIANGQI_FSF_NNUE_NET,
   XIANGQI_FSF_PLAYABLE_ENGINES,
+  XIANGQI_FSF_SERVING_NET,
+  XIANGQI_FSF_VARIANT,
   xiangqiFsfEngineTierFor,
-  xiangqiFsfLiveEngineMove,
+  xiangqiFsfNetPath,
 } from './xiangqi-fsf-engine.js';
 
 test('FSF Xiangqi levels 1-7 keep the Lichess/PlayStrategy weakening profiles', () => {
@@ -108,20 +112,21 @@ test('level 8 command block: net on, hash set, node anchor + movetime ceiling, n
   const top = XIANGQI_FSF_PLAYABLE_ENGINES[7]!;
   const commands = buildFairyStockfishCommands({
     moves: ['h3e3'],
-    variant: 'xiangqi',
+    ...standardXiangqiFsfRules(),
     skill: top.skill,
     depth: top.depth,
     nodes: top.nodes,
     hashMb: top.hashMb,
-    eval: { evalFile: '/app/bin/xiangqi-c07e94a5c7cb.nnue' },
+    eval: { evalFile: `/app/bin/${XIANGQI_FSF_SERVING_NET}` },
     movetimeMs: 6_000,
   });
   assert.deepEqual(commands, [
     'uci',
     'setoption name Hash value 64',
     'setoption name Use NNUE value true',
-    'setoption name EvalFile value /app/bin/xiangqi-c07e94a5c7cb.nnue',
-    'setoption name UCI_Variant value xiangqi',
+    `setoption name EvalFile value /app/bin/${XIANGQI_FSF_SERVING_NET}`,
+    `setoption name VariantPath value ${standardXiangqiFsfRules().iniPath}`,
+    `setoption name UCI_Variant value ${XIANGQI_FSF_VARIANT}`,
     'setoption name Skill Level value 20',
     'ucinewgame',
     'isready',
@@ -134,7 +139,7 @@ test('level 1-7 command block forces classical eval so the new binary cannot pic
   const l7 = XIANGQI_FSF_PLAYABLE_ENGINES[6]!;
   const commands = buildFairyStockfishCommands({
     moves: [],
-    variant: 'xiangqi',
+    ...standardXiangqiFsfRules(),
     skill: l7.skill,
     depth: l7.depth,
     nodes: l7.nodes,
@@ -145,7 +150,8 @@ test('level 1-7 command block forces classical eval so the new binary cannot pic
   assert.deepEqual(commands, [
     'uci',
     'setoption name Use NNUE value false',
-    'setoption name UCI_Variant value xiangqi',
+    `setoption name VariantPath value ${standardXiangqiFsfRules().iniPath}`,
+    `setoption name UCI_Variant value ${XIANGQI_FSF_VARIANT}`,
     'setoption name Skill Level value 16',
     'ucinewgame',
     'isready',
@@ -163,13 +169,12 @@ test('translates between Pikafish and Fairy-Stockfish Xiangqi ranks', () => {
   assert.throws(() => fsfXiangqiUciToPikafishUci('b0c2'), /invalid Fairy-Stockfish/);
 });
 
-// An ini-defined xiangqi variant silently runs classical evaluation even when it
-// inherits xiangqi and sets nnueAlias. Keep the served variant built-in so NNUE
-// tiers (including L8) use their net; the game server adjudicates the draw.
-test('standard xiangqi FSF sessions use built-in xiangqi and the NNUE EvalFile for net tiers', async (t) => {
+// Cover the actual live entry points, including the catalog path used by EvE,
+// rather than only assembling a standalone command block.
+test('every xiangqi FSF tier and the worst-move bot load the capture-only rule and matching net', async (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'xiangqi-fsf-session-'));
   const bin = join(dir, 'fairy-stockfish-xiangqi');
-  const net = join(dir, XIANGQI_FSF_NNUE_NET);
+  const net = join(dir, XIANGQI_FSF_SERVING_NET);
   writeFileSync(bin, '');
   writeFileSync(net, '');
   const savedPath = process.env.MISTBOARD_FSF_XIANGQI_PATH;
@@ -186,21 +191,24 @@ test('standard xiangqi FSF sessions use built-in xiangqi and the NNUE EvalFile f
   const sessions: WarmSessionSpec[] = [];
   t.mock.method(UciWarmSessionCache.prototype, 'withSession', async (spec: WarmSessionSpec) => {
     sessions.push(spec);
-    return { best: null };
+    return { best: null, lines: [] };
   });
 
-  for (const tier of XIANGQI_FSF_PLAYABLE_ENGINES) {
-    await xiangqiFsfLiveEngineMove(tier.id, []);
+  for (const tier of [
+    ...XIANGQI_FSF_PLAYABLE_ENGINES,
+    { id: XIANGQI_WORST_ENGINE_ID, nnue: true },
+  ]) {
+    await xiangqiLiveEngineMove(tier.id, []);
     const session = sessions.at(-1)!;
     assert.equal(session.bin, bin);
     assert.deepEqual(
       session.initCommands.filter((command) => command.startsWith('setoption name UCI_Variant ')),
-      ['setoption name UCI_Variant value xiangqi'],
+      [`setoption name UCI_Variant value ${XIANGQI_FSF_VARIANT}`],
       tier.id,
     );
-    assert.equal(
-      session.initCommands.some((command) => command.includes('VariantPath')),
-      false,
+    assert.deepEqual(
+      session.initCommands.filter((command) => command.includes('VariantPath')),
+      [`setoption name VariantPath value ${standardXiangqiFsfRules().iniPath}`],
     );
     assert.ok(
       session.initCommands.includes(`setoption name Use NNUE value ${Boolean(tier.nnue)}`),
@@ -212,5 +220,12 @@ test('standard xiangqi FSF sessions use built-in xiangqi and the NNUE EvalFile f
       tier.id,
     );
   }
-  assert.equal(sessions.length, XIANGQI_FSF_PLAYABLE_ENGINES.length);
+  assert.equal(sessions.length, XIANGQI_FSF_PLAYABLE_ENGINES.length + 1);
+
+  delete process.env.MISTBOARD_FSF_XIANGQI_NET;
+  assert.equal(xiangqiFsfNetPath(bin), net, 'the production sibling path uses the alias');
+  const originalNet = join(dir, XIANGQI_FSF_NNUE_NET);
+  writeFileSync(originalNet, '');
+  process.env.MISTBOARD_FSF_XIANGQI_NET = originalNet;
+  assert.throws(() => xiangqiFsfNetPath(bin), /must name a mistboardxiangqi-/);
 });

@@ -1,6 +1,7 @@
 // Community translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_COMMUNITY = {
+  'profile.championLabel': '{variant} {pace} champion',
   'inbox.searchPlaceholder': 'Search or start new conversation',
   'profile.chartRange1M': '1M',
   'profile.chartRange3M': '3M',
@@ -31,7 +32,7 @@ export const EN_COMMUNITY = {
   'bots.noCompletedGames': 'No completed {variant} games yet.',
   'bots.engineGameOne': '{count} engine game',
   'bots.engineGameMany': '{count} engine games',
-  'bots.eloFromSample': 'Elo from {sample}',
+  'bots.eloFromSample': 'Elo from {sample} · {date}',
   'bots.timeControlSeconds': '{initial}s + {increment}s',
   'bots.fairyStockfishLevelBio':
     "Level {level} of Mistboard's eight-level ladder, backed by Fairy-Stockfish.",

@@ -745,11 +745,17 @@ function gameWithPostgamePlayers(
     ...game,
     // The legacy raw roster also travels in this envelope. Apply the same
     // metadata gate there, including for in-memory summaries.
-    participants: (game.participants ?? []).map(({ title, flair, ...seat }, index) => ({
-      ...seat,
-      ...(players[index]?.title != null ? { title } : {}),
-      ...(players[index]?.flair != null ? { flair } : {}),
-    })),
+    participants: (game.participants ?? []).map(
+      ({ title, flair, handle, champions, ...seat }, index) => ({
+        ...seat,
+        ...(players[index]?.handle != null ? { handle } : {}),
+        ...(players[index]?.title != null ? { title } : {}),
+        ...(players[index]?.flair != null ? { flair } : {}),
+        ...(champions && players[index]?.champions != null
+          ? { champions: players[index].champions }
+          : {}),
+      }),
+    ),
     players,
   };
 }

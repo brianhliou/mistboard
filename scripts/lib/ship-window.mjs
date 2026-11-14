@@ -1,5 +1,9 @@
-// The ship window: production restarts at most once per window (default 4h),
-// so releases batch instead of each session shipping on its own "ship".
+// The ship window: production restarts at most once per window (default 2h,
+// was 4h until 2026-11-13, when ships went to three slots a day: 09:00, 12:30
+// and 16:00 Pacific), so releases batch instead of each session shipping on
+// its own "ship". 2h, not 3h: a
+// release often lands an hour late (12 of 27 ships went out first try, 14 days
+// to 11-13), and a late one must not close the next slot.
 // 2026-10-16 restarted prod 7 times (08:33 to 16:52 PDT) while the rule was
 // "two ships a day, batched": a cadence every session must keep lives in the
 // tool they all run, with a logged bypass (--extra-ship "<reason>") for a prod
@@ -11,7 +15,7 @@
 // restarted prod), and only when it deployed. Pure functions here; the git and
 // file reads are release-prod.mjs's.
 
-export const DEFAULT_SHIP_WINDOW_HOURS = 4;
+export const DEFAULT_SHIP_WINDOW_HOURS = 2;
 export const PUSH_STAGE_LABEL = 'git push release head';
 const HOUR_MS = 3_600_000;
 

@@ -1989,7 +1989,7 @@ function releaseLogPath() {
 
 // The ship window (scripts/lib/ship-window.mjs): a --push that deploys is
 // refused while the last production push is younger than --ship-window-hours
-// (default 4), unless --extra-ship "<reason>" names the production bug it
+// (default 2), unless --extra-ship "<reason>" names the production bug it
 // fixes; the reason lands in this run's release record. A refusal exits 3
 // before anything is written (onRefuse 'exit'); the post-plan backstop throws
 // instead, because by then a --changelog commit may exist and the failure

@@ -207,6 +207,8 @@ test('top-event filter keeps the professional series and drops amateur, youth an
   }
   for (const name of [
     '2026年第六届世界青少年锦标赛',
+    // The same youth event under dpxq's 2026-11-13 name: an age group of the open.
+    '2026年第五届世界象棋公开赛 U18组',
     '2026年“山海杯”全国业余象棋棋王争霸赛',
     '2026年全国大学生象棋锦标赛',
     '2026年大竹林街道凤栖沱社区“银龄杯”象棋比赛 公开组',

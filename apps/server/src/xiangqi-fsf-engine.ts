@@ -23,10 +23,11 @@
 // that binary too, with `Use NNUE` forced off so their calibration does not drift.
 
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { type EngineClock, nativeWatchdogMs, uciClockWords } from './engine-time-budget.js';
 import {
   fairyStockfishPath,
+  resolveFsfVariantIniPath,
   splitFairyStockfishCommands,
   UciEnginePool,
   type UciEval,
@@ -35,7 +36,9 @@ import {
 
 // Bumped 0.1.0 -> 0.2.0 on 2026-09-02: new binary for every level, NNUE + node
 // anchor on Level 8. Recorded per PvE game as the engine build version.
-export const XIANGQI_FSF_ENGINE_VERSION = '0.2.0';
+// 0.2.2: 120-ply capture-only draw, preserving NNUE with a variant-named net.
+// 0.2.1 was briefly used for the reverted ini change in November 2026.
+export const XIANGQI_FSF_ENGINE_VERSION = '0.2.2';
 
 /**
  * Short form of the Fairy-Stockfish commit prod builds for this provider. MUST
@@ -52,6 +55,18 @@ export const XIANGQI_FSF_ENGINE_REF = '1b5bdd40';
  * verifies the full digest before the binary is allowed to load it.
  */
 export const XIANGQI_FSF_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
+
+export const XIANGQI_FSF_VARIANT = 'mistboardxiangqi';
+// Same checksummed weights. FSF silently uses classical evaluation when the
+// net filename does not start with the selected variant's name.
+export const XIANGQI_FSF_SERVING_NET = `${XIANGQI_FSF_VARIANT}-${XIANGQI_FSF_NNUE_NET.slice('xiangqi-'.length)}`;
+
+export function standardXiangqiFsfRules(): { variant: string; iniPath: string } {
+  return {
+    variant: XIANGQI_FSF_VARIANT,
+    iniPath: resolveFsfVariantIniPath('standard-xiangqi.ini'),
+  };
+}
 
 export type XiangqiFsfEngineId = `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`;
 
@@ -204,9 +219,8 @@ export function xiangqiFsfPath(): string {
 
 /**
  * Resolve the NNUE net as an absolute path: explicit env override, else
- * XIANGQI_FSF_NNUE_NET beside the binary (prod bakes it there; dev keeps a copy
- * beside the master build). Throws rather than letting the engine run classical
- * under a label that promises the net.
+ * XIANGQI_FSF_SERVING_NET beside the binary. An override must also use the
+ * serving variant's filename prefix, or FSF silently runs classical evaluation.
  */
 export function xiangqiFsfNetPath(binPath: string): string {
   const explicit = process.env.MISTBOARD_FSF_XIANGQI_NET;
@@ -217,12 +231,17 @@ export function xiangqiFsfNetPath(binPath: string): string {
         `MISTBOARD_FSF_XIANGQI_NET points at ${resolved} but the file does not exist`,
       );
     }
+    if (!basename(resolved).startsWith(`${XIANGQI_FSF_VARIANT}-`)) {
+      throw new Error(
+        `MISTBOARD_FSF_XIANGQI_NET must name a ${XIANGQI_FSF_VARIANT}-*.nnue file so FSF loads NNUE. Copy the official ${XIANGQI_FSF_NNUE_NET} to ${XIANGQI_FSF_SERVING_NET}.`,
+      );
+    }
     return resolved;
   }
-  const beside = resolve(dirname(binPath), XIANGQI_FSF_NNUE_NET);
+  const beside = resolve(dirname(binPath), XIANGQI_FSF_SERVING_NET);
   if (existsSync(beside)) return beside;
   throw new Error(
-    `Fairy-Stockfish xiangqi net ${XIANGQI_FSF_NNUE_NET} not found beside ${binPath}. Set MISTBOARD_FSF_XIANGQI_NET.`,
+    `Fairy-Stockfish xiangqi net ${XIANGQI_FSF_SERVING_NET} not found beside ${binPath}. Copy ${XIANGQI_FSF_NNUE_NET} to that name or set MISTBOARD_FSF_XIANGQI_NET.`,
   );
 }
 
@@ -244,7 +263,7 @@ export async function xiangqiFsfLiveEngineMove(
     const movetimeMs = opts.movetimeMs ?? tier.movetimeMs;
     const { init, position, go } = splitFairyStockfishCommands({
       moves: moves.map(pikafishUciToFsfXiangqiUci),
-      variant: 'xiangqi',
+      ...standardXiangqiFsfRules(),
       skill: tier.skill,
       depth: tier.depth,
       nodes: tier.nodes,

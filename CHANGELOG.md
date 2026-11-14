@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Ladder champions now have crowns on rankings, profiles and game seats ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
+- The Pikafish jieqi bot at every level and the jieqi analysis board now run an NNUE build with our own MIT-licensed net ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Accounts marked for outside help in rated games leave the leaderboards and lose rated play, and their recent opponents get back the rating points they lost ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - The default Wood sounds are quieter, and captures land as a soft knock instead of a sharp clack ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Correspondence games can be rated, each variant in its own correspondence rating; casual stays the default ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
@@ -81,6 +83,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Games sent from a recording clock credit the device with a link on every board ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Recording clocks and event software can post xiangqi games straight to a broadcast page through the new broadcast push API ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Playing now cards on /games show full bot names, and their boards, names and buttons line up across each row ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Other groups of a relayed dpxq event are added automatically ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
@@ -120,6 +123,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Broadcast partners create and revoke their own push tokens in settings ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
+- Bot pages show the month each engine-ladder rating was measured ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
+- The language menu uses a 文A translate icon instead of a globe ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - The bots page lists opponents and levels strongest first ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - The correspondence Post a seek dialog uses the same layout as Play a game ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - On phones the game counts join the mission block and article rows rotate until touched ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
@@ -169,6 +175,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Pikafish xiangqi bots at each level now search with their own engine, so weaker levels no longer play above their strength ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
+- Your own challenge card now names the side you picked ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
+- Fairy-Stockfish xiangqi bots no longer treat a game with no capture for 100 plies as drawn and now play on to the site's 120-ply rule ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Puzzle history draws the board for puzzles that were later withdrawn ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Banqi luck grading finishes about four times faster ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Finished Gomoku games say five in a row, not den entered, on the watch page and every game list ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))

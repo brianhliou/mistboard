@@ -26,6 +26,7 @@ import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
 import { attachGameParticipants } from './persistence-games.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
 import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
@@ -97,6 +98,7 @@ export type UpdateUserProfileResult =
 
 export type PublicProfileUser = {
   handle: string;
+  champions: Champion[];
   displayName: string;
   bio: string;
   location: string;
@@ -806,14 +808,18 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const [puzzleStreak, achievements] = await Promise.all([
+  const [puzzleStreak, achievements, champions] = await Promise.all([
     getPuzzleStreak(user.id, { timeZone: options.timeZone }),
     getUserAchievements(user.id),
+    user.profileVisibility !== 'private' && !user.closedAt
+      ? getChampions().then((entries) => championsForUser(entries, user.id, user.handle))
+      : [],
   ]);
 
   return {
     user: {
       handle: user.handle,
+      champions,
       displayName: user.displayName,
       bio: user.bio,
       location: user.location,

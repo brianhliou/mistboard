@@ -10,6 +10,7 @@ import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
 import { snapshotPayload } from './payloads.js';
 import type { UserAccount } from './persistence.js';
+import { refreshSeatChampions } from './persistence-leaderboards.js';
 import {
   cancelRematch,
   declineRematch,
@@ -292,6 +293,7 @@ export async function handleWebSocketConnection(
     }
   }
 
+  await refreshSeatChampions();
   const snapshot = snapshotPayload(
     {
       ...room,

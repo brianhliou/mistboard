@@ -18,6 +18,7 @@ import type {
   GameVisibility,
 } from './persistence-game-lifecycle.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import { bucketForGame } from './rating-buckets.js';
 import {
@@ -93,6 +94,7 @@ export type GameParticipant = {
   // closed/private accounts, non-user seats and unset values.
   title?: PlayerTitle | null;
   flair?: FlairKey | null;
+  champions?: Champion[];
   // Engine build version for engine-version seats whose subject_id is version-less (the
   // variant-tenant UCI engines — jieqi/banqi, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
@@ -1734,6 +1736,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
               CASE game_participants.color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
     [roomIds],
   );
+  const champions = rows.some(
+    (row) => row.visibility !== 'private' && row.subject_type === 'user' && !!row.handle,
+  )
+    ? await getChampions()
+    : [];
   const byGame = new Map<string, GameParticipant[]>();
   for (const row of rows) {
     const linkableUser =
@@ -1759,6 +1766,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
       // participant shape, same convention as the fields below.
       ...(row.handle != null ? { handle: row.handle } : {}),
+      // Crowns follow the same gate as title/flair; server-side readers keep the
+      // handle, and the public game envelope strips it for private seats.
+      ...(linkableUser
+        ? { champions: championsForUser(champions, row.subject_id, row.handle) }
+        : {}),
       ...(linkableUser && row.title != null ? { title: row.title } : {}),
       ...(linkableUser && row.flair != null ? { flair: row.flair } : {}),
       // Omitted-when-null so the participant shape is unchanged for games without a

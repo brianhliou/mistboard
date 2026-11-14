@@ -543,11 +543,11 @@ definePersistenceTests('ratings', () => {
       // pv has the highest RAW rating (1900) but RD 300 (provisional) → it sorts
       // LAST by conservative rating and is marked provisional, not hidden.
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('u_hi','fog','blitz',1600,60,0.06,20),
-          ('u_lo','fog','blitz',1550,60,0.06,20),
-          ('u_pv','fog','blitz',1900,300,0.06,3)`,
+          ('u_hi','fog','blitz',1600,60,0.06,20,now()),
+          ('u_lo','fog','blitz',1550,60,0.06,20,now()),
+          ('u_pv','fog','blitz',1900,300,0.06,3,now())`,
       );
     } finally {
       await client.end();
@@ -589,10 +589,10 @@ definePersistenceTests('ratings', () => {
     try {
       await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'lx_test'`);
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('lx_real','jieqi','bullet',1500,200,0.06,1),
-          ('lx_test','jieqi','bullet',1900,60,0.06,40)`,
+          ('lx_real','jieqi','bullet',1500,200,0.06,1,now()),
+          ('lx_test','jieqi','bullet',1900,60,0.06,40,now())`,
       );
     } finally {
       await client.end();
@@ -633,13 +633,13 @@ definePersistenceTests('ratings', () => {
       // Jungle: three settled players + a private one that must not appear.
       // Jungle flip: one player, proving grouping keeps ladders separate.
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('sum_a','jungle','blitz',1700,60,0.06,20),
-          ('sum_b','jungle','blitz',1600,60,0.06,20),
-          ('sum_c','jungle','blitz',1500,60,0.06,20),
-          ('sum_p','jungle','blitz',1900,60,0.06,20),
-          ('sum_a','jungle_flip','blitz',1400,60,0.06,10)`,
+          ('sum_a','jungle','blitz',1700,60,0.06,20,now()),
+          ('sum_b','jungle','blitz',1600,60,0.06,20,now()),
+          ('sum_c','jungle','blitz',1500,60,0.06,20,now()),
+          ('sum_p','jungle','blitz',1900,60,0.06,20,now()),
+          ('sum_a','jungle_flip','blitz',1400,60,0.06,10,now())`,
       );
     } finally {
       await client.end();

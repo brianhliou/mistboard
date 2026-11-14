@@ -128,6 +128,7 @@ export type PostgamePlayer = {
   botId: string | null;
   title?: persistence.GameParticipant['title'];
   flair?: persistence.GameParticipant['flair'];
+  champions?: persistence.GameParticipant['champions'];
 };
 
 export type PostgameGameSummary = {
@@ -191,6 +192,14 @@ export function postgamePlayers(
       botId: !redacted && participant.subjectType === 'bot' ? participant.subjectId : null,
       ...(linkableUser && participant.title != null ? { title: participant.title } : {}),
       ...(linkableUser && participant.flair != null ? { flair: participant.flair } : {}),
+      ...(linkableUser && participant.champions != null
+        ? {
+            champions: participant.champions.map(({ variant, timeClass }) => ({
+              variant,
+              timeClass,
+            })),
+          }
+        : {}),
     };
   });
 }

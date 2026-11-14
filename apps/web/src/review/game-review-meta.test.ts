@@ -405,3 +405,63 @@ describe('buildReviewMeta', () => {
     expect(metaCard.querySelectorAll('.game-meta-card__player--won')).toHaveLength(0);
   });
 });
+
+describe('finished seat championships', () => {
+  it('renders one crown labelled with every title in the postgame meta card and review strips', async () => {
+    const { reviewSeatProfiles } = await import('../profile-link.js');
+    const { mountFortressXiangqiReview } = await import('./fortress-xiangqi-review.js');
+    const players = [
+      {
+        color: 'red',
+        name: 'Alice',
+        handle: 'alice',
+        champions: [
+          { variant: 'xiangqi', timeClass: 'blitz' },
+          { variant: 'banqi', timeClass: 'rapid' },
+        ] as const,
+      },
+      { color: 'black', name: 'Bob', handle: 'bob', champions: [] },
+    ];
+    for (const championships of [true, false]) {
+      const roster = players.map((player) => ({
+        ...player,
+        champions: championships ? player.champions : undefined,
+      }));
+      const { metaCard } = buildReviewMeta({
+        gameSpecId: 'xiangqi',
+        variantName: 'Xiangqi',
+        status: 'Done',
+        game: { roomId: 'crowns', players: roster },
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      const review = mountFortressXiangqiReview(root, {
+        ariaLabel: 'Review',
+        title: 'Review',
+        summary: '',
+        moves: [],
+        analysis: null,
+        seatLabels: true,
+        players: { red: 'Alice', black: 'Bob' },
+        playerProfiles: reviewSeatProfiles(roster),
+      });
+      for (const host of [metaCard, root]) {
+        const icons = [...host.querySelectorAll<HTMLImageElement>('.champion-crown')];
+        expect(icons.map((icon) => icon.alt)).toEqual(
+          championships ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
+        );
+        expect(
+          icons.every(
+            (icon) =>
+              icon.title === icon.alt &&
+              icon.getAttribute('aria-label') === icon.alt &&
+              icon.width === 20,
+          ),
+        ).toBe(true);
+        expect(host.querySelector('a[href="/@/bob"] .champion-crown')).toBeNull();
+      }
+      review.destroy();
+      root.remove();
+    }
+  });
+});
