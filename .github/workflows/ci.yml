@@ -17,6 +17,7 @@ on:
       - "tsconfig*.json"
       - "docker-compose.yml"
       - "railway*.json"
+      - ".railway/**"
       - "railpack.json"
 
 concurrency:
