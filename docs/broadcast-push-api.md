@@ -8,18 +8,25 @@ see the move within about two seconds.
 
 ## Getting a token
 
-Write to contact@mistboard.com with the event's name, dates and number of
-boards. We create the event and send you a token for it. The token can write
-only to that event.
+Make a Mistboard account, then write to contact@mistboard.com with your
+account handle, the event's name, dates and number of boards. We create the
+event and grant your account access. Tokens are never sent by email.
 
-The event page and every game credit the sending device with a link, set by us when the event is set up.
+Sign in and open **Settings > Email and sign-in > Broadcast push**. Choose
+the event, enter a label for your device or app, and select **Create token**.
+Copy the token immediately: it is shown only once. You can have up to five
+active tokens per event. The token can write only to that event.
 
-For development we issue a test token. It writes to a test event that is not
-listed on the site and is not indexed by search engines; you open its boards
-by their links. The API behaves the same for both kinds of token.
+For development, ask for access to a test event. It is not listed on the site
+and is not indexed by search engines; you open its boards by their links.
+The API behaves the same for test and public events.
 
-Keep the token out of logs and source control. If one leaks, tell us and we
-revoke it and issue another.
+The event page and every game credit the sending device with a link, set by us
+when the event is set up.
+
+Keep the token out of logs and source control. If one leaks, revoke it in
+settings and create another. Revoking event access or disabling the owner's
+account also stops its tokens from working.
 
 ## Posting a game
 

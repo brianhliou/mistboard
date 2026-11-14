@@ -7,6 +7,22 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANS_ACCOUNT = {
+  'account.broadcastPush': '直播推送',
+  'account.broadcastPushHelp': '创建令牌，让你的记谱设备或应用向赛事推送棋谱。',
+  'account.broadcastPushLabel': '令牌名称',
+  'account.broadcastPushCreate': '创建令牌',
+  'account.broadcastPushOnce': '请立即复制此令牌。以后将无法再次查看。',
+  'account.broadcastPushCopy': '复制',
+  'account.broadcastPushCopied': '令牌已复制。',
+  'account.broadcastPushCopyFailed': '无法复制。请选中上方令牌并手动复制。',
+  'account.broadcastPushDismiss': '隐藏令牌',
+  'account.broadcastPushRevoke': '撤销',
+  'account.broadcastPushRevoked': '已撤销',
+  'account.broadcastPushCreated': '创建时间',
+  'account.broadcastPushLastUsed': '最近使用',
+  'account.broadcastPushNever': '从未使用',
+  'account.broadcastPushFailed': '无法完成请求，请重试。',
+  'account.broadcastPushLimit': '每个赛事最多可有 5 个有效令牌。请先撤销一个，再创建新令牌。',
   'account.loading': '正在加载账号',
   'account.signedIn': '已登录',
   'account.viewProfile': '查看资料',

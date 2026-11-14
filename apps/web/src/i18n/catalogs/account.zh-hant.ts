@@ -7,6 +7,22 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANT_ACCOUNT = {
+  'account.broadcastPush': '直播推送',
+  'account.broadcastPushHelp': '建立權杖，讓你的記譜裝置或應用程式向賽事推送棋譜。',
+  'account.broadcastPushLabel': '權杖名稱',
+  'account.broadcastPushCreate': '建立權杖',
+  'account.broadcastPushOnce': '請立即複製此權杖。以後將無法再次檢視。',
+  'account.broadcastPushCopy': '複製',
+  'account.broadcastPushCopied': '權杖已複製。',
+  'account.broadcastPushCopyFailed': '無法複製。請選取上方權杖並手動複製。',
+  'account.broadcastPushDismiss': '隱藏權杖',
+  'account.broadcastPushRevoke': '撤銷',
+  'account.broadcastPushRevoked': '已撤銷',
+  'account.broadcastPushCreated': '建立時間',
+  'account.broadcastPushLastUsed': '最近使用',
+  'account.broadcastPushNever': '從未使用',
+  'account.broadcastPushFailed': '無法完成請求，請重試。',
+  'account.broadcastPushLimit': '每個賽事最多可有 5 個有效權杖。請先撤銷一個，再建立新權杖。',
   'account.loading': '正在載入帳號',
   'account.signedIn': '已登入',
   'account.viewProfile': '查看個人資料',

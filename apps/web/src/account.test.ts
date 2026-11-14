@@ -31,6 +31,78 @@ type TestUser = {
 };
 
 describe('account page auth flow', () => {
+  it('creates, copies and revokes a broadcast token; remounting never redisplays its value', async () => {
+    window.history.replaceState(null, '', '/account/settings/account');
+    const tokens: unknown[] = [];
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const token = {
+      id: 'bpt_12345678',
+      label: '<Clock>',
+      createdAt: '2026-11-13T00:00:00Z',
+      lastUsedAt: null,
+      revokedAt: null,
+    };
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return jsonResponse({ user: testUser('misty') });
+      if (init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toEqual({ label: '<Clock>' });
+        tokens.push(token);
+        return jsonResponse({ token: 'synthetic-one-time-value', metadata: token }, 201);
+      }
+      if (init?.method === 'DELETE') return jsonResponse({ revoked: true });
+      return jsonResponse({ grants: [{ tourSlug: 'test', name: '<Test>', tokens }] });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { mountAccountSettings } = await import('./account.js');
+    const root = document.querySelector<HTMLElement>('#app')!;
+    await mountAccountSettings(root);
+    await flushDom();
+    const section = root.querySelector<HTMLElement>('.account-broadcast-push')!;
+    const input = section.querySelector<HTMLInputElement>('input')!;
+    input.value = '<Clock>';
+    section
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushDom();
+    expect(section.textContent).toContain('It will not be shown again.');
+    expect(section.querySelector('code')?.textContent).toBe('synthetic-one-time-value');
+    expect(section.querySelector('script')).toBeNull();
+    [...section.querySelectorAll('button')].find((b) => b.textContent === 'Copy')!.click();
+    await flushDom();
+    expect(writeText).toHaveBeenCalledWith('synthetic-one-time-value');
+    await mountAccountSettings(root);
+    await flushDom();
+    expect(root.textContent).not.toContain('synthetic-one-time-value');
+    expect(root.textContent).toContain('<Clock>');
+    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Revoke')!.click();
+    await flushDom();
+    expect(root.textContent).toContain('Revoked');
+    expect(fetch).toHaveBeenCalledWith('/api/account/broadcast-push/test/bpt_12345678', {
+      method: 'DELETE',
+    });
+  });
+
+  it.each([false, true])('shows Broadcast push only with a grant (%s)', async (granted) => {
+    window.history.replaceState(null, '', '/account/settings/account');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: testUser('misty') });
+        if (String(input) === '/api/account/broadcast-push')
+          return jsonResponse({
+            grants: granted ? [{ tourSlug: 'test', name: 'Clock test', tokens: [] }] : [],
+          });
+        throw new Error('unexpected fetch');
+      }),
+    );
+    const { mountAccountSettings } = await import('./account.js');
+    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    await flushDom();
+    expect(document.body.textContent?.includes('Broadcast push')).toBe(granted);
+    if (granted) expect(document.body.textContent).toContain('Clock test');
+  });
   beforeEach(() => {
     vi.resetModules();
     Object.defineProperty(window, 'localStorage', {

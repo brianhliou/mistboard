@@ -1466,3 +1466,7 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `apps/web/src/review/ffq-banqi-decisions.ts`: FFQ decisions polling, move-list luck overlay and per-seat chance totals.
 
 `scripts/ffq-win-calibration.mjs` and `docs/ffq-win-calibration-2026-11-13.json`: reproducible 300-game level-7 self-play sample and logistic fit; scale documentation in `docs/misty-analysis-win-scale.md`.
+
+`apps/server/src/routes/account-broadcast-push.ts` + `.test.ts`: session-owned broadcast push grant/token APIs, one-time issuance, ownership checks, creation limits and origin protection; dispatched by the account route.
+
+`apps/web/src/account-broadcast-push.ts`: grant-only Broadcast push section within Email and sign-in settings, one-time copy, safe token metadata and revocation; interaction regressions live in `account.test.ts`.
