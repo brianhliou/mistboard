@@ -320,6 +320,7 @@ export function createTenantRuntimeRoom<
     now?: number;
     internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
     pveBotId?: string;
+    engineBotIds?: Partial<Record<C, string>>;
     rated?: boolean;
     timeControl?: RoomTimeControl;
     lobbyMatch?: boolean;
@@ -352,6 +353,9 @@ export function createTenantRuntimeRoom<
       ...(options.creatorPreference ? { creatorPreference: options.creatorPreference } : {}),
       ...(options.internalEngineTest ? { internalEngineTest: options.internalEngineTest } : {}),
       ...(options.pveBotId ? { pveBotId: options.pveBotId } : {}),
+      ...(options.engineBotIds && Object.keys(options.engineBotIds).length > 0
+        ? { engineBotIds: options.engineBotIds }
+        : {}),
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
       ...(setup !== undefined ? { setup } : {}),
@@ -427,6 +431,8 @@ export function createTenantRuntimeRoomFromEvents<
       rematch: { offers: {} },
       engineTimer: null,
       engineReservationId: null,
+      engineReservationIds: {},
+      engineBotIds: first.type === 'room-created' ? { ...first.engineBotIds } : {},
       pveBotId,
     },
   };
@@ -910,7 +916,7 @@ export function tenantSeatDisplayNames<
         names[color] = internal.displayName;
         continue;
       }
-      names[color] = liveSeatEngineName(clientId, room.pveBotId, () =>
+      names[color] = liveSeatEngineName(clientId, tenantBotIdForSeat(room, color), () =>
         engine.displayName(clientId),
       );
       continue;
@@ -942,9 +948,8 @@ export function tenantSeatProfiles<
   for (const color of tenant.colors) {
     const clientId = room.projection.seats[color];
     if (clientId && tenant.engine?.isEngineClientId(clientId)) {
-      const bot = room.pveBotId
-        ? firstPartyBotForId(room.pveBotId)
-        : firstPartyBotForEngine(clientId);
+      const botId = tenantBotIdForSeat(room, color);
+      const bot = botId ? firstPartyBotForId(botId) : firstPartyBotForEngine(clientId);
       if (bot) profiles[color] = { botId: bot.id };
       continue;
     }
@@ -1287,6 +1292,27 @@ export function tenantPveEngineId<
   return null;
 }
 
+export function tenantBotIdForSeat<C extends string>(
+  room: { engineBotIds?: Partial<Record<C, string>>; pveBotId: string | null },
+  seat: C,
+): string | null {
+  // A partial map must not lend the first bot's identity to the other seat.
+  return (
+    room.engineBotIds?.[seat] ??
+    (Object.keys(room.engineBotIds ?? {}).length === 0 ? room.pveBotId : null)
+  );
+}
+
+export function tenantRoomMode<C extends string>(
+  tenant: { colors: readonly C[]; engine?: { isEngineClientId(id: string | undefined): boolean } },
+  room: { projection: { seats: Partial<Record<C, string>> } },
+): 'pvp' | 'pve' | 'eve' {
+  const engines = tenant.colors.filter((seat) =>
+    tenant.engine?.isEngineClientId(room.projection.seats[seat]),
+  ).length;
+  return engines === 0 ? 'pvp' : engines === tenant.colors.length ? 'eve' : 'pve';
+}
+
 export function tenantEventsForClient<
   Kind extends string,
   C extends string,
@@ -1438,10 +1464,19 @@ export function isTenantEvent<
         event.creatorPreference === 'random' ||
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
+      (event.engineBotIds === undefined ||
+        (typeof event.engineBotIds === 'object' &&
+          event.engineBotIds !== null &&
+          !Array.isArray(event.engineBotIds) &&
+          Object.entries(event.engineBotIds).every(
+            ([seat, bot]) =>
+              tenant.rules.isColor(seat) && typeof bot === 'string' && bot.length > 0,
+          ))) &&
       (event.internalEngineTest === undefined ||
         (tenant.gameSpecId === 'banqi' &&
           isInternalEngineTest(event.internalEngineTest) &&
           event.rated !== true &&
+          event.engineBotIds === undefined &&
           event.pveBotId === undefined)) &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&

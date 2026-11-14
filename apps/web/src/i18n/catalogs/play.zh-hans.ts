@@ -363,6 +363,8 @@ export const ZH_HANS_PLAY = {
   'puzzle.embedLoadFailed': '这道题目无法加载。',
   'puzzle.embedNotAvailable': '这道题目暂不可用。',
   'puzzle.openInAnalysis': '在分析棋盘中打开',
+  'puzzle.exploration': '分析变化',
+  'puzzle.backToSolution': '返回答案',
   'puzzle.checkFailed': '无法检查着法，请重试。',
   'puzzle.dashboardTitle': '解题面板',
   'puzzle.dashboardSubtitle': '训练、分析、提高',
@@ -579,8 +581,6 @@ export const ZH_HANS_PLAY = {
   'correspondence.opponentLink': '链接',
   'correspondence.yourSideLabel': '你的执方',
   'correspondence.sideRandom': '随机',
-  'correspondence.kindHintPublic': '任何人都可以在这里、首页或「进行中的对局」页面接受。',
-  'correspondence.kindHintLink': '你会得到一个链接，发给想对弈的人。',
   'correspondence.postSeek': '发布求战',
   'correspondence.createLink': '创建链接',
   'correspondence.seekPosted':
@@ -899,9 +899,6 @@ export const ZH_HANS_PLAY = {
   'lobby.panelDaysSignIn': '登录后可按天/步对局',
   'variant.ffqBanqi.name': 'FFQ 暗棋',
   'live.ffq.hp': '{hp}/{max} 生命值',
-  'live.ffq.noProgress': '无进展 {count}/{limit}',
-  'live.ffq.chase': '{side} 追捉 {count}/{limit}',
-  'live.ffq.captureDamage': '{capturer} 吃掉了{owner}的{piece}：{owner}生命值 −{damage}',
   'live.ffq.adminOnly': '此试玩需要管理员账号，并启用 FFQ 暗棋功能开关。',
   'result.hp': '生命值耗尽',
 } satisfies Partial<Record<PlayI18nKey, string>>;

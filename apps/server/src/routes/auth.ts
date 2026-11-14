@@ -22,6 +22,7 @@ import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limi
 import { emailDomainAcceptsMail } from './../email-domain.js';
 import { authCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { parsePuzzleDeviceId } from './../persistence-puzzle-quality.js';
 import { emailLocale } from './../player-email.js';
 import { isProductionLikeRuntime } from './../server-policy.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
@@ -275,6 +276,8 @@ export async function tryHandle(
       tokenHash: hashSecret(sessionToken),
       expiresAt,
       userAgent: sessionUserAgent(request),
+      deviceId: parsePuzzleDeviceId(request.headers['x-mistboard-device-id']),
+      createdAt: now,
     });
     try {
       await persistence.completeLoginEmailRequest(loginId, now);

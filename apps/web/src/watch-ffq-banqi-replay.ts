@@ -31,6 +31,7 @@ export function mountFFQBanqiWatchReplay(
   options: TenantWatchReplayOptions = {},
 ) {
   return mountTenantWatchReplay<WatchRecord, FFQBanqiPlayerView, 'truth'>(root, roomId, options, {
+    variant: 'ffq-banqi',
     installStyles: installBanqiBoardStyles,
     appearanceEvent: xiangqiAppearanceChangedEvent,
     loadPostgame: async (id) => {

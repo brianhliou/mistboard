@@ -2,6 +2,8 @@ import {
   createInitialXiangqiState,
   legacyPositionRepetitionKey,
   positionRepetitionKey,
+  XIANGQI_PUZZLE_ADMISSION_PROFILE,
+  XIANGQI_SOLVER_SCORE_PROFILE,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
 } from '@mistboard/game';
@@ -709,7 +711,16 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       seed: 'publication-pilot-v1',
       targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
     });
-    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+    const run = await initializeXiangqiPuzzleMiningRun({
+      manifest,
+      engineProfile: {
+        binary: { sha256: 'd'.repeat(64) },
+        network: { sha256: XIANGQI_SOLVER_SCORE_PROFILE.networkSha256 },
+      },
+      shardSize: 3,
+      scanProfile: { profileVersion: 'verify-v1', ...XIANGQI_PUZZLE_ADMISSION_PROFILE },
+      auditProfile: { profileVersion: 'audit-v1', ...XIANGQI_PUZZLE_ADMISSION_PROFILE },
+    });
     const historicalGameId = manifest.games[0]?.historicalGameId as string;
     const postBlunderPly = 17;
     const candidate = await recordXiangqiPuzzleMiningCandidate({
@@ -725,14 +736,22 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       historicalGameId,
       postBlunderPly,
     );
-    const engineProfile = { engine: 'pikafish-test', binarySha256: 'd'.repeat(64) };
+    const engineProfile = {
+      binary: { sha256: 'd'.repeat(64) },
+      network: { sha256: XIANGQI_SOLVER_SCORE_PROFILE.networkSha256 },
+    };
     await recordXiangqiPuzzleMiningJudgment({
       candidateId: candidate.id,
       stage: 'verify',
       profileVersion: 'verify-v1',
       verdict: 'pass',
       engineProfile,
-      evidence: { depth: 20, bestCp: 510, secondCp: 120 },
+      evidence: {
+        ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+        depth: 20,
+        bestCp: 510,
+        secondCp: 120,
+      },
       puzzleData: puzzle,
     });
     await getPool().query(
@@ -751,7 +770,7 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       profileVersion: 'audit-v1',
       verdict: 'pass',
       engineProfile,
-      evidence: { depth: 22, stable: true },
+      evidence: { ...XIANGQI_PUZZLE_ADMISSION_PROFILE, depth: 22, stable: true },
       claimToken: 'publication-audit-claim',
     });
     await getPool().query(`UPDATE xiangqi_puzzle_mining_runs SET status = 'review' WHERE id = $1`, [
@@ -866,7 +885,10 @@ definePersistenceTests('xiangqi puzzle mining', () => {
   test('publication refuses a position an earlier run already published', async () => {
     const games = Array.from({ length: 16 }, (_, index) => pilotGame(100 + index));
     await seedEligibleGames(games);
-    const engineProfile = { engine: 'pikafish-test', binarySha256: 'e'.repeat(64) };
+    const engineProfile = {
+      binary: { sha256: 'e'.repeat(64) },
+      network: { sha256: XIANGQI_SOLVER_SCORE_PROFILE.networkSha256 },
+    };
     // The first run stored its key in the spelling used before 2026-10 (role
     // initials, chariot and cannon both `c`); the second uses the current one.
     // They name the same position, so the guard must still match them.
@@ -884,7 +906,19 @@ definePersistenceTests('xiangqi puzzle mining', () => {
         seed,
         targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
       });
-      const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+      const run = await initializeXiangqiPuzzleMiningRun({
+        manifest,
+        engineProfile,
+        shardSize: 3,
+        scanProfile: {
+          profileVersion: 'verify-v1',
+          ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+        },
+        auditProfile: {
+          profileVersion: 'audit-v1',
+          ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+        },
+      });
       const historicalGameId = manifest.games[0]?.historicalGameId as string;
       const postBlunderPly = 21;
       const candidate = await recordXiangqiPuzzleMiningCandidate({
@@ -901,7 +935,12 @@ definePersistenceTests('xiangqi puzzle mining', () => {
         profileVersion: 'verify-v1',
         verdict: 'pass',
         engineProfile,
-        evidence: { depth: 20, bestCp: 520, secondCp: 110 },
+        evidence: {
+          ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+          depth: 20,
+          bestCp: 520,
+          secondCp: 110,
+        },
         puzzleData: publishablePuzzle(
           `xq-mined-crossrun-${candidate.id}`,
           historicalGameId,
@@ -924,7 +963,7 @@ definePersistenceTests('xiangqi puzzle mining', () => {
         profileVersion: 'audit-v1',
         verdict: 'pass',
         engineProfile,
-        evidence: { depth: 22, stable: true },
+        evidence: { ...XIANGQI_PUZZLE_ADMISSION_PROFILE, depth: 22, stable: true },
         claimToken: `crossrun-claim-${seed}`,
       });
       await getPool().query(
@@ -937,6 +976,8 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     const firstRunId = await publishOneCandidate('crossrun-first-v1', 0, legacyKey);
     const firstPlan = await planXiangqiPuzzlePublication(getPool(), firstRunId);
     assert.equal(firstPlan.eligibleCandidates, 1);
+    const firstPuzzleId = firstPlan.candidates[0]?.puzzle.id;
+    assert.ok(firstPuzzleId);
     const firstPublished = await publishXiangqiPuzzlePublication({
       runId: firstRunId,
       expectedTotal: 1,
@@ -951,7 +992,10 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     const secondRunId = await publishOneCandidate('crossrun-second-v1', 8, currentKey);
     await assert.rejects(
       planXiangqiPuzzlePublication(getPool(), secondRunId),
-      /repeats a position already published as puzzle/,
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes('repeats a position already published as ') &&
+        error.message.endsWith(firstPuzzleId),
     );
   });
 

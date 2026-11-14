@@ -24,7 +24,7 @@ import type {
   HeadToHeadSubject,
   HeadToHeadTally,
 } from './persistence-games.js';
-import { postgamePlayers } from './routes/lib.js';
+import { type PostgamePlayer, postgamePlayers } from './routes/lib.js';
 
 export { type CrosstableTenantLookup, crosstableReviewUrl } from './crosstable-review-url.js';
 
@@ -40,6 +40,8 @@ export type CrosstablePlayer = {
   // so the private-seat redaction that drops the name drops these too.
   handle: string | null;
   botId: string | null;
+  title?: PostgamePlayer['title'];
+  flair?: PostgamePlayer['flair'];
 };
 export type CrosstableScore = { a: number; b: number; draws: number; total: number };
 export type CrosstableGame = {
@@ -169,12 +171,16 @@ export function resolveCrosstablePair(
         kind: rowA!.kind as CrosstablePlayer['kind'],
         handle: rowA!.handle,
         botId: rowA!.botId,
+        ...(rowA!.title != null ? { title: rowA!.title } : {}),
+        ...(rowA!.flair != null ? { flair: rowA!.flair } : {}),
       },
       {
         name: rowB!.name,
         kind: rowB!.kind as CrosstablePlayer['kind'],
         handle: rowB!.handle,
         botId: rowB!.botId,
+        ...(rowB!.title != null ? { title: rowB!.title } : {}),
+        ...(rowB!.flair != null ? { flair: rowB!.flair } : {}),
       },
     ],
   };

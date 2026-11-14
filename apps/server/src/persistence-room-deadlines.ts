@@ -7,8 +7,10 @@
  * stays the source of truth; this table only decides which rooms to look at.
  */
 
-import { linkableHandleSql } from './persistence-correspondence-seeks.js';
+import type { FlairKey } from './flair.js';
+import { linkableIdentitySql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
 
 export type RoomDeadlineRecord = {
   roomId: string;
@@ -36,8 +38,11 @@ export type CorrespondenceGameSummary = {
   isYourMove: boolean;
   opponentName: string | null;
   // The opponent's handle for a /@/<handle> link; null for a closed or private
-  // account (linkableHandleSql) and for a seat with no account behind it.
+  // account (linkableIdentitySql) and for a seat with no account behind it.
   opponentHandle?: string | null;
+  // Same identity gate as the handle; unset/withheld metadata is omitted.
+  opponentTitle?: PlayerTitle | null;
+  opponentFlair?: FlairKey | null;
   dueAt: Date;
   // Rated correspondence: read off the room's own room-created event (seq 0), the
   // durable home of the flag, so the index needs no copy of it.
@@ -86,11 +91,15 @@ export async function listCorrespondenceGamesForUser(
     due_at: Date;
     opponent_name: string | null;
     opponent_handle: string | null;
+    opponent_title: PlayerTitle | null;
+    opponent_flair: FlairKey | null;
     rated: boolean;
   }>(
     `SELECT rd.room_id, rd.game_spec_id, mine.seat AS my_seat, rd.seat AS on_move_seat,
             rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
-            ${linkableHandleSql('opp_user')} AS opponent_handle,
+            ${linkableIdentitySql('opp_user', 'handle')} AS opponent_handle,
+            ${linkableIdentitySql('opp_user', 'title')} AS opponent_title,
+            ${linkableIdentitySql('opp_user', 'flair')} AS opponent_flair,
             COALESCE((created.payload->>'rated')::boolean, false) AS rated
      FROM room_seat_tokens mine
      JOIN room_deadlines rd ON rd.room_id = mine.room_id
@@ -109,6 +118,8 @@ export async function listCorrespondenceGamesForUser(
     isYourMove: row.on_move_seat === row.my_seat,
     opponentName: row.opponent_name,
     opponentHandle: row.opponent_handle,
+    ...(row.opponent_title != null ? { opponentTitle: row.opponent_title } : {}),
+    ...(row.opponent_flair != null ? { opponentFlair: row.opponent_flair } : {}),
     dueAt: row.due_at,
     rated: row.rated,
   }));

@@ -31,9 +31,9 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-11-10',
+    updatedAt: '2026-11-12',
     updateNote:
-      'Added diagrams of how the soldier moves, for chess players.',
+      'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.',
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },
@@ -327,18 +327,13 @@ export const xiangqiArticle: Article = {
               'To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red\'s chariots and cannons pour through the gap and checkmate on the thirteenth move.',
           },
           {
-            kind: 'xq-replay',
-            spec: {
-              iccs: 'h2e2 h7e7 h0g2 h9g7 i0i1 i9h9 i1d1 h9h3 d1d8 b9a7 a0a1 b7b0 b2b7 g7h9 e2e6 f9e8 a1d1 e9f9 d8d9 e8d9 d1f1 e7f7 f1f7 f9e9 b7e7',
-              red: 'Red',
-              black: 'Black',
-              title: 'Sacrifice the Horse in 13',
-              event: 'Classic manual, 1632',
-              resultText: '1-0',
-              // Empty notes give the annotated card (move sheet beside the
-              // board, result pinned under it), the layout the blog boards use.
-              annotations: { byPly: {} },
-            },
+            kind: 'embed',
+            // Local study ids (scripts/variant-lab/rules-page-games/plans/xiangqi.plan.json);
+            // swapped for the prod ids when the study is created there.
+            path: '/embed/study/FhTsmUme/Z9O7CHU2',
+            title: 'Sacrifice the Horse in 13',
+            // Width-bound at the 702px column, as the jieqi rules page's embed.
+            aspect: [702, 800],
           } as ArticleBlock,
           { kind: 'sub-heading', text: 'A first opening' },
           {

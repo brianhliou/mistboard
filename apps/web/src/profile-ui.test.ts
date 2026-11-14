@@ -39,8 +39,9 @@ function game(overrides: Partial<FeaturedGame> = {}): FeaturedGame {
 
 describe('profile game rows', () => {
   it('puts full names on opponent and neutral pairing name elements', () => {
-    const fullName = 'MistyThreeKingdomsBanqi level 7';
+    const fullName = 'Misty Three Kingdoms Banqi Level 7';
     const fixture = game({
+      variant: 'three-kingdoms-banqi',
       participants: [
         {
           color: 'white',
@@ -51,7 +52,7 @@ describe('profile game rows', () => {
         },
         {
           color: 'black',
-          displayName: fullName,
+          displayName: 'MistyThreeKingdomsBanqi level 7',
           subjectType: 'engine-version',
           subjectId: 'misty-three-kingdoms-banqi-level-7',
           visibility: 'public',
@@ -199,7 +200,7 @@ describe('profile game rows', () => {
 
     const link = row.querySelector('a');
     expect(link?.getAttribute('href')).toBe('/jungle-flip/game/jgf_profile');
-    expect(row.textContent).toContain('vs MistyJungleFlip');
+    expect(row.textContent).toContain('vs Misty Flip Jungle');
     expect(row.textContent).not.toContain('vs White');
     expect(row.textContent).toContain('Flip Jungle');
     expect(row.textContent).toContain('Black');

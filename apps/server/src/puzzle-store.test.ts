@@ -8,8 +8,41 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { xiangqiPuzzleTrainingTags } from '@mistboard/game';
 import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
+import { positionPuzzleFixture } from './fixtures/xiangqi-position-packet.js';
 import { close, getPool, init, isInitialized } from './persistence-db.js';
 import { getPuzzleStore, playerPuzzleCount, resetPuzzleStoreForTests } from './puzzle-store.js';
+
+test('all serving snapshots withhold a planted source history on a position-only record', async (t) => {
+  resetPuzzleStoreForTests();
+  init('postgres://unused@127.0.0.1:9/never');
+  t.after(async () => {
+    await close();
+    resetPuzzleStoreForTests();
+  });
+  const good = positionPuzzleFixture();
+  const planted = {
+    ...good,
+    id: 'planted-position',
+    sourceGame: { gameId: 'PRIVATE_GAME_REF', ply: 50 },
+    initial: { ...good.initial, id: 'planted-position', moveLog: ['PRIVATE_GAME_HISTORY'] },
+  };
+  t.mock.method(getPool(), 'query', async (sql: string) =>
+    sql.includes('SELECT seed_hash')
+      ? { rows: [{ seed_hash: seedPuzzleContentHash() }] }
+      : {
+          rows: [
+            { data: good, position_only: true },
+            { data: planted, position_only: true },
+            { data: { ...planted, id: 'stripped-credit', credit: undefined }, position_only: true },
+          ],
+        },
+  );
+  t.mock.method(console, 'warn', () => {});
+  const snapshot = await getPuzzleStore();
+  assert.equal(snapshot.byId.has(good.id), true);
+  assert.equal(snapshot.byId.has(planted.id), false);
+  assert.ok(!JSON.stringify(snapshot.puzzles).includes('PRIVATE_GAME'));
+});
 
 test('persistence-off store serves the seed corpus byte-identically, in order', async () => {
   assert.equal(isInitialized(), false, 'this test expects a persistence-off runtime');
@@ -59,7 +92,7 @@ test('player provenance survives JSON storage and reload alongside derived train
   let reads = 0;
   t.mock.method(getPool(), 'query', async (sql: string) => {
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    assert.match(sql, /SELECT data FROM puzzles WHERE hidden_reason IS NULL/);
+    assert.match(sql, /SELECT data, position_only FROM puzzles WHERE hidden_reason IS NULL/);
     reads += 1;
     return { rows: [{ data: JSON.parse(stored) }] };
   });

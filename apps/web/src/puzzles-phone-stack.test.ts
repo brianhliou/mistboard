@@ -194,13 +194,12 @@ describe('puzzle phone first screen', () => {
       /\.puzzles-shell \.puzzle-board-panel > \.puzzle-session-chips \{ order: 4;[^}]*height: 30px;/,
     );
     expect(phoneBlock).not.toMatch(/\.puzzle-session-chips \{[^}]*display: none/);
-    // Centred in the spare height under the prompt; auto margins take only
-    // what the capped board leaves, never the board's own height.
+    // History follows the prompt instead of floating in a tall phone's gap.
     expect(portraitBlock).toContain(
-      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: auto; }',
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: 0; }',
     );
     expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
-    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
+    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(2);
     // Desktop keeps it under the board.
     expect(desktop).toMatch(/\.puzzle-session-chips \{ order: 4; grid-column: 2;/);
   });
@@ -319,6 +318,21 @@ describe('keepActivePuzzleMoveInView', () => {
     list.scrollLeft = 200; // the ply sits at -20..70, clipped at the left
     keepActivePuzzleMoveInView(root);
     expect(list.scrollLeft).toBe(200 - (20 + 12));
+  });
+
+  it('keeps the current exploration move visible without an active solution ply', () => {
+    const { list, root } = line(5);
+    list.className = 'puzzle-exploration-moves';
+    const current = list.querySelector<HTMLElement>('.puzzle-move-cell--active')!;
+    current.classList.remove('puzzle-move-cell--active');
+    current.setAttribute('aria-current', 'step');
+    keepActivePuzzleMoveInView(root);
+    expect(list.scrollLeft).toBe(6 * 90 - 320 + 12);
+    current.removeAttribute('aria-current');
+    list.children[2]!.firstElementChild!.setAttribute('aria-current', 'step');
+    keepActivePuzzleMoveInView(root);
+    expect(list.scrollLeft).toBe(2 * 90 - 12);
+    expect(list.scrollTop).toBe(0);
   });
 });
 
@@ -479,7 +493,7 @@ describe('puzzle phone menu rows', () => {
   });
   const keys = (rows: HTMLElement[]) => rows.map((row) => row.dataset.puzzleMenuRow);
 
-  it('shows Rated and auto-next while solving, and hides the goal and themes', () => {
+  it('shows Rated, auto-next and the mate objective while solving, keeping themes hidden', () => {
     const rows = puzzlePhoneMenuRows(props());
     expect(keys(rows)).toEqual(['rated', 'autoNext']);
     const head = puzzlePhoneMenuHead(props());
@@ -488,7 +502,7 @@ describe('puzzle phone menu rows', () => {
     expect(head?.querySelector('a')).toBeNull();
     expect(head?.textContent).toContain('Played locally');
     expect(head?.textContent).toContain('to move');
-    expect(head?.textContent).not.toContain('Mate in');
+    expect(head?.textContent).toContain('Mate in 2');
   });
 
   it('adds the themes row and the goal once solved', () => {

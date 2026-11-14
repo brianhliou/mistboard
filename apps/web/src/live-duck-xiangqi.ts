@@ -120,6 +120,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   finishBadges: (view, previous) =>
     view.status.type === 'finished'
       ? finishBadgesForResult({
+          variant: DUCK_XIANGQI_SPEC_ID,
           colors: duckWebTenant.colors,
           winner: view.status.winner,
           reason: view.status.reason,

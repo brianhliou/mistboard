@@ -20,6 +20,7 @@
 // URL, and `?anything` would otherwise mint a second cached copy of a file.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { botOpponentById } from '@mistboard/game';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
 import { parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
@@ -31,6 +32,7 @@ import {
   DATA_VARIANTS,
   type DataFileTarget,
   type DataListing,
+  type DataScope,
   dataFileHash,
   dataFileKey,
   dataFileName,
@@ -45,6 +47,7 @@ import {
 } from '../game-data-files.js';
 import { getGameSummaries, loadRoomsEvents } from '../persistence.js';
 import {
+  type BotFilter,
   countPublishedGamesByMonth,
   getStoredDataFile,
   getStoredDataFileMeta,
@@ -89,25 +92,71 @@ export function clearDataListingCache(): void {
   listingCache.clear();
 }
 
+type PublicDataBot = Awaited<ReturnType<typeof listPublicDataBots>>[number];
+
+// What a bot or opponent filter selects: the bot ids whose games it holds and
+// the variants it plays, or null when nothing public matches (a 404). An
+// opponent is every level of one map entry (bot-opponents.ts) that is a public
+// data bot; its variants are the union of theirs.
+function resolveScope(
+  scope: DataScope,
+  bots: readonly PublicDataBot[],
+): { filter: BotFilter; variants: readonly string[] } | null {
+  if (scope.botId) {
+    const bot = bots.find((candidate) => candidate.id === scope.botId);
+    return bot ? { filter: bot.id, variants: bot.variants } : null;
+  }
+  if (scope.opponentId) {
+    const opponent = botOpponentById(scope.opponentId);
+    // A one-bot opponent's files are that bot's (the listing normalizes it),
+    // so the same games never sit under a second URL.
+    if (!opponent || opponent.members.length < 2) return null;
+    const memberIds = new Set(opponent.members.map((member) => member.botId));
+    const members = bots.filter((bot) => memberIds.has(bot.id));
+    if (members.length === 0) return null;
+    const played = new Set(members.flatMap((bot) => bot.variants));
+    return {
+      filter: members.map((bot) => bot.id),
+      variants: DATA_VARIANTS.filter((variant) => played.has(variant)),
+    };
+  }
+  return null;
+}
+
+// The start of the month after `now`'s (UTC): counts run up to it, so a
+// variant whose only games are this month can say when its first file comes.
+function nextMonthStart(now: Date): Date {
+  const start = currentMonthStart(now);
+  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
+}
+
 export async function loadDataListing(
   now: Date = new Date(),
-  botId?: string,
+  scopeOrBotId?: DataScope | string,
 ): Promise<DataListing> {
+  const scope: DataScope =
+    typeof scopeOrBotId === 'string' ? { botId: scopeOrBotId } : (scopeOrBotId ?? {});
   const monthStart = currentMonthStart(now).getTime();
-  const key = botId ?? '';
+  const key = scope.botId
+    ? `bot:${scope.botId}`
+    : scope.opponentId
+      ? `opponent:${scope.opponentId}`
+      : '';
   const bots = await listPublicDataBots(DATA_VARIANTS);
-  const bot = botId ? bots.find((candidate) => candidate.id === botId) : undefined;
-  if (botId && !bot) throw new UnknownDataBotError();
+  const filtered = scope.botId || scope.opponentId;
+  const resolved = filtered ? resolveScope(scope, bots) : null;
+  if (filtered && !resolved) throw new UnknownDataBotError();
   const cached = listingCache.get(key);
   if (cached && cached.monthStart === monthStart && now.getTime() - cached.at < LISTING_TTL_MS) {
     return cached.listing;
   }
-  const variants = bot?.variants ?? DATA_VARIANTS;
+  const variants = resolved?.variants ?? DATA_VARIANTS;
+  const until = nextMonthStart(now);
   const [counts, engineCounts, stored, collectionRows] = await Promise.all([
-    countPublishedGamesByMonth(variants, new Date(monthStart), 'human', botId),
-    countPublishedGamesByMonth(variants, new Date(monthStart), 'engine', botId),
+    countPublishedGamesByMonth(variants, until, 'human', resolved?.filter),
+    countPublishedGamesByMonth(variants, until, 'engine', resolved?.filter),
     listStoredDataFiles(),
-    botId ? Promise.resolve([]) : listCollectionRows(),
+    filtered ? Promise.resolve([]) : listCollectionRows(),
   ]);
   const listing = {
     ...buildDataListing({
@@ -116,7 +165,8 @@ export async function loadDataListing(
       stored,
       collections: listableCollections(collectionRows),
       now,
-      botId,
+      ...scope,
+      offeredVariants: variants,
     }),
     bots,
   };
@@ -126,10 +176,9 @@ export async function loadDataListing(
 
 class UnknownDataBotError extends Error {}
 
-async function botVariants(botId: string): Promise<readonly string[] | null> {
-  return (
-    (await listPublicDataBots(DATA_VARIANTS)).find((bot) => bot.id === botId)?.variants ?? null
-  );
+async function scopeFor(target: DataFileTarget) {
+  if (target.kind === 'collection') return null;
+  return resolveScope(target, await listPublicDataBots(DATA_VARIANTS));
 }
 
 type ResolvedTarget =
@@ -141,8 +190,10 @@ async function resolveTarget(target: DataFileTarget, now: Date): Promise<Resolve
   if (target.kind !== 'collection') {
     const range = parseMonth(target.month)!;
     if (!isClosedMonth(range, now)) return { status: 404, error: 'month_not_closed' };
-    const supported = target.botId ? await botVariants(target.botId) : DATA_VARIANTS;
-    if (!supported || (target.variant !== ALL_VARIANTS_KEY && !supported.includes(target.variant)))
+    const scoped = target.botId || target.opponentId ? await scopeFor(target) : null;
+    if ((target.botId || target.opponentId) && !scoped) return { status: 404, error: 'not_found' };
+    const supported = scoped?.variants ?? DATA_VARIANTS;
+    if (target.variant !== ALL_VARIANTS_KEY && !supported.includes(target.variant))
       return { status: 404, error: 'not_found' };
     const variants = target.variant === ALL_VARIANTS_KEY ? supported : [target.variant];
     const roomIds = await listPublishedRoomIds(
@@ -150,7 +201,7 @@ async function resolveTarget(target: DataFileTarget, now: Date): Promise<Resolve
       range.from,
       range.to,
       target.kind === 'engine-monthly' ? 'engine' : 'human',
-      target.botId,
+      scoped?.filter,
     );
     if (roomIds.length === 0) return { status: 404, error: 'no_games' };
     return { roomIds: async () => roomIds };
@@ -181,9 +232,26 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_bot_id' }, { 'cache-control': NO_STORE });
       return true;
     }
-    const botId = parsedBot ? (firstPartyBotForId(parsedBot)?.id ?? parsedBot) : undefined;
+    const opponentParam = parsedUrl?.searchParams.get('opponent') ?? null;
+    if (opponentParam !== null && (requested || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(opponentParam))) {
+      writeJson(response, 400, { error: 'invalid_opponent' }, { 'cache-control': NO_STORE });
+      return true;
+    }
+    const opponent = opponentParam ? botOpponentById(opponentParam) : null;
+    if (opponentParam && !opponent) {
+      writeJson(response, 404, { error: 'not_found' }, { 'cache-control': NO_STORE });
+      return true;
+    }
+    // A one-bot opponent is that bot: one listing, one set of file URLs.
+    const scope: DataScope = parsedBot
+      ? { botId: firstPartyBotForId(parsedBot)?.id ?? parsedBot }
+      : opponent
+        ? opponent.members.length === 1
+          ? { botId: opponent.members[0]!.botId }
+          : { opponentId: opponent.id }
+        : {};
     try {
-      const listing = await loadDataListing(new Date(), botId);
+      const listing = await loadDataListing(new Date(), scope);
       writeJson(response, 200, listing, { 'cache-control': 'public, max-age=60' });
     } catch (error) {
       if (!(error instanceof UnknownDataBotError)) throw error;
@@ -216,8 +284,8 @@ export async function tryHandle(
 
   const target = parsed.target;
   // Recheck visibility even for a previously built file, before redirecting or serving it.
-  if (target.kind !== 'collection' && target.botId) {
-    const variants = await botVariants(target.botId);
+  if (target.kind !== 'collection' && (target.botId || target.opponentId)) {
+    const variants = (await scopeFor(target))?.variants;
     if (!variants || (target.variant !== ALL_VARIANTS_KEY && !variants.includes(target.variant))) {
       writeJson(response, 404, { error: 'not_found' }, noStore);
       return true;

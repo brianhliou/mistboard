@@ -27,6 +27,7 @@ import { abJchessVsJqeArticle } from './articles/content/ab-jchess-vs-jqe.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { jqeArticle } from './articles/content/jqe.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
+import { xiangqiNnueTrainingArticle } from './articles/content/xiangqi-nnue-training.js';
 import { chariotCannonRepetitionKeyArticle } from './articles/content/chariot-cannon-repetition-key.js';
 import { flipJungleSkillCeilingArticle } from './articles/content/flip-jungle-skill-ceiling.js';
 import { katagoJungleArticle } from './articles/content/katago-jungle.js';
@@ -82,6 +83,7 @@ import { helpmatesInXiangqiArticle } from './articles/content/helpmates-in-xiang
 import { shortestStalemateXiangqiArticle } from './articles/content/shortest-stalemate-xiangqi.js';
 import { generalBlunderChallengeArticle } from './articles/content/general-blunder-challenge.js';
 import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
+import { mengFanruiArticle } from './articles/content/meng-fanrui.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
@@ -93,6 +95,7 @@ import { tangDanArticle } from './articles/content/tang-dan.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  mengFanruiArticle,
   oneOpponentFourVariantsArticle,
   fogFutureArticle,
   tangDanArticle,
@@ -107,6 +110,7 @@ export const articles: Article[] = [
   chariotCannonRepetitionKeyArticle,
   solverAuditArticle,
   pikafishRevealBugArticle,
+  xiangqiNnueTrainingArticle,
   katagoJungleArticle,
   abJchessVsJqeArticle,
   jqeArticle,

@@ -94,12 +94,17 @@ export async function guardFFQBanqiHttpRead(
   const path = url.pathname;
   const review = /^\/ffq-banqi\/game\/[^/]+\/?$/.test(path);
   const replay = /^\/api\/ffq-banqi\/games\/[^/]+$/.test(path);
-  if ((!target.summary && !target.shell && !review && !replay) || request.method !== 'GET')
-    return refuse();
+  const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis$/.test(path);
+  const analysisPoll = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis\/jobs\/[^/]+$/.test(path);
+  const allowedRead =
+    (target.summary || target.shell || review || replay || analysisPoll) &&
+    request.method === 'GET';
+  const allowedAnalysis = analysis && (request.method === 'GET' || request.method === 'POST');
+  if (!allowedRead && !allowedAnalysis) return refuse();
   if (!ffqBanqiEnabled() || !ffqBanqiAdmits(await currentAccountUser(request))) return refuse();
   // Only these owned serializers may run after the gate. Aliases, raw events,
   // artifacts, embeds and all other descendants remain closed.
-  if (review || replay) return false;
+  if (review || replay || analysis || analysisPoll) return false;
   // Continue through the normal static shell only AFTER authorization, keeping
   // the private cache/robots headers. Other alias pages remain closed.
   if (target.shell) return false;

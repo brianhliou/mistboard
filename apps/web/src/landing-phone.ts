@@ -71,8 +71,8 @@ export function buildLandingTvStrip(locale: Locale): LandingTvStrip {
 }
 
 /**
- * The mission line that closes the phone home, under the chat, with a link to
- * /about. The top of the phone keeps the TV board and the Play buttons.
+ * The mission under the shortcut tiles and above News, with totals and a link
+ * to /about. The top of the phone keeps the TV board and the Play buttons.
  */
 export function buildLandingPhoneMission(locale: Locale): HTMLElement {
   const el = document.createElement('section');
@@ -83,11 +83,13 @@ export function buildLandingPhoneMission(locale: Locale): HTMLElement {
   const text = document.createElement('p');
   text.className = 'landing-phone-mission-text';
   text.textContent = t('home.mission', {}, locale);
+  const totals = document.createElement('div');
+  totals.className = 'landing-phone-mission-totals';
   const about = document.createElement('a');
   about.className = 'landing-phone-mission-about';
   about.href = localizedHref('/about', locale);
   about.textContent = t('home.missionAbout', {}, locale);
-  el.append(label, text, about);
+  el.append(label, text, totals, about);
   return el;
 }
 

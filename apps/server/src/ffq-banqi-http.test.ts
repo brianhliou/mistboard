@@ -44,6 +44,8 @@ function reads(id: string): Array<[string, string]> {
       '/export.pgn',
       '/analysis',
       '/analysis/jobs/job',
+      '/analysis/jobs/job/extra',
+      '/analysis/extra',
       '/decisions',
       '/watch',
       '/crosstable',
@@ -52,6 +54,8 @@ function reads(id: string): Array<[string, string]> {
       paths.push(['GET', `/api/${prefix}games/${id}${suffix}`]);
     }
     paths.push(['POST', `/api/${prefix}games/${id}/analysis`]);
+    paths.push(['POST', `/api/${prefix}games/${id}/analysis/jobs/job`]);
+    paths.push(['HEAD', `/api/${prefix}games/${id}/analysis`]);
     paths.push(['POST', `/api/${prefix}games/${id}/favorite`]);
     paths.push(['DELETE', `/api/${prefix}games/${id}/favorite`]);
     paths.push(['GET', `/${prefix}game/${id}`]);
@@ -223,7 +227,7 @@ for (const flag of [undefined, 'false', 'true']) {
         'live_alias',
       ]) {
         for (const [method, path] of reads(id)) {
-          // Only minimal summaries and the canonical live room shell open.
+          // Only owned replay/analysis serializers and minimal summaries open.
           const safeSummary =
             !['ffq_inflight', 'ffq_wrong_variant'].includes(id) &&
             method === 'GET' &&
@@ -231,11 +235,15 @@ for (const flag of [undefined, 'false', 'true']) {
           const url = new URL(path, 'http://localhost');
           const safeShell =
             method === 'GET' && [`/room/${id}`, `/room/${id}/`].includes(url.pathname);
-          if (
-            admitted &&
+          const ownedRead =
             method === 'GET' &&
-            (path === `/api/ffq-banqi/games/${id}` || path === `/ffq-banqi/game/${id}`)
-          ) {
+            (path === `/api/ffq-banqi/games/${id}` ||
+              path === `/ffq-banqi/game/${id}` ||
+              path === `/api/ffq-banqi/games/${id}/analysis/jobs/job`);
+          const ownedAnalysis =
+            (method === 'GET' || method === 'POST') &&
+            path === `/api/ffq-banqi/games/${id}/analysis`;
+          if (admitted && (ownedRead || ownedAnalysis)) {
             const headers = new Map();
             const response = {
               setHeader: (key: string, value: unknown) => headers.set(key.toLowerCase(), value),

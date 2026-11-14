@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ensureLocaleCatalog } from '../i18n/catalog.js';
 import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
 import { lineToChapter, mountEmbedLine } from './embed-line-page.js';
 import { embedLineFromSearch } from './embed-route.js';
@@ -175,4 +176,43 @@ describe('mountEmbedLine', () => {
     expect(chapter.root?.root?.children?.[0]?.children?.[0]?.uci).toBe('b1b1');
     expect(chapter.tags).toEqual({ red: 'A', result: '1-0' });
   });
+});
+
+it('a hidden decision line asks for a move rather than claiming a mate, and reveals its legal reply', async () => {
+  const root = document.createElement('div');
+  document.body.append(root);
+  await mountEmbedLine(
+    root,
+    { variant: 'xiangqi' },
+    embedLineFromSearch('?moves=h3e3,h8e8&event=Decision'),
+    { hideSolution: true },
+  );
+  expect(root.querySelector('.embed-card-solution-prompt')?.textContent).toBe(
+    'What would you play?',
+  );
+  expect(root.querySelector('.embed-card-rail-inner')?.getAttribute('aria-hidden')).toBe('true');
+  root.querySelector<HTMLButtonElement>('.embed-card-solution-show')?.click();
+  expect(root.querySelector('.embed-card-solution-cover')).toBeNull();
+  expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(2);
+  root.remove();
+});
+
+it.each([
+  ['zh-Hans', '你会怎么走？'],
+  ['zh-Hant', '你會怎麼走？'],
+] as const)('localizes a hidden decision prompt in %s', async (lang, prompt) => {
+  await ensureLocaleCatalog(lang);
+  const previous = window.location.pathname + window.location.search;
+  window.history.replaceState(null, '', `/${lang.toLowerCase()}/embed/line/xiangqi`);
+  const root = document.createElement('div');
+  document.body.append(root);
+  try {
+    await mountEmbedLine(root, { variant: 'xiangqi' }, embedLineFromSearch('?moves=h3e3,h8e8'), {
+      hideSolution: true,
+    });
+    expect(root.querySelector('.embed-card-solution-prompt')?.textContent).toBe(prompt);
+  } finally {
+    window.history.replaceState(null, '', previous);
+    root.remove();
+  }
 });

@@ -117,7 +117,9 @@ describe('live and correspondence seat rows', () => {
     const who = row.querySelector('.current-game-seat-who');
     expect(discInk(row)).toBe('red');
     expect(who?.firstElementChild?.classList.contains('seat-disc')).toBe(true);
-    expect(who?.children[1]?.classList.contains('current-game-seat-name')).toBe(true);
+    const label = who?.children[1];
+    expect(label?.classList.contains('current-game-seat-label')).toBe(true);
+    expect(label?.firstElementChild?.classList.contains('current-game-seat-name')).toBe(true);
   });
 
   it('draws a dashed ring while the ink is unbound', () => {

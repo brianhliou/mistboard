@@ -129,7 +129,9 @@ export const jungleFlipArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/uKxJ60mN/8mQHGAqc',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/jungle-flip.plan.json);
+          // swapped for the prod ids when the prod study is created from that plan.
+          path: '/embed/study/7d1IkHPE/vUJ3Yodx',
           title: 'Flip Jungle: an engine game, Red wins on move 28',
           // Width-bound at the 702px column: the 4x4 board beside the move sheet,
           // plus seat rows, controls, header and credit.

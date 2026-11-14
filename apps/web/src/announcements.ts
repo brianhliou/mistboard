@@ -47,6 +47,22 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-18',
+    kind: 'article',
+    headline: 'A player page for Meng Fanrui.',
+    body: "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.",
+    href: '/blog/meng-fanrui',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-11-13',
+    kind: 'release',
+    headline: 'Correspondence games can now be rated.',
+    body: 'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.',
+    href: '/correspondence',
+    cta: 'Play by correspondence',
+  },
+  {
     date: '2026-11-10',
     kind: 'release',
     headline: 'Three Kingdoms Banqi is open to everyone.',

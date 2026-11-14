@@ -68,6 +68,58 @@ function guest(color: GameParticipant['color']): GameParticipant {
   };
 }
 
+test('crosstable carries title/flair only for a visible linkable user seat', () => {
+  const account = {
+    ...user('red', 'alice'),
+    handle: 'alice',
+    title: 'xim',
+    flair: 'variant-banqi',
+  } satisfies GameParticipant;
+  const room = {
+    roomId: 'bq_identity',
+    variant: 'banqi',
+    participants: [account, engine('black', 'misty-banqi')],
+  };
+  const pair = resolveCrosstablePair(room, LOOKUP);
+  assert.ok(pair.ok);
+  const payload = buildCrosstable({
+    variant: room.variant,
+    players: pair.players,
+    games: [],
+    tallies: [],
+    lookup: LOOKUP,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(payload)).players[0], {
+    name: 'User alice',
+    kind: 'account',
+    handle: 'alice',
+    botId: null,
+    title: 'xim',
+    flair: 'variant-banqi',
+  });
+  for (const seat of [
+    { ...account, handle: null },
+    { ...account, visibility: 'private' as const },
+    { ...engine('red', 'other-engine'), title: account.title, flair: account.flair },
+    { ...account, subjectType: 'bot' as const, subjectId: 'misty' },
+  ]) {
+    const hidden = resolveCrosstablePair(
+      { ...room, participants: [seat, room.participants[1]!] },
+      LOOKUP,
+    );
+    const body = hidden.ok
+      ? buildCrosstable({
+          variant: room.variant,
+          players: hidden.players,
+          games: [],
+          tallies: [],
+          lookup: LOOKUP,
+        })
+      : hidden;
+    assert.doesNotMatch(JSON.stringify(body), /"(?:title|flair)"|xim|variant-banqi/);
+  }
+});
+
 test('crosstable pair: two public accounts resolve in seat order', () => {
   const resolution = resolveCrosstablePair(
     {

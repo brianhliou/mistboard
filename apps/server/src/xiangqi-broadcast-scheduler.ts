@@ -16,7 +16,10 @@
 
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
+import { seedXiangqiBroadcastSiblingTourOn } from './persistence-xiangqi-broadcasts.js';
 import {
+  type DpxqSiblingSeed,
+  type DpxqTrackedTour,
   fetchDpxqTourIndex,
   planDpxqIndexSync,
   rememberDpxqTourIndex,
@@ -82,20 +85,25 @@ const liveDeps: XiangqiBroadcastSchedulerDeps = {
   evaluateLiveBoard: (boardId) => requestBroadcastLiveEvalForBoard(boardId),
 };
 
-/** One index sweep: every end-date move is applied and logged on its tour.
+/** One index sweep: extend end dates and seed newly listed sibling groups.
  *  A failed read is logged without a tour; the next sweep retries. */
 export async function sweepDpxqTourIndex(
   deps: {
     fetchImpl?: Parameters<typeof fetchDpxqTourIndex>[0]['fetchImpl'];
     now?: () => number;
+    listTours?: () => Promise<DpxqTrackedTour[]>;
+    seedSibling?: (seed: DpxqSiblingSeed) => Promise<boolean>;
+    extendEndsAt?: typeof persistence.extendXiangqiBroadcastTourEndsAt;
+    recordSyncLog?: typeof persistence.recordXiangqiBroadcastSyncLog;
   } = {},
 ): Promise<void> {
+  const recordSyncLog = deps.recordSyncLog ?? persistence.recordXiangqiBroadcastSyncLog;
   const index = await fetchDpxqTourIndex({
     fetchImpl: deps.fetchImpl ?? defaultXiangqiBroadcastFetch,
     timeoutMs: 15_000,
   });
   if (!index.ok) {
-    await persistence.recordXiangqiBroadcastSyncLog({
+    await recordSyncLog({
       severity: 'warning',
       kind: 'dpxq_index_unreadable',
       message: index.message,
@@ -103,16 +111,32 @@ export async function sweepDpxqTourIndex(
     return;
   }
   rememberDpxqTourIndex(index.rows);
-  const tours = await persistence.listXiangqiBroadcastTourSourcesOn(getPool());
+  const tours = await (deps.listTours
+    ? deps.listTours()
+    : persistence.listXiangqiBroadcastTourSourcesOn(getPool()));
   const plan = planDpxqIndexSync({ rows: index.rows, tours, now: (deps.now ?? Date.now)() });
   for (const move of plan.endDateMoves) {
-    if (!(await persistence.extendXiangqiBroadcastTourEndsAt(move.slug, move.to))) continue;
-    await persistence.recordXiangqiBroadcastSyncLog({
+    const extendEndsAt = deps.extendEndsAt ?? persistence.extendXiangqiBroadcastTourEndsAt;
+    if (!(await extendEndsAt(move.slug, move.to))) continue;
+    await recordSyncLog({
       tourSlug: move.slug,
       severity: 'info',
       kind: 'event_end_moved',
       message: `dpxq now lists the event ending ${move.to.slice(0, 10)}`,
       payload: { dpxqTour: move.tourId, from: move.from, to: move.to },
+    });
+  }
+  for (const seed of plan.siblingSeeds) {
+    const inserted = deps.seedSibling
+      ? await deps.seedSibling(seed)
+      : await seedXiangqiBroadcastSiblingTourOn(getPool(), seed);
+    if (!inserted) continue;
+    await recordSyncLog({
+      tourSlug: seed.tour.slug,
+      severity: 'info',
+      kind: 'event_sibling_seeded',
+      message: `seeded dpxq sibling group of ${seed.parentSlug}`,
+      payload: { dpxqTour: seed.tourId, parentSlug: seed.parentSlug },
     });
   }
 }

@@ -1,0 +1,18 @@
+{
+  "intro": "jqe (Red) against AB-JChess (Black), game 115 of the first run in their 600-game match on 2026-10-31, at 4 seconds a move. AB-JChess read every position again for this study. Marks (?!, ?, ??) grade each move against its choice, the graph is Black's chance as it saw it, and the die beside a turned-over piece grades how lucky the turn was from what both players could see. Pieces taken face-down or never turned over stay face-down.",
+  "judged": {
+    "33": "Red gives back what Black's last move let slip. AB-JChess wanted the cannon across to b5 first.",
+    "34": "Black returns the favour: the chariot dives to d3 at once, where the horse jump to c4 kept more."
+  },
+  "comments": {
+    "21": "Red has taken six pieces to Black's two, and Red is clearly better.",
+    "22": "Black turns over a chariot, and Red's lead starts to shrink.",
+    "26": "A second chariot for Black from a face-down piece. With both in play, Black is now slightly better.",
+    "45": "Turning this piece over is a gamble on what it will be. It comes up a soldier, and Black's chariots mate in three moves.",
+    "50": "The second chariot takes the face-down piece on d1, and the general has no move: checkmate."
+  },
+  "lines": {
+    "33": "AB-JChess's choice.",
+    "34": "AB-JChess's choice."
+  }
+}

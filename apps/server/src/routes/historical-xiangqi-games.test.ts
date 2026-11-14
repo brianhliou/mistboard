@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
   CANONICAL_VARIANT_ORDER,
   GAMES_SEARCH_DEFAULT_MIN_PLIES,
   type GameSpecId,
 } from '@mistboard/game';
+import { seedBroadcastDiscoveryFixture } from '../broadcast-discovery-test-support.js';
+import { definePersistenceTests } from '../persistence-test-support.js';
+import type { HttpApiContext } from './lib.js';
 // The searchable variants derive from the tenant registry (via the watch
 // channels), so the registrations must be populated, as index.ts does.
 import '../variant-tenant/register-tenants.js';
@@ -22,7 +26,48 @@ import {
   SEARCH_WINDOW,
   searchableVariants,
   searchLanes,
+  tryHandle,
 } from './historical-xiangqi-games.js';
+
+definePersistenceTests('historical search broadcast discovery', () => {
+  test('broadcast search totals and filtered results omit unlisted boards', async () => {
+    const { tours, boards } = await seedBroadcastDiscoveryFixture();
+    for (const event of ['', tours[1]!.name]) {
+      let status = 0;
+      let body = '';
+      const response = {
+        writeHead(code: number) {
+          status = code;
+        },
+        end(chunk: string) {
+          body = chunk;
+        },
+      } as unknown as ServerResponse;
+      const url = new URL(
+        'http://test.local/api/historical-xiangqi/games?source=broadcast&plyMin=0',
+      );
+      if (event) url.searchParams.set('event', event);
+      assert.equal(
+        await tryHandle(
+          {} as HttpApiContext,
+          { method: 'GET' } as IncomingMessage,
+          response,
+          url.pathname,
+          url,
+        ),
+        true,
+      );
+      assert.equal(status, 200);
+      const page = JSON.parse(body);
+      assert.equal(page.total, event ? 0 : 1);
+      assert.deepEqual(
+        page.games.map((game: { id: string }) => game.id),
+        event ? [] : [boards[0]!.id],
+      );
+      assert.ok(!body.includes(tours[1]!.slug));
+    }
+  });
+});
 
 function parse(query: string) {
   return parseHistoricalXiangqiGameQuery(new URLSearchParams(query));

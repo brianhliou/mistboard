@@ -21,7 +21,6 @@
 // native read. Treat a native review as a prerequisite for publishing, not a
 // nice-to-have: rules copy that is subtly wrong is worse than no rules copy.
 
-import { JIEQI_SAMPLE_GAME } from '../../jieqi-sample-game.js';
 import { cjkGlyphMark, xiangqiGlyph } from '../../xiangqi-piece-sets.js';
 import {
   JIEQI_CAPTURE_PRIVACY,
@@ -91,8 +90,8 @@ export const luatCoUpArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
-  updatedAt: '2026-11-07',
-  updateNote: 'Lặp lại thế cờ nay xét cả đuổi bắt mãi, và ván hòa vì không ăn quân đến sau 40 nước mỗi bên thay vì 60.',
+  updatedAt: '2026-11-12',
+  updateNote: 'Ván mẫu nay là một ván mới, mỗi nước có đánh giá của AB-JChess (lời bình bằng tiếng Anh).',
   audience: 'Người mới chơi cờ úp, và người chơi cờ tướng muốn biết cờ úp khác ở chỗ nào.',
   intro: [
     {
@@ -199,19 +198,18 @@ export const luatCoUpArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Đi thử từng nước một ván engine tự đánh với chính mình. Quân úp hiện ra như những đĩa màu và lật lên đúng lần đầu chúng di chuyển.',
+          text: 'Một ván trong trận đấu 600 ván giữa jqe (Đỏ) và AB-JChess (Đen) hồi tháng Mười. Đen ở phía dưới bàn cờ. Đỏ ăn sáu quân trong mười một nước đầu, nhưng hai quân úp của Đen lật lên thành xe ở nước 11 và 13, và thế cờ nghiêng về Đen. Ở nước 23 Đỏ lật quân cạnh tướng, ra một con tốt, và hai xe Đen chiếu bí ở nước 25. Các ký hiệu và biến phụ là đánh giá của AB-JChess. Lời bình trong ván hiện chỉ có bằng tiếng Anh.',
         },
         {
-          kind: 'jieqi-replay',
-          spec: {
-            red: JIEQI_SAMPLE_GAME.red,
-            black: JIEQI_SAMPLE_GAME.black,
-            event: JIEQI_SAMPLE_GAME.event,
-            outcome: 'Đỏ thắng bằng chiếu bí · 36 nước',
-            resultText: JIEQI_SAMPLE_GAME.result,
-            deal: JIEQI_SAMPLE_GAME.deal,
-            moves: JIEQI_SAMPLE_GAME.moves,
-          },
+          kind: 'embed',
+          // The same study as the English /rules/jieqi page. Local study ids
+          // (scripts/variant-lab/rules-page-games/plans/jieqi.plan.json); swapped
+          // for the prod ids when the study is created there. Study comments are
+          // localized only to en, zh-Hans and zh-Hant, so a Vietnamese reader gets
+          // the English notes.
+          path: '/embed/study/4KNglJHs/olxXB9Ny',
+          title: 'Cờ úp: jqe gặp AB-JChess, Đen chiếu bí ở nước 25',
+          aspect: [702, 800],
         } as ArticleBlock,
       ],
     },

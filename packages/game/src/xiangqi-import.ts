@@ -44,12 +44,19 @@ export type XiangqiMoveFormat =
   | 'chinese' // Chinese relative notation: 炮二平五, 马8进7, 前炮平五
   | 'dhtmlxq'; // dpxq.com / dhtmlxq packed record: 4 digits per move
 
+export type XiangqiImportFailure =
+  | { code: 'unknown_notation' }
+  | { code: 'illegal_move'; format: XiangqiMoveFormat; ply: number; move: string };
+
 export interface XiangqiImportResult {
   moves: XiangqiMove[];
   /** The format that replayed legally, or null when nothing matched. */
   format: XiangqiMoveFormat | null;
   /** Set when no codec produced a fully-legal game; the most useful reason. */
   error?: string;
+  /** Machine-readable failure; failed imports never expose partial moves.
+   *  `ply` is 1-based and `move` retains the failing notation token. */
+  failure?: XiangqiImportFailure;
   /** The position the moves replay from, when it is not the standard opening:
    *  a caller-supplied initialState, or a [DhtmlXQ_binit] custom start. Callers
    *  that render the game need this, or they draw the wrong board. */
@@ -177,8 +184,30 @@ function chineseCleaned(input: string): string {
 
 function chineseChunks(input: string): string[] {
   const cleaned = chineseCleaned(input);
+  const compact = cleaned.match(/.{1,4}/g) ?? [];
+  // Historically spaces and punctuation could even occur inside a move.
+  if (compact.length > 0 && compact.every((token) => parseChineseToken(token) !== null)) {
+    return compact;
+  }
   const chunks: string[] = [];
-  for (let i = 0; i + 4 <= cleaned.length; i += 4) chunks.push(cleaned.slice(i, i + 4));
+  // Preserve an unreadable word (and any short trailing fragment) for error
+  // reporting instead of silently discarding it. Valid compact records still
+  // split into the same four-character moves as before.
+  const words = input
+    .replace(/\d+\./g, '')
+    .replace(CN_CAPTURE_GLOSS, '')
+    .replace(CJK_PUNCTUATION, ' ')
+    .split(/[\s,]+/);
+  for (let word of words) {
+    while (word.length > 0) {
+      if (parseChineseToken(word.slice(0, 4)) === null) {
+        chunks.push(word);
+        break;
+      }
+      chunks.push(word.slice(0, 4));
+      word = word.slice(4);
+    }
+  }
   return chunks;
 }
 
@@ -322,6 +351,9 @@ const CODECS: XiangqiNotationCodec[] = [
 ];
 
 export interface XiangqiImportOptions {
+  /** Use this existing codec exclusively, with no sniffing or fallback. ICCS
+   *  callers use `uci-0indexed`, not our 1-indexed `coordinate` format. */
+  format?: XiangqiMoveFormat;
   /** Replay from here instead of the standard opening. Set by the PGN reader
    *  when a [FEN] tag names a custom start, which is how classical endgame
    *  compositions are recorded. */
@@ -335,23 +367,55 @@ export function importXiangqiGame(
   options: XiangqiImportOptions = {},
 ): XiangqiImportResult {
   const trimmed = input.trim();
-  if (!trimmed) return { moves: [], format: null, error: 'Enter a game to import.' };
+  if (!trimmed) {
+    return {
+      moves: [],
+      format: null,
+      error: 'Enter a game to import.',
+      failure: { code: 'unknown_notation' },
+    };
+  }
   // An explicit initialState wins; otherwise a DhtmlXQ record may carry its own
   // start. binit appears only in DhtmlXQ records, so this cannot disturb the
   // other codecs.
-  const start = options.initialState ?? dhtmlxqStateFromBinit(trimmed) ?? undefined;
-  let firstError: string | undefined;
-  for (const codec of CODECS) {
-    if (!codec.detect(trimmed)) continue;
+  const start =
+    options.initialState ??
+    (!options.format || options.format === 'dhtmlxq' ? dhtmlxqStateFromBinit(trimmed) : null) ??
+    undefined;
+  const codecs = options.format
+    ? CODECS.filter((codec) => codec.format === options.format)
+    : CODECS;
+  let failed: ReturnType<typeof replayWithCodec> | undefined;
+  const rememberFailure = (attempt: ReturnType<typeof replayWithCodec>): void => {
+    if (attempt.failure && attempt.failure.ply > (failed?.failure?.ply ?? 0)) failed = attempt;
+  };
+  for (const codec of codecs) {
+    const first = codec.tokenize(trimmed)[0];
+    if (options.format ? !first || !codec.detect(first) : !codec.detect(trimmed)) continue;
     const attempt = replayWithCodec(codec, trimmed, start);
     if (attempt.moves.length > 0 && !attempt.error) {
       return start
         ? { moves: attempt.moves, format: codec.format, initialState: start }
         : { moves: attempt.moves, format: codec.format };
     }
-    firstError ??= attempt.error;
+    rememberFailure(attempt);
   }
-  return { moves: [], format: null, error: firstError ?? 'Unrecognized move notation.' };
+  // A malformed later token fails whole-input detection. Diagnose it from a
+  // readable first token, but never use this fallback to accept an input the
+  // original sniffer would not have accepted. Prefer the deepest legal prefix.
+  if (!options.format) {
+    for (const codec of codecs) {
+      const first = codec.tokenize(trimmed)[0];
+      if (codec.format === 'dhtmlxq' || !first || !codec.detect(first)) continue;
+      if (!codec.detect(trimmed)) rememberFailure(replayWithCodec(codec, trimmed, start));
+    }
+  }
+  return {
+    moves: [],
+    format: null,
+    error: failed?.error ?? 'Unrecognized move notation.',
+    failure: failed?.failure ?? { code: 'unknown_notation' },
+  };
 }
 
 // Fold a codec's tokens through the rules engine; a token that does not resolve
@@ -360,16 +424,24 @@ function replayWithCodec(
   codec: XiangqiNotationCodec,
   input: string,
   initialState?: XiangqiGameState,
-): { moves: XiangqiMove[]; error?: string } {
+): {
+  moves: XiangqiMove[];
+  error?: string;
+  failure?: Extract<XiangqiImportFailure, { code: 'illegal_move' }>;
+} {
   const tokens = codec.tokenize(input);
   if (tokens.length === 0) return { moves: [], error: 'No moves found.' };
   let state = initialState ?? createInitialXiangqiState('import');
   const moves: XiangqiMove[] = [];
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]!;
-    const move = codec.resolveMove(token, state);
+    const move = codec.detect(token) ? codec.resolveMove(token, state) : null;
     if (!move || state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) {
-      return { moves, error: `Move ${index + 1} ("${token}") is not legal as ${codec.format}.` };
+      return {
+        moves: [],
+        error: `Move ${index + 1} ("${token}") is not legal as ${codec.format}.`,
+        failure: { code: 'illegal_move', format: codec.format, ply: index + 1, move: token },
+      };
     }
     state = applyXiangqiRecordMove(state, move);
     moves.push(move);

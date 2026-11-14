@@ -1,0 +1,3910 @@
+{
+  "label": "pass2-200k",
+  "startedAt": "2026-11-13T02:31:02.032Z",
+  "machine": {
+    "cpu": "Apple M3 Max",
+    "logicalCpus": 14,
+    "platform": "darwin",
+    "release": "27.2.0",
+    "node": "v26.11.1",
+    "revision": "89bd9188802b87ea11a182ccb9ce20d277876449",
+    "engineSha256": "95c6f08cafe828170e4c35d64af310c4e17c0c3e5f7d3e67f69057237ed25bcd",
+    "netSha256": "03e7052b0c5178bd1a683bc38ec9a9f0c41177367b6891f8e697dd95876e413e"
+  },
+  "engineId": "misty-banqi-decisions@0.3.0+nnue+rank200000+baseline200000+floor200000+d7",
+  "rankingNodes": 200000,
+  "implementationSha256": "8b5f43db3e40892bfc614e57316ded6a9f5aaf18bd7c14250bd8a7d829318560",
+  "method": "Full finished games; cold exact-query cache per game, normal reuse within game; two analysis slots.",
+  "games": [
+    {
+      "name": "Game 1: second seat wins in 33",
+      "seed": 320,
+      "corpusIndex": 0,
+      "corpusSha256": "c320045b8d625cca375ec2ed5a3f86ba28517036ae46761084d2e390e59a814e",
+      "plies": 66,
+      "flips": [
+        1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 15, 17, 18, 19, 20, 21, 22, 23, 25, 27, 33, 39, 41, 45,
+        47, 49, 51, 53, 59, 61, 65
+      ],
+      "finalStatus": {
+        "type": "finished",
+        "winner": "black",
+        "reason": "stalemate"
+      },
+      "decisions": [
+        {
+          "ply": 1,
+          "mover": "red",
+          "bestWin": 48.403554801521565,
+          "playedWin": 48.063100832343316,
+          "realizedWin": 50,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 48.403554801521565
+            },
+            {
+              "move": "g1g1",
+              "win": 48.28388430425482
+            },
+            {
+              "move": "b1b1",
+              "win": 48.063100832343316,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.3404539691782489,
+          "luck": 1.9368991676566836,
+          "wallMs": 5902.018291,
+          "evalCalls": 74,
+          "searches": 74,
+          "requestedNodes": 14800000,
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"]
+        },
+        {
+          "ply": 2,
+          "mover": "black",
+          "bestWin": 50.53947511926836,
+          "playedWin": 49.761641730161486,
+          "realizedWin": 48.80355243833374,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g1g1",
+              "win": 50.53947511926836
+            },
+            {
+              "move": "g2g2",
+              "win": 50.213508877422655
+            },
+            {
+              "move": "a2a2",
+              "win": 49.99763287065287
+            },
+            {
+              "move": "b3b3",
+              "win": 49.761641730161486,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.777833389106874,
+          "luck": -0.958089291827747,
+          "wallMs": 7266.040667,
+          "evalCalls": 87,
+          "searches": 87,
+          "requestedNodes": 17400000,
+          "rankedTopThree": ["g1g1", "g2g2", "a2a2"]
+        },
+        {
+          "ply": 3,
+          "mover": "red",
+          "bestWin": 51.0063977861752,
+          "playedWin": 50.38201080348691,
+          "realizedWin": 52.02403732122674,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "b0b0",
+              "win": 51.0063977861752
+            },
+            {
+              "move": "a1a1",
+              "win": 50.900823295636066
+            },
+            {
+              "move": "c1c1",
+              "win": 50.62940834517582
+            },
+            {
+              "move": "d3d3",
+              "win": 50.38201080348691,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.6243869826882928,
+          "luck": 1.6420265177398363,
+          "wallMs": 7839.9169170000005,
+          "evalCalls": 86,
+          "searches": 86,
+          "requestedNodes": 17200000,
+          "rankedTopThree": ["b0b0", "a1a1", "c1c1"]
+        },
+        {
+          "ply": 4,
+          "mover": "black",
+          "bestWin": 48.32380156582023,
+          "playedWin": 48.23098418614908,
+          "realizedWin": 50.82839219143761,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "d2d2",
+              "win": 48.32380156582023
+            },
+            {
+              "move": "b2b2",
+              "win": 48.23098418614908,
+              "played": true
+            },
+            {
+              "move": "g1g1",
+              "win": 48.08452486849505
+            }
+          ],
+          "decisionLoss": 0.09281737967115333,
+          "luck": 2.5974080052885284,
+          "wallMs": 6611.966291000001,
+          "evalCalls": 71,
+          "searches": 71,
+          "requestedNodes": 14200000,
+          "rankedTopThree": ["d2d2", "b2b2", "g1g1"]
+        },
+        {
+          "ply": 5,
+          "mover": "red",
+          "bestWin": 49.184050313667,
+          "playedWin": 48.19505250838114,
+          "realizedWin": 50.09205189599892,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 49.184050313667
+            },
+            {
+              "move": "c0c0",
+              "win": 49.096911411026284
+            },
+            {
+              "move": "g2g2",
+              "win": 48.98642111190341
+            },
+            {
+              "move": "b0b0",
+              "win": 48.19505250838114,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.9889978052858623,
+          "luck": 1.8969993876177824,
+          "wallMs": 8676.78225,
+          "evalCalls": 80,
+          "searches": 80,
+          "requestedNodes": 16000000,
+          "rankedTopThree": ["f3f3", "c0c0", "g2g2"]
+        },
+        {
+          "ply": 6,
+          "mover": "black",
+          "bestWin": 49.27886300140162,
+          "playedWin": 48.774630388496774,
+          "realizedWin": 54.49835205954683,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "d2d2",
+              "win": 49.27886300140162
+            },
+            {
+              "move": "e3e3",
+              "win": 49.26177373572477
+            },
+            {
+              "move": "g3g3",
+              "win": 49.15399377729379
+            },
+            {
+              "move": "c2c2",
+              "win": 48.774630388496774,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.5042326129048433,
+          "luck": 5.723721671050058,
+          "wallMs": 8092.382166999996,
+          "evalCalls": 80,
+          "searches": 80,
+          "requestedNodes": 16000000,
+          "rankedTopThree": ["d2d2", "e3e3", "g3g3"]
+        },
+        {
+          "ply": 9,
+          "mover": "red",
+          "bestWin": 43.7983396679879,
+          "playedWin": 43.7983396679879,
+          "realizedWin": 43.50127852729232,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 43.7983396679879,
+              "played": true
+            },
+            {
+              "move": "g0g0",
+              "win": 43.4208619017291
+            },
+            {
+              "move": "g1g1",
+              "win": 43.14144269624332
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.29706114069557543,
+          "wallMs": 7212.557333000004,
+          "evalCalls": 65,
+          "searches": 65,
+          "requestedNodes": 13000000,
+          "rankedTopThree": ["f3f3", "g0g0", "g1g1"]
+        },
+        {
+          "ply": 10,
+          "mover": "black",
+          "bestWin": 58.65553320423772,
+          "playedWin": 58.421772189438606,
+          "realizedWin": 65.24068491501986,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "h3h3",
+              "win": 58.65553320423772
+            },
+            {
+              "move": "f1f1",
+              "win": 58.421772189438606,
+              "played": true
+            },
+            {
+              "move": "c3c3",
+              "win": 56.686033169902174
+            }
+          ],
+          "decisionLoss": 0.23376101479911426,
+          "luck": 6.818912725581249,
+          "wallMs": 6795.6576669999995,
+          "evalCalls": 67,
+          "searches": 67,
+          "requestedNodes": 13400000,
+          "rankedTopThree": ["h3h3", "f1f1", "c3c3"]
+        },
+        {
+          "ply": 11,
+          "mover": "red",
+          "bestWin": 35.69825857834716,
+          "playedWin": 35.69825857834716,
+          "realizedWin": 41.96956162806843,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "f2f2",
+              "win": 35.69825857834716,
+              "played": true
+            },
+            {
+              "move": "e2e2",
+              "win": 35.11071824943418
+            },
+            {
+              "move": "a1a1",
+              "win": 34.05221688041747
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 6.271303049721276,
+          "wallMs": 7115.983333000004,
+          "evalCalls": 60,
+          "searches": 60,
+          "requestedNodes": 12000000,
+          "rankedTopThree": ["e2e2", "f2f2", "a1a1"]
+        },
+        {
+          "ply": 12,
+          "mover": "black",
+          "bestWin": 65.30627670868735,
+          "playedWin": 65.02896085239334,
+          "realizedWin": 71.1382833072352,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "d1d1",
+              "win": 65.30627670868735
+            },
+            {
+              "move": "g2g2",
+              "win": 65.02896085239334,
+              "played": true
+            },
+            {
+              "move": "h3h3",
+              "win": 64.57885513227241
+            }
+          ],
+          "decisionLoss": 0.2773158562940097,
+          "luck": 6.109322454841859,
+          "wallMs": 7237.900750000001,
+          "evalCalls": 63,
+          "searches": 63,
+          "requestedNodes": 12600000,
+          "rankedTopThree": ["g2g2", "h3h3", "d1d1"]
+        },
+        {
+          "ply": 13,
+          "mover": "red",
+          "bestWin": 34.234715793845766,
+          "playedWin": 27.130923906092395,
+          "realizedWin": 17.085039397158944,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "h2h2",
+              "win": 34.234715793845766
+            },
+            {
+              "move": "d2d2",
+              "win": 30.381450283262133
+            },
+            {
+              "move": "g3g3",
+              "win": 27.130923906092395,
+              "played": true
+            }
+          ],
+          "decisionLoss": 7.103791887753371,
+          "luck": -10.045884508933451,
+          "wallMs": 7732.307583999995,
+          "evalCalls": 58,
+          "searches": 58,
+          "requestedNodes": 11600000,
+          "rankedTopThree": ["h2h2", "d2d2", "g3g3"]
+        },
+        {
+          "ply": 15,
+          "mover": "red",
+          "bestWin": 15.587033488450807,
+          "playedWin": 15.504056357370152,
+          "realizedWin": 11.849774804133453,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 15.587033488450807
+            },
+            {
+              "move": "f0f0",
+              "win": 15.504056357370152,
+              "played": true
+            },
+            {
+              "move": "e2e2",
+              "win": 14.72664705928494
+            }
+          ],
+          "decisionLoss": 0.0829771310806553,
+          "luck": -3.6542815532366983,
+          "wallMs": 7488.769165999998,
+          "evalCalls": 58,
+          "searches": 58,
+          "requestedNodes": 11600000,
+          "rankedTopThree": ["e1e1", "f0f0", "e2e2"]
+        },
+        {
+          "ply": 17,
+          "mover": "red",
+          "bestWin": 12.683785071598912,
+          "playedWin": 12.683785071598912,
+          "realizedWin": 9.69711946929445,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 12.683785071598912,
+              "played": true
+            },
+            {
+              "move": "e1e1",
+              "win": 12.443415722984561
+            },
+            {
+              "move": "e0e0",
+              "win": 11.038216023444326
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -2.9866656023044627,
+          "wallMs": 6724.999750000003,
+          "evalCalls": 53,
+          "searches": 53,
+          "requestedNodes": 10600000,
+          "rankedTopThree": ["e2e2", "e1e1", "e0e0"]
+        },
+        {
+          "ply": 18,
+          "mover": "black",
+          "bestWin": 90.7450014345987,
+          "playedWin": 90.17945639477281,
+          "realizedWin": 89.07850895108885,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "f2f3",
+              "win": 90.7450014345987
+            },
+            {
+              "move": "h1h1",
+              "win": 90.44099667760496
+            },
+            {
+              "move": "d1d1",
+              "win": 90.17945639477281,
+              "played": true
+            },
+            {
+              "move": "h2h2",
+              "win": 90.0965316889115
+            }
+          ],
+          "decisionLoss": 0.5655450398258921,
+          "luck": -1.100947443683964,
+          "wallMs": 6992.964708999993,
+          "evalCalls": 59,
+          "searches": 59,
+          "requestedNodes": 11800000,
+          "rankedTopThree": ["f2f3", "h1h1", "h2h2"]
+        },
+        {
+          "ply": 19,
+          "mover": "red",
+          "bestWin": 10.662875875306208,
+          "playedWin": 10.662875875306208,
+          "realizedWin": 10.124442766917433,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "e0e0",
+              "win": 10.662875875306208,
+              "played": true
+            },
+            {
+              "move": "g0g0",
+              "win": 10.535311377836479
+            },
+            {
+              "move": "h0h0",
+              "win": 9.790616431089177
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.5384331083887748,
+          "wallMs": 5523.158875000008,
+          "evalCalls": 48,
+          "searches": 48,
+          "requestedNodes": 9600000,
+          "rankedTopThree": ["e0e0", "g0g0", "h0h0"]
+        },
+        {
+          "ply": 20,
+          "mover": "black",
+          "bestWin": 90.39918030317814,
+          "playedWin": 90.01541140740957,
+          "realizedWin": 89.53555642045939,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "f2f3",
+              "win": 90.39918030317814
+            },
+            {
+              "move": "h1h1",
+              "win": 90.01541140740957,
+              "played": true
+            },
+            {
+              "move": "h2h2",
+              "win": 89.63122265986073
+            }
+          ],
+          "decisionLoss": 0.38376889576856854,
+          "luck": -0.4798549869501869,
+          "wallMs": 5782.708333000002,
+          "evalCalls": 44,
+          "searches": 44,
+          "requestedNodes": 8800000,
+          "rankedTopThree": ["f2f3", "h1h1", "h2h2"]
+        },
+        {
+          "ply": 21,
+          "mover": "red",
+          "bestWin": 10.214663760124468,
+          "playedWin": 9.500929428580502,
+          "realizedWin": 10.124442766917433,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g0g0",
+              "win": 10.214663760124468
+            },
+            {
+              "move": "h0h0",
+              "win": 9.765813178172417
+            },
+            {
+              "move": "e0f0",
+              "win": 9.69711946929445
+            },
+            {
+              "move": "a2a2",
+              "win": 9.500929428580502,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.7137343315439661,
+          "luck": 0.6235133383369309,
+          "wallMs": 7091.031457999998,
+          "evalCalls": 48,
+          "searches": 48,
+          "requestedNodes": 9600000,
+          "rankedTopThree": ["g0g0", "h0h0", "e0f0"]
+        },
+        {
+          "ply": 22,
+          "mover": "black",
+          "bestWin": 90.14046421228699,
+          "playedWin": 88.79065402386644,
+          "realizedWin": 86.94689166918971,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "f2f3",
+              "win": 90.14046421228699
+            },
+            {
+              "move": "h2h2",
+              "win": 89.95597199657382
+            },
+            {
+              "move": "g3f3",
+              "win": 89.18551153472504
+            },
+            {
+              "move": "h0h0",
+              "win": 88.79065402386644,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.3498101884205482,
+          "luck": -1.843762354676727,
+          "wallMs": 6627.900542000003,
+          "evalCalls": 41,
+          "searches": 41,
+          "requestedNodes": 8200000,
+          "rankedTopThree": ["f2f3", "h2h2", "g3f3"]
+        },
+        {
+          "ply": 23,
+          "mover": "red",
+          "bestWin": 12.68530767030227,
+          "playedWin": 12.640037225013867,
+          "realizedWin": 9.442218785969807,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 12.68530767030227
+            },
+            {
+              "move": "g0g0",
+              "win": 12.640037225013867,
+              "played": true
+            },
+            {
+              "move": "a1a1",
+              "win": 12.4901671611289
+            }
+          ],
+          "decisionLoss": 0.04527044528840385,
+          "luck": -3.1978184390440596,
+          "wallMs": 5676.1398749999935,
+          "evalCalls": 40,
+          "searches": 40,
+          "requestedNodes": 8000000,
+          "rankedTopThree": ["g0g0", "a1a1", "a3a3"]
+        },
+        {
+          "ply": 25,
+          "mover": "red",
+          "bestWin": 9.17025994647004,
+          "playedWin": 8.572309139102996,
+          "realizedWin": 7.23136059066038,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "a1a1",
+              "win": 9.17025994647004
+            },
+            {
+              "move": "a3a3",
+              "win": 8.572309139102996,
+              "played": true
+            },
+            {
+              "move": "c3c3",
+              "win": 8.409014906370732
+            },
+            {
+              "move": "c1c1",
+              "win": 8.27598260127547
+            }
+          ],
+          "decisionLoss": 0.5979508073670434,
+          "luck": -1.3409485484426167,
+          "wallMs": 6770.564000000013,
+          "evalCalls": 42,
+          "searches": 42,
+          "requestedNodes": 8400000,
+          "rankedTopThree": ["a1a1", "c3c3", "c1c1"]
+        },
+        {
+          "ply": 27,
+          "mover": "red",
+          "bestWin": 7.122839435133226,
+          "playedWin": 7.122839435133226,
+          "realizedWin": 8.424745343669514,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "a1a1",
+              "win": 7.122839435133226,
+              "played": true
+            },
+            {
+              "move": "c3c3",
+              "win": 6.9054611341699985
+            },
+            {
+              "move": "c0c0",
+              "win": 6.8629688006321325
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 1.3019059085362876,
+          "wallMs": 5111.369166999997,
+          "evalCalls": 34,
+          "searches": 34,
+          "requestedNodes": 6800000,
+          "rankedTopThree": ["a1a1", "c3c3", "c0c0"]
+        },
+        {
+          "ply": 33,
+          "mover": "red",
+          "bestWin": 7.5398000595887655,
+          "playedWin": 7.125212765061175,
+          "realizedWin": 5.5451325623559455,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e3e3",
+              "win": 7.5398000595887655
+            },
+            {
+              "move": "c1c1",
+              "win": 7.125212765061175,
+              "played": true
+            },
+            {
+              "move": "c0c0",
+              "win": 7.06187720893993
+            }
+          ],
+          "decisionLoss": 0.4145872945275908,
+          "luck": -1.5800802027052292,
+          "wallMs": 4524.273832999985,
+          "evalCalls": 32,
+          "searches": 32,
+          "requestedNodes": 6400000,
+          "rankedTopThree": ["c1c1", "c0c0", "e3e3"]
+        },
+        {
+          "ply": 39,
+          "mover": "red",
+          "bestWin": 4.994184357695218,
+          "playedWin": 4.628660341070289,
+          "realizedWin": 3.9175977988830866,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "c2b2",
+              "win": 4.994184357695218
+            },
+            {
+              "move": "a0a0",
+              "win": 4.695042896524288
+            },
+            {
+              "move": "c2c1",
+              "win": 4.656129154388232
+            },
+            {
+              "move": "c0c0",
+              "win": 4.628660341070289,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.3655240166249287,
+          "luck": -0.7110625421872028,
+          "wallMs": 3794.472542000003,
+          "evalCalls": 28,
+          "searches": 28,
+          "requestedNodes": 5600000,
+          "rankedTopThree": ["c2b2", "a0a0", "c2c1"]
+        },
+        {
+          "ply": 41,
+          "mover": "red",
+          "bestWin": 4.6073360986009675,
+          "playedWin": 4.258902915760721,
+          "realizedWin": 3.808212155884064,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "c2b2",
+              "win": 4.6073360986009675
+            },
+            {
+              "move": "e3e3",
+              "win": 4.437888006947646
+            },
+            {
+              "move": "c3c3",
+              "win": 4.258902915760721,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.34843318284024605,
+          "luck": -0.4506907598766574,
+          "wallMs": 3148.671457999997,
+          "evalCalls": 24,
+          "searches": 24,
+          "requestedNodes": 4800000,
+          "rankedTopThree": ["c2b2", "c3c3", "e3e3"]
+        },
+        {
+          "ply": 45,
+          "mover": "red",
+          "bestWin": 3.7401255507045255,
+          "playedWin": 3.7401255507045255,
+          "realizedWin": 3.4602956980053747,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "e3e3",
+              "win": 3.7401255507045255,
+              "played": true
+            },
+            {
+              "move": "a0a0",
+              "win": 3.6105006668128174
+            },
+            {
+              "move": "e1e1",
+              "win": 3.581163592862592
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.2798298526991507,
+          "wallMs": 3313.5636670000094,
+          "evalCalls": 26,
+          "searches": 26,
+          "requestedNodes": 5200000,
+          "rankedTopThree": ["e3e3", "e1e1", "a0a0"]
+        },
+        {
+          "ply": 47,
+          "mover": "red",
+          "bestWin": 3.681738916328539,
+          "playedWin": 3.681738916328539,
+          "realizedWin": 2.9580535933023597,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 3.681738916328539,
+              "played": true
+            },
+            {
+              "move": "a0a0",
+              "win": 3.5816943907280896
+            },
+            {
+              "move": "h3h3",
+              "win": 3.220533054379218
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.7236853230261793,
+          "wallMs": 3498.1552500000107,
+          "evalCalls": 25,
+          "searches": 25,
+          "requestedNodes": 5000000,
+          "rankedTopThree": ["e1e1", "a0a0", "h3h3"]
+        },
+        {
+          "ply": 49,
+          "mover": "red",
+          "bestWin": 2.9903521700271813,
+          "playedWin": 2.9369874567662744,
+          "realizedWin": 2.936987456766275,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "a0a0",
+              "win": 2.9903521700271813
+            },
+            {
+              "move": "h3h3",
+              "win": 2.947538852691195
+            },
+            {
+              "move": "d0d0",
+              "win": 2.9369874567662744,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.05336471326090697,
+          "luck": 4.440892098500626e-16,
+          "wallMs": 2880.839874999976,
+          "evalCalls": 21,
+          "searches": 21,
+          "requestedNodes": 4200000,
+          "rankedTopThree": ["a0a0", "h3h3", "d0d0"]
+        },
+        {
+          "ply": 51,
+          "mover": "red",
+          "bestWin": 2.941193384620735,
+          "playedWin": 2.941193384620735,
+          "realizedWin": 2.936987456766275,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "d2d2",
+              "win": 2.941193384620735,
+              "played": true
+            },
+            {
+              "move": "a0a0",
+              "win": 2.9369874567662753
+            },
+            {
+              "move": "g1g1",
+              "win": 2.9369874567662753
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.0042059278544601675,
+          "wallMs": 2805.922333000024,
+          "evalCalls": 19,
+          "searches": 19,
+          "requestedNodes": 3800000,
+          "rankedTopThree": ["a0a0", "g1g1", "d2d2"]
+        },
+        {
+          "ply": 53,
+          "mover": "red",
+          "bestWin": 2.936987456766275,
+          "playedWin": 2.936987456766275,
+          "realizedWin": 2.936987456766275,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "a0a0",
+              "win": 2.936987456766275
+            },
+            {
+              "move": "g1g1",
+              "win": 2.936987456766275,
+              "played": true
+            },
+            {
+              "move": "h2h2",
+              "win": 2.936987456766275
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 0,
+          "wallMs": 2589.9089579999854,
+          "evalCalls": 15,
+          "searches": 15,
+          "requestedNodes": 3000000,
+          "rankedTopThree": ["a0a0", "g1g1", "h2h2"]
+        },
+        {
+          "ply": 59,
+          "mover": "red",
+          "bestWin": 2.936987456766275,
+          "playedWin": 2.7764104264631086,
+          "realizedWin": 2.4552563658567763,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "f0g0",
+              "win": 2.936987456766275
+            },
+            {
+              "move": "h2h2",
+              "win": 2.7764104264631086,
+              "played": true
+            },
+            {
+              "move": "a0a0",
+              "win": 2.7694216183696767
+            }
+          ],
+          "decisionLoss": 0.16057703030316617,
+          "luck": -0.32115406060633234,
+          "wallMs": 1262.2419590000063,
+          "evalCalls": 9,
+          "searches": 9,
+          "requestedNodes": 1800000,
+          "rankedTopThree": ["a0a0", "h2h2", "f0g0"]
+        },
+        {
+          "ply": 61,
+          "mover": "red",
+          "bestWin": 2.4552563658567763,
+          "playedWin": 2.4552563658567763,
+          "realizedWin": 2.4552563658567763,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "a0a0",
+              "win": 2.4552563658567763
+            },
+            {
+              "move": "h3h3",
+              "win": 2.4552563658567763,
+              "played": true
+            },
+            {
+              "move": "f0g0",
+              "win": 2.4552563658567763
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 0,
+          "wallMs": 64.78858299998683,
+          "evalCalls": 6,
+          "searches": 6,
+          "requestedNodes": 1200000,
+          "rankedTopThree": ["a0a0", "h3h3", "f0g0"]
+        },
+        {
+          "ply": 65,
+          "mover": "red",
+          "bestWin": 2.4552563658567763,
+          "playedWin": 2.4552563658567763,
+          "realizedWin": 2.4552563658567763,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "a0a0",
+              "win": 2.4552563658567763,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 0,
+          "wallMs": 12.911125000013271,
+          "evalCalls": 2,
+          "searches": 2,
+          "requestedNodes": 400000,
+          "rankedTopThree": ["a0a0"]
+        }
+      ],
+      "wallMs": 172169.684625,
+      "evalCalls": 1465,
+      "rankEvalCalls": 570,
+      "baselineEvalCalls": 895,
+      "rankWallMs": 64818.88757999998,
+      "logicalRequestedNodes": 293000000,
+      "searches": 1465,
+      "requestedNodes": 293000000,
+      "reportedNodes": 291336580,
+      "missingNodeReports": 0,
+      "capHits": 0,
+      "meanFlipMs": 5380.30264453125,
+      "poolStats": {
+        "pools": [
+          {
+            "name": "abjchess-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "abjchess-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 1465,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "duck-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "ffq-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jqe-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "katago-jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "three-kingdoms-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          }
+        ],
+        "totals": {
+          "active": 0,
+          "queueDepth": 0,
+          "waited": 0,
+          "timedOut": 0
+        },
+        "processes": {
+          "name": "all-engine-processes",
+          "active": 0,
+          "queueDepth": 0,
+          "maxProcesses": 12,
+          "acquired": 1465,
+          "waited": 0,
+          "timedOut": 0,
+          "peakQueueDepth": 0
+        }
+      },
+      "complete": true
+    },
+    {
+      "name": "Game 4: second seat wins in 60",
+      "seed": 339,
+      "corpusIndex": 3,
+      "corpusSha256": "c320045b8d625cca375ec2ed5a3f86ba28517036ae46761084d2e390e59a814e",
+      "plies": 120,
+      "flips": [
+        1, 2, 3, 4, 5, 6, 7, 10, 13, 16, 18, 20, 22, 24, 25, 26, 27, 28, 29, 31, 48, 51, 53, 60, 61,
+        62, 63, 66, 71, 72, 78, 79
+      ],
+      "finalStatus": {
+        "type": "finished",
+        "winner": "black",
+        "reason": "stalemate"
+      },
+      "decisions": [
+        {
+          "ply": 1,
+          "mover": "red",
+          "bestWin": 48.403554801521565,
+          "playedWin": 48.063100832343316,
+          "realizedWin": 50.09205189599892,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 48.403554801521565
+            },
+            {
+              "move": "g1g1",
+              "win": 48.28388430425482
+            },
+            {
+              "move": "b1b1",
+              "win": 48.063100832343316,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.3404539691782489,
+          "luck": 2.0289510636556045,
+          "wallMs": 9028.571040999988,
+          "evalCalls": 74,
+          "searches": 74,
+          "requestedNodes": 14800000,
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"]
+        },
+        {
+          "ply": 2,
+          "mover": "black",
+          "bestWin": 50.921569298396626,
+          "playedWin": 50.87894149583986,
+          "realizedWin": 47.05773918729125,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "d1d1",
+              "win": 50.921569298396626
+            },
+            {
+              "move": "b3b3",
+              "win": 50.87894149583986,
+              "played": true
+            },
+            {
+              "move": "a3a3",
+              "win": 49.986630707421064
+            }
+          ],
+          "decisionLoss": 0.04262780255676546,
+          "luck": -3.8212023085486138,
+          "wallMs": 9502.703792000015,
+          "evalCalls": 73,
+          "searches": 73,
+          "requestedNodes": 14600000,
+          "rankedTopThree": ["d1d1", "b3b3", "a3a3"]
+        },
+        {
+          "ply": 3,
+          "mover": "red",
+          "bestWin": 55.365482935014356,
+          "playedWin": 55.365482935014356,
+          "realizedWin": 12.886860291577854,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "b2b2",
+              "win": 55.365482935014356,
+              "played": true
+            },
+            {
+              "move": "c1c1",
+              "win": 53.96645583026947
+            },
+            {
+              "move": "b0b0",
+              "win": 53.15711197234835
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -42.4786226434365,
+          "wallMs": 9824.070707999985,
+          "evalCalls": 72,
+          "searches": 72,
+          "requestedNodes": 14400000,
+          "rankedTopThree": ["b2b2", "c1c1", "b0b0"]
+        },
+        {
+          "ply": 4,
+          "mover": "black",
+          "bestWin": 86.56616464722748,
+          "playedWin": 83.31490833394547,
+          "realizedWin": 81.5157651431742,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "b3b2",
+              "win": 86.56616464722748
+            },
+            {
+              "move": "f2f2",
+              "win": 84.1645950613092
+            },
+            {
+              "move": "g2g2",
+              "win": 84.1464429789952
+            },
+            {
+              "move": "d2d2",
+              "win": 83.31490833394547,
+              "played": true
+            }
+          ],
+          "decisionLoss": 3.2512563132820134,
+          "luck": -1.799143190771261,
+          "wallMs": 10834.17545900002,
+          "evalCalls": 70,
+          "searches": 70,
+          "requestedNodes": 14000000,
+          "rankedTopThree": ["b3b2", "f2f2", "g2g2"]
+        },
+        {
+          "ply": 5,
+          "mover": "red",
+          "bestWin": 19.355892101523406,
+          "playedWin": 17.44446672928576,
+          "realizedWin": 14.13382401591943,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 19.355892101523406
+            },
+            {
+              "move": "d0d0",
+              "win": 18.827127433993283
+            },
+            {
+              "move": "a1a1",
+              "win": 17.62766120287273
+            },
+            {
+              "move": "b0b0",
+              "win": 17.44446672928576,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.9114253722376446,
+          "luck": -3.310642713366331,
+          "wallMs": 14286.76995799999,
+          "evalCalls": 80,
+          "searches": 80,
+          "requestedNodes": 16000000,
+          "rankedTopThree": ["c1c1", "d0d0", "a1a1"]
+        },
+        {
+          "ply": 6,
+          "mover": "black",
+          "bestWin": 85.86617598408057,
+          "playedWin": 82.62447345903436,
+          "realizedWin": 83.58240437072985,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "b3b2",
+              "win": 85.86617598408057
+            },
+            {
+              "move": "e1e1",
+              "win": 82.77650277531671
+            },
+            {
+              "move": "g2g2",
+              "win": 82.77095117892779
+            },
+            {
+              "move": "d1d1",
+              "win": 82.62447345903436,
+              "played": true
+            }
+          ],
+          "decisionLoss": 3.2417025250462075,
+          "luck": 0.9579309116954846,
+          "wallMs": 10068.482208000001,
+          "evalCalls": 65,
+          "searches": 65,
+          "requestedNodes": 13000000,
+          "rankedTopThree": ["b3b2", "g2g2", "e1e1"]
+        },
+        {
+          "ply": 7,
+          "mover": "red",
+          "bestWin": 16.98400822744347,
+          "playedWin": 15.837704856414222,
+          "realizedWin": 14.864023737321475,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 16.98400822744347
+            },
+            {
+              "move": "f2f2",
+              "win": 16.630746307520237
+            },
+            {
+              "move": "a1a1",
+              "win": 15.837704856414222,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.1463033710292496,
+          "luck": -0.9736811190927472,
+          "wallMs": 11080.071083999996,
+          "evalCalls": 62,
+          "searches": 62,
+          "requestedNodes": 12400000,
+          "rankedTopThree": ["c1c1", "f2f2", "a1a1"]
+        },
+        {
+          "ply": 10,
+          "mover": "black",
+          "bestWin": 85.16186879636061,
+          "playedWin": 83.97215391744649,
+          "realizedWin": 86.08813591131842,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 85.16186879636061
+            },
+            {
+              "move": "c3c3",
+              "win": 84.587844544335
+            },
+            {
+              "move": "e0e0",
+              "win": 84.46014828932472
+            },
+            {
+              "move": "c2c2",
+              "win": 83.97215391744649,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.189714878914117,
+          "luck": 2.1159819938719266,
+          "wallMs": 11545.115041000012,
+          "evalCalls": 73,
+          "searches": 73,
+          "requestedNodes": 14600000,
+          "rankedTopThree": ["a3a3", "c3c3", "e0e0"]
+        },
+        {
+          "ply": 13,
+          "mover": "red",
+          "bestWin": 13.828571947225072,
+          "playedWin": 13.216022621975494,
+          "realizedWin": 14.00029530333191,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "d3d3",
+              "win": 13.828571947225072
+            },
+            {
+              "move": "c0c0",
+              "win": 13.216022621975494,
+              "played": true
+            },
+            {
+              "move": "b3b2",
+              "win": 13.094954138457574
+            }
+          ],
+          "decisionLoss": 0.612549325249578,
+          "luck": 0.7842726813564163,
+          "wallMs": 9042.644459000003,
+          "evalCalls": 52,
+          "searches": 52,
+          "requestedNodes": 10400000,
+          "rankedTopThree": ["b3b2", "c0c0", "d3d3"]
+        },
+        {
+          "ply": 16,
+          "mover": "black",
+          "bestWin": 82.25063939730256,
+          "playedWin": 82.18464514417161,
+          "realizedWin": 79.61445499054108,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 82.25063939730256
+            },
+            {
+              "move": "c3c3",
+              "win": 82.18464514417161,
+              "played": true
+            },
+            {
+              "move": "e1e1",
+              "win": 81.7650957949797
+            }
+          ],
+          "decisionLoss": 0.06599425313095253,
+          "luck": -2.5701901536305343,
+          "wallMs": 9796.079790999996,
+          "evalCalls": 60,
+          "searches": 60,
+          "requestedNodes": 12000000,
+          "rankedTopThree": ["a3a3", "e1e1", "c3c3"]
+        },
+        {
+          "ply": 18,
+          "mover": "black",
+          "bestWin": 84.75934245090255,
+          "playedWin": 78.02703755466021,
+          "realizedWin": 79.61445499054108,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "d1d2",
+              "win": 84.75934245090255
+            },
+            {
+              "move": "d3d3",
+              "win": 79.74122486630628
+            },
+            {
+              "move": "e1e1",
+              "win": 78.02703755466021,
+              "played": true
+            },
+            {
+              "move": "a3a3",
+              "win": 77.98185670325383
+            }
+          ],
+          "decisionLoss": 6.73230489624234,
+          "luck": 1.587417435880866,
+          "wallMs": 9685.295249999966,
+          "evalCalls": 60,
+          "searches": 60,
+          "requestedNodes": 12000000,
+          "rankedTopThree": ["d1d2", "d3d3", "a3a3"]
+        },
+        {
+          "ply": 20,
+          "mover": "black",
+          "bestWin": 79.03601306781901,
+          "playedWin": 78.61872779065777,
+          "realizedWin": 80.72639602536954,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 79.03601306781901
+            },
+            {
+              "move": "e0e0",
+              "win": 78.61872779065777,
+              "played": true
+            },
+            {
+              "move": "a3a3",
+              "win": 75.64322548734025
+            }
+          ],
+          "decisionLoss": 0.4172852771612412,
+          "luck": 2.107668234711767,
+          "wallMs": 7791.6783339999965,
+          "evalCalls": 58,
+          "searches": 58,
+          "requestedNodes": 11600000,
+          "rankedTopThree": ["e0e0", "e2e2", "a3a3"]
+        },
+        {
+          "ply": 22,
+          "mover": "black",
+          "bestWin": 83.53181555713567,
+          "playedWin": 81.3514059844606,
+          "realizedWin": 81.40454756112642,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e1e0",
+              "win": 83.53181555713567
+            },
+            {
+              "move": "e2e2",
+              "win": 81.3514059844606,
+              "played": true
+            },
+            {
+              "move": "a3a3",
+              "win": 80.48237382351698
+            }
+          ],
+          "decisionLoss": 2.1804095726750745,
+          "luck": 0.053141576665822754,
+          "wallMs": 7287.632541000028,
+          "evalCalls": 47,
+          "searches": 47,
+          "requestedNodes": 9400000,
+          "rankedTopThree": ["e1e0", "a3a3", "e2e2"]
+        },
+        {
+          "ply": 24,
+          "mover": "black",
+          "bestWin": 83.48110166845021,
+          "playedWin": 81.8540586571963,
+          "realizedWin": 81.5157651431742,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "e1e0",
+              "win": 83.48110166845021
+            },
+            {
+              "move": "a3a3",
+              "win": 82.77714120962702
+            },
+            {
+              "move": "g0g0",
+              "win": 81.8540586571963,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.6270430112539032,
+          "luck": -0.33829351402209795,
+          "wallMs": 7323.6957500000135,
+          "evalCalls": 47,
+          "searches": 47,
+          "requestedNodes": 9400000,
+          "rankedTopThree": ["a3a3", "e1e0", "g0g0"]
+        },
+        {
+          "ply": 25,
+          "mover": "red",
+          "bestWin": 17.146377738330308,
+          "playedWin": 15.949605598285771,
+          "realizedWin": 16.620701810552085,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 17.146377738330308
+            },
+            {
+              "move": "c2b2",
+              "win": 16.98097103394629
+            },
+            {
+              "move": "f3f3",
+              "win": 16.7045498891919
+            },
+            {
+              "move": "d3d3",
+              "win": 15.949605598285771,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.196772140044537,
+          "luck": 0.6710962122663133,
+          "wallMs": 10796.15408399998,
+          "evalCalls": 59,
+          "searches": 59,
+          "requestedNodes": 11800000,
+          "rankedTopThree": ["g2g2", "f3f3", "c2b2"]
+        },
+        {
+          "ply": 26,
+          "mover": "black",
+          "bestWin": 83.07087376703214,
+          "playedWin": 80.52025546714106,
+          "realizedWin": 79.31402764774053,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "e1e0",
+              "win": 83.07087376703214
+            },
+            {
+              "move": "h0h0",
+              "win": 81.74475293794104
+            },
+            {
+              "move": "a3a3",
+              "win": 81.72707217564319
+            },
+            {
+              "move": "f0f0",
+              "win": 80.52025546714106,
+              "played": true
+            }
+          ],
+          "decisionLoss": 2.5506182998910845,
+          "luck": -1.2062278194005245,
+          "wallMs": 9742.229290999996,
+          "evalCalls": 51,
+          "searches": 51,
+          "requestedNodes": 10200000,
+          "rankedTopThree": ["e1e0", "a3a3", "h0h0"]
+        },
+        {
+          "ply": 27,
+          "mover": "red",
+          "bestWin": 20.685972352259473,
+          "playedWin": 15.62938416500193,
+          "realizedWin": 15.145771517415682,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "d3d2",
+              "win": 20.685972352259473
+            },
+            {
+              "move": "e3e3",
+              "win": 17.57603299382778
+            },
+            {
+              "move": "g2g2",
+              "win": 16.70771323682526
+            },
+            {
+              "move": "h3h3",
+              "win": 15.62938416500193,
+              "played": true
+            }
+          ],
+          "decisionLoss": 5.056588187257542,
+          "luck": -0.48361264758624856,
+          "wallMs": 9589.064416999987,
+          "evalCalls": 57,
+          "searches": 57,
+          "requestedNodes": 11400000,
+          "rankedTopThree": ["d3d2", "e3e3", "g2g2"]
+        },
+        {
+          "ply": 28,
+          "mover": "black",
+          "bestWin": 84.37491676427435,
+          "playedWin": 80.46164465668808,
+          "realizedWin": 81.90097461263065,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e1e0",
+              "win": 84.37491676427435
+            },
+            {
+              "move": "h0h0",
+              "win": 80.46164465668808,
+              "played": true
+            },
+            {
+              "move": "g3g3",
+              "win": 80.06045138468612
+            }
+          ],
+          "decisionLoss": 3.913272107586266,
+          "luck": 1.4393299559425685,
+          "wallMs": 6774.376749999996,
+          "evalCalls": 37,
+          "searches": 37,
+          "requestedNodes": 7400000,
+          "rankedTopThree": ["e1e0", "h0h0", "g3g3"]
+        },
+        {
+          "ply": 29,
+          "mover": "red",
+          "bestWin": 18.09902538736936,
+          "playedWin": 16.875918208530372,
+          "realizedWin": 14.22343301868677,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "d3d2",
+              "win": 18.09902538736936
+            },
+            {
+              "move": "e3e3",
+              "win": 16.875918208530372,
+              "played": true
+            },
+            {
+              "move": "a2a2",
+              "win": 16.16532771869
+            }
+          ],
+          "decisionLoss": 1.223107178838987,
+          "luck": -2.6524851898436026,
+          "wallMs": 7655.672042000049,
+          "evalCalls": 43,
+          "searches": 43,
+          "requestedNodes": 8600000,
+          "rankedTopThree": ["d3d2", "e3e3", "a2a2"]
+        },
+        {
+          "ply": 31,
+          "mover": "red",
+          "bestWin": 15.00435305626528,
+          "playedWin": 14.04395568805743,
+          "realizedWin": 15.528242303659198,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "d3d2",
+              "win": 15.00435305626528
+            },
+            {
+              "move": "a2a2",
+              "win": 14.145371463035499
+            },
+            {
+              "move": "a0a0",
+              "win": 14.04395568805743,
+              "played": true
+            },
+            {
+              "move": "g2g2",
+              "win": 13.264551130839584
+            }
+          ],
+          "decisionLoss": 0.9603973682078504,
+          "luck": 1.4842866156017678,
+          "wallMs": 7365.542499999981,
+          "evalCalls": 52,
+          "searches": 52,
+          "requestedNodes": 10400000,
+          "rankedTopThree": ["d3d2", "a2a2", "g2g2"]
+        },
+        {
+          "ply": 48,
+          "mover": "black",
+          "bestWin": 90.95023560551682,
+          "playedWin": 89.33198955117578,
+          "realizedWin": 91.93727438968193,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 90.95023560551682
+            },
+            {
+              "move": "f0e0",
+              "win": 90.27058948988173
+            },
+            {
+              "move": "g1g1",
+              "win": 90.10533507048254
+            },
+            {
+              "move": "c1c1",
+              "win": 89.33198955117578,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.6182460543410428,
+          "luck": 2.605284838506151,
+          "wallMs": 5468.356832999969,
+          "evalCalls": 44,
+          "searches": 44,
+          "requestedNodes": 8800000,
+          "rankedTopThree": ["a3a3", "f0e0", "g1g1"]
+        },
+        {
+          "ply": 51,
+          "mover": "red",
+          "bestWin": 8.470005952647092,
+          "playedWin": 8.249790823214935,
+          "realizedWin": 6.068424846587305,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 8.470005952647092
+            },
+            {
+              "move": "g2g2",
+              "win": 8.307625182780026
+            },
+            {
+              "move": "g1g1",
+              "win": 8.249790823214935,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.22021512943215704,
+          "luck": -2.18136597662763,
+          "wallMs": 5237.124208000023,
+          "evalCalls": 38,
+          "searches": 38,
+          "requestedNodes": 7600000,
+          "rankedTopThree": ["f3f3", "g2g2", "g1g1"]
+        },
+        {
+          "ply": 53,
+          "mover": "red",
+          "bestWin": 6.821026876939183,
+          "playedWin": 6.821026876939183,
+          "realizedWin": 4.401469946699422,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "h1h1",
+              "win": 6.821026876939183,
+              "played": true
+            },
+            {
+              "move": "g2g2",
+              "win": 5.648321744517137
+            },
+            {
+              "move": "f3f3",
+              "win": 5.577024745948839
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -2.4195569302397617,
+          "wallMs": 3774.9374170000083,
+          "evalCalls": 34,
+          "searches": 34,
+          "requestedNodes": 6800000,
+          "rankedTopThree": ["h1h1", "g2g2", "f3f3"]
+        },
+        {
+          "ply": 60,
+          "mover": "black",
+          "bestWin": 96.26450204676107,
+          "playedWin": 96.14771854553001,
+          "realizedWin": 96.37619020655448,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 96.26450204676107
+            },
+            {
+              "move": "a2a2",
+              "win": 96.1800198202635
+            },
+            {
+              "move": "d0d0",
+              "win": 96.14771854553001,
+              "played": true
+            },
+            {
+              "move": "e3e2",
+              "win": 96.05458834099332
+            }
+          ],
+          "decisionLoss": 0.11678350123105474,
+          "luck": 0.22847166102447147,
+          "wallMs": 4253.031207999971,
+          "evalCalls": 38,
+          "searches": 38,
+          "requestedNodes": 7600000,
+          "rankedTopThree": ["a3a3", "e3e2", "a2a2"]
+        },
+        {
+          "ply": 61,
+          "mover": "red",
+          "bestWin": 3.7034319317574234,
+          "playedWin": 3.4002887383765,
+          "realizedWin": 3.165622598022992,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 3.7034319317574234
+            },
+            {
+              "move": "b0a0",
+              "win": 3.572721166791098
+            },
+            {
+              "move": "a1a0",
+              "win": 3.572721166791098
+            },
+            {
+              "move": "g2g2",
+              "win": 3.4002887383765,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.3031431933809232,
+          "luck": -0.2346661403535082,
+          "wallMs": 3284.600834000041,
+          "evalCalls": 27,
+          "searches": 27,
+          "requestedNodes": 5400000,
+          "rankedTopThree": ["f3f3", "b0a0", "a1a0"]
+        },
+        {
+          "ply": 62,
+          "mover": "black",
+          "bestWin": 96.82624296992354,
+          "playedWin": 96.80035504788549,
+          "realizedWin": 96.67248550506685,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "a3a3",
+              "win": 96.82624296992354
+            },
+            {
+              "move": "a2a2",
+              "win": 96.80035504788549,
+              "played": true
+            },
+            {
+              "move": "e3e2",
+              "win": 96.73120173052962
+            }
+          ],
+          "decisionLoss": 0.025887922038052125,
+          "luck": -0.12786954281864382,
+          "wallMs": 4027.910333000007,
+          "evalCalls": 34,
+          "searches": 34,
+          "requestedNodes": 6800000,
+          "rankedTopThree": ["a3a3", "a2a2", "e3e2"]
+        },
+        {
+          "ply": 63,
+          "mover": "red",
+          "bestWin": 3.3699666027408046,
+          "playedWin": 3.2198701671115177,
+          "realizedWin": 3.1319359514539045,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 3.3699666027408046
+            },
+            {
+              "move": "f2f2",
+              "win": 3.2198701671115177,
+              "played": true
+            },
+            {
+              "move": "a1a0",
+              "win": 3.1207843459361726
+            }
+          ],
+          "decisionLoss": 0.15009643562928687,
+          "luck": -0.08793421565761328,
+          "wallMs": 2652.4371669999673,
+          "evalCalls": 23,
+          "searches": 23,
+          "requestedNodes": 4600000,
+          "rankedTopThree": ["f3f3", "f2f2", "a1a0"]
+        },
+        {
+          "ply": 66,
+          "mover": "black",
+          "bestWin": 96.84564504671796,
+          "playedWin": 96.69458220174839,
+          "realizedWin": 96.66062064680966,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "g0g1",
+              "win": 96.84564504671796
+            },
+            {
+              "move": "e3e2",
+              "win": 96.69609322116929
+            },
+            {
+              "move": "a3a3",
+              "win": 96.69458220174839,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.151062844969573,
+          "luck": -0.033961554938727545,
+          "wallMs": 3173.0158749999828,
+          "evalCalls": 27,
+          "searches": 27,
+          "requestedNodes": 5400000,
+          "rankedTopThree": ["g0g1", "a3a3", "e3e2"]
+        },
+        {
+          "ply": 71,
+          "mover": "red",
+          "bestWin": 3.3084645538121684,
+          "playedWin": 3.3084645538121684,
+          "realizedWin": 3.065600333602667,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 3.3084645538121684,
+              "played": true
+            },
+            {
+              "move": "a2a3",
+              "win": 3.165622598022992
+            },
+            {
+              "move": "b0a0",
+              "win": 3.032944726363091
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.24286422020950127,
+          "wallMs": 2216.215375000029,
+          "evalCalls": 19,
+          "searches": 19,
+          "requestedNodes": 3800000,
+          "rankedTopThree": ["f3f3", "a2a3", "b0a0"]
+        },
+        {
+          "ply": 72,
+          "mover": "black",
+          "bestWin": 96.87921565406381,
+          "playedWin": 96.85181749662385,
+          "realizedWin": 96.43994222304023,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "e3d3",
+              "win": 96.87921565406381
+            },
+            {
+              "move": "h2h2",
+              "win": 96.85181749662385,
+              "played": true
+            },
+            {
+              "move": "g1g0",
+              "win": 96.82307082850929
+            }
+          ],
+          "decisionLoss": 0.027398157439961324,
+          "luck": -0.4118752735836182,
+          "wallMs": 3306.3099999999977,
+          "evalCalls": 23,
+          "searches": 23,
+          "requestedNodes": 4600000,
+          "rankedTopThree": ["e3d3", "h2h2", "g1g0"]
+        },
+        {
+          "ply": 78,
+          "mover": "black",
+          "bestWin": 96.97786540641046,
+          "playedWin": 96.33077129826715,
+          "realizedWin": 95.59853005330058,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "h0g0",
+              "win": 96.97786540641046
+            },
+            {
+              "move": "g2g1",
+              "win": 96.51501939931941
+            },
+            {
+              "move": "f1f1",
+              "win": 96.33077129826715,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.6470941081433068,
+          "luck": -0.7322412449665734,
+          "wallMs": 2996.9574160000193,
+          "evalCalls": 23,
+          "searches": 23,
+          "requestedNodes": 4600000,
+          "rankedTopThree": ["h0g0", "g2g1", "f1f1"]
+        },
+        {
+          "ply": 79,
+          "mover": "red",
+          "bestWin": 4.279175523833537,
+          "playedWin": 3.0875596273658346,
+          "realizedWin": 3.0875596273658346,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "h1h0",
+              "win": 4.279175523833537
+            },
+            {
+              "move": "f2e2",
+              "win": 3.903761493227911
+            },
+            {
+              "move": "a2a3",
+              "win": 3.4480165474413624
+            },
+            {
+              "move": "g3g3",
+              "win": 3.0875596273658346,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.1916158964677024,
+          "luck": 0,
+          "wallMs": 2628.9268750000047,
+          "evalCalls": 18,
+          "searches": 18,
+          "requestedNodes": 3600000,
+          "rankedTopThree": ["h1h0", "f2e2", "a2a3"]
+        }
+      ],
+      "wallMs": 232041.70066600002,
+      "evalCalls": 1540,
+      "rankEvalCalls": 718,
+      "baselineEvalCalls": 822,
+      "rankWallMs": 102996.48891300004,
+      "logicalRequestedNodes": 308000000,
+      "searches": 1540,
+      "requestedNodes": 308000000,
+      "reportedNodes": 308001540,
+      "missingNodeReports": 0,
+      "capHits": 0,
+      "meanFlipMs": 7251.303145812501,
+      "poolStats": {
+        "pools": [
+          {
+            "name": "abjchess-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "abjchess-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 3005,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "duck-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "ffq-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jqe-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "katago-jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "three-kingdoms-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          }
+        ],
+        "totals": {
+          "active": 0,
+          "queueDepth": 0,
+          "waited": 0,
+          "timedOut": 0
+        },
+        "processes": {
+          "name": "all-engine-processes",
+          "active": 1,
+          "queueDepth": 0,
+          "maxProcesses": 12,
+          "acquired": 3005,
+          "waited": 0,
+          "timedOut": 0,
+          "peakQueueDepth": 0
+        }
+      },
+      "complete": true
+    },
+    {
+      "name": "Game 19: second seat wins in 111",
+      "seed": 331,
+      "corpusIndex": 18,
+      "corpusSha256": "c320045b8d625cca375ec2ed5a3f86ba28517036ae46761084d2e390e59a814e",
+      "plies": 222,
+      "flips": [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 21, 25, 29, 39, 43, 45, 46, 63,
+        68, 73, 79, 82, 90, 105, 144
+      ],
+      "finalStatus": {
+        "type": "finished",
+        "winner": "black",
+        "reason": "stalemate"
+      },
+      "decisions": [
+        {
+          "ply": 1,
+          "mover": "red",
+          "bestWin": 48.403554801521565,
+          "playedWin": 48.063100832343316,
+          "realizedWin": 43.95429240174578,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 48.403554801521565
+            },
+            {
+              "move": "g1g1",
+              "win": 48.28388430425482
+            },
+            {
+              "move": "b1b1",
+              "win": 48.063100832343316,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.3404539691782489,
+          "luck": -4.108808430597534,
+          "wallMs": 6336.105167000031,
+          "evalCalls": 74,
+          "searches": 74,
+          "requestedNodes": 14800000,
+          "rankedTopThree": ["e1e1", "g1g1", "b1b1"]
+        },
+        {
+          "ply": 2,
+          "mover": "black",
+          "bestWin": 55.766826134948786,
+          "playedWin": 54.30068427853838,
+          "realizedWin": 51.84020844121936,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 55.766826134948786
+            },
+            {
+              "move": "b2b2",
+              "win": 55.35170007418993
+            },
+            {
+              "move": "a1a1",
+              "win": 54.30068427853838,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.4661418564104096,
+          "luck": -2.4604758373190165,
+          "wallMs": 6592.018582999997,
+          "evalCalls": 73,
+          "searches": 73,
+          "requestedNodes": 14600000,
+          "rankedTopThree": ["c1c1", "b2b2", "a1a1"]
+        },
+        {
+          "ply": 3,
+          "mover": "red",
+          "bestWin": 49.78386607271861,
+          "playedWin": 49.78386607271861,
+          "realizedWin": 45.775702105393144,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "d1d1",
+              "win": 49.78386607271861,
+              "played": true
+            },
+            {
+              "move": "b3b3",
+              "win": 48.69432075883873
+            },
+            {
+              "move": "e1e1",
+              "win": 45.41447797962828
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -4.008163967325466,
+          "wallMs": 6681.83245799999,
+          "evalCalls": 72,
+          "searches": 72,
+          "requestedNodes": 14400000,
+          "rankedTopThree": ["d1d1", "b3b3", "e1e1"]
+        },
+        {
+          "ply": 4,
+          "mover": "black",
+          "bestWin": 55.7454423792728,
+          "playedWin": 55.7454423792728,
+          "realizedWin": 71.4397372236611,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "b2b2",
+              "win": 55.7454423792728,
+              "played": true
+            },
+            {
+              "move": "b0b0",
+              "win": 54.229530512219114
+            },
+            {
+              "move": "c1c1",
+              "win": 52.01663664716821
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 15.694294844388295,
+          "wallMs": 6535.095583999995,
+          "evalCalls": 71,
+          "searches": 71,
+          "requestedNodes": 14200000,
+          "rankedTopThree": ["b2b2", "b0b0", "c1c1"]
+        },
+        {
+          "ply": 5,
+          "mover": "red",
+          "bestWin": 29.90599578664441,
+          "playedWin": 29.90599578664441,
+          "realizedWin": 35.26198306991626,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 29.90599578664441,
+              "played": true
+            },
+            {
+              "move": "a2a2",
+              "win": 29.251142228713697
+            },
+            {
+              "move": "b0b0",
+              "win": 28.89097514167367
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 5.355987283271851,
+          "wallMs": 8089.377749999985,
+          "evalCalls": 70,
+          "searches": 70,
+          "requestedNodes": 14000000,
+          "rankedTopThree": ["a2a2", "c1c1", "b0b0"]
+        },
+        {
+          "ply": 6,
+          "mover": "black",
+          "bestWin": 64.73801693008373,
+          "playedWin": 62.74337690737077,
+          "realizedWin": 62.43673063917166,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "b2b1",
+              "win": 64.73801693008373
+            },
+            {
+              "move": "c0c0",
+              "win": 64.19913334508225
+            },
+            {
+              "move": "f0f0",
+              "win": 63.72390818231667
+            },
+            {
+              "move": "b0b0",
+              "win": 62.74337690737077,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.9946400227129644,
+          "luck": -0.3066462681991098,
+          "wallMs": 7165.539208000002,
+          "evalCalls": 71,
+          "searches": 71,
+          "requestedNodes": 14200000,
+          "rankedTopThree": ["b2b1", "c0c0", "f0f0"]
+        },
+        {
+          "ply": 7,
+          "mover": "red",
+          "bestWin": 36.76905084406121,
+          "playedWin": 35.8678043919105,
+          "realizedWin": 35.93729949245685,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g0g0",
+              "win": 36.76905084406121
+            },
+            {
+              "move": "g3g3",
+              "win": 36.45491961586848
+            },
+            {
+              "move": "b3b3",
+              "win": 36.37743251978082
+            },
+            {
+              "move": "h0h0",
+              "win": 35.8678043919105,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.9012464521507155,
+          "luck": 0.0694951005463551,
+          "wallMs": 9575.437582999992,
+          "evalCalls": 78,
+          "searches": 78,
+          "requestedNodes": 15600000,
+          "rankedTopThree": ["g0g0", "g3g3", "b3b3"]
+        },
+        {
+          "ply": 8,
+          "mover": "black",
+          "bestWin": 61.49070943036606,
+          "playedWin": 61.14487355340969,
+          "realizedWin": 61.743385997576716,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "f3f3",
+              "win": 61.49070943036606
+            },
+            {
+              "move": "a3a3",
+              "win": 61.14487355340969,
+              "played": true
+            },
+            {
+              "move": "g1g1",
+              "win": 61.113509295473776
+            },
+            {
+              "move": "d0d0",
+              "win": 61.08021239013705
+            }
+          ],
+          "decisionLoss": 0.34583587695637164,
+          "luck": 0.598512444167028,
+          "wallMs": 8395.390667000029,
+          "evalCalls": 78,
+          "searches": 78,
+          "requestedNodes": 15600000,
+          "rankedTopThree": ["f3f3", "d0d0", "g1g1"]
+        },
+        {
+          "ply": 9,
+          "mover": "red",
+          "bestWin": 38.201374101505614,
+          "playedWin": 37.432336299726416,
+          "realizedWin": 35.4302733312082,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "g3g3",
+              "win": 38.201374101505614
+            },
+            {
+              "move": "h2h2",
+              "win": 37.56027763497632
+            },
+            {
+              "move": "f0f0",
+              "win": 37.432336299726416,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.7690378017791986,
+          "luck": -2.002062968518217,
+          "wallMs": 7686.535457999969,
+          "evalCalls": 63,
+          "searches": 63,
+          "requestedNodes": 12600000,
+          "rankedTopThree": ["g3g3", "h2h2", "f0f0"]
+        },
+        {
+          "ply": 10,
+          "mover": "black",
+          "bestWin": 65.05576134908605,
+          "playedWin": 65.05576134908605,
+          "realizedWin": 62.78152022123592,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "c3c3",
+              "win": 65.05576134908605,
+              "played": true
+            },
+            {
+              "move": "b2b1",
+              "win": 64.56972666879179
+            },
+            {
+              "move": "g1g1",
+              "win": 64.27495480041593
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -2.274241127850132,
+          "wallMs": 5858.709917000029,
+          "evalCalls": 51,
+          "searches": 51,
+          "requestedNodes": 10200000,
+          "rankedTopThree": ["c3c3", "b2b1", "g1g1"]
+        },
+        {
+          "ply": 11,
+          "mover": "red",
+          "bestWin": 37.2828082782258,
+          "playedWin": 36.118754504299915,
+          "realizedWin": 37.47695214230835,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g3g3",
+              "win": 37.2828082782258
+            },
+            {
+              "move": "g2g2",
+              "win": 37.15295008705146
+            },
+            {
+              "move": "f3f3",
+              "win": 36.30699919266875
+            },
+            {
+              "move": "h2h2",
+              "win": 36.118754504299915,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.164053773925886,
+          "luck": 1.3581976380084342,
+          "wallMs": 9190.144166999962,
+          "evalCalls": 74,
+          "searches": 74,
+          "requestedNodes": 14800000,
+          "rankedTopThree": ["g3g3", "g2g2", "f3f3"]
+        },
+        {
+          "ply": 12,
+          "mover": "black",
+          "bestWin": 62.52304785769166,
+          "playedWin": 61.468671726194884,
+          "realizedWin": 63.55251419984302,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "b2b1",
+              "win": 62.52304785769166
+            },
+            {
+              "move": "g1g1",
+              "win": 62.1175086311787
+            },
+            {
+              "move": "d3d3",
+              "win": 62.1137501603196
+            },
+            {
+              "move": "f3f3",
+              "win": 61.468671726194884,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.054376131496774,
+          "luck": 2.083842473648133,
+          "wallMs": 6651.915291000041,
+          "evalCalls": 59,
+          "searches": 59,
+          "requestedNodes": 11800000,
+          "rankedTopThree": ["d3d3", "b2b1", "g1g1"]
+        },
+        {
+          "ply": 13,
+          "mover": "red",
+          "bestWin": 36.57234512351565,
+          "playedWin": 36.57234512351565,
+          "realizedWin": 33.59969188321382,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "g1g1",
+              "win": 36.57234512351565,
+              "played": true
+            },
+            {
+              "move": "g2g2",
+              "win": 36.38098645196309
+            },
+            {
+              "move": "e2e2",
+              "win": 36.32832571372987
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -2.972653240301831,
+          "wallMs": 6994.797874999989,
+          "evalCalls": 56,
+          "searches": 56,
+          "requestedNodes": 11200000,
+          "rankedTopThree": ["g1g1", "e2e2", "g2g2"]
+        },
+        {
+          "ply": 14,
+          "mover": "black",
+          "bestWin": 67.06959654275583,
+          "playedWin": 67.06959654275583,
+          "realizedWin": 65.82286101488872,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "d3d3",
+              "win": 67.06959654275583,
+              "played": true
+            },
+            {
+              "move": "b2b1",
+              "win": 66.40030811678618
+            },
+            {
+              "move": "e2e2",
+              "win": 66.07898310364853
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -1.2467355278671164,
+          "wallMs": 5673.620166999986,
+          "evalCalls": 45,
+          "searches": 45,
+          "requestedNodes": 9000000,
+          "rankedTopThree": ["d3d3", "e2e2", "b2b1"]
+        },
+        {
+          "ply": 15,
+          "mover": "red",
+          "bestWin": 34.61861991424344,
+          "playedWin": 30.571722266283217,
+          "realizedWin": 33.108601360457975,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 34.61861991424344
+            },
+            {
+              "move": "e0e0",
+              "win": 34.086384970290936
+            },
+            {
+              "move": "g3g3",
+              "win": 32.928585669028436
+            },
+            {
+              "move": "a0a0",
+              "win": 30.571722266283217,
+              "played": true
+            }
+          ],
+          "decisionLoss": 4.046897647960222,
+          "luck": 2.5368790941747577,
+          "wallMs": 8694.275167000014,
+          "evalCalls": 66,
+          "searches": 66,
+          "requestedNodes": 13200000,
+          "rankedTopThree": ["g2g2", "e0e0", "g3g3"]
+        },
+        {
+          "ply": 18,
+          "mover": "black",
+          "bestWin": 59.95272805721677,
+          "playedWin": 58.903287030989375,
+          "realizedWin": 69.60308990696248,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "c2c2",
+              "win": 59.95272805721677
+            },
+            {
+              "move": "f2f2",
+              "win": 59.25423466033485
+            },
+            {
+              "move": "d2d2",
+              "win": 58.903287030989375,
+              "played": true
+            },
+            {
+              "move": "e1e1",
+              "win": 58.30121908271684
+            }
+          ],
+          "decisionLoss": 1.0494410262273917,
+          "luck": 10.699802875973106,
+          "wallMs": 8259.710290999967,
+          "evalCalls": 61,
+          "searches": 61,
+          "requestedNodes": 12200000,
+          "rankedTopThree": ["c2c2", "e1e1", "f2f2"]
+        },
+        {
+          "ply": 19,
+          "mover": "red",
+          "bestWin": 26.10955554136419,
+          "playedWin": 23.677323499563077,
+          "realizedWin": 21.173437828081767,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "e0e0",
+              "win": 26.10955554136419
+            },
+            {
+              "move": "g0g0",
+              "win": 24.561527332063825
+            },
+            {
+              "move": "h1h1",
+              "win": 23.889707849507673
+            },
+            {
+              "move": "f1f1",
+              "win": 23.677323499563077,
+              "played": true
+            }
+          ],
+          "decisionLoss": 2.4322320418011145,
+          "luck": -2.50388567148131,
+          "wallMs": 8791.371417000017,
+          "evalCalls": 63,
+          "searches": 63,
+          "requestedNodes": 12600000,
+          "rankedTopThree": ["e0e0", "g0g0", "h1h1"]
+        },
+        {
+          "ply": 21,
+          "mover": "red",
+          "bestWin": 23.801687198141394,
+          "playedWin": 18.343394862755243,
+          "realizedWin": 16.417595629270146,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "d0d0",
+              "win": 23.801687198141394
+            },
+            {
+              "move": "e0e0",
+              "win": 20.125227417601675
+            },
+            {
+              "move": "c0c0",
+              "win": 19.77355228089701
+            },
+            {
+              "move": "f2f2",
+              "win": 18.343394862755243,
+              "played": true
+            }
+          ],
+          "decisionLoss": 5.458292335386151,
+          "luck": -1.9257992334850975,
+          "wallMs": 9024.281833000015,
+          "evalCalls": 58,
+          "searches": 58,
+          "requestedNodes": 11600000,
+          "rankedTopThree": ["d0d0", "e0e0", "c0c0"]
+        },
+        {
+          "ply": 25,
+          "mover": "red",
+          "bestWin": 14.4379021982953,
+          "playedWin": 14.4379021982953,
+          "realizedWin": 9.537095564452557,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "g0g0",
+              "win": 14.4379021982953,
+              "played": true
+            },
+            {
+              "move": "e0e0",
+              "win": 14.397600727683004
+            },
+            {
+              "move": "c0c0",
+              "win": 12.76824108862547
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -4.900806633842743,
+          "wallMs": 5625.588292,
+          "evalCalls": 48,
+          "searches": 48,
+          "requestedNodes": 9600000,
+          "rankedTopThree": ["e0e0", "g0g0", "c0c0"]
+        },
+        {
+          "ply": 29,
+          "mover": "red",
+          "bestWin": 8.625738291273272,
+          "playedWin": 7.827827829686525,
+          "realizedWin": 5.841618363161601,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "a1b1",
+              "win": 8.625738291273272
+            },
+            {
+              "move": "a2a2",
+              "win": 8.095306522421282
+            },
+            {
+              "move": "g2g2",
+              "win": 7.827827829686525,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.7979104615867474,
+          "luck": -1.9862094665249241,
+          "wallMs": 6229.688375000027,
+          "evalCalls": 40,
+          "searches": 40,
+          "requestedNodes": 8000000,
+          "rankedTopThree": ["a1b1", "g2g2", "a2a2"]
+        },
+        {
+          "ply": 39,
+          "mover": "red",
+          "bestWin": 6.50828407772644,
+          "playedWin": 5.056302802347066,
+          "realizedWin": 5.411671095866716,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "h1h1",
+              "win": 6.50828407772644
+            },
+            {
+              "move": "a2a2",
+              "win": 5.316000260733813
+            },
+            {
+              "move": "e0e0",
+              "win": 5.177596979886989
+            },
+            {
+              "move": "h3h3",
+              "win": 5.056302802347066,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.4519812753793744,
+          "luck": 0.3553682935196498,
+          "wallMs": 8978.730082999915,
+          "evalCalls": 55,
+          "searches": 55,
+          "requestedNodes": 11000000,
+          "rankedTopThree": ["h1h1", "e0e0", "a2a2"]
+        },
+        {
+          "ply": 43,
+          "mover": "red",
+          "bestWin": 4.615010156516301,
+          "playedWin": 4.323349327583017,
+          "realizedWin": 3.98748776112717,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "g3g3",
+              "win": 4.615010156516301
+            },
+            {
+              "move": "a2a2",
+              "win": 4.495711877957924
+            },
+            {
+              "move": "b3b3",
+              "win": 4.42222181454755
+            },
+            {
+              "move": "e1e1",
+              "win": 4.323349327583017,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.29166082893328404,
+          "luck": -0.3358615664558471,
+          "wallMs": 6684.331709000049,
+          "evalCalls": 50,
+          "searches": 50,
+          "requestedNodes": 10000000,
+          "rankedTopThree": ["a2a2", "b3b3", "g3g3"]
+        },
+        {
+          "ply": 45,
+          "mover": "red",
+          "bestWin": 4.301789708900906,
+          "playedWin": 4.301789708900906,
+          "realizedWin": 3.741341970378812,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "d0d0",
+              "win": 4.301789708900906,
+              "played": true
+            },
+            {
+              "move": "c0c0",
+              "win": 4.15074927934784
+            },
+            {
+              "move": "e0e0",
+              "win": 4.030532769906952
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.5604477385220941,
+          "wallMs": 5142.321790999966,
+          "evalCalls": 40,
+          "searches": 40,
+          "requestedNodes": 8000000,
+          "rankedTopThree": ["d0d0", "e0e0", "c0c0"]
+        },
+        {
+          "ply": 46,
+          "mover": "black",
+          "bestWin": 96.27189598286228,
+          "playedWin": 96.16560355588877,
+          "realizedWin": 95.75088717717148,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "f1g1",
+              "win": 96.27189598286228
+            },
+            {
+              "move": "a0a1",
+              "win": 96.21867256835213
+            },
+            {
+              "move": "e3e3",
+              "win": 96.16560355588877,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.1062924269735106,
+          "luck": -0.41471637871728717,
+          "wallMs": 4072.2267920000013,
+          "evalCalls": 31,
+          "searches": 31,
+          "requestedNodes": 6200000,
+          "rankedTopThree": ["f1g1", "a0a1", "e3e3"]
+        },
+        {
+          "ply": 63,
+          "mover": "red",
+          "bestWin": 3.553290985106057,
+          "playedWin": 3.553290985106057,
+          "realizedWin": 3.143126112552899,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "a2a2",
+              "win": 3.553290985106057,
+              "played": true
+            },
+            {
+              "move": "e0e0",
+              "win": 3.5520835873328016
+            },
+            {
+              "move": "g3g3",
+              "win": 3.478333221095416
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.4101648725531577,
+          "wallMs": 4322.074041999993,
+          "evalCalls": 38,
+          "searches": 38,
+          "requestedNodes": 7600000,
+          "rankedTopThree": ["e0e0", "a2a2", "g3g3"]
+        },
+        {
+          "ply": 68,
+          "mover": "black",
+          "bestWin": 97.01007228622633,
+          "playedWin": 96.96170792396515,
+          "realizedWin": 96.92343898967323,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "b1c1",
+              "win": 97.01007228622633
+            },
+            {
+              "move": "c2c2",
+              "win": 96.98325222120498
+            },
+            {
+              "move": "b3b3",
+              "win": 96.96170792396515,
+              "played": true
+            }
+          ],
+          "decisionLoss": 0.04836436226118224,
+          "luck": -0.038268934291920687,
+          "wallMs": 3833.742166000069,
+          "evalCalls": 33,
+          "searches": 33,
+          "requestedNodes": 6600000,
+          "rankedTopThree": ["b1c1", "c2c2", "b3b3"]
+        },
+        {
+          "ply": 73,
+          "mover": "red",
+          "bestWin": 2.9580535933023597,
+          "playedWin": 2.9475144421570194,
+          "realizedWin": 2.9580535933023597,
+          "playedRank": 3,
+          "candidates": [
+            {
+              "move": "f0f1",
+              "win": 2.9580535933023597
+            },
+            {
+              "move": "g0h0",
+              "win": 2.9580535933023597
+            },
+            {
+              "move": "e0e0",
+              "win": 2.9475144421570194,
+              "played": true
+            },
+            {
+              "move": "g3g3",
+              "win": 2.945786382751837
+            }
+          ],
+          "decisionLoss": 0.01053915114534032,
+          "luck": 0.01053915114534032,
+          "wallMs": 2684.829541999963,
+          "evalCalls": 26,
+          "searches": 26,
+          "requestedNodes": 5200000,
+          "rankedTopThree": ["g3g3", "f0f1", "g0h0"]
+        },
+        {
+          "ply": 79,
+          "mover": "red",
+          "bestWin": 3.8216215736365227,
+          "playedWin": 3.7188862283137283,
+          "realizedWin": 3.848883713867103,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "g3g3",
+              "win": 3.8216215736365227
+            },
+            {
+              "move": "h1h1",
+              "win": 3.7188862283137283,
+              "played": true
+            },
+            {
+              "move": "e2e2",
+              "win": 3.7135927980786536
+            },
+            {
+              "move": "d0e0",
+              "win": 3.5600577769597663
+            }
+          ],
+          "decisionLoss": 0.10273534532279438,
+          "luck": 0.12999748555337476,
+          "wallMs": 2972.0649579999736,
+          "evalCalls": 28,
+          "searches": 28,
+          "requestedNodes": 5600000,
+          "rankedTopThree": ["g3g3", "e2e2", "d0e0"]
+        },
+        {
+          "ply": 82,
+          "mover": "black",
+          "bestWin": 95.52041026722664,
+          "playedWin": 95.4953279289001,
+          "realizedWin": 94.71875779295696,
+          "playedRank": 2,
+          "candidates": [
+            {
+              "move": "a2a1",
+              "win": 95.52041026722664
+            },
+            {
+              "move": "c2c2",
+              "win": 95.4953279289001,
+              "played": true
+            },
+            {
+              "move": "f2g2",
+              "win": 95.48879375551829
+            }
+          ],
+          "decisionLoss": 0.025082338326541276,
+          "luck": -0.7765701359431318,
+          "wallMs": 2719.875875000027,
+          "evalCalls": 27,
+          "searches": 27,
+          "requestedNodes": 5400000,
+          "rankedTopThree": ["c2c2", "a2a1", "f2g2"]
+        },
+        {
+          "ply": 90,
+          "mover": "black",
+          "bestWin": 94.88209305808851,
+          "playedWin": 93.20081317218504,
+          "realizedWin": 94.86418338426436,
+          "playedRank": 4,
+          "candidates": [
+            {
+              "move": "a2b2",
+              "win": 94.88209305808851
+            },
+            {
+              "move": "b3c3",
+              "win": 94.82818605709065
+            },
+            {
+              "move": "c2c3",
+              "win": 94.79195027365242
+            },
+            {
+              "move": "g3g3",
+              "win": 93.20081317218504,
+              "played": true
+            }
+          ],
+          "decisionLoss": 1.6812798859034785,
+          "luck": 1.6633702120793288,
+          "wallMs": 3108.7534999999916,
+          "evalCalls": 27,
+          "searches": 27,
+          "requestedNodes": 5400000,
+          "rankedTopThree": ["a2b2", "b3c3", "c2c3"]
+        },
+        {
+          "ply": 105,
+          "mover": "red",
+          "bestWin": 3.9814528611453675,
+          "playedWin": 3.9814528611453675,
+          "realizedWin": 3.889972076668535,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "c0c0",
+              "win": 3.9814528611453675,
+              "played": true
+            },
+            {
+              "move": "g0f0",
+              "win": 3.959389505112213
+            },
+            {
+              "move": "d0d1",
+              "win": 3.623809793445517
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": -0.09148078447683261,
+          "wallMs": 1521.9375419999706,
+          "evalCalls": 14,
+          "searches": 14,
+          "requestedNodes": 2800000,
+          "rankedTopThree": ["c0c0", "g0f0", "d0d1"]
+        },
+        {
+          "ply": 144,
+          "mover": "black",
+          "bestWin": 94.5694500654188,
+          "playedWin": 94.5694500654188,
+          "realizedWin": 94.5694500654188,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 94.5694500654188,
+              "played": true
+            },
+            {
+              "move": "a1b1",
+              "win": 50
+            },
+            {
+              "move": "a1a2",
+              "win": 50
+            }
+          ],
+          "decisionLoss": 0,
+          "luck": 0,
+          "wallMs": 1805.4187920000404,
+          "evalCalls": 15,
+          "searches": 15,
+          "requestedNodes": 3000000,
+          "rankedTopThree": ["e2e2", "a1b1", "a1a2"]
+        }
+      ],
+      "wallMs": 195900.686375,
+      "evalCalls": 1655,
+      "rankEvalCalls": 665,
+      "baselineEvalCalls": 990,
+      "rankWallMs": 75299.48112599994,
+      "logicalRequestedNodes": 331000000,
+      "searches": 1655,
+      "requestedNodes": 331000000,
+      "reportedNodes": 331001655,
+      "missingNodeReports": 0,
+      "capHits": 0,
+      "meanFlipMs": 6121.89644921875,
+      "poolStats": {
+        "pools": [
+          {
+            "name": "abjchess-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "abjchess-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "atomic-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "banqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 4660,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "crazyhouse-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "duck-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "ffq-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "fortress-xiangqi-fsf-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jqe-live",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "jungle-flip-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "katago-jungle",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikafish-xiangqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 1,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "pikajieqi-analysis",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "three-kingdoms-banqi",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          },
+          {
+            "name": "xiangqi-fsf",
+            "active": 0,
+            "queueDepth": 0,
+            "maxProcesses": 2,
+            "acquired": 0,
+            "waited": 0,
+            "timedOut": 0,
+            "peakQueueDepth": 0
+          }
+        ],
+        "totals": {
+          "active": 0,
+          "queueDepth": 0,
+          "waited": 0,
+          "timedOut": 0
+        },
+        "processes": {
+          "name": "all-engine-processes",
+          "active": 0,
+          "queueDepth": 0,
+          "maxProcesses": 12,
+          "acquired": 4660,
+          "waited": 0,
+          "timedOut": 0,
+          "peakQueueDepth": 0
+        }
+      },
+      "complete": true
+    }
+  ],
+  "finishedAt": "2026-11-13T02:41:02.195Z"
+}

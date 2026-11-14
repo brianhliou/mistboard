@@ -1,7 +1,13 @@
 /** Deterministic calibration fixtures, never player data. See docs/engine-pacing.md. */
 import { createHash } from 'node:crypto';
-import { createThreeKingdomsBanqiSetup, getThreeKingdomsBanqiLegalMoves } from '@mistboard/game';
+import {
+  createFFQBanqiSetup,
+  createThreeKingdomsBanqiSetup,
+  getFFQBanqiLegalMoves,
+  getThreeKingdomsBanqiLegalMoves,
+} from '@mistboard/game';
 import { PACING_LEGAL_MEDIANS } from './engine-reply-pacing.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import { playRandomGame, VARIANTS, type VariantSpec } from './variant-postgame-fixtures.js';
 
@@ -21,6 +27,11 @@ export function pacingCalibrationFixtures() {
       tenant: threeKingdomsBanqiTenant,
       enumerate: getThreeKingdomsBanqiLegalMoves,
       makeSetup: createThreeKingdomsBanqiSetup,
+    },
+    {
+      tenant: ffqBanqiTenant,
+      enumerate: getFFQBanqiLegalMoves,
+      makeSetup: createFFQBanqiSetup,
     },
   ];
   return specs.map((spec) => {

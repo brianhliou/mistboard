@@ -5,6 +5,7 @@ import {
   createInitialXiangqiState,
   type XiangqiMove,
 } from '@mistboard/game';
+import { positionPuzzleFixture } from './fixtures/xiangqi-position-packet.js';
 import {
   englishSourcePlayerName,
   isOnlinePlatformEvent,
@@ -12,6 +13,19 @@ import {
   puzzleDetailSourceFields,
   resetPuzzleSetupMoveCacheForTests,
 } from './puzzle-setup-move.js';
+
+test('position-only credit never loads a source game or reconstructs history', async () => {
+  let calls = 0;
+  const fields = await puzzleDetailSourceFields(positionPuzzleFixture(), async () => {
+    calls++;
+    throw new Error('PRIVATE_SOURCE_MUST_NOT_BE_LOADED');
+  });
+  assert.equal(calls, 0);
+  assert.equal(fields.credit?.name, 'DPXQ');
+  const text = JSON.stringify(fields);
+  for (const key of ['sourceGame', 'setupMove', 'history', 'PRIVATE_SOURCE'])
+    assert.ok(!text.includes(key));
+});
 
 // A short legal game. A puzzle starting at ply N has GAME[N-1] as its setup
 // move; GAME[N..] is the game's continuation, which the detail never carries.

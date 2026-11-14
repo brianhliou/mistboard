@@ -304,6 +304,7 @@ async function runVariantEngineGame(
     secondEngineId: secondEngine.id,
     maxPlies: maxPliesFromTask(task),
     openingPolicy: task.openingPolicy,
+    seed: task.seed,
     startedAt: startedAt.getTime(),
     onEvent: async (event: TenantRoomEvent<string, unknown>, seq: number) => {
       await appendEvent(pool, gameId, seq, event);

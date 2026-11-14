@@ -18,8 +18,9 @@ import {
   type ThreeKingdomsBanqiState,
   threeKingdomsBanqiStateToEngineFen,
 } from '@mistboard/game';
-import { resolveValidatedEngineMove, searchStillCurrent } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { type EngineMoveAttempt, resolveValidatedEngineMove } from './engine-move-guard.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
@@ -27,6 +28,7 @@ import {
   type ThreeKingdomsBanqiEngineProvider,
   type ThreeKingdomsBanqiEngineRequest,
   threeKingdomsBanqiEngineTierFor,
+  threeKingdomsBanqiEngineVersion,
   threeKingdomsBanqiLiveEngineMove,
   threeKingdomsBanqiNetPath,
   threeKingdomsBanqiNoiseSeed,
@@ -37,6 +39,11 @@ import {
   type ThreeKingdomsBanqiSpecId,
   threeKingdomsBanqiTenant,
 } from './three-kingdoms-banqi-tenant.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { replayTenantEvents, tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
@@ -193,14 +200,41 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
   const engineId = room.projection.seats[seat]!;
   const tier = threeKingdomsBanqiEngineTierFor(engineId)!;
-  const { computeBudgetMs: movetimeCapMs } = budgetForMove({
+  const startedAt = Date.now();
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
+  const state = room.projection.state;
+  const paceInput = {
+    variant: 'three-kingdoms-banqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: state.ply,
+    legalCount: getThreeKingdomsBanqiLegalMoves(state).length,
     remainingMs,
     incrementMs: clock?.incrementMs ?? 0,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isThreeKingdomsBanqiEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
-  const state = room.projection.state;
+  };
+  let movetimeCapMs = liveBotMoveTime(budgetInput).movetimeMs;
+  let budgetExhausted = false;
+  let lastSearch: UciEval | null = null;
+  let attempts: EngineMoveAttempt[] = [];
+  if (movetimeCapMs <= 0 || !turn.current()) return;
   let chosen: ThreeKingdomsBanqiMove | null;
   if (tier.evaluation === 'random') {
     const legal = getThreeKingdomsBanqiLegalMoves(state);
@@ -208,24 +242,32 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
   } else {
     const result = await resolveValidatedEngineMove<ThreeKingdomsBanqiMove>({
       maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-      requestMove: async () =>
-        (
-          await moveProvider(
-            threeKingdomsBanqiTierRequestFor(
-              room.events as readonly ThreeKingdomsBanqiEvent[],
-              state,
-              engineId,
-              movetimeCapMs,
-            ),
-          )
-        ).best,
+      requestMove: async () => {
+        movetimeCapMs = liveBotMoveTime({
+          ...budgetInput,
+          waitedMs: Date.now() - startedAt,
+        }).movetimeMs;
+        if (movetimeCapMs <= 0) {
+          budgetExhausted = true;
+          return null;
+        }
+        lastSearch = await moveProvider(
+          threeKingdomsBanqiTierRequestFor(
+            room.events as readonly ThreeKingdomsBanqiEvent[],
+            state,
+            engineId,
+            movetimeCapMs,
+          ),
+        );
+        return lastSearch.best;
+      },
       validate: (uci) => {
         const parsed = uciToThreeKingdomsBanqiMove(uci);
         return parsed && isThreeKingdomsBanqiLegalMove(room.projection.state, parsed)
           ? parsed
           : null;
       },
-      stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+      stillOnTurn: () => !budgetExhausted && turn.current(),
       onReject: ({ attempt, uci, reason, error }) =>
         logger.warn(
           {
@@ -241,8 +283,30 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
     });
     if (result.aborted) return;
     chosen = result.chosen;
+    attempts = result.attempts;
   }
-  if (!engineToMove(room, seat)) return;
+  let writes: Promise<void>;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  // Provider failure keeps its existing immediate terminal outcome.
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+    ...(chosen === null ? { enabled: false } : {}),
+  });
+  if (!(await turn.wait(pace.waitMs))) return;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
   // A playtest bot that cannot answer resigns, as banqi's does (fail closed):
   // a silent random move would hide an engine/kernel disagreement.
   const event: ThreeKingdomsBanqiEvent =
@@ -259,6 +323,27 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
       'Three Kingdoms banqi engine gave no legal move; resigning its seat',
     );
   }
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
+      variant: 'three-kingdoms-banqi',
+      roomId: room.id,
+      engineId,
+      engineVersion: threeKingdomsBanqiEngineVersion(engineId)!,
+      seat,
+      ply: state.ply,
+      budgetMs: tier.evaluation === 'random' ? null : movetimeCapMs,
+      remainingMs,
+      incrementMs: paceInput.incrementMs,
+      tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
+      search: lastSearch,
+      thinkTimeMs,
+      attempts,
+      move: chosen ? threeKingdomsBanqiMoveToUci(chosen) : null,
+      fen: threeKingdomsBanqiStateToEngineFen(state),
+      legalCount: paceInput.legalCount,
+    }),
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

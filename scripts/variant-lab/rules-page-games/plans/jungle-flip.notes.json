@@ -1,0 +1,21 @@
+{
+  "title": "MistyJungleFlip against itself: the turn-overs decide it",
+  "intro": "MistyJungleFlip against itself at 7.5 million nodes a move, three times the strength the site's bot plays at, read again by the same engine at the same depth. Marks (?!, ?, ??) grade each move against its choice; none was needed, because no move cost its player more than a few points. The graph is Red's chance as the engine saw it, and a turn-over is graded on the average of every tile it could have been, so its luck is the jump in the graph that follows it. The game is won in the first five turn-overs.",
+  "judged": {},
+  "lines": {},
+  "comments": {
+    "2": "Blue's first tile is a dog, beside Red's rat, which it can now take. Red's chance drops to about four in ten.",
+    "3": "The luck of the game. Red turns up its elephant, the strongest piece, and its chance jumps from about four in ten to three in four.",
+    "5": "And again: a red tiger next to Blue's dog. Red is now near nine in ten, from two turn-overs that any other tile could have spoiled.",
+    "7": "The tiger takes the dog.",
+    "11": "And the wolf. Blue has turned over four pieces and lost two of them.",
+    "17": "The elephant takes the leopard.",
+    "18": "Blue's lion takes the dog back.",
+    "19": "Red's cat takes Blue's cat.",
+    "24": "Blue turns up its elephant at last. The engine slightly preferred moving the tiger to d2 first, but the turn-over cost only a couple of points, not enough for a mark.",
+    "30": "Blue turns over Red's leopard, a gamble that was right on average and comes up badly: the leopard takes Blue's rat next move, and Red's chance is 97 in 100 from here.",
+    "43": "The lion takes the tiger.",
+    "47": "The rat takes Blue's elephant, the one capture only a rat can make.",
+    "55": "Red's lion takes Blue's last piece, its lion. Blue has no move, and Red wins."
+  }
+}

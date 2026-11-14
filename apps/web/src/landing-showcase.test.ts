@@ -11,8 +11,10 @@ describe('homepageShowcaseGames', () => {
   it('presents every side as the current Misty engine', () => {
     for (const game of homepageShowcaseGames()) {
       for (const color of ['white', 'black'] as const) {
-        // The seat is the exact build; the homepage shows the brand.
-        expect(displayParticipantName(game, color)).toBe('Misty');
+        // The seat is the exact build; the homepage shows Misty named after
+        // the game it plays (every showcase game is Fog Chess).
+        expect(game.variant).toBe('dark-chess');
+        expect(displayParticipantName(game, color)).toBe('Misty Fog Chess');
         expect(participantForColor(game, color)).toMatchObject({
           color,
           displayName: MISTBOARD_ENGINE_MISTY_NAME,

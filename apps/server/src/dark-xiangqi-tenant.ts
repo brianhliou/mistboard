@@ -39,6 +39,7 @@ import {
   applyTenantEvent,
   replayTenantEvents,
   tenantPveEngineId,
+  tenantRoomMode,
 } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
@@ -337,7 +338,7 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
   const firstAt = room.events[0]?.at ?? Date.now();
   const lastAt = room.events[room.events.length - 1]?.at ?? Date.now();
   const engineSeat = darkXiangqiEngineSeat(room);
-  const mode = engineSeat ? 'pve' : 'pvp';
+  const mode = tenantRoomMode(darkXiangqiTenant, room);
   // Finished Fog Xiangqi games are public like every other variant; the fog
   // live-spectate gate is separate and unaffected.
   const visibility: persistence.GameVisibility = 'public';
@@ -387,6 +388,8 @@ function darkXiangqiResult(winner: XiangqiColor | null): persistence.GameResult 
 
 function darkXiangqiEngineSeat(room: DarkXiangqiTenantRoom): XiangqiColor | null {
   for (const color of ['red', 'black'] as const) {
+    const status = room.projection.state.status;
+    if (status.type === 'finished' && status.winner === color) continue;
     if (isDarkXiangqiEngineClientId(room.projection.seats[color])) return color;
   }
   return null;

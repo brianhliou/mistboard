@@ -205,3 +205,25 @@ test('retired atomic cannot be run by EvE even while its catalogue remains', () 
   assert.equal(eveAdapterFor('atomic-xiangqi'), null);
   assert.ok(!EVE_VARIANT_IDS.includes('atomic-xiangqi'));
 });
+
+// A bot-vs-bot game plays the rules a live game plays. Live rooms stamp their rule
+// version on the setup (xiangqi's 120-ply progress clock, jieqi's repetition and
+// adjudication rule); an EvE setup that omits a stamp replays under the legacy rule
+// (xiangqi ladders and the 2026-11-11 title match drew at 60 capture-free plies).
+// The deal itself is random, so only the scalar stamps must match.
+test('every EvE adapter stamps the rules its live tenant stamps', () => {
+  for (const variant of EVE_VARIANT_IDS) {
+    const adapter = eveAdapterFor(variant);
+    assert.ok(adapter, variant);
+    const rules = adapter.tenant.rules as { createSetup?: () => unknown };
+    const live = rules.createSetup?.();
+    if (live === undefined) continue;
+    assert.ok(adapter.createSetup, `${variant}: live rooms stamp a setup, EvE rooms do not`);
+    const eve = adapter.createSetup(1n) as Record<string, unknown>;
+    if (live === null || typeof live !== 'object' || Array.isArray(live)) continue;
+    for (const [key, value] of Object.entries(live)) {
+      if (value !== null && typeof value === 'object') continue;
+      assert.deepEqual(eve?.[key], value, `${variant}: EvE setup.${key}`);
+    }
+  }
+});

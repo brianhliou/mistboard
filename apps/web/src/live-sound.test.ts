@@ -571,3 +571,120 @@ describe('playTerminalPlan waits for the final move to land', () => {
     expect(started).toBeGreaterThan(0);
   });
 });
+
+// 2026-11-13: Wood at the default volume read as loud and clacky. The pick
+// from an audition was about 30% quieter overall with the capture's click
+// filtered off; this pins what the browser plays, not just the table.
+describe('Wood file playback is the softened mix', () => {
+  const filters: Array<{ type: string; frequency: { value: number }; Q: { value: number } }> = [];
+  const gains: number[] = [];
+
+  beforeEach(() => {
+    filters.length = 0;
+    gains.length = 0;
+    class FakeAudioContext {
+      currentTime = 0;
+      destination = {};
+      sampleRate = 48_000;
+      state = 'running';
+      async resume(): Promise<void> {}
+      createGain() {
+        return {
+          gain: {
+            setValueAtTime() {},
+            linearRampToValueAtTime() {},
+            exponentialRampToValueAtTime() {},
+            set value(next: number) {
+              gains.push(next);
+            },
+            get value() {
+              return gains.at(-1) ?? 1;
+            },
+          },
+          connect: (node: unknown) => node,
+        };
+      }
+      createBiquadFilter() {
+        const filter = {
+          type: 'bandpass',
+          frequency: { value: 0, setValueAtTime() {} },
+          Q: { value: 1 },
+          connect: (node: unknown) => node,
+        };
+        filters.push(filter);
+        return filter;
+      }
+      createBufferSource() {
+        return {
+          buffer: null,
+          playbackRate: { value: 1 },
+          connect: (node: unknown) => node,
+          start() {},
+          stop() {},
+        };
+      }
+      createOscillator() {
+        return {
+          type: 'sine',
+          frequency: { setValueAtTime() {} },
+          connect: (node: unknown) => node,
+          start() {},
+          stop() {},
+        };
+      }
+      createBuffer(_channels: number, length: number) {
+        const samples = new Float32Array(length);
+        return { getChannelData: () => samples };
+      }
+      decodeAudioData() {
+        return Promise.resolve({ duration: 0.2 });
+      }
+    }
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    vi.stubGlobal('fetch', async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) }));
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: true, isActive: true },
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'userActivation');
+    Reflect.deleteProperty(window as unknown as Record<string, unknown>, 'localStorage');
+    vi.resetModules();
+  });
+
+  async function loadedWood() {
+    vi.resetModules();
+    const mod = await import('./live-sound.js');
+    mod.initLiveSound();
+    // fetch, arrayBuffer and decode each settle on their own tick.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    filters.length = 0;
+    gains.length = 0;
+    return mod;
+  }
+
+  it('plays a move at the auditioned level with no filter', async () => {
+    const mod = await loadedWood();
+    mod.playSound('move');
+    expect(filters).toHaveLength(0);
+    // Default volume 0.7 times the Wood master: 0.40, down from 0.56.
+    expect(gains.at(-1)).toBeCloseTo(0.4, 2);
+  });
+
+  it('plays captures and cannon captures through a flat low-pass, below a move', async () => {
+    const mod = await loadedWood();
+    for (const kind of ['capture', 'cannon-capture'] as const) {
+      filters.length = 0;
+      mod.playSound(kind);
+      expect(filters).toHaveLength(1);
+      expect(filters[0]).toMatchObject({ type: 'lowpass', frequency: { value: 2500 } });
+      expect(filters[0]?.Q.value).toBeCloseTo(-3.01, 2);
+    }
+    gains.length = 0;
+    mod.playSound('capture');
+    expect(gains.at(-1)).toBeLessThan(0.4);
+  });
+});

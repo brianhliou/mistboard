@@ -389,6 +389,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'VSX0aLce/Ogrhzz2m',
           spec: { ...G_QUALIFIER, startPly: 41 },
           caption: "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.",
         },
@@ -407,6 +408,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'VSX0aLce/3ohMPeM2',
           spec: { ...G_MENG, startPly: 38 },
           caption: "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.",
         },
@@ -416,6 +418,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'VSX0aLce/Z3Ehhpnn',
           spec: { ...G_JIN, startPly: 110 },
           caption: "Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.",
         },
@@ -425,6 +428,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'VSX0aLce/IPshem2M',
           spec: { ...G_FINAL, startPly: 44 },
           caption: "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.",
         },
@@ -443,6 +447,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'VSX0aLce/kbM1lTTH',
           spec: { ...G_STAGE_ONE, startPly: 77 },
           caption: "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.",
         },

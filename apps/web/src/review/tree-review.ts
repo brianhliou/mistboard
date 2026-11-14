@@ -2604,6 +2604,20 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // reveal.") used to sit here. Removed 2026-08-22: the 🎲 badges and the
       // luck-free accuracy carry the story without a caption under the summary.
       decisionSummaryEl.replaceChildren();
+      if (overlay.totals) {
+        for (const side of ['red', 'black'] as const) {
+          const totals = overlay.totals[side];
+          const row = document.createElement('p');
+          row.className = 'review-decision-totals';
+          row.dataset.side = side;
+          row.textContent = t('review.chanceTotals', {
+            side: t(`replay.${side}`),
+            luck: `${totals.luck > 0 ? '+' : ''}${totals.luck.toFixed(1)}`,
+            loss: totals.decisionLoss.toFixed(1),
+          });
+          decisionSummaryEl.append(row);
+        }
+      }
     }
     // The advantage chart's "if reveals ran average" ghost line is intentionally NOT drawn for now:
     // after the last tile flips the gap freezes and the ghost just shadows the real line for the

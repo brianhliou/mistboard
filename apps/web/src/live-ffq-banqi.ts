@@ -3,21 +3,26 @@
 import {
   type BanqiColor,
   type BanqiSquare,
-  FFQ_BANQI_CHASE_LIMIT,
-  FFQ_BANQI_DAMAGE,
-  FFQ_BANQI_NO_PROGRESS_LIMIT,
   FFQ_BANQI_SPEC_ID,
   type FFQBanqiMove,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './live-ffq-banqi.css';
+import { banqiRevealOdds } from './banqi-reveal-odds.js';
+import {
+  seatPanelBlock,
+  seatPanelLine,
+  seatPanelNone,
+  seatPanelPieces,
+} from './banqi-seat-panel.js';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
-import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
+import { createFFQBanqiHpMeter } from './ffq-banqi-hp.js';
 import { variantDisplayLabel } from './game-display.js';
+import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -33,7 +38,14 @@ import {
   installBanqiBoardStyles,
 } from './live-banqi-render.js';
 import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
+import {
+  maybePlayFFQBanqiSound,
+  resetFFQBanqiSoundState,
+  soundForOwnFFQBanqiMove,
+} from './live-ffq-banqi-sound.js';
+import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
@@ -102,6 +114,9 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+    // Hello bypasses the snapshot hook. Seed the initial diff baseline here;
+    // reconnect hellos of the same ply stay silent in the sound policy.
+    if (frame.type === 'hello' && core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
   },
   playAgainRequestBody: (state) => ({
     gameSpecId: FFQ_BANQI_SPEC_ID,
@@ -120,17 +135,20 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   },
   // A new view may revoke the selection's moves, including a turn change.
   onSnapshotApplied: () => {
+    if (core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
     clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
   onEventApplied: () => {
+    if (core) maybePlayFFQBanqiSound(core.state.view, core.state.seat);
     clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
+  resetSounds: resetFFQBanqiSoundState,
   renderBoard,
-  renderExtras: renderProgress,
+  renderExtras: renderSeatPanel,
   animateBoard: (refs, view, takePending) => {
     if (!view || draggingFrom) return;
     const pending = takePending();
@@ -181,8 +199,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
         else if (result.kind === 'clear') selectedSquare = null;
         else if (result.kind === 'move') {
           selectedSquare = null;
-          core?.send({
-            type: 'move',
+          sendMove(view, {
             from: ffqBanqiIndex(result.move.from),
             to: ffqBanqiIndex(result.move.to),
           });
@@ -229,7 +246,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
           const move = view.legalMoves.find(
             (m) => m.from === ffqBanqiIndex(from) && m.to === ffqBanqiIndex(to) && m.from !== m.to,
           );
-          if (move) core?.send({ type: 'move', ...move });
+          if (move) sendMove(view, move);
         }
         selectedSquare = draggingFrom = null;
         renderBoard(ctx.refs, view ?? null);
@@ -271,6 +288,11 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
 
 export function bootstrapFFQBanqiLiveRoom(): void {
   client.bootstrap();
+}
+
+function sendMove(view: FFQBanqiWireView, move: FFQBanqiMove): void {
+  core?.send({ type: 'move', ...move });
+  playSound(soundForOwnFFQBanqiMove(view, move));
 }
 
 function canInteract(): boolean {
@@ -324,42 +346,67 @@ function clearChaseNotice(): void {
   chaseBubble?.clear();
 }
 
-function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
-  refs.hiddenPool.replaceChildren();
+// The seat panel under the board, Three Kingdoms banqi's layout
+// (banqi-seat-panel.ts): one block per seat, the top seat's first like the
+// board, its name and HP bar where Three Kingdoms shows points, then the pieces
+// it took, then its ink's remaining face-down pool and reveal odds. Every
+// capture is public in Fanfanqi, a covered one included, and
+// the panel reads only the viewer's view, never the deal. A cannon can
+// take a covered piece of its own colour, so a seat's line can hold both inks;
+// a covered capture is shaded as banqi shades one. The no-progress and chase
+// counts stay rules, not readouts: the chase limit shows as a cross and a
+// bubble on the board when a move would break it.
+function renderSeatPanel(refs: LiveRefs, view: FFQBanqiWireView | null): void {
+  const host = refs.hiddenPool;
+  host.replaceChildren();
   if (!view) return;
-  const panel = document.createElement('div');
-  panel.className = 'ffq-banqi-progress';
-  for (const side of tenant.colors) {
-    panel.append(createFFQBanqiHpRow(view, side));
+  const bottom: BanqiColor = core?.orientation() ?? 'red';
+  const top: BanqiColor = bottom === 'red' ? 'black' : 'red';
+  // The final view stays masked and carries the same exact public pool, so
+  // finished odds need no move-log reconstruction.
+  const odds = banqiRevealOdds({ pool: view.pool });
+  const pool = document.createElement('div');
+  renderHiddenPoolPanel(
+    pool,
+    [top, bottom].map((color) => ({
+      color,
+      label: t(color === 'red' ? 'setup.red' : 'setup.black'),
+      side: odds.pool[color],
+    })),
+    banqiPieceGhostSvg,
+    { odds },
+  );
+  for (const side of [top, bottom]) {
+    const pieces = pool.querySelector<HTMLElement>(
+      `.hidden-pool__row[data-ink="${side}"] .hidden-pool__pieces`,
+    )!;
+    pieces.classList.add('tk-seat__pieces');
+    if (pieces.querySelector('.hidden-pool__none')) pieces.replaceChildren(seatPanelNone());
+    host.append(seatBlock(view, side, pieces));
   }
-  const counters = document.createElement('div');
-  counters.className = 'ffq-banqi-counters';
-  counters.textContent = [
-    t('live.ffq.noProgress', { count: view.noProgressClock, limit: FFQ_BANQI_NO_PROGRESS_LIMIT }),
-    ...tenant.colors.map((side) =>
-      t('live.ffq.chase', {
-        side: t(side === 'red' ? 'setup.red' : 'setup.black'),
-        count: view.chaseCounts[side],
-        limit: FFQ_BANQI_CHASE_LIMIT,
-      }),
-    ),
-  ].join(' · ');
-  panel.append(counters);
-  const captures = document.createElement('ol');
-  captures.className = 'ffq-banqi-captures';
-  for (const capture of view.captured) {
-    if (capture.role === null) continue;
-    const entry = document.createElement('li');
-    entry.textContent = t('live.ffq.captureDamage', {
-      capturer: t(capture.capturedBy === 'red' ? 'setup.red' : 'setup.black'),
-      owner: t(capture.owner === 'red' ? 'setup.red' : 'setup.black'),
-      piece: t(`review.luckCard.role.${capture.role}`),
-      damage: FFQ_BANQI_DAMAGE[capture.role],
-    });
-    captures.append(entry);
-  }
-  panel.append(captures);
-  refs.hiddenPool.append(panel);
+}
+
+function seatBlock(view: FFQBanqiWireView, side: BanqiColor, faceDown: HTMLElement): HTMLElement {
+  const block = seatPanelBlock({
+    name: t(side === 'red' ? 'setup.red' : 'setup.black'),
+    score: createFFQBanqiHpMeter(view, side),
+    seat: side,
+    ink: side,
+    className: 'tk-seat--hp',
+  });
+  const taken = view.captured
+    .filter((capture) => capture.capturedBy === side)
+    .map((capture) => ({
+      owner: capture.owner,
+      role: capture.role,
+      takenFaceDown: capture.wasFaceDown,
+    }));
+  const pieces = document.createElement('div');
+  for (const owner of [tenant.oppositeColor(side), side])
+    fillCapturedPoolWith(pieces, taken, owner, banqiPieceGhostSvg);
+  block.append(seatPanelLine('captured', t('live.tk.captured'), seatPanelPieces(pieces)));
+  block.append(seatPanelLine('face-down', t('live.stillFaceDown'), faceDown));
+  return block;
 }
 
 function isMoveEvent(event: TenantLiveEvent): event is MoveEvent {

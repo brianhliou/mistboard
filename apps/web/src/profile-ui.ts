@@ -10,6 +10,7 @@ import {
   matchupSeats,
   participantForColor,
   terminationLabel,
+  terminationVariant,
   variantNameKeyForSpecId,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
@@ -293,7 +294,9 @@ export function buildProfileGameRow(
     variantPill.prepend(thumb);
   }
   details.append(variantPill);
-  const ending = opts.ending ? terminationLabel(game.termination, locale) : '';
+  const ending = opts.ending
+    ? terminationLabel(game.termination, terminationVariant(game.variant), locale)
+    : '';
   if (ending) details.append(buildGameDetail(ending, 'profile-game-ending'));
   if (unavailable) {
     const tag = buildGameDetail(unavailable.label, 'profile-game-unavailable');

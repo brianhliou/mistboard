@@ -182,6 +182,19 @@ export function buildReadoutSummary(report: MistboardReadoutV1) {
     report.actions.length + (report.verdict === 'unknown' ? 1 : 0) - actions.length,
   );
   const context: string[] = [];
+  const conversions = product?.guestSignInConversion;
+  if (conversions?.length) {
+    context.push(
+      'Guest sign-in after playing a person (UTC game-finish weeks; distinct browsers signing in within 7 days): ' +
+        conversions
+          .map(
+            (week) =>
+              `${week.weekStart}: ${week.signedInWithin7d}/${week.guests}${week.complete ? '' : ' (window still open)'}`,
+          )
+          .join('; ') +
+        '. Browser links start at deployment; earlier sign-ins cannot be backfilled.',
+    );
+  }
   if (
     product &&
     before &&

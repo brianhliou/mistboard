@@ -2,24 +2,29 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assembleMinedXiangqiPuzzle,
+  assertXiangqiSolverGateVersion,
   buildXiangqiSolutionFromPv,
   classifyXiangqiSolverMoveUniqueness,
   createInitialXiangqiState,
   detectXiangqiBlunderCandidates,
+  getStandardXiangqiLegalMoves,
   isXiangqiQuietKeyMove,
   isXiangqiSolverMoveUnique,
-  isXiangqiUniquelyWinning,
   makeXiangqiPuzzleInitial,
   tagXiangqiPuzzleThemes,
   validateStandardXiangqiPuzzle,
   XIANGQI_MATE_SCORE_CP,
+  XIANGQI_SOLVER_GATE_DEFAULTS,
+  XIANGQI_SOLVER_GATE_VERSION,
   type XiangqiBoard,
   type XiangqiGameState,
   type XiangqiMove,
   xiangqiPuzzleAttributionIssue,
+  xiangqiPuzzleHasStartingChoice,
   xiangqiPuzzleTitle,
   xiangqiSourceAttribution,
   xiangqiUciScoreToCp,
+  xiangqiWinRate,
 } from './index.js';
 
 function playingState(
@@ -118,178 +123,115 @@ test('detectXiangqiBlunderCandidates treats mate-mapped scores as decisive', () 
 
 // ── Uniqueness rule ──────────────────────────────────────────────────────────
 
-const UNIQUE_OPTS = { winCp: 250, uniqueGapCp: 150 };
+const SOLVER_UNIQUE_OPTS = XIANGQI_SOLVER_GATE_DEFAULTS;
+const cp = (scoreCp: number) => ({ scoreCp, mate: null });
+const mating = (mate: number) => ({ scoreCp: XIANGQI_MATE_SCORE_CP - mate, mate });
+const unique = (
+  best: ReturnType<typeof cp> | ReturnType<typeof mating>,
+  second?: ReturnType<typeof cp> | ReturnType<typeof mating>,
+) => isXiangqiSolverMoveUnique(best, second, SOLVER_UNIQUE_OPTS);
 
-test('isXiangqiUniquelyWinning requires a winning best line', () => {
-  assert.equal(isXiangqiUniquelyWinning([{ scoreCp: 200, mate: null }], UNIQUE_OPTS), false);
-  assert.equal(isXiangqiUniquelyWinning([], UNIQUE_OPTS), false);
+test('solver admission does not inherit the grader immediate-mate exception', () => {
+  assert.equal(unique(mating(1), cp(700)), false);
+  assert.equal(unique(mating(1), mating(2)), false);
 });
 
-test('isXiangqiUniquelyWinning accepts an only-move (no second line)', () => {
-  assert.equal(isXiangqiUniquelyWinning([{ scoreCp: 400, mate: null }], UNIQUE_OPTS), true);
+test('non-mating answers need meaningful winning-chance separation on the CC0 scale', () => {
+  assert.equal(unique(cp(350), cp(0)), false);
+  assert.equal(unique(cp(350), cp(-200)), true);
+  assert.equal(unique(cp(600), cp(40)), true);
 });
 
-test('isXiangqiUniquelyWinning enforces the cp gap between best and second', () => {
+test('only legal moves still require a clear win', () => {
+  assert.equal(unique(cp(400)), true);
+  assert.equal(unique(cp(-400)), false);
+  assert.equal(unique(cp(200), cp(-1000)), false);
+});
+
+test('the same chance-gap boundary applies to mates and centipawn scores', () => {
+  assert.equal(unique(mating(2), cp(132)), true);
+  assert.equal(unique(mating(2), cp(134)), false);
+  assert.equal(unique(cp(500), cp(50)), true);
+  assert.equal(unique(cp(500), cp(60)), false);
+  const gap = xiangqiWinRate(500) - xiangqiWinRate(50);
   assert.equal(
-    isXiangqiUniquelyWinning(
-      [
-        { scoreCp: 500, mate: null },
-        { scoreCp: 300, mate: null },
-      ],
-      UNIQUE_OPTS,
-    ),
+    isXiangqiSolverMoveUnique(cp(500), cp(50), { ...SOLVER_UNIQUE_OPTS, minWinRateGap: gap }),
+    false,
+  );
+});
+
+test('multiple overwhelming wins and alternative forced mates fail admission', () => {
+  assert.equal(unique(cp(900), cp(600)), false);
+  assert.equal(unique(cp(600), cp(550)), false);
+  assert.equal(unique(mating(9), cp(1730)), false);
+  assert.equal(unique(mating(7), cp(748)), false);
+  assert.equal(unique(mating(3), mating(4)), false);
+  assert.equal(unique(mating(3), mating(-4)), true);
+});
+
+test('mate-in-one admission bounds the strongest non-immediate alternative', () => {
+  assert.equal(unique(mating(1), cp(297)), true);
+  assert.equal(unique(mating(1), cp(298)), false);
+  assert.equal(
+    unique(mating(1), mating(1)),
+    false,
+    'a top-two list cannot rule out a strong third move',
+  );
+  assert.deepEqual(classifyXiangqiSolverMoveUniqueness(mating(1), mating(1), SOLVER_UNIQUE_OPTS), {
+    unique: false,
+    reason: 'immediate-mate-alternatives-unchecked',
+  });
+  const covered = (third: ReturnType<typeof cp>) =>
+    isXiangqiSolverMoveUnique(mating(1), mating(1), SOLVER_UNIQUE_OPTS, {
+      lines: [mating(1), mating(1), third],
+      legalMoveCount: 10,
+    });
+  assert.equal(covered(cp(0)), true);
+  assert.equal(covered(cp(700)), false);
+});
+
+test('a list containing only immediate mates needs complete legal-move coverage', () => {
+  const lines = [mating(1), mating(1)];
+  assert.equal(
+    isXiangqiSolverMoveUnique(lines[0], lines[1], SOLVER_UNIQUE_OPTS, { lines, legalMoveCount: 2 }),
     true,
   );
   assert.equal(
-    isXiangqiUniquelyWinning(
-      [
-        { scoreCp: 500, mate: null },
-        { scoreCp: 400, mate: null },
-      ],
-      UNIQUE_OPTS,
-    ),
+    isXiangqiSolverMoveUnique(lines[0], lines[1], SOLVER_UNIQUE_OPTS, { lines, legalMoveCount: 3 }),
+    false,
+  );
+  assert.equal(
+    isXiangqiSolverMoveUnique(cp(400), undefined, SOLVER_UNIQUE_OPTS, {
+      lines: [cp(400)],
+      legalMoveCount: 3,
+    }),
     false,
   );
 });
 
-test('isXiangqiUniquelyWinning accepts a lone mate over a non-mate second line', () => {
-  assert.equal(
-    isXiangqiUniquelyWinning(
-      [
-        { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-        { scoreCp: 800, mate: null },
-      ],
-      UNIQUE_OPTS,
-    ),
-    true,
-  );
-  // Two mates within the gap: not unique.
-  assert.equal(
-    isXiangqiUniquelyWinning(
-      [
-        { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-        { scoreCp: XIANGQI_MATE_SCORE_CP - 5, mate: 5 },
-      ],
-      UNIQUE_OPTS,
-    ),
-    false,
+test('invalid score or configuration evidence cannot pass a separation gate', () => {
+  assert.equal(unique(cp(Number.NaN), cp(-1000)), false);
+  assert.throws(() =>
+    isXiangqiSolverMoveUnique(cp(500), cp(0), { ...SOLVER_UNIQUE_OPTS, winRateK: Number.NaN }),
   );
 });
 
-// ── Winning-floor per-ply uniqueness (gated re-mine) ─────────────────────────
-
-// winHi 0.80 ~ +240cp, winLo 0.60 ~ +70cp on the K=400 logistic.
-const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, minGapCp: 200 };
-
-test('isXiangqiSolverMoveUnique: only-move (no runner-up) is unique', () => {
-  assert.equal(
-    isXiangqiSolverMoveUnique({ scoreCp: 400, mate: null }, undefined, SOLVER_UNIQUE_OPTS),
-    true,
-  );
-});
-
-test('isXiangqiSolverMoveUnique: a losing only move is not a puzzle answer', () => {
-  assert.equal(
-    isXiangqiSolverMoveUnique({ scoreCp: -400, mate: null }, undefined, SOLVER_UNIQUE_OPTS),
-    false,
-  );
-});
-
-test('isXiangqiSolverMoveUnique: best must clear the winning floor', () => {
-  // +150cp is winning-ish but below winHi (~+240): not a puzzle move.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: 150, mate: null },
-      { scoreCp: -50, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    false,
-  );
-});
-
-test('isXiangqiSolverMoveUnique: two still-winning moves a small gap apart are NOT unique', () => {
-  // +600 vs +550: both crushing, 50cp apart — forcing one is unfair.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: 600, mate: null },
-      { scoreCp: 550, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    false,
-  );
-});
-
-test('isXiangqiSolverMoveUnique: unique when the runner-up loses the win', () => {
-  // +600 vs +40 (~win% 0.53, below winLo): the alternative throws the win.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: 600, mate: null },
-      { scoreCp: 40, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    true,
-  );
-});
-
-test('isXiangqiSolverMoveUnique: hard near-tie floor rejects a boundary-sensitive result', () => {
-  const verdict = classifyXiangqiSolverMoveUniqueness(
-    { scoreCp: 270, mate: null },
-    { scoreCp: 71, mate: null },
-    SOLVER_UNIQUE_OPTS,
-  );
-  assert.deepEqual(verdict, { unique: false, reason: 'near-tie' });
-
-  assert.deepEqual(
-    classifyXiangqiSolverMoveUniqueness(
-      { scoreCp: 270, mate: null },
-      { scoreCp: 70, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    { unique: true, reason: 'runner-up-loses-win' },
-  );
-});
-
-test('isXiangqiSolverMoveUnique: a runner-up that still wins is a second answer, whatever the margin', () => {
-  // +900 vs +600: the runner-up still wins (~97%), so failing it would be unfair.
-  assert.deepEqual(
-    classifyXiangqiSolverMoveUniqueness(
-      { scoreCp: 900, mate: null },
-      { scoreCp: 600, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    { unique: false, reason: 'alternative-still-good' },
-  );
-});
-
-test('isXiangqiSolverMoveUnique: a mate is unique only when no other move mates', () => {
-  // Faster mate over a slower mate: NOT unique. The grader only rescues a mate
-  // on the spot, so a served puzzle with a second forced mate is a trap.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-      { scoreCp: XIANGQI_MATE_SCORE_CP - 5, mate: 5 },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    false,
-  );
-  // Two mates of equal distance: not unique.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    false,
-  );
-  // Lone mate over a non-mate second line: unique.
-  assert.equal(
-    isXiangqiSolverMoveUnique(
-      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
-      { scoreCp: 800, mate: null },
-      SOLVER_UNIQUE_OPTS,
-    ),
-    true,
-  );
+test('CC0 pilot regressions retain clear tactics and reject competing wins', () => {
+  // Pinned CC0 pilot, 5M nodes, 2026-11-09. Scores favor the solver.
+  for (const [name, best, second, expected] of [
+    ['48gHj root', mating(11), cp(527), false],
+    ['48gHj later', mating(7), cp(748), false],
+    ['pPdSk', mating(3), mating(4), false],
+    ['HCfFJ defence', cp(871), cp(0), true],
+    ['HCfFJ tail', cp(582), cp(310), false],
+    ['MHTdb capture', cp(438), cp(-340), true],
+    ['MHTdb fork choices', cp(456), cp(111), false],
+    ['zHNIm', cp(360), cp(-39), true],
+    ['YAK1n', cp(352), cp(-197), true],
+    ['1Je5x', cp(341), cp(-231), true],
+    ['MleJ5', cp(453), cp(-240), true],
+  ] as const)
+    assert.equal(unique(best, second), expected, name);
 });
 
 // ── Solution building ────────────────────────────────────────────────────────
@@ -506,6 +448,13 @@ function looseHorseInput(
   };
 }
 
+test('quiet PV tails cannot bypass the configured minimum solution length', () => {
+  assert.deepEqual(
+    assembleMinedXiangqiPuzzle(looseHorseInput(), { maxSolutionPlies: 9, minSolutionPlies: 3 }),
+    { ok: false, reason: 'too-short-after-trim' },
+  );
+});
+
 test('isXiangqiQuietKeyMove: a capture or a check is loud, a developing move is quiet', () => {
   const opening = createInitialXiangqiState('quiet-open');
   assert.equal(isXiangqiQuietKeyMove(opening, { from: 'h3', to: 'e3' }), true);
@@ -530,12 +479,15 @@ test('assembleMinedXiangqiPuzzle with quietKey refuses a checking key', () => {
   });
 });
 
-test('assembleMinedXiangqiPuzzle: the trim beats a 5-ply floor unless floorAfterTrim holds it', () => {
+test('assembleMinedXiangqiPuzzle always enforces its minimum after trimming', () => {
   const opts = { maxSolutionPlies: 9, minSolutionPlies: 5 };
-  // Old behaviour: the 5-ply line passes the floor, then trims to 1 ply.
-  const loose = assembleMinedXiangqiPuzzle(looseHorseInput(), opts);
-  assert.equal(loose.ok, true);
-  if (loose.ok) assert.equal(loose.puzzle.solution.length, 1);
+  assert.deepEqual(assembleMinedXiangqiPuzzle(looseHorseInput(), opts), {
+    ok: false,
+    reason: 'too-short-after-trim',
+  });
+  const easy = assembleMinedXiangqiPuzzle(looseHorseInput(), { ...opts, minSolutionPlies: 1 });
+  assert.equal(easy.ok, true);
+  if (easy.ok) assert.equal(easy.puzzle.solution.length, 1);
   assert.deepEqual(
     assembleMinedXiangqiPuzzle(looseHorseInput(), { ...opts, floorAfterTrim: true }),
     {
@@ -616,4 +568,60 @@ test('xiangqiPuzzleAttributionIssue flags a DPXQ puzzle without an http credit',
     },
   };
   assert.equal(xiangqiPuzzleAttributionIssue(ok, 'dpxq'), null);
+});
+
+// Reported move 25: mate in nine beside +17.3 and +12.8 must not be
+// admitted as one forced answer simply because only one PV shows mate.
+test('mate beside a decisive centipawn alternative is not unique', () => {
+  for (const scoreCp of [1730, 1280, 800]) {
+    assert.deepEqual(
+      classifyXiangqiSolverMoveUniqueness(
+        { scoreCp: XIANGQI_MATE_SCORE_CP - 9, mate: 9 },
+        { scoreCp, mate: null },
+        SOLVER_UNIQUE_OPTS,
+      ),
+      { unique: false, reason: 'insufficient-separation' },
+    );
+  }
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 9, mate: 9 },
+      { scoreCp: 40, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    true,
+  );
+});
+
+test('solver gate evidence has an explicit version and rejects missing or old policy', () => {
+  assert.doesNotThrow(() => assertXiangqiSolverGateVersion(XIANGQI_SOLVER_GATE_VERSION));
+  for (const version of [undefined, null, '', 'only-mate-v1', 'unique-winning-move-v2']) {
+    assert.throws(() => assertXiangqiSolverGateVersion(version), /requires solver gate/);
+  }
+});
+
+test('mining rejects a forced start independently of a supplied winning score', () => {
+  const forced = playingState('forced-root', {
+    e1: { color: 'red', role: 'general' },
+    a3: { color: 'red', role: 'chariot' },
+    d10: { color: 'black', role: 'general' },
+    e3: { color: 'black', role: 'chariot' },
+    d2: { color: 'black', role: 'chariot' },
+    h2: { color: 'black', role: 'horse' },
+  });
+  assert.deepEqual(getStandardXiangqiLegalMoves(forced), [{ from: 'a3', to: 'e3' }]);
+  assert.equal(xiangqiPuzzleHasStartingChoice(forced), false);
+  assert.equal(xiangqiPuzzleHasStartingChoice(mateInTwoState()), true);
+  const result = assembleMinedXiangqiPuzzle(
+    {
+      gameId: 'forced-root',
+      blunderPly: 20,
+      postBlunderState: forced,
+      pv: [{ from: 'a3', to: 'e3' }],
+      verifyScore: { scoreCp: 600, mate: null },
+      swingCp: 700,
+    },
+    { ...BUILD_OPTS, minSolutionPlies: 1 },
+  );
+  assert.deepEqual(result, { ok: false, reason: 'no-choice-at-root' });
 });

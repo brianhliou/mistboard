@@ -10,13 +10,15 @@ import {
   getFFQBanqiPlayerView,
   isFFQBanqiLegalMove,
 } from '@mistboard/game';
-import { resolveValidatedEngineMove, searchStillCurrent } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { type EngineMoveAttempt, resolveValidatedEngineMove } from './engine-move-guard.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import {
   FFQ_BANQI_ENGINE_MOVETIME_CAP_MS,
   type FFQBanqiEngineProvider,
   type FFQBanqiEngineRequest,
   ffqBanqiEngineTierFor,
+  ffqBanqiEngineVersion,
   ffqBanqiLiveEngineMove,
   ffqBanqiMoveToUci,
   isFFQBanqiEngineClientId,
@@ -24,6 +26,11 @@ import {
 } from './ffq-banqi-engine.js';
 import type { FFQBanqiEvent } from './ffq-banqi-tenant.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
@@ -130,14 +137,41 @@ export async function playFFQBanqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
   const engineId = room.projection.seats[seat]!;
   const tier = ffqBanqiEngineTierFor(engineId)!;
-  const { computeBudgetMs: movetimeCapMs } = budgetForMove({
+  const startedAt = Date.now();
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
+  const state = room.projection.state;
+  const paceInput = {
+    variant: 'ffq-banqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: state.ply,
+    legalCount: getFFQBanqiLegalMoves(state).length,
     remainingMs,
     incrementMs: clock?.incrementMs ?? 0,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isFFQBanqiEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: FFQ_BANQI_ENGINE_MOVETIME_CAP_MS,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
-  const state = room.projection.state;
+  };
+  let movetimeCapMs = liveBotMoveTime(budgetInput).movetimeMs;
+  let budgetExhausted = false;
+  let lastSearch: UciEval | null = null;
+  let attempts: EngineMoveAttempt[] = [];
+  if (movetimeCapMs <= 0 || !turn.current()) return;
   let chosen: FFQBanqiMove | null;
   if (tier.evaluation === 'random') {
     const legal = getFFQBanqiLegalMoves(state);
@@ -146,12 +180,20 @@ export async function playFFQBanqiEngineMoveIfReady(
     const result = await resolveValidatedEngineMove<FFQBanqiMove>({
       maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
       requestMove: async () => {
+        movetimeCapMs = liveBotMoveTime({
+          ...budgetInput,
+          waitedMs: Date.now() - startedAt,
+        }).movetimeMs;
+        if (movetimeCapMs <= 0) {
+          budgetExhausted = true;
+          return null;
+        }
         const request = ffqBanqiTierRequestFor(
           state,
           engineId,
           movetimeCapMs,
           remainingMs,
-          clock?.incrementMs ?? 0,
+          paceInput.incrementMs,
         );
         const response = await moveProvider(request);
         if (
@@ -160,13 +202,20 @@ export async function playFFQBanqiEngineMoveIfReady(
           response.sessionId !== request.sessionId
         )
           throw new Error('FFQ engine response correlation mismatch');
-        return response.move ? ffqBanqiMoveToUci(response.move) : null;
+        const uci = response.move ? ffqBanqiMoveToUci(response.move) : null;
+        lastSearch = response.search ?? {
+          best: uci,
+          cp: response.cp ?? null,
+          mate: response.mate ?? null,
+          depth: 0,
+        };
+        return uci;
       },
       validate: (uci) => {
         const parsed = uciToFFQBanqiMove(uci);
         return parsed && isFFQBanqiLegalMove(room.projection.state, parsed) ? parsed : null;
       },
-      stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
+      stillOnTurn: () => !budgetExhausted && turn.current(),
       onReject: ({ attempt, uci, reason, error }) =>
         logger.warn(
           {
@@ -182,8 +231,30 @@ export async function playFFQBanqiEngineMoveIfReady(
     });
     if (result.aborted) return;
     chosen = result.chosen;
+    attempts = result.attempts;
   }
-  if (!engineToMove(room, seat)) return;
+  let writes: Promise<void>;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  // Provider failure keeps its existing immediate terminal outcome.
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+    ...(chosen === null ? { enabled: false } : {}),
+  });
+  if (!(await turn.wait(pace.waitMs))) return;
+  do {
+    writes = room.pendingWrites;
+    await writes;
+  } while (writes !== room.pendingWrites);
+  if (!turn.current()) return;
   // A playtest bot that cannot answer resigns, as banqi's does (fail closed):
   // a silent random move would hide an engine/kernel disagreement.
   const event: FFQBanqiEvent =
@@ -200,6 +271,29 @@ export async function playFFQBanqiEngineMoveIfReady(
       'FFQ banqi engine gave no legal move; resigning its seat',
     );
   }
+  // The masked public FEN only: the decision artifact carries nothing the bot
+  // seat could not see.
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
+      variant: 'ffq-banqi',
+      roomId: room.id,
+      engineId,
+      engineVersion: ffqBanqiEngineVersion(engineId)!,
+      seat,
+      ply: state.ply,
+      budgetMs: tier.evaluation === 'random' ? null : movetimeCapMs,
+      remainingMs,
+      incrementMs: paceInput.incrementMs,
+      tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
+      search: lastSearch,
+      thinkTimeMs,
+      attempts,
+      move: chosen ? ffqBanqiMoveToUci(chosen) : null,
+      fen: ffqBanqiStateToFen(state),
+      legalCount: paceInput.legalCount,
+    }),
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

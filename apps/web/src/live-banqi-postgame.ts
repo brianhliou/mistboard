@@ -144,6 +144,7 @@ async function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse
   const status = reviewOutcomeLine(
     banqiOutcome(postgame.game.result, firstColor),
     postgame.game.termination,
+    BANQI_SPEC_ID,
   );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: BANQI_SPEC_ID,

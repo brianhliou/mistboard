@@ -34,7 +34,7 @@
 // Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
 import {
   type BoardSeat,
   type CurrentGame,
@@ -74,6 +74,7 @@ import {
   matchupSeats,
   namesMatchupLabel,
   terminationLabel,
+  terminationVariant,
   variantDisplayLabel,
 } from './game-display.js';
 import { gameMetaForGame, timeControlLabelForGame } from './game-meta.js';
@@ -359,11 +360,11 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     const hasInk = variantSeatsHaveInk(game.gameSpecId);
     const ink = (seat: CurrentGamePlayer | null): string | null | false =>
       !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
-    const topRow = buildSeatRow(top, clockEls, ink(top));
+    const topRow = buildSeatRow(top, clockEls, ink(top), game.gameSpecId);
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom), game.gameSpecId);
     article.append(open, topRow, boardRoot, bottomRow);
     stampSeatInkFamily(article, game.gameSpecId);
 
@@ -625,7 +626,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           winner === 'east' || winner === 'west' ? winner : null,
           readStoredXiangqiPieceSet(),
           t('games.finalHands'),
-          terminationLabel(final.reason === 'tie' ? 'draw' : final.reason) || null,
+          terminationLabel(
+            final.reason === 'tie' ? 'draw' : final.reason,
+            XIANGQI_MAHJONG_SPEC_ID,
+          ) || null,
         );
         drawn = true;
       }
@@ -749,6 +753,7 @@ export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
   ink: string | null | false,
+  gameSpecId?: string,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
@@ -756,20 +761,25 @@ export function buildSeatRow(
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  const fullName = displayLiveName(player?.name, t('games.guest'));
-  const nameEl = playerNameEl(
-    player?.isEngine ? cardSeatName(fullName) : fullName,
-    profileTargetFor(player),
-    'current-game-seat-name',
+  const fullName = displayLiveName(
+    player?.name,
+    t('games.guest'),
+    player ? { ...player, gameSpecId } : undefined,
   );
+  // The whole name, wrapping onto a second line rather than cut (decided
+  // 2026-11-12), with the BOT tag following its last word.
+  const label = document.createElement('span');
+  label.className = 'current-game-seat-label';
+  const nameEl = playerNameEl(fullName, profileTargetFor(player), 'current-game-seat-name');
   nameEl.title = fullName;
-  who.append(nameEl);
+  label.append(nameEl);
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
     badge.textContent = t('games.bot');
-    who.append(badge);
+    label.append(' ', badge);
   }
+  who.append(label);
   const clock = document.createElement('span');
   clock.className = 'current-game-seat-clock';
   row.append(who, clock);
@@ -908,8 +918,11 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
 } {
   const [top, bottom] = seatOrder(game);
   return {
-    first: displayLiveName(bottom?.name, t('games.guest')),
-    second: displayLiveName(top?.name, t('games.guest')),
+    first: displayLiveName(bottom?.name, t('games.guest'), {
+      ...bottom,
+      gameSpecId: game.gameSpecId,
+    }),
+    second: displayLiveName(top?.name, t('games.guest'), { ...top, gameSpecId: game.gameSpecId }),
   };
 }
 
@@ -1018,7 +1031,7 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const result = document.createElement('span');
   result.className = 'current-game-result';
   result.textContent = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination);
+  const reason = terminationLabel(game.termination, terminationVariant(game.variant));
   if (reason) result.title = reason;
   const when = document.createElement('time');
   when.className = 'current-game-finished-when';

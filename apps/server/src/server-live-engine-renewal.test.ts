@@ -22,8 +22,10 @@ import {
 } from './server-dark-xiangqi-engine.js';
 import {
   type LiveEngineReservationHolder,
+  liveEngineReservationForSeat,
   releaseLiveEngineSeatsOnShutdown,
   requestLiveEngineTurnWithRenewal,
+  takeLiveEngineReservations,
 } from './server-live-engine-reservations.js';
 import type { Room } from './server-types.js';
 import type { DarkXiangqiLiveRoom } from './server-ws-dark-xiangqi.js';
@@ -33,6 +35,31 @@ import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './variant-ten
 const TOKEN = 'test-token';
 const CHESS_ENGINE = 'python-tier1-v0.9.5';
 const DXQ_ENGINE = 'python-fdx-v1.0';
+
+test('seat-scoped holders isolate renewal writes and cleanup deduplicates the PvE alias', () => {
+  const room = {
+    id: 'eve-holders',
+    engineReservationId: null as string | null,
+    engineReservationIds: { red: 'red-old', black: 'black-old' },
+  };
+  const red = liveEngineReservationForSeat(room, 'red');
+  const black = liveEngineReservationForSeat(room, 'black');
+  red.engineReservationId = 'red-new';
+  assert.equal(black.engineReservationId, 'black-old');
+  assert.equal(room.engineReservationId, null);
+  black.engineReservationId = 'black-new';
+  assert.deepEqual(takeLiveEngineReservations(room).sort(), ['black-new', 'red-new']);
+  assert.equal(red.engineReservationId, null);
+  assert.equal(black.engineReservationId, null);
+  const pve = {
+    id: 'pve-holder',
+    engineReservationId: 'old',
+    engineReservationIds: { black: 'old' },
+  };
+  liveEngineReservationForSeat(pve, 'black').engineReservationId = 'new';
+  assert.equal(pve.engineReservationId, 'new');
+  assert.deepEqual(takeLiveEngineReservations(pve), ['new']);
+});
 
 // The fields EngineTurnRequest defines (packages/game/src/engine-protocol.ts),
 // the same allow-list engine-protocol/build.test.ts holds the builder to.
@@ -439,6 +466,33 @@ test('fog chess: rejected twice forfeits the engine seat, once', async () => {
 });
 
 // ── Restart (#567) ──────────────────────────────────────────────────────────
+
+test('EvE renewal sends and replaces only the requesting seat reservation', async () => {
+  const stub = await startStubEngine(['reservation-unknown', 'move'], { from: 'e7', to: 'e5' });
+  try {
+    const room = {
+      id: 'eve-renewal',
+      engineReservationIds: { white: 'white-old', black: 'black-old' },
+    };
+    await requestLiveEngineTurnWithRenewal({
+      holder: liveEngineReservationForSeat(room, 'black'),
+      request: minimalTurnRequest(),
+      budget: { computeBudgetMs: 1_000, watchdogTimeoutMs: 5_000 },
+    });
+    assert.deepEqual(room.engineReservationIds, { white: 'white-old', black: 'renewed-1' });
+    assert.deepEqual(
+      stub.turns.map((turn) => turn.reservationId),
+      ['black-old', 'renewed-1'],
+    );
+    assertSameRedactedBody(stub.turns);
+    await waitFor(async () => stub.releases.includes('black-old'));
+    assert.deepEqual(await releaseLiveEngineSeatsOnShutdown([room]), { released: 2, failed: 0 });
+    assert.deepEqual([...stub.releases].sort(), ['black-old', 'renewed-1', 'white-old']);
+    assert.deepEqual(room.engineReservationIds, {});
+  } finally {
+    await stub.close();
+  }
+});
 
 test('a server stop hands every engine seat back to the worker and forgets it', async () => {
   const stub = await startStubEngine([], { from: 'e7', to: 'e5' });

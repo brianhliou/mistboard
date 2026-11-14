@@ -19,16 +19,21 @@ import {
 } from '../first-party-bots.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
-import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
+import {
+  releaseLiveEngineReservation,
+  releaseLiveEngineReservations,
+} from '../server-live-engine-reservations.js';
 import { tenantDurableDeadlineFor } from './lifecycle.js';
 import {
   appendTenantRuntimeEvent,
   applyTenantEvent,
   createTenantRuntimeRoomFromEvents,
   isTenantEventLog,
+  tenantBotIdForSeat,
   tenantClockExpiryEventFor,
   tenantEventWasAccepted,
   tenantPauseEventFor,
+  tenantRoomMode,
 } from './runtime.js';
 import { tenantSeatTokenStatesFromPersistence } from './seat-session.js';
 import type {
@@ -123,6 +128,7 @@ export type TenantEventWriterContext<
    * turn.
    */
   scheduleEngineMove?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
+  releaseEngineReservation?(reservationId: string, reason: string): void;
   /** The correspondence game-over email to both players (#1057). Never awaited. */
   notifyCorrespondenceGameOver?(notice: GameOverNotice): void;
 };
@@ -182,17 +188,19 @@ export async function appendTenantEvent<
     room.projection = projected;
     const appendedSeq = room.events.length - 1;
     writer.scheduleLifecycleTimers(room);
-    writer.scheduleEngineMove(room);
+    // The live EvE scheduler is a later slice; lifecycle plumbing alone must
+    // never start an engine match.
+    if (tenantRoomMode(tenant, room) !== 'eve') writer.scheduleEngineMove(room);
     // PvE: free the engine seat reservation the moment the game ends, so a
     // finished/aborted game doesn't tie up a global engine seat until its TTL.
     // Idempotent via the null guard; harmless for PvP (no reservation).
     const endStatus = room.projection.state.status.type;
-    if ((endStatus === 'finished' || endStatus === 'aborted') && room.engineReservationId) {
-      releaseLiveEngineReservation(
-        room.engineReservationId,
+    if (endStatus === 'finished' || endStatus === 'aborted') {
+      releaseLiveEngineReservations(
+        room,
         `${tenant.engine?.reservationReleaseTag ?? tenant.kind}-${endStatus}`,
+        writer.releaseEngineReservation,
       );
-      room.engineReservationId = null;
     }
     if (
       writer.persistence.isInitialized() &&
@@ -405,13 +413,11 @@ async function resyncTenantRoomFromStore<
   if (status === 'finished' || status === 'aborted') {
     room.gameEndRecorded = true;
     room.pendingDebugArtifacts = undefined;
-    if (room.engineReservationId) {
-      releaseLiveEngineReservation(
-        room.engineReservationId,
-        `${tenant.engine?.reservationReleaseTag ?? tenant.kind}-${status}`,
-      );
-      room.engineReservationId = null;
-    }
+    releaseLiveEngineReservations(
+      room,
+      `${tenant.engine?.reservationReleaseTag ?? tenant.kind}-${status}`,
+      writer.releaseEngineReservation,
+    );
   }
   logger.warn(
     {
@@ -445,8 +451,12 @@ export function buildTenantGameSummary<
   const moveEvents = room.events.filter((event) => event.type === 'move-played');
   const firstAt = room.events[0]?.at ?? Date.now();
   const lastAt = room.events[room.events.length - 1]?.at ?? Date.now();
-  const engineSeat = tenantEngineSeat(tenant, room);
-  const mode = engineSeat ? 'pve' : 'pvp';
+  const engineSeat =
+    tenant.colors.find(
+      (color) =>
+        color !== status.winner && tenant.engine?.isEngineClientId(room.projection.seats[color]),
+    ) ?? null;
+  const mode = tenantRoomMode(tenant, room);
   // Finished games are public (lichess model): human-vs-human games are no
   // longer kept private. Fog variants stay hidden WHILE LIVE via the separate
   // spectate gate; this only affects the concluded row's browsability. Guest
@@ -562,6 +572,7 @@ function contextWithDefaults<
     onRoomResynced: () => {},
     scheduleLifecycleTimers: () => {},
     scheduleEngineMove: () => {},
+    releaseEngineReservation: releaseLiveEngineReservation,
     notifyCorrespondenceGameOver,
     ...ctx,
   };
@@ -715,18 +726,19 @@ export function tenantParticipant<
     // The live seat name, verbatim (tenantSeatDisplayNames): the finished game
     // keeps the name the room showed, rung label included.
     const engine = tenant.engine;
-    const seatName = liveSeatEngineName(seatedClientId, room.pveBotId, () =>
+    const botId = tenantBotIdForSeat(room, color);
+    const seatName = liveSeatEngineName(seatedClientId, botId, () =>
       engine.displayName(seatedClientId),
     );
-    if (room.pveBotId) {
-      const bot = firstPartyBotForId(room.pveBotId);
+    if (botId) {
+      const bot = firstPartyBotForId(botId);
       return {
         color: color as persistence.GameParticipantColor,
         displayName: seatName,
         subjectType: 'bot',
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
-        subjectId: bot?.id ?? room.pveBotId,
+        subjectId: bot?.id ?? botId,
         engineId: seatedClientId,
         ...(engineVersion != null ? { engineVersion } : {}),
         visibility,
@@ -774,24 +786,6 @@ export function tenantParticipant<
     subjectId: token?.deviceId ?? null,
     visibility,
   };
-}
-
-function tenantEngineSeat<
-  Kind extends string,
-  C extends string,
-  M,
-  State extends TenantGameStateLike<C>,
-  View,
-  Spec extends string,
->(
-  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
-  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
-): C | null {
-  if (!tenant.engine) return null;
-  for (const color of tenant.colors) {
-    if (tenant.engine.isEngineClientId(room.projection.seats[color])) return color;
-  }
-  return null;
 }
 
 export function persistenceRecordForTenantSeatToken<C extends string>(

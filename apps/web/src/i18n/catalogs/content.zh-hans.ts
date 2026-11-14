@@ -7,6 +7,9 @@
 import type { ContentI18nKey } from './content.js';
 
 export const ZH_HANS_CONTENT = {
+  'articles.replay.round': '轮次',
+  'articles.replay.roundN': '第{n}轮',
+  'articles.replay.timeIncrement': '{minutes}分＋{seconds}秒',
   'videos.heading': '视频库',
   'videos.intro': '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
   'videos.introMainland': '精选象棋与揭棋中文视频：规则、开局、战术与思路。',
@@ -227,6 +230,11 @@ export const ZH_HANS_CONTENT = {
   'stats.gamesPerWeekLabel': '最近 {count} 周每周完成的对局数',
   'stats.gamesPerWeekSeries': '对局',
   'stats.allGames': '全部对局',
+  'stats.chartView': '每周对局图表视图',
+  'stats.versusPeople': '玩家对局',
+  'stats.casual': '休闲',
+  'stats.rated': '排位',
+  'stats.thisWeekSeriesSoFar': '本周已完成：{series}',
   'stats.thisWeekSoFar': '本周已完成 {count} 局',
   'stats.byVariant': '按变体统计',
   'stats.byMode': '按模式统计',
@@ -527,6 +535,10 @@ export const ZH_HANS_CONTENT = {
   'champions.statDraws': '和',
   'champions.statLosses': '负',
   'champions.barLabel': '{wins} 胜，{draws} 和，{losses} 负',
+  'champions.tookPikafish':
+    '2026-11-11 在对 Fairy-Stockfish 8 级的头衔赛中获胜，共 40 局，得分率 61%。',
+  'champions.aboutPikafish':
+    '源自 Stockfish 的开源象棋引擎。在这里它使用公开的 CC0 Fairy-Stockfish 象棋网络。',
   'champions.tookAbJchess2': '2026-10-31 从 jqe 手中夺回头衔，共 600 局，得分率 57%。',
   'champions.aboutAbJchess2':
     "作者 Huorongrong 和 Laoxu（Kouza），基于 Devin O'Keefe 的开源引擎 jqe 的代码，带有自己的神经网络。在本站每步 4 秒，4 线程。",
@@ -654,6 +666,13 @@ export const ZH_HANS_CONTENT = {
   'data.countOneMonth': '{months} 个月，{games}',
   'data.countManyMonths': '{months} 个月，{games}',
   'data.noMonths': '还没有已结束且有对局的月份。',
+  'data.levelFilter': '等级',
+  'data.allLevels': '全部等级',
+  'data.notBuilt': '首次下载时生成，之后显示大小和校验和。',
+  'data.notBuiltFormat': '{format}：首次下载时生成',
+  'data.unavailableNone': '{variant}暂不提供下载。',
+  'data.firstArchive': '首批{variant}对局下于{month}。该月结束后，即{date}，会出现它们的文件。',
+  'data.searchLink': '在对局搜索中逐局浏览这些对局',
   'data.currentMonthNote': '{month}结束后会加入。',
   'data.downloadLabel': '下载 {format}：{file}',
   'data.aboutHeading': '关于数据',

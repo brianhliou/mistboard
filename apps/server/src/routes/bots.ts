@@ -10,7 +10,12 @@ import {
   JIEQI_JQE_ENGINE_ID,
   jqeAvailable,
 } from '../jieqi-engine.js';
-import { isJungleFlipEngineClientId, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
+import {
+  isJungleFlipEngineClientId,
+  jungleFlipEngineAvailable,
+  jungleFlipEngineTierFor,
+  jungleFlipNetPath,
+} from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
@@ -53,14 +58,17 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);
     if (!engineId) continue;
-    // A missing private net must never advertise the neural rung as playable.
-    if (isJungleFlipEngineClientId(engineId) && !jungleFlipEngineAvailable(engineId)) continue;
+    // A missing private net must never advertise the neural rung at all.
+    if (jungleFlipEngineTierFor(engineId)?.evaluation === 'nnue' && jungleFlipNetPath() === null)
+      continue;
     // An engine the box cannot run is unplayable, not missing: AB-JChess and KataGo
-    // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), which a
-    // dev box usually lacks. jqe also needs MISTBOARD_JQE_ENABLED, held off until its
-    // author's OK, so off it drops out of /api/bots and its profile 404s.
-    const serveable =
-      engineId === JIEQI_ABJCHESS_ENGINE_ID
+    // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), and
+    // Misty's Flip Jungle its binary, which a dev box usually lacks; the variant
+    // stays listed so /bots still shows it. jqe also needs MISTBOARD_JQE_ENABLED, held off until its author's OK, so off
+    // it drops out of /api/bots and its profile 404s.
+    const serveable = isJungleFlipEngineClientId(engineId)
+      ? jungleFlipEngineAvailable(engineId)
+      : engineId === JIEQI_ABJCHESS_ENGINE_ID
         ? abJchessAvailable()
         : engineId === JIEQI_JQE_ENGINE_ID
           ? jqeAvailable()

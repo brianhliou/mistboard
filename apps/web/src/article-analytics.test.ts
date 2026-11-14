@@ -31,14 +31,15 @@ describe('article instrumentation', () => {
     }
   });
 
+  // Needs a published article whose annotated boards are still inline
+  // steppers: a board that names a study renders as that study's iframe embed
+  // instead (xiangqiReplayStudyEmbed), which is how the champions article this
+  // test used to read lost all fifteen of its steppers on 2026-11-13.
   // Explicit timeout: mountPendingWidgets mounts EVERY widget on the page, and
-  // the champions article carries fifteen replays, so this one test builds
-  // fifteen boards to click one. Measured 8.5s to 17s on the same machine
-  // depending on what else is running, which straddles the 15s default and
-  // fails a release gate at random. The cost grows with the article.
+  // a page with many boards measured 8.5s to 17s, straddling the 15s default.
   it('reports a board embed once, on first interaction, not per move', { timeout: 60_000 }, () => {
     const events = recorder();
-    const page = buildArticlePage('xiangqi-champions');
+    const page = buildArticlePage('puzzles-with-more-than-one-solution');
     document.body.append(page);
     const controllers = mountPendingWidgets(page);
     try {
@@ -49,7 +50,7 @@ describe('article instrumentation', () => {
       for (let i = 0; i < 6; i += 1) next?.click();
       const engaged = events.filter((e) => e.name === 'article_replay_engaged');
       expect(engaged).toHaveLength(1);
-      expect(engaged[0]?.props?.slug).toBe('xiangqi-champions');
+      expect(engaged[0]?.props?.slug).toBe('puzzles-with-more-than-one-solution');
       expect(engaged[0]?.props?.annotated).toBe(true);
     } finally {
       for (const controller of controllers) controller.destroy();

@@ -162,6 +162,12 @@ export interface PracticeSession<M, T> {
   retry(): void;
   /** Restart from the exercise's start position. */
   reset(): Promise<void>;
+  /**
+   * Every position of the line played so far: index 0 is the start, index i
+   * the position after `view().moves[i - 1]`. Lets a surface step back through
+   * the attempt without replaying it.
+   */
+  line(): readonly T[];
 }
 
 interface Frame<T> {
@@ -173,6 +179,8 @@ interface Frame<T> {
    *  reset restore it by restoring the frame, with no separate bookkeeping to
    *  fall out of step with the board. */
   moves: readonly string[];
+  /** Positions along `moves`, start first; length is moves.length + 1. */
+  line: readonly T[];
   /** Settles once a pending exact result (`exactLater`) has been folded into
    *  `evaluation.exact`; null when nothing is pending. */
   exactReady?: Promise<void> | null;
@@ -184,6 +192,7 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     evaluation: null,
     movesPlayed: 0,
     moves: [],
+    line: [config.initialTruth],
   };
   /** The position the learner stood at before their most recent move, for retry. */
   let previous: Frame<T> | null = null;
@@ -288,11 +297,13 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       return true;
     }
     const parent = frame.truth;
+    const replied = config.applyMove(parent, reply);
     frame = {
-      truth: config.applyMove(parent, reply),
+      truth: replied,
       evaluation: null,
       movesPlayed: frame.movesPlayed,
       moves: [...frame.moves, config.moveLabel(reply, parent)],
+      line: [...frame.line, replied],
     };
     config.onMovePlayed?.(reply, parent, 'defender');
     await evaluateInto(frame);
@@ -327,11 +338,13 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
 
     phase = 'thinking';
     hintLevel = 0;
+    const played = config.applyMove(before.truth, move);
     frame = {
-      truth: config.applyMove(before.truth, move),
+      truth: played,
       evaluation: null,
       movesPlayed: before.movesPlayed + 1,
       moves: [...before.moves, config.moveLabel(move, before.truth)],
+      line: [...before.line, played],
     };
     // Announced before the search, not after it: this is the moment the learner
     // let go of the piece.
@@ -435,7 +448,13 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
   }
 
   async function reset(): Promise<void> {
-    frame = { truth: config.initialTruth, evaluation: null, movesPlayed: 0, moves: [] };
+    frame = {
+      truth: config.initialTruth,
+      evaluation: null,
+      movesPlayed: 0,
+      moves: [],
+      line: [config.initialTruth],
+    };
     previous = null;
     verdict = null;
     graded = null;
@@ -472,6 +491,7 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     hint,
     retry,
     reset,
+    line: () => frame.line,
   };
 }
 

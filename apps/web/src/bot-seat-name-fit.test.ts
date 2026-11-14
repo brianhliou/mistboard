@@ -28,6 +28,8 @@ import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 //   1440 x 900     >=106.94px (250px card min)  139.66px     197.19px
 // The live grid can shrink to a 250px card between column breakpoints. Its
 // 106.94px at 13.6px is tighter than the phone's finished row at 12.48px.
+// Since 2026-11-12 a /games live name wraps onto a second line rather than
+// cut, so the guard now binds the finished and meta rows; the budget stays.
 // Guard the measured minimum, rounded DOWN. Proportional glyphs mean there is
 // no honest universal character limit: e.g. 12 W's overflow, 12 i's fit.
 const NAME_BUDGET_PX = 106;
@@ -150,9 +152,9 @@ describe('bot seat names fit game cards', () => {
       'three-kingdoms-banqi',
       'misty-three-kingdoms-banqi-level-7',
       'MistyThreeKingdomsBanqi level 7',
-      'Misty level 7',
+      'Misty Three Kingdoms Banqi Level 7',
     ],
-    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Level 7'],
+    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Banqi Level 7'],
   ])(
     'carries old %s seat names through every finished-game display',
     (variant, subjectId, displayName, expected) => {
@@ -202,7 +204,7 @@ describe('bot seat names fit game cards', () => {
       expect(profileName?.title).toBe(expected);
       const meta = createGameMetaCard({
         headline: [],
-        players: reviewMetaPlayers(postgamePlayers(participants)),
+        players: reviewMetaPlayers(postgamePlayers(participants), undefined, null, variant),
       });
       const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
       expect(metaName?.textContent).toBe(expected);

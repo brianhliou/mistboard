@@ -20,6 +20,8 @@ import {
   isXiangqiSolverMoveUnique,
   standardXiangqiEngineFen,
   XIANGQI_MATE_SCORE_CP,
+  type XiangqiGameState,
+  xiangqiSolverMoveCoverage,
   xiangqiUciScoreToCp,
 } from '../../packages/game/src/index.ts';
 import {
@@ -57,8 +59,7 @@ function gateVerdict(bestScore: string, secondScore: string | null): boolean {
 // ── The gate contract at the shared defaults ─────────────────────────────────
 
 test('gate contract: a uniquely winning solver move passes', () => {
-  // Best keeps a clear win (+600 ~ win% 0.97); the runner-up throws it away
-  // (+40 ~ win% 0.55, at/below winLo 0.60): the shipped move is THE answer.
+  // The frozen CC0 transform separates +600 (~94%) from +40 (~55%).
   assert.equal(gateVerdict('cp 600', 'cp 40'), true);
 });
 
@@ -73,21 +74,33 @@ test('gate contract: two winning moves fail however far apart', () => {
   assert.equal(gateVerdict('cp 900', 'cp 600'), false);
 });
 
-test('gate contract: hard floor rejects near ties before win-band classification', () => {
-  assert.equal(gateVerdict('cp 270', 'cp 71'), false); // 199cp gap
-  assert.equal(gateVerdict('cp 270', 'cp 70'), true); // 200cp gap, runner-up <= winLo
+test('gate contract: separation boundary rejects a near tie', () => {
+  assert.equal(gateVerdict('cp 500', 'cp 60'), false);
+  assert.equal(gateVerdict('cp 500', 'cp 50'), true);
 });
 
 test('gate contract: best move below the winning floor fails even when unique-ish', () => {
-  // +150 ~ win% 0.70, under winHi 0.80: not decisively winning, not a puzzle.
+  // +150 maps below winHi 0.80 on the CC0 score scale.
   assert.equal(gateVerdict('cp 150', 'cp -50'), false);
 });
 
-test('gate contract: a mate is unique only when no other move mates (lichess rule)', () => {
+test('gate contract: a mate requires the runner-up to lose the win', () => {
   assert.equal(gateVerdict('mate 3', 'mate 5'), false); // a slower second mate is a trap
   assert.equal(gateVerdict('mate 3', 'mate 3'), false); // dual mate: two solutions
-  assert.equal(gateVerdict('mate 3', 'cp 800'), true); // lone mate beats non-mate
+  assert.equal(gateVerdict('mate 3', 'cp 800'), false); // a non-mating alternative still wins
+  assert.equal(gateVerdict('mate 9', 'cp 1730'), false); // reported move 25
+  assert.equal(gateVerdict('mate 9', 'cp 1280'), false);
+  assert.equal(gateVerdict('mate 3', 'cp 40'), true); // runner-up loses the win
+  assert.equal(gateVerdict('mate 3', 'cp 70'), true);
+  assert.equal(gateVerdict('mate 3', 'cp 132'), true);
+  assert.equal(gateVerdict('mate 3', 'cp 134'), false);
   assert.equal(gateVerdict('mate 3', 'mate -4'), true); // second gets mated: not a mate
+});
+
+test('gate contract: immediate mates still check non-immediate winning alternatives', () => {
+  assert.equal(gateVerdict('mate 1', 'mate 1'), false);
+  assert.equal(gateVerdict('mate 1', 'cp 1730'), false);
+  assert.equal(gateVerdict('mate 1', 'cp 0'), true);
 });
 
 test('gate contract: an only-move (no MultiPV runner-up) is unique', () => {
@@ -177,8 +190,72 @@ test('analyzeXiangqiSolverPly searches the standalone FEN at MultiPV 2 and gates
     XIANGQI_SOLVER_GATE_DEFAULTS,
   );
   assert.equal(dual.unique, false);
-  assert.equal(dual.reason, 'near-tie');
+  assert.equal(dual.reason, 'insufficient-separation');
   assert.equal(resets, 2);
+});
+
+test('parser compares a completed common depth and ignores bound-only scores', () => {
+  const parsed = parseXiangqiScoredLines(
+    [
+      'info depth 20 multipv 1 score cp 600 nodes 10 pv h2e2',
+      'info depth 20 multipv 2 score cp 0 nodes 20 pv b2e2',
+      'info depth 21 multipv 1 score cp 800 nodes 30 pv h2e2',
+      'info depth 21 multipv 2 score cp 300 lowerbound nodes 40 pv b2e2',
+    ],
+    2,
+  );
+  assert.deepEqual(
+    parsed.map((line) => [line.depth, line.score.cp]),
+    [
+      [20, 600],
+      [20, 0],
+    ],
+  );
+  assert.deepEqual(
+    parseXiangqiScoredLines(['info depth 20 multipv 1 score cp 600 pv h2e2'], 2),
+    [],
+  );
+});
+
+test('immediate-mate admission searches past every kernel-proven immediate win', async () => {
+  const state: XiangqiGameState = {
+    id: 'three-immediate-mates',
+    moveNumber: 1,
+    progressClock: 0,
+    positionCounts: {},
+    status: { type: 'playing', turn: 'red' },
+    board: {
+      d1: { color: 'red', role: 'general' },
+      a8: { color: 'red', role: 'chariot' },
+      b9: { color: 'red', role: 'chariot' },
+      e10: { color: 'black', role: 'general' },
+    },
+  };
+  const coverage = xiangqiSolverMoveCoverage(state);
+  assert.equal(coverage.immediateWins.length, 3);
+  const token = (move: { from: string; to: string }) =>
+    `${move.from[0]}${Number(move.from.slice(1)) - 1}${move.to[0]}${Number(move.to.slice(1)) - 1}`;
+  const requested: number[] = [];
+  const analyze = async (alternativeCp: number) =>
+    analyzeXiangqiSolverPly(
+      {
+        newGame: async () => {},
+        analyzeFen: async (_fen, _limits, multiPv) => {
+          requested.push(multiPv);
+          const rows = coverage.immediateWins.map(
+            (move, i) => `info depth 22 multipv ${i + 1} score mate 1 pv ${token(move)}`,
+          );
+          rows.push(`info depth 22 multipv 4 score cp ${alternativeCp} pv a7a6`);
+          return parseXiangqiScoredLines(rows, 4);
+        },
+      },
+      state,
+      { depth: 22 },
+      XIANGQI_SOLVER_GATE_DEFAULTS,
+    );
+  assert.equal((await analyze(700)).unique, false);
+  assert.equal((await analyze(0)).unique, true);
+  assert.deepEqual(requested, [4, 4]);
 });
 
 test('interrupted MultiPV updates cannot assemble a false common-depth comparison', () => {

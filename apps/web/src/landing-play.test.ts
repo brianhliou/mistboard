@@ -21,6 +21,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -759,6 +760,51 @@ describe('landing play panel', () => {
     );
   });
 
+  it('offers Three Kingdoms Banqi in the open Play dialog as soon as its roster lands', () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setThreeKingdomsBanqiEngineOptions([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    try {
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+      openPlaySetup(panel, 'Play a bot');
+      const tkCard = () =>
+        document.querySelector<HTMLButtonElement>(
+          '.landing-variant-card[data-game-spec="three-kingdoms-banqi"]',
+        );
+      const soon = t('setup.soon', {}, 'en');
+      // No roster yet: the bot flow greys Three Kingdoms out.
+      expect(tkCard()?.disabled).toBe(true);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')?.textContent).toBe(soon);
+      const selectedBefore = selectedVariantSpec();
+
+      setThreeKingdomsBanqiEngineOptions(
+        Array.from({ length: 8 }, (_, i) => ({
+          id: `misty-three-kingdoms-banqi-level-${i + 1}`,
+          name: `Misty Level ${i + 1}`,
+          familyName: 'Misty',
+          kind: 'container',
+        })),
+      );
+
+      // Same dialog, no Lobby/Bot toggle: the card is playable and the pick kept.
+      expect(tkCard()?.disabled).toBe(false);
+      expect(tkCard()?.classList.contains('landing-variant-card-disabled')).toBe(false);
+      expect(tkCard()?.querySelector('.landing-variant-card-badge')).toBeNull();
+      expect(selectedVariantSpec()).toBe(selectedBefore);
+      selectModalVariant('three-kingdoms-banqi');
+      expect(selectedVariantSpec()).toBe('three-kingdoms-banqi');
+      expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+        'misty-three-kingdoms-banqi-level-4',
+      );
+    } finally {
+      setThreeKingdomsBanqiEngineOptions([]);
+    }
+  });
+
   it('hides neural Flip Jungle L8 when runtime net confirmation is absent, missing or lost', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       if (String(input) === '/api/engines/playable')
@@ -1242,6 +1288,41 @@ describe('landing play panel', () => {
       expect(navigated).toEqual(['/challenge/seek_abc']);
     });
   }
+
+  it('offers Rated on a correspondence friend invite and posts it rated', async () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setRatedModeEnabled(true, true);
+    setResolvedSignedIn(true);
+    setRoomNavigator(() => {});
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/correspondence/seeks') {
+        return jsonResponse(
+          { seek: { id: 'seek_r', gameSpecId: 'jieqi' }, challengeUrl: '/challenge/seek_r' },
+          { status: 201 },
+        );
+      }
+      return jsonResponse({ playing: 0, online: 0 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+    clickModalButton('Correspondence');
+    clickModalTimeControl('2');
+    expect(document.body.textContent).not.toContain('coming soon');
+    clickModalButton('Rated');
+    clickModalButton('Create room');
+    await flushPromises();
+
+    expect(seekPostBody(fetchSpy)).toMatchObject({
+      gameSpecId: 'jieqi',
+      daysPerMove: 2,
+      visibility: 'private',
+      rated: true,
+    });
+  });
 
   // #1059: signed out, Challenge a friend creates a direct invite room the guest
   // sits in at once, instead of a sign-in wall. The side goes as the variant's

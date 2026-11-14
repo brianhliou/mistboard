@@ -108,6 +108,38 @@ function seatSnapshotState(
 
 const json = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
+test('inbox carries gated opponent title/flair and omits absent or unlinkable metadata', async () => {
+  const base = {
+    roomId: 'xq_identity',
+    gameSpecId: 'xiangqi',
+    mySeat: 'red',
+    isYourMove: true,
+    dueAt: new Date('2026-11-13T12:00:00Z'),
+    opponentName: 'Bob',
+    opponentHandle: 'bob',
+    opponentTitle: 'xgm',
+    opponentFlair: 'variant-xiangqi',
+  } satisfies CorrespondenceGameSummary;
+  const payload = await correspondenceGamesForUser(ALICE, {
+    list: async () => [base],
+    seatBoard: async () => null,
+  });
+  assert.equal(payload.games[0]?.opponentTitle, 'xgm');
+  assert.equal(payload.games[0]?.opponentFlair, 'variant-xiangqi');
+  for (const game of [
+    { ...base, opponentHandle: null },
+    { ...base, opponentHandle: undefined },
+    { ...base, opponentTitle: null, opponentFlair: null },
+  ]) {
+    const hidden = await correspondenceGamesForUser(ALICE, {
+      list: async () => [game],
+      seatBoard: async () => null,
+    });
+    assert.doesNotMatch(JSON.stringify(hidden), /opponentTitle|opponentFlair|xgm|variant-xiangqi/);
+    assert.equal(hidden.games[0]?.opponentName, 'Bob');
+  }
+});
+
 test('inbox seat board for seat A is exactly A’s room PlayerView and holds nothing hidden from A', async () => {
   const room = await seatedGameWithMoves();
   try {

@@ -153,7 +153,11 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
+  const status = reviewOutcomeLine(
+    gameOutcome(postgame.game.result),
+    postgame.game.termination,
+    FORTRESS_XIANGQI_SPEC_ID,
+  );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: FORTRESS_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(FORTRESS_XIANGQI_SPEC_ID),

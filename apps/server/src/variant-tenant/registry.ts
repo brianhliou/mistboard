@@ -56,6 +56,7 @@ export type TenantManagedRoom = {
   id: string;
   // PvE: the engine-service seat, handed back by the shutdown (#567).
   engineReservationId?: string | null;
+  engineReservationIds?: Partial<Record<string, string | null>>;
   clients: Iterable<{
     socket: { close(code?: number, reason?: string): unknown; send(data: string): unknown };
     id?: string;

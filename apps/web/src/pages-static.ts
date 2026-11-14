@@ -671,17 +671,18 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
-    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
     aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
-    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
     aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
     aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [
-    textLine(t('source.chessground', {}, locale)),
-    textLine(t('source.chessops', {}, locale)),
-    textLine(t('source.stockfish', {}, locale)),
+    // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
+    // its home page and the CC0 Fairy-Stockfish net it runs on here (not
+    // Pikafish's own weights, which are not licensed for commercial use).
+    pikafishCreditLine(locale),
     // The xiangqi ladder below Pikafish and the Duck Xiangqi bot run upstream
     // Fairy-Stockfish builds (fairy-stockfish-*.ref); uncredited until 2026-10-17.
     linkLine(
@@ -695,14 +696,12 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ...(jqeEnabled()
       ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
       : []),
-    // The top jungle bot (#434): engine, the engine it is built on, and the net's
-    // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
+    // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
+    // fork that carries our patches.
     linkLine(
-      t('source.katagomo', {}, locale),
-      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+      t('source.pikafishJieqi', {}, locale),
+      'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi_old-mistboard',
     ),
-    linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
-    linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
     // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
     ...(gomokuEnabled()
       ? [
@@ -711,19 +710,20 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
           linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
         ]
       : []),
+    // The top jungle bot (#434): engine, the engine it is built on, and the net's
+    // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
+    linkLine(
+      t('source.katagomo', {}, locale),
+      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+    ),
+    linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
+    linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    textLine(t('source.stockfish', {}, locale)),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
-    // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
-    // its home page and the CC0 Fairy-Stockfish net it runs on here (not
-    // Pikafish's own weights, which are not licensed for commercial use).
-    pikafishCreditLine(locale),
-    // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
-    // fork that carries our patches.
-    linkLine(
-      t('source.pikafishJieqi', {}, locale),
-      'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi_old-mistboard',
-    ),
+    textLine(t('source.chessground', {}, locale)),
+    textLine(t('source.chessops', {}, locale)),
     // The five third-party xiangqi piece sets (2026-10-08); sources and licences
     // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
     // CC BY 4.0, so its credit names the author and links the licence.

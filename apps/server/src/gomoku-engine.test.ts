@@ -646,3 +646,38 @@ test('fresh-process search watchdog allows cold network startup beyond the searc
   assert.deepEqual(engine.kills, []);
   assert.equal(engine.counts().closed, 1);
 });
+
+test('live Rapfi applies a clock ceiling without changing its node anchor or move policy', async () => {
+  const engine = fakeEngine({ output: '7,7' });
+  assert.deepEqual(
+    await gomokuLiveEngineMove(createGomokuRoomState('gmk_budget'), 'rapfi-level-8', {
+      ...engine,
+      movetimeMs: 125,
+    }),
+    { to: 'h8' },
+  );
+  assert.ok(engine.commands[0]!.includes('INFO timeout_turn 125'));
+  assert.ok(engine.commands[0]!.includes('INFO max_node 80000'));
+});
+
+test('Gomoku records selected-candidate search telemetry before appending its move', async () => {
+  const { room, ctx } = fixture('black', 1, createGomokuRoomState('telemetry'));
+  // A nonempty position exercises the lower-tier candidate selection policy.
+  room.projection.state = applyGomokuRoomMove(room.projection.state, { to: 'a1' });
+  room.projection.state = applyGomokuRoomMove(room.projection.state, { to: 'b1' });
+  const engine = fakeEngine();
+  const append = ctx.appendEvent;
+  ctx.appendEvent = async (target, event) => {
+    assert.equal(target.pendingDebugArtifacts?.length, 1);
+    return append(target, event);
+  };
+  await playGomokuEngineMoveIfReady(ctx, room, (state, id, options) =>
+    gomokuLiveEngineMove(state, id, { ...engine, ...options }),
+  );
+  const payload = room.pendingDebugArtifacts![0]!.payload;
+  assert.equal(payload.engine_version, '1387d11312');
+  assert.equal(payload.tier_nodes, 5000);
+  assert.equal(payload.pace_reason, 'off');
+  assert.equal((payload.search as { nodes: number }).nodes, 4370);
+  assert.equal(payload.move, payload.engine_move);
+});

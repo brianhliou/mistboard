@@ -218,6 +218,10 @@ export async function handleWebSocketConnection(
     socket.close(1008, 'rated requires counted account');
     return;
   }
+  if (assignment.deniedReason === 'rated_account_marked') {
+    socket.close(1008, 'rated_account_marked');
+    return;
+  }
   if (assignment.deniedReason === 'play-disabled') {
     // The account is an identity, not a player (126). Distinct close reason so
     // the client explains the lock instead of showing the generic spectator or

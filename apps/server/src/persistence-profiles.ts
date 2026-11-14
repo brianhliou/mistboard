@@ -56,6 +56,7 @@ export const GAME_VARIANTS_BY_RATING_POOL = {
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
   banqi: ['banqi'],
+  three_kingdoms_banqi: ['three-kingdoms-banqi'],
   jungle: ['jungle'],
   jungle_flip: ['jungle-flip'],
   xiangqi: ['xiangqi'],

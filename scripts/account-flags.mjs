@@ -9,6 +9,8 @@
 //   node scripts/account-flags.mjs <email|@handle> --grant-admin         # promote to admin
 //   node scripts/account-flags.mjs <email|@handle> --revoke-admin        # demote to player
 //   node scripts/account-flags.mjs <email|@handle> --disable-play        # no games, no puzzles
+//   node scripts/account-flags.mjs <email|@handle> --mark-fair-play [--dry-run]
+//   node scripts/account-flags.mjs <email|@handle> --unmark-fair-play
 //   node scripts/account-flags.mjs <email|@handle> --enable-play         # let it play again
 //   node scripts/account-flags.mjs <email|@handle> --exclude-from-stats  # its games leave every count
 //   node scripts/account-flags.mjs <email|@handle> --include-in-stats    # count them again
@@ -43,10 +45,19 @@
 
 import { parseArgs } from 'node:util';
 import pg from 'pg';
+import { tsImport } from 'tsx/esm/api';
+
+const { markFairPlay, unmarkFairPlay } = await tsImport(
+  '../apps/server/src/fair-play.ts',
+  import.meta.url,
+);
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
+    'mark-fair-play': { type: 'boolean', default: false },
+    'unmark-fair-play': { type: 'boolean', default: false },
+    'dry-run': { type: 'boolean', default: false },
     'grant-admin': { type: 'boolean', default: false },
     'revoke-admin': { type: 'boolean', default: false },
     'disable-play': { type: 'boolean', default: false },
@@ -70,8 +81,21 @@ if (!email) {
     'Usage: node scripts/account-flags.mjs <email|@handle> ' +
       '[--grant-admin|--revoke-admin] [--disable-play|--enable-play] ' +
       '[--exclude-from-stats|--include-in-stats] ' +
+      '[--mark-fair-play [--dry-run]|--unmark-fair-play] ' +
       '[--grant-variant <spec>|--revoke-variant <spec>] [--note <text>]',
   );
+}
+if (values['mark-fair-play'] && values['unmark-fair-play']) {
+  fail('Pass one of --mark-fair-play or --unmark-fair-play, not both.');
+}
+if (
+  values['dry-run'] &&
+  (!values['mark-fair-play'] ||
+    Object.entries(values).some(
+      ([flag, value]) => value && !['mark-fair-play', 'dry-run'].includes(flag),
+    ))
+) {
+  fail('--dry-run requires --mark-fair-play alone; no other account switches.');
 }
 if (values['exclude-from-stats'] && values['include-in-stats']) {
   fail('Pass one of --exclude-from-stats or --include-in-stats, not both.');
@@ -114,7 +138,7 @@ try {
   const byHandle = email.startsWith('@');
   const found = await client.query(
     `SELECT id, email, handle, display_name, account_role, email_verified_at, play_disabled_at,
-            stats_excluded_at
+            stats_excluded_at, fair_play_marked_at
        FROM users WHERE ${byHandle ? 'lower(handle) = lower($1)' : 'lower(email) = lower($1)'}
        LIMIT 1`,
     [byHandle ? email.slice(1) : email],
@@ -128,6 +152,7 @@ try {
     `${row.email} -> @${row.handle} (${row.display_name}), role=${row.account_role}, ` +
       `play=${row.play_disabled_at ? `disabled since ${row.play_disabled_at.toISOString()}` : 'enabled'}, ` +
       `stats=${row.stats_excluded_at ? `excluded since ${row.stats_excluded_at.toISOString()}` : 'counted'}, ` +
+      `fair-play=${row.fair_play_marked_at ? 'marked' : 'unmarked'}, ` +
       `verified=${row.email_verified_at ? 'yes' : 'no'}, id=${row.id}`,
   );
 
@@ -135,10 +160,35 @@ try {
     targetRole === null &&
     targetLock === null &&
     targetExcluded === null &&
+    !values['mark-fair-play'] &&
+    !values['unmark-fair-play'] &&
     !grantVariant &&
     !revokeVariant
   ) {
     console.log('Read-only run. Pass a flag to change something.');
+  }
+
+  if (values['mark-fair-play'] || values['unmark-fair-play']) {
+    await client.query('BEGIN');
+    try {
+      if (values['mark-fair-play']) {
+        const refunds = await markFairPlay(client, row.id, values['dry-run']);
+        console.log(values['dry-run'] ? 'Dry run: no writes.' : 'Fair play marked.');
+        for (const refund of refunds) {
+          console.log(
+            `@${refund.handle} ${refund.variant}/${refund.timeClass} +${refund.points} (${refund.gameId})`,
+          );
+        }
+        if (!refunds.length) console.log('No refunds.');
+      } else {
+        await unmarkFairPlay(client, row.id);
+        console.log('Fair play unmarked; refunds retained.');
+      }
+      await client.query(values['dry-run'] ? 'ROLLBACK' : 'COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
   }
 
   if (targetRole !== null) {

@@ -97,6 +97,15 @@
   gap: 30px;
 }
 
+/* The game rail beside the cards: the /games and /data rail (current-games.css),
+   chips on a phone. */
+.bots-layout {
+  gap: 20px;
+}
+
+/* A ladder's level is picked in the card's bottom row, left of Play; the
+   select itself is the shared select.site-select (app-base.css). */
+
 /* ── Roster sections ──────────────────────────────────────────────────────── */
 
 .bot-roster-section {
@@ -158,21 +167,82 @@
     var(--site-panel) 55%
   );
   box-shadow: 0 4px 16px color-mix(in srgb, var(--site-shadow) 12%, transparent);
-  transition:
-    border-color 140ms ease,
-    transform 140ms ease,
-    box-shadow 140ms ease;
+  transition: border-color 140ms ease;
 }
 
+/* A quiet border on hover; the card does not move. */
 .bots-directory .profile-summary-card:hover {
   border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border));
-  box-shadow: 0 9px 24px color-mix(in srgb, var(--site-shadow) 18%, transparent);
-  transform: translateY(-2px);
 }
 
-.bots-directory .profile-summary-card-footer,
-.bots-directory .profile-summary-card-variants {
+/* Card order: name, champion title, bio, credits, then the bottom block
+   (rating, games and record, and the play row) pushed to the card's foot, so
+   Play sits in the same place on every card in a row. */
+.bots-directory .bot-card-champion {
+  margin: 0.6rem 0.8rem 0;
+  padding-bottom: 4px;
+  font-size: 13px;
+}
+
+.bots-directory .bot-card-credits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0.45rem 0.8rem 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bots-directory .bot-card-credits a {
+  color: var(--site-muted);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--site-muted) 45%, transparent);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.bots-directory .bot-card-credits a:hover {
+  color: var(--site-text);
+}
+
+.bots-directory .bot-card-foot {
+  display: flex;
+  flex-direction: column;
   margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+/* Level select (ladders only) on the left, Play on the right, on every card. */
+.bots-directory .bot-card-foot .profile-summary-card-bot-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0.6rem 0.8rem 0.7rem;
+}
+
+.bots-directory .bot-card-foot .bot-level-select {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.bots-directory .bot-card-foot .profile-summary-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-left: auto;
+  padding-inline: 1rem;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.bots-directory .bot-card-foot .profile-summary-card-footer {
+  border-top: 0;
+  padding-top: 0;
 }
 
 /* ── Bot profile (/bot/:id) ───────────────────────────────────────────────── */

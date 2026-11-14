@@ -1,0 +1,17 @@
+{
+  "intro": "Sacrifice the Horse in 13, a trap from a manual printed in 1632. Pikafish read every position for this study: marks (?!, ?, ??) grade each move against its choice, a side line shows what it would play instead, and the graph is Red's chance as it sees it.",
+  "judged": {
+    "9": "The chariot dives into Black's camp at once. Pikafish preferred the quiet soldier push first.",
+    "12": "The cannon takes the horse Red left behind. Pikafish would bring an advisor up to e9 instead: the horse was bait.",
+    "14": "The losing move. From here Pikafish gives Red a won game; the advisor to e9 still held."
+  },
+  "comments": {
+    "15": "The cannon takes the centre soldier with check, and Red's chariots and cannons come through the gap.",
+    "25": "Checkmate."
+  },
+  "lines": {
+    "9": "Pikafish's choice.",
+    "12": "Pikafish's choice.",
+    "14": "Pikafish's choice."
+  }
+}

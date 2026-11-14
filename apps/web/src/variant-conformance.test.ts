@@ -474,6 +474,14 @@ describe('FFQ banqi canonical web metadata', () => {
     );
   });
 
+  it('offers Three Kingdoms Banqi downloads on its finished review page', () => {
+    // The export is the masked public record (server three-kingdoms-banqi-game-export.ts).
+    expect(exportFormatsForVariant(THREE_KINGDOMS_BANQI_SPEC_ID)).toEqual(['pgn', 'json']);
+    expect(webVariantTenantForSpecId(THREE_KINGDOMS_BANQI_SPEC_ID)?.reviewRouteBase).toBe(
+      '/three-kingdoms-banqi/game',
+    );
+  });
+
   it('keeps FFQ banqi fixed Red/Black seats after canonical registration', () => {
     expect(SEAT_NAMING).toHaveProperty('ffq-banqi', 'seat-word');
     expect(seatsNamePlayers('ffq-banqi')).toBe(false);

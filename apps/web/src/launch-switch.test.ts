@@ -205,11 +205,12 @@ async function threeKingdomsListedOnWeb() {
   };
 }
 
-it('Three Kingdoms Banqi is launched, casual and unrated', async () => {
+it('Three Kingdoms Banqi is launched and live-rated, with casual-only correspondence', async () => {
   const game = await import('@mistboard/game');
   expect(game.gameSpecForId('three-kingdoms-banqi')).toMatchObject({ publicSurface: 'casual' });
-  expect(game.gameSpecForId('three-kingdoms-banqi').rated).not.toBe(true);
-  expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBeNull();
+  expect(game.gameSpecForId('three-kingdoms-banqi').rated).toBe(true);
+  expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBe('three_kingdoms_banqi');
+  expect(game.isCorrespondenceRatedSpec('three-kingdoms-banqi')).toBe(false);
   const listed = await threeKingdomsListedOnWeb();
   expect(listed).toEqual(everyValue(listed, true));
   // Correspondence follows launch (#1002 built it), casual only.

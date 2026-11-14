@@ -520,6 +520,13 @@ body.embed-body {
   /* Panning the score sheet, including at its ends, must not move the host
      article and carry the board out of view. The page scrolls outside it. */
   overscroll-behavior-y: contain;
+  /* The sheet scrolls down only. The banqi and jieqi rows, luck chips
+     included, fill the rail to the pixel, so a scrollbar that takes width (a
+     mouse, or "always show scroll bars") would push them into a sideways
+     scroll. The sheet scrolls by wheel, touch and the stepper, which keeps the
+     current move in view, without a drawn bar. */
+  overflow-x: hidden;
+  scrollbar-width: none;
 }
 
 /* A score sheet, the study's: number, then the two moves in fixed halves, so

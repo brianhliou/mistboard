@@ -144,12 +144,14 @@ export function dataPageBody(
 ): string {
   const t = (key: CopyKey, params = {}) => dataCopy(locale, key, params);
   const raw = new URLSearchParams(search).get('variant');
-  const variant = raw && listing.variants.includes(raw) ? raw : 'all';
+  // The rail lists every offered variant, one with no finished month yet included.
+  const railVariants = listing.offeredVariants ?? listing.variants;
+  const variant = raw && railVariants.includes(raw) ? raw : 'all';
   const totals = new Map<string, number>();
   for (const month of listing.months)
     for (const v of month.variants) totals.set(v.variant, (totals.get(v.variant) ?? 0) + v.games);
   let body = `${p(t('data.subtitle'))}<p><a href="/data/about">${escapeHtml(t('data.aboutLink'))}</a></p>`;
-  body += `<ul>${['all', ...listing.variants].map((v) => `<li><a href="/data${v === 'all' ? '' : `?variant=${encodeURIComponent(v)}`}">${escapeHtml(v === 'all' ? t('data.allVariants') : dataVariantName(v, locale))}</a> ${number(v === 'all' ? [...totals.values()].reduce((a, b) => a + b, 0) : (totals.get(v) ?? 0), locale)}</li>`).join('')}</ul>`;
+  body += `<ul>${['all', ...railVariants].map((v) => `<li><a href="/data${v === 'all' ? '' : `?variant=${encodeURIComponent(v)}`}">${escapeHtml(v === 'all' ? t('data.allVariants') : dataVariantName(v, locale))}</a> ${number(v === 'all' ? [...totals.values()].reduce((a, b) => a + b, 0) : (totals.get(v) ?? 0), locale)}</li>`).join('')}</ul>`;
   const rows = (months: DataMonth[]) =>
     months.flatMap((month) => {
       const row = variant === 'all' ? month : month.variants.find((v) => v.variant === variant);

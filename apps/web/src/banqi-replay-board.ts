@@ -21,6 +21,11 @@ import {
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
+import { analysisMarks, type DecisionOverlay } from './review/analysis-marks.js';
+import { banqiLuckDetail, banqiLuckPieceSvg } from './review/flip-luck.js';
+import { attachLuckBadgeCard, attachLuckMarkCard } from './review/luck-mark-card.js';
+import { formatFlipVariantBestMove } from './review/move-advice-text.js';
+import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 
 export type BanqiReplayBoardSpec = {
   /** The chapter's dealt FEN (six fields); the deal is what makes the moves replayable. */
@@ -32,6 +37,11 @@ export type BanqiReplayBoardSpec = {
    *  played from the position before that move. The sheet lists each as a
    *  branch under its move, and the board steps through it (jumpToLine). */
   lines?: ReadonlyMap<number, readonly string[]>;
+  /** Study annotations by 1-based mainline ply: a move glyph (?!, ??) and a
+   *  comment, listed under the move the way the jieqi board lists them. */
+  glyphs?: Readonly<Record<number, string>>;
+  notes?: Readonly<Record<number, string>>;
+  decisions?: DecisionOverlay | null;
 };
 
 const TOKEN = /^([a-h][1-4])([a-h][1-4])$/;
@@ -98,6 +108,12 @@ export function mountBanqiReplayBoard(
   installBanqiBoardStyles();
   const { states, played, labels } = replayBanqiLine(spec);
   const total = labels.length;
+  const marks = analysisMarks({
+    analysis: { moves: [], evals: [] },
+    decisions: spec.decisions,
+    quoteEvalBestMove: false,
+    formatBestMove: formatFlipVariantBestMove,
+  });
   const perspective = spec.perspective ?? 'red';
   // Each sideline replayed from the position its move was played in.
   const lines = new Map<number, ReturnType<typeof replayBanqiLine>>();
@@ -113,6 +129,22 @@ export function mountBanqiReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
+  const luckDetail = (ply: number) => {
+    const luck = spec.decisions?.byPly.get(ply)?.luck;
+    const move = played[ply - 1];
+    const before = states[ply - 1];
+    return luck !== undefined && move && before ? banqiLuckDetail(move, { luck, before }) : null;
+  };
+  const detachMark = spec.decisions?.byPly.size
+    ? attachLuckMarkCard(frame, () => (inLine ? null : luckDetail(index)), banqiLuckPieceSvg)
+    : undefined;
+  const detachBadge = spec.decisions?.byPly.size
+    ? attachLuckBadgeCard(
+        host.closest<HTMLElement>('.embed-card') ?? host,
+        (badge) => luckDetail(Number(badge.dataset.luckPath)),
+        banqiLuckPieceSvg,
+      )
+    : undefined;
   // The player view, not the truth view: a tile nobody has flipped yet is a
   // face-down disc in a replay too, the way it was to the players. The truth
   // view (every identity revealed) is the postgame's, for reading a finished
@@ -120,9 +152,15 @@ export function mountBanqiReplayBoard(
   const shownState = (): BanqiGameState =>
     inLine ? lines.get(inLine.atPly)!.states[inLine.cursor]! : states[index]!;
   const paint = (): void => {
+    const luck = inLine ? null : luckDetail(index);
     frame.innerHTML = renderBanqiBoardSvg(
       getBanqiPlayerView(shownState(), perspective),
       perspective,
+      {
+        markers: luck
+          ? [{ square: luck.square as BanqiSquare, kind: 'luck', luck: { luck: luck.luck } }]
+          : [],
+      },
     );
   };
   const render = (glide?: { move: BanqiMove | undefined; reverse: boolean }): void => {
@@ -142,6 +180,8 @@ export function mountBanqiReplayBoard(
 
   return {
     destroy: () => {
+      detachMark?.();
+      detachBadge?.();
       host.replaceChildren();
     },
     jumpToPly: (ply: number) => {
@@ -181,7 +221,18 @@ export function mountBanqiReplayBoard(
     moveEntries: () =>
       labels.map((label, i) => {
         const line = lines.get(i + 1);
-        return { ply: i + 1, label, ...(line ? { line: { moves: line.labels } } : {}) };
+        const mark = marks.get(i + 1);
+        const glyph = spec.glyphs?.[i + 1] ?? mark?.suffix;
+        const note = [spec.notes?.[i + 1], mark?.comment].filter(Boolean).join(' ');
+        const luck = luckDetail(i + 1);
+        return {
+          ply: i + 1,
+          label,
+          ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+          ...(note ? { note } : {}),
+          ...(luck ? { luck: Math.round(luck.luck) } : {}),
+          ...(line ? { line: { moves: line.labels } } : {}),
+        };
       }),
     bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),
     previewArrow: (arrow) => {

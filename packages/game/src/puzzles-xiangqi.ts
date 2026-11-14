@@ -83,6 +83,9 @@ export type XiangqiPuzzle = {
   solution: XiangqiMove[];
   goal: XiangqiPuzzleGoal;
   themes: XiangqiPuzzleTheme[];
+  /** Position-only source credit. These puzzles carry no sourceGame or
+   * preceding game history; the archive link is the credit, not a hosted game. */
+  credit?: XiangqiPuzzleCredit;
   /** Explicit provenance, persisted with the puzzle. Training tags are derived
    *  separately; player identity is never inferred from source display names. */
   tags?: `player:${string}`[];
@@ -110,6 +113,14 @@ export type XiangqiPuzzle = {
     // puzzles-xiangqi-attribution.ts). Absent for sources that ask for none.
     attribution?: { name: string; url: string };
   };
+};
+
+export type XiangqiPuzzleCredit = {
+  name: string;
+  event: string;
+  red: string;
+  black: string;
+  url: string;
 };
 
 export type XiangqiPuzzleValidationIssueCode =

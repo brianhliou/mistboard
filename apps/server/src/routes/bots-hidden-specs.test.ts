@@ -41,3 +41,25 @@ test('a hidden spec leaves every public bot field', () => {
   // The source row is untouched: the play path still reads the full list.
   assert.ok(bot.supportedGameSpecIds.includes('mahjong'));
 });
+
+// A box without Misty's Flip Jungle engine (every dev box without the private
+// build) must still list the variant, unplayable, so /bots shows Flip Jungle the
+// way it shows AB-JChess and KataGo there; the play path still refuses it.
+test('a missing Flip Jungle engine lists the variant as unplayable, not missing', () => {
+  const saved = process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH;
+  process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = '/nonexistent/jungle-flip-engine';
+  try {
+    const misty = {
+      id: 'misty',
+      defaultGameSpecId: 'dark-chess',
+      activeEngineId: 'misty',
+      supportedGameSpecIds: ['dark-chess', 'jungle-flip'],
+    };
+    const flip = botPlayOptions(misty).find((option) => option.gameSpecId === 'jungle-flip');
+    assert.ok(flip, 'jungle-flip must stay listed');
+    assert.equal(flip.playable, false);
+  } finally {
+    if (saved === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH;
+    else process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = saved;
+  }
+});

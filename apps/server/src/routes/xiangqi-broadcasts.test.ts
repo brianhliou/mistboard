@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
@@ -9,7 +10,13 @@ import {
   type XiangqiBroadcastRound,
   type XiangqiBroadcastTour,
 } from '@mistboard/game';
+import {
+  broadcastDiscoveryFixture,
+  seedBroadcastDiscoveryFixture,
+} from '../broadcast-discovery-test-support.js';
 import type { StoredXiangqiBroadcastBoard } from '../persistence.js';
+import { definePersistenceTests } from '../persistence-test-support.js';
+import { broadcastLiveEvaluator } from '../xiangqi-broadcast-live-eval.js';
 import {
   manualXiangqiBroadcastPollForApi,
   manualXiangqiBroadcastSourceImportForApi,
@@ -52,6 +59,7 @@ const storedBoard: StoredXiangqiBroadcastBoard = {
 };
 
 const storedTour = {
+  listed: true,
   ...tour,
   pollMode: 'auto' as const,
   pollEnabled: false,
@@ -104,6 +112,85 @@ function deps(
     ...overrides,
   };
 }
+
+test('homepage/feed and live-card discovery omit every field of an unlisted event; ops retains it', async () => {
+  const { tours, sources } = broadcastDiscoveryFixture();
+  const persistence = deps({
+    listXiangqiBroadcastTours: async () => tours,
+    getXiangqiBroadcastTour: sources.getTour,
+    listXiangqiBroadcastRounds: sources.listRounds,
+    listXiangqiBroadcastBoards: sources.listBoards,
+    getXiangqiBroadcastBoard: sources.getBoard,
+    listXiangqiBroadcastSyncLogs: async () => [],
+  });
+  const index = await xiangqiBroadcastIndexForApi(persistence);
+  assert.deepEqual(
+    index.tours.map((entry) => entry.tour.slug),
+    [tours[0]!.slug],
+  );
+  assert.equal(index.tours[0]?.liveBoardCount, 1);
+  assert.ok(!JSON.stringify(index).includes(tours[1]!.slug));
+  assert.ok(!JSON.stringify(index).includes('Unlisted opponent'));
+  const ops = await xiangqiBroadcastOpsIndexForApi(persistence);
+  assert.equal(ops.tours.length, 2);
+
+  assert.ok(await xiangqiBroadcastTourForApi(tours[1]!.slug, persistence));
+  const hiddenRound = (await sources.listRounds(tours[1]!.slug))[0]!;
+  assert.ok(await xiangqiBroadcastRoundForApi(tours[1]!.slug, hiddenRound.id, persistence));
+  assert.ok(await xiangqiBroadcastRoundStreamForApi(tours[1]!.slug, hiddenRound.id, persistence));
+  for (const board of await sources.listBoards(hiddenRound.id)) {
+    assert.ok(await xiangqiBroadcastBoardForApi(board.id, persistence));
+    assert.ok(await xiangqiBroadcastBoardStreamForApi(board.id, persistence));
+    assert.deepEqual(
+      (await xiangqiBroadcastBoardExportForApi(board.id, persistence))?.moves,
+      board.moves,
+    );
+  }
+});
+
+definePersistenceTests('broadcast direct API discovery', () => {
+  test('unlisted tour, round, board, export and SSE reads still work by direct link', async (t) => {
+    t.mock.method(broadcastLiveEvaluator, 'cached', () => ({
+      ply: 1,
+      nodes: 1,
+      depth: 1,
+      cp: 0,
+      mate: null,
+      lines: [],
+    }));
+    const { tours, rounds, boards } = await seedBroadcastDiscoveryFixture();
+    const hidden = tours[1]!;
+    const hiddenBoards = boards.filter((board) => board.tourSlug === hidden.slug);
+    const paths = [
+      `/api/xiangqi/broadcasts/${hidden.slug}`,
+      `/api/xiangqi/broadcasts/${hidden.slug}/rounds/${rounds[1]!.id}`,
+      `/api/xiangqi/broadcasts/${hidden.slug}/rounds/${rounds[1]!.id}/events`,
+      ...hiddenBoards.flatMap((board) => [
+        `/api/xiangqi/broadcasts/boards/${board.id}`,
+        `/api/xiangqi/broadcasts/boards/${board.id}/export`,
+        `/api/xiangqi/broadcasts/boards/${board.id}/events`,
+      ]),
+    ];
+    for (const path of paths) {
+      const response = captureResponse();
+      const emitter = new EventEmitter();
+      const request = Object.assign(emitter, { method: 'GET', headers: {} });
+      assert.equal(
+        await tryHandle(
+          emptyCtx(),
+          request as IncomingMessage,
+          response,
+          path,
+          new URL(path, 'http://test.local'),
+        ),
+        true,
+      );
+      emitter.emit('close');
+      assert.equal(response.statusCode, 200, path);
+      assert.ok(response.body.includes(hidden.slug), path);
+    }
+  });
+});
 
 test('broadcast index API summarizes tournaments and sync status', async () => {
   const payload = await xiangqiBroadcastIndexForApi(deps());
@@ -1080,9 +1167,16 @@ function captureResponse(): ServerResponse & ResponseCapture {
     statusCode: 200,
     headers: {} as Record<string, string | string[]>,
     body: '',
+    setHeader(name: string, value: string | string[]) {
+      this.headers[name.toLowerCase()] = value;
+      return this;
+    },
+    on() {
+      return this;
+    },
     writeHead(statusCode: number, headers: Record<string, string | string[]> = {}) {
       this.statusCode = statusCode;
-      this.headers = headers;
+      this.headers = { ...this.headers, ...headers };
       return this;
     },
     end(chunk?: string) {

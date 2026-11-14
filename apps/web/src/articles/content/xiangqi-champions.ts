@@ -1154,6 +1154,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/kkN9Bwhq',
           spec: { ...C_kkN9Bwhq },
           caption:
             'Yang Guanlin vs Hu Ronghua, 12 November 1965. Ninety moves of endgame, and move 41 is the cannon swing that finally breaks it.',
@@ -1175,6 +1176,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/Ue0EgpS7',
           spec: { ...C_Ue0EgpS7 },
           caption:
             'Li Yiting vs Yang Guanlin, 27 December 1956. Li was eighteen, and our engine grades him 99.0, the highest of any player here.',
@@ -1196,6 +1198,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/0BM6N4j4',
           spec: { ...C_0BM6N4j4 },
           caption:
             'Yang Guanlin vs Hu Ronghua, 28 October 1960. Move 24 is the one to watch: a cannon Yang cannot take, marked brilliant.',
@@ -1207,6 +1210,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/z88B1zTk',
           spec: { ...C_z88B1zTk },
           caption:
             'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.',
@@ -1228,12 +1232,14 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/H4ovjgj7',
           spec: { ...C_H4ovjgj7 },
           caption:
             'Li Laiqun vs Liu Dahua, 29 August 1980. Li would take four titles of his own starting two years later.',
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/nj9VX8BK',
           spec: { ...C_nj9VX8BK },
           caption:
             'Yang Guanlin vs Liu Dahua, 3 September 1980. The outgoing era losing to the incoming one in under thirty-five moves.',
@@ -1255,6 +1261,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/sUzJIb4U',
           spec: { ...C_sUzJIb4U },
           caption:
             'Li Laiqun vs Hu Ronghua, 7 December 1982, from the championship Li won. Move 23 is the cannon push, and Hu has nothing after it.',
@@ -1271,6 +1278,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/DCNGV4UV',
           spec: { ...C_DCNGV4UV },
           caption:
             'Lü Qin vs Yu Youhua, 23 November 1986. The only game where both players are marked brilliant: Lü Qin\'s cannon on 21, Yu Youhua\'s horse on 32.',
@@ -1292,6 +1300,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/rhF5YH7d',
           spec: { ...C_rhF5YH7d },
           caption:
             'Xu Tianhong vs Xu Yinchuan, 19 October 1990. No blunder from either side, which is the game Xu Tianhong wanted.',
@@ -1308,6 +1317,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/oyo2kgtC',
           spec: { ...C_oyo2kgtC },
           caption:
             'Zhao Guorong vs Hu Ronghua, 22 October 1989, the year before his first title. Move 30 is the chariot swing, and Hu does not recover.',
@@ -1329,6 +1339,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/ZBE8Dp5U',
           spec: { ...C_ZBE8Dp5U },
           caption:
             'Xu Yinchuan vs Liu Dahua, 11 October 1995. The only game here in which our engine finds neither a blunder nor a mistake from either player.',
@@ -1350,6 +1361,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/hLWs5hR5',
           spec: { ...C_hLWs5hR5 },
           caption:
             'Tao Hanming vs Liu Dahua, 21 October 1996. More chances for both players than a positional grind offers, and Tao was better at taking them.',
@@ -1366,6 +1378,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/HFq9qzB8',
           spec: { ...C_HFq9qzB8 },
           caption:
             'Xu Tianhong vs Yu Youhua, 3 November 2002, from the championship Yu finally won. The Smiling Buddha against the desperado.',
@@ -1387,6 +1400,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/fOnPsRe1',
           spec: { ...C_fOnPsRe1 },
           caption:
             'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.',
@@ -1403,6 +1417,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'ytSzepET/aHRbltmz',
           spec: { ...C_aHRbltmz },
           caption:
             'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.',

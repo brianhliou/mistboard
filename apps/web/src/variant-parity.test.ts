@@ -14,6 +14,7 @@ vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
 vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
 vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
 vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
 // landing-play imports variants too; reload its module after setting the flags.
 vi.resetModules();
 const { leaderboardVariants, profileRatingVariants, ratingVariantLabel } = await import(
@@ -151,7 +152,7 @@ describe('variant parity', () => {
     'registry capabilities.supportsRated',
     'champions title presence',
   ] as const) {
-    it(`rejects planted Three Kingdoms capability on: ${surface}`, () => {
+    it(`rejects planted Three Kingdoms capability mismatch: ${surface}`, () => {
       const planted = declarations.map((spec) =>
         spec.id !== 'three-kingdoms-banqi'
           ? spec
@@ -159,7 +160,7 @@ describe('variant parity', () => {
               ...spec,
               ...(surface === 'champions title presence'
                 ? { championsTitle: true }
-                : { rated: true }),
+                : { rated: false }),
             },
       );
       expect(() => assertParity(planted, surface)).toThrow(/three-kingdoms-banqi/);

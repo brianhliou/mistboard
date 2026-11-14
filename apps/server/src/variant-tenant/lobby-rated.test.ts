@@ -37,6 +37,8 @@ import {
   TEST_DATABASE_URL,
 } from '../persistence-test-support.js';
 import { XMJ_BOT_CLIENT_ID } from '../server-xiangqi-mahjong-bots.js';
+import { createThreeKingdomsBanqiRoom } from '../three-kingdoms-banqi-registration.js';
+import { threeKingdomsBanqiTenant } from '../three-kingdoms-banqi-tenant.js';
 import { createXiangqiMahjongRoom } from '../xiangqi-mahjong-registration.js';
 import { xiangqiMahjongTenant } from '../xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
@@ -212,6 +214,43 @@ async function withRatedOn<T>(run: () => Promise<T>): Promise<T> {
     else process.env[RATED_FLAG] = previous;
   }
 }
+
+test('Three Kingdoms Banqi rates lobby and friend rooms at every rated pace; Misty stays casual', async () => {
+  const registration = routingTenants().find(
+    (candidate) => candidate.gameSpecId === threeKingdomsBanqiTenant.gameSpecId,
+  );
+  assert.ok(registration?.lobby?.supportsRated);
+  await withRatedOn(() =>
+    withTenantEnabled(registration, async () => {
+      for (const timeControl of [
+        { initialMs: 60_000, incrementMs: 1_000 },
+        BLITZ,
+        { initialMs: 300_000, incrementMs: 5_000 },
+        { initialMs: 600_000, incrementMs: 5_000 },
+      ]) {
+        assert.equal(registration.lobby!.allowsTimeControl(timeControl), true);
+        const lobby = await registration.lobby!.createRoom(timeControl, true);
+        assert.equal(roomRated(registration.rooms.get(lobby.id)), true);
+        const friend = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl },
+          ACCOUNT,
+        );
+        assert.equal(friend.status, 201, JSON.stringify(friend.json));
+        assert.equal(roomRated(registration.rooms.get(friend.json.roomId as string)), true);
+      }
+      const bot = await createThreeKingdomsBanqiRoom(
+        BLITZ,
+        'red',
+        { engineId: 'misty-three-kingdoms-banqi-level-1', seat: 'black' },
+        true,
+      );
+      assert.ok(bot.ok);
+      assert.equal(bot.room.rated, false, 'a bot seat overrides a requested rated flag');
+      assert.equal(bot.room.projection.rated, false);
+    }),
+  );
+});
 
 // Registrations that own their spec's create route (not the correspondence-only
 // dark-chess slice, whose friend rooms are the legacy chess path).
@@ -474,6 +513,7 @@ const RATED_LOBBY_TENANTS = [
   duckXiangqiTenant,
   jieqiTenant,
   banqiTenant,
+  threeKingdomsBanqiTenant,
   jungleTenant,
   jungleFlipTenant,
   darkXiangqiTenant,

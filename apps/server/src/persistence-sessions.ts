@@ -1,12 +1,14 @@
 // Account-session persistence: session create/resolve, metadata, and
 // revocation. Split out of persistence-accounts.ts; the shared users-row
 // plumbing (USER_COLUMNS_QUALIFIED, userFromRow) stays there.
+import type pg from 'pg';
 import {
   USER_COLUMNS_QUALIFIED,
   type UserAccount,
   type UserRow,
   userFromRow,
 } from './persistence-accounts.js';
+import { countedHumanGame, countedPlayerSeat } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 
 export type AccountSession = {
@@ -15,6 +17,8 @@ export type AccountSession = {
   tokenHash: string;
   expiresAt: Date;
   userAgent?: string | null;
+  deviceId?: string | null;
+  createdAt?: Date;
 };
 
 export type AccountSessionSummary = {
@@ -27,9 +31,17 @@ export type AccountSessionSummary = {
 
 export async function createAccountSession(session: AccountSession): Promise<void> {
   await getPool().query(
-    `INSERT INTO account_sessions (id, user_id, token_hash, expires_at, user_agent)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [session.id, session.userId, session.tokenHash, session.expiresAt, session.userAgent ?? null],
+    `INSERT INTO account_sessions (id, user_id, token_hash, expires_at, user_agent, device_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, now()))`,
+    [
+      session.id,
+      session.userId,
+      session.tokenHash,
+      session.expiresAt,
+      session.userAgent ?? null,
+      session.deviceId ?? null,
+      session.createdAt ?? null,
+    ],
   );
 }
 
@@ -163,4 +175,66 @@ export async function revokeAccountSession(
        AND revoked_at IS NULL`,
     [sessionId, tokenHash, at],
   );
+}
+
+export type GuestSignInWeek = {
+  weekStart: string;
+  guests: number;
+  signedInWithin7d: number;
+  complete: boolean;
+};
+
+// One browser per game-finish week, even if it played several games or signed
+// in several times. Any qualifying finish may start its seven-day window.
+// Historical sessions without device attribution cannot establish conversion.
+export async function getWeeklyGuestSignIns(
+  { now = new Date(), weeks = 26 }: { now?: Date; weeks?: number } = {},
+  db: Pick<pg.Pool, 'query'> = getPool(),
+): Promise<GuestSignInWeek[]> {
+  const { rows } = await db.query<{
+    week_start: string;
+    guests: number;
+    signed_in: number;
+    complete: boolean;
+  }>(
+    `WITH axis AS (
+       SELECT generate_series(
+         date_trunc('week', $1::timestamptz AT TIME ZONE 'UTC') - ($2::int - 1) * interval '1 week',
+         date_trunc('week', $1::timestamptz AT TIME ZONE 'UTC'), interval '1 week'
+       ) AT TIME ZONE 'UTC' AS week_start
+     ), guest_weeks AS (
+       SELECT date_trunc('week', g.ended_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS week_start,
+              guest.subject_id,
+              bool_or(EXISTS (
+                SELECT 1 FROM account_sessions s JOIN users u ON u.id = s.user_id
+                WHERE s.device_id = guest.subject_id AND u.stats_excluded_at IS NULL
+                  AND s.created_at >= g.ended_at
+                  AND s.created_at <= g.ended_at + interval '168 hours'
+                  AND s.created_at < $1::timestamptz
+              )) AS signed_in
+       FROM games g JOIN game_participants guest ON guest.game_id = g.room_id
+       WHERE ${countedHumanGame('g')} AND g.mode = 'pvp'
+         AND guest.subject_type = 'guest' AND ${countedPlayerSeat('guest')}
+         AND g.ended_at >= (SELECT min(week_start) FROM axis) AND g.ended_at < $1::timestamptz
+         AND EXISTS (
+           SELECT 1 FROM game_participants opponent
+           WHERE opponent.game_id = g.room_id AND opponent.color <> guest.color
+             AND ${countedPlayerSeat('opponent')}
+         )
+       GROUP BY 1, guest.subject_id
+     )
+     SELECT to_char(a.week_start AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS week_start,
+            count(g.subject_id)::int AS guests,
+            count(g.subject_id) FILTER (WHERE g.signed_in)::int AS signed_in,
+            a.week_start + interval '336 hours' <= $1::timestamptz AS complete
+     FROM axis a LEFT JOIN guest_weeks g USING (week_start)
+     GROUP BY a.week_start ORDER BY a.week_start`,
+    [now, weeks],
+  );
+  return rows.map((row) => ({
+    weekStart: row.week_start,
+    guests: row.guests,
+    signedInWithin7d: row.signed_in,
+    complete: row.complete,
+  }));
 }

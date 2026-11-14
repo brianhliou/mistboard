@@ -209,3 +209,11 @@
 .analysis-summary__phase--poor .analysis-summary__phase-label {
   color: #e5222c;
 }
+
+.review-decision-totals {
+  margin: 4px 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--site-muted);
+  overflow-wrap: anywhere;
+}

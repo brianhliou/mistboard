@@ -253,14 +253,14 @@ function threeKingdomsListedUnder(isPublic: (id: GameSpecId) => boolean) {
   };
 }
 
-test('Three Kingdoms Banqi is launched, casual and unrated, on every server surface', async () => {
+test('Three Kingdoms Banqi is launched and live-rated, with casual-only correspondence', async () => {
   const id = 'three-kingdoms-banqi';
   assert.equal(isPublicGameSpec(id), true);
   assert.equal(articleIsIndexable(id), true);
   assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') + 1], id);
   assert.equal(isAllowlistedGameSpec(id), false);
   assert.equal(await mayPlayVariant(null, id), true);
-  assert.equal(ratingPoolForSpec(id), null);
+  assert.equal(ratingPoolForSpec(id), 'three_kingdoms_banqi');
   // Correspondence follows launch (#1002 built it), casual only.
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), true);
   assert.equal(isCorrespondenceRatedSpec(id), false);

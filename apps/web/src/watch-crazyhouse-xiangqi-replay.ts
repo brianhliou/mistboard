@@ -48,6 +48,7 @@ export function mountCrazyhouseXiangqiWatchReplay(
     CrazyhouseXiangqiPlayerView,
     'truth'
   >(root, roomId, options, {
+    variant: 'crazyhouse-xiangqi',
     installStyles: () => {},
     // Piece-set / board-theme changes repaint the board in place (the homepage
     // TV sits frozen on one ply, so nothing else would re-render it).

@@ -10,6 +10,7 @@ import {
   BANQI_RULES_THUMBNAIL,
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
+import type { XiangqiReplayBlock } from './articles/types.js';
 import {
   buildArticleFooter,
   buildArticlePage,
@@ -232,8 +233,11 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Four correspondence games against one opponent, a draft scheduled for
-      // 2026-10-27 (DEV shows it early for review).
+      // The xiangqi own-net engineering post, a draft dated Tuesday 2026-11-24.
+      '/blog/xiangqi-nnue-training',
+      // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
+      '/blog/meng-fanrui',
+      // Four correspondence games against one opponent, dated Friday 2026-11-20.
       '/blog/one-opponent-four-variants',
       '/blog/fog-future',
       // The board and piece settings showcase, scheduled for 2026-11-06
@@ -644,6 +648,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/meng-fanrui',
       '/blog/one-opponent-four-variants',
       '/blog/tang-dan',
       '/blog/zuo-wenjing',
@@ -1555,6 +1560,67 @@ describe('blog post read-next footer', () => {
   });
 });
 
+describe('a game board that names its study', () => {
+  const block = {
+    kind: 'xq-replay',
+    study: 'VSX0aLce/Ogrhzz2m',
+    spec: {
+      iccs: 'h2e2 h9g7',
+      red: 'Red',
+      black: 'Black',
+      event: '2026 Shanghai Cup',
+      resultText: '1-0',
+      startPly: 41,
+    },
+    caption: 'Move 41 is the one to watch.',
+  } satisfies XiangqiReplayBlock;
+
+  it('renders that chapter embed at the start ply, titled with the event, in place of the stepper', () => {
+    const figure = renderBlock(block);
+    const frame = figure.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe('/embed/study/VSX0aLce/Ogrhzz2m?ply=41');
+    expect(frame?.title).toBe('2026 Shanghai Cup');
+    expect(frame?.classList.contains('article-embed-frame')).toBe(true);
+    expect(frame?.style.aspectRatio).toBe('702 / 800');
+    expect(figure.querySelector('figcaption')?.textContent).toBe(block.caption);
+    expect(figure.dataset.pendingWidget).toBeUndefined();
+  });
+
+  it('opens on the start position when the spec has no start ply', () => {
+    const { startPly: _, ...spec } = block.spec;
+    const frame = renderBlock({ ...block, spec }).querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe('/embed/study/VSX0aLce/Ogrhzz2m');
+  });
+
+  it('refuses a reference that is not studyId/chapterId', () => {
+    expect(() => renderBlock({ ...block, study: 'VSX0aLce' })).toThrow(/studyId\/chapterId/);
+    expect(() => renderBlock({ ...block, study: '../x/y?z' })).toThrow(/studyId\/chapterId/);
+  });
+
+  it('every study reference on a published page is well formed and points at one game', () => {
+    const refs = new Map<string, string>();
+    for (const article of articles) {
+      const walk = (v: unknown): void => {
+        if (Array.isArray(v)) {
+          v.forEach(walk);
+          return;
+        }
+        if (!v || typeof v !== 'object') return;
+        const o = v as { kind?: string; study?: string; spec?: { iccs?: string } };
+        if (o.kind === 'xq-replay' && o.study) {
+          expect(o.study).toMatch(/^[A-Za-z0-9_-]{8}\/[A-Za-z0-9_-]{8}$/);
+          const prior = refs.get(o.study);
+          if (prior !== undefined) expect(o.spec?.iccs).toBe(prior);
+          refs.set(o.study, o.spec?.iccs ?? '');
+        }
+        for (const x of Object.values(o)) walk(x);
+      };
+      walk(article);
+    }
+    expect(refs.size).toBeGreaterThanOrEqual(51);
+  });
+});
+
 describe('Bilibili article block', () => {
   const block = {
     kind: 'bilibili',
@@ -1630,6 +1696,21 @@ describe('image figure credit', () => {
     expect(link?.getAttribute('href')).toBe('https://www.xiangqiqipu.com/Player/View-33.html');
     expect(link?.target).toBe('_blank');
     expect(link?.rel).toBe('noopener');
+  });
+
+  it('labels the credit in the page language, keeping the source a link', () => {
+    const block = {
+      kind: 'image-figure' as const,
+      src: '/a.jpg',
+      alt: 'A.',
+      caption: '孟繁睿。',
+      credit: { text: '中国象棋协会', href: 'https://example.com/' },
+    };
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      const cap = renderBlock(block, lang).querySelector('figcaption');
+      expect(cap?.textContent).toBe('孟繁睿。 照片：中国象棋协会');
+      expect(cap?.querySelector('a')?.textContent).toBe('中国象棋协会');
+    }
   });
 
   it('keeps a caption without a credit as plain text', () => {

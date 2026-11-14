@@ -63,6 +63,7 @@ import {
   isRatedModeEnabled,
   onRatedModeChange,
 } from './rated-flag.js';
+import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
 import {
   isLikelySignedIn,
@@ -956,7 +957,7 @@ export function buildPlayPanel(
   ratedBtn.addEventListener('click', () => {
     if (ratedBlocked) return;
     if (!signedIn) {
-      window.location.href = loginHrefForCurrentPage(locale);
+      window.location.href = loginHrefForCurrentPage(locale, 'rated-toggle');
       return;
     }
     if (mode === 'rated') return;
@@ -1042,7 +1043,7 @@ export function buildPlayPanel(
     if (!signedIn) {
       const hint = document.createElement('a');
       hint.className = 'pp-pace-hint';
-      hint.href = loginHrefForCurrentPage(locale);
+      hint.href = loginHrefForCurrentPage(locale, 'correspondence');
       hint.textContent = t('lobby.panelDaysSignIn', {}, locale);
       parts.push(hint);
     }
@@ -1373,6 +1374,13 @@ export function buildPlayPanel(
       renderBotRows();
       renderFeatures();
     };
+    // Another page fetch (landing.ts, a rules page) may land a runtime roster
+    // after this panel painted; re-read it rather than keep the stale rows.
+    const stopRosterWatch = onRuntimeEngineRostersChanged(() => {
+      const tkEngines = threeKingdomsBanqiEngineOptions();
+      if (tkEngines) threeKingdomsBanqiEngineIds = new Set(tkEngines.map((engine) => engine.id));
+      refreshBotLadders();
+    });
     // Misty's neural tiers share a bot id, so their availability must come
     // from the runtime engine roster, not Misty's playable bot profile.
     void fetch('/api/engines/playable', { headers: { accept: 'application/json' } })
@@ -1420,6 +1428,7 @@ export function buildPlayPanel(
     const timer = window.setInterval(() => {
       if (!document.body.contains(board)) {
         window.clearInterval(timer);
+        stopRosterWatch();
         searching?.();
         return;
       }
