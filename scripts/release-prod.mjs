@@ -32,6 +32,7 @@ import {
 } from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { formatEnginePin, readEngineHead } from './lib/engine-head.mjs';
 import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
 import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
@@ -224,6 +225,7 @@ try {
     catchUpBeforeGate();
     enforceAgentBranchAccounting();
   }
+  if (options.push || options.plan) printEnginePin();
   if (options.changelog.length > 0 && !options.plan) commitChangelog();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
   release.expectedRevision = release.headRevision;
@@ -2131,6 +2133,15 @@ function enforceAgentBranchAccounting() {
     head: options.head,
     base: `${options.remote}/${options.targetBranch}`,
   });
+}
+
+function printEnginePin() {
+  try {
+    const pin = readFileSync(path.join(workdir, 'engine.ref'), 'utf8').split(/\r?\n/, 1)[0].trim();
+    console.log(formatEnginePin(pin, readEngineHead()));
+  } catch {
+    console.log('engine_pin: unknown (could not read engine.ref)');
+  }
 }
 
 // The ship-window reminder uses the same branch inventory as the release gate.

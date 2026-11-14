@@ -51,6 +51,7 @@ import {
   printDeploymentPlan,
   readBaseline,
 } from './lib/engine-deploy-plan.mjs';
+import { readEngineHead } from './lib/engine-head.mjs';
 
 const SERVICE = 'engine-worker';
 // The prod Railway project. `railway up` resolves its target from the CLI's
@@ -61,7 +62,6 @@ const SERVICE = 'engine-worker';
 // within six minutes on 2026-09-05, from two different worktrees, and the only
 // symptom was a "✓ Project mistboard-fdx-v12" line scrolling past in the output.
 const PROJECT_ID = 'edd519d3-638e-40da-81b4-a8a70eb7eb94';
-const ENGINE_REMOTE = 'git@github.com:brianhliou/mistboard-engine.git';
 const ENGINE_REF = process.env.MISTBOARD_ENGINE_REF ?? 'main';
 const ENGINE_REF_FILE = 'engine.ref';
 const RAILPACK = 'railpack.json';
@@ -371,17 +371,12 @@ function bumpEngineRef(sha) {
 }
 
 function engineHeadSha() {
-  const res = spawnSync('git', ['ls-remote', ENGINE_REMOTE, ENGINE_REF], { encoding: 'utf8' });
-  if (res.status !== 0) {
-    console.error(`could not read ${ENGINE_REMOTE} ${ENGINE_REF}: ${res.stderr?.trim()}`);
+  const result = readEngineHead({ ref: ENGINE_REF });
+  if (result.error) {
+    console.error(result.error);
     process.exit(1);
   }
-  const sha = (res.stdout ?? '').trim().split(/\s+/)[0] ?? '';
-  if (!/^[0-9a-f]{40}$/.test(sha)) {
-    console.error(`unexpected ls-remote output: ${res.stdout}`);
-    process.exit(1);
-  }
-  return sha;
+  return result.sha;
 }
 
 function sleep(ms) {
