@@ -133,6 +133,30 @@ describe('installGlobalChunkLoadRecovery', () => {
     expect(rearmed.defaultPrevented).toBe(true);
   });
 
+  it('recovers a stale correspondence variant-markers stylesheet without a reload loop (#1114)', () => {
+    // /correspondence -> setup-panel-parts -> variant-markers imports CSS.
+    // An old tab can request the previous hashed stylesheet after a deploy.
+    const preloadFailure = () =>
+      Object.assign(new Event('vite:preloadError', { cancelable: true }), {
+        payload: new Error('Unable to preload CSS for /assets/variant-markers-old.css'),
+      });
+    const reload = vi.fn();
+    const leaveDocument = install(reload);
+    const first = preloadFailure();
+    window.dispatchEvent(first);
+    expect(first.defaultPrevented).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    // Reloading keeps sessionStorage. If the same bundle is still broken,
+    // leave the error to the route's error panel rather than reload forever.
+    leaveDocument();
+    install(reload);
+    const repeated = preloadFailure();
+    window.dispatchEvent(repeated);
+    expect(repeated.defaultPrevented).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the cap across documents and late optional failures, but allows a new deploy', () => {
     const entry = document.createElement('script');
     entry.type = 'module';
