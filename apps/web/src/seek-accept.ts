@@ -162,6 +162,17 @@ export function accepterColorLabel(gameSpecId: string, color: string | undefined
   return null;
 }
 
+// The side the POSTER plays, on their own seek or challenge: the side they
+// picked. The /challenge page shows it on the creator's own card.
+export function posterColorLabel(gameSpecId: string, color: string | undefined): string | null {
+  if (color === 'random') return t('challenge.randomColors');
+  if (color === 'first')
+    return t('challenge.youPlayColor', { color: firstMoverColorName(gameSpecId) });
+  if (color === 'second')
+    return t('challenge.youPlayColor', { color: secondMoverColorName(gameSpecId) });
+  return null;
+}
+
 // The seat the ACCEPTER would take on someone else's seek, when the poster
 // picked a side; null for random (no seat is decided until the game starts).
 export function accepterSide(color: string | undefined): SeatSide | null {
