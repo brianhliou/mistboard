@@ -374,6 +374,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                     title: { type: ['string', 'null'] },
                     rating: { type: ['object', 'null'] },
                     playing: { type: 'boolean' },
+                    champions: CHAMPIONS,
                   },
                 },
               },

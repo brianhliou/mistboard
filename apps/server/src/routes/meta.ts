@@ -182,12 +182,14 @@ export async function tryHandle(
           PUBLIC_RATING_TIME_CLASS,
         )
       : new Map<string, persistence.BestRatingEntry>();
+    const champions = persistence.isInitialized() ? await persistence.getChampions() : [];
     const players = listed.map((entry) => ({
       handle: entry.handle,
       displayName: entry.displayName,
       title: entry.title,
       rating: ratings.get(entry.userId) ?? null,
       playing: stats.playingUserIds.has(entry.userId),
+      champions: persistence.championsForUser(champions, entry.userId, entry.handle),
     }));
     writeJson(
       response,

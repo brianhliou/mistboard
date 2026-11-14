@@ -190,6 +190,7 @@ type OnlinePlayerEntry = {
   title?: string | null;
   rating: { variant: string; eloRating: number; provisional: boolean } | null;
   playing?: boolean;
+  champions?: Championship[];
 };
 
 type OnlinePlayersResult = {
@@ -836,6 +837,8 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
       link.append(dot);
       prependTitleBadge(link, player.title, locale);
       link.append(name);
+      const crowns = buildChampionCrowns(player.champions, { size: 16, locale });
+      if (crowns) link.append(crowns);
       if (player.playing) {
         const playingMark = document.createElement('span');
         playingMark.className = 'leaderboard-online-playing';

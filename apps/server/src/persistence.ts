@@ -412,6 +412,7 @@ export type {
   LeaderboardSummaryLadder,
 } from './persistence-leaderboards.js';
 export {
+  championsForUser,
   clearChampionsCache,
   getBestRatings,
   getBestRatingsAnyTimeClass,

@@ -49,6 +49,46 @@ describe('profile ratings rail', () => {
     }
   });
 
+  it('shows one champion crown beside an online player who holds titles', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      return new Response(
+        JSON.stringify(
+          url.pathname === '/api/players/online'
+            ? {
+                players: [
+                  {
+                    handle: 'alice',
+                    displayName: 'Alice',
+                    rating: null,
+                    champions: [
+                      { variant: 'xiangqi', timeClass: 'blitz' },
+                      { variant: 'banqi', timeClass: 'rapid' },
+                    ],
+                  },
+                  { handle: 'bob', displayName: 'Bob', rating: null, champions: [] },
+                  { handle: 'cara', displayName: 'Cara', rating: null },
+                ],
+                count: 3,
+              }
+            : { ladders: [] },
+        ),
+      );
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    const links = [...root.querySelectorAll('.leaderboard-online-list a')];
+    expect(links).toHaveLength(3);
+    const crowns = [...links[0]!.querySelectorAll<HTMLImageElement>('.champion-crown')];
+    expect(crowns.map((icon) => icon.alt)).toEqual([
+      'Xiangqi blitz champion, Banqi rapid champion',
+    ]);
+    expect(crowns[0]!.width).toBe(16);
+    expect(links[1]!.querySelector('.champion-crowns')).toBeNull();
+    expect(links[2]!.querySelector('.champion-crowns')).toBeNull();
+  });
+
   it('carries multiple champion crowns from leaderboard summaries into variant rows', async () => {
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
