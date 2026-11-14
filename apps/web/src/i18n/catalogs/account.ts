@@ -1,6 +1,24 @@
 // Account translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_ACCOUNT = {
+  'account.broadcastPush': 'Broadcast push',
+  'account.broadcastPushHelp':
+    'Create a token for your recording device or app to send games to an event.',
+  'account.broadcastPushLabel': 'Token label',
+  'account.broadcastPushCreate': 'Create token',
+  'account.broadcastPushOnce': 'Copy this token now. It will not be shown again.',
+  'account.broadcastPushCopy': 'Copy',
+  'account.broadcastPushCopied': 'Token copied.',
+  'account.broadcastPushCopyFailed': 'Could not copy. Select and copy the token above.',
+  'account.broadcastPushDismiss': 'Hide token',
+  'account.broadcastPushRevoke': 'Revoke',
+  'account.broadcastPushRevoked': 'Revoked',
+  'account.broadcastPushCreated': 'Created',
+  'account.broadcastPushLastUsed': 'Last used',
+  'account.broadcastPushNever': 'Never',
+  'account.broadcastPushFailed': 'Could not complete the request. Please try again.',
+  'account.broadcastPushLimit':
+    'You can have up to 5 active tokens per event. Revoke one before creating another.',
   'account.loading': 'Loading account',
   'account.signedIn': 'Signed in',
   'account.viewProfile': 'View profile',

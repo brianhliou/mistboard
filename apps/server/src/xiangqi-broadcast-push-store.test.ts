@@ -83,6 +83,40 @@ async function setup(slug = 'event') {
 }
 
 definePersistenceTests('broadcast push HTTP adapter', () => {
+  test('persistence push and status reject a revoked grant or disabled owner with 401; legacy tokens still work', async () => {
+    const h = await setup();
+    const statusPath = '/api/xiangqi/broadcast-push/status';
+    assert.equal((await h.request(undefined, statusPath)).status, 200);
+    await getPool().query(`INSERT INTO users (id, email, handle, display_name)
+      VALUES ('owner', 'owner@example.test', 'clockmaker', 'Clock maker')`);
+    await getPool().query(`INSERT INTO xiangqi_broadcast_push_grants (id, account_id, tour_slug)
+      VALUES ('grant', 'owner', 'event')`);
+    await getPool().query(
+      'UPDATE xiangqi_broadcast_push_tokens SET account_id = $1 WHERE id = $2',
+      ['owner', h.id],
+    );
+    assert.equal((await h.request()).status, 200);
+    assert.equal((await h.request(undefined, statusPath)).status, 200);
+    // Plant only the grant failure: the token itself remains unrevoked.
+    await getPool().query(
+      "UPDATE xiangqi_broadcast_push_grants SET revoked_at = now() WHERE id = 'grant'",
+    );
+    assert.equal((await h.request()).status, 401);
+    assert.equal((await h.request(undefined, statusPath)).status, 401);
+    await getPool().query(
+      "UPDATE xiangqi_broadcast_push_grants SET revoked_at = NULL WHERE id = 'grant'",
+    );
+    await getPool().query("UPDATE users SET play_disabled_at = now() WHERE id = 'owner'");
+    assert.equal((await h.request()).status, 401);
+    assert.equal((await h.request(undefined, statusPath)).status, 401);
+    await getPool().query(
+      'UPDATE xiangqi_broadcast_push_tokens SET account_id = NULL WHERE id = $1',
+      [h.id],
+    );
+    assert.equal((await h.request()).status, 200);
+    assert.equal((await h.request(undefined, statusPath)).status, 200);
+  });
+
   test('persistence push route creates/extends/retries/corrects/takes back with sticky completion and updates players/clock', async () => {
     const h = await setup();
     const created = await h.request();
