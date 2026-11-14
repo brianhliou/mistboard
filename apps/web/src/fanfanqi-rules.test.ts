@@ -44,7 +44,7 @@ describe('Fanfanqi rules registration', () => {
     expect(ARTICLE_META.fanfanqi).toMatchObject({ kind: 'rules', title: 'Fanfanqi Rules' });
     expect(articleIsUnpublished('fanfanqi')).toBe(false);
     expect(articleIsIndexable('fanfanqi')).toBe(true);
-    expect(isArticleTranslationPublished('fanfanqi')).toBe(false);
+    expect(isArticleTranslationPublished('fanfanqi')).toBe(true);
   });
 
   it('lists the launched English rules in production even with play disabled', () => {

@@ -204,6 +204,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'shogi4',
   'jieqi',
   'banqi',
+  // Machine-drafted, not native-reviewed, from the signed-off English launch rules.
+  'fanfanqi',
   // Machine-drafted 2026-09-22 (zh-Hant first, Taiwanese vocabulary: 砲、覆盤、
   // 回合), not native-reviewed, locked the day the English copy published.
   'banqi-statistics',
@@ -250,7 +252,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
-  fanfanqi: 'English-only launch rules by explicit product scope.',
   'three-kingdoms-banqi':
     'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:
@@ -287,6 +288,130 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
+  'Fanfanqi Rules': '翻翻棋规则',
+  'Flip hidden pieces and race to zero HP.': '翻开暗子，把对方的血量打到零。',
+  'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
+    '翻翻棋在 4×8 的棋盘上进行，棋子暗置，双方从 60 点血开始。了解大小顺序、只能吃子的炮、各子扣血值、捉子上限与和棋规则。',
+  'Players learning Fanfanqi or comparing its HP rules with banqi.':
+    '想学翻翻棋，或想比较其血量规则与暗棋差异的玩家。',
+  'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.':
+    '开局有四颗明子。每回合翻开一颗暗子，或走一颗已翻开的己方棋子。',
+  'Captures follow a rank ladder. Cannons only capture and can take covered pieces of either color.':
+    '吃子按大小顺序。炮只能吃子，还能打任一颜色的暗子。',
+  'Both players start with 60 HP. A captured piece costs its owner HP, even when the owner made the capture.':
+    '双方各从 60 点血开始。棋子被吃时，扣的是该子所属一方的血，即使是自己吃掉的。',
+  'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.':
+    '翻翻棋是一种以血量（HP）计分、对局更短的[暗棋](/rules/banqi)。暗子与大小顺序让每次翻子都很重要；每次吃子，扣的都是被吃棋子所属一方的血。把对方的血量打到零就赢了。',
+  'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.':
+    '腾讯的《天天象棋》App 在 2016 年 7 月加入了以 60 点血计分的翻翻棋模式。Mistboard 采用自己的版本，与腾讯没有任何关联。',
+  'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up, showing whatever pieces the shuffle put there. The other 28 start face down.':
+    '棋盘有 4×8 格。每方各有一将、二士、二象、二车、二马、二炮、五兵。把全部 32 颗棋子洗乱后铺在棋盘上。四个固定格子上的棋子开局时就翻开，洗到什么子就显示什么子，其余 28 颗盖着。',
+  'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.':
+    '红方先走。双方座位从开局就有固定颜色，翻子不会改变你的颜色。双方都能看到还有哪些棋子未翻开，但不知道每一颗暗子具体是什么。下图是一盘棋第一步之前的布局。',
+  'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or shoots with a face-up red cannon, like the one in this deal. Then Black moves, and the players alternate from there.':
+    '开局每一格都有子，所以第一步没有棋子能走到空格。红方可以翻一颗暗子，也可以用已翻开的红炮吃子，就像这盘布局里的那颗炮。接着轮到黑方，之后双方轮流走。',
+  'Turns and flips': '回合与翻子',
+  'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent.':
+    '轮到你时，翻开一颗暗子，或走一颗已翻开的己方棋子。翻子就用完这一回合。你可以翻任何一颗暗子，即使翻出来的是对方的棋子。',
+  'Steps and the rank ladder': '走法与大小顺序',
+  'Every piece except the cannon moves one square up, down, left or right. It can step onto an empty square or capture a face-up enemy it outranks or matches. It cannot land on a covered piece or a friendly piece. There are no diagonal moves.':
+    '除炮以外，每种棋子都只能向上、下、左、右走一格。可以走到空格，也可以吃掉已翻开、与自己同级或比自己小的敌子。不能走到暗子或己方棋子所在的格子，也不能斜走。',
+  'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with three exceptions: a general cannot capture a soldier, a soldier can capture a general, and a cannon ignores rank when it captures (see [Cannons only capture](#cannons-only-capture)).':
+    '大小顺序从大到小是**将 > 士 > 象 > 车 > 马 > 炮 > 卒**。每种棋子可以吃同级或比自己小的子，但有三处例外：将不能吃兵，兵可以吃将，炮吃子时不论大小（见[炮只能吃子](#cannons-only-capture)）。',
+  'There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.':
+    '这里没有将军一说。将被吃时，与其他棋子被吃一样，按血量规则扣血。下图中，兵可以吃旁边的将，将却不能吃兵。',
+  'The ring marks a capture; dots mark empty destinations.':
+    '圆环表示可吃的棋子；圆点表示可走的空格。',
+  'Dots mark empty destinations. The soldier has no capture ring.':
+    '圆点表示可走的空格。兵上没有表示可吃的圆环。',
+  'HP and capture damage': '血量与吃子扣血',
+  'Both players start with **60 HP**. Each capture removes HP from the owner of the captured piece. The damage depends on that piece:':
+    '双方各从 **60 点血**开始。每次吃子，扣的是被吃棋子所属一方的血。扣多少取决于被吃的棋子：',
+  'Captured piece': '被吃的棋子',
+  'HP lost': '扣除血量',
+  'HP stops at zero, and a player at zero loses. Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.':
+    '血量最低为零，降到零的一方判负。每方十六颗棋子的扣血值合计为 100，而起始血量只有 60，所以还远未被吃光，对局就会结束。丢将会一下扣掉起始血量的一半。',
+  'Cannons only capture': '炮只能吃子',
+  'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.':
+    '暗棋的炮可以像其他棋子一样走一格，翻翻棋的炮却不能：炮只能通过吃子来移动。没有子可打的炮只能留在原地，受到威胁时也不能走到空格避险。',
+  'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.':
+    '找炮能打哪颗子时，沿着同一行或同一列，从炮往外看。遇到的第一颗子就是**炮架**，炮要跳过它。炮架可以是任何棋子：己方或对方、明子或暗子都行。炮架之后的下一颗子就是**目标**，距离多远都行，也不论大小。下图中，黑卒是炮架，炮可以吃掉它后面的将。',
+  'The ring marks the target.': '圆环表示目标。',
+  'The target must be a face-up enemy or a face-down piece of either color. If the next piece after the screen is a face-up piece of your own, there is no shot along that line. Only a cannon can capture a face-down piece, and the shot is a gamble, because it may be your own. Below, the red cannon from the opening deal shoots down, over the back beside it.':
+    '目标必须是已翻开的敌子，或任一颜色的暗子。如果炮架之后的下一颗子是已翻开的己方棋子，炮就不能沿这条线吃子。只有炮能打暗子，而打暗子是在赌，因为可能打中自己的子。下图中，开局布局里的红炮向下开火，跳过旁边的那颗暗子。',
+  'Before: the dots mark the cannon’s two shots.': '吃子前：圆点表示炮的两个可打目标。',
+  'After: the tint marks the shot.': '吃子后：底色标出这一步吃子。',
+  'The captured piece is turned face up as it leaves the board, so both players see its color and type. Here it was a black soldier, and Black loses its HP.':
+    '被吃的棋子离开棋盘时会翻开，双方都能看到它的颜色和种类。这里被吃的是黑卒，所以扣黑方的血。',
+  'Had it been a red piece, Red would have lost the HP instead. Pieces still face down on the board stay hidden from both players, even after the game ends.':
+    '如果打中的是红子，扣的就会是红方的血。棋盘上仍盖着的暗子，即使对局结束，也不会向任何一方揭示。',
+  Chases: '捉子',
+  'A chase is a step, with no flip and no capture, that ends next to a face-up enemy piece the moved piece could capture. A step that ends next to only stronger pieces or covered pieces is not a chase. Ending next to two pieces you could take is still one chase. Cannons never step, so they never chase.':
+    '捉子是指不翻子也不吃子、走完后落在一颗已翻开且能被自己吃掉的敌子旁边的一步。如果旁边只有比自己大的子或暗子，就不算捉子。走到两颗可吃的子旁边，也只算一次捉子。炮不能走空格，所以不会捉子。',
+  'Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either.':
+    '下图中，红马走到黑炮旁边算捉子。走到象旁边不算，因为马不能吃象；走到暗子旁边也不算。',
+  'Dots mark the horse’s steps.': '圆点表示马可走的位置。',
+  'You may chase four times in a row. The game does not offer a fifth chase in a row, so you pick another move instead; it is never an automatic loss. Below, a red chariot chases a black horse back and forth until it reaches the limit.':
+    '你可以连续捉子四次。游戏不会提供连续第五次捉子的走法，你必须改走别的着法，不会因此自动判负。下图中，红车来回追捉黑马，直到达到上限。',
+  'Crosses mark the steps the chase limit removes. The dot is the chariot’s one step left.':
+    '叉号表示因捉子上限而被禁止的走法。圆点表示车仅剩的一步走法。',
+  'A step that is not a chase resets your own count. A flip or a capture by either player resets both counts. Your opponent’s steps do not reset yours. If every move you have left would be a fifth chase, you have no legal move and lose.':
+    '走一步不捉子的棋，会把自己的捉子计数归零。任一方翻子或吃子，会把双方的计数都归零。对方走子不会把你的计数归零。如果剩下的每一步都会是连续第五次捉子，你就没有合法着法，判负。',
+  'Reduce your opponent to zero HP to win. A player with no legal move on their turn loses. A flip is a legal move while any covered piece remains.':
+    '把对方的血量打到零就获胜。轮到自己却没有合法着法的一方判负。只要还有暗子，翻子就是合法着法。',
+  'After 30 plies without a flip or capture, the game is a draw. A ply is one player’s turn. Any flip or capture resets this count, including a cannon’s capture of a covered friendly piece.':
+    '连续 30 步没有翻子或吃子，就判和棋。这里一步指一方的一回合。任何翻子或吃子都会把这个计数归零，包括炮吃掉己方暗子。',
+  'HP is checked before the draw count. The draw count is checked before the no-legal-move loss. At 30 quiet plies, the game draws even if a player cannot move.':
+    '先检查血量，再检查和棋计数，最后才检查是否因没有合法着法而判负。连续 30 步没有翻子或吃子时，即使有一方无法走棋，也判和棋。',
+  'How Fanfanqi differs from banqi': '翻翻棋与暗棋的区别',
+  'The rank ladder and the one-square steps are the same as in [banqi](/rules/banqi). Six rules differ:':
+    '大小顺序和每次走一格的走法都与[暗棋](/rules/banqi)相同。以下六条规则不同：',
+  Colors: '颜色',
+  'Set by the first flip': '由第一次翻子决定',
+  'Fixed by seat: the first player is Red': '按座位固定：先手执红',
+  Start: '开局',
+  'All 32 pieces face down': '32 颗棋子全部盖着',
+  'Four face up, 28 face down': '四颗明子，28 颗暗子',
+  'Steps one square, or captures over a screen': '走一格，或隔炮架吃子',
+  'Only captures, and may shoot a face-down piece of either color':
+    '只能吃子，可以打任一颜色的暗子',
+  'Your opponent has no legal move': '对方没有合法着法',
+  'Your opponent reaches zero HP or has no legal move': '对方血量降到零，或没有合法着法',
+  '60 plies with no flip or capture, or a threefold repetition':
+    '连续 60 步无翻子或吃子，或三次重复局面',
+  '30 plies with no flip or capture': '连续 30 步无翻子或吃子',
+  'A chase may not repeat a position a third time': '不得以捉子使同一局面第三次出现',
+  'At most four chases in a row': '最多连续捉子四次',
+  'Which player is Red?': '哪一方执红？',
+  'The player who moves first. Colors belong to the seats from the start, so flipping a black piece on your first turn does not make you Black.':
+    '先走的一方。双方座位从开局就有固定颜色，所以第一步翻出黑子，也不会让你变成黑方。',
+  'Can I flip one of my opponent’s pieces?': '可以翻对方的棋子吗？',
+  'Yes. You may flip any face-down piece. If it turns out to be your opponent’s, it stays theirs and they can move it on their turn.':
+    '可以。你可以翻任何一颗暗子。如果翻出来是对方的，它仍归对方，对方在自己的回合就能走它。',
+  'Can a cannon move without capturing?': '炮可以不吃子只移动吗？',
+  'No. A cannon only moves by capturing over a screen. When it has no shot, it cannot move at all.':
+    '不行。炮只能隔着炮架吃子来移动。没有子可打时，炮完全不能动。',
+  'What happens if my cannon captures my own face-down piece?': '如果炮吃掉了己方暗子，会怎样？',
+  'You lose that piece’s HP: 30 for your own general. The capture still counts as progress, so it resets the 30-ply draw count.':
+    '扣的是你自己的血，打中己方的将就扣 30 点。这次吃子仍算有进展，会把无翻子、无吃子的 30 步和棋计数归零。',
+  'Play Fanfanqi': '来下翻翻棋',
+  'The black horse has two free squares. The red chariot outranks it, so any step that ends beside the horse is a chase.':
+    '黑马有两个空格可走。红车比马大，所以只要走到马旁边就算捉子。',
+  'Chase 1.': '第 1 次捉子。',
+  'The horse runs to its other square.': '马逃到另一个格子。',
+  'Chase 2.': '第 2 次捉子。',
+  'The horse runs back.': '马逃回原来的格子。',
+  'Chase 3.': '第 3 次捉子。',
+  'The horse runs again.': '马再次逃开。',
+  'Chase 4.': '第 4 次捉子。',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can still step away to the dot, or Red can flip a piece, which resets both counts.':
+    '红方已连续捉子四次，所以马旁边的两个走法都被打了叉。车仍可走到圆点处避开，红方也可以翻子，让双方的计数都归零。',
+  'RED SEES': '红方看到',
+  'BLACK SEES': '黑方看到',
+  'a black soldier was taken': '被吃的是黑卒',
+  'Black HP: 60 → 58': '黑方血量：60 → 58',
+  'WHAT EACH PLAYER SEES': '双方各自看到的信息',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
   'Training our own xiangqi net': '训练我们自己的象棋网络',
@@ -7201,6 +7326,130 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
+  'Fanfanqi Rules': '翻翻棋規則',
+  'Flip hidden pieces and race to zero HP.': '翻開暗子，把對方的血量打到零。',
+  'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
+    '翻翻棋在 4×8 的棋盤上進行，棋子暗置，雙方從 60 點血開始。了解大小順序、只能吃子的炮、各子扣血值、捉子上限與和棋規則。',
+  'Players learning Fanfanqi or comparing its HP rules with banqi.':
+    '想學翻翻棋，或想比較其血量規則與暗棋差異的玩家。',
+  'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.':
+    '開局有四顆明子。每回合翻開一顆暗子，或走一顆已翻開的己方棋子。',
+  'Captures follow a rank ladder. Cannons only capture and can take covered pieces of either color.':
+    '吃子按大小順序。炮只能吃子，還能打任一顏色的暗子。',
+  'Both players start with 60 HP. A captured piece costs its owner HP, even when the owner made the capture.':
+    '雙方各從 60 點血開始。棋子被吃時，扣的是該子所屬一方的血，即使是自己吃掉的。',
+  'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.':
+    '翻翻棋是一種以血量（HP）計分、對局更短的[暗棋](/rules/banqi)。暗子與大小順序讓每次翻子都很重要；每次吃子，扣的都是被吃棋子所屬一方的血。把對方的血量打到零就贏了。',
+  'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.':
+    '騰訊的《天天象棋》App 在 2016 年 7 月加入了以 60 點血計分的翻翻棋模式。Mistboard 採用自己的版本，與騰訊沒有任何關聯。',
+  'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up, showing whatever pieces the shuffle put there. The other 28 start face down.':
+    '棋盤有 4×8 格。每方各有一將、二士、二象、二車、二馬、二炮、五兵。把全部 32 顆棋子洗亂後鋪在棋盤上。四個固定格子上的棋子開局時就翻開，洗到什麼子就顯示什麼子，其餘 28 顆蓋著。',
+  'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.':
+    '紅方先走。雙方座位從開局就有固定顏色，翻子不會改變你的顏色。雙方都能看到還有哪些棋子未翻開，但不知道每一顆暗子具體是什麼。下圖是一盤棋第一步之前的佈局。',
+  'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or shoots with a face-up red cannon, like the one in this deal. Then Black moves, and the players alternate from there.':
+    '開局每一格都有子，所以第一步沒有棋子能走到空格。紅方可以翻一顆暗子，也可以用已翻開的紅炮吃子，就像這盤佈局裡的那顆炮。接著輪到黑方，之後雙方輪流走。',
+  'Turns and flips': '回合與翻子',
+  'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent.':
+    '輪到你時，翻開一顆暗子，或走一顆已翻開的己方棋子。翻子就用完這一回合。你可以翻任何一顆暗子，即使翻出來的是對方的棋子。',
+  'Steps and the rank ladder': '走法與大小順序',
+  'Every piece except the cannon moves one square up, down, left or right. It can step onto an empty square or capture a face-up enemy it outranks or matches. It cannot land on a covered piece or a friendly piece. There are no diagonal moves.':
+    '除炮以外，每種棋子都只能向上、下、左、右走一格。可以走到空格，也可以吃掉已翻開、與自己同級或比自己小的敵子。不能走到暗子或己方棋子所在的格子，也不能斜走。',
+  'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with three exceptions: a general cannot capture a soldier, a soldier can capture a general, and a cannon ignores rank when it captures (see [Cannons only capture](#cannons-only-capture)).':
+    '大小順序從大到小是**將 > 士 > 象 > 車 > 馬 > 炮 > 卒**。每種棋子可以吃同級或比自己小的子，但有三處例外：將不能吃兵，兵可以吃將，炮吃子時不論大小（見[炮只能吃子](#cannons-only-capture)）。',
+  'There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.':
+    '這裡沒有將軍一說。將被吃時，與其他棋子被吃一樣，按血量規則扣血。下圖中，兵可以吃旁邊的將，將卻不能吃兵。',
+  'The ring marks a capture; dots mark empty destinations.':
+    '圓環表示可吃的棋子；圓點表示可走的空格。',
+  'Dots mark empty destinations. The soldier has no capture ring.':
+    '圓點表示可走的空格。兵上沒有表示可吃的圓環。',
+  'HP and capture damage': '血量與吃子扣血',
+  'Both players start with **60 HP**. Each capture removes HP from the owner of the captured piece. The damage depends on that piece:':
+    '雙方各從 **60 點血**開始。每次吃子，扣的是被吃棋子所屬一方的血。扣多少取決於被吃的棋子：',
+  'Captured piece': '被吃的棋子',
+  'HP lost': '扣除血量',
+  'HP stops at zero, and a player at zero loses. Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.':
+    '血量最低為零，降到零的一方判負。每方十六顆棋子的扣血值合計為 100，而起始血量只有 60，所以還遠未被吃光，對局就會結束。丟將會一下扣掉起始血量的一半。',
+  'Cannons only capture': '炮只能吃子',
+  'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.':
+    '暗棋的炮可以像其他棋子一樣走一格，翻翻棋的炮卻不能：炮只能透過吃子來移動。沒有子可打的炮只能留在原地，受到威脅時也不能走到空格避險。',
+  'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.':
+    '找炮能打哪顆子時，沿著同一行或同一列，從炮往外看。遇到的第一顆子就是**炮架**，炮要跳過它。炮架可以是任何棋子：己方或對方、明子或暗子都行。炮架之後的下一顆子就是**目標**，距離多遠都行，也不論大小。下圖中，黑卒是炮架，炮可以吃掉它後面的將。',
+  'The ring marks the target.': '圓環表示目標。',
+  'The target must be a face-up enemy or a face-down piece of either color. If the next piece after the screen is a face-up piece of your own, there is no shot along that line. Only a cannon can capture a face-down piece, and the shot is a gamble, because it may be your own. Below, the red cannon from the opening deal shoots down, over the back beside it.':
+    '目標必須是已翻開的敵子，或任一顏色的暗子。如果炮架之後的下一顆子是已翻開的己方棋子，炮就不能沿這條線吃子。只有炮能打暗子，而打暗子是在賭，因為可能打中自己的子。下圖中，開局佈局裡的紅炮向下開火，跳過旁邊的那顆暗子。',
+  'Before: the dots mark the cannon’s two shots.': '吃子前：圓點表示炮的兩個可打目標。',
+  'After: the tint marks the shot.': '吃子後：底色標出這一步吃子。',
+  'The captured piece is turned face up as it leaves the board, so both players see its color and type. Here it was a black soldier, and Black loses its HP.':
+    '被吃的棋子離開棋盤時會翻開，雙方都能看到它的顏色和種類。這裡被吃的是黑卒，所以扣黑方的血。',
+  'Had it been a red piece, Red would have lost the HP instead. Pieces still face down on the board stay hidden from both players, even after the game ends.':
+    '如果打中的是紅子，扣的就會是紅方的血。棋盤上仍蓋著的暗子，即使對局結束，也不會向任何一方揭示。',
+  Chases: '捉子',
+  'A chase is a step, with no flip and no capture, that ends next to a face-up enemy piece the moved piece could capture. A step that ends next to only stronger pieces or covered pieces is not a chase. Ending next to two pieces you could take is still one chase. Cannons never step, so they never chase.':
+    '捉子是指不翻子也不吃子、走完後落在一顆已翻開且能被自己吃掉的敵子旁邊的一步。如果旁邊只有比自己大的子或暗子，就不算捉子。走到兩顆可吃的子旁邊，也只算一次捉子。炮不能走空格，所以不會捉子。',
+  'Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either.':
+    '下圖中，紅馬走到黑炮旁邊算捉子。走到象旁邊不算，因為馬不能吃象；走到暗子旁邊也不算。',
+  'Dots mark the horse’s steps.': '圓點表示馬可走的位置。',
+  'You may chase four times in a row. The game does not offer a fifth chase in a row, so you pick another move instead; it is never an automatic loss. Below, a red chariot chases a black horse back and forth until it reaches the limit.':
+    '你可以連續捉子四次。遊戲不會提供連續第五次捉子的走法，你必須改走別的著法，不會因此自動判負。下圖中，紅車來回追捉黑馬，直到達到上限。',
+  'Crosses mark the steps the chase limit removes. The dot is the chariot’s one step left.':
+    '叉號表示因捉子上限而被禁止的走法。圓點表示車僅剩的一步走法。',
+  'A step that is not a chase resets your own count. A flip or a capture by either player resets both counts. Your opponent’s steps do not reset yours. If every move you have left would be a fifth chase, you have no legal move and lose.':
+    '走一步不捉子的棋，會把自己的捉子計數歸零。任一方翻子或吃子，會把雙方的計數都歸零。對方走子不會把你的計數歸零。如果剩下的每一步都會是連續第五次捉子，你就沒有合法著法，判負。',
+  'Reduce your opponent to zero HP to win. A player with no legal move on their turn loses. A flip is a legal move while any covered piece remains.':
+    '把對方的血量打到零就獲勝。輪到自己卻沒有合法著法的一方判負。只要還有暗子，翻子就是合法著法。',
+  'After 30 plies without a flip or capture, the game is a draw. A ply is one player’s turn. Any flip or capture resets this count, including a cannon’s capture of a covered friendly piece.':
+    '連續 30 步沒有翻子或吃子，就判和棋。這裡一步指一方的一回合。任何翻子或吃子都會把這個計數歸零，包括炮吃掉己方暗子。',
+  'HP is checked before the draw count. The draw count is checked before the no-legal-move loss. At 30 quiet plies, the game draws even if a player cannot move.':
+    '先檢查血量，再檢查和棋計數，最後才檢查是否因沒有合法著法而判負。連續 30 步沒有翻子或吃子時，即使有一方無法走棋，也判和棋。',
+  'How Fanfanqi differs from banqi': '翻翻棋與暗棋的區別',
+  'The rank ladder and the one-square steps are the same as in [banqi](/rules/banqi). Six rules differ:':
+    '大小順序和每次走一格的走法都與[暗棋](/rules/banqi)相同。以下六條規則不同：',
+  Colors: '顏色',
+  'Set by the first flip': '由第一次翻子決定',
+  'Fixed by seat: the first player is Red': '按座位固定：先手執紅',
+  Start: '開局',
+  'All 32 pieces face down': '32 顆棋子全部蓋著',
+  'Four face up, 28 face down': '四顆明子，28 顆暗子',
+  'Steps one square, or captures over a screen': '走一格，或隔炮架吃子',
+  'Only captures, and may shoot a face-down piece of either color':
+    '只能吃子，可以打任一顏色的暗子',
+  'Your opponent has no legal move': '對方沒有合法著法',
+  'Your opponent reaches zero HP or has no legal move': '對方血量降到零，或沒有合法著法',
+  '60 plies with no flip or capture, or a threefold repetition':
+    '連續 60 步無翻子或吃子，或三次重複局面',
+  '30 plies with no flip or capture': '連續 30 步無翻子或吃子',
+  'A chase may not repeat a position a third time': '不得以捉子使同一局面第三次出現',
+  'At most four chases in a row': '最多連續捉子四次',
+  'Which player is Red?': '哪一方執紅？',
+  'The player who moves first. Colors belong to the seats from the start, so flipping a black piece on your first turn does not make you Black.':
+    '先走的一方。雙方座位從開局就有固定顏色，所以第一步翻出黑子，也不會讓你變成黑方。',
+  'Can I flip one of my opponent’s pieces?': '可以翻對方的棋子嗎？',
+  'Yes. You may flip any face-down piece. If it turns out to be your opponent’s, it stays theirs and they can move it on their turn.':
+    '可以。你可以翻任何一顆暗子。如果翻出來是對方的，它仍歸對方，對方在自己的回合就能走它。',
+  'Can a cannon move without capturing?': '炮可以不吃子只移動嗎？',
+  'No. A cannon only moves by capturing over a screen. When it has no shot, it cannot move at all.':
+    '不行。炮只能隔著炮架吃子來移動。沒有子可打時，炮完全不能動。',
+  'What happens if my cannon captures my own face-down piece?': '如果炮吃掉了己方暗子，會怎樣？',
+  'You lose that piece’s HP: 30 for your own general. The capture still counts as progress, so it resets the 30-ply draw count.':
+    '扣的是你自己的血，打中己方的將就扣 30 點。這次吃子仍算有進展，會把無翻子、無吃子的 30 步和棋計數歸零。',
+  'Play Fanfanqi': '來下翻翻棋',
+  'The black horse has two free squares. The red chariot outranks it, so any step that ends beside the horse is a chase.':
+    '黑馬有兩個空格可走。紅車比馬大，所以只要走到馬旁邊就算捉子。',
+  'Chase 1.': '第 1 次捉子。',
+  'The horse runs to its other square.': '馬逃到另一個格子。',
+  'Chase 2.': '第 2 次捉子。',
+  'The horse runs back.': '馬逃回原來的格子。',
+  'Chase 3.': '第 3 次捉子。',
+  'The horse runs again.': '馬再次逃開。',
+  'Chase 4.': '第 4 次捉子。',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can still step away to the dot, or Red can flip a piece, which resets both counts.':
+    '紅方已連續捉子四次，所以馬旁邊的兩個走法都被打了叉。車仍可走到圓點處避開，紅方也可以翻子，讓雙方的計數都歸零。',
+  'RED SEES': '紅方看到',
+  'BLACK SEES': '黑方看到',
+  'a black soldier was taken': '被吃的是黑卒',
+  'Black HP: 60 → 58': '黑方血量：60 → 58',
+  'WHAT EACH PLAYER SEES': '雙方各自看到的資訊',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
   'Training our own xiangqi net': '訓練我們自己的象棋網路',
