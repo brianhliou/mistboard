@@ -36,8 +36,8 @@ IDS = {
     'jieqi-new': 'jq_a9840ec7-12a0-4f81-8b00-42d07934038e',
 }
 SPECS = {
-    'fog': dict(binary=str(TOOLS / 'pikafish-6a59ee2f/src/pikafish'), version='6a59ee2f',
-                net=str(TOOLS / 'pikafish-6a59ee2f/src/pikafish.nnue'), model='uci-wdl',
+    'fog': dict(binary=str(TOOLS / 'pikafish-6a59ee2f-cc0/src/pikafish'), version='6a59ee2f-cc0@c07e94a5',
+                net=str(TOOLS / 'pikafish-6a59ee2f-cc0/src/xiangqi-c07e94a5c7cb.nnue'), model='uci-wdl',
                 options=['UCI_ShowWDL value true']),
     'banqi': dict(binary=str(WORK / 'banqi-target/release/banqi-engine'), version='0.3.0@45f0fdea',
                   net=str(Path.home() / 'projects/misty-banqi-wt-net/nets/misty-banqi-0.3.0.bqnn'),

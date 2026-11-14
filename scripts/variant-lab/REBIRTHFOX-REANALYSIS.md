@@ -10,8 +10,8 @@ Expected scores below use each engine’s native conversion. “pp” means perc
 - **holds — Jieqi: the g1 elephant reveal helped Red by about 7 points.** Ply 47: expected 87.0%, realized 91.9%; reveal effect 4.9 pp.
 - **changes — Duck: Black was 79% before move 18.** Before ply 36, Black 90.5%; site curve 65.7%. Budget 50,000,000.
 - **changes — Duck: 13 general shuffles from moves 39–51; Red 51% → 70%.** Red 48.3% → 90.5% at Black-to-move indices 77 and 103; includes Red replies. Site curve 48.2% → 64.4%. The move count is unchanged.
-- **changes — Fog: d2-d9 took Red 58% → 9%.** Ply 11: 70.3% → 0.0%; best b1a3. Site curve 58.1% → 8.3%.
-- **changes — Fog: Black’s second move was ??, 55% → 23%.** Ply 4: 59.8% → 0.0%; best h6h1. Site curve 55.6% → 24.2%.
+- **changes — Fog: d2-d9 took Red 58% → 9%.** Ply 11: 55.9% → 0.0%; best g4g5. Site curve 54.0% → 14.2%.
+- **changes — Fog: Black’s second move was ??, 55% → 23%.** Ply 4: 57.1% → 1.2%; best h6h1. Site curve 54.6% → 32.1%.
 
 The article and study script were not edited. The JSON retains native scores, raw exact UCI lines, budgets, preferred moves, pre-reveal costs, luck, and the site’s separate historical win-curve conversion. A curve-only difference is not evidence of a changed move assessment.
 
@@ -21,17 +21,18 @@ Selection: the three largest positive costs for each side, plus every strict cro
 
 ### fog — `dxq_cfa3ee3a-a688-4338-a626-e6c923b65bbb`
 
-6a59ee2f; 20,000,000 requested nodes per search. Brian: Black.
+6a59ee2f-cc0@c07e94a5; 20,000,000 requested nodes per search. Brian: Black.
 
 | Ply | Side | Played | Before → after | Cost | Engine’s choice |
 |---:|---|---|---|---:|---|
-| 1 | red | i1i2 | 52.2% → 31.9% | 20.3 pp | g4g5 |
-| 2 | black | h8h6 | 68.0% → 43.6% | 24.4 pp | h8h1 |
-| 3 | red | i2d2 | 56.4% → 40.2% | 16.2 pp | h1g3 |
-| 4 | black | h6i6 | 59.8% → 0.0% | 59.8 pp | h6h1 |
-| 5 | red | b3e3 | 100.0% → 58.6% | 41.3 pp | h3h6 |
-| 6 | black | c10e8 | 41.4% → 0.0% | 41.4 pp | h10g8 |
-| 11 | red | d2d9 | 70.3% → 0.0% | 70.3 pp | b1a3 |
+| 1 | red | i1i2 | 52.2% → 41.9% | 10.3 pp | c4c5 |
+| 2 | black | h8h6 | 58.1% → 45.2% | 12.8 pp | h8h1 |
+| 3 | red | i2d2 | 54.8% → 42.9% | 11.8 pp | h1g3 |
+| 4 | black | h6i6 | 57.1% → 1.2% | 55.9 pp | h6h1 |
+| 5 | red | b3e3 | 98.8% → 58.7% | 40.1 pp | h3h6 |
+| 6 | black | c10e8 | 41.3% → 1.8% | 39.5 pp | h10g8 |
+| 7 | red | h3h5 | 98.2% → 63.9% | 34.3 pp | h3h6 |
+| 11 | red | d2d9 | 55.9% → 0.0% | 55.9 pp | g4g5 |
 
 ### banqi — `bq_6f89b56d-39d1-42ba-a39c-a413babc4807`
 
@@ -54,7 +55,7 @@ Selection: the three largest positive costs for each side, plus every strict cro
 
 | Ply | Move | 10-14 before → expected | New before → expected | New best |
 |---:|---|---|---|---|
-| 15 | @e1 | 45.9% → 47.8% | 51.3% → 48.0% | @e3 |
+| 15 | @e1 | 51.3% → 48.0% | 51.3% → 48.0% | @e3 |
 
 ### jieqi — `jq_8f4e0d9c-01be-4480-a84e-3b469fedd28f`
 
@@ -74,8 +75,8 @@ AB-JChess-20261031@efc83867; 20,000,000 requested nodes per search. Brian: Black
 
 | Ply | Move | 10-14 before → expected | New before → expected | New best |
 |---:|---|---|---|---|
-| 44 | f6f3 | 51.7% → 24.4% | 54.1% → 13.7% | f6f2 |
-| 47 | g1e3 | 82.7% → 84.5% | 87.0% → 87.0% | g1e3 |
+| 44 | f6f3 | 54.8% → 10.6% | 54.1% → 13.7% | f6f2 |
+| 47 | g1e3 | 90.0% → 90.0% | 87.0% → 87.0% | g1e3 |
 
 ### duck — `dkx_b076e2a8-60ee-4443-99aa-b69a7b584ec1`
 
@@ -121,7 +122,7 @@ A turning point “survives” only if it is selected again after re-ranking the
 | duck / black | 300000 → 50000000 | 4 of 9 | 1 of 9 | 9 of 9 |
 | duck / black | 5000000 → 50000000 | 5 of 9 | 2 of 9 | 9 of 9 |
 
-Fog information boundary: Pikafish and mover-view Misty share **4 of 9** Pikafish turning points. Misty selected 7; common plies: [1, 2, 3, 6]. Misty has 48/48 decisions.
+Fog information boundary: Pikafish and mover-view Misty share **5 of 10** Pikafish turning points. Misty selected 8; common plies: [1, 2, 3, 4, 6]. Misty has 48/48 decisions.
 
 ## Known limits
 

@@ -21,8 +21,8 @@ ap.add_argument('--limit', type=int, default=48)
 args = ap.parse_args()
 engine_dir = Path.home() / 'projects/mistboard-engine'
 sys.path.insert(0, str(engine_dir/'src'))
-os.environ['FOW_XIANGQI_PIKAFISH'] = str(Path.home()/'projects/tools/pikafish-6a59ee2f/src/pikafish')
-os.environ['FOW_XIANGQI_PIKAFISH_NET'] = str(Path.home()/'projects/tools/pikafish-6a59ee2f/src/pikafish.nnue')
+os.environ['FOW_XIANGQI_PIKAFISH'] = str(Path.home()/'projects/tools/pikafish-6a59ee2f-cc0/src/pikafish')
+os.environ['FOW_XIANGQI_PIKAFISH_NET'] = str(Path.home()/'projects/tools/pikafish-6a59ee2f-cc0/src/xiangqi-c07e94a5c7cb.nnue')
 os.environ['FOW_XIANGQI_SHROUD_BLOCKERS'] = '1'
 spec = importlib.util.spec_from_file_location('rebirthfox_live_worker',engine_dir/'scripts/live_move_worker.py')
 worker = importlib.util.module_from_spec(spec); sys.modules[spec.name] = worker; spec.loader.exec_module(worker)
