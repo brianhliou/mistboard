@@ -54,6 +54,9 @@ export const ZH_HANT_ACCOUNT = {
   'account.settingsGameBehavior': '對局行為',
   'account.premoves': '預走',
   'account.premovesHelp': '輪到你時執行預先準備的著法，前提是該著法仍然合法。',
+  'account.confirmCorrespondenceMoves': '確認通信對局著法',
+  'account.confirmCorrespondenceMovesHelp':
+    '預覽通信對局的每步著法，確認後再傳送。計時對局立即傳送。',
   'account.confirmGameActions': '確認認輸和中止',
   'account.confirmGameActionsHelp': '透過對局操作結束對局前先詢問確認。',
   'account.forumAutoTranslate': '論壇貼文顯示為譯文',

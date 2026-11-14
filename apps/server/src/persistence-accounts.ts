@@ -36,6 +36,7 @@ export type AccountPreferenceKey =
   | 'lowTimeSound'
   | 'premoves'
   | 'confirmGameActions'
+  | 'confirmCorrespondenceMoves'
   | 'inboxBell'
   | 'inboxEmail'
   | 'correspondenceBell'
@@ -51,6 +52,7 @@ export type AccountPreferences = {
   lowTimeSound: boolean;
   premoves: boolean;
   confirmGameActions: boolean;
+  confirmCorrespondenceMoves: boolean;
   inboxBell: boolean;
   inboxEmail: boolean;
   correspondenceBell: boolean;
@@ -77,6 +79,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   lowTimeSound: true,
   premoves: true,
   confirmGameActions: true,
+  confirmCorrespondenceMoves: true,
   inboxBell: true,
   inboxEmail: true,
   correspondenceBell: true,
@@ -409,6 +412,10 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       : DEFAULT_ACCOUNT_PREFERENCES.clockTenths,
     lowTimeSound: booleanOrDefault(parsed.lowTimeSound, DEFAULT_ACCOUNT_PREFERENCES.lowTimeSound),
     premoves: booleanOrDefault(parsed.premoves, DEFAULT_ACCOUNT_PREFERENCES.premoves),
+    confirmCorrespondenceMoves: booleanOrDefault(
+      parsed.confirmCorrespondenceMoves,
+      DEFAULT_ACCOUNT_PREFERENCES.confirmCorrespondenceMoves,
+    ),
     confirmGameActions: booleanOrDefault(
       parsed.confirmGameActions,
       DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,

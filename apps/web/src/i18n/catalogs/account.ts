@@ -65,6 +65,9 @@ export const EN_ACCOUNT = {
   'account.settingsGameBehavior': 'Game behavior',
   'account.premoves': 'Premoves',
   'account.premovesHelp': 'Play a prepared move when your turn begins, if it is still legal.',
+  'account.confirmCorrespondenceMoves': 'Confirm correspondence moves',
+  'account.confirmCorrespondenceMovesHelp':
+    'Preview each correspondence move, then confirm to send it. Timed games send immediately.',
   'account.confirmGameActions': 'Confirm game-ending actions',
   'account.confirmGameActionsHelp':
     'Ask before resigning, aborting, or playing a move that loses by repetition.',

@@ -33,7 +33,8 @@ let pendingPreview: { move: GomokuMove; id: string; ply: number; color: GomokuCo
 function confirmsTouchMoves(): boolean {
   return (
     window.matchMedia?.('(pointer: coarse)').matches === true &&
-    readDisplayPreferences().confirmMovesOnTouch
+    readDisplayPreferences().confirmMovesOnTouch &&
+    core?.state.timeControl?.daysPerMove === undefined
   );
 }
 

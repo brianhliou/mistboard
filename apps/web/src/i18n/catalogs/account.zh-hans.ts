@@ -54,6 +54,9 @@ export const ZH_HANS_ACCOUNT = {
   'account.settingsGameBehavior': '对局行为',
   'account.premoves': '预走',
   'account.premovesHelp': '轮到你时执行预先准备的着法，前提是该着法仍然合法。',
+  'account.confirmCorrespondenceMoves': '确认通信对局着法',
+  'account.confirmCorrespondenceMovesHelp':
+    '预览通信对局的每步着法，确认后再发送。计时对局立即发送。',
   'account.confirmGameActions': '确认认输和中止',
   'account.confirmGameActionsHelp': '通过对局操作结束对局前先询问确认。',
   'account.forumAutoTranslate': '论坛帖子显示为译文',

@@ -781,6 +781,13 @@ function buildGameBehaviorSettings(user: AuthUser, locale: Locale = currentLocal
     ),
     buildBooleanAccountPreference(
       user,
+      'confirmCorrespondenceMoves',
+      t('account.confirmCorrespondenceMoves', {}, locale),
+      t('account.confirmCorrespondenceMovesHelp', {}, locale),
+      locale,
+    ),
+    buildBooleanAccountPreference(
+      user,
       'confirmGameActions',
       t('account.confirmGameActions', {}, locale),
       t('account.confirmGameActionsHelp', {}, locale),
@@ -795,7 +802,11 @@ function buildBooleanAccountPreference(
   user: AuthUser,
   id: Extract<
     AccountPreferenceId,
-    'lowTimeSound' | 'premoves' | 'confirmGameActions' | 'forumAutoTranslate'
+    | 'lowTimeSound'
+    | 'premoves'
+    | 'confirmGameActions'
+    | 'confirmCorrespondenceMoves'
+    | 'forumAutoTranslate'
   >,
   title: string,
   help: string,

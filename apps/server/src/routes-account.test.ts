@@ -121,6 +121,7 @@ definePersistenceTests('account routes', () => {
     for (const body of [
       { clockTenths: 'always' },
       { premoves: false },
+      { confirmCorrespondenceMoves: false },
       { inboxEmail: false },
       { correspondenceDeadlineEmail: false },
       { correspondenceStartEmail: false },
@@ -142,6 +143,7 @@ definePersistenceTests('account routes', () => {
       lowTimeSound: true,
       premoves: false,
       confirmGameActions: true,
+      confirmCorrespondenceMoves: false,
       inboxBell: true,
       inboxEmail: false,
       correspondenceBell: true,
