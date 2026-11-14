@@ -52,7 +52,7 @@ import {
   type VariantTenantRegistration,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { listedOnSurface, listWatchChannels } from './watch-channels.js';
+import { isUnlistedFFQBanqiGame, listedOnSurface, listWatchChannels } from './watch-channels.js';
 import {
   hasLiveWatchPayloadBuilder,
   lastMoveAt,
@@ -290,6 +290,14 @@ function gameFromTenantRoom(
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;
+  if (
+    isUnlistedFFQBanqiGame({
+      roomId: room.id,
+      gameSpecId: registration.gameSpecId,
+      timeControl: projection.timeControl,
+    })
+  )
+    return null;
   if (!isGameInPlay(room as Parameters<typeof isGameInPlay>[0], now)) return null;
   const seats = projection.seats ?? {};
   const players: CurrentGamePlayer[] = [];

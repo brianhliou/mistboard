@@ -11,7 +11,8 @@ import { ffqBanqiEngineAvailable, isFFQBanqiEngineClientId } from './ffq-banqi-e
 import { type FFQBanqiRuntimeRoom, ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import * as persistence from './persistence.js';
-import { writeJson } from './routes/lib.js';
+import { isAllowedFullTimeControl, writeJson } from './routes/lib.js';
+import { resolveBotRoomRequest } from './routes/rooms.js';
 import { scheduleFFQBanqiEngineMove } from './server-ffq-banqi-engine.js';
 import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
@@ -64,7 +65,7 @@ export function getOrLoadFFQBanqiRoom(roomId: string) {
   return getOrLoadTenantRoom(ffqBanqiTenant, ffqBanqiRooms, roomId);
 }
 
-// Engine IDs seat native bots; bot-profile requests and rated games stay closed.
+// Native engines and public bot profiles share the same casual-only factory.
 const route = createTenantRoomsRoute<
   TenantCreateHttpContext & { accountUser: persistence.UserAccount | null },
   BanqiColor | 'random',
@@ -139,20 +140,46 @@ registerVariantTenant({
         writeJson(response, 404, { error: 'unknown_game_spec' });
         return;
       }
-      if (body.botId !== undefined) {
-        writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
-        return;
-      }
+      const resolved = await resolveBotRoomRequest(response, {
+        ...body,
+        gameSpecId: FFQ_BANQI_SPEC_ID,
+        // The FFQ route validates its own native tier selection below. The
+        // shared bot resolver only selects the profile's default engine.
+        ...(body.botId !== undefined ? { engineId: undefined } : {}),
+      });
+      if (!resolved) return;
       await route.handleCreate(
         { ...ctx, accountUser: account },
         response,
-        { ...body, gameSpecId: FFQ_BANQI_SPEC_ID },
+        {
+          ...resolved,
+          ...(body.botId !== undefined && body.engineId !== undefined
+            ? { engineId: body.engineId }
+            : {}),
+        },
         account,
       );
     },
   },
-  watch: null,
-  lobby: null,
+  watch: {
+    channelId: FFQ_BANQI_SPEC_ID,
+    family: 'xiangqi',
+    label: 'Fanfanqi',
+    legacyVariants: [FFQ_BANQI_SPEC_ID],
+  },
+  get lobby() {
+    if (!ffqBanqiAdmits(null)) return null;
+    return {
+      supportsRated: false,
+      allowsTimeControl: (timeControl: RoomTimeControl) =>
+        timeControl.daysPerMove === undefined && isAllowedFullTimeControl(timeControl),
+      createRoom: async (timeControl: RoomTimeControl | undefined) => {
+        const created = await createFFQBanqiRoom(null, timeControl, 'random');
+        if (!created.ok) throw new Error(`ffq_banqi_room_create_failed:${created.error}`);
+        return { id: created.room.id, region: 'global' };
+      },
+    };
+  },
   reviewRouteBase: '/ffq-banqi/game',
   export: null,
   card: null,

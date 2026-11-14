@@ -28,7 +28,12 @@ import {
   type TenantManagedRoom,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { createTenantRuntimeRoomFromEvents, replayTenantEvents } from './variant-tenant/runtime.js';
+import {
+  createTenantRuntimeRoomFromEvents,
+  replayTenantEvents,
+  tenantRoomIsLobbyMatch,
+  tenantSnapshotPayload,
+} from './variant-tenant/runtime.js';
 import { clearTenantRuntimeTimers } from './variant-tenant/ws.js';
 
 const FLAG = 'MISTBOARD_FFQ_BANQI_ENABLED';
@@ -235,11 +240,25 @@ for (const { surface, flag } of launches) {
           assert.equal(observer.seat, 'spectator');
           assert.doesNotMatch(JSON.stringify(result.body), /setup|deal|seed/);
         } else assert.deepEqual(result.body, { error: 'ffq_banqi_disabled' });
-        const lobby = await post('/api/lobby', selectors, headers(), refusedCtx);
-        assert.equal(lobby.status, admitted ? 501 : 404);
-        assert.deepEqual(lobby.body, {
-          error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
-        });
+        const publicLobby = admitted && surface === 'casual';
+        const lobby = await post(
+          '/api/lobby',
+          selectors,
+          headers(),
+          publicLobby
+            ? {
+                ...CTX,
+                lobbyQueue: [],
+                lobbyTickets: new Map(),
+              }
+            : refusedCtx,
+        );
+        assert.equal(lobby.status, publicLobby ? 202 : admitted ? 501 : 404);
+        if (publicLobby) assert.equal(lobby.body.status, 'waiting');
+        else
+          assert.deepEqual(lobby.body, {
+            error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
+          });
       }
       // PvE follows live admission; bot games stay casual.
       for (const preferredColor of ['red', 'black'] as const) {
@@ -298,18 +317,21 @@ for (const { surface, flag } of launches) {
       for (const selectors of CONFLICTS) {
         for (const path of ['/api/rooms', '/api/lobby'] as const) {
           const result = await post(path, selectors, headers(), refusedCtx);
-          assert.equal(result.status, admitted && path === '/api/lobby' ? 501 : 404);
+          assert.equal(
+            result.status,
+            admitted && surface === 'hidden' && path === '/api/lobby' ? 501 : 404,
+          );
           assert.equal(
             result.body.error,
             !admitted
               ? 'ffq_banqi_disabled'
-              : path === '/api/lobby'
+              : surface === 'hidden' && path === '/api/lobby'
                 ? 'ffq_banqi_unsupported_surface'
                 : 'unknown_game_spec',
           );
         }
       }
-      for (const surface of [{ rated: true }, { botId: 'misty' }]) {
+      for (const surface of [{ rated: true }]) {
         const result = await post('/api/rooms', { gameSpecId: 'ffq-banqi', ...surface }, headers());
         assert.equal(result.status, admitted ? 501 : 404);
         assert.equal(
@@ -454,3 +476,45 @@ for (const role of [null, 'player', 'admin'] as const) {
     assert.deepEqual(create.body, { error: 'ffq_banqi_unsupported_surface' });
   });
 }
+
+test('FFQ guest casual lobby matches only after launch and never accepts rated or correspondence', async (t) => {
+  fixture(t, 'true', null, 'casual');
+  const spec = gameSpecForId('ffq-banqi');
+  const tc = { initialMs: 180_000, incrementMs: 2_000 };
+  const ctx = { ...CTX, lobbyQueue: [], lobbyTickets: new Map() } as HttpApiContext;
+  const postSeek = async (_ctx: HttpApiContext, gameSpecId: string, extra: object = {}) =>
+    (await post('/api/lobby', { gameSpecId, timeControl: tc, ...extra }, {}, ctx)).body;
+  spec.publicSurface = 'casual';
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+  const seek = await postSeek(ctx, spec.id);
+  assert.equal(seek.status, 'waiting');
+  const match = await postSeek(ctx, spec.id);
+  assert.equal(match.status, 'matched');
+  const room = ffqBanqiRooms.get(match.roomId as string);
+  assert.ok(room);
+  assert.equal(tenantRoomIsLobbyMatch(room), true);
+  assert.equal(room.rated, false);
+  assert.equal(room.projection.rated, false);
+  const snapshot = tenantSnapshotPayload(ffqBanqiTenant, room, {
+    id: 'guest',
+    seat: 'spectator',
+    solo: false,
+  });
+  assert.doesNotMatch(JSON.stringify({ seek, match, snapshot }), /"(?:setup|deal|seed)"/);
+  assert.equal(ctx.lobbyQueue.length, 0);
+  for (const extra of [
+    { rated: true },
+    { mode: 'correspondence', daysPerMove: 3 },
+    { timeControl: { initialMs: 259_200_000, incrementMs: 0, daysPerMove: 3 } },
+    { variant: 'banqi' },
+  ]) {
+    const refused = await postSeek(ctx, spec.id, extra);
+    assert.ok(refused.error, JSON.stringify(extra));
+    assert.equal(ctx.lobbyQueue.length, 0);
+  }
+  spec.publicSurface = 'hidden';
+  assert.deepEqual(await postSeek(ctx, spec.id), { error: 'ffq_banqi_disabled' });
+  spec.publicSurface = 'casual';
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'false';
+  assert.deepEqual(await postSeek(ctx, spec.id), { error: 'ffq_banqi_disabled' });
+});

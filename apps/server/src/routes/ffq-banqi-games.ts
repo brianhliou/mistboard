@@ -20,10 +20,16 @@ import {
   resolveFFQBanqiDecisions,
 } from '../ffq-banqi-decisions.js';
 import { ffqBanqiEngineAvailable } from '../ffq-banqi-engine.js';
+import { ffqBanqiRooms } from '../ffq-banqi-registration.js';
 import { ffqBanqiPostgameHistory } from '../ffq-banqi-replay.js';
-import { type FFQBanqiEvent, ffqBanqiTenant } from './../ffq-banqi-tenant.js';
+import {
+  type FFQBanqiEvent,
+  type FFQBanqiRuntimeRoom,
+  ffqBanqiTenant,
+} from './../ffq-banqi-tenant.js';
 import * as persistence from './../persistence.js';
 import { isTenantEventLog, replayTenantEvents } from './../variant-tenant/runtime.js';
+import { registerLiveWatchPayloadBuilder } from '../watch-live.js';
 import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
@@ -150,6 +156,57 @@ export function createFFQBanqiAnalysisRoutes(
 }
 
 const handleAnalysis = createFFQBanqiAnalysisRoutes();
+
+// Reuse the masked review projection for TV; no raw projection or setup is
+// serialized. The launch switch and live-only check also protect direct calls.
+export function ffqBanqiLiveWatchPayloadFor(
+  roomId: string,
+  room: Pick<FFQBanqiRuntimeRoom, 'id' | 'events' | 'projection'>,
+): Record<string, unknown> | null {
+  if (!ffqBanqiAdmits(null) || room.id !== roomId) return null;
+  const projection = room.projection;
+  if (
+    projection.state.status.type !== 'playing' ||
+    projection.timeControl?.daysPerMove !== undefined
+  )
+    return null;
+  if (!isTenantEventLog(ffqBanqiTenant, room.events, roomId)) return null;
+  const timeline = ffqBanqiPostgameTimeline(room.events);
+  const isEngine = ffqBanqiTenant.engine!.isEngineClientId;
+  return {
+    game: {
+      roomId,
+      variant: FFQ_BANQI_SPEC_ID,
+      mode: Object.values(projection.seats).some(isEngine) ? 'pve' : 'pvp',
+      result: 'in-progress',
+      termination: 'in-progress',
+      plyCount: timeline.filter((entry) => entry.type === 'move-played').length,
+      startedAt: new Date(room.events[0]!.at).toISOString(),
+      endedAt: null,
+      rated: false,
+      visibility: 'public',
+      initialMs: projection.timeControl?.initialMs ?? null,
+      incrementMs: projection.timeControl?.incrementMs ?? null,
+    },
+    state: {
+      status: projection.state.status,
+      moveNumber: projection.state.moveNumber,
+      ...(projection.clock ? { clock: projection.clock } : {}),
+      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+    },
+    timeline,
+    view: getFFQBanqiPlayerView(projection.state, 'observer'),
+    history: ffqBanqiPostgameHistory(room.events),
+  };
+}
+
+registerLiveWatchPayloadBuilder(FFQ_BANQI_SPEC_ID, async (roomId) => {
+  if (!ffqBanqiAdmits(null)) return null;
+  const room = ffqBanqiRooms.get(roomId);
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return ffqBanqiLiveWatchPayloadFor(roomId, room);
+});
 
 export async function tryHandle(
   _ctx: HttpApiContext,
