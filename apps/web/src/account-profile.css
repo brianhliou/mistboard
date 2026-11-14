@@ -2786,6 +2786,17 @@ button.profile-puzzle-row[aria-pressed="true"] {
   white-space: nowrap;
 }
 
+/* A champion's crown sits against the name; the crown, not the name, takes the
+   slack that pushes the playing mark and rating to the right edge. */
+.leaderboard-online-list .leaderboard-online-name:has(+ .champion-crowns) {
+  flex: 0 1 auto;
+}
+
+.leaderboard-online-list .leaderboard-online-name + .champion-crowns {
+  margin-right: auto;
+  margin-left: -4px;
+}
+
 .leaderboard-online-rating {
   display: inline-flex;
   align-items: center;
