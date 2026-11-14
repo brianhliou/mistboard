@@ -225,11 +225,16 @@ describe('tenant socket client', () => {
     expect(socket.sent).toEqual([]);
   });
 
-  it('puts Confirm and Cancel under the board, never beside it in the center row', () => {
-    // The live room layout (live-layout.ts): the center is a flex row, so a box
-    // placed next to .board-shell squeezes the board to half width on a phone.
-    document.body.innerHTML =
-      '<div class="review-shell__center"><div class="board-shell"><div class="board-stage"><div data-board></div></div></div></div>';
+  it('puts Confirm and Cancel after the status row, never in the board column', () => {
+    // The live room layout (live-layout.ts, game-table.ts): the board column is
+    // a flex row with a fixed height on a phone, so the box belongs in the
+    // game table, where the phone room orders it under the board.
+    document.body.innerHTML = `
+      <div class="review-shell__center"><div class="board-shell"><div class="board-stage"><div data-board></div></div></div></div>
+      <div class="round-table__box">
+        <div data-action-section class="round-table__row"></div>
+        <div data-game-controls-section class="round-table__row"></div>
+      </div>`;
     const made = makeClient();
     made.client.connect();
     const socket = lastSocket();
@@ -245,11 +250,23 @@ describe('tenant socket client', () => {
         legalMoves: [{ from: 'a1', to: 'a2' }],
       },
     });
+    // The player's own turn: the status row says what to do; no box, so the
+    // phone room keeps the height its board was sized for.
+    expect(document.querySelector('.correspondence-room')).toBeNull();
     made.client.send({ type: 'move', from: 'a1', to: 'a2' });
     const box = document.querySelector('.correspondence-room');
-    expect(box?.parentElement?.classList.contains('board-shell')).toBe(true);
-    expect(box?.previousElementSibling?.classList.contains('board-stage')).toBe(true);
+    expect(box?.previousElementSibling?.hasAttribute('data-action-section')).toBe(true);
     expect(document.querySelector('.review-shell__center')!.children).toHaveLength(1);
+    expect(document.querySelector('.board-shell')!.children).toHaveLength(1);
+    // Pending: just the two buttons and their label; the inbox link waits.
+    expect(box?.querySelector('a[href="/correspondence"]')).toBeNull();
+    action('cancel').click();
+    expect(document.querySelector('.correspondence-room')).toBeNull();
+    made.client.send({ type: 'move', from: 'a1', to: 'a2' });
+    action('confirm').click();
+    const after = document.querySelector('.correspondence-room');
+    expect(after?.previousElementSibling?.hasAttribute('data-action-section')).toBe(true);
+    expect(after?.querySelector('a[href="/correspondence"]')).not.toBeNull();
   });
 
   it.each(['banqi', 'jieqi'])('never reveals a hidden %s piece in the whole preview', (spec) => {

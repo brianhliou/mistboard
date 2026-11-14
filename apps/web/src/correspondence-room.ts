@@ -96,22 +96,30 @@ export function createCorrespondenceRoom(
     if (!board) return;
     if (!isLive) pending = null;
     board.inert = pending !== null || submitted;
-    if (!active || !eligible() || !participant()) {
+    // The box is for a move in hand and for the way on after it. On the
+    // player's own turn the status row says what to do and the box stays out,
+    // so the phone room keeps the height its board was sized for.
+    const status = frame.state?.status;
+    const moved = submitted || (status?.type === 'playing' && status.turn !== frame.seat);
+    if (!active || !eligible() || !participant() || (!pending && !moved)) {
       host?.remove();
       host = null;
       return;
     }
     if (!host?.isConnected) {
       host = document.createElement('div');
-      host.className = 'correspondence-room';
-      // Inside .board-shell, under the board: the room's center column is a
-      // flex row, so a sibling of .board-shell sits beside the board and
-      // squeezes it to half width on a phone.
-      const shell = board.closest('.board-shell');
-      if (shell) shell.append(host);
+      host.className = 'round-table__row correspondence-room';
+      // In the game table, right after the "Your move" row: under the board
+      // on a phone, in the side rail on a wide screen. Never next to the
+      // board: the room's center column is a flex row (a sibling of
+      // .board-shell squeezes the board to half width), and on a phone it has
+      // a fixed height (a child of .board-shell spills over the seat line).
+      const row = document.querySelector('[data-action-section]');
+      if (row) row.after(host);
       else board.after(host);
     }
     host.replaceChildren();
+    host.dataset.state = pending ? 'pending' : 'moved';
     if (pending) {
       const label = document.createElement('p');
       label.setAttribute('role', 'status');
@@ -136,16 +144,24 @@ export function createCorrespondenceRoom(
       });
       actions.append(confirmButton, cancel);
       host.append(label, actions);
-    } else if (next?.next) {
+      return;
+    }
+    // After the move: the next game waiting on the player, and the inbox.
+    const links = document.createElement('div');
+    links.className = 'correspondence-room__actions';
+    if (next?.next) {
       const link = document.createElement('a');
       link.href = next.next.url;
+      link.dataset.correspondenceNext = '';
       link.textContent = t('correspondence.nextGame', { count: next.count });
-      host.append(link);
+      links.append(link);
     }
     const back = document.createElement('a');
     back.href = '/correspondence';
+    back.dataset.correspondenceInbox = '';
     back.textContent = t('correspondence.backToGames');
-    host.append(back);
+    links.append(back);
+    host.append(links);
   }
 
   const controller = {

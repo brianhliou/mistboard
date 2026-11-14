@@ -1401,7 +1401,6 @@ a.clock-name.player-name-link {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 0;
 }
 
 .correspondence-room p {
@@ -1432,11 +1431,18 @@ a.clock-name.player-name-link {
   cursor: pointer;
 }
 
-.correspondence-room button {
+.correspondence-room__actions > * {
   flex: 1;
 }
 
-.correspondence-room [data-correspondence-confirm] {
+/* While a move waits for Confirm, the box stands in for the "Your move" row
+   (its label says what to do), so the phone room keeps its height. */
+.live-review__cluster:has(.correspondence-room [data-correspondence-confirm])
+[data-action-section] {
+  display: none;
+}
+
+.correspondence-room :is([data-correspondence-confirm], [data-correspondence-next]) {
   border-color: transparent;
   background: var(--site-accent);
   color: #fff;
