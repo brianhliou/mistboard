@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  handleBaseForEmail,
+  historicalEmailHandleStem,
+  isHistoricalEmailHandle,
   normalizeDisplayName,
   normalizeEmail,
   normalizeProfileHandle,
@@ -19,14 +20,26 @@ test('normalizeEmail rejects unsupported email shapes', () => {
   assert.equal(normalizeEmail('用户@example.com'), null);
 });
 
-test('handleBaseForEmail strips plus tags before deriving public handles', () => {
-  assert.equal(handleBaseForEmail('brian+testing@gmail.com'), 'brian');
-  assert.equal(handleBaseForEmail('first.last+tag@example.com'), 'first-last');
+test('historicalEmailHandleStem recognizes old handles with plus tags and punctuation', () => {
+  assert.equal(historicalEmailHandleStem('brian+testing@gmail.com'), 'brian');
+  assert.equal(historicalEmailHandleStem('first.last+tag@example.com'), 'first-last');
 });
 
-test('handleBaseForEmail falls back when the email local part has no safe handle stem', () => {
-  assert.match(handleBaseForEmail('++@example.com'), /^player-[a-z0-9]{5}$/);
-  assert.match(handleBaseForEmail('ab@example.com'), /^player-[a-z0-9]{5}$/);
+test('isHistoricalEmailHandle catches the bare stem and its collision suffix', () => {
+  assert.equal(isHistoricalEmailHandle('first-last', 'first.last@example.com'), true);
+  assert.equal(isHistoricalEmailHandle('first-last-48213', 'first.last@example.com'), true);
+  // A long stem was cut to leave room for the suffix.
+  const email = 'abcdefghijklmnopqrstuvwxyz@example.com';
+  assert.equal(isHistoricalEmailHandle('abcdefghijklmnopqr-12345', email), true);
+  assert.equal(isHistoricalEmailHandle('first-last-4821', 'first.last@example.com'), false);
+  assert.equal(isHistoricalEmailHandle('first-last-pro', 'first.last@example.com'), false);
+  assert.equal(isHistoricalEmailHandle('player-ab12c', 'first.last@example.com'), false);
+  assert.equal(isHistoricalEmailHandle('ab-12345', 'ab@example.com'), false);
+});
+
+test('historicalEmailHandleStem is deterministic when the local part has no safe stem', () => {
+  assert.equal(historicalEmailHandleStem('++@example.com'), null);
+  assert.equal(historicalEmailHandleStem('ab@example.com'), null);
 });
 
 test('randomFallbackHandle yields a valid random player handle', () => {
@@ -58,10 +71,10 @@ test('normalizeProfileHandle rejects unsafe or reserved handles', () => {
   assert.equal(normalizeProfileHandle('forum'), null);
 });
 
-test('handleBaseForEmail never mints a reserved stem at signup', () => {
-  assert.match(handleBaseForEmail('reports@example.com'), /^player-[a-z0-9]{5}$/);
-  assert.match(handleBaseForEmail('inbox+tag@example.com'), /^player-[a-z0-9]{5}$/);
-  assert.equal(handleBaseForEmail('brian.hliou@example.com'), 'brian-hliou');
+test('historicalEmailHandleStem excludes reserved names that were never minted', () => {
+  assert.equal(historicalEmailHandleStem('reports@example.com'), null);
+  assert.equal(historicalEmailHandleStem('inbox+tag@example.com'), null);
+  assert.equal(historicalEmailHandleStem('brian.hliou@example.com'), 'brian-hliou');
 });
 
 test('normalizeDisplayName trims and bounds public display names', () => {

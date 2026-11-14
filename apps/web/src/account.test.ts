@@ -48,6 +48,147 @@ describe('account page auth flow', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([' 12345678\n', '1234 5678', 'code: 1234567890'])(
+    'cleans pasted and typed login codes before keeping the first eight digits: %j',
+    async (pasted) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) =>
+          String(input) === '/api/auth/me'
+            ? jsonResponse({ user: null })
+            : jsonResponse(authStartData('paste-code'), 202),
+        ),
+      );
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      const code = document.querySelector<HTMLInputElement>('input[name="code"]')!;
+      expect(code.hasAttribute('maxlength')).toBe(false);
+      expect(code.inputMode).toBe('numeric');
+      expect(code.autocomplete).toBe('one-time-code');
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', pasted);
+      code.dispatchEvent(new ClipboardEvent('paste', { clipboardData, cancelable: true }));
+      expect(code.value).toBe('12345678');
+      code.value = pasted;
+      code.dispatchEvent(new Event('input'));
+      expect(code.value).toBe('12345678');
+      document.querySelectorAll<HTMLButtonElement>('.account-auth-reset')[1]!.click();
+    },
+  );
+
+  it.each(['player-abc12', 'chosen-name'])(
+    'offers a pre-filled username after signup and saves Continue as %s',
+    async (chosen) => {
+      const user = testUser('player-abc12');
+      const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('new-user', '12345678'), 202);
+        if (String(input) === '/api/auth/email/confirm')
+          return jsonResponse({ user, isNewUser: true });
+        if (String(input) === '/api/account/profile') {
+          expect(JSON.parse(String(init?.body))).toEqual({
+            handle: chosen,
+            usernamePromptHandled: true,
+          });
+          return jsonResponse({ user: testUser(chosen) });
+        }
+        throw new Error(`unexpected fetch: ${input}`);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      expect(window.location.pathname).toBe('/account');
+      expect(document.querySelector('h1')?.textContent).toBe('Choose your username');
+      const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+      expect(handle.value).toBe('player-abc12');
+      expect(document.querySelector('.account-username-dismiss')).toBeNull();
+      handle.value = chosen;
+      submitAccountForm();
+      await flushDom();
+      expect(
+        fetch.mock.calls.filter(([input]) => String(input) === '/api/account/profile'),
+      ).toHaveLength(1);
+      expect(window.location.pathname).toBe('/');
+    },
+  );
+
+  it.each(['handle_taken', 'invalid_handle'])(
+    'keeps the username step open on %s',
+    async (error) => {
+      const { t } = await import('./i18n/catalog.js');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+          if (String(input) === '/api/auth/email/start')
+            return jsonResponse(authStartData('username-error', '12345678'), 202);
+          if (String(input) === '/api/auth/email/confirm')
+            return jsonResponse({ user: testUser('player-abc12'), isNewUser: true });
+          return jsonResponse({ error }, 400);
+        }),
+      );
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+      handle.value = error === 'invalid_handle' ? 'admin' : 'taken-name';
+      submitAccountForm();
+      await flushDom();
+      expect(document.querySelector('.account-status')?.textContent).toBe(
+        t(error === 'handle_taken' ? 'account.handleTaken' : 'account.invalidHandle'),
+      );
+      expect(window.location.pathname).toBe('/account');
+      expect(handle.getAttribute('aria-invalid')).toBe('true');
+      expect(document.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(
+        false,
+      );
+    },
+  );
+
+  it('allows dismissing the server-selected legacy username suggestion before redirecting', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+      if (String(input) === '/api/auth/email/start')
+        return jsonResponse(authStartData('legacy-user', '12345678'), 202);
+      if (String(input) === '/api/auth/email/confirm')
+        return jsonResponse({
+          user: testUser('legacy-user'),
+          isNewUser: false,
+          suggestUsername: true,
+        });
+      expect(String(input)).toBe('/api/account/profile');
+      expect(JSON.parse(String(init?.body))).toEqual({ usernamePromptHandled: true });
+      return jsonResponse({ user: testUser('legacy-user') });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app')!);
+    document.querySelector<HTMLInputElement>('input[name="email"]')!.value =
+      'legacy-user@example.com';
+    submitAccountForm();
+    await flushDom();
+    submitAccountForm();
+    await flushDom();
+    const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+    handle.value = 'unsaved-edit';
+    document.querySelector<HTMLButtonElement>('.account-username-dismiss')!.click();
+    await flushDom();
+    expect(window.location.pathname).toBe('/');
+  });
+
   it.each([true, false])(
     'tracks the complete auth funnel without private properties (new=%s)',
     async (isNewUser) => {

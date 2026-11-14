@@ -7,6 +7,11 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANS_ACCOUNT = {
+  'account.chooseUsername': '选择你的用户名',
+  'account.chooseUsernameCopy': '用户名会公开显示。你可以保留此名称，也可以选择其他名称。',
+  'account.suggestUsernameCopy': '你的用户名可能包含部分邮箱地址。你可以按需选择其他名称。',
+  'account.usernameContinue': '继续',
+  'account.usernameNotNow': '暂不更改',
   'account.loading': '正在加载账号',
   'account.signedIn': '已登录',
   'account.viewProfile': '查看资料',

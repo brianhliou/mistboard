@@ -7,6 +7,11 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANT_ACCOUNT = {
+  'account.chooseUsername': '選擇你的使用者名稱',
+  'account.chooseUsernameCopy': '使用者名稱會公開顯示。你可以保留此名稱，也可以選擇其他名稱。',
+  'account.suggestUsernameCopy': '你的使用者名稱可能包含部分信箱地址。你可以按需選擇其他名稱。',
+  'account.usernameContinue': '繼續',
+  'account.usernameNotNow': '暫不更改',
   'account.loading': '正在載入帳號',
   'account.signedIn': '已登入',
   'account.viewProfile': '查看個人資料',
