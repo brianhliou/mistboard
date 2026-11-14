@@ -1407,8 +1407,15 @@ export type WarmSessionSpec = {
   /** Absolute path to the engine binary. */
   bin: string;
   /** `uci` … `isready` block written once at spawn; part of the cache key, so
-   *  sessions never mix tiers (different Skill Level / Hash / net). */
+   *  tiers whose init blocks differ (Skill Level / Hash / net) never share. */
   initCommands: readonly string[];
+  /**
+   * Extra cache-key part for tiers whose init blocks are identical and differ
+   * only per move (`go nodes …`). Without it every such tier reuses one process
+   * and its hash table, so a weak tier searches from a strong tier's tree of the
+   * same game (Pikafish xiangqi ladder, 2026-11-13: L1-L8 nearly flat).
+   */
+  sessionKey?: string;
   /** Error-message prefix for session-level failures. */
   name?: string;
   initTimeoutMs?: number;
@@ -1492,7 +1499,7 @@ export class UciWarmSessionCache {
    */
   async withSession<T>(spec: WarmSessionSpec, fn: (session: UciEngineSession) => Promise<T>) {
     if (this.closed) throw new Error(`${this.config.name} cache closed`);
-    const key = `${spec.bin}\n${spec.initCommands.join('\n')}`;
+    const key = `${spec.bin}\n${spec.initCommands.join('\n')}\n${spec.sessionKey ?? ''}`;
     const list = this.idle.get(key);
     const parked = this.config.extraIdleTtlMs === undefined ? list?.shift() : list?.pop();
     if (list?.length === 0) this.idle.delete(key);
