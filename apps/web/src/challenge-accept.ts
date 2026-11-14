@@ -3,7 +3,12 @@ import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-link.js';
-import { accepterColorLabel, buildSeekAcceptAction, seekSignInHref } from './seek-accept.js';
+import {
+  accepterColorLabel,
+  buildSeekAcceptAction,
+  posterColorLabel,
+  seekSignInHref,
+} from './seek-accept.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
@@ -307,8 +312,13 @@ function buildTargetStatus(view: ChallengeView): HTMLElement | null {
   return line;
 }
 
-// "Xiangqi · 3 days per move · You play Black", plus Rated when it is.
+// "Xiangqi · 3 days per move · You play Black", plus Rated when it is. The
+// side is the viewer's own: the creator's pick on their card, the other side
+// for everyone else.
 function buildTerms(view: ChallengeView): HTMLElement {
+  const side = view.isMine
+    ? posterColorLabel(view.gameSpecId, view.preferredColor)
+    : accepterColorLabel(view.gameSpecId, view.preferredColor);
   const detail = document.createElement('p');
   detail.className = 'challenge-subhead';
   const terms = t('challenge.detail', {
@@ -317,7 +327,7 @@ function buildTerms(view: ChallengeView): HTMLElement {
       view.daysPerMove === 1
         ? t('challenge.dayOption', { days: view.daysPerMove })
         : t('challenge.daysOption', { days: view.daysPerMove }),
-    color: accepterColorLabel(view.gameSpecId, view.preferredColor) ?? t('challenge.randomColors'),
+    color: side ?? t('challenge.randomColors'),
   });
   // Accepting a rated challenge plays for rating: say so before the button, not after.
   detail.textContent = view.rated === true ? `${terms} · ${t('play.rated')}` : terms;
