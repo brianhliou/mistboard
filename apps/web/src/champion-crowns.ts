@@ -53,12 +53,16 @@ export function championLabel(
   );
 }
 
-function buildChampionCrown(
-  championship: Championship,
-  size: 16 | 20,
-  locale: Locale,
-): HTMLImageElement {
-  const label = championLabel(championship, locale);
+/** Every held title in one string, for the single crown beside a name. */
+export function championsLabel(
+  championships: readonly Championship[],
+  locale: Locale = currentLocale(),
+): string {
+  const separator = locale === 'en' ? ', ' : '、';
+  return championships.map((championship) => championLabel(championship, locale)).join(separator);
+}
+
+function buildChampionCrown(label: string, size: 16 | 20): HTMLImageElement {
   const icon = document.createElement('img');
   icon.className = 'champion-crown';
   icon.src = CHAMPION_CROWN_IMAGE;
@@ -92,9 +96,8 @@ export function buildChampionCrowns(
   if (!championships?.length) return null;
   const crowns = document.createElement('span');
   crowns.className = 'champion-crowns';
-  crowns.append(
-    ...championships.map((championship) => buildChampionCrown(championship, size, locale)),
-  );
+  // One crown however many ladders the player leads; the label lists them all.
+  crowns.append(buildChampionCrown(championsLabel(championships, locale), size));
   return crowns;
 }
 
@@ -110,8 +113,9 @@ export function buildProfileChampionships(
     const item = document.createElement('li');
     item.className = 'profile-championship';
     const text = document.createElement('span');
-    text.textContent = championLabel(championship, locale);
-    item.append(buildChampionCrown(championship, 20, locale), text);
+    const label = championLabel(championship, locale);
+    text.textContent = label;
+    item.append(buildChampionCrown(label, 20), text);
     list.append(item);
   }
   return list;

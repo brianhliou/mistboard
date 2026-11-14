@@ -1035,7 +1035,7 @@ describe('setWatchSeatInkFamily', () => {
 });
 
 describe('watch seat championships', () => {
-  it('keeps multiple crowns with the named participant and removes missing or empty championships', async () => {
+  it('keeps one crown for several titles with the named participant and removes missing or empty championships', async () => {
     const { renderWatchPlayers } = await import('./watch-route.js');
     const top = document.createElement('div');
     const bottom = document.createElement('div');
@@ -1078,7 +1078,7 @@ describe('watch seat championships', () => {
       renderWatchPlayers(top, bottom, game);
       const icons = [...bottom.querySelectorAll<HTMLImageElement>('.champion-crown')];
       expect(icons.map((icon) => icon.alt)).toEqual(
-        champions?.length ? ['Xiangqi blitz champion', 'Banqi rapid champion'] : [],
+        champions?.length ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
       );
       expect(
         icons.every(

@@ -124,8 +124,7 @@ function assertDiscs(inks: readonly string[], family?: string) {
   );
   const crowns = [...crownName!.querySelectorAll<HTMLImageElement>('.champion-crown')];
   expect(crowns.map((icon) => icon.alt)).toEqual([
-    'Xiangqi blitz champion',
-    'Banqi correspondence champion',
+    'Xiangqi blitz champion, Banqi correspondence champion',
   ]);
   expect(
     crowns.every(
@@ -171,7 +170,7 @@ describe('live room shared seat discs', () => {
     const payload = frame(openView, 'red', ['red', 'black'], true);
     options.applyHello(payload);
     options.render();
-    expect(document.querySelectorAll('.clock-name .champion-crown')).toHaveLength(2);
+    expect(document.querySelectorAll('.clock-name .champion-crown')).toHaveLength(1);
     const nextPayload = {
       ...payload,
       seatProfiles: {

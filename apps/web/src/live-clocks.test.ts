@@ -292,8 +292,7 @@ describe('legacy chess seat championships', () => {
       renderClocks(refs, view);
       const icons = [...refs.playerBottom.querySelectorAll<HTMLImageElement>('.champion-crown')];
       expect(icons.map((icon) => icon.alt)).toEqual([
-        'Xiangqi blitz champion',
-        'Fog Chess rapid champion',
+        'Xiangqi blitz champion, Fog Chess rapid champion',
       ]);
       expect(
         icons.every(

@@ -322,7 +322,7 @@ describe('top-player champion crowns', () => {
       await vi.waitFor(() => expect(widget.querySelector('a[href="/@/alice"]')).not.toBeNull());
       const icons = [...widget.querySelectorAll<HTMLImageElement>('.champion-crown')];
       expect(icons.map((icon) => icon.alt)).toEqual(
-        champions?.length ? ['Xiangqi blitz champion', 'Banqi rapid champion'] : [],
+        champions?.length ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
       );
       expect(
         icons.every(

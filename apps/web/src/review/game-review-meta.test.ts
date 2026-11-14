@@ -407,7 +407,7 @@ describe('buildReviewMeta', () => {
 });
 
 describe('finished seat championships', () => {
-  it('renders multiple labelled crowns in the postgame meta card and review strips', async () => {
+  it('renders one crown labelled with every title in the postgame meta card and review strips', async () => {
     const { reviewSeatProfiles } = await import('../profile-link.js');
     const { mountFortressXiangqiReview } = await import('./fortress-xiangqi-review.js');
     const players = [
@@ -448,7 +448,7 @@ describe('finished seat championships', () => {
       for (const host of [metaCard, root]) {
         const icons = [...host.querySelectorAll<HTMLImageElement>('.champion-crown')];
         expect(icons.map((icon) => icon.alt)).toEqual(
-          championships ? ['Xiangqi blitz champion', 'Banqi rapid champion'] : [],
+          championships ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
         );
         expect(
           icons.every(

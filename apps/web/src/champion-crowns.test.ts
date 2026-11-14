@@ -16,12 +16,12 @@ afterEach(() => window.history.replaceState(null, '', '/'));
 
 describe('champion crowns', () => {
   it.each([
-    ['en', '/', ['Xiangqi blitz champion', 'Flip Jungle correspondence champion']],
-    ['zh-Hans', '/zh-hans/', ['象棋闪电冠军', '翻翻兽棋通信对局冠军']],
-    ['zh-Hant', '/zh-hant/', ['象棋閃電冠軍', '翻翻獸棋通信對局冠軍']],
+    ['en', '/', 'Xiangqi blitz champion, Flip Jungle correspondence champion'],
+    ['zh-Hans', '/zh-hans/', '象棋闪电冠军、翻翻兽棋通信对局冠军'],
+    ['zh-Hant', '/zh-hant/', '象棋閃電冠軍、翻翻獸棋通信對局冠軍'],
   ] as const)(
-    'labels every championship in %s with matching tooltip and accessible text',
-    async (locale, path, labels) => {
+    'shows one crown labelled with every championship in %s',
+    async (locale, path, label) => {
       await ensureLocaleCatalog(locale);
       window.history.replaceState(null, '', path);
       const name = playerNameEl(
@@ -30,23 +30,24 @@ describe('champion crowns', () => {
         'clock-name',
       );
       const icons = [...name.querySelectorAll<HTMLImageElement>('img.champion-crown')];
-      expect(icons.map((icon) => icon.alt)).toEqual(labels);
-      for (const [index, icon] of icons.entries()) {
-        expect(icon.getAttribute('src')).toBe('/champion-crown.png');
-        expect(icon.title).toBe(labels[index]);
-        expect(icon.getAttribute('aria-label')).toBe(labels[index]);
-        expect(icon.width).toBe(20);
-        expect(icon.height).toBe(20);
-      }
+      // One crown per name, however many ladders the player leads.
+      expect(icons).toHaveLength(1);
+      const [icon] = icons;
+      expect(icon!.alt).toBe(label);
+      expect(icon!.getAttribute('src')).toBe('/champion-crown.png');
+      expect(icon!.title).toBe(label);
+      expect(icon!.getAttribute('aria-label')).toBe(label);
+      expect(icon!.width).toBe(20);
+      expect(icon!.height).toBe(20);
       expect(name.textContent).toBe('Alice');
       expect(name.getAttribute('href')).toBe('/@/alice');
     },
   );
 
   it.each([
-    ['en', '/', ['Fog Chess bullet champion', 'Banqi rapid champion']],
-    ['zh-Hans', '/zh-hans/', ['迷雾国际象棋子弹冠军', '暗棋快速冠军']],
-    ['zh-Hant', '/zh-hant/', ['迷霧西洋棋子彈冠軍', '暗棋快速冠軍']],
+    ['en', '/', ['Fog Chess bullet champion, Banqi rapid champion']],
+    ['zh-Hans', '/zh-hans/', ['迷雾国际象棋子弹冠军、暗棋快速冠军']],
+    ['zh-Hant', '/zh-hant/', ['迷霧西洋棋子彈冠軍、暗棋快速冠軍']],
   ] as const)('uses existing bullet and rapid terms in %s', async (locale, path, labels) => {
     await ensureLocaleCatalog(locale);
     window.history.replaceState(null, '', path);
@@ -78,7 +79,7 @@ describe('champion crowns', () => {
         const target = profiles[slot];
         const name = playerNameEl('Seat', target, 'review-seat__name');
         expect(name.querySelectorAll('.champion-crown')).toHaveLength(
-          target?.kind === 'user' && target.handle === 'alice' ? 2 : 0,
+          target?.kind === 'user' && target.handle === 'alice' ? 1 : 0,
         );
       }
     }
@@ -95,7 +96,7 @@ describe('champion crowns', () => {
       champions: [...champions],
     });
     expect(playerNameEl('Alice', target, 'name').querySelectorAll('.champion-crown')).toHaveLength(
-      2,
+      1,
     );
   });
 
@@ -107,7 +108,7 @@ describe('champion crowns', () => {
     host.append(
       playerNameEl('Alice', profileTargetFor({ handle: 'alice', champions }), 'clock-name'),
     );
-    expect(host.querySelectorAll('.champion-crown')).toHaveLength(2);
+    expect(host.querySelectorAll('.champion-crown')).toHaveLength(1);
     const name = playerNameEl(
       'Alice',
       profileTargetFor({ handle: 'alice', champions: value }),
@@ -126,7 +127,7 @@ describe('champion crowns', () => {
         profileTargetFor({ handle: 'alice', champions }),
         'name',
       ).querySelectorAll('.champion-crown'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     for (const identity of [{ champions }, { botId: 'misty', champions }]) {
       expect(
         playerNameEl('Seat', profileTargetFor(identity), 'name').querySelector('.champion-crowns'),
@@ -140,8 +141,9 @@ describe('champion crowns', () => {
     expect(icon).not.toBeNull();
     icon?.dispatchEvent(new Event('error'));
     const fallback = name.querySelector('.champion-crown[role="img"]');
-    expect(fallback?.getAttribute('title')).toBe('Xiangqi blitz champion');
-    expect(fallback?.getAttribute('aria-label')).toBe('Xiangqi blitz champion');
+    const label = 'Xiangqi blitz champion, Flip Jungle correspondence champion';
+    expect(fallback?.getAttribute('title')).toBe(label);
+    expect(fallback?.getAttribute('aria-label')).toBe(label);
     expect(fallback?.textContent).toBe('◇');
   });
 });

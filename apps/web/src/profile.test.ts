@@ -106,10 +106,9 @@ describe('profile ratings rail', () => {
     expect(rows).toHaveLength(3);
     const crowns = [...rows[0]!.querySelectorAll<HTMLImageElement>('.champion-crown')];
     expect(crowns.map((icon) => icon.alt)).toEqual([
-      'Xiangqi blitz champion',
-      'Banqi rapid champion',
+      'Xiangqi blitz champion, Banqi rapid champion',
     ]);
-    expect(crowns.map((icon) => icon.width)).toEqual([16, 16]);
+    expect(crowns.map((icon) => icon.width)).toEqual([16]);
     expect(crowns.map((icon) => icon.title)).toEqual(
       crowns.map((icon) => icon.getAttribute('aria-label')),
     );
