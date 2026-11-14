@@ -104,7 +104,12 @@ export function createCorrespondenceRoom(
     if (!host?.isConnected) {
       host = document.createElement('div');
       host.className = 'correspondence-room';
-      (board.closest('.board-shell') ?? board).after(host);
+      // Inside .board-shell, under the board: the room's center column is a
+      // flex row, so a sibling of .board-shell sits beside the board and
+      // squeezes it to half width on a phone.
+      const shell = board.closest('.board-shell');
+      if (shell) shell.append(host);
+      else board.after(host);
     }
     host.replaceChildren();
     if (pending) {

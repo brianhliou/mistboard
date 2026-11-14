@@ -225,6 +225,33 @@ describe('tenant socket client', () => {
     expect(socket.sent).toEqual([]);
   });
 
+  it('puts Confirm and Cancel under the board, never beside it in the center row', () => {
+    // The live room layout (live-layout.ts): the center is a flex row, so a box
+    // placed next to .board-shell squeezes the board to half width on a phone.
+    document.body.innerHTML =
+      '<div class="review-shell__center"><div class="board-shell"><div class="board-stage"><div data-board></div></div></div></div>';
+    const made = makeClient();
+    made.client.connect();
+    const socket = lastSocket();
+    socket.open();
+    socket.message({
+      type: 'hello',
+      mode: 'correspondence',
+      seat: 'red',
+      state: {
+        id: 'placement',
+        board: { a1: { color: 'red', role: 'chariot' } },
+        status: { type: 'playing', turn: 'red' },
+        legalMoves: [{ from: 'a1', to: 'a2' }],
+      },
+    });
+    made.client.send({ type: 'move', from: 'a1', to: 'a2' });
+    const box = document.querySelector('.correspondence-room');
+    expect(box?.parentElement?.classList.contains('board-shell')).toBe(true);
+    expect(box?.previousElementSibling?.classList.contains('board-stage')).toBe(true);
+    expect(document.querySelector('.review-shell__center')!.children).toHaveLength(1);
+  });
+
   it.each(['banqi', 'jieqi'])('never reveals a hidden %s piece in the whole preview', (spec) => {
     const view =
       spec === 'banqi'
