@@ -31,7 +31,7 @@ export const EN_COMMUNITY = {
   'bots.noCompletedGames': 'No completed {variant} games yet.',
   'bots.engineGameOne': '{count} engine game',
   'bots.engineGameMany': '{count} engine games',
-  'bots.eloFromSample': 'Elo from {sample}',
+  'bots.eloFromSample': 'Elo from {sample} · {date}',
   'bots.timeControlSeconds': '{initial}s + {increment}s',
   'bots.fairyStockfishLevelBio':
     "Level {level} of Mistboard's eight-level ladder, backed by Fairy-Stockfish.",

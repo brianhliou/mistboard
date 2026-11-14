@@ -15,6 +15,7 @@ import {
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
 import './account-profile.css';
 import './bots.css';
 import './current-games.css';
@@ -1422,6 +1423,17 @@ function timeClassLabel(timeClass: BotRatingSnapshot['timeClass']): string {
  * (sourceRef carries `time=untimed`) and 'blitz' is only the bucket the
  * snapshot was published into, so printing "Blitz" states something false.
  */
+/** The month a rating snapshot was published, in the reader's locale ("Sep 2026"). */
+function ratingMonthLabel(createdAt: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(currentLocale(), {
+    year: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
 function ratingSampleLabel(
   rating: BotRatingSnapshot,
   opts: { style: 'rail' | 'spotlight' },
@@ -1434,7 +1446,13 @@ function ratingSampleLabel(
     const sample = t(rating.games === 1 ? 'bots.engineGameOne' : 'bots.engineGameMany', {
       count: rating.games,
     });
-    return spotlight ? t('bots.eloFromSample', { sample }) : sample;
+    // The spotlight dates the number: a ladder run measures one engine build and
+    // net, and a rating that has outlived them should show its age (the
+    // Pikafish card read 2,334 from a September run for two months after its
+    // net was replaced).
+    return spotlight
+      ? t('bots.eloFromSample', { sample, date: ratingMonthLabel(rating.createdAt) })
+      : sample;
   }
   const suffix = spotlight ? ` · ${timeClassLabel(rating.timeClass)}` : '';
   return `${t(rating.games === 1 ? 'profile.ratedGameOne' : 'profile.ratedGameMany', {

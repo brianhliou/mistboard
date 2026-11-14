@@ -37,7 +37,7 @@ export const ZH_HANS_COMMUNITY = {
   'bots.noCompletedGames': '尚无已完成的{variant}对局。',
   'bots.engineGameOne': '{count} 局引擎对局',
   'bots.engineGameMany': '{count} 局引擎对局',
-  'bots.eloFromSample': 'Elo 来自 {sample}',
+  'bots.eloFromSample': 'Elo 来自 {sample} · {date}',
   'bots.timeControlSeconds': '{initial}秒 + {increment}秒',
   'bots.fairyStockfishLevelBio': 'Mistboard 八级阶梯的第 {level} 级，使用 Fairy-Stockfish 引擎。',
   'bots.pikafishLevelBio':

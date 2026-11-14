@@ -298,7 +298,7 @@ describe('bot pages', () => {
       record: 'Record here',
       variants: 'Variants',
       recent: 'Recent games',
-      sample: 'Elo from 48 engine games',
+      sample: 'Elo from 48 engine games · Jun 2026',
       railSample: '48 engine games',
       play: 'Play Fog Chess',
       random: 'random side',
@@ -325,7 +325,7 @@ describe('bot pages', () => {
       record: '本站战绩',
       variants: '棋种',
       recent: '最近对局',
-      sample: 'Elo 来自 48 局引擎对局',
+      sample: 'Elo 来自 48 局引擎对局 · 2026年6月',
       railSample: '48 局引擎对局',
       play: '下迷雾国际象棋',
       random: '随机执方',
@@ -352,7 +352,7 @@ describe('bot pages', () => {
       record: '本站戰績',
       variants: '棋種',
       recent: '最近對局',
-      sample: 'Elo 來自 48 局引擎對局',
+      sample: 'Elo 來自 48 局引擎對局 · 2026年6月',
       railSample: '48 局引擎對局',
       play: '下迷霧西洋棋',
       random: '隨機執方',
@@ -941,8 +941,20 @@ describe('bot pages', () => {
         jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
       },
       gamesByGameSpecId: { xiangqi: [], jieqi: [] },
-      rating: ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 }),
-      ratings: [ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 })],
+      rating: ratingSnapshot({
+        gameSpecId: 'xiangqi',
+        rating: 2334,
+        games: 36,
+        createdAt: '2026-09-02T07:00:00.000Z',
+      }),
+      ratings: [
+        ratingSnapshot({
+          gameSpecId: 'xiangqi',
+          rating: 2334,
+          games: 36,
+          createdAt: '2026-09-02T07:00:00.000Z',
+        }),
+      ],
     });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
     const root = document.createElement('div');
@@ -951,7 +963,8 @@ describe('bot pages', () => {
     await mountBotProfile(root, 'pikafish');
 
     const spotlight = root.querySelector('.profile-chart-detail')?.textContent ?? '';
-    expect(spotlight).toBe('Elo from 36 engine games');
+    // Dated: a rating measures one engine build, so the reader sees its age.
+    expect(spotlight).toBe('Elo from 36 engine games · Sep 2026');
     expect(spotlight).not.toMatch(/rated/i);
     expect(spotlight).not.toMatch(/blitz/i);
 
