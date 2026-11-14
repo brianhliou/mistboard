@@ -126,7 +126,7 @@
   background: var(--site-accent-strong);
 }
 
-/* Opponent picker (Computer / A friend / Anyone) in the setup row sequence. */
+/* Opponent picker (Computer / Online / Friend) leads the setup rows. */
 .landing-setup-mode-switcher > .landing-start-option {
   padding-block: 9px;
   font-weight: 600;
@@ -750,43 +750,11 @@
   display: none;
 }
 
-/* Real time / Correspondence axis switch, rendered as lichess-style underline
-   tabs rather than a filled segment: the tab picks *which axis*, the chips below
-   pick the *value*, so the two read as different roles. Overrides the connected
-   segmented-control styling it inherits from .landing-start-options. */
+/* Pace has its own row, with the same compact choices as the other terms. */
 .landing-time-mode {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  border: 0;
-  border-bottom: 1px solid var(--site-border);
-  border-radius: 0;
-  overflow: visible;
-  margin-bottom: 0;
-}
-
-.landing-time-mode > .landing-start-option {
-  flex: 0 0 auto;
-  min-height: 32px;
-  margin-bottom: -1px;
-  padding: 6px 12px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--site-muted);
-  font-weight: 750;
-}
-
-.landing-time-mode > .landing-start-option:hover:not(:disabled) {
-  color: var(--site-text);
-}
-
-.landing-time-mode > .landing-start-option.selected {
-  background: transparent;
-  color: var(--site-accent-strong);
-  border-bottom-color: var(--site-accent);
-  font-weight: 800;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
 }
 
 .landing-custom-time {
@@ -1343,7 +1311,7 @@ html.landing-setup-open body {
 }
 
 .landing-setup-row .landing-time-mode {
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 /* Side choices sit glyph-beside-label so the row is as short as the others. */
@@ -1401,7 +1369,8 @@ html.landing-setup-open body {
 }
 
 .landing-variant-row,
-.landing-variant-option {
+.landing-variant-option,
+.landing-challenge-player-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1556,7 +1525,7 @@ html.landing-setup-open body {
 .landing-setup-dialog--open .landing-setup-row {
   gap: 8px;
 }
-.landing-setup-dialog--open .landing-setup-row:not(:first-child) {
+.landing-setup-dialog--open .landing-setup-row:not([data-setup-section="variant"]) {
   grid-template-columns: 104px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
@@ -1596,7 +1565,7 @@ html.landing-setup-open body {
   margin: 0;
 }
 
-.landing-setup-dialog--open .landing-setup-row .landing-start-options:not(.landing-time-mode),
+.landing-setup-dialog--open .landing-setup-row .landing-start-options,
 .landing-setup-dialog--open .landing-setup-row .landing-time-presets {
   gap: 0;
   padding: 0;
@@ -1605,10 +1574,7 @@ html.landing-setup-open body {
   background: var(--site-panel);
   overflow: hidden;
 }
-.landing-setup-dialog--open
-  .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
-  > .landing-start-option,
+.landing-setup-dialog--open .landing-setup-row .landing-start-options > .landing-start-option,
 .landing-setup-dialog--open .landing-setup-row .landing-time-presets > .landing-start-option {
   min-height: 44px;
   margin: 0;
@@ -1622,7 +1588,7 @@ html.landing-setup-open body {
 }
 .landing-setup-dialog--open
   .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
+  .landing-start-options
   > .landing-start-option
   + .landing-start-option,
 .landing-setup-dialog--open
@@ -1634,7 +1600,7 @@ html.landing-setup-open body {
 }
 .landing-setup-dialog--open
   .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
+  .landing-start-options
   > .landing-start-option:hover:not(:disabled):not(.selected),
 .landing-setup-dialog--open
   .landing-setup-row
@@ -1645,7 +1611,7 @@ html.landing-setup-open body {
 }
 .landing-setup-dialog--open
   .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
+  .landing-start-options
   > .landing-start-option.selected,
 .landing-setup-dialog--open
   .landing-setup-row
@@ -1668,32 +1634,6 @@ html.landing-setup-open body {
   padding: 8px 40px 8px 14px;
 }
 
-/* Real time / Correspondence: a small left-aligned switch above the presets;
-   the label lines up with the presets, not the middle of the pair. */
-.landing-setup-dialog--open .landing-setup-row .landing-time-mode {
-  justify-content: flex-start;
-  gap: 4px;
-  margin-bottom: 6px;
-  border: 0;
-}
-.landing-setup-dialog--open
-  .landing-setup-row:has(.landing-time-mode:not([hidden]))
-  > .landing-setup-row-label {
-  align-self: end;
-  padding-bottom: 14px;
-}
-.landing-setup-dialog--open .landing-setup-row .landing-time-mode > .landing-start-option {
-  min-height: 26px;
-  padding: 2px 10px;
-  border: 0;
-  border-radius: 999px;
-  font-size: 12px;
-}
-.landing-setup-dialog--open .landing-setup-row .landing-time-mode > .landing-start-option.selected {
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong);
-}
-
 .landing-setup-dialog--open .landing-setup-actions {
   padding: 14px 24px 20px;
 }
@@ -1709,7 +1649,7 @@ html.landing-setup-open body {
 }
 .landing-setup-dialog--open
   .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
+  .landing-start-options
   > .landing-start-option:first-child,
 .landing-setup-dialog--open
   .landing-setup-row
@@ -1719,7 +1659,7 @@ html.landing-setup-open body {
 }
 .landing-setup-dialog--open
   .landing-setup-row
-  .landing-start-options:not(.landing-time-mode)
+  .landing-start-options
   > .landing-start-option:last-child,
 .landing-setup-dialog--open
   .landing-setup-row
@@ -1742,8 +1682,7 @@ html.landing-setup-open body {
   padding-top: max(18px, calc((100vh - 700px) / 2));
 }
 
-/* A muted line under a row label: "min + sec per move" under Time control.
-   Correspondence swaps it for "days per move", and its options are bare numbers. */
+/* Real-time units appear once under Time control; correspondence chips name days. */
 .landing-setup-row-hint {
   display: block;
   margin-top: 3px;
@@ -1866,4 +1805,126 @@ html.landing-setup-open body {
   max-width: none;
   height: 110%;
   transform: translate(-50%, -55%);
+}
+
+/* Opponent choices carry a second line; the terms keep their compact height. */
+.landing-setup-mode-switcher > .landing-start-option,
+.landing-time-mode > .landing-start-option {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.2;
+}
+.landing-setup-option-hint {
+  color: inherit;
+  opacity: 0.75;
+  font-size: 11px;
+  font-weight: 500;
+  text-wrap: balance;
+}
+.landing-setup-dialog .landing-setup-mode-switcher > .landing-start-option {
+  min-height: 54px;
+  padding-block: 8px;
+}
+.landing-setup-header:has(.landing-setup-sheet-back:not([hidden])) {
+  position: relative;
+  padding-inline: 52px;
+}
+.landing-setup-accordion[hidden],
+.landing-setup-actions[hidden],
+.landing-challenge-player-picker[hidden],
+.landing-challenge-player-row[hidden],
+.landing-challenge-player-option[hidden],
+.landing-challenge-player-retry[hidden] {
+  display: none;
+}
+.landing-challenge-player-picker {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 20px 20px;
+}
+.landing-challenge-player-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+  font: inherit;
+}
+.landing-challenge-player-list {
+  display: grid;
+  gap: 6px;
+}
+.landing-challenge-player-row,
+.landing-challenge-player-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+}
+.landing-challenge-player-option,
+.landing-challenge-player-retry {
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+.landing-challenge-player-option:hover,
+.landing-challenge-player-row:hover {
+  background: var(--site-hover);
+}
+.landing-challenge-player-option:focus-visible,
+.landing-challenge-player-search:focus-visible,
+.landing-challenge-player-retry:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+.landing-player-avatar {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 800;
+}
+.landing-player-online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: 0;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--site-panel);
+  border-radius: 50%;
+  background: var(--site-accent);
+}
+.landing-player-identity {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+.landing-player-handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.landing-player-status,
+.landing-challenge-player-message {
+  color: var(--site-muted);
+  font-size: 12px;
 }

@@ -61,13 +61,14 @@ describe('setup dialog on a phone', () => {
     document.body.append(panel);
     return panel;
   };
-  const openQuick = (panel: HTMLElement, mode: 'pve' | 'pvp'): HTMLButtonElement => {
-    const button = panel.querySelector<HTMLButtonElement>(
-      `.landing-play-quick-action[data-play-mode="${mode}"]`,
-    );
+  const openPlay = (panel: HTMLElement, mode: 'pve' | 'pvp'): HTMLButtonElement => {
+    const button = panel.querySelector<HTMLButtonElement>('.landing-play-action');
     expect(button).not.toBeNull();
     button!.focus();
     button!.click();
+    document
+      .querySelector<HTMLButtonElement>(`.landing-setup-mode-switcher [data-play-mode="${mode}"]`)
+      ?.click();
     return button!;
   };
   const dialog = () => document.querySelector<HTMLElement>('.landing-setup-dialog');
@@ -79,7 +80,7 @@ describe('setup dialog on a phone', () => {
 
   it('renders a bottom sheet with one variant row instead of the tile grid', () => {
     stubViewport(true);
-    openQuick(mountPanel(), 'pve');
+    openPlay(mountPanel(), 'pve');
 
     expect(dialog()?.classList.contains('landing-setup-sheet')).toBe(true);
     expect(document.querySelector('.landing-setup-grabber')).not.toBeNull();
@@ -100,13 +101,13 @@ describe('setup dialog on a phone', () => {
   it('lists the same variants as the desktop grid, and a pick updates the row and the start payload', async () => {
     for (const mode of ['pve', 'pvp'] as const) {
       stubViewport(false);
-      openQuick(mountPanel(), mode);
+      openPlay(mountPanel(), mode);
       const desktop = pickerEntries('.landing-variant-card[data-game-spec]');
       document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
       document.body.replaceChildren();
 
       stubViewport(true);
-      openQuick(mountPanel(), mode);
+      openPlay(mountPanel(), mode);
       document.querySelector<HTMLButtonElement>('.landing-variant-row')?.click();
       const list = document.querySelector<HTMLElement>('.landing-variant-picker');
       expect(list?.hidden).toBe(false);
@@ -118,7 +119,7 @@ describe('setup dialog on a phone', () => {
     }
 
     stubViewport(true);
-    openQuick(mountPanel(), 'pvp');
+    openPlay(mountPanel(), 'pvp');
     document.querySelector<HTMLButtonElement>('.landing-variant-row')?.click();
     document
       .querySelector<HTMLButtonElement>('.landing-variant-option[data-game-spec="banqi"]')
@@ -142,7 +143,7 @@ describe('setup dialog on a phone', () => {
 
   it('pins Start game in a footer outside the scrolling content', () => {
     stubViewport(true);
-    openQuick(mountPanel(), 'pve');
+    openPlay(mountPanel(), 'pve');
 
     const start = document.querySelector<HTMLButtonElement>('.landing-setup-start');
     const footer = start?.closest<HTMLElement>('.landing-setup-footer');
@@ -152,12 +153,22 @@ describe('setup dialog on a phone', () => {
     expect(document.querySelector('.landing-setup-scroll .landing-setup-accordion')).not.toBeNull();
   });
 
+  it('scrolls the selected variant into view when opening its list', () => {
+    stubViewport(true);
+    openPlay(mountPanel(), 'pvp');
+    const selected = document.querySelector<HTMLElement>('.landing-variant-option.selected')!;
+    selected.scrollIntoView = vi.fn();
+    document.querySelector<HTMLButtonElement>('.landing-variant-row')?.click();
+    expect(selected.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(document.activeElement).toBe(selected);
+  });
+
   it('locks page scroll while open and returns focus on close', () => {
     stubViewport(true);
     const panel = mountPanel();
     const html = document.documentElement;
 
-    const opener = openQuick(panel, 'pve');
+    const opener = openPlay(panel, 'pve');
     expect(html.classList.contains('landing-setup-open')).toBe(true);
     expect(dialog()?.contains(document.activeElement)).toBe(true);
     // Switching opponent reopens the sheet in place; the page stays locked.
@@ -171,7 +182,7 @@ describe('setup dialog on a phone', () => {
     expect(html.classList.contains('landing-setup-open')).toBe(false);
     expect(document.activeElement).toBe(opener);
 
-    openQuick(panel, 'pvp');
+    openPlay(panel, 'pvp');
     expect(html.classList.contains('landing-setup-open')).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(dialog()).toBeNull();

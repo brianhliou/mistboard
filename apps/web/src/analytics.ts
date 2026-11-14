@@ -648,6 +648,8 @@ export function trackCorrespondenceSeekPosted(props: {
   daysPerMove: number;
   kind: CorrespondenceSeekKind;
   surface: 'correspondence' | 'lobby' | 'profile' | 'home-button' | 'postgame' | 'review';
+  source?: 'setup';
+  send_to?: 'link' | 'player';
 }): void {
   track('correspondence_seek_posted', props);
 }

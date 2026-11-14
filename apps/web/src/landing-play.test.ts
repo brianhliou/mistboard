@@ -86,11 +86,9 @@ describe('landing play panel', () => {
       });
 
       clickModalButton(t('setup.correspondence', {}, locale));
-      const notice = document.querySelector<HTMLElement>(
-        '[data-setup-section="time"] .landing-setup-account-notice',
-      );
+      const notice = document.querySelector<HTMLElement>('.landing-setup-correspondence-notice');
       expect(notice?.hidden).toBe(false);
-      expect(notice?.textContent).toBe(t('setup.correspondenceNeedsAccount', {}, locale));
+      expect(notice?.textContent).toBe(t('setup.correspondenceAccountExplanation', {}, locale));
       const signIn = () => document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
       expect(signIn()?.hidden).toBe(false);
       expect(signIn()?.textContent).toBe(t('correspondence.hostSignIn', {}, locale));
@@ -190,7 +188,7 @@ describe('landing play panel', () => {
           document.querySelector('[data-setup-section="gameType"] button[aria-checked="true"]')
             ?.textContent,
         ).toBe('Rated');
-        expect(selectedModalTimeControl()).toBe(correspondence ? '7' : '5 + 5');
+        expect(selectedModalTimeControl()).toBe(correspondence ? '7 days' : '5 + 5');
         if (play === 'friend') expect(selectedModalColor()).toBe('Black');
         expect(
           document.querySelector<HTMLButtonElement>('button.landing-setup-start')?.hidden,
@@ -303,53 +301,20 @@ describe('landing play panel', () => {
     expect(panel.textContent).toContain('開始對局');
     openPlaySetup(panel, '對戰機器人');
     const switcher = document.querySelector('.landing-setup-mode-switcher');
-    expect(switcher?.textContent).toContain('機器人');
+    expect(switcher?.textContent).toContain('電腦');
     expect(switcher?.textContent).toContain('好友');
-    expect(switcher?.textContent).toContain('大廳');
+    expect(switcher?.textContent).toContain('線上');
   });
 
-  it('phone quick row opens the setup dialog on the computer or the friend mode', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    // The primary Play button stays the panel's first action (desktop unchanged);
-    // the phone row follows it.
-    expect(panel.querySelector('.landing-play-action')?.classList).toContain(
-      'landing-play-action-primary',
-    );
-    const quick = [...panel.querySelectorAll<HTMLButtonElement>('.landing-play-quick-action')];
-    expect(quick.map((button) => [button.textContent, button.dataset.playMode])).toEqual([
-      ['Play the computer', 'pve'],
-      ['Play a friend', 'pvp'],
-    ]);
-
-    const selectedMode = () =>
-      document.querySelector<HTMLButtonElement>(
-        '.landing-setup-mode-switcher [aria-checked="true"]',
-      )?.dataset.playMode;
-
-    quick[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(selectedMode()).toBe('pve');
-    document.querySelector('.landing-setup-overlay')?.remove();
-
-    quick[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(selectedMode()).toBe('pvp');
-  });
-
-  it('localizes the phone quick row', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([], { locale: 'zh-Hans' });
-    const labels = [...panel.querySelectorAll('.landing-play-quick-action')].map(
-      (button) => button.textContent,
-    );
-    expect(labels).toEqual(['与电脑对弈', '和朋友对弈']);
+  it('renders only one homepage Play action in each locale', () => {
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const panel = buildLandingPlayPanel([], { locale });
+      expect(panel.querySelectorAll('.landing-play-action')).toHaveLength(1);
+      expect(panel.querySelector('.landing-play-quick')).toBeNull();
+      expect(panel.querySelector('.landing-play-action')?.textContent).toContain(
+        t('play.playGame', {}, locale),
+      );
+    }
   });
 
   it('localizes the play setup dialog shell', () => {
@@ -376,7 +341,7 @@ describe('landing play panel', () => {
     );
   });
 
-  it('puts opponent near the end and only shows Bot when there are multiple choices', () => {
+  it('puts Opponent first and shows Bot when there are multiple choices in the legacy accordion', () => {
     useAccordionSetup();
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubGlobal(
@@ -389,7 +354,7 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Play a bot');
     expect(document.querySelector('.landing-setup-title')?.textContent).toBe('Play a game');
     selectModalVariant('dark-chess');
-    expect(setupSectionOrder()).toEqual(['variant', 'time', 'side', 'gameType', 'opponent']);
+    expect(setupSectionOrder()).toEqual(['opponent', 'variant', 'time', 'side', 'gameType']);
     selectModalVariant('dark-xiangqi');
     expect(document.querySelector<HTMLElement>('[data-setup-section="gameType"]')?.hidden).toBe(
       false,
@@ -401,19 +366,26 @@ describe('landing play panel', () => {
     ).toBe(true);
     selectModalVariant('xiangqi');
     expect(setupSectionOrder()).toEqual([
+      'opponent',
+      'engine',
       'variant',
       'time',
       'side',
       'gameType',
-      'opponent',
-      'engine',
     ]);
 
     openPlaySetup(panel, 'Challenge a friend');
-    expect(setupSectionOrder()).toEqual(['variant', 'time', 'side', 'gameType', 'opponent']);
+    expect(setupSectionOrder()).toEqual([
+      'opponent',
+      'pace',
+      'variant',
+      'time',
+      'side',
+      'gameType',
+    ]);
 
     openPlaySetup(panel, 'Find opponent');
-    expect(setupSectionOrder()).toEqual(['variant', 'time', 'gameType', 'opponent']);
+    expect(setupSectionOrder()).toEqual(['opponent', 'pace', 'variant', 'time', 'gameType']);
   });
 
   it('uses chess kings for Fog Chess and red/blue elephants for Jungle sides', () => {
@@ -514,7 +486,7 @@ describe('landing play panel', () => {
     ).not.toBeNull();
   });
 
-  it('starts setup on Variant and shows all offered variants together', () => {
+  it('starts setup on Opponent and shows all offered variants together', () => {
     useAccordionSetup();
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
@@ -527,7 +499,7 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Challenge a friend');
 
-    expect(activeSetupSection()).toBe('variant');
+    expect(activeSetupSection()).toBe('opponent');
     expect(document.querySelector('[aria-label="Game group"]')).toBeNull();
     expect(visibleVariantPickerSpecs()).toEqual(BASELINE_PICKER_SPECS);
     expect(selectedVariantSpec()).toBe('dark-chess');
@@ -656,15 +628,9 @@ describe('landing play panel', () => {
     expect(selectedModalTimeControl()).toBe('1 + 1');
   });
 
-  // A rules-page CTA names no side, and landing on second means the board moves
-  // before the visitor has touched anything. On the flip pair the picker is move
-  // order rather than ink, so "Second" is the whole first impression.
-  for (const { gameSpecId, label } of [
-    { gameSpecId: 'jungle-flip', label: 'First' },
-    { gameSpecId: 'banqi', label: 'First' },
-    { gameSpecId: 'jieqi', label: 'Red' },
-  ]) {
-    it(`opens a ${gameSpecId} engine deep link on the first mover`, async () => {
+  // A first visit uses Random for every bot variant as well as human games.
+  for (const gameSpecId of ['jungle-flip', 'banqi', 'jieqi']) {
+    it(`opens a ${gameSpecId} engine deep link on Random`, async () => {
       const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
         if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
         if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/first_mover' });
@@ -675,7 +641,7 @@ describe('landing play panel', () => {
       window.history.replaceState(null, '', `/?play=computer&gameSpecId=${gameSpecId}`);
 
       maybeOpenPlayDeepLink([]);
-      expect(selectedModalColor()).toBe(label);
+      expect(selectedModalColor()).toBe('Random');
 
       clickModalButton('Start game');
       await flushPromises();
@@ -683,7 +649,7 @@ describe('landing play panel', () => {
       expect(roomPostBody(fetchSpy)).toMatchObject({
         mode: 'pve',
         gameSpecId,
-        preferredColor: 'red',
+        preferredColor: 'random',
       });
     });
   }
@@ -820,9 +786,7 @@ describe('landing play panel', () => {
     expect(document.querySelector('a.landing-setup-start')?.textContent).toBe('Sign in to play');
   });
 
-  // Sides are variant-declared, so an untouched default must not persist as if it
-  // were a pick: xiangqi's 'red' coerces to the SECOND seat in any variant whose
-  // first mover is not red, which would seat a player who never chose anything.
+  // Only an explicit side is remembered; untouched defaults stay Random.
   it('does not let an untouched engine side follow the player into another variant', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
@@ -836,9 +800,9 @@ describe('landing play panel', () => {
     ]);
     document.body.append(panel);
 
-    // Xiangqi (red opens): take the default without touching the picker.
+    // Take the Random default without touching the picker.
     openPlaySetup(panel, 'Play a bot');
-    expect(selectedModalColor()).toBe('Red');
+    expect(selectedModalColor()).toBe('Random');
     clickModalButton('Start game');
     await flushPromises();
     document.querySelector('.landing-setup-overlay')?.remove();
@@ -846,16 +810,16 @@ describe('landing play panel', () => {
     // assertion below cannot pass on a stale call.
     fetchSpy.mockClear();
 
-    // Fog Chess opens white. A remembered 'red' would coerce to Black here.
+    // The untouched side stays Random in Fog Chess too.
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-chess');
-    expect(selectedModalColor()).toBe('White');
+    expect(selectedModalColor()).toBe('Random');
 
     clickModalButton('Start game');
     await flushPromises();
     expect(roomPostBody(fetchSpy)).toMatchObject({
       mode: 'pve',
-      preferredColor: 'white',
+      preferredColor: 'random',
     });
   });
 
@@ -1023,7 +987,7 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('jungle-flip');
-    expect(selectedModalColor()).toBe('First');
+    expect(selectedModalColor()).toBe('Random');
     clickModalColor('Second');
     clickModalButton('Start game');
     await flushPromises();
@@ -1410,7 +1374,7 @@ describe('landing play panel', () => {
       openPlaySetup(panel, 'Challenge a friend');
       selectModalVariant(gameSpecId);
       clickModalButton('Correspondence');
-      // The open layout names the unit once on the row, so each pill is the number.
+      // Correspondence chips include their day unit.
       clickModalTimeControl('2');
       clickModalColor(color);
       expect(selectedModalColor()).toBe(color);
@@ -1538,11 +1502,11 @@ describe('landing play panel', () => {
     clickModalButton('Create room');
     await flushPromises();
 
-    expect(document.querySelector('.landing-setup-account-notice')?.textContent).toContain(
-      'Correspondence games need an account.',
+    expect(document.querySelector('.landing-setup-correspondence-notice')?.textContent).toContain(
+      t('setup.correspondenceAccountExplanation'),
     );
     expect(document.querySelector('.landing-setup-status')?.textContent).toBe('');
-    expect(document.body.textContent).not.toContain('Try again');
+    expect(document.querySelector('.landing-setup-status')?.textContent).not.toContain('Try again');
     const link = document.querySelector<HTMLAnchorElement>('a.landing-setup-start');
     expect(link).not.toBeNull();
     const href = new URL(link!.getAttribute('href')!, 'https://mistboard.test');
@@ -1555,12 +1519,14 @@ describe('landing play panel', () => {
     window.history.replaceState(null, '', referrer!);
     maybeOpenPlayDeepLink([]);
     expect(selectedVariantSpec()).toBe('jieqi');
-    expect(document.querySelector('.landing-time-mode .selected')?.textContent?.trim()).toBe(
-      'Correspondence',
-    );
+    expect(
+      document
+        .querySelector('.landing-time-mode .selected .landing-start-option-text')
+        ?.textContent?.trim(),
+    ).toBe('Correspondence');
     expect(
       document.querySelector('.landing-correspondence-presets .selected')?.textContent?.trim(),
-    ).toBe('7');
+    ).toBe('7 days');
     expect(selectedModalColor()).toBe('Black');
     expect(window.location.search).toBe('');
   });
@@ -1578,8 +1544,8 @@ describe('landing play panel', () => {
       }),
     );
     for (const [locale, expected] of [
-      ['zh-Hans', '通信对局需要账号。'],
-      ['zh-Hant', '通信對局需要帳號。'],
+      ['zh-Hans', t('setup.correspondenceAccountExplanation', {}, 'zh-Hans')],
+      ['zh-Hant', t('setup.correspondenceAccountExplanation', {}, 'zh-Hant')],
     ] as const) {
       await ensureLocaleCatalog(locale);
       openLandingSetupDialog({
@@ -1592,7 +1558,7 @@ describe('landing play panel', () => {
       });
       clickModalButton(t('setup.createRoom', {}, locale));
       await flushPromises();
-      const notice = document.querySelector<HTMLElement>('.landing-setup-account-notice');
+      const notice = document.querySelector<HTMLElement>('.landing-setup-correspondence-notice');
       expect(notice?.hidden).toBe(false);
       expect(notice?.textContent).toContain(expected);
       expect(notice?.textContent).not.toMatch(/[A-Za-z]{4}/);
@@ -2020,7 +1986,7 @@ function openPlaySetup(panel: HTMLElement, label: string): void {
     .querySelector<HTMLButtonElement>('.landing-play-action')
     ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const mode = PLAY_SETUP_MODE_BY_LABEL[label];
-  if (mode && mode !== 'pve') {
+  if (mode) {
     document
       .querySelector<HTMLButtonElement>(`.landing-setup-mode-switcher [data-play-mode="${mode}"]`)
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -2029,7 +1995,11 @@ function openPlaySetup(panel: HTMLElement, label: string): void {
 
 function clickModalButton(label: string): void {
   [...document.querySelectorAll<HTMLButtonElement>('.landing-setup-dialog button')]
-    .find((button) => button.textContent === label)
+    .find(
+      (button) =>
+        button.textContent === label ||
+        button.querySelector('.landing-start-option-text')?.textContent === label,
+    )
     ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
@@ -2041,7 +2011,12 @@ function clickModalColor(label: string): void {
 
 function clickModalTimeControl(label: string): void {
   [...document.querySelectorAll<HTMLButtonElement>('.landing-time-presets button')]
-    .find((button) => button.textContent?.trim() === label)
+    .find(
+      (button) =>
+        button.textContent?.trim() === label ||
+        button.textContent?.trim() === `${label} days` ||
+        button.textContent?.trim() === `${label} day`,
+    )
     ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
