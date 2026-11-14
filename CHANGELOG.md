@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Accounts marked for outside help in rated games leave the leaderboards and lose rated play, and their recent opponents get back the rating points they lost ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- The default Wood sounds are quieter, and captures land as a soft knock instead of a sharp clack ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Correspondence games can be rated, each variant in its own correspondence rating; casual stays the default ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Three Kingdoms Banqi games between two signed-in players can be rated, with their own leaderboard and a rating on the profile ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
 - Duck Xiangqi, Crazyhouse Xiangqi, Three Kingdoms banqi and Gomoku bots take their time like the others, mostly a few seconds with an occasional long think ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
@@ -52,6 +54,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Clarify mate objectives and let players explore completed puzzles ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Six rules pages and the Vietnamese jieqi guide embed an annotated sample game ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - A player page for Meng Fanrui, the 2025 Chinese Xiangqi Association men's champion, in English and Chinese ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
 - Study boards embedded in articles show the engine score chart, the luck split for banqi and jieqi flips, and Fog Xiangqi games with a Red or Black view ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
@@ -78,6 +81,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Recording clocks and event software can post xiangqi games straight to a broadcast page through the new broadcast push API ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- Playing now cards on /games show full bot names, and their boards, names and buttons line up across each row ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Other groups of a relayed dpxq event are added automatically ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Duck Xiangqi study embeds show the engine's move marks, its lines and where it would have put the duck ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
 - Three Kingdoms Banqi games download as PGN and JSON, naming each piece only when it was turned over ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
@@ -115,6 +120,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The bots page lists opponents and levels strongest first ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- The correspondence Post a seek dialog uses the same layout as Play a game ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - On phones the game counts join the mission block and article rows rotate until touched ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - The weekly chart on /stats can switch to games between people, split casual and rated ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Pikafish holds the xiangqi title on the Champions page after a 40-game match against Fairy-Stockfish ([2b54dffb](https://github.com/brianhliou/mistboard/commit/2b54dffb))
@@ -162,6 +169,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Puzzle history draws the board for puzzles that were later withdrawn ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- Banqi luck grading finishes about four times faster ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- Finished Gomoku games say five in a row, not den entered, on the watch page and every game list ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
+- Challenging a friend to a correspondence game from Play a game can now be rated ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Bot-vs-bot rating games play the live rules: xiangqi's 60-move no-capture draw, and jieqi's repetition and adjudication rules ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - World Xiangqi Open team groups show English names on their broadcast pages ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Homepage play-panel rows with a playing count no longer stand taller than the rest ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
