@@ -130,6 +130,7 @@ describe('/champions', () => {
     // AB-JChess-20261031 won 306, lost 227, drew 67 against jqe (a 0.566 score).
     expect(stats('jieqi')).toEqual(['306 wins', '67 draws', '227 losses']);
     expect(stats('jungle')).toEqual(['82 wins', '118 draws', '0 losses']);
+    expect(stats('xiangqi')).toEqual(['15 wins', '20 draws', '5 losses']);
     expect(card('jieqi').querySelector('.champions-bar')?.getAttribute('aria-label')).toBe(
       '306 wins, 67 draws, 227 losses',
     );

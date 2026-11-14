@@ -211,12 +211,14 @@ export const TITLES: readonly Title[] = [
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
     credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
-    // Title match xq-title-pikafish-vs-fsf-2026-11-11 on prod's engine queue: 40 games,
-    // colours alternated, level 8 against Fairy-Stockfish level 8, 24.5/40.
+    // Title match xq-title-pikafish-vs-fsf-2026-11-13 on prod's engine queue: 40 games,
+    // colours alternated, level 8 against Fairy-Stockfish level 8, 25/40 (Elo +89,
+    // 95% +16 to +171), after bot-vs-bot games moved to the live 120-ply rule. It
+    // replaces the 11-11 match (15-19-6), played under the old 60-ply rule.
     reign: {
       wins: 15,
-      draws: 19,
-      losses: 6,
+      draws: 20,
+      losses: 5,
       tookKey: 'champions.tookPikafish',
       gamesHref: '/study/Tf6bUHnC',
       about: (locale) => [t('champions.aboutPikafish', {}, locale)],
