@@ -1018,6 +1018,22 @@
   font-weight: 800;
 }
 
+/* Sign-in uses the same primary action and touch target as Play. */
+a.landing-setup-start:not([hidden]) {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+
+.landing-setup-account-notice {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .landing-setup-status {
   margin: 0;
   padding: 12px 20px 0;
