@@ -24,7 +24,7 @@ export const fanfanqiArticle: Article = {
     'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.',
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-11-14',
+  publishedAt: '2026-11-17',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
