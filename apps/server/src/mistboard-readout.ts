@@ -1,4 +1,10 @@
 import { createHash } from 'node:crypto';
+import {
+  type StaleBotRating,
+  staleBotRatingKey,
+  staleBotRatingLabel,
+} from './bot-rating-provenance.js';
+import { type HeldBotRating, heldBotRatingKey } from './bot-rating-refresh.js';
 import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
@@ -109,6 +115,9 @@ export type MistboardReadoutEngines = {
   failedTasks: number;
   staleWorkers: number;
   activeWorkers: number;
+  // Absent on old reports. Each row is the latest published variant/time-class snapshot.
+  staleRatings?: StaleBotRating[];
+  heldRatings?: HeldBotRating[];
 };
 
 // Whether every stored broadcast board would answer the board API. Ingestion
@@ -310,6 +319,9 @@ export type MistboardReadoutV1 = {
   // Last successful complaint observation, carried across failed collectors.
   // Absent on older snapshots; never turn missing delivery facts into zeros.
   loginEmailComplaintsSeen?: number;
+  // Preserve the edge baseline when the engine collector temporarily fails.
+  staleBotRatingsSeen?: string[];
+  heldBotRatingsSeen?: string[];
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -396,6 +408,16 @@ export function buildMistboardReadout(input: {
     puzzles: input.facts.puzzles,
     mining: input.facts.mining,
     engines: input.facts.engines,
+    staleBotRatingsSeen:
+      input.facts.engines?.staleRatings?.map(staleBotRatingKey) ??
+      input.previousReport?.staleBotRatingsSeen ??
+      input.previousReport?.engines?.staleRatings?.map(staleBotRatingKey) ??
+      [],
+    heldBotRatingsSeen:
+      input.facts.engines?.heldRatings?.map(heldBotRatingKey) ??
+      input.previousReport?.heldBotRatingsSeen ??
+      input.previousReport?.engines?.heldRatings?.map(heldBotRatingKey) ??
+      [],
     broadcasts: input.facts.broadcasts ?? null,
     feedback: input.facts.feedback ?? null,
     deploys: input.facts.deploys ?? null,
@@ -430,6 +452,8 @@ function buildActions(
     ...deployDisruptionActions(facts.deploys ?? null, previousReport),
     ...loginEmailDeliveryActions(facts.loginEmailDelivery ?? null, previousReport),
     ...botTimeLossActions(facts.botTiming ?? null, previousReport),
+    ...staleBotRatingActions(facts.engines?.staleRatings, previousReport),
+    ...heldBotRatingActions(facts.engines?.heldRatings, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -738,6 +762,51 @@ function missingEngineKey(engine: MistboardReadoutMissingEngine): string {
   return `${engine.variant}:${engine.binary}`;
 }
 
+function heldBotRatingLabel(rating: HeldBotRating): string {
+  return `${rating.botId} (${rating.gameSpecId}, ${rating.timeClass}): calibration rating held (${rating.previousRating} → ${rating.estimatedRating} Elo, more than 200 Elo on the same build)`;
+}
+
+function heldBotRatingActions(
+  held: HeldBotRating[] | undefined,
+  previous: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const before = new Set(
+    previous?.heldBotRatingsSeen ?? previous?.engines?.heldRatings?.map(heldBotRatingKey) ?? [],
+  );
+  const fresh = (held ?? []).filter((rating) => !before.has(heldBotRatingKey(rating)));
+  return fresh.length === 0
+    ? []
+    : [
+        {
+          code: 'bot-ratings-calibration-held',
+          severity: 'action',
+          ownerIssue: null,
+          dedupeKey: `bot-ratings-calibration-held:${fresh.map(heldBotRatingKey).sort().join(',')}`,
+          text: `${fresh.map(heldBotRatingLabel).join('; ')}. Review the calibration games before importing a replacement; the published rating is unchanged.`,
+        },
+      ];
+}
+
+function staleBotRatingActions(
+  stale: StaleBotRating[] | undefined,
+  previous: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const before = new Set(
+    previous?.staleBotRatingsSeen ?? previous?.engines?.staleRatings?.map(staleBotRatingKey) ?? [],
+  );
+  const fresh = (stale ?? []).filter((rating) => !before.has(staleBotRatingKey(rating)));
+  if (fresh.length === 0) return [];
+  return [
+    {
+      code: 'bot-ratings-stale',
+      severity: 'action',
+      dedupeKey: `bot-ratings-stale:${fresh.map(staleBotRatingKey).sort().join(',')}`,
+      ownerIssue: null,
+      text: `${fresh.map(staleBotRatingLabel).join('; ')}. Queue rated ladders for the affected variants, review the results, then import.`,
+    },
+  ];
+}
+
 function renderMissingEngine(engine: MistboardReadoutMissingEngine): string {
   return `${engine.binary} (${engine.variant})`;
 }
@@ -948,6 +1017,8 @@ const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
   'login-email-complaint-new',
   // Each bot loss on time is its own game; the key names the rooms.
   'bot-time-losses',
+  'bot-ratings-stale',
+  'bot-ratings-calibration-held',
 ]);
 
 function alertKey(
@@ -1123,6 +1194,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
     lines.push(
       `- Engines: ${report.engines.activeWorkers} active workers, ${report.engines.failedTasks} failed tasks, ${report.engines.staleWorkers} stale workers`,
     );
+  }
+  for (const rating of report.engines?.staleRatings ?? []) {
+    lines.push(`- ${staleBotRatingLabel(rating)}.`);
+  }
+  for (const rating of report.engines?.heldRatings ?? []) {
+    lines.push(`- ${heldBotRatingLabel(rating)}.`);
   }
   // Optional on the type because older snapshots predate the section; the
   // renderer meets those on /readouts.
