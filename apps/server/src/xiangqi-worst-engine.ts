@@ -15,6 +15,7 @@ import { splitFairyStockfishCommands, UciWarmSessionCache } from './uci-engine-h
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
+  standardXiangqiFsfRules,
   xiangqiFsfLivePool,
   xiangqiFsfNetPath,
   xiangqiFsfPath,
@@ -22,7 +23,7 @@ import {
 
 export const XIANGQI_WORST_ENGINE_ID = 'fairy-stockfish-xiangqi-worst';
 // Bump on any change to the pick rule, budget or engine config.
-export const XIANGQI_WORST_ENGINE_VERSION = 'worst-v2';
+export const XIANGQI_WORST_ENGINE_VERSION = 'worst-v3';
 
 // Above any xiangqi position's legal move count; the engine caps MultiPV at the
 // root move count anyway.
@@ -97,7 +98,7 @@ export async function xiangqiWorstEngineMove(
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs ?? WORST_TIER.movetimeMs));
   const { init, position, go } = splitFairyStockfishCommands({
     moves: moves.map(pikafishUciToFsfXiangqiUci),
-    variant: 'xiangqi',
+    ...standardXiangqiFsfRules(),
     nodes: WORST_TIER.nodes,
     eval: { evalFile: xiangqiFsfNetPath(bin) },
     movetimeMs,

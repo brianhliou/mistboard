@@ -203,7 +203,7 @@ test('xiangqi engine catalog exposes the honest FSF human ladder', () => {
     movetimeMs: 50,
   });
   assert.equal(isCatalogXiangqiEngineClientId(fsf?.id), true);
-  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.2.0');
+  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.2.2');
   assert.equal(
     XIANGQI_ENGINE_CATALOG.filter((entry) => entry.id.startsWith('fairy-stockfish-xiangqi-level-'))
       .length,
