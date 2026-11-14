@@ -2,7 +2,7 @@
 // weights. The production-native pin is separately gated by fetch-fsf-xiangqi-net.sh.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -38,15 +38,17 @@ const deadline = setTimeout(() => { console.error('FSF probe timed out'); proces
     throw new Error('No FSF response: ' + lines.join('\n'));
   };
   sf.FS.writeFile('variants.ini', fs.readFileSync(config.iniPath));
-  const net = fs.readFileSync(config.netPath);
-  sf.FS.writeFile(config.originalNet, net);
-  sf.FS.writeFile(config.servingNet, net);
+  if (config.netPath) {
+    const net = fs.readFileSync(config.netPath);
+    sf.FS.writeFile(config.originalNet, net);
+    sf.FS.writeFile(config.servingNet, net);
+  }
   sf.postMessage('uci');
   await waitFor(line => line === 'uciok');
   sf.postMessage('setoption name VariantPath value variants.ini');
   const results = [];
   for (const variant of ['xiangqi', config.variant]) {
-    for (const nnue of [false, true]) {
+    for (const nnue of config.netPath ? [false, true] : [false]) {
       for (const clock of [0, 100, 118, 120]) {
         lines.length = 0;
         sf.postMessage('setoption name Use NNUE value ' + nnue);
@@ -76,7 +78,13 @@ const deadline = setTimeout(() => { console.error('FSF probe timed out'); proces
 })().catch(error => { console.error(error); process.exit(1); });
 `;
 
-test('standard xiangqi FSF keeps evaluating at 100 plies, draws at 120, and still loads NNUE', () => {
+test('standard xiangqi FSF keeps evaluating at 100 plies, draws at 120, and still loads NNUE', (t) => {
+  // The CC0 net is gitignored and fetched at build time, so hosted CI has no
+  // copy: there the draw rule is checked on the classical eval only, and the
+  // image build's fetch-fsf-xiangqi-net.sh proves the NNUE load.
+  const netPath = resolve(repoRoot, 'apps/web/public/engine/pikafish', XIANGQI_FSF_NNUE_NET);
+  const hasNet = existsSync(netPath);
+  if (!hasNet) t.diagnostic(`no ${XIANGQI_FSF_NNUE_NET} in this checkout: NNUE half skipped`);
   const dir = mkdtempSync(join(tmpdir(), 'fsf-standard-xiangqi-'));
   try {
     const assets = resolve(repoRoot, 'apps/web/public/engine/fairy-stockfish');
@@ -94,7 +102,7 @@ test('standard xiangqi FSF keeps evaluating at 100 plies, draws at 120, and stil
           ...rules,
           originalNet: XIANGQI_FSF_NNUE_NET,
           servingNet: XIANGQI_FSF_SERVING_NET,
-          netPath: resolve(repoRoot, 'apps/web/public/engine/pikafish', XIANGQI_FSF_NNUE_NET),
+          netPath: hasNet ? netPath : null,
         }),
       ],
       { encoding: 'utf8', timeout: 25_000 },
@@ -106,7 +114,7 @@ test('standard xiangqi FSF keeps evaluating at 100 plies, draws at 120, and stil
       cp: number;
       evaluation: string;
     }[];
-    assert.equal(results.length, 16);
+    assert.equal(results.length, hasNet ? 16 : 8);
     for (const result of results) {
       assert.match(result.evaluation, result.nnue ? /NNUE evaluation using/ : /classical/);
       const drawn = result.clock >= (result.variant === 'xiangqi' ? 100 : 120);
