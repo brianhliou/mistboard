@@ -4,7 +4,7 @@ import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isSignedIn, signedInResolvedEvent } from './signed-in-state.js';
-import { formatDayClock } from './web-utils.js';
+import { correspondenceTimeLeftLabel } from './web-utils.js';
 
 // The signed-in homepage's correspondence row (#1058): the player's games that
 // wait on their move, each a link into its room. Nothing for a player with none
@@ -96,6 +96,53 @@ export function buildLandingCorrespondenceMoves(
   return box;
 }
 
+/** Private invitations are actionable on the homepage on phones and desktops.
+ * The correspondence page owns the shared Accept/Decline handlers. */
+export function buildLandingIncomingChallenges(options: { hydrate?: boolean } = {}): HTMLElement {
+  const box = document.createElement('section');
+  box.className = 'landing-corr-incoming';
+  box.hidden = true;
+  if (options.hydrate === false) return box;
+  let mounted = false;
+  let generation = 0;
+  let timer: number | undefined;
+  const sync = (): void => {
+    if (box.isConnected) mounted = true;
+    else if (mounted) {
+      window.removeEventListener(signedInResolvedEvent, sync);
+      document.removeEventListener('visibilitychange', refresh);
+      window.clearInterval(timer);
+      generation += 1;
+      return;
+    }
+    const mine = ++generation;
+    if (!isSignedIn()) {
+      box.replaceChildren();
+      box.hidden = true;
+      return;
+    }
+    void import('./correspondence.js')
+      .then(({ renderIncomingChallenges }) =>
+        renderIncomingChallenges(box, undefined, {
+          compact: true,
+          isCurrent: () => mine === generation && isSignedIn() && (!mounted || box.isConnected),
+        }),
+      )
+      .catch(() => {});
+  };
+  const refresh = (): void => {
+    if (!document.hidden) sync();
+  };
+  window.addEventListener(signedInResolvedEvent, sync);
+  document.addEventListener('visibilitychange', refresh);
+  timer = window.setInterval(refresh, 30_000);
+  sync();
+  queueMicrotask(() => {
+    if (box.isConnected) mounted = true;
+  });
+  return box;
+}
+
 async function loadYourMoveGames(): Promise<CorrespondenceGame[]> {
   const resp = await fetch('/api/correspondence/games').catch(() => null);
   if (!resp?.ok) return [];
@@ -123,9 +170,16 @@ export function yourMoveOpponentLabel(game: CorrespondenceGame, locale?: Locale)
 /** "Xiangqi · 1d 4h left" for a row; the time drops once the deadline passed. */
 export function yourMoveMeta(game: CorrespondenceGame, now = Date.now(), locale?: Locale): string {
   const parts = [variantDisplayLabel(game.gameSpecId)];
+  if (
+    typeof game.moveNumber === 'number' &&
+    Number.isInteger(game.moveNumber) &&
+    game.moveNumber > 0
+  ) {
+    parts.push(t('games.moveCount', { count: game.moveNumber }, locale));
+  }
   const remaining = deadlineRemainingMs(game.dueAt, now);
   if (remaining !== null && remaining > 0) {
-    parts.push(t('correspondence.timeLeft', { time: formatDayClock(remaining) }, locale));
+    parts.push(correspondenceTimeLeftLabel(game.dueAt, now, locale));
   }
   return parts.join(' · ');
 }

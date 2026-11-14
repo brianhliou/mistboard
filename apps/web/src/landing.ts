@@ -32,6 +32,7 @@ import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
 import {
   buildLandingCorrespondenceMoves,
+  buildLandingIncomingChallenges,
   createYourMoveFeed,
 } from './landing-correspondence-moves.js';
 import {
@@ -757,6 +758,7 @@ export function buildLandingStage(
   // panel lists them (its Your move tab), the card shows only at phone width.
   playStack.append(
     playPanel,
+    buildLandingIncomingChallenges({ hydrate: !opts.skipLiveWidgets }),
     buildLandingCorrespondenceMoves({
       hydrate: !opts.skipLiveWidgets,
       feed: yourMove,
