@@ -628,9 +628,15 @@ describe('landing play panel', () => {
     expect(selectedModalTimeControl()).toBe('1 + 1');
   });
 
-  // A first visit uses Random for every bot variant as well as human games.
-  for (const gameSpecId of ['jungle-flip', 'banqi', 'jieqi']) {
-    it(`opens a ${gameSpecId} engine deep link on Random`, async () => {
+  // A rules-page CTA names no side, and landing on second means the board moves
+  // before the visitor has touched anything. On the flip pair the picker is move
+  // order rather than ink, so "Second" is the whole first impression.
+  for (const { gameSpecId, label } of [
+    { gameSpecId: 'jungle-flip', label: 'First' },
+    { gameSpecId: 'banqi', label: 'First' },
+    { gameSpecId: 'jieqi', label: 'Red' },
+  ]) {
+    it(`opens a ${gameSpecId} engine deep link on the first mover`, async () => {
       const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
         if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
         if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/first_mover' });
@@ -641,7 +647,7 @@ describe('landing play panel', () => {
       window.history.replaceState(null, '', `/?play=computer&gameSpecId=${gameSpecId}`);
 
       maybeOpenPlayDeepLink([]);
-      expect(selectedModalColor()).toBe('Random');
+      expect(selectedModalColor()).toBe(label);
 
       clickModalButton('Start game');
       await flushPromises();
@@ -649,7 +655,7 @@ describe('landing play panel', () => {
       expect(roomPostBody(fetchSpy)).toMatchObject({
         mode: 'pve',
         gameSpecId,
-        preferredColor: 'random',
+        preferredColor: 'red',
       });
     });
   }
@@ -786,7 +792,9 @@ describe('landing play panel', () => {
     expect(document.querySelector('a.landing-setup-start')?.textContent).toBe('Sign in to play');
   });
 
-  // Only an explicit side is remembered; untouched defaults stay Random.
+  // Sides are variant-declared, so an untouched default must not persist as if it
+  // were a pick: xiangqi's 'red' coerces to the SECOND seat in any variant whose
+  // first mover is not red, which would seat a player who never chose anything.
   it('does not let an untouched engine side follow the player into another variant', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
@@ -800,9 +808,9 @@ describe('landing play panel', () => {
     ]);
     document.body.append(panel);
 
-    // Take the Random default without touching the picker.
+    // Xiangqi (red opens): take the default without touching the picker.
     openPlaySetup(panel, 'Play a bot');
-    expect(selectedModalColor()).toBe('Random');
+    expect(selectedModalColor()).toBe('Red');
     clickModalButton('Start game');
     await flushPromises();
     document.querySelector('.landing-setup-overlay')?.remove();
@@ -810,16 +818,16 @@ describe('landing play panel', () => {
     // assertion below cannot pass on a stale call.
     fetchSpy.mockClear();
 
-    // The untouched side stays Random in Fog Chess too.
+    // Fog Chess opens white. A remembered 'red' would coerce to Black here.
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-chess');
-    expect(selectedModalColor()).toBe('Random');
+    expect(selectedModalColor()).toBe('White');
 
     clickModalButton('Start game');
     await flushPromises();
     expect(roomPostBody(fetchSpy)).toMatchObject({
       mode: 'pve',
-      preferredColor: 'random',
+      preferredColor: 'white',
     });
   });
 
@@ -987,7 +995,7 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('jungle-flip');
-    expect(selectedModalColor()).toBe('Random');
+    expect(selectedModalColor()).toBe('First');
     clickModalColor('Second');
     clickModalButton('Start game');
     await flushPromises();

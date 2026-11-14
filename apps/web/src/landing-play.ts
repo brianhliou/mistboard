@@ -439,6 +439,11 @@ export function buildLandingPlayPanel(
       modeSwitcher: true,
       source: 'hero',
       modeFrom: storedMode ? 'stored' : 'default',
+      // Same rule as a mode switch: Friend and Online rate alike, bot games never do.
+      ratedDisabled:
+        !storedMode || storedMode === 'pve'
+          ? undefined
+          : !isRatedModeEnabled() || isLikelyStatsExcluded(),
     });
   });
   panel.append(playButton);
@@ -1879,12 +1884,14 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   }
   let selectedEngineId =
     engineByGameSpec.get(selectedGameSpecId) ?? storedPreference.engineId ?? choice.engineId;
-  // An untouched side stays Random across modes and variants. Only a real pick
-  // (including the legacy global key) is remembered as an explicit preference.
+  // An untouched side follows the mode default (Random against people, the first
+  // mover against the bot). Only a real pick, including the legacy global key, is
+  // remembered as an explicit preference.
   const storedColor =
     choice.initialColor ?? storedPreference.preferredColor ?? loadStoredColorPreference();
   let colorIsExplicit = storedColor !== undefined;
-  let preferredColor: LandingColorPreference = storedColor ?? defaultColorPreference();
+  let preferredColor: LandingColorPreference =
+    storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
   let syncGameSpecificSections = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
@@ -2600,10 +2607,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (!capabilities.supportsRated) {
       rated = false;
     }
-    // An untouched side stays Random; an explicit pick uses this variant's colors.
+    // An untouched side follows the mode default; an explicit pick uses this
+    // variant's colors.
     preferredColor = colorIsExplicit
       ? coerceColorPreferenceForCapabilities(preferredColor, capabilities)
-      : defaultColorPreference();
+      : defaultColorPreference(choice.mode, selectedGameSpecId);
     // Some variants (the four-player Mahjong table) have no choosable side, so
     // suppress the color picker and let the server assign seats.
     const hideColorPicker =
@@ -3454,9 +3462,18 @@ function loadStoredColorPreference(): LandingColorPreference | undefined {
   return undefined;
 }
 
-// Every mode opens on a coin flip until the player explicitly chooses a side.
-function defaultColorPreference(): LandingColorPreference {
-  return 'random';
+// The side shown before the player picks one. Games against people open on
+// Random, where the coin flip is the fairness mechanism. PvE seats the human as
+// the variant's first mover: a game against a bot has no fairness argument for a
+// coin flip, and on the flip variants the picker is move order rather than ink,
+// so a bot that moves first would play before the player has done anything.
+// Read from the variant's own capabilities, since each declares its first mover.
+function defaultColorPreference(
+  mode: LandingPlayMode,
+  gameSpecId: LandingGameSpecId,
+): LandingColorPreference {
+  if (mode !== 'pve') return 'random';
+  return landingGameSpecCapabilities(gameSpecId).firstColor;
 }
 
 function setupPreferenceStorageKey(mode: LandingPlayMode): string {

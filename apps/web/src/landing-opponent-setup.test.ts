@@ -109,6 +109,19 @@ describe('#1123 opponent-first setup', () => {
     button!.click();
   };
 
+  it('keeps rated off when the homepage reopens a human opponent while rated play is off', () => {
+    setRatedModeEnabled(false, true);
+    window.localStorage.setItem('mistboard:setup:lastMode', 'pvp');
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+    panel.querySelector<HTMLButtonElement>('.landing-play-action')!.click();
+    const rated = document.querySelector<HTMLButtonElement>(
+      '[data-setup-section="gameType"] .landing-start-option',
+    );
+    expect(rated?.disabled).toBe(true);
+    expect(rated?.textContent).toContain('coming soon');
+  });
+
   it('has one homepage Play entry, remembers the last opponent, and records its origin', () => {
     const panel = buildLandingPlayPanel([]);
     document.body.append(panel);
@@ -190,17 +203,19 @@ describe('#1123 opponent-first setup', () => {
     },
   );
 
-  it('starts Computer on Random, with an explicit stored side taking priority', () => {
+  it('starts Computer on the first mover and people on Random, with a stored side taking priority', () => {
+    const selectedSide = () =>
+      document.querySelector('.landing-color-option.selected .landing-color-label')?.textContent;
+    // Find opponent has no side picker; the server seats lobby games.
+    open('pvp');
+    expect(selectedSide()).toBe('Random');
+    click('.landing-setup-close');
     open();
-    expect(
-      document.querySelector('.landing-color-option.selected .landing-color-label')?.textContent,
-    ).toBe('Random');
+    expect(selectedSide()).toBe('Red');
     click('.landing-setup-close');
     window.localStorage.setItem('mistboard:setup:pve', JSON.stringify({ preferredColor: 'black' }));
     open();
-    expect(
-      document.querySelector('.landing-color-option.selected .landing-color-label')?.textContent,
-    ).toBe('Black');
+    expect(selectedSide()).toBe('Black');
   });
 
   it('hides Send to outside signed-in Friend correspondence and defaults to a link', () => {

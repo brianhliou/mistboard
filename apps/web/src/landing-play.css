@@ -1517,6 +1517,17 @@ html.landing-setup-open body {
   padding: 2px 24px;
   border-block: 0;
 }
+/* Friend with real time runs six rows plus two-line opponent buttons and the
+   Pace row, which on a 1280x720 window put half the Rating row under a scroll.
+   Short desktop windows get tighter rows and margins instead. */
+@media (min-width: 680px) and (max-height: 760px) {
+  .landing-setup-dialog.landing-setup-dialog--open {
+    max-height: calc(100vh - 24px);
+  }
+  .landing-setup-dialog--open .landing-setup-accordion {
+    gap: 6px;
+  }
+}
 
 /* Labels sit beside their controls below the variant grid, which keeps the
    panel short. A choice is one outlined group of full-height options; the
