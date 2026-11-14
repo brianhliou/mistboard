@@ -43,10 +43,11 @@ GitHub's attempt number prevents repeated invocations from retrying a second
 failure. The wait ignores the old completed badge until the new attempt
 appears. Release records include `ciReruns`, with run ID, attempt, files and URL.
 
-Root and workspace compiler commands use TypeScript 7. The tooling test
-`scripts/typescript-version.test.mjs` checks declarations, lock entries and
-installed compiler versions. TypeScript 5 remains a private API dependency of
-analysis tools that require it; it does not supply the root `tsc` command.
+Workspace compiler commands use TypeScript 7. The root leaves TypeScript to
+analysis tools' dependency requirements, so madge and typescript-estree can
+resolve the TypeScript 5 API. The tooling test
+`scripts/typescript-version.test.mjs` checks workspace declarations, lock entries
+and installed compiler versions, plus the API resolved by madge's analysis tools.
 
 Before a dry run or push can proceed, every local `agent/*` branch with commits
 outside both the release HEAD and local `origin/main` must be merged into the
@@ -105,6 +106,10 @@ node --test scripts/batch-ci.test.mjs scripts/release-agent-branches.test.mjs sc
 These execute the release orchestration with external effects replaced, test
 CI verdicts and candidate lookup, exercise the pre-push hook, and check drain
 cleanup. They do not publish refs or contact production.
+Later-stage routine release fixtures provide completed green batch evidence
+through the injected batch lookup or GitHub subprocess response. Missing-evidence
+regressions retain the refusal; fresh-candidate CI and drain cancellation tests
+explicitly exercise the emergency path.
 
 ## Parked build verification (2026-10-26)
 

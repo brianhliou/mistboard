@@ -82,6 +82,12 @@ childProcess.spawnSync = (command, args, options) => {
   if (command === 'node' && args[0] === 'scripts/prod-smoke-plan.mjs') {
     return result('prod-smoke-plan: deploy_required=' + (process.env.FIXTURE_NO_DEPLOY ? 'false' : 'true') + '\\nreason: fixture\\n');
   }
+  if (command === 'gh' && args[0] === 'run' && args[1] === 'list') {
+    const headSha = args[args.indexOf('--commit') + 1];
+    return result(JSON.stringify(process.env.FIXTURE_GREEN_BATCH ? [
+      { headSha, status: 'completed', conclusion: 'success' },
+    ] : []));
+  }
   if (command === 'node' && args[0] === 'scripts/pre-push-check.mjs') {
     return result(JSON.stringify({ kind: 'targeted', reason: 'fixture', commands: [['npm', 'run', 'fixture-gate']] }));
   }
@@ -162,11 +168,14 @@ test('push preflight reports a trailing or unknown engine pin and continues to t
     const result = f.run(['--push'], {
       FIXTURE_ENGINE_LOOKUP: lookup,
       FIXTURE_FAIL: 'fixture-gate',
+      FIXTURE_GREEN_BATCH: '1',
     });
     assert.equal(result.status, 1, result.output);
     assert.match(result.stdout, lookup === 'behind' ? /engine_pin: behind/ : /engine_pin: unknown/);
     assert.ok(result.events.some(({ command }) => command === 'npm'));
-    assert.ok(!result.events.some(({ args }) => args.includes('push')));
+    assert.ok(
+      !result.events.some(({ command, args }) => command === 'git' && args.includes('push')),
+    );
     assert.deepEqual(f.snapshot(), before);
   }
 });
