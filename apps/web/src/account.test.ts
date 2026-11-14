@@ -48,6 +48,36 @@ describe('account page auth flow', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([
+    '/?play=friend&variant=jieqi&tc=5m5&rated=1&side=black',
+    '/?play=lobby&variant=banqi&tc=corr&days=7&rated=1&side=random',
+  ])('#1111 sign-in returns to the complete play setup: %s', async (referrer) => {
+    window.history.replaceState(
+      null,
+      '',
+      `/account?tab=login&referrer=${encodeURIComponent(referrer)}`,
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('login-setup', '12345678'), 202);
+        if (String(input) === '/api/auth/email/confirm')
+          return jsonResponse({ user: testUser('setup-player'), isNewUser: false });
+        throw new Error(`unexpected fetch: ${input}`);
+      }),
+    );
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app')!);
+    document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+    submitAccountForm();
+    await flushDom();
+    submitAccountForm();
+    await flushDom();
+    expect(window.location.pathname + window.location.search).toBe(referrer);
+  });
+
   it.each([true, false])(
     'tracks the complete auth funnel without private properties (new=%s)',
     async (isNewUser) => {
