@@ -4,6 +4,7 @@ import {
   type BanqiDeal,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
+  gameSpecForId,
   isCorrespondenceRatedSpec,
 } from '@mistboard/game';
 import { mayPlayCorrespondence, mayPlayCorrespondenceByUserId } from './correspondence-access.js';
@@ -393,3 +394,29 @@ for (const spec of specs) {
     assert.equal(reads, cases.length);
   });
 }
+
+test('FFQ public live launch keeps correspondence admin-only, including directed accounts', async (t) => {
+  flags(t, true);
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'casual';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(close);
+  t.mock.method(getPool(), 'query', async (sql: string, args: unknown[]) => {
+    assert.ok(sql.includes('account_role AS'));
+    return { rows: [{ accountRole: args[0] }] };
+  });
+  for (const user of [null, player, admin]) {
+    assert.equal(await mayPlayCorrespondence(user, 'ffq-banqi'), user === admin);
+  }
+  assert.equal(await mayPlayCorrespondenceByUserId('player', 'ffq-banqi'), false);
+  assert.equal(await mayPlayCorrespondenceByUserId('admin', 'ffq-banqi'), true);
+  assert.deepEqual(await seeksVisibleTo([{ gameSpecId: 'ffq-banqi' }], player), []);
+  assert.deepEqual(
+    await createSeekResult(ctx, player, { gameSpecId: 'ffq-banqi', daysPerMove: 3 }, 'board'),
+    { status: 403, body: { error: 'variant_not_granted' } },
+  );
+});

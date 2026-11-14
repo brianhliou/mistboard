@@ -1,4 +1,4 @@
-import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
+import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import type { UserAccount } from './persistence.js';
 
@@ -21,9 +21,20 @@ export function isFFQBanqiGame(game: {
   );
 }
 
-// Every FFQ door requires BOTH the runtime flag and an admin account, in
-// local development as well as production. There is no flag-only bypass.
+// The final launch changes publicSurface; until then the runtime flag still
+// admits only admins. The runtime flag remains a kill switch after launch.
 export function ffqBanqiAdmits(accountUser: Pick<UserAccount, 'accountRole'> | null): boolean {
+  return (
+    ffqBanqiEnabled() &&
+    (gameSpecForId(FFQ_BANQI_SPEC_ID).publicSurface !== 'hidden' ||
+      accountUser?.accountRole === 'admin')
+  );
+}
+
+// Live launch never opens correspondence (#994), including existing invites.
+export function ffqBanqiCorrespondenceAdmits(
+  accountUser: Pick<UserAccount, 'accountRole'> | null,
+): boolean {
   return ffqBanqiEnabled() && accountUser?.accountRole === 'admin';
 }
 

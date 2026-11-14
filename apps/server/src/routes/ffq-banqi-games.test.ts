@@ -4,11 +4,13 @@ import test from 'node:test';
 import {
   applyFFQBanqiMove,
   type BanqiDeal,
+  correspondenceTimeControl,
   createFFQBanqiDeal,
   createFFQBanqiStateFromSetup,
   FFQ_BANQI_DAMAGE,
   FFQ_BANQI_SPEC_ID,
   type FFQBanqiMove,
+  gameSpecForId,
   getFFQBanqiLegalMoves,
 } from '@mistboard/game';
 import { ffqBanqiAdmits } from '../ffq-banqi-access.js';
@@ -25,6 +27,7 @@ import { resolveGameExport } from '../game-export-tenant.js';
 import { type TenantGameCardStore, tenantGameCard, tenantGamePageMeta } from '../og-game-tenant.js';
 import { resolvePositionOg } from '../og-position.js';
 import type { GameRecord } from '../persistence.js';
+import { close, getPool, init } from '../persistence-db.js';
 import { variantTenantForRoomId } from '../variant-tenant/registry.js';
 import { replayTenantEvents } from '../variant-tenant/runtime.js';
 import '../ffq-banqi-registration.js';
@@ -170,48 +173,62 @@ test('finished FFQ API is masked at every ply with exact HP and capture damage',
   }
 });
 
-test('FFQ exports remain unavailable for both hidden deals', () => {
-  for (const format of ['pgn', 'json'] as const) {
-    const args = { roomId: ROOM, format };
-    const summary = {
-      ...game,
-      jobId: null,
-      gameIndex: null,
-      whiteEngineId: null,
-      blackEngineId: null,
-      timeControl: null,
-      initialMs: null,
-      incrementMs: null,
-    };
-    const a = resolveGameExport({ ...args, summary, events: events() });
-    const b = resolveGameExport({ ...args, summary, events: events(swapped) });
-    assert.equal(a.status, 501);
-    assert.equal(JSON.stringify(a), JSON.stringify(b));
-    assert.ok(!JSON.stringify(a).includes('deal_fen'));
-    assert.deepEqual(a, {
-      status: 501,
-      body: { error: 'export_not_supported_for_variant', variant: FFQ_BANQI_SPEC_ID },
+for (const surface of ['hidden', 'casual'] as const) {
+  test(`FFQ exports remain unavailable for both hidden deals: surface=${surface}`, (t) => {
+    const spec = gameSpecForId('ffq-banqi');
+    const priorSurface = spec.publicSurface;
+    spec.publicSurface = surface;
+    t.after(() => {
+      spec.publicSurface = priorSurface;
     });
-  }
-});
+    for (const format of ['pgn', 'json'] as const) {
+      const args = { roomId: ROOM, format };
+      const summary = {
+        ...game,
+        jobId: null,
+        gameIndex: null,
+        whiteEngineId: null,
+        blackEngineId: null,
+        timeControl: null,
+        initialMs: null,
+        incrementMs: null,
+      };
+      const a = resolveGameExport({ ...args, summary, events: events() });
+      const b = resolveGameExport({ ...args, summary, events: events(swapped) });
+      assert.equal(a.status, 501);
+      assert.equal(JSON.stringify(a), JSON.stringify(b));
+      assert.ok(!JSON.stringify(a).includes('deal_fen'));
+      assert.deepEqual(a, {
+        status: 501,
+        body: { error: 'export_not_supported_for_variant', variant: FFQ_BANQI_SPEC_ID },
+      });
+    }
+  });
 
-test('FFQ has no share card or page meta for either hidden deal', async () => {
-  assert.equal(variantTenantForRoomId(ROOM)?.export, null);
-  assert.equal(variantTenantForRoomId(ROOM)?.card, null);
-  for (const log of [events(), events(swapped)]) {
-    assert.equal(await tenantGameCard(ROOM, store(log)), null);
-    assert.equal(await tenantGamePageMeta(`/ffq-banqi/game/${ROOM}`, store(log)), null);
-  }
-  // The unused card projection must still mask every covered on-board piece.
-  const fen = ffqBanqiCardFen(state);
-  assert.equal(fen, ffqBanqiCardFen(replayTenantEvents(ffqBanqiTenant, events(swapped)).state));
-  const board = resolvePositionOg('banqi', fen);
-  assert.ok(board && board.board.kind === 'grid');
-  assert.equal(
-    board.board.tiles.filter((tile) => tile.hidden).length,
-    state.board.filter((piece) => piece?.faceDown).length,
-  );
-});
+  test(`FFQ has no share card or page meta for either hidden deal: surface=${surface}`, async (t) => {
+    const spec = gameSpecForId('ffq-banqi');
+    const priorSurface = spec.publicSurface;
+    spec.publicSurface = surface;
+    t.after(() => {
+      spec.publicSurface = priorSurface;
+    });
+    assert.equal(variantTenantForRoomId(ROOM)?.export, null);
+    assert.equal(variantTenantForRoomId(ROOM)?.card, null);
+    for (const log of [events(), events(swapped)]) {
+      assert.equal(await tenantGameCard(ROOM, store(log)), null);
+      assert.equal(await tenantGamePageMeta(`/ffq-banqi/game/${ROOM}`, store(log)), null);
+    }
+    // The unused card projection must still mask every covered on-board piece.
+    const fen = ffqBanqiCardFen(state);
+    assert.equal(fen, ffqBanqiCardFen(replayTenantEvents(ffqBanqiTenant, events(swapped)).state));
+    const board = resolvePositionOg('banqi', fen);
+    assert.ok(board && board.board.kind === 'grid');
+    assert.equal(
+      board.board.tiles.filter((tile) => tile.hidden).length,
+      state.board.filter((piece) => piece?.faceDown).length,
+    );
+  });
+}
 
 test('FFQ route gates before reads and rejects live, aborted, foreign and missing games', async () => {
   for (const admitted of [false, true]) {
@@ -550,4 +567,84 @@ test('FFQ decisions are finished-only, cache-first and checkpoint-job compatible
   } finally {
     await resetAnalysisJobsForTests();
   }
+});
+
+test('FFQ default review admission prepares public masked replay but keeps correspondence and private games closed', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  const flag = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(async () => {
+    await close();
+    spec.publicSurface = surface;
+    if (flag === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+    else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
+  });
+  let role: 'player' | 'admin' | null = null;
+  let log = events();
+  let visibility = 'public';
+  let eventReads = 0;
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('UPDATE account_sessions'))
+      return { rows: [{ id: 'reviewer', handle: 'reviewer', account_role: role }] };
+    if (sql.includes('SELECT games.room_id'))
+      return {
+        rows: [
+          {
+            room_id: ROOM,
+            variant: FFQ_BANQI_SPEC_ID,
+            mode: 'pvp',
+            result: game.result,
+            termination: game.termination,
+            ply_count: moves.length,
+            started_at: new Date(0),
+            ended_at: new Date(1),
+            visibility,
+            time_control: null,
+          },
+        ],
+      };
+    if (sql.includes('FROM game_participants')) return { rows: [] };
+    if (sql.startsWith('SELECT payload FROM events')) {
+      eventReads++;
+      return { rows: log.map((payload) => ({ payload })) };
+    }
+    assert.fail(`unexpected review query: ${sql}`);
+  });
+  for (const publicSurface of ['hidden', 'casual'] as const)
+    for (const enabled of [false, true])
+      for (const account of [null, 'player', 'admin'] as const)
+        for (const correspondence of [false, true])
+          for (const privateGame of [false, true]) {
+            spec.publicSurface = publicSurface;
+            process.env.MISTBOARD_FFQ_BANQI_ENABLED = String(enabled);
+            role = account;
+            visibility = privateGame ? 'private' : 'public';
+            log = events();
+            if (correspondence && log[0]?.type === 'room-created')
+              log[0].timeControl = correspondenceTimeControl(3);
+            const admitted =
+              enabled &&
+              (account === 'admin' ||
+                (publicSurface === 'casual' && !correspondence && !privateGame));
+            const before = eventReads;
+            const res = fakeResponse();
+            await handleFFQBanqiPostgame(
+              {
+                method: 'GET',
+                headers: account ? { cookie: 'mistboard_session=reviewer.fixture' } : {},
+              } as IncomingMessage,
+              res.response,
+              `/api/ffq-banqi/games/${ROOM}`,
+            );
+            assert.equal(
+              res.captured.status,
+              admitted ? 200 : 404,
+              JSON.stringify({ publicSurface, enabled, account, correspondence, privateGame }),
+            );
+            if (admitted) serialized(res.captured.body);
+            else assert.deepEqual(res.captured.body, { error: 'not_found' });
+            if (!enabled || (publicSurface === 'hidden' && account !== 'admin'))
+              assert.equal(eventReads, before);
+          }
 });

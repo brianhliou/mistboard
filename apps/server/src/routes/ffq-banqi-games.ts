@@ -7,7 +7,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import type { BanqiDecision } from '../banqi-analysis.js';
-import { ffqBanqiAdmits } from './../ffq-banqi-access.js';
+import { ffqBanqiAdmits, ffqBanqiCorrespondenceAdmits } from './../ffq-banqi-access.js';
 import {
   FFQ_BANQI_ANALYSIS_TIER,
   type FFQBanqiAnalysisCache,
@@ -27,7 +27,7 @@ import { isTenantEventLog, replayTenantEvents } from './../variant-tenant/runtim
 import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
-// Admin-only finished replay. All snapshots are observer-masked, even after
+// Launch-gated finished replay. All snapshots are observer-masked, even after
 // game end. The deal and the old flip variants' revealed track never leave here.
 
 type FFQBanqiPostgameMove = {
@@ -52,19 +52,31 @@ export type FFQBanqiPostgamePersistence = {
 /** Everything the handler reads from outside, injectable for the route tests. */
 export type FFQBanqiPostgameRouteDeps = FFQBanqiPostgamePersistence & {
   persistenceReady(): boolean;
-  admits(request: IncomingMessage): Promise<boolean>;
+  admits(request: IncomingMessage, roomId: string): Promise<boolean>;
 };
 
 const defaultDeps: FFQBanqiPostgameRouteDeps = {
   getGameSummary: (roomId) => persistence.getGameSummary(roomId),
   loadRoomEvents: (roomId) => persistence.loadRoomEvents<FFQBanqiEvent>(roomId),
   persistenceReady: () => persistence.isInitialized(),
-  admits: async (request) => ffqBanqiAdmits(await currentAccountUser(request)),
+  admits: async (request, roomId) => {
+    const account = await currentAccountUser(request);
+    if (!ffqBanqiAdmits(account)) return false;
+    if (ffqBanqiCorrespondenceAdmits(account)) return true;
+    const game = persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null;
+    if (!game || game.variant !== FFQ_BANQI_SPEC_ID || game.visibility === 'private') return false;
+    // Ordinary room summaries do not persist daysPerMove; the recorded opening
+    // is authoritative even after the correspondence deadline row is removed.
+    const events = await persistence.loadRoomEvents<FFQBanqiEvent>(roomId);
+    const created = events?.[0];
+    return created?.type === 'room-created' && created.timeControl?.daysPerMove === undefined;
+  },
 };
 
 const POSTGAME_ROUTE = /^\/api\/ffq-banqi\/games\/([^/]+)$/;
 
-const ANALYSIS_ROUTE = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)(?:\/jobs\/[^/]+)?$/;
+const ANALYSIS_ROUTE =
+  /^\/api\/ffq-banqi\/games\/([^/]+)\/(?:analysis|decisions)(?:\/jobs\/[^/]+)?$/;
 
 export function createFFQBanqiAnalysisRoutes(
   deps: FFQBanqiPostgameRouteDeps = defaultDeps,
@@ -121,10 +133,11 @@ export function createFFQBanqiAnalysisRoutes(
     response: ServerResponse,
     pathname: string,
   ): Promise<boolean> => {
-    if (!ANALYSIS_ROUTE.test(pathname)) return false;
+    const match = pathname.match(ANALYSIS_ROUTE);
+    if (!match) return false;
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('x-robots-tag', 'noindex');
-    if (!(await deps.admits(request))) {
+    if (!(await deps.admits(request, decodeURIComponent(match[1]!)))) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
@@ -160,9 +173,9 @@ export async function handleFFQBanqiPostgame(
   response.setHeader('Cache-Control', 'no-store');
   response.setHeader('x-robots-tag', 'noindex');
   if (!requireMethod(request, response, 'GET')) return true;
-  // The gate comes before persistence and the lookup: a refused caller learns
-  // nothing, not even whether the database is up.
-  if (!(await deps.admits(request))) {
+  // Reject unlaunched callers before persistence; launched viewers must also
+  // pass the per-game correspondence and privacy checks.
+  if (!(await deps.admits(request, decodeURIComponent(match[1]!)))) {
     writeJson(response, 404, { error: 'not_found' });
     return true;
   }

@@ -1,8 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
-import { ffqBanqiEnabled } from './feature-flags.js';
-import { FFQ_BANQI_ROOM_ID_PREFIX, ffqBanqiAdmits } from './ffq-banqi-access.js';
+import {
+  FFQ_BANQI_ROOM_ID_PREFIX,
+  ffqBanqiAdmits,
+  ffqBanqiCorrespondenceAdmits,
+} from './ffq-banqi-access.js';
 import * as persistence from './persistence.js';
 import { type HttpApiContext, writeJson } from './routes/lib.js';
 
@@ -94,14 +97,23 @@ export async function guardFFQBanqiHttpRead(
   const path = url.pathname;
   const review = /^\/ffq-banqi\/game\/[^/]+\/?$/.test(path);
   const replay = /^\/api\/ffq-banqi\/games\/[^/]+$/.test(path);
-  const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis$/.test(path);
-  const analysisPoll = /^\/api\/ffq-banqi\/games\/[^/]+\/analysis\/jobs\/[^/]+$/.test(path);
+  const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)$/.test(path);
+  const analysisPoll = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)\/jobs\/[^/]+$/.test(
+    path,
+  );
   const allowedRead =
     (target.summary || target.shell || review || replay || analysisPoll) &&
     request.method === 'GET';
   const allowedAnalysis = analysis && (request.method === 'GET' || request.method === 'POST');
   if (!allowedRead && !allowedAnalysis) return refuse();
-  if (!ffqBanqiEnabled() || !ffqBanqiAdmits(await currentAccountUser(request))) return refuse();
+  const account = await currentAccountUser(request);
+  if (!ffqBanqiAdmits(account)) return refuse();
+  const readGame = async () =>
+    ctx.inMemoryGameSummary?.(roomId) ??
+    (persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null);
+  const publicGame = ffqBanqiCorrespondenceAdmits(account) ? null : await readGame();
+  if (publicGame?.visibility === 'private' || publicGame?.timeControl?.daysPerMove !== undefined)
+    return refuse();
   // Only these owned serializers may run after the gate. Aliases, raw events,
   // artifacts, embeds and all other descendants remain closed.
   if (review || replay || analysis || analysisPoll) return false;
@@ -109,9 +121,7 @@ export async function guardFFQBanqiHttpRead(
   // the private cache/robots headers. Other alias pages remain closed.
   if (target.shell) return false;
 
-  const game =
-    ctx.inMemoryGameSummary?.(roomId) ??
-    (persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null);
+  const game = publicGame ?? (await readGame());
   if (!game || game.variant !== FFQ_BANQI_SPEC_ID) return refuse();
   // Explicit allowlist, never spread a record/state/event. Even finished FFQ
   // games retain their hidden identities; setup, deal and artifacts stay out.

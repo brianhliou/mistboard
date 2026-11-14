@@ -107,8 +107,8 @@ export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
 }
 
-// Hidden FFQ banqi playtest. This opt-in never grants access on its own;
-// ffq-banqi-access.ts also requires an admin account at every entry point.
+// FFQ runtime kill switch. Admission remains admin-only until the final
+// publicSurface launch; correspondence keeps its independent admin gate.
 export function ffqBanqiEnabled(): boolean {
   return process.env.MISTBOARD_FFQ_BANQI_ENABLED === 'true';
 }
