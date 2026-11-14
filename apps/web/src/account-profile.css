@@ -1140,6 +1140,11 @@
 }
 
 .account-auth-reset,
+.account-actions .account-username-dismiss {
+  min-height: 40px;
+}
+
+.account-auth-reset,
 .account-auth-email-suggestion {
   border: 0;
   background: transparent;
@@ -1181,6 +1186,15 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
+}
+
+/* A phone keyboard must not trigger Safari's focus zoom. */
+@media (pointer: coarse), (max-width: 600px) {
+  .account-settings-shell input:not([type="checkbox"]):not([type="radio"]),
+  .account-settings-shell textarea,
+  .account-settings-shell select {
+    font-size: 16px;
+  }
 }
 
 /* Touch floor (#576): 18px of text, padded to a 40px target. */

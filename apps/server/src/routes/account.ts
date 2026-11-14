@@ -466,7 +466,11 @@ export async function tryHandle(
     return true;
   }
   const body = await readJsonBody(request);
-  const handle = normalizeProfileHandle(typeof body.handle === 'string' ? body.handle : null);
+  const usernamePromptHandled = body.usernamePromptHandled === true;
+  const dismissOnly = usernamePromptHandled && body.handle === undefined;
+  const handle = dismissOnly
+    ? user.handle
+    : normalizeProfileHandle(typeof body.handle === 'string' ? body.handle : null);
   if (!handle) {
     writeJson(response, 400, { error: 'invalid_handle' });
     return true;
@@ -475,7 +479,9 @@ export async function tryHandle(
   // there is no separate display-name input to validate.
   const result = await persistence.updateUserProfile(
     user.id,
-    { handle, displayName: handle },
+    dismissOnly
+      ? { usernamePromptHandled: true }
+      : { handle, displayName: handle, usernamePromptHandled },
     new Date(),
   );
   if (!result.ok) {

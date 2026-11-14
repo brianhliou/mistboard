@@ -127,6 +127,7 @@ export type UserAccount = {
   emailVerifiedAt: Date | null;
   handle: string;
   handleChangedAt: Date | null;
+  usernamePromptDismissedAt?: Date | null;
   displayName: string;
   displayNameChangedAt: Date | null;
   bio: string;
@@ -194,6 +195,7 @@ export const USER_COLUMNS = [
   'email_verified_at',
   'handle',
   'handle_changed_at',
+  'username_prompt_dismissed_at',
   'display_name',
   'display_name_changed_at',
   'bio',
@@ -339,6 +341,7 @@ export type UserRow = {
   email_verified_at: Date | null;
   handle: string;
   handle_changed_at: Date | null;
+  username_prompt_dismissed_at?: Date | null;
   display_name: string;
   display_name_changed_at: Date | null;
   bio: string;
@@ -370,6 +373,7 @@ export function userFromRow(row: UserRow): UserAccount {
     emailVerifiedAt: row.email_verified_at,
     handle: row.handle,
     handleChangedAt: row.handle_changed_at,
+    usernamePromptDismissedAt: row.username_prompt_dismissed_at ?? null,
     displayName: row.display_name,
     displayNameChangedAt: row.display_name_changed_at,
     bio: row.bio,

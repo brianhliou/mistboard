@@ -1,6 +1,12 @@
 // Account translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_ACCOUNT = {
+  'account.chooseUsername': 'Choose your username',
+  'account.chooseUsernameCopy': 'Your username is public. Keep this one or choose another.',
+  'account.suggestUsernameCopy':
+    'Your username may include part of your email address. Choose a different one if you prefer.',
+  'account.usernameContinue': 'Continue',
+  'account.usernameNotNow': 'Not now',
   'account.loading': 'Loading account',
   'account.signedIn': 'Signed in',
   'account.viewProfile': 'View profile',
@@ -224,6 +230,11 @@ export const EN_ACCOUNT = {
 export type AccountI18nKey = keyof typeof EN_ACCOUNT;
 
 export const CRITICAL_ACCOUNT_I18N_KEYS = [
+  'account.chooseUsername',
+  'account.chooseUsernameCopy',
+  'account.suggestUsernameCopy',
+  'account.usernameContinue',
+  'account.usernameNotNow',
   'account.loading',
   'account.signedIn',
   'account.viewProfile',

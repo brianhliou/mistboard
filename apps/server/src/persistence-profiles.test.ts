@@ -1,3 +1,4 @@
+import { shouldSuggestUsername } from './account-session.js';
 import {
   createAccountSession,
   createUser,
@@ -8,6 +9,40 @@ import {
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 
 definePersistenceTests('profiles', () => {
+  test('username prompt dismissal survives a fresh session read and leaves the first rename available', async () => {
+    const now = new Date('2026-11-13T12:00:00Z');
+    const user = await createUser({
+      id: 'legacy_username_prompt',
+      email: 'legacy.name+tag@example.com',
+      emailVerifiedAt: now,
+      handle: 'legacy-name',
+      displayName: 'legacy-name',
+      now,
+    });
+    assert.equal(shouldSuggestUsername(user), true);
+    const result = await updateUserProfile(user.id, { usernamePromptHandled: true }, now);
+    assert.equal(result.ok, true);
+    const tokenHash = sha256('username-prompt-session');
+    await createAccountSession({
+      id: 'username-prompt-session',
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(now.getTime() + 86_400_000),
+    });
+    const loaded = await getUserByAccountSession('username-prompt-session', tokenHash, now);
+    assert.ok(loaded);
+    assert.equal(loaded.handle, user.handle);
+    assert.equal(loaded.handleChangedAt, null);
+    assert.equal(loaded.usernamePromptDismissedAt?.toISOString(), now.toISOString());
+    assert.equal(shouldSuggestUsername(loaded), false);
+    const renamed = await updateUserProfile(
+      user.id,
+      { handle: 'chosen-name', displayName: 'chosen-name' },
+      now,
+    );
+    assert.equal(renamed.ok, true);
+  });
+
   test('user locale preference is nullable and session-readable', async () => {
     const now = new Date('2026-05-09T12:00:00.000Z');
     const user = await createUser({
