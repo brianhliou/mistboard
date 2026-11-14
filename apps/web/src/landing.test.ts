@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
@@ -27,6 +29,40 @@ const ROSTER = [
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {
+  it('offers FFQ computer levels only from the runtime roster and withdraws them on failure', async () => {
+    const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+    const original = spec.publicSurface;
+    spec.publicSurface = 'casual';
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const options = [
+      {
+        id: 'misty-ffq-banqi-level-4',
+        name: 'Misty Level 4',
+        familyName: 'Misty',
+        kind: 'container',
+      },
+    ];
+    try {
+      setFFQBanqiEngineOptions([]);
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse({ engines: ROSTER, ffqBanqiEngines: options })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toEqual(options);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response('', { status: 503 })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+    } finally {
+      spec.publicSurface = original;
+      setFFQBanqiEngineOptions([]);
+    }
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
