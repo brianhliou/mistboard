@@ -47,6 +47,8 @@ export const threeKingdomsBanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-10',
+  updatedAt: '2026-11-17',
+  updateNote: 'The comparison table now includes Fanfanqi.',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   tldr: [
     'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.',

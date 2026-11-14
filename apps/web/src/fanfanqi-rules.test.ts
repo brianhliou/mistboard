@@ -25,7 +25,10 @@ import {
   variantSupportsPve,
 } from './variant-public-surfaces.js';
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
 
 describe('Fanfanqi rules registration', () => {
   it('publishes the English rules slug for the launched spec on both ends', () => {
@@ -45,6 +48,8 @@ describe('Fanfanqi rules registration', () => {
   });
 
   it('lists the launched English rules in production even with play disabled', () => {
+    // The page goes live at 16:00 UTC on its publishedAt date.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-17T16:00:00Z') });
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
     vi.stubEnv('DEV', false);
     expect(buildArticlePage('fanfanqi').dataset.articleSlug).toBe('fanfanqi');
@@ -132,7 +137,8 @@ describe('Fanfanqi rules match the kernel', () => {
     );
     expect(prose).toContain(`After ${FFQ_BANQI_RULES.noProgressPlies} plies`);
     expect(prose).not.toContain('—');
-    expect(prose).not.toMatch(/翻翻棋|Taiwan|mainland/);
+    // The name is glossed once; the page still describes the game by its rules, not a region.
+    expect(prose).not.toMatch(/Taiwan|mainland/);
     expect(article.sections.at(-1)?.blocks?.at(-1)?.kind).toBe('cta');
   });
 

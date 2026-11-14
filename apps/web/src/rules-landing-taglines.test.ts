@@ -9,7 +9,10 @@ import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type Locale, SUPPORTED_LOCALES } from './i18n/locale.js';
 import { renderRulesIndexShellForPrerender } from './pages-static.js';
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
 
 // Inspect actual rendered tiles, so a newly listed game cannot escape this
 // contract by being absent from a hand-kept list of slugs.
@@ -99,7 +102,9 @@ it.each(SUPPORTED_LOCALES)(
   '%s crawler copy contains exactly the screen content and records the higher baseline',
   async (locale) => {
     await ensureLocaleCatalog(locale);
-    // Match the production public list, without local-only playtest flags.
+    // Match the production public list, without local-only playtest flags,
+    // from the day the Fanfanqi rules go live (16:00 UTC, 2026-11-17).
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-17T16:00:00Z') });
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
     const lang = locale === 'en' ? undefined : locale;

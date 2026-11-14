@@ -53,9 +53,9 @@ export const banqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-11-07',
+  updatedAt: '2026-11-17',
   updateNote:
-    'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.',
+    'The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -271,7 +271,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).',
+          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.',
         },
       ],
     },

@@ -16,6 +16,9 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
   'apps/web/src/i18n/catalogs/play.zh-hant.ts': [
     { sentence: '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。', count: 1 },
   ],
+  'apps/web/src/articles/content/fanfanqi.ts': [
+    { sentence: 'Fanfanqi (翻翻棋, “flip-flip chess”)', count: 1 },
+  ],
   'apps/web/src/articles/content/jieqi-openings.ts': [{ sentence: NOTATION_CITATION, count: 1 }],
   'apps/web/src/articles/content/khai-cuoc-co-up.ts': [
     { sentence: NOTATION_CITATION, count: 1 },
@@ -26,6 +29,15 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
     },
   ],
   'apps/web/src/article-i18n.ts': [
+    // Fanfanqi launch (2026-11-17): the banqi house-rules link, two update notes
+    // and the shared comparison table header.
+    { sentence: '[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的变体。', count: 1 },
+    { sentence: '[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的變體。', count: 1 },
+    { sentence: '家规一节现在链接到翻翻棋：炮可以打暗子的变体。', count: 1 },
+    { sentence: '家規一節現在連結到翻翻棋：炮可以打暗子的變體。', count: 1 },
+    { sentence: '对照表现在加入了翻翻棋。', count: 1 },
+    { sentence: '對照表現在加入了翻翻棋。', count: 1 },
+    { sentence: "Fanfanqi: '翻翻棋',", count: 2 },
     { sentence: NOTATION_CITATION, count: 2 },
     {
       sentence:

@@ -34,7 +34,11 @@ export const fanfanqiArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Fanfanqi is a faster form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.',
+      text: 'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.',
+    },
+    {
+      kind: 'paragraph',
+      text: 'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.',
     },
   ],
   sections: [

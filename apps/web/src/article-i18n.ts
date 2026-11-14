@@ -507,8 +507,6 @@ const ZH_HANS: Record<string, string> = {
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盘 Mistboard 实战的捉子例子，一步一步展示捉子规则禁止的那一步。',
   // Expanded jieqi rules (2026-11-05).
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
@@ -688,6 +686,13 @@ const ZH_HANS: Record<string, string> = {
   'Any piece takes any piece': '任何棋子都能吃任何棋子',
   'Take or trap every enemy piece': '吃光或困住所有敌子',
   'First to 100 points': '先得 100 分',
+  'The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.':
+    '家规一节现在链接到翻翻棋：炮可以打暗子的变体。',
+  'The comparison table now includes Fanfanqi.': '对照表现在加入了翻翻棋。',
+  Fanfanqi: '翻翻棋',
+  'One square; the cannon only moves to capture': '每次走一格；炮只能吃子，不能平移',
+  'By rank; the cannon can also take face-down pieces': '按大小吃子；炮还能打暗子',
+  'Bring your opponent from 60 HP to zero': '把对方的 60 点血打到零',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
@@ -3593,8 +3598,8 @@ const ZH_HANS: Record<string, string> = {
   'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
     '炮通常不隔子，和其他子一样按大小吃相邻的子',
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 采用的是台湾规则。',
-  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
-    'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.':
+    'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的变体。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。',
   'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
@@ -7416,8 +7421,6 @@ const ZH_HANT: Record<string, string> = {
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盤 Mistboard 實戰的捉子例子，一步一步展示捉子規則禁止的那一步。',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
@@ -7597,6 +7600,13 @@ const ZH_HANT: Record<string, string> = {
   'Any piece takes any piece': '任何棋子都能吃任何棋子',
   'Take or trap every enemy piece': '吃光或困住所有敵子',
   'First to 100 points': '先得 100 分',
+  'The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.':
+    '家規一節現在連結到翻翻棋：炮可以打暗子的變體。',
+  'The comparison table now includes Fanfanqi.': '對照表現在加入了翻翻棋。',
+  Fanfanqi: '翻翻棋',
+  'One square; the cannon only moves to capture': '每次走一格；炮只能吃子，不能平移',
+  'By rank; the cannon can also take face-down pieces': '按大小吃子；炮還能打暗子',
+  'Bring your opponent from 60 HP to zero': '把對方的 60 點血打到零',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
@@ -10843,8 +10853,8 @@ const ZH_HANT: Record<string, string> = {
   'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
     '炮通常不隔子，和其他子一樣按大小吃相鄰的子',
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 採用的是台灣規則。',
-  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
-    'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.':
+    'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的變體。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。',
   'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
