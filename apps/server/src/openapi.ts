@@ -137,6 +137,17 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       handle: { type: 'string' },
       displayName: { type: 'string' },
       title: { type: ['string', 'null'] },
+      champions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['variant', 'timeClass'],
+          properties: {
+            variant: { type: 'string' },
+            timeClass: { type: 'string', enum: ['bullet', 'blitz', 'rapid', 'correspondence'] },
+          },
+        },
+      },
       eloRating: { type: 'integer' },
       gamesPlayed: { type: 'integer' },
       provisional: { type: 'boolean' },
