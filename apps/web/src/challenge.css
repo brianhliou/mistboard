@@ -111,13 +111,15 @@
 
 .challenge-share-link {
   width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
   margin: 4px 0 12px;
   padding: 8px 10px;
   border: 1px solid var(--site-border-soft);
   border-radius: var(--site-radius);
   background: var(--site-surface);
   color: var(--site-muted);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .challenge-status {

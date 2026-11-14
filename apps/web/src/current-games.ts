@@ -91,7 +91,7 @@ import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
-import { formatClock, formatDayClock } from './web-utils.js';
+import { correspondenceTimeLeftLabel, formatClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
@@ -819,9 +819,7 @@ function tickCard(card: CardState, now: number): void {
   for (const [color, el] of Object.entries(card.clockEls)) {
     if (correspondence) {
       const onMove = game.deadline?.seat === color;
-      el.textContent = onMove
-        ? t('games.deadline', { time: formatDayClock(Date.parse(game.deadline!.dueAt) - now) })
-        : '';
+      el.textContent = onMove ? correspondenceTimeLeftLabel(game.deadline!.dueAt, now) : '';
       el.classList.toggle('is-deadline', onMove);
       el.hidden = !onMove;
       continue;

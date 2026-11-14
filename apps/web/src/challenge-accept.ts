@@ -243,6 +243,19 @@ function buildHeading(view: ChallengeView): HTMLElement {
   heading.className = 'challenge-heading';
   const isPublic = view.visibility === 'public';
   if (view.isMine) {
+    const name = view.targetHandle ? `@${view.targetHandle}` : view.targetName;
+    if (!isPublic && name) {
+      appendWithNameNode(
+        heading,
+        (token) => t('challenge.sentTo', { name: token }),
+        playerNameEl(
+          name,
+          profileTargetFor({ handle: view.targetHandle }),
+          'challenge-heading-name',
+        ),
+      );
+      return heading;
+    }
     heading.textContent = isPublic ? t('challenge.yourSeek') : t('challenge.yourChallenge');
     return heading;
   }
@@ -330,7 +343,7 @@ function buildTerms(view: ChallengeView): HTMLElement {
     color: side ?? t('challenge.randomColors'),
   });
   // Accepting a rated challenge plays for rating: say so before the button, not after.
-  detail.textContent = view.rated === true ? `${terms} · ${t('play.rated')}` : terms;
+  detail.textContent = `${terms} · ${view.rated === true ? t('play.rated') : t('play.casual')}`;
   return detail;
 }
 
@@ -362,13 +375,14 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
   status.className = 'challenge-status';
   status.hidden = true;
 
-  if (view.isMine && isPublic) {
+  if (view.isMine) {
     // A public seek is already on the open board; its creator needs a way to
     // take it down, not a link to pass around.
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.className = 'challenge-btn-secondary';
-    cancel.textContent = t('challenge.cancel');
+    cancel.textContent = isPublic ? t('challenge.cancel') : t('challenge.withdraw');
+    if (!isPublic) cancel.dataset.withdrawChallenge = '';
     cancel.addEventListener('click', () => {
       cancel.disabled = true;
       status.hidden = true;
@@ -376,11 +390,10 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
         .then((res) => {
           // 404: already gone (taken or expired), which is what Cancel wanted.
           if (res.ok || res.status === 404) {
-            const notice = buildNotice(
-              t('challenge.seekCancelled'),
-              t('challenge.seekCancelledBody'),
-            );
-            notice.append(buildOpenGamesLink('challenge-btn'));
+            const notice = isPublic
+              ? buildNotice(t('challenge.seekCancelled'), t('challenge.seekCancelledBody'))
+              : buildGoneNotice({ reason: 'withdrawn' });
+            if (isPublic) notice.append(buildOpenGamesLink('challenge-btn'));
             card.replaceWith(notice);
             return;
           }
@@ -393,10 +406,12 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
         });
     });
     actions.append(cancel);
-  } else if (view.isMine) {
+  }
+  if (view.isMine && !isPublic) {
     // A link challenge: the creator sees the shareable link and can copy it.
     const share = document.createElement('input');
     share.className = 'challenge-share-link';
+    share.setAttribute('aria-label', t('challenge.copyLink'));
     share.readOnly = true;
     share.value = `${location.origin}/challenge/${view.id}`;
     share.addEventListener('focus', () => share.select());
@@ -407,7 +422,7 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     const copy = document.createElement('button');
     copy.className = 'challenge-btn';
     copy.textContent = t('challenge.copyLink');
-    copy.addEventListener('click', () => {
+    const copyLink = async (): Promise<void> => {
       // A browser may refuse the write (NotAllowedError on Android Chrome):
       // select the link instead so a long-press copy is one step away.
       const selectForManualCopy = (): void => {
@@ -418,11 +433,30 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
         selectForManualCopy();
         return;
       }
-      navigator.clipboard.writeText(share.value).then(() => {
+      await navigator.clipboard.writeText(share.value).then(() => {
         copy.textContent = t('challenge.copied');
       }, selectForManualCopy);
-    });
-    actions.append(copy);
+    };
+    copy.addEventListener('click', () => void copyLink());
+    // Share only where the browser has a share sheet; elsewhere it would be a
+    // second Copy button.
+    if (typeof navigator.share === 'function') {
+      const shareButton = document.createElement('button');
+      shareButton.type = 'button';
+      shareButton.className = 'challenge-btn';
+      shareButton.textContent = t('challenge.share');
+      shareButton.addEventListener('click', async () => {
+        try {
+          await navigator.share({ url: share.value });
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          await copyLink();
+        }
+      });
+      actions.prepend(shareButton, copy);
+    } else {
+      actions.prepend(copy);
+    }
   }
 
   if (view.canAccept) {
