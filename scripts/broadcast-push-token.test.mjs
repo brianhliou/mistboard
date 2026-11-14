@@ -198,7 +198,7 @@ test('set-source saves the device link with polling off and reports the change',
   const url = 'https://device.example/broadcast';
   await s.runBroadcastPushToken(['set-source', '--tour', 'test', '--url', url], s.client, s.log);
   const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
-  assert.deepEqual(update.args, ['test', url]);
+  assert.deepEqual(update.args, ['test', url, null]);
   assert.match(update.sql, /source_url = \$2/);
   assert.match(update.sql, /poll_mode = 'off'/);
   assert.match(update.sql, /poll_enabled = false/);
@@ -212,6 +212,65 @@ test('set-source saves the device link with polling off and reports the change',
   });
 });
 
+test('set-source stores the trimmed device credit and reports its name', async (t) => {
+  const s = await setup(t);
+  const url = 'https://device.example';
+  await s.runBroadcastPushToken(
+    ['set-source', '--tour', 'test', '--url', url, '--device', '  Recording Clock  '],
+    s.client,
+    s.log,
+  );
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.deepEqual(JSON.parse(update.args[2]), {
+    deviceCredit: { name: 'Recording Clock', url },
+  });
+  assert.equal(JSON.parse(s.output[0]).device, 'Recording Clock');
+  assert.equal(s.calls.at(-1).sql, 'COMMIT');
+});
+
+test('set-source accepts device names at both length boundaries after trimming', async (t) => {
+  const s = await setup(t);
+  for (const name of ['X', 'X'.repeat(60)]) {
+    await s.runBroadcastPushToken(
+      ['set-source', '--tour', 'test', '--url', 'https://device.example', '--device', ` ${name} `],
+      s.client,
+      s.log,
+    );
+  }
+  assert.deepEqual(
+    s.output.map((line) => JSON.parse(line).device),
+    ['X', 'X'.repeat(60)],
+  );
+});
+
+test('set-source rejects empty and overlong device names without writes', async (t) => {
+  const s = await setup(t);
+  const cli = new URL('./broadcast-push-token.mjs', import.meta.url);
+  for (const name of ['', '   ', 'x'.repeat(61)]) {
+    const args = [
+      'set-source',
+      '--tour',
+      'test',
+      '--url',
+      'https://device.example',
+      '--device',
+      name,
+    ];
+    await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /1-60/);
+    const result = spawnSync(process.execPath, [cli.pathname, ...args], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /1-60/);
+  }
+  assert.equal(s.calls.length, 0);
+  assert.equal(s.output.length, 0);
+});
+
 test('set-source refuses an event filled by polling and leaves it untouched', async (t) => {
   const s = await setup(t);
   const query = s.client.query;
@@ -220,7 +279,15 @@ test('set-source refuses an event filled by polling and leaves it untouched', as
     s.calls.push({ sql, args });
     return { rows: [], rowCount: 0 };
   };
-  const args = ['set-source', '--tour', 'dpxq-event', '--url', 'https://device.example'];
+  const args = [
+    'set-source',
+    '--tour',
+    'dpxq-event',
+    '--url',
+    'https://device.example',
+    '--device',
+    'Clock',
+  ];
   await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /polled event/);
   const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
   assert.match(update.sql, /WHERE slug = \$1 AND \(source_url IS NULL OR poll_mode = 'off'\)/);

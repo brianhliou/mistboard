@@ -7,6 +7,74 @@ vi.mock('./review/advantage-chart.js', async (importOriginal) => {
   return { ...actual, createAdvantageChart: vi.fn(actual.createAdvantageChart) };
 });
 
+describe('broadcast device credit', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([false, true])('names the linked device in Game info (embedded: %s)', (embedded) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    const root = document.createElement('div');
+    const review = mountBroadcastBoardReview(
+      root,
+      {
+        board: {
+          id: 't-r-b1',
+          tourSlug: 't',
+          roundId: 'r',
+          boardNumber: 1,
+          red: { name: 'Red' },
+          black: { name: 'Black' },
+          result: '1-0',
+          sourceUrl: 'https://device.example/game',
+        },
+        timeline: [],
+        context: {
+          tour: {
+            name: 'Device event',
+            deviceCredit: { name: 'Recording Clock', url: 'https://device.example' },
+          },
+          round: { name: 'Round 1' },
+        },
+      },
+      { embedded },
+    );
+    const link = root.querySelector('.review-provenance a');
+    expect(link?.textContent).toBe('Recording Clock');
+    expect(link?.getAttribute('href')).toBe('https://device.example');
+    expect(link?.getAttribute('rel')).toBe('noreferrer');
+    review.destroy();
+  });
+
+  it('does not infer a device from a board source URL', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    const root = document.createElement('div');
+    const review = mountBroadcastBoardReview(root, {
+      board: {
+        id: 't-r-b1',
+        tourSlug: 't',
+        roundId: 'r',
+        boardNumber: 1,
+        red: { name: 'Red' },
+        black: { name: 'Black' },
+        result: '1-0',
+        sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_143066.html',
+      },
+      timeline: [],
+      context: { tour: { name: 'Imported event' }, round: { name: 'Round 1' } },
+    });
+    const link = root.querySelector('.review-provenance a');
+    expect(link?.textContent).toBe('dpxq.com');
+    expect(link?.getAttribute('href')).toBe('http://www.dpxq.com/hldcg/search/view_m_143066.html');
+    expect(root.textContent).not.toContain('Recording Clock');
+    review.destroy();
+  });
+});
+
 // A finished broadcast game seats its players the way lichess does: a strip
 // above and below the board with the name, the team, and a link to the
 // player's page. The side card keeps the event and the result.

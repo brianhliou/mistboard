@@ -10,7 +10,7 @@ import pg from 'pg';
 
 class CommandError extends Error {}
 const usage =
-  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | grant --account <@handle|email> --tour <slug> | revoke-grant --account <@handle|email> --tour <slug> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false | set-source --tour <slug> --url <https url>';
+  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | grant --account <@handle|email> --tour <slug> | revoke-grant --account <@handle|email> --tour <slug> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false | set-source --tour <slug> --url <https url> [--device <name>]';
 const flags = {
   'create-test-event': ['slug', 'name'],
   issue: ['tour', 'label', 'out'],
@@ -19,7 +19,7 @@ const flags = {
   revoke: ['id'],
   list: ['tour'],
   'set-listed': ['tour', 'listed'],
-  'set-source': ['tour', 'url'],
+  'set-source': ['tour', 'url', 'device'],
 };
 function argumentsFor(argv) {
   const [command, ...args] = argv;
@@ -33,7 +33,7 @@ function argumentsFor(argv) {
   } catch {
     throw new CommandError(usage);
   }
-  if (command !== 'list' && flags[command].some((key) => !values[key]?.trim()))
+  if (command !== 'list' && flags[command].some((key) => key !== 'device' && !values[key]?.trim()))
     throw new CommandError(usage);
   if ((values.tour || values.slug) && !/^[a-z0-9][a-z0-9-]*$/.test(values.tour ?? values.slug))
     throw new CommandError('invalid tour slug');
@@ -41,6 +41,11 @@ function argumentsFor(argv) {
   if (command === 'set-listed' && !['true', 'false'].includes(values.listed))
     throw new CommandError('listed must be true or false');
   if (command === 'set-source') {
+    if (values.device !== undefined) {
+      values.device = values.device.trim();
+      if (!values.device || values.device.length > 60)
+        throw new CommandError('device name must be 1-60 characters');
+    }
     let url;
     try {
       url = new URL(values.url);
@@ -180,10 +185,16 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
     } else if (command === 'set-source') {
       result = await client.query(
         `UPDATE xiangqi_broadcast_tours
-            SET source_url = $2, payload = jsonb_set(payload, '{sourceUrl}', to_jsonb($2::text)),
+            SET source_url = $2,
+                payload = jsonb_set(payload, '{sourceUrl}', to_jsonb($2::text))
+                  || COALESCE($3::jsonb, '{}'::jsonb),
                 poll_mode = 'off', poll_enabled = false, updated_at = now()
           WHERE slug = $1 AND (source_url IS NULL OR poll_mode = 'off')`,
-        [v.tour, v.url],
+        [
+          v.tour,
+          v.url,
+          v.device ? JSON.stringify({ deviceCredit: { name: v.device, url: v.url } }) : null,
+        ],
       );
     } else {
       result = await client.query(
@@ -199,7 +210,13 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
     log(
       JSON.stringify(
         command === 'set-source'
-          ? { ok: true, tour: v.tour, sourceUrl: v.url, pollMode: 'off' }
+          ? {
+              ok: true,
+              tour: v.tour,
+              sourceUrl: v.url,
+              pollMode: 'off',
+              ...(v.device ? { device: v.device } : {}),
+            }
           : { ok: true },
       ),
     );

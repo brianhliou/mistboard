@@ -29,6 +29,10 @@ import {
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
 } from './persistence-xiangqi-broadcasts.js';
+import {
+  xiangqiBroadcastRoundForApi,
+  xiangqiBroadcastTourForApi,
+} from './routes/xiangqi-broadcasts.js';
 
 const tour = { schema: 'mistboard.xiangqi.broadcast.v1', slug: 'push-test', name: 'Push test' };
 const round = { schema: tour.schema, id: 'push-test-r1', tourSlug: tour.slug, name: 'Round 1' };
@@ -331,6 +335,59 @@ definePersistenceTests('xiangqi broadcast push', () => {
     assert.equal(await getXiangqiBroadcastBoard('missing-board'), null);
   });
 
+  test('device credit survives CLI storage and board, tour and round API reads', async () => {
+    await seed();
+    await applyXiangqiBroadcastBoardUpdate(board, options(1));
+    const assertCredit = async (expected?: { name: string; url: string }) => {
+      const tours = [
+        await getXiangqiBroadcastTour(tour.slug),
+        (await xiangqiBroadcastTourForApi(tour.slug))?.tour,
+        (await xiangqiBroadcastRoundForApi(tour.slug, round.id))?.tour,
+      ];
+      for (const event of tours) {
+        assert.ok(event);
+        assert.deepEqual(event.deviceCredit, expected);
+        assert.equal(Object.hasOwn(event, 'deviceCredit'), expected !== undefined);
+      }
+    };
+    await assertCredit();
+    const url = 'https://device.example/event';
+    const name = 'Recording Clock';
+    const report = await cli(
+      'set-source',
+      '--tour',
+      tour.slug,
+      '--url',
+      url,
+      '--device',
+      ` ${name} `,
+    );
+    assert.equal(report.device, name);
+    const { rows } = await getPool().query(
+      'SELECT payload FROM xiangqi_broadcast_tours WHERE slug = $1',
+      [tour.slug],
+    );
+    assert.deepEqual(rows[0].payload.deviceCredit, { name, url });
+    await assertCredit({ name, url });
+    // Even a source-only edit keeps the existing device credit.
+    await cli('set-source', '--tour', tour.slug, '--url', url);
+    await assertCredit({ name, url });
+    for (const invalid of [
+      { name, url: 'http://device.example' },
+      { name: '', url },
+      { name: '  ', url },
+      { name, url: 'not-a-url' },
+      { name: 12, url },
+      'malformed',
+    ]) {
+      await getPool().query(
+        "UPDATE xiangqi_broadcast_tours SET payload = jsonb_set(payload, '{deviceCredit}', $2::jsonb) WHERE slug = $1",
+        [tour.slug, JSON.stringify(invalid)],
+      );
+      await assertCredit();
+    }
+  });
+
   test('CLI set-source refuses an event the poller fills and leaves its polling on', async () => {
     await seed();
     await getPool().query(
@@ -338,7 +395,15 @@ definePersistenceTests('xiangqi broadcast push', () => {
       [tour.slug],
     );
     await assert.rejects(
-      cli('set-source', '--tour', tour.slug, '--url', 'https://device.example/event'),
+      cli(
+        'set-source',
+        '--tour',
+        tour.slug,
+        '--url',
+        'https://device.example/event',
+        '--device',
+        'Clock',
+      ),
       /polled event keeps its own source/,
     );
     const { rows } = await getPool().query(

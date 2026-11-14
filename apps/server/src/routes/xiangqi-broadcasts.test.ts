@@ -113,6 +113,24 @@ function deps(
   };
 }
 
+test('the tour API serves the device credit only when the event has one', async () => {
+  const deviceCredit = { name: 'Recording Clock', url: 'https://device.example' };
+  const persistence = deps({
+    getXiangqiBroadcastTour: async () => ({ ...storedTour, deviceCredit }),
+  });
+  const served = await xiangqiBroadcastTourForApi(tour.slug, persistence);
+  assert.deepEqual(served?.tour.deviceCredit, deviceCredit);
+  // The event page's "Game records" line names the device (#1107).
+  assert.deepEqual(served?.recordsSource, {
+    host: 'device.example',
+    href: 'https://device.example',
+    name: 'Recording Clock',
+  });
+  const plain = await xiangqiBroadcastTourForApi(tour.slug, deps());
+  assert.equal(Object.hasOwn(plain!.tour, 'deviceCredit'), false);
+  assert.notEqual(plain?.recordsSource?.name, 'Recording Clock');
+});
+
 test('homepage/feed and live-card discovery omit every field of an unlisted event; ops retains it', async () => {
   const { tours, sources } = broadcastDiscoveryFixture();
   const persistence = deps({

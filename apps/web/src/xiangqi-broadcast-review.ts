@@ -8,6 +8,7 @@
 import type {
   XiangqiBroadcastPlayerTag,
   XiangqiBroadcastResult,
+  XiangqiBroadcastTour,
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
@@ -67,7 +68,7 @@ export type BroadcastReviewInput = {
   timeline: Array<{ ply: number; color: XiangqiColor; move: XiangqiMove }>;
   /** Names for the meta card and provenance; the round payload when it loaded. */
   context?: {
-    tour: { name: string; nameEn?: string };
+    tour: Pick<XiangqiBroadcastTour, 'name' | 'nameEn' | 'deviceCredit'>;
     round: { name: string; nameEn?: string; startsAt?: string };
   } | null;
   /** Each side's player page slug, when the player has one (the board API
@@ -311,18 +312,19 @@ function provenance(
   addDetail(details, t('broadcast.board'), String(data.board.boardNumber));
   addDetail(details, t('setup.red'), playerLine(data.board.red));
   addDetail(details, t('setup.black'), playerLine(data.board.black));
-  if (data.board.sourceUrl) {
+  const device = context?.tour.deviceCredit;
+  const sourceUrl = device?.url ?? data.board.sourceUrl;
+  if (sourceUrl) {
     const dt = document.createElement('dt');
     dt.textContent = t('broadcast.source');
     const dd = document.createElement('dd');
     const link = document.createElement('a');
-    link.href = data.board.sourceUrl;
+    link.href = sourceUrl;
     link.rel = 'noreferrer';
-    // A named database (XQBase on vietnamchess.vn) is credited by name.
+    // A recording device (#1107) or a named database (XQBase on
+    // vietnamchess.vn) is credited by name.
     link.textContent =
-      broadcastRecordsSourceName(data.board.sourceUrl) ??
-      hostOf(data.board.sourceUrl) ??
-      data.board.sourceUrl;
+      device?.name ?? broadcastRecordsSourceName(sourceUrl) ?? hostOf(sourceUrl) ?? sourceUrl;
     dd.append(link);
     details.append(dt, dd);
   }
