@@ -405,6 +405,12 @@ test('unrelated game, room and OG reads perform no FFQ identity query', async (t
 });
 
 test('reserved FFQ reads close without persistence or touching runtime state', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
   const previous = process.env[FLAG];
   t.after(() => {
     if (previous === undefined) delete process.env[FLAG];

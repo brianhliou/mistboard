@@ -42,7 +42,8 @@ it.each(SUPPORTED_LOCALES)('every %s tile uses its article tagline', async (loca
     if (source?.kind !== 'rules') throw new Error(`missing rules article: ${slug}`);
     expect(source.tagline?.trim(), slug).toBeTruthy();
     expect(source.tagline!.length, slug).toBeLessThan(70);
-    if (lang) expect(hasTranslation(lang, source.tagline!), slug).toBe(true);
+    if (lang && isArticleTranslationPublished(source.slug))
+      expect(hasTranslation(lang, source.tagline!), slug).toBe(true);
     const localized =
       lang && isArticleTranslationPublished(source.slug) ? translateArticle(source, lang) : source;
     if (localized.kind !== 'rules') throw new Error(`not a rules article: ${slug}`);

@@ -28,41 +28,40 @@ import {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('Fanfanqi rules registration', () => {
-  it('maps the English rules slug to the unchanged hidden spec on both ends', () => {
+  it('publishes the English rules slug for the launched spec on both ends', () => {
     expect(gameSpecForId(FFQ_BANQI_SPEC_ID).publicName).toBe('Fanfanqi');
     expect(findArticle('fanfanqi')).toMatchObject({
       kind: 'rules',
-      status: 'draft',
+      status: 'published',
       title: 'Fanfanqi Rules',
     });
     expect(rulesSlugForGameSpec(FFQ_BANQI_SPEC_ID)).toBe('fanfanqi');
     expect(gameSpecIdFromRulesSlug('fanfanqi')).toBe(FFQ_BANQI_SPEC_ID);
     expect(canonicalArticleBase('fanfanqi')).toBe('rules');
     expect(ARTICLE_META.fanfanqi).toMatchObject({ kind: 'rules', title: 'Fanfanqi Rules' });
-    expect(articleIsUnpublished('fanfanqi')).toBe(true);
-    expect(articleIsIndexable('fanfanqi')).toBe(false);
+    expect(articleIsUnpublished('fanfanqi')).toBe(false);
+    expect(articleIsIndexable('fanfanqi')).toBe(true);
     expect(isArticleTranslationPublished('fanfanqi')).toBe(false);
   });
 
-  it('hides the page in production, and keeps local listings and play off without the flag', () => {
+  it('lists the launched English rules in production even with play disabled', () => {
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
     vi.stubEnv('DEV', false);
-    expect(buildArticlePage('fanfanqi').dataset.articleSlug).toBeUndefined();
-    expect(rulesSlugPublicSurfaceEnabled('fanfanqi')).toBe(false);
-    for (const dev of [false, true]) {
-      vi.stubEnv('DEV', dev);
-      expect(buildRulesIndex().querySelector('a[href="/rules/fanfanqi"]')).toBeNull();
-      const page = buildArticlePage('fanfanqi');
-      expect(page.querySelector('a[href*="gameSpecId=ffq-banqi"]')).toBeNull();
-      expect(page.querySelector('.article-variant-sidebar a[href="/rules/fanfanqi"]')).toBeNull();
+    expect(buildArticlePage('fanfanqi').dataset.articleSlug).toBe('fanfanqi');
+    expect(rulesSlugPublicSurfaceEnabled('fanfanqi')).toBe(true);
+    expect(buildRulesIndex().querySelector('a[href="/rules/fanfanqi"]')).not.toBeNull();
+    for (const slug of ['banqi', 'fanfanqi']) {
+      expect(
+        buildArticlePage(slug).querySelector('.article-variant-sidebar a[href="/rules/fanfanqi"]'),
+      ).not.toBeNull();
     }
   });
 
-  it('lists the local playtest with its own marker and the standard play buttons', () => {
+  it('lists Fanfanqi with its own marker and the standard play buttons', () => {
     vi.stubEnv('DEV', true);
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
-    expect(variantPublicSurfaceEnabled(FFQ_BANQI_SPEC_ID)).toBe(false);
-    expect(rulesHrefForGameSpec(FFQ_BANQI_SPEC_ID)).toBeNull();
+    expect(variantPublicSurfaceEnabled(FFQ_BANQI_SPEC_ID)).toBe(true);
+    expect(rulesHrefForGameSpec(FFQ_BANQI_SPEC_ID)).toBe('/rules/fanfanqi');
     expect(rulesSlugPublicSurfaceEnabled('fanfanqi')).toBe(true);
     const index = buildRulesIndex();
     const tile = index.querySelector('.rules-landing-tile[href="/rules/fanfanqi"]');

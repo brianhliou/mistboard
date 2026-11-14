@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import {
   countedPublicGame,
@@ -28,7 +28,17 @@ import {
   getUserRatingHistory,
 } from './persistence-profiles.js';
 
+function hiddenFixture(t: TestContext) {
+  const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
+}
+
 test('FFQ public totals follow launch and keep correspondence private', (t) => {
+  hiddenFixture(t);
   const previous = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
   process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
   t.after(() => {
@@ -122,6 +132,7 @@ test('FFQ SQL discovery filters run before ordering, pagination and window total
 });
 
 test('authorized FFQ profile pages and admin queries keep the variant before pagination', async (t) => {
+  hiddenFixture(t);
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(() => close());
   const queries: string[] = [];

@@ -161,7 +161,7 @@ export type GameSpecId =
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
-  // FFQ banqi (翻翻棋): kernel and hidden metadata only, no tenant or launch flag.
+  // Fanfanqi: public casual live play with hidden identities and HP scoring.
   | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
@@ -557,10 +557,9 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Kernel only: 4x8, fixed inks, four initial reveals, 60 HP, capture-only
-    // cannons, 30-ply no-progress draw and four consecutive chases permitted.
-    // No serving tenant yet: every room request is rejected, and this entry
-    // opens no public play, ratings, correspondence, studies or exports.
+    // Public casual live play: fixed inks, four initial reveals, 60 HP,
+    // capture-only cannons, 30-ply draw and four consecutive chases.
+    // Ratings, public correspondence, studies and exports remain closed.
     id: FFQ_BANQI_SPEC_ID,
     publicName: 'Fanfanqi',
     family: 'xiangqi',
@@ -572,8 +571,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'ffq_banqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    publicSurface: 'casual',
+    runtimeStatus: 'live',
   },
   {
     // Hong Kong Old Style (清章). Four seats, one human against three bots.
@@ -880,7 +879,7 @@ export type LaunchLists = {
   readonly correspondenceEligible: readonly GameSpecId[];
   /** CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: correspondence for granted accounts. */
   readonly correspondenceAllowlisted: readonly GameSpecId[];
-  /** Hidden correspondence specs, admitted by their existing tenant access policy. */
+  /** Restricted correspondence specs, admitted by their existing tenant access policy. */
   readonly correspondenceRestricted: readonly GameSpecId[];
   /** ALLOWLISTED_GAME_SPEC_IDS: playable only with a per-account grant. */
   readonly allowlisted: readonly GameSpecId[];
@@ -892,8 +891,14 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
-    correspondenceRestricted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) => !isPublic(id)),
+    // Fanfanqi launches live only. Its existing admin correspondence playtest
+    // remains restricted even when its live public surface is enabled.
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id !== FFQ_BANQI_SPEC_ID && isPublic(id),
+    ),
+    correspondenceRestricted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id === FFQ_BANQI_SPEC_ID || !isPublic(id),
+    ),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),

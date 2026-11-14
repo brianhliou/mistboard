@@ -13,16 +13,18 @@ import {
 import type { Article } from '../types.js';
 
 // Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
-// A draft for the local playtest; production does not publish it.
+// English launch rules; pieces still covered remain masked after the game.
 export const fanfanqiArticle: Article = {
   slug: 'fanfanqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Fanfanqi Rules',
+  tagline: 'Flip hidden pieces and race to zero HP.',
   summary:
     'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
+  publishedAt: '2026-11-14',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',

@@ -1181,7 +1181,7 @@ export function localizeAnnouncement(
   locale: AnnouncementLocale,
 ): Announcement {
   const dict = dictFor(locale);
-  if (!dict) return entry;
+  if (entry.englishOnly || !dict) return entry;
   return {
     ...entry,
     headline: localizeAnnouncementString(entry.headline, locale),

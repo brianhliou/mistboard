@@ -313,6 +313,9 @@ const analysisPath = `/api/ffq-banqi/games/${ROOM}/analysis`;
 const GET = { method: 'GET', headers: {} } as IncomingMessage;
 
 test('FFQ analysis refuses non-admin and flag-off callers before any read, compute or job poll', async () => {
+  const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
   const flag = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
   try {
     for (const enabled of [false, true]) {
@@ -372,6 +375,7 @@ test('FFQ analysis refuses non-admin and flag-off callers before any read, compu
     );
     assert.equal(res.captured.status, 404);
   } finally {
+    spec.publicSurface = surface;
     if (flag === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
     else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
   }

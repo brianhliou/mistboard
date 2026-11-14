@@ -189,8 +189,8 @@ describe('homepage play panel', () => {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
     // Intentional homepage omissions: Fog games remain in the setup dialog.
-    // Keep this explicit; newly launched public PvE variants get no exemption.
-    const excluded = ['dark-xiangqi', 'dark-chess'];
+    // Fanfanqi waits for its runtime-only engine roster, absent from this fixture.
+    const excluded = ['dark-xiangqi', 'dark-chess', 'ffq-banqi'];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) =>
@@ -270,13 +270,15 @@ describe('homepage play panel', () => {
       orderPanelSpecs(
         enabledLandingVariantGameSpecs('pvp', 'en')
           .filter(
-            (spec) => isPublicGameSpec(spec.gameSpecId) && !excluded.includes(spec.gameSpecId),
+            (spec) =>
+              isPublicGameSpec(spec.gameSpecId) &&
+              !['dark-xiangqi', 'dark-chess'].includes(spec.gameSpecId),
           )
           .map((spec) => spec.gameSpecId),
       ),
     );
     for (const spec of [
-      ...excluded,
+      ...excluded.filter((id) => id !== 'ffq-banqi'),
       ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
     ]) {
       expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
@@ -291,7 +293,7 @@ describe('homepage play panel', () => {
     for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
     }
-    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
     const board = buildPlayPanel('en', { hydrate: false });
     for (const spec of [
       'xiangqi',

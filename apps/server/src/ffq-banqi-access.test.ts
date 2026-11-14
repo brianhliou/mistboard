@@ -122,14 +122,20 @@ function fixture(
 class Socket {
   sent: Record<string, unknown>[] = [];
   closes: unknown[] = [];
+  handlers = new Map<string, (data: string) => void>();
   send(data: string) {
     this.sent.push(JSON.parse(data));
   }
   close(code: number, reason: string) {
     this.closes.push([code, reason]);
   }
-  on() {
+  on(event: string, handler: (data: string) => void) {
+    this.handlers.set(event, handler);
     return this;
+  }
+  async receive(message: object) {
+    this.handlers.get('message')?.(JSON.stringify(message));
+    for (let i = 0; i < 10; i++) await new Promise((resolve) => setImmediate(resolve));
   }
 }
 
@@ -385,6 +391,50 @@ for (const { surface, flag } of launches) {
       }
     });
   }
+}
+
+for (const role of [null, 'player'] as const) {
+  test(`launched FFQ plays PvE and casual PvP through production handlers: ${role ?? 'guest'}`, async (t) => {
+    // Use the committed launch state rather than substituting a hypothetical switch.
+    const surface = gameSpecForId('ffq-banqi').publicSurface;
+    assert.equal(surface, 'casual');
+    const { headers } = fixture(t, 'true', role, surface);
+    const pvp = await post('/api/rooms', { gameSpecId: 'ffq-banqi' }, headers());
+    assert.equal(pvp.status, 201);
+    const red = await connect(pvp.body.roomId, headers('red-player'));
+    const black = await connect(pvp.body.roomId, headers('black-player'));
+    assertMasked(red);
+    assertMasked(black);
+    await red.receive({ type: 'move', from: 0, to: 0 });
+    await black.receive({ type: 'move', from: 1, to: 1 });
+    const room = ffqBanqiRooms.get(pvp.body.roomId)!;
+    assert.equal(room.projection.state.ply, 2);
+    assert.equal(room.rated, false);
+    assert.doesNotMatch(JSON.stringify([...red.sent, ...black.sent]), /"(?:setup|deal|seed)"/);
+
+    const pve = await post(
+      '/api/rooms',
+      {
+        gameSpecId: 'ffq-banqi',
+        mode: 'pve',
+        engineId: 'misty-ffq-banqi-level-1',
+        preferredColor: 'red',
+      },
+      headers(),
+    );
+    assert.equal(pve.status, 201);
+    const human = await connect(pve.body.roomId, headers('human-player'));
+    assertMasked(human);
+    await human.receive({ type: 'move', from: 0, to: 0 });
+    const botRoom = ffqBanqiRooms.get(pve.body.roomId)!;
+    const deadline = Date.now() + 8_000;
+    while (botRoom.projection.state.ply < 2 && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(botRoom.projection.state.ply, 2, 'the real Level 1 bot replies');
+    assert.equal(botRoom.rated, false);
+    assert.ok(human.sent.some((frame) => frame.type === 'snapshot'));
+    assert.doesNotMatch(JSON.stringify(human.sent), /"(?:setup|deal|seed)"/);
+  });
 }
 
 test('missing FFQ registration never selects chess', async (t) => {

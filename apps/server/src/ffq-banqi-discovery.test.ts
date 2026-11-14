@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import test from 'node:test';
+import test, { afterEach, beforeEach } from 'node:test';
 import {
   createFFQBanqiDeal,
   FFQ_BANQI_FACE_UP_SQUARES,
@@ -28,6 +28,15 @@ import { collectLiveTvCandidates, liveWatchPayloadForFeatured } from './watch-li
 import { clearWatchRailCache } from './watch-rail-cache.js';
 
 const FLAG = 'MISTBOARD_FFQ_BANQI_ENABLED';
+const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+const originalSurface = spec.publicSurface;
+// These prelaunch fixtures intentionally exercise the hidden state.
+beforeEach(() => {
+  spec.publicSurface = 'hidden';
+});
+afterEach(() => {
+  spec.publicSurface = originalSurface;
+});
 const ROOM = 'ffq_discovery';
 const SECRET = 'FFQ-CANONICAL-SETUP-MUST-NOT-REACH-DISCOVERY';
 const now = 1_800_000_000_000;

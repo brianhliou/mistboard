@@ -121,7 +121,11 @@ import {
   updateStartOptionButtonLabel,
   variantCardButton,
 } from './setup-panel-parts.js';
-import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
+import {
+  isLikelyAdmin,
+  isLikelyStatsExcluded,
+  statsExcludedResolvedEvent,
+} from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
@@ -890,7 +894,9 @@ export function buildStartForm(
 
   // Public specs, plus a playtest variant for an account the menu offers it to,
   // in the canonical shelf order so the tiles sit where Play a game puts them.
-  const specIds = [...correspondenceSpecIdsFor(webVariantOfferedInMenu)].sort(
+  const specIds = [
+    ...correspondenceSpecIdsFor((id) => isLikelyAdmin() && webVariantOfferedInMenu(id)),
+  ].sort(
     (a, b) =>
       canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
   );
@@ -1284,7 +1290,9 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
   // The server's list is what the host plays; keep the client's order and
   // drop anything this build does not offer.
   const offered = new Set(info.gameSpecIds);
-  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu).filter((id) => offered.has(id));
+  const specIds = correspondenceSpecIdsFor(
+    (id) => isLikelyAdmin() && webVariantOfferedInMenu(id),
+  ).filter((id) => offered.has(id));
   const status = document.createElement('p');
   status.className = 'correspondence-form-status';
   status.setAttribute('role', 'status');

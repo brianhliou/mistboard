@@ -250,6 +250,7 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  fanfanqi: 'English-only launch rules by explicit product scope.',
   'three-kingdoms-banqi':
     'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:

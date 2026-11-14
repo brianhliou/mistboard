@@ -29,6 +29,7 @@ export type AnnouncementKind = 'status' | 'article' | 'release' | 'update';
 
 export type Announcement = {
   date: string; // ISO YYYY-MM-DD
+  englishOnly?: boolean; // Explicit editorial scope; localized feeds keep the English copy.
   kind: AnnouncementKind;
   headline: string;
   body?: string;
@@ -53,6 +54,15 @@ const baseAnnouncements: Announcement[] = [
     body: "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.",
     href: '/blog/meng-fanrui',
     cta: 'Read the article',
+  },
+  {
+    date: '2026-11-17',
+    kind: 'release',
+    englishOnly: true,
+    headline: 'Fanfanqi is open to everyone.',
+    body: 'Play Fanfanqi against Misty, find an opponent or invite a friend. Each side starts with 60 HP on a 4 by 8 board. Flip hidden pieces and capture to bring your opponent to zero. All games are casual. The English rules explain capture damage, cannon shots and the chase limit.',
+    href: '/rules/fanfanqi',
+    cta: 'Read the English rules',
   },
   {
     date: '2026-11-13',
