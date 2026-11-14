@@ -15,7 +15,7 @@ import { loadEngine } from './engine-registry.js';
 
 test('worker hashes the resolved net bytes, including an override that differs from the server pin', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'eve-net-stamp-'));
-  const net = join(dir, 'net.nnue');
+  const net = join(dir, 'mistboardxiangqi-test.nnue');
   writeFileSync(net, 'worker-specific net bytes');
   const names = ['MISTBOARD_FSF_XIANGQI_PATH', 'MISTBOARD_FSF_XIANGQI_NET'] as const;
   const saved = names.map((name) => process.env[name]);
