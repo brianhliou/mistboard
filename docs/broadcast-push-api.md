@@ -12,6 +12,8 @@ Write to contact@mistboard.com with the event's name, dates and number of
 boards. We create the event and send you a token for it. The token can write
 only to that event.
 
+The event page and every game credit the sending device with a link, set by us when the event is set up.
+
 For development we issue a test token. It writes to a test event that is not
 listed on the site and is not indexed by search engines; you open its boards
 by their links. The API behaves the same for both kinds of token.

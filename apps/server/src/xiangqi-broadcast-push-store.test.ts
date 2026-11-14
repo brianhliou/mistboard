@@ -83,6 +83,35 @@ async function setup(slug = 'event') {
 }
 
 definePersistenceTests('broadcast push HTTP adapter', () => {
+  test('persistence push route accepts device credit with polling off and refuses it with auto polling', async () => {
+    const h = await setup();
+    const sourceUrl = 'https://device.example/event';
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET source_url = $1 WHERE slug = 'event'`,
+      [sourceUrl],
+    );
+    assert.equal((await h.request()).status, 200);
+    const saved = await getXiangqiBroadcastBoard('event-r3-b12');
+    assert.equal(saved?.sourceUrl, sourceUrl);
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET poll_mode = 'auto' WHERE slug = 'event'`,
+    );
+    const refused = await h.request({ ...initial, moves: [], seq: 3 });
+    assert.equal(refused.status, 409);
+    assert.equal(refused.body.error, 'event_not_pushable');
+    const applied = await applyBroadcastPushGame('event', {
+      round: 3,
+      board: 12,
+      moves: [],
+      status: 'live',
+      result: '*',
+      seq: 3,
+    });
+    assert.equal(applied.ok, false);
+    if (!applied.ok) assert.equal(applied.error, 'event_not_pushable');
+    assert.deepEqual(await getXiangqiBroadcastBoard('event-r3-b12'), saved);
+  });
+
   test('persistence push route creates/extends/retries/corrects/takes back with sticky completion and updates players/clock', async () => {
     const h = await setup();
     const created = await h.request();
