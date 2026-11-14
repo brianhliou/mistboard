@@ -54,6 +54,12 @@ test('broad gate defers to ci:quick (which runs check:drift first)', () => {
   assert.match(output, /npm run ci:quick/);
 });
 
+test('Railway deploy config takes the broad gate, legacy files and IaC alike (#980)', () => {
+  for (const file of ['.railway/web.json', '.railway/railway.ts', 'railway.web.json']) {
+    assert.match(plan([file]), /pre-push: broad gate/, file);
+  }
+});
+
 test('unwatched files still get the drift check', () => {
   const output = plan(['.gitignore']);
   assert.match(output, /pre-push: unmapped gate/);

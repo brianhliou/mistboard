@@ -76,7 +76,7 @@ const GITHUB_POLL_MS = 10_000;
 // (function hoisting masks it until the first web-safe release).
 const WEB_SAFE_PREFIXES = ['apps/web/', 'docs/', 'scripts/', '.github/'];
 // Carve-outs from the scripts/ web-safe prefix: build.mjs and start.mjs are
-// Railway watch paths (railway.web.json) that shape the SERVER build/boot, so
+// Railway watch paths (.railway/web.json) that shape the SERVER build/boot, so
 // a diff touching them must keep the full engine tier. Same TDZ note as above.
 const SERVER_SHAPING_SCRIPTS = new Set(['scripts/build.mjs', 'scripts/start.mjs']);
 const CI_TRIGGER_PATTERNS = [
@@ -89,6 +89,7 @@ const CI_TRIGGER_PATTERNS = [
   'tsconfig*.json',
   'docker-compose.yml',
   'railway*.json',
+  '.railway/**',
   'railpack.json',
 ];
 const VALID_SMOKE_TIERS = new Set(['full', 'web', 'lite', 'none']);
@@ -1043,7 +1044,7 @@ function confirmAncestor(pushed, tip) {
 // Main moved past the pushed commit to `tip`, which contains it. Decide which
 // revision production will serve, since the revision wait and the smokes'
 // --expect-revision are pinned to one SHA and time out on any other: Railway
-// deploys a push only when it touches a watch pattern (railway.web.json), so
+// deploys a push only when it touches a watch pattern (.railway/web.json), so
 // the tip is served when the pushed..tip diff matches one, and the pushed
 // commit stays served when it does not (a docs-only or scripts-only push). The
 // same classifier as the deploy plan answers it, against the same config. An

@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { railwayWatchConfigFiles } from './lib/railway-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = resolve(repoRoot, 'scripts/engine-assets.sh');
@@ -62,7 +63,7 @@ test('the CC0 patch is hashed and watched by the release workflow and all Railwa
   assert.match(recipe, /^RECIPE_VERSION=4$/m);
   assert.ok(recipeInputs().includes(pikafishPatch));
   assert.ok(workflow.includes(`      - ${pikafishPatch}\n`));
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     assert.ok(build.watchPatterns.includes(`/${pikafishPatch}`), file);
   }
@@ -135,7 +136,7 @@ test('the Build engines workflow re-runs on every recipe input, the script and i
 });
 
 test('every Railway service watches every recipe input, so a pin bump deploys', () => {
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     for (const input of [...recipeInputs(), 'scripts/engine-assets.sh']) {
       assert.ok(build.watchPatterns.includes(`/${input}`), `${file} must watch /${input}`);
@@ -503,7 +504,7 @@ test('every script railpack runs exists, fails fast, and redeploys every service
       assert.match(readFileSync(path, 'utf8'), /^set -eu$/m, `scripts/${name} must set -eu`);
     }
   }
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     for (const name of scripts) {
       assert.ok(

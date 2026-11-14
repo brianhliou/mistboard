@@ -202,7 +202,7 @@ test('argument parsing rejects accidental override, incomplete value and conflic
   }
 });
 
-function fixture(t) {
+function fixture(t, { legacyBaseline = false } = {}) {
   const directory = temp(t);
   const repo = join(directory, 'repo');
   const bin = join(directory, 'bin');
@@ -223,21 +223,30 @@ function fixture(t) {
     JSON.stringify({ build: ['echo cachebust-engine-aaaaaaa'] }),
   );
   writeFileSync(join(repo, 'engine.ref'), HEAD);
+  const workerConfig = JSON.stringify({
+    build: {
+      watchPatterns: [
+        '/apps/server/**',
+        '!/apps/server/**/*.test.ts',
+        '/scripts/fetch-release-asset.sh',
+      ],
+    },
+  });
+  mkdirSync(join(repo, '.railway'));
+  // A legacy baseline predates the IaC move (#980): only the Config as Code
+  // file exists there, and the comparison must still read its watch patterns.
   writeFileSync(
-    join(repo, 'railway.engine-worker.json'),
-    JSON.stringify({
-      build: {
-        watchPatterns: [
-          '/apps/server/**',
-          '!/apps/server/**/*.test.ts',
-          '/scripts/fetch-release-asset.sh',
-        ],
-      },
-    }),
+    join(repo, legacyBaseline ? 'railway.engine-worker.json' : '.railway/engine-worker.json'),
+    workerConfig,
   );
   git('add', '.');
   git('commit', '-qm', 'baseline');
   const baseline = git('rev-parse', 'HEAD');
+  if (legacyBaseline) {
+    writeFileSync(join(repo, '.railway/engine-worker.json'), workerConfig);
+    git('add', '.');
+    git('commit', '-qm', 'worker config moves to IaC');
+  }
   mkdirSync(join(repo, 'apps/server/src/engines'), { recursive: true });
   writeFileSync(join(repo, 'apps/server/src/engines/registry.ts'), 'new engine id');
   git('add', '.');
@@ -307,6 +316,17 @@ test('CLI check-only lists a planted runtime engine change and worker/binary rid
   assert.match(result.stdout, /binary asset rider/);
   assert.doesNotMatch(result.stdout, /unrelated docs/);
   assert.match(result.stdout, /check-only/);
+  assert.equal(existsSync(f.marker), false);
+});
+
+test('a baseline from before the IaC move still compares through the legacy worker config', (t) => {
+  const f = fixture(t, { legacyBaseline: true });
+  const result = f.run('green', f.baselineArgs);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /worker config moves to IaC/);
+  assert.match(result.stdout, /worker registry rider/);
+  assert.match(result.stdout, /binary asset rider/);
+  assert.doesNotMatch(result.stdout, /unrelated docs/);
   assert.equal(existsSync(f.marker), false);
 });
 
