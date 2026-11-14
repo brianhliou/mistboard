@@ -1,5 +1,9 @@
 import './landing-correspondence-moves.css';
-import { type CorrespondenceGame, deadlineRemainingMs } from './correspondence-model.js';
+import {
+  type CorrespondenceGame,
+  deadlineRemainingMs,
+  type IncomingChallenge,
+} from './correspondence-model.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -121,13 +125,20 @@ export function buildLandingIncomingChallenges(options: { hydrate?: boolean } = 
       box.hidden = true;
       return;
     }
-    void import('./correspondence.js')
-      .then(({ renderIncomingChallenges }) =>
-        renderIncomingChallenges(box, undefined, {
-          compact: true,
-          isCurrent: () => mine === generation && isSignedIn() && (!mounted || box.isConnected),
-        }),
-      )
+    const isCurrent = (): boolean =>
+      mine === generation && isSignedIn() && (!mounted || box.isConnected);
+    void loadIncomingChallenges()
+      .then(async (challenges) => {
+        if (!isCurrent()) return;
+        if (challenges.length === 0) {
+          box.replaceChildren();
+          box.hidden = true;
+          return;
+        }
+        // The correspondence page's code loads only when a challenge waits.
+        const { renderIncomingChallenges } = await import('./correspondence.js');
+        await renderIncomingChallenges(box, undefined, { compact: true, challenges, isCurrent });
+      })
       .catch(() => {});
   };
   const refresh = (): void => {
@@ -141,6 +152,13 @@ export function buildLandingIncomingChallenges(options: { hydrate?: boolean } = 
     if (box.isConnected) mounted = true;
   });
   return box;
+}
+
+async function loadIncomingChallenges(): Promise<IncomingChallenge[]> {
+  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+  if (!resp?.ok) return [];
+  const body = (await resp.json().catch(() => null)) as { challenges?: unknown } | null;
+  return Array.isArray(body?.challenges) ? (body.challenges as IncomingChallenge[]) : [];
 }
 
 async function loadYourMoveGames(): Promise<CorrespondenceGame[]> {

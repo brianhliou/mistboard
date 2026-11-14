@@ -1642,11 +1642,14 @@ export async function renderIncomingChallenges(
   onCount?: (count: number) => void,
   options: IncomingChallengeOptions = {},
 ): Promise<void> {
-  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
-  const body = resp?.ok
-    ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
-    : null;
-  const challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  let challenges = options.challenges;
+  if (!challenges) {
+    const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+    const body = resp?.ok
+      ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
+      : null;
+    challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  }
   if (options.isCurrent?.() === false) return;
   onCount?.(challenges.length);
   host.hidden = challenges.length === 0;
@@ -1687,6 +1690,9 @@ export type IncomingChallengeOptions = {
   navigate?: (url: string) => void;
   compact?: boolean;
   isCurrent?: () => boolean;
+  // Already read by the caller (the homepage reads first, so it loads this
+  // module only when a challenge is waiting).
+  challenges?: IncomingChallenge[];
 };
 
 export function buildIncomingChallengeCard(

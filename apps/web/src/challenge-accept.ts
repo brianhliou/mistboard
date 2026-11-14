@@ -438,23 +438,25 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
       }, selectForManualCopy);
     };
     copy.addEventListener('click', () => void copyLink());
-    const shareButton = document.createElement('button');
-    shareButton.type = 'button';
-    shareButton.className = 'challenge-btn';
-    shareButton.textContent = t('challenge.share');
-    shareButton.addEventListener('click', async () => {
-      if (!navigator.share) {
-        await copyLink();
-        return;
-      }
-      try {
-        await navigator.share({ url: share.value });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        await copyLink();
-      }
-    });
-    actions.prepend(shareButton, copy);
+    // Share only where the browser has a share sheet; elsewhere it would be a
+    // second Copy button.
+    if (typeof navigator.share === 'function') {
+      const shareButton = document.createElement('button');
+      shareButton.type = 'button';
+      shareButton.className = 'challenge-btn';
+      shareButton.textContent = t('challenge.share');
+      shareButton.addEventListener('click', async () => {
+        try {
+          await navigator.share({ url: share.value });
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          await copyLink();
+        }
+      });
+      actions.prepend(shareButton, copy);
+    } else {
+      actions.prepend(copy);
+    }
   }
 
   if (view.canAccept) {

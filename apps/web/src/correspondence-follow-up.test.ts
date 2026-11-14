@@ -245,12 +245,13 @@ it('puts correspondence play-again before the live rematch on a finished corresp
 });
 
 describe('phone invite sharing', () => {
-  it('copies when native sharing is unavailable', async () => {
+  it('shows only Copy when native sharing is unavailable', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     const card = buildChallengeCard(sent);
-    button(card, 'Share')?.click();
+    expect(button(card, 'Share')).toBeUndefined();
+    button(card, 'Copy link')?.click();
     await vi.waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(`${location.origin}/challenge/sent-1`),
     );
