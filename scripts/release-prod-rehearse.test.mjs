@@ -20,6 +20,9 @@ function fixture(t) {
   mkdirSync(root);
   const env = {
     ...gitFreeEnv(),
+    // No real suites run in this fixture. Exercise the hosted skip instead of
+    // touching the machine lock; gate-lock.test.mjs covers local ownership.
+    CI: '1',
     GIT_CONFIG_GLOBAL: '/dev/null',
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_AUTHOR_DATE: '2026-01-01T00:00:00Z',

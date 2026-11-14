@@ -129,6 +129,9 @@ function fixture(script, args, failures, settings = {}) {
       timeout: 10_000,
       env: {
         ...process.env,
+        // Gate bodies are mocked, so this fixture must not queue on the real
+        // machine lock. gate-lock.test.mjs exercises it with injected paths.
+        CI: '1',
         MISTBOARD_RELEASE_LOCK: lockFile,
         MISTBOARD_RELEASE_LOG: logFile,
         MISTBOARD_SKIP_PREPUSH_DB: '0',
