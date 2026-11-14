@@ -39,10 +39,11 @@ export const oneOpponentFourVariantsArticle: Article = {
   slug: 'one-opponent-four-variants',
   kind: 'article',
   publisher: 'mistboard',
-  title: 'Won the fog game, lost the other three: four variants against one opponent',
+  title: 'Won the fog game, lost the other three',
+  cardTitle: 'Won the fog game, lost three',
   seoTitle: 'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent',
   summary:
-    'Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.',
+    'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-20',

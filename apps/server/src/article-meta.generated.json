@@ -632,15 +632,15 @@
     }
   },
   "one-opponent-four-variants": {
-    "title": "Won the fog game, lost the other three: four variants against one opponent",
+    "title": "Won the fog game, lost the other three",
     "kind": "article",
-    "description": "Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.",
+    "description": "Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.",
     "status": "published",
     "publishedAt": "2026-11-20",
     "liveAt": 1795190400000,
     "zhTitles": {
-      "zh-hans": "赢了迷雾象棋，输了另外三盘：同一位对手，四种变体",
-      "zh-hant": "贏了迷霧象棋，輸了另外三盤：同一位對手，四種變體"
+      "zh-hans": "赢了迷雾象棋，输了另外三盘",
+      "zh-hant": "贏了迷霧象棋，輸了另外三盤"
     }
   },
   "one-thousand-games": {

@@ -300,12 +300,12 @@ const ZH_HANS: Record<string, string> = {
   'Ranked animals race to enter the enemy den.': '动物按大小吃子，抢进对方兽穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻将，每手五张牌。',
   // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
-  'Won the fog game, lost the other three: four variants against one opponent':
-    '赢了迷雾象棋，输了另外三盘：同一位对手，四种变体',
+  'Won the fog game, lost the other three': '赢了迷雾象棋，输了另外三盘',
+  'Won the fog game, lost three': '赢了迷雾象棋，输了另外三盘',
   'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
     '迷雾象棋、暗棋、揭棋和鸭子象棋：与同一位对手的四盘棋',
-  'Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.':
-    '与同一位棋手下的迷雾象棋、暗棋、揭棋和鸭子象棋通信棋，每一步都由引擎评分。',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '与同一位棋手同时下的四盘通信棋，分别是迷雾象棋、暗棋、揭棋和鸭子象棋。每一步都由引擎评分，每次翻子都拆成选择和运气两部分。',
   '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
     '我和 @rebirthfox333 同时下了四盘通信棋，迷雾象棋、暗棋、揭棋和鸭子象棋各一盘。',
   "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
@@ -7098,12 +7098,12 @@ const ZH_HANT: Record<string, string> = {
   'Ranked animals race to enter the enemy den.': '動物按大小吃子，搶進對方獸穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻將，每手五張牌。',
   // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
-  'Won the fog game, lost the other three: four variants against one opponent':
-    '贏了迷霧象棋，輸了另外三盤：同一位對手，四種變體',
+  'Won the fog game, lost the other three': '贏了迷霧象棋，輸了另外三盤',
+  'Won the fog game, lost three': '贏了迷霧象棋，輸了另外三盤',
   'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
     '迷霧象棋、暗棋、揭棋和鴨子象棋：與同一位對手的四盤棋',
-  'Correspondence games against one player in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by the engine.':
-    '與同一位棋手下的迷霧象棋、暗棋、揭棋和鴨子象棋通信棋，每一步都由引擎評分。',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '與同一位棋手同時下的四盤通信棋，分別是迷霧象棋、暗棋、揭棋和鴨子象棋。每一步都由引擎評分，每次翻子都拆成選擇和運氣兩部分。',
   '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
     '我和 @rebirthfox333 同時下了四盤通信棋，迷霧象棋、暗棋、揭棋和鴨子象棋各一盤。',
   "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
