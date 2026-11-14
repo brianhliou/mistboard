@@ -26,6 +26,8 @@ ROOT = Path(__file__).resolve().parents[2]
 LAB = ROOT / 'scripts/variant-lab'
 WORK = Path('/private/tmp/rebirthfox-reanalysis')
 TOOLS = Path.home() / 'projects/tools'
+# The CC0 build the server runs: upstream at the pikafish.ref pin plus the CC0 net patch.
+PIKAFISH_CC0 = TOOLS / f"pikafish-{(ROOT / 'pikafish.ref').read_text().split()[0][:8]}-cc0/src"
 ENGINE = Path.home() / 'projects/mistboard-engine'
 ABJ = Path('/private/tmp/claude-501/-Users-brianliou-projects-mistboard/b61017db-5d19-4152-9436-daef3f9492bf/scratchpad/abjbuild/abjchess')
 IDS = {
@@ -36,8 +38,8 @@ IDS = {
     'jieqi-new': 'jq_a9840ec7-12a0-4f81-8b00-42d07934038e',
 }
 SPECS = {
-    'fog': dict(binary=str(TOOLS / 'pikafish-6a59ee2f-cc0/src/pikafish'), version='6a59ee2f-cc0@c07e94a5',
-                net=str(TOOLS / 'pikafish-6a59ee2f-cc0/src/xiangqi-c07e94a5c7cb.nnue'), model='uci-wdl',
+    'fog': dict(binary=str(PIKAFISH_CC0 / 'pikafish'), version='6a59ee2f-cc0@c07e94a5',
+                net=str(PIKAFISH_CC0 / 'xiangqi-c07e94a5c7cb.nnue'), model='uci-wdl',
                 options=['UCI_ShowWDL value true']),
     'banqi': dict(binary=str(WORK / 'banqi-target/release/banqi-engine'), version='0.3.0@45f0fdea',
                   net=str(Path.home() / 'projects/misty-banqi-wt-net/nets/misty-banqi-0.3.0.bqnn'),

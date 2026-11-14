@@ -235,10 +235,10 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // The xiangqi own-net engineering post, a draft dated Tuesday 2026-11-24.
       '/blog/xiangqi-nnue-training',
-      // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
-      '/blog/meng-fanrui',
       // Four correspondence games against one opponent, dated Friday 2026-11-20.
       '/blog/one-opponent-four-variants',
+      // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
+      '/blog/meng-fanrui',
       '/blog/fog-future',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
@@ -648,8 +648,8 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
-      '/blog/meng-fanrui',
       '/blog/one-opponent-four-variants',
+      '/blog/meng-fanrui',
       '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',

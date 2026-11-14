@@ -17,9 +17,9 @@
     },
     "engines": {
       "fog": {
-        "binary": "/Users/brianliou/projects/tools/pikafish-6a59ee2f-cc0/src/pikafish",
+        "binary": "~/projects/tools/pikafish-<pikafish.ref pin>-cc0/src/pikafish",
         "version": "6a59ee2f-cc0@c07e94a5",
-        "net": "/Users/brianliou/projects/tools/pikafish-6a59ee2f-cc0/src/xiangqi-c07e94a5c7cb.nnue",
+        "net": "~/projects/tools/pikafish-<pikafish.ref pin>-cc0/src/xiangqi-c07e94a5c7cb.nnue",
         "model": "uci-wdl",
         "options": ["UCI_ShowWDL value true"],
         "binary_sha256": "e5c4810e9889360175617524a581fe0b0a569dc02509a2ddb9f2f6e56bb28bb6",
