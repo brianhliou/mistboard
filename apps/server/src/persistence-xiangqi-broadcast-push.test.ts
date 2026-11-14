@@ -297,8 +297,67 @@ definePersistenceTests('xiangqi broadcast push', () => {
     assert.equal((await getXiangqiBroadcastBoard(board.id))?.result, '0-1');
   });
 
+  test('CLI sets device credit without enabling polling; board detail prefers board, round, then tour', async () => {
+    await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET poll_mode = 'auto', poll_enabled = true WHERE slug = $1`,
+      [tour.slug],
+    );
+    const sourceUrl = 'https://device.example/event';
+    assert.deepEqual(await cli('set-source', '--tour', tour.slug, '--url', sourceUrl), {
+      ok: true,
+      tour: tour.slug,
+      sourceUrl,
+      pollMode: 'off',
+    });
+    const event = await getXiangqiBroadcastTour(tour.slug);
+    assert.equal(event?.sourceUrl, sourceUrl);
+    assert.equal(event?.pollMode, 'off');
+    assert.equal(event?.pollEnabled, false);
+    assert.equal((await applyXiangqiBroadcastBoardUpdate(board, options(1))).ok, true);
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, sourceUrl);
+    const roundUrl = 'https://device.example/round';
+    await getPool().query(`UPDATE xiangqi_broadcast_rounds SET source_url = $2 WHERE id = $1`, [
+      round.id,
+      roundUrl,
+    ]);
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, roundUrl);
+    const boardUrl = 'https://device.example/game';
+    assert.equal(
+      (await applyXiangqiBroadcastBoardUpdate({ ...board, sourceUrl: boardUrl }, options(2))).ok,
+      true,
+    );
+    assert.equal((await getXiangqiBroadcastBoard(board.id))?.sourceUrl, boardUrl);
+    assert.equal(await getXiangqiBroadcastBoard('missing-board'), null);
+  });
+
+  test('CLI set-source refuses an event the poller fills and leaves its polling on', async () => {
+    await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET source_url = 'https://source.invalid', poll_mode = 'auto', poll_enabled = true WHERE slug = $1`,
+      [tour.slug],
+    );
+    await assert.rejects(
+      cli('set-source', '--tour', tour.slug, '--url', 'https://device.example/event'),
+      /polled event keeps its own source/,
+    );
+    const { rows } = await getPool().query(
+      'SELECT source_url, poll_mode, poll_enabled FROM xiangqi_broadcast_tours WHERE slug = $1',
+      [tour.slug],
+    );
+    assert.deepEqual(rows[0], {
+      source_url: 'https://source.invalid',
+      poll_mode: 'auto',
+      poll_enabled: true,
+    });
+  });
+
   test('illegal/rejected writes and failed transactions leave board and sequence together unchanged', async () => {
     await seed();
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET source_url = 'https://source.invalid', poll_mode = 'off' WHERE slug = $1`,
+      [tour.slug],
+    );
     await applyXiangqiBroadcastBoardUpdate(board, options(4));
     const before = await getXiangqiBroadcastBoard(board.id);
     const invalid = await applyXiangqiBroadcastBoardUpdate(

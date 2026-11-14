@@ -10,7 +10,7 @@ import pg from 'pg';
 
 class CommandError extends Error {}
 const usage =
-  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | grant --account <@handle|email> --tour <slug> | revoke-grant --account <@handle|email> --tour <slug> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false';
+  'Usage: broadcast:push-token create-test-event --slug <slug> --name <name> | grant --account <@handle|email> --tour <slug> | revoke-grant --account <@handle|email> --tour <slug> | issue --tour <slug> --label <label> --out <path> | revoke --id <id> | list [--tour <slug>] | set-listed --tour <slug> --listed true|false | set-source --tour <slug> --url <https url>';
 const flags = {
   'create-test-event': ['slug', 'name'],
   issue: ['tour', 'label', 'out'],
@@ -19,6 +19,7 @@ const flags = {
   revoke: ['id'],
   list: ['tour'],
   'set-listed': ['tour', 'listed'],
+  'set-source': ['tour', 'url'],
 };
 function argumentsFor(argv) {
   const [command, ...args] = argv;
@@ -39,6 +40,15 @@ function argumentsFor(argv) {
   if (values.id && !/^bpt_[a-f0-9]{8}$/.test(values.id)) throw new CommandError('invalid token id');
   if (command === 'set-listed' && !['true', 'false'].includes(values.listed))
     throw new CommandError('listed must be true or false');
+  if (command === 'set-source') {
+    let url;
+    try {
+      url = new URL(values.url);
+    } catch {
+      throw new CommandError('source must be a valid HTTPS URL');
+    }
+    if (url.protocol !== 'https:') throw new CommandError('source must be a valid HTTPS URL');
+  }
   return { command, values };
 }
 
@@ -167,16 +177,32 @@ export async function runBroadcastPushToken(argv, client, log = console.log) {
         `UPDATE xiangqi_broadcast_push_tokens SET revoked_at = COALESCE(revoked_at, now()) WHERE id = $1`,
         [v.id],
       );
+    } else if (command === 'set-source') {
+      result = await client.query(
+        `UPDATE xiangqi_broadcast_tours
+            SET source_url = $2, payload = jsonb_set(payload, '{sourceUrl}', to_jsonb($2::text)),
+                poll_mode = 'off', poll_enabled = false, updated_at = now()
+          WHERE slug = $1 AND (source_url IS NULL OR poll_mode = 'off')`,
+        [v.tour, v.url],
+      );
     } else {
       result = await client.query(
         `UPDATE xiangqi_broadcast_tours SET listed = $2, updated_at = now() WHERE slug = $1`,
         [v.tour, v.listed === 'true'],
       );
     }
+    if (!result.rowCount && command === 'set-source')
+      throw new CommandError('no push event with that slug; a polled event keeps its own source');
     if (!result.rowCount) throw new CommandError('no matching event or token');
     await client.query('COMMIT');
     committed = true;
-    log(JSON.stringify({ ok: true }));
+    log(
+      JSON.stringify(
+        command === 'set-source'
+          ? { ok: true, tour: v.tour, sourceUrl: v.url, pollMode: 'off' }
+          : { ok: true },
+      ),
+    );
   } catch (error) {
     if (!committed) await client.query('ROLLBACK').catch(() => {});
     if (file) await file.close().catch(() => {});

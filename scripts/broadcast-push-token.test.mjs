@@ -193,6 +193,61 @@ test('invalid flags and values fail before touching the database', async (t) => 
   await writeFile(s.out, 'existing');
 });
 
+test('set-source saves the device link with polling off and reports the change', async (t) => {
+  const s = await setup(t);
+  const url = 'https://device.example/broadcast';
+  await s.runBroadcastPushToken(['set-source', '--tour', 'test', '--url', url], s.client, s.log);
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.deepEqual(update.args, ['test', url]);
+  assert.match(update.sql, /source_url = \$2/);
+  assert.match(update.sql, /poll_mode = 'off'/);
+  assert.match(update.sql, /poll_enabled = false/);
+  assert.match(update.sql, /jsonb_set/);
+  assert.equal(s.calls.at(-1).sql, 'COMMIT');
+  assert.deepEqual(JSON.parse(s.output[0]), {
+    ok: true,
+    tour: 'test',
+    sourceUrl: url,
+    pollMode: 'off',
+  });
+});
+
+test('set-source refuses an event filled by polling and leaves it untouched', async (t) => {
+  const s = await setup(t);
+  const query = s.client.query;
+  s.client.query = async (sql, args = []) => {
+    if (!sql.includes('UPDATE xiangqi_broadcast_tours')) return query(sql, args);
+    s.calls.push({ sql, args });
+    return { rows: [], rowCount: 0 };
+  };
+  const args = ['set-source', '--tour', 'dpxq-event', '--url', 'https://device.example'];
+  await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /polled event/);
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.match(update.sql, /WHERE slug = \$1 AND \(source_url IS NULL OR poll_mode = 'off'\)/);
+  assert.equal(s.calls.at(-1).sql, 'ROLLBACK');
+  assert.equal(s.output.length, 0);
+});
+
+test('set-source rejects non-HTTPS or invalid URLs before any database access', async (t) => {
+  const s = await setup(t);
+  const cli = new URL('./broadcast-push-token.mjs', import.meta.url);
+  for (const url of ['http://device.example', 'ftp://device.example', 'not-a-url']) {
+    const args = ['set-source', '--tour', 'test', '--url', url];
+    await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /HTTPS/);
+    const result = spawnSync(process.execPath, [cli.pathname, ...args], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /HTTPS/);
+  }
+  assert.equal(s.calls.length, 0);
+  assert.equal(s.output.length, 0);
+});
+
 test('CLI entrypoint sanitizes invalid arguments and fails safely without DATABASE_URL', () => {
   const token = `mbpush_${randomBytes(32).toString('base64url')}`;
   const cli = new URL('./broadcast-push-token.mjs', import.meta.url);

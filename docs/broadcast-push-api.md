@@ -21,6 +21,9 @@ For development, ask for access to a test event. It is not listed on the site
 and is not indexed by search engines; you open its boards by their links.
 The API behaves the same for test and public events.
 
+The event page and every game credit the sending device with a link, set by us
+when the event is set up.
+
 Keep the token out of logs and source control. If one leaks, revoke it in
 settings and create another. Revoking event access or disabling the owner's
 account also stops its tokens from working.
