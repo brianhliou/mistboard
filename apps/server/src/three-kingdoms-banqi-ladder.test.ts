@@ -134,9 +134,9 @@ test('TK tier selection accepts eight levels, keeps the historical budget and re
     ],
   );
   assert.equal(engine.threeKingdomsBanqiEngineTierFor(L8)?.evaluation, 'nnue');
-  assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_VERSION, '0.3.0');
+  assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_VERSION, '0.3.1');
   for (const tier of engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES) {
-    assert.equal(engine.threeKingdomsBanqiEngineVersion(tier.id), '0.3.0');
+    assert.equal(engine.threeKingdomsBanqiEngineVersion(tier.id), '0.3.1');
     assert.equal(engine.threeKingdomsBanqiEngineDisplayName(tier.id), `Misty level ${tier.level}`);
   }
   assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_NAME, 'MistyThreeKingdomsBanqi');
@@ -458,10 +458,10 @@ test('TK calibrated search tiers play legal moves with the local noise-capable b
   );
 });
 
-test('TK search signatures name 0.3.0; historical and process-free L1 pairs stay unchanged', () => {
+test('TK search signatures name 0.3.1; historical and process-free L1 pairs stay unchanged', () => {
   for (const tier of engine.THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
     const entry = loadEngine(tier.id);
-    const version = tier.level !== undefined && tier.level >= 2 ? '0.3.0' : '0.2.0';
+    const version = tier.level !== undefined && tier.level >= 2 ? '0.3.1' : '0.2.0';
     const signature = `${tier.id}-${version}-${tier.evaluation}-nodes-${tier.nodes}`;
     const mix = tier.level !== undefined && tier.level >= 2;
     const noise = tier.level !== undefined && tier.level >= 2 && tier.level <= 4;

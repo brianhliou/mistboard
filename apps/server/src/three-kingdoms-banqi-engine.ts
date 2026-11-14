@@ -19,7 +19,7 @@ import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js
 
 export const THREE_KINGDOMS_BANQI_ENGINE_ID = 'misty-three-kingdoms-banqi';
 export const THREE_KINGDOMS_BANQI_ENGINE_NAME = 'MistyThreeKingdomsBanqi';
-export const THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0.3.0';
+export const THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0.3.1';
 export const THREE_KINGDOMS_BANQI_HISTORICAL_ENGINE_VERSION = '0.2.0';
 
 // The engine's full level (Brian, 2026-10-28): about 1.6s a move on a laptop,
