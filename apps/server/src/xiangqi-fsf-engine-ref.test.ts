@@ -10,7 +10,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { XIANGQI_FSF_ENGINE_REF, XIANGQI_FSF_NNUE_NET } from './xiangqi-fsf-engine.js';
+import {
+  XIANGQI_FSF_ENGINE_REF,
+  XIANGQI_FSF_NNUE_NET,
+  XIANGQI_FSF_SERVING_NET,
+  XIANGQI_FSF_VARIANT,
+} from './xiangqi-fsf-engine.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'fairy-stockfish-xiangqi.ref');
@@ -62,7 +67,13 @@ test('the recipe builds from the .ref file and railpack fetches the net the prov
     'the script sha256 check must pin the digest whose prefix names the net',
   );
   assert.ok(
-    netScript.includes("grep -q 'NNUE evaluation using'"),
+    netScript.includes('grep -Fq "NNUE evaluation using $bin/$serving_net enabled"'),
     'the build must prove the binary loads the net, not just that both files exist',
   );
+  assert.ok(netScript.includes(`variant=${XIANGQI_FSF_VARIANT}\n`));
+  assert.ok(netScript.includes(`serving_net=${XIANGQI_FSF_SERVING_NET}\n`));
+  assert.ok(netScript.includes('cp "$bin/$net" "$bin/$serving_net"'));
+  assert.ok(netScript.includes('$root/apps/server/src/standard-xiangqi.ini'));
+  assert.ok(netScript.includes('setoption name UCI_Variant value %s'));
+  assert.ok(netScript.includes('"$variant"'));
 });

@@ -12,7 +12,10 @@
 set -eu
 
 bin=${1:?bindir}
+root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+variant=mistboardxiangqi
 net=xiangqi-c07e94a5c7cb.nnue
+serving_net=mistboardxiangqi-c07e94a5c7cb.nnue
 url=https://raw.githubusercontent.com/fairy-stockfish/Fairy-Stockfish-NNUE/0f4dce21530775b1dc862b7c84aa707548183097/$net
 net_sha=c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11
 
@@ -29,18 +32,25 @@ curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$bin/$net" "$url" || die "down
 [ "$(sha256 "$bin/$net")" = "$net_sha" ] || die "$net sha256 mismatch (want $net_sha)"
 log "$net ok"
 
+# FSF associates nets with variants by filename. The official filename selects
+# built-in xiangqi only; the custom draw rule needs the identical weights under
+# its own variant prefix. Never change the downloaded artifact or its digest.
+cp "$bin/$net" "$bin/$serving_net"
+[ "$(sha256 "$bin/$serving_net")" = "$net_sha" ] || die "$serving_net sha256 mismatch"
+
 # Load it: the binary must report NNUE evaluation with this file.
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 out="$tmp/uci.out"
 {
-  printf 'uci\nsetoption name Use NNUE value true\nsetoption name EvalFile value %s\n' "$bin/$net"
-  printf 'setoption name UCI_Variant value xiangqi\nucinewgame\nisready\ngo depth 1\n'
+  printf 'uci\nsetoption name Use NNUE value true\nsetoption name EvalFile value %s\n' "$bin/$serving_net"
+  printf 'setoption name VariantPath value %s\n' "$root/apps/server/src/standard-xiangqi.ini"
+  printf 'setoption name UCI_Variant value %s\nucinewgame\nposition startpos\nisready\ngo depth 1\n' "$variant"
   i=0
   until grep -q '^bestmove' "$out" 2>/dev/null || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
   echo quit
 } | "$bin/fairy-stockfish-xiangqi" > "$out"
-grep -q 'NNUE evaluation using' "$out" || die "fairy-stockfish-xiangqi did not load $net: $(tail -3 "$out")"
+grep -Fq "NNUE evaluation using $bin/$serving_net enabled" "$out" || die "fairy-stockfish-xiangqi did not load $serving_net for $variant: $(tail -3 "$out")"
 grep -q '^bestmove' "$out" || die "fairy-stockfish-xiangqi did not answer a search with $net"
-log "installed $net into $bin, loaded by fairy-stockfish-xiangqi"
+log "installed $serving_net into $bin, loaded by fairy-stockfish-xiangqi for $variant"
 echo fairy-stockfish-xiangqi-nnue-ok
