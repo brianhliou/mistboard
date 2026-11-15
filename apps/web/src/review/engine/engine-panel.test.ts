@@ -1,6 +1,53 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as ceval from './ceval.js';
 import { createEnginePanel } from './engine-panel.js';
 import { createEvalBar } from './eval-bar.js';
+
+it('forwards explicit Jieqi rules, preserves them on retuning and clears them when omitted', async () => {
+  vi.useFakeTimers();
+  vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
+  const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
+    depth: 0,
+    seldepth: 0,
+    nodes: 0,
+    nps: 0,
+    lines: [],
+  }));
+  const dispose = vi.fn();
+  vi.spyOn(ceval, 'createCeval').mockReturnValue({
+    variant: 'jieqi',
+    preload: async () => {},
+    evaluate,
+    stop: vi.fn(),
+    dispose,
+  });
+  const panel = createEnginePanel({ variant: 'jieqi' });
+  try {
+    panel.setPosition([], 'public w - 0 1', true, undefined, 'legacy');
+    panel.setOn(true);
+    await vi.advanceTimersByTimeAsync(151);
+    expect(evaluate.mock.lastCall?.[0]).toMatchObject({ jieqiRule: 'legacy' });
+
+    const slider = panel.el.querySelector<HTMLInputElement>('input[type="range"]')!;
+    slider.value = '2';
+    slider.dispatchEvent(new Event('change'));
+    await vi.advanceTimersByTimeAsync(151);
+    expect(evaluate.mock.lastCall?.[0]).toMatchObject({ multiPv: 2, jieqiRule: 'legacy' });
+
+    panel.setPosition([], 'public b - 0 1', true, undefined, 'jqe-v1');
+    await vi.advanceTimersByTimeAsync(151);
+    expect(evaluate.mock.lastCall?.[0]).toMatchObject({ jieqiRule: 'jqe-v1' });
+
+    panel.setPosition([], 'public w - 0 1');
+    await vi.advanceTimersByTimeAsync(151);
+    expect(evaluate.mock.lastCall?.[0]).not.toHaveProperty('jieqiRule');
+    expect(ceval.createCeval).toHaveBeenCalledTimes(1);
+  } finally {
+    panel.dispose();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
+});
 
 // happy-dom is not cross-origin isolated, so cevalSupported() is false here:
 // the panel mounts hidden and disabled and never touches the WASM engine. That still pins

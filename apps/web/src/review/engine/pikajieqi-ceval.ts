@@ -146,6 +146,9 @@ export class PikaJieQiCeval implements CevalHandle {
     const multiPv = req.multiPv ?? 1;
     const maxDepth = req.maxDepth ?? depthForEffort(req.effort);
     const infinite = req.maxDepth === undefined && req.effort === 'infinite';
+    // A warm worker can serve another game next. Select its public rule on
+    // every evaluation, after stopping the old search and before the position.
+    this.send(`setoption name Jieqi Rule value ${req.jieqiRule ?? 'jqe-v1'}`);
     this.send(`setoption name MultiPV value ${multiPv}`);
     this.send(
       req.movesUci.length

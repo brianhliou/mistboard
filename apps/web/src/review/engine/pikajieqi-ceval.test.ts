@@ -35,9 +35,9 @@ class FakeWorker {
     if (message.type !== 'command' || !message.command) return;
     this.commands.push(message.command);
     const option = /^setoption name (.*?) value /.exec(message.command)?.[1];
-    // These are the options exposed by the pinned NNUE build. In particular,
-    // UCI_AnalyseMode from the classical build would fail its handshake.
-    if (option && !['Hash', 'MultiPV', 'ChanceMix', 'EvalFile'].includes(option)) {
+    // Rule transport is prepared ahead of the rule-capable asset update.
+    // UCI_AnalyseMode from the classical build still fails the NNUE handshake.
+    if (option && !['Hash', 'MultiPV', 'ChanceMix', 'EvalFile', 'Jieqi Rule'].includes(option)) {
       throw new Error(`unsupported NNUE browser option: ${option}`);
     }
     if (message.command === 'uci') {
@@ -141,10 +141,39 @@ describe('PikaJieQi ceval dispatch', () => {
       pvUci: ['a0a1'],
     });
     expect(FakeWorker.latest?.commands).toContain('setoption name MultiPV value 2');
+    expect(FakeWorker.latest?.commands).toContain('setoption name Jieqi Rule value jqe-v1');
     expect(FakeWorker.latest?.commands).toContain('go depth 4');
     // One line at MultiPV 2 is an incomplete burst: it renders once, at bestmove.
     expect(updates).toEqual([4]);
     handle.dispose();
+  });
+
+  it('sets the rule before every position and search when reusing a worker', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const handle = new PikaJieQiCeval('jieqi');
+    await handle.preload();
+    const worker = FakeWorker.latest!;
+    const fen = '9/9/9/9/9/9/9/9/9/9 w R0A0C0P0N0B0r0a0c0p0n0b0 0 1';
+    try {
+      for (const jieqiRule of ['legacy', 'jqe-v1', 'legacy', undefined] as const) {
+        const start = worker.commands.length;
+        await handle.evaluate({
+          initialFen: fen,
+          movesUci: ['a0a1'],
+          maxDepth: 4,
+          jieqiRule,
+        });
+        expect(FakeWorker.latest).toBe(worker);
+        expect(worker.commands.slice(start)).toEqual([
+          `setoption name Jieqi Rule value ${jieqiRule ?? 'jqe-v1'}`,
+          'setoption name MultiPV value 1',
+          `position fen ${fen} moves a0a1`,
+          'go depth 4',
+        ]);
+      }
+    } finally {
+      handle.dispose();
+    }
   });
 
   it('runs continuous analysis until stop and then resolves the superseded search', async () => {

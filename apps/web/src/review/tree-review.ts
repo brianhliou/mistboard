@@ -67,7 +67,7 @@ import {
   setAlternativesEnabled,
   trimAlternatives,
 } from './alternatives-pref.js';
-import type { CevalLine, CevalVariant } from './engine/ceval.js';
+import type { CevalLine, CevalRequest, CevalVariant } from './engine/ceval.js';
 import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engine-arrow-pref.js';
 import { createEnginePanel } from './engine/engine-panel.js';
 import { createEvalBar } from './engine/eval-bar.js';
@@ -202,6 +202,9 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   /** The no-progress draw limit `truth` is played under, for a `'fen'` engine whose
    *  search scores that draw (banqi: 60, or 40 for a game created before 2026-10-17). */
   noProgressLimit?(truth: Truth): number;
+  /** Public Jieqi rule for this position. Legacy games must select `legacy`
+   *  explicitly; omitting the hook uses the engine's standalone-analysis default. */
+  jieqiRule?(truth: Truth): CevalRequest['jieqiRule'];
   /** Prettify a PV move (engine UCI) for the engine panel. */
   formatPvMove(uci: string): string;
   /** Decode the engine's UCI dialect into the board/tree move dialect. Omit when
@@ -2323,9 +2326,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           presentation.engine.fen(node.truth),
           searchable,
           presentation.engine.noProgressLimit?.(node.truth),
+          presentation.engine.jieqiRule?.(node.truth),
         );
       } else {
-        enginePanel.setPosition(uciTo(node), engineBaseFen, searchable);
+        enginePanel.setPosition(
+          uciTo(node),
+          engineBaseFen,
+          searchable,
+          undefined,
+          presentation.engine?.jieqiRule?.(node.truth),
+        );
       }
     }
     paintOverlays();

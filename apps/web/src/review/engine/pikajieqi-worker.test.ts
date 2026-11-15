@@ -39,8 +39,17 @@ describe('pinned jieqi NNUE worker', () => {
     expect(config.locateFile('pikajieqi.wasm')).toBe(wasmUrl);
     expect(initialize).toHaveBeenCalledOnce();
     expect(postMessage).toHaveBeenCalledWith({ type: 'ready' });
-    await receive({ data: { type: 'command', command: 'go depth 4' } });
-    expect(command).toHaveBeenCalledWith('go depth 4');
+    const commands = ['legacy', 'jqe-v1', 'legacy'].flatMap((rule) => [
+      `setoption name Jieqi Rule value ${rule}`,
+      'position fen public w - 0 1',
+      'go depth 4',
+    ]);
+    for (const text of commands) {
+      await receive({ data: { type: 'command', command: text } });
+    }
+    expect(command.mock.calls).toEqual(commands.map((text) => [text]));
+    expect(moduleFactory).toHaveBeenCalledOnce();
+    expect(initialize).toHaveBeenCalledOnce();
   });
 
   it('ships the supplied NNUE artifacts and both engine and net licenses', () => {
