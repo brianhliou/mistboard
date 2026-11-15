@@ -22,6 +22,7 @@ export const ZH_HANS_COMMUNITY = {
   'challenge.liveReconnecting': '正在重新连接，邀请状态可能尚未更新。',
   'challenge.liveDismiss': '关闭',
   'challenge.liveOpenGame': '进入对局',
+  'challenge.liveTabTitle': '对局邀请',
 
   'profile.championLabel': '{variant}{pace}冠军',
   'inbox.searchPlaceholder': '搜索或发起新对话',
