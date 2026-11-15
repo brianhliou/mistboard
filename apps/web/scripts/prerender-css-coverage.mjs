@@ -16,15 +16,45 @@ import { join, relative } from 'node:path';
 
 /** Classes (`.x`) and ids (`#x`) a selector list requires, one array per
  *  comma-separated selector. Pseudo-class arguments (`:not(.x)`, `:is(.a, .b)`)
- *  are dropped: a negated or alternative class is not a requirement. */
+ *  are dropped: a negated or alternative class is not a requirement. A `:has()`
+ *  with one alternative is kept: its classes must be on the page to match. */
 export function selectorClassSets(selectorList) {
   const out = [];
   for (const raw of splitTopLevel(selectorList)) {
-    const sel = stripPseudoArguments(raw.trim());
+    const trimmed = raw.trim();
+    const sel = stripPseudoArguments(trimmed);
     if (!sel) continue;
-    out.push([...sel.matchAll(/([.#])(-?[_a-zA-Z][\w-]*)/g)].map((m) => m[1] + m[2]));
+    const classes = [...sel.matchAll(/([.#])(-?[_a-zA-Z][\w-]*)/g)].map((m) => m[1] + m[2]);
+    for (const arg of hasArguments(trimmed)) {
+      const alternatives = selectorClassSets(arg);
+      if (alternatives.length === 1) classes.push(...alternatives[0]);
+    }
+    out.push(classes);
   }
   return out;
+}
+
+/** The argument of each top-level `:has(...)` in one selector. */
+function hasArguments(sel) {
+  const args = [];
+  let depth = 0;
+  for (let i = 0; i < sel.length; i++) {
+    const ch = sel[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    else if (depth === 0 && sel.startsWith(':has(', i)) {
+      let inner = 0;
+      for (let j = i + 4; j < sel.length; j++) {
+        if (sel[j] === '(') inner++;
+        else if (sel[j] === ')' && --inner === 0) {
+          args.push(sel.slice(i + 5, j).replace(/^\s*[>+~]\s*/, ''));
+          i = j;
+          break;
+        }
+      }
+    }
+  }
+  return args;
 }
 
 function splitTopLevel(list) {
