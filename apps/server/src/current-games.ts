@@ -437,22 +437,21 @@ function firstEventAt(events: readonly { at?: number }[]): number | null {
   return typeof first?.at === 'number' ? first.at : null;
 }
 
-// Live (clock-driven) games lead, human games before engine games, most
-// recently active first. Correspondence games follow, soonest deadline first:
-// on a page that is mostly correspondence, the game about to be decided is the
-// one worth a look.
+// Live (clock-driven) games lead, human games before engine games;
+// correspondence games follow. Within each group games stay in the order they
+// started, so a move never reshuffles the page and a new game joins at the end
+// of its group (decided 2026-11-14; activity and deadline order moved cards on
+// every move).
 export function sortCurrentGames(games: CurrentGame[]): CurrentGame[] {
   const tier = (game: CurrentGame): number =>
     (game.timeClass === 'correspondence' ? 0 : 10) + (game.composition === 'pvp' ? 1 : 0);
+  const started = (game: CurrentGame): number => game.startedAt ?? Number.POSITIVE_INFINITY;
   return [...games].sort((a, b) => {
     const byTier = tier(b) - tier(a);
     if (byTier !== 0) return byTier;
-    if (a.timeClass === 'correspondence' && b.timeClass === 'correspondence') {
-      const dueA = a.deadline ? Date.parse(a.deadline.dueAt) : Number.POSITIVE_INFINITY;
-      const dueB = b.deadline ? Date.parse(b.deadline.dueAt) : Number.POSITIVE_INFINITY;
-      if (dueA !== dueB) return dueA - dueB;
-    }
-    return (b.lastActivityAt ?? 0) - (a.lastActivityAt ?? 0);
+    const byStart = started(a) - started(b);
+    if (byStart !== 0 && !Number.isNaN(byStart)) return byStart;
+    return a.roomId < b.roomId ? -1 : a.roomId > b.roomId ? 1 : 0;
   });
 }
 

@@ -544,7 +544,7 @@ test('timeClassFor decides correspondence by daysPerMove, never by the ms value'
   assert.equal(timeClassFor(null), null);
 });
 
-test('live human games lead, then live engine games, then correspondence by soonest deadline', () => {
+test('live human games lead, then live engine games, then correspondence, each in start order', () => {
   const base = (over: Partial<CurrentGame>): CurrentGame => ({
     channelId: 'xiangqi',
     clock: null,
@@ -563,25 +563,60 @@ test('live human games lead, then live engine games, then correspondence by soon
     url: '/room/x',
     ...over,
   });
-  const sorted = sortCurrentGames([
+  // The newer game in each group moved last and the older correspondence game
+  // is due later: neither activity nor deadline may move a card.
+  const games = [
     base({
-      roomId: 'corr-late',
+      roomId: 'corr-new',
       timeClass: 'correspondence',
-      deadline: { seat: 'red', dueAt: new Date(NOW + 2 * 86_400_000).toISOString() },
-    }),
-    base({ roomId: 'pve-old', composition: 'pve', lastActivityAt: NOW - 50_000 }),
-    base({
-      roomId: 'corr-soon',
-      timeClass: 'correspondence',
+      startedAt: NOW - 3_600_000,
       deadline: { seat: 'red', dueAt: new Date(NOW + 3_600_000).toISOString() },
     }),
-    base({ roomId: 'pvp-old', lastActivityAt: NOW - 10_000 }),
-    base({ roomId: 'pvp-new' }),
-    base({ roomId: 'pve-new', composition: 'pve' }),
-  ]);
+    base({
+      roomId: 'pve-old',
+      composition: 'pve',
+      startedAt: NOW - 90_000,
+      lastActivityAt: NOW - 50_000,
+    }),
+    base({
+      roomId: 'corr-old',
+      timeClass: 'correspondence',
+      startedAt: NOW - 5 * 86_400_000,
+      deadline: { seat: 'red', dueAt: new Date(NOW + 2 * 86_400_000).toISOString() },
+    }),
+    base({ roomId: 'pvp-old', startedAt: NOW - 60_000, lastActivityAt: NOW }),
+    base({ roomId: 'pvp-new', startedAt: NOW - 30_000, lastActivityAt: NOW - 20_000 }),
+    base({ roomId: 'pve-new', composition: 'pve', startedAt: NOW - 40_000 }),
+    base({ roomId: 'pvp-unstarted', startedAt: null }),
+  ];
+  const expected = [
+    'pvp-old',
+    'pvp-new',
+    'pvp-unstarted',
+    'pve-old',
+    'pve-new',
+    'corr-old',
+    'corr-new',
+  ];
   assert.deepEqual(
-    sorted.map((game) => game.roomId),
-    ['pvp-new', 'pvp-old', 'pve-new', 'pve-old', 'corr-soon', 'corr-late'],
+    sortCurrentGames(games).map((game) => game.roomId),
+    expected,
+  );
+  // A move bumps a game's activity and resets its deadline; the order holds.
+  const afterMoves = games.map((game) =>
+    game.roomId === 'pvp-new' || game.roomId === 'corr-old'
+      ? {
+          ...game,
+          lastActivityAt: NOW + 5_000,
+          deadline: game.deadline
+            ? { ...game.deadline, dueAt: new Date(NOW + 3 * 86_400_000).toISOString() }
+            : null,
+        }
+      : game,
+  );
+  assert.deepEqual(
+    sortCurrentGames(afterMoves).map((game) => game.roomId),
+    expected,
   );
 });
 
