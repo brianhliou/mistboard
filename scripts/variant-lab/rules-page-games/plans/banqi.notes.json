@@ -6,6 +6,7 @@
     "10": "The red elephant on a4 takes that cannon on b4. In Banqi an elephant outranks a cannon. Level 8 recaptures with a piece already face up instead of spending a turn on a flip.",
     "45": "The flip on g4 turns up the red general, one of Level 8’s pieces. It still helps Level 7 here: the average flip was worth 34.2% for Level 7, and this one gives 44.8%. An opponent’s piece can be a lucky draw when it turns up in a bad place.",
     "53": "The black general moves from d4 to c4. The analysis prefers d4 to e4: after the move played, Level 7’s chances fall from 96.2% to 64.5%. The side line shows that move, which needs no flip.",
+    "57": "The black soldier on h4 could take the red general on g4. Level 7 passes up this capture for several moves; after moving the black elephant from c1 to b1 instead, its chances fall from 63.6% to 57.5%.",
     "58": "The red soldier on c4 takes the black general on b4. This is Banqi’s one exception to rank: a soldier can take a general, so the strongest piece still has to watch the weakest.",
     "206": "The red advisor moves from b3 to b4 and takes the last black soldier. Level 7 has no legal move left, which loses in Banqi, so Level 8 wins."
   },

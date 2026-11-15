@@ -5,7 +5,7 @@
     "description": "A recorded engine game, analyzed with the served Level 8 engine and pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/three-kingdoms-banqi.",
     "visibility": "public",
     "chapter": {
-      "name": "Misty level 8 vs Misty level 7",
+      "name": "Misty Level 8 vs Misty Level 7",
       "variant": "three-kingdoms-banqi",
       "orientation": "black",
       "tree": {
@@ -273,7 +273,7 @@
                                                                                                                                                                                                                                                                                                   "annotations": {
                                                                                                                                                                                                                                                                                                     "comments": [
                                                                                                                                                                                                                                                                                                       {
-                                                                                                                                                                                                                                                                                                        "text": "The black horse on g5 takes the red chariot on f3, right after that chariot took another black horse. The chariot is worth 15 and the lost horse 10, so Level 7 comes out ahead, 90 to 45."
+                                                                                                                                                                                                                                                                                                        "text": "The black horse on g5 takes the red chariot on f3, right after that chariot took another black horse. The chariot is worth 15 and the lost horse 10, so Level 7 leads 90 to 45."
                                                                                                                                                                                                                                                                                                       }
                                                                                                                                                                                                                                                                                                     ]
                                                                                                                                                                                                                                                                                                   }
@@ -314,7 +314,7 @@
                                                                                                                                                                                                                               "annotations": {
                                                                                                                                                                                                                                 "comments": [
                                                                                                                                                                                                                                   {
-                                                                                                                                                                                                                                    "text": "The flip on i1 turns up the second red chariot. It is a strong piece but scores nothing by itself: Level 8 still trails 20 to 55. Averaged over the pieces still face down, the flip was worth 3.7% for Level 8; this chariot gives 3.6%, so the draw changes little."
+                                                                                                                                                                                                                                    "text": "The flip on i1 turns up the second red chariot. It is a strong piece but scores nothing by itself: Level 7 still leads 55 to 20. Averaged over the pieces still face down, the flip was worth 3.7% for Level 8; this chariot gives 3.6%, so the draw changes little."
                                                                                                                                                                                                                                   }
                                                                                                                                                                                                                                 ]
                                                                                                                                                                                                                               }
@@ -365,7 +365,7 @@
                                                                                                                                       "annotations": {
                                                                                                                                         "comments": [
                                                                                                                                           {
-                                                                                                                                            "text": "The red soldier on e2 takes the black chariot on e3. In Three Kingdoms any piece may take any piece it reaches, so a soldier can take a chariot. Level 8 scores its first 15 points; the score is 15 to 45."
+                                                                                                                                            "text": "The red soldier on e2 takes the black chariot on e3. In Three Kingdoms any piece may take any piece it reaches, so a soldier can take a chariot. Level 8 scores its first 15 points; Level 7 leads 45 to 15."
                                                                                                                                           }
                                                                                                                                         ]
                                                                                                                                       }
@@ -483,8 +483,8 @@
         }
       },
       "tags": {
-        "red": "Misty level 8",
-        "black": "Misty level 7",
+        "red": "Misty Level 8",
+        "black": "Misty Level 7",
         "result": "0-1",
         "event": "Three Kingdoms Banqi, engine self-play",
         "date": "2026-11-10"
