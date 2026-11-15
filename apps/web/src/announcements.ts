@@ -55,6 +55,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-11-15',
+    kind: 'release',
+    headline: 'Challenge someone you follow to a game right now.',
+    body: 'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.',
+    href: '/?play=friend',
+    cta: 'Challenge a player',
+  },
+  {
     date: '2026-11-13',
     kind: 'release',
     headline: 'Correspondence games can now be rated.',
