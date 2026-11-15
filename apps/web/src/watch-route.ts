@@ -1401,7 +1401,7 @@ async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
   return data.events;
 }
 
-function mergeWatchMetadata(
+export function mergeWatchMetadata(
   target: Record<string, GameMeta>,
   namesTarget: Record<string, { first: string; second: string }>,
   feed: WatchFeed | null | undefined,
@@ -1413,9 +1413,11 @@ function mergeWatchMetadata(
     // shared seat model (red/black for xiangqi + jungle, white/black
     // otherwise). The chess path reads names from metadataByRoomId.
     const [firstSeat, secondSeat] = matchupSeats(game);
+    // The tiles are as narrow as a finished /games card, so they shorten alike.
+    const label = variantDisplayLabel(game.variant);
     namesTarget[game.roomId] = {
-      first: displayParticipantName(game, firstSeat),
-      second: displayParticipantName(game, secondSeat),
+      first: cardSeatName(displayParticipantName(game, firstSeat), label),
+      second: cardSeatName(displayParticipantName(game, secondSeat), label),
     };
   }
 }
