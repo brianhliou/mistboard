@@ -31,6 +31,7 @@ import {
   serializedTreeMainline,
 } from '@mistboard/game';
 import { createEmbedScoreChart, embedScoreSeries } from './embed/embed-score-chart.js';
+import { studyScoreSeatColors } from './embed/embed-score-seat-colors.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -1024,6 +1025,8 @@ function renderStudy(
     const series = embedScoreSeries(chapter.scoreSeries, positions);
     const scoreChart = series
       ? createEmbedScoreChart(series, {
+          variant,
+          seatColors: studyScoreSeatColors(variant, mountedTree),
           onJump: (ply) => handle?.jumpToPly(ply),
           moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
         })

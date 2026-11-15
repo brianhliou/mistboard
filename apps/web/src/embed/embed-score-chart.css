@@ -2,8 +2,8 @@
    row (embed-score-chart.ts; embed-card.ts underBoard), where the article
    replay draws its chart. ONE height for the tablebase's reason: the card fits
    the board to the room the pane leaves, so 140px is what it costs the board.
-   It sits on the card, so no border of its own. The inks are the article's
-   two-engine pair, lifted on dark. */
+   It sits on the card, so no border of its own. Single-series fills and faded
+   seat zones reuse advantage-chart.css; comparisons keep their engine inks. */
 .embed-score-chart {
   display: flex;
   flex: none;
@@ -65,6 +65,13 @@
   stroke-dasharray: 3 3;
   vector-effect: non-scaling-stroke;
 }
+.embed-score-chart--seat-fill .embed-score-chart__mid {
+  stroke: var(--site-bg);
+  opacity: 0.65;
+}
+.embed-score-chart .advantage-chart__zone--neutral {
+  --advantage-zone-ink: var(--site-muted);
+}
 .embed-score-chart__mid-label {
   position: absolute;
   top: 50%;
@@ -104,9 +111,17 @@
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
+.embed-score-chart--seat-fill .embed-score-chart__line {
+  stroke-width: 1.4;
+}
 .embed-score-chart__cursor {
   stroke: var(--site-text, #222);
   stroke-width: 1.5;
   opacity: 0.7;
   vector-effect: non-scaling-stroke;
+}
+.embed-score-chart--seat-fill .embed-score-chart__cursor {
+  stroke: var(--site-brand-accent);
+  stroke-width: 1;
+  opacity: 0.85;
 }
