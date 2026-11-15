@@ -36,7 +36,7 @@ import {
   replayDarkXiangqiStudy,
 } from '../dark-xiangqi-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
-import { seatInkForVariant } from '../flip-seat-ink.js';
+import { isFlipSeatVariant, seatInkForVariant } from '../flip-seat-ink.js';
 import {
   mountFortressXiangqiReplayBoard,
   replayFortressXiangqiLine,
@@ -431,10 +431,17 @@ async function mountStudyEmbedCard(
     ? null
     : embedScoreSeries(chapter.scoreSeries, (card.handle.plyCount?.() ?? 0) + 1);
   if (series) {
+    // A flip variant's series is keyed by seat; name the ink that seat played.
+    const seat = series.side === 'red' ? cardOptions.seats.first : cardOptions.seats.second;
+    const sideInk =
+      isFlipSeatVariant(chapter.variant) && (seat.ink === 'red' || seat.ink === 'black')
+        ? seat.ink
+        : undefined;
     chart = createEmbedScoreChart(series, {
       onJump: (ply) => card.jumpToPly(ply),
       moveLabel: (ply) =>
         card.handle.moveEntries?.().find((entry) => entry.ply === ply)?.label ?? '',
+      sideInk,
     });
     chart.setPly(currentPly);
     card.setUnderBoard(chart.el);

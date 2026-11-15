@@ -106,6 +106,7 @@ import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js'
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { prependTitleBadge } from './player-titles.js';
+import { withRulesGamePreview } from './rules-game-preview.js';
 import { hasLikelyVariantGrant, variantGrantsResolvedEvent } from './signed-in-state.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -1096,7 +1097,10 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  const article = articleLang ? translateArticle(base, articleLang) : base;
+  const article = withRulesGamePreview(
+    articleLang ? translateArticle(base, articleLang) : base,
+    lang ?? currentLocale(),
+  );
 
   const main = document.createElement('main');
   main.className = 'site-section article-shell article-page';

@@ -84,10 +84,14 @@ export function createEmbedScoreChart(
     onJump: (ply: number) => void;
     /** The move that reached a ply ("e2-e5"), shown after its number in the readout. */
     moveLabel?: (ply: number) => string;
+    /** The ink the series' side played, when it is not the side's own name: a
+     *  flip variant's series is keyed by seat, and the first flip can bind the
+     *  first seat to Black. Unset, the side names itself. */
+    sideInk?: EmbedScoreSide;
   },
 ): EmbedScoreChart {
   const maxPly = data.series[0]!.values.length - 1;
-  const sideName = data.side === 'red' ? 'Red' : 'Black';
+  const sideName = (opts.sideInk ?? data.side) === 'red' ? 'Red' : 'Black';
   const sideLabel = `Win chance for ${sideName}`;
 
   const el = document.createElement('div');
