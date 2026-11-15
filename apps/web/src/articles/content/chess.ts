@@ -39,11 +39,18 @@ export const chessArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-30',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
     audience: 'Mistboard visitors who want the regular chess baseline before reading Fog Chess rules.',
     thumbnail: {
       pieces: boardToPieces(DARK_CHESS_START_STATE.board),
       orientation: 'white',
     },
+    tldr: [
+      'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.',
+      'You must answer check and may never leave your king under attack. Checkmate wins the game.',
+      'A player with no legal move who is not in check is stalemated, and the game is drawn.',
+    ],
     intro: [
       {
         kind: 'paragraph',
