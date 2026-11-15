@@ -375,9 +375,13 @@ describe('setup dialog on a phone', () => {
           sent.room = { roomId: 'sheet_reserved', url: '/room/sheet_reserved', seat: 'red' };
         await vi.advanceTimersByTimeAsync(5000);
       }
+      if (outcome === 'accepted') {
+        // The sender is taken into the room, where the finished card has no job left.
+        expect(window.location.pathname).toBe('/room/sheet_reserved');
+        expect(document.querySelectorAll('.live-invite')).toHaveLength(0);
+        return;
+      }
       expect(dialog()?.textContent).toContain(`Invitation ${outcome}`);
-      if (outcome === 'accepted')
-        expect(dialog()?.querySelector('a')?.getAttribute('href')).toBe('/room/sheet_reserved');
       document.querySelector<HTMLButtonElement>('.landing-setup-close')!.click();
       expect(document.querySelector('.live-invites')?.textContent).toContain(
         `Invitation ${outcome}`,

@@ -343,6 +343,36 @@ describe('site-wide real-time invitations', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('clears the accepted card once it has taken the player into the room', async () => {
+    controller.dispose();
+    navigate = vi.fn((url: string) => window.history.pushState(null, '', url));
+    controller = createLiveInviteController({ navigate });
+    fetcher.mockImplementation(async (url: string) => {
+      if (url.endsWith('/accept')) return json({ invite: accepted() });
+      if (url.endsWith('/heartbeat')) return json({ leaseMs: 15_000, pollAfterMs: 5_000 });
+      return json({ incoming, outgoing });
+    });
+    controller.setUser('bob');
+    await flush();
+    button('Accept').click();
+    await flush();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('/room/xq_reserved');
+    expect(document.querySelector('.live-invite')).toBeNull();
+    incoming = [accepted()];
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(document.querySelector('.live-invite')).toBeNull();
+    expect(document.querySelector<HTMLElement>('.live-invites')?.hidden).toBe(true);
+  });
+
+  it('names a player once when the display name is the handle', async () => {
+    incoming = [invite({ sender: { handle: 'player-k3fc4', displayName: 'player-k3fc4' } })];
+    controller.setUser('bob');
+    await flush();
+    const heading = document.querySelector('.live-invite h2')?.textContent ?? '';
+    expect(heading).toContain('@player-k3fc4');
+    expect(heading.split('player-k3fc4')).toHaveLength(2);
+  });
+
   it('restores a sender offer after navigation and inspects its retained terminal outcome', async () => {
     incoming = [];
     outgoing = [invite({ isMine: true, canCancel: true, canAccept: false, canDecline: false })];

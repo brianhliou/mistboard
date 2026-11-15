@@ -287,7 +287,11 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
     const heading = document.createElement('h2');
     const party = invite.isMine ? invite.target : invite.sender;
     heading.textContent = t(invite.isMine ? 'challenge.liveSent' : 'challenge.liveIncoming', {
-      name: `${party.displayName} (@${party.handle})`,
+      // A new account's display name is its handle; say it once.
+      name:
+        party.displayName === party.handle
+          ? `@${party.handle}`
+          : `${party.displayName} (@${party.handle})`,
     });
     const terms = document.createElement('p');
     const first = invite.preferredColor === 'first';
@@ -366,6 +370,17 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
   }
 
   function render(): void {
+    // An accepted offer has done its job once its player is in that room; left
+    // up, its card would cover the board until dismissed by hand.
+    const here = stripLocalePrefix(window.location.pathname);
+    for (const [id, invite] of records) {
+      if (
+        invite.status === 'accepted' &&
+        invite.room &&
+        here === `/room/${encodeURIComponent(invite.room.roomId)}`
+      )
+        dismissed.add(id);
+    }
     for (const [id, cached] of cards) {
       if (!records.has(id) || dismissed.has(id)) {
         cached.element.remove();
