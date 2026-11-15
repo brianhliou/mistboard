@@ -808,6 +808,7 @@ function buildBooleanAccountPreference(
     | 'confirmGameActions'
     | 'confirmCorrespondenceMoves'
     | 'forumAutoTranslate'
+    | 'liveInvites'
   >,
   title: string,
   help: string,
@@ -1216,7 +1217,16 @@ function buildPrivacySettings(user: AuthUser, locale: Locale = currentLocale()):
   const form = document.createElement('form');
   form.className = 'account-settings-form';
   form.append(buildDmPolicyControl(user, locale));
-  panel.append(form);
+  panel.append(
+    form,
+    buildBooleanAccountPreference(
+      user,
+      'liveInvites',
+      t('account.liveInvites', {}, locale),
+      t('account.liveInvitesHelp', {}, locale),
+      locale,
+    ),
+  );
   return panel;
 }
 

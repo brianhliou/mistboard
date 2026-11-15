@@ -1,6 +1,22 @@
 // Community translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_COMMUNITY = {
+  'challenge.liveTitle': 'Real-time invitations',
+  'challenge.liveIncoming': '{name} invited you to play now',
+  'challenge.liveSent': 'Invitation to {name}',
+  'challenge.liveWaiting': 'Waiting for a reply',
+  'challenge.liveAccepting': 'Creating your game…',
+  'challenge.liveAccepted': 'Invitation accepted',
+  'challenge.liveCancelled': 'Invitation cancelled',
+  'challenge.liveDeclined': 'Invitation declined',
+  'challenge.liveExpired': 'Invitation expired',
+  'challenge.liveUnavailable': 'Player unavailable. They may be offline or no longer able to play.',
+  'challenge.liveRemaining': 'Expires in {seconds}s',
+  'challenge.liveRetry': 'Could not update the invitation. Try again.',
+  'challenge.liveReconnecting': 'Reconnecting. Invitation status may be out of date.',
+  'challenge.liveDismiss': 'Dismiss',
+  'challenge.liveOpenGame': 'Open game',
+
   'profile.championLabel': '{variant} {pace} champion',
   'inbox.searchPlaceholder': 'Search or start new conversation',
   'profile.chartRange1M': '1M',

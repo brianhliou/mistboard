@@ -15,6 +15,7 @@ export type AccountPreferences = {
   followersBell: boolean;
   forumBell: boolean;
   challengesBell: boolean;
+  liveInvites: boolean;
   correspondenceDeadlineEmail: boolean;
   correspondenceStartEmail: boolean;
   correspondenceTurnDigest: boolean;
@@ -33,6 +34,7 @@ export const defaultAccountPreferences: AccountPreferences = {
   followersBell: true,
   forumBell: true,
   challengesBell: true,
+  liveInvites: true,
   correspondenceDeadlineEmail: true,
   correspondenceStartEmail: true,
   correspondenceTurnDigest: true,
@@ -108,6 +110,7 @@ export function normalizeAccountPreferences(value: unknown): AccountPreferences 
       parsed.challengesBell,
       defaultAccountPreferences.challengesBell,
     ),
+    liveInvites: booleanOrDefault(parsed.liveInvites, defaultAccountPreferences.liveInvites),
     correspondenceStartEmail: booleanOrDefault(
       parsed.correspondenceStartEmail,
       defaultAccountPreferences.correspondenceStartEmail,

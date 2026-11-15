@@ -924,6 +924,37 @@ describe('account page auth flow', () => {
     ).toMatchObject({ premoves: false, clockTenths: 'always' });
   });
 
+  it('saves and reloads incoming live invite permission in Privacy, separately from the bell', async () => {
+    window.history.replaceState(null, '', '/account/settings/privacy');
+    const user = testUser('misty');
+    const requests: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/account/preferences') {
+          const body = JSON.parse(String(init?.body));
+          requests.push(body);
+          Object.assign(user.accountPreferences, body);
+        }
+        return jsonResponse({ user });
+      }),
+    );
+    const { mountAccountSettings } = await import('./account.js');
+    const root = document.querySelector<HTMLElement>('#app')!;
+    await mountAccountSettings(root);
+    const off = root.querySelector<HTMLInputElement>('input[name="liveInvites"][value="false"]');
+    expect(off).not.toBeNull();
+    expect(root.textContent).toContain('Muting the challenge bell does not block invitations');
+    off!.checked = true;
+    off!.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+    expect(requests).toEqual([{ liveInvites: false }]);
+    await mountAccountSettings(root);
+    expect(
+      root.querySelector<HTMLInputElement>('input[name="liveInvites"][value="false"]')?.checked,
+    ).toBe(true);
+  });
+
   it('renders notification channels as a matrix and saves each available switch', async () => {
     window.history.replaceState(null, '', '/account/settings/notifications');
     const user = testUser('misty');

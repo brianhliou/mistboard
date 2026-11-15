@@ -31,6 +31,21 @@ describe('account preferences', () => {
     ).toBe(false);
   });
 
+  it('saves incoming live invite opt-out independently of the challenge bell', () => {
+    for (const value of [null, {}, { liveInvites: 'false' }]) {
+      expect(normalizeAccountPreferences(value)).toMatchObject({ liveInvites: true });
+    }
+    expect(replaceAccountPreferences({ liveInvites: false, challengesBell: true })).toMatchObject({
+      liveInvites: false,
+      challengesBell: true,
+    });
+    expect(readAccountPreferences()).toMatchObject({ liveInvites: false, challengesBell: true });
+    writeAccountPreference('challengesBell', false);
+    expect(readAccountPreferences().liveInvites).toBe(false);
+    writeAccountPreference('liveInvites', true);
+    expect(readAccountPreferences()).toMatchObject({ liveInvites: true, challengesBell: false });
+  });
+
   it('defaults to the behavior users had before preferences were configurable', () => {
     expect(readAccountPreferences()).toEqual(defaultAccountPreferences);
   });

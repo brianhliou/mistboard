@@ -1,6 +1,10 @@
 // Account translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_ACCOUNT = {
+  'account.liveInvites': 'Allow incoming real-time invitations',
+  'account.liveInvitesHelp':
+    'People you follow or who follow you can invite you while you are online. Muting the challenge bell does not block invitations. This setting blocks incoming real-time invitations on every device.',
+
   'account.chooseUsername': 'Choose your username',
   'account.chooseUsernameCopy': 'Your username is public. Keep this one or choose another.',
   'account.suggestUsernameCopy':

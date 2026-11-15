@@ -50,7 +50,7 @@ current policies; invalidated offers become `unavailable` and leave pending list
 Set the server-enforced incoming opt-out through the existing preferences API:
 `PATCH /api/account/preferences { "liveInvites": false }`. Legacy or malformed
 stored values default to `true`. This is independent of `challengesBell`, which
-only controls notifications. The settings UI follows separately.
+only controls notifications. The saved permission is available under Account settings → Privacy.
 
 An invite lasts 60 seconds. There may be at most three pending invites involving
 an account, counting both directions. There may be only one pending invite per
@@ -113,3 +113,34 @@ tenant's existing lobby binding and the legacy Fog Chess factory, without
 adding variants, route registrations or correspondence capabilities. Regression
 coverage is in `routes/live-invite-accept.test.ts`, `routes/live-invites.test.ts`
 and `live-invites.test.ts`.
+
+## Browser controller
+
+The account navigation bootstraps one `live-invites.ts` controller per document,
+including non-game pages. Only resolved signed-in accounts heartbeat and poll;
+embedded documents do not initialize account navigation. The controller uses
+`leaseMs` and `pollAfterMs` with a maximum five-second polling interval. Each
+request is bounded to ten seconds. Incoming cards show the sender's name and
+handle, variant, clock, the recipient's side, explicit rated/casual terms and a
+remaining-expiry countdown before Accept or Decline.
+
+Sender controls can pass the creation response's `invite` to
+`mountLiveInviteWaiting(host, invite)`, which returns an unmount function. The
+shared controller keeps tracking after that control unmounts. Known invitations
+missing from the pending list are inspected individually for retained decline,
+cancellation, expiry or unavailability. Unavailability does not disclose whether
+a player opted out, blocked someone, went offline or became busy.
+
+Both participants follow only the server-returned reserved `/room/:id` path on
+acceptance. A per-account, per-tab session marker prevents retained acceptance
+from redirecting again after reload; an Open game link remains available.
+Pending ids survive navigation in session storage and are re-read from the
+server before rendering. No board, seat token or hidden game information is
+stored by this UI.
+
+Sign-out, account changes and disposal abort requests and clear timers. Stale
+polls cannot overwrite completed actions or a different account's state. Each
+tab renews the account-wide lease independently; pagehide pauses this document
+without revoking other tabs' leases, and pageshow resumes it after a back/forward
+cache restore. Cross-tab identity signals trigger a fresh auth read before
+resuming. Incoming opt-out and the challenge notification bell remain independent.
