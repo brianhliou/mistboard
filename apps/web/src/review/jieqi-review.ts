@@ -49,9 +49,11 @@ import {
  *  at a parsed dealt position (`root`) and read the current truth back from the
  *  position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
 export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState> & {
-  /** Persisted game's public stamp. Unstamped games retain legacy rules.
-   *  Composition callers put the current rule on their parsed root instead. */
+  /** Persisted game's public stamp. Unstamped games retain legacy rules. */
   adjudicationRule?: JieqiAdjudicationRule;
+  /** Engine-only rule for compositions; leaves local adjudication unchanged.
+   *  The displayed truth's own stamp takes precedence when present. */
+  engineRule?: JieqiAdjudicationRule;
   revealLuckOnly?: boolean;
 };
 
@@ -85,6 +87,7 @@ export function jieqiLuckDetail(
 function makeJieqiPresentation(
   adapter: VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView>,
   revealLuckOnly = false,
+  engineRule?: JieqiAdjudicationRule,
 ): TreePresentation<
   JieqiMove,
   JieqiGameState,
@@ -106,7 +109,7 @@ function makeJieqiPresentation(
       // face-down. A review's deal may hold placeholders for those (a finished
       // game's public deal), so the default pool would hand the engine guesses.
       fen: (truth) => jieqiStateToPikafishFen(truth, { public: true }),
-      jieqiRule: (truth) => truth.adjudicationRule ?? 'legacy',
+      jieqiRule: (truth) => truth.adjudicationRule ?? engineRule ?? 'legacy',
       canEvaluatePosition: (truth) => truth.status.type === 'playing',
       formatPvMove: formatJieqiBestMove,
       moveFromEngineUci: pikafishUciToJieqiMove,
@@ -226,7 +229,7 @@ export function mountJieqiReview(
   );
   return mountTreeReview(
     root,
-    makeJieqiPresentation(faceDown.adapter, config.revealLuckOnly),
+    makeJieqiPresentation(faceDown.adapter, config.revealLuckOnly, config.engineRule),
     faceDown.config,
   );
 }

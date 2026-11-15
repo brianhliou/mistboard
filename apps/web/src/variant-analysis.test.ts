@@ -107,7 +107,8 @@ describe('Jieqi standalone rule selection', () => {
     PUBLIC_START.jieqi,
     `${PUBLIC_START.jieqi} ${PINNED_HIDDEN.jieqi}`,
     PUBLIC_MIDGAME.jieqi,
-  ])('uses current rules without game provenance, including FEN %s', async (fen) => {
+    `${PUBLIC_START.jieqi.replace(' 0 1', ' 85 1')} ${PINNED_HIDDEN.jieqi}`,
+  ])('uses jqe-v1 only for the engine without game provenance, including FEN %s', async (fen) => {
     vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
     const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
       depth: 0,
@@ -128,6 +129,16 @@ describe('Jieqi standalone rule selection', () => {
     await vi.waitFor(() => expect(evaluate).toHaveBeenCalled());
     expect(evaluate.mock.lastCall![0]).toMatchObject({ jieqiRule: 'jqe-v1', movesUci: [] });
     expect(evaluate.mock.lastCall![0].initialFen?.split(' ')).toHaveLength(5);
+    if (fen.includes(' 85 ')) {
+      // A quiet move from clock 85 must remain playable locally. A terminal
+      // position has no side to move and cannot issue another engine request.
+      clickSquare(root, 'i4');
+      clickSquare(root, 'i5');
+      expect(root.querySelector('.analysis-phone-info')?.textContent).toContain('Black to move');
+      await vi.waitFor(() => expect(evaluate).toHaveBeenCalledTimes(2));
+      expect(evaluate.mock.lastCall![0].jieqiRule).toBe('jqe-v1');
+      expect(evaluate.mock.lastCall![0].initialFen?.split(' ')[3]).toBe('86');
+    }
   });
 });
 

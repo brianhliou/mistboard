@@ -51,54 +51,60 @@ describe('xiangqi study record loading', () => {
 });
 
 describe('Jieqi study rule selection', () => {
-  it('uses current browser rules for a chapter reconstructed from an unstamped FEN', async () => {
-    vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
-    const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
-      depth: 0,
-      seldepth: 0,
-      nodes: 0,
-      nps: 0,
-      lines: [],
-    }));
-    vi.spyOn(ceval, 'createCeval').mockReturnValue({
-      variant: 'jieqi',
-      preload: async () => {},
-      evaluate,
-      stop: vi.fn(),
-      dispose: vi.fn(),
-    });
-    const root = document.createElement('div');
-    document.body.append(root);
-    const rootFen =
-      'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB';
-    const tree: SerializedTree = {
-      version: 1,
-      rootFen,
-      root: { children: [{ uci: 'i4i5', children: [] }] },
-    };
-    const handle = await mountStudyReview('jieqi', root, {
-      title: 'Rules',
-      summary: '',
-      ariaLabel: 'Study board',
-      reviewSurface: 'study',
-      rootFen,
-      initialTree: tree,
-      initialPosition: 'end',
-    });
-    try {
-      root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
-      await vi.waitFor(() => expect(evaluate).toHaveBeenCalled());
-      expect(evaluate.mock.lastCall![0]).toMatchObject({ jieqiRule: 'jqe-v1', movesUci: [] });
-      root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
-      await vi.waitFor(() => expect(evaluate).toHaveBeenCalledTimes(2));
-      expect(evaluate.mock.lastCall![0].jieqiRule).toBe('jqe-v1');
-      expect(handle.serialize()).toEqual(tree);
-    } finally {
-      handle.destroy();
-      root.remove();
-      vi.restoreAllMocks();
-    }
-  });
+  it.each([0, 85])(
+    'preserves local rules at clock %i while the engine uses jqe-v1',
+    async (clock) => {
+      vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
+      const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
+        depth: 0,
+        seldepth: 0,
+        nodes: 0,
+        nps: 0,
+        lines: [],
+      }));
+      vi.spyOn(ceval, 'createCeval').mockReturnValue({
+        variant: 'jieqi',
+        preload: async () => {},
+        evaluate,
+        stop: vi.fn(),
+        dispose: vi.fn(),
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      const rootFen = `xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 ${clock} 1 prnabpbrccppanpCNPNAPAPBRPPRCB`;
+      const tree: SerializedTree = {
+        version: 1,
+        rootFen,
+        root: { children: [{ uci: 'i4i5', children: [{ uci: 'a7a6', children: [] }] }] },
+      };
+      const handle = await mountStudyReview('jieqi', root, {
+        title: 'Rules',
+        summary: '',
+        ariaLabel: 'Study board',
+        reviewSurface: 'study',
+        rootFen,
+        initialTree: tree,
+        initialPosition: 'end',
+      });
+      try {
+        // Loading must retain the whole chapter for the owner's next autosave,
+        // including the second quiet move past jqe-v1's 80-ply limit.
+        expect(handle.serialize()).toEqual(tree);
+        root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
+        await vi.waitFor(() => expect(evaluate).toHaveBeenCalled());
+        expect(evaluate.mock.lastCall![0]).toMatchObject({ jieqiRule: 'jqe-v1', movesUci: [] });
+        expect(evaluate.mock.lastCall![0].initialFen?.split(' ')[3]).toBe(String(clock + 2));
+        root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+        await vi.waitFor(() => expect(evaluate).toHaveBeenCalledTimes(2));
+        expect(evaluate.mock.lastCall![0].jieqiRule).toBe('jqe-v1');
+        expect(handle.serialize()).toEqual(tree);
+      } finally {
+        handle.destroy();
+        root.remove();
+        vi.restoreAllMocks();
+      }
+    },
+  );
 });
 
 describe('jieqi study face-down faces', () => {

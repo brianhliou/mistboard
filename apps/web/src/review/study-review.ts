@@ -243,12 +243,12 @@ export async function mountStudyReview(
       installJieqiBoardStyles();
       const parsed = rootFen ? parseJieqiFen(rootFen) : null;
       if (!parsed?.ok) throw new Error('jieqi study chapter needs a dealt root position');
-      // Chapters reconstruct compositions, not persisted games. FEN's missing
-      // rule metadata does not make the chapter a legacy game.
-      const truth = { ...parsed.state, adjudicationRule: JIEQI_ADJUDICATION_RULE };
       const overlay = await storedDecisions;
       return mountJieqiReview(root, STUDY_GAME_ID, null, {
         ...(await baseReady),
+        // Analyse under the current engine rule without changing which moves
+        // the chapter can load and persist under its original local rules.
+        engineRule: JIEQI_ADJUDICATION_RULE,
         decisions: overlay
           ? { canRun: false, fetchCached: async () => overlay, run: async () => overlay }
           : null,
@@ -256,7 +256,7 @@ export async function mountStudyReview(
         // Hover faces like the finished-game review: the chapter's root carries no
         // identity its own Reveal identities does not already show.
         showFaceDown: true,
-        root: { truth, fen: jieqiStateToDealtFen(truth) },
+        root: { truth: parsed.state, fen: jieqiStateToDealtFen(parsed.state) },
       });
     }
     case 'jungle-flip': {
