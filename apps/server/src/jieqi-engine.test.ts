@@ -315,8 +315,10 @@ test('the ladder is eight levels, Lichess-shaped, with level 8 the full-strength
   assert.equal(pikafish.length, 8);
   assert.deepEqual(
     pikafish.map((t) => t.skill ?? null),
-    [-9, -5, -1, 3, 7, 11, 16, null],
+    [-9, -5, -1, 3, 9, 11, 16, null],
   );
+  // Level 5 searches deeper than Level 4 (#1125): at one shared depth the two played alike.
+  assert.ok((pikafish[4]?.depth ?? 0) > (pikafish[3]?.depth ?? 0));
   assert.ok(JIEQI_PLAYABLE_ENGINES.every((t) => !t.retired));
   assert.equal(jieqiEngineTierFor('pikafish-jieqi-amateur')?.retired, true);
 });
