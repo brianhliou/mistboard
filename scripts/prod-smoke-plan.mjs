@@ -8,8 +8,7 @@ import { DEFAULT_PROD_BASE_URL, normalizeBaseUrl, revisionMatches } from './lib/
 import { fetchWithTimeout } from './lib/http.mjs';
 import { parsePositiveInteger, requiredValue } from './lib/smoke-args.mjs';
 
-// web's watch patterns (#980: Infrastructure as Code data file; the legacy
-// railway.web.json carries the same list until it is deleted after cutover).
+// web's watch patterns (#980: the Infrastructure as Code data file).
 const DEFAULT_CONFIG = '.railway/web.json';
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_PRINTED_FILES = 30;
