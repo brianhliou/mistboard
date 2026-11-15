@@ -3231,8 +3231,6 @@ const ZH_HANS: Record<string, string> = {
     '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍采用 60 个半回合的无吃子上限，而普通象棋采用 120 个半回合。',
   Repetition: '重复局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有全程将军，则判和。',
@@ -6737,7 +6735,7 @@ const ZH_HANS: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '示例对局换成了一盘在本站与引擎下的对局。',
   'Added a sample game from the site.': '新增一盘本站的示例对局。',
-  'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
+  'Added a short summary at the top.': '在文章顶部添加了简短摘要。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
@@ -10533,8 +10531,6 @@ const ZH_HANT: Record<string, string> = {
     '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍採用 60 個半回合的無吃子上限，而普通象棋採用 120 個半回合。',
   Repetition: '重複局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有全程將軍，則判和。',
@@ -13490,7 +13486,7 @@ const ZH_HANT: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '範例對局換成了一盤在本站與引擎下的對局。',
   'Added a sample game from the site.': '新增一盤本站的範例對局。',
-  'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
+  'Added a short summary at the top.': '在文章頂部新增了簡短摘要。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',

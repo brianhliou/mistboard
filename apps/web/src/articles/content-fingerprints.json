@@ -13,7 +13,7 @@
   },
   "atomic-xiangqi": {
     "hash": "ea182bfe8a39702e",
-    "updatedAt": "2026-11-03"
+    "updatedAt": "2026-11-15"
   },
   "atomic-xiangqi-build": {
     "hash": "1bfea4fd5ead6c00",
@@ -49,7 +49,7 @@
   },
   "chess": {
     "hash": "4210c6383158ef2c",
-    "updatedAt": null
+    "updatedAt": "2026-11-15"
   },
   "chess960-starting-positions": {
     "hash": "1e0ce946b3aa4d0c",
@@ -225,7 +225,7 @@
   },
   "shogi4": {
     "hash": "c4d268160cd5b013",
-    "updatedAt": "2026-06-06"
+    "updatedAt": "2026-11-15"
   },
   "shortest-stalemate-xiangqi": {
     "hash": "8087e9a6ea932d7e",

@@ -39,6 +39,8 @@ export const chessArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-30',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
     audience: 'Mistboard visitors who want the regular chess baseline before reading Fog Chess rules.',
     thumbnail: {
       pieces: boardToPieces(DARK_CHESS_START_STATE.board),

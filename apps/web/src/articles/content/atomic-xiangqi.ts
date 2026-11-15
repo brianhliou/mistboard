@@ -25,9 +25,8 @@ export const atomicXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-15',
-  updatedAt: '2026-11-03',
-  updateNote:
-      'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },
