@@ -1483,3 +1483,7 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `apps/server/src/routes/account-broadcast-push.ts` + `.test.ts`: session-owned broadcast push grant/token APIs, one-time issuance, ownership checks, creation limits and origin protection; dispatched by the account route.
 
 `apps/web/src/account-broadcast-push.ts`: grant-only Broadcast push section within Email and sign-in settings, one-time copy, safe token metadata and revocation; interaction regressions live in `account.test.ts`.
+
+`apps/server/src/persistence-room-deadlines.ts` + `correspondence-first-move.test.ts` + `persistence-correspondence-first-move.test.ts`: oldest correspondence first-move debt, shared seek/challenge/quick-pair admission, release after moving, and the private stalling-account audit written atomically with a pregame abort in `persistence-game-lifecycle.ts` (#1131).
+
+`apps/web/src/correspondence-first-move.ts` + `.test.ts`: localized first-move reminder and safe game link across correspondence posting, seek acceptance, challenges, homepage setup and postgame challenges.

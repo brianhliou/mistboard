@@ -525,6 +525,7 @@ export type {
 export {
   countHostCorrespondenceGames,
   deleteRoomDeadline,
+  firstMoveOwedForUser,
   listActiveCorrespondenceRoomIds,
   listActiveRoomDeadlines,
   listCorrespondenceGamesForUser,

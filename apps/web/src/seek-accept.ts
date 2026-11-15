@@ -6,6 +6,7 @@
 // page. The /challenge page shares the error copy and the sign-in href.
 
 import { trackCorrespondenceSeekAccepted } from './analytics.js';
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import { firstMoverColorName, secondMoverColorName } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -100,7 +101,7 @@ export function buildSeekAcceptAction(options: SeekAcceptOptions): HTMLElement {
   button.type = 'button';
   button.className = className;
   button.textContent = label;
-  const status = options.status ?? null;
+  let status = options.status ?? null;
 
   const showError = (message: string, gone: boolean): void => {
     if (status) {
@@ -121,10 +122,12 @@ export function buildSeekAcceptAction(options: SeekAcceptOptions): HTMLElement {
       method: 'POST',
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              url?: string;
+              error?: string;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && body?.url) {
           trackCorrespondenceSeekAccepted({
             daysPerMove: seek.daysPerMove,
@@ -137,6 +140,16 @@ export function buildSeekAcceptAction(options: SeekAcceptOptions): HTMLElement {
         // The session hint said signed in, the server disagrees.
         if (res.status === 401) {
           navigate(seekSignInHref(seek.id, locale));
+          return;
+        }
+        if (body?.error === 'first_move_owed' && body.roomId) {
+          if (!status) {
+            status = document.createElement('span');
+            status.setAttribute('role', 'status');
+            button.insertAdjacentElement('afterend', status);
+          }
+          renderFirstMoveOwed(status, body, locale);
+          button.disabled = false;
           return;
         }
         const gone = isSeekGoneError(body?.error);

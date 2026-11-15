@@ -541,6 +541,7 @@ export const ZH_HANT_PLAY = {
   'correspondence.gamesUnavailableBody': '暫時無法載入你的通信對局。',
   'correspondence.signIn': '登入',
   'correspondence.heading': '通信對局',
+  'correspondence.firstMoveOwed': '請先在與{opponent}的對局中走出第一步，再開始另一盤對局。',
   'correspondence.yourMove': '輪到你走',
   'correspondence.waitingOnOpponent': '等待對手',
   'correspondence.recentlyFinished': '最近結束',

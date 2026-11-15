@@ -39,6 +39,7 @@
 // correspondence-model.ts. Browsing seeks also stays on the homepage lobby's
 // Correspondence tab; this page shows the same feed.
 
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import './current-games.css';
 import './account-profile.css';
 import './landing-play.css';
@@ -1125,13 +1126,19 @@ export function buildStartForm(
       body: JSON.stringify(request.body),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          challengeUrl?: string | null;
-          error?: string;
-          limit?: number;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string | null;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         submit.disabled = false;
         if (!res.ok) {
+          if (renderFirstMoveOwed(status, body)) {
+            status.classList.add('is-error');
+            return;
+          }
           showStatus(postErrorText(body?.error, body?.limit), true);
           return;
         }
@@ -1340,17 +1347,24 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
       body: JSON.stringify({ gameSpecId: variant.value(), side: side.value() }),
     })
       .then(async (res) => {
-        const result = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-          limit?: number;
-        } | null;
+        const result = (await res.json().catch(() => null)) as
+          | ({
+              url?: string;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && result?.url) {
           navigate(result.url);
           return;
         }
         if (res.status === 401) {
           navigate(loginHrefForCurrentPage());
+          return;
+        }
+        if (renderFirstMoveOwed(status, result)) {
+          submit.disabled = false;
+          status.classList.add('is-error');
           return;
         }
         // A cap refusal stays refused until a game ends; anything else may pass on retry.

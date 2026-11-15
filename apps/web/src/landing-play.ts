@@ -37,6 +37,7 @@ import {
 import { loginHrefWithReferrer } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
 import { targetedChallengeRequestBody } from './challenge-model.js';
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import {
   correspondenceRatedAvailable,
   isCorrespondenceSpecFor,
@@ -206,7 +207,7 @@ export type OpenLobbyRequest = {
   };
   waitingMs: number;
 };
-type RoomCreationFailure = {
+type RoomCreationFailure = FirstMoveOwedFailure & {
   error?: string;
   limit?: number;
 };
@@ -3216,6 +3217,7 @@ function showCorrespondenceFailure(
   locale: Locale,
   setup: PlayDialogSetup,
 ): void {
+  if (renderFirstMoveOwed(status, failure, locale)) return;
   status.replaceChildren();
   if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
     const link = document.createElement('a');

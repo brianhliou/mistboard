@@ -1,4 +1,5 @@
 import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { targetedChallengeRequestBody } from './challenge-model.js';
@@ -188,10 +189,12 @@ export function openChallengeDialog(opts: {
       body: JSON.stringify(request.body),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          challengeUrl?: string;
-          error?: string;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string;
+              error?: string;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && body?.challengeUrl) {
           trackCorrespondenceSeekPosted({
             gameSpecId: variant.value,
@@ -202,7 +205,9 @@ export function openChallengeDialog(opts: {
           location.href = body.challengeUrl;
           return;
         }
-        error.textContent = challengeErrorText(res.status, body?.error, name, locale);
+        if (!renderFirstMoveOwed(error, body, locale)) {
+          error.textContent = challengeErrorText(res.status, body?.error, name, locale);
+        }
         error.hidden = false;
         send.disabled = false;
       })
