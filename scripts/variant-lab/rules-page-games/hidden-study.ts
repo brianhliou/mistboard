@@ -189,24 +189,28 @@ export function makePlan(options: {
     ...options.treeRoot,
     root: tree.root,
   };
+  // Prod exports spell some engine handles 'Misty level 8'; the page says 'Level'.
+  const seat = (handle: string) => handle.replace(/\blevel\b/, 'Level');
+  const red = seat(game.players.red.handle);
+  const black = seat(game.players.black.handle);
   const create: StudyCreateSpec = {
     owner: 'mistboard',
     name: `${options.title}: Level 7 versus Level 8, annotated`,
     description: `A recorded engine game, analyzed with the served Level 8 engine and pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/${game.variant}.`,
     visibility: 'public',
     chapter: {
-      name: `${game.players.red.handle} vs ${game.players.black.handle}`,
+      name: `${red} vs ${black}`,
       variant: game.variant,
       orientation: 'black',
       tree: publicTree,
       tags: {
-        red: game.players.red.handle,
-        black: game.players.black.handle,
+        red,
+        black,
         result: game.result === 'red' ? '1-0' : game.result === 'black' ? '0-1' : '1/2-1/2',
-        event: `${options.title}, engine self-play`,
+        event: `${red} vs ${black.replace(/^Misty /, '')}, Mistboard bot settings`,
         date: game.started_at.slice(0, 10),
       },
-      scoreSeries: { side: 'red', series: [{ name: options.title, color: 'a', values: redScore }] },
+      scoreSeries: { side: 'red', series: [{ name: 'Misty', color: 'a', values: redScore }] },
     },
   };
   checkCreate(create);

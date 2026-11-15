@@ -1180,14 +1180,14 @@
         "red": "Misty Level 7",
         "black": "Misty Level 8",
         "result": "0-1",
-        "event": "Banqi, engine self-play",
+        "event": "Misty Level 7 vs Level 8, Mistboard bot settings",
         "date": "2026-11-09"
       },
       "scoreSeries": {
         "side": "red",
         "series": [
           {
-            "name": "Banqi",
+            "name": "Misty",
             "color": "a",
             "values": [
               0.48343670268785593, 0.4404501867400794, 0.5055228953683342, 0.8061155857194666,
