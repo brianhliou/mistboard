@@ -7,6 +7,7 @@ import {
   replayGameEvents,
   type VariantId,
 } from '@mistboard/game';
+import { accountRoomCreated, accountRoomSeats } from './account-room.js';
 import * as persistence from './persistence.js';
 import { hydrateRoomOnce } from './room-hydration.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
@@ -32,6 +33,7 @@ import { modeForProjection } from './server-policy.js';
 import { verifySeatToken } from './server-seat-session.js';
 import type { Client, Room } from './server-types.js';
 import { resumeStalePausedTenantRooms } from './variant-tenant/pause-recovery.js';
+import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 
 type CreateRoomOptions = {
   randomSeating?: boolean;
@@ -338,6 +340,9 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     rated = false,
     options: CreateRoomOptions = {},
   ): Promise<Room> {
+    const accounts = accountRoomSeats();
+    if (accounts && (mode !== 'pvp' || !persistence.isInitialized()))
+      throw new PersistenceFailure();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const roomId = randomUUID();
       const existing =
@@ -360,6 +365,16 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         ...(rated ? { rated: true } : {}),
       };
       const events: GameEvent[] = [roomCreated];
+      const seatTokens: Room['seatTokens'] = {};
+      if (accounts) {
+        for (const [seat, identity] of [
+          ['white', accounts.first],
+          ['black', accounts.second],
+        ] as const) {
+          const { state } = mintTenantSeatToken({ seatTokens }, seat, identity);
+          events.push({ type: 'seat-assigned', at, roomId, clientId: state.clientId, seat });
+        }
+      }
       if (mode === 'pve') {
         const engineSeat: 'white' | 'black' = options.engineColor ?? 'black';
         events.push({
@@ -372,18 +387,33 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       }
 
       if (persistence.isInitialized()) {
-        for (const [seq, event] of events.entries()) {
-          try {
-            await persistence.appendEvent(roomId, seq, event);
-          } catch (err) {
-            config.recordPersistenceError(roomId, seq, event, err as Error);
-            throw new PersistenceFailure();
+        if (accounts) {
+          await persistence.persistAccountRoom(roomId, events, Object.values(seatTokens), {
+            variant,
+            mode: 'pvp',
+            region,
+            startedAt: new Date(at),
+            whiteClient: seatTokens.white!.clientId,
+            blackClient: seatTokens.black!.clientId,
+            whiteName: accounts.first.userDisplayName,
+            blackName: accounts.second.userDisplayName,
+            corpusId: null,
+            visibility: 'public',
+          });
+        } else {
+          for (const [seq, event] of events.entries()) {
+            try {
+              await persistence.appendEvent(roomId, seq, event);
+            } catch (err) {
+              config.recordPersistenceError(roomId, seq, event, err as Error);
+              throw new PersistenceFailure();
+            }
           }
         }
       }
 
       const projection = replayGameEvents(events);
-      if (persistence.isInitialized()) {
+      if (persistence.isInitialized() && !accounts) {
         await persistGameStart(roomId, projection, mode, new Date(at), region);
       }
       const room: Room = {
@@ -391,7 +421,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         clients: new Set(),
         events,
         projection,
-        seatTokens: {},
+        seatTokens,
         clockTimer: null,
         engineTimer: null,
         abortTimer: null,
@@ -421,6 +451,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         pauseGraceTimer: null,
       };
       config.rooms.set(roomId, room);
+      if (accounts) accountRoomCreated(roomId, 'white', 'black');
       scheduleRoomTimers(room);
       return room;
     }

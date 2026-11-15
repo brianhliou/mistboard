@@ -315,6 +315,7 @@ export {
   loadRoom,
   loadRoomEvents,
   loadRoomsEvents,
+  persistAccountRoom,
   recordGameDebugArtifact,
   recordGameStart,
   recordRoomLifecycleAudit,

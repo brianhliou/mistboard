@@ -42,7 +42,7 @@ function row(id: string): UserRow {
   };
 }
 
-test('HTTP directed live invite lifecycle is authenticated and private, with acceptance unavailable', async (t) => {
+test('HTTP directed live invite lifecycle is authenticated and private', async (t) => {
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(async () => {
     clearPresence();
@@ -111,7 +111,7 @@ test('HTTP directed live invite lifecycle is authenticated and private, with acc
   });
   assert.equal((await request('target', 'GET', '')).body.incoming[0].id, id);
   assert.equal((await request('sender', 'GET', '')).body.outgoing[0].id, id);
-  assert.equal((await request('target', 'POST', `/${id}/accept`)).status, 501);
+  assert.equal((await request('target', 'GET', `/${id}`)).body.invite.canAccept, true);
   assert.equal((await request('sender', 'POST', `/${id}/decline`)).status, 404);
   assert.equal((await request('target', 'POST', `/${id}/decline`)).status, 200);
   assert.equal((await request('sender', 'GET', `/${id}`)).body.invite.status, 'declined');
@@ -250,6 +250,18 @@ test('HTTP sends require follow or follower eligibility, either-direction blocks
   );
   h.advance(LIVE_INVITE_LEASE_MS);
   assert.equal((await h.request('stranger')).body.error, 'target_unavailable');
+});
+
+test('HTTP acceptance is target-only, even for a sender who can inspect the invite', async (t) => {
+  const h = harness(t);
+  const created = await h.request();
+  assert.equal(created.status, 201);
+  const denied = await h.request('sender', 'POST', `/${created.body.invite.id}/accept`);
+  assert.equal(denied.status, 404);
+  assert.equal(
+    (await h.request('target', 'GET', `/${created.body.invite.id}`)).body.invite.status,
+    'pending',
+  );
 });
 
 test('HTTP duplicate and reverse sends are atomic, cancellation is owner-only, and send throttles recover', async (t) => {

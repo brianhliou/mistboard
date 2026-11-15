@@ -203,8 +203,9 @@ Edit task → find file → open only that file.
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
 | `account-session.ts` | Account auth: `currentAccountUser`, `ensureUserForEmail`, `hashSecret`, session cookies, email login |
 | `presence.ts` | In-memory online-players tracker (touched by `currentAccountUser`, TTL-pruned) behind `/api/players/online` |
-| `live-invites.ts` + `.test.ts` | Bounded process-local directed real-time invite lifecycle, expiry, caps, send throttling and participant-only wire views; short heartbeat leases live in `presence.ts` |
-| `routes/live-invites.ts` + `.test.ts` | Authenticated invite polling, create/cancel/decline, current follow/block/preference/play-lock/availability gates; acceptance unavailable; contract in `docs/live-invites.md` |
+| `live-invites.ts` + `.test.ts` | Bounded process-local directed real-time invites, atomic acceptance claims, retained outcomes, expiry/caps and participant-only room views; short heartbeat leases live in `presence.ts` |
+| `routes/live-invites.ts` + `.test.ts`, `routes/live-invite-accept.test.ts` | Authenticated invite lifecycle and durable two-account acceptance; rechecked policy/rating/availability gates, factory failure/race/reconnect and whole-payload hidden-deal regressions; contract in `docs/live-invites.md` |
+| `account-room.ts` | Async account-seat scope across existing tenant and Fog Chess live factories; initial room events, seats and running record persist atomically through `persistAccountRoom` |
 | `account-identity.ts` | Email normalization, handle generation, display name handling |
 | `build-info.ts` | Build metadata surfaced through status responses |
 | `feature-flags.ts` | Runtime on-switches for rated mode and hidden/prelaunch surfaces |

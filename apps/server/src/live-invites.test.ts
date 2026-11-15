@@ -120,6 +120,48 @@ test('live invite snapshots and serialized views cannot mutate state or expose i
   assert.equal(store.getFor(stored.id, 'b', at)?.status, 'unavailable');
 });
 
+test('accept claims survive expiry, stale refreshes and capacity pressure until creation settles', () => {
+  const store = new LiveInviteStore(1);
+  const result = store.create(party('a'), party('b'), terms, at);
+  assert.ok(result.ok);
+  const id = result.invite.id;
+  assert.equal(store.beginAccept(id, 'a', at), false);
+  assert.equal(store.beginAccept(id, 'b', at), true);
+  assert.equal(store.beginAccept(id, 'b', at), false);
+  store.invalidate(id, at);
+  assert.equal(store.closeFor(id, 'a', 'cancelled', at)?.status, 'accepting');
+  assert.deepEqual(store.create(party('c'), party('d'), terms, at + LIVE_INVITE_TTL_MS), {
+    ok: false,
+    error: 'invite_capacity',
+  });
+  assert.equal(store.getFor(id, 'b', at + LIVE_INVITE_TTL_MS)?.status, 'accepting');
+  store.retryAccept(id, at + LIVE_INVITE_TTL_MS);
+  assert.equal(store.getFor(id, 'b', at + LIVE_INVITE_TTL_MS)?.status, 'expired');
+});
+
+test('accepted offers retain only each participant room seat in serialized views and expire from polling', () => {
+  const store = new LiveInviteStore();
+  const result = store.create(party('a'), party('b'), terms, at);
+  assert.ok(result.ok);
+  const id = result.invite.id;
+  store.beginAccept(id, 'b', at);
+  store.accept(id, { id: 'bq_private', senderSeat: 'red', targetSeat: 'black' }, at);
+  const accepted = store.getFor(id, 'a', at)!;
+  assert.equal(store.listFor('a', at)[0]?.status, 'accepted');
+  assert.deepEqual(liveInviteView(accepted, 'a').room, {
+    roomId: 'bq_private',
+    url: '/room/bq_private',
+    seat: 'red',
+  });
+  assert.equal(liveInviteView(accepted, 'b').room?.seat, 'black');
+  assert.throws(() => liveInviteView(accepted, 'c'), /participant required/);
+  const raw = JSON.stringify(liveInviteView(accepted, 'a'));
+  for (const forbidden of ['userId', 'senderSeat', 'targetSeat', 'token'])
+    assert.equal(raw.includes(forbidden), false);
+  assert.equal(store.getFor(id, 'c', at), null);
+  assert.deepEqual(store.listFor('a', at + LIVE_INVITE_RETENTION_MS), []);
+});
+
 test('ordinary five-minute presence and socket refreshes never renew the short invite lease', () => {
   clearPresence();
   const user = { id: 'a', handle: 'a', displayName: 'a', profileVisibility: 'public' as const };

@@ -21,14 +21,23 @@ export type LiveInvite = LiveInviteTerms & {
   target: LiveInviteParty;
   createdAt: number;
   expiresAt: number;
-  status: 'pending' | 'cancelled' | 'declined' | 'expired' | 'unavailable';
+  status:
+    | 'pending'
+    | 'accepting'
+    | 'accepted'
+    | 'cancelled'
+    | 'declined'
+    | 'expired'
+    | 'unavailable';
   closedAt: number | null;
+  room?: { id: string; senderSeat: string; targetSeat: string };
 };
 export type LiveInviteCreateError = 'duplicate_invite' | 'pending_invite_limit' | 'invite_capacity';
 
 // All writes after asynchronous eligibility checks are synchronous: concurrent
-// sends cannot race the pair, pending or global caps. No rooms or seat tokens
-// exist in this slice. Restarting deliberately forgets all offers.
+// sends cannot race the pair, pending or global caps. Acceptance claims an
+// offer synchronously before asynchronous creation. Restart forgets offers;
+// accepted rooms and account seats survive in the durable room store.
 export class LiveInviteStore {
   private readonly invites = new Map<string, LiveInvite>();
   private readonly sends = new Map<string, number[]>();
@@ -52,7 +61,9 @@ export class LiveInviteStore {
     now: number,
   ): { ok: true; invite: LiveInvite } | { ok: false; error: LiveInviteCreateError } {
     this.prune(now);
-    const pending = [...this.invites.values()].filter((invite) => invite.status === 'pending');
+    const pending = [...this.invites.values()].filter(
+      (invite) => invite.status === 'pending' || invite.status === 'accepting',
+    );
     if (
       pending.some(
         (invite) =>
@@ -71,7 +82,7 @@ export class LiveInviteStore {
     // Terminal rows may be evicted early under pressure; live offers never are.
     if (this.invites.size >= this.capacity) {
       for (const [id, invite] of this.invites) {
-        if (invite.status !== 'pending') {
+        if (invite.status !== 'pending' && invite.status !== 'accepting') {
           this.invites.delete(id);
           break;
         }
@@ -105,7 +116,7 @@ export class LiveInviteStore {
     return [...this.invites.values()]
       .filter(
         (invite) =>
-          invite.status === 'pending' &&
+          ['pending', 'accepting', 'accepted'].includes(invite.status) &&
           (invite.sender.userId === userId || invite.target.userId === userId),
       )
       .map((invite) => structuredClone(invite));
@@ -130,6 +141,29 @@ export class LiveInviteStore {
   invalidate(id: string, now: number): void {
     this.prune(now);
     if (this.invites.get(id)?.status === 'pending') this.finish(id, 'unavailable', now);
+  }
+
+  beginAccept(id: string, userId: string, now: number): boolean {
+    const invite = this.getFor(id, userId, now);
+    if (!invite || invite.target.userId !== userId || invite.status !== 'pending') return false;
+    this.invites.get(id)!.status = 'accepting';
+    return true;
+  }
+
+  accept(id: string, room: NonNullable<LiveInvite['room']>, now: number): void {
+    const invite = this.invites.get(id);
+    if (invite?.status !== 'accepting') throw new Error('invite not claimed');
+    invite.room = { ...room };
+    this.finish(id, 'accepted', now);
+  }
+
+  retryAccept(id: string, now: number): void {
+    const invite = this.invites.get(id);
+    if (invite?.status === 'accepting') {
+      invite.status = 'pending';
+      invite.closedAt = null;
+      this.prune(now);
+    }
   }
 
   private finish(id: string, status: LiveInvite['status'], now: number): void {
@@ -158,6 +192,8 @@ export const liveInvites = new LiveInviteStore();
 // Deliberate allowlist: account ids, email, preferences, tokens and any future
 // internal metadata can never ride a polling response by accident.
 export function liveInviteView(invite: LiveInvite, userId: string) {
+  if (invite.sender.userId !== userId && invite.target.userId !== userId)
+    throw new Error('invite participant required');
   const party = ({ handle, displayName }: LiveInviteParty) => ({ handle, displayName });
   return {
     id: invite.id,
@@ -171,8 +207,17 @@ export function liveInviteView(invite: LiveInvite, userId: string) {
     expiresAt: new Date(invite.expiresAt).toISOString(),
     status: invite.status,
     isMine: invite.sender.userId === userId,
-    canAccept: false,
+    canAccept: invite.status === 'pending' && invite.target.userId === userId,
     canCancel: invite.status === 'pending' && invite.sender.userId === userId,
     canDecline: invite.status === 'pending' && invite.target.userId === userId,
+    ...(invite.status === 'accepted' && invite.room
+      ? {
+          room: {
+            roomId: invite.room.id,
+            url: `/room/${encodeURIComponent(invite.room.id)}`,
+            seat: invite.sender.userId === userId ? invite.room.senderSeat : invite.room.targetSeat,
+          },
+        }
+      : {}),
   };
 }

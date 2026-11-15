@@ -1,8 +1,11 @@
+import { randomInt } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isRetiredGameSpec, maybeGameSpecForId } from '@mistboard/game';
+import { createWithAccountSeats } from '../account-room.js';
 import { currentAccountUser } from '../account-session.js';
 import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from '../feature-flags.js';
+import { LiveGameAdmission, type LiveGameReservation } from '../live-game-admission.js';
 import {
   LIVE_INVITE_POLL_MS,
   LIVE_INVITE_TTL_MS,
@@ -102,6 +105,15 @@ export function createLiveInviteHandler(
   deps: LiveInviteDependencies,
   store = new LiveInviteStore(),
 ) {
+  const admissions = new WeakMap<HttpApiContext, LiveGameAdmission>();
+  function admissionFor(ctx: HttpApiContext): LiveGameAdmission {
+    let admission = admissions.get(ctx);
+    if (!admission) {
+      admission = new LiveGameAdmission({ rooms: ctx.rooms });
+      admissions.set(ctx, admission);
+    }
+    return admission;
+  }
   async function eligible(
     sender: InviteUser,
     target: InviteUser,
@@ -129,8 +141,7 @@ export function createLiveInviteHandler(
     return !busy.has(sender.id) && !busy.has(target.id) && liveInviteReachable(target.id, now);
   }
 
-  async function refresh(invite: LiveInvite, ctx: HttpApiContext): Promise<LiveInvite | null> {
-    if (invite.status !== 'pending') return invite;
+  async function resolveEligible(invite: LiveInvite, ctx: HttpApiContext) {
     const [sender, target] = await Promise.all([
       deps.findUser(invite.sender.handle),
       deps.findUser(invite.target.handle),
@@ -145,7 +156,7 @@ export function createLiveInviteHandler(
       !(await eligible(sender, target, ctx, now)) ||
       (await liveInviteTermsError(sender, target, invite))
     )
-      store.invalidate(invite.id, ctx.now?.() ?? Date.now());
+      return null;
     // Policy reads can wait on the database. Recheck leases after all awaits,
     // and never fall back to a snapshot that aged out while we were waiting.
     const finishedAt = ctx.now?.() ?? Date.now();
@@ -153,7 +164,15 @@ export function createLiveInviteHandler(
       !liveInviteReachable(invite.sender.userId, finishedAt) ||
       !liveInviteReachable(invite.target.userId, finishedAt)
     )
-      store.invalidate(invite.id, finishedAt);
+      return null;
+    return { sender, target };
+  }
+
+  async function refresh(invite: LiveInvite, ctx: HttpApiContext): Promise<LiveInvite | null> {
+    if (invite.status !== 'pending') return invite;
+    if (!(await resolveEligible(invite, ctx)))
+      store.invalidate(invite.id, ctx.now?.() ?? Date.now());
+    const finishedAt = ctx.now?.() ?? Date.now();
     return store.getFor(invite.id, invite.sender.userId, finishedAt);
   }
 
@@ -236,7 +255,7 @@ export function createLiveInviteHandler(
         const outgoing: ReturnType<typeof liveInviteView>[] = [];
         for (const invite of store.listFor(user.id, now)) {
           const fresh = await refresh(invite, ctx);
-          if (fresh?.status === 'pending')
+          if (fresh && ['pending', 'accepting', 'accepted'].includes(fresh.status))
             (fresh.sender.userId === user.id ? outgoing : incoming).push(
               liveInviteView(fresh, user.id),
             );
@@ -332,7 +351,110 @@ export function createLiveInviteHandler(
         return true;
       }
       if (match?.[2] === 'accept') {
-        writeJson(response, 501, { error: 'live_invite_accept_unavailable' });
+        if (invite.target.userId !== user.id) {
+          writeJson(response, 404, { error: 'not_found' });
+          return true;
+        }
+        if (invite.status === 'accepted') {
+          writeJson(response, 200, { invite: liveInviteView(invite, user.id) });
+          return true;
+        }
+        if (!store.beginAccept(id, user.id, now)) {
+          writeJson(response, 409, { error: 'invite_unavailable' });
+          return true;
+        }
+        const reservations: LiveGameReservation[] = [];
+        try {
+          if (!persistence.isInitialized()) {
+            writeJson(response, 503, { error: 'persistence_disabled' });
+            return true;
+          }
+          let accounts = await resolveEligible(invite, ctx);
+          if (!accounts) {
+            store.retryAccept(id, ctx.now?.() ?? Date.now());
+            store.invalidate(id, ctx.now?.() ?? Date.now());
+            writeJson(response, 409, { error: 'invite_unavailable' });
+            return true;
+          }
+          for (const account of [accounts.sender, accounts.target]) {
+            const result = await admissionFor(ctx).reserve({ userId: account.id }, id);
+            if (!result.ok) {
+              store.retryAccept(id, ctx.now?.() ?? Date.now());
+              store.invalidate(id, ctx.now?.() ?? Date.now());
+              writeJson(response, 409, { error: 'invite_unavailable' });
+              return true;
+            }
+            reservations.push(result.reservation);
+          }
+          // Durable ownership reads can wait. Re-read account policy and
+          // variant access after both reservations, before admitting creation.
+          accounts = await resolveEligible(invite, ctx);
+          if (!accounts) {
+            store.retryAccept(id, ctx.now?.() ?? Date.now());
+            store.invalidate(id, ctx.now?.() ?? Date.now());
+            writeJson(response, 409, { error: 'invite_unavailable' });
+            return true;
+          }
+          const admittedAt = ctx.now?.() ?? Date.now();
+          const busy = busyLiveInviteUsers(ctx);
+          if (
+            admittedAt >= invite.expiresAt ||
+            !liveInviteReachable(accounts.sender.id, admittedAt) ||
+            !liveInviteReachable(accounts.target.id, admittedAt) ||
+            busy.has(accounts.sender.id) ||
+            busy.has(accounts.target.id)
+          ) {
+            store.retryAccept(id, admittedAt);
+            store.invalidate(id, admittedAt);
+            writeJson(response, 409, { error: 'invite_unavailable' });
+            return true;
+          }
+          if (ctx.refusesCreate()) {
+            writeJson(response, 503, { error: 'server_draining' });
+            return true;
+          }
+          const senderFirst =
+            invite.preferredColor === 'first' ||
+            (invite.preferredColor === 'random' && randomInt(2) === 0);
+          const identity = (account: InviteUser) => ({
+            userId: account.id,
+            userHandle: account.handle,
+            userDisplayName: account.displayName,
+          });
+          const tenant = variantTenantForSpecId(invite.gameSpecId);
+          const terms = invite;
+          const created = await createWithAccountSeats(
+            identity(senderFirst ? accounts.sender : accounts.target),
+            identity(senderFirst ? accounts.target : accounts.sender),
+            () => {
+              if (tenant?.lobby) return tenant.lobby.createRoom(terms.timeControl, terms.rated);
+              if (terms.gameSpecId !== 'dark-chess') throw new Error('unsupported invite spec');
+              return ctx.createRoom(
+                'pvp',
+                'dark-chess',
+                ctx.pveBuiltinEngineClientId,
+                terms.timeControl,
+                terms.rated,
+              );
+            },
+          );
+          store.accept(
+            id,
+            {
+              id: created.room.id,
+              senderSeat: senderFirst ? created.seats.first : created.seats.second,
+              targetSeat: senderFirst ? created.seats.second : created.seats.first,
+            },
+            ctx.now?.() ?? Date.now(),
+          );
+          invite = store.getFor(id, user.id, ctx.now?.() ?? Date.now())!;
+          writeJson(response, 200, { invite: liveInviteView(invite, user.id) });
+        } catch {
+          writeJson(response, 503, { error: 'room_create_failed' });
+        } finally {
+          for (const reservation of reservations) reservation.release();
+          store.retryAccept(id, ctx.now?.() ?? Date.now());
+        }
         return true;
       }
       if (method === 'DELETE' || match?.[2] === 'decline') {
