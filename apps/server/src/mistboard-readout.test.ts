@@ -19,6 +19,7 @@ import {
 } from './mistboard-readout.js';
 import type { PuzzleQualityAggregate } from './persistence-puzzle-quality.js';
 import { decideReadoutEmail } from './readout-email.js';
+import { MILESTONE_METRICS, type ReadoutMilestones } from './readout-milestones.js';
 
 const runtime: MistboardReadoutRuntime = {
   revision: 'abc123',
@@ -66,6 +67,112 @@ function reportWith(
     previousReport,
   });
 }
+
+test('site milestones cross once at 999 to 1,000, then stay quiet', () => {
+  const milestoneReport = (total: number, previousReport?: ReturnType<typeof reportWith>) =>
+    reportWith(
+      Object.assign({}, emptyFacts, {
+        milestones: { completedGames: { total, last30Days: 0 } },
+      }),
+      previousReport,
+    );
+  const before = milestoneReport(999);
+  const crossed = milestoneReport(1000, before);
+  const action = crossed.actions.find((entry) => entry.code === 'site-milestone-crossed');
+  assert.ok(action, 'the first report at 1,000 must request a milestone post');
+  assert.equal(action.severity, 'action');
+  assert.match(
+    action.text,
+    /Completed human games.*1,000.*2026-07-20.*Draft the milestone post\.$/,
+  );
+  assert.ok(
+    !milestoneReport(1001, crossed).actions.some((a) => a.code.startsWith('site-milestone')),
+  );
+  assert.ok(
+    !milestoneReport(1500, crossed).actions.some((a) => a.code.startsWith('site-milestone')),
+  );
+});
+
+function milestoneReport(
+  milestones: ReadoutMilestones,
+  previousReport?: ReturnType<typeof reportWith>,
+) {
+  return reportWith({ ...emptyFacts, milestones }, previousReport);
+}
+
+test('milestones bootstrap silently, persist totals, and emit only the highest power crossed', () => {
+  const first = milestoneReport({ accounts: { total: 99_999, last30Days: 500 } });
+  assert.deepEqual(first.actions, []);
+  assert.deepEqual(first.milestoneTotalsSeen, { accounts: 99_999 });
+  const before = milestoneReport({ accounts: { total: 9, last30Days: 0 } });
+  const jump = milestoneReport({ accounts: { total: 1001, last30Days: 0 } }, before);
+  assert.deepEqual(
+    jump.actions.map((a) => a.dedupeKey),
+    ['site-milestone-crossed:accounts:1000'],
+  );
+  // A v2 snapshot from before this feature is also a bootstrap.
+  const legacy = reportWith(emptyFacts);
+  delete legacy.milestoneTotalsSeen;
+  assert.deepEqual(
+    milestoneReport({ accounts: { total: 1001, last30Days: 0 } }, legacy).actions,
+    [],
+  );
+});
+
+test('every fixed site total participates, with guest solve coverage stated in the action', () => {
+  for (const metric of Object.keys(MILESTONE_METRICS)) {
+    const before = milestoneReport({ [metric]: { total: 9, last30Days: 0 } });
+    const crossed = milestoneReport({ [metric]: { total: 10, last30Days: 0 } }, before);
+    assert.equal(crossed.actions.length, 1, metric);
+    assert.equal(crossed.actions[0]?.dedupeKey, `site-milestone-crossed:${metric}:10`);
+    if (metric === 'puzzlesSolved')
+      assert.match(crossed.actions[0]!.text, /recorded guest browsers/);
+  }
+});
+
+test('milestone heads-ups use the 30-day pace at the inclusive 14-day boundary, once per milestone', () => {
+  const before = milestoneReport({ accounts: { total: 85, last30Days: 30 } });
+  assert.deepEqual(before.actions, []);
+  assert.deepEqual(
+    milestoneReport({ accounts: { total: 85, last30Days: 30 } }, before).actions,
+    [],
+  );
+  assert.deepEqual(milestoneReport({ accounts: { total: 86, last30Days: 0 } }, before).actions, []);
+  const near = milestoneReport({ accounts: { total: 86, last30Days: 30 } }, before);
+  assert.equal(near.actions[0]?.severity, 'watch');
+  assert.equal(near.actions[0]?.dedupeKey, 'site-milestone-near:accounts:100');
+  assert.match(near.actions[0]!.text, /100.*2026-08-03.*14 days/);
+  const repeated = milestoneReport({ accounts: { total: 87, last30Days: 30 } }, near);
+  const stalled = milestoneReport({ accounts: { total: 87, last30Days: 0 } }, repeated);
+  assert.deepEqual(repeated.actions, []);
+  assert.deepEqual(stalled.actions, []);
+  const recovered = milestoneReport({ accounts: { total: 90, last30Days: 30 } }, stalled);
+  assert.deepEqual(recovered.actions, []);
+  const crossed = milestoneReport({ accounts: { total: 100, last30Days: 30 } }, recovered);
+  assert.equal(crossed.actions[0]?.code, 'site-milestone-crossed');
+  const next = milestoneReport({ accounts: { total: 999, last30Days: 30 } }, crossed);
+  assert.equal(next.actions[0]?.dedupeKey, 'site-milestone-near:accounts:1000');
+  assert.notEqual(next.alertKey, near.alertKey);
+});
+
+test('failed milestone collectors skip actions and preserve both edge and heads-up history', () => {
+  const before = milestoneReport({ accounts: { total: 999, last30Days: 0 } });
+  const failed = milestoneReport({ accounts: null, players: { total: 10, last30Days: 0 } }, before);
+  assert.deepEqual(failed.actions, []);
+  assert.equal(failed.milestones?.accounts, null);
+  assert.equal(failed.milestoneTotalsSeen?.accounts, 999);
+  const recovered = milestoneReport({ accounts: { total: 1000, last30Days: 0 } }, failed);
+  assert.equal(recovered.actions[0]?.dedupeKey, 'site-milestone-crossed:accounts:1000');
+  const near = milestoneReport({ accounts: { total: 999, last30Days: 30 } }, before);
+  const failedAfterNear = milestoneReport({ accounts: null }, near);
+  assert.deepEqual(
+    milestoneReport({ accounts: { total: 999, last30Days: 30 } }, failedAfterNear).actions,
+    [],
+  );
+  for (const total of [Number.NaN, Infinity, -1]) {
+    assert.deepEqual(milestoneReport({ accounts: { total, last30Days: 30 } }, before).actions, []);
+  }
+});
 
 test('a held calibration move raises an action once and keeps the edge across collector failure', () => {
   const held = {

@@ -9,6 +9,12 @@ import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import type { GuestSignInWeek } from './persistence-sessions.js';
+import {
+  type MilestoneTotals,
+  milestoneActions,
+  milestoneTotalsSeen,
+  type ReadoutMilestones,
+} from './readout-milestones.js';
 
 export const MISTBOARD_READOUT_SCHEMA_VERSION = 2 as const;
 // v1 snapshots are still the comparison baseline the day after a deploy, so
@@ -322,6 +328,9 @@ export type MistboardReadoutV1 = {
   // Preserve the edge baseline when the engine collector temporarily fails.
   staleBotRatingsSeen?: string[];
   heldBotRatingsSeen?: string[];
+  milestones?: ReadoutMilestones;
+  milestoneTotalsSeen?: MilestoneTotals;
+  milestoneHeadsUpsSeen?: string[];
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -334,6 +343,7 @@ export type MistboardReadoutV1 = {
 };
 
 export type MistboardReadoutFacts = {
+  milestones?: ReadoutMilestones;
   content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
@@ -387,9 +397,15 @@ export function buildMistboardReadout(input: {
   const collectorErrors = [...(input.facts.collectorErrors ?? [])].sort((a, b) =>
     a.section.localeCompare(b.section),
   );
-  const actions = buildActions(input.facts, input.previousReport ?? null, input.runtime).sort(
-    (a, b) => a.dedupeKey.localeCompare(b.dedupeKey),
-  );
+  const actions = [
+    ...buildActions(input.facts, input.previousReport ?? null, input.runtime),
+    ...milestoneActions(
+      input.facts.milestones,
+      input.previousReport?.milestoneTotalsSeen,
+      input.previousReport?.milestoneHeadsUpsSeen ?? [],
+      input.now,
+    ),
+  ].sort((a, b) => a.dedupeKey.localeCompare(b.dedupeKey));
   const verdict = readoutVerdict(actions, collectorErrors, input.runtime);
   const reportWithoutFingerprint = {
     kind: 'mistboard-readout' as const,
@@ -403,6 +419,17 @@ export function buildMistboardReadout(input: {
     trigger: input.trigger,
     verdict,
     production: input.runtime,
+    milestones: input.facts.milestones,
+    milestoneTotalsSeen: milestoneTotalsSeen(
+      input.facts.milestones,
+      input.previousReport?.milestoneTotalsSeen,
+    ),
+    milestoneHeadsUpsSeen: [
+      ...new Set([
+        ...(input.previousReport?.milestoneHeadsUpsSeen ?? []),
+        ...actions.filter((a) => a.code === 'site-milestone-near').map((a) => a.dedupeKey),
+      ]),
+    ].sort(),
     content: input.facts.content,
     product: input.facts.product,
     puzzles: input.facts.puzzles,
@@ -1019,6 +1046,8 @@ const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
   'bot-time-losses',
   'bot-ratings-stale',
   'bot-ratings-calibration-held',
+  'site-milestone-crossed',
+  'site-milestone-near',
 ]);
 
 function alertKey(
@@ -1053,6 +1082,7 @@ function decisionFingerprint(
     verdict: report.verdict,
     production: report.production,
     product: report.product,
+    milestones: report.milestones,
     puzzles: report.puzzles
       ? {
           checkpoint: report.puzzles.checkpoint,
