@@ -1,0 +1,671 @@
+{
+  "schema_version": "1.1",
+  "game_id": "tkb_eve_task_230ed547-939e-4c92-9c27-5fa7a5d35286",
+  "source": {
+    "name": "Mistboard",
+    "url": "https://mistboard.com",
+    "game_url": "https://mistboard.com/three-kingdoms-banqi/game/tkb_eve_task_230ed547-939e-4c92-9c27-5fa7a5d35286"
+  },
+  "variant": "three-kingdoms-banqi",
+  "mode": "eve",
+  "time_control": { "initial_ms": null, "increment_ms": null, "label": "untimed" },
+  "players": { "red": { "handle": "Misty level 8" }, "black": { "handle": "Misty level 7" } },
+  "started_at": "2026-11-10T23:34:47.111Z",
+  "ended_at": "2026-11-10T23:37:28.740Z",
+  "result": "black",
+  "termination": "points",
+  "ply_count": 78,
+  "license": "CC BY 4.0",
+  "first_mover_ink": "red",
+  "plies": [
+    {
+      "ply": 1,
+      "mover": "red",
+      "uci": "@f4",
+      "san": null,
+      "revealed": { "color": "red", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 2,
+      "mover": "black",
+      "uci": "@f5",
+      "san": null,
+      "revealed": { "color": "black", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 3,
+      "mover": "red",
+      "uci": "@g4",
+      "san": null,
+      "revealed": { "color": "red", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 4,
+      "mover": "black",
+      "uci": "f5f4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 5,
+      "mover": "red",
+      "uci": "@g5",
+      "san": null,
+      "revealed": { "color": "red", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 6,
+      "mover": "black",
+      "uci": "f4g4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 7,
+      "mover": "red",
+      "uci": "g5h3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 8,
+      "mover": "black",
+      "uci": "g4g3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 9,
+      "mover": "red",
+      "uci": "h3f4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 10,
+      "mover": "black",
+      "uci": "g3f3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 11,
+      "mover": "red",
+      "uci": "f4e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 12,
+      "mover": "black",
+      "uci": "f3e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 13,
+      "mover": "red",
+      "uci": "@f2",
+      "san": null,
+      "revealed": { "color": "red", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 14,
+      "mover": "black",
+      "uci": "@h2",
+      "san": null,
+      "revealed": { "color": "black", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 15,
+      "mover": "red",
+      "uci": "f2f5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 16,
+      "mover": "black",
+      "uci": "h2e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 17,
+      "mover": "red",
+      "uci": "@d2",
+      "san": null,
+      "revealed": { "color": "black", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 18,
+      "mover": "black",
+      "uci": "@i2",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 19,
+      "mover": "red",
+      "uci": "@d1",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 20,
+      "mover": "black",
+      "uci": "d2e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 21,
+      "mover": "red",
+      "uci": "i2i3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 22,
+      "mover": "black",
+      "uci": "e3i3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 23,
+      "mover": "red",
+      "uci": "d1e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 24,
+      "mover": "black",
+      "uci": "e2d2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 25,
+      "mover": "red",
+      "uci": "e1e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 26,
+      "mover": "black",
+      "uci": "d2d3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 27,
+      "mover": "red",
+      "uci": "f5e5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 28,
+      "mover": "black",
+      "uci": "e4c3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 29,
+      "mover": "red",
+      "uci": "e5e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 30,
+      "mover": "black",
+      "uci": "i3e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 31,
+      "mover": "red",
+      "uci": "e2e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 32,
+      "mover": "black",
+      "uci": "d3d1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 33,
+      "mover": "red",
+      "uci": "@b4",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 34,
+      "mover": "black",
+      "uci": "b4b3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 35,
+      "mover": "red",
+      "uci": "@g2",
+      "san": null,
+      "revealed": { "color": "black", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 36,
+      "mover": "black",
+      "uci": "g2e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 37,
+      "mover": "red",
+      "uci": "@c5",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 38,
+      "mover": "black",
+      "uci": "c3e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 39,
+      "mover": "red",
+      "uci": "@c1",
+      "san": null,
+      "revealed": { "color": "black", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 40,
+      "mover": "black",
+      "uci": "d1d2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 41,
+      "mover": "red",
+      "uci": "@d4",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 42,
+      "mover": "black",
+      "uci": "e4f2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 43,
+      "mover": "red",
+      "uci": "@a1",
+      "san": null,
+      "revealed": { "color": "red", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 44,
+      "mover": "black",
+      "uci": "b3c3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 45,
+      "mover": "red",
+      "uci": "@a5",
+      "san": null,
+      "revealed": { "color": "red", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 46,
+      "mover": "black",
+      "uci": "e3f5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 47,
+      "mover": "red",
+      "uci": "a5c3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 48,
+      "mover": "black",
+      "uci": "f5d4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 49,
+      "mover": "red",
+      "uci": "@i5",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 50,
+      "mover": "black",
+      "uci": "f2e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 51,
+      "mover": "red",
+      "uci": "c3e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 52,
+      "mover": "black",
+      "uci": "d2d3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 53,
+      "mover": "red",
+      "uci": "@i1",
+      "san": null,
+      "revealed": { "color": "red", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 54,
+      "mover": "black",
+      "uci": "d3a3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 55,
+      "mover": "red",
+      "uci": "@h4",
+      "san": null,
+      "revealed": { "color": "red", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 56,
+      "mover": "black",
+      "uci": "d4f3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 57,
+      "mover": "red",
+      "uci": "a1b3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 58,
+      "mover": "black",
+      "uci": "f3h4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 59,
+      "mover": "red",
+      "uci": "b3c1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 60,
+      "mover": "black",
+      "uci": "h4f3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 61,
+      "mover": "red",
+      "uci": "i1i2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 62,
+      "mover": "black",
+      "uci": "@b1",
+      "san": null,
+      "revealed": { "color": "black", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 63,
+      "mover": "red",
+      "uci": "i2e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 64,
+      "mover": "black",
+      "uci": "e4g5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 65,
+      "mover": "red",
+      "uci": "e2e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 66,
+      "mover": "black",
+      "uci": "@c2",
+      "san": null,
+      "revealed": { "color": "black", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 67,
+      "mover": "red",
+      "uci": "e3a3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 68,
+      "mover": "black",
+      "uci": "c2c1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 69,
+      "mover": "red",
+      "uci": "a3f3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 70,
+      "mover": "black",
+      "uci": "g5f3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 71,
+      "mover": "red",
+      "uci": "@h1",
+      "san": null,
+      "revealed": { "color": "red", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 72,
+      "mover": "black",
+      "uci": "f3e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 73,
+      "mover": "red",
+      "uci": "@a4",
+      "san": null,
+      "revealed": { "color": "black", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 74,
+      "mover": "black",
+      "uci": "c1c2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 75,
+      "mover": "red",
+      "uci": "@f1",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 76,
+      "mover": "black",
+      "uci": "c2h2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 77,
+      "mover": "red",
+      "uci": "@g1",
+      "san": null,
+      "revealed": { "color": "black", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 78,
+      "mover": "black",
+      "uci": "h2h1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    }
+  ]
+}

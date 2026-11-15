@@ -1,0 +1,1678 @@
+{
+  "intro": "Level 7 has the first seat and black ink; Level 8 has the second seat and red ink. The graph is from the first seat. Flip grades compare public pool means, while the die marks the revealed piece’s luck.",
+  "comments": {
+    "1": "The opening flip reveals a black cannon on b2. Level 7 therefore takes black ink and Level 8 takes red ink. The flip has a 48.1% public-pool expectation for Level 7; this cannon produces 44.0%. The difference is reveal luck, not a mistake in choosing the square.",
+    "5": "The black cannon on b2 jumps over the covered b3 tile to capture the red advisor on b4. A cannon needs exactly one screen; that screen can stay covered, so this capture gives neither player its identity.",
+    "10": "The red elephant from a4 captures that black cannon on b4. In Banqi an elephant can capture a cannon by rank. Level 8 trades back using an already revealed piece, without spending a turn on another flip.",
+    "45": "The flip on g4 reveals the red general, a piece belonging to Level 8. That still helps Level 7 in this position: its public-pool expectation is 34.2%, while this particular reveal gives 44.8%. A piece of the opponent’s ink can be a lucky draw because its location matters.",
+    "53": "The black general moves from d4 to c4. Level 8’s analysis prefers d4 to e4 instead; the first-seat estimate falls from 96.2% to 64.5% after the played move. The side line shows that legal alternative without turning over a new tile.",
+    "58": "The red soldier on c4 captures the black general on b4. This is Banqi’s rank exception: a soldier can capture a general. The highest-ranked piece still needs protection from the lowest-ranked enemy.",
+    "206": "The red advisor moves from b3 to b4 and removes the last black soldier. Level 7 now has no legal move, so Level 8 wins by stalemate. The result follows from the board, not from a resignation or a clock."
+  },
+  "evidence": {
+    "identity": "MistyBanqi 0.3.0",
+    "version": "0.3.0",
+    "binarySha256": "95c6f08cafe828170e4c35d64af310c4e17c0c3e5f7d3e67f69057237ed25bcd",
+    "netSha256": "03e7052b0c5178bd1a683bc38ec9a9f0c41177367b6891f8e697dd95876e413e",
+    "engineId": "misty-banqi-analysis@0.3.0+nnue-nodes-2000000+history2",
+    "decisionEngineId": "misty-banqi-decisions@0.3.0+nnue+rank200000+baseline200000+floor200000+d7",
+    "nodes": 2000000,
+    "analysis": [
+      {
+        "ply": 0,
+        "cp": -18,
+        "mate": null,
+        "best": "e2e2",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 1,
+        "cp": -65,
+        "mate": null,
+        "best": "c2c2",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 2,
+        "cp": 6,
+        "mate": null,
+        "best": "b4b4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 3,
+        "cp": 387,
+        "mate": null,
+        "best": "c4c4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 4,
+        "cp": 348,
+        "mate": null,
+        "best": "b2b4",
+        "pv": ["b2b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 5,
+        "cp": 394,
+        "mate": null,
+        "best": "b3b3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 6,
+        "cp": 424,
+        "mate": null,
+        "best": "b1b1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 7,
+        "cp": 416,
+        "mate": null,
+        "best": "a4a4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 8,
+        "cp": 204,
+        "mate": null,
+        "best": "c1c1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 9,
+        "cp": 250,
+        "mate": null,
+        "best": "a4b4",
+        "pv": ["a4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 10,
+        "cp": 250,
+        "mate": null,
+        "best": "b1b2",
+        "pv": ["b1b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 11,
+        "cp": 204,
+        "mate": null,
+        "best": "b4c4",
+        "pv": ["b4c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 12,
+        "cp": 178,
+        "mate": null,
+        "best": "b1b2",
+        "pv": ["b1b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 13,
+        "cp": 211,
+        "mate": null,
+        "best": "c4c3",
+        "pv": ["c4c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 14,
+        "cp": 227,
+        "mate": null,
+        "best": "b1b2",
+        "pv": ["b1b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 15,
+        "cp": 249,
+        "mate": null,
+        "best": "e4e4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 16,
+        "cp": 253,
+        "mate": null,
+        "best": "e3e3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 17,
+        "cp": 253,
+        "mate": null,
+        "best": "c3c4",
+        "pv": ["c3c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 18,
+        "cp": 279,
+        "mate": null,
+        "best": "b2b3",
+        "pv": ["b2b3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 19,
+        "cp": 308,
+        "mate": null,
+        "best": "g3g3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 20,
+        "cp": 357,
+        "mate": null,
+        "best": "f3f3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 21,
+        "cp": 162,
+        "mate": null,
+        "best": "g1g1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 22,
+        "cp": 141,
+        "mate": null,
+        "best": "f3f3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 23,
+        "cp": 95,
+        "mate": null,
+        "best": "c4b4",
+        "pv": ["c4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 24,
+        "cp": 105,
+        "mate": null,
+        "best": "c3c4",
+        "pv": ["c3c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 25,
+        "cp": 73,
+        "mate": null,
+        "best": "b4c4",
+        "pv": ["b4c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 26,
+        "cp": 99,
+        "mate": null,
+        "best": "b3b4",
+        "pv": ["b3b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 27,
+        "cp": 87,
+        "mate": null,
+        "best": "c4b4",
+        "pv": ["c4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 28,
+        "cp": 106,
+        "mate": null,
+        "best": "c3c4",
+        "pv": ["c3c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 29,
+        "cp": 72,
+        "mate": null,
+        "best": "b4c4",
+        "pv": ["b4c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 30,
+        "cp": 102,
+        "mate": null,
+        "best": "b3b4",
+        "pv": ["b3b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 31,
+        "cp": 81,
+        "mate": null,
+        "best": "c4b4",
+        "pv": ["c4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 32,
+        "cp": 121,
+        "mate": null,
+        "best": "c3c4",
+        "pv": ["c3c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 33,
+        "cp": 89,
+        "mate": null,
+        "best": "b4b3",
+        "pv": ["b4b3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 34,
+        "cp": 112,
+        "mate": null,
+        "best": "c4b4",
+        "pv": ["c4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 35,
+        "cp": 69,
+        "mate": null,
+        "best": "b3b2",
+        "pv": ["b3b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 36,
+        "cp": 77,
+        "mate": null,
+        "best": "f3f3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 37,
+        "cp": 76,
+        "mate": null,
+        "best": "b2c2",
+        "pv": ["b2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 38,
+        "cp": 50,
+        "mate": null,
+        "best": "b3c3",
+        "pv": ["b3c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 39,
+        "cp": 51,
+        "mate": null,
+        "best": "e3e3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 40,
+        "cp": -28,
+        "mate": null,
+        "best": "c3c2",
+        "pv": ["c3c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 41,
+        "cp": -79,
+        "mate": null,
+        "best": "g1g2",
+        "pv": ["g1g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 42,
+        "cp": -64,
+        "mate": null,
+        "best": "h3h3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 43,
+        "cp": -180,
+        "mate": null,
+        "best": "e3e4",
+        "pv": ["e3e4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 44,
+        "cp": -173,
+        "mate": null,
+        "best": "g4g4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 45,
+        "cp": -57,
+        "mate": null,
+        "best": "h2h2",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 46,
+        "cp": -157,
+        "mate": null,
+        "best": "h4h4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 47,
+        "cp": 635,
+        "mate": null,
+        "best": "d3d3",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 48,
+        "cp": 686,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 49,
+        "cp": 647,
+        "mate": null,
+        "best": "f4f4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 50,
+        "cp": 706,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 51,
+        "cp": 645,
+        "mate": null,
+        "best": "d4d4",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 52,
+        "cp": 875,
+        "mate": null,
+        "best": "d4e4",
+        "pv": ["d4e4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 53,
+        "cp": 162,
+        "mate": null,
+        "best": "d3d4",
+        "pv": ["d3d4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 54,
+        "cp": 190,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 55,
+        "cp": 134,
+        "mate": null,
+        "best": "d4c4",
+        "pv": ["d4c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 56,
+        "cp": 151,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 57,
+        "cp": 82,
+        "mate": null,
+        "best": "c4b4",
+        "pv": ["c4b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 58,
+        "cp": 159,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 59,
+        "cp": 86,
+        "mate": null,
+        "best": "e2e2",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 60,
+        "cp": 144,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 61,
+        "cp": 40,
+        "mate": null,
+        "best": "e4d4",
+        "pv": ["e4d4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 62,
+        "cp": 59,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 63,
+        "cp": 89,
+        "mate": null,
+        "best": "d4d3",
+        "pv": ["d4d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 64,
+        "cp": 105,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 65,
+        "cp": 85,
+        "mate": null,
+        "best": "e1e1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 66,
+        "cp": 76,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 67,
+        "cp": 107,
+        "mate": null,
+        "best": "g2h2",
+        "pv": ["g2h2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 68,
+        "cp": 107,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 69,
+        "cp": 118,
+        "mate": null,
+        "best": "b4c4",
+        "pv": ["b4c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 70,
+        "cp": 130,
+        "mate": null,
+        "best": "d1d1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 71,
+        "cp": -86,
+        "mate": null,
+        "best": "h2g2",
+        "pv": ["h2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 72,
+        "cp": -61,
+        "mate": null,
+        "best": "h1h1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 73,
+        "cp": -256,
+        "mate": null,
+        "best": "f1f1",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 74,
+        "cp": -244,
+        "mate": null,
+        "best": "f2f2",
+        "pv": [],
+        "nodes": 2000001
+      },
+      {
+        "ply": 75,
+        "cp": -556,
+        "mate": null,
+        "best": "e2f2",
+        "pv": ["e2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 76,
+        "cp": -599,
+        "mate": null,
+        "best": "e1e2",
+        "pv": ["e1e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 77,
+        "cp": -636,
+        "mate": null,
+        "best": "g2f2",
+        "pv": ["g2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 78,
+        "cp": -636,
+        "mate": null,
+        "best": "e1e2",
+        "pv": ["e1e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 79,
+        "cp": -685,
+        "mate": null,
+        "best": "f2e2",
+        "pv": ["f2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 80,
+        "cp": -694,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 81,
+        "cp": -699,
+        "mate": null,
+        "best": "g3g2",
+        "pv": ["g3g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 82,
+        "cp": -701,
+        "mate": null,
+        "best": "f1f2",
+        "pv": ["f1f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 83,
+        "cp": -744,
+        "mate": null,
+        "best": "g2f2",
+        "pv": ["g2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 84,
+        "cp": -832,
+        "mate": null,
+        "best": "f1e1",
+        "pv": ["f1e1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 85,
+        "cp": -800,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 86,
+        "cp": -814,
+        "mate": null,
+        "best": "c2c1",
+        "pv": ["c2c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 87,
+        "cp": -814,
+        "mate": null,
+        "best": "d2e2",
+        "pv": ["d2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 88,
+        "cp": -808,
+        "mate": null,
+        "best": "c1d1",
+        "pv": ["c1d1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 89,
+        "cp": -950,
+        "mate": null,
+        "best": "f3a3",
+        "pv": ["f3a3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 90,
+        "cp": -950,
+        "mate": null,
+        "best": "a2a3",
+        "pv": ["a2a3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 91,
+        "cp": -950,
+        "mate": null,
+        "best": "d3d2",
+        "pv": ["d3d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 92,
+        "cp": -950,
+        "mate": null,
+        "best": "a3a4",
+        "pv": ["a3a4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 93,
+        "cp": -950,
+        "mate": null,
+        "best": "f4g4",
+        "pv": ["f4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 94,
+        "cp": -949,
+        "mate": null,
+        "best": "b3b4",
+        "pv": ["b3b4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 95,
+        "cp": -950,
+        "mate": null,
+        "best": "d1e1",
+        "pv": ["d1e1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 96,
+        "cp": -950,
+        "mate": null,
+        "best": "c3c4",
+        "pv": ["c3c4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 97,
+        "cp": -950,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 98,
+        "cp": -950,
+        "mate": null,
+        "best": "c1d1",
+        "pv": ["c1d1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 99,
+        "cp": -950,
+        "mate": null,
+        "best": "g4h4",
+        "pv": ["g4h4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 100,
+        "cp": -950,
+        "mate": null,
+        "best": "b1c1",
+        "pv": ["b1c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 101,
+        "cp": -950,
+        "mate": null,
+        "best": "d2d3",
+        "pv": ["d2d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 102,
+        "cp": -950,
+        "mate": null,
+        "best": "b2c2",
+        "pv": ["b2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 103,
+        "cp": -950,
+        "mate": null,
+        "best": "h1g1",
+        "pv": ["h1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 104,
+        "cp": -950,
+        "mate": null,
+        "best": "b1c1",
+        "pv": ["b1c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 105,
+        "cp": -950,
+        "mate": null,
+        "best": "d3d2",
+        "pv": ["d3d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 106,
+        "cp": -950,
+        "mate": null,
+        "best": "c4d4",
+        "pv": ["c4d4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 107,
+        "cp": -950,
+        "mate": null,
+        "best": "d2c2",
+        "pv": ["d2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 108,
+        "cp": -950,
+        "mate": null,
+        "best": "b1c1",
+        "pv": ["b1c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 109,
+        "cp": -950,
+        "mate": null,
+        "best": "g1g2",
+        "pv": ["g1g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 110,
+        "cp": -950,
+        "mate": null,
+        "best": "b1c1",
+        "pv": ["b1c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 111,
+        "cp": -950,
+        "mate": null,
+        "best": "c2c3",
+        "pv": ["c2c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 112,
+        "cp": -950,
+        "mate": null,
+        "best": "b1c1",
+        "pv": ["b1c1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 113,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 114,
+        "cp": -950,
+        "mate": null,
+        "best": "c1d1",
+        "pv": ["c1d1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 115,
+        "cp": -950,
+        "mate": null,
+        "best": "c3d3",
+        "pv": ["c3d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 116,
+        "cp": -950,
+        "mate": null,
+        "best": "d1e1",
+        "pv": ["d1e1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 117,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 118,
+        "cp": -950,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 119,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 120,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 121,
+        "cp": -950,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 122,
+        "cp": -950,
+        "mate": null,
+        "best": "g1g2",
+        "pv": ["g1g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 123,
+        "cp": -950,
+        "mate": null,
+        "best": "d2e2",
+        "pv": ["d2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 124,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 125,
+        "cp": -950,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 126,
+        "cp": -950,
+        "mate": null,
+        "best": "g1g2",
+        "pv": ["g1g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 127,
+        "cp": -950,
+        "mate": null,
+        "best": "d2c2",
+        "pv": ["d2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 128,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 129,
+        "cp": -950,
+        "mate": null,
+        "best": "c2b2",
+        "pv": ["c2b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 130,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 131,
+        "cp": -950,
+        "mate": null,
+        "best": "b2c2",
+        "pv": ["b2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 132,
+        "cp": -950,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 133,
+        "cp": -950,
+        "mate": null,
+        "best": "c2b2",
+        "pv": ["c2b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 134,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 135,
+        "cp": -950,
+        "mate": null,
+        "best": "g2h2",
+        "pv": ["g2h2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 136,
+        "cp": -950,
+        "mate": null,
+        "best": "e1e2",
+        "pv": ["e1e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 137,
+        "cp": -950,
+        "mate": null,
+        "best": "f2g2",
+        "pv": ["f2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 138,
+        "cp": -950,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 139,
+        "cp": -950,
+        "mate": null,
+        "best": "b2c2",
+        "pv": ["b2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 140,
+        "cp": -950,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 141,
+        "cp": -950,
+        "mate": null,
+        "best": "c2b2",
+        "pv": ["c2b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 142,
+        "cp": -950,
+        "mate": null,
+        "best": "d2e2",
+        "pv": ["d2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 143,
+        "cp": -950,
+        "mate": null,
+        "best": "b2c2",
+        "pv": ["b2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 144,
+        "cp": -950,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 145,
+        "cp": -950,
+        "mate": null,
+        "best": "c2c3",
+        "pv": ["c2c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 146,
+        "cp": -950,
+        "mate": null,
+        "best": "d2e2",
+        "pv": ["d2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 147,
+        "cp": -950,
+        "mate": null,
+        "best": "c3c2",
+        "pv": ["c3c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 148,
+        "cp": -950,
+        "mate": null,
+        "best": "d3c3",
+        "pv": ["d3c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 149,
+        "cp": -950,
+        "mate": null,
+        "best": "c2d2",
+        "pv": ["c2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 150,
+        "cp": -950,
+        "mate": null,
+        "best": "c3d3",
+        "pv": ["c3d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 151,
+        "cp": -950,
+        "mate": null,
+        "best": "h4g4",
+        "pv": ["h4g4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 152,
+        "cp": -950,
+        "mate": null,
+        "best": "d3d2",
+        "pv": ["d3d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 153,
+        "cp": -950,
+        "mate": null,
+        "best": "h2h3",
+        "pv": ["h2h3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 154,
+        "cp": -950,
+        "mate": null,
+        "best": "d2e2",
+        "pv": ["d2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 155,
+        "cp": -950,
+        "mate": null,
+        "best": "g2h2",
+        "pv": ["g2h2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 156,
+        "cp": -950,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 157,
+        "cp": -950,
+        "mate": null,
+        "best": "f3e3",
+        "pv": ["f3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 158,
+        "cp": -950,
+        "mate": null,
+        "best": "d2c2",
+        "pv": ["d2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 159,
+        "cp": -950,
+        "mate": null,
+        "best": "h2g2",
+        "pv": ["h2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 160,
+        "cp": -950,
+        "mate": null,
+        "best": "d2c2",
+        "pv": ["d2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 161,
+        "cp": -950,
+        "mate": null,
+        "best": "e3e2",
+        "pv": ["e3e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 162,
+        "cp": -950,
+        "mate": null,
+        "best": "d1e1",
+        "pv": ["d1e1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 163,
+        "cp": -950,
+        "mate": null,
+        "best": "e2e1",
+        "pv": ["e2e1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 164,
+        "cp": -950,
+        "mate": null,
+        "best": "f3e3",
+        "pv": ["f3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 165,
+        "cp": -950,
+        "mate": null,
+        "best": "e1f1",
+        "pv": ["e1f1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 166,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 167,
+        "cp": -950,
+        "mate": null,
+        "best": "f1g1",
+        "pv": ["f1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 168,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 169,
+        "cp": -950,
+        "mate": null,
+        "best": "g1h1",
+        "pv": ["g1h1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 170,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 171,
+        "cp": -950,
+        "mate": null,
+        "best": "h1g1",
+        "pv": ["h1g1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 172,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 173,
+        "cp": -950,
+        "mate": null,
+        "best": "g1h1",
+        "pv": ["g1h1"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 174,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 175,
+        "cp": -950,
+        "mate": null,
+        "best": "h1h2",
+        "pv": ["h1h2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 176,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 177,
+        "cp": -950,
+        "mate": null,
+        "best": "g2f2",
+        "pv": ["g2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 178,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 179,
+        "cp": -950,
+        "mate": null,
+        "best": "f2g2",
+        "pv": ["f2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 180,
+        "cp": -950,
+        "mate": null,
+        "best": "e2f2",
+        "pv": ["e2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 181,
+        "cp": -950,
+        "mate": null,
+        "best": "g2f2",
+        "pv": ["g2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 182,
+        "cp": -950,
+        "mate": null,
+        "best": "e3f3",
+        "pv": ["e3f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 183,
+        "cp": -950,
+        "mate": null,
+        "best": "f2f3",
+        "pv": ["f2f3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 184,
+        "cp": -950,
+        "mate": null,
+        "best": "e2f2",
+        "pv": ["e2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 185,
+        "cp": -950,
+        "mate": null,
+        "best": "h2g2",
+        "pv": ["h2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 186,
+        "cp": -950,
+        "mate": null,
+        "best": "e3d3",
+        "pv": ["e3d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 187,
+        "cp": -950,
+        "mate": null,
+        "best": "g2h2",
+        "pv": ["g2h2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 188,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 189,
+        "cp": -950,
+        "mate": null,
+        "best": "h2g2",
+        "pv": ["h2g2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 190,
+        "cp": -950,
+        "mate": null,
+        "best": "e3d3",
+        "pv": ["e3d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 191,
+        "cp": -950,
+        "mate": null,
+        "best": "g2f2",
+        "pv": ["g2f2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 192,
+        "cp": -950,
+        "mate": null,
+        "best": "d3e3",
+        "pv": ["d3e3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 193,
+        "cp": -950,
+        "mate": null,
+        "best": "f2e2",
+        "pv": ["f2e2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 194,
+        "cp": -1000,
+        "mate": null,
+        "best": "c3d3",
+        "pv": ["c3d3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 195,
+        "cp": -1000,
+        "mate": null,
+        "best": "e2d2",
+        "pv": ["e2d2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 196,
+        "cp": -1000,
+        "mate": null,
+        "best": "b3c3",
+        "pv": ["b3c3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 197,
+        "cp": -1000,
+        "mate": null,
+        "best": "d2c2",
+        "pv": ["d2c2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 198,
+        "cp": -1000,
+        "mate": null,
+        "best": "c3b3",
+        "pv": ["c3b3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 199,
+        "cp": -1000,
+        "mate": null,
+        "best": "f3g3",
+        "pv": ["f3g3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 200,
+        "cp": -1000,
+        "mate": null,
+        "best": "b3a3",
+        "pv": ["b3a3"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 201,
+        "cp": -1000,
+        "mate": null,
+        "best": "c2b2",
+        "pv": ["c2b2"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 202,
+        "cp": -1000,
+        "mate": null,
+        "best": "a3a4",
+        "pv": ["a3a4"],
+        "nodes": 2000001
+      },
+      {
+        "ply": 203,
+        "cp": -1000,
+        "mate": null,
+        "best": "b2b3",
+        "pv": ["b2b3"],
+        "nodes": 6257
+      },
+      {
+        "ply": 204,
+        "cp": -1000,
+        "mate": null,
+        "best": "a4b4",
+        "pv": ["a4b4"],
+        "nodes": 258
+      },
+      {
+        "ply": 205,
+        "cp": -1000,
+        "mate": null,
+        "best": "b3b4",
+        "pv": ["b3b4"],
+        "nodes": 4644
+      },
+      {
+        "ply": 206,
+        "cp": -30000,
+        "mate": null,
+        "best": null,
+        "pv": []
+      }
+    ]
+  }
+}
