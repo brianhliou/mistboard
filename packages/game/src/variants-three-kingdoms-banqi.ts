@@ -647,7 +647,7 @@ const START_COUNTS: Readonly<Record<BanqiPieceRole, number>> = {
  * the covered-tile pool and the last move. The pool is PUBLIC arithmetic (start
  * counts minus face-up pieces minus captures), computed without reading any
  * face-down tile's identity, so the engine learns nothing a player could not. */
-export function threeKingdomsBanqiStateToEngineFen(state: ThreeKingdomsBanqiState): string {
+export function threeKingdomsBanqiStateToEngineFen(state: ThreeKingdomsBanqiReplayState): string {
   const seen = new Map<string, number>();
   const bump = (color: BanqiColor, role: BanqiPieceRole) =>
     seen.set(`${color}:${role}`, (seen.get(`${color}:${role}`) ?? 0) + 1);
