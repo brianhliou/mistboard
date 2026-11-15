@@ -1,5 +1,6 @@
 import {
   JIEQI_SPEC_ID,
+  type JieqiAdjudicationRule,
   type JieqiColor,
   type JieqiGameStatus,
   type JieqiMove,
@@ -76,6 +77,7 @@ export type JieqiPostgameResponse = {
   state: {
     status: JieqiGameStatus;
     moveNumber: number;
+    adjudicationRule?: JieqiAdjudicationRule;
     clock?: unknown;
     timeControl?: { initialMs: number; incrementMs: number };
   };
@@ -196,8 +198,10 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
 
   root.replaceChildren(buildNav());
   mountJieqiReview(root, postgame.game.roomId, deal, {
-    // A finished game: what the still-face-down pieces were, on hover and
-    // from the menu (#824). The payload already carries the whole deal.
+    // Only the public persisted stamp selects new rules; its absence is legacy.
+    adjudicationRule: postgame.state.adjudicationRule,
+    // Hover faces and Reveal identities use only identities determined in the
+    // public deal. Never-revealed pieces stay unknown after the game too.
     showFaceDown: true,
     pageClassName: 'jieqi-review',
     ariaLabel: 'Jieqi postgame',

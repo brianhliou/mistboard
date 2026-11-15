@@ -18,6 +18,7 @@
 import { existsSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { resolve } from 'node:path';
+import { type JieqiAdjudicationRule, parseJieqiAdjudicationRule } from '@mistboard/game';
 import { logger } from './obs.js';
 import {
   boundedEnvInt,
@@ -40,7 +41,8 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // 0.3.3 (2026-10-02): new binary (pikafish-jieqi.ref bcc83f88, #497): reveals scored
 // honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
 // 0.4.0 (2026-11-13, #1104): jieqi NNUE + ChanceMix, embedded MIT jqe-label net.
-export const JIEQI_ENGINE_VERSION = '0.4.0';
+// 0.4.1 (2026-11-15, #1151): bc398e6e adds selectable jqe-v1 adjudication.
+export const JIEQI_ENGINE_VERSION = '0.4.1';
 
 // AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): a
 // jieqi engine with its own NNUE, the top jieqi slot again from AB-JChess-20261031 (a new
@@ -84,13 +86,15 @@ export const ABJCHESS_ENGINE_REF = 'efc83867';
 // it now. The ref below moves in the same commit; this bump is belt-and-braces.
 // 0.5.0 (2026-10-02): new binary (#497); every reveal eval can change. Ref moves too.
 // 0.6.0 (2026-11-13, #1104): NNUE + ChanceMix; every evaluation can change.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.6.0';
+// 0.6.1 (2026-11-15, #1151): jqe-v1 adjudication; invalidate all prior evaluations.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.6.1';
 
 // Short form of pikafish-jieqi.ref, included in both analysis cache keys.
 // fd1a6f82 (2026-11-13, #1104): jieqi-mistboard NNUE + ChanceMix replaces the
 // classical build. Every evaluation can change, so cached sweeps must recompute.
+// bc398e6e (2026-11-15, #1151): selectable legacy/jqe-v1 repetition and clock rules.
 // jieqi-engine-ref.test.ts prevents the build pin and cache identity drifting.
-export const PIKAFISH_JIEQI_ENGINE_REF = 'fd1a6f82';
+export const PIKAFISH_JIEQI_ENGINE_REF = 'bc398e6e';
 
 export type JieqiEngineTier = {
   id: string;
@@ -568,6 +572,16 @@ function jieqiGoCommand(opts: JieqiEvalBudget & { searchMoves?: readonly string[
   return opts.searchMoves?.length ? `${go} searchmoves ${opts.searchMoves.join(' ')}` : go;
 }
 
+/** Set this on every Pikafish search: warm processes serve games with different stamps.
+ *  Other Jieqi engines have their own rule options and do not support Jieqi Rule. */
+function jieqiRuleOptions(
+  rule: JieqiAdjudicationRule | undefined,
+  engine?: JieqiLiveEngine | JieqiAnalysisEngine,
+): string[] {
+  if (engine === 'ab-jchess' || engine === 'jqe') return [];
+  return [`setoption name Jieqi Rule value ${parseJieqiAdjudicationRule(rule) ?? 'legacy'}`];
+}
+
 /** The exact UCI block a fixed-budget analysis eval sends. Exported so the analysis
  *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
  *  by (room, engine, depth) and promises a CPU-independent result, which a second
@@ -579,6 +593,7 @@ export function buildJieqiAnalysisCommands(fen: string, opts: JieqiAnalysisReque
     ...jieqiAnalysisResourceOptions(),
     'ucinewgame',
     'isready',
+    ...jieqiRuleOptions(opts.adjudicationRule),
     buildJieqiPositionCommand(fen, opts.moves),
     jieqiGoCommand(opts),
   ];
@@ -607,9 +622,11 @@ export async function evaluateJieqiFen(fen: string, opts: JieqiAnalysisRequest):
   }
 }
 
-/** One analysis eval request on a session: the budget, the repetition window, and two
+/** One analysis eval request on a session: the budget, the repetition window, and
  *  per-request switches a shared session needs because it outlives any one search. */
 export type JieqiAnalysisRequest = JieqiEvalBudget & {
+  /** Absent is the stored game's legacy rule, never the engine's current option. */
+  adjudicationRule?: JieqiAdjudicationRule;
   moves?: readonly string[];
   /** Kernel-legal nonterminal roots. Terminal moves are scored by the kernel. */
   searchMoves?: readonly string[];
@@ -683,6 +700,7 @@ export async function withJieqiAnalysisSession<T>(
   const request = (fen: string, opts: JieqiAnalysisRequest, multiPv: number) => ({
     positionCommand: [
       opts.fresh ? 'ucinewgame' : null,
+      ...jieqiRuleOptions(opts.adjudicationRule, engine),
       `setoption name MultiPV value ${Math.max(1, Math.floor(multiPv))}`,
       buildJieqiPositionCommand(fen, opts.moves),
     ]
@@ -746,6 +764,8 @@ export function jieqiEngineVersion(clientId: string | undefined): string | null 
 // prior FEN-only behavior. Safe under redaction: a window has no reveal, so the window-start
 // FEN's dark tiles stay dark and the replayed moves are all of already-revealed pieces.
 export type JieqiEngineOptions = {
+  /** Public game-rule stamp; absent selects legacy explicitly on Pikafish. */
+  adjudicationRule?: JieqiAdjudicationRule;
   movetimeMs?: number;
   depth?: number;
   moves?: readonly string[];
@@ -832,6 +852,7 @@ export async function jieqiLiveEngineMove(
     newGame?: boolean;
     rng?: () => number;
     searchMoves?: readonly string[];
+    adjudicationRule?: JieqiAdjudicationRule;
   } = {},
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
@@ -853,6 +874,7 @@ export async function jieqiLiveEngineMove(
       rng: opts.rng,
       engine: tier.engine,
       searchMoves: opts.searchMoves,
+      adjudicationRule: opts.adjudicationRule,
     });
   } finally {
     release();
@@ -890,6 +912,7 @@ export function buildJieqiGoCommand(opts: JieqiEngineOptions = {}): string {
 export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
   return [
     ...buildJieqiLiveInitCommands(opts.engine),
+    ...jieqiRuleOptions(opts.adjudicationRule, opts.engine),
     buildJieqiPositionCommand(fen, opts.moves),
     buildJieqiGoCommand(opts),
   ];
@@ -959,6 +982,7 @@ export async function jieqiEngineSearch(
   // same depth in a quarter of the nodes per line).
   const prefix = [
     opts.newGame ? 'ucinewgame' : null,
+    ...jieqiRuleOptions(opts.adjudicationRule, opts.engine),
     `setoption name MultiPV value ${skilled ? JIEQI_SKILL_MULTIPV : 1}`,
   ].filter((line): line is string => line !== null);
   const request = {

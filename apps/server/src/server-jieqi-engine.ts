@@ -18,6 +18,7 @@
 import {
   getJieqiLegalMoves,
   isJieqiLegalMove,
+  type JieqiAdjudicationRule,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
@@ -215,6 +216,7 @@ export type JieqiEngineMoveProvider = (
     newGame?: boolean;
     /** The draw guard's re-search: restrict the root to these moves. */
     searchMoves?: readonly string[];
+    adjudicationRule?: JieqiAdjudicationRule;
   },
 ) => Promise<UciEval>;
 
@@ -354,6 +356,7 @@ export async function playJieqiEngineMoveIfReady(
         budgetAfterWait,
         moves,
         newGame,
+        adjudicationRule: stateAtTurn.adjudicationRule,
       });
       lastSearch = search;
       // The engines search under xiangqi's chase rule; ours draws a chase. Keep a
@@ -371,6 +374,7 @@ export async function playJieqiEngineMoveIfReady(
             budgetAfterWait: budget,
             moves,
             searchMoves,
+            adjudicationRule: stateAtTurn.adjudicationRule,
           });
         },
       });

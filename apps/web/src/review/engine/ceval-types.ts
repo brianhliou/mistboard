@@ -4,6 +4,8 @@
 // misty-ceval.ts would otherwise type-import back from ceval.ts). ceval.ts re-exports
 // everything here, so existing `from './ceval.js'` importers are unaffected.
 
+import type { JieqiAdjudicationRule } from '@mistboard/game';
+
 /** Variants a client engine can evaluate. `xiangqi` uses Pikafish,
  *  `fortressxiangqi`/`atomicxiangqi`/`crazyhousexiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses
  *  PikaJieQi, `gomoku` uses Rapfi, and the remaining variants use Misty. createCeval() dispatches to
@@ -86,6 +88,9 @@ export interface CevalRequest {
   /** Plies without a capture or flip that draw the game, for engines whose search
    *  scores that draw (MistyBanqi). A rule, so public. Omit for the engine's default. */
   noProgressLimit?: number;
+  /** Public Jieqi adjudication rule. Old games must pass `legacy` explicitly;
+   *  standalone analysis without a game defaults to the current jqe rule. */
+  jieqiRule?: JieqiAdjudicationRule | 'legacy';
   /** Progressive callback fired as depth increases (throttled). */
   onUpdate?: (update: CevalUpdate) => void;
 }

@@ -305,6 +305,7 @@ export async function evaluateJieqiPosition(
       movetimeMs: movetimeCapMs,
       moves: window.moves,
       searchMoves: window.searchMoves,
+      adjudicationRule: state.adjudicationRule,
     }),
   );
   const pv = publicJieqiPv(state, evaluation.pv);
@@ -789,6 +790,9 @@ export function jieqiDecisionDepsFromSession(
         session.evaluateFen(repetitionWindow?.fen ?? fen, {
           ...split,
           moves: repetitionWindow?.moves ?? [],
+          ...(repetitionWindow?.state?.adjudicationRule
+            ? { adjudicationRule: repetitionWindow.state.adjudicationRule }
+            : {}),
           ...(repetitionWindow?.searchMoves ? { searchMoves: repetitionWindow.searchMoves } : {}),
           fresh: true,
         }),
@@ -862,6 +866,7 @@ export function jieqiDecisionDepsFromSession(
                     ...rankBudget,
                     moves: childWindow.moves,
                     searchMoves: childWindow.searchMoves,
+                    adjudicationRule: post.adjudicationRule,
                     fresh: true,
                   }),
                 );
@@ -890,6 +895,9 @@ export function jieqiDecisionDepsFromSession(
               ...profile.decisionMultiPv,
               multiPv: JIEQI_DECISION_MULTIPV,
               moves: repetitionWindow?.moves,
+              ...(repetitionWindow?.state?.adjudicationRule
+                ? { adjudicationRule: repetitionWindow.state.adjudicationRule }
+                : {}),
               ...(repetitionWindow?.searchMoves
                 ? { searchMoves: repetitionWindow.searchMoves }
                 : {}),

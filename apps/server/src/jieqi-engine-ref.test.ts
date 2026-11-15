@@ -15,7 +15,12 @@ import {
   JIEQI_ANALYSIS_ENGINE_ID,
   JIEQI_DECISIONS_ENGINE_ID,
 } from './jieqi-analysis.js';
-import { ABJCHESS_ENGINE_REF, PIKAFISH_JIEQI_ENGINE_REF } from './jieqi-engine.js';
+import {
+  ABJCHESS_ENGINE_REF,
+  JIEQI_ANALYSIS_ENGINE_VERSION,
+  JIEQI_ENGINE_VERSION,
+  PIKAFISH_JIEQI_ENGINE_REF,
+} from './jieqi-engine.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'pikafish-jieqi.ref');
@@ -23,6 +28,18 @@ const refFile = resolve(repoRoot, 'pikafish-jieqi.ref');
 function pinnedRef(): string {
   return readFileSync(refFile, 'utf8').split('\n')[0]!.trim();
 }
+
+test('#1151 adjudication pin moves native, browser and cache identities together', () => {
+  assert.equal(pinnedRef(), 'bc398e6ef546fe33b35b73989457bc446ea2882a');
+  assert.equal(PIKAFISH_JIEQI_ENGINE_REF, 'bc398e6e');
+  assert.equal(JIEQI_ENGINE_VERSION, '0.4.1');
+  assert.equal(JIEQI_ANALYSIS_ENGINE_VERSION, '0.6.1');
+  const browser = readFileSync(
+    resolve(repoRoot, 'apps/web/src/review/engine/pikajieqi-ceval.ts'),
+    'utf8',
+  );
+  assert.match(browser, /const ENGINE_ASSET_VERSION = 'bc398e6e-emsdk3174-nnue1';/);
+});
 
 test('the .ref file holds a full 40-char commit sha on its first line', () => {
   // The build step does `head -1 | tr -d '[:space:]'` and then `git checkout $REF`, so a

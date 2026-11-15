@@ -13,7 +13,7 @@ import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-b
 import { parseInfo } from './uci-info.js';
 
 const ENGINE_BASE = '/engine/pikafish-jieqi/';
-const ENGINE_ASSET_VERSION = 'fd1a6f82-emsdk3174-nnue1';
+const ENGINE_ASSET_VERSION = 'bc398e6e-emsdk3174-nnue1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 const EMIT_THROTTLE_MS = 80;
 const EMPTY_UPDATE: CevalUpdate = {
@@ -146,6 +146,9 @@ export class PikaJieQiCeval implements CevalHandle {
     const multiPv = req.multiPv ?? 1;
     const maxDepth = req.maxDepth ?? depthForEffort(req.effort);
     const infinite = req.maxDepth === undefined && req.effort === 'infinite';
+    // A warm worker can serve another game next. Select its public rule on
+    // every evaluation, after stopping the old search and before the position.
+    this.send(`setoption name Jieqi Rule value ${req.jieqiRule ?? 'jqe-v1'}`);
     this.send(`setoption name MultiPV value ${multiPv}`);
     this.send(
       req.movesUci.length

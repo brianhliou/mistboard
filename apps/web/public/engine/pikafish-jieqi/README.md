@@ -4,14 +4,14 @@ Pikafish's official `jieqi` NNUE branch with chance-node reveal search
 (`ChanceMix`, on by default) for the jieqi bots and browser analysis.
 
 - Source: https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard
-- Commit: `fd1a6f825ebfd57dc2994ea9ee0d9f5408e49d83`
+- Commit: `bc398e6ef546fe33b35b73989457bc446ea2882a`
 - Toolchain: `emscripten/emsdk:3.1.74`
 - Engine license: GPL-3.0-or-later (`COPYING.txt`)
 - Embedded 256-wide net: trained from random initialization on
   [jqe](https://github.com/devinokeefe/jieqi) labels, with no Pikafish weights;
   MIT licensed (`jieqi-net-LICENSE`)
 
-The complete corresponding source is `pikajieqi-source-fd1a6f82.tar.gz`,
+The complete corresponding source is `pikajieqi-source-bc398e6e.tar.gz`,
 including the embedded net, its license and the offline Python 3 embedding tools.
 Earlier source archives are retained for earlier distributed builds.
 

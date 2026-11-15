@@ -26,9 +26,9 @@ describe('pinned jieqi NNUE worker', () => {
       },
       importScripts,
     });
-    const jsUrl = 'http://localhost/engine/pikafish-jieqi/pikajieqi.js?v=fd1a6f82-emsdk3174-nnue1';
+    const jsUrl = 'http://localhost/engine/pikafish-jieqi/pikajieqi.js?v=bc398e6e-emsdk3174-nnue1';
     const wasmUrl =
-      'http://localhost/engine/pikafish-jieqi/pikajieqi.wasm?v=fd1a6f82-emsdk3174-nnue1';
+      'http://localhost/engine/pikafish-jieqi/pikajieqi.wasm?v=bc398e6e-emsdk3174-nnue1';
     await receive({ data: { type: 'init', jsUrl, wasmUrl } });
     expect(importScripts).toHaveBeenCalledWith(jsUrl);
     const config = moduleFactory.mock.calls[0]?.[0] as unknown as {
@@ -39,15 +39,26 @@ describe('pinned jieqi NNUE worker', () => {
     expect(config.locateFile('pikajieqi.wasm')).toBe(wasmUrl);
     expect(initialize).toHaveBeenCalledOnce();
     expect(postMessage).toHaveBeenCalledWith({ type: 'ready' });
-    await receive({ data: { type: 'command', command: 'go depth 4' } });
-    expect(command).toHaveBeenCalledWith('go depth 4');
+    const commands = ['legacy', 'jqe-v1', 'legacy'].flatMap((rule) => [
+      `setoption name Jieqi Rule value ${rule}`,
+      'position fen public w - 0 1',
+      'go depth 4',
+    ]);
+    for (const text of commands) {
+      await receive({ data: { type: 'command', command: text } });
+    }
+    expect(command.mock.calls).toEqual(commands.map((text) => [text]));
+    expect(moduleFactory).toHaveBeenCalledOnce();
+    expect(initialize).toHaveBeenCalledOnce();
   });
 
   it('ships the supplied NNUE artifacts and both engine and net licenses', () => {
     // Pinned bytes, not a source-code assertion: catches stale/mixed build copies.
     const hashes: Record<string, string> = {
       'pikajieqi.js': '070d4de390bb2fd35cb6c955ce8011fea49272fb842a1c92aa1d51c05e380e8e',
-      'pikajieqi.wasm': '1af057339c17986a71476db8e5de42b7ed30d4fdb89b22f8b51396e164f0821b',
+      'pikajieqi.wasm': '8f1e3c8a10dc1be9cdc6f475cd19e76354208e234f7ad62f5fa52aea7a9672bc',
+      'pikajieqi-source-bc398e6e.tar.gz':
+        '9f45be7ceb9e63ff6f2197822d0daf9b0c12c2833b61800c1f92d3626263e9f7',
     };
     for (const [file, hash] of Object.entries(hashes)) {
       expect(createHash('sha256').update(read(file)).digest('hex')).toBe(hash);
