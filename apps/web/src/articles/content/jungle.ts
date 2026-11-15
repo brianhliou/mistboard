@@ -33,6 +33,11 @@ export const jungleArticle: Article = {
   updateNote:
     'Added a capture table and an FAQ.',
   playableOnMistboard: true,
+  tldr: [
+    'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.',
+    'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.',
+    'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.',
+  ],
   audience:
     'Experienced Jungle Chess players who want a clear reference, plus chess and xiangqi players meeting it for the first time.',
   intro: [

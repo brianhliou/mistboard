@@ -28,6 +28,11 @@ export const duckXiangqiArticle: Article = {
   updatedAt: '2026-10-16',
   updateNote:
     "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.",
+  tldr: [
+    'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.',
+    'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.',
+    'Capture the enemy general to win. There is no check, and a player with no legal turn loses.',
+  ],
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },

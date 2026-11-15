@@ -28,6 +28,11 @@ export const fortressXiangqiArticle: Article = {
   updatedAt: '2026-09-03',
   updateNote:
     'The Treasure figure now shows the five moves the rules allow, not eight.',
+  tldr: [
+    'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.',
+    'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.',
+    'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.',
+  ],
   audience: 'Xiangqi and crazyhouse players who want a compact, decisive drop variant.',
   thumbnail: { kind: 'svg', svg: FORTRESS_XIANGQI_START_BOARD },
   intro: [

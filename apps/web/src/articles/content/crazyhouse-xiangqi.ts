@@ -36,6 +36,11 @@ export const crazyhouseXiangqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-10-01',
   playableOnMistboard: true,
+  tldr: [
+    'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.',
+    'Advisors and elephants start in hand and may move or drop only on their own half of the board.',
+    'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.',
+  ],
   audience:
     'Xiangqi players trying the drop version for the first time, and Crazyhouse players who want the xiangqi rules stated precisely.',
   thumbnail: { kind: 'svg', svg: CRAZYHOUSE_XIANGQI_START_BOARD },
