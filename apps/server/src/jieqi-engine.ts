@@ -117,13 +117,16 @@ export type JieqiLiveEngine = 'ab-jchess' | 'jqe';
 // Fairy-Stockfish ladder copies (xiangqi-fsf-engine.ts): skill -9..16, depth 5/5/5/5/5/8/13,
 // 50..500 ms. Level 8 is the full-strength bot every jieqi game used to get, under its
 // old id so its history and rating carry over. Strength per level is a starting point
-// until the EvE run rates it (jieqi-eve-adapter.ts).
+// until the EvE run rates it (jieqi-eve-adapter.ts). Level 5 moved from skill 7, depth 5
+// to skill 9, depth 6 on 2026-11-14 (#1125): over 100 games it scored +17 Elo
+// [-51, +87] against Level 4, so the two played alike; the new Level 5 scored +186
+// [+116, +274] against Level 4 and Level 6 +111 [+44, +189] against it.
 const JIEQI_LADDER_TIERS = [
   { level: 1, skill: -9, depth: 5, movetimeMs: 50 },
   { level: 2, skill: -5, depth: 5, movetimeMs: 100 },
   { level: 3, skill: -1, depth: 5, movetimeMs: 150 },
   { level: 4, skill: 3, depth: 5, movetimeMs: 200 },
-  { level: 5, skill: 7, depth: 5, movetimeMs: 300 },
+  { level: 5, skill: 9, depth: 6, movetimeMs: 300 },
   { level: 6, skill: 11, depth: 8, movetimeMs: 400 },
   { level: 7, skill: 16, depth: 13, movetimeMs: 500 },
 ].map(
