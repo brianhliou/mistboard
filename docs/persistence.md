@@ -38,8 +38,10 @@ Bot difficulty records use the seated engine's `game_participants.engine_id`
 in `game_participants.bot_level` when a game finishes (migration 203). This
 preserves the level when an unnumbered engine id changes rung labels. Repeated
 finish writes preserve the original level, including an unrecorded level.
-Only explicitly numbered historical engine ids are backfilled; missing ids
-and older unnumbered ids remain unknown, without consulting today's ladder.
+The backfill labels numbered engine ids by their number and the unnumbered
+`misty-banqi` and `misty-jungle-flip` ids as Level 7, the classical
+full-strength configuration they always ran; rows with no engine id (before
+2026-09-22) remain unknown.
 
 The bot directory and profile APIs add `levelRecordsByGameSpecId` beside
 `recordsByGameSpecId`. Each variant maps to rows containing `level`, `games`,

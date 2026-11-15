@@ -80,8 +80,8 @@ definePersistenceTests('bot profiles', () => {
     ]);
     await seed('no-level', 'jungle-flip', null, 'draw');
     await seed('legacy-alias', 'jungle-flip', 'misty-jungle-flip', 'draw');
-    // Simulate a pre-migration alias. Its historical level cannot be inferred
-    // from today's engine catalog (the full-strength rung was renumbered).
+    // A stored row without a level keeps it when the game is recorded again
+    // with the same engine id, and is reported apart from the numbered levels.
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await client.connect();
     try {
@@ -125,7 +125,7 @@ definePersistenceTests('bot profiles', () => {
     }
   });
 
-  test('the level migration backfills only explicitly numbered Misty engine ids', async () => {
+  test('the level migration backfills numbered Misty ids and the Level 7 aliases', async () => {
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await client.connect();
     try {
@@ -154,7 +154,7 @@ definePersistenceTests('bot profiles', () => {
       );
       assert.deepEqual(
         rows.map((row) => row.bot_level),
-        [1, 7, 8, null, null, null, null, null],
+        [1, 7, 7, 7, 8, null, null, null],
       );
     } finally {
       await client.end();
