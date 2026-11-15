@@ -6178,6 +6178,8 @@ const ZH_HANS: Record<string, string> = {
     '五子棋：Rapfi 第 8 级对 Rapfi 第 7 级，附注解',
   'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
     '新增一盘引擎对局：Rapfi 第 8 级对第 7 级，附注解和一张图，画出两个级别各自估计的黑方胜率。',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate.':
+    '新增一盘引擎对局：Misty 第 8 级对第 7 级，附着法评分、每次翻子的运气和一张图，画出两个级别各自的估计。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到红，所以翻的人这盘是红方。',
@@ -13130,6 +13132,8 @@ const ZH_HANT: Record<string, string> = {
     '五子棋：Rapfi 第 8 級對 Rapfi 第 7 級，附註解',
   'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
     '新增一盤引擎對局：Rapfi 第 8 級對第 7 級，附註解和一張圖，畫出兩個級別各自估計的黑方勝率。',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate.':
+    '新增一盤引擎對局：Misty 第 8 級對第 7 級，附著法評分、每次翻子的運氣和一張圖，畫出兩個級別各自的估計。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到紅，所以翻的人這盤是紅方。',
