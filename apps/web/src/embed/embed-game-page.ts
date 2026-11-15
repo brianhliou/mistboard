@@ -47,6 +47,7 @@ import {
 } from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import { createEmbedScoreChart, type EmbedScoreChart } from './embed-score-chart.js';
+import { embedScoreSeatColors } from './embed-score-seat-colors.js';
 import './embed.css';
 
 export { fitBoardWidth } from './embed-card.js';
@@ -306,7 +307,11 @@ export async function mountEmbedGame(
         (line) => line.values.length === (card!.handle.plyCount?.() ?? -1) + 1,
       )
     ) {
-      chart = createEmbedScoreChart(loaded.scoreSeries, { onJump: (ply) => card?.jumpToPly(ply) });
+      chart = createEmbedScoreChart(loaded.scoreSeries, {
+        variant: specId,
+        seatColors: embedScoreSeatColors(specId, game.firstColor ?? null),
+        onJump: (ply) => card?.jumpToPly(ply),
+      });
       chart.setPly(chartPly);
       card.setUnderBoard(chart.el);
     }
