@@ -1103,12 +1103,14 @@ export async function deleteXiangqiBroadcastTour(slug: string): Promise<boolean>
   });
 }
 
+export const LISTED_BROADCAST_TOUR = 'listed';
+
 export async function listXiangqiBroadcastTours(
   options: { includeUnlisted?: boolean } = {},
 ): Promise<StoredXiangqiBroadcastTour[]> {
   const { rows } = await getPool().query<TourRow>(
     `SELECT * FROM xiangqi_broadcast_tours
-      WHERE listed OR $1
+      WHERE ${LISTED_BROADCAST_TOUR} OR $1
       ORDER BY starts_at DESC NULLS LAST, slug`,
     [options.includeUnlisted === true],
   );

@@ -42,6 +42,7 @@ import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
+import { collectReadoutMilestones } from './persistence-readout-milestones.js';
 import { getWeeklyGuestSignIns } from './persistence-sessions.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
@@ -363,7 +364,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend, comparison] = await Promise.all([
+  const [collectors, trend, comparison, milestones] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -379,6 +380,7 @@ export async function collectMistboardReadoutFacts(
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
     collectReadoutComparison(db, now).catch(() => null),
+    collectReadoutMilestones(db, now),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -397,6 +399,7 @@ export async function collectMistboardReadoutFacts(
       : [],
   );
   return {
+    milestones,
     product: settledValue(collectors[0]),
     puzzles: settledValue(collectors[1]),
     mining: settledValue(collectors[2]),

@@ -7,6 +7,7 @@ import {
   generateMistboardReadout,
   latestMistboardReadout,
 } from './persistence-mistboard-readout.js';
+import { collectReadoutMilestones } from './persistence-readout-milestones.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 
 type ParticipantFixture = {
@@ -23,13 +24,14 @@ async function insertGame(input: {
   status?: 'completed' | 'aborted';
   result?: string;
   termination?: string;
+  rated?: boolean;
   participants: ParticipantFixture[];
 }): Promise<void> {
   const status = input.status ?? 'completed';
   await getPool().query(
     `INSERT INTO games
-       (room_id, variant, mode, status, result, termination, ply_count, started_at, ended_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 20, $7::timestamptz - interval '10 minutes', $7)`,
+       (room_id, variant, mode, status, result, termination, ply_count, started_at, ended_at, rated)
+     VALUES ($1, $2, $3, $4, $5, $6, 20, $7::timestamptz - interval '10 minutes', $7, $8)`,
     [
       input.roomId,
       input.variant,
@@ -40,6 +42,7 @@ async function insertGame(input: {
       status === 'completed' ? (input.result ?? 'white-wins') : null,
       status === 'completed' ? (input.termination ?? 'checkmate') : 'engine-failure',
       input.endedAt,
+      input.rated ?? false,
     ],
   );
   for (const participant of input.participants) {
@@ -58,6 +61,86 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('Mistboard readout', () => {
+  test('milestone counts reuse counted seats and games, and rated games exclude every bot seat', async () => {
+    await getPool().query(`INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
+      VALUES ('one', 'one@example.com', 'one', 'One', '2026-06-01', NULL),
+             ('two', 'two@example.com', 'two', 'Two', '2026-11-01', NULL),
+             ('internal', 'internal@example.com', 'internal', 'Internal', '2026-11-01', now())`);
+    const human = { color: 'white' as const, subjectType: 'user' as const, subjectId: 'one' };
+    const other = { color: 'black' as const, subjectType: 'user' as const, subjectId: 'two' };
+    const guest = { color: 'black' as const, subjectType: 'guest' as const, subjectId: 'browser' };
+    const bot = { color: 'black' as const, subjectType: 'bot' as const, subjectId: 'bot' };
+    for (const [roomId, mode, seat, endedAt] of [
+      ['rated-pvp', 'pvp', other, '2026-09-01'],
+      ['rated-pve', 'pve', bot, '2026-11-01'],
+      ['bot-disguised-as-pvp', 'pvp', bot, '2026-11-01'],
+      ['engine-disguised-as-pvp', 'pvp', { ...bot, subjectType: 'engine-version' }, '2026-11-01'],
+      ['guest-pvp', 'pvp', guest, '2026-11-01'],
+      ['bot-ladder', 'eve', bot, '2026-11-01'],
+    ] as const) {
+      await insertGame({
+        roomId,
+        mode,
+        variant: 'xiangqi',
+        rated: roomId !== 'guest-pvp',
+        endedAt,
+        participants: [human, seat],
+      });
+    }
+    const now = new Date('2026-11-14T17:23:00Z');
+    const counts = await collectReadoutMilestones(getPool(), now);
+    assert.deepEqual(counts.completedGames, { total: 5, last30Days: 4 });
+    assert.deepEqual(counts.players, { total: 3, last30Days: 1 });
+    assert.deepEqual(counts.accounts, { total: 2, last30Days: 1 });
+    assert.deepEqual(counts.pvpGames, { total: 2, last30Days: 1 });
+    assert.deepEqual(counts.ratedGames, { total: 1, last30Days: 0 });
+  });
+
+  test('milestone inventory and first solves exclude hidden/private rows and dedupe guests and accounts', async () => {
+    const now = new Date('2026-11-14T17:23:00Z');
+    const baseline = await collectReadoutMilestones(getPool(), now);
+    await getPool().query(`INSERT INTO users (id, email, handle, display_name, created_at)
+      VALUES ('solver', 'solver@example.com', 'solver', 'Solver', '2026-06-01')`);
+    await getPool().query(`INSERT INTO puzzles (id, variant, title, seq, goal_type, solution_plies, data, source_kind, created_at, hidden_reason)
+      VALUES ('milestone-offered', 'xiangqi', 'Offered', 100000, 'mate', 1, '{}', 'mined', '2026-11-01', NULL),
+             ('milestone-hidden', 'xiangqi', 'Hidden', 100001, 'mate', 1, '{}', 'mined', '2026-11-01', 'withheld')`);
+    await getPool().query(`INSERT INTO puzzle_attempts (user_id, puzzle_id, variant, solved, created_at)
+      VALUES ('solver', 'milestone-offered', 'xiangqi', TRUE, '2026-09-01')`);
+    await getPool().query(`INSERT INTO puzzle_quality_sessions
+      (puzzle_id, session_id, variant, outcome, completed_at, user_id, device_id)
+      VALUES ('milestone-offered', '00000000-0000-4000-8000-000000000001', 'xiangqi', 'solved', '2026-11-01', 'solver', 'same-browser'),
+             ('milestone-offered', '00000000-0000-4000-8000-000000000002', 'xiangqi', 'solved', '2026-11-01', NULL, 'guest-browser'),
+             ('milestone-offered', '00000000-0000-4000-8000-000000000003', 'xiangqi', 'solved', '2026-11-02', NULL, 'guest-browser'),
+             ('milestone-offered', '00000000-0000-4000-8000-000000000004', 'xiangqi', 'solved', '2026-11-02', NULL, NULL)`);
+    await getPool().query(`INSERT INTO studies (id, owner_id, name, visibility, created_at)
+      VALUES ('milestone-public', 'solver', 'Public', 'public', '2026-11-01'),
+             ('milestone-private', 'solver', 'Private', 'private', '2026-11-01'),
+             ('milestone-unlisted', 'solver', 'Unlisted', 'unlisted', '2026-11-01')`);
+    await getPool().query(`INSERT INTO xiangqi_broadcast_tours (slug, name, payload, listed, created_at)
+      VALUES ('event', '2026测试象棋赛', '{}', TRUE, '2026-11-01'),
+             ('duplicate', '2026测试象棋赛', '{}', TRUE, '2026-11-02'),
+             ('stray', 'Stray tour', '{}', FALSE, '2026-11-02')`);
+    const counts = await collectReadoutMilestones(getPool(), now);
+    assert.deepEqual(counts.puzzlesSolved, { total: 2, last30Days: 1 });
+    assert.equal(counts.puzzlesOffered?.total, baseline.puzzlesOffered!.total + 1);
+    assert.equal(counts.puzzlesOffered?.last30Days, baseline.puzzlesOffered!.last30Days + 1);
+    assert.deepEqual(counts.studies, { total: 1, last30Days: 1 });
+    assert.deepEqual(counts.broadcasts, { total: 1, last30Days: 1 });
+    const first = await generateMistboardReadout({
+      trigger: 'manual',
+      now,
+      runtime: {
+        revision: null,
+        activeGames: 0,
+        databaseRequired: true,
+        persistence: 'enabled',
+        persistenceErrors: { count1m: 0, lastAt: null },
+      },
+      db: getPool(),
+    });
+    assert.deepEqual((await latestMistboardReadout())?.milestones, first.report.milestones);
+    assert.ok(!first.report.actions.some((a) => a.code.startsWith('site-milestone')));
+  });
   const deliveryRuntime = {
     revision: null,
     activeGames: 0,
