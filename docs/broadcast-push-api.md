@@ -132,8 +132,8 @@ Errors return `{ "ok": false, "error": "<code>", "message": "..." }`:
 | Status | `error` | What to do |
 |---|---|---|
 | 400 | `invalid_body` | Fix the field named in `message`. |
-| 401 | `unauthorized` | The token is missing or wrong. |
-| 403 | `token_revoked` | Ask us for a new token. |
+| 401 | `unauthorized` | The token is missing or wrong, or its event was deleted. |
+| 403 | `token_revoked` | The token was revoked. Create a new one under Settings, Email and sign-in, Broadcast push. |
 | 409 | `event_not_pushable` | The event is filled from another source; ask us. |
 | 413 | `too_large` | The body is over 64 KB or the game over 1,000 moves. |
 | 422 | `illegal_move` | `ply` and `move` say which move failed. Moves before it were not saved either. |
