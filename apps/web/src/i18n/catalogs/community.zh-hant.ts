@@ -671,6 +671,7 @@ export const ZH_HANT_COMMUNITY = {
   'bots.communityTitle': '社群機器人',
   'bots.communityIntro': 'Mistboard 社群分享的引擎。',
   'bots.levelName': '第 {level} 級',
+  'bots.earlierGamesLevelNotRecorded': '早期對局，未記錄級別',
   'bots.startHere': '從這裡開始',
   'bots.strongest': '最強',
   'bots.playVariant': '下{variant}',

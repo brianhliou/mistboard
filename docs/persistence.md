@@ -33,6 +33,22 @@ result/termination enums (which have grown far past the original design);
 `migrate.ts` applies them in order, and new schema changes are always new
 numbered migrations.
 
+Bot difficulty records use the seated engine's `game_participants.engine_id`
+(migration 148). Misty's Banqi and Flip Jungle levels are now also snapshotted
+in `game_participants.bot_level` when a game finishes (migration 203). This
+preserves the level when an unnumbered engine id changes rung labels. Repeated
+finish writes preserve the original level, including an unrecorded level.
+Only explicitly numbered historical engine ids are backfilled; missing ids
+and older unnumbered ids remain unknown, without consulting today's ladder.
+
+The bot directory and profile APIs add `levelRecordsByGameSpecId` beside
+`recordsByGameSpecId`. Each variant maps to rows containing `level`, `games`,
+`wins`, `losses` and `draws`; a null level is the separate earlier-games bucket.
+Lifetime, variant and level records all use `countedPublicGame` from
+`persistence-counted-games.ts`, so short games, excluded accounts/devices,
+internal tests, engine-only games and pre-launch games do not inflate the
+records. Recent-game history keeps its existing visibility rules.
+
 ## Beyond the game core
 
 The same database holds the product's other domains, each in its own

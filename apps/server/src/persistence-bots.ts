@@ -1,7 +1,7 @@
 import { defaultEngineTimeControl } from '@mistboard/game';
 import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
-import { seatWonGame } from './persistence-counted-games.js';
+import { countedPublicGame, seatWonGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -56,6 +56,8 @@ export type BotModeRecord = {
   draws: number;
 };
 
+export type BotLevelRecord = BotModeRecord & { level: number | null };
+
 export type BotDirectoryEntry = BotProfile & {
   gamesTotal: number;
   record: BotModeRecord;
@@ -67,6 +69,8 @@ export type BotDirectoryEntry = BotProfile & {
   // real 0-0-0 are different claims, and the page has to be able to say "no
   // games yet" rather than render nothing.
   recordsByGameSpecId: Record<string, BotModeRecord>;
+  // NULL is unlabelled history, never an inferred current/default level.
+  levelRecordsByGameSpecId: Record<string, BotLevelRecord[]>;
 };
 
 export type BotProfilePage = BotDirectoryEntry & {
@@ -263,7 +267,7 @@ export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
         AND game_participants.visibility = 'public'
        LEFT JOIN games
          ON games.room_id = game_participants.game_id
-        AND games.status = 'completed'
+        AND ${countedPublicGame('games')}
         AND games.visibility = 'public'
        LEFT JOIN LATERAL (
          SELECT game_spec_id, time_class, rating, rating_deviation, games, source, source_ref, created_at
@@ -284,7 +288,10 @@ export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
       ORDER BY bot_profiles.display_name`,
   );
   const profiles = rows.map(botFromRow);
-  const records = await queryBotRecordsByGameSpecId(profiles);
+  const [records, levelRecords] = await Promise.all([
+    queryBotRecordsByGameSpecId(profiles),
+    queryBotLevelRecordsByGameSpecId(profiles),
+  ]);
   const bots = rows.map((row, index) => {
     const profile = profiles[index]!;
     return {
@@ -292,6 +299,7 @@ export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
       gamesTotal: Number(row.games_total),
       record: recordFromRow(row),
       recordsByGameSpecId: records.get(profile.id) ?? {},
+      levelRecordsByGameSpecId: levelRecords.get(profile.id) ?? {},
     };
   });
   return attachLatestRatings(bots);
@@ -327,7 +335,7 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
         AND game_participants.visibility = 'public'
        LEFT JOIN games
          ON games.room_id = game_participants.game_id
-        AND games.status = 'completed'
+        AND ${countedPublicGame('games')}
         AND games.visibility = 'public'
        LEFT JOIN LATERAL (
          SELECT game_spec_id, time_class, rating, rating_deviation, games, source, source_ref, created_at
@@ -353,10 +361,11 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
   if (!row) return null;
 
   const base = botFromRow(row);
-  const [games, recordsByGameSpecId, gamesByGameSpecId] = await Promise.all([
+  const [games, recordsByGameSpecId, gamesByGameSpecId, levelRecords] = await Promise.all([
     queryBotGames(botId, BOT_GAMES_PAGE),
     queryBotRecordsByGameSpecId([base]).then((records) => records.get(botId) ?? {}),
     queryBotGamesByGameSpecId(botId, base.supportedGameSpecIds, BOT_VARIANT_GAMES_PAGE),
+    queryBotLevelRecordsByGameSpecId([base]),
   ]);
   const [profile] = await attachLatestRatings([
     {
@@ -365,6 +374,7 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
       record: recordFromRow(row),
       games,
       recordsByGameSpecId,
+      levelRecordsByGameSpecId: levelRecords.get(botId) ?? {},
       gamesByGameSpecId,
     },
   ]);
@@ -413,7 +423,7 @@ async function queryBotRecordsByGameSpecId(
       WHERE game_participants.subject_type = 'bot'
         AND game_participants.subject_id = ANY($1::text[])
         AND game_participants.visibility = 'public'
-        AND games.status = 'completed'
+        AND ${countedPublicGame('games')}
         AND games.visibility = 'public'
       GROUP BY game_participants.subject_id, games.variant`,
     [bots.map((bot) => bot.id)],
@@ -428,6 +438,47 @@ async function queryBotRecordsByGameSpecId(
       draws: Number(row.draws),
     };
   }
+  return byBot;
+}
+
+async function queryBotLevelRecordsByGameSpecId(
+  bots: readonly Pick<BotProfile, 'id'>[],
+): Promise<Map<string, Record<string, BotLevelRecord[]>>> {
+  const byBot = new Map<string, Record<string, BotLevelRecord[]>>();
+  if (!bots.some((bot) => bot.id === 'misty')) return byBot;
+  const { rows } = await getPool().query<{
+    variant: string;
+    bot_level: number | null;
+    games_total: string;
+    wins: string;
+    losses: string;
+    draws: string;
+  }>(
+    `SELECT games.variant, game_participants.bot_level,
+            COUNT(*)::text AS games_total,
+            COUNT(*) FILTER (WHERE games.result = 'draw')::text AS draws,
+            COUNT(*) FILTER (WHERE ${BOT_SEAT_WON})::text AS wins,
+            COUNT(*) FILTER (
+              WHERE games.result <> 'draw' AND NOT (${BOT_SEAT_WON})
+            )::text AS losses
+       FROM game_participants
+       JOIN games ON games.room_id = game_participants.game_id
+      WHERE game_participants.subject_type = 'bot'
+        AND game_participants.subject_id = 'misty'
+        AND game_participants.visibility = 'public'
+        AND games.visibility = 'public'
+        AND ${countedPublicGame('games')}
+        AND games.variant IN ('banqi', 'jungle-flip')
+      GROUP BY games.variant, game_participants.bot_level
+      ORDER BY games.variant, game_participants.bot_level NULLS LAST`,
+  );
+  const records: Record<string, BotLevelRecord[]> = { banqi: [], 'jungle-flip': [] };
+  for (const row of rows) {
+    const bucket = records[row.variant] ?? [];
+    bucket.push({ level: row.bot_level, ...recordFromRow(row) });
+    records[row.variant] = bucket;
+  }
+  byBot.set('misty', records);
   return byBot;
 }
 
@@ -691,7 +742,9 @@ function ratingFromRow(row: BotProfileRow): BotRatingSnapshot | null {
   };
 }
 
-function recordFromRow(row: BotDirectoryRow): BotModeRecord {
+function recordFromRow(
+  row: Pick<BotDirectoryRow, 'games_total' | 'wins' | 'losses' | 'draws'>,
+): BotModeRecord {
   return {
     games: Number(row.games_total),
     wins: Number(row.wins),

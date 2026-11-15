@@ -21,6 +21,10 @@ const bot = {
     xiangqi: { games: 1, wins: 0, losses: 1, draws: 0 },
     mahjong: { games: 1, wins: 1, losses: 0, draws: 0 },
   },
+  levelRecordsByGameSpecId: {
+    xiangqi: [{ level: 1, games: 1, wins: 1, losses: 0, draws: 0 }],
+    mahjong: [{ level: 1, games: 1, wins: 1, losses: 0, draws: 0 }],
+  },
   gamesByGameSpecId: {
     xiangqi: [game('xiangqi')],
     mahjong: [game('mahjong')],
@@ -35,6 +39,7 @@ test('a hidden spec leaves every public bot field', () => {
     ['xiangqi'],
   );
   assert.deepEqual(Object.keys(visible.recordsByGameSpecId), ['xiangqi']);
+  assert.deepEqual(Object.keys(visible.levelRecordsByGameSpecId), ['xiangqi']);
   assert.deepEqual(Object.keys(visible.gamesByGameSpecId), ['xiangqi']);
   assert.ok(botPlayOptions(visible).every((option) => option.gameSpecId !== 'mahjong'));
   assert.ok(botPlayOptions(visible).every((option) => option.gameSpecId !== 'fortress-xiangqi'));

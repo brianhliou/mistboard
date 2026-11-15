@@ -1567,6 +1567,44 @@ describe('/bots covers every launched bot variant', () => {
   }
 
   for (const { gameSpecId, base, label, rosterKey } of mistyLadderCases) {
+    it(`shows each ${label} level's own record and keeps unlabelled history separate`, async () => {
+      vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
+      const roster = [8, 7, 4, 1].map((level) => ({ id: engineIdAt(base, level) }));
+      stubFetch(
+        [mistyFor(gameSpecId, base)].map((bot) => ({
+          ...bot,
+          levelRecordsByGameSpecId: {
+            [gameSpecId]: [
+              { level: 1, games: 2, wins: 1, losses: 1, draws: 0 },
+              { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+              { level: null, games: 2, wins: 2, losses: 0, draws: 0 },
+            ],
+            'dark-chess': [{ level: 1, games: 99, wins: 99, losses: 0, draws: 0 }],
+          },
+        })),
+        [],
+        { [rosterKey]: roster },
+      );
+      window.history.replaceState(null, '', `/bots?game=${gameSpecId}`);
+      const root = document.createElement('div');
+      const { mountBots } = await import('./bots.js');
+      await mountBots(root);
+      const rows = () => [...cardFor(root, 'misty')!.querySelectorAll('.bot-level-record')];
+      expect(rows().map((row) => row.textContent)).toEqual([
+        'Level 8 · 0 games · 0-0-0',
+        'Level 7 · 1 game · 1-0-0',
+        'Level 4 · 0 games · 0-0-0',
+        'Level 1 · 2 games · 1-1-0',
+        'Earlier games, level not recorded · 2 games · 2-0-0',
+      ]);
+      expect(
+        cardFor(root, 'misty')!.querySelector('.profile-summary-card-footer')?.textContent,
+      ).toContain('4-1-0');
+      pickLevel(root, 'misty', engineIdAt(base, 1));
+      expect(rows()).toHaveLength(5);
+      expect(rows()[3]?.textContent).toContain('1-1-0');
+    });
+
     it(`offers Misty's ${label} levels the server seats, opening on Level 4, playing the picked engine`, async () => {
       vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
       const roster = [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({ id: engineIdAt(base, level) }));
@@ -1589,6 +1627,7 @@ describe('/bots covers every launched bot variant', () => {
       expect(select?.value).toBe(`${base}-level-4`);
       // Her per-game record, rating and bio stay on the card.
       expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('4-1-0');
+      expect(card.querySelector('.bot-level-records')).toBeNull();
       expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,620');
       expect(card.querySelector('.profile-summary-card-bio')?.textContent).toContain(label);
 

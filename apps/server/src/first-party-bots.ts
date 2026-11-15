@@ -50,6 +50,21 @@ export type FirstPartyBotProfile = {
   legacyBotIds?: readonly string[];
 };
 
+// Snapshot only at game write time. Historical aliases must not be resolved
+// through the current ladder: the unnumbered full-strength id moved to L7.
+export function mistyLevelForEngine(
+  variant: string,
+  engineId: string | null | undefined,
+): number | null {
+  const tiers =
+    variant === 'banqi'
+      ? BANQI_PLAYABLE_ENGINES
+      : variant === 'jungle-flip'
+        ? JUNGLE_FLIP_PLAYABLE_ENGINES
+        : [];
+  return tiers.find((tier) => tier.id === engineId)?.level ?? null;
+}
+
 export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
