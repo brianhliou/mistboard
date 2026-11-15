@@ -15,18 +15,39 @@ pass. This command never advances `main` or starts a production drain.
 After adding fixes or merging another branch, rerun the local gates and
 `batch:ci` on the new committed batch HEAD.
 
-`npm run release:prod -- --push` normally publishes `release/<full commit SHA>` first.
-Railway continues to deploy from `main`; publishing the candidate cannot deploy
-it. Hosted `ci.yml` runs on every candidate, including docs-only commits.
+`npm run release:prod -- --push` requires a prior completed green batch run.
+It refuses with a message naming `batch:ci` before writing its changelog,
+running local gates or starting a production drain. GitHub lookup failures
+also refuse. A previously failed first attempt may receive the one listed-flake
+retry below; it must turn green before the release proceeds. Catching up with `main` happens before this check: if that changes
+the batch tree, run `batch:ci` again.
 
-The release reuses a completed green candidate run for the same HEAD, or for its
-direct parent when the complete trees differ only in `CHANGELOG.md` (the
-changelog commit added by the release). Reuse skips the candidate push and fresh
-CI wait; it still checks main, accounts for branches, and drains games before
-promotion. Any other tree change, a merge commit needing the parent exception,
-an unreadable comparison or a non-green run takes the normal fresh-candidate
-path. The release log records the tested revision and run URL separately from
-the promoted revision.
+The release compares complete Git trees, so a different commit SHA with the
+same tree remains covered. It also accepts the direct parent of a single-parent
+changelog-only commit. Any change beyond `CHANGELOG.md`, including deletions,
+renames and file modes, invalidates that parent exception. The lookup checks
+exact candidates first, then the latest 100 hosted push runs from this workflow,
+restricted to `release/<sha>` branches and locally available commit objects.
+Missing evidence fails closed; run `batch:ci` on HEAD to refresh it.
+
+`--extra-ship "<prod defect reason>"` bypasses the prior-batch requirement and
+logs the reason. It still publishes a candidate and requires its hosted CI to
+pass before promoting `main`. Railway deploys only from `main`.
+
+Batch CI and the release's candidate wait automatically re-run **failed jobs
+only**, once, when every failed job has only test-step failures and every
+reported failure is listed in `scripts/ci-known-flakes.json` (initially #1068's
+Banqi analysis runner test). Unknown log formats, unlisted failures, cancelled
+jobs, compile/build failures and unavailable evidence receive no retry.
+GitHub's attempt number prevents repeated invocations from retrying a second
+failure. The wait ignores the old completed badge until the new attempt
+appears. Release records include `ciReruns`, with run ID, attempt, files and URL.
+
+Workspace compiler commands use TypeScript 7. The root leaves TypeScript to
+analysis tools' dependency requirements, so madge and typescript-estree can
+resolve the TypeScript 5 API. The tooling test
+`scripts/typescript-version.test.mjs` checks workspace declarations, lock entries
+and installed compiler versions, plus the API resolved by madge's analysis tools.
 
 Before a dry run or push can proceed, every local `agent/*` branch with commits
 outside both the release HEAD and local `origin/main` must be merged into the
@@ -85,6 +106,10 @@ node --test scripts/batch-ci.test.mjs scripts/release-agent-branches.test.mjs sc
 These execute the release orchestration with external effects replaced, test
 CI verdicts and candidate lookup, exercise the pre-push hook, and check drain
 cleanup. They do not publish refs or contact production.
+Later-stage routine release fixtures provide completed green batch evidence
+through the injected batch lookup or GitHub subprocess response. Missing-evidence
+regressions retain the refusal; fresh-candidate CI and drain cancellation tests
+explicitly exercise the emergency path.
 
 ## Parked build verification (2026-10-26)
 

@@ -30,8 +30,10 @@ import {
   parseChangelogArg,
   previewInsertion,
 } from './lib/changelog-entry.mjs';
+import { retryHostedCi, waitForExactCi } from './lib/ci-flake-retry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { formatEnginePin, readEngineHead } from './lib/engine-head.mjs';
 import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
 import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
@@ -155,6 +157,7 @@ const release = {
   ciRunUrl: null,
   ciTestedRevision: null,
   reusedCiRun: null,
+  ciReruns: [],
   // The commit the --changelog lines link (HEAD when the release started), and
   // the changelog commit made on top of it; null without --changelog.
   featureRevision: null,
@@ -224,7 +227,18 @@ try {
     enforceShipWindow('after taking the release lock');
     catchUpBeforeGate();
     enforceAgentBranchAccounting();
+    release.headRevision = git(['rev-parse', '--verify', options.head]);
+    release.reusedCiRun = findReusableBatchRun() ?? (await recoverFailedBatchRun());
+    if (!release.reusedCiRun) {
+      if (!options.extraShip) {
+        throw new Error(
+          'release refused: run npm run batch:ci -- <worktree> and obtain green hosted CI for this batch tree before --push',
+        );
+      }
+      console.log(`batch:ci requirement bypassed for --extra-ship: ${options.extraShip}`);
+    }
   }
+  if (options.push || options.plan) printEnginePin();
   if (options.changelog.length > 0 && !options.plan) commitChangelog();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
   release.expectedRevision = release.headRevision;
@@ -292,6 +306,7 @@ try {
     if (release.drainRequired) requireUsableDrainToken(liveGames);
   }
 
+  const batchCheckedRevision = release.headRevision;
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
     if (options.rehearse) {
@@ -324,7 +339,14 @@ try {
   if (options.push) {
     catchUpWithMain();
     enforceAgentBranchAccounting();
-    release.reusedCiRun = findReusableBatchRun();
+    if (release.headRevision !== batchCheckedRevision) {
+      release.reusedCiRun = findReusableBatchRun() ?? (await recoverFailedBatchRun());
+      if (!release.reusedCiRun && !options.extraShip) {
+        throw new Error(
+          'release refused: main changed the batch tree; run npm run batch:ci -- <worktree> again before --push',
+        );
+      }
+    }
     release.candidateBranch = `release/${release.reusedCiRun?.headSha ?? release.headRevision}`;
     if (!release.reusedCiRun) {
       runTimed(
@@ -916,6 +938,22 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
  * lib/ci-run-verdict.mjs.
  */
 async function waitForGithubCi({ headRevision, branch = options.targetBranch, exact = false }) {
+  if (exact) {
+    const run = await waitForExactCi({
+      readRun: () => {
+        const found = findGithubRun(headRevision, branch);
+        if (found?.url) release.ciRunUrl = found.url;
+        return found;
+      },
+      retry: (run) =>
+        retryHostedCi({ root: workdir, run, record: (entry) => release.ciReruns.push(entry) }),
+      timeoutMs: options.timeoutMs,
+      pollMs: GITHUB_POLL_MS,
+      wait: sleep,
+    });
+    console.log(`hosted CI passed: ${run.url ?? headRevision}`);
+    return { revision: headRevision, tip: headRevision, adopted: [] };
+  }
   const deadline = Date.now() + options.timeoutMs;
   let revision = headRevision;
   const adopted = [];
@@ -927,25 +965,6 @@ async function waitForGithubCi({ headRevision, branch = options.targetBranch, ex
     attempt += 1;
     run = findGithubRun(revision, branch);
     if (run?.url) release.ciRunUrl = run.url;
-    // Promotion requires a successful completed run for this exact candidate.
-    // A cancelled run or partly green jobs cannot authorize production.
-    if (exact) {
-      if (run?.status === 'completed') {
-        if (run.conclusion !== 'success') {
-          throw new Error(
-            `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}: ${run.url ?? revision}`,
-          );
-        }
-        console.log(`hosted CI passed: ${run.url ?? revision}`);
-        return { revision, tip: revision, adopted };
-      }
-      console.log(
-        `attempt ${attempt}: ${run?.status ?? 'waiting for the run to appear'} on ${branch}`,
-      );
-      if (Date.now() + GITHUB_POLL_MS > deadline) break;
-      await sleep(GITHUB_POLL_MS);
-      continue;
-    }
     // Checked every poll, not once (see above).
     const superseded = supersededBy(revision);
     const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
@@ -1155,11 +1174,64 @@ function findReusableBatchRun() {
       root: workdir,
       headRevision: release.headRevision,
       findRun: findGithubRun,
+      listRuns: listBatchRuns,
     });
   } catch (error) {
-    console.log(`warn: could not reuse batch CI (${error.message}); testing a fresh candidate`);
+    console.log(`warn: could not reuse batch CI (${error.message}); batch:ci evidence unavailable`);
     return null;
   }
+}
+
+// Recover only an existing first-attempt failure. Missing evidence never
+// starts a fresh candidate run at ship time; batch:ci is still required.
+async function recoverFailedBatchRun() {
+  try {
+    const candidate = findReusableBatchCi({
+      root: workdir,
+      headRevision: release.headRevision,
+      findRun: findGithubRun,
+      listRuns: listBatchRuns,
+      acceptRun: (run) =>
+        run.status === 'completed' && run.conclusion === 'failure' && run.attempt === 1,
+    });
+    if (!candidate) return null;
+    return await waitForExactCi({
+      readRun: () => findGithubRun(candidate.headSha, `release/${candidate.headSha}`),
+      retry: (run) =>
+        retryHostedCi({ root: workdir, run, record: (entry) => release.ciReruns.push(entry) }),
+      timeoutMs: options.timeoutMs,
+      pollMs: GITHUB_POLL_MS,
+      wait: sleep,
+    });
+  } catch (error) {
+    console.log(`batch:ci recovery refused: ${error.message}`);
+    return null;
+  }
+}
+
+function listBatchRuns() {
+  const output = runCapture(
+    'gh batch runs',
+    [
+      'gh',
+      'run',
+      'list',
+      '--workflow',
+      options.ciWorkflow,
+      '--event',
+      'push',
+      '--json',
+      'databaseId,status,conclusion,headSha,headBranch,url,attempt',
+      '--limit',
+      '100',
+    ],
+    { quiet: true },
+  );
+  const runs = JSON.parse(output);
+  if (!Array.isArray(runs)) throw new Error('batch CI runs is not an array');
+  return runs.filter(
+    (run) => /^[a-f0-9]{40}$/.test(run.headSha) && run.headBranch === `release/${run.headSha}`,
+  );
 }
 
 function listGithubRuns(headRevision, branch = options.targetBranch) {
@@ -1175,7 +1247,7 @@ function listGithubRuns(headRevision, branch = options.targetBranch) {
     '--event',
     'push',
     '--json',
-    'databaseId,status,conclusion,headSha,url',
+    'databaseId,status,conclusion,headSha,url,attempt',
     '--limit',
     '10',
   ];
@@ -1943,6 +2015,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     ciRequired: release.ciRequired,
     ciRunUrl: release.ciRunUrl,
     ciTestedRevision: release.ciTestedRevision,
+    ciReruns: release.ciReruns,
     changelogCommit: release.changelogCommit,
     lockWaitMs: release.lockWaitMs,
     gate: release.gate,
@@ -2132,6 +2205,15 @@ function enforceAgentBranchAccounting() {
     head: options.head,
     base: `${options.remote}/${options.targetBranch}`,
   });
+}
+
+function printEnginePin() {
+  try {
+    const pin = readFileSync(path.join(workdir, 'engine.ref'), 'utf8').split(/\r?\n/, 1)[0].trim();
+    console.log(formatEnginePin(pin, readEngineHead()));
+  } catch {
+    console.log('engine_pin: unknown (could not read engine.ref)');
+  }
 }
 
 // The ship-window reminder uses the same branch inventory as the release gate.
@@ -2517,12 +2599,16 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> reuse green batch CI or push release/<sha> -> start pending drain -> exact candidate hosted CI when not reused -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> require prior green batch CI -> --changelog commit -> local ci:quick -> --extra-ship candidate when not reused -> start pending drain -> exact candidate hosted CI when not reused -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
 
 Batch preparation:
   npm run batch:ci -- <worktree> pushes the clean batch HEAD and waits for CI.
+  --push requires that green batch tree before creating its changelog commit.
+  --extra-ship bypasses only this precondition; candidate CI still must pass.
+  Listed flaky tests get at most one failed-job re-run, recorded in ciReruns.
   A completed green run can cover the same HEAD or its direct parent when
-  only CHANGELOG.md differs. All other tree changes require fresh candidate CI.
+  only CHANGELOG.md differs. Identical trees under other SHAs can also reuse CI.
+  All other tree changes require another batch:ci run before release.
 
 Branch accounting:
   Local agent/* work outside both --head and origin/main must be merged or

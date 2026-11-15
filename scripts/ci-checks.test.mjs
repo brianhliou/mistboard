@@ -34,6 +34,7 @@ cp.spawnSync = (command, args, options) => {
     if (args[0] === 'ls-files') return ok((failures.untrackedFiles ?? []).join('\\n'));
     if (args[0] === 'ls-remote') return ok(base + '\\trefs/heads/main');
     if (args[0] === 'log') return ok('2020-01-01T00:00:00Z');
+    if (args[0] === 'rev-list') return ok(head + ' ' + base);
     if (args[0] === 'rev-parse') return ok(args.includes('--abbrev-ref') ? 'agent/fixture' : args.at(-1) === 'HEAD' ? head : base);
     if (args[0] === 'merge-base') return ok(base);
     if (args[0] === 'diff' && args.at(-1) === 'origin/main') {
@@ -44,6 +45,13 @@ cp.spawnSync = (command, args, options) => {
       ? (failures.dirtyFiles ?? [])
       : (failures.files ?? ['apps/server/src/persistence.ts'])).join('\\n'));
     throw new Error('unexpected git operation: ' + args.join(' '));
+  }
+  // Later-stage release tests have a completed batch for the fixture HEAD.
+  // Keep the production lookup and refusal intact; replace only GitHub I/O.
+  if (command === 'gh' && args[0] === 'run' && args[1] === 'list') {
+    return ok(JSON.stringify(failures.missingBatch ? [] : [
+      { headSha: head, status: 'completed', conclusion: 'success' },
+    ]));
   }
   if (args[0] === 'scripts/prod-smoke-plan.mjs') {
     return ok('prod-smoke-plan: deploy_required=false\\nreason: fixture');
@@ -329,6 +337,16 @@ test('signals and spawn failures are failures and do not hide later commands', (
   assert.ok(ran(result.calls, 'check:cycles'));
   assert.match(result.summary, /npm run lint.*SIGTERM/);
   assert.match(result.summary, /npm run i18n:check.*fixture ENOENT/);
+});
+
+test('release without green batch evidence refuses before any local gate or push', () => {
+  const result = fixture('scripts/release-prod.mjs', ['--push', '--full-ci'], {
+    missingBatch: true,
+  });
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.output, /release refused: run npm run batch:ci/);
+  assert.ok(!result.calls.some(([command]) => command === 'npm'));
+  assert.ok(!result.calls.some(([command, ...args]) => command === 'git' && args.includes('push')));
 });
 
 test('release runs persistence after failed quick checks and summarizes both', () => {

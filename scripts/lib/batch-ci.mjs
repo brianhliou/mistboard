@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { retryHostedCi, waitForExactCi } from './ci-flake-retry.mjs';
 
 function capture(root, command, args, { trim = true } = {}) {
   const result = spawnSync(command, args, { cwd: root, encoding: 'utf8' });
@@ -24,7 +25,7 @@ export function readBatchRun({ root, revision, workflow = 'ci.yml' }) {
       '--event',
       'push',
       '--json',
-      'databaseId,status,conclusion,headSha,url',
+      'databaseId,status,conclusion,headSha,url,attempt',
       '--limit',
       '10',
     ]),
@@ -36,7 +37,13 @@ export function readBatchRun({ root, revision, workflow = 'ci.yml' }) {
 
 // Limit the changelog exception to a direct, single-parent commit. Comparing
 // complete trees (with renames disabled) also catches deletions and mode changes.
-export function findReusableBatchCi({ root, headRevision, findRun }) {
+export function findReusableBatchCi({
+  root,
+  headRevision,
+  findRun,
+  listRuns = () => [],
+  acceptRun = (run) => run.status === 'completed' && run.conclusion === 'success',
+}) {
   const parents = capture(root, 'git', ['rev-list', '--parents', '-n', '1', headRevision]).split(
     ' ',
   );
@@ -52,10 +59,29 @@ export function findReusableBatchCi({ root, headRevision, findRun }) {
       .filter(Boolean);
     if (changed.every((file) => file === 'CHANGELOG.md')) candidates.push(parents[1]);
   }
+  const inspected = new Set();
   for (const revision of candidates) {
     const run = findRun(revision, `release/${revision}`);
-    if (run?.headSha === revision && run.status === 'completed' && run.conclusion === 'success') {
+    if (run?.headSha === revision) inspected.add(revision);
+    if (run?.headSha === revision && acceptRun(run)) {
       return run;
+    }
+  }
+  // A new commit SHA (for example, an empty merge) does not invalidate the
+  // tested tree. Only locally available commits can supply tree evidence.
+  const trees = candidates.map((revision) =>
+    capture(root, 'git', ['rev-parse', `${revision}^{tree}`]),
+  );
+  const seen = new Set(inspected);
+  for (const run of listRuns()) {
+    if (seen.has(run.headSha)) continue;
+    seen.add(run.headSha);
+    if (!acceptRun(run)) continue;
+    try {
+      const tree = capture(root, 'git', ['rev-parse', '--verify', `${run.headSha}^{tree}`]);
+      if (trees.includes(tree)) return run;
+    } catch {
+      // Missing commit objects cannot authorize promotion.
     }
   }
   return null;
@@ -95,22 +121,25 @@ export async function runBatchCi({
   log(`batch: ${revision} (${root})`);
   log(`git push origin ${revision}:refs/heads/${branch}`);
   capture(root, 'git', ['push', 'origin', `${revision}:refs/heads/${branch}`]);
-  const deadline = now() + timeoutMs;
-  while (now() <= deadline) {
+  try {
+    const run = await waitForExactCi({
+      readRun: () => {
+        const found = readRun({ root, revision });
+        return found?.headSha === revision ? found : null;
+      },
+      retry: (candidate) => retryHostedCi({ root, run: candidate, log }),
+      timeoutMs,
+      pollMs,
+      log,
+      now,
+      wait,
+    });
+    log(`hosted CI passed: ${run.url ?? revision}`);
+    return run;
+  } catch (error) {
     const run = readRun({ root, revision });
-    if (run?.headSha === revision && run.status === 'completed') {
-      if (run.conclusion !== 'success') {
-        failedJobs({ root, run, log });
-        throw new Error(
-          `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}: ${run.url ?? revision}`,
-        );
-      }
-      log(`hosted CI passed: ${run.url ?? revision}`);
-      return run;
-    }
-    log(`hosted CI: ${run?.status ?? 'waiting for the run to appear'} on ${branch}`);
-    if (now() + pollMs > deadline) break;
-    await wait(pollMs);
+    if (run?.headSha === revision && run.status === 'completed' && run.conclusion !== 'success')
+      failedJobs({ root, run, log });
+    throw error;
   }
-  throw new Error(`timed out waiting for ci.yml on ${revision}`);
 }
