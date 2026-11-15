@@ -505,8 +505,6 @@ const ZH_HANS: Record<string, string> = {
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盘 Mistboard 实战的捉子例子，一步一步展示捉子规则禁止的那一步。',
   // Expanded jieqi rules (2026-11-05).
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
@@ -693,8 +691,6 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋规则：两人在 15×15 棋盘上轮流落子，先在横、竖或斜线上连成五子者获胜。学会落子、连成五子，以及如何在 Mistboard 发放的开局里跟着回合提示走棋。',
-  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
-    '更新了开局示意图，与现在每局的开局方式一致：两枚黑子、三枚白子，轮到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一个空的交叉点上放一枚棋子。棋子落下后就不再移动。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -3595,10 +3591,6 @@ const ZH_HANS: Record<string, string> = {
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 采用的是台湾规则。',
   'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
     'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和将。炮只比兵大一级，所以马和比马大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的马可以斜走或斜吃吗？',
@@ -6169,6 +6161,23 @@ const ZH_HANS: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一颗兵，或吃将。',
   'An engine game': '一盘引擎对局',
+  // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
+  '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
+    '[MistyBanqi](/blog/mistybanqi) 第 7 级对第 8 级。第 7 级执黑，第 8 级执红；第 7 级无子可走时，第 8 级获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 7 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。',
+  'The [companion study](/study/FsA5sowX) has twenty games of MistyBanqi against itself at ten million nodes a move, one chapter each, with a note on how it went. Two hundred games from that run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了二十盘 MistyBanqi 自我对弈，每步搜索一千万个节点，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  'Banqi: Level 7 versus Level 8, annotated': '暗棋：第 7 级对第 8 级，附注解',
+  'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip.':
+    '引擎对局换成了第 7 级对第 8 级，按本站机器人的实际设置对弈，附胜率图、着法评分和每次翻子的运气。',
+  'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.':
+    'Misty 第 8 级执红，第 7 级执黑。78 步后第 7 级以 100 比 45 获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 8 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。终局时仍背面朝上的七个子始终不公开。',
+  'Three Kingdoms Banqi: Level 7 versus Level 8, annotated': '三国暗棋：第 7 级对第 8 级，附注解',
+  'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone makes five on row 3. Step through it with the arrows.':
+    'Rapfi 是 Mistboard 五子棋机器人背后的引擎，它自己跟自己下：第 8 级执黑，第 7 级执白，从发放的开局开始。前 25 子局面一直均势。白方第 13 子 f4 挡在了三连错误的一端，从那以后黑方有必胜。黑方用冲四（差一子成五、白方必须马上挡的线）牵制白方，第 27 子在第 3 行连成五子。用箭头一步步看。',
+  'Gomoku: Rapfi Level 8 against Rapfi Level 7, annotated':
+    '五子棋：Rapfi 第 8 级对 Rapfi 第 7 级，附注解',
+  'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
+    '新增一盘引擎对局：Rapfi 第 8 级对第 7 级，附注解和一张图，画出两个级别各自估计的黑方胜率。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到红，所以翻的人这盘是红方。',
@@ -7416,8 +7425,6 @@ const ZH_HANT: Record<string, string> = {
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盤 Mistboard 實戰的捉子例子，一步一步展示捉子規則禁止的那一步。',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
@@ -7604,8 +7611,6 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋規則：兩人在 15×15 棋盤上輪流落子，先在橫、豎或斜線上連成五子者獲勝。學會落子、連成五子，以及如何在 Mistboard 發放的開局裡跟著回合提示走棋。',
-  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
-    '更新了開局示意圖，與現在每局的開局方式一致：兩枚黑子、三枚白子，輪到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一個空的交叉點上放一枚棋子。棋子落下後就不再移動。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -10847,10 +10852,6 @@ const ZH_HANT: Record<string, string> = {
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 採用的是台灣規則。',
   'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
     'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和將。炮只比兵大一級，所以馬和比馬大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的馬可以斜走或斜吃嗎？',
@@ -13112,6 +13113,23 @@ const ZH_HANT: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一顆兵，或吃將。',
   'An engine game': '一盤引擎對局',
+  // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
+  '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
+    '[MistyBanqi](/blog/mistybanqi) 第 7 級對第 8 級。第 7 級執黑，第 8 級執紅；第 7 級無子可走時，第 8 級獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 7 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。',
+  'The [companion study](/study/FsA5sowX) has twenty games of MistyBanqi against itself at ten million nodes a move, one chapter each, with a note on how it went. Two hundred games from that run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了二十盤 MistyBanqi 自我對弈，每步搜尋一千萬個節點，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  'Banqi: Level 7 versus Level 8, annotated': '暗棋：第 7 級對第 8 級，附註解',
+  'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip.':
+    '引擎對局換成了第 7 級對第 8 級，按本站機器人的實際設定對弈，附勝率圖、著法評分和每次翻子的運氣。',
+  'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.':
+    'Misty 第 8 級執紅，第 7 級執黑。78 步後第 7 級以 100 比 45 獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 8 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。終局時仍背面朝上的七個子始終不公開。',
+  'Three Kingdoms Banqi: Level 7 versus Level 8, annotated': '三國暗棋：第 7 級對第 8 級，附註解',
+  'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone makes five on row 3. Step through it with the arrows.':
+    'Rapfi 是 Mistboard 五子棋機器人背後的引擎，它自己跟自己下：第 8 級執黑，第 7 級執白，從發放的開局開始。前 25 子局面一直均勢。白方第 13 子 f4 擋在了三連錯誤的一端，從那以後黑方有必勝。黑方用衝四（差一子成五、白方必須馬上擋的線）牽制白方，第 27 子在第 3 行連成五子。用箭頭一步步看。',
+  'Gomoku: Rapfi Level 8 against Rapfi Level 7, annotated':
+    '五子棋：Rapfi 第 8 級對 Rapfi 第 7 級，附註解',
+  'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
+    '新增一盤引擎對局：Rapfi 第 8 級對第 7 級，附註解和一張圖，畫出兩個級別各自估計的黑方勝率。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到紅，所以翻的人這盤是紅方。',

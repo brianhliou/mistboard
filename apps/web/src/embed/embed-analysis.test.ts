@@ -50,6 +50,7 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
       'jieqi',
       'jungle',
       'jungle-flip',
+      'three-kingdoms-banqi',
       'xiangqi',
     ]);
   });
@@ -217,4 +218,43 @@ describe('loadEmbedAnalysis', () => {
     expect(loaded?.annotations.get(1)?.note).not.toContain('g1');
     expect(calls.every((c) => c.method === 'GET')).toBe(true);
   });
+});
+
+it('loads Three Kingdoms cached decisions with public 1-based candidates and GETs only', async () => {
+  const calls = stubApi({
+    '/api/three-kingdoms-banqi/games/tk/analysis': {
+      engineId: 'misty-three-kingdoms-banqi',
+      depth: 1,
+      plies: [
+        { ply: 0, cp: 0, mate: null, best: 'i5i4' },
+        { ply: 1, cp: 100, mate: null, best: 'a1a2' },
+      ],
+    },
+    '/api/three-kingdoms-banqi/games/tk/decisions': {
+      decisions: [
+        {
+          ply: 1,
+          mover: 'red',
+          bestWin: 70,
+          playedWin: 50,
+          realizedWin: 62,
+          playedRank: 2,
+          candidates: [
+            { move: 'i5i4', win: 70 },
+            { move: 'a1a1', win: 50, played: true },
+          ],
+        },
+      ],
+    },
+  });
+  const loaded = await loadEmbedAnalysis('three-kingdoms-banqi', 'tk', {
+    playedMoves: async () => [{ ply: 1, from: 'a1', to: 'a1' }],
+    events: async () => [],
+  });
+  expect(loaded?.annotations.get(1)?.note).toBe('Blunder. i5-i4 was best.');
+  expect(loaded?.overlayAtPly(0).arrows).toEqual([
+    expect.objectContaining({ from: 'i5', to: 'i4' }),
+  ]);
+  expect(calls.map((c) => c.method)).toEqual(['GET', 'GET']);
+  expect(embedAnalysisVariant('three-kingdoms-banqi')?.parseMove('a0a0')).toBeNull();
 });

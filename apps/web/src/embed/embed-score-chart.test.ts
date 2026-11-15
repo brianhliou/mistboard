@@ -56,7 +56,7 @@ describe('study score chart seat advantage', () => {
     ]);
   });
 
-  it('keeps comparison lines in engine inks over faded seat zones, without seat fills', () => {
+  it('draws two or more lines in engine inks with no shading at all', () => {
     const { el } = createEmbedScoreChart(
       {
         ...data,
@@ -65,16 +65,14 @@ describe('study score chart seat advantage', () => {
       { variant: 'xiangqi', onJump: () => {} },
     );
     expect(el.querySelectorAll('.advantage-chart__area')).toHaveLength(0);
-    const zones = [...el.querySelectorAll('.embed-score-chart__zone')];
-    expect(zones).toHaveLength(2);
-    expect(el.querySelectorAll('linearGradient .advantage-chart__zone-stop--near')).toHaveLength(2);
-    expect(el.querySelectorAll('linearGradient .advantage-chart__zone-stop--far')).toHaveLength(2);
+    expect(el.querySelectorAll('.embed-score-chart__zone')).toHaveLength(0);
+    expect(el.querySelectorAll('linearGradient')).toHaveLength(0);
     const lines = [...el.querySelectorAll('.embed-score-chart__line')];
     expect(lines.map((line) => line.getAttribute('stroke'))).toEqual([
       'var(--eval-compare-a, #1f7a8c)',
       'var(--eval-compare-b, #d9822b)',
     ]);
-    expect(zones.every((zone) => paintsBefore(zone, lines[0]!))).toBe(true);
+    expect(el.textContent).toContain('Win chance for Red');
   });
 
   it('resolves chess to White/Black and preserves that pairing for a Black perspective', () => {

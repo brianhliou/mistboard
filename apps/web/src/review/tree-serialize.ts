@@ -39,6 +39,9 @@ export interface SerializedTree {
   version: 1;
   root: SerializedNode;
   rootFen?: string;
+  /** Identity-free opening; @a1:R records an observed red-chariot flip, a1b1
+   * records a board move. No rootFen, per-square identities or sampled deal. */
+  replay?: 'three-kingdoms-banqi-public-v1';
 }
 
 /** True when at least one annotation field carries real content. Empty arrays and
@@ -76,9 +79,17 @@ function serializeNode<M, T, V>(
 export function serializeTree<M, T, V>(
   tree: GameTree<M, T, V>,
   adapter: VariantTreeAdapter<M, T, V>,
-  opts?: { skip?: (node: GameTreeNode<M, T>) => boolean; rootFen?: string },
+  opts?: {
+    skip?: (node: GameTreeNode<M, T>) => boolean;
+    rootFen?: string;
+    replay?: SerializedTree['replay'];
+  },
 ): SerializedTree {
   const out: SerializedTree = { version: 1, root: serializeNode(tree.root, adapter, opts?.skip) };
+  if (opts?.replay) {
+    if (opts.rootFen) throw new Error('A public replay cannot carry a dealt root.');
+    out.replay = opts.replay;
+  }
   if (opts?.rootFen) out.rootFen = opts.rootFen;
   return out;
 }

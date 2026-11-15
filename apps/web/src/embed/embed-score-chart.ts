@@ -3,8 +3,9 @@
 // view, one value per position: index 0 the start, index n after ply n. A
 // cursor sits on the board's ply, the pointer scrubs a readout, and a click or
 // tap jumps the board there: the review underboard chart's behaviour
-// (review/chart-scrub.ts). A single estimate fills in the leading seat's ink;
-// comparisons keep the article's engine inks over the review chart's seat zones.
+// (review/chart-scrub.ts). A single estimate fills in the leading seat's ink
+// over the review chart's seat zones; two or more estimates are bare lines in
+// the article's engine inks, with no shading (one line's fill would hide the other).
 //
 // One fixed height (embed.css): the card fits the board to the room the pane
 // leaves (embed-card.ts underBoard), so a pane that changed height would resize
@@ -163,7 +164,8 @@ export function createEmbedScoreChart(
   const instance = ++chartInstance;
   const defs = svg('defs', {});
   chart.append(defs);
-  for (const [i, ink] of [topInk, bottomInk].entries()) {
+  const zoneInks = data.series.length === 1 ? [topInk, bottomInk] : [];
+  for (const [i, ink] of zoneInks.entries()) {
     const y = (i * VIEW_H) / 2;
     const zoneId = `embed-score-zone-${instance}-${i}`;
     const gradient = svg('linearGradient', {

@@ -1,10 +1,121 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import * as game from './index.js';
 
 type State = game.ThreeKingdomsBanqiState;
 type Board = game.ThreeKingdomsBanqiBoard;
 type Square = game.ThreeKingdomsBanqiSquare;
+
+// Verbatim public moves/outcomes from the supplied export; no secret setup.
+const recordedGame = JSON.parse(
+  readFileSync(new URL('../fixtures/three-kingdoms-banqi-78.json', import.meta.url), 'utf8'),
+) as { plies: { uci: string; revealed?: { color: game.BanqiColor; role: game.BanqiPieceRole } }[] };
+
+test('public replay parses only complete observed flips and ordinary moves', () => {
+  assert.equal(typeof game.parseThreeKingdomsBanqiReplayMove, 'function');
+  assert.deepEqual(game.parseThreeKingdomsBanqiReplayMove('@f4:A'), {
+    from: 'f4',
+    to: 'f4',
+    revealed: { color: 'red', role: 'advisor' },
+  });
+  assert.deepEqual(game.parseThreeKingdomsBanqiReplayMove('@f5:r'), {
+    from: 'f5',
+    to: 'f5',
+    revealed: { color: 'black', role: 'chariot' },
+  });
+  assert.deepEqual(game.parseThreeKingdomsBanqiReplayMove('f5f4'), { from: 'f5', to: 'f4' });
+  for (const bad of ['@f4', 'f4f4', '@j1:A', '@f6:A', '@f4:K', 'f5f4:A', '@f4:AA', ' @f4:A']) {
+    assert.equal(game.parseThreeKingdomsBanqiReplayMove(bad), null, bad);
+  }
+});
+
+test('the exported 78-ply public replay settles black winning on points without a deal', () => {
+  assert.equal(typeof game.createInitialThreeKingdomsBanqiReplayState, 'function');
+  let state = game.createInitialThreeKingdomsBanqiReplayState('recorded');
+  for (const tile of Object.values(state.board)) assert.deepEqual(tile, { faceDown: true });
+  for (const ply of recordedGame.plies) {
+    const token = ply.revealed ? `${ply.uci}:${game.banqiPieceLetter(ply.revealed)}` : ply.uci;
+    const before = JSON.stringify(state);
+    const next = game.applyThreeKingdomsBanqiReplayMove(
+      state,
+      game.parseThreeKingdomsBanqiReplayMove(token)!,
+    );
+    assert.equal(JSON.stringify(state), before, 'parent remains unchanged');
+    state = next;
+    for (const tile of Object.values(state.board)) {
+      if (tile?.faceDown) assert.deepEqual(tile, { faceDown: true });
+    }
+  }
+  assert.equal(state.ply, 78);
+  assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'score' });
+  assert.equal(state.scores.black, 100);
+  assert.ok(Object.values(state.board).some((tile) => tile?.faceDown));
+});
+
+test('public replay refuses missing, exhausted, repeated and misplaced outcomes', () => {
+  assert.equal(typeof game.createInitialThreeKingdomsBanqiReplayState, 'function');
+  const root = game.createInitialThreeKingdomsBanqiReplayState('recorded');
+  const flipped = game.applyThreeKingdomsBanqiReplayMove(
+    root,
+    game.parseThreeKingdomsBanqiReplayMove('@a1:G')!,
+  );
+  for (const [parent, token] of [
+    [flipped, '@b1:G'],
+    [flipped, '@a1:S'],
+    [root, '@e3:S'],
+    [root, 'a1a2'],
+  ] as const) {
+    assert.throws(
+      () =>
+        game.applyThreeKingdomsBanqiReplayMove(
+          parent,
+          game.parseThreeKingdomsBanqiReplayMove(token)!,
+        ),
+      /replay/i,
+    );
+  }
+  assert.throws(
+    () => game.applyThreeKingdomsBanqiReplayMove(root, { from: 'a1', to: 'a1' }),
+    /replay/i,
+  );
+  assert.throws(
+    () =>
+      game.applyThreeKingdomsBanqiReplayMove(flipped, {
+        from: 'a1',
+        to: 'a2',
+        revealed: { color: 'red', role: 'soldier' },
+      }),
+    /replay/i,
+  );
+  const second = game.applyThreeKingdomsBanqiReplayMove(
+    flipped,
+    game.parseThreeKingdomsBanqiReplayMove('@b1:g')!,
+  );
+  const captured = game.applyThreeKingdomsBanqiReplayMove(second, move('a1', 'b1'));
+  assert.throws(
+    () =>
+      game.applyThreeKingdomsBanqiReplayMove(
+        captured,
+        game.parseThreeKingdomsBanqiReplayMove('@c1:g')!,
+      ),
+    /replay/i,
+  );
+  assert.deepEqual(flipped.lastMove, move('a1', 'a1'));
+});
+
+test('public replay retains the kernel chase window across quiet moves', () => {
+  assert.equal(typeof game.applyThreeKingdomsBanqiReplayMove, 'function');
+  let state: game.ThreeKingdomsBanqiReplayState = chaseCycle();
+  for (let lap = 0; lap < 2; lap += 1) {
+    for (let i = 0; i < 2; i += 1) {
+      state = game.applyThreeKingdomsBanqiReplayMove(state, move(...CHASES[i]));
+      assert.equal(state.chasedSquare, FLEES[i][0]);
+      state = game.applyThreeKingdomsBanqiReplayMove(state, move(...FLEES[i]));
+    }
+  }
+  assert.throws(() => game.applyThreeKingdomsBanqiReplayMove(state, move('a1', 'b1')), /replay/i);
+});
 const up = (color: game.BanqiColor, role: game.BanqiPieceRole): game.BanqiPiece => ({
   color,
   role,

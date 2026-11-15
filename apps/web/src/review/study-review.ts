@@ -279,9 +279,13 @@ export async function mountStudyReview(
     }
     case 'three-kingdoms-banqi': {
       const [
-        { mountThreeKingdomsBanqiReview },
+        { mountThreeKingdomsBanqiReview, mountThreeKingdomsBanqiPublicReplayReview },
         { installBanqiBoardStyles },
-        { parseThreeKingdomsBanqiFen, threeKingdomsBanqiStateToDealtFen },
+        {
+          parseThreeKingdomsBanqiFen,
+          threeKingdomsBanqiStateToDealtFen,
+          THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
+        },
       ] = await Promise.all([
         import('./three-kingdoms-banqi-review.js'),
         import('./../live-banqi-render.js'),
@@ -289,6 +293,16 @@ export async function mountStudyReview(
       ]);
       // The face-down backs and hit targets are styled by banqi's installed sheet.
       installBanqiBoardStyles();
+      if (config.initialTree?.replay !== undefined) {
+        if (
+          config.initialTree.replay !== THREE_KINGDOMS_BANQI_PUBLIC_REPLAY ||
+          rootFen ||
+          config.initialTree.rootFen
+        ) {
+          throw new Error('Invalid Three Kingdoms banqi public replay root.');
+        }
+        return mountThreeKingdomsBanqiPublicReplayReview(root, await baseReady);
+      }
       const parsed = rootFen
         ? parseThreeKingdomsBanqiFen(rootFen, { gameId: STUDY_GAME_ID })
         : null;

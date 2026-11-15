@@ -14,6 +14,7 @@ import {
   type JungleFlipPieceRole,
   type JungleFlipPlayerView,
   jungleFlipHiddenPool,
+  type ThreeKingdomsBanqiPlayerView,
 } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import { jungleFlipPieceGhostSvg } from '../jungle-flip-render.js';
@@ -76,7 +77,7 @@ export function publicFlipLuckDetail(
   variant: 'banqi' | 'jungle-flip',
   move: { from: string; to: string },
   luck: number,
-  before: BanqiPlayerView | JungleFlipPlayerView,
+  before: BanqiPlayerView | JungleFlipPlayerView | ThreeKingdomsBanqiPlayerView,
   drawn: { color: Color; role: FlipRole } | null,
 ): FlipLuckDetail | null {
   return variant === 'banqi'

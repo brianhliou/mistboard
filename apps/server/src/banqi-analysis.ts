@@ -44,7 +44,7 @@ import * as persistence from './persistence.js';
 const BANQI_ANALYSIS_NODES = banqiEngineTierFor('misty-banqi-level-8')!.nodes;
 // Offline work has no player clock. Leave ample headroom for NNUE on a busy CPU
 // so the node budget binds; the hard cap still bounds a stalled engine process.
-const BANQI_ANALYSIS_MOVETIME_CAP_MS = 30_000;
+export const BANQI_ANALYSIS_MOVETIME_CAP_MS = 30_000;
 
 // Nominal cache dimension: `depth` only has to be STABLE for the (room, engine, depth) cache
 // key (banqi's real dial is nodes, encoded in the engine id). Kept at the family default.
