@@ -162,8 +162,16 @@ export async function retryHostedCi({ root, run, record, log }) {
   });
 }
 
-function gh(root, args) {
-  const result = spawnSync('gh', args, { cwd: root, encoding: 'utf8' });
+// A failed server shard's log runs past 1.5 MB; spawnSync's 1 MB default
+// buffer fails it with ENOBUFS, which read as missing evidence.
+export const GH_MAX_BUFFER = 64 * 1024 * 1024;
+
+export function readCommand(command, args, cwd) {
+  const result = spawnSync(command, args, { cwd, encoding: 'utf8', maxBuffer: GH_MAX_BUFFER });
   if (result.error || result.status !== 0) throw new Error('GitHub CI evidence unavailable');
   return result.stdout;
+}
+
+function gh(root, args) {
+  return readCommand('gh', args, root);
 }

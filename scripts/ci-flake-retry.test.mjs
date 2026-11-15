@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { listedTestFailures, retryKnownFlake, waitForExactCi } from './lib/ci-flake-retry.mjs';
+import {
+  listedTestFailures,
+  readCommand,
+  retryKnownFlake,
+  waitForExactCi,
+} from './lib/ci-flake-retry.mjs';
 
 const file = 'apps/server/src/banqi-analysis-runner.test.ts';
 const tap = (name = file) =>
@@ -151,4 +156,12 @@ test('the required-jobs aggregator is retried with its listed failing test job',
     await fixture({ jobList: [{ name: 'node', conclusion: 'failure' }] }).retry(failed),
     false,
   );
+});
+
+test('a failed-job log larger than 1 MB is read, not refused as missing evidence', () => {
+  // A failed server shard's log was 1.6 MB on 2026-11-14 (run 43680010944);
+  // the 1 MB default buffer threw and the listed flake never re-ran.
+  const size = 2_000_000;
+  const out = readCommand(process.execPath, ['-e', `process.stdout.write('x'.repeat(${size}))`]);
+  assert.equal(out.length, size);
 });
