@@ -229,6 +229,55 @@ describe('study creator workspace', () => {
 });
 
 describe('study chapter permalinks', () => {
+  it.each([
+    { variant: 'jungle', move: 'a1b1', family: 'jungle', first: 'red' },
+    { variant: 'chess', move: 'e2e4', family: 'chess', first: 'white' },
+  ])(
+    'sets the score chart family for a $variant chapter',
+    async ({ variant, move, family, first }) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          if (input.toString() === '/api/chat/study/study1') return jsonResponse({ lines: [] });
+          return jsonResponse({
+            study: {
+              id: 'study1',
+              name: 'Seat inks',
+              description: '',
+              visibility: 'public',
+              isOwner: false,
+              likeCount: 0,
+              likedByViewer: false,
+            },
+            chapters: [
+              {
+                id: 'chapter1',
+                name: 'Chapter',
+                variant,
+                orientation: 'red',
+                root: { version: 1, root: { children: [{ uci: move, children: [] }] } },
+                version: 1,
+                gamebook: false,
+                scoreSeries: {
+                  side: 'red',
+                  series: [{ name: 'Engine', color: 'a', values: [0.7, 0.3] }],
+                },
+              },
+            ],
+          });
+        }),
+      );
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountStudy(root, 'study1');
+      const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+      expect(chart).not.toBeNull();
+      expect(chart?.dataset.seatInkFamily).toBe(family);
+      expect(chart?.querySelector(`.advantage-chart__area--${first}`)).not.toBeNull();
+      expect(chart?.querySelector('.advantage-chart__area--black')).not.toBeNull();
+    },
+  );
+
   const chapterSwitchFixture = (
     opts: { scores?: 'first' | 'both' | 'stale'; owner?: boolean } = {},
   ) => {

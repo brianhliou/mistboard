@@ -78,6 +78,7 @@ import {
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import { createEmbedScoreChart, embedScoreSeries } from './embed-score-chart.js';
+import { embedScoreSeatColors, studyScoreSeatColors } from './embed-score-seat-colors.js';
 import './embed.css';
 
 type StudyPayload = {
@@ -431,17 +432,20 @@ async function mountStudyEmbedCard(
     ? null
     : embedScoreSeries(chapter.scoreSeries, (card.handle.plyCount?.() ?? 0) + 1);
   if (series) {
-    // A flip variant's series is keyed by seat; name the ink that seat played.
-    const seat = series.side === 'red' ? cardOptions.seats.first : cardOptions.seats.second;
-    const sideInk =
-      isFlipSeatVariant(chapter.variant) && (seat.ink === 'red' || seat.ink === 'black')
-        ? seat.ink
-        : undefined;
+    // A flip variant's series is keyed by seat; the card's first seat carries the
+    // ink its replay bound (Three Kingdoms included), so use that binding.
+    const variant = chapter.variant ?? 'xiangqi';
+    const firstInk = cardOptions.seats.first.ink;
+    const seatColors =
+      isFlipSeatVariant(variant) && (firstInk === 'red' || firstInk === 'black')
+        ? embedScoreSeatColors(variant, firstInk)
+        : studyScoreSeatColors(variant, chapter.root);
     chart = createEmbedScoreChart(series, {
+      variant,
+      seatColors,
       onJump: (ply) => card.jumpToPly(ply),
       moveLabel: (ply) =>
         card.handle.moveEntries?.().find((entry) => entry.ply === ply)?.label ?? '',
-      sideInk,
     });
     chart.setPly(currentPly);
     card.setUnderBoard(chart.el);

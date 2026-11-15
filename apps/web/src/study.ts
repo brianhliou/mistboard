@@ -31,7 +31,8 @@ import {
   serializedTreeMainline,
 } from '@mistboard/game';
 import { createEmbedScoreChart, embedScoreSeries } from './embed/embed-score-chart.js';
-import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
+import { embedScoreSeatColors, studyScoreSeatColors } from './embed/embed-score-seat-colors.js';
+import { isFlipSeatVariant } from './flip-seat-ink.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -1025,7 +1026,7 @@ function renderStudy(
     const series = embedScoreSeries(chapter.scoreSeries, positions);
     // Series are seat-keyed; the recorded opening flip binds each seat's ink.
     // Use the same replays as the embed, including identity-free public games.
-    let sideInk: 'red' | 'black' | undefined;
+    let seatColors = studyScoreSeatColors(variant, mountedTree);
     if (series && isFlipSeatVariant(variant)) {
       let firstColor: 'red' | 'black' | null = null;
       const moves = serializedTreeMainline(mountedTree);
@@ -1046,12 +1047,12 @@ function renderStudy(
           threeKingdomsBanqiStudyLine({ id: chapter.id, root: mountedTree }).views.at(-1)
             ?.firstColor ?? null;
       }
-      const ink = seatInkForVariant(variant, series.side, firstColor);
-      if (ink === 'red' || ink === 'black') sideInk = ink;
+      seatColors = embedScoreSeatColors(variant, firstColor);
     }
     const scoreChart = series
       ? createEmbedScoreChart(series, {
-          sideInk,
+          variant,
+          seatColors,
           onJump: (ply) => handle?.jumpToPly(ply),
           moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
         })

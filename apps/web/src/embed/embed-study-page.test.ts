@@ -909,6 +909,44 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it.each([
+    {
+      variant: 'jungle',
+      move: 'a1b1',
+      family: 'jungle',
+      first: 'red',
+      rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
+    },
+    { variant: 'chess', move: 'e2e4', family: 'chess', first: 'white', rootFen: undefined },
+  ])(
+    'gives an embedded $variant score chart its own seat family',
+    async ({ variant, move, family, first, rootFen }) => {
+      stubFetch(200, {
+        study: { id: 's' },
+        chapters: [
+          {
+            id: 'chapter1',
+            name: 'Seat inks',
+            variant,
+            root: { rootFen, root: { children: [{ uci: move, children: [] }] } },
+            scoreSeries: {
+              side: 'red',
+              series: [{ name: 'Engine', color: 'a', values: [0.7, 0.3] }],
+            },
+          },
+        ],
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'chapter1' });
+      const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+      expect(chart?.dataset.seatInkFamily).toBe(family);
+      expect(chart?.querySelector(`.advantage-chart__area--${first}`)).not.toBeNull();
+      expect(chart?.querySelector('.advantage-chart__area--black')).not.toBeNull();
+      root.remove();
+    },
+  );
+
   it("draws a jieqi chapter's score series under the board, its cursor on the board's ply", async () => {
     // 40 plies, so 41 positions: index 0 the deal, index n after ply n.
     const ab = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.01);

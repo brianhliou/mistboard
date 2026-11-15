@@ -78,11 +78,13 @@ describe('study score chart played ink', () => {
           await mountStudy(root, 'score', 'chapter');
           const expected =
             variant === 'xiangqi' || ink === 'red' ? side : side === 'red' ? 'black' : 'red';
+          // Flip Jungle's second ink is drawn blue, and the legend says so.
+          const word = expected === 'red' ? 'Red' : variant === 'jungle-flip' ? 'Blue' : 'Black';
           expect(root.querySelector('.embed-score-chart__legend')?.textContent).toContain(
-            `Win chance for ${expected === 'red' ? 'Red' : 'Black'}`,
+            `Win chance for ${word}`,
           );
           expect(root.querySelector('.embed-score-chart')?.getAttribute('aria-label')).toContain(
-            `Win chance for ${expected === 'red' ? 'Red' : 'Black'}`,
+            `Win chance for ${word}`,
           );
           expect(root.querySelector('.embed-score-chart__line')).not.toBeNull();
         });
