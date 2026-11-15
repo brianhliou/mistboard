@@ -37,6 +37,22 @@ describe('cardSeatName', () => {
     expect(cardSeatName('Fairy-Stockfish Level 2')).toBe('FSF Level 2');
   });
 
+  it('drops the game from Misty only when it is this game', () => {
+    expect(cardSeatName('Misty Three Kingdoms Banqi Level 2', 'Three Kingdoms Banqi')).toBe(
+      'Misty Level 2',
+    );
+    expect(cardSeatName('Misty Banqi', 'Banqi')).toBe('Misty');
+    for (const name of [
+      'Misty Banqi Level 2',
+      'Misty Three Kingdoms Banqi fan',
+      'Misty Banqiing',
+    ]) {
+      expect(cardSeatName(name, name.includes('Three') ? 'Three Kingdoms Banqi' : 'Jungle')).toBe(
+        name,
+      );
+    }
+  });
+
   it('leaves every other name alone', () => {
     for (const name of ['Pikafish Level 7', 'Guest', 'Fairy-Stockfish', 'Fairy-Stockfish fan']) {
       expect(cardSeatName(name)).toBe(name);
@@ -76,7 +92,7 @@ describe('/games seat names', () => {
     );
   });
 
-  it('names an old recorded Three Kingdoms seat after the game, level kept', () => {
+  it('a finished card calls Misty by her level and keeps the game name as its tooltip', () => {
     const fullName = 'Misty Three Kingdoms Banqi Level 7';
     const tile = buildFinishedTile(
       finishedGame(
@@ -94,7 +110,7 @@ describe('/games seat names', () => {
     const name = tile.querySelector<HTMLElement>(
       '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
     );
-    expect(name?.textContent).toBe(fullName);
+    expect(name?.textContent).toBe('Misty Level 7');
     expect(name?.title).toBe(fullName);
   });
 });

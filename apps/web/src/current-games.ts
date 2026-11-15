@@ -1097,7 +1097,7 @@ function finishedSeatRow(
   row.title = name;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
-  label.textContent = cardSeatName(name);
+  label.textContent = cardSeatName(name, variantDisplayLabel(game.variant));
   label.title = name;
   if (variantSeatsHaveInk(game.variant)) {
     row.append(
