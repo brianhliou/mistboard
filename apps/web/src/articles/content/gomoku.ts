@@ -26,7 +26,7 @@ export function createGomokuArticle(
     status: 'published',
     publishedAt: '2026-10-31',
     updatedAt: '2026-11-14',
-    updateNote: 'Added an annotated engine game: Rapfi at Level 8 against Level 7, with a deeper Rapfi’s win-chance graph and notes.',
+    updateNote: 'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a win-chance graph from a deeper Rapfi search.',
     audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
     thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
     tldr: [
