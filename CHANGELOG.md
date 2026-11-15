@@ -15,6 +15,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Signed-in players can challenge someone they follow, or who follows them, to a game right now from Play, Friend, Real time; the invitation reaches the other player on any page for a minute, accepting opens the game for both, and a setting turns incoming invitations off ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
+- A tab in the background shows waiting game invitations in its title ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
+- The bots page shows Misty's Banqi and Flip Jungle records by level ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
+- Jieqi bot Level 5 searches deeper and now plays clearly stronger than Level 4 ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - The Three Kingdoms Banqi bot searches through repeated positions, so it stops chasing pieces it cannot win; its ratings start a fresh record on the new engine ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - The Play window now asks who you are playing first, shows each time control as minutes plus increment once, and lets signed-in players send a correspondence challenge to someone they follow or who follows them ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - Picking correspondence or Rated as a guest says it needs an account before you start, and signing in brings back the variant, pace and side you chose ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
@@ -61,6 +65,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Studies fit one phone screen, and each move note sits in a fixed slot that opens in full on a tap ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
+- The Three Kingdoms Banqi rules page is available in Chinese ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - Clarify mate objectives and let players explore completed puzzles ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
 - Six rules pages and the Vietnamese jieqi guide embed an annotated sample game ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - A player page for Meng Fanrui, the 2025 Chinese Xiangqi Association men's champion, in English and Chinese ([56f89b57](https://github.com/brianhliou/mistboard/commit/56f89b57))
@@ -88,6 +94,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Study analysis charts fill each side's advantage in its seat colour ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - A recording clock's credit shows beside every board, worded like the site's other game sources ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Games sent from a recording clock credit the device with a link on every board ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Recording clocks and event software can post xiangqi games straight to a broadcast page through the new broadcast push API ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
@@ -182,6 +189,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Misty's name fits on finished game cards, shown as Misty Level N ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
+- Games on the current games page keep their place, and a new game appears at the top of its group ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - Pikafish xiangqi bots at each level now search with their own engine, so weaker levels no longer play above their strength ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Your own challenge card now names the side you picked ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Fairy-Stockfish xiangqi bots no longer treat a game with no capture for 100 plies as drawn and now play on to the site's 120-ply rule ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
