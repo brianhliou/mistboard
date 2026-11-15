@@ -52,6 +52,33 @@ describe('seek sign-in link', () => {
 });
 
 describe('accept error copy', () => {
+  it('links the first move owed instead of treating the seek as closed', async () => {
+    stubAccept(409, {
+      error: 'first_move_owed',
+      roomId: 'xq_owed',
+      opponentName: '<Erin>',
+    });
+    const status = document.createElement('p');
+    const gone = vi.fn();
+    const action = buildSeekAcceptAction({
+      className: 'x',
+      seek,
+      signedIn: true,
+      surface: 'correspondence',
+      status,
+      onGone: gone,
+    }) as HTMLButtonElement;
+    action.click();
+    await flush();
+    expect(status.textContent).toBe(
+      'Make your first move in your game against <Erin> before starting another.',
+    );
+    expect(status.querySelector('a')?.getAttribute('href')).toBe('/room/xq_owed');
+    expect(status.querySelector('erin')).toBeNull();
+    expect(action.disabled).toBe(false);
+    expect(gone).not.toHaveBeenCalled();
+  });
+
   it('reads the same for a public seek taken, withdrawn or expired', () => {
     for (const code of ['seek_taken', 'seek_not_found', 'challenge_expired']) {
       expect(seekAcceptErrorText(code, 'public', 'en')).toBe('This seek is no longer open.');

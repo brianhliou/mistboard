@@ -311,6 +311,8 @@ export const EN_PLAY = {
   'correspondence.gamesUnavailableBody': 'Your correspondence games could not be loaded right now.',
   'correspondence.signIn': 'Sign in',
   'correspondence.heading': 'Correspondence',
+  'correspondence.firstMoveOwed':
+    'Make your first move in your game against {opponent} before starting another.',
   'correspondence.yourMove': 'Your move',
   'correspondence.waitingOnOpponent': 'Waiting on opponent',
   'correspondence.recentlyFinished': 'Recently finished',

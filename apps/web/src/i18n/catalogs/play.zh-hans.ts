@@ -541,6 +541,7 @@ export const ZH_HANS_PLAY = {
   'correspondence.gamesUnavailableBody': '暂时无法加载你的通信对局。',
   'correspondence.signIn': '登录',
   'correspondence.heading': '通信对局',
+  'correspondence.firstMoveOwed': '请先在与{opponent}的对局中走出第一步，再开始另一盘对局。',
   'correspondence.yourMove': '轮到你走',
   'correspondence.waitingOnOpponent': '等待对手',
   'correspondence.recentlyFinished': '最近结束',

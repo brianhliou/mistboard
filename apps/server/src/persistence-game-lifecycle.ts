@@ -338,6 +338,27 @@ export async function appendRoomEvent<T extends PersistedRoomEvent>(
   if (event.roomId !== roomId) {
     throw new Error(`event roomId mismatch: expected ${roomId}, got ${event.roomId}`);
   }
+  if (event.type === 'game-aborted' && 'reason' in event && event.reason === 'pregame-timeout') {
+    // Keep the stalling account after the deadline row is removed. The abort
+    // and its audit commit together, including rooms with no games row. Account
+    // ids stay in the private audit, never in replay or reconnect payloads.
+    await getPool().query(
+      `WITH appended AS (
+         INSERT INTO events (room_id, seq, type, payload) VALUES ($1, $2, $3, $4)
+         RETURNING room_id, seq, payload
+       )
+       INSERT INTO room_lifecycle_audit
+         (room_id, kind, at_ms, event_seq, build_revision, payload)
+       SELECT a.room_id, 'correspondence-first-move-stalled',
+              (a.payload->>'at')::bigint, a.seq, $5,
+              jsonb_build_object('userId', rd.seat_user_id, 'seat', rd.seat,
+                                 'gameSpecId', rd.game_spec_id)
+       FROM appended a JOIN room_deadlines rd ON rd.room_id = a.room_id
+       WHERE rd.seat_user_id IS NOT NULL`,
+      [roomId, seq, event.type, event, getBuildInfo().revision],
+    );
+    return;
+  }
   await getPool().query(
     'INSERT INTO events (room_id, seq, type, payload) VALUES ($1, $2, $3, $4)',
     [roomId, seq, event.type, event],
