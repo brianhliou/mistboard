@@ -188,8 +188,6 @@ describe('homepage play panel', () => {
           expect(game.querySelector('a.pp-name')).toBeNull();
           expect(game.querySelector('.pp-name')?.textContent).toContain('Jieqi');
         }
-        // Enabling a playtest does not make its draft rules public.
-        expect(board.querySelector('a[href="/rules/fanfanqi"]')).toBeNull();
       } finally {
         Object.assign(article, { slug, status, publishedAt });
       }

@@ -163,7 +163,7 @@ describe('FFQ hidden admin room entry', () => {
     setFFQBanqiEngineOptions([
       {
         id: 'misty-ffq-banqi-level-1',
-        name: 'Misty level 1',
+        name: 'Misty Level 1',
         familyName: 'Misty',
         kind: 'builtin',
       },

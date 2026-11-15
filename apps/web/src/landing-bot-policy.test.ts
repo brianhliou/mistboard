@@ -373,7 +373,7 @@ describe('landing bot ladder (homepage play panel)', () => {
     const spec = 'three-kingdoms-banqi';
     const engines = Array.from({ length: 8 }, (_, i) => `misty-${spec}-level-${i + 1}`);
     expect(LANDING_BOT_GAME_SPEC_IDS.indexOf(spec)).toBe(
-      LANDING_BOT_GAME_SPEC_IDS.indexOf('banqi') + 1,
+      LANDING_BOT_GAME_SPEC_IDS.indexOf('ffq-banqi') + 1,
     );
     expect(landingBotLadder(spec)).toEqual([]);
     expect(landingBotLadder(spec, new Set(['misty']))).toEqual([]);

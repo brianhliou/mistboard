@@ -186,7 +186,7 @@ test('old Three Kingdoms engine seats read short names without changing their id
       return [
         `misty-three-kingdoms-banqi-level-${level}`,
         `MistyThreeKingdomsBanqi level ${level}`,
-        `Misty level ${level}`,
+        `Misty Level ${level}`,
       ];
     }),
   ];

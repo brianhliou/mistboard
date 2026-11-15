@@ -134,7 +134,7 @@ describe('bot seat names fit game cards', () => {
         subjectType: 'engine-version',
         subjectId: 'misty-three-kingdoms-banqi-level-7',
       }),
-    ).toBe('Misty level 7');
+    ).toBe('Misty Level 7');
   });
 
   it('leaves a human literally named MistyThreeKingdomsBanqi alone', () => {

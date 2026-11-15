@@ -154,7 +154,7 @@ export function isThreeKingdomsBanqiEngineClientId(clientId: string | undefined)
 export function threeKingdomsBanqiEngineDisplayName(clientId: string): string {
   const tier = threeKingdomsBanqiEngineTierFor(clientId);
   if (!tier) return clientId;
-  return tier.level === undefined ? 'Misty' : `Misty level ${tier.level}`;
+  return tier.level === undefined ? 'Misty' : `Misty Level ${tier.level}`;
 }
 
 export function threeKingdomsBanqiEngineVersion(clientId: string | undefined): string | null {

@@ -407,8 +407,11 @@ test('FFQ public live launch keeps correspondence admin-only, including directed
   });
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(close);
+  let roleReads = 0;
   t.mock.method(getPool(), 'query', async (sql: string, args: unknown[]) => {
-    assert.ok(sql.includes('account_role AS'));
+    // Other gates (such as the first-move-owed check) query too; only the role read answers.
+    if (!sql.includes('account_role AS')) return { rows: [] };
+    roleReads += 1;
     return { rows: [{ accountRole: args[0] }] };
   });
   for (const user of [null, player, admin]) {
@@ -421,4 +424,5 @@ test('FFQ public live launch keeps correspondence admin-only, including directed
     await createSeekResult(ctx, player, { gameSpecId: 'ffq-banqi', daysPerMove: 3 }, 'board'),
     { status: 403, body: { error: 'variant_not_granted' } },
   );
+  assert.ok(roleReads > 0);
 });

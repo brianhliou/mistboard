@@ -206,7 +206,7 @@ test('Fanfanqi is live and public for casual play, with English rules and no rat
   assert.equal(isPublicGameSpec(id), true);
   assert.equal(isAllowlistedGameSpec(id), false);
   assert.equal(await mayPlayVariant(null, id), true);
-  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') - 1], id);
+  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') + 1], id);
   assert.equal(articleIsIndexable('fanfanqi'), true);
   assert.equal(ratingPoolForSpec(id), null);
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), false);
@@ -292,7 +292,7 @@ test('Three Kingdoms Banqi is launched and live-rated, with casual-only correspo
   const id = 'three-kingdoms-banqi';
   assert.equal(isPublicGameSpec(id), true);
   assert.equal(articleIsIndexable(id), true);
-  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') + 1], id);
+  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('ffq-banqi') + 1], id);
   assert.equal(isAllowlistedGameSpec(id), false);
   assert.equal(await mayPlayVariant(null, id), true);
   assert.equal(ratingPoolForSpec(id), 'three_kingdoms_banqi');

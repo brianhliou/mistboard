@@ -137,7 +137,7 @@ test('TK tier selection accepts eight levels, keeps the historical budget and re
   assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_VERSION, '0.3.1');
   for (const tier of engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES) {
     assert.equal(engine.threeKingdomsBanqiEngineVersion(tier.id), '0.3.1');
-    assert.equal(engine.threeKingdomsBanqiEngineDisplayName(tier.id), `Misty level ${tier.level}`);
+    assert.equal(engine.threeKingdomsBanqiEngineDisplayName(tier.id), `Misty Level ${tier.level}`);
   }
   assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_NAME, 'MistyThreeKingdomsBanqi');
   assert.equal(

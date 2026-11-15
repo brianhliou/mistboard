@@ -342,7 +342,7 @@ export function persistedSeatDisplayName(participant: {
       return threeKingdomsBanqiEngineDisplayName(subjectId);
     }
     const oldName = /^MistyThreeKingdomsBanqi(?: level ([1-8]))?$/.exec(displayName);
-    if (oldName) return oldName[1] ? `Misty level ${oldName[1]}` : 'Misty';
+    if (oldName) return oldName[1] ? `Misty Level ${oldName[1]}` : 'Misty';
   }
   if (subjectType === 'engine-version' || subjectType === 'bot') {
     const banqiId = subjectType === 'engine-version' ? subjectId : engineId;

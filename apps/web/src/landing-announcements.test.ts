@@ -324,7 +324,15 @@ describe('landing announcements', () => {
     // announcement-i18n.ts, not the catalog, so the whole entry renders in zh.
     const newest = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0];
     const localized = localizeAnnouncement(newest, 'zh-Hant');
-    expect(localized.headline).not.toBe(newest?.headline);
+    // An englishOnly entry keeps its English copy in every locale by design.
+    if (newest?.englishOnly) expect(localized.headline).toBe(newest.headline);
+    else expect(localized.headline).not.toBe(newest?.headline);
+    const newestTranslated = [...announcements()]
+      .filter((entry) => !entry.englishOnly)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    expect(localizeAnnouncement(newestTranslated, 'zh-Hant').headline).not.toBe(
+      newestTranslated?.headline,
+    );
     expect(news.querySelector('.news-page-link')?.textContent).toBe(localized.cta);
     expect(news.querySelector('.news-page-headline')?.textContent).toBe(localized.headline);
   });
