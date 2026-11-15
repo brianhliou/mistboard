@@ -45,6 +45,9 @@ function rulesTemplateFailures(list: readonly Article[]) {
     if (lines.length < 2 || lines.length > 4 || lines.some((line) => !line.trim())) {
       missing.push('summary');
     }
+    // The In short box is the page's opening; the summary paragraph above it
+    // would say the same thing twice, so a rules page keeps it for search only.
+    if (article.showSummaryOnPage !== false) missing.push('lede');
     // Both shared helpers produce an optional lead and a final button row.
     // Reference pages keep relatedClosing; a play link is not required.
     const closing = article.sections.at(-1);
@@ -147,6 +150,8 @@ describe('published rules summaries and final closings', () => {
           ],
         },
         { ...valid, slug: 'rules-no-closing', sections: [] },
+        { ...valid, slug: 'rules-summary-shown', showSummaryOnPage: true },
+        { ...valid, slug: 'rules-summary-default', showSummaryOnPage: undefined },
         {
           ...valid,
           slug: 'rules-secondary-first-button',
@@ -194,6 +199,8 @@ describe('published rules summaries and final closings', () => {
       { slug: 'rules-blank-line', missing: ['summary'] },
       { slug: 'rules-five-summary-lines', missing: ['summary'] },
       { slug: 'rules-no-closing', missing: ['closing'] },
+      { slug: 'rules-summary-shown', missing: ['lede'] },
+      { slug: 'rules-summary-default', missing: ['lede'] },
       { slug: 'rules-secondary-first-button', missing: ['closing'] },
       { slug: 'rules-note-before-buttons', missing: ['closing'] },
       { slug: 'rules-prose-after-buttons', missing: ['closing'] },

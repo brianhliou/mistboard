@@ -54,6 +54,7 @@ export const darkChessArticle: Article = {
     tagline: 'Chess where you see only the squares your pieces can reach.',
     summary:
       "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
+    showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-22',
     updatedAt: '2026-11-15',
