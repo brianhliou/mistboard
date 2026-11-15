@@ -398,6 +398,10 @@ export function botEngineAttributions(): BotEngineAttribution[] {
  * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
  * cannot be linkable on /watch and plain on /games.
  */
+/** Every engine id Misty's own builds use (misty-banqi-level-3,
+ *  misty-three-kingdoms-banqi-level-1, misty-ffq-banqi-level-4, ...). */
+const MISTY_OWN_ENGINE_ID = /^misty-/;
+
 export type LiveSeatProfile = { handle?: string; botId?: string; champions?: Champion[] };
 
 export function liveSeatProfileIdentity(
@@ -409,7 +413,10 @@ export function liveSeatProfileIdentity(
     // Same order as liveSeatEngineName: the name and the page it links to come
     // from one source.
     const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-    return bot ? { botId: bot.id } : {};
+    if (bot) return { botId: bot.id };
+    // Misty's own engines with no attribution row (Three Kingdoms Banqi, FFQ
+    // banqi) are still Misty; their seat links her page, never an engine page.
+    return MISTY_OWN_ENGINE_ID.test(engineClientId) ? { botId: 'misty' } : {};
   }
   return userHandle ? { handle: userHandle } : {};
 }
