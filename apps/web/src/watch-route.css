@@ -22,12 +22,9 @@
   }
 }
 
-/* col1 (phone): who is playing and on what clock belongs directly under the
-   board. The shared stack puts the "side" rail there because on a review page it
-   carries the game's identity; on /watch it carries a BROWSE list (the channel
-   rail), and the previously-on strip is browse too, so both drop below the
-   console. Dissolving .watch-center is what lets the previously-on strip leave
-   the board's own area; each child gets its own row, so nothing overlaps. */
+/* col1 (phone): channels form a single scrollable row above the game; the
+   detailed meta card follows the board, console and completed games. Dissolve
+   both columns so those pieces can occupy separate rows in the shared grid. */
 /* The headline is a phone affordance: from col2 up the console beside the board
    already names both players, so it would only repeat them. */
 .watch-headline {
@@ -37,12 +34,13 @@
 @media (max-width: 799px) {
   .watch-review-shell .review-shell__cluster {
     grid-template-areas:
+      "channels"
       "headline"
       "board"
       "pov"
       "table"
       "previously"
-      "side";
+      "meta";
   }
 
   .watch-review-shell .watch-headline {
@@ -67,8 +65,10 @@
     line-height: 1.3;
   }
 
-  /* Both wrappers dissolve: the shell's center slot AND .watch-center inside it,
-     or the board/pov/previously trio stays nested and never reaches the grid. */
+  /* The shell slots AND their inner columns must dissolve for their children
+     to reach the grid. */
+  .watch-review-shell .review-shell__left,
+  .watch-review-shell .watch-left,
   .watch-review-shell .review-shell__center,
   .watch-review-shell .watch-center {
     display: contents;
@@ -84,6 +84,14 @@
 
   .watch-review-shell .watch-previously {
     grid-area: previously;
+  }
+
+  .watch-review-shell .watch-channel-rail {
+    grid-area: channels;
+  }
+
+  .watch-review-shell .watch-meta {
+    grid-area: meta;
   }
 }
 
@@ -1059,5 +1067,80 @@
   .watch-review-shell .review-shell__left {
     align-self: start;
     overflow: visible;
+  }
+}
+
+@media (max-width: 799px) {
+  /* Keep every channel reachable without making the document wider or
+     stacking an entire desktop rail below the game. */
+  .watch-review-shell .watch-channel-rail {
+    --watch-marker: 24px;
+    width: 100%;
+  }
+
+  .watch-review-shell .watch-channel-list {
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .watch-review-shell .watch-channel-list a {
+    display: flex;
+    flex-direction: row-reverse;
+    flex: 0 0 auto;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 6px 10px;
+  }
+
+  .watch-review-shell .watch-channel-text {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .watch-review-shell .watch-channel-player {
+    display: none;
+  }
+
+  .watch-review-shell .watch-headline {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .watch-review-shell .watch-meta:empty {
+    display: none;
+  }
+
+  /* Names keep their whole line box and can wrap, including unbroken handles.
+     Linked names are controls too, so give them the same touch floor. */
+  .watch-game-table .clock-name,
+  .watch-meta .game-meta-card__name {
+    flex: 1;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
+  .watch-game-table .watch-player-bot,
+  .watch-game-table .clock-to-move {
+    font-size: 11px;
+  }
+
+  .watch-meta .game-meta-card__variant {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .watch-game-table .review-move-list__move,
+  .watch-empty-actions a,
+  .watch-pov__button {
+    min-height: 44px;
   }
 }
