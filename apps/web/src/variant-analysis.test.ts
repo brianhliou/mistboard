@@ -15,6 +15,7 @@ import {
 } from './gomoku-analysis-import.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
+import * as ceval from './review/engine/ceval.js';
 import { setResolvedAdmin } from './signed-in-state.js';
 import { mountVariantAnalysisPage } from './variant-analysis.js';
 
@@ -98,6 +99,36 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
+});
+
+describe('Jieqi standalone rule selection', () => {
+  it.each([
+    '',
+    PUBLIC_START.jieqi,
+    `${PUBLIC_START.jieqi} ${PINNED_HIDDEN.jieqi}`,
+    PUBLIC_MIDGAME.jieqi,
+  ])('uses current rules without game provenance, including FEN %s', async (fen) => {
+    vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
+    const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
+      depth: 0,
+      seldepth: 0,
+      nodes: 0,
+      nps: 0,
+      lines: [],
+    }));
+    vi.spyOn(ceval, 'createCeval').mockReturnValue({
+      variant: 'jieqi',
+      preload: async () => {},
+      evaluate,
+      stop: vi.fn(),
+      dispose: vi.fn(),
+    });
+    const root = await mountAt('jieqi', fen ? `?fen=${encodeURIComponent(fen)}` : '');
+    root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
+    await vi.waitFor(() => expect(evaluate).toHaveBeenCalled());
+    expect(evaluate.mock.lastCall![0]).toMatchObject({ jieqiRule: 'jqe-v1', movesUci: [] });
+    expect(evaluate.mock.lastCall![0].initialFen?.split(' ')).toHaveLength(5);
+  });
 });
 
 describe('Gomoku direct analysis mount', () => {

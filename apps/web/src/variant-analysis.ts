@@ -389,6 +389,7 @@ export async function mountVariantAnalysisPage(
         {
           createInitialJieqiState,
           createJieqiDeal,
+          JIEQI_ADJUDICATION_RULE,
           jieqiStateToDealtFen,
           jieqiStateToPikafishFen,
           parseJieqiFen,
@@ -401,11 +402,14 @@ export async function mountVariantAnalysisPage(
         import('./live-jieqi-render.js'),
       ]);
       installJieqiBoardStyles();
-      const { truth, custom } = seedRoot(
+      const { truth: seed, custom } = seedRoot(
         fenParam,
         (fen) => parseJieqiFen(fen, { gameId: ANALYSIS_GAME_ID, rng: Math.random }),
         () => createInitialJieqiState(ANALYSIS_GAME_ID, createJieqiDeal(Math.random)),
       );
+      // A FEN has no game provenance. Both custom positions and fresh deals
+      // analyse under the current rule, even though FEN carries no rule stamp.
+      const truth = { ...seed, adjudicationRule: JIEQI_ADJUDICATION_RULE };
       const fen = jieqiStateToDealtFen(truth);
       pinFenInUrl(fenParam, fen);
       const codec = makeJieqiTreeAdapter(ANALYSIS_GAME_ID, null);

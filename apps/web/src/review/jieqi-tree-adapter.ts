@@ -14,6 +14,7 @@ import {
   getJieqiPlayerView,
   getJieqiPublicView,
   isJieqiLegalMove,
+  type JieqiAdjudicationRule,
   type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
@@ -118,13 +119,17 @@ export function makeJieqiTreeAdapter(
   // Read at PROJECTION time, not at construction: the review menu's Reveal toggle
   // flips the caller's flag and re-renders, and the adapter picks it up on the next
   // project() rather than being rebuilt (which would drop the tree).
-  opts: { revealAll?: () => boolean } = {},
+  opts: { revealAll?: () => boolean; adjudicationRule?: JieqiAdjudicationRule } = {},
 ): VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView> {
   return {
     mode: 'perfect-info',
     initialTruth: () => {
       if (!deal) throw new Error('jieqi tree adapter: no deal; mount with config.root');
-      return createInitialJieqiState(gameId, deal);
+      return createInitialJieqiState(gameId, deal, {
+        ...(opts.adjudicationRule
+          ? { repetition: true, adjudicationRule: opts.adjudicationRule }
+          : {}),
+      });
     },
     isLegal: (truth, move) => truth.status.type === 'playing' && isJieqiLegalMove(truth, move),
     applyMove: (truth, move) => applyJieqiMove(truth, move),

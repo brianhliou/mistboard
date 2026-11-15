@@ -5,6 +5,7 @@
 // presentation is built per-game rather than held as a module constant.
 
 import {
+  type JieqiAdjudicationRule,
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
@@ -48,6 +49,9 @@ import {
  *  at a parsed dealt position (`root`) and read the current truth back from the
  *  position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
 export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState> & {
+  /** Persisted game's public stamp. Unstamped games retain legacy rules.
+   *  Composition callers put the current rule on their parsed root instead. */
+  adjudicationRule?: JieqiAdjudicationRule;
   revealLuckOnly?: boolean;
 };
 
@@ -102,6 +106,7 @@ function makeJieqiPresentation(
       // face-down. A review's deal may hold placeholders for those (a finished
       // game's public deal), so the default pool would hand the engine guesses.
       fen: (truth) => jieqiStateToPikafishFen(truth, { public: true }),
+      jieqiRule: (truth) => truth.adjudicationRule ?? 'legacy',
       canEvaluatePosition: (truth) => truth.status.type === 'playing',
       formatPvMove: formatJieqiBestMove,
       moveFromEngineUci: pikafishUciToJieqiMove,
@@ -201,12 +206,15 @@ export function mountJieqiReview(
   deal: JieqiDeal | null,
   config: JieqiReviewConfig,
 ): JieqiReviewHandle {
-  // The postgame deal is fully known here, so revealing is a presentation switch,
-  // not a data fetch: the flag lives beside the adapter that reads it and the menu
-  // item that flips it, and nothing else in the review needs to know about it.
+  // Revealing the public deal is a presentation switch; undetermined pieces
+  // stay unknown. The flag lives beside the adapter and the menu item that
+  // flips it, and nothing else in the review needs to know about it.
   let revealAll = false;
   const faceDown = withFaceDownReview(
-    makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll }),
+    makeJieqiTreeAdapter(gameId, deal, {
+      adjudicationRule: config.adjudicationRule,
+      revealAll: () => revealAll,
+    }),
     {
       ...config,
       revealHidden: {
