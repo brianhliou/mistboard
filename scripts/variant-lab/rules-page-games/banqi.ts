@@ -177,7 +177,7 @@ export async function buildBanqi(assets: string, scratch: string) {
     sidelines,
     notes: {
       intro:
-        'Level 7 has the first seat and black ink; Level 8 has the second seat and red ink. The graph is from the first seat. Flip grades compare public pool means, while the die marks the revealed piece’s luck.',
+        'Level 7 moves first and plays black; Level 8 plays red. The graph shows Level 7’s winning chances. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw.',
       comments,
       evidence: {
         ...provenance,
