@@ -10,11 +10,29 @@ import {
   firstPartyBotForId,
   liveSeatEngineName,
   liveSeatProfileIdentity,
+  mistyLevelForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
+
+test('Misty level snapshots resolve only engines offered for that variant', () => {
+  for (const [variant, base] of [
+    ['banqi', 'misty-banqi'],
+    ['jungle-flip', 'misty-jungle-flip'],
+  ]) {
+    assert.equal(mistyLevelForEngine(variant!, base), 7);
+    for (const level of [1, 2, 3, 4, 5, 6, 8]) {
+      assert.equal(mistyLevelForEngine(variant!, `${base}-level-${level}`), level);
+    }
+    assert.equal(mistyLevelForEngine(variant!, null), null);
+    assert.equal(mistyLevelForEngine(variant!, 'unknown'), null);
+  }
+  assert.equal(mistyLevelForEngine('banqi', 'misty-jungle-flip-level-1'), null);
+  assert.equal(mistyLevelForEngine('jungle-flip', 'misty-banqi-level-1'), null);
+  assert.equal(mistyLevelForEngine('dark-chess', 'python-v2-v1.6'), null);
+});
 
 test('the merged Misty identity fronts every house variant', () => {
   const misty = firstPartyBotForId('misty');

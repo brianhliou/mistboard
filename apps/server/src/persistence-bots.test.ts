@@ -25,6 +25,142 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('bot profiles', () => {
+  test('splits Misty records by stored level without attributing unlabelled games to a level', async () => {
+    await insertBotProfile('misty', 'Misty', 'public', {
+      gameSpecId: 'jungle-flip',
+      supportedGameSpecIds: ['jungle-flip', 'banqi'],
+    });
+    const seed = async (
+      id: string,
+      variant: string,
+      engineId: string | null,
+      result: 'black-wins' | 'white-wins' | 'draw',
+      overrides: Partial<Parameters<typeof recordGameEnd>[1]> = {},
+    ) =>
+      recordGameEnd(id, {
+        variant,
+        mode: 'pve',
+        result,
+        termination: result === 'draw' ? 'draw' : 'king-captured',
+        plyCount: 20,
+        startedAt: new Date('2026-11-01T00:00:00Z'),
+        endedAt: new Date('2026-11-01T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: engineId,
+        whiteName: 'Guest',
+        blackName: 'Misty',
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Misty',
+            subjectType: 'bot',
+            subjectId: 'misty',
+            engineId,
+            visibility: 'public',
+          },
+        ],
+        ...overrides,
+      });
+    await seed('level-1-win', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins');
+    await seed('level-8-loss', 'jungle-flip', 'misty-jungle-flip-level-8', 'white-wins');
+    let listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    const records = (bot: typeof listed) => bot?.levelRecordsByGameSpecId;
+    assert.deepEqual(records(listed)?.['jungle-flip'], [
+      { level: 1, games: 1, wins: 1, losses: 0, draws: 0 },
+      { level: 8, games: 1, wins: 0, losses: 1, draws: 0 },
+    ]);
+    await seed('no-level', 'jungle-flip', null, 'draw');
+    await seed('legacy-alias', 'jungle-flip', 'misty-jungle-flip', 'draw');
+    // A stored row without a level keeps it when the game is recorded again
+    // with the same engine id, and is reported apart from the numbered levels.
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        "UPDATE game_participants SET bot_level = NULL WHERE game_id = 'legacy-alias'",
+      );
+    } finally {
+      await client.end();
+    }
+    await seed('legacy-alias', 'jungle-flip', 'misty-jungle-flip', 'draw');
+    await seed('current-alias', 'banqi', 'misty-banqi', 'black-wins');
+    await seed('too-short', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
+      plyCount: 1,
+    });
+    await seed('eve', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', { mode: 'eve' });
+    await seed('private', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
+      visibility: 'private',
+    });
+    await seed('internal', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
+      corpusId: 'internal-banqi-provider',
+    });
+    await seed('prelaunch', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
+      endedAt: new Date('2026-01-01'),
+    });
+    listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    const profile = await getPublicBotProfile('misty');
+    assert.deepEqual(profile?.levelRecordsByGameSpecId, records(listed));
+    assert.deepEqual(records(listed)?.['jungle-flip'], [
+      { level: 1, games: 1, wins: 1, losses: 0, draws: 0 },
+      { level: 8, games: 1, wins: 0, losses: 1, draws: 0 },
+      { level: null, games: 2, wins: 0, losses: 0, draws: 2 },
+    ]);
+    assert.deepEqual(records(listed)?.banqi, [
+      { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+    ]);
+    for (const [variant, levels] of Object.entries(records(listed) ?? {})) {
+      const sum = { games: 0, wins: 0, losses: 0, draws: 0 };
+      for (const row of levels)
+        for (const key of ['games', 'wins', 'losses', 'draws'] as const) sum[key] += row[key];
+      assert.deepEqual(sum, listed?.recordsByGameSpecId[variant]);
+    }
+  });
+
+  test('the level migration backfills numbered Misty ids and the Level 7 aliases', async () => {
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      // Shadow the real tables on this connection; the migration sees the
+      // pre-column schema without changing any public table or landed SQL.
+      await client.query(`CREATE TEMP TABLE games (room_id text, variant text);
+        CREATE TEMP TABLE game_participants (game_id text, subject_type text, subject_id text, engine_id text);
+        INSERT INTO games VALUES ('flip', 'jungle-flip'), ('banqi', 'banqi');
+        INSERT INTO game_participants VALUES
+          ('flip', 'bot', 'misty', 'misty-jungle-flip-level-1'),
+          ('flip', 'bot', 'misty', 'misty-jungle-flip-level-7'),
+          ('banqi', 'bot', 'misty', 'misty-banqi-level-8'),
+          ('flip', 'bot', 'misty', 'misty-jungle-flip'),
+          ('banqi', 'bot', 'misty', 'misty-banqi'),
+          ('flip', 'bot', 'misty', NULL),
+          ('banqi', 'bot', 'misty', 'misty-jungle-flip-level-1'),
+          ('flip', 'bot', 'another-bot', 'misty-jungle-flip-level-1');`);
+      await client.query(
+        readFileSync(
+          new URL('../migrations/204_game_participants_bot_level.sql', import.meta.url),
+          'utf8',
+        ),
+      );
+      const { rows } = await client.query<{ bot_level: number | null }>(
+        'SELECT bot_level FROM game_participants ORDER BY bot_level NULLS LAST',
+      );
+      assert.deepEqual(
+        rows.map((row) => row.bot_level),
+        [1, 7, 7, 7, 8, null, null, null],
+      );
+    } finally {
+      await client.end();
+    }
+  });
+
   test('splits a multi-variant bot record and recent games per game spec', async () => {
     // The pikafish bug (2026-09-04): one aggregate GROUP BY bot id meant the
     // profile could only ever show lifetime numbers, and the flat games list
@@ -47,7 +183,7 @@ definePersistenceTests('bot profiles', () => {
         result,
         termination: result === 'draw' ? 'draw' : 'king-captured',
         plyCount: 20,
-        startedAt: new Date('2026-01-01T00:00:00Z'),
+        startedAt: new Date('2026-06-01T00:00:00Z'),
         endedAt,
         whiteClient: 'human-client',
         blackClient: 'python-v2-v1.5',
@@ -80,11 +216,11 @@ definePersistenceTests('bot profiles', () => {
     // The bot plays black. Two xiangqi (1 win, 1 loss), three jieqi (2 wins,
     // 1 draw), no banqi. The jieqi games are the MOST RECENT, reproducing the
     // shape that hid xiangqi behind a global row cap.
-    await endGame('mb-xq-1', 'xiangqi', 'black-wins', new Date('2026-01-01T01:00:00Z'));
-    await endGame('mb-xq-2', 'xiangqi', 'white-wins', new Date('2026-01-01T02:00:00Z'));
-    await endGame('mb-jq-1', 'jieqi', 'black-wins', new Date('2026-01-01T03:00:00Z'));
-    await endGame('mb-jq-2', 'jieqi', 'black-wins', new Date('2026-01-01T04:00:00Z'));
-    await endGame('mb-jq-3', 'jieqi', 'draw', new Date('2026-01-01T05:00:00Z'));
+    await endGame('mb-xq-1', 'xiangqi', 'black-wins', new Date('2026-06-01T01:00:00Z'));
+    await endGame('mb-xq-2', 'xiangqi', 'white-wins', new Date('2026-06-01T02:00:00Z'));
+    await endGame('mb-jq-1', 'jieqi', 'black-wins', new Date('2026-06-01T03:00:00Z'));
+    await endGame('mb-jq-2', 'jieqi', 'black-wins', new Date('2026-06-01T04:00:00Z'));
+    await endGame('mb-jq-3', 'jieqi', 'draw', new Date('2026-06-01T05:00:00Z'));
 
     const profile = await getPublicBotProfile('multi-bot');
 
@@ -156,7 +292,11 @@ definePersistenceTests('bot profiles', () => {
           roomId: room.id,
           color: 'east',
         });
-        await recordGameEnd(room.id, buildTenantGameSummary(xiangqiMahjongTenant, room));
+        // Long enough to count: the bot page counts only games where both sides moved.
+        await recordGameEnd(room.id, {
+          ...buildTenantGameSummary(xiangqiMahjongTenant, room),
+          plyCount: 20,
+        });
       } finally {
         xiangqiMahjongRooms.delete(room.id);
       }
@@ -173,7 +313,7 @@ definePersistenceTests('bot profiles', () => {
       mode: 'pve',
       result: SEAT_WIN_RESULT.west,
       termination: 'resignation',
-      plyCount: 0,
+      plyCount: 20,
       startedAt: new Date('2026-10-20T00:00:00Z'),
       endedAt: new Date('2026-10-20T00:10:00Z'),
       whiteClient: null,
@@ -282,8 +422,8 @@ definePersistenceTests('bot profiles', () => {
           result,
           termination: 'king-captured',
           plyCount: 20,
-          startedAt: new Date('2026-01-01T00:00:00Z'),
-          endedAt: new Date('2026-01-01T01:00:00Z'),
+          startedAt: new Date('2026-06-01T00:00:00Z'),
+          endedAt: new Date('2026-06-01T01:00:00Z'),
           whiteClient: 'human-client',
           blackClient: 'engine',
           whiteName: null,
@@ -359,8 +499,8 @@ definePersistenceTests('bot profiles', () => {
         result,
         termination: result === 'draw' ? 'draw' : 'king-captured',
         plyCount: 20,
-        startedAt: new Date('2026-01-01T00:00:00Z'),
-        endedAt: new Date('2026-01-01T01:00:00Z'),
+        startedAt: new Date('2026-06-01T00:00:00Z'),
+        endedAt: new Date('2026-06-01T01:00:00Z'),
         whiteClient: 'human-client',
         blackClient: 'engine',
         whiteName: null,
@@ -458,9 +598,9 @@ definePersistenceTests('bot profiles', () => {
       createdAt: new Date('2026-01-01T00:03:00Z'),
     });
 
-    const startedAt = new Date('2026-01-01T00:00:00Z');
-    const publicEndedAt = new Date('2026-01-01T00:04:00Z');
-    const privateEndedAt = new Date('2026-01-01T00:05:00Z');
+    const startedAt = new Date('2026-06-01T00:00:00Z');
+    const publicEndedAt = new Date('2026-06-01T00:04:00Z');
+    const privateEndedAt = new Date('2026-06-01T00:05:00Z');
 
     await recordGameEnd('test-bot-public-game', {
       variant: 'dark-chess',
@@ -614,12 +754,12 @@ definePersistenceTests('bot profiles', () => {
     await insertBotProfile('private-pager-bot', 'Private Pager Bot', 'private');
     for (let index = 1; index <= 12; index += 1) {
       const hour = String(index).padStart(2, '0');
-      await endBotGame('pager-bot', `pg-dc-${hour}`, 'dark-chess', `2026-01-01T${hour}:00:00Z`);
+      await endBotGame('pager-bot', `pg-dc-${hour}`, 'dark-chess', `2026-06-01T${hour}:00:00Z`);
     }
     // Newer than every dark-chess game, so a missing variant filter would
     // put it on the page.
-    await endBotGame('pager-bot', 'pg-bq-1', 'banqi', '2026-01-01T13:00:00Z');
-    await endBotGame('private-pager-bot', 'pg-private-1', 'dark-chess', '2026-01-01T01:00:00Z');
+    await endBotGame('pager-bot', 'pg-bq-1', 'banqi', '2026-06-01T13:00:00Z');
+    await endBotGame('private-pager-bot', 'pg-private-1', 'dark-chess', '2026-06-01T01:00:00Z');
 
     const page = await routeGet('/api/bots/pager-bot/games?variant=dark-chess&offset=10&limit=15');
     assert.equal(page.status, 200);
@@ -658,7 +798,7 @@ definePersistenceTests('bot profiles', () => {
         'cursor-bot',
         `cursor-${id}`,
         'dark-chess',
-        id === '00' ? '2026-01-01T00:00:00Z' : '2026-01-01T01:00:00Z',
+        id === '00' ? '2026-06-01T00:00:00Z' : '2026-06-01T01:00:00Z',
       );
     }
     const base = '/api/bots/cursor-bot/games?variant=dark-chess&limit=2';
@@ -670,7 +810,7 @@ definePersistenceTests('bot profiles', () => {
       first.map((game) => game.roomId),
       ['cursor-03', 'cursor-02'],
     );
-    await endBotGame('cursor-bot', 'cursor-04', 'dark-chess', '2026-01-01T02:00:00Z');
+    await endBotGame('cursor-bot', 'cursor-04', 'dark-chess', '2026-06-01T02:00:00Z');
     const last = first[first.length - 1];
     const before = encodeURIComponent(JSON.stringify([last.endedAt, last.roomId]));
     const second = JSON.parse((await routeGet(`${base}&offset=99&before=${before}`)).body)
@@ -802,7 +942,7 @@ async function endBotGame(
     result: 'black-wins',
     termination: 'king-captured',
     plyCount: 20,
-    startedAt: new Date('2026-01-01T00:00:00Z'),
+    startedAt: new Date('2026-06-01T00:00:00Z'),
     endedAt: new Date(endedAt),
     whiteClient: 'human-client',
     blackClient: 'python-v2-v1.5',

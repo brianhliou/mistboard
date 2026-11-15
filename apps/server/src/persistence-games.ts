@@ -5,6 +5,7 @@ import { engineVersionDisplayName } from './engine-registry.js';
 import {
   botEngineAttributions,
   firstPartyBotForEngine,
+  mistyLevelForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
 import type { FlairKey } from './flair.js';
@@ -1595,15 +1596,20 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
       await client.query(
         `INSERT INTO game_participants
            (game_id, color, subject_type, subject_id, display_name, visibility, engine_version,
-            engine_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            engine_id, bot_level)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (game_id, color) DO UPDATE SET
            subject_type = EXCLUDED.subject_type,
            subject_id = EXCLUDED.subject_id,
            display_name = EXCLUDED.display_name,
            visibility = EXCLUDED.visibility,
            engine_version = EXCLUDED.engine_version,
-           engine_id = EXCLUDED.engine_id`,
+           engine_id = EXCLUDED.engine_id,
+           bot_level = CASE
+             WHEN game_participants.engine_id IS NOT DISTINCT FROM EXCLUDED.engine_id
+               THEN game_participants.bot_level
+             ELSE EXCLUDED.bot_level
+           END`,
         [
           roomId,
           participant.color,
@@ -1613,6 +1619,9 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
           participant.visibility,
           participant.engineVersion ?? null,
           participant.engineId ?? null,
+          participant.subjectType === 'bot' && participant.subjectId === 'misty'
+            ? mistyLevelForEngine(summary.variant, participant.engineId)
+            : null,
         ],
       );
     }

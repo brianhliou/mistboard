@@ -107,6 +107,8 @@ export function withoutHiddenSpecs<T extends BotProfile>(bot: T): T {
   if (page.recordsByGameSpecId)
     page.recordsByGameSpecId = pickVisibleSpecs(page.recordsByGameSpecId);
   if (page.gamesByGameSpecId) page.gamesByGameSpecId = pickVisibleSpecs(page.gamesByGameSpecId);
+  if (page.levelRecordsByGameSpecId)
+    page.levelRecordsByGameSpecId = pickVisibleSpecs(page.levelRecordsByGameSpecId);
   return visible;
 }
 

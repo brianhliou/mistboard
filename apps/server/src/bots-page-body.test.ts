@@ -42,6 +42,7 @@ function bot(overrides: Partial<BotDirectoryEntry>): BotDirectoryEntry {
     gamesTotal: 0,
     record: { games: 0, wins: 0, losses: 0, draws: 0 },
     recordsByGameSpecId: {},
+    levelRecordsByGameSpecId: {},
     ...overrides,
   };
 }

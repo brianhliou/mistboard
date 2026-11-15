@@ -104,6 +104,7 @@ type BotProfile = {
   // for the /bots directory card. Optional so an older payload still renders --
   // botRecordFor/botGamesFor fall back to the lifetime figures.
   recordsByGameSpecId?: Record<string, BotRecord>;
+  levelRecordsByGameSpecId?: Record<string, (BotRecord & { level: number | null })[]>;
   gamesByGameSpecId?: Record<string, FeaturedGame[]>;
 };
 
@@ -414,7 +415,7 @@ function mistyLadder(
     const play: BotPlayTarget = rung.botId ? { botId: rung.botId, engineId } : { engineId };
     return {
       bot: botFor(engineId),
-      level: rungs.length > 1 ? rung.level : null,
+      level: rung.level,
       key: engineId,
       play,
     };
@@ -604,6 +605,39 @@ function buildOpponentCard(
     });
     card.dataset.opponentId = opponent.key;
     layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);
+    const levelRecords = bot.levelRecordsByGameSpecId?.[gameSpecId];
+    if (levelRecords && selected.play) {
+      const levels = opponent.members.flatMap((member) =>
+        member.level === null ? [] : [member.level],
+      );
+      const recorded = new Map(levelRecords.map((record) => [record.level, record]));
+      const list = document.createElement('ul');
+      list.className = 'bot-level-records';
+      // Keep historical recorded levels even when their engines are no longer
+      // offered. An absent field (old API) makes no per-level claims at all.
+      const allLevels = new Set([
+        ...levels,
+        ...levelRecords.flatMap((record) => (record.level === null ? [] : [record.level])),
+      ]);
+      const append = (level: number | null, record: BotRecord) => {
+        const row = document.createElement('li');
+        row.className = 'bot-level-record';
+        const label =
+          level === null ? t('bots.earlierGamesLevelNotRecorded') : t('bots.levelName', { level });
+        const games = t(record.games === 1 ? 'bots.gameCountOne' : 'bots.gameCountMany', {
+          count: record.games,
+        });
+        row.textContent = `${label} · ${games} · ${recordLabel(record)}`;
+        row.title = t('bots.recordTitle');
+        list.append(row);
+      };
+      for (const level of [...allLevels].sort((a, b) => b - a)) {
+        append(level, recorded.get(level) ?? EMPTY_RECORD);
+      }
+      const earlier = recorded.get(null);
+      if (earlier && earlier.games > 0) append(null, earlier);
+      card.querySelector('.profile-summary-card-footer')?.after(list);
+    }
     return card;
   };
 
