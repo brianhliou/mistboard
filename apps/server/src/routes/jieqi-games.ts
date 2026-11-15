@@ -241,6 +241,9 @@ async function buildJieqiWatchPostgame(
     state: {
       status: projection.state.status,
       moveNumber: projection.state.moveNumber,
+      ...(projection.state.adjudicationRule
+        ? { adjudicationRule: projection.state.adjudicationRule }
+        : {}),
       ...(projection.clock ? { clock: projection.clock } : {}),
       ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
     },
@@ -425,6 +428,9 @@ export async function jieqiPostgameForApi(
     state: {
       status: projection.state.status,
       moveNumber: projection.state.moveNumber,
+      ...(projection.state.adjudicationRule
+        ? { adjudicationRule: projection.state.adjudicationRule }
+        : {}),
       ...(projection.clock ? { clock: projection.clock } : {}),
       ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
     },

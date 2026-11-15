@@ -234,7 +234,7 @@ export async function mountStudyReview(
       const [
         { mountJieqiReview },
         { installJieqiBoardStyles },
-        { parseJieqiFen, jieqiStateToDealtFen },
+        { parseJieqiFen, jieqiStateToDealtFen, JIEQI_ADJUDICATION_RULE },
       ] = await Promise.all([
         import('./jieqi-review.js'),
         import('./../live-jieqi-render.js'),
@@ -246,6 +246,9 @@ export async function mountStudyReview(
       const overlay = await storedDecisions;
       return mountJieqiReview(root, STUDY_GAME_ID, null, {
         ...(await baseReady),
+        // Analyse under the current engine rule without changing which moves
+        // the chapter can load and persist under its original local rules.
+        engineRule: JIEQI_ADJUDICATION_RULE,
         decisions: overlay
           ? { canRun: false, fetchCached: async () => overlay, run: async () => overlay }
           : null,

@@ -21,6 +21,7 @@ import {
   jieqiEngineMove,
   jieqiEngineTierFor,
   jieqiEngineVersion,
+  jieqiLiveEngineMove,
   jqeAvailable,
   jqeEnabled,
   pickSkillMove,
@@ -247,6 +248,80 @@ test('jieqiEngineMove reuses one parked process across moves', async () => {
   } finally {
     if (prior === undefined) delete process.env.MISTBOARD_PIKAFISH_PATH;
     else process.env.MISTBOARD_PIKAFISH_PATH = prior;
+  }
+});
+
+test('every Pikafish level resets the rule across legacy-to-jqe-v1 warm requests', async () => {
+  const bin = join(fixtureDir, 'rule-switch.mjs');
+  writeFileSync(
+    bin,
+    `#!/usr/bin/env node
+let rule = 'legacy';
+let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') process.stdout.write('option name Hash type spin default 16 min 1 max 4096\\noption name Threads type spin default 1 min 1 max 16\\noption name Jieqi Rule type combo default legacy var legacy var jqe-v1\\nuciok\\n');
+    if (line.startsWith('setoption name Jieqi Rule value ')) rule = line.split(' ').at(-1);
+    if (line === 'isready') process.stdout.write('readyok\\n');
+    if (line.startsWith('go')) {
+      const cp = rule === 'jqe-v1' ? 84 : rule === 'legacy' ? 42 : -999;
+      process.stdout.write('info depth 3 multipv 1 score cp ' + cp + ' pv b2e2\\nbestmove b2e2\\n');
+    }
+  }
+});
+`,
+  );
+  chmodSync(bin, 0o755);
+  const prior = process.env.MISTBOARD_PIKAFISH_PATH;
+  process.env.MISTBOARD_PIKAFISH_PATH = bin;
+  try {
+    const before = pikafishJieqiWarmSessionStats();
+    const tiers = JIEQI_PLAYABLE_ENGINES.filter((tier) => tier.engine === undefined);
+    for (const tier of tiers) {
+      for (const adjudicationRule of [undefined, 'jqe-v1', undefined] as const) {
+        const result = await jieqiLiveEngineMove(tier.id, FEN, {
+          movetimeMs: 50,
+          adjudicationRule,
+          rng: () => 0,
+        });
+        assert.equal(
+          result.cp,
+          adjudicationRule ? 84 : 42,
+          `${tier.id}: ${adjudicationRule ?? 'legacy'}`,
+        );
+      }
+    }
+    const after = pikafishJieqiWarmSessionStats();
+    assert.equal(after.spawned - before.spawned, 1, 'all levels and rules share one process');
+    assert.equal(after.reused - before.reused, tiers.length * 3 - 1);
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_PIKAFISH_PATH;
+    else process.env.MISTBOARD_PIKAFISH_PATH = prior;
+  }
+});
+
+test('standalone and live command blocks select the stored rule before history and searchmoves', () => {
+  for (const adjudicationRule of [undefined, 'jqe-v1'] as const) {
+    const opts = {
+      nodes: 10,
+      movetimeMs: 50,
+      moves: ['e0e1'],
+      searchMoves: ['e9e8'],
+      adjudicationRule,
+    };
+    for (const commands of [
+      buildJieqiAnalysisCommands(FEN, opts),
+      buildJieqiLiveCommands(FEN, opts),
+    ]) {
+      const option = `setoption name Jieqi Rule value ${adjudicationRule ?? 'legacy'}`;
+      assert.ok(commands.includes(option));
+      assert.ok(commands.indexOf(option) < commands.indexOf(`position fen ${FEN} moves e0e1`));
+      assert.match(commands.at(-1)!, / searchmoves e9e8$/);
+    }
   }
 });
 
