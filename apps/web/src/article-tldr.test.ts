@@ -135,7 +135,43 @@ describe('published rules summaries and final closings', () => {
       rulesTemplateFailures([
         broken,
         { ...valid, slug: 'rules-blank-line', tldr: ['A turn rule.', ' '] },
+        {
+          ...valid,
+          slug: 'rules-five-summary-lines',
+          tldr: [
+            'A turn rule.',
+            'A winning rule.',
+            'A move rule.',
+            'A capture rule.',
+            'A draw rule.',
+          ],
+        },
         { ...valid, slug: 'rules-no-closing', sections: [] },
+        {
+          ...valid,
+          slug: 'rules-secondary-first-button',
+          sections: [
+            {
+              heading: 'Play',
+              blocks: [
+                {
+                  kind: 'cta',
+                  buttons: [{ label: 'Play', href: '/?play=friend', emphasis: 'secondary' }],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          ...valid,
+          slug: 'rules-note-before-buttons',
+          sections: [
+            {
+              ...play,
+              blocks: [{ kind: 'note', text: 'Read before playing.' }, ...play.blocks!],
+            },
+          ],
+        },
         {
           ...valid,
           slug: 'rules-prose-after-buttons',
@@ -156,7 +192,10 @@ describe('published rules summaries and final closings', () => {
     ).toEqual([
       { slug: 'rules-missing-both', missing: ['summary', 'closing'] },
       { slug: 'rules-blank-line', missing: ['summary'] },
+      { slug: 'rules-five-summary-lines', missing: ['summary'] },
       { slug: 'rules-no-closing', missing: ['closing'] },
+      { slug: 'rules-secondary-first-button', missing: ['closing'] },
+      { slug: 'rules-note-before-buttons', missing: ['closing'] },
       { slug: 'rules-prose-after-buttons', missing: ['closing'] },
     ]);
   });
