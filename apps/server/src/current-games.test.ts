@@ -544,7 +544,7 @@ test('timeClassFor decides correspondence by daysPerMove, never by the ms value'
   assert.equal(timeClassFor(null), null);
 });
 
-test('live human games lead, then live engine games, then correspondence, each in start order', () => {
+test('live human games lead, then live engine games, then correspondence, newest started first', () => {
   const base = (over: Partial<CurrentGame>): CurrentGame => ({
     channelId: 'xiangqi',
     clock: null,
@@ -570,7 +570,7 @@ test('live human games lead, then live engine games, then correspondence, each i
       roomId: 'corr-new',
       timeClass: 'correspondence',
       startedAt: NOW - 3_600_000,
-      deadline: { seat: 'red', dueAt: new Date(NOW + 3_600_000).toISOString() },
+      deadline: { seat: 'red', dueAt: new Date(NOW + 2 * 86_400_000).toISOString() },
     }),
     base({
       roomId: 'pve-old',
@@ -582,7 +582,7 @@ test('live human games lead, then live engine games, then correspondence, each i
       roomId: 'corr-old',
       timeClass: 'correspondence',
       startedAt: NOW - 5 * 86_400_000,
-      deadline: { seat: 'red', dueAt: new Date(NOW + 2 * 86_400_000).toISOString() },
+      deadline: { seat: 'red', dueAt: new Date(NOW + 3_600_000).toISOString() },
     }),
     base({ roomId: 'pvp-old', startedAt: NOW - 60_000, lastActivityAt: NOW }),
     base({ roomId: 'pvp-new', startedAt: NOW - 30_000, lastActivityAt: NOW - 20_000 }),
@@ -590,13 +590,13 @@ test('live human games lead, then live engine games, then correspondence, each i
     base({ roomId: 'pvp-unstarted', startedAt: null }),
   ];
   const expected = [
-    'pvp-old',
-    'pvp-new',
     'pvp-unstarted',
-    'pve-old',
+    'pvp-new',
+    'pvp-old',
     'pve-new',
-    'corr-old',
+    'pve-old',
     'corr-new',
+    'corr-old',
   ];
   assert.deepEqual(
     sortCurrentGames(games).map((game) => game.roomId),
@@ -604,7 +604,7 @@ test('live human games lead, then live engine games, then correspondence, each i
   );
   // A move bumps a game's activity and resets its deadline; the order holds.
   const afterMoves = games.map((game) =>
-    game.roomId === 'pvp-new' || game.roomId === 'corr-old'
+    game.roomId === 'pvp-old' || game.roomId === 'corr-old'
       ? {
           ...game,
           lastActivityAt: NOW + 5_000,

@@ -80,7 +80,7 @@ export function cardSeatName(name: string): string {
 export type CurrentGameSections<T> = { live: T[]; correspondence: T[] };
 
 // Both sections keep the server's order: people first, then bots, then
-// correspondence, each in the order its games started.
+// correspondence, each newest started first.
 export function splitSections<T extends Pick<CurrentGame, 'timeClass'>>(
   games: readonly T[],
 ): CurrentGameSections<T> {

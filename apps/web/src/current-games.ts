@@ -298,7 +298,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       card.root.remove();
       cards.delete(roomId);
     }
-    // Live first (people, then bots), then correspondence, each in start order,
+    // Live first (people, then bots), then correspondence, each newest started first,
     // then the seeks waiting for a second player. A card already in place is moved only
     // when the order changed, so a live board is not detached on every poll.
     const sections = splitSections(games);

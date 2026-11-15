@@ -438,10 +438,10 @@ function firstEventAt(events: readonly { at?: number }[]): number | null {
 }
 
 // Live (clock-driven) games lead, human games before engine games;
-// correspondence games follow. Within each group games stay in the order they
-// started, so a move never reshuffles the page and a new game joins at the end
-// of its group (decided 2026-11-14; activity and deadline order moved cards on
-// every move).
+// correspondence games follow. Within each group the newest game leads and the
+// rest keep their start order, so a new game pushes the others down once and a
+// move never reshuffles the page (decided 2026-11-14; activity and deadline
+// order moved cards on every move). A game with no start time yet is the newest.
 export function sortCurrentGames(games: CurrentGame[]): CurrentGame[] {
   const tier = (game: CurrentGame): number =>
     (game.timeClass === 'correspondence' ? 0 : 10) + (game.composition === 'pvp' ? 1 : 0);
@@ -449,7 +449,7 @@ export function sortCurrentGames(games: CurrentGame[]): CurrentGame[] {
   return [...games].sort((a, b) => {
     const byTier = tier(b) - tier(a);
     if (byTier !== 0) return byTier;
-    const byStart = started(a) - started(b);
+    const byStart = started(b) - started(a);
     if (byStart !== 0 && !Number.isNaN(byStart)) return byStart;
     return a.roomId < b.roomId ? -1 : a.roomId > b.roomId ? 1 : 0;
   });
