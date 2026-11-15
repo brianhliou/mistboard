@@ -1,0 +1,439 @@
+{
+  "openingId": "gmk-212",
+  "openingIndex": 161,
+  "rootFen": "15/15/15/15/15/8W6/9W5/7BB6/15/6W8/15/15/15/15/15 b",
+  "black": "Rapfi Level 8",
+  "white": "Rapfi Level 7",
+  "gameSeed": 1146,
+  "status": {
+    "type": "finished",
+    "winner": "black",
+    "reason": "five"
+  },
+  "moves": [
+    {
+      "ply": 1,
+      "color": "black",
+      "level": "8",
+      "to": "i7",
+      "ms": 1744,
+      "msg": "MESSAGE Speed 74137 | Depth 16-35 | Eval 49 | Node 80K | Time 1080ms"
+    },
+    {
+      "ply": 2,
+      "color": "white",
+      "level": "7",
+      "to": "k8",
+      "ms": 809,
+      "msg": "MESSAGE Speed 80741 | Depth 13-24 | Eval -14 | Node 25K | Time 311ms"
+    },
+    {
+      "ply": 3,
+      "color": "black",
+      "level": "8",
+      "to": "h11",
+      "ms": 1209,
+      "msg": "MESSAGE Speed 95538 | Depth 20-29 | Eval 31 | Node 80K | Time 838ms"
+    },
+    {
+      "ply": 4,
+      "color": "white",
+      "level": "7",
+      "to": "i6",
+      "ms": 564,
+      "msg": "MESSAGE Speed 96068 | Depth 17-26 | Eval -31 | Node 25K | Time 261ms"
+    },
+    {
+      "ply": 5,
+      "color": "black",
+      "level": "8",
+      "to": "h9",
+      "ms": 1205,
+      "msg": "MESSAGE Speed 91673 | Depth 18-34 | Eval 14 | Node 80K | Time 873ms"
+    },
+    {
+      "ply": 6,
+      "color": "white",
+      "level": "7",
+      "to": "h10",
+      "ms": 569,
+      "msg": "MESSAGE Speed 97753 | Depth 16-32 | Eval -12 | Node 25K | Time 256ms"
+    },
+    {
+      "ply": 7,
+      "color": "black",
+      "level": "8",
+      "to": "j7",
+      "ms": 1126,
+      "msg": "MESSAGE Speed 99714 | Depth 20-46 | Eval -12 | Node 80K | Time 803ms"
+    },
+    {
+      "ply": 8,
+      "color": "white",
+      "level": "7",
+      "to": "g10",
+      "ms": 645,
+      "msg": "MESSAGE Speed 84040 | Depth 15-29 | Eval -19 | Node 25K | Time 301ms"
+    },
+    {
+      "ply": 9,
+      "color": "black",
+      "level": "8",
+      "to": "f10",
+      "ms": 1131,
+      "msg": "MESSAGE Speed 94917 | Depth 16-40 | Eval -44 | Node 80K | Time 844ms"
+    },
+    {
+      "ply": 10,
+      "color": "white",
+      "level": "7",
+      "to": "g9",
+      "ms": 637,
+      "msg": "MESSAGE Speed 85525 | Depth 14-28 | Eval -10 | Node 25K | Time 294ms"
+    },
+    {
+      "ply": 11,
+      "color": "black",
+      "level": "8",
+      "to": "f8",
+      "ms": 1167,
+      "msg": "MESSAGE Speed 94354 | Depth 18-40 | Eval 0 | Node 80K | Time 850ms"
+    },
+    {
+      "ply": 12,
+      "color": "white",
+      "level": "7",
+      "to": "g8",
+      "ms": 631,
+      "msg": "MESSAGE Speed 85378 | Depth 14-19 | Eval -2 | Node 25K | Time 293ms"
+    },
+    {
+      "ply": 13,
+      "color": "black",
+      "level": "8",
+      "to": "g7",
+      "ms": 1302,
+      "msg": "MESSAGE Speed 83115 | Depth 15-35 | Eval -37 | Node 80K | Time 964ms"
+    },
+    {
+      "ply": 14,
+      "color": "white",
+      "level": "7",
+      "to": "h7",
+      "ms": 716,
+      "msg": "MESSAGE Speed 76794 | Depth 14-36 | Eval 25 | Node 25K | Time 326ms"
+    },
+    {
+      "ply": 15,
+      "color": "black",
+      "level": "8",
+      "to": "f9",
+      "ms": 1353,
+      "msg": "MESSAGE Speed 79400 | Depth 17-29 | Eval -19 | Node 80K | Time 1008ms"
+    },
+    {
+      "ply": 16,
+      "color": "white",
+      "level": "7",
+      "to": "f7",
+      "ms": 732,
+      "msg": "MESSAGE Speed 77729 | Depth 13-22 | Eval -27 | Node 25K | Time 323ms"
+    },
+    {
+      "ply": 17,
+      "color": "black",
+      "level": "8",
+      "to": "h6",
+      "ms": 1385,
+      "msg": "MESSAGE Speed 82495 | Depth 18-26 | Eval -6 | Node 80K | Time 971ms"
+    },
+    {
+      "ply": 18,
+      "color": "white",
+      "level": "7",
+      "to": "e9",
+      "ms": 676,
+      "msg": "MESSAGE Speed 71977 | Depth 12-22 | Eval -9 | Node 25K | Time 349ms"
+    },
+    {
+      "ply": 19,
+      "color": "black",
+      "level": "8",
+      "to": "j10",
+      "ms": 1461,
+      "msg": "MESSAGE Speed 72878 | Depth 15-24 | Eval -4 | Node 80K | Time 1099ms"
+    },
+    {
+      "ply": 20,
+      "color": "white",
+      "level": "7",
+      "to": "i9",
+      "ms": 650,
+      "msg": "MESSAGE Speed 81363 | Depth 14-26 | Eval -31 | Node 25K | Time 309ms"
+    },
+    {
+      "ply": 21,
+      "color": "black",
+      "level": "8",
+      "to": "g11",
+      "ms": 1256,
+      "msg": "MESSAGE Speed 84826 | Depth 15-16 | Eval -12 | Node 80K | Time 944ms"
+    },
+    {
+      "ply": 22,
+      "color": "white",
+      "level": "7",
+      "to": "i11",
+      "ms": 723,
+      "msg": "MESSAGE Speed 63484 | Depth 14-22 | Eval 7 | Node 25K | Time 394ms"
+    },
+    {
+      "ply": 23,
+      "color": "black",
+      "level": "8",
+      "to": "l7",
+      "ms": 1775,
+      "msg": "MESSAGE Speed 57768 | Depth 14-29 | Eval 3 | Node 80K | Time 1386ms"
+    },
+    {
+      "ply": 24,
+      "color": "white",
+      "level": "7",
+      "to": "j4",
+      "ms": 778,
+      "msg": "MESSAGE Speed 58981 | Depth 14-15 | Eval 14 | Node 25K | Time 424ms"
+    },
+    {
+      "ply": 25,
+      "color": "black",
+      "level": "8",
+      "to": "g5",
+      "ms": 1589,
+      "msg": "MESSAGE Speed 62734 | Depth 15-22 | Eval 58 | Node 80K | Time 1277ms"
+    },
+    {
+      "ply": 26,
+      "color": "white",
+      "level": "7",
+      "to": "f4",
+      "ms": 700,
+      "msg": "MESSAGE Speed 67493 | Depth 12-22 | Eval -72 | Node 25K | Time 372ms"
+    },
+    {
+      "ply": 27,
+      "color": "black",
+      "level": "8",
+      "to": "l5",
+      "ms": 1040,
+      "msg": "MESSAGE Speed 120K | Depth 15-30 | Eval 443 | Node 80K | Time 666ms"
+    },
+    {
+      "ply": 28,
+      "color": "white",
+      "level": "7",
+      "to": "k6",
+      "ms": 548,
+      "msg": "MESSAGE Speed 121K | Depth 11-27 | Eval -250 | Node 25K | Time 206ms"
+    },
+    {
+      "ply": 29,
+      "color": "black",
+      "level": "8",
+      "to": "f12",
+      "ms": 1184,
+      "msg": "MESSAGE Speed 100K | Depth 15-38 | Eval 65 | Node 80K | Time 796ms"
+    },
+    {
+      "ply": 30,
+      "color": "white",
+      "level": "7",
+      "to": "f11",
+      "ms": 620,
+      "msg": "MESSAGE Speed 96980 | Depth 15-17 | Eval 30 | Node 25K | Time 258ms"
+    },
+    {
+      "ply": 31,
+      "color": "black",
+      "level": "8",
+      "to": "l6",
+      "ms": 950,
+      "msg": "MESSAGE Speed 157K | Depth 17-38 | Eval 382 | Node 80K | Time 507ms"
+    },
+    {
+      "ply": 32,
+      "color": "white",
+      "level": "7",
+      "to": "j5",
+      "ms": 552,
+      "msg": "MESSAGE Speed 115K | Depth 14-24 | Eval -210 | Node 25K | Time 218ms"
+    },
+    {
+      "ply": 33,
+      "color": "black",
+      "level": "8",
+      "to": "k4",
+      "ms": 878,
+      "msg": "MESSAGE Speed 143K | Depth 14-44 | Eval 480 | Node 80K | Time 559ms"
+    },
+    {
+      "ply": 34,
+      "color": "white",
+      "level": "7",
+      "to": "l8",
+      "ms": 692,
+      "msg": "MESSAGE Speed 98094 | Depth 13-20 | Eval -191 | Node 25K | Time 256ms"
+    },
+    {
+      "ply": 35,
+      "color": "black",
+      "level": "8",
+      "to": "j3",
+      "ms": 806,
+      "msg": "MESSAGE Speed 172K | Depth 14-23 | Eval 526 | Node 80K | Time 465ms"
+    },
+    {
+      "ply": 36,
+      "color": "white",
+      "level": "7",
+      "to": "i2",
+      "ms": 528,
+      "msg": "MESSAGE Speed 105K | Depth 10-24 | Eval -218 | Node 25K | Time 238ms"
+    },
+    {
+      "ply": 37,
+      "color": "black",
+      "level": "8",
+      "to": "m5",
+      "ms": 738,
+      "msg": "MESSAGE Speed 184K | Depth 18-13 | Eval +M17 | Node 80K | Time 435ms"
+    },
+    {
+      "ply": 38,
+      "color": "white",
+      "level": "7",
+      "to": "i13",
+      "ms": 414,
+      "msg": "MESSAGE Speed 200K | Depth 18-12 | Eval -M16 | Node 25K | Time 125ms"
+    },
+    {
+      "ply": 39,
+      "color": "black",
+      "level": "8",
+      "to": "i12",
+      "ms": 638,
+      "msg": "MESSAGE Speed 238K | Depth 25-11 | Eval +M15 | Node 80K | Time 336ms"
+    },
+    {
+      "ply": 40,
+      "color": "white",
+      "level": "7",
+      "to": "k13",
+      "ms": 443,
+      "msg": "MESSAGE Speed 208K | Depth 19-10 | Eval -M14 | Node 25K | Time 120ms"
+    },
+    {
+      "ply": 41,
+      "color": "black",
+      "level": "8",
+      "to": "j12",
+      "ms": 706,
+      "msg": "MESSAGE Speed 239K | Depth 25-9 | Eval +M13 | Node 80K | Time 335ms"
+    },
+    {
+      "ply": 42,
+      "color": "white",
+      "level": "7",
+      "to": "k7",
+      "ms": 484,
+      "msg": "MESSAGE Speed 192K | Depth 18-10 | Eval -M12 | Node 25K | Time 131ms"
+    },
+    {
+      "ply": 43,
+      "color": "black",
+      "level": "8",
+      "to": "k9",
+      "ms": 671,
+      "msg": "MESSAGE Speed 241K | Depth 24-7 | Eval +M11 | Node 80K | Time 332ms"
+    },
+    {
+      "ply": 44,
+      "color": "white",
+      "level": "7",
+      "to": "j8",
+      "ms": 535,
+      "msg": "MESSAGE Speed 164K | Depth 21-6 | Eval -M10 | Node 25K | Time 152ms"
+    },
+    {
+      "ply": 45,
+      "color": "black",
+      "level": "8",
+      "to": "m3",
+      "ms": 654,
+      "msg": "MESSAGE Speed 247K | Depth 25-5 | Eval +M9 | Node 80K | Time 324ms"
+    },
+    {
+      "ply": 46,
+      "color": "white",
+      "level": "7",
+      "to": "n8",
+      "ms": 343,
+      "msg": "MESSAGE Speed 44636 | Depth 26-4 | Eval -M8 | Node 491 | Time 11ms"
+    },
+    {
+      "ply": 47,
+      "color": "black",
+      "level": "8",
+      "to": "m8",
+      "ms": 323,
+      "msg": "MESSAGE Speed 16666 | Depth 26-3 | Eval +M7 | Node 150 | Time 10ms"
+    },
+    {
+      "ply": 48,
+      "color": "white",
+      "level": "7",
+      "to": "m6",
+      "ms": 349,
+      "msg": "MESSAGE Speed 17857 | Depth 26-2 | Eval -M6 | Node 125 | Time 7ms"
+    },
+    {
+      "ply": 49,
+      "color": "black",
+      "level": "8",
+      "to": "l3",
+      "ms": 366,
+      "msg": "MESSAGE Speed 254K | Depth 26-3 | Eval +M5 | Node 14K | Time 58ms"
+    },
+    {
+      "ply": 50,
+      "color": "white",
+      "level": "7",
+      "to": "l4",
+      "ms": 319,
+      "msg": "MESSAGE Speed 8333 | Depth 26-2 | Eval -M4 | Node 50 | Time 7ms"
+    },
+    {
+      "ply": 51,
+      "color": "black",
+      "level": "8",
+      "to": "k3",
+      "ms": 354,
+      "msg": "MESSAGE Speed 7142 | Depth 26-2 | Eval +M3 | Node 50 | Time 7ms"
+    },
+    {
+      "ply": 52,
+      "color": "white",
+      "level": "7",
+      "to": "n3",
+      "ms": 334,
+      "msg": "MESSAGE Speed 8333 | Depth 26-2 | Eval -M2 | Node 50 | Time 6ms"
+    },
+    {
+      "ply": 53,
+      "color": "black",
+      "level": "8",
+      "to": "i3",
+      "ms": 350,
+      "msg": "MESSAGE mix9svq nnue: weight loaded in 67ms"
+    }
+  ]
+}

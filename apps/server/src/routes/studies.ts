@@ -24,6 +24,8 @@ import {
   isStudyEligibleSpecId,
   parsePracticeGoal,
   startIsDealt,
+  THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
@@ -91,9 +93,16 @@ async function listAccessFor(request: IncomingMessage): Promise<StudyListAccess>
   return { includeAdminOnly: await adminOnlyStudyGate(request) };
 }
 
-export function isSerializedTree(value: unknown): boolean {
+export function isSerializedTree(value: unknown, variant: string): boolean {
   if (!value || typeof value !== 'object') return false;
-  const tree = value as { version?: unknown; root?: unknown };
+  const tree = value as { version?: unknown; root?: unknown; replay?: unknown; rootFen?: unknown };
+  if (
+    tree.replay !== undefined &&
+    (variant !== THREE_KINGDOMS_BANQI_SPEC_ID ||
+      tree.replay !== THREE_KINGDOMS_BANQI_PUBLIC_REPLAY ||
+      tree.rootFen !== undefined)
+  )
+    return false;
   if (tree.version !== 1) return false;
   const root = tree.root as { children?: unknown } | null;
   return !!root && typeof root === 'object' && Array.isArray(root.children);
@@ -186,6 +195,13 @@ async function pageOf(
 // path to remember. The create-study flow already mints one; the add-chapter
 // flow did not, which shipped a study whose second chapter would not load.
 export function ensureDealtRoot(variant: string, root: unknown): unknown {
+  if (
+    variant === 'three-kingdoms-banqi' &&
+    root &&
+    typeof root === 'object' &&
+    (root as { replay?: unknown }).replay === THREE_KINGDOMS_BANQI_PUBLIC_REPLAY
+  )
+    return root;
   if (!startIsDealt(variant)) return root;
   if (
     root &&
@@ -224,9 +240,12 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
  * text like any other user field, and an open-ended object would let a client
  * store whatever it liked on our row.
  */
+// `white` is the second seat where the first mover is Black (Gomoku): the embed
+// names that seat from it.
 const CHAPTER_TAG_KEYS = [
   'red',
   'black',
+  'white',
   'result',
   'event',
   'date',
@@ -531,7 +550,8 @@ export async function tryHandle(
       return true;
     }
     const chapterId = chapterMatch[2]!;
-    if (request.method === 'PATCH') return patchChapter(request, response, chapterId, user.id);
+    if (request.method === 'PATCH')
+      return patchChapter(request, response, chapterMatch[1]!, chapterId, user.id);
     if (request.method === 'DELETE') return removeChapter(response, chapterId, user.id);
     writeJson(response, 405, { error: 'method_not_allowed' });
     return true;
@@ -579,7 +599,7 @@ async function createStudy(
     writeJson(response, 400, { error: 'unsupported_variant' });
     return true;
   }
-  if (!isSerializedTree(chapter.root)) {
+  if (!isSerializedTree(chapter.root, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -733,7 +753,7 @@ async function addChapter(
     writeJson(response, 400, { error: 'variant_mismatch' });
     return true;
   }
-  if (!isSerializedTree(body.root)) {
+  if (!isSerializedTree(body.root, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -764,6 +784,7 @@ async function addChapter(
 async function patchChapter(
   request: IncomingMessage,
   response: ServerResponse,
+  studyId: string,
   chapterId: string,
   ownerId: string,
 ): Promise<boolean> {
@@ -814,7 +835,13 @@ async function patchChapter(
     }
   }
   if ('root' in body) {
-    if (!isSerializedTree(body.root)) {
+    const study = await persistence.getStudyById(studyId);
+    const chapter = study?.chapters.find((candidate) => candidate.id === chapterId);
+    if (!chapter) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    if (!isSerializedTree(body.root, chapter.variant)) {
       writeJson(response, 400, { error: 'invalid_tree' });
       return true;
     }

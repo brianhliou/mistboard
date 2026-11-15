@@ -48,6 +48,9 @@ export const threeKingdomsBanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-10',
+  updatedAt: '2026-11-15',
+  updateNote:
+    'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate.',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   tldr: [
     'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.',
@@ -188,6 +191,22 @@ export const threeKingdomsBanqiArticle: Article = {
     {
       heading: 'Compared with banqi',
       blocks: [BANQI_FAMILY_COMPARISON],
+    },
+    {
+      heading: 'An engine game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.',
+        },
+        {
+          kind: 'embed',
+          // Built by scripts/variant-lab/rules-page-games (plans/three-kingdoms-banqi.plan.json).
+          path: '/embed/study/fcx7JEzH/7lZCHESh',
+          title: 'Three Kingdoms Banqi: Level 7 versus Level 8, annotated',
+          aspect: [702, 480],
+        },
+      ],
     },
     {
       heading: 'Play on Mistboard',

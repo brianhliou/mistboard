@@ -36,7 +36,7 @@ import {
   replayDarkXiangqiStudy,
 } from '../dark-xiangqi-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
-import { seatInkForVariant } from '../flip-seat-ink.js';
+import { isFlipSeatVariant, seatInkForVariant } from '../flip-seat-ink.js';
 import {
   mountFortressXiangqiReplayBoard,
   replayFortressXiangqiLine,
@@ -57,6 +57,10 @@ import { fetchStudyChapterDecisions } from '../review/study-decisions.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
+import {
+  mountThreeKingdomsBanqiStudyReplay,
+  threeKingdomsBanqiStudyLine,
+} from '../three-kingdoms-banqi-study-replay.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import {
@@ -74,7 +78,7 @@ import {
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import { createEmbedScoreChart, embedScoreSeries } from './embed-score-chart.js';
-import { studyScoreSeatColors } from './embed-score-seat-colors.js';
+import { embedScoreSeatColors, studyScoreSeatColors } from './embed-score-seat-colors.js';
 import './embed.css';
 
 type StudyPayload = {
@@ -212,6 +216,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'chess',
   'dark-chess',
   'gomoku',
+  'three-kingdoms-banqi',
 ]);
 
 /**
@@ -236,6 +241,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'dark-xiangqi') {
     await mountDarkXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'three-kingdoms-banqi') {
+    await mountThreeKingdomsBanqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'banqi') {
@@ -353,6 +362,52 @@ export async function mountChapterEmbed(
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
 
+async function mountThreeKingdomsBanqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  let line: ReturnType<typeof threeKingdomsBanqiStudyLine>;
+  try {
+    line = threeKingdomsBanqiStudyLine(chapter);
+  } catch {
+    note(root, 'This chapter has no valid position to show.');
+    return;
+  }
+  const final = line.views.at(-1)!;
+  const tags = chapter.tags ?? {};
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountStudyEmbedCard(root, chapter, options, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: {
+        name: tags.red ?? 'First seat',
+        ink: seatInkForVariant('three-kingdoms-banqi', 'red', final.firstColor),
+      },
+      second: {
+        name: tags.black ?? 'Second seat',
+        ink: seatInkForVariant('three-kingdoms-banqi', 'black', final.firstColor),
+      },
+    },
+    result: token ? banqiResultLabel(token, final.firstColor) : '',
+    credit,
+    aspect: boardAspectForSpec('three-kingdoms-banqi'),
+    railWidthPx: embedRailWidthPx('three-kingdoms-banqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountThreeKingdomsBanqiStudyReplay(
+        host,
+        line,
+        options.hideSolution ? null : options.decisions,
+        hooks,
+        chapter.orientation === 'black' ? 'black' : 'red',
+      ),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
 /** All study boards share the card's under-board slot and their own move labels. */
 async function mountStudyEmbedCard(
   root: HTMLElement,
@@ -377,9 +432,17 @@ async function mountStudyEmbedCard(
     ? null
     : embedScoreSeries(chapter.scoreSeries, (card.handle.plyCount?.() ?? 0) + 1);
   if (series) {
+    // A flip variant's series is keyed by seat; the card's first seat carries the
+    // ink its replay bound (Three Kingdoms included), so use that binding.
+    const variant = chapter.variant ?? 'xiangqi';
+    const firstInk = cardOptions.seats.first.ink;
+    const seatColors =
+      isFlipSeatVariant(variant) && (firstInk === 'red' || firstInk === 'black')
+        ? embedScoreSeatColors(variant, firstInk)
+        : studyScoreSeatColors(variant, chapter.root);
     chart = createEmbedScoreChart(series, {
-      variant: chapter.variant ?? 'xiangqi',
-      seatColors: studyScoreSeatColors(chapter.variant ?? 'xiangqi', chapter.root),
+      variant,
+      seatColors,
       onJump: (ply) => card.jumpToPly(ply),
       moveLabel: (ply) =>
         card.handle.moveEntries?.().find((entry) => entry.ply === ply)?.label ?? '',
@@ -489,7 +552,11 @@ async function mountGomokuEmbed(
     railWidthPx: embedRailWidthPx('gomoku'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) => mountGomokuReplayBoard(host, line, hooks),
+    // A study chapter's glyphs and comments, on the sheet and beside the stone.
+    mountBoard: async (host, hooks) => {
+      const { glyphs, notes } = chapterAnnotations(chapter);
+      return mountGomokuReplayBoard(host, line, hooks, { glyphs, notes });
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

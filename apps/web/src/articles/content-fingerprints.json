@@ -20,8 +20,8 @@
     "updatedAt": null
   },
   "banqi": {
-    "hash": "205c217df45c8d7a",
-    "updatedAt": "2026-11-07"
+    "hash": "061ef9892f7b8495",
+    "updatedAt": "2026-11-15"
   },
   "banqi-chariot-endgame": {
     "hash": "82fb17bd22906b81",
@@ -108,8 +108,8 @@
     "updatedAt": "2026-10-24"
   },
   "gomoku": {
-    "hash": "8cbe8e6a246c2aaf",
-    "updatedAt": "2026-11-07"
+    "hash": "91ab8e5f6cceed5e",
+    "updatedAt": "2026-11-15"
   },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",
@@ -248,8 +248,8 @@
     "updatedAt": "2026-11-09"
   },
   "three-kingdoms-banqi": {
-    "hash": "32e7d8e0ee1f1adf",
-    "updatedAt": null
+    "hash": "3e7d8f9d8efd0ad5",
+    "updatedAt": "2026-11-15"
   },
   "titled-players": {
     "hash": "ab311579f749c5a4",
