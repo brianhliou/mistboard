@@ -4,6 +4,7 @@ import {
   GOMOKU_PLACEMENT,
   GOMOKU_WINNING_BOARD,
 } from '../../gomoku-rules-diagrams.js';
+import { playClosing } from '../diagrams.js';
 import type { Article } from '../types.js';
 
 // Set after the re-screened openings have a published study.
@@ -83,15 +84,14 @@ export function createGomokuArticle(
           ] },
         ],
       },
-      {
+      playClosing({
         heading: 'Play on Mistboard',
-        blocks: [
-          { kind: 'cta', buttons: [
-            { label: 'Play Gomoku', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
-            { label: 'Play a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
-          ] },
+        playLabel: 'Play Gomoku',
+        playHref: '/?play=computer&gameSpecId=gomoku',
+        secondary: [
+          { label: 'Play a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
         ],
-      },
+      }),
     ],
   };
 }

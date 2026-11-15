@@ -1,5 +1,5 @@
 import {
-  relatedClosing,
+  playClosing,
   SHOGI4_CAPTURE,
   SHOGI4_DROP,
   SHOGI4_GAME_STEPS,
@@ -36,6 +36,11 @@ export const shogi4Article: Article = {
     audience:
       'Players and shogi-curious readers who want the full, primary-sourced rules of Shogi4, a 4×4 drop-shogi.',
     thumbnail: { kind: 'svg', svg: SHOGI4_RULES_THUMBNAIL },
+    tldr: [
+      'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.',
+      'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.',
+      'Capture the enemy royal to win. There is no check or checkmate.',
+    ],
     intro: [
       {
         kind: 'paragraph',
@@ -200,11 +205,12 @@ export const shogi4Article: Article = {
           },
         ],
       },
-      relatedClosing({
+      playClosing({
         heading: 'Playing Shogi4',
         lead: "Shogi4 isn't playable on the site yet; for now this page is the rules reference. Browse the rest of the rules, or compare it with the chess and xiangqi primers.",
-        links: [
-          { label: 'All rules', href: '/rules', emphasis: 'primary' },
+        playLabel: 'All rules',
+        playHref: '/rules',
+        secondary: [
           { label: 'Chess Rules', href: '/rules/chess', emphasis: 'secondary' },
           { label: 'Xiangqi Rules', href: '/rules/xiangqi', emphasis: 'secondary' },
         ],

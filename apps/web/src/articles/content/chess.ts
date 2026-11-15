@@ -20,7 +20,7 @@ import {
   BASIC_STALEMATE,
   boardToPieces,
   DARK_CHESS_START_STATE,
-  relatedClosing,
+  playClosing,
 } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -44,6 +44,11 @@ export const chessArticle: Article = {
       pieces: boardToPieces(DARK_CHESS_START_STATE.board),
       orientation: 'white',
     },
+    tldr: [
+      'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.',
+      'You must answer check and may never leave your king under attack. Checkmate wins the game.',
+      'A player with no legal move who is not in check is stalemated, and the game is drawn.',
+    ],
     intro: [
       {
         kind: 'paragraph',
@@ -359,11 +364,12 @@ export const chessArticle: Article = {
           } as ArticleBlock,
         ],
       },
-      relatedClosing({
+      playClosing({
         heading: 'Where to next',
         lead: 'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.',
-        links: [
-          { label: 'Read Fog Chess', href: '/rules/fog-chess', emphasis: 'primary' },
+        playLabel: 'Read Fog Chess',
+        playHref: '/rules/fog-chess',
+        secondary: [
           { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],
       }),

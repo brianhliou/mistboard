@@ -286,6 +286,25 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // #1149 rules summaries: machine-drafted, using the existing rules terminology.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子会移除执行吃子的棋子、被吃的棋子，以及相邻四个交叉点上的棋子。爆炸旁的兵卒不受影响。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子时只移除炮和被吃的棋子，不波及目标旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉对方将帅即获胜。威胁炸掉将帅也算将军。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，双方轮流移动一枚棋子。每种棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被将军时必须应将，不能让自己的王处于受攻击的状态。将死对方即获胜。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方没有合法着法但未被将军时，形成逼和，双方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面标示的方向移动，也可以跳过己方棋子。王以外的棋子到达最远一行时进化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子转归对方，可以打入空格，但不能打入最远一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉对方的王即获胜，没有将军或将死。',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
   'Training our own xiangqi net': '训练我们自己的象棋网络',
@@ -7195,6 +7214,25 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // #1149 rules summaries: Traditional overrides follow the shared base.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子會移除執行吃子的棋子、被吃的棋子，以及相鄰四個交叉點上的棋子。爆炸旁的兵卒不受影響。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子時只移除炮和被吃的棋子，不波及目標旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉對方將帥即獲勝。威脅炸掉將帥也算將軍。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，雙方輪流移動一枚棋子。每種棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被將軍時必須應將，不能讓自己的王處於受攻擊的狀態。將死對方即獲勝。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方沒有合法著法但未被將軍時，形成逼和，雙方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面標示的方向移動，也可以跳過己方棋子。王以外的棋子到達最遠一行時進化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子轉歸對方，可以打入空格，但不能打入最遠一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉對方的王即獲勝，沒有將軍或將死。',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
   'Training our own xiangqi net': '訓練我們自己的象棋網路',

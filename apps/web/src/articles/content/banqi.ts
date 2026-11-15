@@ -13,7 +13,7 @@ import {
   BANQI_STEP,
 } from '../../banqi-rules-diagrams.js';
 import { BANQI_CHASE_RULE_STEPS } from '../banqi-chase-diagrams.js';
-import { BANQI_RULES_THUMBNAIL } from '../diagrams.js';
+import { BANQI_RULES_THUMBNAIL, playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // Re-cut 2026-09-21 on Brian's read of the page: the custom diagrams go, and
@@ -330,21 +330,14 @@ export const banqiArticle: Article = {
         },
       ],
     },
-    {
+    playClosing({
       heading: 'Play on Mistboard',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'Play the computer or send a friend a link. No account needed.',
-        },
-        {
-          kind: 'cta',
-          buttons: [
-            { label: 'Play vs computer', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
-            { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
-          ],
-        },
+      lead: 'Play the computer or send a friend a link. No account needed.',
+      playLabel: 'Play vs computer',
+      playHref: '/?play=computer&gameSpecId=banqi',
+      secondary: [
+        { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
       ],
-    },
+    }),
   ],
 };

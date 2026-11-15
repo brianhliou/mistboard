@@ -6,12 +6,10 @@ import {
   ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
-import { relatedClosing } from '../diagrams.js';
+import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// The rules page is the front door: the variant is listed in the rails and
-// tiles (2026-09-17) but not in the play menu, so the play links in the
-// closing block are authored by hand rather than taken from the setup dialog.
+// Retired rules reference: the closing links to the study, never new games.
 export const atomicXiangqiArticle: Article = {
   slug: 'atomic-xiangqi',
   gameSpecId: 'atomic-xiangqi',
@@ -31,6 +29,11 @@ export const atomicXiangqiArticle: Article = {
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },
+  tldr: [
+    'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.',
+    'A cannon capture removes only the cannon and its target, with no blast beside the target.',
+    'Blowing up the enemy general wins. A threat to do so counts as check.',
+  ],
   intro: [
     {
       kind: 'paragraph',
@@ -166,10 +169,11 @@ export const atomicXiangqiArticle: Article = {
       ],
     },
     // Retired 2026-10-11: no play buttons; the page and its companions stay up.
-    relatedClosing({
+    playClosing({
       heading: 'Further reading',
       lead: 'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
-      links: [{ label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'primary' }],
+      playLabel: 'The twelve engine games',
+      playHref: '/study/dPKhvJKb',
     }),
   ],
 };
