@@ -74,6 +74,7 @@ import {
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import { createEmbedScoreChart, embedScoreSeries } from './embed-score-chart.js';
+import { studyScoreSeatColors } from './embed-score-seat-colors.js';
 import './embed.css';
 
 type StudyPayload = {
@@ -377,6 +378,8 @@ async function mountStudyEmbedCard(
     : embedScoreSeries(chapter.scoreSeries, (card.handle.plyCount?.() ?? 0) + 1);
   if (series) {
     chart = createEmbedScoreChart(series, {
+      variant: chapter.variant ?? 'xiangqi',
+      seatColors: studyScoreSeatColors(chapter.variant ?? 'xiangqi', chapter.root),
       onJump: (ply) => card.jumpToPly(ply),
       moveLabel: (ply) =>
         card.handle.moveEntries?.().find((entry) => entry.ply === ply)?.label ?? '',
