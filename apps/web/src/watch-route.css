@@ -1140,6 +1140,14 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
+    color: var(--site-accent, #237960);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .watch-headline__variant:hover,
+  .watch-headline__variant:focus-visible {
+    text-decoration: underline;
   }
 
   .watch-empty-actions a,
