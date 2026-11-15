@@ -114,12 +114,7 @@ export function createLiveInviteHandler(
     }
     return admission;
   }
-  async function eligible(
-    sender: InviteUser,
-    target: InviteUser,
-    ctx: HttpApiContext,
-    now: number,
-  ): Promise<boolean> {
+  async function policyEligible(sender: InviteUser, target: InviteUser): Promise<boolean> {
     if (
       sender.closedAt ||
       target.closedAt ||
@@ -137,6 +132,16 @@ export function createLiveInviteHandler(
       !(await deps.hasFollow(target.id, sender.id))
     )
       return false;
+    return true;
+  }
+
+  async function eligible(
+    sender: InviteUser,
+    target: InviteUser,
+    ctx: HttpApiContext,
+    now: number,
+  ) {
+    if (!(await policyEligible(sender, target))) return false;
     const busy = busyLiveInviteUsers(ctx);
     return !busy.has(sender.id) && !busy.has(target.id) && liveInviteReachable(target.id, now);
   }
@@ -189,17 +194,20 @@ export function createLiveInviteHandler(
     const suffix = pathname.slice(base.length);
     const match = suffix.match(/^\/([a-zA-Z0-9-]{1,64})(?:\/(decline|accept))?$/);
     const heartbeat = suffix === '/heartbeat';
-    if (suffix !== '' && !heartbeat && !match) {
+    const availability = suffix === '/availability';
+    if (suffix !== '' && !heartbeat && !availability && !match) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    const methods = heartbeat
-      ? ['POST', 'DELETE']
-      : suffix === ''
-        ? ['GET', 'POST']
-        : match?.[2]
-          ? ['POST']
-          : ['GET', 'DELETE'];
+    const methods = availability
+      ? ['GET']
+      : heartbeat
+        ? ['POST', 'DELETE']
+        : suffix === ''
+          ? ['GET', 'POST']
+          : match?.[2]
+            ? ['POST']
+            : ['GET', 'DELETE'];
     if (!requireMethod(request, response, ...methods)) return true;
     const method = request.method ?? 'GET';
     // Mutations are same-origin JSON requests. Fetch metadata remains correct
@@ -235,6 +243,48 @@ export function createLiveInviteHandler(
     }
     try {
       const now = ctx.now?.() ?? Date.now();
+      if (availability) {
+        const handles = new URL(request.url ?? pathname, 'http://localhost').searchParams.getAll(
+          'handle',
+        );
+        if (
+          !handles.length ||
+          handles.length > 50 ||
+          handles.some((handle) => !/^[a-zA-Z0-9_-]{1,40}$/.test(handle))
+        ) {
+          writeJson(response, 400, { error: 'invalid_handles' });
+          return true;
+        }
+        const admission = admissionFor(ctx);
+        const senderBusy =
+          busyLiveInviteUsers(ctx).has(user.id) || !!(await admission.find({ userId: user.id }));
+        const players = [];
+        for (const handle of new Set(handles)) {
+          const target = await deps.findUser(handle);
+          let state: 'available' | 'busy' | 'offline' | 'unavailable' = 'unavailable';
+          // This is a private connection lookup, never a public presence oracle.
+          // Withheld profiles and policy failures share one opaque outcome.
+          if (
+            target &&
+            target.id !== user.id &&
+            target.profileVisibility !== 'private' &&
+            !senderBusy &&
+            (await policyEligible(user, target))
+          ) {
+            const targetBusy =
+              busyLiveInviteUsers(ctx).has(target.id) ||
+              !!(await admission.find({ userId: target.id }));
+            state = !liveInviteReachable(target.id, ctx.now?.() ?? Date.now())
+              ? 'offline'
+              : targetBusy
+                ? 'busy'
+                : 'available';
+          }
+          players.push({ handle, availability: state });
+        }
+        writeJson(response, 200, { players });
+        return true;
+      }
       if (heartbeat) {
         if (method === 'DELETE') {
           leaveLiveInvites(user.id);
@@ -310,6 +360,14 @@ export function createLiveInviteHandler(
         const error = await liveInviteTermsError(user, target, terms);
         if (error) {
           writeJson(response, 400, { error });
+          return true;
+        }
+        const admission = admissionFor(ctx);
+        if (
+          (await admission.find({ userId: user.id })) ||
+          (await admission.find({ userId: target.id }))
+        ) {
+          writeJson(response, 409, { error: 'target_unavailable' });
           return true;
         }
         // No await between the last liveness check and the synchronous insert.

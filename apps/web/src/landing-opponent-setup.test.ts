@@ -68,6 +68,8 @@ describe('#1123 opponent-first setup', () => {
         });
       if (url === '/api/relations/online-following')
         return json({ players: [{ handle: 'online' }] });
+      if (url.includes('/api/live-invites/availability?'))
+        return json({ players: [{ handle: 'online', availability: 'available' }] });
       if (url === '/api/correspondence/seeks' && init?.method === 'POST') {
         return json({ challengeUrl: '/challenge/sent', seek: { gameSpecId: 'jieqi' } }, 201);
       }
@@ -218,10 +220,10 @@ describe('#1123 opponent-first setup', () => {
     expect(selectedSide()).toBe('Black');
   });
 
-  it('hides Send to outside signed-in Friend correspondence and defaults to a link', () => {
+  it('offers Send to only for signed-in Friend at either pace and defaults to a link', () => {
     for (const mode of ['pve', 'lobby', 'pvp'] as const) {
       open(mode);
-      expect(section('sendTo')?.hidden ?? true).toBe(true);
+      expect(section('sendTo')?.hidden ?? true).toBe(mode !== 'pvp');
     }
     setResolvedSignedIn(false);
     open('pvp', true);
@@ -381,8 +383,9 @@ describe('#1123 opponent-first setup', () => {
     await flush();
     click('[data-handle="online"]');
     click('.landing-time-mode button:first-child');
-    expect(section('sendTo')?.hidden).toBe(true);
-    expect(start().textContent).toBe('Create room');
+    await flush();
+    expect(section('sendTo')?.hidden).toBe(false);
+    expect(start().textContent).toBe('Send challenge to @online');
     click('.landing-time-mode button:nth-child(2)');
     expect(start().textContent).toBe('Send challenge to @online');
     click('[data-send-to="link"]');

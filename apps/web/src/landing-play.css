@@ -1895,6 +1895,11 @@ html.landing-setup-open body {
 .landing-challenge-player-row:hover {
   background: var(--site-hover);
 }
+.landing-challenge-player-option:disabled {
+  cursor: default;
+  color: var(--site-muted);
+  background: var(--site-panel);
+}
 .landing-challenge-player-option:focus-visible,
 .landing-challenge-player-search:focus-visible,
 .landing-challenge-player-retry:focus-visible {

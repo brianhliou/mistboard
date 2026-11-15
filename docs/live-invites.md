@@ -9,6 +9,7 @@ reclaim their own seat by signing in; this API issues no seat credentials.
 | --- | --- |
 | `POST /api/live-invites/heartbeat` | Renew a 15-second reachability lease; returns `leaseMs` and `pollAfterMs` |
 | `DELETE /api/live-invites/heartbeat` | Revoke the account's lease immediately |
+| `GET /api/live-invites/availability?handle=alice&handle=bob` | Read availability for up to 50 connection handles; returns `{ players: [{ handle, availability }] }` |
 | `POST /api/live-invites` | Create a directed invite; returns `201 { invite }` |
 | `GET /api/live-invites` | Return the session's pending, accepting and retained accepted `incoming` and `outgoing` arrays and `pollAfterMs` |
 | `GET /api/live-invites/:id` | Inspect an invite, including its retained terminal status, as either participant |
@@ -22,6 +23,16 @@ are `Cache-Control: no-store`. Poll and heartbeat every five seconds while ready
 to receive invites. Merely browsing or holding a game socket does not renew this
 lease. Sending an invite renews the sender's lease; list/inspect requests do not.
 Explicit lease revocation applies to all tabs for the account.
+
+Availability is `available`, `busy`, `offline` or `unavailable`. Either follow
+direction permits a lookup, including a follower the sender does not follow.
+Unrelated, blocked, private, closed, locked and opted-out accounts all return
+the same `unavailable` state, without policy details, internal ids or room data.
+Busy includes disconnected seats and durable seats in unloaded live rooms.
+The picker refreshes every five seconds while selecting a real-time recipient,
+fails closed on a read failure, and rechecks a correspondence selection when
+switching back to real time. Sending and accepting still validate current
+availability on the server.
 
 Creation body:
 
@@ -144,3 +155,41 @@ tab renews the account-wide lease independently; pagehide pauses this document
 without revoking other tabs' leases, and pageshow resumes it after a back/forward
 cache restore. Cross-tab identity signals trigger a fresh auth read before
 resuming. Incoming opt-out and the challenge notification bell remain independent.
+
+## Play-sheet rehearsal
+
+Use a local persistent dev pair and two isolated browser contexts signed in as
+ordinary accounts A and B. Let B follow A without A following B, keep B's page
+open, and enable incoming real-time invitations for B. Use the local main pair
+as the review baseline. Capture only the Friend setup sheet, player picker and
+sender waiting sheet at phone and desktop sizes; no other pages changed here.
+
+1. As A, open Play → Friend → Real time → Pick a player. B must show as online
+   and selectable. Choose Banqi, 3+2, Second and Rated (with counted accounts and
+   local rated enabled). Send. A must see the waiting card with those exact
+   terms, and B's incoming card must show the complementary side. Accept as B;
+   both accounts must reach the same reserved room with opposite seats.
+2. End that game before each subsequent send. Repeat with a casual invitation
+   and Decline as B, then with Cancel as A. Both accounts must see the matching
+   terminal outcome, with no room created. Send another and leave both pages
+   open for 60 seconds; the invite must expire and the sender must see expiry.
+3. Close every B tab and wait at least 15 seconds. A's picker must show B as
+   offline and disable B. Reopen B, then turn off incoming real-time invitations
+   in Account settings → Privacy. Within one picker refresh, A must see the
+   generic unavailable state and cannot send. If B becomes busy, disconnects
+   or opts out after A selects B, sending must fail without creating another
+   type of challenge.
+4. Select an offline B in Correspondence, switch to Real time, and confirm Send
+   is disabled. Switch back and send a directed correspondence challenge.
+   Repeat switching pace and choose Share a link: real time must retain its
+   existing room link flow; correspondence must retain its existing private
+   challenge link. Switching delivery back to Pick a player retains B and
+   rechecks live availability. No correspondence fallback is offered.
+
+Automated coverage: `landing-play-sheet.test.ts` drives the sheet through send,
+waiting, cancel and retained accept/decline/expiry outcomes;
+`landing-challenge-player.test.ts` covers follower-only availability, busy and
+offline states, failures, cleanup and delayed reads across pace switches.
+`routes/live-invites.test.ts` and `routes/live-invite-accept.test.ts` exercise
+authenticated two-account lifecycle and durable-seat revalidation at the HTTP
+handler boundary, without requiring listening sockets.

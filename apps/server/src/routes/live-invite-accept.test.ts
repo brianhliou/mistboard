@@ -243,6 +243,7 @@ function fixture(t: TestContext) {
   async function request(user: string, method: string, path: string, body: unknown = {}) {
     const req = Readable.from([JSON.stringify(body)]) as IncomingMessage;
     req.method = method;
+    req.url = `/api/live-invites${path}`;
     req.headers = { 'x-user': user, host: 'localhost', 'content-type': 'application/json' };
     let status = 0;
     let raw = '';
@@ -255,7 +256,7 @@ function fixture(t: TestContext) {
         raw = data;
       },
     } as unknown as ServerResponse;
-    assert.equal(await handler(ctx, req, res, `/api/live-invites${path}`), true);
+    assert.equal(await handler(ctx, req, res, `/api/live-invites${path.split('?')[0]}`), true);
     return { status, raw, body: JSON.parse(raw) };
   }
   async function send(overrides = {}, sender = 'sender') {
@@ -293,6 +294,24 @@ function fixture(t: TestContext) {
     },
   };
 }
+
+test('picker and send both reject durable seats in unloaded real-time rooms', async (t) => {
+  const h = fixture(t);
+  const read = () => h.request('sender', 'GET', '/availability?handle=target');
+  assert.equal((await read()).body.players[0].availability, 'available');
+  h.db.durableBusy.add('target');
+  assert.deepEqual((await read()).body.players, [{ handle: 'target', availability: 'busy' }]);
+  const sent = await h.request('sender', 'POST', '', {
+    targetHandle: 'target',
+    gameSpecId: 'dark-chess',
+    timeControl: clock,
+  });
+  assert.equal(sent.body.error, 'target_unavailable');
+  assert.equal(h.rooms.size, 0);
+  h.db.durableBusy.clear();
+  h.db.durableBusy.add('sender');
+  assert.equal((await read()).body.players[0].availability, 'unavailable');
+});
 
 test('acceptance durably seats both accounts, preserves terms, replays idempotently and exposes only the requester seat', async (t) => {
   const h = fixture(t);

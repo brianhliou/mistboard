@@ -57,6 +57,7 @@ test('HTTP directed live invite lifecycle is authenticated and private', async (
       return { rows: [users.get(String(args[0]))].filter(Boolean) };
     if (sql.includes('FROM user_relations'))
       return { rows: sql.includes("relation = 'follow'") ? [{ one: 1 }] : [] };
+    if (sql.includes('SELECT DISTINCT seats.room_id')) return { rows: [] };
     assert.fail(`unexpected query: ${sql}`);
   });
   const ctx = {
@@ -171,6 +172,7 @@ function harness(t: TestContext) {
   ) {
     const req = Readable.from([raw ?? JSON.stringify(body)]) as IncomingMessage;
     req.method = method;
+    req.url = `/api/live-invites${suffix}`;
     req.headers = {
       'x-user': user,
       'content-type': 'application/json',
@@ -192,7 +194,7 @@ function harness(t: TestContext) {
         data = s;
       },
     } as unknown as ServerResponse;
-    assert.equal(await handler(ctx, req, res, `/api/live-invites${suffix}`), true);
+    assert.equal(await handler(ctx, req, res, `/api/live-invites${suffix.split('?')[0]}`), true);
     return { status, headers, body: JSON.parse(data), raw: data };
   }
   heartbeatLiveInvites('target', now);
@@ -213,6 +215,58 @@ function harness(t: TestContext) {
     },
   };
 }
+
+test('picker availability includes follower-only players and hides policy details; sends revalidate stale availability', async (t) => {
+  const h = harness(t);
+  h.follows.clear();
+  h.follows.add('target:sender');
+  const read = () => h.request('sender', 'GET', '/availability?handle=target&handle=stranger');
+  let result = await read();
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    players: [
+      { handle: 'target', availability: 'available' },
+      { handle: 'stranger', availability: 'unavailable' },
+    ],
+  });
+  assert.equal(result.headers['Cache-Control'], 'no-store');
+  const room = {
+    projection: { state: { status: { type: 'playing' } } },
+    seatTokens: { white: { userId: 'target' } },
+    clients: [],
+  };
+  h.ctx.rooms.set('private-room', room as unknown as Parameters<typeof h.ctx.rooms.set>[1]);
+  assert.equal((await read()).body.players[0].availability, 'busy');
+  assert.equal((await h.request()).body.error, 'target_unavailable');
+  h.ctx.rooms.clear();
+  h.advance(LIVE_INVITE_LEASE_MS);
+  assert.equal((await read()).body.players[0].availability, 'offline');
+  h.heartbeat('target');
+  h.users.get('target')!.accountPreferences.liveInvites = false;
+  result = await read();
+  assert.equal(result.body.players[0].availability, 'unavailable');
+  for (const secret of ['userId', 'accountPreferences', 'private-room', 'email', 'liveInvites'])
+    assert.equal(result.raw.includes(secret), false);
+  h.users.get('target')!.accountPreferences.liveInvites = true;
+  h.users.get('target')!.profileVisibility = 'private';
+  assert.equal((await read()).body.players[0].availability, 'unavailable');
+  h.users.get('target')!.profileVisibility = 'public';
+  h.blocks.add('target:sender');
+  assert.equal((await read()).body.players[0].availability, 'unavailable');
+  h.blocks.clear();
+  assert.equal((await read()).body.players[0].availability, 'available');
+  assert.equal((await h.request('missing', 'GET', '/availability?handle=target')).status, 401);
+  assert.equal(
+    (
+      await h.request(
+        'sender',
+        'GET',
+        `/availability?${Array.from({ length: 51 }, () => 'handle=target').join('&')}`,
+      )
+    ).status,
+    400,
+  );
+});
 
 test('HTTP sends require follow or follower eligibility, either-direction blocks override it, and self/closed/locked/offline/opted-out targets fail closed', async (t) => {
   const h = harness(t);
