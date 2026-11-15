@@ -68,7 +68,8 @@ export function profileTargetFor(
 
 /** The target for a persisted game participant. Bots link off `subjectId` (it is
  *  the bot slug); users need the separately-carried `handle`, since `subjectId`
- *  is an internal user id. Every other subject type has no public page. */
+ *  is an internal user id. A Misty engine version links Misty; every other
+ *  subject type has no public page. */
 export function participantProfileTarget(
   participant: GameParticipant | null | undefined,
 ): ProfileTarget | null {
@@ -80,6 +81,11 @@ export function participantProfileTarget(
     return participant.handle
       ? profileTargetFor({ handle: participant.handle, champions: participant.champions })
       : null;
+  }
+  // Misty's own engines with no bot row (Three Kingdoms Banqi, FFQ banqi) are
+  // recorded as engine versions; the seat is still Misty and links her page.
+  if (participant.subjectType === 'engine-version' && /^misty-/.test(participant.subjectId ?? '')) {
+    return { kind: 'bot', botId: 'misty' };
   }
   return null;
 }

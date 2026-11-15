@@ -198,7 +198,18 @@ describe('bot seat names fit game cards', () => {
       expect(cardName?.textContent).toBe(expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty'));
       expect(cardName?.title).toBe(expected);
       expect(watchQueueMatchupLabel(game)).toBe(`Ann vs ${expected}`);
-      expect(watchGamePlayers(game)[1]?.name).toBe(expected);
+      // /watch's card and seat rows shorten like finished cards and link Misty's
+      // page, since a Misty engine version is still Misty (2026-11-15).
+      const short = expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty');
+      const watchSeat = watchGamePlayers(game)[1];
+      expect(watchSeat?.name).toBe(short);
+      expect(watchSeat?.fullName ?? watchSeat?.name).toBe(expected);
+      expect(watchSeat?.profile).toEqual({ kind: 'bot', botId: 'misty' });
+      const watchMeta = createGameMetaCard({ headline: [], players: watchGamePlayers(game) });
+      const watchMetaName = watchMeta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
+      expect(watchMetaName?.textContent).toBe(short);
+      expect(watchMetaName?.title).toBe(expected);
+      expect(watchMetaName?.getAttribute('href')).toBe('/bot/misty');
       const profileName = buildProfileGameRow(game).querySelector<HTMLElement>(
         '.profile-game-opponent-name',
       );

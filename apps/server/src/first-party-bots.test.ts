@@ -344,3 +344,14 @@ test('bot seats without an engine id attribute by (bot, variant) through the cur
   const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
   assert.equal(new Set(keys).size, keys.length);
 });
+
+test('Misty engines with no bot row still link her page on live seats', () => {
+  for (const engineId of [
+    'misty-three-kingdoms-banqi-level-1',
+    'misty-three-kingdoms-banqi',
+    'misty-ffq-banqi-level-4',
+  ]) {
+    assert.deepEqual(liveSeatProfileIdentity(engineId, null), { botId: 'misty' });
+  }
+  assert.deepEqual(liveSeatProfileIdentity('some-unknown-engine', null), {});
+});
