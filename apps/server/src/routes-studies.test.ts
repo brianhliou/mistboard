@@ -133,6 +133,13 @@ test('chapter tags keep the allowlist and drop everything else', () => {
   // is silent, which is why a caller has to read its own write back.
   assert.deepEqual(parseChapterTags({ Red: 'Xu Chao', Black: 'Huang Xueqian', Result: '1-0' }), {});
 
+  // Gomoku's seats are Black then White; without `white` the second seat's
+  // player was dropped and the embed fell back to the colour name.
+  assert.deepEqual(parseChapterTags({ black: 'Rapfi Level 8', white: 'Rapfi Level 7' }), {
+    black: 'Rapfi Level 8',
+    white: 'Rapfi Level 7',
+  });
+
   // Blank strings clear rather than store, and non-strings are ignored.
   assert.deepEqual(parseChapterTags({ red: '   ', black: 42, result: '1-0' }), { result: '1-0' });
   assert.deepEqual(parseChapterTags(null), {});
