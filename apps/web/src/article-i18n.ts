@@ -3284,8 +3284,6 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
   Repetition: '重复局面',
@@ -6789,11 +6787,7 @@ const ZH_HANS: Record<string, string> = {
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉赖理兄 2022 年世界快棋冠军的话。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '示例对局换成了一盘在本站与引擎下的对局。',
-  'Added a sample game from the site.': '新增一盘本站的示例对局。',
   'Added a short summary at the top.': '在文章顶部添加了简短摘要。',
-  'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -6803,12 +6797,6 @@ const ZH_HANS: Record<string, string> = {
     '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 级现在在这套搜索上加入了一个训练好的神经网络。第 1 到第 7 级就是本文介绍的经典引擎。这个网络暂未公开，之后会发布，届时本页会更新说明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '宝的示意图现在显示规则允许的五种走法，而不是八种。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再称鸭子象棋为 Mistboard 原创；它是把 Tim Paulden 的鸭子国际象棋搬到了象棋棋盘上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增将帅对面的论证、88 个中占 8 个的统计、对局长度的中位数，以及关于 9 月 29 日引擎漏洞的说明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
@@ -10641,8 +10629,6 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
   Repetition: '重複局面',
@@ -13597,11 +13583,7 @@ const ZH_HANT: Record<string, string> = {
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉賴理兄 2022 年世界快棋冠軍的話。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '範例對局換成了一盤在本站與引擎下的對局。',
-  'Added a sample game from the site.': '新增一盤本站的範例對局。',
   'Added a short summary at the top.': '在文章頂部新增了簡短摘要。',
-  'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -13611,12 +13593,6 @@ const ZH_HANT: Record<string, string> = {
     '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 級現在在這套搜尋上加入了一個訓練好的神經網路。第 1 到第 7 級就是本文介紹的經典引擎。這個網路暫未公開，之後會發布，屆時本頁會更新說明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '寶的示意圖現在顯示規則允許的五種走法，而不是八種。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再稱鴨子象棋為 Mistboard 原創；它是把 Tim Paulden 的鴨子西洋棋搬到了象棋棋盤上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增將帥對面的論證、88 個中占 8 個的統計、對局長度的中位數，以及關於 9 月 29 日引擎漏洞的說明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":

@@ -29,9 +29,8 @@ export const jungleArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-09-17',
-  updateNote:
-    'Added a capture table and an FAQ.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
   tldr: [
     'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.',

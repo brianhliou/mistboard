@@ -25,9 +25,8 @@ export const fortressXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-07-01',
-  updatedAt: '2026-09-03',
-  updateNote:
-    'The Treasure figure now shows the five moves the rules allow, not eight.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   tldr: [
     'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.',
     'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.',

@@ -21,9 +21,8 @@ export const jungleFlipArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-09-25',
-  updateNote:
-    'Added an FAQ on what the bot cannot see, and the sample game as a study.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
   tldr: [
     'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.',

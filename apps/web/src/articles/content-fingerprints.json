@@ -57,7 +57,7 @@
   },
   "crazyhouse-xiangqi": {
     "hash": "4e9ee8c2537cbb96",
-    "updatedAt": null
+    "updatedAt": "2026-11-15"
   },
   "dou-shou-qi-engine": {
     "hash": "3e938e69da8dd82c",
@@ -65,7 +65,7 @@
   },
   "duck-xiangqi": {
     "hash": "007e61d56ddc537a",
-    "updatedAt": "2026-10-16"
+    "updatedAt": "2026-11-15"
   },
   "duck-xiangqi-game-tree": {
     "hash": "7ca223a21374dede",
@@ -85,7 +85,7 @@
   },
   "fog-chess": {
     "hash": "5179ab8dc7b32733",
-    "updatedAt": "2026-06-04"
+    "updatedAt": "2026-11-15"
   },
   "fog-future": {
     "hash": "d5d6d6ad339aabbc",
@@ -93,7 +93,7 @@
   },
   "fog-xiangqi": {
     "hash": "c9ee249ec8db2b6e",
-    "updatedAt": "2026-07-23"
+    "updatedAt": "2026-11-15"
   },
   "fortress-and-atomic-xiangqi-on-hold": {
     "hash": "c38a532ebb0d735d",
@@ -101,7 +101,7 @@
   },
   "fortress-xiangqi": {
     "hash": "bdef85f0eb5188f6",
-    "updatedAt": "2026-09-03"
+    "updatedAt": "2026-11-15"
   },
   "general-blunder-challenge": {
     "hash": "2766874a101bfb37",
@@ -149,7 +149,7 @@
   },
   "jungle": {
     "hash": "0fac97a3a55afbcf",
-    "updatedAt": "2026-09-17"
+    "updatedAt": "2026-11-15"
   },
   "jungle-den-term": {
     "hash": "f78b1e9cc48339b4",
@@ -157,7 +157,7 @@
   },
   "jungle-flip": {
     "hash": "252f8e21b4000de8",
-    "updatedAt": "2026-09-25"
+    "updatedAt": "2026-11-15"
   },
   "katago-jungle": {
     "hash": "1307d633e9e4a811",
@@ -177,7 +177,7 @@
   },
   "mahjong": {
     "hash": "59beac96b863ab54",
-    "updatedAt": "2026-11-06"
+    "updatedAt": "2026-11-15"
   },
   "meng-fanrui": {
     "hash": "7788cf6a3869bc7a",
@@ -265,7 +265,7 @@
   },
   "xiangqi": {
     "hash": "a122fed02035354b",
-    "updatedAt": "2026-11-12"
+    "updatedAt": "2026-11-15"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",

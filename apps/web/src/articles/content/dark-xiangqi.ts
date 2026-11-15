@@ -29,9 +29,8 @@ export const darkXiangqiArticle: Article = {
     status: 'published',
     playableOnMistboard: true,
     publishedAt: '2026-05-26',
-    updatedAt: '2026-07-23',
-    updateNote:
-      'Added a sample game from the site.',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
     tldr: [
       'You see your own pieces and the points they can reach. Hidden blockers can change that view.',
       'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.',

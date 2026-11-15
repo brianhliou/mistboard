@@ -18,8 +18,8 @@ export const mahjongArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-13',
-  updatedAt: '2026-11-06',
-  updateNote: 'Hong Kong mahjong closed to new games on November 6, 2026.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: false,
   tldr: [
     'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.',

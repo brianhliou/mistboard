@@ -35,6 +35,8 @@ export const crazyhouseXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-01',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
   tldr: [
     'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.',
