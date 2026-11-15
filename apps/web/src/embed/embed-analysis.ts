@@ -69,6 +69,10 @@ import {
 } from '../review/move-advice-text.js';
 import { moveGlyphTone } from '../review/move-glyph.js';
 import type { MoveAnnotation } from '../review/move-list.js';
+import {
+  fetchCachedThreeKingdomsBanqiDecisions,
+  formatThreeKingdomsBanqiBestMove,
+} from '../review/three-kingdoms-banqi-decisions.js';
 import type { SvgBoardSquareGlyph } from '../svg-board-arrow.js';
 import { loadJieqiEmbedLuck } from './embed-jieqi-luck.js';
 import type { EmbedScoreSeries } from './embed-score-chart.js';
@@ -206,8 +210,15 @@ export const EMBED_ANALYSIS_VARIANTS: Readonly<Record<GameSpecId, EmbedAnalysisV
   'crazyhouse-xiangqi': null,
   mahjong: null,
   'xiangqi-mahjong': null,
-  // Local playtest only (#628): no stored analysis.
-  'three-kingdoms-banqi': null,
+  'three-kingdoms-banqi': {
+    route: 'three-kingdoms-banqi',
+    quoteEvalBestMove: true,
+    formatBestMove: formatThreeKingdomsBanqiBestMove,
+    parseMove: (uci) =>
+      /^[a-i][1-5][a-i][1-5]$/.test(uci) ? { from: uci.slice(0, 2), to: uci.slice(2) } : null,
+    arrows: true,
+    fetchDecisions: (roomId) => fetchCachedThreeKingdomsBanqiDecisions(roomId),
+  },
   // Hidden kernel only: no stored analysis or engine request.
   'ffq-banqi': null,
   chess: null,
@@ -270,6 +281,10 @@ export async function loadEmbedAnalysis(
     formatBestMove: variant.formatBestMove,
   });
   const result = embedAnalysisFromMarks(marks, variant, played);
+  if (specId === 'three-kingdoms-banqi')
+    for (const [ply, mark] of marks)
+      if (mark.luck !== undefined)
+        result.annotations.set(ply, { ...result.annotations.get(ply), luck: mark.luck });
   if (
     specId === 'jieqi' &&
     analysis.evals.length === played.length + 1 &&

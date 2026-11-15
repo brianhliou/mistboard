@@ -57,6 +57,10 @@ import { fetchStudyChapterDecisions } from '../review/study-decisions.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
+import {
+  mountThreeKingdomsBanqiStudyReplay,
+  threeKingdomsBanqiStudyLine,
+} from '../three-kingdoms-banqi-study-replay.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import {
@@ -211,6 +215,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'chess',
   'dark-chess',
   'gomoku',
+  'three-kingdoms-banqi',
 ]);
 
 /**
@@ -235,6 +240,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'dark-xiangqi') {
     await mountDarkXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'three-kingdoms-banqi') {
+    await mountThreeKingdomsBanqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'banqi') {
@@ -348,6 +357,52 @@ export async function mountChapterEmbed(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+async function mountThreeKingdomsBanqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  let line: ReturnType<typeof threeKingdomsBanqiStudyLine>;
+  try {
+    line = threeKingdomsBanqiStudyLine(chapter);
+  } catch {
+    note(root, 'This chapter has no valid position to show.');
+    return;
+  }
+  const final = line.views.at(-1)!;
+  const tags = chapter.tags ?? {};
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountStudyEmbedCard(root, chapter, options, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: {
+        name: tags.red ?? 'First seat',
+        ink: seatInkForVariant('three-kingdoms-banqi', 'red', final.firstColor),
+      },
+      second: {
+        name: tags.black ?? 'Second seat',
+        ink: seatInkForVariant('three-kingdoms-banqi', 'black', final.firstColor),
+      },
+    },
+    result: token ? banqiResultLabel(token, final.firstColor) : '',
+    credit,
+    aspect: boardAspectForSpec('three-kingdoms-banqi'),
+    railWidthPx: embedRailWidthPx('three-kingdoms-banqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountThreeKingdomsBanqiStudyReplay(
+        host,
+        line,
+        options.hideSolution ? null : options.decisions,
+        hooks,
+        chapter.orientation === 'black' ? 'black' : 'red',
+      ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
