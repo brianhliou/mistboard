@@ -843,6 +843,72 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it.each([
+    { kind: 'board move', ply: 1, glyph: 6, square: 'h10', text: '?!', tone: 'inaccuracy' },
+    { kind: 'drop', ply: 3, glyph: 2, square: 'e5', text: '?', tone: 'mistake' },
+  ] as const)(
+    'pins a crazyhouse $kind grade to its destination point',
+    async ({ ply, glyph, square, text, tone }) => {
+      stubFetch(200, {
+        study: { id: 's' },
+        chapters: [
+          {
+            id: 'ChxGrade',
+            variant: 'crazyhouse-xiangqi',
+            root: {
+              root: {
+                children: [
+                  {
+                    uci: 'h3h10',
+                    annotations: { glyphs: ply === 1 ? [glyph] : [] },
+                    children: [
+                      {
+                        uci: 'i10h10',
+                        children: [
+                          { uci: 'N@e5', annotations: { glyphs: ply === 3 ? [glyph] : [] } },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'ChxGrade' }, { startPly: ply });
+
+      const board = () => root.querySelector('.chx-embed-board-svg');
+      const selector = `.xq-marker--${tone}`;
+      const expected = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      expected.innerHTML = xiangqiMarkerSvg(
+        { square, kind: 'glyph', text, className: `xq-marker--${tone}` },
+        'red',
+      );
+      const assertGrade = () => {
+        expect(root.querySelector('.embed-card-status')?.textContent).toBe(`${ply} / 3`);
+        expect(board()?.querySelectorAll('.xq-marker--glyph')).toHaveLength(1);
+        expect(badgeAt(board(), selector)).toEqual(badgeAt(expected, selector));
+        expect(root.querySelector('.review-move-list__suffix')?.textContent?.trim()).toBe(text);
+      };
+      assertGrade();
+
+      // Backward navigation clears the badge on an ungraded position; stepping
+      // forward restores the same grade at the same point, including a drop.
+      const previous = root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!;
+      previous.click();
+      expect(board()?.querySelector('.xq-marker')).toBeNull();
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      assertGrade();
+      for (let step = 0; step < ply; step++) previous.click();
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 3');
+      expect(board()?.querySelector('.xq-marker')).toBeNull();
+      root.remove();
+    },
+  );
+
   it('stops a crazyhouse line at the first token the kernel refuses', async () => {
     // A horse dropped while none is held, then legal moves after it.
     const tokens = ['h3h10', 'i10h10', 'R@e5', 'h10h1'];
