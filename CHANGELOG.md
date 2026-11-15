@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- The Three Kingdoms Banqi bot searches through repeated positions, so it stops chasing pieces it cannot win; its ratings start a fresh record on the new engine ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
+- The Play window now asks who you are playing first, shows each time control as minutes plus increment once, and lets signed-in players send a correspondence challenge to someone they follow or who follows them ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - Picking correspondence or Rated as a guest says it needs an account before you start, and signing in brings back the variant, pace and side you chose ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Correspondence moves wait for Confirm before they are sent, on by default and switchable in settings, and after your move the game links to the next one waiting on you ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Sent correspondence challenges show who they went to with a Withdraw button, challenges waiting on you have Accept and Decline on the homepage, and Share opens the phone's share sheet ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
@@ -254,6 +256,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Bot ratings record the engine build and net they were measured on ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - The site counts where sign-ins start and how many guests who play a person go on to sign in ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Xiangqi bots and server review analysis run patched Pikafish on the public CC0 network ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Browser xiangqi analysis uses the public CC0 network with patched Pikafish ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
