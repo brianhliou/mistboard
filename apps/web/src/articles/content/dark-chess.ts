@@ -59,6 +59,11 @@ export const darkChessArticle: Article = {
     updatedAt: '2026-06-04',
     updateNote:
       'Replaced the sample game with a game played against the engine on the site.',
+    tldr: [
+      'You see your own pieces and the squares they can move to. Everything else is hidden.',
+      'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.',
+      'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.',
+    ],
     audience:
       'Any chess player who has heard of fog chess, dark chess, or Fog of War and wants to understand it from scratch.',
     thumbnail: ARTICLE_OG_POSITIONS['dark-chess'],

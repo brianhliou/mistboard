@@ -286,6 +286,63 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // #1150 rules summaries: machine-drafted Simplified, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或从持子中打入一枚。吃掉的棋子变成己方颜色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象开局时都在持子中，只能在己方半盘移动或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '将死对方即获胜，无合法着法的一方判负。打入可以将军，也可以将死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其余部分都被隐藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉对方的王即获胜。没有将军或将死，王车易位可以经过受攻击的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出现三次、双方各走五十步而没有兵的移动或吃子，或一方无合法着法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到达的交叉点。隐藏的阻挡棋子会改变视野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉对方将帅即获胜。没有将军，将帅照面时可以沿无子相隔的直线吃掉对方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出现三次，或连续六十个半回合没有吃子，判为和棋。无合法着法的一方判负。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鸭子放到一个新的空点上。吃掉将帅时立即结束，不再放鸭子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鸭子不能被吃。它能挡住直线、蹩马腿、塞象眼，也能充当炮架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉对方将帅即获胜。没有将军，无法完成合法回合的一方判负。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盘为七路八横线，双方九宫位于对角。宝在己方半盘内可向任意方向走一个交叉点。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或从持子中打入一枚。被吃的棋子改换阵营，进入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '将死对方即获胜，无合法着法的一方判负。士、象和宝打入时仍受各自活动范围限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '进入对方兽穴、吃光对方所有动物，或使对方无合法着法，即获胜。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '动物能吃同级或更低级的动物。陆地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。狮和虎可以跳河，但水路上有鼠就不能跳；动物进入对方陷阱后失去等级。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚动物棋子在四乘四棋盘上全部盖放。第一枚翻开的棋子决定先手的颜色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻开一枚盖子，或把一枚已翻开的己方动物横向或纵向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高级吃低级，同级相吃时双方同时移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光对方颜色的动物，或使对方既无法翻子也无法走子，即获胜。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '通过摸牌和弃牌组成四副面子和一对将眼。本桌规定，完整牌型至少三番才能和牌。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '吃牌只能吃上家的弃牌；碰、杠或和牌可以认领任一对手的弃牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季节牌放到一旁并补牌。若活牌墙摸尽仍无人和牌，该手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盘为九路十横线，红方先行。将帅和士不能离开九宫，象不能过河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '炮吃子必须恰好隔一个炮架。马和象会被蹩腿、塞眼；兵卒过河后可以横走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '将死对方即获胜，无合法着法的一方判负。双方将帅不能在同一路上无子相隔地照面。',
   // #1149 rules summaries: machine-drafted, using the existing rules terminology.
   'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
     '吃子会移除执行吃子的棋子、被吃的棋子，以及相邻四个交叉点上的棋子。爆炸旁的兵卒不受影响。',
@@ -7221,6 +7278,63 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // #1150 rules summaries: machine-drafted Traditional, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或從持子中打入一枚。吃掉的棋子變成己方顏色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象開局時都在持子中，只能在己方半盤移動或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '將死對方即獲勝，無合法著法的一方判負。打入可以將軍，也可以將死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其餘部分都被隱藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉對方的王即獲勝。沒有將軍或將死，王車易位可以經過受攻擊的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出現三次、雙方各走五十步而沒有兵的移動或吃子，或一方無合法著法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到達的交叉點。隱藏的阻擋棋子會改變視野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉對方將帥即獲勝。沒有將軍，將帥照面時可以沿無子相隔的直線吃掉對方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出現三次，或連續六十個半回合沒有吃子，判為和棋。無合法著法的一方判負。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鴨子放到一個新的空點上。吃掉將帥時立即結束，不再放鴨子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鴨子不能被吃。牠能擋住直線、蹩馬腿、塞象眼，也能充當砲架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉對方將帥即獲勝。沒有將軍，無法完成合法回合的一方判負。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盤為七路八橫線，雙方九宮位於對角。寶在己方半盤內可向任意方向走一個交叉點。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或從持子中打入一枚。被吃的棋子改換陣營，進入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '將死對方即獲勝，無合法著法的一方判負。士、象和寶打入時仍受各自活動範圍限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '進入對方獸穴、吃光對方所有動物，或使對方無合法著法，即獲勝。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '動物能吃同級或更低級的動物。陸地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。獅和虎可以跳河，但水路上有鼠就不能跳；動物進入對方陷阱後失去等級。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚動物棋子在四乘四棋盤上全部蓋放。第一枚翻開的棋子決定先手的顏色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻開一枚蓋子，或把一枚已翻開的己方動物橫向或縱向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高級吃低級，同級相吃時雙方同時移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光對方顏色的動物，或使對方既無法翻子也無法走子，即獲勝。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '透過摸牌和棄牌組成四副面子和一對將眼。本桌規定，完整牌型至少三番才能食糊。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '上牌只能上上家的棄牌；碰、槓或食糊可以取用任一對手的棄牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季節牌放到一旁並補牌。若活牌牆摸盡仍無人食糊，該手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盤為九路十橫線，紅方先行。將帥和士不能離開九宮，象不能過河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '砲吃子必須恰好隔一個砲架。馬和象會被蹩腿、塞眼；兵卒過河後可以橫走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '將死對方即獲勝，無合法著法的一方判負。雙方將帥不能在同一路上無子相隔地照面。',
   // #1149 rules summaries: Traditional overrides follow the shared base.
   'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
     '吃子會移除執行吃子的棋子、被吃的棋子，以及相鄰四個交叉點上的棋子。爆炸旁的兵卒不受影響。',

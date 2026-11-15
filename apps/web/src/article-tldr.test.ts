@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { playClosing, relatedClosing } from './articles/diagrams.js';
 import type { Article } from './articles/types.js';
 import { articles } from './articles-data.js';
 
-// #1149 is a six-page migration, not a new requirement for every older rule page.
+// Keep #1149's destination pins alongside the contract for every published page.
 const NORMALIZED_RULES = [
   'atomic-xiangqi',
   'banqi',
@@ -27,6 +28,46 @@ function missingTldr(list: readonly Article[]): string[] {
         !(a.tldr ?? []).some((line) => line.trim().length > 0),
     )
     .map((a) => a.slug);
+}
+
+// Xiangqi Mahjong keeps its existing hand-building introduction and ending.
+// Drafts are checked when published; age, visibility and playability do not exempt rules.
+function coveredRules(list: readonly Article[]): Article[] {
+  return list.filter(
+    (a) => a.kind === 'rules' && a.status === 'published' && a.slug !== 'xiangqi-mahjong-32',
+  );
+}
+
+function rulesTemplateFailures(list: readonly Article[]) {
+  return coveredRules(list).flatMap((article) => {
+    const missing: string[] = [];
+    const lines = article.tldr ?? [];
+    if (lines.length < 2 || lines.length > 4 || lines.some((line) => !line.trim())) {
+      missing.push('summary');
+    }
+    // Both shared helpers produce an optional lead and a final button row.
+    // Reference pages keep relatedClosing; a play link is not required.
+    const closing = article.sections.at(-1);
+    const blocks = closing?.blocks ?? [];
+    const cta = blocks.at(-1);
+    if (
+      !closing?.heading.trim() ||
+      blocks.length < 1 ||
+      blocks.length > 2 ||
+      blocks.slice(0, -1).some((block) => block.kind !== 'paragraph' || !block.text.trim()) ||
+      cta?.kind !== 'cta' ||
+      cta.buttons.length === 0 ||
+      cta.buttons.some(
+        (button, index) =>
+          !button.label.trim() ||
+          !button.href.trim() ||
+          button.emphasis !== (index === 0 ? 'primary' : 'secondary'),
+      )
+    ) {
+      missing.push('closing');
+    }
+    return missing.length ? [{ slug: article.slug, missing }] : [];
+  });
 }
 
 describe('article In short (tldr)', () => {
@@ -65,18 +106,64 @@ describe('article In short (tldr)', () => {
   });
 });
 
-describe('normalized rules summaries and closings (#1149)', () => {
-  const bySlug = (slug: string) => articles.find((a) => a.slug === slug)!;
+describe('published rules summaries and final closings', () => {
+  it('every published rules page follows the template, apart from Xiangqi Mahjong', () => {
+    expect(rulesTemplateFailures(articles)).toEqual([]);
+  });
 
-  it.each(NORMALIZED_RULES)('%s opens with two to four rule-based summary lines', (slug) => {
-    const lines = bySlug(slug).tldr ?? [];
-    expect(lines.length).toBeGreaterThanOrEqual(2);
-    expect(lines.length).toBeLessThanOrEqual(4);
-    for (const line of lines) {
-      expect(line.trim()).not.toBe('');
+  it.each(coveredRules(articles))('$slug keeps its summary about the rules', (article) => {
+    for (const line of article.tldr ?? []) {
       expect(line).not.toMatch(/Mistboard|play (?:now|online)|no account/i);
     }
   });
+
+  it('catches a planted rules page missing both requirements and isolates each failure', () => {
+    const base = articles.find((a) => a.slug === 'banqi')!;
+    const broken: Article = { ...base, slug: 'rules-missing-both', tldr: undefined, sections: [] };
+    const play = playClosing({ heading: 'Play', playLabel: 'Play', playHref: '/?play=friend' });
+    const related = relatedClosing({
+      heading: 'Related rules',
+      lead: 'Read another rules page.',
+      links: [{ label: 'Rules', href: '/rules', emphasis: 'primary' }],
+    });
+    const valid: Article = {
+      ...broken,
+      tldr: ['A turn rule.', 'A winning rule.'],
+      sections: [play],
+    };
+    expect(
+      rulesTemplateFailures([
+        broken,
+        { ...valid, slug: 'rules-blank-line', tldr: ['A turn rule.', ' '] },
+        { ...valid, slug: 'rules-no-closing', sections: [] },
+        {
+          ...valid,
+          slug: 'rules-prose-after-buttons',
+          sections: [
+            {
+              ...play,
+              blocks: [...play.blocks!, { kind: 'paragraph', text: 'After the buttons.' }],
+            },
+          ],
+        },
+        { ...valid, slug: 'rules-with-play-closing' },
+        { ...valid, slug: 'rules-with-related-closing', sections: [related] },
+        { ...broken, slug: 'draft-rules', status: 'draft' },
+        { ...broken, slug: 'outline-rules', status: 'outline' },
+        { ...broken, slug: 'old-article', kind: 'article', publisher: 'mistboard' },
+        { ...broken, slug: 'xiangqi-mahjong-32' },
+      ]),
+    ).toEqual([
+      { slug: 'rules-missing-both', missing: ['summary', 'closing'] },
+      { slug: 'rules-blank-line', missing: ['summary'] },
+      { slug: 'rules-no-closing', missing: ['closing'] },
+      { slug: 'rules-prose-after-buttons', missing: ['closing'] },
+    ]);
+  });
+});
+
+describe('normalized rules closing destinations (#1149)', () => {
+  const bySlug = (slug: string) => articles.find((a) => a.slug === slug)!;
 
   const destinations = {
     'atomic-xiangqi': ['/study/dPKhvJKb'],
