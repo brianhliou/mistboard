@@ -613,8 +613,9 @@ const ZH_HANS: Record<string, string> = {
   'Five in a row wins': '连五获胜',
   // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三国暗棋规则',
+  'Three Kingdoms Banqi Rules: How to Play and Score': '三国暗棋规则：玩法与计分',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
-    '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
+    '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋，棋子开局全部盖着。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
   'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
     '三十二颗棋子开局时全部盖着。轮到你时，翻开一颗暗子，或走一颗己方棋子。',
   'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':
@@ -7523,8 +7524,9 @@ const ZH_HANT: Record<string, string> = {
   'Five in a row wins': '連五獲勝',
   // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三國暗棋規則',
+  'Three Kingdoms Banqi Rules: How to Play and Score': '三國暗棋規則：玩法與計分',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
-    '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
+    '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋，棋子開局全部蓋著。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
   'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
     '三十二顆棋子開局時全部蓋著。輪到你時，翻開一顆暗子，或走一顆己方棋子。',
   'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':

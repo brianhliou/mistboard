@@ -41,6 +41,7 @@ export const threeKingdomsBanqiArticle: Article = {
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Three Kingdoms Banqi Rules',
+  seoTitle: 'Three Kingdoms Banqi Rules: How to Play and Score',
   tagline: 'Face-down pieces, any piece takes any piece, first to 100 wins.',
   summary:
     'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.',
