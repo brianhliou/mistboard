@@ -1,6 +1,7 @@
 // Railway Infrastructure as Code for the two services this repo deploys (#980).
-// It replaces Config as Code (railway.web.json, railway.engine-worker.json),
-// which Railway stops reading on 2026-12-01.
+// It replaces Config as Code (railway.web.json, railway.engine-worker.json,
+// deleted after the 2026-11-14 cutover), which Railway stops reading on
+// 2026-12-01.
 //
 // The settings live in the JSON files beside this one, so the scripts that
 // need them (prod-smoke-plan, engine-deploy-plan, the railway tests) read the

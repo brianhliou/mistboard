@@ -45,7 +45,6 @@
       "/scripts/fetch-release-asset.sh",
       "/scripts/fetch-private-net.sh",
       "/railpack.json",
-      "/railway.web.json",
       "/tsconfig.base.json"
     ]
   },

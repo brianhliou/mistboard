@@ -44,7 +44,6 @@
       "/package.json",
       "/package-lock.json",
       "/railpack.json",
-      "/railway.engine-worker.json",
       "/tsconfig.base.json"
     ]
   },
