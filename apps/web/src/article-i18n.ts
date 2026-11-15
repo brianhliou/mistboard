@@ -626,7 +626,7 @@ const ZH_HANS: Record<string, string> = {
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
     '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键在于该翻哪颗子、该吃哪颗子，以及哪些子可以暂时让对方有机会吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
-    'Gamesofa 的暗棋 App 在 2026 年 7 月推出了三国暗棋。Mistboard 采用自己的版本，与 Gamesofa 没有任何关联。',
+    '神来也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三国暗棋。Mistboard 采用自己的版本，与神来也没有任何关联。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
     '棋盘横向 9 个点、纵向 5 个点，没有河界，也没有九宫。每一方都有一整套象棋棋子：一将、二士、二象、二车、二马、二炮、五兵。三十二颗棋子开局时全部洗乱、盖着，分成四块，每块八颗，中间一行和中间一列空着。',
   'Your turn': '轮到你时',
@@ -7536,7 +7536,7 @@ const ZH_HANT: Record<string, string> = {
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
     '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵在於該翻哪顆子、該吃哪顆子，以及哪些子可以暫時讓對方有機會吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
-    'Gamesofa 的暗棋 App 在 2026 年 7 月推出了三國暗棋。Mistboard 採用自己的版本，與 Gamesofa 沒有任何關聯。',
+    '神來也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三國暗棋。Mistboard 採用自己的版本，與神來也沒有任何關聯。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
     '棋盤橫向 9 個點、縱向 5 個點，沒有河界，也沒有九宮。每一方都有一整套象棋棋子：一將、二士、二象、二車、二馬、二炮、五兵。三十二顆棋子開局時全部洗亂、蓋著，分成四塊，每塊八顆，中間一行和中間一列空著。',
   'Your turn': '輪到你時',
