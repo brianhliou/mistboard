@@ -145,7 +145,7 @@ definePersistenceTests('bot profiles', () => {
           ('flip', 'bot', 'another-bot', 'misty-jungle-flip-level-1');`);
       await client.query(
         readFileSync(
-          new URL('../migrations/203_game_participants_bot_level.sql', import.meta.url),
+          new URL('../migrations/204_game_participants_bot_level.sql', import.meta.url),
           'utf8',
         ),
       );

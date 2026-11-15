@@ -35,7 +35,7 @@ numbered migrations.
 
 Bot difficulty records use the seated engine's `game_participants.engine_id`
 (migration 148). Misty's Banqi and Flip Jungle levels are now also snapshotted
-in `game_participants.bot_level` when a game finishes (migration 203). This
+in `game_participants.bot_level` when a game finishes (migration 204). This
 preserves the level when an unnumbered engine id changes rung labels. Repeated
 finish writes preserve the original level, including an unrecorded level.
 The backfill labels numbered engine ids by their number and the unnumbered
