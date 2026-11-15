@@ -144,6 +144,8 @@ for (const spec of restricted) {
       }
       if (sql.includes('SELECT 1 AS one FROM users')) return { rows: [{ one: 1 }], rowCount: 1 };
       if (sql.includes('FROM user_relations')) return { rows: [], rowCount: 0 };
+      // #1131: neither account owes a first move in another correspondence game.
+      if (sql.includes('AS opponent_name')) return { rows: [], rowCount: 0 };
       if (sql.includes('FROM correspondence_seeks'))
         return {
           rows: [

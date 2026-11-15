@@ -150,7 +150,11 @@ test('a rename can replace the tags, and refuses tags it would drop', () => {
   assert.deepEqual(checkPlan(s, rename({ red: 'AB-JChess 0.2d', black: ' jqe it014 ' })), [
     'rename a: "Game 1" -> "x" tags red "AB-JChess 0.2d", black "jqe it014"',
   ]);
-  for (const tags of [{}, { white: 'x' }, { red: 'x', player: 'y' }, ['red'], { red: ' ' }]) {
+  // Gomoku chapters name their second seat with a white tag (#1146).
+  assert.deepEqual(checkPlan(s, rename({ black: 'Rapfi L8', white: 'Rapfi L7' })), [
+    'rename a: "Game 1" -> "x" tags black "Rapfi L8", white "Rapfi L7"',
+  ]);
+  for (const tags of [{}, { blue: 'x' }, { red: 'x', player: 'y' }, ['red'], { red: ' ' }]) {
     assert.throws(() => checkPlan(s, rename(tags)), /tags .*not kept/);
   }
 });

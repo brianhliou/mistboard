@@ -499,6 +499,10 @@ export type CreateSeekOptions = {
   // The host route mails both players its own start emails once the game is
   // made, so the private seek it posts must not also mail a challenge (#1057).
   skipChallengeEmail?: boolean;
+  // The host route posts as the host, who answers many players at once; a first
+  // move the host owes elsewhere must not lock everyone else out (#1131). The
+  // player accepting is still checked.
+  skipFirstMoveOwed?: boolean;
 };
 
 /** Options for an accept made on a player's behalf (the correspondence host route). */
@@ -522,7 +526,7 @@ export async function createSeekResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
-  const owed = await firstMoveOwedResult(user.id);
+  const owed = options.skipFirstMoveOwed ? null : await firstMoveOwedResult(user.id);
   if (owed) return owed;
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
   // A retired variant takes no new games: the same 410 the request gate gives.

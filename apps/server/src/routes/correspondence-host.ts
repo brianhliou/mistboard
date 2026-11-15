@@ -68,6 +68,7 @@ function defaultHostDeps(ctx: HttpApiContext): HostDeps {
       createSeekResult(ctx, host, body, 'board', {
         skipOpenSeekCap: true,
         skipChallengeEmail: true,
+        skipFirstMoveOwed: true,
       }),
     accept: (player, seekId) => acceptSeekResult(ctx, player, seekId, { hostGame: true }),
     cancel: async (host, seekId) => {
