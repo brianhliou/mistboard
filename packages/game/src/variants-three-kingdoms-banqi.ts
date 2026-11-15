@@ -9,6 +9,7 @@ import { banqiPieceLetter } from './banqi-fen.js';
 import type { AbortReason } from './types.js';
 import {
   assertValidBanqiDeal,
+  BANQI_PIECE_COUNTS,
   type BanqiCapture,
   type BanqiColor,
   type BanqiDeal,
@@ -38,7 +39,8 @@ export const THREE_KINGDOMS_BANQI_CHASE_REPETITION_LIMIT = 3;
  */
 export const THREE_KINGDOMS_BANQI_RULES = {
   // The general is ordinary: neither check nor facing generals restrict a move.
-  generalSafety: (_state: ThreeKingdomsBanqiState, _move: ThreeKingdomsBanqiMove): boolean => true,
+  generalSafety: (_state: ThreeKingdomsBanqiReplayState, _move: ThreeKingdomsBanqiMove): boolean =>
+    true,
   // Rule 3: a face-down piece cannot be captured, by the cannon or anything else.
   // Its occupancy is public; its ink/role never affects move legality.
   faceDownTarget: (): boolean => false,
@@ -112,6 +114,18 @@ export type ThreeKingdomsBanqiState = {
   // threeKingdomsBanqiPositionKey. Public: it is a function of the move list.
   repCounts: Record<string, number>;
 };
+/** Public replay keeps occupancy, never the identities of covered tiles. */
+export type ThreeKingdomsBanqiReplayState = Omit<ThreeKingdomsBanqiState, 'board'> & {
+  board: Partial<Record<ThreeKingdomsBanqiSquare, BanqiVisibleBoardEntry>>;
+};
+
+export type ThreeKingdomsBanqiReplayMove = ThreeKingdomsBanqiMove & {
+  /** Present only on the recorded flip that publicly revealed this piece. */
+  revealed?: { color: BanqiColor; role: BanqiPieceRole };
+};
+
+export const THREE_KINGDOMS_BANQI_PUBLIC_REPLAY = 'three-kingdoms-banqi-public-v1';
+
 export type ThreeKingdomsBanqiPlayerView = {
   id: string;
   perspective: BanqiSeat;
@@ -238,7 +252,7 @@ export function createThreeKingdomsBanqiStateFromSetup(
 }
 
 export function isThreeKingdomsBanqiLegalMove(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
   move: ThreeKingdomsBanqiMove,
 ): boolean {
   return getThreeKingdomsBanqiLegalMoves(state).some(
@@ -256,7 +270,7 @@ export function threeKingdomsBanqiSeatToMove(
  * (THREE_KINGDOMS_BANQI_RULES.generalSafety). All revealed enemies are capturable.
  */
 function boardDests(
-  board: ThreeKingdomsBanqiBoard,
+  board: ThreeKingdomsBanqiReplayState['board'],
   from: ThreeKingdomsBanqiSquare,
 ): ThreeKingdomsBanqiSquare[] {
   const piece = board[from];
@@ -264,7 +278,7 @@ function boardDests(
   const file = FILES.indexOf(from[0]);
   const rank = Number(from[1]);
   const dests: ThreeKingdomsBanqiSquare[] = [];
-  const mayLand = (target: BanqiPiece | undefined) =>
+  const mayLand = (target: BanqiVisibleBoardEntry | undefined) =>
     !target ||
     (target.faceDown ? THREE_KINGDOMS_BANQI_RULES.faceDownTarget() : target.color !== piece.color);
 
@@ -325,10 +339,10 @@ function boardDests(
 
 /** `board` after the quiet move `move` (no flip, no capture). */
 function boardAfterQuietMove(
-  board: ThreeKingdomsBanqiBoard,
+  board: ThreeKingdomsBanqiReplayState['board'],
   move: ThreeKingdomsBanqiMove,
-): ThreeKingdomsBanqiBoard {
-  const next: ThreeKingdomsBanqiBoard = { ...board, [move.to]: board[move.from] };
+): ThreeKingdomsBanqiReplayState['board'] {
+  const next: ThreeKingdomsBanqiReplayState['board'] = { ...board, [move.to]: board[move.from] };
   delete next[move.from];
   return next;
 }
@@ -338,7 +352,7 @@ function boardAfterQuietMove(
  * enemy piece that moved on the previous ply); else null. `move` must be legal.
  */
 function chaseTargetOf(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
   move: ThreeKingdomsBanqiMove,
 ): ThreeKingdomsBanqiSquare | null {
   if (move.from === move.to) return null; // flip
@@ -353,7 +367,7 @@ function chaseTargetOf(
 
 /** How `move` relates to a chase: the two kinds the rule singles out, or neither. */
 function chaseKindOf(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
   move: ThreeKingdomsBanqiMove,
 ): 'chase' | 'flee' | null {
   const chases = chaseTargetOf(state, move) !== null;
@@ -370,7 +384,7 @@ function chaseKindOf(
  * can recur, and within one window the scores are fixed.
  */
 export function threeKingdomsBanqiPositionKey(
-  state: Pick<ThreeKingdomsBanqiState, 'board' | 'ply' | 'firstColor'>,
+  state: Pick<ThreeKingdomsBanqiReplayState, 'board' | 'ply' | 'firstColor'>,
 ): string {
   const squares = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
     const piece = state.board[square];
@@ -382,7 +396,7 @@ export function threeKingdomsBanqiPositionKey(
 
 /** Chase moves (from `moves`) the repetition limit refuses. */
 function forbiddenChaseMoves(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
   moves: ThreeKingdomsBanqiMove[],
 ): ThreeKingdomsBanqiMove[] {
   return moves.filter((move) => {
@@ -397,7 +411,7 @@ function forbiddenChaseMoves(
 }
 
 function enumerateThreeKingdomsBanqiMoves(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
 ): ThreeKingdomsBanqiMove[] {
   if (state.status.type !== 'playing') return [];
   const ink = banqiInkForSeat(state, threeKingdomsBanqiSeatToMove(state));
@@ -421,7 +435,7 @@ function enumerateThreeKingdomsBanqiMoves(
  * or when they are its only moves and so stay legal.
  */
 export function getThreeKingdomsBanqiForbiddenChaseMoves(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
 ): ThreeKingdomsBanqiMove[] {
   const moves = enumerateThreeKingdomsBanqiMoves(state);
   const forbidden = forbiddenChaseMoves(state, moves);
@@ -429,7 +443,7 @@ export function getThreeKingdomsBanqiForbiddenChaseMoves(
 }
 
 export function getThreeKingdomsBanqiLegalMoves(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
 ): ThreeKingdomsBanqiMove[] {
   const moves = enumerateThreeKingdomsBanqiMoves(state);
   const forbidden = forbiddenChaseMoves(state, moves);
@@ -440,7 +454,7 @@ export function getThreeKingdomsBanqiLegalMoves(
 }
 
 export function getThreeKingdomsBanqiResult(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
 ): ThreeKingdomsBanqiStatus {
   if (state.status.type !== 'playing') return state.status;
   for (const seat of ['red', 'black'] as const) {
@@ -479,6 +493,21 @@ export function applyThreeKingdomsBanqiMove(
   state: ThreeKingdomsBanqiState,
   move: ThreeKingdomsBanqiMove,
 ): ThreeKingdomsBanqiState {
+  return applyThreeKingdomsBanqiKernelMove(state, move);
+}
+
+function applyThreeKingdomsBanqiKernelMove(
+  state: ThreeKingdomsBanqiState,
+  move: ThreeKingdomsBanqiMove,
+): ThreeKingdomsBanqiState;
+function applyThreeKingdomsBanqiKernelMove(
+  state: ThreeKingdomsBanqiReplayState,
+  move: ThreeKingdomsBanqiMove,
+): ThreeKingdomsBanqiReplayState;
+function applyThreeKingdomsBanqiKernelMove(
+  state: ThreeKingdomsBanqiReplayState,
+  move: ThreeKingdomsBanqiMove,
+): ThreeKingdomsBanqiReplayState {
   if (
     !getThreeKingdomsBanqiLegalMoves(state).some(
       (candidate) => candidate.from === move.from && candidate.to === move.to,
@@ -488,6 +517,8 @@ export function applyThreeKingdomsBanqiMove(
   const seat = threeKingdomsBanqiSeatToMove(state);
   const other = oppositeBanqiSeat(seat);
   const piece = state.board[move.from]!;
+  // An unresolved covered tile needs an observed outcome before it can flip.
+  if (!('color' in piece)) return state;
   const flip = move.from === move.to;
   const target = flip ? undefined : state.board[move.to];
   const board = { ...state.board };
@@ -500,7 +531,7 @@ export function applyThreeKingdomsBanqiMove(
   } else {
     board[move.to] = { ...piece };
     delete board[move.from];
-    if (target) {
+    if (target && !target.faceDown) {
       scores[seat] += THREE_KINGDOMS_BANQI_POINTS[target.role];
       captures = [...captures, { owner: target.color, role: target.role }];
     }
@@ -509,7 +540,7 @@ export function applyThreeKingdomsBanqiMove(
   const irreversible = flip || target !== undefined;
   const chased = irreversible ? null : chaseTargetOf(state, move);
   const ply = state.ply + 1;
-  const next: ThreeKingdomsBanqiState = {
+  const next: ThreeKingdomsBanqiReplayState = {
     ...state,
     board,
     firstColor,
@@ -535,7 +566,7 @@ export function applyThreeKingdomsBanqiMove(
 }
 
 export function getThreeKingdomsBanqiPlayerView(
-  state: ThreeKingdomsBanqiState,
+  state: ThreeKingdomsBanqiReplayState,
   seat: BanqiSeat,
 ): ThreeKingdomsBanqiPlayerView {
   const board: ThreeKingdomsBanqiPlayerView['board'] = {};
@@ -567,9 +598,10 @@ export function getThreeKingdomsBanqiPlayerView(
  * X = hidden tile, UPPER/lower = revealed red/black. Then seat to move (r/b),
  * firstColor (r/b/-), red-seat score, black-seat score, clock, fullmove number.
  * Never includes a deal, seed, hidden identity field or per-square hidden pool.
- * Replay requires the server-secret initial deal + moves, not this projection.
+ * Replay requires either the server-secret setup or recorded public flip
+ * outcomes alongside the moves, never this positional projection alone.
  */
-export function threeKingdomsBanqiStateToFen(state: ThreeKingdomsBanqiState): string {
+export function threeKingdomsBanqiStateToFen(state: ThreeKingdomsBanqiReplayState): string {
   const rows: string[] = [];
   for (let rank = THREE_KINGDOMS_BANQI_HEIGHT; rank >= 1; rank -= 1) {
     let row = '';
@@ -633,4 +665,95 @@ export function threeKingdomsBanqiStateToEngineFen(state: ThreeKingdomsBanqiStat
   }
   const last = state.lastMove ? `${state.lastMove.from}${state.lastMove.to}` : '-';
   return `${threeKingdomsBanqiStateToFen(state)} ${pool || '-'} ${last}`;
+}
+
+const REPLAY_ROLE: Readonly<Record<string, BanqiPieceRole>> = {
+  G: 'general',
+  A: 'advisor',
+  E: 'elephant',
+  R: 'chariot',
+  H: 'horse',
+  C: 'cannon',
+  S: 'soldier',
+};
+
+/** Public replay tokens: a board move (a1b1), or an observed flip (@a1:R).
+ * This is deliberately separate from dealt-FEN parsing: no sampling occurs. */
+export function parseThreeKingdomsBanqiReplayMove(
+  token: string,
+): ThreeKingdomsBanqiReplayMove | null {
+  const flip = /^@([a-i][1-5]):([GAERHCSgaerhcs])$/.exec(token);
+  if (flip) {
+    const letter = flip[2]!;
+    const square = flip[1] as ThreeKingdomsBanqiSquare;
+    return {
+      from: square,
+      to: square,
+      revealed: {
+        color: letter === letter.toUpperCase() ? 'red' : 'black',
+        role: REPLAY_ROLE[letter.toUpperCase()]!,
+      },
+    };
+  }
+  const move = /^([a-i][1-5])([a-i][1-5])$/.exec(token);
+  if (!move || move[1] === move[2]) return null;
+  return { from: move[1] as ThreeKingdomsBanqiSquare, to: move[2] as ThreeKingdomsBanqiSquare };
+}
+
+/** The public opening has 32 anonymous occupants and no secret setup. */
+export function createInitialThreeKingdomsBanqiReplayState(
+  id: string,
+): ThreeKingdomsBanqiReplayState {
+  const board: ThreeKingdomsBanqiReplayState['board'] = {};
+  for (const square of THREE_KINGDOMS_BANQI_SETUP_SQUARES) board[square] = { faceDown: true };
+  return {
+    id,
+    board,
+    status: { type: 'playing', turn: 'red' },
+    ply: 0,
+    moveNumber: 1,
+    firstColor: null,
+    scores: { red: 0, black: 0 },
+    noProgressClock: 0,
+    captures: [],
+    repCounts: {},
+  };
+}
+
+/** Supply only this flip's observed identity, then run the ordinary kernel.
+ * The remaining tiles stay identity-free. History is carried forward intact,
+ * rather than reconstructed from a positional FEN (which loses chase state).
+ * Throws on incomplete, impossible or illegal records; never repairs a deal. */
+export function applyThreeKingdomsBanqiReplayMove(
+  state: ThreeKingdomsBanqiReplayState,
+  move: ThreeKingdomsBanqiReplayMove,
+): ThreeKingdomsBanqiReplayState {
+  const fail = (): never => {
+    throw new Error('Inconsistent Three Kingdoms banqi public replay.');
+  };
+  if (!isThreeKingdomsBanqiLegalMove(state, move)) return fail();
+  const action = { from: move.from, to: move.to };
+  const flip = move.from === move.to;
+  if (!flip) {
+    if (move.revealed !== undefined) return fail();
+    return applyThreeKingdomsBanqiKernelMove(state, action);
+  }
+  const identity = move.revealed;
+  if (
+    !identity ||
+    !['red', 'black'].includes(identity.color) ||
+    !Object.keys(BANQI_PIECE_COUNTS).includes(identity.role)
+  )
+    return fail();
+  const used =
+    state.captures.filter((p) => p.owner === identity.color && p.role === identity.role).length +
+    Object.values(state.board).filter(
+      (p) => p && !p.faceDown && p.color === identity.color && p.role === identity.role,
+    ).length;
+  if (used >= BANQI_PIECE_COUNTS[identity.role]) return fail();
+  const observed: BanqiPiece = { color: identity.color, role: identity.role, faceDown: true };
+  return applyThreeKingdomsBanqiKernelMove(
+    { ...state, board: { ...state.board, [move.from]: observed } },
+    action,
+  );
 }

@@ -6,7 +6,7 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { ensureDealtRoot } from './studies.js';
+import { ensureDealtRoot, isSerializedTree } from './studies.js';
 
 // The bug this exists for: studies gained the dealt variants, the create-study
 // flow minted a deal, and the ADD-CHAPTER flow did not. So a jieqi study opened
@@ -14,6 +14,33 @@ import { ensureDealtRoot } from './studies.js';
 // supported yet" — a chapter with no deal has nothing to replay from. Found in
 // production by adding a chapter, not by any test.
 const EMPTY = { version: 1, root: { children: [] } };
+
+test('a public Three Kingdoms replay never acquires a sampled dealt root', () => {
+  const recorded = { ...EMPTY, replay: 'three-kingdoms-banqi-public-v1' };
+  assert.equal(isSerializedTree(recorded), true);
+  const stored = {
+    id: 'chapter',
+    variant: 'three-kingdoms-banqi',
+    root: ensureDealtRoot('three-kingdoms-banqi', recorded),
+  };
+  assert.deepEqual(JSON.parse(JSON.stringify(stored)), {
+    id: 'chapter',
+    variant: 'three-kingdoms-banqi',
+    root: recorded,
+  });
+});
+
+test('public replay roots reject unknown formats and any accompanying deal', () => {
+  assert.equal(isSerializedTree({ ...EMPTY, replay: 'unknown-v1' }), false);
+  assert.equal(
+    isSerializedTree({
+      ...EMPTY,
+      replay: 'three-kingdoms-banqi-public-v1',
+      rootFen: 'secret-deal',
+    }),
+    false,
+  );
+});
 
 test('a dealt variant always comes back with a root position', () => {
   for (const spec of [BANQI_SPEC_ID, JIEQI_SPEC_ID, JUNGLE_FLIP_SPEC_ID]) {

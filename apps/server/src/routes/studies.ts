@@ -24,6 +24,7 @@ import {
   isStudyEligibleSpecId,
   parsePracticeGoal,
   startIsDealt,
+  THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
@@ -93,7 +94,12 @@ async function listAccessFor(request: IncomingMessage): Promise<StudyListAccess>
 
 export function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-  const tree = value as { version?: unknown; root?: unknown };
+  const tree = value as { version?: unknown; root?: unknown; replay?: unknown; rootFen?: unknown };
+  if (
+    tree.replay !== undefined &&
+    (tree.replay !== THREE_KINGDOMS_BANQI_PUBLIC_REPLAY || tree.rootFen !== undefined)
+  )
+    return false;
   if (tree.version !== 1) return false;
   const root = tree.root as { children?: unknown } | null;
   return !!root && typeof root === 'object' && Array.isArray(root.children);
@@ -186,6 +192,13 @@ async function pageOf(
 // path to remember. The create-study flow already mints one; the add-chapter
 // flow did not, which shipped a study whose second chapter would not load.
 export function ensureDealtRoot(variant: string, root: unknown): unknown {
+  if (
+    variant === 'three-kingdoms-banqi' &&
+    root &&
+    typeof root === 'object' &&
+    (root as { replay?: unknown }).replay === THREE_KINGDOMS_BANQI_PUBLIC_REPLAY
+  )
+    return root;
   if (!startIsDealt(variant)) return root;
   if (
     root &&
