@@ -240,9 +240,12 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
  * text like any other user field, and an open-ended object would let a client
  * store whatever it liked on our row.
  */
+// `white` is the second seat where the first mover is Black (Gomoku): the embed
+// names that seat from it.
 const CHAPTER_TAG_KEYS = [
   'red',
   'black',
+  'white',
   'result',
   'event',
   'date',

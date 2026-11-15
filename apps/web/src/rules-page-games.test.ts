@@ -8,6 +8,7 @@ import {
   ALL_JUNGLE_FLIP_SQUARES,
   applyCrazyhouseXiangqiMove,
   applyDuckXiangqiTurn,
+  applyGomokuRoomMove,
   applyJungleFlipMove,
   applyJungleMove,
   applyStandardXiangqiMove,
@@ -29,6 +30,8 @@ import {
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleGameState,
+  parseGomokuFen,
+  parseGomokuMove,
   parseJungleFlipFen,
   type XiangqiGameState,
   type XiangqiSquare,
@@ -424,5 +427,32 @@ describe('rules page sample games', () => {
       for (const t of line.slice(0, ply)) s = play(s, t);
       for (const t of moves) s = play(s, t);
     }
+  });
+  it('gomoku: Rapfi Level 8 vs Level 7, legal throughout, Black ends on five in a row', () => {
+    const chapter = readPlan('gomoku').create.chapter;
+    expect(chapter.variant).toBe('gomoku');
+    expect(embedPaths('gomoku')).toContain('/embed/study/DnfILsD2/k7UH5qWM');
+    expect(chapter.tags).toMatchObject({
+      black: 'Rapfi Level 8',
+      white: 'Rapfi Level 7',
+      result: '1-0',
+    });
+    const nodes = mainLine(chapter.tree.root);
+    expect(nodes).toHaveLength(53);
+    // A placement has no sideline: each point is its own move.
+    expect(sidelines(chapter.tree.root)).toEqual([]);
+    const root = parseGomokuFen(chapter.tree.rootFen, 'rules-gomoku');
+    if (!root.ok) throw new Error('bad root');
+    let state = root.state;
+    for (const { uci } of nodes) {
+      const move = parseGomokuMove(uci);
+      const next = move && applyGomokuRoomMove(state, move);
+      if (!next || next === state) throw new Error(`illegal ${uci}`);
+      state = next;
+    }
+    expect(state.status).toEqual({ type: 'finished', winner: 'black', reason: 'five' });
+    // The winning point is the engine's own choice, never a graded move.
+    expect(nodes.at(-1)!.annotations?.glyphs ?? []).toEqual([]);
+    expect(nodes.filter((n) => n.annotations?.glyphs?.length).length).toBeGreaterThan(0);
   });
 });
