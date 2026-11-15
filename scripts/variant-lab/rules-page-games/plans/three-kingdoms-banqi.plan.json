@@ -2,7 +2,7 @@
   "create": {
     "owner": "mistboard",
     "name": "Three Kingdoms Banqi: Level 7 versus Level 8, annotated",
-    "description": "A recorded engine game, analyzed with the served Level 8 engine and pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/three-kingdoms-banqi.",
+    "description": "A recorded engine game. The graph has two lines, each level's own read of every position at its served settings; grades use Level 8 and its pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/three-kingdoms-banqi.",
     "visibility": "public",
     "chapter": {
       "name": "Misty Level 8 vs Misty Level 7",
@@ -476,7 +476,7 @@
           "annotations": {
             "comments": [
               {
-                "text": "Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph shows Level 8’s winning chances. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout."
+                "text": "Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph has a line for each level: its own estimate of red’s winning chances at every position. Grades use Level 8’s. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout."
               }
             ]
           }
@@ -493,8 +493,25 @@
         "side": "red",
         "series": [
           {
-            "name": "Misty",
+            "name": "Level 7",
             "color": "a",
+            "values": [
+              0.501, 0.5015, 0.4825, 0.473, 0.4725, 0.4235, 0.4235, 0.4225, 0.4225, 0.4225, 0.4225,
+              0.4225, 0.4225, 0.42450000000000004, 0.3765, 0.3765, 0.3775, 0.371, 0.358, 0.358,
+              0.358, 0.354, 0.3555, 0.358, 0.35850000000000004, 0.35850000000000004, 0.377, 0.377,
+              0.3825, 0.35850000000000004, 0.35850000000000004, 0.35850000000000004,
+              0.35850000000000004, 0.3575, 0.3575, 0.332, 0.332, 0.33, 0.33, 0.3275, 0.3275,
+              0.32799999999999996, 0.32799999999999996, 0.32849999999999996, 0.32849999999999996,
+              0.332, 0.33149999999999996, 0.33149999999999996, 0.33149999999999996,
+              0.32549999999999996, 0.325, 0.325, 0.325, 0.313, 0.3135, 0.28650000000000003,
+              0.28800000000000003, 0.2905, 0.3095, 0.3095, 0.3105, 0.3105, 0.32799999999999996,
+              0.32849999999999996, 0.32849999999999996, 0.32799999999999996, 0.3225, 0.322, 0.322,
+              0.29350000000000004, 0.29350000000000004, 0.2395, 0.14, 0, 0, 0, 0, 0, 0
+            ]
+          },
+          {
+            "name": "Level 8",
+            "color": "b",
             "values": [
               0.5435, 0.537, 0.3325, 0.2325, 0.243, 0.16949999999999996, 0.1825, 0.1625, 0.175,
               0.175, 0.1865, 0.17299999999999996, 0.1775, 0.2655, 0.144, 0.14450000000000002,

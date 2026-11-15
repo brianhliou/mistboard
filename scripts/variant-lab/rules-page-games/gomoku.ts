@@ -29,6 +29,7 @@ import {
   parseGomokuFen,
   parseGomokuMove,
   parseRapfiOutput,
+  RAPFI_LEVELS,
   type RapfiPoint,
   rapfiBoardLines,
 } from '@mistboard/game';
@@ -67,6 +68,11 @@ type EvalRow = {
 
 const GAME = resolve(PLANS, 'gomoku.game.json');
 const ROWS = resolve(PLANS, 'gomoku.rows.jsonl');
+// Each level's own read of every position, at its served node budget.
+const LEVEL_ROWS = {
+  7: resolve(PLANS, 'gomoku.level7.rows.jsonl'),
+  8: resolve(PLANS, 'gomoku.level8.rows.jsonl'),
+} as const;
 const square = (p: RapfiPoint): string => `${'abcdefghijklmno'[p.x]}${p.y + 1}`;
 
 function replay(record: GameRecord): GomokuRoomState[] {
@@ -129,7 +135,14 @@ if (mode === 'play') {
   console.log('result', JSON.stringify(state.status), moves.length, 'moves');
 } else if (mode === 'analyse') {
   const binaryPath = arg('--rapfi', process.env.RAPFI_BIN);
-  const nodes = Number(arg('--nodes', '1000000'));
+  // --level 7|8 reads at that level's served node budget into its own rows file;
+  // without it, a deep read at --nodes (default 1,000,000) into gomoku.rows.jsonl.
+  const level = arg('--level', '');
+  const served = RAPFI_LEVELS.find((tier) => String(tier.level) === level);
+  if (level && (!served || (level !== '7' && level !== '8'))) throw new Error('--level is 7 or 8');
+  if (served?.candidateCount !== undefined) throw new Error('level samples candidates');
+  const nodes = served ? served.nodes : Number(arg('--nodes', '1000000'));
+  const out = served ? LEVEL_ROWS[served.level as 7 | 8] : ROWS;
   const record = JSON.parse(readFileSync(GAME, 'utf8')) as GameRecord;
   const states = replay(record);
   const child = spawn(binaryPath, [], { stdio: ['pipe', 'pipe', 'inherit'] });
@@ -169,7 +182,7 @@ if (mode === 'play') {
       'INFO timeout_turn 600000',
     ].join('\n')}\n`,
   );
-  writeFileSync(ROWS, '');
+  writeFileSync(out, '');
   // Every position before the five: the last one is decided by the game itself.
   for (const [ply, state] of states.entries()) {
     if (state.status.type !== 'playing') break;
@@ -202,7 +215,7 @@ if (mode === 'play') {
       nodes: c.totalNodes,
       ms: Date.now() - started,
     };
-    appendFileSync(ROWS, `${JSON.stringify(row)}\n`);
+    appendFileSync(out, `${JSON.stringify(row)}\n`);
     console.log(ply, turn, row.best, row.played, row.eval, row.blackScore, `d${row.depth}`);
   }
   child.stdin.end('END\n');
@@ -216,20 +229,29 @@ if (mode === 'play') {
   if (states[0]!.status.type !== 'playing' || states[0]!.status.turn !== 'black')
     throw new Error('Black moves first');
   const moves = record.moves.map((m) => m.to);
-  const rows = readFileSync(ROWS, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => JSON.parse(l) as EvalRow)
-    .sort((a, b) => a.ply - b.ply);
-  if (rows.length !== moves.length)
-    throw new Error(`${rows.length} rows for ${moves.length} plies`);
-  rows.forEach((r, i) => {
-    if (r.ply !== i || r.played !== moves[i]) throw new Error(`row ${i} is not ply ${i}`);
-  });
-
-  const blackScore = rows.map((r) => r.blackScore);
-  blackScore.push(1);
-  const best = rows.map((r) => r.best);
+  const readRows = (path: string) => {
+    const rows = readFileSync(path, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as EvalRow)
+      .sort((a, b) => a.ply - b.ply);
+    if (rows.length !== moves.length)
+      throw new Error(`${path}: ${rows.length} rows for ${moves.length} plies`);
+    rows.forEach((r, i) => {
+      if (r.ply !== i || r.played !== moves[i])
+        throw new Error(`${path}: row ${i} is not ply ${i}`);
+    });
+    // Black's five ends the game: the final point is the result.
+    return { rows, blackScore: [...rows.map((r) => r.blackScore), 1] };
+  };
+  const level7 = readRows(LEVEL_ROWS[7]);
+  const level8 = readRows(LEVEL_ROWS[8]);
+  // Grades, best moves and notes use the deep read. At 80,000 nodes Level 8's
+  // own read swings by half a game on quiet moves (0.98, 0.45, 0.93 at
+  // positions 28-30), which would grade sound moves as blunders.
+  const deep = readRows(ROWS);
+  const blackScore = deep.blackScore;
+  const best = deep.rows.map((r) => r.best);
   // A placement is one point, not a from-to move, so no sidelines (study-annotate
   // draws a line's arrow from its first move's two squares).
   const base = { rootFen: record.rootFen, moves, redScore: blackScore, best };
@@ -241,7 +263,7 @@ if (mode === 'play') {
       owner: 'mistboard',
       name: 'Gomoku: Level 7 versus Level 8, annotated',
       description:
-        'Rapfi at Level 8 (Black) against Rapfi at Level 7 (White) from a dealt opening, read by Rapfi at a far deeper search. From the Gomoku rules page at mistboard.com/rules/gomoku.',
+        'Rapfi at Level 8 (Black) against Rapfi at Level 7 (White) from a dealt opening. The graph has two lines, each level’s own read of every position at its served node budget; grades and notes use a deeper read of a million positions a move. From the Gomoku rules page at mistboard.com/rules/gomoku.',
       visibility: 'public',
       chapter: {
         name: notes.title ?? 'Rapfi Level 8 vs Rapfi Level 7',
@@ -256,8 +278,14 @@ if (mode === 'play') {
           date: '2026-11-14',
         },
         scoreSeries: {
-          side: 'black',
-          series: [{ name: 'Rapfi', color: 'a', values: blackScore }],
+          // Chart slots are move-order seats; Gomoku's first ("red") is Black,
+          // so 'red' labels these values as Black's chances.
+          side: 'red',
+          // Two lines, so the chart draws no seat fill.
+          series: [
+            { name: 'Level 7', color: 'a', values: level7.blackScore },
+            { name: 'Level 8', color: 'b', values: level8.blackScore },
+          ],
         },
       },
     },

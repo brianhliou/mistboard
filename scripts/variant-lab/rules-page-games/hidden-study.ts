@@ -88,7 +88,13 @@ export function checkpoint<T>(path: string): AnalysisProgressStore<T> {
   };
 }
 export type GradingOptions = {
-  analysis: { engineId: string; nodes: number; movetimeCapMs: number; chance?: string };
+  analysis: {
+    engineId: string;
+    nodes: number;
+    movetimeCapMs: number;
+    chance?: string;
+    evaluation?: string;
+  };
   decisions: {
     engineId: string;
     nodes: number | { rank: number; baseline: number; minimum: number };
@@ -121,15 +127,17 @@ export function makePlan(options: {
   decisionEngineId: string;
   notes: Notes;
   sidelines: EngineSideline[];
+  /** The graded read's legend name, e.g. 'Level 8'. */
+  lineName: string;
+  /** The other level's own read of every position: drawn first, never graded. */
+  compare: { name: string; engineId: string; analysis: StudyEval[] };
 }) {
   const { game, analysis, decisions, notes } = options;
-  if (
-    analysis.length !== game.plies.length + 1 ||
-    analysis.some(
-      (row, i) => row.ply !== i || (!Number.isFinite(row.cp) && !Number.isFinite(row.mate)),
-    )
-  )
-    throw new Error('incomplete mainline analysis');
+  const complete = (rows: StudyEval[]) =>
+    rows.length === game.plies.length + 1 &&
+    rows.every((row, i) => row.ply === i && (Number.isFinite(row.cp) || Number.isFinite(row.mate)));
+  if (!complete(analysis)) throw new Error('incomplete mainline analysis');
+  if (!complete(options.compare.analysis)) throw new Error('incomplete comparison analysis');
   const comments = Object.entries(notes.comments);
   if (
     comments.length < 5 ||
@@ -146,15 +154,19 @@ export function makePlan(options: {
   const flipPlies = game.plies.filter((ply) => ply.uci.startsWith('@')).map((ply) => ply.ply);
   if (JSON.stringify(decisions.map((d) => d.ply)) !== JSON.stringify(flipPlies))
     throw new Error('incomplete pool-mean flip analysis');
-  const redScore = analysis.map((row, i) =>
-    i === game.plies.length
-      ? game.result === 'red'
-        ? 1
-        : game.result === 'black'
-          ? 0
-          : 0.5
-      : winPercent(row.cp, row.mate, options.engineId) / 100,
-  );
+  // Red's expected score from one engine's read; the final point is the result.
+  const scoreOf = (rows: StudyEval[], engineId: string) =>
+    rows.map((row, i) =>
+      i === game.plies.length
+        ? game.result === 'red'
+          ? 1
+          : game.result === 'black'
+            ? 0
+            : 0.5
+        : winPercent(row.cp, row.mate, engineId) / 100,
+    );
+  const redScore = scoreOf(analysis, options.engineId);
+  const compareScore = scoreOf(options.compare.analysis, options.compare.engineId);
   const byPly = new Map(decisions.map((d) => [d.ply, d]));
   // For flips BOTH ends of the grade come from the same candidate pool means.
   // The root's ChanceMix estimate and the realized tile cannot grade a choice.
@@ -196,7 +208,7 @@ export function makePlan(options: {
   const create: StudyCreateSpec = {
     owner: 'mistboard',
     name: `${options.title}: Level 7 versus Level 8, annotated`,
-    description: `A recorded engine game, analyzed with the served Level 8 engine and pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/${game.variant}.`,
+    description: `A recorded engine game. The graph has two lines, each level's own read of every position at its served settings; grades use ${options.lineName} and its pinned net. Flip choices use public pool means; reveal luck is separate. From mistboard.com/rules/${game.variant}.`,
     visibility: 'public',
     chapter: {
       name: `${red} vs ${black}`,
@@ -210,7 +222,14 @@ export function makePlan(options: {
         event: `${red} vs ${black.replace(/^Misty /, '')}, Mistboard bot settings`,
         date: game.started_at.slice(0, 10),
       },
-      scoreSeries: { side: 'red', series: [{ name: 'Misty', color: 'a', values: redScore }] },
+      // Two lines, so the chart draws no seat fill (embed-score-chart.ts).
+      scoreSeries: {
+        side: 'red',
+        series: [
+          { name: options.compare.name, color: 'a', values: compareScore },
+          { name: options.lineName, color: 'b', values: redScore },
+        ],
+      },
     },
   };
   checkCreate(create);
