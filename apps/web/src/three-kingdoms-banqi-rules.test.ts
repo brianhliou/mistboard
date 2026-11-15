@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { hasTranslation, translateArticle } from './article-i18n.js';
+import { hasTranslation, isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { articleProse } from './article-prose.js';
 import { threeKingdomsBanqiArticle } from './articles/content/three-kingdoms-banqi.js';
 import { articleDiagramLabels } from './articles/svg-labels.js';
@@ -73,15 +73,20 @@ describe('Three Kingdoms Banqi rules page buttons', () => {
   });
 });
 
-// The page is a draft, so it is not in TRANSLATED_ARTICLE_SLUGS and the coverage
-// gate skips it. These hold its Chinese ready for the day it is published.
 describe('Three Kingdoms Banqi Chinese', () => {
-  const article = threeKingdomsBanqiArticle as Article;
+  const article = threeKingdomsBanqiArticle as Extract<Article, { kind: 'rules' }>;
+
+  it('publishes both Chinese rules pages', () => {
+    expect(isArticleTranslationPublished(article.slug)).toBe(true);
+  });
 
   it.each(['zh-Hans', 'zh-Hant'] as const)('%s has every string on the page', (lang) => {
     const texts = [
       ...articleProse(article).map(({ text }) => text),
       ...articleDiagramLabels(article).map(({ text }) => text),
+      ...[article.tagline, article.audience, article.seoTitle, article.updateNote].filter(
+        (text): text is string => Boolean(text),
+      ),
     ];
     expect(texts.length).toBeGreaterThan(40);
     expect(texts.filter((text) => !hasTranslation(lang, text))).toEqual([]);
