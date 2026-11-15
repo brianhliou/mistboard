@@ -22,9 +22,8 @@
   }
 }
 
-/* col1 (phone): channels form a single scrollable row above the game; the
-   detailed meta card follows the board, console and completed games. Dissolve
-   both columns so those pieces can occupy separate rows in the shared grid. */
+/* col1 (phone): channels, compact game identity, then the room-style seat bands
+   around the board. Dissolve the shared columns/table into this grid. */
 /* The headline is a phone affordance: from col2 up the console beside the board
    already names both players, so it would only repeat them. */
 .watch-headline {
@@ -33,14 +32,20 @@
 
 @media (max-width: 799px) {
   .watch-review-shell .review-shell__cluster {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
     grid-template-areas:
-      "channels"
-      "headline"
-      "board"
-      "pov"
-      "table"
-      "previously"
-      "meta";
+      "channels channels channels"
+      "headline headline headline"
+      "player-top captures-top clock-top"
+      "board board board"
+      "player-bottom captures-bottom clock-bottom"
+      "pool pool pool"
+      "pov pov pov"
+      "moves moves moves"
+      "nav nav nav"
+      "previously previously previously";
+    gap: 0;
+    justify-items: stretch;
   }
 
   .watch-review-shell .watch-headline {
@@ -90,11 +95,8 @@
     grid-area: channels;
   }
 
-  /* The phone grid centres its items; the meta card spans the column like the
-     game table above it. */
   .watch-review-shell .watch-meta {
-    grid-area: meta;
-    justify-self: stretch;
+    display: none;
   }
 }
 
@@ -1117,18 +1119,16 @@
     display: none;
   }
 
-  /* Names keep their whole line box and can wrap, including unbroken handles.
-     Linked names are controls too, so give them the same touch floor. */
-  .watch-game-table .clock-name,
-  .watch-meta .game-meta-card__name {
+  /* Match the room's single seat line; linked names retain the touch floor. */
+  .watch-game-table .clock-name {
     flex: 0 1 auto;
     min-width: 0;
     min-height: 44px;
-    display: flex;
-    align-items: center;
-    white-space: normal;
-    overflow: visible;
-    overflow-wrap: anywhere;
+    display: block;
+    line-height: 44px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .watch-game-table .watch-player-bot,
@@ -1136,7 +1136,7 @@
     font-size: 11px;
   }
 
-  .watch-meta .game-meta-card__variant {
+  .watch-headline__variant {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -1144,6 +1144,229 @@
 
   .watch-empty-actions a,
   .watch-pov__button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 799px) {
+  /* Shared room table slots become board-relative bands, as in live-review.css.
+     Keep hidden tables hidden while a channel is empty or loading. */
+  .watch-review-shell .review-shell__right,
+  .watch-review-shell .watch-right,
+  .watch-review-shell .watch-game-table:not([hidden]),
+  .watch-game-table .round-table__box,
+  .watch-game-table .replay-console {
+    display: contents;
+  }
+
+  .watch-review-shell .watch-channel-rail,
+  .watch-review-shell .watch-headline {
+    margin-bottom: 8px;
+  }
+
+  .watch-review-shell .watch-previously {
+    margin-top: 10px;
+  }
+
+  .watch-game-table .round-table__player--top {
+    grid-area: player-top;
+  }
+  .watch-game-table .round-table__player--bottom {
+    grid-area: player-bottom;
+  }
+  .watch-game-table [data-clock-top] {
+    grid-area: clock-top;
+  }
+  .watch-game-table [data-clock-bottom] {
+    grid-area: clock-bottom;
+  }
+  .watch-game-table .captures-strip-top {
+    grid-area: captures-top;
+  }
+  .watch-game-table .captures-strip-bottom {
+    grid-area: captures-bottom;
+  }
+  .watch-game-table .hidden-pool {
+    grid-area: pool;
+  }
+  .watch-game-table .game-table-moves {
+    grid-area: moves;
+  }
+  .watch-game-table .move-nav-bar {
+    grid-area: nav;
+  }
+
+  /* The existing fog POV rotates the board; swap entire seat bands with it. */
+  .watch-review-shell[data-watch-pov="black"] .round-table__player--top {
+    grid-area: player-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] .round-table__player--bottom {
+    grid-area: player-top;
+  }
+  .watch-review-shell[data-watch-pov="black"] [data-clock-top] {
+    grid-area: clock-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] [data-clock-bottom] {
+    grid-area: clock-top;
+  }
+  .watch-review-shell[data-watch-pov="black"] .captures-strip-top {
+    grid-area: captures-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] .captures-strip-bottom {
+    grid-area: captures-top;
+  }
+
+  .watch-game-table .round-table__player,
+  .watch-game-table .captures-strip,
+  .watch-game-table .clock-slot {
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .watch-game-table .round-table__player {
+    padding: 0 8px 0 12px;
+    border: 0;
+    align-items: center;
+    font-size: 15px;
+  }
+
+  .watch-game-table .clock-name {
+    font-size: 15px;
+  }
+  .watch-game-table .clock-to-move {
+    display: none;
+  }
+
+  .watch-game-table .captures-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: 25vw;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .watch-game-table .captures-strip:empty,
+  .watch-game-table .hidden-pool:empty,
+  .watch-game-table .round-table__row:has(.room-actions:empty) {
+    display: none;
+  }
+
+  .watch-game-table .clock-slot {
+    display: flex;
+    margin-left: auto;
+  }
+
+  /* Same 44px band and 26px clock face as the phone room. Specificity clears
+     the theme's clock-card repaint, including the active/emergency states. */
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row {
+    flex: 1 0 auto;
+    justify-items: center;
+    align-content: center;
+    width: auto;
+    min-width: 104px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+    color: var(--site-heading);
+    animation: none;
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row strong {
+    min-width: 0;
+    color: inherit;
+    font-size: 26px;
+    text-align: center;
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row.active {
+    background: var(--site-accent);
+    color: var(--site-on-accent, #fff);
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row.emerg {
+    background: var(--clock-emerg-bg);
+    color: var(--clock-emerg-text);
+  }
+
+  /* The room's horizontal move band, using watch's existing review notation. */
+  .watch-game-table .game-table-moves {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 44px;
+    max-height: none;
+    padding: 0 8px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    contain: inline-size;
+    scrollbar-width: none;
+    white-space: nowrap;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+  }
+
+  .watch-game-table .review-move-list {
+    flex: none;
+    padding: 0;
+  }
+
+  .watch-game-table .review-move-list__rows {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    max-height: none;
+    overflow-x: visible;
+    overflow-y: visible;
+    font-size: 15px;
+  }
+
+  .watch-game-table .review-move-list__row {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0;
+    background: none;
+  }
+
+  .watch-game-table .review-move-list__number {
+    padding: 0 2px 0 4px;
+  }
+
+  .watch-game-table .review-move-list__move {
+    flex: none;
+    align-items: center;
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--site-radius-sm, 6px);
+    box-shadow: none;
+    font-size: 15px;
+  }
+
+  .watch-game-table .review-move-list__move--current {
+    background: var(--site-heading);
+    color: var(--site-panel, var(--site-surface));
+    font-weight: 600;
+  }
+
+  .watch-game-table .move-nav-bar {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .watch-game-table .move-nav-bar [data-replay] {
+    min-width: 44px;
     min-height: 44px;
   }
 }
