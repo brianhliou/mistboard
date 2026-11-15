@@ -10,8 +10,9 @@ import {
   TK_SOLDIER,
   TK_THUMBNAIL,
 } from '../../three-kingdoms-banqi-diagrams.js';
+import { playClosing } from '../diagrams.js';
 import { BANQI_FAMILY_COMPARISON } from './banqi-family-comparison.js';
-import type { Article, ArticleBlock } from '../types.js';
+import type { Article } from '../types.js';
 
 // Launched rules for #628, checked against the kernel. Five rules the app
 // leaves unwritten (perpetual chase, what resets the 40-ply count, face-down
@@ -19,22 +20,6 @@ import type { Article, ArticleBlock } from '../types.js';
 // (THREE_KINGDOMS_BANQI_RULES in the engine). The app's help has no section for
 // this mode, so the page presents them as Mistboard's rules, not Gamesofa's;
 // change the engine and this page together.
-
-const PLAY: ArticleBlock = {
-  kind: 'cta',
-  buttons: [
-    {
-      label: 'Play a friend',
-      href: '/?play=friend&gameSpecId=three-kingdoms-banqi',
-      emphasis: 'primary',
-    },
-    {
-      label: 'Play a bot',
-      href: '/?play=computer&gameSpecId=three-kingdoms-banqi',
-      emphasis: 'secondary',
-    },
-  ],
-};
 
 export const threeKingdomsBanqiArticle: Article = {
   slug: 'three-kingdoms-banqi',
@@ -208,9 +193,13 @@ export const threeKingdomsBanqiArticle: Article = {
         },
       ],
     },
-    {
+    playClosing({
       heading: 'Play on Mistboard',
-      blocks: [PLAY],
-    },
+      playLabel: 'Play a friend',
+      playHref: '/?play=friend&gameSpecId=three-kingdoms-banqi',
+      secondary: [
+        { label: 'Play a bot', href: '/?play=computer&gameSpecId=three-kingdoms-banqi', emphasis: 'secondary' },
+      ],
+    }),
   ],
 };

@@ -31,9 +31,13 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-11-12',
-    updateNote:
-      'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
+    tldr: [
+      'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.',
+      'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.',
+      'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.',
+    ],
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },

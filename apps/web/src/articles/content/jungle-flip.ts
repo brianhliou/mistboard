@@ -21,10 +21,15 @@ export const jungleFlipArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-09-25',
-  updateNote:
-    'Added an FAQ on what the bot cannot see, and the sample game as a study.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
+  tldr: [
+    'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.',
+    'Each turn, flip a tile or move a revealed animal one square along a row or column.',
+    'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.',
+    'Win by eliminating the other color or leaving your opponent with no legal flip or move.',
+  ],
   audience:
     'Jungle players who want the flip variant, and anyone who grew up playing a face-down animal game on a chalk grid.',
   intro: [

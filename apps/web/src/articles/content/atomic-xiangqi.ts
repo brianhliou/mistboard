@@ -25,12 +25,16 @@ export const atomicXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-15',
-  updatedAt: '2026-11-03',
-  updateNote:
-      'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },
+  tldr: [
+    'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.',
+    'A cannon capture removes only the cannon and its target, with no blast beside the target.',
+    'Blowing up the enemy general wins. A threat to do so counts as check.',
+  ],
   intro: [
     {
       kind: 'paragraph',

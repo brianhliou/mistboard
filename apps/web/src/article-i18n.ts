@@ -285,6 +285,82 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // #1150 rules summaries: machine-drafted Simplified, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或从持子中打入一枚。吃掉的棋子变成己方颜色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象开局时都在持子中，只能在己方半盘移动或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '将死对方即获胜，无合法着法的一方判负。打入可以将军，也可以将死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其余部分都被隐藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉对方的王即获胜。没有将军或将死，王车易位可以经过受攻击的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出现三次、双方各走五十步而没有兵的移动或吃子，或一方无合法着法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到达的交叉点。隐藏的阻挡棋子会改变视野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉对方将帅即获胜。没有将军，将帅照面时可以沿无子相隔的直线吃掉对方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出现三次，或连续六十个半回合没有吃子，判为和棋。无合法着法的一方判负。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鸭子放到一个新的空点上。吃掉将帅时立即结束，不再放鸭子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鸭子不能被吃。它能挡住直线、蹩马腿、塞象眼，也能充当炮架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉对方将帅即获胜。没有将军，无法完成合法回合的一方判负。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盘为七路八横线，双方九宫位于对角。宝在己方半盘内可向任意方向走一个交叉点。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或从持子中打入一枚。被吃的棋子改换阵营，进入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '将死对方即获胜，无合法着法的一方判负。士、象和宝打入时仍受各自活动范围限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '进入对方兽穴、吃光对方所有动物，或使对方无合法着法，即获胜。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '动物能吃同级或更低级的动物。陆地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。狮和虎可以跳河，但水路上有鼠就不能跳；动物进入对方陷阱后失去等级。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚动物棋子在四乘四棋盘上全部盖放。第一枚翻开的棋子决定先手的颜色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻开一枚盖子，或把一枚已翻开的己方动物横向或纵向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高级吃低级，同级相吃时双方同时移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光对方颜色的动物，或使对方既无法翻子也无法走子，即获胜。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '通过摸牌和弃牌组成四副面子和一对将眼。本桌规定，完整牌型至少三番才能和牌。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '吃牌只能吃上家的弃牌；碰、杠或和牌可以认领任一对手的弃牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季节牌放到一旁并补牌。若活牌墙摸尽仍无人和牌，该手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盘为九路十横线，红方先行。将帅和士不能离开九宫，象不能过河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '炮吃子必须恰好隔一个炮架。马和象会被蹩腿、塞眼；兵卒过河后可以横走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '将死对方即获胜，无合法着法的一方判负。双方将帅不能在同一路上无子相隔地照面。',
+  // #1149 rules summaries: machine-drafted, using the existing rules terminology.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子会移除执行吃子的棋子、被吃的棋子，以及相邻四个交叉点上的棋子。爆炸旁的兵卒不受影响。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子时只移除炮和被吃的棋子，不波及目标旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉对方将帅即获胜。威胁炸掉将帅也算将军。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，双方轮流移动一枚棋子。每种棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被将军时必须应将，不能让自己的王处于受攻击的状态。将死对方即获胜。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方没有合法着法但未被将军时，形成逼和，双方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面标示的方向移动，也可以跳过己方棋子。王以外的棋子到达最远一行时进化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子转归对方，可以打入空格，但不能打入最远一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉对方的王即获胜，没有将军或将死。',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
   'Training our own xiangqi net': '训练我们自己的象棋网络',
@@ -3209,12 +3285,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍采用 60 个半回合的无吃子上限，而普通象棋采用 120 个半回合。',
   Repetition: '重复局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有全程将军，则判和。',
@@ -6718,11 +6790,7 @@ const ZH_HANS: Record<string, string> = {
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉赖理兄 2022 年世界快棋冠军的话。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '示例对局换成了一盘在本站与引擎下的对局。',
-  'Added a sample game from the site.': '新增一盘本站的示例对局。',
-  'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
-  'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
+  'Added a short summary at the top.': '在文章顶部添加了简短摘要。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -6732,12 +6800,6 @@ const ZH_HANS: Record<string, string> = {
     '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 级现在在这套搜索上加入了一个训练好的神经网络。第 1 到第 7 级就是本文介绍的经典引擎。这个网络暂未公开，之后会发布，届时本页会更新说明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '宝的示意图现在显示规则允许的五种走法，而不是八种。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再称鸭子象棋为 Mistboard 原创；它是把 Tim Paulden 的鸭子国际象棋搬到了象棋棋盘上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增将帅对面的论证、88 个中占 8 个的统计、对局长度的中位数，以及关于 9 月 29 日引擎漏洞的说明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
@@ -7207,6 +7269,82 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // #1150 rules summaries: machine-drafted Traditional, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或從持子中打入一枚。吃掉的棋子變成己方顏色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象開局時都在持子中，只能在己方半盤移動或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '將死對方即獲勝，無合法著法的一方判負。打入可以將軍，也可以將死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其餘部分都被隱藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉對方的王即獲勝。沒有將軍或將死，王車易位可以經過受攻擊的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出現三次、雙方各走五十步而沒有兵的移動或吃子，或一方無合法著法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到達的交叉點。隱藏的阻擋棋子會改變視野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉對方將帥即獲勝。沒有將軍，將帥照面時可以沿無子相隔的直線吃掉對方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出現三次，或連續六十個半回合沒有吃子，判為和棋。無合法著法的一方判負。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鴨子放到一個新的空點上。吃掉將帥時立即結束，不再放鴨子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鴨子不能被吃。牠能擋住直線、蹩馬腿、塞象眼，也能充當砲架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉對方將帥即獲勝。沒有將軍，無法完成合法回合的一方判負。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盤為七路八橫線，雙方九宮位於對角。寶在己方半盤內可向任意方向走一個交叉點。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或從持子中打入一枚。被吃的棋子改換陣營，進入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '將死對方即獲勝，無合法著法的一方判負。士、象和寶打入時仍受各自活動範圍限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '進入對方獸穴、吃光對方所有動物，或使對方無合法著法，即獲勝。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '動物能吃同級或更低級的動物。陸地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。獅和虎可以跳河，但水路上有鼠就不能跳；動物進入對方陷阱後失去等級。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚動物棋子在四乘四棋盤上全部蓋放。第一枚翻開的棋子決定先手的顏色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻開一枚蓋子，或把一枚已翻開的己方動物橫向或縱向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高級吃低級，同級相吃時雙方同時移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光對方顏色的動物，或使對方既無法翻子也無法走子，即獲勝。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '透過摸牌和棄牌組成四副面子和一對將眼。本桌規定，完整牌型至少三番才能食糊。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '上牌只能上上家的棄牌；碰、槓或食糊可以取用任一對手的棄牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季節牌放到一旁並補牌。若活牌牆摸盡仍無人食糊，該手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盤為九路十橫線，紅方先行。將帥和士不能離開九宮，象不能過河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '砲吃子必須恰好隔一個砲架。馬和象會被蹩腿、塞眼；兵卒過河後可以橫走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '將死對方即獲勝，無合法著法的一方判負。雙方將帥不能在同一路上無子相隔地照面。',
+  // #1149 rules summaries: Traditional overrides follow the shared base.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子會移除執行吃子的棋子、被吃的棋子，以及相鄰四個交叉點上的棋子。爆炸旁的兵卒不受影響。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子時只移除炮和被吃的棋子，不波及目標旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉對方將帥即獲勝。威脅炸掉將帥也算將軍。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，雙方輪流移動一枚棋子。每種棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被將軍時必須應將，不能讓自己的王處於受攻擊的狀態。將死對方即獲勝。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方沒有合法著法但未被將軍時，形成逼和，雙方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面標示的方向移動，也可以跳過己方棋子。王以外的棋子到達最遠一行時進化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子轉歸對方，可以打入空格，但不能打入最遠一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉對方的王即獲勝，沒有將軍或將死。',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
   'Training our own xiangqi net': '訓練我們自己的象棋網路',
@@ -10496,12 +10634,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍採用 60 個半回合的無吃子上限，而普通象棋採用 120 個半回合。',
   Repetition: '重複局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有全程將軍，則判和。',
@@ -13456,11 +13590,7 @@ const ZH_HANT: Record<string, string> = {
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉賴理兄 2022 年世界快棋冠軍的話。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '範例對局換成了一盤在本站與引擎下的對局。',
-  'Added a sample game from the site.': '新增一盤本站的範例對局。',
-  'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
-  'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
+  'Added a short summary at the top.': '在文章頂部新增了簡短摘要。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -13470,12 +13600,6 @@ const ZH_HANT: Record<string, string> = {
     '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 級現在在這套搜尋上加入了一個訓練好的神經網路。第 1 到第 7 級就是本文介紹的經典引擎。這個網路暫未公開，之後會發布，屆時本頁會更新說明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '寶的示意圖現在顯示規則允許的五種走法，而不是八種。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再稱鴨子象棋為 Mistboard 原創；它是把 Tim Paulden 的鴨子西洋棋搬到了象棋棋盤上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增將帥對面的論證、88 個中占 8 個的統計、對局長度的中位數，以及關於 9 月 29 日引擎漏洞的說明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
