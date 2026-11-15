@@ -382,10 +382,10 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // and sort with the unlisted specs.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
-  // Fanfanqi (admin playtest until launch) leads the banqi family, so the
-  // admins who see it meet it in its launch place (decided 2026-11-11).
-  FFQ_BANQI_SPEC_ID,
+  // Banqi leads its family; Fanfanqi follows until it shows its own pull
+  // (decided 2026-11-14, reversing the 2026-11-11 order).
   BANQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   // Keep the launched banqi family together.
   THREE_KINGDOMS_BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
