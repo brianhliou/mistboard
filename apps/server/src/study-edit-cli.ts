@@ -312,7 +312,7 @@ export function checkPlan(
     return names.get(id)!;
   };
   const tree = (value: unknown, i: number) => {
-    if (!isSerializedTree(value)) throw new Error(`op ${i + 1}: not a SerializedTree`);
+    if (!isSerializedTree(value, variant)) throw new Error(`op ${i + 1}: not a SerializedTree`);
     return mainlinePlies(value);
   };
   plan.ops.forEach((op, i) => {
@@ -490,7 +490,7 @@ export function checkCreate(
   if (!isStudyEligibleSpecId(chapter.variant)) {
     throw new Error(`create: variant "${chapter.variant}" cannot hold a study`);
   }
-  if (!isSerializedTree(chapter.tree))
+  if (!isSerializedTree(chapter.tree, chapter.variant))
     throw new Error('create: first chapter is not a SerializedTree');
   if (chapter.gamebook !== undefined && typeof chapter.gamebook !== 'boolean')
     throw new Error('create: gamebook must be true or false');

@@ -216,6 +216,7 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
       'Dealt openings',
       'Names and history',
       'Common questions',
+      'An engine game',
       'Play on Mistboard',
     ]);
     expect(
@@ -230,7 +231,7 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     for (const link of page.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
       expect(page.querySelector(link.hash)).not.toBeNull();
     }
-    expect(article.updatedAt).toBe('2026-11-07');
+    expect(article.updatedAt).toBe('2026-11-15');
     expect(article.updateNote).toBeTruthy();
     const wordCount = articleProse(article)
       .filter(({ path }) => path !== 'summary')

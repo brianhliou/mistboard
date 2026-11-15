@@ -138,6 +138,8 @@ describe('stored analysis in finished Jieqi game embeds', () => {
     await mountEmbedGame(root, { roomId: 'jq_fixture' }, { startPly: 0 });
     const graph = root.querySelector<HTMLElement>('.embed-score-chart')!;
     expect(graph).not.toBeNull();
+    expect(graph.dataset.seatInkFamily).toBe('xiangqi');
+    expect(graph.querySelectorAll('.advantage-chart__area')).toHaveLength(2);
     expect(graph.dataset.ply).toBe('0');
     expect(root.querySelector('[data-ply="1"]')?.textContent).toContain('🎲 +10%');
     expect(JSON.stringify(watch.overlay?.(1))).toContain('"kind":"luck"');

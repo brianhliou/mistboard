@@ -1,5 +1,5 @@
 import {
-  playClosing,
+  relatedClosing,
   SHOGI4_CAPTURE,
   SHOGI4_DROP,
   SHOGI4_GAME_STEPS,
@@ -205,12 +205,11 @@ export const shogi4Article: Article = {
           },
         ],
       },
-      playClosing({
+      relatedClosing({
         heading: 'Playing Shogi4',
         lead: "Shogi4 isn't playable on the site yet; for now this page is the rules reference. Browse the rest of the rules, or compare it with the chess and xiangqi primers.",
-        playLabel: 'All rules',
-        playHref: '/rules',
-        secondary: [
+        links: [
+          { label: 'All rules', href: '/rules', emphasis: 'primary' },
           { label: 'Chess Rules', href: '/rules/chess', emphasis: 'secondary' },
           { label: 'Xiangqi Rules', href: '/rules/xiangqi', emphasis: 'secondary' },
         ],

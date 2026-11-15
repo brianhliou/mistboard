@@ -8,6 +8,7 @@ import {
   ALL_JUNGLE_FLIP_SQUARES,
   applyCrazyhouseXiangqiMove,
   applyDuckXiangqiTurn,
+  applyGomokuRoomMove,
   applyJungleFlipMove,
   applyJungleMove,
   applyStandardXiangqiMove,
@@ -29,13 +30,20 @@ import {
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleGameState,
+  parseGomokuFen,
+  parseGomokuMove,
   parseJungleFlipFen,
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ArticleBlock } from './articles/types.js';
+import { buildArticlePage } from './articles.js';
 import { articles } from './articles-data.js';
+import { replayBanqiLine, replayBanqiLineFrom } from './banqi-replay-board.js';
+import { mountEmbedStudy } from './embed/embed-study-page.js';
+import type { StudyChapterPayload } from './study-chapter-spec.js';
+import { threeKingdomsBanqiStudyLine } from './three-kingdoms-banqi-study-replay.js';
 
 type Node = {
   uci: string;
@@ -49,20 +57,33 @@ type Plan = {
       variant: string;
       tags: Record<string, string>;
       tree: { rootFen: string; root: Node };
+      scoreSeries: StudyChapterPayload['scoreSeries'];
     };
   };
 };
 
-function readPlan(name: string): Plan {
+function readArtifact<T>(name: string, kind: string): T {
   // The working directory is the workspace or the repo root, depending on how vitest ran.
   const path = ['../..', '.']
     .map((root) =>
-      resolve(process.cwd(), root, `scripts/variant-lab/rules-page-games/plans/${name}.plan.json`),
+      resolve(
+        process.cwd(),
+        root,
+        `scripts/variant-lab/rules-page-games/plans/${name}.${kind}.json`,
+      ),
     )
     .find((candidate) => existsSync(candidate));
   if (!path) throw new Error(`no plan ${name}`);
-  return JSON.parse(readFileSync(path, 'utf8')) as Plan;
+  return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
+
+const readPlan = (name: string): Plan => readArtifact(name, 'plan');
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  document.body.replaceChildren();
+});
 
 function mainLine(root: Node): Node[] {
   const out: Node[] = [];
@@ -103,6 +124,144 @@ const xqMove = (t: string) => {
 };
 
 describe('rules page sample games', () => {
+  const banqiGame = '/embed/study/49WEgbqa/WDgABhew';
+  const kingdomsGame = '/embed/study/fcx7JEzH/7lZCHESh';
+
+  it('banqi: embeds the annotated Level 7 vs Level 8 game and keeps the companion links', () => {
+    expect(embedPaths('banqi')).toContain(banqiGame);
+    expect(embedPaths('banqi')).not.toContain('/embed/study/FsA5sowX/F8fezAhm');
+    // Keep pages detached: attaching an iframe starts happy-dom navigation.
+    const banqi = buildArticlePage('banqi');
+    expect(banqi.querySelector('iframe')?.getAttribute('src')).toContain(banqiGame);
+    expect(banqi.textContent).toContain('Level 7 plays black');
+    expect(banqi.textContent).toContain('Level 8 wins');
+    expect(banqi.querySelector('a[href="/study/FsA5sowX"]')).not.toBeNull();
+    expect(banqi.querySelector('a[href="/blog/banqi-statistics"]')).not.toBeNull();
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      expect(
+        buildArticlePage('banqi', lang).querySelector('iframe')?.getAttribute('src'),
+      ).toContain(banqiGame);
+    }
+  });
+
+  it('three-kingdoms-banqi: embeds the annotated game in its own section before Play', () => {
+    expect(embedPaths('three-kingdoms-banqi')).toEqual([kingdomsGame]);
+    const kingdoms = buildArticlePage('three-kingdoms-banqi');
+    expect(kingdoms.querySelector('iframe')?.getAttribute('src')).toContain(kingdomsGame);
+    expect(kingdoms.textContent).toContain('Level 7 wins 100 to 45');
+    const headings = [...kingdoms.querySelectorAll('h2')].map((heading) => heading.textContent);
+    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+  });
+
+  for (const variant of ['banqi', 'three-kingdoms-banqi']) {
+    it(`${variant}: renders the generated chart, move grades, notes and imported luck`, async () => {
+      const source = readPlan(variant).create.chapter;
+      const chapter: StudyChapterPayload = {
+        ...source,
+        id: 'chapter',
+        root: source.tree,
+        hasDecisions: true,
+      };
+      const luck = readArtifact<{ decisions: { ply: number }[] }>(variant, 'luck');
+      const notes = readArtifact<{ comments: Record<string, string> }>(variant, 'notes');
+      const fetcher = vi.fn(async (url: string) =>
+        Response.json(
+          url.endsWith('/decisions') ? luck : { study: { id: 'local' }, chapters: [chapter] },
+        ),
+      );
+      vi.stubGlobal('fetch', fetcher);
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 'local', chapterId: 'chapter' });
+      expect(root.querySelector('.embed-note')).toBeNull();
+      const chart = root.querySelector('.embed-score-chart');
+      expect(chart).not.toBeNull();
+      // The series is keyed by seat; Banqi's first flip bound the first seat to Black.
+      expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
+        variant === 'banqi' ? 'Win chance for Black' : 'Win chance for Red',
+      );
+      // One line per level, each across the whole game; two lines draw no seat fill.
+      const lines = [...(chart?.querySelectorAll('polyline') ?? [])];
+      expect(lines).toHaveLength(2);
+      for (const line of lines)
+        expect(line.getAttribute('points')?.split(' ')).toHaveLength(
+          mainLine(source.tree.root).length + 1,
+        );
+      expect(chart?.classList.contains('embed-score-chart--seat-fill')).toBe(false);
+      expect(
+        [...(chart?.querySelectorAll('.embed-score-chart__key') ?? [])].map((k) => k.textContent),
+      ).toEqual(['Level 7', 'Level 8']);
+      for (const text of Object.values(notes.comments)) expect(root.textContent).toContain(text);
+      expect(root.querySelectorAll('.review-move-list__suffix')).toHaveLength(
+        mainLine(source.tree.root).filter((node) => node.annotations?.glyphs?.length).length,
+      );
+      expect(root.querySelectorAll('.review-move-list__luck')).toHaveLength(luck.decisions.length);
+      const flipPly = luck.decisions[0]!.ply;
+      for (let ply = 0; ply < flipPly; ply++)
+        root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(chart?.getAttribute('data-ply')).toBe(String(flipPly));
+      if (variant === 'banqi') expect(root.querySelector('.luck-mark')).not.toBeNull();
+      root
+        .querySelector<HTMLElement>('.review-move-list__luck')!
+        .dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+      await vi.waitFor(() => expect(document.querySelector('.luck-card--open')).not.toBeNull());
+      expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+        '/api/studies/local',
+        '/api/studies/local/chapters/chapter/decisions',
+      ]);
+    });
+
+    it(`${variant}: replays the recorded result and every sideline without predicting a flip`, () => {
+      const source = readPlan(variant).create.chapter;
+      expect(source.tags.result).toBe('0-1');
+      const moves = mainLine(source.tree.root).map((node) => node.uci);
+      let branchCount = 0;
+      if (variant === 'banqi') {
+        const line = replayBanqiLine({ rootFen: source.tree.rootFen, moves });
+        expect(line.played).toHaveLength(206);
+        expect(line.states.at(-1)?.status).toMatchObject({ type: 'finished', winner: 'black' });
+        // Export tags name seats. The opening flip gives Level 7 black ink.
+        expect(line.states.at(-1)?.firstColor).toBe('black');
+        for (const [ply, side] of sidelines(source.tree.root)) {
+          const replay = replayBanqiLineFrom(line.states[ply]!, side);
+          expect(replay.played).toHaveLength(side.length);
+          for (const [i, move] of replay.played.entries()) {
+            expect(move.from).not.toBe(move.to);
+            expect(replay.states[i]!.board[move.from]?.faceDown).not.toBe(true);
+            expect(replay.states[i]!.board[move.to]?.faceDown).not.toBe(true);
+          }
+          branchCount++;
+        }
+      } else {
+        const replay = threeKingdomsBanqiStudyLine({ id: 'chapter', root: source.tree });
+        expect(replay.played).toHaveLength(78);
+        expect(replay.views.at(-1)?.status).toMatchObject({ type: 'finished', winner: 'black' });
+        expect(replay.views.at(-1)?.scores).toEqual({ red: 45, black: 100 });
+        expect(
+          Object.values(replay.views.at(-1)!.board).filter((tile) => tile?.faceDown),
+        ).toHaveLength(7);
+        for (const branch of replay.lines.values()) {
+          for (const [i, move] of branch.played.entries()) {
+            expect(move.from).not.toBe(move.to);
+            expect(branch.views[i]!.board[move.from]?.faceDown).not.toBe(true);
+            expect(branch.views[i]!.board[move.to]?.faceDown).not.toBe(true);
+          }
+          branchCount++;
+        }
+        // Check the whole public replay, including every branch view.
+        const payload = JSON.parse(
+          JSON.stringify({ ...replay, lines: [...replay.lines.values()] }),
+        );
+        expect(JSON.stringify(payload)).not.toMatch(/rootFen|deal|seed|capturedRole/);
+        for (const line of [payload, ...payload.lines])
+          for (const view of line.views)
+            for (const tile of Object.values(view.board))
+              if ((tile as { faceDown: boolean } | null)?.faceDown)
+                expect(tile).toEqual({ faceDown: true });
+      }
+      expect(branchCount).toBeGreaterThan(0);
+    });
+  }
+
   it('xiangqi: the 1632 trap, legal from the start, Red mates on move 13', () => {
     const chapter = readPlan('xiangqi').create.chapter;
     expect(chapter.variant).toBe('xiangqi');
@@ -247,5 +406,51 @@ describe('rules page sample games', () => {
       for (const t of line.slice(0, ply)) s = play(s, t);
       for (const t of moves) s = play(s, t);
     }
+  });
+  it('gomoku: Rapfi Level 8 vs Level 7, legal throughout, Black ends on five in a row', () => {
+    const chapter = readPlan('gomoku').create.chapter;
+    expect(chapter.variant).toBe('gomoku');
+    expect(embedPaths('gomoku')).toContain('/embed/study/MZT6MgY7/VMykrCYz');
+    expect(chapter.tags).toMatchObject({
+      black: 'Rapfi Level 8',
+      white: 'Rapfi Level 7',
+      result: '1-0',
+    });
+    const nodes = mainLine(chapter.tree.root);
+    expect(nodes).toHaveLength(53);
+    // A placement has no sideline: each point is its own move.
+    expect(sidelines(chapter.tree.root)).toEqual([]);
+    const root = parseGomokuFen(chapter.tree.rootFen, 'rules-gomoku');
+    if (!root.ok) throw new Error('bad root');
+    let state = root.state;
+    for (const { uci } of nodes) {
+      const move = parseGomokuMove(uci);
+      const next = move && applyGomokuRoomMove(state, move);
+      if (!next || next === state) throw new Error(`illegal ${uci}`);
+      state = next;
+    }
+    expect(state.status).toEqual({ type: 'finished', winner: 'black', reason: 'five' });
+    // The winning point is the engine's own choice, never a graded move.
+    expect(nodes.at(-1)!.annotations?.glyphs ?? []).toEqual([]);
+    expect(nodes.filter((n) => n.annotations?.glyphs?.length).length).toBeGreaterThan(0);
+  });
+
+  it('gomoku: the chart reads as Black’s winning chances, one line per level', async () => {
+    const source = readPlan('gomoku').create.chapter;
+    const chapter: StudyChapterPayload = { ...source, id: 'chapter', root: source.tree };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ study: { id: 'local' }, chapters: [chapter] })),
+    );
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 'local', chapterId: 'chapter' });
+    const chart = root.querySelector('.embed-score-chart');
+    // Gomoku's chart slots are move-order seats: the first ("red") is Black.
+    // Both lines climb as Black's five comes, so the label must name Black.
+    expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
+      'Win chance for Black',
+    );
+    expect(chart?.querySelectorAll('polyline')).toHaveLength(2);
+    expect(chart?.classList.contains('embed-score-chart--seat-fill')).toBe(false);
   });
 });

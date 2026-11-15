@@ -2,13 +2,14 @@
 // Only the public engine pool supplies the counterfactual distribution. The
 // actual deal is read once per played flip, solely to select its realized term.
 import {
-  applyThreeKingdomsBanqiMove,
+  applyThreeKingdomsBanqiReplayMove,
   type BanqiPiece,
   type BanqiPieceRole,
   banqiPieceLetter,
   getThreeKingdomsBanqiLegalMoves,
   type ThreeKingdomsBanqiMove,
-  type ThreeKingdomsBanqiSquare,
+  type ThreeKingdomsBanqiReplayMove,
+  type ThreeKingdomsBanqiReplayState,
   type ThreeKingdomsBanqiState,
   winPercent,
 } from '@mistboard/game';
@@ -33,6 +34,7 @@ import {
 import {
   THREE_KINGDOMS_BANQI_ENGINE_VERSION,
   type ThreeKingdomsBanqiEngineProvider,
+  type ThreeKingdomsBanqiEngineRequest,
   threeKingdomsBanqiLiveEngineMove,
 } from './three-kingdoms-banqi-engine.js';
 import {
@@ -84,28 +86,6 @@ function publicPool(fen: string): PoolEntry[] {
   return entries;
 }
 
-// Build an arbitrary representative deal FROM THE PUBLIC BAG, fixing the
-// candidate square's outcome. No donor identity or hidden location is read.
-function counterfactual(
-  state: ThreeKingdomsBanqiState,
-  square: ThreeKingdomsBanqiSquare,
-  outcome: PoolEntry,
-  pool: readonly PoolEntry[],
-): ThreeKingdomsBanqiState {
-  const remaining = pool.flatMap((entry) =>
-    Array.from({ length: entry.count - (entry === outcome ? 1 : 0) }, () => entry.piece),
-  );
-  const board = { ...state.board, [square]: { ...outcome.piece } };
-  for (const key of Object.keys(state.board).sort() as ThreeKingdomsBanqiSquare[]) {
-    if (key === square || !state.board[key]?.faceDown) continue;
-    const piece = remaining.shift();
-    if (!piece) throw new Error('three_kingdoms_banqi_decisions_pool_mismatch');
-    board[key] = { ...piece };
-  }
-  if (remaining.length) throw new Error('three_kingdoms_banqi_decisions_pool_mismatch');
-  return { ...state, board };
-}
-
 /** All values are win%, mover-SEAT POV, independent of the opening ink. */
 export async function evaluateThreeKingdomsBanqiFlipDecision(
   state: ThreeKingdomsBanqiState,
@@ -114,27 +94,61 @@ export async function evaluateThreeKingdomsBanqiFlipDecision(
   ply: number,
   provider: ThreeKingdomsBanqiEngineProvider = threeKingdomsBanqiLiveEngineMove,
 ): Promise<ThreeKingdomsBanqiDecision> {
+  const revealed = state.board[played.from];
+  if (!revealed?.faceDown) throw new Error('three_kingdoms_banqi_decisions_not_a_flip');
+  return evaluateThreeKingdomsBanqiPublicFlipDecision(
+    state,
+    { ...played, revealed },
+    ply,
+    (position, move) => ({
+      ...threeKingdomsBanqiTierRequestFor(
+        move
+          ? [
+              ...history,
+              {
+                type: 'move-played',
+                at: 0,
+                roomId: state.id,
+                color: state.status.type === 'playing' ? state.status.turn : 'red',
+                move,
+              },
+            ]
+          : history,
+        // This adapter only supplies public fields to the existing request builder.
+        position as ThreeKingdomsBanqiState,
+        THREE_KINGDOMS_BANQI_ANALYSIS_TIER,
+        THREE_KINGDOMS_BANQI_DECISION_MOVETIME_CAP_MS,
+      ),
+      nodes: THREE_KINGDOMS_BANQI_DECISION_NODES,
+    }),
+    provider,
+  );
+}
+
+/** Same pool-mean algorithm for an observed public replay. Unknown tiles need
+ * no representative deal: only each candidate outcome is supplied to the kernel.
+ * requestFor preserves the caller's quiet-move/chase history for board moves. */
+export async function evaluateThreeKingdomsBanqiPublicFlipDecision(
+  state: ThreeKingdomsBanqiReplayState,
+  played: ThreeKingdomsBanqiReplayMove,
+  ply: number,
+  requestFor: (
+    position: ThreeKingdomsBanqiReplayState,
+    move?: ThreeKingdomsBanqiMove,
+  ) => ThreeKingdomsBanqiEngineRequest,
+  provider: ThreeKingdomsBanqiEngineProvider = threeKingdomsBanqiLiveEngineMove,
+): Promise<ThreeKingdomsBanqiDecision> {
   if (
     state.status.type !== 'playing' ||
     played.from !== played.to ||
+    !played.revealed ||
     !state.board[played.from]?.faceDown
-  ) {
+  )
     throw new Error('three_kingdoms_banqi_decisions_not_a_flip');
-  }
+  // Validate the observed outcome before starting expensive searches.
+  applyThreeKingdomsBanqiReplayMove(state, played);
   const mover = state.status.turn;
-  const requestFor = (
-    position: ThreeKingdomsBanqiState,
-    events: readonly ThreeKingdomsBanqiEvent[],
-  ) => ({
-    ...threeKingdomsBanqiTierRequestFor(
-      events,
-      position,
-      THREE_KINGDOMS_BANQI_ANALYSIS_TIER,
-      THREE_KINGDOMS_BANQI_DECISION_MOVETIME_CAP_MS,
-    ),
-    nodes: THREE_KINGDOMS_BANQI_DECISION_NODES,
-  });
-  const root = requestFor(state, history);
+  const root = requestFor(state);
   // Quiet history cannot change the pool, so the window-start FEN has the
   // same bag as the mover's current position.
   const pool = publicPool(root.fen);
@@ -157,20 +171,13 @@ export async function evaluateThreeKingdomsBanqiFlipDecision(
     candidates.set(threeKingdomsBanqiMoveToUci(selected), selected);
     remaining = remaining.filter((move) => move !== selected);
   }
-  const winAfter = async (before: ThreeKingdomsBanqiState, move: ThreeKingdomsBanqiMove) => {
-    const post = applyThreeKingdomsBanqiMove(before, move);
-    if (post === before) throw new Error('three_kingdoms_banqi_decisions_invalid_move');
+  const winAfter = async (move: ThreeKingdomsBanqiReplayMove) => {
+    const post = applyThreeKingdomsBanqiReplayMove(state, move);
+    if (post === state) throw new Error('three_kingdoms_banqi_decisions_invalid_move');
     if (post.status.type === 'finished') {
       return post.status.winner === mover ? 100 : post.status.winner === null ? 50 : 0;
     }
-    const event: ThreeKingdomsBanqiEvent = {
-      type: 'move-played',
-      at: 0,
-      roomId: state.id,
-      color: mover,
-      move,
-    };
-    const evaluation = await provider(requestFor(post, [...history, event]));
+    const evaluation = await provider(requestFor(post, move));
     if (evaluation.cp === null && evaluation.mate === null)
       throw new VacuousAnalysisError('three-kingdoms-banqi');
     // Engine scores are side-to-move: post has the opponent to move. This
@@ -189,7 +196,7 @@ export async function evaluateThreeKingdomsBanqiFlipDecision(
     let win: number;
     if (move.from === move.to) {
       const wins = await mapWithConcurrency(pool, CONCURRENCY, (entry) =>
-        winAfter(counterfactual(state, move.from, entry, pool), move),
+        winAfter({ ...move, revealed: entry.piece }),
       );
       // Center the weighted mean so equal outcomes remain exactly equal to
       // a deterministic board move's value (no rounding-only decision loss).
@@ -202,12 +209,12 @@ export async function evaluateThreeKingdomsBanqiFlipDecision(
         );
       if (uci === playedUci) {
         const realized = pool.findIndex(
-          (entry) => banqiPieceLetter(entry.piece) === banqiPieceLetter(state.board[played.from]!),
+          (entry) => banqiPieceLetter(entry.piece) === banqiPieceLetter(played.revealed!),
         );
         if (realized < 0) throw new Error('three_kingdoms_banqi_decisions_missing_outcome');
         realizedWin = wins[realized]!;
       }
-    } else win = await winAfter(state, move);
+    } else win = await winAfter(move);
     scored.push({ move: uci, win, ...(uci === playedUci ? { played: true } : {}) });
     if (uci === playedUci) playedWin = win;
   }

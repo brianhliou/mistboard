@@ -12,12 +12,18 @@
 import {
   ALL_THREE_KINGDOMS_BANQI_SQUARES,
   applyThreeKingdomsBanqiMove,
+  applyThreeKingdomsBanqiReplayMove,
   type BanqiDeal,
+  banqiPieceLetter,
+  createInitialThreeKingdomsBanqiReplayState,
   getThreeKingdomsBanqiPlayerView,
   isThreeKingdomsBanqiLegalMove,
+  parseThreeKingdomsBanqiReplayMove,
   THREE_KINGDOMS_BANQI_SETUP_SQUARES,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
+  type ThreeKingdomsBanqiReplayMove,
+  type ThreeKingdomsBanqiReplayState,
   type ThreeKingdomsBanqiSquare,
   type ThreeKingdomsBanqiState,
   threeKingdomsBanqiMoveLabel,
@@ -26,6 +32,43 @@ import {
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
 const SQUARE_SET = new Set<string>(ALL_THREE_KINGDOMS_BANQI_SQUARES);
+
+/** Recorded outcomes live on moves, never on a hidden board or a square map.
+ * An interactive flip has no outcome and is refused; navigation can replay the
+ * recorded flip, but a new branch cannot borrow its identity from the future. */
+export function makeThreeKingdomsBanqiReplayTreeAdapter(): VariantTreeAdapter<
+  ThreeKingdomsBanqiReplayMove,
+  ThreeKingdomsBanqiReplayState,
+  ThreeKingdomsBanqiPlayerView
+> {
+  const token = (move: ThreeKingdomsBanqiReplayMove): string =>
+    move.revealed ? `@${move.from}:${banqiPieceLetter(move.revealed)}` : `${move.from}${move.to}`;
+  return {
+    mode: 'perfect-info',
+    initialTruth: () => createInitialThreeKingdomsBanqiReplayState('study'),
+    isLegal: (state, move) => {
+      try {
+        applyThreeKingdomsBanqiReplayMove(state, move);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    applyMove: applyThreeKingdomsBanqiReplayMove,
+    project: (state) => [
+      {
+        key: 'truth',
+        label: 'Board',
+        tier: 'primary',
+        view: getThreeKingdomsBanqiPlayerView(state, threeKingdomsBanqiSeatToMove(state)),
+      },
+    ],
+    moveLabel: (move) => threeKingdomsBanqiMoveLabel(move, move.revealed),
+    moveKey: token,
+    toEngineUci: token,
+    fromUci: parseThreeKingdomsBanqiReplayMove,
+  };
+}
 
 /** A finished game's deal, read off its ply-0 revealed board (the postgame's
  *  history.revealed[0]) in setup-square order, the order the room dealt it.
