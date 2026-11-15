@@ -90,8 +90,11 @@
     grid-area: channels;
   }
 
+  /* The phone grid centres its items; the meta card spans the column like the
+     game table above it. */
   .watch-review-shell .watch-meta {
     grid-area: meta;
+    justify-self: stretch;
   }
 }
 
@@ -1118,7 +1121,8 @@
      Linked names are controls too, so give them the same touch floor. */
   .watch-game-table .clock-name,
   .watch-meta .game-meta-card__name {
-    flex: 1;
+    flex: 0 1 auto;
+    min-width: 0;
     min-height: 44px;
     display: flex;
     align-items: center;
@@ -1138,7 +1142,6 @@
     min-height: 44px;
   }
 
-  .watch-game-table .review-move-list__move,
   .watch-empty-actions a,
   .watch-pov__button {
     min-height: 44px;
