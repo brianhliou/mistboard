@@ -193,7 +193,9 @@ describe('bot seat names fit game cards', () => {
       const cardName = tile.querySelector<HTMLElement>(
         '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
       );
-      expect(cardName?.textContent).toBe(expected);
+      // A finished card drops the game from Misty's name (2026-11-14); the
+      // tooltip and every other surface keep the full name.
+      expect(cardName?.textContent).toBe(expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty'));
       expect(cardName?.title).toBe(expected);
       expect(watchQueueMatchupLabel(game)).toBe(`Ann vs ${expected}`);
       expect(watchGamePlayers(game)[1]?.name).toBe(expected);
