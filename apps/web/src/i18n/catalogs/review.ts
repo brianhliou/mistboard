@@ -896,6 +896,8 @@ export const EN_REVIEW = {
   'study.phone.searchChapters': 'Search chapters',
   'study.phone.noChapterMatch': 'No chapter matches.',
   'study.phone.closeChapters': 'Close chapters',
+  'study.moveNote': 'Move note',
+  'study.readMoveNote': 'Read full move note',
   'study.phone.info': 'Info',
   'study.phone.closeInfo': 'Close study info',
   'study.chapterSettings': 'Chapter settings',
