@@ -22,12 +22,8 @@
   }
 }
 
-/* col1 (phone): who is playing and on what clock belongs directly under the
-   board. The shared stack puts the "side" rail there because on a review page it
-   carries the game's identity; on /watch it carries a BROWSE list (the channel
-   rail), and the previously-on strip is browse too, so both drop below the
-   console. Dissolving .watch-center is what lets the previously-on strip leave
-   the board's own area; each child gets its own row, so nothing overlaps. */
+/* col1 (phone): channels, compact game identity, then the room-style seat bands
+   around the board. Dissolve the shared columns/table into this grid. */
 /* The headline is a phone affordance: from col2 up the console beside the board
    already names both players, so it would only repeat them. */
 .watch-headline {
@@ -36,13 +32,20 @@
 
 @media (max-width: 799px) {
   .watch-review-shell .review-shell__cluster {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
     grid-template-areas:
-      "headline"
-      "board"
-      "pov"
-      "table"
-      "previously"
-      "side";
+      "channels channels channels"
+      "headline headline headline"
+      "player-top captures-top clock-top"
+      "board board board"
+      "player-bottom captures-bottom clock-bottom"
+      "pool pool pool"
+      "pov pov pov"
+      "moves moves moves"
+      "nav nav nav"
+      "previously previously previously";
+    gap: 0;
+    justify-items: stretch;
   }
 
   .watch-review-shell .watch-headline {
@@ -67,8 +70,10 @@
     line-height: 1.3;
   }
 
-  /* Both wrappers dissolve: the shell's center slot AND .watch-center inside it,
-     or the board/pov/previously trio stays nested and never reaches the grid. */
+  /* The shell slots AND their inner columns must dissolve for their children
+     to reach the grid. */
+  .watch-review-shell .review-shell__left,
+  .watch-review-shell .watch-left,
   .watch-review-shell .review-shell__center,
   .watch-review-shell .watch-center {
     display: contents;
@@ -84,6 +89,14 @@
 
   .watch-review-shell .watch-previously {
     grid-area: previously;
+  }
+
+  .watch-review-shell .watch-channel-rail {
+    grid-area: channels;
+  }
+
+  .watch-review-shell .watch-meta {
+    display: none;
   }
 }
 
@@ -1059,5 +1072,309 @@
   .watch-review-shell .review-shell__left {
     align-self: start;
     overflow: visible;
+  }
+}
+
+@media (max-width: 799px) {
+  /* Keep every channel reachable without making the document wider or
+     stacking an entire desktop rail below the game. */
+  .watch-review-shell .watch-channel-rail {
+    --watch-marker: 24px;
+    width: 100%;
+  }
+
+  .watch-review-shell .watch-channel-list {
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .watch-review-shell .watch-channel-list a {
+    display: flex;
+    flex-direction: row-reverse;
+    flex: 0 0 auto;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 6px 10px;
+  }
+
+  .watch-review-shell .watch-channel-text {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .watch-review-shell .watch-channel-player {
+    display: none;
+  }
+
+  .watch-review-shell .watch-headline {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .watch-review-shell .watch-meta:empty {
+    display: none;
+  }
+
+  /* Match the room's single seat line; linked names retain the touch floor. */
+  .watch-game-table .clock-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: 44px;
+    display: block;
+    line-height: 44px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .watch-game-table .watch-player-bot,
+  .watch-game-table .clock-to-move {
+    font-size: 11px;
+  }
+
+  .watch-headline__variant {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--site-accent, #237960);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .watch-headline__variant:hover,
+  .watch-headline__variant:focus-visible {
+    text-decoration: underline;
+  }
+
+  .watch-empty-actions a,
+  .watch-pov__button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 799px) {
+  /* Shared room table slots become board-relative bands, as in live-review.css.
+     Keep hidden tables hidden while a channel is empty or loading. */
+  .watch-review-shell .review-shell__right,
+  .watch-review-shell .watch-right,
+  .watch-review-shell .watch-game-table:not([hidden]),
+  .watch-game-table .round-table__box,
+  .watch-game-table .replay-console {
+    display: contents;
+  }
+
+  .watch-review-shell .watch-channel-rail,
+  .watch-review-shell .watch-headline {
+    margin-bottom: 8px;
+  }
+
+  .watch-review-shell .watch-previously {
+    margin-top: 10px;
+  }
+
+  .watch-game-table .round-table__player--top {
+    grid-area: player-top;
+  }
+  .watch-game-table .round-table__player--bottom {
+    grid-area: player-bottom;
+  }
+  .watch-game-table [data-clock-top] {
+    grid-area: clock-top;
+  }
+  .watch-game-table [data-clock-bottom] {
+    grid-area: clock-bottom;
+  }
+  .watch-game-table .captures-strip-top {
+    grid-area: captures-top;
+  }
+  .watch-game-table .captures-strip-bottom {
+    grid-area: captures-bottom;
+  }
+  .watch-game-table .hidden-pool {
+    grid-area: pool;
+  }
+  .watch-game-table .game-table-moves {
+    grid-area: moves;
+  }
+  .watch-game-table .move-nav-bar {
+    grid-area: nav;
+  }
+
+  /* The existing fog POV rotates the board; swap entire seat bands with it. */
+  .watch-review-shell[data-watch-pov="black"] .round-table__player--top {
+    grid-area: player-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] .round-table__player--bottom {
+    grid-area: player-top;
+  }
+  .watch-review-shell[data-watch-pov="black"] [data-clock-top] {
+    grid-area: clock-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] [data-clock-bottom] {
+    grid-area: clock-top;
+  }
+  .watch-review-shell[data-watch-pov="black"] .captures-strip-top {
+    grid-area: captures-bottom;
+  }
+  .watch-review-shell[data-watch-pov="black"] .captures-strip-bottom {
+    grid-area: captures-top;
+  }
+
+  .watch-game-table .round-table__player,
+  .watch-game-table .captures-strip,
+  .watch-game-table .clock-slot {
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .watch-game-table .round-table__player {
+    padding: 0 8px 0 12px;
+    border: 0;
+    align-items: center;
+    font-size: 15px;
+  }
+
+  .watch-game-table .clock-name {
+    font-size: 15px;
+  }
+  .watch-game-table .clock-to-move {
+    display: none;
+  }
+
+  .watch-game-table .captures-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: 25vw;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .watch-game-table .captures-strip:empty,
+  .watch-game-table .hidden-pool:empty,
+  .watch-game-table .round-table__row:has(.room-actions:empty) {
+    display: none;
+  }
+
+  .watch-game-table .clock-slot {
+    display: flex;
+    margin-left: auto;
+  }
+
+  /* Same 44px band and 26px clock face as the phone room. Specificity clears
+     the theme's clock-card repaint, including the active/emergency states. */
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row {
+    flex: 1 0 auto;
+    justify-items: center;
+    align-content: center;
+    width: auto;
+    min-width: 104px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+    color: var(--site-heading);
+    animation: none;
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row strong {
+    min-width: 0;
+    color: inherit;
+    font-size: 26px;
+    text-align: center;
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row.active {
+    background: var(--site-accent);
+    color: var(--site-on-accent, #fff);
+  }
+
+  :root .watch-game-table .clocks.clock-slot div.clock-time-row.emerg {
+    background: var(--clock-emerg-bg);
+    color: var(--clock-emerg-text);
+  }
+
+  /* The room's horizontal move band, using watch's existing review notation. */
+  .watch-game-table .game-table-moves {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 44px;
+    max-height: none;
+    padding: 0 8px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    contain: inline-size;
+    scrollbar-width: none;
+    white-space: nowrap;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+  }
+
+  .watch-game-table .review-move-list {
+    flex: none;
+    padding: 0;
+  }
+
+  .watch-game-table .review-move-list__rows {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    max-height: none;
+    overflow-x: visible;
+    overflow-y: visible;
+    font-size: 15px;
+  }
+
+  .watch-game-table .review-move-list__row {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0;
+    background: none;
+  }
+
+  .watch-game-table .review-move-list__number {
+    padding: 0 2px 0 4px;
+  }
+
+  .watch-game-table .review-move-list__move {
+    flex: none;
+    align-items: center;
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--site-radius-sm, 6px);
+    box-shadow: none;
+    font-size: 15px;
+  }
+
+  .watch-game-table .review-move-list__move--current {
+    background: var(--site-heading);
+    color: var(--site-panel, var(--site-surface));
+    font-weight: 600;
+  }
+
+  .watch-game-table .move-nav-bar {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .watch-game-table .move-nav-bar [data-replay] {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
