@@ -167,6 +167,8 @@ export type ReviewScaffoldConfig = SizingInput & {
   annotations?: HTMLElement;
   /** The right-rail navigation element: a linear scrubber or a tree nav bar. */
   navigation: HTMLElement;
+  /** Study move note, under navigation on wide screens and after phone moves. */
+  navigationNote?: HTMLElement;
   /** Panel that opens over the rail from a control-bar tool (the opening
    *  explorer). Sits directly above navigation, so the tool that toggles it is
    *  adjacent to what it opens. */
@@ -345,9 +347,13 @@ export function createReviewScaffold(
     boardTrackingBox = pocketBox;
   }
   const right = railGroup(
-    [boardTrackingBox, config.navigation, config.analysisSummary, config.railFooter].filter(
-      (el): el is HTMLElement => el != null,
-    ),
+    [
+      boardTrackingBox,
+      config.navigation,
+      config.navigationNote,
+      config.analysisSummary,
+      config.railFooter,
+    ].filter((el): el is HTMLElement => el != null),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
   // Phone stack (col1): the center column and the right rail dissolve and each
@@ -361,6 +367,7 @@ export function createReviewScaffold(
     under: config.underboard,
     summary: config.analysisSummary,
   });
+  if (config.navigationNote) config.navigationNote.dataset.col1Area = 'extra';
 
   const nextShell = createReviewShell({
     ariaLabel: config.ariaLabel,
@@ -747,6 +754,26 @@ function fitPrimaryToViewport(
     stageEl
       .closest<HTMLElement>('.review-shell__cluster')
       ?.style.setProperty('--uni-board-fit-w', `${targetWidth}px`);
+    // The note takes the room a full-width board leaves. Only its one-line
+    // minimum participates in fitting, so a tall phone never shrinks its board
+    // to accommodate the note's previous height after a resize.
+    const studyShell = stageEl.closest<HTMLElement>('.review-shell--study');
+    if (studyShell && window.matchMedia?.(PHONE_QUERY).matches) {
+      const note = studyShell.querySelector<HTMLElement>(
+        '.review-comment-panel--study:not([hidden])',
+      );
+      const dock = studyShell.parentElement?.querySelector<HTMLElement>('.study-phone-dock');
+      const moves = studyShell.querySelector<HTMLElement>('.review-move-list');
+      if (note && dock && moves) {
+        const gap = cluster ? Number.parseFloat(getComputedStyle(cluster).rowGap) || 0 : 0;
+        const remaining =
+          dock.getBoundingClientRect().top - moves.getBoundingClientRect().bottom - gap - 2;
+        studyShell.style.setProperty(
+          '--study-note-height',
+          `${Math.max(30, Math.floor(remaining))}px`,
+        );
+      }
+    }
     opts?.onFitted?.();
   });
 }
@@ -811,8 +838,23 @@ export function oneScreenBoardWidth(
   const pageBottomPad = phonePage
     ? Number.parseFloat(getComputedStyle(phonePage).paddingBottom) || 0
     : 0;
+  const studyDock = shell.classList.contains('review-shell--study')
+    ? shell.parentElement?.querySelector<HTMLElement>('.study-phone-dock')
+    : null;
+  const studyNote = shell.querySelector<HTMLElement>('.review-comment-panel--study:not([hidden])');
+  const noteGap = studyNote
+    ? Number.parseFloat(
+        getComputedStyle(shell.querySelector('.review-shell__cluster') ?? shell).rowGap,
+      ) || 0
+    : 0;
+  const viewportBottom = studyDock?.getBoundingClientRect().top ?? window.innerHeight;
   const room =
-    window.innerHeight - stageTop - shellBottomPad - pageBottomPad - (belowBoard - boardHeight);
+    viewportBottom -
+    stageTop -
+    shellBottomPad -
+    pageBottomPad -
+    (belowBoard - boardHeight) -
+    (studyNote ? 30 + noteGap : 0);
   if (room <= 0) return Number.POSITIVE_INFINITY;
   return Math.floor((room - 2) * aspect * currentBoardScale());
 }

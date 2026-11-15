@@ -1210,7 +1210,9 @@
    * the chapter bar right above the board it sat over the bar. Give it its
    * own row, as the mock's player row. */
   .review-shell--study .review-stage:has(.review-seat--top) {
-    margin-top: 28px;
+    /* The cluster already reserves the top seat row. A second reservation
+       here spent 28px above the board on every phone. */
+    margin-top: 0;
   }
 
   /* The About tab's Source is one long unbroken URL; it pushed the page to
@@ -1231,15 +1233,12 @@
   }
   .review-shell.review-shell--study .review-shell__left > *,
   .review-shell--study [data-col1-area="under"],
+  .review-shell--study .review-analysis-summary-slot,
   .review-shell--study .review-rail-main > .move-nav-bar--band,
-  .review-shell--study .review-rail-main > .engine-panel:not(.engine-panel--on) {
+  .review-shell--study .review-rail-main > .engine-panel {
     display: none;
   }
-  /* Turned on from the Info sheet, the engine's card stays below the moves. */
-  .review-shell--study .review-rail-main > .engine-panel {
-    order: 1;
-    border-top: 1px solid var(--site-border);
-  }
+  /* Engine controls and output remain in Info, including while enabled. */
   /* The move strip: one row that scrolls sideways, the current move kept in
    * view (study-phone.ts bindMoveNav). Same strip as the analysis board. */
   .review-shell--study .review-rail-main .review-move-list {
@@ -1280,6 +1279,21 @@
   }
   .review-shell--study .review-rail-main .review-move-list__move--empty {
     display: none;
+  }
+}
+
+/* Use the chrome above the board first on short portrait screens. Touch
+   controls retain a 44px floor; the board fit spends height only afterward. */
+@media (max-width: 600px) and (max-height: 740px) {
+  :has(> .study-phone-dock) > .site-nav {
+    height: 44px;
+    min-height: 44px;
+  }
+  .review-shell.review-shell--study {
+    padding-top: 0;
+  }
+  .review-shell--study .review-shell__cluster--col1-stack {
+    row-gap: 2px;
   }
 }
 

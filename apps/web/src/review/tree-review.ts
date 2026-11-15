@@ -114,6 +114,7 @@ import {
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
 import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
+import { createStudyMoveNote } from './study-move-note.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
 
@@ -1731,10 +1732,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const importPanel = config.importPanel
     ? createImportPanel(config.importPanel, { editorLink: config.boardEditorHref !== undefined })
     : null;
-  // Authored comment for the CURRENT node, under the board. The move list shows
-  // only a bubble marker per commented move; navigation brings the text here.
-  const commentPanelEl = document.createElement('section');
-  commentPanelEl.className = 'review-comment-panel';
+  // Authored comment for the current node. Study notes get a stable rail slot;
+  // other reviews keep their underboard panel. Move cells retain their marker.
+  const studyNote =
+    config.reviewSurface === 'study' ? createStudyMoveNote(root, mountAbort.signal) : null;
+  const commentPanelEl = studyNote?.el ?? document.createElement('section');
+  if (!studyNote) commentPanelEl.className = 'review-comment-panel';
   commentPanelEl.hidden = true;
   commentPanelEl.setAttribute('aria-live', 'polite');
   const analysisSummaryEl = document.createElement('div');
@@ -1749,6 +1752,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // line under the list on the tree surface.
   const formatBestForAdvice = presentation.formatBestMove ?? defaultFormatBestMove;
   let chart: AdvantageChart | null = null;
+
+  function updateCommentPanel(): void {
+    // A study's root comment is the chapter introduction, often several hundred
+    // characters; it renders in the About tab, so this slot only ever holds a
+    // note about one move (the longest measured on the site is ~106 characters).
+    const authoredComment =
+      config.reviewSurface === 'study' && currentPath.length === 0
+        ? ''
+        : (displayComment(currentNode().annotations?.comments?.[0]) ?? '');
+    if (studyNote) {
+      const hasNotes = (node: typeof tree.root): boolean =>
+        Boolean(node.parent && displayComment(node.annotations?.comments?.[0])?.trim()) ||
+        node.children.some(hasNotes);
+      const wasHidden = commentPanelEl.hidden;
+      studyNote.update(authoredComment, hasNotes(tree.root));
+      if (wasHidden !== commentPanelEl.hidden) scaffold.refit();
+    } else {
+      commentPanelEl.textContent = authoredComment;
+      commentPanelEl.hidden = !authoredComment;
+    }
+  }
 
   // ── Accuracy summary (rail) ──
   // One renderer for every path that shows the summary (base analysis, the jieqi
@@ -1918,9 +1942,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           tree.annotateAt(currentPath, { comments: text.trim() ? [{ text }] : [] });
           refreshMoveTreeAnnotations();
           moveTree.setCurrent(currentPath); // the rebuild dropped the highlight
-          const trimmed = text.trim();
-          commentPanelEl.textContent = trimmed;
-          commentPanelEl.hidden = !trimmed;
+          updateCommentPanel();
           notifyChange();
         },
         onClearShapes: () => {
@@ -2030,7 +2052,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     boardCols: presentation.boardCols,
     boardMaxPx: presentation.boardMaxPx,
     underboard: composeUnderboard(
-      commentPanelEl,
+      studyNote ? undefined : commentPanelEl,
       // A played game always has Share & export (and usually Move times), so the
       // panel shows for those too; the analysis board keeps its own gate.
       config.analysis ||
@@ -2046,12 +2068,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       config.underboardNote,
     ),
     underboardOverflows: true,
-    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar),
+    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar) || Boolean(studyNote),
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
     railBelow: explorerBelowRail ? config.explorer?.el : undefined,
     navigation: controls.el,
+    navigationNote: studyNote?.el,
     analysisSummary: analysisSummaryEl,
     gauge: evalBar?.el ?? (presentation.reserveGaugeTrack ? gaugeSpacer() : undefined),
     materialTop,
@@ -2330,27 +2353,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     }
     paintOverlays();
     annotationEditor?.setAnnotations(node.annotations);
-    // Under-board comment panel: the current node's authored text (hidden when
-    // the node carries none). The move list only marks commented moves.
-    //
-    // A STUDY's root comment is excluded. It is the chapter's introduction --
-    // chapter-level prose, often several hundred characters -- while every other
-    // node here carries a note about one move, and the longest of those measured
-    // across the site is 106 characters. Sharing one slot between the two meant
-    // stepping off the start of a chapter resized the page by ~300px, and a
-    // reader clicking through an annotated game felt it on every chapter. The
-    // study surface renders that intro in the About tab instead, which is where
-    // the chapter's other chapter-level facts already are.
-    const authoredComment =
-      config.reviewSurface === 'study' && currentPath.length === 0
-        ? ''
-        : (displayComment(node.annotations?.comments?.[0]) ?? '');
-    commentPanelEl.textContent = authoredComment;
-    // Only a move with a note gets the box. An uncommented move shows no empty
-    // box between the board and the tabs; stepping onto or off a note moves what
-    // is below the board by the note's height (Brian, 2026-10-02, over the
-    // reserved two-line box that never reflowed).
-    commentPanelEl.hidden = !authoredComment;
+    updateCommentPanel();
     moveTree.setCurrent(currentPath);
     if (forkPicker) {
       const hadFork = !forkPicker.el.hidden;
