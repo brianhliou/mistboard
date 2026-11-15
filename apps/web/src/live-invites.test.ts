@@ -373,6 +373,50 @@ describe('site-wide real-time invitations', () => {
     expect(heading.split('player-k3fc4')).toHaveLength(2);
   });
 
+  it('counts pending invitations in a hidden tab title and restores it on return', async () => {
+    let visibility: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
+    });
+    const show = (next: DocumentVisibilityState) => {
+      visibility = next;
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    try {
+      document.title = 'Blog · Mistboard';
+      controller.setUser('bob');
+      await flush();
+      expect(document.title).toBe('Blog · Mistboard');
+      show('hidden');
+      expect(document.title).toBe('(1) Game invite · Blog · Mistboard');
+      document.title = 'Puzzles · Mistboard';
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(document.title).toBe('(1) Game invite · Puzzles · Mistboard');
+      show('visible');
+      expect(document.title).toBe('Puzzles · Mistboard');
+      show('hidden');
+      incoming = [];
+      fetcher.mockImplementation(async (url: string) => {
+        if (url === `${base}/offer-1`)
+          return json({
+            invite: invite({ status: 'declined', canAccept: false, canDecline: false }),
+          });
+        if (url.endsWith('/heartbeat')) return json({ leaseMs: 15_000, pollAfterMs: 5_000 });
+        return json({ incoming, outgoing, pollAfterMs: 5_000 });
+      });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(document.title).toBe('Puzzles · Mistboard');
+      incoming = [invite({ id: 'offer-2' })];
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(document.title).toBe('(1) Game invite · Puzzles · Mistboard');
+      controller.setUser(null);
+      expect(document.title).toBe('Puzzles · Mistboard');
+    } finally {
+      delete (document as { visibilityState?: unknown }).visibilityState;
+    }
+  });
+
   it('restores a sender offer after navigation and inspects its retained terminal outcome', async () => {
     incoming = [];
     outgoing = [invite({ isMine: true, canCancel: true, canAccept: false, canDecline: false })];
