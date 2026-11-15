@@ -910,6 +910,49 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('draws the regenerated Duck Xiangqi rules-game chart across all 120 complete turns', async () => {
+    const plan = JSON.parse(
+      readFileSync(
+        resolve(
+          dirname(fileURLToPath(import.meta.url)),
+          '../../../../scripts/variant-lab/rules-page-games/plans/duck-xiangqi.plan.json',
+        ),
+        'utf8',
+      ),
+    );
+    const { tree, ...chapter } = plan.create.chapter;
+    stubFetch(200, {
+      study: { id: 'Hkwqd2kn' },
+      chapters: [{ ...chapter, id: 'ZlZFbv0q', root: tree }],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      await mountEmbedStudy(root, { studyId: 'Hkwqd2kn', chapterId: 'ZlZFbv0q' });
+      const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+      expect(chart).not.toBeNull();
+      expect(chart?.querySelector('polyline')?.getAttribute('points')?.split(' ')).toHaveLength(
+        121,
+      );
+      expect(chart?.textContent).toContain('Fairy-StockfishWin chance for Red');
+      expect(chart?.dataset.ply).toBe('0');
+
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+      expect(chart?.dataset.ply).toBe('1');
+      expect(root.querySelector('[data-duck-square="d9"]')).not.toBeNull();
+
+      const plot = chart!.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+      plot.getBoundingClientRect = () =>
+        ({ left: 0, top: 0, width: 400, height: 60, right: 400, bottom: 60 }) as DOMRect;
+      plot.dispatchEvent(new MouseEvent('click', { clientX: 400, bubbles: true }));
+      expect(chart?.dataset.ply).toBe('120');
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('120 / 120');
+      expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    } finally {
+      root.remove();
+    }
+  });
+
   it("draws a jieqi chapter's score series under the board, its cursor on the board's ply", async () => {
     // 40 plies, so 41 positions: index 0 the deal, index n after ply n.
     const ab = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.01);
