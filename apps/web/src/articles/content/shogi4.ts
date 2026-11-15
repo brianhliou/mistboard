@@ -30,9 +30,8 @@ export const shogi4Article: Article = {
     showInIndex: false,
     status: 'published',
     publishedAt: '2026-06-05',
-    updatedAt: '2026-06-06',
-    updateNote:
-      'Reworked the diagrams, the history and the prose.',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
     audience:
       'Players and shogi-curious readers who want the full, primary-sourced rules of Shogi4, a 4×4 drop-shogi.',
     thumbnail: { kind: 'svg', svg: SHOGI4_RULES_THUMBNAIL },
