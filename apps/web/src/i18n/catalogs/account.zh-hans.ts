@@ -7,6 +7,10 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANS_ACCOUNT = {
+  'account.liveInvites': '允许接收实时对局邀请',
+  'account.liveInvitesHelp':
+    '在线时，你关注的人或关注你的人可以邀请你对局。关闭挑战铃声不会阻止邀请。此设置会在所有设备上阻止收到实时对局邀请。',
+
   'account.chooseUsername': '选择你的用户名',
   'account.chooseUsernameCopy': '用户名会公开显示。你可以保留此名称，也可以选择其他名称。',
   'account.suggestUsernameCopy': '你的用户名可能包含部分邮箱地址。你可以按需选择其他名称。',

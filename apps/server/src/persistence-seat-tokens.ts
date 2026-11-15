@@ -154,8 +154,9 @@ export async function upsertRoomSeatToken(
     lastSeenAt: Date;
     revokedAt?: Date | null;
   },
+  database: Pick<ReturnType<typeof getPool>, 'query'> = getPool(),
 ): Promise<void> {
-  await getPool().query(
+  await database.query(
     `INSERT INTO room_seat_tokens
        (room_id, seat, client_id, token_hash, user_id, issued_at, last_seen_at, revoked_at,
         device_id)

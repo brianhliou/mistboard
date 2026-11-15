@@ -7,6 +7,10 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANT_ACCOUNT = {
+  'account.liveInvites': '允許接收即時對局邀請',
+  'account.liveInvitesHelp':
+    '在線時，你追蹤的人或追蹤你的人可以邀請你對局。關閉挑戰鈴聲不會阻止邀請。此設定會在所有裝置上阻止收到即時對局邀請。',
+
   'account.chooseUsername': '選擇你的使用者名稱',
   'account.chooseUsernameCopy': '使用者名稱會公開顯示。你可以保留此名稱，也可以選擇其他名稱。',
   'account.suggestUsernameCopy': '你的使用者名稱可能包含部分信箱地址。你可以按需選擇其他名稱。',

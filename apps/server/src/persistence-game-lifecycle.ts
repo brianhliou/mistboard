@@ -1,6 +1,11 @@
 import type { Color, GameEvent } from '@mistboard/game';
 import { getBuildInfo } from './build-info.js';
-import { getPool } from './persistence-db.js';
+import { getPool, withTransaction } from './persistence-db.js';
+import {
+  type RoomSeatTokenRecord,
+  type RoomSeatTokenSeat,
+  upsertRoomSeatToken,
+} from './persistence-seat-tokens.js';
 
 export type PersistedRoomEvent = {
   type: string;
@@ -334,11 +339,12 @@ export async function appendRoomEvent<T extends PersistedRoomEvent>(
   roomId: string,
   seq: number,
   event: T,
+  database?: Pick<ReturnType<typeof getPool>, 'query'>,
 ): Promise<void> {
   if (event.roomId !== roomId) {
     throw new Error(`event roomId mismatch: expected ${roomId}, got ${event.roomId}`);
   }
-  await getPool().query(
+  await (database ?? getPool()).query(
     'INSERT INTO events (room_id, seq, type, payload) VALUES ($1, $2, $3, $4)',
     [roomId, seq, event.type, event],
   );
@@ -619,8 +625,12 @@ export async function listStalePausedTenantRoomIds(
   return rows.map((row) => row.room_id);
 }
 
-export async function recordGameStart(roomId: string, summary: RunningGameSummary): Promise<void> {
-  await getPool().query(
+export async function recordGameStart(
+  roomId: string,
+  summary: RunningGameSummary,
+  database: Pick<ReturnType<typeof getPool>, 'query'> = getPool(),
+): Promise<void> {
+  await database.query(
     `INSERT INTO games
        (room_id, variant, result, termination, ply_count, started_at, ended_at,
         white_client, black_client, white_name, black_name, corpus_id,
@@ -643,6 +653,30 @@ export async function recordGameStart(roomId: string, summary: RunningGameSummar
       summary.region ?? 'global',
     ],
   );
+}
+
+// A two-account live room must hydrate with both owners or not exist at all.
+// In particular, a failed second token insert must roll back the secret setup
+// and first seat too; deleting a published room from memory is insufficient.
+export async function persistAccountRoom(
+  roomId: string,
+  events: readonly PersistedRoomEvent[],
+  tokens: readonly RoomSeatTokenRecord<RoomSeatTokenSeat>[],
+  summary: RunningGameSummary,
+): Promise<void> {
+  if (
+    tokens.length !== 2 ||
+    !tokens[0]?.userId ||
+    !tokens[1]?.userId ||
+    tokens[0].userId === tokens[1].userId ||
+    tokens[0].seat === tokens[1].seat
+  )
+    throw new Error('distinct account seats required');
+  await withTransaction(async (client) => {
+    for (const [seq, event] of events.entries()) await appendRoomEvent(roomId, seq, event, client);
+    for (const token of tokens) await upsertRoomSeatToken(roomId, token, client);
+    await recordGameStart(roomId, summary, client);
+  });
 }
 
 export async function listGameDebugArtifactSummaries(

@@ -2,9 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildLandingPlayPanel,
   type LandingGameSpecId,
+  openLandingSetupDialog,
   setRoomNavigator,
   variantLabelForGameSpec,
 } from './landing-play.js';
+import {
+  disposeLiveInvites,
+  initializeLiveInvites,
+  type LiveInviteView,
+  setLiveInviteUser,
+} from './live-invites.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
@@ -46,6 +53,7 @@ describe('setup dialog on a phone', () => {
   });
 
   afterEach(() => {
+    disposeLiveInvites();
     document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
     document.body.replaceChildren();
     document.documentElement.className = '';
@@ -54,6 +62,7 @@ describe('setup dialog on a phone', () => {
     setResolvedSignedIn(undefined);
     setRoomNavigator(null);
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   const mountPanel = (): HTMLElement => {
@@ -221,6 +230,164 @@ describe('setup dialog on a phone', () => {
       window.history.replaceState(null, '', '/');
     }
   });
+
+  it.each([409, 401])(
+    'sends the exact sheet terms for a follower-only player and handles HTTP %s without a fallback',
+    async (httpStatus) => {
+      stubViewport(true);
+      setResolvedSignedIn(true);
+      setRatedModeEnabled(true);
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/following?')) return jsonResponse({ entries: [], total: 0 });
+        if (url.includes('/followers?'))
+          return jsonResponse({
+            entries: [{ handle: 'follower', displayName: 'Follower' }],
+            total: 1,
+          });
+        if (url.includes('/availability?'))
+          return jsonResponse({ players: [{ handle: 'follower', availability: 'available' }] });
+        if (url === '/api/relations/online-following') return jsonResponse({ players: [] });
+        if (url === '/api/live-invites' && init?.method === 'POST')
+          return jsonResponse(
+            { error: httpStatus === 401 ? 'not_signed_in' : 'target_unavailable' },
+            { status: httpStatus },
+          );
+        return jsonResponse({}, { status: 404 });
+      });
+      openLandingSetupDialog({
+        mode: 'pvp',
+        initialGameSpecId: 'banqi',
+        initialTimePresetId: '3m2',
+        initialColor: 'black',
+        initialRated: true,
+      });
+      expect(document.querySelector<HTMLElement>('[data-setup-section="sendTo"]')?.hidden).toBe(
+        false,
+      );
+      document.querySelector<HTMLButtonElement>('[data-send-to="player"]')!.click();
+      document.querySelector<HTMLButtonElement>('.landing-challenge-player-row')!.click();
+      await flushPromises();
+      const follower = document.querySelector<HTMLButtonElement>('[data-handle="follower"]')!;
+      expect(follower.disabled).toBe(false);
+      expect(follower.textContent).toContain('online now');
+      follower.click();
+      document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
+      await flushPromises();
+      const post = fetchSpy.mock.calls.find(
+        ([url, init]) => url === '/api/live-invites' && init?.method === 'POST',
+      );
+      expect(post).toBeDefined();
+      expect(JSON.parse(post![1]!.body as string)).toEqual({
+        targetHandle: 'follower',
+        gameSpecId: 'banqi',
+        timeControl: { initialMs: 180000, incrementMs: 2000 },
+        preferredColor: 'second',
+        rated: true,
+      });
+      if (httpStatus === 401) {
+        expect(document.querySelector<HTMLButtonElement>('.landing-setup-start')?.hidden).toBe(
+          true,
+        );
+        expect(document.querySelector<HTMLAnchorElement>('a.landing-setup-start')?.hidden).toBe(
+          false,
+        );
+      } else {
+        expect(document.querySelector('.landing-setup-status')?.textContent).toContain(
+          'Player unavailable',
+        );
+        expect(document.querySelector<HTMLButtonElement>('.landing-setup-start')?.disabled).toBe(
+          true,
+        );
+      }
+      expect(
+        fetchSpy.mock.calls.some(
+          ([url]) => url === '/api/rooms' || url === '/api/correspondence/seeks',
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it.each(['declined', 'cancelled', 'expired', 'accepted'] as const)(
+    'opens the sender waiting state from the sheet and retains the %s outcome',
+    async (outcome) => {
+      vi.useFakeTimers();
+      const drain = async () => {
+        for (let i = 0; i < 60; i++) await Promise.resolve();
+      };
+      stubViewport(true);
+      setResolvedSignedIn(true);
+      let sent: LiveInviteView | undefined;
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/following?'))
+          return jsonResponse({ entries: [{ handle: 'friend' }], total: 1 });
+        if (url.includes('/followers?')) return jsonResponse({ entries: [], total: 0 });
+        if (url.includes('online-following')) return jsonResponse({ players: [] });
+        if (url.includes('/availability?'))
+          return jsonResponse({ players: [{ handle: 'friend', availability: 'available' }] });
+        if (url.endsWith('/heartbeat')) return jsonResponse({ leaseMs: 15000, pollAfterMs: 5000 });
+        if (url === '/api/live-invites' && init?.method === 'POST') {
+          sent = {
+            ...JSON.parse(init.body as string),
+            id: 'sheet-offer',
+            sender: { handle: 'sender', displayName: 'Sender' },
+            target: { handle: 'friend', displayName: 'Friend' },
+            status: 'pending',
+            isMine: true,
+            canAccept: false,
+            canDecline: false,
+            canCancel: true,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 60000).toISOString(),
+          };
+          return jsonResponse({ invite: sent }, { status: 201 });
+        }
+        if (url === '/api/live-invites')
+          return jsonResponse({ incoming: [], outgoing: sent?.status === 'pending' ? [sent] : [] });
+        if (url === '/api/live-invites/sheet-offer') {
+          if (init?.method === 'DELETE') sent = { ...sent!, status: 'cancelled', canCancel: false };
+          return jsonResponse({ invite: sent });
+        }
+        return jsonResponse({}, { status: 404 });
+      });
+      initializeLiveInvites();
+      setLiveInviteUser('sender');
+      await drain();
+      openLandingSetupDialog({ mode: 'pvp', initialGameSpecId: 'banqi', initialRated: false });
+      document.querySelector<HTMLButtonElement>('[data-send-to="player"]')!.click();
+      document.querySelector<HTMLButtonElement>('.landing-challenge-player-row')!.click();
+      await drain();
+      document.querySelector<HTMLButtonElement>('[data-handle="friend"]')!.click();
+      document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
+      await drain();
+      expect(dialog()?.textContent).toContain('Waiting for a reply');
+      expect(document.querySelector<HTMLElement>('.landing-setup-accordion')?.hidden).toBe(true);
+      expect(document.querySelectorAll('.live-invite')).toHaveLength(2);
+      if (outcome === 'cancelled') {
+        [...dialog()!.querySelectorAll<HTMLButtonElement>('button')]
+          .find((button) => button.textContent === 'Cancel')!
+          .click();
+        await drain();
+      } else {
+        sent = { ...sent!, status: outcome, canCancel: false };
+        if (outcome === 'accepted')
+          sent.room = { roomId: 'sheet_reserved', url: '/room/sheet_reserved', seat: 'red' };
+        await vi.advanceTimersByTimeAsync(5000);
+      }
+      if (outcome === 'accepted') {
+        // The sender is taken into the room, where the finished card has no job left.
+        expect(window.location.pathname).toBe('/room/sheet_reserved');
+        expect(document.querySelectorAll('.live-invite')).toHaveLength(0);
+        return;
+      }
+      expect(dialog()?.textContent).toContain(`Invitation ${outcome}`);
+      document.querySelector<HTMLButtonElement>('.landing-setup-close')!.click();
+      expect(document.querySelector('.live-invites')?.textContent).toContain(
+        `Invitation ${outcome}`,
+      );
+    },
+  );
 });
 
 function memoryStorage(): Storage {

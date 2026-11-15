@@ -203,6 +203,9 @@ Edit task → find file → open only that file.
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
 | `account-session.ts` | Account auth: `currentAccountUser`, `ensureUserForEmail`, `hashSecret`, session cookies, email login |
 | `presence.ts` | In-memory online-players tracker (touched by `currentAccountUser`, TTL-pruned) behind `/api/players/online` |
+| `live-invites.ts` + `.test.ts` | Bounded process-local directed real-time invites, atomic acceptance claims, retained outcomes, expiry/caps and participant-only room views; short heartbeat leases live in `presence.ts` |
+| `routes/live-invites.ts` + `.test.ts`, `routes/live-invite-accept.test.ts` | Authenticated invite lifecycle and durable two-account acceptance; rechecked policy/rating/availability gates, factory failure/race/reconnect and whole-payload hidden-deal regressions; contract in `docs/live-invites.md` |
+| `account-room.ts` | Async account-seat scope across existing tenant and Fog Chess live factories; initial room events, seats and running record persist atomically through `persistAccountRoom` |
 | `account-identity.ts` | Email normalization, handle generation, display name handling |
 | `build-info.ts` | Build metadata surfaced through status responses |
 | `feature-flags.ts` | Runtime on-switches for rated mode and hidden/prelaunch surfaces |
@@ -673,6 +676,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `feature-flags.ts` | Build-time gates for hidden/prelaunch client surfaces |
 | `rated-flag.ts` | Client mirror of `/api/server-status` rated-mode switch |
 | `public-assets.ts` | Public build asset filter used by `vite.config.ts` to keep local bakeoff and pixel-lab artifacts out of ordinary web builds |
+| `live-invites.ts` + `.test.ts`, `live-invites.css` | Signed-in document invite heartbeat/polling, incoming actions and reusable sender waiting UI; retained terminal outcomes, reserved-room navigation, account/tab/navigation guards and expiry cleanup. |
 | `account.ts` | `/account` + `/account/settings` mounts. Sign-in/registration form (email + magic code), signed-in account card, settings form (display name / handle / email), auth-tabs. Uses `site-shell.ts` for shared chrome/auth fetch and loads `account-profile.css` |
 | `profile.ts` | `/@/:handle` + `/leaderboard` mounts. `mountProfile`, `mountLeaderboard`, `renderLeaderboardShellForPrerender` (build-time frame for dist/leaderboard.html), profile header/ratings/games builders, leaderboard panel + table. Uses `site-shell.ts` and `game-display.ts` for shared contracts and loads `account-profile.css` |
 | `profile-puzzles.ts` + `profile-puzzles.test.ts` | Owner-only profile puzzle history: one shared fetch follows every chronological history API page, derives daily saved rating points for the shared profile spotlight with gaps for legacy data, and aggregates attempts into the Activity tab’s per-day solved/failed rows |

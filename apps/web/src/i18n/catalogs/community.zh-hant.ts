@@ -7,6 +7,22 @@
 import type { CommunityI18nKey } from './community.js';
 
 export const ZH_HANT_COMMUNITY = {
+  'challenge.liveTitle': '即時對局邀請',
+  'challenge.liveIncoming': '{name} 邀請你立即對局',
+  'challenge.liveSent': '已邀請 {name}',
+  'challenge.liveWaiting': '等待回覆',
+  'challenge.liveAccepting': '正在建立對局…',
+  'challenge.liveAccepted': '邀請已接受',
+  'challenge.liveCancelled': '邀請已取消',
+  'challenge.liveDeclined': '邀請已拒絕',
+  'challenge.liveExpired': '邀請已過期',
+  'challenge.liveUnavailable': '對方目前無法對局，可能已離線或暫時無法接受邀請。',
+  'challenge.liveRemaining': '{seconds} 秒後過期',
+  'challenge.liveRetry': '無法更新邀請，請重試。',
+  'challenge.liveReconnecting': '正在重新連線，邀請狀態可能尚未更新。',
+  'challenge.liveDismiss': '關閉',
+  'challenge.liveOpenGame': '進入對局',
+
   'profile.championLabel': '{variant}{pace}冠軍',
   'inbox.searchPlaceholder': '搜尋或開始新對話',
   'profile.chartRange1M': '1個月',

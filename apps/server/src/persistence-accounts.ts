@@ -41,6 +41,7 @@ export type AccountPreferenceKey =
   | 'inboxEmail'
   | 'correspondenceBell'
   | 'challengesBell'
+  | 'liveInvites'
   | 'forumBell'
   | 'followersBell'
   | 'correspondenceDeadlineEmail'
@@ -59,6 +60,8 @@ export type AccountPreferences = {
   // Bell mutes for the sources that arrived after the first two: pending
   // challenges, forum replies/quotes, new followers. All default on.
   challengesBell: boolean;
+  // Server-enforced incoming real-time invitation opt-out, independent of bells.
+  liveInvites: boolean;
   forumBell: boolean;
   followersBell: boolean;
   correspondenceDeadlineEmail: boolean;
@@ -84,6 +87,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   inboxEmail: true,
   correspondenceBell: true,
   challengesBell: true,
+  liveInvites: true,
   forumBell: true,
   followersBell: true,
   correspondenceDeadlineEmail: true,
@@ -434,6 +438,7 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       parsed.challengesBell,
       DEFAULT_ACCOUNT_PREFERENCES.challengesBell,
     ),
+    liveInvites: booleanOrDefault(parsed.liveInvites, DEFAULT_ACCOUNT_PREFERENCES.liveInvites),
     forumBell: booleanOrDefault(parsed.forumBell, DEFAULT_ACCOUNT_PREFERENCES.forumBell),
     followersBell: booleanOrDefault(
       parsed.followersBell,

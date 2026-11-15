@@ -24,7 +24,9 @@ describe('account nav', () => {
     document.body.innerHTML = '';
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const { disposeLiveInvites } = await import('./live-invites.js');
+    disposeLiveInvites();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });

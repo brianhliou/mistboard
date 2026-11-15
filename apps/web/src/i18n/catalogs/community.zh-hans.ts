@@ -7,6 +7,22 @@
 import type { CommunityI18nKey } from './community.js';
 
 export const ZH_HANS_COMMUNITY = {
+  'challenge.liveTitle': '实时对局邀请',
+  'challenge.liveIncoming': '{name} 邀请你立即对局',
+  'challenge.liveSent': '已邀请 {name}',
+  'challenge.liveWaiting': '等待回复',
+  'challenge.liveAccepting': '正在创建对局…',
+  'challenge.liveAccepted': '邀请已接受',
+  'challenge.liveCancelled': '邀请已取消',
+  'challenge.liveDeclined': '邀请已拒绝',
+  'challenge.liveExpired': '邀请已过期',
+  'challenge.liveUnavailable': '对方当前无法对局，可能已离线或暂时无法接受邀请。',
+  'challenge.liveRemaining': '{seconds} 秒后过期',
+  'challenge.liveRetry': '无法更新邀请，请重试。',
+  'challenge.liveReconnecting': '正在重新连接，邀请状态可能尚未更新。',
+  'challenge.liveDismiss': '关闭',
+  'challenge.liveOpenGame': '进入对局',
+
   'profile.championLabel': '{variant}{pace}冠军',
   'inbox.searchPlaceholder': '搜索或发起新对话',
   'profile.chartRange1M': '1个月',

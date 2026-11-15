@@ -2,12 +2,14 @@ import { t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
 import { startOptionButton } from './setup-panel-parts.js';
 
+type Availability = 'available' | 'busy' | 'offline' | 'unavailable';
 type ChallengePlayer = {
   handle: string;
   displayName: string;
   following: boolean;
   follower: boolean;
   online: boolean;
+  availability?: Availability;
 };
 
 // Both relation lists are private, paginated APIs. A withheld handle cannot be
@@ -72,12 +74,12 @@ async function challengePlayers(): Promise<ChallengePlayer[]> {
   );
 }
 
-function playerContents(player: ChallengePlayer, locale: Locale): HTMLElement[] {
+function playerContents(player: ChallengePlayer, locale: Locale, realtime = false): HTMLElement[] {
   const avatar = document.createElement('span');
   avatar.className = 'landing-player-avatar';
   avatar.setAttribute('aria-hidden', 'true');
   avatar.textContent = Array.from(player.displayName.trim() || player.handle)[0]!.toUpperCase();
-  if (player.online) {
+  if (realtime ? player.availability === 'available' : player.online) {
     const dot = document.createElement('span');
     dot.className = 'landing-player-online-dot';
     avatar.append(dot);
@@ -90,13 +92,23 @@ function playerContents(player: ChallengePlayer, locale: Locale): HTMLElement[] 
   const status = document.createElement('small');
   status.className = 'landing-player-status';
   status.textContent = t(
-    player.online
-      ? 'setup.playerOnline'
-      : player.following && player.follower
-        ? 'setup.playerMutual'
-        : player.follower
-          ? 'setup.playerFollowsYou'
-          : 'setup.playerFollowing',
+    realtime
+      ? player.availability === undefined
+        ? 'play.checking'
+        : player.availability === 'available'
+          ? 'setup.playerOnline'
+          : player.availability === 'busy'
+            ? 'profile.playingNow'
+            : player.availability === 'offline'
+              ? 'bots.offline'
+              : 'challenge.liveUnavailable'
+      : player.online
+        ? 'setup.playerOnline'
+        : player.following && player.follower
+          ? 'setup.playerMutual'
+          : player.follower
+            ? 'setup.playerFollowsYou'
+            : 'setup.playerFollowing',
     {},
     locale,
   );
@@ -117,6 +129,12 @@ export function buildLandingChallengePlayer(options: {
   let selected: ChallengePlayer | null = null;
   let players: ChallengePlayer[] | null = null;
   let loading = false;
+  let realtime = false;
+  let disposed = false;
+  let generation = 0;
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  let availabilityRequest: AbortController | undefined;
+  let refreshAvailability = async () => {};
   const section = document.createElement('div');
   section.className = 'landing-setup-section';
   section.hidden = true;
@@ -150,18 +168,25 @@ export function buildLandingChallengePlayer(options: {
     chevron.setAttribute('aria-hidden', 'true');
     chevron.textContent = '›';
     row.replaceChildren(
-      ...(selected ? playerContents(selected, locale) : [t('setup.pickPlayer', {}, locale)]),
+      ...(selected
+        ? playerContents(selected, locale, realtime)
+        : [t('setup.pickPlayer', {}, locale)]),
       chevron,
     );
     options.onChange();
   };
   link.addEventListener('click', () => {
     sendTo = 'link';
+    generation++;
+    clearTimeout(refreshTimer);
+    availabilityRequest?.abort();
     sync();
   });
   player.addEventListener('click', () => {
     sendTo = 'player';
+    if (realtime) for (const entry of players ?? []) entry.availability = undefined;
     sync();
+    void refreshAvailability();
   });
   section.append(toggle, row);
 
@@ -198,32 +223,96 @@ export function buildLandingChallengePlayer(options: {
     }
   };
   search.addEventListener('input', filter);
+  const renderPlayers = () => {
+    if (!players || disposed) return;
+    players.sort(
+      (a, b) =>
+        Number(realtime ? b.availability === 'available' : b.online) -
+          Number(realtime ? a.availability === 'available' : a.online) ||
+        a.handle.localeCompare(b.handle),
+    );
+    const focused = (document.activeElement as HTMLElement | null)?.dataset.handle;
+    list.replaceChildren();
+    for (const entry of players) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'landing-challenge-player-option';
+      button.dataset.handle = entry.handle;
+      button.dataset.search = `${entry.handle} ${entry.displayName}`.toLocaleLowerCase();
+      button.disabled = realtime && entry.availability !== 'available';
+      button.append(...playerContents(entry, locale, realtime));
+      button.addEventListener('click', () => {
+        if (realtime && entry.availability !== 'available') return;
+        selected = entry;
+        sync();
+        options.onClose();
+      });
+      list.append(button);
+    }
+    message.textContent = t('setup.challengePlayersEmpty', {}, locale);
+    message.hidden = players.length > 0;
+    filter();
+    sync();
+    if (focused)
+      [...list.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.dataset.handle === focused && !button.disabled)
+        ?.focus({ preventScroll: true });
+  };
+  refreshAvailability = async () => {
+    clearTimeout(refreshTimer);
+    availabilityRequest?.abort();
+    const version = ++generation;
+    if (!realtime || sendTo !== 'player' || !players?.length || disposed) return;
+    const abort = new AbortController();
+    availabilityRequest = abort;
+    const timeout = setTimeout(() => abort.abort(), 10_000);
+    retry.hidden = true;
+    try {
+      const states = new Map<string, Availability>();
+      for (let offset = 0; offset < players.length; offset += 50) {
+        const params = new URLSearchParams();
+        for (const entry of players.slice(offset, offset + 50))
+          params.append('handle', entry.handle);
+        const response = await fetch(`/api/live-invites/availability?${params}`, {
+          cache: 'no-store',
+          signal: abort.signal,
+        });
+        if (version !== generation || disposed) return;
+        if (!response.ok) throw new Error('availability unavailable');
+        const data = (await response.json()) as {
+          players?: { handle: string; availability: Availability }[];
+        };
+        if (!Array.isArray(data.players)) throw new Error('invalid availability');
+        for (const entry of data.players)
+          states.set(entry.handle.toLowerCase(), entry.availability);
+      }
+      if (version !== generation || disposed) return;
+      for (const entry of players)
+        entry.availability = states.get(entry.handle.toLowerCase()) ?? 'unavailable';
+    } catch {
+      if (version !== generation || disposed) return;
+      for (const entry of players) entry.availability = 'unavailable';
+      retry.hidden = false;
+    } finally {
+      clearTimeout(timeout);
+    }
+    renderPlayers();
+    refreshTimer = setTimeout(() => void refreshAvailability(), 5_000);
+  };
   const load = async () => {
-    if (loading || players) return;
+    if (loading || disposed) return;
+    if (players) {
+      await refreshAvailability();
+      return;
+    }
     loading = true;
     retry.hidden = true;
     message.hidden = false;
     message.textContent = t('play.checking', {}, locale);
     try {
       players = await challengePlayers();
-      list.replaceChildren();
-      for (const entry of players) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'landing-challenge-player-option';
-        button.dataset.handle = entry.handle;
-        button.dataset.search = `${entry.handle} ${entry.displayName}`.toLocaleLowerCase();
-        button.append(...playerContents(entry, locale));
-        button.addEventListener('click', () => {
-          selected = entry;
-          sync();
-          options.onClose();
-        });
-        list.append(button);
-      }
-      message.textContent = t('setup.challengePlayersEmpty', {}, locale);
-      message.hidden = players.length > 0;
-      filter();
+      renderPlayers();
+      await refreshAvailability();
     } catch {
       message.textContent = t('setup.challengePlayersFailed', {}, locale);
       retry.hidden = false;
@@ -241,6 +330,28 @@ export function buildLandingChallengePlayer(options: {
     section,
     picker,
     row,
+    setRealtime(value: boolean) {
+      if (realtime === value) return;
+      realtime = value;
+      generation++;
+      clearTimeout(refreshTimer);
+      availabilityRequest?.abort();
+      // A remembered correspondence pick must be checked before a live send.
+      for (const entry of players ?? []) entry.availability = undefined;
+      renderPlayers();
+      void refreshAvailability();
+    },
+    canSend: () => !!selected && (!realtime || selected.availability === 'available'),
+    markUnavailable() {
+      if (selected) selected.availability = 'unavailable';
+      renderPlayers();
+    },
+    dispose() {
+      disposed = true;
+      generation++;
+      clearTimeout(refreshTimer);
+      availabilityRequest?.abort();
+    },
     choosingPlayer: () => !section.hidden && sendTo === 'player',
     selectedHandle: () => selected?.handle,
     summary: () =>

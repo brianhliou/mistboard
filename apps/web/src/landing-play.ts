@@ -58,6 +58,7 @@ import {
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
 import { buildLandingChallengePlayer } from './landing-challenge-player.js';
+import { createLandingLiveChallenge } from './landing-live-challenge.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
@@ -1907,7 +1908,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const correspondenceNeedsAccount = () =>
     selectedCorrespondenceDays !== null &&
     (choice.mode === 'pvp' ? accountRequiredByServer : isGuest());
-  const needsAccount = () => (isGuest() && ratedPicked()) || correspondenceNeedsAccount();
+  const needsAccount = () =>
+    accountRequiredByServer || (isGuest() && ratedPicked()) || correspondenceNeedsAccount();
   let openSetupSection = (_id: string) => {};
   let openNextSetupSection = (_id: string) => {};
 
@@ -2308,7 +2310,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (timeHint) {
       timeHint.textContent = corrActive ? '' : t('setup.timeUnits', {}, locale);
     }
-    challengePlayer.section.hidden = choice.mode !== 'pvp' || !corrActive || isGuest();
+    challengePlayer.section.hidden = choice.mode !== 'pvp' || isGuest();
+    challengePlayer.setRealtime(!corrActive);
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
     // An untouched preset follows the selected variant; a chosen one sticks.
@@ -2377,9 +2380,25 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     status.replaceChildren();
     syncAccountRequirement();
   };
+  const inviteWaiting = document.createElement('div');
+  inviteWaiting.hidden = true;
+  const liveChallenge = createLandingLiveChallenge({
+    button: startButton,
+    status,
+    waiting: inviteWaiting,
+    locale,
+    onSent: () => {
+      challengePlayer.dispose();
+      accordion.hidden = true;
+      actions.hidden = true;
+      inviteWaiting.hidden = false;
+    },
+    onAccountRequired: requireAccount,
+    onUnavailable: () => challengePlayer.markUnavailable(),
+    onSettled: () => syncAccountRequirement(),
+  });
   startButton.addEventListener('click', () => {
-    if (needsAccount() || (challengePlayer.choosingPlayer() && !challengePlayer.selectedHandle()))
-      return;
+    if (needsAccount() || (challengePlayer.choosingPlayer() && !challengePlayer.canSend())) return;
     rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend posts a link challenge (the invite link the friend
@@ -2413,6 +2432,16 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     }
     const setup = selectedRoomSetup(selectedGameSpecId, rated, selectedPreset, preferredColor);
     storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId, colorIsExplicit);
+    if (choice.mode === 'pvp' && challengePlayer.choosingPlayer()) {
+      void liveChallenge.send({
+        targetHandle: challengePlayer.selectedHandle()!,
+        gameSpecId: selectedGameSpecId,
+        timeControl: setup.timeControl,
+        preferredColor: correspondenceSeat(selectedGameSpecId, preferredColor),
+        rated,
+      });
+      return;
+    }
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
       // The empty-lobby "play the engine" offer is chess-only (no engine plays
@@ -2441,6 +2470,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   });
   const close = () => {
     stopRosterWatch();
+    challengePlayer.dispose();
+    liveChallenge.dispose();
     cancelLobbyWait?.();
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
@@ -2543,14 +2574,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   ratingSection.section.append(ratedAccountNotice);
   syncAccountRequirement = () => {
     correspondenceAccountNotice.hidden = !correspondenceNeedsAccount();
-    challengePlayer.section.hidden =
-      choice.mode !== 'pvp' || selectedCorrespondenceDays === null || isGuest();
+    challengePlayer.section.hidden = choice.mode !== 'pvp' || isGuest();
     if (!startButton.hasAttribute('aria-busy')) {
       startButton.textContent =
         challengePlayer.choosingPlayer() && challengePlayer.selectedHandle()
           ? t('setup.sendChallengeTo', { handle: challengePlayer.selectedHandle()! }, locale)
           : playLabel;
-      startButton.disabled = challengePlayer.choosingPlayer() && !challengePlayer.selectedHandle();
+      startButton.disabled = challengePlayer.choosingPlayer() && !challengePlayer.canSend();
     }
     ratedAccountNotice.hidden = !isGuest() || !ratedPicked();
     const required = needsAccount();
@@ -2801,7 +2831,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       overlay,
       dialog,
       header,
-      body: [...(notice ? [notice] : []), accordion],
+      body: [...(notice ? [notice] : []), accordion, inviteWaiting],
       pickers: [variantPicker, challengePlayer.picker].filter(
         (el): el is HTMLElement => el !== null,
       ),
@@ -2810,7 +2840,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   } else {
     dialog.append(header);
     if (notice) dialog.append(notice);
-    dialog.append(accordion);
+    dialog.append(accordion, inviteWaiting);
     dialog.append(challengePlayer.picker);
     dialog.append(status, actions);
   }
