@@ -107,11 +107,11 @@ describe('PikaJieQi ceval dispatch', () => {
     const handle = new PikaJieQiCeval('jieqi');
     await handle.preload();
     expect(FakeWorker.latest?.url).toBe(
-      '/engine/pikafish-jieqi/worker.js?v=fd1a6f82-emsdk3174-nnue1',
+      '/engine/pikafish-jieqi/worker.js?v=bc398e6e-emsdk3174-nnue1',
     );
     expect(FakeWorker.latest?.init).toMatchObject({
-      jsUrl: '/engine/pikafish-jieqi/pikajieqi.js?v=fd1a6f82-emsdk3174-nnue1',
-      wasmUrl: '/engine/pikafish-jieqi/pikajieqi.wasm?v=fd1a6f82-emsdk3174-nnue1',
+      jsUrl: '/engine/pikafish-jieqi/pikajieqi.js?v=bc398e6e-emsdk3174-nnue1',
+      wasmUrl: '/engine/pikafish-jieqi/pikajieqi.wasm?v=bc398e6e-emsdk3174-nnue1',
     });
     expect(FakeWorker.latest?.commands).toContain('setoption name Hash value 32');
     expect(FakeWorker.latest?.commands.some((command) => command.includes('Threads'))).toBe(false);

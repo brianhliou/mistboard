@@ -103,8 +103,9 @@ test('pinned NNUE binary advertises every site option', {
 }, async (t) => {
   const bin = pikaJieqiPath();
   const uci = execFileSync(bin, [], { input: 'uci\nquit\n', encoding: 'utf8', timeout: 5_000 });
-  assert.match(uci, /fd1a6f82/);
+  assert.match(uci, /bc398e6e/);
   assert.match(uci, /option name ChanceMix type check default true/);
+  assert.match(uci, /option name Jieqi Rule type combo default legacy var legacy var jqe-v1/);
   const options = new Set([...uci.matchAll(/^option name (.*?) type /gm)].map((m) => m[1]));
   const browser = readFileSync(
     new URL('../../web/src/review/engine/pikajieqi-ceval.ts', import.meta.url),
@@ -123,6 +124,33 @@ test('pinned NNUE binary advertises every site option', {
     if (name) assert.ok(options.has(name), `unadvertised site option: ${name}`);
   }
   t.diagnostic(`uci options: ${[...options].join(', ')}`);
+});
+
+test('pinned binary distinguishes legacy and jqe-v1 perpetual-check repetition', {
+  skip: process.env.MISTBOARD_TEST_JIEQI_NATIVE !== '1',
+  timeout: 10_000,
+}, () => {
+  // bc398e6e tools/kernel-fixtures/{cycles,kernel}.json: check-threefold.
+  // Red's rook checks on every move; Black (the side to move) wins under jqe-v1.
+  const fen = '4k4/9/4R4/9/9/9/9/9/9/3K5 b X 0 1';
+  const moves = 'e9f9 e7f7 f9e9 f7e7 e9f9 e7f7 f9e9 f7e7';
+  const input = [
+    'uci',
+    ...['legacy', 'jqe-v1', 'legacy'].flatMap((rule) => [
+      `setoption name Jieqi Rule value ${rule}`,
+      `position fen ${fen} moves ${moves}`,
+      'ruleprobe 0',
+    ]),
+    'quit',
+    '',
+  ].join('\n');
+  const output = execFileSync(pikaJieqiPath(), [], {
+    input,
+    encoding: 'utf8',
+    timeout: 5_000,
+  });
+  const verdicts = [...output.matchAll(/^info string ruleprobe (\w+) fen /gm)].map((m) => m[1]);
+  assert.deepEqual(verdicts, ['draw', 'win', 'draw']);
 });
 
 test('pinned NNUE binary obeys both search limits on masked positions', {
@@ -200,5 +228,6 @@ test('pinned NNUE binary matches the default bench signature', {
   assert.equal(bench.status, 0, bench.error?.message);
   const signature = /Nodes searched\s*:\s*(\d+)/.exec(bench.stderr)?.[1];
   t.diagnostic(`default bench: ${signature} nodes`);
-  assert.equal(signature, '469838');
+  // bc398e6e default bench, with the embedded net and default legacy rules.
+  assert.equal(signature, '361322');
 });

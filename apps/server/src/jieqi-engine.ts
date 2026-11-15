@@ -41,7 +41,8 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // 0.3.3 (2026-10-02): new binary (pikafish-jieqi.ref bcc83f88, #497): reveals scored
 // honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
 // 0.4.0 (2026-11-13, #1104): jieqi NNUE + ChanceMix, embedded MIT jqe-label net.
-export const JIEQI_ENGINE_VERSION = '0.4.0';
+// 0.4.1 (2026-11-15, #1151): bc398e6e adds selectable jqe-v1 adjudication.
+export const JIEQI_ENGINE_VERSION = '0.4.1';
 
 // AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): a
 // jieqi engine with its own NNUE, the top jieqi slot again from AB-JChess-20261031 (a new
@@ -85,13 +86,15 @@ export const ABJCHESS_ENGINE_REF = 'efc83867';
 // it now. The ref below moves in the same commit; this bump is belt-and-braces.
 // 0.5.0 (2026-10-02): new binary (#497); every reveal eval can change. Ref moves too.
 // 0.6.0 (2026-11-13, #1104): NNUE + ChanceMix; every evaluation can change.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.6.0';
+// 0.6.1 (2026-11-15, #1151): jqe-v1 adjudication; invalidate all prior evaluations.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.6.1';
 
 // Short form of pikafish-jieqi.ref, included in both analysis cache keys.
 // fd1a6f82 (2026-11-13, #1104): jieqi-mistboard NNUE + ChanceMix replaces the
 // classical build. Every evaluation can change, so cached sweeps must recompute.
+// bc398e6e (2026-11-15, #1151): selectable legacy/jqe-v1 repetition and clock rules.
 // jieqi-engine-ref.test.ts prevents the build pin and cache identity drifting.
-export const PIKAFISH_JIEQI_ENGINE_REF = 'fd1a6f82';
+export const PIKAFISH_JIEQI_ENGINE_REF = 'bc398e6e';
 
 export type JieqiEngineTier = {
   id: string;

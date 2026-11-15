@@ -193,7 +193,7 @@ test('the recipe builds and verifies the same ten binaries the image expects', (
 
 test('jieqi NNUE builds the renamed binary and ships the embedded net license', () => {
   const ref = readFileSync(resolve(repoRoot, 'pikafish-jieqi.ref'), 'utf8').split('\n')[0];
-  assert.equal(ref, 'fd1a6f825ebfd57dc2994ea9ee0d9f5408e49d83');
+  assert.equal(ref, 'bc398e6ef546fe33b35b73989457bc446ea2882a');
   const step = recipe.slice(
     recipe.indexOf('  ref=$(pin pikafish-jieqi.ref)'),
     recipe.indexOf('  ref=$(pin pikafish.ref)'),

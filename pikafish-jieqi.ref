@@ -1,12 +1,23 @@
-fd1a6f825ebfd57dc2994ea9ee0d9f5408e49d83
+bc398e6ef546fe33b35b73989457bc446ea2882a
 # Pikafish's official jieqi NNUE branch with ChanceMix (default on).
 # Source: https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard
 # The 256-wide embedded net was trained from random initialization on jqe labels.
 # It contains no Pikafish weights and is MIT licensed (src/jieqi-net-LICENSE).
-# Embedded net: src/jieqi-b395f77e3ee9.nnue.zst; native default bench: 469838 nodes.
+# Embedded net: src/jieqi-b395f77e3ee9.nnue.zst; 2026-11-13 native default bench: 469838 nodes.
 # Decided 2026-11-13 (#1104): replaces the classical jieqi_old build.
 # 400 games, 4 s/move, 4 threads, Hash 256: 292 wins, 61 losses, 47 draws,
 # +248 Elo [+213, +287] (pentanomial) against the previous Level 8 build.
+#
+# Decided 2026-11-15 (#1151, #1155): adds the UCI option `Jieqi Rule`
+# (`legacy` default, `jqe-v1`). Under `jqe-v1`, repetition (third occurrence),
+# perpetual check, perpetual chase and the 80-ply no-capture clock match
+# packages/game/src/variants-jieqi.ts for games stamped `jqe-v1`.
+# Rules match before the pin: bc398e6e with `Jieqi Rule=jqe-v1` against fd1a6f82,
+# 400 games at Level 8's served settings (4000 ms, 4 threads, Hash 256),
+# refereed under jqe-v1: 188 wins, 10 losses, 202 draws; -12 Elo [-43, +18]
+# (pentanomial), 0 errors. The rule set before the run was that the fix enters
+# the pin unless the whole interval is below zero.
+# Native default bench at bc398e6e (legacy rules, same net): 361322 nodes.
 #
 # scripts/engine-assets.sh copies src/pikafish to bin/pikafish-jieqi.
 # Python 3 embeds the checked-in net at build time; no net download is needed.
