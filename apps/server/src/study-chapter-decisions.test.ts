@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import {
+  banqiPieceLetter,
+  createInitialThreeKingdomsBanqiState,
+  threeKingdomsBanqiStateToDealtFen,
+} from '@mistboard/game';
 import { validateStudyDecisions } from './study-chapter-decisions.js';
 
 const rootFen =
@@ -103,3 +109,143 @@ for (const [name, variant, data] of [
     assert.throws(() => validateStudyDecisions(variant, banqiTree, data));
   });
 }
+
+const tkTree = {
+  version: 1,
+  replay: 'three-kingdoms-banqi-public-v1',
+  root: {
+    children: [
+      { uci: '@a1:R', children: [{ uci: '@b1:s', children: [{ uci: 'a1b1', children: [] }] }] },
+    ],
+  },
+};
+const tkInput = {
+  engineId: 'misty-three-kingdoms-banqi',
+  source: 'fixture',
+  decisions: [
+    {
+      ply: 1,
+      mover: 'red',
+      bestWin: 70,
+      playedWin: 50,
+      realizedWin: 62,
+      playedRank: 2,
+      candidates: [
+        { move: 'b1b1', win: 70 },
+        { move: 'a1a1', win: 50, played: true },
+      ],
+    },
+  ],
+};
+test('Three Kingdoms accepts public replay flip decisions and serializes only public scores and moves', () => {
+  const checked = validateStudyDecisions('three-kingdoms-banqi', tkTree, tkInput);
+  assert.deepEqual(checked, tkInput);
+  assert.deepEqual(JSON.parse(JSON.stringify({ chapter: tkTree, analysis: checked })), {
+    chapter: tkTree,
+    analysis: tkInput,
+  });
+  assert.doesNotMatch(JSON.stringify(checked), /role|color|captured|deal|seed|board/);
+  const second = {
+    ...tkInput,
+    decisions: [
+      { ...tkInput.decisions[0], ply: 2, mover: 'black', candidates: [{ move: 'b1b1', win: 70 }] },
+    ],
+  };
+  assert.deepEqual(validateStudyDecisions('three-kingdoms-banqi', tkTree, second), second);
+  const dealt = {
+    ...tkTree,
+    replay: undefined,
+    rootFen: threeKingdomsBanqiStateToDealtFen(createInitialThreeKingdomsBanqiState('study', 42)),
+    root: { children: [{ uci: 'a1a1', children: [] }] },
+  };
+  assert.deepEqual(validateStudyDecisions('three-kingdoms-banqi', dealt, tkInput), tkInput);
+});
+
+test('Three Kingdoms strictly rejects invalid decisions, illegal candidates and planted hidden identities', () => {
+  // The valid control must pass, so unsupported-variant rejection cannot satisfy these cases.
+  assert.deepEqual(validateStudyDecisions('three-kingdoms-banqi', tkTree, tkInput), tkInput);
+  const row = tkInput.decisions[0]!;
+  for (const bad of [
+    { ply: 0 },
+    { ply: 1.5 },
+    { ply: 3 },
+    { ply: 99 },
+    { mover: 'black' },
+    { bestWin: Infinity },
+    { playedWin: NaN },
+    { realizedWin: -1 },
+    { realizedWin: 101 },
+    { playedRank: 0 },
+    { playedRank: 1.5 },
+    { playedRank: undefined },
+    { candidates: [] },
+    { bestWin: 71 },
+    { capturedRole: 'horse' },
+    { unknown: true },
+    { candidates: [{ move: 'a0a0', win: 70 }] },
+    { candidates: [{ move: 'a1b1', win: 70 }] },
+    { candidates: [{ move: 'e3e3', win: 70 }] },
+    { candidates: [{ move: 'a1a1 ', win: 70 }] },
+    { candidates: [{ move: '@a1:R', win: 70 }] },
+    { candidates: [{ move: 'a1a1', win: NaN }] },
+    { candidates: [{ move: 'a1a1', win: 70, played: 'yes' }] },
+    { candidates: [{ move: 'a1a1', win: 70, captured: { role: 'horse', color: 'red' } }] },
+  ])
+    assert.throws(
+      () =>
+        validateStudyDecisions('three-kingdoms-banqi', tkTree, {
+          ...tkInput,
+          decisions: [{ ...row, ...bad }],
+        }),
+      JSON.stringify(bad),
+    );
+  assert.throws(() =>
+    validateStudyDecisions('three-kingdoms-banqi', tkTree, { ...tkInput, decisions: [row, row] }),
+  );
+  assert.throws(() =>
+    validateStudyDecisions('three-kingdoms-banqi', tkTree, { ...tkInput, capturedRole: 'horse' }),
+  );
+  for (const root of [
+    {},
+    { ...tkTree, replay: 'unknown' },
+    { ...tkTree, rootFen: 'secret' },
+    { ...tkTree, root: { children: [{ uci: '@e3:R', children: [] }] } },
+  ])
+    assert.throws(() => validateStudyDecisions('three-kingdoms-banqi', root, tkInput));
+});
+
+test('Three Kingdoms validates every observed flip in the complete 78-ply public game', () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL('../../../packages/game/fixtures/three-kingdoms-banqi-78.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const root: { children: { uci: string; children: unknown[] }[] } = { children: [] };
+  let node = root;
+  const decisions = [];
+  for (const [index, ply] of fixture.plies.entries()) {
+    const uci = ply.revealed ? `${ply.uci}:${banqiPieceLetter(ply.revealed)}` : ply.uci;
+    const child = { uci, children: [] };
+    node.children.push(child);
+    node = child;
+    if (ply.revealed)
+      decisions.push({
+        ply: index + 1,
+        mover: index % 2 === 0 ? 'red' : 'black',
+        bestWin: 50,
+        playedWin: 50,
+        realizedWin: 62,
+        playedRank: 1,
+        candidates: [{ move: `${ply.uci.slice(1)}${ply.uci.slice(1)}`, win: 50, played: true }],
+      });
+  }
+  const input = { engineId: 'offline', source: 'complete-game', decisions };
+  const checked = validateStudyDecisions(
+    'three-kingdoms-banqi',
+    { version: 1, replay: tkTree.replay, root },
+    input,
+  );
+  assert.deepEqual(checked, input);
+  assert.doesNotMatch(JSON.stringify(checked), /role|color|captured|deal|seed|board/);
+});

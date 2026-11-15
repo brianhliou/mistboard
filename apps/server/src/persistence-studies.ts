@@ -110,6 +110,8 @@ export type PublicStudySummary = StudySummary & {
 export type StudyChapterTags = {
   red?: string;
   black?: string;
+  /** The second seat in a game Black opens (Gomoku), where `black` is the first. */
+  white?: string;
   /** PGN result token: '1-0' | '0-1' | '1/2-1/2' | '*'. */
   result?: string;
   event?: string;

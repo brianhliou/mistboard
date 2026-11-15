@@ -1257,7 +1257,7 @@ describe('rules variant sidebar', () => {
       // variant's rules page uses; its title is localized like any string.
       const embed = page.querySelector('iframe[src*="/embed/study/"]');
       expect(embed).not.toBeNull();
-      expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
+      expect(embed?.getAttribute('title')).toBe('暗棋：第 7 级对第 8 级，附注解');
       await setImmediate();
       expect(request).not.toHaveBeenCalled();
     } finally {

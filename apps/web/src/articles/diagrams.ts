@@ -109,11 +109,13 @@ export {
 export { SHOGI4_GAME_STEPS, SHOGI4_GAME_TITLE } from '../shogi4-sample-game.js';
 
 // ── Standardized rules-article closings ───────────────────────────────────
-// playClosing gives a closing one primary destination and optional secondary
-// links. Live games deep-link into the play modal; reference-only and retired
-// games link to rules or studies instead. The caller owns availability and
-// destinations; this helper never enables a game. relatedClosing remains for
-// pages that have not yet migrated to the shared primary-action template.
+// Two kinds, picked by whether *this article's* game is playable on Mistboard
+// today:
+//   relatedClosing — the game is not hosted (base games, or fog variants not
+//     yet public). Links onward to related rules articles.
+//   playClosing — the game is live. Deep-links into the homepage play modal
+//     (`/?play=lobby` etc.), so a reader drops straight into starting a game.
+// A not-yet-public fog variant flips from related to play by swapping the call.
 export function relatedClosing(opts: {
   heading: string;
   lead: string;

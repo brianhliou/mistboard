@@ -20,7 +20,7 @@ import {
   BASIC_STALEMATE,
   boardToPieces,
   DARK_CHESS_START_STATE,
-  playClosing,
+  relatedClosing,
 } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -364,12 +364,11 @@ export const chessArticle: Article = {
           } as ArticleBlock,
         ],
       },
-      playClosing({
+      relatedClosing({
         heading: 'Where to next',
         lead: 'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.',
-        playLabel: 'Read Fog Chess',
-        playHref: '/rules/fog-chess',
-        secondary: [
+        links: [
+          { label: 'Read Fog Chess', href: '/rules/fog-chess', emphasis: 'primary' },
           { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],
       }),

@@ -1,0 +1,420 @@
+{
+  "game_id": "tkb_eve_task_230ed547-939e-4c92-9c27-5fa7a5d35286",
+  "result": "black",
+  "termination": "points",
+  "first_mover_ink": "red",
+  "plies": [
+    {
+      "ply": 1,
+      "uci": "@f4",
+      "revealed": {
+        "color": "red",
+        "role": "advisor"
+      }
+    },
+    {
+      "ply": 2,
+      "uci": "@f5",
+      "revealed": {
+        "color": "black",
+        "role": "chariot"
+      }
+    },
+    {
+      "ply": 3,
+      "uci": "@g4",
+      "revealed": {
+        "color": "red",
+        "role": "cannon"
+      }
+    },
+    {
+      "ply": 4,
+      "uci": "f5f4"
+    },
+    {
+      "ply": 5,
+      "uci": "@g5",
+      "revealed": {
+        "color": "red",
+        "role": "horse"
+      }
+    },
+    {
+      "ply": 6,
+      "uci": "f4g4"
+    },
+    {
+      "ply": 7,
+      "uci": "g5h3"
+    },
+    {
+      "ply": 8,
+      "uci": "g4g3"
+    },
+    {
+      "ply": 9,
+      "uci": "h3f4"
+    },
+    {
+      "ply": 10,
+      "uci": "g3f3"
+    },
+    {
+      "ply": 11,
+      "uci": "f4e2"
+    },
+    {
+      "ply": 12,
+      "uci": "f3e3"
+    },
+    {
+      "ply": 13,
+      "uci": "@f2",
+      "revealed": {
+        "color": "red",
+        "role": "chariot"
+      }
+    },
+    {
+      "ply": 14,
+      "uci": "@h2",
+      "revealed": {
+        "color": "black",
+        "role": "cannon"
+      }
+    },
+    {
+      "ply": 15,
+      "uci": "f2f5"
+    },
+    {
+      "ply": 16,
+      "uci": "h2e2"
+    },
+    {
+      "ply": 17,
+      "uci": "@d2",
+      "revealed": {
+        "color": "black",
+        "role": "horse"
+      }
+    },
+    {
+      "ply": 18,
+      "uci": "@i2",
+      "revealed": {
+        "color": "red",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 19,
+      "uci": "@d1",
+      "revealed": {
+        "color": "red",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 20,
+      "uci": "d2e4"
+    },
+    {
+      "ply": 21,
+      "uci": "i2i3"
+    },
+    {
+      "ply": 22,
+      "uci": "e3i3"
+    },
+    {
+      "ply": 23,
+      "uci": "d1e1"
+    },
+    {
+      "ply": 24,
+      "uci": "e2d2"
+    },
+    {
+      "ply": 25,
+      "uci": "e1e2"
+    },
+    {
+      "ply": 26,
+      "uci": "d2d3"
+    },
+    {
+      "ply": 27,
+      "uci": "f5e5"
+    },
+    {
+      "ply": 28,
+      "uci": "e4c3"
+    },
+    {
+      "ply": 29,
+      "uci": "e5e3"
+    },
+    {
+      "ply": 30,
+      "uci": "i3e3"
+    },
+    {
+      "ply": 31,
+      "uci": "e2e3"
+    },
+    {
+      "ply": 32,
+      "uci": "d3d1"
+    },
+    {
+      "ply": 33,
+      "uci": "@b4",
+      "revealed": {
+        "color": "black",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 34,
+      "uci": "b4b3"
+    },
+    {
+      "ply": 35,
+      "uci": "@g2",
+      "revealed": {
+        "color": "black",
+        "role": "horse"
+      }
+    },
+    {
+      "ply": 36,
+      "uci": "g2e3"
+    },
+    {
+      "ply": 37,
+      "uci": "@c5",
+      "revealed": {
+        "color": "black",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 38,
+      "uci": "c3e4"
+    },
+    {
+      "ply": 39,
+      "uci": "@c1",
+      "revealed": {
+        "color": "black",
+        "role": "elephant"
+      }
+    },
+    {
+      "ply": 40,
+      "uci": "d1d2"
+    },
+    {
+      "ply": 41,
+      "uci": "@d4",
+      "revealed": {
+        "color": "red",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 42,
+      "uci": "e4f2"
+    },
+    {
+      "ply": 43,
+      "uci": "@a1",
+      "revealed": {
+        "color": "red",
+        "role": "horse"
+      }
+    },
+    {
+      "ply": 44,
+      "uci": "b3c3"
+    },
+    {
+      "ply": 45,
+      "uci": "@a5",
+      "revealed": {
+        "color": "red",
+        "role": "elephant"
+      }
+    },
+    {
+      "ply": 46,
+      "uci": "e3f5"
+    },
+    {
+      "ply": 47,
+      "uci": "a5c3"
+    },
+    {
+      "ply": 48,
+      "uci": "f5d4"
+    },
+    {
+      "ply": 49,
+      "uci": "@i5",
+      "revealed": {
+        "color": "black",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 50,
+      "uci": "f2e4"
+    },
+    {
+      "ply": 51,
+      "uci": "c3e1"
+    },
+    {
+      "ply": 52,
+      "uci": "d2d3"
+    },
+    {
+      "ply": 53,
+      "uci": "@i1",
+      "revealed": {
+        "color": "red",
+        "role": "chariot"
+      }
+    },
+    {
+      "ply": 54,
+      "uci": "d3a3"
+    },
+    {
+      "ply": 55,
+      "uci": "@h4",
+      "revealed": {
+        "color": "red",
+        "role": "cannon"
+      }
+    },
+    {
+      "ply": 56,
+      "uci": "d4f3"
+    },
+    {
+      "ply": 57,
+      "uci": "a1b3"
+    },
+    {
+      "ply": 58,
+      "uci": "f3h4"
+    },
+    {
+      "ply": 59,
+      "uci": "b3c1"
+    },
+    {
+      "ply": 60,
+      "uci": "h4f3"
+    },
+    {
+      "ply": 61,
+      "uci": "i1i2"
+    },
+    {
+      "ply": 62,
+      "uci": "@b1",
+      "revealed": {
+        "color": "black",
+        "role": "advisor"
+      }
+    },
+    {
+      "ply": 63,
+      "uci": "i2e2"
+    },
+    {
+      "ply": 64,
+      "uci": "e4g5"
+    },
+    {
+      "ply": 65,
+      "uci": "e2e3"
+    },
+    {
+      "ply": 66,
+      "uci": "@c2",
+      "revealed": {
+        "color": "black",
+        "role": "chariot"
+      }
+    },
+    {
+      "ply": 67,
+      "uci": "e3a3"
+    },
+    {
+      "ply": 68,
+      "uci": "c2c1"
+    },
+    {
+      "ply": 69,
+      "uci": "a3f3"
+    },
+    {
+      "ply": 70,
+      "uci": "g5f3"
+    },
+    {
+      "ply": 71,
+      "uci": "@h1",
+      "revealed": {
+        "color": "red",
+        "role": "elephant"
+      }
+    },
+    {
+      "ply": 72,
+      "uci": "f3e1"
+    },
+    {
+      "ply": 73,
+      "uci": "@a4",
+      "revealed": {
+        "color": "black",
+        "role": "advisor"
+      }
+    },
+    {
+      "ply": 74,
+      "uci": "c1c2"
+    },
+    {
+      "ply": 75,
+      "uci": "@f1",
+      "revealed": {
+        "color": "black",
+        "role": "soldier"
+      }
+    },
+    {
+      "ply": 76,
+      "uci": "c2h2"
+    },
+    {
+      "ply": 77,
+      "uci": "@g1",
+      "revealed": {
+        "color": "black",
+        "role": "elephant"
+      }
+    },
+    {
+      "ply": 78,
+      "uci": "h2h1"
+    }
+  ]
+}
