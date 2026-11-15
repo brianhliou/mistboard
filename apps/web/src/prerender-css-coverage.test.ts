@@ -52,6 +52,25 @@ const sheets = new Map([
 ]);
 
 describe('prerender CSS coverage', () => {
+  it('counts a :has() argument as required, so a rule keyed on a page part skips pages without it', () => {
+    // The study phone dock rule `:has(> .study-phone-dock) > .site-nav` styles
+    // the nav only beside the dock; read without its :has() argument it claimed
+    // every page with a nav (the 2026-11-15 batch build).
+    expect(selectorClassSets(':has(> .study-phone-dock) > .site-nav')).toEqual([
+      ['.site-nav', '.study-phone-dock'],
+    ]);
+    expect(selectorClassSets('.a:has(.b .c)')).toEqual([['.a', '.b', '.c']]);
+    // Alternatives inside :has() are not each required.
+    expect(selectorClassSets('.a:has(.b, .c)')).toEqual([['.a']]);
+    const dock = new Map([
+      [
+        'assets/study-e.css',
+        stylesheetSelectors(':has(> .study-phone-dock) > .site-nav{height:44px}'),
+      ],
+    ]);
+    expect(unlinkedMatchingRules(page([], ARTICLE_MARKUP), dock)).toEqual([]);
+  });
+
   it('reads what selectors require, ignoring negations and attribute values', () => {
     expect(selectorClassSets('.a.b > .c, #d .e:not(.f), [href$=".pdf"]')).toEqual([
       ['.a', '.b', '.c'],
