@@ -12,9 +12,11 @@ const NOTATION_CITATION =
 const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
   'apps/web/src/i18n/catalogs/play.zh-hans.ts': [
     { sentence: '翻翻棋最多允许连续捉子四次。这步棋会是第五次。请走别的着法。', count: 1 },
+    { sentence: "'variant.ffqBanqi.name': '翻翻棋',", count: 1 },
   ],
   'apps/web/src/i18n/catalogs/play.zh-hant.ts': [
     { sentence: '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。', count: 1 },
+    { sentence: "'variant.ffqBanqi.name': '翻翻棋',", count: 1 },
   ],
   'apps/web/src/articles/content/fanfanqi.ts': [
     { sentence: 'Fanfanqi (翻翻棋, “flip-flip chess”)', count: 1 },

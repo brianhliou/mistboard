@@ -459,8 +459,8 @@ describe('FFQ banqi canonical web metadata', () => {
   });
 
   it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
-    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
-    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', 'variant.ffqBanqi.name');
+    expect(variantNameKeyForSpecId('ffq-banqi')).toBe('variant.ffqBanqi.name');
     expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
   });
 

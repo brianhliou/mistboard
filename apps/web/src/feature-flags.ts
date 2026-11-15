@@ -89,8 +89,8 @@ export function banqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_BANQI_ENABLED === 'true';
 }
 
-// FFQ's admin-only playtest remains off even in dev. The server checks the
-// account independently; this flag only enables its renderer when routed.
+// Fanfanqi stays off unless the build sets this flag, even in dev. The server
+// has its own flag; this one only enables the renderer when routed.
 export function ffqBanqiEnabled(): boolean {
   return import.meta.env.VITE_FFQ_BANQI_ENABLED === 'true';
 }

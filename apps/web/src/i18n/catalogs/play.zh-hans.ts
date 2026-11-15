@@ -902,7 +902,7 @@ export const ZH_HANS_PLAY = {
   'lobby.panelDaysShort': '{days} 天',
   'lobby.panelMoreGames': '还有 {count} 局',
   'lobby.panelDaysSignIn': '登录后可按天/步对局',
-  'variant.ffqBanqi.name': 'FFQ 暗棋',
+  'variant.ffqBanqi.name': '翻翻棋',
   'live.ffq.hp': '{hp}/{max} 生命值',
   'live.ffq.adminOnly': '此试玩需要管理员账号，并启用 FFQ 暗棋功能开关。',
   'result.hp': '生命值耗尽',
