@@ -33,9 +33,14 @@ import {
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ArticleBlock } from './articles/types.js';
+import { buildArticlePage } from './articles.js';
 import { articles } from './articles-data.js';
+import { replayBanqiLine, replayBanqiLineFrom } from './banqi-replay-board.js';
+import { mountEmbedStudy } from './embed/embed-study-page.js';
+import type { StudyChapterPayload } from './study-chapter-spec.js';
+import { threeKingdomsBanqiStudyLine } from './three-kingdoms-banqi-study-replay.js';
 
 type Node = {
   uci: string;
@@ -49,20 +54,33 @@ type Plan = {
       variant: string;
       tags: Record<string, string>;
       tree: { rootFen: string; root: Node };
+      scoreSeries: StudyChapterPayload['scoreSeries'];
     };
   };
 };
 
-function readPlan(name: string): Plan {
+function readArtifact<T>(name: string, kind: string): T {
   // The working directory is the workspace or the repo root, depending on how vitest ran.
   const path = ['../..', '.']
     .map((root) =>
-      resolve(process.cwd(), root, `scripts/variant-lab/rules-page-games/plans/${name}.plan.json`),
+      resolve(
+        process.cwd(),
+        root,
+        `scripts/variant-lab/rules-page-games/plans/${name}.${kind}.json`,
+      ),
     )
     .find((candidate) => existsSync(candidate));
   if (!path) throw new Error(`no plan ${name}`);
-  return JSON.parse(readFileSync(path, 'utf8')) as Plan;
+  return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
+
+const readPlan = (name: string): Plan => readArtifact(name, 'plan');
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  document.body.replaceChildren();
+});
 
 function mainLine(root: Node): Node[] {
   const out: Node[] = [];
@@ -103,6 +121,165 @@ const xqMove = (t: string) => {
 };
 
 describe('rules page sample games', () => {
+  const banqiPreview = '/embed/study/LocalBq1/Chapter1';
+  const kingdomsPreview = '/embed/study/LocalTk1/Chapter2';
+  const previewEnv = () => {
+    vi.stubEnv('VITE_BANQI_RULES_GAME', banqiPreview);
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_RULES_GAME', kingdomsPreview);
+  };
+
+  it('previews annotated Banqi with the recorded result and the existing companion links', () => {
+    previewEnv();
+    // Keep pages detached: attaching an iframe starts happy-dom navigation.
+    const banqi = buildArticlePage('banqi');
+    expect(banqi.querySelector('iframe')?.getAttribute('src')).toContain(banqiPreview);
+    expect(banqi.textContent).toContain('Level 7 plays black');
+    expect(banqi.textContent).toContain('Level 8 wins');
+    expect(banqi.querySelector('a[href="/study/FsA5sowX"]')).not.toBeNull();
+    expect(banqi.querySelector('a[href="/blog/banqi-statistics"]')).not.toBeNull();
+    expect(embedPaths('banqi')).toContain('/embed/study/FsA5sowX/F8fezAhm');
+  });
+
+  it('previews annotated Three Kingdoms Banqi with the recorded result before Play', () => {
+    previewEnv();
+    const kingdoms = buildArticlePage('three-kingdoms-banqi');
+    expect(kingdoms.querySelector('iframe')?.getAttribute('src')).toContain(kingdomsPreview);
+    expect(kingdoms.textContent).toContain('Level 7 wins');
+    expect(kingdoms.textContent).toContain('100');
+    expect(kingdoms.textContent).toContain('45');
+    const headings = [...kingdoms.querySelectorAll('h2')].map((heading) => heading.textContent);
+    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+    expect(embedPaths('three-kingdoms-banqi')).toEqual([]);
+  });
+
+  it('keeps preview IDs out of production and translated rules pages', () => {
+    previewEnv();
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      expect(
+        buildArticlePage('banqi', lang).querySelector('iframe')?.getAttribute('src'),
+      ).toContain('/embed/study/FsA5sowX/F8fezAhm');
+      expect(buildArticlePage('three-kingdoms-banqi', lang).querySelector('iframe')).toBeNull();
+    }
+    vi.stubEnv('DEV', false);
+    expect(buildArticlePage('banqi').querySelector('iframe')?.getAttribute('src')).toContain(
+      '/embed/study/FsA5sowX/F8fezAhm',
+    );
+    expect(buildArticlePage('three-kingdoms-banqi').querySelector('iframe')).toBeNull();
+  });
+
+  it.each(['', 'https://example.com/embed/study/one/two', '/embed/study/one/two?x=1'])(
+    'leaves published content in place for an invalid local preview path: %s',
+    (path) => {
+      vi.stubEnv('VITE_BANQI_RULES_GAME', path);
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_RULES_GAME', path);
+      expect(buildArticlePage('banqi').querySelector('iframe')?.getAttribute('src')).toContain(
+        '/embed/study/FsA5sowX/F8fezAhm',
+      );
+      expect(buildArticlePage('three-kingdoms-banqi').querySelector('iframe')).toBeNull();
+    },
+  );
+
+  for (const variant of ['banqi', 'three-kingdoms-banqi']) {
+    it(`${variant}: renders the generated chart, move grades, notes and imported luck`, async () => {
+      const source = readPlan(variant).create.chapter;
+      const chapter: StudyChapterPayload = {
+        ...source,
+        id: 'chapter',
+        root: source.tree,
+        hasDecisions: true,
+      };
+      const luck = readArtifact<{ decisions: { ply: number }[] }>(variant, 'luck');
+      const notes = readArtifact<{ comments: Record<string, string> }>(variant, 'notes');
+      const fetcher = vi.fn(async (url: string) =>
+        Response.json(
+          url.endsWith('/decisions') ? luck : { study: { id: 'local' }, chapters: [chapter] },
+        ),
+      );
+      vi.stubGlobal('fetch', fetcher);
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 'local', chapterId: 'chapter' });
+      expect(root.querySelector('.embed-note')).toBeNull();
+      const chart = root.querySelector('.embed-score-chart');
+      expect(chart).not.toBeNull();
+      // The series is keyed by seat; Banqi's first flip bound the first seat to Black.
+      expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
+        variant === 'banqi' ? 'Win chance for Black' : 'Win chance for Red',
+      );
+      expect(chart?.querySelector('polyline')?.getAttribute('points')?.split(' ')).toHaveLength(
+        mainLine(source.tree.root).length + 1,
+      );
+      for (const text of Object.values(notes.comments)) expect(root.textContent).toContain(text);
+      expect(root.querySelectorAll('.review-move-list__suffix')).toHaveLength(
+        mainLine(source.tree.root).filter((node) => node.annotations?.glyphs?.length).length,
+      );
+      expect(root.querySelectorAll('.review-move-list__luck')).toHaveLength(luck.decisions.length);
+      const flipPly = luck.decisions[0]!.ply;
+      for (let ply = 0; ply < flipPly; ply++)
+        root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(chart?.getAttribute('data-ply')).toBe(String(flipPly));
+      if (variant === 'banqi') expect(root.querySelector('.luck-mark')).not.toBeNull();
+      root
+        .querySelector<HTMLElement>('.review-move-list__luck')!
+        .dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+      await vi.waitFor(() => expect(document.querySelector('.luck-card--open')).not.toBeNull());
+      expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+        '/api/studies/local',
+        '/api/studies/local/chapters/chapter/decisions',
+      ]);
+    });
+
+    it(`${variant}: replays the recorded result and every sideline without predicting a flip`, () => {
+      const source = readPlan(variant).create.chapter;
+      expect(source.tags.result).toBe('0-1');
+      const moves = mainLine(source.tree.root).map((node) => node.uci);
+      let branchCount = 0;
+      if (variant === 'banqi') {
+        const line = replayBanqiLine({ rootFen: source.tree.rootFen, moves });
+        expect(line.played).toHaveLength(206);
+        expect(line.states.at(-1)?.status).toMatchObject({ type: 'finished', winner: 'black' });
+        // Export tags name seats. The opening flip gives Level 7 black ink.
+        expect(line.states.at(-1)?.firstColor).toBe('black');
+        for (const [ply, side] of sidelines(source.tree.root)) {
+          const replay = replayBanqiLineFrom(line.states[ply]!, side);
+          expect(replay.played).toHaveLength(side.length);
+          for (const [i, move] of replay.played.entries()) {
+            expect(move.from).not.toBe(move.to);
+            expect(replay.states[i]!.board[move.from]?.faceDown).not.toBe(true);
+            expect(replay.states[i]!.board[move.to]?.faceDown).not.toBe(true);
+          }
+          branchCount++;
+        }
+      } else {
+        const replay = threeKingdomsBanqiStudyLine({ id: 'chapter', root: source.tree });
+        expect(replay.played).toHaveLength(78);
+        expect(replay.views.at(-1)?.status).toMatchObject({ type: 'finished', winner: 'black' });
+        expect(replay.views.at(-1)?.scores).toEqual({ red: 45, black: 100 });
+        expect(
+          Object.values(replay.views.at(-1)!.board).filter((tile) => tile?.faceDown),
+        ).toHaveLength(7);
+        for (const branch of replay.lines.values()) {
+          for (const [i, move] of branch.played.entries()) {
+            expect(move.from).not.toBe(move.to);
+            expect(branch.views[i]!.board[move.from]?.faceDown).not.toBe(true);
+            expect(branch.views[i]!.board[move.to]?.faceDown).not.toBe(true);
+          }
+          branchCount++;
+        }
+        // Check the whole public replay, including every branch view.
+        const payload = JSON.parse(
+          JSON.stringify({ ...replay, lines: [...replay.lines.values()] }),
+        );
+        expect(JSON.stringify(payload)).not.toMatch(/rootFen|deal|seed|capturedRole/);
+        for (const line of [payload, ...payload.lines])
+          for (const view of line.views)
+            for (const tile of Object.values(view.board))
+              if ((tile as { faceDown: boolean } | null)?.faceDown)
+                expect(tile).toEqual({ faceDown: true });
+      }
+      expect(branchCount).toBeGreaterThan(0);
+    });
+  }
+
   it('xiangqi: the 1632 trap, legal from the start, Red mates on move 13', () => {
     const chapter = readPlan('xiangqi').create.chapter;
     expect(chapter.variant).toBe('xiangqi');
