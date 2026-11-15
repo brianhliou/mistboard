@@ -486,14 +486,14 @@
         "red": "Misty Level 8",
         "black": "Misty Level 7",
         "result": "0-1",
-        "event": "Three Kingdoms Banqi, engine self-play",
+        "event": "Misty Level 8 vs Level 7, Mistboard bot settings",
         "date": "2026-11-10"
       },
       "scoreSeries": {
         "side": "red",
         "series": [
           {
-            "name": "Three Kingdoms Banqi",
+            "name": "Misty",
             "color": "a",
             "values": [
               0.5435, 0.537, 0.3325, 0.2325, 0.243, 0.16949999999999996, 0.1825, 0.1625, 0.175,
