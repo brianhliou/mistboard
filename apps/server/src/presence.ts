@@ -27,6 +27,34 @@ export type PresenceEntry = {
 
 export const PRESENCE_TTL_MS = 5 * 60 * 1000;
 
+// An explicit polling heartbeat, independent of general HTTP/socket presence.
+// A closed or suspended tab stops being invite-reachable within fifteen seconds.
+export const LIVE_INVITE_LEASE_MS = 15_000;
+const MAX_INVITE_LEASES = 10_000;
+const inviteLeases = new Map<string, number>();
+
+export function heartbeatLiveInvites(userId: string, nowMs = Date.now()): boolean {
+  for (const [id, expiresAt] of inviteLeases) {
+    if (expiresAt <= nowMs) inviteLeases.delete(id);
+  }
+  if (!inviteLeases.has(userId) && inviteLeases.size >= MAX_INVITE_LEASES) return false;
+  inviteLeases.set(userId, nowMs + LIVE_INVITE_LEASE_MS);
+  return true;
+}
+
+export function liveInviteReachable(userId: string, nowMs = Date.now()): boolean {
+  const expiresAt = inviteLeases.get(userId) ?? 0;
+  if (expiresAt <= nowMs) {
+    inviteLeases.delete(userId);
+    return false;
+  }
+  return true;
+}
+
+export function leaveLiveInvites(userId: string): void {
+  inviteLeases.delete(userId);
+}
+
 // Sweep threshold: prune-on-read handles steady state; this bounds the map if
 // many distinct users touch between reads.
 const PRUNE_SIZE_THRESHOLD = 2000;
@@ -71,6 +99,7 @@ export function onlinePresence(nowMs: number = Date.now()): PresenceEntry[] {
 
 export function clearPresence(): void {
   entries.clear();
+  inviteLeases.clear();
 }
 
 function pruneExpired(nowMs: number): void {

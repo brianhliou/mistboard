@@ -11,6 +11,35 @@ import { assert, definePersistenceTests, test } from './persistence-test-support
 import { createInboxEmailUnsubscribeRoute } from './routes/inbox-email-unsubscribe.js';
 
 definePersistenceTests('accounts', () => {
+  test('live invite opt-out defaults on for legacy rows and persists independently of bell preferences', async () => {
+    const now = new Date();
+    const user = await createUser({
+      id: 'invite-prefs',
+      email: 'invite-prefs@example.test',
+      emailVerifiedAt: now,
+      handle: 'inviteprefs',
+      displayName: 'Invite prefs',
+      now,
+    });
+    assert.equal(user.accountPreferences.liveInvites, true);
+    for (const preferences of [
+      { challengesBell: false },
+      { challengesBell: false, liveInvites: 'false' },
+    ]) {
+      await getPool().query('UPDATE users SET account_preferences = $2::jsonb WHERE id = $1', [
+        user.id,
+        JSON.stringify(preferences),
+      ]);
+      assert.equal((await findUserByEmail(user.email))?.accountPreferences.liveInvites, true);
+    }
+    for (const enabled of [false, true, false]) {
+      await updateUserAccountPreference(user.id, 'liveInvites', enabled, now);
+      const stored = await findUserByEmail(user.email);
+      assert.equal(stored?.accountPreferences.liveInvites, enabled);
+      assert.equal(stored?.accountPreferences.challengesBell, false);
+    }
+  });
+
   test('DM unsubscribe persists only inboxEmail and invalid or unknown tokens change nothing', async () => {
     const user = await createUser({
       id: 'user_dm_unsubscribe',

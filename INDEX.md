@@ -203,6 +203,8 @@ Edit task → find file → open only that file.
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
 | `account-session.ts` | Account auth: `currentAccountUser`, `ensureUserForEmail`, `hashSecret`, session cookies, email login |
 | `presence.ts` | In-memory online-players tracker (touched by `currentAccountUser`, TTL-pruned) behind `/api/players/online` |
+| `live-invites.ts` + `.test.ts` | Bounded process-local directed real-time invite lifecycle, expiry, caps, send throttling and participant-only wire views; short heartbeat leases live in `presence.ts` |
+| `routes/live-invites.ts` + `.test.ts` | Authenticated invite polling, create/cancel/decline, current follow/block/preference/play-lock/availability gates; acceptance unavailable; contract in `docs/live-invites.md` |
 | `account-identity.ts` | Email normalization, handle generation, display name handling |
 | `build-info.ts` | Build metadata surfaced through status responses |
 | `feature-flags.ts` | Runtime on-switches for rated mode and hidden/prelaunch surfaces |
