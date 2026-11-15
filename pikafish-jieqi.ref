@@ -14,7 +14,7 @@ bc398e6ef546fe33b35b73989457bc446ea2882a
 # packages/game/src/variants-jieqi.ts for games stamped `jqe-v1`.
 # Rules match before the pin: bc398e6e with `Jieqi Rule=jqe-v1` against fd1a6f82,
 # 400 games at Level 8's served settings (4000 ms, 4 threads, Hash 256),
-# refereed under jqe-v1: 188 wins, 10 losses, 202 draws; -12 Elo [-43, +18]
+# refereed under jqe-v1: 188 wins, 10 draws, 202 losses; -12 Elo [-43, +18]
 # (pentanomial), 0 errors. The rule set before the run was that the fix enters
 # the pin unless the whole interval is below zero.
 # Native default bench at bc398e6e (legacy rules, same net): 361322 nodes.
