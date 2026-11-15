@@ -17,6 +17,7 @@ import {
   BOT_DEFAULT_TIME_CONTROL_ID,
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
+  FFQ_BANQI_SPEC_ID,
   GOMOKU_SPEC_ID,
   isAllowedEngineTimeControl,
   isRetiredGameSpec,
@@ -89,8 +90,8 @@ describe('Flip Jungle engine picker mirror', () => {
   });
 });
 
-describe('FFQ banqi hidden admin playtest', () => {
-  it('registers private live and review clients without public discovery', () => {
+describe('FFQ banqi launch preparation', () => {
+  it('registers live and review clients alongside server discovery metadata', () => {
     const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(web?.roomIdPrefix).toBe('ffq_');
     expect(web?.loadLiveRoomClient).toBeTypeOf('function');
@@ -100,13 +101,46 @@ describe('FFQ banqi hidden admin playtest', () => {
     const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(server).toMatchObject({
       roomIdPrefix: 'ffq_',
-      watch: null,
-      lobby: null,
+      watch: { channelId: 'ffq-banqi', family: 'xiangqi' },
       export: null,
       card: null,
     });
     expect(server?.admitsConnection).toBeTypeOf('function');
     expect(server?.reviewRouteBase).toBe('/ffq-banqi/game');
+  });
+
+  it('keeps the live lobby casual and follows admission in hidden and launched states', () => {
+    const spec = maybeGameSpecForId(FFQ_BANQI_SPEC_ID)!;
+    const original = spec.publicSurface;
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === FFQ_BANQI_SPEC_ID)!;
+    const server = registeredVariantTenants().find(
+      (tenant) => tenant.gameSpecId === FFQ_BANQI_SPEC_ID,
+    )!;
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        for (const flag of ['false', 'true']) {
+          vi.stubEnv('VITE_FFQ_BANQI_ENABLED', flag);
+          vi.stubEnv('MISTBOARD_FFQ_BANQI_ENABLED', flag);
+          expect(web.enabled()).toBe(flag === 'true');
+          expect(web.landing?.capabilities.supportsRated).toBe(false);
+          expect(server.lobby !== null).toBe(surface === 'casual' && flag === 'true');
+          if (server.lobby) {
+            expect(server.lobby.supportsRated).toBe(web.landing?.capabilities.supportsRated);
+            expect(server.lobby.allowsTimeControl?.({ initialMs: 300000, incrementMs: 5000 })).toBe(
+              true,
+            );
+            expect(
+              server.lobby.allowsTimeControl?.({ daysPerMove: 3, initialMs: 0, incrementMs: 0 }),
+            ).toBe(false);
+          }
+          expect(web.landing?.modes?.includes('lobby')).toBe(surface === 'casual');
+        }
+      }
+    } finally {
+      spec.publicSurface = original;
+      vi.unstubAllEnvs();
+    }
   });
 
   it('serves only the owned game shell; HTTP authorization precedes shell dispatch', () => {

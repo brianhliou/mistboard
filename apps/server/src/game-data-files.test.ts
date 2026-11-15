@@ -225,10 +225,9 @@ test('every public variant is offered on /data or named as unavailable, never bo
     if (!isPublicGameSpec(id) || id === 'chess') continue;
     assert.ok(offered.has(id) !== unavailable.has(id), id);
   }
-  // Three Kingdoms Banqi exports its masked public record, so it lists like
-  // any variant; nothing public is unavailable today.
+  // Fanfanqi launches without public exports; TK keeps its masked record.
   assert.ok(offered.has('three-kingdoms-banqi'));
-  assert.deepEqual(DATA_UNAVAILABLE_VARIANTS, []);
+  assert.deepEqual(DATA_UNAVAILABLE_VARIANTS, [{ variant: 'ffq-banqi', reason: 'no-export' }]);
   assert.equal(
     parseDataFilePath('/api/data/monthly/2026-09/three-kingdoms-banqi.jsonl.gz')?.ok,
     true,
@@ -242,7 +241,7 @@ test('every public variant is offered on /data or named as unavailable, never bo
 
 test('a listing never names a variant that is not public, filtered or not', () => {
   const hidden = GAME_SPEC_IDS.filter((id) => !isPublicGameSpec(id));
-  assert.ok(hidden.includes('ffq-banqi'));
+  assert.ok(!DATA_VARIANTS.includes('ffq-banqi'));
   const counts = [
     ...hidden.map((variant) => ({ month: '2026-09', variant, games: 9 })),
     ...hidden.map((variant) => ({ month: '2026-10', variant, games: 9 })),
@@ -260,7 +259,6 @@ test('a listing never names a variant that is not public, filtered or not', () =
     });
     const wire = JSON.stringify(listing);
     for (const id of hidden) assert.ok(!wire.includes(`"${id}"`), `${id} in ${wire}`);
-    assert.ok(!wire.includes('ffq'), wire);
     assert.deepEqual(
       listing.variants,
       DATA_VARIANTS.filter((id) => id === 'xiangqi' || id === 'three-kingdoms-banqi'),

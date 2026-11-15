@@ -522,7 +522,7 @@ describe('landing bot ladder (homepage play panel)', () => {
     for (const spec of LANDING_BOT_GAME_SPEC_IDS) {
       // Engine-only TK waits for its runtime roster and uses the setup's
       // default tier; its generic Misty offer is not a public bot profile.
-      if (spec === 'three-kingdoms-banqi') continue;
+      if (spec === 'three-kingdoms-banqi' || spec === 'ffq-banqi') continue;
       const offer = landingBotOffer(spec);
       expect(landingBotLadderIndex(landingBotLadder(spec), offer?.botId)).toBeGreaterThanOrEqual(0);
     }

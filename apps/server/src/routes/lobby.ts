@@ -8,7 +8,7 @@ import {
 import { currentAccountUser } from './../account-session.js';
 import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from './../feature-flags.js';
-import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
+import { ffqBanqiAdmits, isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import * as persistence from './../persistence.js';
 import type { LobbyTicket, Room } from './../server-types.js';
@@ -62,17 +62,27 @@ export async function tryHandle(
       return true;
     }
     if (!requireMethod(request, response, 'POST')) return true;
-    const body = await readJsonBody(request);
+    let body = await readJsonBody(request);
     if (isFFQBanqiRequest(body)) {
       const gate = gateGameSpecRequest(body, await currentAccountUser(request));
       if (gate.type === 'reject') {
         writeJson(response, gate.httpStatus, { error: gate.error });
         return true;
       }
-      // Admission opens the private room playtest; FFQ has no lobby. Claim
-      // conflicting selectors here before another tenant can match them.
-      writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
-      return true;
+      // The private admin playtest never posts public seeks.
+      if (!ffqBanqiAdmits(null)) {
+        writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
+        return true;
+      }
+      if ([body.gameSpecId, body.variant].some((id) => id != null && id !== 'ffq-banqi')) {
+        writeJson(response, 404, { error: 'unknown_game_spec' });
+        return true;
+      }
+      if ((body.mode !== undefined && body.mode !== 'pvp') || body.daysPerMove !== undefined) {
+        writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
+        return true;
+      }
+      body = { ...body, gameSpecId: 'ffq-banqi' };
     }
     // Variant tenants join the lobby on their own path; the chess gate would
     // 501 them as not-integrated, so the registry is consulted before it.
@@ -374,7 +384,8 @@ async function lobbyOpenRequests(
   return live
     .filter(
       (ticket) =>
-        !persistence.isAllowlistedGameSpec(ticket.gameSpecId) || visible.has(ticket.gameSpecId),
+        (ticket.gameSpecId !== 'ffq-banqi' || ffqBanqiAdmits(null)) &&
+        (!persistence.isAllowlistedGameSpec(ticket.gameSpecId) || visible.has(ticket.gameSpecId)),
     )
     .slice(0, 20)
     .map((ticket) => ({

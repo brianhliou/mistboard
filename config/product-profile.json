@@ -5,6 +5,7 @@
     "duck-xiangqi",
     "atomic-xiangqi",
     "crazyhouse-xiangqi",
+    "ffq-banqi",
     "banqi",
     "three-kingdoms-banqi",
     "jungle",
@@ -18,6 +19,7 @@
   "serverFlagByGameSpecId": {
     "xiangqi": "MISTBOARD_XIANGQI_ENABLED",
     "fortress-xiangqi": "MISTBOARD_FORTRESS_XIANGQI_ENABLED",
+    "ffq-banqi": "MISTBOARD_FFQ_BANQI_ENABLED",
     "banqi": "MISTBOARD_BANQI_ENABLED",
     "three-kingdoms-banqi": "MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED",
     "jungle": "MISTBOARD_JUNGLE_ENABLED",

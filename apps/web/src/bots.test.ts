@@ -1459,7 +1459,7 @@ describe('/bots covers every launched bot variant', () => {
     );
   }
 
-  it('lists a game for every live public variant a first-party bot or engine plays, never FFQ', async () => {
+  it('lists a game for every live public variant a first-party bot or engine plays', async () => {
     for (const flag of FLAGS) vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     const { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots } =
       await serverFixtures();
@@ -1483,7 +1483,7 @@ describe('/bots covers every launched bot variant', () => {
     expect([...rail].sort()).toEqual([...expected].sort());
     expect(rail).toContain('three-kingdoms-banqi');
     expect(rail).toContain('jungle-flip');
-    expect(rail).not.toContain('ffq-banqi');
+    expect(rail).toContain('ffq-banqi');
     expect(root.textContent).not.toMatch(/FFQ|Fu Fu Qi/i);
   });
 

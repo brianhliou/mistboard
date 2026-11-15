@@ -503,7 +503,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 910,
+    baselineChars: 957,
   },
   {
     routeId: '/zh-hans/rules',
@@ -516,7 +516,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 538,
+    baselineChars: 572,
   },
   {
     routeId: '/zh-hant/rules',
@@ -529,7 +529,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 536,
+    baselineChars: 570,
   },
   {
     routeId: '/watch',

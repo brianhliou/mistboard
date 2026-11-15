@@ -40,9 +40,15 @@ describe('announcement translation coverage', () => {
     expect(localizeAnnouncementString('Flip Jungle has launched.', locale)).toBe(headline);
   });
 
-  it('every announcement string resolves in all zh scripts', () => {
+  it('every announcement outside explicit English-only scope resolves in all zh scripts', () => {
     const missing: string[] = [];
-    for (const text of liveStrings()) {
+    const required = allAnnouncements().filter((entry) => !entry.englishOnly);
+    const strings = new Set(
+      required.flatMap((entry) =>
+        [entry.headline, entry.body, entry.cta].filter((text): text is string => !!text),
+      ),
+    );
+    for (const text of strings) {
       for (const lang of ANNOUNCEMENT_LANGS) {
         if (!hasAnnouncementTranslation(lang, text)) missing.push(`[${lang}] ${truncate(text)}`);
       }

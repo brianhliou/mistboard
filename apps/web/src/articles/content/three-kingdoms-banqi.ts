@@ -35,7 +35,7 @@ export const threeKingdomsBanqiArticle: Article = {
   publishedAt: '2026-11-10',
   updatedAt: '2026-11-15',
   updateNote:
-    'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate.',
+    'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate. The comparison table now includes Fanfanqi.',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   tldr: [
     'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.',

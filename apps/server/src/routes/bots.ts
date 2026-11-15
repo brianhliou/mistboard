@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
 import { botEngineVersion } from '../bot-engine-versions.js';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
+import { ffqBanqiEngineAvailable, isFFQBanqiEngineClientId } from '../ffq-banqi-engine.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
 import { parseGamePageCursor } from '../game-page-cursor.js';
 import {
@@ -66,15 +67,17 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
     // Misty's Flip Jungle its binary, which a dev box usually lacks; the variant
     // stays listed so /bots still shows it. jqe also needs MISTBOARD_JQE_ENABLED, held off until its author's OK, so off
     // it drops out of /api/bots and its profile 404s.
-    const serveable = isJungleFlipEngineClientId(engineId)
-      ? jungleFlipEngineAvailable(engineId)
-      : engineId === JIEQI_ABJCHESS_ENGINE_ID
-        ? abJchessAvailable()
-        : engineId === JIEQI_JQE_ENGINE_ID
-          ? jqeAvailable()
-          : engineId === KATAGO_JUNGLE_ENGINE_ID
-            ? katagoJungleAvailable()
-            : true;
+    const serveable = isFFQBanqiEngineClientId(engineId)
+      ? ffqBanqiEngineAvailable(engineId)
+      : isJungleFlipEngineClientId(engineId)
+        ? jungleFlipEngineAvailable(engineId)
+        : engineId === JIEQI_ABJCHESS_ENGINE_ID
+          ? abJchessAvailable()
+          : engineId === JIEQI_JQE_ENGINE_ID
+            ? jqeAvailable()
+            : engineId === KATAGO_JUNGLE_ENGINE_ID
+              ? katagoJungleAvailable()
+              : true;
     const version = botEngineVersion(engineId);
     options.push({
       gameSpecId,

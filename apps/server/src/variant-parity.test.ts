@@ -15,6 +15,7 @@ import { registeredVariantTenants } from './variant-tenant/registry.js';
 // `rated` already exists. The manifest step will add `flair` and `routeBase`.
 // Until then, public playable specs owe flair and a direct game route.
 const KNOWN_FLAIR_GAPS = new Set<GameSpecId>([
+  'ffq-banqi', // Public casual launch does not add variant flair.
   'three-kingdoms-banqi', // Launched without variant flair; pin the absence explicitly.
   'xiangqi-mahjong', // Launched without variant flair; do not silently skip it.
 ]);

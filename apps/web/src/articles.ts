@@ -1597,11 +1597,11 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
 }
 
 // Explicit placement for rules pages outside the canonical public shelf, as an
-// offset from a shelf entry. The banqi family is ordered by player base
-// (decided 2026-11-07): Fanfanqi, then Banqi, then Three Kingdoms Banqi.
+// offset from a shelf entry. The banqi family runs Banqi, Fanfanqi, then
+// Three Kingdoms Banqi (decided 2026-11-14, until Fanfanqi has players here).
 // Gomoku, a separate board-game family, follows the shelf's end.
 const RULES_RAIL_PLACEMENT: Record<string, { spec: string; offset: number }> = {
-  fanfanqi: { spec: 'banqi', offset: -0.5 },
+  fanfanqi: { spec: 'banqi', offset: 0.25 },
   'three-kingdoms-banqi': { spec: 'banqi', offset: 0.5 },
   gomoku: { spec: 'xiangqi-mahjong', offset: 0.5 },
 };

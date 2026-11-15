@@ -55,7 +55,7 @@ export const banqiArticle: Article = {
   publishedAt: '2026-06-15',
   updatedAt: '2026-11-15',
   updateNote:
-    'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip.',
+    'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip. The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -271,7 +271,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).',
+          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.',
         },
       ],
     },

@@ -4133,6 +4133,7 @@ export function joinLobbyFromPlay(
     onWithdrawn?: () => void;
   },
 ): () => Promise<void> {
+  setup = { ...setup, rated: setup.rated && landingVariantSupportsRated(setup.gameSpecId) };
   const controller = new AbortController();
   const originalText = button.textContent ?? '';
   const queueJoinedAt = Date.now();

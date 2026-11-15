@@ -923,7 +923,7 @@ export const ZH_HANT_PLAY = {
   'lobby.panelDaysShort': '{days} 天',
   'lobby.panelMoreGames': '還有 {count} 局',
   'lobby.panelDaysSignIn': '登入後可按天/步對局',
-  'variant.ffqBanqi.name': 'FFQ 暗棋',
+  'variant.ffqBanqi.name': '翻翻棋',
   'live.ffq.hp': '{hp}/{max} 生命值',
   'live.ffq.adminOnly': '此試玩需要管理員帳號，並啟用 FFQ 暗棋功能開關。',
   'result.hp': '生命值耗盡',

@@ -13,16 +13,19 @@ import {
 import type { Article } from '../types.js';
 
 // Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
-// A draft for the local playtest; production does not publish it.
+// English launch rules; pieces still covered remain masked after the game.
 export const fanfanqiArticle: Article = {
   slug: 'fanfanqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Fanfanqi Rules',
+  seoTitle: 'Fanfanqi Rules: How to Play, Ranks and HP',
+  tagline: 'Flip hidden pieces and race to zero HP.',
   summary:
     'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
+  publishedAt: '2026-11-15',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
@@ -32,7 +35,11 @@ export const fanfanqiArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Fanfanqi is a faster form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.',
+      text: 'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.',
+    },
+    {
+      kind: 'paragraph',
+      text: 'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.',
     },
   ],
   sections: [

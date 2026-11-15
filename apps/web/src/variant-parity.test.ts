@@ -37,6 +37,7 @@ const CHAMPIONS_TITLE_SPECS = new Set<GameSpecId>([
   'gomoku',
 ]);
 const KNOWN_FLAIR_GAPS = new Set<GameSpecId>([
+  'ffq-banqi', // Casual launch without variant flair, matching the server.
   'three-kingdoms-banqi', // Launched without flair; assert absence, not a silent skip.
   'xiangqi-mahjong', // Same known gap on server and web.
 ]);

@@ -38,7 +38,13 @@ test('registry: misses fall through to null (chess fallback stays untouched)', (
   assert.equal(variantTenantForSpecId('dark-chess'), null);
 });
 
-test('registry: every product-profile variant tenant exposes a lobby (Find opponent matchmaking)', () => {
+test('registry: every product-profile variant tenant exposes a lobby (Find opponent matchmaking)', (t) => {
+  const flag = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+  t.after(() => {
+    if (flag === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+    else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
+  });
   // The homepage Find-opponent picker offers every product-profile variant, and
   // POST /api/lobby resolves the tenant via variantTenantForSpecId. A tenant with
   // lobby=null answers `${errorPrefix}_not_integrated` (501), which the client

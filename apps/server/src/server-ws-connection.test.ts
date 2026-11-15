@@ -72,7 +72,7 @@ for (const flag of [undefined, 'false', 'true']) {
       else process.env.MISTBOARD_FFQ_BANQI_ENABLED = flag;
       try {
         const account = accountRole ? ({ accountRole } as UserAccount) : null;
-        const admitted = flag === 'true' && accountRole === 'admin';
+        const admitted = flag === 'true';
         assert.deepEqual(
           await resolveWebSocketLiveRuntime([], 'ffq_reserved', async () => account),
           {
