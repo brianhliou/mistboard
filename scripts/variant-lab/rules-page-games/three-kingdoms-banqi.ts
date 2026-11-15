@@ -71,6 +71,8 @@ export function publicRequest(
   moves: readonly ThreeKingdomsBanqiMove[],
   nodes: number,
   movetimeCapMs: number,
+  /** Level 7 reads with the classical evaluation: no EvalFile, as served. */
+  evaluation: 'nnue' | 'classical' = 'nnue',
 ): ThreeKingdomsBanqiEngineRequest {
   const state = states.at(-1)!;
   const start = Math.max(0, states.length - 1 - state.noProgressClock);
@@ -88,7 +90,7 @@ export function publicRequest(
     nodes,
     movetimeCapMs,
     chance: tier.chance,
-    evalFile: process.env.MISTBOARD_THREE_KINGDOMS_BANQI_NET,
+    ...(evaluation === 'nnue' ? { evalFile: process.env.MISTBOARD_THREE_KINGDOMS_BANQI_NET } : {}),
   };
 }
 export function threeKingdomsPublicLine(
@@ -133,40 +135,70 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
   const grading = threeKingdomsGradingOptions();
   const key = artifactKey(game, provenance, grading);
   const tier = grading.analysis;
-  const store = checkpoint<StudyEval>(resolve(scratch, `three-kingdoms-banqi.${key}.sweep.json`));
-  const analysis = (await store.load())?.items ?? [];
-  for (let ply = analysis.length; ply < states.length; ply++) {
-    const state = states[ply]!;
-    if (state.status.type === 'finished')
-      analysis.push({
-        ply,
-        cp: state.status.winner === 'red' ? 30_000 : state.status.winner === 'black' ? -30_000 : 0,
-        mate: null,
-        best: null,
-        pv: [],
-      });
-    else {
-      const evaluation = await threeKingdomsBanqiLiveEngineMove(
-        publicRequest(
-          states.slice(0, ply + 1),
-          moves.slice(0, ply),
-          tier.nodes,
-          tier.movetimeCapMs,
-        ),
-      );
-      const sign = state.status.type === 'playing' && state.status.turn === 'black' ? -1 : 1;
-      analysis.push({
-        ply,
-        cp: evaluation.cp === null ? null : evaluation.cp * sign,
-        mate: evaluation.mate === null ? null : evaluation.mate * sign,
-        best: evaluation.best,
-        pv: threeKingdomsPublicLine(state, evaluation.pv ?? []),
-        nodes: evaluation.nodes,
-      });
+  // One whole-game read: every position from the side to move, signed to red.
+  const sweep = async (path: string, label: string, evaluation: 'nnue' | 'classical') => {
+    const store = checkpoint<StudyEval>(path);
+    const rows = (await store.load())?.items ?? [];
+    for (let ply = rows.length; ply < states.length; ply++) {
+      const state = states[ply]!;
+      if (state.status.type === 'finished')
+        rows.push({
+          ply,
+          cp:
+            state.status.winner === 'red' ? 30_000 : state.status.winner === 'black' ? -30_000 : 0,
+          mate: null,
+          best: null,
+          pv: [],
+        });
+      else {
+        const result = await threeKingdomsBanqiLiveEngineMove(
+          publicRequest(
+            states.slice(0, ply + 1),
+            moves.slice(0, ply),
+            tier.nodes,
+            tier.movetimeCapMs,
+            evaluation,
+          ),
+        );
+        const sign = state.status.type === 'playing' && state.status.turn === 'black' ? -1 : 1;
+        rows.push({
+          ply,
+          cp: result.cp === null ? null : result.cp * sign,
+          mate: result.mate === null ? null : result.mate * sign,
+          best: result.best,
+          pv: threeKingdomsPublicLine(state, result.pv ?? []),
+          nodes: result.nodes,
+        });
+      }
+      await store.save({ nextIndex: ply + 1, items: rows });
+      console.log(`Three Kingdoms ${label} position ${ply}/${moves.length}`);
     }
-    await store.save({ nextIndex: ply + 1, items: analysis });
-    console.log(`Three Kingdoms position ${ply}/${moves.length}`);
-  }
+    return rows;
+  };
+  const analysis = await sweep(
+    resolve(scratch, `three-kingdoms-banqi.${key}.sweep.json`),
+    'Level 8',
+    'nnue',
+  );
+  // Level 7 differs from Level 8 only in evaluation: same nodes and chance mode,
+  // classical in place of the net.
+  const level7 = threeKingdomsBanqiEngineTierFor('misty-three-kingdoms-banqi-level-7')!;
+  if (level7.level !== 7 || level7.evaluation !== 'classical' || level7.nodes !== tier.nodes)
+    throw new Error('Three Kingdoms Level 7 is no longer Level 8 without the net');
+  const level7EngineId = THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID.replace('+l8-', '+l7-').replace(
+    '-nnue-',
+    '-classical-',
+  );
+  if (!/\+l7-.*-classical-/.test(level7EngineId)) throw new Error('Level 7 id did not change');
+  const level7Key = artifactKey(game, provenance, {
+    ...grading,
+    analysis: { ...grading.analysis, engineId: level7EngineId, evaluation: 'classical' },
+  });
+  const level7Analysis = await sweep(
+    resolve(scratch, `three-kingdoms-banqi.${level7Key}.level7.sweep.json`),
+    'Level 7',
+    'classical',
+  );
   const decStore = checkpoint<BanqiDecision>(
     resolve(scratch, `three-kingdoms-banqi.${key}.decisions.json`),
   );
@@ -201,6 +233,8 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
     decisions,
     engineId: THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID,
     decisionEngineId: THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID,
+    lineName: 'Level 8',
+    compare: { name: 'Level 7', engineId: level7EngineId, analysis: level7Analysis },
     sidelines: analysis
       .slice(0, -1)
       .flatMap((row) =>
@@ -210,7 +244,7 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
       ),
     notes: {
       intro:
-        'Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph shows Level 8’s winning chances. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout.',
+        'Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph has a line for each level: its own estimate of red’s winning chances at every position. Grades use Level 8’s. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout.',
       comments,
       evidence: {
         ...provenance,
@@ -218,6 +252,7 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
         decisionEngineId: THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID,
         nodes: tier.nodes,
         analysis,
+        level7: { engineId: level7EngineId, nodes: level7.nodes, analysis: level7Analysis },
       },
     },
   });

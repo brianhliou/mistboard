@@ -124,63 +124,34 @@ const xqMove = (t: string) => {
 };
 
 describe('rules page sample games', () => {
-  const banqiPreview = '/embed/study/LocalBq1/Chapter1';
-  const kingdomsPreview = '/embed/study/LocalTk1/Chapter2';
-  const previewEnv = () => {
-    vi.stubEnv('VITE_BANQI_RULES_GAME', banqiPreview);
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_RULES_GAME', kingdomsPreview);
-  };
+  const banqiGame = '/embed/study/49WEgbqa/WDgABhew';
+  const kingdomsGame = '/embed/study/fcx7JEzH/7lZCHESh';
 
-  it('previews annotated Banqi with the recorded result and the existing companion links', () => {
-    previewEnv();
+  it('banqi: embeds the annotated Level 7 vs Level 8 game and keeps the companion links', () => {
+    expect(embedPaths('banqi')).toContain(banqiGame);
+    expect(embedPaths('banqi')).not.toContain('/embed/study/FsA5sowX/F8fezAhm');
     // Keep pages detached: attaching an iframe starts happy-dom navigation.
     const banqi = buildArticlePage('banqi');
-    expect(banqi.querySelector('iframe')?.getAttribute('src')).toContain(banqiPreview);
+    expect(banqi.querySelector('iframe')?.getAttribute('src')).toContain(banqiGame);
     expect(banqi.textContent).toContain('Level 7 plays black');
     expect(banqi.textContent).toContain('Level 8 wins');
     expect(banqi.querySelector('a[href="/study/FsA5sowX"]')).not.toBeNull();
     expect(banqi.querySelector('a[href="/blog/banqi-statistics"]')).not.toBeNull();
-    expect(embedPaths('banqi')).toContain('/embed/study/FsA5sowX/F8fezAhm');
-  });
-
-  it('previews annotated Three Kingdoms Banqi with the recorded result before Play', () => {
-    previewEnv();
-    const kingdoms = buildArticlePage('three-kingdoms-banqi');
-    expect(kingdoms.querySelector('iframe')?.getAttribute('src')).toContain(kingdomsPreview);
-    expect(kingdoms.textContent).toContain('Level 7 wins');
-    expect(kingdoms.textContent).toContain('100');
-    expect(kingdoms.textContent).toContain('45');
-    const headings = [...kingdoms.querySelectorAll('h2')].map((heading) => heading.textContent);
-    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
-    expect(embedPaths('three-kingdoms-banqi')).toEqual([]);
-  });
-
-  it('keeps preview IDs out of production and translated rules pages', () => {
-    previewEnv();
     for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
       expect(
         buildArticlePage('banqi', lang).querySelector('iframe')?.getAttribute('src'),
-      ).toContain('/embed/study/FsA5sowX/F8fezAhm');
-      expect(buildArticlePage('three-kingdoms-banqi', lang).querySelector('iframe')).toBeNull();
+      ).toContain(banqiGame);
     }
-    vi.stubEnv('DEV', false);
-    expect(buildArticlePage('banqi').querySelector('iframe')?.getAttribute('src')).toContain(
-      '/embed/study/FsA5sowX/F8fezAhm',
-    );
-    expect(buildArticlePage('three-kingdoms-banqi').querySelector('iframe')).toBeNull();
   });
 
-  it.each(['', 'https://example.com/embed/study/one/two', '/embed/study/one/two?x=1'])(
-    'leaves published content in place for an invalid local preview path: %s',
-    (path) => {
-      vi.stubEnv('VITE_BANQI_RULES_GAME', path);
-      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_RULES_GAME', path);
-      expect(buildArticlePage('banqi').querySelector('iframe')?.getAttribute('src')).toContain(
-        '/embed/study/FsA5sowX/F8fezAhm',
-      );
-      expect(buildArticlePage('three-kingdoms-banqi').querySelector('iframe')).toBeNull();
-    },
-  );
+  it('three-kingdoms-banqi: embeds the annotated game in its own section before Play', () => {
+    expect(embedPaths('three-kingdoms-banqi')).toEqual([kingdomsGame]);
+    const kingdoms = buildArticlePage('three-kingdoms-banqi');
+    expect(kingdoms.querySelector('iframe')?.getAttribute('src')).toContain(kingdomsGame);
+    expect(kingdoms.textContent).toContain('Level 7 wins 100 to 45');
+    const headings = [...kingdoms.querySelectorAll('h2')].map((heading) => heading.textContent);
+    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+  });
 
   for (const variant of ['banqi', 'three-kingdoms-banqi']) {
     it(`${variant}: renders the generated chart, move grades, notes and imported luck`, async () => {
@@ -208,9 +179,17 @@ describe('rules page sample games', () => {
       expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
         variant === 'banqi' ? 'Win chance for Black' : 'Win chance for Red',
       );
-      expect(chart?.querySelector('polyline')?.getAttribute('points')?.split(' ')).toHaveLength(
-        mainLine(source.tree.root).length + 1,
-      );
+      // One line per level, each across the whole game; two lines draw no seat fill.
+      const lines = [...(chart?.querySelectorAll('polyline') ?? [])];
+      expect(lines).toHaveLength(2);
+      for (const line of lines)
+        expect(line.getAttribute('points')?.split(' ')).toHaveLength(
+          mainLine(source.tree.root).length + 1,
+        );
+      expect(chart?.classList.contains('embed-score-chart--seat-fill')).toBe(false);
+      expect(
+        [...(chart?.querySelectorAll('.embed-score-chart__key') ?? [])].map((k) => k.textContent),
+      ).toEqual(['Level 7', 'Level 8']);
       for (const text of Object.values(notes.comments)) expect(root.textContent).toContain(text);
       expect(root.querySelectorAll('.review-move-list__suffix')).toHaveLength(
         mainLine(source.tree.root).filter((node) => node.annotations?.glyphs?.length).length,
@@ -431,7 +410,7 @@ describe('rules page sample games', () => {
   it('gomoku: Rapfi Level 8 vs Level 7, legal throughout, Black ends on five in a row', () => {
     const chapter = readPlan('gomoku').create.chapter;
     expect(chapter.variant).toBe('gomoku');
-    expect(embedPaths('gomoku')).toContain('/embed/study/DnfILsD2/k7UH5qWM');
+    expect(embedPaths('gomoku')).toContain('/embed/study/MZT6MgY7/VMykrCYz');
     expect(chapter.tags).toMatchObject({
       black: 'Rapfi Level 8',
       white: 'Rapfi Level 7',
@@ -454,5 +433,24 @@ describe('rules page sample games', () => {
     // The winning point is the engine's own choice, never a graded move.
     expect(nodes.at(-1)!.annotations?.glyphs ?? []).toEqual([]);
     expect(nodes.filter((n) => n.annotations?.glyphs?.length).length).toBeGreaterThan(0);
+  });
+
+  it('gomoku: the chart reads as Black’s winning chances, one line per level', async () => {
+    const source = readPlan('gomoku').create.chapter;
+    const chapter: StudyChapterPayload = { ...source, id: 'chapter', root: source.tree };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ study: { id: 'local' }, chapters: [chapter] })),
+    );
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 'local', chapterId: 'chapter' });
+    const chart = root.querySelector('.embed-score-chart');
+    // Gomoku's chart slots are move-order seats: the first ("red") is Black.
+    // Both lines climb as Black's five comes, so the label must name Black.
+    expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
+      'Win chance for Black',
+    );
+    expect(chart?.querySelectorAll('polyline')).toHaveLength(2);
+    expect(chart?.classList.contains('embed-score-chart--seat-fill')).toBe(false);
   });
 });

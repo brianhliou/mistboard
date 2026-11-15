@@ -381,20 +381,38 @@ for (const variant of ['banqi', 'three-kingdoms-banqi'] as const) {
       decisionEngineId: luck.engineId,
       notes,
       sidelines: [],
+      lineName: 'Level 8',
+      compare: {
+        name: 'Level 7',
+        engineId: notes.evidence.level7.engineId,
+        analysis: notes.evidence.level7.analysis as StudyEval[],
+      },
     };
     assert.throws(
       () => makePlan({ ...base, analysis: analysis.slice(0, -1) }),
       /incomplete mainline/,
     );
     assert.throws(
+      () => makePlan({ ...base, compare: { ...base.compare, analysis: analysis.slice(0, -1) } }),
+      /incomplete comparison/,
+    );
+    assert.throws(
       () => makePlan({ ...base, decisions: luck.decisions.slice(1) }),
       /incomplete pool/,
     );
     assert.throws(() => makePlan({ ...base, notes: { ...notes, comments: {} } }), /five to eight/);
-    assert.equal(
-      parseChapterScoreSeries(create.chapter.scoreSeries, game.ply_count).series[0]!.values.at(-1),
-      0,
+    // Both levels read the whole game; the final point is the result for each line.
+    const chart = parseChapterScoreSeries(create.chapter.scoreSeries, game.ply_count);
+    assert.deepEqual(
+      chart.series.map((line) => [line.name, line.color, line.values.length, line.values.at(-1)]),
+      [
+        ['Level 7', 'a', game.ply_count + 1, 0],
+        ['Level 8', 'b', game.ply_count + 1, 0],
+      ],
     );
+    // Two separate reads, not one line drawn twice.
+    assert.notDeepEqual(chart.series[0]!.values, chart.series[1]!.values);
+    assert.notEqual(notes.evidence.level7.engineId, notes.evidence.engineId);
     assert.equal(notes.evidence.version, variant === 'banqi' ? '0.3.0' : '0.3.1');
     const pins = readFileSync(new URL('../fetch-private-net.sh', import.meta.url), 'utf8');
     assert.ok(pins.includes(notes.evidence.netSha256));

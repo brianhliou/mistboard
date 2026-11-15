@@ -25,8 +25,8 @@ export function createGomokuArticle(
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-10-31',
-    updatedAt: '2026-11-14',
-    updateNote: 'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a win-chance graph from a deeper Rapfi search.',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.',
     audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
     thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
     tldr: [
@@ -86,12 +86,11 @@ export function createGomokuArticle(
       {
         heading: 'An engine game',
         blocks: [
-          { kind: 'paragraph', text: 'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself here: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone completes five in a row on row 3. Step through it with the arrows.' },
+          { kind: 'paragraph', text: 'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone makes five on row 3. Step through it with the arrows.' },
           {
             kind: 'embed',
-            // Local study ids (scripts/variant-lab/rules-page-games/plans/gomoku.plan.json);
-            // swapped for the prod ids when the prod study is created from that plan.
-            path: '/embed/study/DnfILsD2/k7UH5qWM',
+            // Built by scripts/variant-lab/rules-page-games (plans/gomoku.plan.json).
+            path: '/embed/study/MZT6MgY7/VMykrCYz',
             title: 'Gomoku: Rapfi Level 8 against Rapfi Level 7, annotated',
             // Width-bound at the 702px column: the 15x15 board gets the column
             // minus the move sheet, plus seat rows, chart, controls, header and credit.
