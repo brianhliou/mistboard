@@ -4,7 +4,7 @@ import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { cardSeatName } from './current-games-model.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
 import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
-import { createGameTable } from './game-table.js';
+import { centeredScrollOffsets, createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
@@ -554,6 +554,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watchPly = ply;
     watchMaxPly = maxPly;
     moveList?.update(ply, jumpBoardToPly);
+    revealWatchPhoneMove(watch.movesRoot);
     moveScrubber.setBounds(ply, maxPly);
     if (moveScrubber.status)
       moveScrubber.status.textContent = maxPly > 0 ? `${ply} / ${maxPly}` : '';
@@ -574,6 +575,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   const clearPovToggle = (): void => {
     watch.povRoot.replaceChildren();
+    delete watch.el.dataset.watchPov;
   };
 
   // (Re)build the fog-perspective toggle under the board for the freshly loaded
@@ -938,6 +940,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // Left meta card + right-rail seat rows for the featured game. No LIVE chip:
   // the running clock already says the game is live.
   const renderLiveMeta = (featured: LiveFeatured): void => {
+    delete watch.el.dataset.watchPov;
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
@@ -958,7 +961,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watch.gameTableRoot.hidden = false;
     renderWatchHeadline(watch.headlineRoot, {
       matchup: playersMatchupLabel(players),
-      detail: `${t('watch.liveBadge')} · ${variantName}`,
+      detail: t('watch.liveBadge'),
+      variantName,
+      variantHref: localizedRulesHref(featured.gameSpecId),
+      info: [t('watch.inProgress')],
     });
     renderWatchPlayerRows(watch.playerTop, watch.playerBottom, players);
   };
@@ -1627,6 +1633,9 @@ function renderWatchPovToggle(
   const buttons: HTMLButtonElement[] = [];
   const select = (kind: 'white' | 'truth' | 'black'): void => {
     handle.setPov?.(kind);
+    // Match the phone's board-relative bands to the existing POV orientation.
+    const shell = root.closest<HTMLElement>('.watch-review-shell');
+    if (shell) shell.dataset.watchPov = kind;
     onPovChange?.();
     for (const button of buttons) {
       const active = button.dataset.pov === kind;
@@ -1711,11 +1720,8 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
   const center = document.createElement('div');
   center.className = 'watch-center';
 
-  // Phone-only headline above the board. On col1 the left rail (which carries
-  // the meta card) drops to the bottom of the stack, so the page used to open
-  // on a board with nothing above it: no players, no variant, no indication of
-  // what you were looking at. Hidden from col2 up, where the console beside the
-  // board already names both players.
+  // Phone-only replacement for the detailed desktop card: matchup/result and
+  // one linked variant/time/date subline above the board.
   const headlineRoot = document.createElement('div');
   headlineRoot.className = 'watch-headline';
 
@@ -1869,7 +1875,14 @@ function renderWatchActiveGame(
     game
       ? {
           matchup: watchQueueMatchupLabel(game),
-          detail: `${variantDisplayLabel(game.variant)} · ${watchGameStatusLine(game)}`,
+          detail: watchGameStatusLine(game),
+          variantName: variantDisplayLabel(game.variant),
+          variantHref: localizedRulesHref(game.variant),
+          info: [
+            timeControlLabelForGame(game),
+            watchRatedSegment(game),
+            timeAgoLabel(game.endedAt),
+          ],
         }
       : null,
   );
@@ -1922,17 +1935,19 @@ function setWatchMainLinkChip(link: HTMLAnchorElement, text: string): void {
   if (chip) chip.textContent = text;
 }
 
+function watchRatedSegment(game: FeaturedGame): string | null {
+  return game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
+}
+
 function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void {
   root.replaceChildren();
   if (!game) return;
   const players = watchGamePlayers(game);
-  const ratedSegment =
-    game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
   const card = createGameMetaCard({
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
     // No "Human vs engine" segment: the BOT tag on the player row already says
     // it, and the extra words wrapped the headline onto two lines.
-    headline: [timeControlLabelForGame(game), ratedSegment],
+    headline: [timeControlLabelForGame(game), watchRatedSegment(game)],
     variantName: variantDisplayLabel(game.variant),
     variantHref: localizedRulesHref(game.variant),
     subline: timeAgoLabel(game.endedAt) || null,
@@ -1942,23 +1957,47 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
   root.append(card.el);
 }
 
-// The phone headline: who is playing on the first line, what you are watching on
-// the second. Both watch paths (a finished FeaturedGame and the live featured
-// payload) funnel through here so the two never drift apart.
+// Both watch paths reuse the desktop card's localized labels and rules link.
 export function renderWatchHeadline(
   root: HTMLElement,
-  headline: { matchup: string; detail: string } | null,
+  headline: {
+    matchup: string;
+    detail: string;
+    variantName: string;
+    variantHref: string | null;
+    info: Array<string | null>;
+  } | null,
 ): void {
   root.replaceChildren();
   root.hidden = !headline;
   if (!headline) return;
   const matchup = document.createElement('p');
   matchup.className = 'watch-headline__matchup';
-  matchup.textContent = headline.matchup;
+  matchup.textContent = [headline.matchup, headline.detail].filter(Boolean).join(' · ');
   const detail = document.createElement('p');
   detail.className = 'watch-headline__detail';
-  detail.textContent = headline.detail;
+  const variant = document.createElement(headline.variantHref ? 'a' : 'span');
+  variant.className = 'watch-headline__variant';
+  variant.textContent = headline.variantName;
+  if (variant instanceof HTMLAnchorElement && headline.variantHref)
+    variant.href = headline.variantHref;
+  detail.append(variant);
+  const info = headline.info.filter(Boolean).join(' · ');
+  if (info) detail.append(document.createTextNode(` · ${info}`));
   root.append(matchup, detail);
+}
+
+// Reuse the room's two-axis centering, confined to the phone strip. The review
+// list's own revealer handles desktop vertical scrolling as before.
+export function revealWatchPhoneMove(scroller: HTMLElement): void {
+  if (!window.matchMedia('(max-width: 799px)').matches) return;
+  const current = scroller.querySelector<HTMLElement>('.review-move-list__move--current');
+  if (!current) return;
+  scroller.scrollLeft = centeredScrollOffsets(
+    scroller,
+    scroller.getBoundingClientRect(),
+    current.getBoundingClientRect(),
+  ).left;
 }
 
 // "Name vs Name" from an already-resolved seat list (the live path has no
