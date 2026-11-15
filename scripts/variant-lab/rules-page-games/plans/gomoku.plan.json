@@ -1,7 +1,7 @@
 {
   "create": {
     "owner": "mistboard",
-    "name": "Gomoku: an engine game, annotated",
+    "name": "Gomoku: Level 7 versus Level 8, annotated",
     "description": "Rapfi at Level 8 (Black) against Rapfi at Level 7 (White) from a dealt opening, read by Rapfi at a far deeper search. From the Gomoku rules page at mistboard.com/rules/gomoku.",
     "visibility": "public",
     "chapter": {
