@@ -87,9 +87,23 @@ export function checkpoint<T>(path: string): AnalysisProgressStore<T> {
     },
   };
 }
-/** A changed export, engine or net must never resume somebody else's scores. */
-export function artifactKey(game: RecordGame, artifacts: ReturnType<typeof pinnedAssets>): string {
-  return createHash('sha256').update(JSON.stringify({ game, artifacts })).digest('hex');
+export type GradingOptions = {
+  analysis: { engineId: string; nodes: number; movetimeCapMs: number; chance?: string };
+  decisions: {
+    engineId: string;
+    nodes: number | { rank: number; baseline: number; minimum: number };
+    movetimeCapMs: number;
+    candidates?: number;
+    chance?: string;
+  };
+};
+/** Any change to the inputs or grading recipe invalidates both checkpoints. */
+export function artifactKey(
+  game: RecordGame,
+  artifacts: ReturnType<typeof pinnedAssets>,
+  grading: GradingOptions,
+): string {
+  return createHash('sha256').update(JSON.stringify({ game, artifacts, grading })).digest('hex');
 }
 export type Notes = {
   intro: string;

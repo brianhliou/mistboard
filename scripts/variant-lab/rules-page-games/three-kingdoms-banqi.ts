@@ -115,11 +115,24 @@ export function threeKingdomsPublicLine(
   }
   return line;
 }
+export function threeKingdomsGradingOptions() {
+  const tier = threeKingdomsBanqiEngineTierFor('misty-three-kingdoms-banqi-level-8')!;
+  return {
+    analysis: { ...tier, engineId: THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID },
+    decisions: {
+      engineId: THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID,
+      nodes: THREE_KINGDOMS_BANQI_DECISION_NODES,
+      movetimeCapMs: THREE_KINGDOMS_BANQI_DECISION_MOVETIME_CAP_MS,
+      chance: tier.chance,
+    },
+  };
+}
 export async function buildThreeKingdoms(assets: string, scratch: string) {
   const { game, states, moves, tokens } = replayThreeKingdomsGame();
   const provenance = pinnedAssets('three-kingdoms-banqi', assets);
-  const key = artifactKey(game, provenance);
-  const tier = threeKingdomsBanqiEngineTierFor('misty-three-kingdoms-banqi-level-8')!;
+  const grading = threeKingdomsGradingOptions();
+  const key = artifactKey(game, provenance, grading);
+  const tier = grading.analysis;
   const store = checkpoint<StudyEval>(resolve(scratch, `three-kingdoms-banqi.${key}.sweep.json`));
   const analysis = (await store.load())?.items ?? [];
   for (let ply = analysis.length; ply < states.length; ply++) {
@@ -167,8 +180,8 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
         publicRequest(
           action ? [...states.slice(0, i + 1), post] : states.slice(0, i + 1),
           action ? [...moves.slice(0, i), action] : moves.slice(0, i),
-          THREE_KINGDOMS_BANQI_DECISION_NODES,
-          THREE_KINGDOMS_BANQI_DECISION_MOVETIME_CAP_MS,
+          grading.decisions.nodes,
+          grading.decisions.movetimeCapMs,
         ),
       ),
     );

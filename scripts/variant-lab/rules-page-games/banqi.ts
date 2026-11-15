@@ -19,6 +19,11 @@ import {
   analyzeBanqiDecisions,
   analyzeBanqiPostgame,
   BANQI_ANALYSIS_ENGINE_ID,
+  BANQI_ANALYSIS_MOVETIME_CAP_MS,
+  BANQI_DECISION_BASELINE_NODES,
+  BANQI_DECISION_CANDIDATES,
+  BANQI_DECISION_MIN_NODES,
+  BANQI_DECISION_RANK_NODES,
   BANQI_DECISIONS_ENGINE_ID,
 } from '../../../apps/server/src/banqi-analysis.ts';
 import {
@@ -101,18 +106,35 @@ export async function buildBanqi(assets: string, scratch: string) {
   const replay = replayBanqiGame(); // Assert recorded result before any engine search.
   const { game, setup, moves, states } = replay;
   const provenance = pinnedAssets('banqi', assets);
-  const key = artifactKey(game, provenance);
+  const grading = {
+    analysis: {
+      engineId: BANQI_ANALYSIS_ENGINE_ID,
+      nodes: banqiEngineTierFor('misty-banqi-level-8')!.nodes,
+      movetimeCapMs: BANQI_ANALYSIS_MOVETIME_CAP_MS,
+    },
+    decisions: {
+      engineId: BANQI_DECISIONS_ENGINE_ID,
+      nodes: {
+        rank: BANQI_DECISION_RANK_NODES,
+        baseline: BANQI_DECISION_BASELINE_NODES,
+        minimum: BANQI_DECISION_MIN_NODES,
+      },
+      movetimeCapMs: BANQI_ANALYSIS_MOVETIME_CAP_MS,
+      candidates: BANQI_DECISION_CANDIDATES,
+    },
+  };
+  const key = artifactKey(game, provenance, grading);
   const path = resolve(scratch, `banqi.${key}.sweep.json`);
   const store = checkpoint<StudyEval>(path);
   const extra = new Map<number, { pv: string[]; nodes?: number }>();
-  const nodes = banqiEngineTierFor('misty-banqi-level-8')!.nodes;
+  const { nodes, movetimeCapMs } = grading.analysis;
   await analyzeBanqiPostgame(
     moves,
     setup,
     async (state, window) => {
       const evaluation = await evaluateBanqiFenNodes(window!.fen, {
         nodes,
-        movetimeCapMs: 30_000,
+        movetimeCapMs,
         moves: window!.moves,
         noProgressLimit: banqiNoProgressLimitOf(state),
         searchMoves: getBanqiForbiddenChaseMoves(state).length

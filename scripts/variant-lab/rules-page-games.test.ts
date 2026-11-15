@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   createInitialThreeKingdomsBanqiReplayState,
-  getThreeKingdomsBanqiPlayerView,
   serializedTreeMainline,
   THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
+  type ThreeKingdomsBanqiReplayState,
   threeKingdomsBanqiStateToEngineFen,
   winPercent,
 } from '@mistboard/game';
@@ -27,6 +27,7 @@ import {
 import {
   publicRequest,
   replayThreeKingdomsGame,
+  threeKingdomsGradingOptions,
   threeKingdomsPublicLine,
 } from './rules-page-games/three-kingdoms-banqi.ts';
 
@@ -121,39 +122,221 @@ test('both exports replay to their exact recorded kernel results; altered result
   );
 });
 
-test('Three Kingdoms public requests retain the complete quiet window and never a dealt root', () => {
+// Inspect the bytes that will be stored/sent, without running them through a
+// player-view redactor (which would hide a leak before this assertion saw it).
+function assertMaskedFen(fen: string, state: ThreeKingdomsBanqiReplayState) {
+  const fields = fen.split(' ');
+  assert.equal(fields.length, 9, 'public engine FEN has no dealt suffix');
+  const rows = fields[0]!.split('/');
+  assert.equal(rows.length, 5);
+  for (const [row, placement] of rows.entries()) {
+    const tiles = [...placement].flatMap((c) =>
+      /[1-9]/.test(c) ? Array(Number(c)).fill('.') : [c],
+    );
+    assert.equal(tiles.length, 9);
+    for (const [file, tile] of tiles.entries()) {
+      const square = `${String.fromCharCode(97 + file)}${5 - row}` as keyof typeof state.board;
+      if (state.board[square]?.faceDown)
+        assert.equal(tile, 'X', `covered identity in request at ${square}`);
+    }
+  }
+}
+
+function assertPublicStudy(serialized: string, neverFlipped: readonly string[]) {
+  assert.doesNotMatch(serialized, /deal_fen|rootFen|"setup"|captured_hidden/);
+  const identity =
+    /"(?:role|color|owner|type)"\s*:\s*"|"(?:[GAERHCSgaerhcs]|red|black|general|advisor|elephant|chariot|horse|cannon|soldier|(?:red|black) (?:general|advisor|elephant|chariot|horse|cannon|soldier))"/;
+  const visit = (value: unknown) => {
+    if (typeof value === 'string') {
+      for (const square of neverFlipped) {
+        // Replay/engine tokens, plus identities stated in commentary.
+        assert.doesNotMatch(value, new RegExp(`@?${square}(?:${square})?:[GAERHCSgaerhcs]`));
+        assert.doesNotMatch(
+          value,
+          new RegExp(
+            `(?:red|black) (?:general|advisor|elephant|chariot|horse|cannon|soldier) (?:on|at) ${square}\\b`,
+            'i',
+          ),
+        );
+      }
+      // A FEN embedded anywhere in evidence must keep unobserved tiles covered.
+      if (/^[1-9XGAERHCSgaerhcs]+(?:\/[1-9XGAERHCSgaerhcs]+){4} /.test(value)) {
+        const board = Object.fromEntries(
+          neverFlipped.map((square) => [square, { faceDown: true }]),
+        );
+        assertMaskedFen(value, { board } as ThreeKingdomsBanqiReplayState);
+      }
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    if (record.faceDown === true) {
+      for (const field of ['color', 'role', 'owner', 'type'])
+        assert.ok(record[field] == null, `covered piece/capture carries ${field}`);
+    }
+    for (const square of neverFlipped) {
+      if (record[square] != null)
+        assert.doesNotMatch(
+          JSON.stringify(record[square]),
+          identity,
+          `identity stored under ${square}`,
+        );
+      if (['square', 'at', 'from', 'to'].some((field) => record[field] === square)) {
+        for (const field of ['color', 'role', 'owner', 'type', 'revealed'])
+          assert.ok(record[field] == null, `unobserved ${square} carries ${field}`);
+      }
+    }
+    for (const child of Object.values(record)) visit(child);
+  };
+  visit(JSON.parse(serialized));
+}
+
+test('Three Kingdoms stored study artifacts never identify an unflipped tile or covered capture', () => {
   const { states, moves } = replayThreeKingdomsGame();
+  const flipped = new Set(moves.filter((move) => move.from === move.to).map((move) => move.from));
+  const neverFlipped = Object.keys(states[0]!.board).filter(
+    (square) =>
+      states[0]!.board[square as keyof (typeof states)[0]['board']]?.faceDown &&
+      !flipped.has(square as (typeof moves)[number]['from']),
+  );
+  assert.equal(neverFlipped.length, 7, 'exercise the actual game’s unrevealed tiles');
+  const read = (kind: string) =>
+    JSON.parse(
+      readFileSync(
+        new URL(`rules-page-games/plans/three-kingdoms-banqi.${kind}.json`, import.meta.url),
+        'utf8',
+      ),
+    );
+  const artifacts = { plan: read('plan'), luck: read('luck'), notes: read('notes') };
+  assertPublicStudy(JSON.stringify(artifacts), neverFlipped);
+  const masked = structuredClone(artifacts);
+  masked.notes.evidence.board = Object.fromEntries(
+    neverFlipped.map((square) => [square, { faceDown: true }]),
+  );
+  masked.notes.evidence.captures = [{ faceDown: true, role: null }];
+  assertPublicStudy(JSON.stringify(masked), neverFlipped);
+  // Probe every persisted surface, including notes/evidence and decisions.
+  for (const square of neverFlipped) {
+    for (const target of ['tree', 'decisions', 'luck', 'notes', 'evidence']) {
+      const leaked = structuredClone(artifacts);
+      const container = {
+        tree: leaked.plan.create.chapter.tree,
+        decisions: leaked.luck.decisions[0],
+        luck: leaked.luck,
+        notes: leaked.notes,
+        evidence: leaked.notes.evidence,
+      }[target];
+      container[square] = { faceDown: true, color: 'red', role: 'soldier' };
+      assert.throws(
+        () => assertPublicStudy(JSON.stringify(leaked), neverFlipped),
+        /identity|covered/,
+      );
+    }
+    const leaked = structuredClone(artifacts);
+    leaked.plan.create.chapter.tree.root.children.push({ uci: `@${square}:S`, children: [] });
+    assert.throws(() => assertPublicStudy(JSON.stringify(leaked), neverFlipped));
+    leaked.plan.create.chapter.tree.root.children.pop();
+    leaked.notes.comments['78'] += ` A red soldier on ${square} stays covered.`;
+    assert.throws(() => assertPublicStudy(JSON.stringify(leaked), neverFlipped));
+  }
+  const fenLeak = structuredClone(artifacts);
+  const revealed = structuredClone(states[0]!);
+  revealed.board[neverFlipped[0] as keyof typeof revealed.board] = {
+    faceDown: false,
+    color: 'red',
+    role: 'soldier',
+  };
+  fenLeak.notes.evidence.fen = publicRequest([revealed], [], 1, 1).fen;
+  assert.throws(() => assertPublicStudy(JSON.stringify(fenLeak), neverFlipped), /covered identity/);
+  const captured = structuredClone(artifacts);
+  captured.notes.evidence.captures = [{ faceDown: true, role: 'soldier', owner: 'red' }];
+  assert.throws(
+    () => assertPublicStudy(JSON.stringify(captured), neverFlipped),
+    /covered piece\/capture/,
+  );
+});
+
+test('Three Kingdoms analysis and decision requests mask every covered tile and retain quiet history', async () => {
+  const { states, moves } = replayThreeKingdomsGame();
+  const grading = threeKingdomsGradingOptions();
+  let decisionRequests = 0;
   for (let ply = 0; ply < moves.length; ply++) {
-    const request = publicRequest(states.slice(0, ply + 1), moves.slice(0, ply), 2_048_000, 3_000);
+    const request = publicRequest(
+      states.slice(0, ply + 1),
+      moves.slice(0, ply),
+      grading.analysis.nodes,
+      grading.analysis.movetimeCapMs,
+    );
     const start = ply - states[ply]!.noProgressClock;
     assert.equal(request.fen, threeKingdomsBanqiStateToEngineFen(states[start]!));
+    assertMaskedFen(request.fen, states[start]!);
     assert.deepEqual(
       request.moves,
       moves.slice(start, ply).map((m) => `${m.from}${m.to}`),
     );
     assert.equal(request.chance, 'mix');
-    for (const state of states.slice(0, ply + 1)) {
-      const serialized = JSON.stringify(getThreeKingdomsBanqiPlayerView(state, 'red'));
-      for (const piece of Object.values(JSON.parse(serialized).board) as { faceDown?: boolean }[]) {
-        if (piece?.faceDown) assert.deepEqual(piece, { faceDown: true });
-      }
-    }
+    if (request.fen.includes('X'))
+      assert.throws(
+        () => assertMaskedFen(request.fen.replace('X', 'S'), states[start]!),
+        /covered identity/,
+      );
+    const played = moves[ply]!;
+    if (played.from !== played.to) continue;
+    await decisions.evaluateThreeKingdomsBanqiPublicFlipDecision(
+      states[ply]!,
+      played,
+      ply + 1,
+      (post, action) => {
+        const history = action ? [...states.slice(0, ply + 1), post] : states.slice(0, ply + 1);
+        const line = action ? [...moves.slice(0, ply), action] : moves.slice(0, ply);
+        const request = publicRequest(
+          history,
+          line,
+          grading.decisions.nodes,
+          grading.decisions.movetimeCapMs,
+        );
+        const root = history[history.length - 1 - post.noProgressClock]!;
+        assertMaskedFen(request.fen, root);
+        if (request.fen.includes('X'))
+          assert.throws(
+            () => assertMaskedFen(request.fen.replace('X', 'S'), root),
+            /covered identity/,
+          );
+        decisionRequests++;
+        return request;
+      },
+      async (request) => ({ cp: 0, mate: null, depth: 1, best: request.searchMoves?.[0] ?? null }),
+    );
   }
+  assert.ok(decisionRequests > 100, 'exercise candidate ranking and counterfactual pool requests');
 });
 
-test('checkpoint identity binds the export, engine bytes and pinned net', () => {
-  const game = readGame('banqi');
+test('checkpoint identity binds the export, engine bytes, pinned net and complete grading recipe', () => {
+  const game = readGame('three-kingdoms-banqi');
   const artifacts = {
-    identity: 'MistyBanqi 0.3.0',
-    version: '0.3.0',
+    identity: 'MistyThreeKingdomsBanqi 0.3.1',
+    version: '0.3.1',
     binarySha256: 'a',
     netSha256: 'b',
   };
-  const key = artifactKey(game, artifacts);
-  assert.equal(key, artifactKey(structuredClone(game), { ...artifacts }));
-  assert.notEqual(key, artifactKey({ ...game, game_id: 'another-game' }, artifacts));
-  assert.notEqual(key, artifactKey(game, { ...artifacts, binarySha256: 'c' }));
-  assert.notEqual(key, artifactKey(game, { ...artifacts, netSha256: 'd' }));
+  const options = threeKingdomsGradingOptions();
+  const key = artifactKey(game, artifacts, options);
+  assert.equal(key, artifactKey(structuredClone(game), { ...artifacts }, structuredClone(options)));
+  assert.notEqual(key, artifactKey({ ...game, game_id: 'another-game' }, artifacts, options));
+  assert.notEqual(key, artifactKey(game, { ...artifacts, binarySha256: 'c' }, options));
+  assert.notEqual(key, artifactKey(game, { ...artifacts, netSha256: 'd' }, options));
+  for (const section of ['analysis', 'decisions'] as const) {
+    for (const field of ['engineId', 'nodes', 'movetimeCapMs'] as const) {
+      const changed = structuredClone(options);
+      if (field === 'engineId') changed[section][field] += '-new-algorithm';
+      else changed[section][field]++;
+      assert.notEqual(
+        key,
+        artifactKey(game, artifacts, changed),
+        `${section}.${field} must invalidate checkpoints`,
+      );
+    }
+  }
 });
 
 for (const variant of ['banqi', 'three-kingdoms-banqi'] as const) {
