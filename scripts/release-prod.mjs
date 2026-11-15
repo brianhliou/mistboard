@@ -34,6 +34,7 @@ import { retryHostedCi, waitForExactCi } from './lib/ci-flake-retry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
 import { formatEnginePin, readEngineHead } from './lib/engine-head.mjs';
+import { withGateLock } from './lib/gate-lock.mjs';
 import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
 import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
@@ -1262,6 +1263,14 @@ function listGithubRuns(headRevision, branch = options.targetBranch) {
 }
 
 async function runLocalGate(gate, changedFiles) {
+  // Normal pushes already hold release.lock. Keep gate.lock across inline CI
+  // and persistence; child npm wrappers inherit MISTBOARD_GATE_LOCK_HELD=1.
+  return withGateLock('release:prod local gate', () => runLocalGateStages(gate, changedFiles), {
+    worktree: workdir,
+  });
+}
+
+async function runLocalGateStages(gate, changedFiles) {
   release.gate = { kind: gate.kind, reason: gate.reason };
   console.log(`local gate: ${gate.kind} (${gate.reason})`);
   const results = [];

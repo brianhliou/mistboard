@@ -1,5 +1,26 @@
 # Production releases require a green candidate
 
+## One full local suite at a time
+
+`ci:quick`, `test:persistent`, root `test`, and `verify` queue on the machine-wide
+`~/.local/share/mistboard/gate.lock` across worktrees. The file records the holder's
+PID, worktree, branch, command and start time. Waiters name the holder, poll every
+10 seconds, and fail after 45 minutes (`MISTBOARD_GATE_LOCK_TIMEOUT_MS` overrides
+the timeout in milliseconds). Dead holders are taken over automatically. Normal
+exit, failures, SIGINT and SIGTERM remove the owned lock; interrupted command
+wrappers stop their child process group before unlocking.
+
+Releases always acquire **release.lock first, then gate.lock** for their local
+gate stages, including inline CI and persistence. They release gate.lock before
+the hosted CI wait and production work. Do not invoke a release from a process
+that already holds gate.lock: reversing the order can deadlock another release.
+`MISTBOARD_GATE_LOCK_HELD=1` is set by the holder and inherited by nested npm
+scripts so they reuse ownership. Do not set it manually to bypass the queue.
+Hosted runners skip locking when `CI` is set. Targeted workspace and single-file
+tests, `test:unit`, and `vitest --changed` stay unlocked.
+
+## Green candidate workflow
+
 After assembling and committing a batch and passing its local gates, run hosted
 CI before the scheduled release:
 
