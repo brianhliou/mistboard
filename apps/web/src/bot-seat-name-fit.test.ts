@@ -19,7 +19,7 @@ import { buildProfileGameRow } from './profile-ui.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { reviewMetaPlayers } from './review/game-review-meta.js';
 import { webVariantTenants } from './variant-tenant/registry.js';
-import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
+import { mergeWatchMetadata, watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 
 // Measured with the real components/CSS and loaded Noto Sans on the local pair,
 // 2026-11-10. Name space (not whole row width):
@@ -198,7 +198,24 @@ describe('bot seat names fit game cards', () => {
       expect(cardName?.textContent).toBe(expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty'));
       expect(cardName?.title).toBe(expected);
       expect(watchQueueMatchupLabel(game)).toBe(`Ann vs ${expected}`);
-      expect(watchGamePlayers(game)[1]?.name).toBe(expected);
+      // /watch's card and seat rows shorten like finished cards and link Misty's
+      // page, since a Misty engine version is still Misty (2026-11-15).
+      const short = expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty');
+      const watchSeat = watchGamePlayers(game)[1];
+      expect(watchSeat?.name).toBe(short);
+      expect(watchSeat?.fullName ?? watchSeat?.name).toBe(expected);
+      expect(watchSeat?.profile).toEqual({ kind: 'bot', botId: 'misty' });
+      const watchMeta = createGameMetaCard({ headline: [], players: watchGamePlayers(game) });
+      const watchMetaName = watchMeta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
+      expect(watchMetaName?.textContent).toBe(short);
+      expect(watchMetaName?.title).toBe(expected);
+      expect(watchMetaName?.getAttribute('href')).toBe('/bot/misty');
+      // The "Previously on" tiles are as narrow as a /games card.
+      const tileNames: Record<string, { first: string; second: string }> = {};
+      mergeWatchMetadata({}, tileNames, {
+        unlocked: [game],
+      } as unknown as Parameters<typeof mergeWatchMetadata>[2]);
+      expect(tileNames[game.roomId]).toEqual({ first: 'Ann', second: short });
       const profileName = buildProfileGameRow(game).querySelector<HTMLElement>(
         '.profile-game-opponent-name',
       );

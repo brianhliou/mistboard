@@ -328,7 +328,7 @@ describe('watchGamePlayers', () => {
   it('paints flip-variant seat rows with the bound ink, not the seat id', () => {
     const rows = watchGamePlayers(flipGame('banqi', 'black'));
     expect(rows.map((row) => [row.name, row.color])).toEqual([
-      ['Misty Banqi', 'black'],
+      ['Misty', 'black'],
       ['human', 'red'],
     ]);
   });
