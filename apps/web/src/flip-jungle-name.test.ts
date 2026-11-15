@@ -32,7 +32,8 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
   ],
   'apps/web/src/article-i18n.ts': [
     // Fanfanqi rules translations: exact new source and translated sentences.
-    { sentence: '翻翻棋规则', count: 1 },
+    // The rules title and its search title (翻翻棋规则：玩法、大小顺序与扣血).
+    { sentence: '翻翻棋规则', count: 2 },
     { sentence: '翻翻棋在 4×8 的棋盘上进行，棋子暗置，双方从 60 点血开始。', count: 1 },
     { sentence: '想学翻翻棋，或想比较其血量规则与暗棋差异的玩家。', count: 1 },
     {
@@ -51,7 +52,8 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
     },
     { sentence: '翻翻棋与暗棋的区别', count: 1 },
     { sentence: '来下翻翻棋', count: 1 },
-    { sentence: '翻翻棋規則', count: 1 },
+    // The rules title and its search title (翻翻棋規則：玩法、大小順序與扣血).
+    { sentence: '翻翻棋規則', count: 2 },
     { sentence: '翻翻棋在 4×8 的棋盤上進行，棋子暗置，雙方從 60 點血開始。', count: 1 },
     { sentence: '想學翻翻棋，或想比較其血量規則與暗棋差異的玩家。', count: 1 },
     { sentence: '翻翻棋是一種以血量（HP）計分、對局更短的[暗棋](/rules/banqi)。', count: 1 },

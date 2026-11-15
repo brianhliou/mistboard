@@ -19,6 +19,7 @@ export const fanfanqiArticle: Article = {
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Fanfanqi Rules',
+  seoTitle: 'Fanfanqi Rules: How to Play, Ranks and HP',
   tagline: 'Flip hidden pieces and race to zero HP.',
   summary:
     'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.',

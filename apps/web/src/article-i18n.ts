@@ -290,6 +290,7 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 const ZH_HANS: Record<string, string> = {
   // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
   'Fanfanqi Rules': '翻翻棋规则',
+  'Fanfanqi Rules: How to Play, Ranks and HP': '翻翻棋规则：玩法、大小顺序与扣血',
   'Flip hidden pieces and race to zero HP.': '翻开暗子，把对方的血量打到零。',
   'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
     '翻翻棋在 4×8 的棋盘上进行，棋子暗置，双方从 60 点血开始。了解大小顺序、只能吃子的炮、各子扣血值、捉子上限与和棋规则。',
@@ -7328,6 +7329,7 @@ const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
   // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
   'Fanfanqi Rules': '翻翻棋規則',
+  'Fanfanqi Rules: How to Play, Ranks and HP': '翻翻棋規則：玩法、大小順序與扣血',
   'Flip hidden pieces and race to zero HP.': '翻開暗子，把對方的血量打到零。',
   'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
     '翻翻棋在 4×8 的棋盤上進行，棋子暗置，雙方從 60 點血開始。了解大小順序、只能吃子的炮、各子扣血值、捉子上限與和棋規則。',
