@@ -464,7 +464,8 @@ definePersistenceTests('game data files', () => {
     assert.ok(!listing.variants.includes('jungle'));
     assert.ok(listing.offeredVariants.includes('jungle'));
     assert.ok(listing.months.every((month) => month.month !== '2026-09'));
-    assert.deepEqual(listing.unavailableVariants, []);
+    // Fanfanqi is public and exports nothing, so /data names it without a file.
+    assert.deepEqual(listing.unavailableVariants, [{ variant: 'ffq-banqi', reason: 'no-export' }]);
   });
 
   test('the listing counts closed months only, without the excluded games', async () => {

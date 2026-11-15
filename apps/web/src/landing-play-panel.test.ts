@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs';
-import { GAME_SPECS, isPublicGameSpec, RATED_TIME_CONTROLS } from '@mistboard/game';
+import {
+  FFQ_BANQI_SPEC_ID,
+  GAME_SPECS,
+  gameSpecForId,
+  isPublicGameSpec,
+  RATED_TIME_CONTROLS,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
 import { findArticle } from './articles-data.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
+import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { landingBotLadder } from './landing-bot-policy.js';
 import type { YourMoveFeed } from './landing-correspondence-moves.js';
 import { enabledLandingVariantGameSpecs, setRoomNavigator } from './landing-play.js';
@@ -19,7 +26,11 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
+import {
+  setResolvedAdmin,
+  setResolvedSignedIn,
+  setResolvedStatsExcluded,
+} from './signed-in-state.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 
 const flush = async (): Promise<void> => {
@@ -73,6 +84,41 @@ function rememberLivePace(): void {
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('homepage play panel', () => {
+  it('offers launched FFQ to guests and waits for the runtime computer roster', () => {
+    const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+    const original = spec.publicSurface;
+    setResolvedAdmin(false);
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        setFFQBanqiEngineOptions([]);
+        const board = buildPlayPanel('en', { hydrate: false });
+        expect(board.querySelector('.pp-person-rows [data-game-spec="ffq-banqi"]') !== null).toBe(
+          surface === 'casual',
+        );
+        expect(board.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]')).toBeNull();
+        setFFQBanqiEngineOptions(
+          [1, 4].map((level) => ({
+            id: `misty-ffq-banqi-level-${level}`,
+            name: `Misty Level ${level}`,
+            familyName: 'Misty',
+            kind: 'container',
+          })),
+        );
+        const loaded = buildPlayPanel('en', { hydrate: false });
+        expect(loaded.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]') !== null).toBe(
+          surface === 'casual',
+        );
+        if (surface === 'casual')
+          expect(stepValue(row(loaded, FFQ_BANQI_SPEC_ID), 'level')).toBe('Level 4');
+      }
+    } finally {
+      spec.publicSurface = original;
+      setFFQBanqiEngineOptions([]);
+      setResolvedAdmin(undefined);
+    }
+  });
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
     sessionStorage.clear();
@@ -251,8 +297,8 @@ describe('homepage play panel', () => {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
     // Intentional homepage omissions: Fog games remain in the setup dialog.
-    // Keep this explicit; newly launched public PvE variants get no exemption.
-    const excluded = ['dark-xiangqi', 'dark-chess'];
+    // Fanfanqi waits for its runtime-only engine roster, absent from this fixture.
+    const excluded = ['dark-xiangqi', 'dark-chess', 'ffq-banqi'];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) =>
@@ -332,13 +378,15 @@ describe('homepage play panel', () => {
       orderPanelSpecs(
         enabledLandingVariantGameSpecs('pvp', 'en')
           .filter(
-            (spec) => isPublicGameSpec(spec.gameSpecId) && !excluded.includes(spec.gameSpecId),
+            (spec) =>
+              isPublicGameSpec(spec.gameSpecId) &&
+              !['dark-xiangqi', 'dark-chess'].includes(spec.gameSpecId),
           )
           .map((spec) => spec.gameSpecId),
       ),
     );
     for (const spec of [
-      ...excluded,
+      ...excluded.filter((id) => id !== 'ffq-banqi'),
       ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
     ]) {
       expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
@@ -353,7 +401,7 @@ describe('homepage play panel', () => {
     for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
     }
-    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
     const board = buildPlayPanel('en', { hydrate: false });
     for (const spec of [
       'xiangqi',

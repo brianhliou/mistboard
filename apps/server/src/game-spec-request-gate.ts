@@ -82,7 +82,7 @@ const GATED_GAME_SPECS = {
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
   },
-  // Hidden playtest: BOTH the flag and admin role, plus a room registration.
+  // Live launch admission plus a room registration; hidden until publicSurface changes.
   'ffq-banqi': {
     enabled: ffqBanqiAdmits,
     disabledError: 'ffq_banqi_disabled',
@@ -194,7 +194,7 @@ export function gateGameSpecRequest(
     if (ffqBanqiAdmits(accountUser) && variantTenantForSpecId('ffq-banqi')) {
       return { type: 'pass' };
     }
-    // Missing registration must still reject, even for an enabled admin.
+    // Missing registration must still reject after public launch.
     return rejectGatedSpec('ffq-banqi', accountUser);
   }
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from

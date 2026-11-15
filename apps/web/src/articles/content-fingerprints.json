@@ -20,7 +20,7 @@
     "updatedAt": null
   },
   "banqi": {
-    "hash": "061ef9892f7b8495",
+    "hash": "a95b9c7b6e4635d9",
     "updatedAt": "2026-11-15"
   },
   "banqi-chariot-endgame": {
@@ -78,6 +78,10 @@
   "en-passant-under-fog": {
     "hash": "c9787f57dba369bf",
     "updatedAt": "2026-10-15"
+  },
+  "fanfanqi": {
+    "hash": "1e631a444f30c317",
+    "updatedAt": null
   },
   "flip-jungle-skill-ceiling": {
     "hash": "081e5cc9952dcb31",
@@ -248,7 +252,7 @@
     "updatedAt": "2026-11-09"
   },
   "three-kingdoms-banqi": {
-    "hash": "3e7d8f9d8efd0ad5",
+    "hash": "a4ed3f33fa8cc304",
     "updatedAt": "2026-11-15"
   },
   "titled-players": {

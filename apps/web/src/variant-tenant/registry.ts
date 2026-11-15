@@ -216,8 +216,6 @@ const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): 
 const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
-// Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
-// The server repeats this check for create, HTTP shells and every connection.
 
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
@@ -354,7 +352,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
         mountFFQBanqiPostgame(root, roomId),
       ),
-    // No watch channel or public discovery. Spectators use the gated room.
+    // Spectators use the room; the server enforces admission and masked views.
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
@@ -364,7 +362,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: ffqBanqiOffered,
       acceptsDeepLink: ffqBanqiOffered,
-      modes: ['pvp', 'pve'],
+      get modes() {
+        return isPublicGameSpec(FFQ_BANQI_SPEC_ID)
+          ? (['pvp', 'pve', 'lobby'] as const)
+          : (['pvp', 'pve'] as const);
+      },
       get engineOptions() {
         return ffqBanqiEngineOptions();
       },

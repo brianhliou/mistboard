@@ -830,16 +830,11 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
-  it('orders the banqi family by player base: fanfanqi, banqi, three kingdoms', () => {
+  it('orders the banqi family banqi, fanfanqi, three kingdoms', () => {
     const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
     const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
     const banqi = slugs.indexOf('banqi');
-    expect(banqi).toBeGreaterThanOrEqual(1);
-    expect(slugs.slice(banqi - 1, banqi + 2)).toEqual([
-      'fanfanqi',
-      'banqi',
-      'three-kingdoms-banqi',
-    ]);
+    expect(slugs.slice(banqi, banqi + 3)).toEqual(['banqi', 'fanfanqi', 'three-kingdoms-banqi']);
   });
 
   it('renders rules tiles as marker, label and tagline, with no per-tile badge', () => {

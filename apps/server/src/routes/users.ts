@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
-import { ffqBanqiAdmits } from '../ffq-banqi-access.js';
+import { ffqBanqiCorrespondenceAdmits } from '../ffq-banqi-access.js';
 import { parseGamePageCursor } from '../game-page-cursor.js';
 import * as persistence from './../persistence.js';
 import { attachProfileBoards } from './../profile-game-boards.js';
@@ -46,11 +46,11 @@ export async function tryHandle(
       return true;
     }
     const viewer = await currentAccountUser(request);
-    if (ffqBanqiAdmits(viewer)) response.setHeader('Cache-Control', 'no-store');
+    if (ffqBanqiCorrespondenceAdmits(viewer)) response.setHeader('Cache-Control', 'no-store');
     const profile = await persistence.getUserProfileByHandle(handle, viewer?.id ?? null, {
       // Play-streak days are bucketed on the viewer's calendar (play-streak.ts).
       timeZone: parsedUrl.searchParams.get('tz'),
-      includeFFQ: ffqBanqiAdmits(viewer),
+      includeFFQ: ffqBanqiCorrespondenceAdmits(viewer),
     });
     if (!profile) {
       writeJson(response, 404, { error: 'not_found' });
@@ -66,7 +66,11 @@ export async function tryHandle(
       profile: {
         ...profile,
         // The first page of the Games tab: same marking as the pager below.
-        games: await profileGameRows(profile.games, parsedUrl, ffqBanqiAdmits(viewer)),
+        games: await profileGameRows(
+          profile.games,
+          parsedUrl,
+          ffqBanqiCorrespondenceAdmits(viewer),
+        ),
         isViewer,
         relation: relation ? { following: relation.following, blocked: relation.blocked } : null,
       },
@@ -91,7 +95,7 @@ export async function tryHandle(
     const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = clampInt(parsedUrl.searchParams.get('limit'), 15, 1, GAMES_PAGE_MAX);
     const viewer = await currentAccountUser(request);
-    if (ffqBanqiAdmits(viewer)) response.setHeader('Cache-Control', 'no-store');
+    if (ffqBanqiCorrespondenceAdmits(viewer)) response.setHeader('Cache-Control', 'no-store');
     // Optional pool filter for the profile's Games tab. parseRatingVariant is
     // fail-closed: an unknown value yields null, which serves the unfiltered
     // history rather than erroring or, worse, matching nothing.
@@ -115,7 +119,7 @@ export async function tryHandle(
       offset,
       limit,
       {
-        includeFFQ: ffqBanqiAdmits(viewer),
+        includeFFQ: ffqBanqiCorrespondenceAdmits(viewer),
         ratingVariant,
         result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
         opponent: opponent || null,
@@ -130,7 +134,7 @@ export async function tryHandle(
     // stays in the owner's history, marked, rather than vanishing from it
     // (replayable-games.ts markUnavailableGames).
     writeJson(response, 200, {
-      games: await profileGameRows(page.games, parsedUrl, ffqBanqiAdmits(viewer)),
+      games: await profileGameRows(page.games, parsedUrl, ffqBanqiCorrespondenceAdmits(viewer)),
       total: page.total,
     });
     return true;

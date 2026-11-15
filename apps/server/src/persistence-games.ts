@@ -1064,7 +1064,7 @@ export type HeadToHeadTally = {
 };
 
 // Bound params: $1 variant, $2/$3 subject a, $4/$5 subject b.
-const HEAD_TO_HEAD_FROM_SQL = `FROM games
+const headToHeadFromSql = () => `FROM games
      JOIN game_participants a
        ON a.game_id = games.room_id
       AND a.subject_type = $2
@@ -1103,7 +1103,7 @@ export async function queryHeadToHeadGames(
     a_color: GameParticipantColor;
   }>(
     `SELECT games.room_id, games.variant, games.result, games.ended_at, a.color AS a_color
-     ${HEAD_TO_HEAD_FROM_SQL}
+     ${headToHeadFromSql()}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $6`,
     [...headToHeadParams(a, b, variant), boundedLimit],
@@ -1130,7 +1130,7 @@ export async function tallyHeadToHeadGames(
     count: number;
   }>(
     `SELECT a.color AS a_color, games.result, count(*)::int AS count
-     ${HEAD_TO_HEAD_FROM_SQL}
+     ${headToHeadFromSql()}
      GROUP BY a.color, games.result`,
     headToHeadParams(a, b, variant),
   );
@@ -1141,7 +1141,7 @@ export async function tallyHeadToHeadGames(
 // any signed-in account; private games are saveable only by an account recorded
 // as a participant. Keeping this predicate beside every favorite query prevents
 // a later visibility flip from leaking a stale bookmark through the saved list.
-const FAVORITE_ACCESS_SQL = `games.status = 'completed'
+const favoriteAccessSql = () => `games.status = 'completed'
        AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND (
@@ -1163,7 +1163,7 @@ export async function getGameFavoriteState(
     `SELECT
        EXISTS (
          SELECT 1 FROM games
-         WHERE games.room_id = $1 AND ${FAVORITE_ACCESS_SQL}
+         WHERE games.room_id = $1 AND ${favoriteAccessSql()}
        ) AS accessible,
        EXISTS (
          SELECT 1 FROM game_favorites
@@ -1186,7 +1186,7 @@ export async function setGameFavorite(
       `INSERT INTO game_favorites (game_id, user_id)
        SELECT games.room_id, $2
        FROM games
-       WHERE games.room_id = $1 AND ${FAVORITE_ACCESS_SQL}
+       WHERE games.room_id = $1 AND ${favoriteAccessSql()}
        ON CONFLICT (user_id, game_id) DO NOTHING`,
       [roomId, userId],
     );

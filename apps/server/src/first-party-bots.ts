@@ -25,6 +25,7 @@ import {
   banqiEngineDisplayName,
   banqiEngineTierFor,
 } from './banqi-engine.js';
+import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
 import type { Champion } from './persistence-leaderboards.js';
 import {
@@ -134,9 +135,11 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'jungle-flip': 'misty-jungle-flip',
       // The in-process tile bot (packages/game xiangqi-mahjong-bot.ts).
       'xiangqi-mahjong': 'misty-xiangqi-mahjong',
+      'ffq-banqi': 'misty-ffq-banqi-level-4',
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [
+      ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
       'python-v2-v1.0',
       'python-v2-v1.1',
       'python-v2-v1.2',
@@ -157,6 +160,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
     seatNamesByEngineId: Object.fromEntries([
+      ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ['misty-jungle-flip-level-7', 'Misty Level 7'],

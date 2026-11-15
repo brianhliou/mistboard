@@ -373,7 +373,7 @@ export function secondMoverColorName(gameSpecId: string): string {
 export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
   gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
-  'ffq-banqi': null,
+  'ffq-banqi': 'variant.ffqBanqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'xiangqi-mahjong': 'variant.xiangqiMahjong.name',

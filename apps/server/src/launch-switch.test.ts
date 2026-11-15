@@ -198,6 +198,41 @@ test('Gomoku is launched with a public live rating pool and casual correspondenc
 // config/product-profile.json is the deploy catalog (dev flags, seed fixtures),
 // a JSON file the .mjs scripts read, so it cannot derive from the switch. A
 // launched playtest spec must be in it; this is the reminder at launch.
+test('Fanfanqi is live and public for casual play, with English rules and no ratings or correspondence', async (t) => {
+  const game = await import('@mistboard/game');
+  const id = game.FFQ_BANQI_SPEC_ID;
+  assert.equal(game.gameSpecForId(id).runtimeStatus, 'live');
+  assert.equal(game.gameSpecForId(id).publicSurface, 'casual');
+  assert.equal(isPublicGameSpec(id), true);
+  assert.equal(isAllowlistedGameSpec(id), false);
+  assert.equal(await mayPlayVariant(null, id), true);
+  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') - 1], id);
+  assert.equal(articleIsIndexable('fanfanqi'), true);
+  assert.equal(ratingPoolForSpec(id), null);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), false);
+  assert.equal(CORRESPONDENCE_ALLOWLISTED_SPEC_IDS.includes(id), false);
+  assert.equal(isCorrespondenceRatedSpec(id), false);
+  const profile = JSON.parse(
+    readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../../config/product-profile.json'),
+      'utf8',
+    ),
+  );
+  assert.ok(profile.gameSpecIds.includes(id));
+  assert.equal(profile.serverFlagByGameSpecId[id], 'MISTBOARD_FFQ_BANQI_ENABLED');
+  const previous = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+  t.after(() => {
+    if (previous === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+    else process.env.MISTBOARD_FFQ_BANQI_ENABLED = previous;
+  });
+  await import('./variant-tenant/register-tenants.js');
+  const { searchableVariants } = await import('./routes/historical-xiangqi-games.js');
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+  assert.ok(searchableVariants().some((variant) => variant.id === id));
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'false';
+  assert.ok(!searchableVariants().some((variant) => variant.id === id));
+});
+
 test('a launched playtest spec is in the product profile', () => {
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
   const profile = JSON.parse(
@@ -310,4 +345,35 @@ test('the generated sitemap indexes the launched English TK rules', async () => 
     section: 'pages',
   });
   assert.ok(xml.includes('<loc>https://mistboard.test/rules/three-kingdoms-banqi</loc>'));
+});
+
+test('the generated sitemap indexes only the English Fanfanqi rules', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-ffq-launch-'));
+  const paths = ['', '/zh-hans', '/zh-hant'].map((prefix) => `${prefix}/rules/fanfanqi`);
+  for (const path of paths) {
+    const file = join(staticDir, `${path}.html`);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, '<html>Rules</html>');
+  }
+  // Only the English page is emitted by the article translation policy.
+  await writeFile(
+    join(staticDir, 'prerender-sitemap.json'),
+    JSON.stringify([{ path: paths[0], lastmod: '2026-11-14' }]),
+  );
+  let xml = '';
+  await serveSitemap({
+    response: {
+      writeHead() {},
+      end(body: string) {
+        xml = body;
+      },
+    } as unknown as ServerResponse,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    section: 'pages',
+  });
+  assert.ok(xml.includes('<loc>https://mistboard.test/rules/fanfanqi</loc>'));
+  for (const prefix of ['/zh-hans', '/zh-hant']) {
+    assert.ok(!xml.includes(`<loc>https://mistboard.test${prefix}/rules/fanfanqi</loc>`));
+  }
 });

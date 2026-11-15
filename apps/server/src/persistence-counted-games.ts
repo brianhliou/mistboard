@@ -172,15 +172,17 @@ export function notRetiredVariant(
 export function offPublicGameSpecIds(
   isPublic: (id: GameSpecId) => boolean = isPublicGameSpec,
 ): readonly string[] {
-  return GAME_SPECS.filter(
-    (spec) =>
-      spec.id === FFQ_BANQI_SPEC_ID || spec.runtimeStatus === 'retired' || !isPublic(spec.id),
-  ).map((spec) => spec.id);
+  return GAME_SPECS.filter((spec) => spec.runtimeStatus === 'retired' || !isPublic(spec.id)).map(
+    (spec) => spec.id,
+  );
 }
 
-// Exclude FFQ before pagination, even if its metadata changes.
+// Exclude the hidden playtest before pagination. Live launch keeps the admin
+// correspondence games private, including completed games with no deadline row.
 export function notFFQBanqiGame(gamesAlias = 'games'): string {
-  return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
+  if (!isPublicGameSpec(FFQ_BANQI_SPEC_ID))
+    return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
+  return `(${gamesAlias}.variant <> '${FFQ_BANQI_SPEC_ID}' OR ${liveClockGame(gamesAlias)})`;
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();
@@ -208,9 +210,10 @@ export const DELETED_GAME_SPEC_IDS: readonly string[] = [
 // a hidden variant.
 export function publicVariant(
   gamesAlias = 'g',
-  offPublicIds: readonly string[] = OFF_PUBLIC_GAME_SPEC_IDS,
+  offPublicIds: readonly string[] = offPublicGameSpecIds(),
 ): string {
-  return notRetiredVariant(gamesAlias, [...DELETED_GAME_SPEC_IDS, ...offPublicIds]);
+  return `${notRetiredVariant(gamesAlias, [...DELETED_GAME_SPEC_IDS, ...offPublicIds])}
+    AND ${notFFQBanqiGame(gamesAlias)}`;
 }
 
 // A counted game in a variant that is still live and public: the filter

@@ -250,6 +250,7 @@ describe('variant correspondence conformance', () => {
     for (const tenant of pickerTenants) {
       if (tenant.gameSpecId === MAHJONG_SPEC_ID) continue;
       if (tenant.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) continue;
+      if (tenant.gameSpecId === FFQ_BANQI_SPEC_ID) continue;
       expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS, tenant.gameSpecId).toContain(tenant.gameSpecId);
       const days = panelPersonPaces(tenant.gameSpecId as never, 'casual', true).filter(
         (pace) => pace.kind === 'days',
@@ -458,8 +459,8 @@ describe('FFQ banqi canonical web metadata', () => {
   });
 
   it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
-    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
-    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', 'variant.ffqBanqi.name');
+    expect(variantNameKeyForSpecId('ffq-banqi')).toBe('variant.ffqBanqi.name');
     expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
   });
 
@@ -505,21 +506,27 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(events).not.toHaveBeenCalled();
   });
 
-  it('has no public play, rating, rules, watch, analysis, editor, study or embed listing', () => {
+  it('launches casual play and rules without ratings, correspondence, analysis, editor, study or embed', () => {
     const id = 'ffq-banqi';
     // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
-    expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(id);
-    expect(WATCH_CHANNEL_MINI_IDS).not.toHaveProperty(id);
+    expect((LANDING_BOT_GAME_SPEC_IDS as readonly string[]).includes(id)).toBe(
+      isPublicGameSpec(id) && maybeGameSpecForId(id)?.runtimeStatus === 'live',
+    );
+    expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS as readonly string[]).not.toContain(id);
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(id);
+    // Registered channel identity is available before the server lists it.
+    expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(id);
     expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
-    expect(rulesHrefForGameSpec(id)).toBeNull();
+    expect(rulesHrefForGameSpec(id)).toBe(isPublicGameSpec(id) ? '/rules/fanfanqi' : null);
     expect(rulesSlugForGameSpec(id)).toBe('fanfanqi');
     expect(articles.find((article) => article.slug === 'fanfanqi')).toMatchObject({
       kind: 'rules',
-      status: 'draft',
+      status: 'published',
     });
     expect(embedRendererKindForVariant(id)).toBeNull();
   });

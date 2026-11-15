@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
 import test from 'node:test';
+import { gameSpecForId } from '@mistboard/game';
 import { ffqBanqiHttpTarget, guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import { handleApiRequest, routes } from './http-api.js';
 import { close, getPool, init } from './persistence-db.js';
@@ -57,6 +58,7 @@ function reads(id: string): Array<[string, string]> {
       paths.push(['GET', `/api/${prefix}games/${id}${suffix}`]);
     }
     paths.push(['POST', `/api/${prefix}games/${id}/analysis`]);
+    paths.push(['POST', `/api/${prefix}games/${id}/decisions`]);
     paths.push(['POST', `/api/${prefix}games/${id}/analysis/jobs/job`]);
     paths.push(['HEAD', `/api/${prefix}games/${id}/analysis`]);
     paths.push(['POST', `/api/${prefix}games/${id}/decisions`]);
@@ -136,11 +138,18 @@ async function invoke(
   return { status, body, headers };
 }
 
-for (const flag of [undefined, 'false', 'true']) {
+const launches = (['hidden', 'casual'] as const).flatMap((surface) =>
+  [undefined, 'false', 'true'].map((flag) => ({ surface, flag })),
+);
+
+for (const { surface, flag } of launches) {
   for (const role of [null, 'player', 'admin'] as const) {
-    test(`FFQ HTTP dispatch: flag=${flag}, account=${role ?? 'guest'}`, {
+    test(`FFQ HTTP dispatch: surface=${surface}, flag=${flag}, account=${role ?? 'guest'}`, {
       timeout: 15_000,
     }, async (t) => {
+      const spec = gameSpecForId('ffq-banqi');
+      const priorSurface = spec.publicSurface;
+      spec.publicSurface = surface;
       const previous = process.env[FLAG];
       const staticDir = await mkdtemp(join(tmpdir(), 'ffq-shell-'));
       await writeFile(
@@ -150,6 +159,7 @@ for (const flag of [undefined, 'false', 'true']) {
       if (flag === undefined) delete process.env[FLAG];
       else process.env[FLAG] = flag;
       t.after(async () => {
+        spec.publicSurface = priorSurface;
         if (previous === undefined) delete process.env[FLAG];
         else process.env[FLAG] = previous;
         clearPresence();
@@ -222,7 +232,7 @@ for (const flag of [undefined, 'false', 'true']) {
         staticDir,
         drainController: { isDraining: () => false },
       } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
-      const admitted = flag === 'true' && role === 'admin';
+      const admitted = flag === 'true' && (surface === 'casual' || role === 'admin');
       for (const id of [
         'ffq_reserved',
         '%66fq_encoded',
@@ -260,7 +270,7 @@ for (const flag of [undefined, 'false', 'true']) {
                 context,
                 {
                   method,
-                  headers: { cookie: 'mistboard_session=fixture.token' },
+                  headers: role ? { cookie: 'mistboard_session=fixture.token' } : {},
                 } as IncomingMessage,
                 response,
                 new URL(path, 'http://localhost'),
@@ -323,11 +333,15 @@ for (const flag of [undefined, 'false', 'true']) {
       assert.equal(direct.status, 404);
       assert.equal(direct.body, '{"error":"not_found"}');
       if (!admitted) assert.equal(summaryReads, 0, 'unauthorized request loaded a summary');
-      assert.equal(
-        queries.filter((sql) => sql.includes('SELECT games.room_id')).length,
-        admitted ? 3 : 0,
-        'only authorized summary endpoints load persisted summaries',
-      );
+      const summaryQueries = queries.filter((sql) => sql.includes('SELECT games.room_id')).length;
+      if (admitted && role !== 'admin')
+        assert.ok(summaryQueries >= 3, 'public reads check correspondence admission');
+      else
+        assert.equal(
+          summaryQueries,
+          admitted ? 3 : 0,
+          'only authorized summary endpoints load persisted summaries',
+        );
     });
   }
 }
@@ -395,6 +409,12 @@ test('unrelated game, room and OG reads perform no FFQ identity query', async (t
 });
 
 test('reserved FFQ reads close without persistence or touching runtime state', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
   const previous = process.env[FLAG];
   t.after(() => {
     if (previous === undefined) delete process.env[FLAG];
