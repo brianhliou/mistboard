@@ -13,6 +13,8 @@ import {
   type TimeControlId,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { articleIsLive } from './articles/publish-time.js';
+import { findArticle } from './articles-data.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import {
@@ -75,6 +77,7 @@ import {
   threeKingdomsBanqiEngineOptions,
 } from './three-kingdoms-banqi-access.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { rulesHrefForGameSpec } from './variant-public-surfaces.js';
 import {
   type WebTenantEngineOption,
   webVariantOfferedInMenu,
@@ -407,6 +410,25 @@ export function buildPlayPanel(
   const labelFor = (id: string): string =>
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
+  const gameName = (gameSpecId: string, label: string): HTMLElement => {
+    const href = rulesHrefForGameSpec(gameSpecId);
+    const article = href ? findArticle(href.slice('/rules/'.length)) : undefined;
+    // Playtest flags and local draft previews never publish a homepage link.
+    const name =
+      href && article?.kind === 'rules' && articleIsLive(article)
+        ? document.createElement('a')
+        : document.createElement('span');
+    name.className = 'pp-name';
+    if (name instanceof HTMLAnchorElement && href) {
+      name.href = localizedHref(href, locale);
+      name.classList.add('pp-rules-link');
+    }
+    const labelText = document.createElement('span');
+    labelText.className = 'pp-name-label';
+    labelText.textContent = label;
+    name.append(labelText);
+    return name;
+  };
   const ordered = (): LandingGameSpecId[] =>
     orderPanelSpecs(variants.map((v) => v.gameSpecId)) as LandingGameSpecId[];
 
@@ -623,14 +645,9 @@ export function buildPlayPanel(
       row.className = 'pp-row pp-row-bot';
       row.dataset.gameSpec = gameSpecId;
 
-      const name = document.createElement('span');
-      name.className = 'pp-name';
+      const name = gameName(gameSpecId, label);
       // The live count sits on its own line under the label: inline, a long
       // name (Crazyhouse Xiangqi) ellipsised it out of sight.
-      const labelText = document.createElement('span');
-      labelText.className = 'pp-name-label';
-      labelText.textContent = label;
-      name.append(labelText);
       const playing = document.createElement('em');
       playing.className = 'pp-playing';
       name.append(playing);
@@ -1258,12 +1275,10 @@ export function buildPlayPanel(
       tile.classList.toggle('has-waiting', waitingIn(gameSpecId, pace) > 0);
       const text = document.createElement('span');
       text.className = 'pp-tile-text';
-      const name = document.createElement('span');
-      name.className = 'pp-name';
       // A tile is half the panel wide, so a name too long for it takes its
       // short form instead of an ellipsis; the full name stays the title.
       const short = TILE_NAME_KEYS[gameSpecId];
-      name.textContent = short ? t(short, {}, locale) : label;
+      const name = gameName(gameSpecId, short ? t(short, {}, locale) : label);
       if (short) name.title = label;
       text.append(name);
       if (paceNote) {
