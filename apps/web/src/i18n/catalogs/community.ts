@@ -16,6 +16,7 @@ export const EN_COMMUNITY = {
   'challenge.liveReconnecting': 'Reconnecting. Invitation status may be out of date.',
   'challenge.liveDismiss': 'Dismiss',
   'challenge.liveOpenGame': 'Open game',
+  'challenge.liveTabTitle': 'Game invite',
 
   'profile.championLabel': '{variant} {pace} champion',
   'inbox.searchPlaceholder': 'Search or start new conversation',

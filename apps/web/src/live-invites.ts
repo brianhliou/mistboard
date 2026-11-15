@@ -369,6 +369,30 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
     }
   }
 
+  // The tray can't be seen from another tab, and an invitation lasts a minute,
+  // so a hidden tab carries the count in its title until the player looks.
+  let titlePrefix: string | null = null;
+  function updateTitle(): void {
+    const count =
+      userId && !suspended && document.visibilityState === 'hidden'
+        ? [...records.values()].filter(
+            (invite) =>
+              !invite.isMine &&
+              invite.status === 'pending' &&
+              !dismissed.has(invite.id) &&
+              Date.parse(invite.expiresAt) > Date.now(),
+          ).length
+        : 0;
+    const base =
+      titlePrefix && document.title.startsWith(titlePrefix)
+        ? document.title.slice(titlePrefix.length)
+        : document.title;
+    titlePrefix = count ? `(${count}) ${t('challenge.liveTabTitle')} · ` : null;
+    const next = `${titlePrefix ?? ''}${base}`;
+    if (document.title !== next) document.title = next;
+  }
+  const onVisibility = () => updateTitle();
+
   function render(): void {
     // An accepted offer has done its job once its player is in that room; left
     // up, its card would cover the board until dismissed by hand.
@@ -413,6 +437,7 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
       connection.textContent = t('challenge.liveReconnecting');
     } else connection?.remove();
     tray.hidden = !userId || suspended || cards.size === 0;
+    updateTitle();
     tick(tray);
     for (const [host, id] of waiting) {
       const invite = records.get(id);
@@ -500,6 +525,7 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
   };
   window.addEventListener('pagehide', onPageHide);
   window.addEventListener('pageshow', onPageShow);
+  document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('storage', onStorage);
   window.addEventListener(accountPreferencesChangedEvent, onPreferences);
 
@@ -526,6 +552,7 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
       pause();
       waiting.clear();
       tray.remove();
+      document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('storage', onStorage);

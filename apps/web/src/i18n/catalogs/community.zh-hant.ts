@@ -22,6 +22,7 @@ export const ZH_HANT_COMMUNITY = {
   'challenge.liveReconnecting': '正在重新連線，邀請狀態可能尚未更新。',
   'challenge.liveDismiss': '關閉',
   'challenge.liveOpenGame': '進入對局',
+  'challenge.liveTabTitle': '對局邀請',
 
   'profile.championLabel': '{variant}{pace}冠軍',
   'inbox.searchPlaceholder': '搜尋或開始新對話',
