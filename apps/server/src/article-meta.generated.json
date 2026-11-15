@@ -805,7 +805,11 @@
     "description": "Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.",
     "status": "published",
     "publishedAt": "2026-11-10",
-    "liveAt": 1794326400000
+    "liveAt": 1794326400000,
+    "zhTitles": {
+      "zh-hans": "三国暗棋规则",
+      "zh-hant": "三國暗棋規則"
+    }
   },
   "titled-players": {
     "title": "Bring your title to Mistboard",

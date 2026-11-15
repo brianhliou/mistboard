@@ -238,8 +238,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-11-06, not native-reviewed, from the English updated
   // 2026-11-06. A hidden playtest page; zh inherits its noindex by slug.
   'gomoku',
-  // three-kingdoms-banqi joins this list when it is published: its dictionary
-  // entries are in below and three-kingdoms-banqi-rules.test.ts checks them.
+  // Machine-drafted 2026-11-14, not native-reviewed, from the signed-off English.
+  // Piece names follow the banqi rules translations.
+  'three-kingdoms-banqi',
 ] as const;
 
 // Published articles that deliberately have no zh pages, each with its reason.
@@ -250,8 +251,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
-  'three-kingdoms-banqi':
-    'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -612,6 +611,7 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules': '五子棋规则',
   'Gomoku board': '五子棋棋盘',
   'Five in a row wins': '连五获胜',
+  // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三国暗棋规则',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
     '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
@@ -624,7 +624,7 @@ const ZH_HANS: Record<string, string> = {
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神来也（Gamesofa）的暗棋 App 里玩过三国模式、想看到成文规则的暗棋玩家，以及对计分版暗棋感兴趣的象棋棋手。',
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
-    '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键就在于该翻哪颗子、该吃哪颗子、哪颗子可以先放着不管。',
+    '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键在于该翻哪颗子、该吃哪颗子，以及哪些子可以暂时让对方有机会吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
     '神来也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三国暗棋。Mistboard 采用自己的版本，与神来也没有任何关联。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
@@ -664,7 +664,7 @@ const ZH_HANS: Record<string, string> = {
   'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
     '先得到 **100 分**的一方立即获胜，即使棋盘上还有棋子。每一方的十六颗棋子共值 135 分，所以还没被吃光，对局就已经结束了。',
   'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
-    '如果连续 40 步（双方各走一步各算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜，分数相同则为和棋。没有合法着法的一方判负，但这种情况很少见：必须已经没有可翻的暗子，而且所有已翻开的己方棋子都被困住。',
+    '如果连续 40 步（一方走一次算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜，分数相同则为和棋。没有合法着法的一方判负，但这种情况很少见：必须已经没有可翻的暗子，而且所有已翻开的己方棋子都被困住。',
   'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
     '这里重复局面不会判和，这一点和[暗棋](/rules/banqi)不同；最后由 40 步的计数来决定。唯一的限制在捉子上。',
   'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
@@ -672,7 +672,7 @@ const ZH_HANS: Record<string, string> = {
   'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
     '如果一步捉子会让同一局面（且轮到同一方走）出现第三次，你就不能走这一步。',
   'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
-    '被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；如果追捉让对方的子走到新的交叉点，局面就不会重复。',
+    '被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；追捉走到新的交叉点时，局面就不会重复。',
   'If forbidding the chase would leave you with no legal move, you may play it.':
     '如果禁止这步捉子后你就没有其他合法着法，那么仍然可以走这一步。',
   'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
@@ -7521,6 +7521,7 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules': '五子棋規則',
   'Gomoku board': '五子棋棋盤',
   'Five in a row wins': '連五獲勝',
+  // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三國暗棋規則',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
     '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
@@ -7533,7 +7534,7 @@ const ZH_HANT: Record<string, string> = {
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神來也（Gamesofa）的暗棋 App 裡玩過三國模式、想看到成文規則的暗棋玩家，以及對計分版暗棋感興趣的象棋棋手。',
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
-    '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵就在於該翻哪顆子、該吃哪顆子、哪顆子可以先放著不管。',
+    '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵在於該翻哪顆子、該吃哪顆子，以及哪些子可以暫時讓對方有機會吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
     '神來也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三國暗棋。Mistboard 採用自己的版本，與神來也沒有任何關聯。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
@@ -7573,7 +7574,7 @@ const ZH_HANT: Record<string, string> = {
   'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
     '先得到 **100 分**的一方立即獲勝，即使棋盤上還有棋子。每一方的十六顆棋子共值 135 分，所以還沒被吃光，對局就已經結束了。',
   'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
-    '如果連續 40 步（雙方各走一步各算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝，分數相同則為和棋。沒有合法著法的一方判負，但這種情況很少見：必須已經沒有可翻的暗子，而且所有已翻開的己方棋子都被困住。',
+    '如果連續 40 步（一方走一次算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝，分數相同則為和棋。沒有合法著法的一方判負，但這種情況很少見：必須已經沒有可翻的暗子，而且所有已翻開的己方棋子都被困住。',
   'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
     '這裡重複局面不會判和，這一點和[暗棋](/rules/banqi)不同；最後由 40 步的計數來決定。唯一的限制在捉子上。',
   'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
@@ -7581,7 +7582,7 @@ const ZH_HANT: Record<string, string> = {
   'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
     '如果一步捉子會讓同一局面（且輪到同一方走）出現第三次，你就不能走這一步。',
   'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
-    '被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；如果追捉讓對方的子走到新的交叉點，局面就不會重複。',
+    '被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；追捉走到新的交叉點時，局面就不會重複。',
   'If forbidding the chase would leave you with no legal move, you may play it.':
     '如果禁止這步捉子後你就沒有其他合法著法，那麼仍然可以走這一步。',
   'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
