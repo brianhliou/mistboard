@@ -197,7 +197,7 @@ export async function buildThreeKingdoms(assets: string, scratch: string) {
       ),
     notes: {
       intro:
-        'Level 8 has the first seat and red ink; Level 7 has the second seat and black ink. Level 7 wins on points. The graph is from the first seat. Flip grades compare public pool means, while the die marks reveal luck. Covered tiles remain unknown throughout this replay.',
+        'Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph shows Level 8’s winning chances. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout.',
       comments,
       evidence: {
         ...provenance,

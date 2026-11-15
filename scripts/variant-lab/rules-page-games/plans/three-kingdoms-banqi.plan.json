@@ -250,7 +250,7 @@
                                                                                                                                                                                                                                                                                                                                   "annotations": {
                                                                                                                                                                                                                                                                                                                                     "comments": [
                                                                                                                                                                                                                                                                                                                                       {
-                                                                                                                                                                                                                                                                                                                                        "text": "The black chariot from h2 captures the red elephant on h1. Its 5 points take Level 7 from 95 to the winning target of 100, ending the game at 45 to 100. Seven tiles are still covered; their identities remain unknown in this study."
+                                                                                                                                                                                                                                                                                                                                        "text": "The black chariot on h2 takes the red elephant on h1. Its 5 points bring Level 7 from 95 to 100, which wins the game, 100 to 45. Seven pieces are still face down, and the study never shows what they are."
                                                                                                                                                                                                                                                                                                                                       }
                                                                                                                                                                                                                                                                                                                                     ]
                                                                                                                                                                                                                                                                                                                                   }
@@ -273,7 +273,7 @@
                                                                                                                                                                                                                                                                                                   "annotations": {
                                                                                                                                                                                                                                                                                                     "comments": [
                                                                                                                                                                                                                                                                                                       {
-                                                                                                                                                                                                                                                                                                        "text": "The black horse from g5 captures the red chariot on f3 immediately after that chariot took another black horse. The chariot is worth 15 points; Level 7 reaches 90 against Level 8’s 45. The recapture is more valuable than the 10 points just conceded."
+                                                                                                                                                                                                                                                                                                        "text": "The black horse on g5 takes the red chariot on f3, right after that chariot took another black horse. The chariot is worth 15 and the lost horse 10, so Level 7 comes out ahead, 90 to 45."
                                                                                                                                                                                                                                                                                                       }
                                                                                                                                                                                                                                                                                                     ]
                                                                                                                                                                                                                                                                                                   }
@@ -314,7 +314,7 @@
                                                                                                                                                                                                                               "annotations": {
                                                                                                                                                                                                                                 "comments": [
                                                                                                                                                                                                                                   {
-                                                                                                                                                                                                                                    "text": "The flip on i1 reveals the second red chariot. It provides a mobile piece, but it does not itself score points: Level 8 still trails 20 to 55. Its pool-mean expectation for this flip is 3.7%, and this chariot outcome gives 3.6%, so the draw changes little."
+                                                                                                                                                                                                                                    "text": "The flip on i1 turns up the second red chariot. It is a strong piece but scores nothing by itself: Level 8 still trails 20 to 55. Averaged over the pieces still face down, the flip was worth 3.7% for Level 8; this chariot gives 3.6%, so the draw changes little."
                                                                                                                                                                                                                                   }
                                                                                                                                                                                                                                 ]
                                                                                                                                                                                                                               }
@@ -365,7 +365,7 @@
                                                                                                                                       "annotations": {
                                                                                                                                         "comments": [
                                                                                                                                           {
-                                                                                                                                            "text": "The red soldier on e2 takes the black chariot on e3. Three Kingdoms uses movement-based captures here, so the soldier can take the chariot. Level 8 gets its first 15 points, leaving the score 15 to 45."
+                                                                                                                                            "text": "The red soldier on e2 takes the black chariot on e3. In Three Kingdoms any piece may take any piece it reaches, so a soldier can take a chariot. Level 8 scores its first 15 points; the score is 15 to 45."
                                                                                                                                           }
                                                                                                                                         ]
                                                                                                                                       }
@@ -402,7 +402,7 @@
                                                                           "annotations": {
                                                                             "comments": [
                                                                               {
-                                                                                "text": "The black cannon on h2 captures the red horse on e2 across the covered g2 square. The red chariot has left f2, so g2 is the only screen. The capture adds 10 points to Level 7’s total without revealing the screen’s identity."
+                                                                                "text": "The black cannon on h2 jumps the face-down piece on g2 to take the red horse on e2. The red chariot has left f2, so g2 is the only piece in between. The capture adds 10 points for Level 7, and the jumped piece stays unknown."
                                                                               }
                                                                             ]
                                                                           }
@@ -415,7 +415,7 @@
                                                               "annotations": {
                                                                 "comments": [
                                                                   {
-                                                                    "text": "The flip on f2 reveals a red chariot. Before the draw, the public-pool comparison prefers moving the red horse from e2 to f4 by 4.0 percentage points. The side line shows that move without using the chariot’s identity to choose it."
+                                                                    "text": "The flip on f2 turns up a red chariot. Before the flip, the analysis preferred moving the red horse from e2 to f4, by 4.0 percentage points. The side line shows that move, chosen without knowing what f2 held."
                                                                   }
                                                                 ]
                                                               }
@@ -450,7 +450,7 @@
                                   "annotations": {
                                     "comments": [
                                       {
-                                        "text": "The black chariot captures the red cannon on g4. Level 7 has already taken the red advisor for 5 points; this cannon adds 10 and brings its total to 15. Captured-piece points, rather than the highest surviving rank, determine progress toward the win."
+                                        "text": "The black chariot takes the red cannon on g4. Level 7 already has 5 points for the red advisor; the cannon adds 10, for 15. Captures score the points, and the first to 100 wins, so rank alone does not decide this game."
                                       }
                                     ]
                                   }
@@ -467,7 +467,7 @@
               "annotations": {
                 "comments": [
                   {
-                    "text": "The opening flip reveals a red advisor on f4, giving Level 8 red ink and Level 7 black ink. Level 8’s public-pool expectation for this flip is 54.8%; the advisor outcome gives 53.7%. The draw and the choice of square are measured separately."
+                    "text": "The opening flip turns up a red advisor on f4, so Level 8 plays red and Level 7 plays black. Averaged over every piece still face down, this flip was worth 54.8% for Level 8; the advisor gives 53.7%. The grade judges the choice of point, and the die judges the draw."
                   }
                 ]
               }
@@ -476,7 +476,7 @@
           "annotations": {
             "comments": [
               {
-                "text": "Level 8 has the first seat and red ink; Level 7 has the second seat and black ink. Level 7 wins on points. The graph is from the first seat. Flip grades compare public pool means, while the die marks reveal luck. Covered tiles remain unknown throughout this replay."
+                "text": "Level 8 moves first and plays red; Level 7 plays black and wins on points. The graph shows Level 8’s winning chances. A flip’s grade compares it with the average over every piece still face down; the die shows whether the piece that turned up was a lucky draw. Pieces still face down stay unknown throughout."
               }
             ]
           }
