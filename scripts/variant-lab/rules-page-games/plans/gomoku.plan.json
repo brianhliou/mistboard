@@ -1,0 +1,367 @@
+{
+  "create": {
+    "owner": "mistboard",
+    "name": "Gomoku: an engine game, annotated",
+    "description": "Rapfi at Level 8 (Black) against Rapfi at Level 7 (White) from a dealt opening, read by Rapfi at a far deeper search. From the Gomoku rules page at mistboard.com/rules/gomoku.",
+    "visibility": "public",
+    "chapter": {
+      "name": "Rapfi Level 8 vs Rapfi Level 7",
+      "variant": "gomoku",
+      "orientation": "black",
+      "tree": {
+        "version": 1,
+        "rootFen": "15/15/15/15/15/8W6/9W5/7BB6/15/6W8/15/15/15/15/15 b",
+        "root": {
+          "children": [
+            {
+              "uci": "i7",
+              "children": [
+                {
+                  "uci": "k8",
+                  "children": [
+                    {
+                      "uci": "h11",
+                      "children": [
+                        {
+                          "uci": "i6",
+                          "children": [
+                            {
+                              "uci": "h9",
+                              "children": [
+                                {
+                                  "uci": "h10",
+                                  "children": [
+                                    {
+                                      "uci": "j7",
+                                      "children": [
+                                        {
+                                          "uci": "g10",
+                                          "children": [
+                                            {
+                                              "uci": "f10",
+                                              "children": [
+                                                {
+                                                  "uci": "g9",
+                                                  "children": [
+                                                    {
+                                                      "uci": "f8",
+                                                      "children": [
+                                                        {
+                                                          "uci": "g8",
+                                                          "children": [
+                                                            {
+                                                              "uci": "g7",
+                                                              "children": [
+                                                                {
+                                                                  "uci": "h7",
+                                                                  "children": [
+                                                                    {
+                                                                      "uci": "f9",
+                                                                      "children": [
+                                                                        {
+                                                                          "uci": "f7",
+                                                                          "children": [
+                                                                            {
+                                                                              "uci": "h6",
+                                                                              "children": [
+                                                                                {
+                                                                                  "uci": "e9",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "uci": "j10",
+                                                                                      "children": [
+                                                                                        {
+                                                                                          "uci": "i9",
+                                                                                          "children": [
+                                                                                            {
+                                                                                              "uci": "g11",
+                                                                                              "children": [
+                                                                                                {
+                                                                                                  "uci": "i11",
+                                                                                                  "children": [
+                                                                                                    {
+                                                                                                      "uci": "l7",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "uci": "j4",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "uci": "g5",
+                                                                                                              "children": [
+                                                                                                                {
+                                                                                                                  "uci": "f4",
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "uci": "l5",
+                                                                                                                      "children": [
+                                                                                                                        {
+                                                                                                                          "uci": "k6",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "uci": "f12",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "uci": "f11",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "uci": "l6",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "uci": "j5",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "uci": "k4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "uci": "l8",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "uci": "j3",
+                                                                                                                                                      "children": [
+                                                                                                                                                        {
+                                                                                                                                                          "uci": "i2",
+                                                                                                                                                          "children": [
+                                                                                                                                                            {
+                                                                                                                                                              "uci": "m5",
+                                                                                                                                                              "children": [
+                                                                                                                                                                {
+                                                                                                                                                                  "uci": "i13",
+                                                                                                                                                                  "children": [
+                                                                                                                                                                    {
+                                                                                                                                                                      "uci": "i12",
+                                                                                                                                                                      "children": [
+                                                                                                                                                                        {
+                                                                                                                                                                          "uci": "k13",
+                                                                                                                                                                          "children": [
+                                                                                                                                                                            {
+                                                                                                                                                                              "uci": "j12",
+                                                                                                                                                                              "children": [
+                                                                                                                                                                                {
+                                                                                                                                                                                  "uci": "k7",
+                                                                                                                                                                                  "children": [
+                                                                                                                                                                                    {
+                                                                                                                                                                                      "uci": "k9",
+                                                                                                                                                                                      "children": [
+                                                                                                                                                                                        {
+                                                                                                                                                                                          "uci": "j8",
+                                                                                                                                                                                          "children": [
+                                                                                                                                                                                            {
+                                                                                                                                                                                              "uci": "m3",
+                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                {
+                                                                                                                                                                                                  "uci": "n8",
+                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                    {
+                                                                                                                                                                                                      "uci": "m8",
+                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                        {
+                                                                                                                                                                                                          "uci": "m6",
+                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                            {
+                                                                                                                                                                                                              "uci": "l3",
+                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                {
+                                                                                                                                                                                                                  "uci": "l4",
+                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                      "uci": "k3",
+                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                          "uci": "n3",
+                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                              "uci": "i3",
+                                                                                                                                                                                                                              "children": [],
+                                                                                                                                                                                                                              "annotations": {
+                                                                                                                                                                                                                                "comments": [
+                                                                                                                                                                                                                                  {
+                                                                                                                                                                                                                                    "text": "i3 makes five in a row, i3 to m3, and Black wins."
+                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                ]
+                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                      ],
+                                                                                                                                                                                                                      "annotations": {
+                                                                                                                                                                                                                        "comments": [
+                                                                                                                                                                                                                          {
+                                                                                                                                                                                                                            "text": "k3 fills the gap: j3, k3, l3 and m3 are four in a row with the points at both ends empty. White can block only one of them."
+                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                        ]
+                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                }
+                                                                                                                                                                                                              ],
+                                                                                                                                                                                                              "annotations": {
+                                                                                                                                                                                                                "comments": [
+                                                                                                                                                                                                                  {
+                                                                                                                                                                                                                    "text": "l3 does two jobs. It makes four in column l (l3, l5, l6, l7), which White must block at l4, and it puts a third stone in row 3 beside j3 and m3."
+                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                ]
+                                                                                                                                                                                                              }
+                                                                                                                                                                                                            }
+                                                                                                                                                                                                          ]
+                                                                                                                                                                                                        }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                                    }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                                }
+                                                                                                                                                                                              ]
+                                                                                                                                                                                            }
+                                                                                                                                                                                          ]
+                                                                                                                                                                                        }
+                                                                                                                                                                                      ]
+                                                                                                                                                                                    }
+                                                                                                                                                                                  ]
+                                                                                                                                                                                }
+                                                                                                                                                                              ]
+                                                                                                                                                                            }
+                                                                                                                                                                          ]
+                                                                                                                                                                        }
+                                                                                                                                                                      ]
+                                                                                                                                                                    }
+                                                                                                                                                                  ]
+                                                                                                                                                                }
+                                                                                                                                                              ],
+                                                                                                                                                              "annotations": {
+                                                                                                                                                                "comments": [
+                                                                                                                                                                  {
+                                                                                                                                                                    "text": "Level 8's own search now sees the forced five too. The deep reading had seen it since f4."
+                                                                                                                                                                  }
+                                                                                                                                                                ]
+                                                                                                                                                              }
+                                                                                                                                                            }
+                                                                                                                                                          ]
+                                                                                                                                                        }
+                                                                                                                                                      ]
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ],
+                                                                                                                      "annotations": {
+                                                                                                                        "comments": [
+                                                                                                                          {
+                                                                                                                            "text": "l5 makes four: h9, i8, j7 and l5 on one diagonal, with the point k6 empty between them. One more stone there would be five, so White must fill it at once."
+                                                                                                                          }
+                                                                                                                        ]
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  ],
+                                                                                                                  "annotations": {
+                                                                                                                    "glyphs": [
+                                                                                                                      4
+                                                                                                                    ],
+                                                                                                                    "comments": [
+                                                                                                                      {
+                                                                                                                        "text": "White blocks the lower end, f4. Rapfi wanted the upper end, j8. After f4 the deep reading finds a forced win for Black: whatever White plays, Black can make five."
+                                                                                                                      }
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              ],
+                                                                                                              "annotations": {
+                                                                                                                "comments": [
+                                                                                                                  {
+                                                                                                                    "text": "For the first 25 stones the deep reading calls the game close to even. Black's g5 makes three in a row on the diagonal g5, h6, i7 with both ends open. Left alone, it becomes four with two ways to finish, so White has to block one end."
+                                                                                                                  }
+                                                                                                                ]
+                                                                                                              }
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            }
+                                                                                          ]
+                                                                                        }
+                                                                                      ]
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "annotations": {
+            "comments": [
+              {
+                "text": "Rapfi at Level 8 (Black) against Rapfi at Level 7 (White), the settings of Mistboard's two strongest Gomoku bots, from a dealt opening: Black's h8 and i8, White's g6, j9 and i10. Rapfi then read every position again, searching a million positions each time where Level 8 searches 80,000 and Level 7 25,000. The graph is Black's chance of winning by that reading, and the mark ?? grades the one move that changed it."
+              }
+            ]
+          }
+        }
+      },
+      "tags": {
+        "black": "Rapfi Level 8",
+        "white": "Rapfi Level 7",
+        "result": "1-0",
+        "event": "Rapfi Level 8 vs Level 7, Mistboard bot settings",
+        "date": "2026-11-14"
+      },
+      "scoreSeries": {
+        "side": "black",
+        "series": [
+          {
+            "name": "Rapfi",
+            "color": "a",
+            "values": [
+              0.5137, 0.4988, 0.4875, 0.4863, 0.4975, 0.4825, 0.4775, 0.475, 0.4813, 0.4788, 0.4775,
+              0.4788, 0.48, 0.48, 0.4838, 0.4763, 0.4963, 0.475, 0.4975, 0.5, 0.5, 0.5, 0.5, 0.5,
+              0.5125, 0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+              1, 1, 1, 1
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "ops": []
+}

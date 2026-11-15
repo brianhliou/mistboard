@@ -1788,6 +1788,37 @@ describe('Gomoku study embeds', () => {
     });
   }
 
+  it('shows a chapter glyph on the sheet and beside its stone, and the comment under its move', async () => {
+    const annotated = chapter(dealt);
+    annotated.root.root = {
+      children: [
+        {
+          uci: 'a2',
+          annotations: { glyphs: [4], comments: [{ text: 'White blocks too late.' }] },
+          children: [{ uci: 'o14', children: [] }],
+        },
+      ],
+    } as never;
+    stubFetch(200, { chapters: [annotated] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+    expect(root.querySelector('.review-move-list__suffix')?.textContent?.trim()).toBe('??');
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'White blocks too late.',
+    );
+    // No badge before the move, one beside a2 on it, none once the next move is shown.
+    expect(root.querySelector('.gomoku-glyph')).toBeNull();
+    const next = root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!;
+    next.click();
+    const badge = root.querySelector('.gomoku-glyph[data-square="a2"]');
+    expect(badge?.querySelector('.xq-marker--blunder')).not.toBeNull();
+    expect(badge?.textContent).toContain('??');
+    next.click();
+    expect(root.querySelector('.gomoku-glyph')).toBeNull();
+    root.remove();
+  });
+
   it('opens a dealt root without moves and clamps a deep link to the legal prefix', async () => {
     for (const [moves, total] of [
       [[], 0],

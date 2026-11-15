@@ -486,7 +486,11 @@ async function mountGomokuEmbed(
     railWidthPx: embedRailWidthPx('gomoku'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) => mountGomokuReplayBoard(host, line, hooks),
+    // A study chapter's glyphs and comments, on the sheet and beside the stone.
+    mountBoard: async (host, hooks) => {
+      const { glyphs, notes } = chapterAnnotations(chapter);
+      return mountGomokuReplayBoard(host, line, hooks, { glyphs, notes });
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
