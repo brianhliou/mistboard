@@ -518,10 +518,19 @@ export function directoryOpponents(
   const byId = new Map(bots.map((bot) => [bot.id, bot]));
   const opponents: DirectoryOpponent[] = [];
   for (const opponent of BOT_OPPONENTS) {
+    // Gomoku presents full-strength Rapfi as the ladder's top choice. Keep
+    // the shared opponent map (and its /data filters) unchanged.
+    if (gameSpecId === 'gomoku' && opponent.id === 'rapfi-strongest') continue;
     const members: DirectoryMember[] = [];
     for (const member of opponent.members) {
       const bot = byId.get(member.botId);
       if (bot && offersGame(bot, gameSpecId)) members.push({ bot, level: member.level });
+    }
+    if (gameSpecId === 'gomoku' && opponent.id === 'rapfi') {
+      const fullStrength = byId.get('rapfi');
+      if (fullStrength && offersGame(fullStrength, gameSpecId)) {
+        members.push({ bot: fullStrength, level: null });
+      }
     }
     if (members.length === 0) continue;
     // A ladder with one member here (Pikafish in xiangqi) is a plain card.
@@ -597,7 +606,10 @@ function buildOpponentCard(
     for (const member of [...opponent.members].reverse()) {
       const option = document.createElement('option');
       option.value = memberKey(member);
-      option.textContent = t('bots.levelName', { level: member.level ?? 0 });
+      option.textContent =
+        member.level === null
+          ? t('bots.fullStrength')
+          : t('bots.levelName', { level: member.level });
       picker.append(option);
     }
     picker.value = memberKey(selected);
@@ -910,6 +922,7 @@ function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
   if (bot.id === 'ab-jchess') return t('bots.abJchessBio');
   if (bot.id === 'jqe') return t('bots.jqeBio');
+  if (bot.id === 'rapfi') return t('thanks.rapfiBotBio');
   if (bot.id === JUNGLE_TOP_BOT_ID) return t('bots.katagoBio');
   if (bot.id === 'misty') return t('bots.mistyBio');
   return undefined;
@@ -921,7 +934,7 @@ function systemBotBio(bot: BotProfile): string | undefined {
 type BotCredit = { label: string; href: string };
 
 export function botCredits(botId: string): BotCredit[] {
-  if (/^rapfi-level-[1-8]$/.test(botId)) {
+  if (botId === 'rapfi' || /^rapfi-level-[1-8]$/.test(botId)) {
     return [
       { label: t('thanks.rapfiAuthors'), href: RAPFI_REPO_URL },
       { label: t('thanks.rapfiBuildAuthor'), href: RAPFI_BUILD_URL },

@@ -209,3 +209,52 @@ test('the engine facts collector carries a stale published rating into the reado
   assert.equal(facts.engines?.staleRatings?.[0]?.botId, 'pikafish');
   assert.ok(!facts.collectorErrors?.some((error) => error.section === 'engines'));
 });
+
+test('Rapfi measurement stamps distinguish build, native network and every serving policy', () => {
+  const ids = ['rapfi-level-1', 'rapfi-level-8', 'rapfi-strongest', 'random-legal-gomoku'];
+  const current = loadBotRatingPins(ids);
+  const sourceRef = stampBotRatingSourceRef('rapfi-calibration', current);
+  assert.equal(new Set(Object.values(current.policies!)).size, ids.length);
+  for (const id of ids) {
+    const netSha256 =
+      id === 'random-legal-gomoku'
+        ? null
+        : '6bc0d1b0ff8e1d857f7f412923cd458f38f1a435087c91ae71fec3676c23ef62';
+    assert.equal(current.nets[id], netSha256);
+    const policy = current.policies![id];
+    assert.ok(policy);
+    assert.deepEqual(readBotRatingStamp(sourceRef, id), {
+      recipe: current.recipe,
+      netSha256,
+      policy,
+    });
+    const row = { ...snapshot, engineId: id, sourceRef };
+    assert.deepEqual(findStaleBotRatings([row], current), []);
+    assert.equal(
+      findStaleBotRatings([row], {
+        ...current,
+        policies: { ...current.policies, [id]: 'different-policy' },
+      }).length,
+      1,
+    );
+    const noPolicy = sourceRef
+      .split(';')
+      .filter((field) => !field.startsWith('policy.'))
+      .join(';');
+    assert.equal(findStaleBotRatings([{ ...row, sourceRef: noPolicy }], current).length, 1);
+    assert.equal(readBotRatingStamp(`${sourceRef};policy.${id}=${policy}`, id), null);
+    assert.equal(
+      readBotRatingStamp(sourceRef.replace(`policy.${id}=${policy}`, `policy.${id}=`), id),
+      null,
+    );
+    assert.equal(findStaleBotRatings([row], { ...current, policies: undefined }).length, 1);
+    assert.throws(() => stampBotRatingSourceRef(`custom;policy.${id}=spoof`, current), /reserved/);
+  }
+  assert.equal(
+    Object.hasOwn(
+      loadBotRatingPins(['rapfi-level-09', 'rapfi-strongest-other']).nets,
+      'rapfi-level-09',
+    ),
+    false,
+  );
+});

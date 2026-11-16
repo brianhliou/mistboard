@@ -5,11 +5,13 @@ import {
   parseGomokuMove,
   parseRapfiOutput,
   RAPFI_LEVELS,
+  RAPFI_STRONGEST,
   type RapfiLevel,
   type RapfiPosition,
   rapfiGameSeed,
   rapfiLevelRequest,
   rapfiPlySeed,
+  rapfiStrongestRequest,
   selectRapfiMove,
 } from '@mistboard/game';
 import { resolveValidatedEngineMove } from './engine-move-guard.js';
@@ -47,7 +49,7 @@ const livePool = new UciEnginePool({
 
 type MoveOptions = GomokuAnalysisOptions & {
   isCurrent?: () => boolean;
-  /** Clock-aware ceiling; nodes and seeded candidate selection remain unchanged. */
+  /** Clock-aware ceiling; the chosen tier's node/selection policy is unchanged. */
   movetimeMs?: number;
   /** Offline calibration supplies its recorded game seed; rooms derive it from id. */
   gameSeed?: number;
@@ -68,12 +70,19 @@ export type GomokuEngineContext = TenantLifecycleContext<
   GomokuRuntimeRoom
 >;
 
+function rapfiTier(engineId: string): { level?: RapfiLevel; nodes?: number; timeMs: number } {
+  if (!isGomokuEngineClientId(engineId)) throw new Error('Unknown Rapfi engine');
+  return engineId === 'rapfi-strongest'
+    ? RAPFI_STRONGEST
+    : RAPFI_LEVELS.find((tier) => engineId === `rapfi-level-${tier.level}`)!;
+}
+
 export async function gomokuLiveEngineMove(
   state: GomokuRoomState,
   engineId: string,
   options: MoveOptions = {},
 ): Promise<GomokuMove | null> {
-  if (!isGomokuEngineClientId(engineId)) throw new Error('Unknown Rapfi engine');
+  const tier = rapfiTier(engineId);
   if (state.status.type !== 'playing') return null;
   const position: RapfiPosition = {
     turn: state.status.turn === 'black' ? 1 : 2,
@@ -89,11 +98,14 @@ export async function gomokuLiveEngineMove(
         : [],
     ),
   };
-  const request = rapfiLevelRequest(
-    position,
-    Number(engineId.at(-1)) as RapfiLevel,
-    rapfiPlySeed(options.gameSeed ?? rapfiGameSeed(state.id), state.ply),
-  );
+  const request =
+    tier.level === undefined
+      ? rapfiStrongestRequest(position)
+      : rapfiLevelRequest(
+          position,
+          tier.level,
+          rapfiPlySeed(options.gameSeed ?? rapfiGameSeed(state.id), state.ply),
+        );
   const searchMs = Math.min(
     request.timeMs,
     Math.max(1, Math.floor(options.movetimeMs ?? request.timeMs)),
@@ -217,7 +229,7 @@ export async function playGomokuEngineMoveIfReady(
   const startedAt = Date.now();
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, Date.now()) : null;
-  const tier = RAPFI_LEVELS[Number(engineId.at(-1)) - 1]!;
+  const tier = rapfiTier(engineId);
   const paceInput = {
     variant: 'gomoku',
     initialMs: clock?.initialMs,

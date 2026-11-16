@@ -70,6 +70,8 @@ export type WebTenantEngineOption = {
   id: string;
   name: string;
   familyName: string;
+  /** A named strength above the numbered levels, localized in setup. */
+  levelLabelKey?: I18nKey;
   kind: string;
 };
 
@@ -421,12 +423,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      engineOptions: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
-        id: `rapfi-level-${level}`,
-        name: `Rapfi Level ${level}`,
-        familyName: 'Rapfi',
-        kind: 'browser',
-      })),
+      engineOptions: [
+        ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+          id: `rapfi-level-${level}`,
+          name: `Rapfi Level ${level}`,
+          familyName: 'Rapfi',
+          kind: 'browser',
+        })),
+        {
+          id: 'rapfi-strongest',
+          name: 'Rapfi Full strength',
+          familyName: 'Rapfi',
+          levelLabelKey: 'bots.fullStrength',
+          kind: 'container',
+        },
+      ],
       defaultEngineId: 'rapfi-level-1',
       // The picker stays unlisted. Admins have the same ?play deep-link door
       // as Three Kingdoms banqi, for a friend room or the browser bot.
