@@ -60,6 +60,8 @@ export const BOT_OPPONENTS: readonly BotOpponent[] = [
     name: 'Rapfi',
     members: ladder(ONE_TO_EIGHT, (level) => `rapfi-level-${level}`),
   },
+  // Keep the established /data?opponent=rapfi key for Levels 1-8.
+  { id: 'rapfi-strongest', name: 'Rapfi', members: [{ botId: 'rapfi', level: null }] },
   { id: 'misty', name: 'Misty', members: [{ botId: 'misty', level: null }] },
   { id: 'katago', name: 'KataGo', members: [{ botId: 'katago', level: null }] },
 ];

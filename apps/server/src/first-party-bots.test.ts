@@ -17,6 +17,31 @@ import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
+test('Rapfi fronts the distinct strongest Gomoku engine without absorbing Levels 1-8', () => {
+  const bot = firstPartyBotForId('rapfi');
+  assert.ok(bot);
+  assert.equal(bot.displayName, 'Rapfi');
+  assert.deepEqual(bot.engines, { gomoku: 'rapfi-strongest' });
+  assert.equal(bot.defaultGameSpecId, 'gomoku');
+  assert.equal(firstPartyBotForEngine('rapfi-strongest'), bot);
+  assert.equal(firstPartyBotEngineFor('rapfi', 'gomoku'), 'rapfi-strongest');
+  assert.equal(firstPartyBotEngineFor('rapfi', 'xiangqi'), null);
+  assert.ok(
+    botEngineAttributions().some(
+      (row) =>
+        row.botId === 'rapfi' && row.variant === 'gomoku' && row.engineId === 'rapfi-strongest',
+    ),
+  );
+  for (let level = 1; level <= 8; level += 1) {
+    const id = `rapfi-level-${level}`;
+    assert.equal(firstPartyBotForEngine(id)?.id, id);
+    assert.equal(firstPartyBotEngineFor(id, 'gomoku'), id);
+  }
+  for (const id of ['rapfi-level-9', 'rapfi-strongest-extra', 'rapfi-random']) {
+    assert.equal(firstPartyBotForEngine(id), null, id);
+  }
+});
+
 test('Misty level snapshots resolve only engines offered for that variant', () => {
   for (const [variant, base] of [
     ['banqi', 'misty-banqi'],
