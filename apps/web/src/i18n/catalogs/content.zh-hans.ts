@@ -536,7 +536,7 @@ export const ZH_HANS_CONTENT = {
   'champions.statLosses': '负',
   'champions.barLabel': '{wins} 胜，{draws} 和，{losses} 负',
   'champions.tookPikafish':
-    '2026-11-13 在对 Fairy-Stockfish 8 级的头衔赛中获胜，共 40 局，得分率 63%。',
+    '2026-11-14 在对 Fairy-Stockfish 8 级的头衔赛中获胜，共 38 局，得分率 68%。',
   'champions.aboutPikafish':
     '源自 Stockfish 的开源象棋引擎。在这里它使用公开的 CC0 Fairy-Stockfish 象棋网络。',
   'champions.tookAbJchess2': '2026-10-31 从 jqe 手中夺回头衔，共 600 局，得分率 57%。',
