@@ -31,8 +31,6 @@ export const fanfanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-15',
-  updatedAt: '2026-11-15',
-  updateNote: 'Added an annotated Level 7 versus Level 8 engine game.',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
@@ -279,23 +277,25 @@ export const fanfanqiArticle: Article = {
         },
       ],
     },
-    {
-      heading: 'An engine game',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
-        },
-        ...(localStudyPath
-          ? [{
+    // The section ships only with its study: dev previews the local copy; the
+    // production study id, updatedAt and updateNote land together after review.
+    ...(localStudyPath
+      ? [{
+          heading: 'An engine game',
+          blocks: [
+            {
+              kind: 'paragraph' as const,
+              text: "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+            },
+            {
               kind: 'embed' as const,
               path: localStudyPath,
               title: 'Fanfanqi: Level 7 versus Level 8, annotated',
               aspect: [702, 480] as [number, number],
-            }]
-          : []),
-      ],
-    },
+            },
+          ],
+        }]
+      : []),
     {
       heading: 'Play on Mistboard',
       blocks: [
