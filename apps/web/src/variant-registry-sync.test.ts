@@ -330,6 +330,21 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     ).toEqual([]);
   });
 
+  it('every server watch channel has a web replay adapter', () => {
+    // A channel the server lists but the web cannot mount falls through to the
+    // chess replay path, which 404s on the tenant's room ids and shows "Replay
+    // feed unavailable". Fanfanqi launched that way on 2026-11-15.
+    const missing = serverTenants
+      .filter((registration) => registration.watch)
+      .filter(
+        (registration) =>
+          !webVariantTenants().find((tenant) => tenant.gameSpecId === registration.gameSpecId)
+            ?.watch,
+      )
+      .map((registration) => registration.gameSpecId);
+    expect(missing).toEqual([]);
+  });
+
   it('every searchable variant links its games where the web mounts them', () => {
     // /games/search rows carry a server-built reviewUrl (crosstableReviewUrl,
     // from the server registry's export.gameRouteBase). The web decides where a
