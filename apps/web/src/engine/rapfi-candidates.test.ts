@@ -311,6 +311,37 @@ describe('Rapfi structured output', () => {
 });
 
 describe('Rapfi candidate commands and selection', () => {
+  it('keeps strongest separate from Levels 1-8 with time-only best-move commands', () => {
+    expect(shared.RAPFI_STRONGEST).toEqual({ timeMs: 5000 });
+    expect(shared.RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    for (const position of [
+      empty,
+      { turn: 2 as const, stones: [{ x: 7, y: 7, player: 1 as const }] },
+    ]) {
+      const request = shared.rapfiStrongestRequest(position);
+      expect(request).toEqual({
+        timeMs: 5000,
+        lines: [
+          'START 15',
+          'INFO rule 0',
+          'INFO timeout_turn 5000',
+          position.stones.length ? 'BOARD\n7,7,2\nDONE' : 'BEGIN',
+        ],
+      });
+      expect('choice' in request).toBe(false);
+      expect(request.lines.some((line) => /max_node|YXNBEST/.test(line))).toBe(false);
+    }
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity, null])(
+    'rejects an invalid node budget %s instead of silently dropping it',
+    (nodes) => {
+      expect(() => shared.rapfiCommands(empty, { nodes: nodes as number, timeMs: 1000 })).toThrow(
+        'Invalid Rapfi budget',
+      );
+    },
+  );
+
   it('loads the position without searching, then requests YXNBEST with structured detail', () => {
     const commands = rapfi.rapfiCommands(
       {
