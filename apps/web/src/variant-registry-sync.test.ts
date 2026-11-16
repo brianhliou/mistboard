@@ -102,7 +102,7 @@ describe('FFQ banqi launch preparation', () => {
     expect(server).toMatchObject({
       roomIdPrefix: 'ffq_',
       watch: { channelId: 'ffq-banqi', family: 'xiangqi' },
-      export: null,
+      export: { gameRouteBase: '/ffq-banqi/game', finishedGame: expect.any(Function) },
       card: null,
     });
     expect(server?.admitsConnection).toBeTypeOf('function');

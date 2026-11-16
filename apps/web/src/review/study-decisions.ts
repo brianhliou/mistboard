@@ -10,6 +10,7 @@ import {
   banqiDecisionOverlay,
   summarizeDecisions as summarizeBanqi,
 } from './banqi-decisions.js';
+import { ffqBanqiDecisionOverlay } from './ffq-banqi-decisions.js';
 import { type JieqiDecision, jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
 import { threeKingdomsBanqiDecisionOverlay } from './three-kingdoms-banqi-decisions.js';
 
@@ -31,7 +32,7 @@ function isLuckRow(raw: unknown): raw is JieqiDecision {
   );
 }
 
-function isThreeKingdomsRow(raw: unknown): boolean {
+function isPoolMeanRow(raw: unknown, coordinate: RegExp): boolean {
   if (
     !isLuckRow(raw) ||
     !isWin(raw.bestWin) ||
@@ -61,13 +62,17 @@ function isThreeKingdomsRow(raw: unknown): boolean {
         isObject(candidate) &&
         Object.keys(candidate).every((key) => ['move', 'win', 'played'].includes(key)) &&
         typeof candidate.move === 'string' &&
-        /^[a-i][1-5][a-i][1-5]$/.test(candidate.move) &&
+        coordinate.test(candidate.move) &&
         isWin(candidate.win) &&
         candidate.win <= (raw.bestWin as number) &&
         (candidate.played === undefined || typeof candidate.played === 'boolean'),
     ) && raw.candidates[0].win === raw.bestWin
   );
 }
+const isThreeKingdomsRow = (raw: unknown) => isPoolMeanRow(raw, /^[a-i][1-5][a-i][1-5]$/);
+const isFFQRow = (raw: unknown) => isPoolMeanRow(raw, /^[a-d][0-7][a-d][0-7]$/);
+const ffqStudyDecisionOverlay = (rows: unknown[]) =>
+  ffqBanqiDecisionOverlay({ engineId: 'study', depth: 0, decisions: rows as BanqiDecision[] });
 
 /** Variant id -> row validator + the same overlay used by that variant's review. */
 export const STUDY_DECISION_VARIANTS: Readonly<
@@ -79,6 +84,7 @@ export const STUDY_DECISION_VARIANTS: Readonly<
     }
   >
 > = {
+  'ffq-banqi': { validate: isFFQRow, overlay: ffqStudyDecisionOverlay },
   'three-kingdoms-banqi': {
     validate: isThreeKingdomsRow,
     overlay: (rows) => threeKingdomsBanqiDecisionOverlay(rows as BanqiDecision[]),
@@ -129,6 +135,13 @@ export async function fetchStudyChapterDecisions(
   mountedTree: unknown = savedTree,
 ): Promise<DecisionOverlay | null> {
   if (!hasOwnKey(STUDY_DECISION_VARIANTS, variant)) return null;
+  if (variant === 'ffq-banqi') {
+    const opening = (tree: unknown) => {
+      const root = tree as { replay?: unknown; initialRevealed?: unknown } | null;
+      return JSON.stringify({ replay: root?.replay, initialRevealed: root?.initialRevealed });
+    };
+    if (opening(savedTree) !== opening(mountedTree)) return null;
+  }
   const support = STUDY_DECISION_VARIANTS[variant]!;
   try {
     const response = await fetch(

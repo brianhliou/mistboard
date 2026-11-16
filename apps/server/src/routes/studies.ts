@@ -19,6 +19,9 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  createInitialFFQBanqiState,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  FFQ_BANQI_PUBLIC_REPLAY,
   initialStartFen,
   isAdminOnlyStudySpecId,
   isStudyEligibleSpecId,
@@ -26,6 +29,7 @@ import {
   startIsDealt,
   THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
   THREE_KINGDOMS_BANQI_SPEC_ID,
+  validateFFQBanqiReplayTree,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
@@ -94,6 +98,14 @@ async function listAccessFor(request: IncomingMessage): Promise<StudyListAccess>
 }
 
 export function isSerializedTree(value: unknown, variant: string): boolean {
+  if (variant === 'ffq-banqi') {
+    try {
+      validateFFQBanqiReplayTree(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
   if (!value || typeof value !== 'object') return false;
   const tree = value as { version?: unknown; root?: unknown; replay?: unknown; rootFen?: unknown };
   if (
@@ -195,6 +207,35 @@ async function pageOf(
 // path to remember. The create-study flow already mints one; the add-chapter
 // flow did not, which shipped a study whose second chapter would not load.
 export function ensureDealtRoot(variant: string, root: unknown): unknown {
+  if (variant === 'ffq-banqi') {
+    const tree = root as {
+      version?: unknown;
+      replay?: unknown;
+      rootFen?: unknown;
+      root?: { children?: unknown[] };
+    } | null;
+    // The existing create/add-chapter dialogs submit an empty tree. Persist
+    // only the four public setup observations, never the rest of that deal.
+    if (
+      tree?.version === 1 &&
+      tree.replay === undefined &&
+      tree.rootFen === undefined &&
+      !('initialRevealed' in tree) &&
+      Array.isArray(tree.root?.children) &&
+      tree.root.children.length === 0
+    ) {
+      const state = createInitialFFQBanqiState('study', Math.random);
+      return {
+        ...tree,
+        replay: FFQ_BANQI_PUBLIC_REPLAY,
+        initialRevealed: FFQ_BANQI_FACE_UP_SQUARES.map((square) => {
+          const piece = state.board[square]!;
+          return { color: piece.color, role: piece.role };
+        }),
+      };
+    }
+    return root;
+  }
   if (
     variant === 'three-kingdoms-banqi' &&
     root &&
@@ -599,7 +640,9 @@ async function createStudy(
     writeJson(response, 400, { error: 'unsupported_variant' });
     return true;
   }
-  if (!isSerializedTree(chapter.root, variant)) {
+  const chapterRoot =
+    variant === 'ffq-banqi' ? ensureDealtRoot(variant, chapter.root) : chapter.root;
+  if (!isSerializedTree(chapterRoot, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -622,7 +665,7 @@ async function createStudy(
       i18n: parseI18nField(chapter.i18n),
       variant,
       orientation,
-      root: ensureDealtRoot(variant, chapter.root),
+      root: ensureDealtRoot(variant, chapterRoot),
       denorm: chapter.denorm ?? {},
       tags: parseChapterTags(chapter.tags),
     },
@@ -753,7 +796,8 @@ async function addChapter(
     writeJson(response, 400, { error: 'variant_mismatch' });
     return true;
   }
-  if (!isSerializedTree(body.root, variant)) {
+  const chapterRoot = variant === 'ffq-banqi' ? ensureDealtRoot(variant, body.root) : body.root;
+  if (!isSerializedTree(chapterRoot, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -764,7 +808,7 @@ async function addChapter(
     i18n: parseI18nField(body.i18n),
     variant,
     orientation,
-    root: ensureDealtRoot(variant, body.root),
+    root: ensureDealtRoot(variant, chapterRoot),
     denorm: body.denorm ?? {},
     tags: parseChapterTags(body.tags),
   });

@@ -2,6 +2,7 @@ import {
   type BanqiColor,
   type BanqiMove,
   type BanqiSeat,
+  FFQ_BANQI_PUBLIC_REPLAY,
   FFQ_BANQI_SPEC_ID,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
@@ -18,7 +19,11 @@ import {
   banqiPieceGhostSvg,
 } from '../live-banqi-render.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
-import { type FFQBanqiReviewSnapshot, makeFFQBanqiTreeAdapter } from './ffq-banqi-tree-adapter.js';
+import {
+  type FFQBanqiReviewSnapshot,
+  makeFFQBanqiStudyTreeAdapter,
+  makeFFQBanqiTreeAdapter,
+} from './ffq-banqi-tree-adapter.js';
 import { mountTreeReview, type TreePresentation, type TreeReviewConfig } from './tree-review.js';
 
 export function mountFFQBanqiReview(
@@ -34,7 +39,10 @@ export function mountFFQBanqiReview(
     BanqiBoardArrow,
     BanqiBoardMarker
   > = {
-    adapter: makeFFQBanqiTreeAdapter(snapshots, config.moves),
+    adapter:
+      config.initialTree?.replay === FFQ_BANQI_PUBLIC_REPLAY
+        ? makeFFQBanqiStudyTreeAdapter(config.initialTree.initialRevealed!)
+        : makeFFQBanqiTreeAdapter(snapshots, config.moves),
     engine: null,
     fen: (frame) => frame.fen,
     boardHostClassName: 'banqi-postgame-board',

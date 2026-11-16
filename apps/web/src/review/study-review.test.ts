@@ -2,9 +2,12 @@ import { createGomokuRoomState, gomokuFen, importXiangqiGame } from '@mistboard/
 import { describe, expect, it, vi } from 'vitest';
 import continuedRecords from '../../../../packages/game/fixtures/xiangqi-notation/adjudicated-records.json';
 import * as ceval from './engine/ceval.js';
+import { makeFFQBanqiStudyTreeAdapter } from './ffq-banqi-tree-adapter.js';
 import { jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
+import { fetchStudyChapterDecisions } from './study-decisions.js';
 import { mountStudyReview } from './study-review.js';
 import type { SerializedTree } from './tree-serialize.js';
+import { deserializeTree } from './tree-serialize.js';
 import { importXiangqiPgnChapters } from './xiangqi-pgn-chapter.js';
 
 function mainlinePlies(tree: SerializedTree): number {
@@ -12,6 +15,130 @@ function mainlinePlies(tree: SerializedTree): number {
   for (let node = tree.root.children[0]; node; node = node.children[0]) plies++;
   return plies;
 }
+
+describe('Fanfanqi observed study review', () => {
+  const tree: SerializedTree = {
+    version: 1,
+    replay: 'ffq-banqi-public-v1',
+    initialRevealed: [
+      { color: 'red', role: 'cannon' },
+      { color: 'black', role: 'horse' },
+      { color: 'red', role: 'soldier' },
+      { color: 'black', role: 'advisor' },
+    ],
+    root: {
+      annotations: {
+        comments: [{ text: 'Observed opening.', by: 'u1', i18n: { en: 'Observed opening.' } }],
+        glyphs: [1],
+        shapes: [{ kind: 'circle', brush: 'green', orig: 'b3' }],
+        gamebook: { hint: 'Consider the pool.', deviation: 'Try the recorded continuation.' },
+      },
+      children: [
+        {
+          uci: 'c1a1x:G',
+          annotations: { comments: [{ text: 'Public covered capture.' }] },
+          children: [{ uci: '@a0:c', children: [] }],
+        },
+        { uci: '@b0:A', children: [] },
+      ],
+    },
+  };
+  it('round-trips public opening, observed branches and notes with pool-mean grades', async () => {
+    const adapter = makeFFQBanqiStudyTreeAdapter(tree.initialRevealed!);
+    const rebuilt = deserializeTree(adapter, tree);
+    const frames = [
+      rebuilt.root,
+      ...rebuilt.root.children,
+      ...rebuilt.root.children[0]!.children,
+    ].map((node) => node.truth);
+    for (const snapshot of frames) {
+      const payload = JSON.parse(JSON.stringify(snapshot));
+      for (const piece of payload.view.board)
+        if (piece?.faceDown) expect(piece).toEqual({ faceDown: true });
+      expect(JSON.stringify(payload)).not.toMatch(/deal|seed|unknownRole/);
+    }
+    expect(frames[1]!.view.hp).toEqual({ red: 30, black: 60 });
+    expect(frames[1]!.damage).toEqual({ red: 30, black: 0 });
+    expect(frames[2]!.view.hp).toEqual({ red: 60, black: 60 });
+    expect(frames[2]!.view.board[0]).toEqual({ faceDown: true });
+    const root = document.createElement('div');
+    document.body.append(root);
+    vi.stubGlobal('fetch', async () => ({
+      status: 200,
+      json: async () => ({
+        decisions: [
+          {
+            ply: 1,
+            mover: 'red',
+            bestWin: 70,
+            playedWin: 50,
+            realizedWin: 62,
+            playedRank: 2,
+            candidates: [
+              { move: 'b0b0', win: 70 },
+              { move: 'c1a1', win: 50, played: true },
+            ],
+          },
+          {
+            ply: 2,
+            mover: 'black',
+            bestWin: 50,
+            playedWin: 50,
+            realizedWin: 45,
+            playedRank: 1,
+            candidates: [{ move: 'a0a0', win: 50, played: true }],
+          },
+        ],
+      }),
+    }));
+    const overlay = await fetchStudyChapterDecisions('ffq-banqi', 's', 'c', tree);
+    const handle = await mountStudyReview('ffq-banqi', root, {
+      title: 'Observed game',
+      summary: '',
+      ariaLabel: 'Study board',
+      reviewSurface: 'study',
+      initialTree: tree,
+      initialPosition: 'end',
+      storedDecisions: Promise.resolve(overlay),
+    });
+    try {
+      expect(overlay?.byPly.get(1)).toMatchObject({ judgment: 'blunder', luck: 12, playedRank: 2 });
+      expect(overlay?.byPly.get(1)?.candidates?.[0]?.label).toBe('a2 flip');
+      expect(overlay?.totals).toEqual({
+        red: { luck: 12, decisionLoss: 20 },
+        black: { luck: -5, decisionLoss: 0 },
+      });
+      expect(handle.serialize()).toEqual(tree);
+      expect(JSON.stringify(handle.serialize())).not.toMatch(/rootFen|deal|seed|board|general/);
+      await vi.waitFor(() =>
+        expect(root.querySelector('.review-move-list__luck')?.textContent).toContain('+12%'),
+      );
+      root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+      expect(handle.serialize()).toEqual(tree);
+      root.querySelector<HTMLButtonElement>('[data-replay="next"]')?.click();
+      expect(handle.serialize()).toEqual(tree);
+    } finally {
+      handle.destroy();
+      root.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+  it('rejects missing opening observations and dealt roots', async () => {
+    for (const initialTree of [
+      { ...tree, initialRevealed: undefined },
+      { ...tree, rootFen: 'secret' },
+    ]) {
+      await expect(
+        mountStudyReview('ffq-banqi', document.createElement('div'), {
+          title: '',
+          summary: '',
+          ariaLabel: 'Study board',
+          initialTree,
+        }),
+      ).rejects.toThrow();
+    }
+  });
+});
 
 describe('xiangqi study record loading', () => {
   for (const record of continuedRecords.cases) {

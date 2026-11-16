@@ -128,3 +128,53 @@ it('reads Three Kingdoms pool-mean grades in its own 1-based move dialect', asyn
     expect(await fetchStudyChapterDecisions('three-kingdoms-banqi', 's', 'c', saved)).toBeNull();
   }
 });
+
+it('reads Fanfanqi public pool means and refuses identities or a changed opening', async () => {
+  const saved = {
+    replay: 'ffq-banqi-public-v1',
+    initialRevealed: [
+      { color: 'red', role: 'cannon' },
+      { color: 'black', role: 'horse' },
+      { color: 'red', role: 'soldier' },
+      { color: 'black', role: 'advisor' },
+    ],
+    root: { children: [{ uci: 'c1a1x:G', children: [] }] },
+  };
+  const row = {
+    ply: 1,
+    mover: 'red',
+    bestWin: 70,
+    playedWin: 50,
+    realizedWin: 62,
+    playedRank: 2,
+    candidates: [
+      { move: 'b0b0', win: 70 },
+      { move: 'c1a1', win: 50, played: true },
+    ],
+  };
+  vi.stubGlobal('fetch', async () => ({ status: 200, json: async () => ({ decisions: [row] }) }));
+  const overlay = await fetchStudyChapterDecisions('ffq-banqi', 's', 'c', saved);
+  expect(overlay?.byPly.get(1)).toMatchObject({ judgment: 'blunder', luck: 12, playedRank: 2 });
+  expect(overlay?.byPly.get(1)?.candidates?.map((candidate) => candidate.label)).toEqual([
+    'a2 flip',
+    'b3-b1',
+  ]);
+  expect(overlay?.totals?.red).toEqual({ luck: 12, decisionLoss: 20 });
+  for (const changed of [
+    { ...saved, initialRevealed: [...saved.initialRevealed].reverse() },
+    { ...saved, replay: 'unknown' },
+    { ...saved, root: { children: [{ uci: 'c1a1x:g', children: [] }] } },
+  ])
+    expect(await fetchStudyChapterDecisions('ffq-banqi', 's', 'c', saved, changed)).toBeNull();
+  for (const bad of [
+    { hiddenRole: { square: 'b0', role: 'general' } },
+    { candidates: [{ move: '@a0:G', win: 70 }] },
+    { candidates: [{ move: 'a0a0', win: 70, hiddenRole: 'general' }] },
+  ]) {
+    vi.stubGlobal('fetch', async () => ({
+      status: 200,
+      json: async () => ({ decisions: [{ ...row, ...bad }] }),
+    }));
+    expect(await fetchStudyChapterDecisions('ffq-banqi', 's', 'c', saved)).toBeNull();
+  }
+});

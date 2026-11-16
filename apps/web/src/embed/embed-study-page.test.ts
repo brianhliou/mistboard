@@ -21,7 +21,10 @@ import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
 /** Study variants the embed card deliberately refuses by name, each with why. */
-const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {};
+const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
+  'ffq-banqi':
+    'Observed Fanfanqi chapters use the full study review; the compact embed has no observed-snapshot renderer.',
+};
 
 const CHAPTER = {
   id: 'Ue0EgpS7',

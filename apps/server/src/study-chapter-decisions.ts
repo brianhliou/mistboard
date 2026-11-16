@@ -2,6 +2,7 @@
 // keyed to the position AFTER that move. Win percentages are mover POV.
 import {
   applyBanqiMove,
+  applyFFQBanqiReplayMove,
   applyJieqiMove,
   applyThreeKingdomsBanqiMove,
   applyThreeKingdomsBanqiReplayMove,
@@ -9,10 +10,12 @@ import {
   type BanqiMove,
   createInitialThreeKingdomsBanqiReplayState,
   engineUciToBanqiMove,
+  getFFQBanqiLegalMoves,
   getThreeKingdomsBanqiLegalMoves,
   hasOwnKey,
   type JieqiMove,
   parseBanqiFen,
+  parseFFQBanqiReplayMove,
   parseJieqiFen,
   parseThreeKingdomsBanqiFen,
   parseThreeKingdomsBanqiReplayMove,
@@ -20,7 +23,9 @@ import {
   serializedTreeRootFen,
   THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
   type ThreeKingdomsBanqiReplayState,
+  validateFFQBanqiReplayTree,
 } from '@mistboard/game';
+import { ffqBanqiMoveToUci } from './ffq-banqi-engine.js';
 
 export type StudyJieqiDecision = {
   ply: number;
@@ -300,11 +305,97 @@ function validateThreeKingdomsBanqiDecisions(tree: unknown, value: unknown): Stu
   return { engineId: input.engineId, source: input.source, decisions };
 }
 
+/** Both flips and covered cannon captures draw from the shared public pool.
+ * Candidates carry only actions and their pool means, never an outcome identity. */
+function validateFFQBanqiDecisions(tree: unknown, value: unknown): StudyDecisionsInput {
+  const input = decisionInput(value);
+  let state = validateFFQBanqiReplayTree(tree);
+  const chances = new Map<number, { mover: 'red' | 'black'; played: string; legal: Set<string> }>();
+  for (const [index, token] of serializedTreeMainline(tree).entries()) {
+    const move = parseFFQBanqiReplayMove(token)!;
+    if (state.status.type !== 'playing') throw new Error('invalid Fanfanqi mainline');
+    if (state.board[move.to]?.faceDown)
+      chances.set(index + 1, {
+        mover: state.status.turn,
+        played: ffqBanqiMoveToUci(move),
+        legal: new Set(getFFQBanqiLegalMoves(state).map(ffqBanqiMoveToUci)),
+      });
+    state = applyFFQBanqiReplayMove(state, move);
+  }
+  const seen = new Set<number>();
+  const decisions = input.decisions.map((raw): StudyBanqiDecision => {
+    const row = object(raw);
+    keys(row, ['ply', 'mover', 'bestWin', 'playedWin', 'realizedWin', 'playedRank', 'candidates']);
+    const ply = row.ply;
+    if (typeof ply !== 'number' || !Number.isInteger(ply) || !chances.has(ply) || seen.has(ply))
+      throw new Error(
+        'ply must identify a unique mainline flip or covered capture (first move = 1)',
+      );
+    const chance = chances.get(ply)!;
+    if (row.mover !== chance.mover) throw new Error('mover does not match chapter');
+    seen.add(ply);
+    if (
+      row.playedRank !== null &&
+      (typeof row.playedRank !== 'number' ||
+        !Number.isInteger(row.playedRank) ||
+        row.playedRank < 1)
+    )
+      throw new Error('invalid playedRank');
+    if (!Array.isArray(row.candidates) || !row.candidates.length)
+      throw new Error('candidates must include preferred and played pool means');
+    const moves = new Set<string>();
+    const candidates = row.candidates.map((raw) => {
+      const candidate = object(raw);
+      keys(candidate, ['move', 'win', 'played']);
+      if (
+        typeof candidate.move !== 'string' ||
+        !chance.legal.has(candidate.move) ||
+        moves.has(candidate.move)
+      )
+        throw new Error('invalid candidate UCI');
+      moves.add(candidate.move);
+      if (candidate.played !== undefined && typeof candidate.played !== 'boolean')
+        throw new Error('invalid candidate played');
+      if (candidate.played === true && candidate.move !== chance.played)
+        throw new Error('played candidate does not match chapter');
+      return {
+        move: candidate.move,
+        win: win(candidate.win),
+        ...(candidate.played === undefined ? {} : { played: candidate.played as boolean }),
+      };
+    });
+    const bestWin = win(row.bestWin),
+      playedWin = win(row.playedWin);
+    if (candidates[0]!.win !== bestWin || candidates.some((candidate) => candidate.win > bestWin))
+      throw new Error('preferred move score must match bestWin');
+    const played = candidates.find((candidate) => candidate.move === chance.played);
+    if (!played || played.played === false || played.win !== playedWin)
+      throw new Error('played candidate score must match playedWin');
+    if (
+      row.playedRank !== null &&
+      row.playedRank !==
+        1 + candidates.filter((candidate) => candidate.win > playedWin + 1e-9).length
+    )
+      throw new Error('playedRank does not match candidates');
+    return {
+      ply,
+      mover: chance.mover,
+      bestWin,
+      playedWin,
+      realizedWin: win(row.realizedWin),
+      playedRank: row.playedRank as number | null,
+      candidates,
+    };
+  });
+  return { engineId: input.engineId, source: input.source, decisions };
+}
+
 /** Every supported variant has its own validator; there is no fallback. */
 export const STUDY_DECISION_VARIANTS = {
   jieqi: { validate: validateJieqiDecisions },
   banqi: { validate: validateBanqiDecisions },
   'three-kingdoms-banqi': { validate: validateThreeKingdomsBanqiDecisions },
+  'ffq-banqi': { validate: validateFFQBanqiDecisions },
 } as const;
 
 /** Reject rather than strip unknown fields: no captured identity can enter storage. */

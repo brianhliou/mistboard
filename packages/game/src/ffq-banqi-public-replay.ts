@@ -158,3 +158,87 @@ export function applyFFQBanqiReplayMove(
   if (after === before) return fail();
   return after;
 }
+
+/** Validate every observed branch before a study import reaches storage.
+ * Unknown structural fields are refused, so a covered-square identity cannot
+ * ride alongside a legal observation. Returns the anonymous opening state. */
+export function validateFFQBanqiReplayTree(value: unknown): FFQBanqiReplayState {
+  const object = (value: unknown, allowed: readonly string[]): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return fail();
+    if (Object.keys(value).some((key) => !allowed.includes(key))) return fail();
+    return value as Record<string, unknown>;
+  };
+  const tree = object(value, ['version', 'replay', 'initialRevealed', 'root']);
+  if (tree.version !== 1 || tree.replay !== FFQ_BANQI_PUBLIC_REPLAY) return fail();
+  if (!Array.isArray(tree.initialRevealed)) return fail();
+  for (const identity of tree.initialRevealed) object(identity, ['color', 'role']);
+  const initial = createInitialFFQBanqiReplayState(
+    'study',
+    tree.initialRevealed as FFQBanqiReplayIdentity[],
+  );
+  const pending = [{ node: tree.root, state: initial, root: true }];
+  while (pending.length) {
+    const entry = pending.pop()!;
+    const node = object(
+      entry.node,
+      entry.root ? ['children', 'annotations'] : ['uci', 'children', 'annotations'],
+    );
+    let state = entry.state;
+    if (!entry.root) {
+      const move = typeof node.uci === 'string' ? parseFFQBanqiReplayMove(node.uci) : null;
+      if (!move) return fail();
+      state = applyFFQBanqiReplayMove(state, move);
+    }
+    if (node.annotations !== undefined) {
+      const annotations = object(node.annotations, ['comments', 'shapes', 'glyphs', 'gamebook']);
+      if (annotations.comments !== undefined) {
+        if (!Array.isArray(annotations.comments)) return fail();
+        for (const raw of annotations.comments) {
+          const comment = object(raw, ['by', 'text', 'i18n']);
+          if (
+            typeof comment.text !== 'string' ||
+            (comment.by !== undefined && typeof comment.by !== 'string')
+          )
+            return fail();
+          if (
+            comment.i18n !== undefined &&
+            (!comment.i18n ||
+              typeof comment.i18n !== 'object' ||
+              Array.isArray(comment.i18n) ||
+              Object.values(comment.i18n).some((text) => typeof text !== 'string'))
+          )
+            return fail();
+        }
+      }
+      if (annotations.shapes !== undefined) {
+        if (!Array.isArray(annotations.shapes)) return fail();
+        for (const raw of annotations.shapes) {
+          const shape = object(raw, ['kind', 'brush', 'orig', 'dest']);
+          if (
+            !['arrow', 'circle'].includes(String(shape.kind)) ||
+            typeof shape.brush !== 'string' ||
+            typeof shape.orig !== 'string' ||
+            (shape.dest !== undefined && typeof shape.dest !== 'string')
+          )
+            return fail();
+        }
+      }
+      if (
+        annotations.glyphs !== undefined &&
+        (!Array.isArray(annotations.glyphs) ||
+          annotations.glyphs.some((glyph) => !Number.isInteger(glyph)))
+      )
+        return fail();
+      if (
+        annotations.gamebook !== undefined &&
+        Object.values(object(annotations.gamebook, ['hint', 'deviation'])).some(
+          (text) => typeof text !== 'string',
+        )
+      )
+        return fail();
+    }
+    if (!Array.isArray(node.children)) return fail();
+    for (const child of node.children) pending.push({ node: child, state, root: false });
+  }
+  return initial;
+}

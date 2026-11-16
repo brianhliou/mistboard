@@ -302,13 +302,13 @@ export function isCorrespondenceAllowlistedSpec(id: string | null | undefined): 
 // web study catalog, so a chapter the API accepts always has a board to render it.
 // Membership is a CAPABILITY, not a product call: a variant qualifies once it has
 // a tree-review stack (adapter + presentation in apps/web/src/review/) AND a
-// deterministic start position. Hidden-deal variants (banqi, jieqi, jungle-flip)
-// are excluded until a chapter can persist its deal — replaying a saved tree
-// against a freshly minted deal would truncate the line to its legal prefix.
+// reproducible start position. Hidden-deal variants persist their deal or
+// public opening observations instead of replaying against a fresh deal.
 export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   // Three Kingdoms banqi (#628): a tree-review stack (review/three-kingdoms-banqi-
   // review.ts) and a dealt FEN (three-kingdoms-banqi-fen.ts) pinning the deal in
   // the chapter root. Launched studies are public, like the casual game.

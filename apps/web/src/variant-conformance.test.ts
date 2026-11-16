@@ -506,7 +506,7 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(events).not.toHaveBeenCalled();
   });
 
-  it('launches casual play and rules without ratings, correspondence, analysis, editor, study or embed', () => {
+  it('supports casual play, rules and observed studies without ratings, correspondence, analysis, editor or embed', () => {
     const id = 'ffq-banqi';
     // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
     expect(variantMiniIdForGameSpec(id)).toBe(id);
@@ -521,7 +521,7 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(id);
     expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
-    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(id);
     expect(rulesHrefForGameSpec(id)).toBe(isPublicGameSpec(id) ? '/rules/fanfanqi' : null);
     expect(rulesSlugForGameSpec(id)).toBe('fanfanqi');
     expect(articles.find((article) => article.slug === 'fanfanqi')).toMatchObject({

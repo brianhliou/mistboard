@@ -42,6 +42,9 @@ describe('study catalog', () => {
     // The hidden-deal variants are in: their canonical FEN pins the deal, and a
     // chapter already persists a hand-set start inside SerializedTree.rootFen.
     expect(isStudyVariantId('banqi')).toBe(true);
+    expect(isStudyVariantId('ffq-banqi')).toBe(true);
+    expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('ffq-banqi');
+    expect(studyVariantSupportsComposition('ffq-banqi')).toBe(false);
     expect(isStudyVariantId('jieqi')).toBe(true);
     expect(isStudyVariantId('jungle-flip')).toBe(true);
     // Study-only chess (2026-09-20) is a catalog member; mahjong never was.
@@ -92,7 +95,7 @@ describe('study board dispatch', () => {
   // loss rather than a bug. The catalog offers the box for all five, so all five
   // have to honour it.
   it('resolves the chapter rootFen in every branch', () => {
-    for (const variant of STUDY_VARIANTS) {
+    for (const variant of STUDY_VARIANTS.filter((variant) => variant.id !== 'ffq-banqi')) {
       const branch = source.slice(source.indexOf(`case '${variant.id}':`));
       const nextCase = branch.indexOf("\n    case '");
       const body = nextCase === -1 ? branch : branch.slice(0, nextCase);
@@ -115,6 +118,7 @@ describe('study board dispatch', () => {
       'atomic-xiangqi': './atomic-xiangqi-review.js',
       'crazyhouse-xiangqi': './crazyhouse-xiangqi-review.js',
       'three-kingdoms-banqi': './three-kingdoms-banqi-review.js',
+      'ffq-banqi': './ffq-banqi-review.js',
       chess: './chess-review.js',
       gomoku: './gomoku-review.js',
     };

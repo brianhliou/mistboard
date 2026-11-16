@@ -5,10 +5,8 @@
 // variant-analysis.ts: every case dynamic-imports its own review module so the
 // study page does not ship five board stacks.
 //
-// Only variants with a DETERMINISTIC start position are here — that is what
-// STUDY_ELIGIBLE_SPEC_IDS encodes. A hidden-deal variant (banqi, jieqi,
-// jungle-flip) would need its deal persisted with the chapter; without it a saved
-// line replays against a fresh deal and truncates to its legal prefix.
+// Every variant pins its start through a standard position, a persisted deal,
+// or an observed public opening. Saved lines never replay against a fresh deal.
 
 import type { StudyVariantId } from '../study-catalog.js';
 import './../game-route.css';
@@ -315,6 +313,24 @@ export async function mountStudyReview(
       return mountThreeKingdomsBanqiReview(root, {
         ...(await baseReady),
         root: { truth: parsed.state, fen: threeKingdomsBanqiStateToDealtFen(parsed.state) },
+      });
+    }
+    case 'ffq-banqi': {
+      const [{ mountFFQBanqiReview }, { installBanqiBoardStyles }, { validateFFQBanqiReplayTree }] =
+        await Promise.all([
+          import('./ffq-banqi-review.js'),
+          import('./../live-banqi-render.js'),
+          import('@mistboard/game'),
+        ]);
+      if (rootFen !== undefined) throw new Error('Fanfanqi study needs a public replay root.');
+      validateFFQBanqiReplayTree(config.initialTree);
+      installBanqiBoardStyles();
+      const overlay = await storedDecisions;
+      return mountFFQBanqiReview(root, [], {
+        ...(await baseReady),
+        decisions: overlay
+          ? { canRun: false, fetchCached: async () => overlay, run: async () => overlay }
+          : null,
       });
     }
     default: {

@@ -31,6 +31,7 @@ const STUDY_VARIANT_IDS = [
   'xiangqi',
   'jieqi',
   'banqi',
+  'ffq-banqi',
   'three-kingdoms-banqi',
   'duck-xiangqi',
   'crazyhouse-xiangqi',

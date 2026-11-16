@@ -247,7 +247,7 @@ test('FFQ banqi has canonical metadata matching its distinct kernel rules', () =
   assert.equal(legacyLiveRoomForGameSpec(spec.id), null);
 });
 
-test('FFQ banqi opens casual public play while keeping ratings, correspondence and studies closed', () => {
+test('FFQ banqi supports casual public play and observed studies while keeping ratings and correspondence closed', () => {
   const spec = maybeGameSpecForId('ffq-banqi');
   assert.ok(spec);
   assert.equal(isPublicGameSpec(spec.id), true);
@@ -258,7 +258,7 @@ test('FFQ banqi opens casual public play while keeping ratings, correspondence a
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
   assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
   assert.equal(isCorrespondenceRatedSpec(spec.id), false);
-  assert.equal(isStudyEligibleSpecId(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), true);
   assert.equal(isAdminOnlyStudySpecId(spec.id), false);
   assert.equal(hasStartFen(spec.id), false, 'the observer FEN is not an import format');
 });
@@ -339,12 +339,13 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
   for (const id of STUDY_ELIGIBLE_SPEC_IDS) {
     assert.ok(maybeGameSpecForId(id), `${id} is not a real game spec`);
     assert.equal(isStudyEligibleSpecId(id), true);
-    // The invariant that replaced the old hidden-deal exclusion. A chapter
-    // stores moves and is replayed from its root, so a variant whose position
-    // cannot be spelled as a FEN has nothing to replay from. That is what makes
-    // the dealt three safe to include: their canonical FEN pins the deal, and a
-    // chapter persists it as SerializedTree.rootFen.
-    assert.equal(hasStartFen(id), true, `${id} is study-eligible but has no start FEN`);
+    // Fanfanqi persists its four public setup observations and observed
+    // outcomes. The other variants pin their start through a FEN.
+    assert.equal(
+      hasStartFen(id),
+      id !== FFQ_BANQI_SPEC_ID,
+      `${id} has an unexpected study root format`,
+    );
   }
   // The hidden-deal variants are IN now, and they are the reason the assertion
   // above exists rather than a hardcoded list.
