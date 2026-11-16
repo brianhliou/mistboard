@@ -1002,7 +1002,14 @@ async function mountJungleFlipEmbed(
     railWidthPx: embedRailWidthPx('jungle-flip'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) => mountJungleFlipReplayBoard(host, line, hooks),
+    mountBoard: async (host, hooks) => {
+      const { glyphs, notes } = chapterAnnotations(chapter);
+      return mountJungleFlipReplayBoard(host, line, hooks, {
+        glyphs,
+        notes,
+        decisions: options.hideSolution ? null : options.decisions,
+      });
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

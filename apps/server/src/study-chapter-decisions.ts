@@ -3,17 +3,22 @@
 import {
   applyBanqiMove,
   applyJieqiMove,
+  applyJungleFlipMove,
   applyThreeKingdomsBanqiMove,
   applyThreeKingdomsBanqiReplayMove,
   BANQI_STUDY_MOVE_OPTIONS,
   type BanqiMove,
   createInitialThreeKingdomsBanqiReplayState,
   engineUciToBanqiMove,
+  getJungleFlipLegalMoves,
   getThreeKingdomsBanqiLegalMoves,
   hasOwnKey,
   type JieqiMove,
+  type JungleFlipMove,
+  jungleFlipMoveToEngineUci,
   parseBanqiFen,
   parseJieqiFen,
+  parseJungleFlipFen,
   parseThreeKingdomsBanqiFen,
   parseThreeKingdomsBanqiReplayMove,
   serializedTreeMainline,
@@ -252,6 +257,37 @@ function validateThreeKingdomsBanqiDecisions(tree: unknown, value: unknown): Stu
         ),
       });
   }
+  return validateFlipDecisionRows(input, flips);
+}
+
+function validateJungleFlipDecisions(tree: unknown, value: unknown): StudyDecisionsInput {
+  const input = decisionInput(value);
+  const fen = serializedTreeRootFen(tree);
+  if (!fen) throw new Error('chapter needs a dealt root');
+  const parsed = parseJungleFlipFen(fen);
+  if (!parsed.ok || parsed.sampled) throw new Error('invalid or undealt Flip Jungle root');
+  let state = parsed.state;
+  const flips = new Map<number, { mover: 'red' | 'black'; legal: Set<string> }>();
+  for (const [index, token] of serializedTreeMainline(tree).entries()) {
+    const match = /^([a-d][1-4])([a-d][1-4])$/.exec(token);
+    if (!match || state.status.type !== 'playing') throw new Error('invalid Flip Jungle mainline');
+    const move = { from: match[1], to: match[2] } as JungleFlipMove;
+    const next = applyJungleFlipMove(state, move);
+    if (next === state) throw new Error('invalid Flip Jungle mainline');
+    if (move.from === move.to)
+      flips.set(index + 1, {
+        mover: state.status.turn,
+        legal: new Set(getJungleFlipLegalMoves(state).map(jungleFlipMoveToEngineUci)),
+      });
+    state = next;
+  }
+  return validateFlipDecisionRows(input, flips);
+}
+
+function validateFlipDecisionRows(
+  input: ReturnType<typeof decisionInput>,
+  flips: ReadonlyMap<number, { mover: 'red' | 'black'; legal: ReadonlySet<string> }>,
+): StudyDecisionsInput {
   const seen = new Set<number>();
   const decisions = input.decisions.map((raw): StudyBanqiDecision => {
     const row = object(raw);
@@ -305,6 +341,7 @@ export const STUDY_DECISION_VARIANTS = {
   jieqi: { validate: validateJieqiDecisions },
   banqi: { validate: validateBanqiDecisions },
   'three-kingdoms-banqi': { validate: validateThreeKingdomsBanqiDecisions },
+  'jungle-flip': { validate: validateJungleFlipDecisions },
 } as const;
 
 /** Reject rather than strip unknown fields: no captured identity can enter storage. */
