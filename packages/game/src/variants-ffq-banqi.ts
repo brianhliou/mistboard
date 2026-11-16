@@ -107,6 +107,10 @@ export type FFQBanqiState = {
   captures: FFQBanqiCapture[];
   lastMove?: FFQBanqiMove;
 };
+/** Public replay retains only occupancy beneath a covered tile. */
+export type FFQBanqiReplayState = Omit<FFQBanqiState, 'board'> & {
+  board: Array<BanqiVisibleBoardEntry | null>;
+};
 /** Every off-board capture is public, including a cannon's covered victim. */
 export type FFQBanqiCapturedView = FFQBanqiCapture;
 export type FFQBanqiPlayerView = {
@@ -218,7 +222,11 @@ function canTake(attacker: BanqiPieceRole, victim: BanqiPieceRole): boolean {
 /** Only public geometry is read. In particular a covered victim's ink/role
  * cannot affect legality, even if capturing it will end the game for the mover.
  */
-function boardDests(board: FFQBanqiBoard, from: number, piece: BanqiPiece): number[] {
+function boardDests(
+  board: FFQBanqiReplayState['board'],
+  from: number,
+  piece: BanqiPiece,
+): number[] {
   if (piece.role !== 'cannon')
     return NEIGHBORS[from].filter((to) => {
       const target = board[to];
@@ -245,7 +253,7 @@ function boardDests(board: FFQBanqiBoard, from: number, piece: BanqiPiece): numb
   return dests;
 }
 
-function isChase(state: FFQBanqiState, move: FFQBanqiMove): boolean {
+function isChase(state: FFQBanqiReplayState, move: FFQBanqiMove): boolean {
   const piece = state.board[move.from];
   if (
     !piece ||
@@ -264,7 +272,7 @@ function isChase(state: FFQBanqiState, move: FFQBanqiMove): boolean {
   });
 }
 
-export function getFFQBanqiLegalMoves(state: FFQBanqiState): FFQBanqiMove[] {
+export function getFFQBanqiLegalMoves(state: FFQBanqiReplayState): FFQBanqiMove[] {
   if (
     state.status.type !== 'playing' ||
     state.hp.red <= 0 ||
@@ -291,14 +299,14 @@ export function getFFQBanqiLegalMoves(state: FFQBanqiState): FFQBanqiMove[] {
   return moves;
 }
 
-export function isFFQBanqiLegalMove(state: FFQBanqiState, move: FFQBanqiMove): boolean {
+export function isFFQBanqiLegalMove(state: FFQBanqiReplayState, move: FFQBanqiMove): boolean {
   return getFFQBanqiLegalMoves(state).some(
     (candidate) => candidate.from === move.from && candidate.to === move.to,
   );
 }
 
 /** Moves legal without the mover's chase count, but forbidden at its real count. */
-export function getFFQBanqiForbiddenChaseMoves(state: FFQBanqiState): FFQBanqiMove[] {
+export function getFFQBanqiForbiddenChaseMoves(state: FFQBanqiReplayState): FFQBanqiMove[] {
   const seat = ffqBanqiSeatToMove(state);
   if (state.chaseCounts[seat] < FFQ_BANQI_CHASE_LIMIT) return [];
   const legal = new Set(getFFQBanqiLegalMoves(state).map((move) => `${move.from}:${move.to}`));
@@ -308,7 +316,7 @@ export function getFFQBanqiForbiddenChaseMoves(state: FFQBanqiState): FFQBanqiMo
   }).filter((move) => !legal.has(`${move.from}:${move.to}`));
 }
 
-export function getFFQBanqiResult(state: FFQBanqiState): FFQBanqiStatus {
+export function getFFQBanqiResult(state: FFQBanqiReplayState): FFQBanqiStatus {
   if (state.status.type !== 'playing') return state.status;
   if (state.hp.red <= 0 || state.hp.black <= 0)
     return {
@@ -329,11 +337,26 @@ export function getFFQBanqiResult(state: FFQBanqiState): FFQBanqiStatus {
 
 /** Illegal moves return the same state, matching the other banqi kernels. */
 export function applyFFQBanqiMove(state: FFQBanqiState, move: FFQBanqiMove): FFQBanqiState {
+  return applyFFQBanqiKernelMove(state, move);
+}
+
+/** Shared rules seam. Public replay must supply the observed flip/capture
+ * identity before entering it; an unresolved back can never be consumed. */
+export function applyFFQBanqiKernelMove(state: FFQBanqiState, move: FFQBanqiMove): FFQBanqiState;
+export function applyFFQBanqiKernelMove(
+  state: FFQBanqiReplayState,
+  move: FFQBanqiMove,
+): FFQBanqiReplayState;
+export function applyFFQBanqiKernelMove(
+  state: FFQBanqiState | FFQBanqiReplayState,
+  move: FFQBanqiMove,
+): FFQBanqiReplayState {
   if (!isFFQBanqiLegalMove(state, move)) return state;
   const seat = ffqBanqiSeatToMove(state);
   const piece = state.board[move.from]!;
   const flip = move.from === move.to;
   const target = flip ? null : state.board[move.to];
+  if (!('color' in piece) || (target && !('color' in target))) return state;
   const board = [...state.board];
   const hp = { ...state.hp };
   let captures = state.captures;
@@ -357,7 +380,7 @@ export function applyFFQBanqiMove(state: FFQBanqiState, move: FFQBanqiMove): FFQ
         [seat]: isChase(state, move) ? state.chaseCounts[seat] + 1 : 0,
       };
   const ply = state.ply + 1;
-  const next: FFQBanqiState = {
+  const next: FFQBanqiReplayState = {
     ...state,
     board,
     hp,
@@ -374,7 +397,7 @@ export function applyFFQBanqiMove(state: FFQBanqiState, move: FFQBanqiMove): FFQ
 }
 
 export function getFFQBanqiPlayerView(
-  state: FFQBanqiState,
+  state: FFQBanqiReplayState,
   perspective: BanqiColor | 'observer',
 ): FFQBanqiPlayerView {
   const board: FFQBanqiPlayerView['board'] = state.board.map((piece) =>

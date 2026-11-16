@@ -15,6 +15,7 @@ export * from './engine-protocol.js';
 export * from './events.js';
 export * from './export-formats.js';
 export * from './ffq-banqi-fen.js';
+export * from './ffq-banqi-public-replay.js';
 export * from './flip-move-label.js';
 export * from './game-specs.js';
 export * from './games-search.js';

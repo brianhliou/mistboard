@@ -1,5 +1,5 @@
-// The game record of the three hidden-piece variants (jieqi, banqi, Flip
-// Jungle): what a finished game's export says about the pieces that started
+// The game record of hidden-piece variants: what a finished game's export
+// says about the pieces that started
 // face down, and a reference replayer that rebuilds the game from the export
 // alone (#484).
 //
@@ -52,8 +52,23 @@
 // The start is a `FEN` tag (with `SetUp "1"`) holding the standard face-down
 // layout as the variant's public FEN, and `DealFEN` holds the deal when there
 // is one. Both FENs use the site's own board and letters.
+//
+// Fanfanqi is public-outcome-only. JSON carries `initial_revealed`, the four
+// public opening identities in FFQ_BANQI_FACE_UP_SQUARES order; PGN carries
+// them in the public opening FEN. Neither format permits a dealt root. Moves
+// use native a0-d7 coordinates (@a0=C for a flip, c1a1x=p for a public covered
+// capture) and ICGA role letters. Replay keeps all other backs anonymous and
+// consumes the recorded identity only when that flip or capture is applied.
 
 import { banqiStateToDealtFen, banqiStateToEngineFen, parseBanqiFen } from './banqi-fen.js';
+import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
+import {
+  applyFFQBanqiReplayMove,
+  createInitialFFQBanqiReplayState,
+  type FFQ_BANQI_PUBLIC_REPLAY,
+  type FFQBanqiReplayIdentity,
+  parseFFQBanqiReplayStartFen,
+} from './ffq-banqi-public-replay.js';
 import {
   jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
@@ -81,6 +96,11 @@ import {
   createInitialBanqiState,
 } from './variants-banqi.js';
 import {
+  FFQ_BANQI_FACE_UP_SQUARES,
+  type FFQBanqiMove,
+  type FFQBanqiState,
+} from './variants-ffq-banqi.js';
+import {
   applyJieqiMove,
   createInitialJieqiState,
   type JieqiBoard,
@@ -102,6 +122,7 @@ import {
 import {
   applyThreeKingdomsBanqiMove,
   createInitialThreeKingdomsBanqiState,
+  type THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
   type ThreeKingdomsBanqiBoard,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiSquare,
@@ -113,8 +134,12 @@ export const HIDDEN_PIECE_VARIANTS = [
   'banqi',
   'jungle-flip',
   'three-kingdoms-banqi',
+  'ffq-banqi',
 ] as const;
 export type HiddenPieceVariant = (typeof HIDDEN_PIECE_VARIANTS)[number];
+export type PublicReplayFormat =
+  | typeof THREE_KINGDOMS_BANQI_PUBLIC_REPLAY
+  | typeof FFQ_BANQI_PUBLIC_REPLAY;
 
 export function isHiddenPieceVariant(variant: string): variant is HiddenPieceVariant {
   return (HIDDEN_PIECE_VARIANTS as readonly string[]).includes(variant);
@@ -142,6 +167,9 @@ export type HiddenPieceRecordPly = {
 export type HiddenPieceRecord = {
   variant: string;
   deal_fen?: string | null;
+  /** Fanfanqi only: the four public opening pieces in setup-square order.
+   * Its remaining 28 identities are never dealt, sampled or recorded. */
+  initial_revealed?: readonly HiddenPieceIdentity[];
   plies: readonly HiddenPieceRecordPly[];
 };
 
@@ -149,6 +177,16 @@ export type HiddenPieceRecord = {
 
 function identity(piece: { color: HiddenPieceColor; role: string }): HiddenPieceIdentity {
   return { color: piece.color, role: piece.role };
+}
+
+/** Fanfanqi discloses a covered cannon victim to both fixed seats. */
+export function ffqBanqiPlyReveal(before: FFQBanqiState, move: FFQBanqiMove): HiddenPieceReveal {
+  const flip = move.from === move.to;
+  const piece = before.board[flip ? move.from : move.to];
+  return {
+    revealed: flip && piece?.faceDown ? identity(piece) : null,
+    capturedHidden: !flip && piece?.faceDown ? identity(piece) : null,
+  };
 }
 
 /** A jieqi ply's reveal, read off the position before it. A piece whose
@@ -189,8 +227,20 @@ export function jungleFlipPlyReveal(
 
 // ── Start positions ──────────────────────────────────────────────────────────
 
-/** The standard face-down start as the variant's public FEN (no identities). */
-export function hiddenPieceStartFen(variant: HiddenPieceVariant): string {
+/** The standard public opening. Fanfanqi requires its four observed pieces;
+ * no variant's covered opening identities are exposed here. */
+export function hiddenPieceStartFen(
+  variant: HiddenPieceVariant,
+  initialRevealed?: readonly HiddenPieceIdentity[],
+): string {
+  if (variant === 'ffq-banqi') {
+    return ffqBanqiStateToFen(
+      createInitialFFQBanqiReplayState(
+        'start',
+        initialRevealed as readonly FFQBanqiReplayIdentity[],
+      ),
+    );
+  }
   if (variant === 'three-kingdoms-banqi')
     return threeKingdomsBanqiStateToPublicFen(createInitialThreeKingdomsBanqiState('start', 0));
   if (variant === 'jieqi') return jieqiStateToPikafishFen(createInitialJieqiState('start'));
@@ -234,7 +284,8 @@ const JUNGLE_FLIP_LETTER: Record<JungleFlipPieceRole, string> = {
 
 function letterTable(variant: HiddenPieceVariant): Readonly<Record<string, string>> {
   if (variant === 'jieqi') return JIEQI_LETTER;
-  if (variant === 'banqi' || variant === 'three-kingdoms-banqi') return BANQI_ICGA_LETTER;
+  if (variant === 'banqi' || variant === 'three-kingdoms-banqi' || variant === 'ffq-banqi')
+    return BANQI_ICGA_LETTER;
   return JUNGLE_FLIP_LETTER;
 }
 
@@ -318,9 +369,11 @@ export function parseHiddenPiecePgnToken(
   const m = (
     variant === 'jieqi'
       ? JIEQI_TOKEN
-      : variant === 'three-kingdoms-banqi'
-        ? /^(@[a-i][1-5]|[a-i][1-5][a-i][1-5])(?:=([A-Za-z]))?$/
-        : JUNGLE_FLIP_TOKEN
+      : variant === 'ffq-banqi'
+        ? /^(@[a-d][0-7]|[a-d][0-7][a-d][0-7])(?:=([A-Za-z]))?(?:x=([A-Za-z]))?$/
+        : variant === 'three-kingdoms-banqi'
+          ? /^(@[a-i][1-5]|[a-i][1-5][a-i][1-5])(?:=([A-Za-z]))?$/
+          : JUNGLE_FLIP_TOKEN
   ).exec(token);
   if (!m) return null;
   const revealed = letter(m[2]);
@@ -361,17 +414,29 @@ export type HiddenPiecePgnWriteGame = {
   tags: Readonly<Record<string, string>>;
   result: string;
   dealFen: string | null;
+  initialRevealed?: readonly HiddenPieceIdentity[];
   plies: readonly HiddenPieceRecordPly[];
 };
 
 /** A whole PGN game: the tag block (seven-tag roster first, then SetUp, FEN,
  *  DealFEN when there is a deal, then the rest), and the movetext. */
 export function writeHiddenPiecePgn(game: HiddenPiecePgnWriteGame): string {
+  if (game.variant === 'ffq-banqi') {
+    if (game.dealFen !== null || game.tags.DealFEN !== undefined) {
+      throw new Error('Fanfanqi public replay cannot carry a dealt root.');
+    }
+    const replayed = replayHiddenPieceRecord({
+      variant: game.variant,
+      initial_revealed: game.initialRevealed,
+      plies: game.plies,
+    });
+    if (!replayed.ok) throw new Error(replayed.error);
+  }
   const tags: Record<string, string> = {
     ...game.tags,
     Result: game.result,
     SetUp: '1',
-    FEN: hiddenPieceStartFen(game.variant),
+    FEN: hiddenPieceStartFen(game.variant, game.initialRevealed),
   };
   if (game.dealFen) tags.DealFEN = game.dealFen;
   else delete tags.DealFEN;
@@ -412,7 +477,8 @@ export function parseHiddenPiecePgn(text: string): ParsedHiddenPiecePgn {
     else if (line.length > 0) movetext.push(line);
   }
   const named = (tags.MistboardVariant ?? tags.Variant ?? '').toLowerCase();
-  const variant = named === 'flip jungle' ? 'jungle-flip' : named;
+  const variant =
+    named === 'flip jungle' ? 'jungle-flip' : named === 'fanfanqi' ? 'ffq-banqi' : named;
   if (!isHiddenPieceVariant(variant)) {
     return { ok: false, error: `not a hidden-piece variant: "${named}"` };
   }
@@ -424,10 +490,34 @@ export function parseHiddenPiecePgn(text: string): ParsedHiddenPiecePgn {
     if (!ply) return { ok: false, error: `unreadable move "${token}"` };
     plies.push(ply);
   }
+  const record: HiddenPieceRecord = {
+    variant,
+    ...(tags.DealFEN ? { deal_fen: tags.DealFEN } : {}),
+    plies,
+  };
+  if (variant === 'ffq-banqi') {
+    try {
+      if (tags.DealFEN !== undefined)
+        throw new Error('Fanfanqi public replay cannot carry a dealt root.');
+      const state = parseFFQBanqiReplayStartFen(tags.FEN ?? '');
+      record.initial_revealed = FFQ_BANQI_FACE_UP_SQUARES.map((square) => {
+        const piece = state.board[square]!;
+        if (piece.faceDown) throw new Error('Missing public opening piece.');
+        return identity(piece);
+      });
+      const replayed = replayHiddenPieceRecord(record);
+      if (!replayed.ok) throw new Error(replayed.error);
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Invalid public replay.',
+      };
+    }
+  }
   return {
     ok: true,
     tags,
-    record: { variant, ...(tags.DealFEN ? { deal_fen: tags.DealFEN } : {}), plies },
+    record,
   };
 }
 
@@ -648,6 +738,48 @@ function flipUciMove<Square extends string>(
   return move ? { from: move[1] as Square, to: move[2] as Square } : null;
 }
 
+function replayFFQBanqi(record: HiddenPieceRecord): HiddenPieceReplayResult {
+  if (record.deal_fen != null)
+    return { ok: false, ply: 0, error: 'Fanfanqi public replay cannot carry a dealt root.' };
+  let n = 0;
+  try {
+    let state = createInitialFFQBanqiReplayState(
+      'record',
+      record.initial_revealed as readonly FFQBanqiReplayIdentity[],
+    );
+    for (const [i, ply] of record.plies.entries()) {
+      n = i + 1;
+      const move = flipUciMove<string>(ply.uci, /[a-d][0-7]/);
+      if (!move || (move.from === move.to && !ply.uci.startsWith('@'))) {
+        return { ok: false, ply: n, error: `unreadable uci ${ply.uci}` };
+      }
+      const index = (sq: string) => Number(sq[1]) * 4 + sq.charCodeAt(0) - 97;
+      state = applyFFQBanqiReplayMove(state, {
+        from: index(move.from),
+        to: index(move.to),
+        ...(ply.revealed != null ? { revealed: ply.revealed as FFQBanqiReplayIdentity } : {}),
+        ...(ply.captured_hidden != null
+          ? { capturedHidden: ply.captured_hidden as FFQBanqiReplayIdentity }
+          : {}),
+      });
+    }
+    return {
+      ok: true,
+      variant: 'ffq-banqi',
+      plies: record.plies.length,
+      finalFen: ffqBanqiStateToFen(state),
+      finalDealtFen: null,
+      status: state.status,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      ply: n,
+      error: error instanceof Error ? error.message : 'Invalid public replay.',
+    };
+  }
+}
+
 /**
  * Rebuild a hidden-piece game from its record alone and return the final
  * position. With `deal_fen` the start is that deal and every reveal must match
@@ -658,6 +790,7 @@ export function replayHiddenPieceRecord(record: HiddenPieceRecord): HiddenPieceR
   if (!isHiddenPieceVariant(record.variant)) {
     return { ok: false, ply: 0, error: `not a hidden-piece variant: ${record.variant}` };
   }
+  if (record.variant === 'ffq-banqi') return replayFFQBanqi(record);
   if (record.variant === 'jieqi') return replayJieqi(record);
   if (record.variant === 'three-kingdoms-banqi') {
     return replayFlip<ThreeKingdomsBanqiState, ThreeKingdomsBanqiBoard, ThreeKingdomsBanqiMove>(
