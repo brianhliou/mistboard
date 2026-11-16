@@ -10,6 +10,7 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
+| `xiangqi-mahjong-bot-search.ts` + `.test.ts` | Misty’s 160-deal determinized XMJ search, heuristic playout kernel, parity and planted-peeker hidden-information checks (#1180) |
 | `xiangqi-mahjong-bot-baseline.ts` | Frozen 2026-10-25 XMJ offence-only bot for reproducible comparisons; do not retune |
 | `xiangqi-mahjong-danger.ts` | Exact neutral-prior deal-in probability from hypergeometrically weighted waiting hands |
 | `xiangqi-mahjong-defensive-bot.ts` | Offline XMJ challenger: frozen offence plus a separately configurable discard danger penalty |
@@ -99,6 +100,8 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
+| `xiangqi-mahjong-bot-search-worker.ts` | Bounded shared thread for live XMJ search; seat-view-only requests, deadlines and restart cleanup (#1180) |
+| `server-xiangqi-mahjong-bots.ts` + `.test.ts` | Misty’s XMJ search scheduling, display pause, stale-result checks and worker privacy/default-policy regressions |
 | `gomoku-tenant.ts` | Flag-gated Gomoku referee with replayed rated state: opening-aware turn order, kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
 | `gomoku-registration.ts` | Flag-gated Gomoku rooms, rated or casual lobby/friend challenges and eight-level server Rapfi PvE with Black/White preference; finished-game share card, JSON export with the recorded opening and TV capability with Rapfi names; public casual-only correspondence through the shared seek/deadline binding; listings and /data wait for publicSurface; rated live play requires signed-in accounts and official clocks |
 | `gomoku-correspondence.test.ts` | Black- and White-to-move correspondence seats, recorded-opening replay, per-turn deadlines, hydrated timeout/no-show sweeps, flag denial, seek visibility and rated refusal |
