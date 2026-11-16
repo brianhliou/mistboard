@@ -200,28 +200,31 @@ definePersistenceTests('profile games filters', () => {
       alice('red'),
       guest('black'),
     ]);
-    await sql(`UPDATE games SET status = 'running' WHERE room_id = 'ffq_unfinished'`);
-    await seedRow('ffq_correspondence_held', 'ffq-banqi', 'red-wins', '2026-08-09T10:00:00Z', [
+    await sql(
+      `UPDATE games SET status = 'running', result = NULL, termination = NULL, ended_at = NULL WHERE room_id = 'ffq_unfinished'`,
+    );
+    await seedRow('ffq_correspondence_public', 'ffq-banqi', 'red-wins', '2026-08-09T10:00:00Z', [
       alice('red'),
       guest('black'),
     ]);
     await sql(
-      `UPDATE games SET initial_ms = 86400000, increment_ms = 0 WHERE room_id = 'ffq_correspondence_held'`,
+      `UPDATE games SET initial_ms = 86400000, increment_ms = 0 WHERE room_id = 'ffq_correspondence_public'`,
     );
     await sql(`INSERT INTO events (room_id, seq, type, payload)
-      VALUES ('ffq_correspondence_held', 0, 'room-created', '{"timeControl":{"daysPerMove":1}}')`);
-    const activity = { variant: 'ffq-banqi', totalGamesPlayed: 3, wins: 1, draws: 1, losses: 1 };
+      VALUES ('ffq_correspondence_public', 0, 'room-created', '{"timeControl":{"daysPerMove":1}}')`);
+    // A finished public correspondence game counts like a live one (decided 2026-11-15).
+    const activity = { variant: 'ffq-banqi', totalGamesPlayed: 4, wins: 2, draws: 1, losses: 1 };
     const visitor = await getUserProfileByHandle('alice', null);
     assert.deepEqual(visitor?.activity, [activity]);
     assert.deepEqual(visitor?.ratings, []);
     const own = await getUserProfileByHandle('alice', 'u_alice');
-    assert.deepEqual(own?.activity, [{ ...activity, totalGamesPlayed: 5, wins: 3 }]);
+    assert.deepEqual(own?.activity, [{ ...activity, totalGamesPlayed: 6, wins: 4 }]);
     const filters = { activityVariant: 'ffq-banqi' as const };
     const page = await getUserGamesPage('alice', null, 0, 50, filters);
     assert.equal(page?.total, visitor?.activity[0]?.totalGamesPlayed);
     for (const result of ['win', 'draw', 'loss'] as const) {
       const filtered = await getUserGamesPage('alice', null, 0, 50, { ...filters, result });
-      assert.equal(filtered?.total, 1);
+      assert.equal(filtered?.total, result === 'win' ? 2 : 1);
     }
     assert.doesNotMatch(JSON.stringify(visitor), /"deal"|"setup"|"board"|"position"/);
   });

@@ -131,7 +131,12 @@ test('public Fanfanqi profile activity counts all visible games without a rating
   await request('/api/users/alice/games?variant=ffq-banqi&result=win');
   assert.ok(gamesParams.includes('ffq-banqi'));
   assert.match(gamesSql, /AND games.variant = \$4/);
-  assert.match(gamesSql, /games.variant <> 'ffq-banqi'/, 'held correspondence stays excluded');
+  // Public Fanfanqi games list like any variant once it is public; private ones never do.
+  assert.match(
+    gamesSql,
+    /games.visibility <> 'private'/,
+    'private games stay off the public profile',
+  );
   spec.publicSurface = 'hidden';
   const hiddenProfile = await request('/api/users/alice/profile');
   assert.deepEqual(hiddenProfile.profile.activity, []);
