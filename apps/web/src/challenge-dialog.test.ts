@@ -2,6 +2,7 @@ import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { setRatedModeEnabled } from './rated-flag.js';
+import { setResolvedAdmin } from './signed-in-state.js';
 
 describe('openChallengeDialog', () => {
   // Casual/Rated is remembered in browser storage; start each test from no pick.
@@ -13,6 +14,8 @@ describe('openChallengeDialog', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     setRatedModeEnabled(false);
+    setResolvedAdmin(undefined);
+    vi.unstubAllEnvs();
   });
 
   it('renders a directed-challenge modal with variant + day + color selects and the target name', () => {
@@ -28,6 +31,28 @@ describe('openChallengeDialog', () => {
       ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
     ]);
     expect(variant?.value).toBe('xiangqi');
+  });
+
+  it('offers Fanfanqi to non-admin live players and always sends it casual', () => {
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    setResolvedAdmin(false);
+    setRatedModeEnabled(true, true);
+    const fetchMock = vi.fn((_url: string, _init: RequestInit) => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    openChallengeDialog({ handle: 'alice' });
+    const dialog = document.querySelector('dialog[data-challenge-dialog]')!;
+    const variant = dialog.querySelector<HTMLSelectElement>('select[aria-label="Game"]')!;
+    expect([...variant.options].map((option) => option.value)).toContain('ffq-banqi');
+    variant.value = 'ffq-banqi';
+    variant.dispatchEvent(new Event('change'));
+    expect(variant.value).toBe('ffq-banqi');
+    const rating = dialog.querySelector<HTMLSelectElement>('select[aria-label="Rating"]')!;
+    expect(rating.value).toBe('casual');
+    expect(rating.querySelector<HTMLOptionElement>('option[value="rated"]')?.disabled).toBe(true);
+    dialog.querySelector<HTMLButtonElement>('.confirm-dialog-confirm')?.click();
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({ targetHandle: 'alice', gameSpecId: 'ffq-banqi' });
+    expect(body.rated).not.toBe(true);
   });
 
   it('posts a directed challenge addressed by target handle on send', () => {

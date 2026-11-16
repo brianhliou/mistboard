@@ -46,8 +46,8 @@ export function openChallengeDialog(opts: {
   const variant = document.createElement('select');
   variant.className = 'challenge-dialog-field';
   variant.setAttribute('aria-label', t('challenge.variant', {}, locale));
-  // A playtest variant (xiangqi mahjong) joins only for an account the menu offers
-  // it to; the server also refuses a target without the grant.
+  // Tenant-gated variants join for accounts the live menu offers them to.
+  // The server independently rechecks both accounts on create and accept.
   const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
   for (const specId of specIds) {
     const opt = document.createElement('option');

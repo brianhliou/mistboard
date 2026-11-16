@@ -183,17 +183,14 @@ export function listedOnSurface(gameSpecId: string): boolean {
   return !LISTED_ONLY_WHEN_PUBLIC.has(gameSpecId) || gameSpecIsPublic(gameSpecId);
 }
 
-// Admin correspondence stays private after the live launch. SQL listings use
-// the recorded opening to enforce the same policy before pagination.
+// Live and correspondence listings share the public launch gate. TV enforces
+// its own all-variant correspondence exclusion independently.
 export function isUnlistedFFQBanqiGame(
   game: Parameters<typeof isFFQBanqiGame>[0] & {
     timeControl?: { daysPerMove?: number } | null;
   },
 ): boolean {
-  return (
-    isFFQBanqiGame(game) &&
-    (!gameSpecIsPublic(FFQ_BANQI_SPEC_ID) || game.timeControl?.daysPerMove !== undefined)
-  );
+  return isFFQBanqiGame(game) && !gameSpecIsPublic(FFQ_BANQI_SPEC_ID);
 }
 
 export function listWatchChannels(): readonly WatchChannel[] {
