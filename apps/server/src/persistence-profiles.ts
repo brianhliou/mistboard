@@ -4,6 +4,7 @@
 // these share the loadProfileUser + profileVisibilityClause privacy gate.
 // Split out of persistence-accounts.ts; the shared users-row plumbing
 // (USER_COLUMNS, userFromRow) stays there.
+import { FFQ_BANQI_SPEC_ID, isPublicGameSpec } from '@mistboard/game';
 import type { FlairKey } from './flair.js';
 import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
@@ -146,9 +147,20 @@ export type ProfilePuzzleRating = {
   attempts: number;
 };
 
+// Activity is separate from rating pools: casual-only variants cannot become
+// ladder or champion candidates just because their games appear on profiles.
+export type ProfileVariantActivity = {
+  variant: typeof FFQ_BANQI_SPEC_ID;
+  totalGamesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
+};
+
 export type UserProfile = {
   user: PublicProfileUser;
   ratings: ProfileBucketRating[];
+  activity: ProfileVariantActivity[];
   // Per-variant puzzle ratings (empty when the user has attempted no puzzles).
   puzzleRatings: ProfilePuzzleRating[];
   // Consecutive days with a puzzle solved, on the calendar of the time zone the
@@ -433,6 +445,8 @@ export type ProfileGameFilters = {
   includeFFQ?: boolean;
   /** Rating pool (the rail's variant), legacy variant strings included. */
   ratingVariant?: RatingVariant | null;
+  /** Casual-only activity, independent of the rating-pool vocabulary. */
+  activityVariant?: ProfileVariantActivity['variant'] | null;
   /** Win, loss or draw from the profile owner's seat. */
   result?: ProfileGameResultFilter | null;
   /** The other seat's handle, case-insensitive, exact. */
@@ -501,6 +515,10 @@ function profileGameFilterSql(
     clauses.push(
       `AND ${RATED_POOL_VARIANTS_SQL} AND ${RATING_POOL_FROM_GAME_SQL} = $${firstParam + params.length - 1}`,
     );
+  }
+  if (filters.activityVariant) {
+    params.push(filters.activityVariant);
+    clauses.push(`AND games.variant = $${firstParam + params.length - 1}`);
   }
   if (filters.result) clauses.push(resultFilterSql(filters.result));
   if (filters.opponent) {
@@ -785,6 +803,43 @@ export async function getUserProfileByHandle(
     }
   }
 
+  const activity: ProfileVariantActivity[] = [];
+  const activityVariants = [FFQ_BANQI_SPEC_ID].filter(isPublicGameSpec);
+  if (activityVariants.length > 0) {
+    const { rows } = await getPool().query<{
+      variant: ProfileVariantActivity['variant'];
+      games_played: string;
+      wins: string;
+      draws: string;
+      losses: string;
+    }>(
+      `SELECT games.variant, COUNT(*)::text AS games_played,
+         COUNT(*) FILTER (WHERE ${OWNER_WON_SQL})::text AS wins,
+         COUNT(*) FILTER (WHERE games.result = 'draw')::text AS draws,
+         COUNT(*) FILTER (WHERE games.result IS DISTINCT FROM 'draw'
+           AND NOT ${OWNER_WON_SQL})::text AS losses
+       FROM game_participants
+       JOIN games ON games.room_id = game_participants.game_id
+       WHERE game_participants.subject_type = 'user'
+         AND game_participants.subject_id = $1
+         AND games.status = 'completed'
+         AND games.variant = ANY($2::text[])
+         ${options.includeFFQ ? '' : `AND ${notFFQBanqiGame()}`}
+         ${visibilityClause}
+       GROUP BY games.variant`,
+      [user.id, activityVariants],
+    );
+    for (const row of rows) {
+      activity.push({
+        variant: row.variant,
+        totalGamesPlayed: Number(row.games_played),
+        wins: Number(row.wins),
+        draws: Number(row.draws),
+        losses: Number(row.losses),
+      });
+    }
+  }
+
   // Puzzle ratings (separate Glicko-2 pool). Show only variants the user has
   // actually attempted, so an untouched pool never renders a default 1500.
   const { rows: puzzleRatingRows } = await getPool().query<{
@@ -833,6 +888,7 @@ export async function getUserProfileByHandle(
       createdAt: user.createdAt,
     },
     ratings,
+    activity,
     puzzleRatings,
     puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
     achievements,
