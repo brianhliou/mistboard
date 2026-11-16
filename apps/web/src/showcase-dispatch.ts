@@ -8,7 +8,7 @@
 // resolver without pulling chessground into its module-init path. The mount
 // itself (which needs mountReplay) lives in ./showcase-board.ts.
 
-import { legacyLiveRoomForGameSpec } from '@mistboard/game';
+import { FFQ_BANQI_SPEC_ID, legacyLiveRoomForGameSpec } from '@mistboard/game';
 import { isGameSpecId } from './variant-public-surfaces.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -34,6 +34,9 @@ export function embedRendererKindForVariant(variant: string): ShowcaseRendererKi
   // Xiangqi Mahjong has a TV renderer but no game embed yet: the embed card's
   // seat rows and board overlay assume a two-colour board. Kept out on purpose.
   if (variant === 'xiangqi-mahjong') return null;
+  // Fanfanqi launched without embeds (2026-11-15); its watch replay draws the
+  // /games and TV boards only.
+  if (variant === FFQ_BANQI_SPEC_ID) return null;
   if (webVariantTenantForSpecId(variant)?.watch) return variant;
   return legacyLiveRoomForGameSpec(variant) ? 'chess' : null;
 }

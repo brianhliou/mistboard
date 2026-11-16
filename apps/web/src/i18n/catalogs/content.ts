@@ -462,7 +462,7 @@ export const EN_CONTENT = {
   'champions.aboutAbJchess2':
     "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
   'champions.tookPikafish':
-    'Won the title match against Fairy-Stockfish Level 8 on 2026-11-11, over 40 games, scoring 61%.',
+    'Won the title match against Fairy-Stockfish Level 8 on 2026-11-14, over 38 games, scoring 68%.',
   'champions.aboutPikafish':
     'An open-source xiangqi engine from the Stockfish line. Here it runs on the public CC0 Fairy-Stockfish xiangqi network.',
   'champions.tookJungle':

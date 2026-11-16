@@ -6,7 +6,6 @@ import type { UserAccount } from './persistence.js';
 // registration must never turn an FFQ connection into a chess room.
 export const FFQ_BANQI_ROOM_ID_PREFIX = 'ffq_';
 
-// Discovery never advertises the playtest, even to admins with the flag on.
 // The reserved prefix also protects rows without variant metadata; the spec
 // protects persisted legacy ids until every room is minted with that prefix.
 export function isFFQBanqiGame(game: {
@@ -21,8 +20,8 @@ export function isFFQBanqiGame(game: {
   );
 }
 
-// The final launch changes publicSurface; until then the runtime flag still
-// admits only admins. The runtime flag remains a kill switch after launch.
+// Play admission follows publicSurface; admins may test while it is hidden.
+// The runtime flag remains a kill switch for live and casual correspondence.
 export function ffqBanqiAdmits(accountUser: Pick<UserAccount, 'accountRole'> | null): boolean {
   return (
     ffqBanqiEnabled() &&
@@ -31,10 +30,9 @@ export function ffqBanqiAdmits(accountUser: Pick<UserAccount, 'accountRole'> | n
   );
 }
 
-// Live launch never opens correspondence (#994), including existing invites.
-export function ffqBanqiCorrespondenceAdmits(
-  accountUser: Pick<UserAccount, 'accountRole'> | null,
-): boolean {
+// Insider reads stay flag + admin only, independently of play admission.
+// Decided 2026-11-15 (#994): casual correspondence follows ffqBanqiAdmits.
+export function ffqBanqiInsider(accountUser: Pick<UserAccount, 'accountRole'> | null): boolean {
   return ffqBanqiEnabled() && accountUser?.accountRole === 'admin';
 }
 

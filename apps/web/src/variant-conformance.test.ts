@@ -464,11 +464,13 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
   });
 
-  it('links FFQ finished games to the private review without advertising watch', () => {
+  // Launched 2026-11-15: finished games are listed on /games and TV, which draw
+  // them through the tenant's watch replay (the masked public postgame read).
+  it('links FFQ finished games to their review and registers the watch replay', () => {
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
     expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.reviewRouteBase).toBe('/ffq-banqi/game');
-    expect(tenant?.watch).toBeUndefined();
+    expect(tenant?.watch?.family).toBe('xiangqi');
     expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual([]);
     expect(finishedGameHref('ffq_finished', FFQ_BANQI_SPEC_ID)).toBe(
       '/ffq-banqi/game/ffq_finished',

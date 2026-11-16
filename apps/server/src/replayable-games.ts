@@ -12,7 +12,7 @@
 // no `replays` binding pass through unless already known to fail. Discovery
 // surfaces drop such a game (filterReplayableGames); a person's own lists keep
 // it, marked, so their history stays whole (markUnavailableGames). FFQ
-// playtests stay excluded until launch; private correspondence needs an explicit opt-in.
+// playtests stay excluded until launch; public correspondence follows the same gate.
 
 import { crosstableReviewUrl } from './crosstable.js';
 import * as persistence from './persistence.js';
@@ -62,7 +62,7 @@ export async function filterReplayableGames<T extends { roomId: string; variant?
  * else 'old-rules' when the stored log no longer replays. For the lists that
  * belong to a person (their profile, their favorites, a bot's record), where a
  * game that silently vanished would misstate their history; the discovery
- * surfaces keep filterReplayableGames. FFQ needs an authorized caller to opt in.
+ * surfaces keep filterReplayableGames. Prelaunch FFQ needs an authorized caller to opt in.
  */
 export async function markUnavailableGames<T extends { roomId: string; variant: string }>(
   rows: readonly T[],
