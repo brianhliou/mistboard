@@ -2,6 +2,7 @@
 import {
   applyFFQBanqiReplayMove,
   type BanqiMove,
+  banqiHiddenPool,
   banqiMoveLabelOnBoard,
   type FFQBanqiReplayState,
   getFFQBanqiPlayerView,
@@ -19,6 +20,8 @@ import {
 } from './live-banqi-render.js';
 import { analysisMarks, type DecisionOverlay } from './review/analysis-marks.js';
 import { formatFFQBanqiBestMove } from './review/ffq-banqi-decisions.js';
+import { type FlipLuckDetail, flipLuckPieceSvg, publicFlipLuckDetail } from './review/flip-luck.js';
+import { attachLuckBadgeCard } from './review/luck-mark-card.js';
 import { chapterAnnotations, GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
 import type { StudyChapterPayload } from './study-chapter-spec.js';
 
@@ -99,6 +102,45 @@ export function mountFFQBanqiStudyReplay(
     quoteEvalBestMove: false,
     formatBestMove: formatFFQBanqiBestMove,
   });
+  const luckDetail = (ply: number): FlipLuckDetail | null => {
+    const luck = decisions?.byPly.get(ply)?.luck;
+    const move = line.played[ply - 1];
+    const before = line.views[ply - 1];
+    const after = line.views[ply];
+    if (luck === undefined || !move || !before || !after) return null;
+    if (move.from === move.to) {
+      const drawn = after.board[move.to];
+      return drawn && !drawn.faceDown
+        ? publicFlipLuckDetail('banqi', move, luck, before, drawn)
+        : null;
+    }
+    // FFQ publicly discloses a covered victim off the board. Its identity
+    // comes only from this capture, never from the pre-move covered tile.
+    const victim = after.captured[before.captured.length];
+    if (!before.board[move.to]?.faceDown || !victim?.role || before.status.type !== 'playing')
+      return null;
+    const pool = banqiHiddenPool(before);
+    const entries = (['red', 'black'] as const).flatMap((color) =>
+      pool[color].entries.filter((p) => p.count > 0).map((p) => ({ ...p, color })),
+    );
+    const count =
+      entries.find((p) => p.color === victim.owner && p.role === victim.role)?.count ?? 0;
+    const total = pool.red.total + pool.black.total;
+    if (!count || !total) return null;
+    return {
+      square: move.to,
+      color: before.status.turn,
+      luck,
+      kind: 'capture',
+      odds: null,
+      capture: { role: victim.role, color: victim.owner, count, total, pool: entries },
+    };
+  };
+  const detachLuck = attachLuckBadgeCard(
+    host.closest<HTMLElement>('.embed-card') ?? host,
+    (badge) => luckDetail(Number(badge.dataset.luckPath)),
+    (role, color) => flipLuckPieceSvg('banqi', role, color),
+  );
   let ply = 0;
   const render = (view = line.views[ply]!, hp = line.hp[ply]!, mainline = true) => {
     const glyph = mainline ? (line.annotations.glyphs[ply] ?? marks.get(ply)?.suffix) : undefined;
@@ -126,6 +168,7 @@ export function mountFFQBanqiStudyReplay(
   hooks.onPlyChange(ply, line.played.length);
   return {
     destroy: () => {
+      detachLuck();
       host.replaceChildren();
     },
     jumpToPly: (next) => {

@@ -12,7 +12,12 @@ import {
 } from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-// Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
+// Decided 2026-11-15: preview a local study; production id wiring follows review.
+const localStudyPath = import.meta.env.DEV
+  ? import.meta.env.VITE_FFQ_BANQI_RULES_STUDY_PATH ?? '/embed/study/HLQzHlhK/O92BsOOd'
+  : undefined;
+
+// Match FFQ_BANQI_RULES in variants-ffq-banqi.ts.
 // English launch rules; pieces still covered remain masked after the game.
 export const fanfanqiArticle: Article = {
   slug: 'fanfanqi',
@@ -26,6 +31,8 @@ export const fanfanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-15',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added an annotated Level 7 versus Level 8 engine game.',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
@@ -270,6 +277,23 @@ export const fanfanqiArticle: Article = {
             },
           ],
         },
+      ],
+    },
+    {
+      heading: 'An engine game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Misty Level 8 plays red; Level 7 plays black. Level 8 wins on points after 83 plies, with 24 HP left. Step through the notes with the arrows. The graph shows Level 7’s estimate of Red’s winning chances at every position. Move grades judge the choice before a flip or covered capture, and the die shows the luck of the outcome. The three pieces still face down at the end stay unknown.',
+        },
+        ...(localStudyPath
+          ? [{
+              kind: 'embed' as const,
+              path: localStudyPath,
+              title: 'Fanfanqi: Level 7 versus Level 8, annotated',
+              aspect: [702, 480] as [number, number],
+            }]
+          : []),
       ],
     },
     {

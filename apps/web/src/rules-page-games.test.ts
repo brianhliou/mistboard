@@ -8,6 +8,7 @@ import {
   ALL_JUNGLE_FLIP_SQUARES,
   applyCrazyhouseXiangqiMove,
   applyDuckXiangqiTurn,
+  applyFFQBanqiReplayMove,
   applyGomokuRoomMove,
   applyJungleFlipMove,
   applyJungleMove,
@@ -30,9 +31,11 @@ import {
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleGameState,
+  parseFFQBanqiReplayMove,
   parseGomokuFen,
   parseGomokuMove,
   parseJungleFlipFen,
+  validateFFQBanqiReplayTree,
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
@@ -42,6 +45,7 @@ import { buildArticlePage } from './articles.js';
 import { articles } from './articles-data.js';
 import { replayBanqiLine, replayBanqiLineFrom } from './banqi-replay-board.js';
 import { mountEmbedStudy } from './embed/embed-study-page.js';
+import { ffqBanqiStudyLine } from './ffq-banqi-study-replay.js';
 import type { StudyChapterPayload } from './study-chapter-spec.js';
 import { threeKingdomsBanqiStudyLine } from './three-kingdoms-banqi-study-replay.js';
 
@@ -151,6 +155,125 @@ describe('rules page sample games', () => {
     expect(kingdoms.textContent).toContain('Level 7 wins 100 to 45');
     const headings = [...kingdoms.querySelectorAll('h2')].map((heading) => heading.textContent);
     expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+  });
+
+  it('fanfanqi: previews the local study in An engine game before Play', () => {
+    const page = buildArticlePage('fanfanqi');
+    expect(embedPaths('fanfanqi')).toEqual(['/embed/study/HLQzHlhK/O92BsOOd']);
+    expect(page.querySelector('iframe')?.getAttribute('src')).toContain(
+      '/embed/study/HLQzHlhK/O92BsOOd',
+    );
+    const headings = [...page.querySelectorAll('h2')].map((h) => h.textContent);
+    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+    expect(page.textContent).toContain('Level 8 wins on points after 83 plies, with 24 HP left');
+  });
+
+  it('fanfanqi: replays the HP result, observed notes and safe sidelines with masked whole payloads', () => {
+    const source = readPlan('ffq-banqi').create.chapter;
+    const chapter = { ...source, id: 'chapter', root: source.tree } as StudyChapterPayload;
+    const replay = ffqBanqiStudyLine(chapter);
+    expect(replay.played).toHaveLength(83);
+    expect(replay.views.at(-1)?.status).toMatchObject({ type: 'finished', winner: 'red' });
+    expect(replay.hp.at(-1)).toEqual({ red: 24, black: 0 });
+    expect(Object.values(replay.views.at(-1)!.board).filter((p) => p?.faceDown)).toHaveLength(3);
+    expect(source.tags.result).toBe('1-0');
+    let state = validateFFQBanqiReplayTree(source.tree);
+    const observed = new Set<string>();
+    const observe = () => {
+      for (const p of state.board) if (p && !p.faceDown) observed.add(`${p.color} ${p.role}`);
+      for (const p of state.captures) observed.add(`${p.owner} ${p.role}`);
+    };
+    observe();
+    const notes = readArtifact<{ comments: Record<string, string> }>('ffq-banqi', 'notes');
+    for (const [i, node] of mainLine(source.tree.root).entries()) {
+      state = applyFFQBanqiReplayMove(state, parseFFQBanqiReplayMove(node.uci)!);
+      observe();
+      const note = notes.comments[String(i + 1)];
+      if (!note) continue;
+      expect(node.annotations?.comments?.some((c) => c.text.includes(note))).toBe(true);
+      expect(note).not.toMatch(/[\u3400-\u9fff]|—|\b(king|rook|knight|pawn)\b/i);
+      for (const named of note
+        .toLowerCase()
+        .matchAll(/\b(red|black) (general|advisor|elephant|chariot|horse|cannon|soldier)\b/g))
+        expect(observed.has(named[0])).toBe(true);
+    }
+    expect(Object.keys(notes.comments)).toHaveLength(7);
+    expect(replay.lines.size).toBe(3);
+    for (const branch of replay.lines.values())
+      for (const [i, move] of branch.played.entries()) {
+        expect(move.from).not.toBe(move.to);
+        expect(branch.views[i]!.board[move.to]?.faceDown).not.toBe(true);
+      }
+    const payload = {
+      chapter,
+      luck: readArtifact('ffq-banqi', 'luck'),
+      notes,
+      replay: { ...replay, lines: [...replay.lines.values()] },
+    };
+    const masked = (value: unknown) =>
+      JSON.parse(JSON.stringify(value), (key, v) => {
+        expect(['setup', 'deal', 'seed', 'rootFen'].includes(key)).toBe(false);
+        if (v?.faceDown === true) expect(v).toEqual({ faceDown: true });
+        return v;
+      });
+    masked(payload);
+    expect(() =>
+      masked({
+        ...payload,
+        embed: { board: [{ faceDown: true, role: 'general', color: 'black' }] },
+      }),
+    ).toThrow();
+  });
+
+  it('fanfanqi: renders all 84 review points, seven notes, 25 luck marks and navigates to the HP ending', async () => {
+    const source = readPlan('ffq-banqi').create.chapter;
+    const chapter = {
+      ...source,
+      id: 'chapter',
+      root: source.tree,
+      hasDecisions: true,
+    } as StudyChapterPayload;
+    const luck = readArtifact<{ decisions: { ply: number }[] }>('ffq-banqi', 'luck');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        Response.json(
+          url.endsWith('/decisions') ? luck : { study: { id: 'local' }, chapters: [chapter] },
+        ),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 'local', chapterId: 'chapter' });
+    expect(root.querySelector('.embed-note')).toBeNull();
+    const chart = root.querySelector('.embed-score-chart');
+    expect(chart?.querySelector('.embed-score-chart__side')?.textContent).toBe(
+      'Win chance for Red',
+    );
+    expect(chart?.querySelectorAll('polyline')).toHaveLength(1);
+    expect(chart?.querySelector('polyline')?.getAttribute('points')?.split(' ')).toHaveLength(84);
+    expect(root.querySelectorAll('.review-move-list__luck')).toHaveLength(25);
+    expect(root.querySelectorAll('.review-move-list__suffix')).toHaveLength(0);
+    const badge = (ply: number) => root.querySelector<HTMLElement>(`[data-luck-path="${ply}"]`)!;
+    badge(17).dispatchEvent(
+      new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }),
+    );
+    await vi.waitFor(() =>
+      expect(document.querySelector('.luck-card--open')?.textContent).toContain('Black Cannon'),
+    );
+    badge(13).dispatchEvent(
+      new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }),
+    );
+    await vi.waitFor(() =>
+      expect(document.querySelector('.luck-card--open')?.textContent).toContain('Black Horse'),
+    );
+    for (const text of Object.values(
+      readArtifact<{ comments: Record<string, string> }>('ffq-banqi', 'notes').comments,
+    ))
+      expect(root.textContent).toContain(text);
+    for (let i = 0; i < 83; i++)
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(chart?.getAttribute('data-ply')).toBe('83');
+    expect(root.querySelector('.ffq-banqi-study-hp')?.textContent).toContain('0');
   });
 
   for (const variant of ['banqi', 'three-kingdoms-banqi']) {
