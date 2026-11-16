@@ -419,6 +419,7 @@ async function mountStudyEmbedCard(
   let currentPly = 0;
   const card = await mountEmbedCard(root, {
     ...cardOptions,
+    mobileNotes: { rootNote: chapter.root?.root?.annotations?.comments?.[0]?.text },
     mountBoard: (host, hooks) =>
       cardOptions.mountBoard(host, {
         onPlyChange: (ply, maxPly) => {
