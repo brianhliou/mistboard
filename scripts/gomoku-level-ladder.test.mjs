@@ -267,6 +267,31 @@ const candidateOutput = [100, 80, -1000]
   ])
   .concat('MESSAGE +29999 | 1-1 | C1', '2,0');
 
+// The fake engine appends while tests poll, so a read can land mid-write: an
+// empty file or a torn last line is "not written yet", not a parse error.
+// Only a complete line (ending in a newline) is parsed.
+function readCommandLog(log) {
+  const text = readFileSync(log, 'utf8');
+  const complete = text.slice(0, text.lastIndexOf('\n') + 1);
+  return complete
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line));
+}
+
+test('the command log reader skips an empty file and a torn last line', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gomoku-log-'));
+  const log = join(dir, 'commands.jsonl');
+  try {
+    writeFileSync(log, '');
+    assert.deepEqual(readCommandLog(log), []);
+    writeFileSync(log, '{"pid":1,"line":"START 15"}\n{"pid":1,"li');
+    assert.deepEqual(readCommandLog(log), [{ pid: 1, line: 'START 15' }]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 async function withNativeFixture(output, check) {
   const dir = mkdtempSync(join(tmpdir(), 'gomoku-native-'));
   const binary = join(dir, 'rapfi');
@@ -292,7 +317,7 @@ require('node:readline').createInterface({input: process.stdin}).on('line', line
   let native;
   try {
     native = await ladder.loadNativeRapfi();
-    await check(native, binary, () => readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse));
+    await check(native, binary, () => readCommandLog(log));
   } finally {
     await native?.stop();
     if (previous === undefined) delete process.env.RAPFI_BIN;
