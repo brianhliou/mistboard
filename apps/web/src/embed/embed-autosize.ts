@@ -26,7 +26,11 @@ function frameOrigin(frame: HTMLIFrameElement): string | null {
 }
 
 function onMessage(event: MessageEvent): void {
-  const data = event.data as { type?: unknown; height?: unknown } | null;
+  const data = event.data as {
+    type?: unknown;
+    height?: unknown;
+    fullReadingHeight?: unknown;
+  } | null;
   if (!data || typeof data !== 'object' || data.type !== EMBED_HEIGHT_MESSAGE) return;
   for (const frame of frames) {
     if (!frame.isConnected) {
@@ -38,6 +42,7 @@ function onMessage(event: MessageEvent): void {
     if (frameOrigin(frame) !== event.origin) return;
     const height = data.height;
     if (typeof height === 'number' && Number.isFinite(height) && height > 0) {
+      frame.classList.toggle('embed-full-reading-height', data.fullReadingHeight === true);
       const next = Math.ceil(height);
       // A frame one pixel shorter can ask for one pixel more: at a fractional
       // zoom (110%, 2.2 device pixels a pixel) the card's measured padding moves
@@ -49,6 +54,7 @@ function onMessage(event: MessageEvent): void {
       frame.style.aspectRatio = 'auto';
       frame.style.height = `${next}px`;
     } else {
+      frame.classList.remove('embed-full-reading-height');
       frame.style.height = '';
       frame.style.aspectRatio = frame.dataset.aspect ?? '';
     }

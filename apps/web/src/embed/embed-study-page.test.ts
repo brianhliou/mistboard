@@ -99,6 +99,74 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('study embed phone notes', () => {
+  const rootNote = 'Start with the cannon. Keep the central file clear.';
+  const moveNote =
+    'The cannon controls the central file. The horse can develop next, while the rook stays behind the soldiers. Do not advance the central soldier until the pieces can support it.';
+  const lineNote = 'Develop the other cannon instead.';
+
+  async function mount(hideSolution = false) {
+    stubFetch(200, {
+      chapters: [
+        {
+          ...CHAPTER,
+          root: {
+            root: {
+              annotations: { comments: [{ text: rootNote }] },
+              children: [
+                {
+                  uci: 'h3e3',
+                  annotations: { comments: [{ text: moveNote }] },
+                  children: [{ uci: 'h8e8' }],
+                },
+                {
+                  uci: 'b3e3',
+                  annotations: { comments: [{ text: lineNote }] },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 'phone', chapterId: CHAPTER.id }, { hideSolution });
+    return root;
+  }
+
+  it('shows the complete current note outside the move scroller and follows navigation', async () => {
+    const root = await mount();
+    const note = root.querySelector<HTMLElement>('.embed-card-current-note');
+    expect(note).not.toBeNull();
+    expect(note!.closest('.embed-card-rail')).toBeNull();
+    expect(note!.textContent).toBe(rootNote);
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(note!.textContent).toBe(moveNote);
+    expect(note!.hidden).toBe(false);
+    root.querySelector<HTMLButtonElement>('[data-ply="2"]')!.click();
+    expect(note!.hidden).toBe(true);
+    expect(note!.textContent).toBe('');
+    root.querySelector<HTMLButtonElement>('.review-move-list__line-move')!.click();
+    expect(note!.textContent).toBe(lineNote);
+    root.querySelector<HTMLButtonElement>('[data-ply="1"]')!.click();
+    expect(note!.textContent).toBe(moveNote);
+    // Desktop retains the original inline notes and branches.
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(moveNote);
+  });
+
+  it('keeps root and move notes out of the new pane until the solution is revealed', async () => {
+    const root = await mount(true);
+    const note = root.querySelector<HTMLElement>('.embed-card-current-note');
+    expect(note).not.toBeNull();
+    expect(note!.hidden).toBe(true);
+    expect(note!.textContent).toBe('');
+    root.querySelector<HTMLButtonElement>('.embed-card-solution-show')!.click();
+    expect(note!.textContent).toBe(rootNote);
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(note!.textContent).toBe(moveNote);
+  });
+});
+
 async function mountAnnotatedDuck({ sideline = true, shapes = true } = {}) {
   const chapter = {
     id: 'DuckMarks',
@@ -1170,7 +1238,7 @@ describe('mountEmbedStudy', () => {
       expect(root.querySelector('.embed-score-chart')).toBeNull();
       // The frame is exactly today's: header, card, credit.
       expect(
-        [...(root.querySelector('.embed-frame')?.children ?? [])].map((el) => el.className),
+        [...(root.querySelector('.embed-frame')?.children ?? [])].map((el) => el.classList[0]),
       ).toEqual(['embed-card-header', 'embed-card', 'embed-credit']);
       root.remove();
     }
