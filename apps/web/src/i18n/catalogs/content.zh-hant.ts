@@ -260,7 +260,7 @@ export const ZH_HANT_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
-  'source.rapfi': 'Rapfi，作者 dhbloo 及貢獻者：八個五子棋機器人等級，GPL-3.0。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及貢獻者：五子棋最強對手及八個機器人等級，GPL-3.0。',
   'source.rapfiNetworks': 'Rapfi 專案提供的 Rapfi 神經網路，CC0 1.0。',
   'source.rapfiBuild':
     'rapfi-wasm，作者 Brian H. Liou：五子棋覆盤分析使用的可重現 Rapfi 瀏覽器建置，GPL-3.0。',
@@ -597,8 +597,10 @@ export const ZH_HANT_CONTENT = {
     '本站最強的鬥獸棋機器人：hzyhhzy 的鬥獸棋版 KataGo，使用 Dandelion 4 神經網路，經作者許可在本站執行。',
   'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的貢獻者',
   'thanks.rapfiBuildAuthor': '瀏覽器建置：Brian H. Liou',
+  'thanks.rapfiBotBio':
+    '本站最強的五子棋對手，強於等級 8。Rapfi 由 dhbloo 及貢獻者開發，使用 Rapfi 專案提供的神經網路。每步思考約 4-5 秒。',
   'thanks.rapfiBody':
-    '驅動全部八個五子棋機器人等級，使用 Rapfi 專案提供的神經網路；rapfi-wasm 建置負責五子棋覆盤頁面的分析。',
+    '驅動五子棋最強對手及全部八個機器人等級，使用 Rapfi 專案提供的神經網路；rapfi-wasm 建置負責五子棋覆盤頁面的分析。',
   'thanks.communityBotBy': '來自社群開發者的機器人。',
   'thanks.statGames': 'Mistboard 上的對局',
   'thanks.statRating': '{variant}等級分',

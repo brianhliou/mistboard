@@ -856,6 +856,7 @@ function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
   if (bot.id === 'ab-jchess') return t('bots.abJchessBio');
   if (bot.id === 'jqe') return t('bots.jqeBio');
+  if (bot.id === 'rapfi') return t('thanks.rapfiBotBio');
   if (bot.id === JUNGLE_TOP_BOT_ID) return t('bots.katagoBio');
   if (bot.id === 'misty') return t('bots.mistyBio');
   return undefined;
@@ -867,7 +868,7 @@ function systemBotBio(bot: BotProfile): string | undefined {
 type BotCredit = { label: string; href: string };
 
 export function botCredits(botId: string): BotCredit[] {
-  if (/^rapfi-level-[1-8]$/.test(botId)) {
+  if (botId === 'rapfi' || /^rapfi-level-[1-8]$/.test(botId)) {
     return [
       { label: t('thanks.rapfiAuthors'), href: RAPFI_REPO_URL },
       { label: t('thanks.rapfiBuildAuthor'), href: RAPFI_BUILD_URL },
