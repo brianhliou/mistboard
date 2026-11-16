@@ -1,11 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
-import {
-  FFQ_BANQI_ROOM_ID_PREFIX,
-  ffqBanqiAdmits,
-  ffqBanqiCorrespondenceAdmits,
-} from './ffq-banqi-access.js';
+import { FFQ_BANQI_ROOM_ID_PREFIX, ffqBanqiAdmits, ffqBanqiInsider } from './ffq-banqi-access.js';
 import * as persistence from './persistence.js';
 import { type HttpApiContext, writeJson } from './routes/lib.js';
 
@@ -113,9 +109,9 @@ export async function guardFFQBanqiHttpRead(
   const readGame = async () =>
     ctx.inMemoryGameSummary?.(roomId) ??
     (persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null);
-  const publicGame = ffqBanqiCorrespondenceAdmits(account) ? null : await readGame();
-  if (publicGame?.visibility === 'private' || publicGame?.timeControl?.daysPerMove !== undefined)
-    return refuse();
+  const publicGame = ffqBanqiInsider(account) ? null : await readGame();
+  // Public correspondence uses the same masked reads as public live games.
+  if (publicGame?.visibility === 'private') return refuse();
   // Only these owned serializers may run after the gate. Aliases, raw events,
   // artifacts, embeds and all other descendants remain closed.
   if (review || replay || analysis || analysisPoll) return false;

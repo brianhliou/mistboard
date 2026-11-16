@@ -7,7 +7,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import type { BanqiDecision } from '../banqi-analysis.js';
-import { ffqBanqiAdmits, ffqBanqiCorrespondenceAdmits } from './../ffq-banqi-access.js';
+import { ffqBanqiAdmits, ffqBanqiInsider } from './../ffq-banqi-access.js';
 import {
   FFQ_BANQI_ANALYSIS_TIER,
   type FFQBanqiAnalysisCache,
@@ -68,14 +68,11 @@ const defaultDeps: FFQBanqiPostgameRouteDeps = {
   admits: async (request, roomId) => {
     const account = await currentAccountUser(request);
     if (!ffqBanqiAdmits(account)) return false;
-    if (ffqBanqiCorrespondenceAdmits(account)) return true;
+    if (ffqBanqiInsider(account)) return true;
     const game = persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null;
     if (!game || game.variant !== FFQ_BANQI_SPEC_ID || game.visibility === 'private') return false;
-    // Ordinary room summaries do not persist daysPerMove; the recorded opening
-    // is authoritative even after the correspondence deadline row is removed.
-    const events = await persistence.loadRoomEvents<FFQBanqiEvent>(roomId);
-    const created = events?.[0];
-    return created?.type === 'room-created' && created.timeControl?.daysPerMove === undefined;
+    // Public live and correspondence games share the observer-masked serializer.
+    return true;
   },
 };
 
@@ -231,7 +228,7 @@ export async function handleFFQBanqiPostgame(
   response.setHeader('x-robots-tag', 'noindex');
   if (!requireMethod(request, response, 'GET')) return true;
   // Reject unlaunched callers before persistence; launched viewers must also
-  // pass the per-game correspondence and privacy checks.
+  // pass the per-game privacy check.
   if (!(await deps.admits(request, decodeURIComponent(match[1]!)))) {
     writeJson(response, 404, { error: 'not_found' });
     return true;
