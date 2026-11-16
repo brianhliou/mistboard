@@ -10,10 +10,13 @@ import type { RatingVariant } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
 
+// Profile filters include casual activity without widening any rated surface.
+export type ProfileGamesVariant = RatingVariant | 'ffq-banqi';
+
 export type ProfileGameResult = 'win' | 'loss' | 'draw';
 
 export type ProfileGamesFilter = {
-  variant: RatingVariant | null;
+  variant: ProfileGamesVariant | null;
   result: ProfileGameResult | null;
   vs: string | null;
 };
@@ -35,7 +38,7 @@ export function hasProfileGamesFilter(filter: ProfileGamesFilter): boolean {
  *  guessed at: `isVariant` is the rail's own list of pools. */
 export function profileGamesFilterFromSearch(
   search: string,
-  isVariant: (value: string) => value is RatingVariant,
+  isVariant: (value: string) => value is ProfileGamesVariant,
 ): ProfileGamesFilter {
   const params = new URLSearchParams(search);
   const variant = params.get('variant') ?? '';

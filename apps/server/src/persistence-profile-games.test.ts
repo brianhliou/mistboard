@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseGamePageCursor } from './game-page-cursor.js';
-import { createUser, getUserGamesPage } from './persistence.js';
+import { createUser, getUserGamesPage, getUserProfileByHandle } from './persistence.js';
 import {
   assert,
   definePersistenceTests,
@@ -175,6 +175,56 @@ test('game page cursors accept only a timestamp and id tuple (#630)', () => {
 });
 
 definePersistenceTests('profile games filters', () => {
+  test('Fanfanqi profile activity agrees with its filtered games across private seats and results', async () => {
+    await seedUsers();
+    for (const [id, result, color, visibility] of [
+      ['ffq_win', 'red-wins', 'red', 'public'],
+      ['ffq_loss', 'red-wins', 'black', 'public'],
+      ['ffq_draw', 'draw', 'black', 'public'],
+      ['ffq_private_seat', 'black-wins', 'black', 'private'],
+    ] as const) {
+      await seedRow(id, 'ffq-banqi', result, '2026-08-06T10:00:00Z', [
+        alice(color, visibility),
+        guest(color === 'red' ? 'black' : 'red'),
+      ]);
+    }
+    await seedRow(
+      'ffq_private_game',
+      'ffq-banqi',
+      'red-wins',
+      '2026-08-07T10:00:00Z',
+      [alice('red'), guest('black')],
+      'private',
+    );
+    await seedRow('ffq_unfinished', 'ffq-banqi', 'red-wins', '2026-08-08T10:00:00Z', [
+      alice('red'),
+      guest('black'),
+    ]);
+    await sql(`UPDATE games SET status = 'running' WHERE room_id = 'ffq_unfinished'`);
+    await seedRow('ffq_correspondence_held', 'ffq-banqi', 'red-wins', '2026-08-09T10:00:00Z', [
+      alice('red'),
+      guest('black'),
+    ]);
+    await sql(
+      `UPDATE games SET initial_ms = 86400000, increment_ms = 0 WHERE room_id = 'ffq_correspondence_held'`,
+    );
+    await sql(`INSERT INTO events (room_id, seq, type, payload)
+      VALUES ('ffq_correspondence_held', 0, 'room-created', '{"timeControl":{"daysPerMove":1}}')`);
+    const activity = { variant: 'ffq-banqi', totalGamesPlayed: 3, wins: 1, draws: 1, losses: 1 };
+    const visitor = await getUserProfileByHandle('alice', null);
+    assert.deepEqual(visitor?.activity, [activity]);
+    assert.deepEqual(visitor?.ratings, []);
+    const own = await getUserProfileByHandle('alice', 'u_alice');
+    assert.deepEqual(own?.activity, [{ ...activity, totalGamesPlayed: 5, wins: 3 }]);
+    const filters = { activityVariant: 'ffq-banqi' as const };
+    const page = await getUserGamesPage('alice', null, 0, 50, filters);
+    assert.equal(page?.total, visitor?.activity[0]?.totalGamesPlayed);
+    for (const result of ['win', 'draw', 'loss'] as const) {
+      const filtered = await getUserGamesPage('alice', null, 0, 50, { ...filters, result });
+      assert.equal(filtered?.total, 1);
+    }
+    assert.doesNotMatch(JSON.stringify(visitor), /"deal"|"setup"|"board"|"position"/);
+  });
   test('profile cursor survives a newer finish with filters and timestamp ties (#630)', async () => {
     await seedUsers();
     for (const id of ['03', '02', '01', '00']) {

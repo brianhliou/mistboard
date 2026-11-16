@@ -13,6 +13,108 @@ describe('profile ratings rail', () => {
     document.body.innerHTML = '';
   });
 
+  it('shows public Fanfanqi activity after Banqi with counts and results, never ratings', async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+    const { mountProfile } = await import('./profile.js');
+    const requests: URL[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      requests.push(url);
+      return new Response(
+        JSON.stringify(
+          url.pathname.endsWith('/profile')
+            ? {
+                profile: {
+                  user: {
+                    handle: 'alice',
+                    displayName: 'Alice',
+                    accountRole: 'player',
+                    profileVisibility: 'public',
+                    createdAt: '2026-01-01T00:00:00Z',
+                  },
+                  ratings: [],
+                  activity: [
+                    { variant: 'ffq-banqi', totalGamesPlayed: 23, wins: 12, draws: 3, losses: 8 },
+                  ],
+                  games: [],
+                  gamesTotal: 23,
+                },
+              }
+            : { games: [], total: 23, players: [] },
+        ),
+      );
+    });
+    const root = document.createElement('main');
+    await mountProfile(root, 'alice');
+    const row = root.querySelector<HTMLButtonElement>(
+      '.profile-rating-row[data-variant="ffq-banqi"]',
+    );
+    expect(row).not.toBeNull();
+    expect(row?.previousElementSibling?.getAttribute('data-variant')).toBe('banqi');
+    expect(row?.textContent).toContain('Fanfanqi');
+    expect(row?.textContent).toContain('23 games');
+    expect(row?.classList.contains('profile-rating-row-empty')).toBe(false);
+    expect(
+      row?.querySelector('.profile-rating-value, .profile-rating-pace, .champion-crown'),
+    ).toBeNull();
+    row?.click();
+    await vi.waitFor(() =>
+      expect(
+        requests.some(
+          (url) =>
+            url.pathname.endsWith('/games') && url.searchParams.get('variant') === 'ffq-banqi',
+        ),
+      ).toBe(true),
+    );
+    const spotlight = root.querySelector('.profile-rating-spotlight');
+    expect(spotlight?.textContent).toContain('12 wins');
+    expect(spotlight?.textContent).toContain('3 draws');
+    expect(spotlight?.textContent).toContain('8 losses');
+    expect(spotlight?.querySelector('.profile-rating-chart, .profile-chart-ranges')).toBeNull();
+    expect(
+      requests.some(
+        (url) =>
+          url.pathname.endsWith('/rating-history') &&
+          url.searchParams.get('variant') === 'ffq-banqi',
+      ),
+    ).toBe(false);
+    root.querySelector<HTMLButtonElement>('[data-result="win"]')?.click();
+    await vi.waitFor(() =>
+      expect(
+        requests.some(
+          (url) =>
+            url.pathname.endsWith('/games') &&
+            url.searchParams.get('variant') === 'ffq-banqi' &&
+            url.searchParams.get('result') === 'win',
+        ),
+      ).toBe(true),
+    );
+    const { leaderboardVariants } = await import('./variants.js');
+    expect(leaderboardVariants.some((variant) => variant.gameSpecId === 'ffq-banqi')).toBe(false);
+    const { RATING_VARIANT_LABEL_KEY } = await import('./champion-crowns.js');
+    expect(Object.keys(RATING_VARIANT_LABEL_KEY)).not.toContain('ffq_banqi');
+  });
+
+  it('omits the Fanfanqi row when its spec is hidden, even with activity in the payload', async () => {
+    vi.resetModules();
+    const { gameSpecForId } = await import('@mistboard/game');
+    const spec = gameSpecForId('ffq-banqi');
+    const surface = spec.publicSurface;
+    try {
+      spec.publicSurface = 'hidden';
+      vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+      const { buildProfileRatings } = await import('./profile.js');
+      const section = buildProfileRatings([], 'en', {
+        activity: [{ variant: 'ffq-banqi', totalGamesPlayed: 23, wins: 12, draws: 3, losses: 8 }],
+      });
+      expect(section.querySelector('[data-variant="ffq-banqi"]')).toBeNull();
+    } finally {
+      spec.publicSurface = surface;
+    }
+  });
+
   it.each([
     ['en', ['Xiangqi blitz champion', 'Flip Jungle correspondence champion']],
     ['zh-Hans', ['象棋闪电冠军', '翻翻兽棋通信对局冠军']],
@@ -431,9 +533,9 @@ describe('profile ratings rail', () => {
 
     expect(section.textContent).toContain('Fog Chess');
     // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) +
-    // Xiangqi Mahjong (launched 2026-10-25) + Gomoku = 7 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // Xiangqi Mahjong (launched 2026-10-25) + Gomoku + Fanfanqi activity = 8 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
     // kept but no profile lists them.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(7);
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(8);
     expect(section.textContent).toContain('Xiangqi Mahjong');
     expect(section.textContent).toContain('Gomoku');
     expect(section.textContent).not.toContain('Fortress Xiangqi');
@@ -861,9 +963,15 @@ describe('profile ratings rail', () => {
     // Canonical ordering: the rail reads in the shared registry order (xiangqi
     // first) regardless of activity; played rows stand out by not dimming.
     const railRows = [...root.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    const { profileRatingVariants } = await import('./variants.js');
+    const { profileRatingVariants, profileActivityVariants } = await import('./variants.js');
+    const { canonicalVariantOrderIndex } = await import('@mistboard/game');
     expect(railRows.map((row) => row.dataset.variant)).toEqual(
-      profileRatingVariants.map((variant) => variant.id),
+      [...profileRatingVariants, ...profileActivityVariants]
+        .sort(
+          (a, b) =>
+            canonicalVariantOrderIndex(a.gameSpecId) - canonicalVariantOrderIndex(b.gameSpecId),
+        )
+        .map((variant) => variant.id),
     );
     const flipRow = railRows.find((row) => row.dataset.variant === 'jungle_flip');
     expect(flipRow?.classList.contains('profile-rating-row-empty')).toBe(false);
@@ -940,9 +1048,15 @@ describe('profile ratings rail', () => {
     const rows = [...section.querySelectorAll<HTMLElement>('.profile-rating-row')];
     // Canonical registry order throughout (crazyhouse before fog), with played
     // rows undimmed and every never-played row dimmed.
-    const { profileRatingVariants } = await import('./variants.js');
+    const { profileRatingVariants, profileActivityVariants } = await import('./variants.js');
+    const { canonicalVariantOrderIndex } = await import('@mistboard/game');
     expect(rows.map((row) => row.dataset.variant)).toEqual(
-      profileRatingVariants.map((variant) => variant.id),
+      [...profileRatingVariants, ...profileActivityVariants]
+        .sort(
+          (a, b) =>
+            canonicalVariantOrderIndex(a.gameSpecId) - canonicalVariantOrderIndex(b.gameSpecId),
+        )
+        .map((variant) => variant.id),
     );
     const played = new Set(['fog', 'crazyhouse_xiangqi']);
     for (const row of rows) {

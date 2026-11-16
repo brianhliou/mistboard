@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { ffqBanqiCorrespondenceAdmits } from '../ffq-banqi-access.js';
 import { parseGamePageCursor } from '../game-page-cursor.js';
@@ -121,6 +122,8 @@ export async function tryHandle(
       {
         includeFFQ: ffqBanqiCorrespondenceAdmits(viewer),
         ratingVariant,
+        activityVariant:
+          parsedUrl.searchParams.get('variant') === FFQ_BANQI_SPEC_ID ? FFQ_BANQI_SPEC_ID : null,
         result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
         opponent: opponent || null,
       },
