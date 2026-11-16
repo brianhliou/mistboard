@@ -96,3 +96,49 @@ are run in this branch, followed by workspace typecheck and named-file Biome,
 per the slice's targeted-test instructions. The registration module, roster,
 database and browser serving implementation are unchanged. The sequential
 chain's final branch owns the merged full gate and release.
+
+
+## Paired native calibration (#1177)
+
+On 2026-11-16, the same local M3 Max arm64 binary played **40 complete games**
+against unchanged Level 8, using 20 dealt openings sampled without replacement
+from the live pool (seed `20261116`), with colors exchanged for every opening.
+Every game ended in kernel five or full-board adjudication; none was truncated.
+Six games were active at most, with searches held to the live four-process pool.
+The run took 1,995.737 seconds (33 minutes 16 seconds).
+
+Strongest finished **28 wins, 11 draws, 1 loss**, scoring **83.75%** with draws
+worth half a point. Its **95% paired-bootstrap score interval is 77.5%–90.0%**
+(100,000 resamples of whole opening pairs). This demonstrates a score above
+Level 8 on this local sample, without estimating a full random-floor Elo rating.
+Strongest scored 14/6/0 as Black and 14/5/1 as White (W/D/L).
+
+| Policy | Observed moves | Median move time | Maximum move time |
+| --- | ---: | ---: | ---: |
+| Rapfi Strongest, time-only 5,000 ms | 1,992 | 4,290.5 ms | 5,042 ms |
+| Level 8, 80,000 nodes / 3,500 ms | 1,979 | 342 ms | 653 ms |
+
+Move times run from spawn through the final move, including cold startup and
+network loading; they exclude pool queue wait and child reaping. The 5,042 ms
+maximum illustrates why a search ceiling is not a whole-call wall-time limit.
+The native search/selection policy is unchanged, including no node command or
+candidate weakening for strongest. Levels 1–8 retain their original settings.
+
+All 40 histories (3,971 recorded placements) replayed legally to their claimed
+results through both the game kernel and tenant event runtime. Every placement
+also matched its recorded seed, color and per-move telemetry. The evidence pins
+the actual executable/network SHA256 and the catalogue's full source, network,
+search configuration and policy signature for every native tier. Historical
+records were not changed; new evidence remains in local scratch under
+`tmp/1177-ladder/`. Production uses x86-64 rather than this arm64 build, so these
+move timings are local observations, not production latency guarantees.
+
+Reproduce with an installed pinned native binary (output appends a new run):
+
+```sh
+RAPFI_BIN=/path/to/rapfi node scripts/gomoku-level-ladder.mjs --engine native --games 40 --seed 20261116 --pairs 8-rapfi-strongest --parallel 6 --label strongest-v-level8-1177 --output tmp/1177-ladder/native40.json
+node scripts/gomoku-level-ladder.mjs --summary tmp/1177-ladder/native40.json
+```
+
+`--parallel` accepts 1–6 only on native; the historical default pairing plan
+and serial WASM behavior remain unchanged. Native policy overrides are refused.

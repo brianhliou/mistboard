@@ -1489,3 +1489,5 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `apps/server/src/persistence-room-deadlines.ts` + `correspondence-first-move.test.ts` + `persistence-correspondence-first-move.test.ts`: oldest correspondence first-move debt, shared seek/challenge/quick-pair admission, release after moving, and the private stalling-account audit written atomically with a pregame abort in `persistence-game-lifecycle.ts` (#1131).
 
 `apps/web/src/correspondence-first-move.ts` + `.test.ts`: localized first-move reminder and safe game link across correspondence posting, seek acceptance, challenges, homepage setup and postgame challenges.
+
+`apps/server/src/gomoku-eve-adapter.ts` + `.test.ts`: seeded live dealt openings, Black/White kernel replay, exact native Rapfi tiers and EvE-only random floor; worker binary capability. `scripts/gomoku-level-ladder.mjs --engine native --pairs 8-rapfi-strongest --parallel 6`: strongest-vs-Level-8 paired calibration with binary/network/policy fingerprints and move telemetry, preserving historical runs.
