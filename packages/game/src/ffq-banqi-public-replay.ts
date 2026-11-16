@@ -3,6 +3,7 @@
 // kernel owns legality, HP, chase, the draw clock and result precedence.
 import { banqiPieceLetter } from './banqi-fen.js';
 import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
+import { hasOwnKey } from './js-compat.js';
 import { BANQI_PIECE_COUNTS, type BanqiColor, type BanqiPieceRole } from './variants-banqi.js';
 import {
   applyFFQBanqiKernelMove,
@@ -37,9 +38,7 @@ function fail(): never {
 
 function validIdentity(piece: FFQBanqiReplayIdentity | undefined): piece is FFQBanqiReplayIdentity {
   return Boolean(
-    piece &&
-      ['red', 'black'].includes(piece.color) &&
-      Object.hasOwn(BANQI_PIECE_COUNTS, piece.role),
+    piece && ['red', 'black'].includes(piece.color) && hasOwnKey(BANQI_PIECE_COUNTS, piece.role),
   );
 }
 

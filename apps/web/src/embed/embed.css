@@ -1318,3 +1318,21 @@ body.embed-body {
     column-gap: 12px;
   }
 }
+
+/* Fanfanqi study embeds keep both public HP meters beside the current frame. */
+.embed-board .ffq-banqi-study-board > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.embed-board .ffq-banqi-study-hp {
+  aspect-ratio: 568 / 36;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.embed-board .ffq-banqi-study-hp > .ffq-banqi-hp {
+  width: 100%;
+}

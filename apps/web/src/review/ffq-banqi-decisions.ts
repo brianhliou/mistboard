@@ -13,17 +13,25 @@ import {
 } from './banqi-decisions.js';
 import { formatFlipVariantBestMove } from './move-advice-text.js';
 
+export function parseFFQBanqiEngineMove(uci: string) {
+  if (!/^[a-d][0-7][a-d][0-7]$/.test(uci)) return null;
+  const square = (s: string) => ffqBanqiSquare(Number(s[1]) * 4 + s.charCodeAt(0) - 97);
+  return { from: square(uci.slice(0, 2)), to: square(uci.slice(2)) };
+}
+
+export function formatFFQBanqiBestMove(uci: string): string {
+  const move = parseFFQBanqiEngineMove(uci);
+  if (!move) return uci;
+  // The shared formatter takes Banqi's zero-based engine ranks.
+  const engineSquare = (s: string) => `${s[0]}${Number(s[1]) - 1}`;
+  return formatFlipVariantBestMove(engineSquare(move.from) + engineSquare(move.to));
+}
+
 export function ffqBanqiDecisionOverlay(body: BanqiDecisionsResponse) {
   const overlay = banqiDecisionOverlay(summarizeDecisions(body.decisions));
   for (const info of overlay.byPly.values())
     for (const candidate of info.candidates ?? []) {
-      if (!candidate.uci || !/^[a-d][0-7][a-d][0-7]$/.test(candidate.uci)) continue;
-      const square = (s: string) => ffqBanqiSquare(Number(s[1]) * 4 + s.charCodeAt(0) - 97);
-      const from = square(candidate.uci.slice(0, 2)),
-        to = square(candidate.uci.slice(2));
-      // The shared formatter takes Banqi's zero-based engine ranks.
-      const engineSquare = (s: string) => `${s[0]}${Number(s[1]) - 1}`;
-      candidate.label = formatFlipVariantBestMove(engineSquare(from) + engineSquare(to));
+      if (candidate.uci) candidate.label = formatFFQBanqiBestMove(candidate.uci);
     }
   const totals = {
     red: { luck: 0, decisionLoss: 0 },

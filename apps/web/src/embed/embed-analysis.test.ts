@@ -46,6 +46,7 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
       'atomic-xiangqi',
       'banqi',
       'dark-chess',
+      'ffq-banqi',
       'fortress-xiangqi',
       'jieqi',
       'jungle',
@@ -70,10 +71,13 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
 });
 
 describe('loadEmbedAnalysis', () => {
-  it('makes no API request for unavailable FFQ analysis', async () => {
+  it('reads only the cache for FFQ analysis and gracefully handles a miss', async () => {
     const calls = stubApi({});
     expect(await loadEmbedAnalysis('ffq-banqi', ROOM, noMoves)).toBeNull();
-    expect(calls).toEqual([]);
+    expect(calls).toEqual([
+      { url: `/api/ffq-banqi/games/${ROOM}/analysis`, method: 'GET' },
+      { url: `/api/ffq-banqi/games/${ROOM}/decisions`, method: 'GET' },
+    ]);
   });
 
   it('reads the cache with GETs only, and is null when the game was never analysed', async () => {
@@ -257,4 +261,52 @@ it('loads Three Kingdoms cached decisions with public 1-based candidates and GET
   ]);
   expect(calls.map((c) => c.method)).toEqual(['GET', 'GET']);
   expect(embedAnalysisVariant('three-kingdoms-banqi')?.parseMove('a0a0')).toBeNull();
+});
+
+it('maps FFQ engine coordinates, public capture grades and pool-mean luck using only cached GETs', async () => {
+  const calls = stubApi({
+    '/api/ffq-banqi/games/ffq/analysis': {
+      engineId: 'misty-ffq',
+      depth: 1,
+      plies: [
+        { ply: 0, cp: 0, mate: null, best: 'b0b0' },
+        { ply: 1, cp: 100, mate: null, best: 'a0a0' },
+      ],
+    },
+    '/api/ffq-banqi/games/ffq/decisions': {
+      decisions: [
+        {
+          ply: 1,
+          mover: 'red',
+          bestWin: 70,
+          playedWin: 50,
+          realizedWin: 62,
+          playedRank: 2,
+          candidates: [
+            { move: 'b0c0', win: 70 },
+            { move: 'c1a1', win: 50, played: true },
+          ],
+        },
+      ],
+    },
+  });
+  const loaded = await loadEmbedAnalysis('ffq-banqi', 'ffq', {
+    playedMoves: async () => [{ ply: 1, from: 'b3', to: 'b1' }],
+    events: async () => [],
+  });
+  expect(loaded?.annotations.get(1)).toMatchObject({
+    suffix: '??',
+    note: 'Blunder. a2-a3 was best.',
+    luck: 12,
+  });
+  expect(loaded?.overlayAtPly(0).arrows).toEqual([
+    expect.objectContaining({ from: 'a2', to: 'a3' }),
+  ]);
+  expect(loaded?.overlayAtPly(1).glyphs).toEqual([
+    expect.objectContaining({ square: 'b1', text: '??' }),
+  ]);
+  expect(embedAnalysisVariant('ffq-banqi')?.parseMove('d7a0')).toEqual({ from: 'h4', to: 'a1' });
+  for (const bad of ['a8b0', 'e0a0', '@a0:G', 'c1a1x:g'])
+    expect(embedAnalysisVariant('ffq-banqi')?.parseMove(bad)).toBeNull();
+  expect(calls.map((c) => c.method)).toEqual(['GET', 'GET']);
 });

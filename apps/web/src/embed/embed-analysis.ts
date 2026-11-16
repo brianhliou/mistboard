@@ -49,6 +49,11 @@ import {
   parseFortressEngineMove,
 } from '../review/engine/engine-arrows.js';
 import {
+  fetchCachedFFQBanqiDecisions,
+  formatFFQBanqiBestMove,
+  parseFFQBanqiEngineMove,
+} from '../review/ffq-banqi-decisions.js';
+import {
   type FlipLuckDetail,
   type FlipRole,
   flipLuckPieceSvg,
@@ -93,6 +98,8 @@ export type EmbedAnalysisVariant = {
   parseMove: ParseEngineMove;
   /** Whether the board draws the better move. False where the review draws none either. */
   arrows: boolean;
+  /** Public pool-mean decisions carry scalar luck without a flip-only popup. */
+  scalarLuck?: boolean;
   /** The cached decision-vs-luck layer, for the chance variants. Never computes. */
   fetchDecisions?: (
     roomId: string,
@@ -212,6 +219,7 @@ export const EMBED_ANALYSIS_VARIANTS: Readonly<Record<GameSpecId, EmbedAnalysisV
   'xiangqi-mahjong': null,
   'three-kingdoms-banqi': {
     route: 'three-kingdoms-banqi',
+    scalarLuck: true,
     quoteEvalBestMove: true,
     formatBestMove: formatThreeKingdomsBanqiBestMove,
     parseMove: (uci) =>
@@ -219,8 +227,15 @@ export const EMBED_ANALYSIS_VARIANTS: Readonly<Record<GameSpecId, EmbedAnalysisV
     arrows: true,
     fetchDecisions: (roomId) => fetchCachedThreeKingdomsBanqiDecisions(roomId),
   },
-  // Hidden kernel only: no stored analysis or engine request.
-  'ffq-banqi': null,
+  'ffq-banqi': {
+    route: 'ffq-banqi',
+    scalarLuck: true,
+    quoteEvalBestMove: true,
+    formatBestMove: formatFFQBanqiBestMove,
+    parseMove: parseFFQBanqiEngineMove,
+    arrows: true,
+    fetchDecisions: (roomId) => fetchCachedFFQBanqiDecisions(roomId),
+  },
   chess: null,
 };
 
@@ -281,7 +296,7 @@ export async function loadEmbedAnalysis(
     formatBestMove: variant.formatBestMove,
   });
   const result = embedAnalysisFromMarks(marks, variant, played);
-  if (specId === 'three-kingdoms-banqi')
+  if (variant.scalarLuck)
     for (const [ply, mark] of marks)
       if (mark.luck !== undefined)
         result.annotations.set(ply, { ...result.annotations.get(ply), luck: mark.luck });

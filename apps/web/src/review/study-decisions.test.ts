@@ -160,6 +160,10 @@ it('reads Fanfanqi public pool means and refuses identities or a changed opening
     'b3-b1',
   ]);
   expect(overlay?.totals?.red).toEqual({ luck: 12, decisionLoss: 20 });
+  expect(JSON.parse(JSON.stringify({ ...overlay, byPly: [...overlay!.byPly] }))).toMatchObject({
+    byPly: [[1, { judgment: 'blunder', luck: 12 }]],
+    totals: { red: { luck: 12, decisionLoss: 20 }, black: { luck: 0, decisionLoss: 0 } },
+  });
   for (const changed of [
     { ...saved, initialRevealed: [...saved.initialRevealed].reverse() },
     { ...saved, replay: 'unknown' },

@@ -23,11 +23,7 @@ import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
 import { mountDevelopers } from './developers-page.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
-import {
-  EMBED_ANALYSIS_VARIANTS,
-  embedAnalysisVariant,
-  loadEmbedAnalysis,
-} from './embed/embed-analysis.js';
+import { EMBED_ANALYSIS_VARIANTS, embedAnalysisVariant } from './embed/embed-analysis.js';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import {
   firstMoverColorName,
@@ -494,19 +490,14 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(seatInkForVariant('ffq-banqi', 'black', 'black')).toBe('black');
   });
 
-  it('explicitly has no embed analysis and never loads replay inputs for it', async () => {
-    expect(EMBED_ANALYSIS_VARIANTS).toHaveProperty('ffq-banqi', null);
-    expect(embedAnalysisVariant('ffq-banqi')).toBeNull();
-    const playedMoves = vi.fn();
-    const events = vi.fn();
-    expect(
-      await loadEmbedAnalysis('ffq-banqi', 'reserved-room', { playedMoves, events }),
-    ).toBeNull();
-    expect(playedMoves).not.toHaveBeenCalled();
-    expect(events).not.toHaveBeenCalled();
+  it('maps cached public FFQ analysis while finished-game cards and TV stay closed', () => {
+    expect(EMBED_ANALYSIS_VARIANTS['ffq-banqi']).toMatchObject({ route: 'ffq-banqi' });
+    expect(embedAnalysisVariant('ffq-banqi')).not.toBeNull();
+    expect(embedRendererKindForVariant('ffq-banqi')).toBeNull();
+    expect(webVariantTenantForSpecId('ffq-banqi')?.watch).toBeUndefined();
   });
 
-  it('supports casual play, rules and observed studies without ratings, correspondence, analysis, editor or embed', () => {
+  it('supports casual play, rules and observed study embeds without ratings, correspondence, standalone analysis, editor or game embeds', () => {
     const id = 'ffq-banqi';
     // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
     expect(variantMiniIdForGameSpec(id)).toBe(id);
