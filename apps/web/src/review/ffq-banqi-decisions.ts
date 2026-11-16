@@ -11,16 +11,7 @@ import {
 } from './banqi-decisions.js';
 
 export function ffqBanqiDecisionOverlay(body: BanqiDecisionsResponse) {
-  const overlay = banqiDecisionOverlay(summarizeDecisions(body.decisions));
-  const totals = {
-    red: { luck: 0, decisionLoss: 0 },
-    black: { luck: 0, decisionLoss: 0 },
-  };
-  for (const d of body.decisions) {
-    totals[d.mover].luck += d.realizedWin - d.playedWin;
-    totals[d.mover].decisionLoss += Math.max(0, d.bestWin - d.playedWin);
-  }
-  return { ...overlay, totals };
+  return banqiDecisionOverlay(summarizeDecisions(body.decisions));
 }
 const url = (roomId: string) => `/api/ffq-banqi/games/${encodeURIComponent(roomId)}/decisions`;
 export async function fetchCachedFFQBanqiDecisions(
