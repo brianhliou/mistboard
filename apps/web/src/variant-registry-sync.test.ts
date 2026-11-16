@@ -95,7 +95,7 @@ describe('FFQ banqi launch preparation', () => {
     const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(web?.roomIdPrefix).toBe('ffq_');
     expect(web?.loadLiveRoomClient).toBeTypeOf('function');
-    expect(web?.watch).toBeUndefined();
+    expect(web?.watch?.mountReplay).toBeTypeOf('function');
     expect(web?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(web?.mountPostgame).toBeTypeOf('function');
     const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');

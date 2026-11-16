@@ -59,7 +59,7 @@ import {
 } from './landing-play.js';
 import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
-import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
+import { homepageTvAdmits, type LandingTvMode, mountLandingTv } from './landing-tv.js';
 import { fetchLiveStats } from './live-stats-client.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
@@ -225,6 +225,7 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     namesByRoomId,
     loaderForId: landingEventLoader,
     isConnected: () => stage.el.isConnected,
+    admitSpec: homepageTvAdmits,
     onGameChange: ({ roomId, specId, mode }) => {
       stage.viewerLink.href = localizedHref(watchHrefForTvGame(mode, roomId), currentLocale());
       stage.tvStrip.update({
