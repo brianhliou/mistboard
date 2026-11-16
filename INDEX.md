@@ -280,6 +280,7 @@ Edit task → find file → open only that file.
 | `engine-move-guard.ts` | Shared engine-move boundary for variant PvE engines: bounded retry + kernel-validate loop, a complete replayable decision record, and fail-closed reporters (fallback counter + alert) so no engine can silently substitute an illegal or threat-blind move |
 | `engine-protocol/build.ts` | Server-side redacted `EngineTurnRequest` builder |
 | `engines/{registry,think-time,types}.ts` | Engine registry/type helpers for engine service code |
+| `gomoku-engine-catalog.ts` | Typed native Rapfi eight-tier and time-only strongest catalogue, exact source/mix9svq/serving-policy signatures and EvE-only random Gomoku floor |
 | `engine-registry.ts` | Maps engine client IDs to implementations: `loadEngine`, `playableLiveEngines`, `engineVersionDisplayName` |
 | `live-engine.ts` | `chooseLiveEngineMove` — interfaces room state with an engine implementation |
 | `engine-time-policy.ts` | Engine think-time budgets per time control / tier |

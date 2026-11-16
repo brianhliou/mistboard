@@ -37,6 +37,7 @@ import {
   FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION,
   type FortressXiangqiEngineTier,
 } from '../fortress-xiangqi-fsf-engine.js';
+import { GOMOKU_CATALOG_ENGINES, GOMOKU_RANDOM_ENGINE_ID } from '../gomoku-engine-catalog.js';
 import {
   ABJCHESS_JIEQI_ENGINE_VERSION,
   JIEQI_ALL_ENGINE_TIERS,
@@ -151,7 +152,9 @@ function extraPlayableEngineIds(): Set<string> {
 export function playableLiveEngines(): EngineDefinition[] {
   const extras = extraPlayableEngineIds();
   return Object.values(KNOWN_ENGINES).filter(
-    (engine) => PROD_PLAYABLE_ENGINE_IDS.has(engine.id) || extras.has(engine.id),
+    (engine) =>
+      engine.id !== GOMOKU_RANDOM_ENGINE_ID &&
+      (PROD_PLAYABLE_ENGINE_IDS.has(engine.id) || extras.has(engine.id)),
   );
 }
 
@@ -1425,6 +1428,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...KATAGO_JUNGLE_ENGINES,
   ...THREE_KINGDOMS_BANQI_ENGINES,
   ...FFQ_BANQI_ENGINES,
+  ...Object.fromEntries(GOMOKU_CATALOG_ENGINES.map((engine) => [engine.id, engine])),
 };
 
 /**
@@ -1510,7 +1514,9 @@ export async function upsertBuiltinEngineVersions(
               ? 'python-subprocess'
               : engine.config.kind === 'builtin'
                 ? 'in-process-typescript'
-                : 'uci-subprocess',
+                : engine.config.kind === 'rapfi-gomocup'
+                  ? 'gomocup-subprocess'
+                  : 'uci-subprocess',
         },
         engine.notes ?? 'Built-in TypeScript worker engine for EvE data collection MVP.',
       ],

@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import type pg from 'pg';
 import { banqiNetPath } from './banqi-engine.js';
 import { type BotRatingStamp, loadBotRatingPins } from './bot-rating-provenance.js';
 import type { EngineDefinition } from './engine-registry.js';
+import { rapfiAnalysisBinaryPath } from './gomoku-analysis.js';
+import { GOMOKU_RANDOM_ENGINE_ID, RAPFI_NATIVE_NETWORK } from './gomoku-engine-catalog.js';
 import { abJchessNetPath, jqeNetPath } from './jieqi-engine.js';
 import { jungleFlipNetPath } from './jungle-flip-engine.js';
 import { katagoJungleNetPath } from './jungle-katago-engine.js';
@@ -22,6 +25,8 @@ function workerNetPath(engine: EngineDefinition): string | null {
     return path;
   };
   switch (config.kind) {
+    case 'rapfi-gomocup':
+      return resolve(dirname(rapfiAnalysisBinaryPath()), RAPFI_NATIVE_NETWORK);
     case 'pikafish-xiangqi':
       return pikafishXiangqiNetPath(pikafishXiangqiPath());
     case 'fairy-stockfish':
@@ -101,8 +106,13 @@ export async function captureEngineGameStamps(
   const recipe = loadBotRatingPins([]).recipe;
   const stamp = async (engine: EngineDefinition): Promise<BotRatingStamp> => {
     const path = workerNetPath(engine);
-    if (path === null) return { recipe, netSha256: null };
-    return { recipe, netSha256: await netSha256(path) };
+    return {
+      recipe,
+      netSha256: path === null ? null : await netSha256(path),
+      ...(engine.config.kind === 'rapfi-gomocup' || engine.id === GOMOKU_RANDOM_ENGINE_ID
+        ? { policy: engine.playSignature }
+        : {}),
+    };
   };
   return { white: await stamp(white), black: await stamp(black) };
 }
@@ -116,6 +126,7 @@ export async function recordEngineGameStamps(
   const side = (stamp: BotRatingStamp): BotRatingStamp => ({
     recipe: stamp.recipe,
     netSha256: stamp.netSha256,
+    ...(stamp.policy === undefined ? {} : { policy: stamp.policy }),
   });
   await db.query(
     `INSERT INTO game_debug_artifacts (game_id, artifact_type, storage, payload)
