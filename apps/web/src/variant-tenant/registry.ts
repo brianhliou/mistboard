@@ -70,6 +70,8 @@ export type WebTenantEngineOption = {
   id: string;
   name: string;
   familyName: string;
+  /** A named strength above the numbered levels, localized in setup. */
+  levelLabelKey?: I18nKey;
   kind: string;
 };
 
@@ -419,7 +421,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           familyName: 'Rapfi',
           kind: 'browser',
         })),
-        { id: 'rapfi-strongest', name: 'Rapfi', familyName: 'Rapfi', kind: 'container' },
+        {
+          id: 'rapfi-strongest',
+          name: 'Rapfi Full strength',
+          familyName: 'Rapfi',
+          levelLabelKey: 'bots.fullStrength',
+          kind: 'container',
+        },
       ],
       defaultEngineId: 'rapfi-level-1',
       // The picker stays unlisted. Admins have the same ?play deep-link door

@@ -513,6 +513,11 @@ describe('Gomoku hidden registration', () => {
         expect(option.kind).toBe(option.id === 'rapfi-strongest' ? 'container' : 'browser');
         expect(server?.isEngineClientId?.(option.id)).toBe(true);
       }
+      expect(web?.landing?.engineOptions?.at(-1)).toMatchObject({
+        id: 'rapfi-strongest',
+        name: 'Rapfi Full strength',
+        levelLabelKey: 'bots.fullStrength',
+      });
       // Browser choices and server recognition agree on all eight stable ids.
       for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
         expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);

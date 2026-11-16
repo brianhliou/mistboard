@@ -249,7 +249,7 @@ describe('bot pages', () => {
   });
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
-    'renders unnumbered Rapfi above its ladder with the standard hosted footer in %s',
+    'combines Full strength and Levels 8 to 1 in one Rapfi card in %s',
     async (locale) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       await ensureLocaleCatalog(locale);
@@ -268,6 +268,10 @@ describe('bot pages', () => {
           rating: null,
           ratings: [],
           playOptions: [{ gameSpecId: 'gomoku', engineId, playable: true }],
+          record:
+            level === null
+              ? { games: 37, wins: 30, losses: 5, draws: 2 }
+              : { games: level, wins: level, losses: 0, draws: 0 },
         });
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
@@ -278,17 +282,25 @@ describe('bot pages', () => {
         [...root.querySelectorAll<HTMLElement>('.profile-summary-card')].map(
           (c) => c.dataset.opponentId,
         ),
-      ).toEqual(['rapfi-strongest', 'rapfi']);
-      const top = cardFor(root, 'rapfi-strongest')!;
+      ).toEqual(['rapfi']);
+      const initial = cardFor(root, 'rapfi')!;
+      const picker = initial.querySelector<HTMLSelectElement>('.bot-level-select')!;
+      expect(picker.value).toBe('rapfi-level-1');
+      expect([...picker.options].map((option) => option.textContent)).toEqual([
+        t('bots.fullStrength'),
+        ...[8, 7, 6, 5, 4, 3, 2, 1].map((level) => t('bots.levelName', { level })),
+      ]);
+      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
+      const initialFooter = initial.querySelector('.profile-summary-card-footer')?.textContent;
+      const top = pickLevel(root, 'rapfi', 'rapfi');
+      expect(top.dataset.botId).toBe('rapfi');
       expect(top.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
         '/bot/rapfi',
       );
       expect(top.querySelector('.profile-summary-card-subtitle')?.textContent).toContain(
         t('bots.hosted'),
       );
-      expect(top.querySelector('.profile-summary-card-badge')?.textContent).toBe(
-        t('bots.strongest'),
-      );
+      expect(top.querySelector('.profile-summary-card-badge-callout')).toBeNull();
       const bio = top.querySelector('.profile-summary-card-bio')?.textContent ?? '';
       expect(bio).toContain('dhbloo');
       expect(bio).toContain('4');
@@ -297,15 +309,33 @@ describe('bot pages', () => {
       expect(top.querySelector('.bot-card-credits a')?.getAttribute('href')).toBe(
         'https://github.com/dhbloo/rapfi',
       );
-      expect(top.querySelector('.bot-level-select')).toBeNull();
+      expect(top.querySelector<HTMLSelectElement>('.bot-level-select')?.value).toBe('rapfi');
+      expect(bio).toBe(t('thanks.rapfiBotBio'));
+      const footer = top.querySelector('.profile-summary-card-footer')?.textContent ?? '';
+      expect(footer).toContain('37');
+      expect(footer).toContain('30');
+      expect(footer).not.toBe(initialFooter);
+      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
       expect(top.lastElementChild?.classList.contains('bot-card-foot')).toBe(true);
       expect(top.querySelector('.bot-card-foot .profile-summary-card-footer')).not.toBeNull();
       expect(top.querySelector('.bot-card-foot .profile-summary-card-action')?.textContent).toBe(
         t('bots.playVariant', { variant: locale === 'en' ? 'Gomoku' : '五子棋' }),
       );
-      expect(
-        cardFor(root, 'rapfi')?.querySelector<HTMLSelectElement>('.bot-level-select')?.value,
-      ).toBe('rapfi-level-1');
+      vi.mocked(fetch).mockResolvedValue(jsonResponse({ url: '/room/gmk_full_strength' }));
+      top.querySelector<HTMLButtonElement>('.profile-summary-card-action')!.click();
+      await flushPromises();
+      const post = vi.mocked(fetch).mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+        botId: 'rapfi',
+        gameSpecId: 'gomoku',
+        mode: 'pve',
+      });
+      expect(bots.find((bot) => bot.id === 'rapfi')?.activeEngineId).toBe('rapfi-strongest');
+      expect(window.location.pathname).toBe('/room/gmk_full_strength');
+      const restored = pickLevel(root, 'rapfi', 'rapfi-level-8');
+      expect(restored.dataset.botId).toBe('rapfi-level-8');
+      expect(restored.querySelector('.profile-summary-card-footer')?.textContent).toContain('8');
+      expect(restored.querySelector('.profile-summary-card-badge-callout')).toBeNull();
       vi.mocked(fetch).mockResolvedValue(jsonResponse({ bot: bots[8] }));
       await mountBotProfile(root, 'rapfi');
       expect(root.querySelector('.bot-profile-credits a')?.getAttribute('href')).toBe(
@@ -315,46 +345,54 @@ describe('bot pages', () => {
     },
   );
 
-  it('offers unnumbered Rapfi in setup without changing the default, and posts its engine', async () => {
-    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
-    const { maybeOpenPlayDeepLink, setRoomNavigator } = await import('./landing-play.js');
-    const store = new Map<string, string>();
-    vi.stubGlobal('localStorage', {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => store.set(key, value),
-      removeItem: (key: string) => store.delete(key),
-      clear: () => store.clear(),
-    });
-    const navigate = vi.fn();
-    setRoomNavigator(navigate);
-    const fetchSpy = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(JSON.stringify({ url: '/room/gmk_rapfi' }), { status: 201 }),
-    );
-    vi.stubGlobal('fetch', fetchSpy);
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=gomoku');
-    maybeOpenPlayDeepLink([]);
-    const select = document.querySelector<HTMLSelectElement>('.landing-engine-select')!;
-    expect([...select.options].map((o) => o.value)).toEqual([
-      ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
-      'rapfi-strongest',
-    ]);
-    expect(select.value).toBe('rapfi-level-1');
-    select.value = 'rapfi-strongest';
-    select.dispatchEvent(new Event('change'));
-    document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/room/gmk_rapfi'));
-    const { closeActiveLandingDialog } = await import('./landing-play.js');
-    closeActiveLandingDialog();
-    setRoomNavigator(null);
-    window.localStorage.clear();
-    const post = fetchSpy.mock.calls.find(([input]) => String(input) === '/api/rooms');
-    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
-      gameSpecId: 'gomoku',
-      mode: 'pve',
-      engineId: 'rapfi-strongest',
-    });
-  });
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'labels Rapfi Full strength in %s setup without changing the default, and posts its engine',
+    async (locale) => {
+      await ensureLocaleCatalog(locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
+      const { t } = await import('./i18n/catalog.js');
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      const { maybeOpenPlayDeepLink, setRoomNavigator } = await import('./landing-play.js');
+      const store = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
+        clear: () => store.clear(),
+      });
+      const navigate = vi.fn();
+      setRoomNavigator(navigate);
+      const fetchSpy = vi.fn(
+        async (_input: RequestInfo | URL, _init?: RequestInit) =>
+          new Response(JSON.stringify({ url: '/room/gmk_rapfi' }), { status: 201 }),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', '/?play=computer&gameSpecId=gomoku');
+      maybeOpenPlayDeepLink([]);
+      const select = document.querySelector<HTMLSelectElement>('.landing-engine-select')!;
+      expect([...select.options].map((o) => o.value)).toEqual([
+        ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+        'rapfi-strongest',
+      ]);
+      expect(select.value).toBe('rapfi-level-1');
+      expect(select.options[8]?.textContent).toBe(`Rapfi ${t('bots.fullStrength')}`);
+      expect(select.textContent).not.toContain(t('bots.levelName', { level: 0 }));
+      select.value = 'rapfi-strongest';
+      select.dispatchEvent(new Event('change'));
+      document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/room/gmk_rapfi'));
+      const { closeActiveLandingDialog } = await import('./landing-play.js');
+      closeActiveLandingDialog();
+      setRoomNavigator(null);
+      window.localStorage.clear();
+      const post = fetchSpy.mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+        gameSpecId: 'gomoku',
+        mode: 'pve',
+        engineId: 'rapfi-strongest',
+      });
+    },
+  );
 
   it('the homepage top rung waits for the roster and plays Rapfi strongest above Level 8', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');

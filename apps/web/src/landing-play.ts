@@ -87,6 +87,7 @@ import { renderVariantMarker } from './variant-markers.js';
 import { variantSupportsPve } from './variant-public-surfaces.js';
 import {
   defaultTimePresetForSpec,
+  type WebTenantEngineOption,
   webVariantOfferedInMenu,
   webVariantTenantForSpecId,
   webVariantTenants,
@@ -94,12 +95,7 @@ import {
 import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
 
-export type PlayableEngine = {
-  id: string;
-  name: string;
-  familyName: string;
-  kind: string;
-};
+export type PlayableEngine = WebTenantEngineOption;
 
 // Which door opened the dialog, for the setup_dialog_opened event: the hero
 // button, a deep link (?play=...), the correspondence tab's create button, or
@@ -3379,7 +3375,9 @@ function buildEngineSetupSection(
     for (const engine of availableEngines) {
       const option = document.createElement('option');
       option.value = engine.id;
-      option.textContent = engine.name;
+      option.textContent = engine.levelLabelKey
+        ? `${engine.familyName} ${t(engine.levelLabelKey, {}, locale)}`
+        : engine.name;
       select.append(option);
     }
     select.value = selected;
