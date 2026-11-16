@@ -31,9 +31,9 @@ export const GAME_EXPORT_FORMATS = {
   // piece never turned over appears nowhere. It still replays on its own (a
   // covered tile cannot be captured, and legality reads only face-up pieces).
   'three-kingdoms-banqi': ['pgn', 'json'],
-  // The FFQ FEN is a masked observer snapshot, not a replay/import format.
-  // Decided 2026-11-10: FFQ launches with no public export or share card (#808).
-  'ffq-banqi': [],
+  // Observed-outcome replay: four public opening pieces, later flips and
+  // public covered victims. No dealt root or still-covered board identities.
+  'ffq-banqi': ['pgn', 'json'],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
   // AND a duck placement, and neither WXF nor ICCS has anything to say about the

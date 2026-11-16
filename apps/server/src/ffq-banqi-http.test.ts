@@ -5,8 +5,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
 import test from 'node:test';
-import { gameSpecForId } from '@mistboard/game';
+import {
+  correspondenceTimeControl,
+  createFFQBanqiDeal,
+  gameSpecForId,
+  parseHiddenPiecePgn,
+  replayHiddenPieceRecord,
+} from '@mistboard/game';
 import { ffqBanqiHttpTarget, guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
+import type { FFQBanqiEvent } from './ffq-banqi-tenant.js';
 import { handleApiRequest, routes } from './http-api.js';
 import { close, getPool, init } from './persistence-db.js';
 import { clearPresence } from './presence.js';
@@ -43,6 +50,7 @@ function reads(id: string): Array<[string, string]> {
       '/artifacts',
       '/export.json',
       '/export.pgn',
+      '/export.json/extra',
       '/analysis',
       '/analysis/jobs/job',
       '/analysis/jobs/job/extra',
@@ -61,6 +69,8 @@ function reads(id: string): Array<[string, string]> {
     paths.push(['POST', `/api/${prefix}games/${id}/decisions`]);
     paths.push(['POST', `/api/${prefix}games/${id}/analysis/jobs/job`]);
     paths.push(['HEAD', `/api/${prefix}games/${id}/analysis`]);
+    paths.push(['HEAD', `/api/${prefix}games/${id}/export.json`]);
+    paths.push(['POST', `/api/${prefix}games/${id}/export.pgn`]);
     paths.push(['POST', `/api/${prefix}games/${id}/decisions`]);
     paths.push(['POST', `/api/${prefix}games/${id}/decisions/jobs/job`]);
     paths.push(['POST', `/api/${prefix}games/${id}/favorite`]);
@@ -75,6 +85,7 @@ function reads(id: string): Array<[string, string]> {
     `/api/chat/player/${id}`,
     `/og/game/${id}.png`,
     `/embed/game/${id}`,
+    `/embed/tv?room=${id}`,
     `/api/watch/live?room=${id}`,
     `/watch?room=${id}`,
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/game/${id}`)}`,
@@ -210,6 +221,7 @@ for (const { surface, flag } of launches) {
         startedAt: new Date(0),
         endedAt: new Date(1),
         rated: false,
+        visibility: 'public',
         setup: { deal: SECRET },
         events: [{ setup: SECRET }],
         state: { board: SECRET },
@@ -253,6 +265,8 @@ for (const { surface, flag } of launches) {
           const ownedRead =
             method === 'GET' &&
             (path === `/api/ffq-banqi/games/${id}` ||
+              (!['ffq_inflight', 'ffq_wrong_variant'].includes(id) &&
+                [`/api/games/${id}/export.json`, `/api/games/${id}/export.pgn`].includes(path)) ||
               path === `/ffq-banqi/game/${id}` ||
               path === `/api/ffq-banqi/games/${id}/analysis/jobs/job` ||
               path === `/api/ffq-banqi/games/${id}/decisions/jobs/job`);
@@ -339,9 +353,24 @@ for (const { surface, flag } of launches) {
       else
         assert.equal(
           summaryQueries,
-          admitted ? 3 : 0,
-          'only authorized summary endpoints load persisted summaries',
+          admitted ? 9 : 0,
+          'only authorized summary and export endpoints load persisted summaries',
         );
+      if (admitted) {
+        summary.visibility = 'private';
+        const privateDownload = await invoke(
+          handler,
+          'GET',
+          '/api/games/ffq_reserved/export.json',
+          role !== null,
+        );
+        assert.equal(
+          privateDownload.status,
+          404,
+          'admin admission must not override export privacy',
+        );
+        assert.equal(privateDownload.body, '{"error":"not_found"}');
+      }
     });
   }
 }
@@ -406,6 +435,104 @@ test('unrelated game, room and OG reads perform no FFQ identity query', async (t
     ffqBanqiHttpTarget(new URL('http://localhost/api/banqi/games/current'))?.roomId,
     'current',
   );
+});
+
+test('FFQ canonical downloads serve only finalized public games and keep embeds closed', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  const flag = process.env[FLAG];
+  spec.publicSurface = 'casual';
+  process.env[FLAG] = 'true';
+  t.after(() => {
+    spec.publicSurface = surface;
+    if (flag === undefined) delete process.env[FLAG];
+    else process.env[FLAG] = flag;
+  });
+  const id = 'ffq_download';
+  const events: FFQBanqiEvent[] = [
+    {
+      type: 'room-created',
+      roomId: id,
+      at: 1,
+      gameSpecId: 'ffq-banqi',
+      setup: { deal: createFFQBanqiDeal(1162) },
+    },
+    { type: 'move-played', roomId: id, at: 2, color: 'red', move: { from: 0, to: 0 } },
+    { type: 'seat-resigned', roomId: id, at: 3, color: 'black' },
+  ];
+  let stored: readonly unknown[] = events;
+  let visibility = 'public';
+  let daysPerMove: number | undefined;
+  const ctx = {
+    rooms: { get: () => ({ gameSpecId: 'ffq-banqi', events: stored }) },
+    inMemoryGameSummary: () => ({
+      roomId: id,
+      variant: 'ffq-banqi',
+      mode: 'pvp',
+      result: 'red-wins',
+      termination: 'resignation',
+      plyCount: 1,
+      startedAt: new Date(1),
+      endedAt: new Date(3),
+      visibility,
+      timeControl: {
+        initialMs: 300_000,
+        incrementMs: 5_000,
+        ...(daysPerMove ? { daysPerMove } : {}),
+      },
+      participants: [],
+    }),
+  } as unknown as HttpApiContext;
+  const run = (req: IncomingMessage, res: ServerResponse) => handleApiRequest(ctx, req, res);
+  for (const correspondenceDays of [undefined, 3] as const)
+    for (const format of ['json', 'pgn']) {
+      daysPerMove = correspondenceDays;
+      const log = events.map((e, i) =>
+        i === 0 && correspondenceDays
+          ? { ...e, timeControl: correspondenceTimeControl(correspondenceDays) }
+          : e,
+      );
+      stored = log;
+      const url = `/api/games/%66fq_download/export.${format}`;
+      const result = await invoke(run, 'GET', url, false);
+      assert.equal(result.status, 200, result.body);
+      assert.equal(result.headers['cache-control'], 'no-store');
+      assert.match(
+        String(result.headers['content-type']),
+        format === 'json' ? /json/ : /chess-pgn/,
+      );
+      if (format === 'json') assert.ok(replayHiddenPieceRecord(JSON.parse(result.body)).ok);
+      else {
+        const parsed = parseHiddenPiecePgn(result.body);
+        assert.ok(parsed.ok, JSON.stringify(parsed));
+        assert.ok(replayHiddenPieceRecord(parsed.record).ok);
+      }
+      stored = log.slice(0, -1); // A stale completed summary never authorizes a live log.
+      assert.equal((await invoke(run, 'GET', url, false)).status, 403);
+      stored = log.map((e, i) => (i === 0 ? { ...e, internalEngineTest: {} } : e));
+      assert.equal((await invoke(run, 'GET', url, false)).status, 403);
+      stored = log;
+      visibility = 'private';
+      assert.equal((await invoke(run, 'GET', url, false)).status, 404);
+      visibility = 'public';
+      process.env[FLAG] = 'false';
+      assert.equal((await invoke(run, 'GET', url, false)).status, 404);
+      process.env[FLAG] = 'true';
+    }
+  for (const [method, url] of [
+    ['GET', `/embed/game/${id}`],
+    ['GET', `/embed/tv?room=${id}`],
+    ['GET', `/api/ffq-banqi/games/${id}/export.json`],
+    ['GET', `/api/banqi/games/${id}/export.json`],
+    ['POST', `/api/games/${id}/export.json`],
+    ['HEAD', `/api/games/${id}/export.pgn`],
+    ['GET', `/api/games/${id}/export.json/extra`],
+    ['GET', `/api/games/${id}/events`],
+  ]) {
+    const response = await invoke(run, method!, url!, false);
+    assert.equal(response.status, 404, `${method} ${url}`);
+    assert.equal(response.body, '{"error":"not_found"}');
+  }
 });
 
 test('reserved FFQ reads close without persistence or touching runtime state', async (t) => {

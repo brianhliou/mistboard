@@ -642,7 +642,7 @@ test('XMJ cards refuse live, between-hand, aborted, missing and mismatched logs'
   }
 });
 
-test('every tenant with a review URL binds a card on a position-card variant', async () => {
+test('tenants with review URLs bind cards except Fanfanqi, which exports without a card', async () => {
   await loadRegistry();
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   let cards = 0;
@@ -676,6 +676,11 @@ test('every tenant with a review URL binds a card on a position-card variant', a
     }
     if (!entry.export) {
       assert.ok(!entry.card, `${entry.kind}: a card needs the export's review URL`);
+      continue;
+    }
+    if (entry.gameSpecId === 'ffq-banqi') {
+      assert.equal(entry.export.gameRouteBase, '/ffq-banqi/game');
+      assert.equal(entry.card, null, 'masked exports do not enable a share card');
       continue;
     }
     assert.ok(entry.card, `${entry.kind}: a review URL wants a share card (#368)`);

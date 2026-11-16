@@ -177,6 +177,8 @@ export type TenantExportGame = {
   dealFen?: string;
   // Public starting snapshot, with covered identities masked.
   initialFen?: string;
+  // Fanfanqi's four public opening identities, in setup-square order.
+  initialRevealed?: readonly HiddenPieceIdentity[];
   // Gomoku's stored opening, separate from event-counted placements. Legacy
   // games explicitly export the empty board with Black to move.
   opening?: GomokuOpening;

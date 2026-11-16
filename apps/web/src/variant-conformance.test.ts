@@ -464,12 +464,12 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
   });
 
-  it('links FFQ finished games to the private review without advertising watch', () => {
+  it('links FFQ finished games to review and lists public record downloads', () => {
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
     expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.reviewRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.watch).toBeUndefined();
-    expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual([]);
+    expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual(['pgn', 'json']);
     expect(finishedGameHref('ffq_finished', FFQ_BANQI_SPEC_ID)).toBe(
       '/ffq-banqi/game/ffq_finished',
     );

@@ -8,6 +8,7 @@ import {
   isFFQBanqiRequest,
 } from './ffq-banqi-access.js';
 import { ffqBanqiEngineAvailable, isFFQBanqiEngineClientId } from './ffq-banqi-engine.js';
+import { ffqBanqiExport } from './ffq-banqi-game-export.js';
 import { type FFQBanqiRuntimeRoom, ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import * as persistence from './persistence.js';
@@ -181,7 +182,7 @@ registerVariantTenant({
     };
   },
   reviewRouteBase: '/ffq-banqi/game',
-  export: null,
+  export: ffqBanqiExport,
   card: null,
   ...tenantCorrespondenceBinding(
     { ...ffqBanqiTenant, enabled: ffqBanqiEnabled },

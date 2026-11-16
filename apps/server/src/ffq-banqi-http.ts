@@ -97,6 +97,7 @@ export async function guardFFQBanqiHttpRead(
   const path = url.pathname;
   const review = /^\/ffq-banqi\/game\/[^/]+\/?$/.test(path);
   const replay = /^\/api\/ffq-banqi\/games\/[^/]+$/.test(path);
+  const gameExport = /^\/api\/games\/[^/]+\/export\.(?:json|pgn)$/.test(path);
   // Reveal grading (/decisions) shares the analysis job shape, so it opens
   // the same way: the base path on GET and POST, its job poll on GET.
   const analysis = /^\/api\/ffq-banqi\/games\/[^/]+\/(?:analysis|decisions)$/.test(path);
@@ -104,7 +105,7 @@ export async function guardFFQBanqiHttpRead(
     path,
   );
   const allowedRead =
-    (target.summary || target.shell || review || replay || analysisPoll) &&
+    (target.summary || target.shell || review || replay || analysisPoll || gameExport) &&
     request.method === 'GET';
   const allowedAnalysis = analysis && (request.method === 'GET' || request.method === 'POST');
   if (!allowedRead && !allowedAnalysis) return refuse();
@@ -113,6 +114,16 @@ export async function guardFFQBanqiHttpRead(
   const readGame = async () =>
     ctx.inMemoryGameSummary?.(roomId) ??
     (persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null);
+  // Only the canonical download route may reach the tenant export hook.
+  // Its event replay independently enforces finalization and internal-test
+  // exclusion for live and correspondence games; admin admission never
+  // overrides download privacy.
+  if (gameExport) {
+    const game = await readGame();
+    if (!game || game.variant !== FFQ_BANQI_SPEC_ID || game.visibility === 'private')
+      return refuse();
+    return false;
+  }
   const publicGame = ffqBanqiCorrespondenceAdmits(account) ? null : await readGame();
   if (publicGame?.visibility === 'private' || publicGame?.timeControl?.daysPerMove !== undefined)
     return refuse();
