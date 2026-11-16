@@ -286,7 +286,7 @@ describe('FFQ masked review', () => {
     expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
   });
 
-  it('shows luck on flips and covered captures plus both seat totals from cached decisions without POST', async () => {
+  it('shows luck on flips and covered captures, with no per-seat totals, from cached decisions without POST', async () => {
     const chance = record.timeline.flatMap(({ move, color }, i) =>
       record.history.truth[i]!.view.board[move!.to]?.faceDown
         ? [{ ply: i + 1, color, capture: move!.from !== move!.to }]
@@ -334,19 +334,11 @@ describe('FFQ masked review', () => {
     vi.stubGlobal('fetch', spy);
     const host = root();
     mountFFQBanqiPostgame(host, ROOM);
-    await vi.waitFor(() =>
-      expect(host.querySelectorAll('.review-decision-totals')).toHaveLength(2),
-    );
-    expect(host.textContent).toContain('🎲 +30%');
+    await vi.waitFor(() => expect(host.textContent).toContain('🎲 +30%'));
     expect(host.textContent).toContain('🎲 -30%');
-    for (const side of ['red', 'black']) {
-      const mine = decisions.filter((d) => d.mover === side);
-      const luck = mine.reduce((sum, d) => sum + d.realizedWin - d.playedWin, 0);
-      const loss = mine.reduce((sum, d) => sum + d.bestWin - d.playedWin, 0);
-      const row = host.querySelector(`.review-decision-totals[data-side="${side}"]`)!;
-      expect(row.textContent).toContain(`luck ${luck > 0 ? '+' : ''}${luck.toFixed(1)} pp`);
-      expect(row.textContent).toContain(`decision loss ${loss.toFixed(1)} pp`);
-    }
+    // Decided 2026-11-15: the per-move luck is the whole story; no per-seat totals line.
+    expect(host.textContent).not.toContain('decision loss');
+    expect(host.textContent).not.toMatch(/luck [+-]?\d+\.\d pp/);
     expect(spy.mock.calls).toHaveLength(3);
     assertMasked(decisions);
   });
