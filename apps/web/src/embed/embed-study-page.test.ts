@@ -2384,3 +2384,52 @@ describe('Three Kingdoms study embed', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
+
+it('Flip Jungle rules-game embed draws its chart, stored grades and a luck die for every flip', async () => {
+  const plans = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../../../scripts/variant-lab/rules-page-games/plans',
+  );
+  const plan = JSON.parse(readFileSync(resolve(plans, 'jungle-flip.plan.json'), 'utf8'));
+  const luck = JSON.parse(readFileSync(resolve(plans, 'jungle-flip.luck.json'), 'utf8'));
+  const { tree, ...chapterSpec } = plan.create.chapter;
+  const chapter = { ...chapterSpec, id: 'vUJ3Yodx', root: tree, hasDecisions: true };
+  // Plant a stored grade as well: this strong self-play game may earn no marks.
+  chapter.root.root.children[0].annotations = { glyphs: [2] };
+  const calls: string[] = [];
+  vi.stubGlobal('fetch', async (path: string) => {
+    calls.push(path);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => (path.endsWith('/decisions') ? luck : { chapters: [chapter] }),
+    };
+  });
+  const root = document.createElement('div');
+  document.body.append(root);
+  await mountEmbedStudy(root, { studyId: '7d1IkHPE', chapterId: chapter.id });
+  expect(calls).toEqual([
+    '/api/studies/7d1IkHPE',
+    '/api/studies/7d1IkHPE/chapters/vUJ3Yodx/decisions',
+  ]);
+  expect(root.querySelector('.embed-score-chart')).not.toBeNull();
+  expect(root.querySelectorAll('.review-move-list__move[data-ply]')).toHaveLength(55);
+  expect(root.querySelectorAll('.review-move-list__luck')).toHaveLength(16);
+  expect(root.querySelector('.review-move-list__move[data-ply="1"]')?.textContent).toContain('?');
+  expect(root.querySelectorAll('.review-move-list__note').length).toBeGreaterThan(0);
+  root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+  expect(root.querySelector('.luck-mark[data-luck-square="d3"]')).not.toBeNull();
+  const board = root.querySelector('.embed-board')!.innerHTML;
+  expect(board).not.toContain(chapter.root.rootFen.split(' ').at(-1));
+  root.remove();
+  calls.length = 0;
+  const hidden = document.createElement('div');
+  await mountEmbedStudy(
+    hidden,
+    { studyId: '7d1IkHPE', chapterId: chapter.id },
+    { hideSolution: true },
+  );
+  expect(calls).toEqual(['/api/studies/7d1IkHPE']);
+  expect(hidden.querySelector('.review-move-list__luck')).toBeNull();
+  expect(hidden.querySelector('.embed-score-chart')).toBeNull();
+});

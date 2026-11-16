@@ -128,3 +128,46 @@ it('reads Three Kingdoms pool-mean grades in its own 1-based move dialect', asyn
     expect(await fetchStudyChapterDecisions('three-kingdoms-banqi', 's', 'c', saved)).toBeNull();
   }
 });
+
+it('maps Flip Jungle engine coordinates and rejects identity-bearing or malformed rows', async () => {
+  const saved = { rootFen: 'dealt', root: { children: [{ uci: 'a1a1', children: [] }] } };
+  const row = {
+    ply: 1,
+    mover: 'red',
+    bestWin: 70,
+    playedWin: 50,
+    realizedWin: 62,
+    playedRank: 2,
+    candidates: [
+      { move: 'b0b0', win: 70 },
+      { move: 'a0a0', win: 50, played: true },
+    ],
+  };
+  const serve = (value: unknown) =>
+    vi.stubGlobal('fetch', async () => ({
+      status: 200,
+      json: async () => ({ decisions: [value] }),
+    }));
+  serve(row);
+  const overlay = await fetchStudyChapterDecisions('jungle-flip', 's', 'c', saved);
+  expect(overlay?.byPly.get(1)).toMatchObject({ judgment: 'blunder', luck: 12, playedRank: 2 });
+  expect(overlay?.byPly.get(1)?.candidates?.[0]).toMatchObject({ label: 'b1 flip', uci: 'b0b0' });
+  for (const bad of [
+    { capturedRole: 'rat' },
+    { playedRank: undefined },
+    { bestWin: NaN },
+    { candidates: [{ move: 'e0e0', win: 70 }] },
+    { candidates: [{ move: 'a4a4', win: 70 }] },
+    { candidates: [{ move: 'a0a0', win: 70, role: 'rat' }] },
+  ]) {
+    serve({ ...row, ...bad });
+    expect(await fetchStudyChapterDecisions('jungle-flip', 's', 'c', saved)).toBeNull();
+  }
+  serve(row);
+  expect(
+    await fetchStudyChapterDecisions('jungle-flip', 's', 'c', saved, {
+      ...saved,
+      root: { children: [{ uci: 'b1b1' }] },
+    }),
+  ).toBeNull();
+});

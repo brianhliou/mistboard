@@ -11,6 +11,10 @@ import {
   summarizeDecisions as summarizeBanqi,
 } from './banqi-decisions.js';
 import { type JieqiDecision, jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
+import {
+  jungleFlipDecisionOverlay,
+  summarizeDecisions as summarizeJungleFlip,
+} from './jungle-flip-decisions.js';
 import { threeKingdomsBanqiDecisionOverlay } from './three-kingdoms-banqi-decisions.js';
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -31,7 +35,7 @@ function isLuckRow(raw: unknown): raw is JieqiDecision {
   );
 }
 
-function isThreeKingdomsRow(raw: unknown): boolean {
+function isFlipRow(raw: unknown, movePattern: RegExp): boolean {
   if (
     !isLuckRow(raw) ||
     !isWin(raw.bestWin) ||
@@ -61,7 +65,7 @@ function isThreeKingdomsRow(raw: unknown): boolean {
         isObject(candidate) &&
         Object.keys(candidate).every((key) => ['move', 'win', 'played'].includes(key)) &&
         typeof candidate.move === 'string' &&
-        /^[a-i][1-5][a-i][1-5]$/.test(candidate.move) &&
+        movePattern.test(candidate.move) &&
         isWin(candidate.win) &&
         candidate.win <= (raw.bestWin as number) &&
         (candidate.played === undefined || typeof candidate.played === 'boolean'),
@@ -80,8 +84,12 @@ export const STUDY_DECISION_VARIANTS: Readonly<
   >
 > = {
   'three-kingdoms-banqi': {
-    validate: isThreeKingdomsRow,
+    validate: (raw) => isFlipRow(raw, /^[a-i][1-5][a-i][1-5]$/),
     overlay: (rows) => threeKingdomsBanqiDecisionOverlay(rows as BanqiDecision[]),
+  },
+  'jungle-flip': {
+    validate: (raw) => isFlipRow(raw, /^[a-d][0-3][a-d][0-3]$/),
+    overlay: (rows) => jungleFlipDecisionOverlay(summarizeJungleFlip(rows as BanqiDecision[])),
   },
   jieqi: {
     validate: isLuckRow,
