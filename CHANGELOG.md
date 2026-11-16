@@ -15,6 +15,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Fanfanqi is open to everyone, casual only, with rules in English and Chinese ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- A player who owes the first move in a correspondence game makes it before starting or accepting another ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- Homepage game names link to their rules in the selected language ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- The jieqi bot and analysis now follow the site's repetition, perpetual and no-capture rules ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Signed-in players can challenge someone they follow, or who follows them, to a game right now from Play, Friend, Real time; the invitation reaches the other player on any page for a minute, accepting opens the game for both, and a setting turns incoming invitations off ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - A tab in the background shows waiting game invitations in its title ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - The bots page shows Misty's Banqi and Flip Jungle records by level ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
@@ -65,6 +69,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The Banqi, Three Kingdoms Banqi and Gomoku rules pages show an annotated Level 7 vs Level 8 game with a chart, move grades and flip luck ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- Every rules page opens with a short summary of its rules ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Studies fit one phone screen, and each move note sits in a fixed slot that opens in full on a tap ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - The Three Kingdoms Banqi rules page is available in Chinese ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - Clarify mate objectives and let players explore completed puzzles ([340656a0](https://github.com/brianhliou/mistboard/commit/340656a0))
@@ -94,6 +100,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Study charts can draw one line per engine, each in its seat colour ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- Bot names on /watch fit their card and link to the bot's page ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- The watch page on phones puts channels above the game, the clocks above and below the board and the moves in one scrolling row ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Study analysis charts fill each side's advantage in its seat colour ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - A recording clock's credit shows beside every board, worded like the site's other game sources ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Games sent from a recording clock credit the device with a link on every board ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
@@ -189,6 +198,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The Gomoku study chart labelled Black's winning chances as White's ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
+- Fanfanqi and Three Kingdoms Banqi bot names write Level with a capital L like the other bots ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Misty's name fits on finished game cards, shown as Misty Level N ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - Games on the current games page keep their place, and a new game appears at the top of its group ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
 - Pikafish xiangqi bots at each level now search with their own engine, so weaker levels no longer play above their strength ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
