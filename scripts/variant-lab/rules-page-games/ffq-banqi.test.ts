@@ -6,6 +6,7 @@ import {
   applyFFQBanqiMove,
   type BanqiDeal,
   createFFQBanqiStateFromSetup,
+  FFQ_BANQI_DAMAGE,
   FFQ_BANQI_FACE_UP_SQUARES,
   ffqBanqiStateToFen,
   getFFQBanqiPlayerView,
@@ -194,19 +195,68 @@ test('missing engine or source pin fails closed; notes match observed outcomes a
     /source pin unavailable|engine unavailable/,
   );
   const comments = artifacts.notes.comments;
-  const square = (index: number) => `${'abcdefgh'[Math.floor(index / 4)]}${(index % 4) + 1}`;
+  assert.deepEqual(comments, {
+    '3': "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon.",
+    '13': "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total.",
+    '17': "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot on g2.",
+    '33': "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48.",
+    '47': 'Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use.',
+    '81': "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one.",
+    '83': 'The red soldier takes it and Black runs out of HP. Red wins with 24 HP left. The three pieces still face down stay hidden.',
+  });
+  const tokens = {
+    3: '@b2:H',
+    13: 'd0d2x:h',
+    17: '@d6:c',
+    33: 'b6b5',
+    47: '@a5:A',
+    81: '@c0:s',
+    83: 'a0b0',
+  };
+  for (const [p, note] of Object.entries(comments)) {
+    const ply = Number(p);
+    assert.doesNotMatch(String(note), /%|public.pool|Level 7/);
+    assert.equal(track.tokens[ply - 1], tokens[ply as keyof typeof tokens]);
+    const row = analysis.find((r: { ply: number }) => r.ply === ply);
+    assert.ok(row && (Number.isFinite(row.cp) || Number.isFinite(row.mate)));
+  }
   for (const ply of [3, 13, 17, 47, 81]) {
     const d = artifacts.luck.decisions.find((d: { ply: number }) => d.ply === ply);
-    assert.ok(comments[String(ply)].includes(`${d.playedWin.toFixed(1)}%`));
-    assert.ok(comments[String(ply)].includes(`${d.realizedWin.toFixed(1)}%`));
-    assert.ok(comments[String(ply)].includes(square(track.moves[ply - 1]!.to)));
+    assert.ok(d && Number.isFinite(d.playedWin) && Number.isFinite(d.realizedWin));
+    if (ply === 17) assert.ok(d.realizedWin < d.playedWin);
+    else assert.ok(d.realizedWin > d.playedWin);
+    if (ply !== 13) assert.deepEqual(track.states[ply]!.hp, track.states[ply - 1]!.hp);
   }
-  assert.equal(track.states[13]!.hp.black, 50);
+  const square = (index: number) => `${'abcdefgh'[Math.floor(index / 4)]}${(index % 4) + 1}`;
+  assert.deepEqual(
+    [3, 13, 17, 33, 47, 81, 83].map((ply) => square(track.moves[ply - 1]!.to)),
+    ['c2', 'c4', 'g4', 'f2', 'f1', 'a3', 'a2'],
+  );
+  const at = (ply: number, square: number) => track.states[ply]!.board[square];
+  assert.deepEqual(at(3, 9), { faceDown: false, color: 'red', role: 'horse' });
+  assert.deepEqual(at(3, 13), { faceDown: false, color: 'black', role: 'cannon' });
+  assert.ok(isFFQBanqiLegalMove(track.states[4]!, { from: 9, to: 13 }));
+  assert.equal(square(track.moves[12]!.from), 'a4');
+  assert.equal(track.states[12]!.hp.black - track.states[13]!.hp.black, 5);
   assert.equal(track.states[13]!.captures.at(-1)!.role, 'horse');
-  assert.ok(comments['33'].includes(square(track.moves[32]!.to)));
+  assert.deepEqual(at(17, 27), { faceDown: false, color: 'black', role: 'cannon' });
+  assert.deepEqual(at(17, 25), { faceDown: false, color: 'red', role: 'chariot' });
+  assert.ok(isFFQBanqiLegalMove(track.states[17]!, { from: 27, to: 25 }));
+  assert.deepEqual(at(32, track.moves[32]!.from), {
+    faceDown: false,
+    color: 'red',
+    role: 'general',
+  });
+  assert.equal(FFQ_BANQI_DAMAGE.advisor, 2 * FFQ_BANQI_DAMAGE.chariot);
+  assert.equal(track.states[33]!.captures.at(-1)!.role, 'advisor');
   assert.deepEqual(track.states[33]!.hp, { red: 48, black: 26 });
-  assert.ok(comments['83'].includes(square(track.moves[82]!.to)));
+  assert.deepEqual(at(47, 20), { faceDown: false, color: 'red', role: 'advisor' });
+  assert.equal(track.states[80]!.hp.black, 2);
+  assert.deepEqual(at(81, 2), { faceDown: false, color: 'black', role: 'soldier' });
+  assert.deepEqual(at(81, 1), { faceDown: false, color: 'red', role: 'soldier' });
   assert.equal(track.states[83]!.captures.at(-1)!.role, 'soldier');
+  assert.deepEqual(track.states[83]!.hp, { red: 24, black: 0 });
+  assert.equal(track.states[83]!.board.filter((p) => p?.faceDown).length, 3);
 });
 
 // Reconstruct one compatible SECRET deal solely inside the test. Publicly

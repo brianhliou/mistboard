@@ -1,13 +1,13 @@
 {
-  "intro": "Level 8 plays red; Level 7 plays black. Red wins on points after 83 plies. The graph shows Level 7’s estimate of Red’s winning chances at every position. Move grades use the same review search. Flip and covered-capture choices use the public pool average; the die shows the luck of the observed outcome. Pieces still face down remain unknown.",
+  "intro": "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
   "comments": {
-    "3": "The flip on c2 reveals a red horse next to the black cannon. Level 7 puts Red at 55.4% after the reveal, against 51.7% averaged over the public pool. The horse can take the cannon on Red’s next turn.",
-    "13": "The red cannon shoots from a4 to c4 over a screen. The covered victim is shown as it leaves: a black horse, costing Black 5 HP. This outcome gives Red 64.6% against the shot’s pool average of 57.3%. The other covered pieces remain unknown.",
-    "17": "Red flips g4 and finds a black cannon. Red’s winning chance falls to 55.2%, against a pool average of 63.9%. The new cannon has a shot at the red chariot on g2, over the covered piece on g3.",
-    "33": "The red general takes the black advisor on f2. Black falls from 36 to 26 HP, while Red still has 48. An advisor costs twice as much HP as a chariot or cannon.",
-    "47": "The flip on f1 reveals a red advisor. Level 7 gives Red 87.1%, against the flip’s public-pool average of 77.8%. Neither player loses HP on a flip; the gain here comes from the piece that becomes available.",
-    "81": "Red flips a3 and reveals a black soldier, beside the red soldier on a2. Black has only 2 HP left. Level 7 gives Red 99.4% after this draw, compared with a pool average of 94.8%.",
-    "83": "The red soldier takes the black soldier on a2 for the last 2 HP. Red wins on points, with 24 HP left. Three pieces are still face down, and their identities stay unknown."
+    "3": "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon.",
+    "13": "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total.",
+    "17": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot on g2.",
+    "33": "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48.",
+    "47": "Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use.",
+    "81": "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one.",
+    "83": "The red soldier takes it and Black runs out of HP. Red wins with 24 HP left. The three pieces still face down stay hidden."
   },
   "evidence": {
     "recipe": "scripts/fetch-release-asset.sh (railpack.json)",

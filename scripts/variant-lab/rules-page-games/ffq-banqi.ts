@@ -211,7 +211,7 @@ export function makeFFQStudy(
   const red = (d: BanqiDecision, value: number) =>
     d.mover === 'red' ? value / 100 : 1 - value / 100;
   const intro =
-    'Level 8 plays red; Level 7 plays black. Red wins on points after 83 plies. The graph shows Level 7’s estimate of Red’s winning chances at every position. Move grades use the same review search. Flip and covered-capture choices use the public pool average; the die shows the luck of the observed outcome. Pieces still face down remain unknown.';
+    "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.";
   const tree = annotateFromEngine({
     rootFen: '',
     moves: tokens,

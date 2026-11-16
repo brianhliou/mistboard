@@ -165,7 +165,9 @@ describe('rules page sample games', () => {
     );
     const headings = [...page.querySelectorAll('h2')].map((h) => h.textContent);
     expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
-    expect(page.textContent).toContain('Level 8 wins on points after 83 plies, with 24 HP left');
+    expect(page.textContent).toContain(
+      "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+    );
   });
 
   it('fanfanqi: replays the HP result, observed notes and safe sidelines with masked whole payloads', () => {

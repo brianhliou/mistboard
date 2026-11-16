@@ -284,7 +284,7 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Misty Level 8 plays red; Level 7 plays black. Level 8 wins on points after 83 plies, with 24 HP left. Step through the notes with the arrows. The graph shows Level 7’s estimate of Red’s winning chances at every position. Move grades judge the choice before a flip or covered capture, and the die shows the luck of the outcome. The three pieces still face down at the end stay unknown.',
+          text: "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
         },
         ...(localStudyPath
           ? [{
