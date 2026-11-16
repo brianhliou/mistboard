@@ -177,12 +177,12 @@ export function offPublicGameSpecIds(
   );
 }
 
-// Exclude the hidden playtest before pagination. Live launch keeps the admin
-// correspondence games private, including completed games with no deadline row.
+// Exclude hidden playtests before pagination. Once public, live and
+// correspondence games follow each listing's existing visibility clauses.
 export function notFFQBanqiGame(gamesAlias = 'games'): string {
   if (!isPublicGameSpec(FFQ_BANQI_SPEC_ID))
     return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
-  return `(${gamesAlias}.variant <> '${FFQ_BANQI_SPEC_ID}' OR ${liveClockGame(gamesAlias)})`;
+  return 'TRUE';
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();
