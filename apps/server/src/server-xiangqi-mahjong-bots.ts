@@ -1,7 +1,7 @@
 /**
  * The bot seat at a xiangqi mahjong table.
  *
- * The bot is a pure function in @mistboard/game (xiangqi-mahjong-bot.ts) that
+ * The bot is a pure function in @mistboard/game (xiangqi-mahjong-bot-search.ts) that
  * reads only its own player view, so it cannot see the opponent's tiles or the
  * walls. This module owns only WHEN it acts: on a short timer, so a human sees
  * a discard land before the table answers it.
@@ -15,15 +15,16 @@ import {
   type XmjRoomState,
   type XmjSeat,
   xmjAnswerAt,
-  xmjBotAction,
   xmjClaimAnswerEarliestAt,
   xmjIsLegalMove,
+  xmjSearchBotAction,
   xmjSeatMayAct,
   xmjViewFor,
 } from '@mistboard/game';
 import { logger } from './obs.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
+import { xmjBotSearchWorker } from './xiangqi-mahjong-bot-search-worker.js';
 
 /** The clientId the bot seat holds. Also what marks the seat as non-human. */
 export const XMJ_BOT_CLIENT_ID = 'misty-xiangqi-mahjong';
@@ -64,13 +65,13 @@ type XmjRuntimeRoomForBots = TenantRuntimeRoom<
   XmjMove,
   XmjRoomState,
   typeof XIANGQI_MAHJONG_SPEC_ID
->;
+> & { stopping?: boolean };
 
 function botSeats(room: XmjRuntimeRoomForBots): XmjSeat[] {
   return XMJ_SEATS.filter((seat) => room.projection.seats[seat] === XMJ_BOT_CLIENT_ID);
 }
 
-/** The move this bot seat wants to make, or null if it has nothing to do. */
+/** Synchronous search for offline fixtures/tests only; live rooms use the worker. */
 export function xmjBotMove(
   state: XmjRoomState,
   seat: XmjSeat,
@@ -78,7 +79,7 @@ export function xmjBotMove(
 ): XmjMove | null {
   if (state.status.type !== 'playing') return null;
   if (!xmjSeatMayAct(state, seat)) return null;
-  const action = xmjBotAction(xmjViewFor(state, seat), seat);
+  const action = xmjSearchBotAction(xmjViewFor(state, seat), seat);
   if (action === null) return null;
   // An answer to a discard is dated to the end of the pause, as the runtime's
   // pass is, so the move log carries no timing the empty-handed pass lacks.
@@ -86,49 +87,78 @@ export function xmjBotMove(
   return xmjIsLegalMove(state, move) ? move : null;
 }
 
-/**
- * Schedule the bot's next action, if it has one. One timer per room, re-armed
- * after every event.
- */
+/** Live decision path: project on the server, search off its event loop. */
+export async function xmjBotMoveAsync(
+  state: XmjRoomState,
+  seat: XmjSeat,
+  now: number = Date.now(),
+): Promise<XmjMove | null> {
+  if (!botMayAct(state, seat)) return null;
+  const action = await xmjBotSearchWorker.search(xmjViewFor(state, seat), seat);
+  if (action === null) return null;
+  const move = { ...action, by: seat, at: xmjAnswerAt(state, now) } as XmjMove;
+  return xmjIsLegalMove(state, move) ? move : null;
+}
+
+function botMayAct(state: XmjRoomState, seat: XmjSeat): boolean {
+  if (state.status.type !== 'playing' || !xmjSeatMayAct(state, seat)) return false;
+  const legal = xmjViewFor(state, seat).legal;
+  return legal.nextHand || legal.pass || legal.selfDraw || legal.discard.length > 0;
+}
+
+// Re-scheduling, even for the same state object, invalidates an in-flight job.
+const scheduledSearches = new WeakMap<XmjRuntimeRoomForBots, object>();
+
+/** Schedule one redacted search and paced answer per room, re-armed after events. */
 export function scheduleXmjBotMove(
   ctx: TenantLifecycleContext<XmjSeat, XmjMove, XmjRoomState, string, XmjRuntimeRoomForBots>,
   room: XmjRuntimeRoomForBots,
 ): void {
   if (room.engineTimer) clearTimeout(room.engineTimer);
   room.engineTimer = null;
-  if (room.projection.state.status.type !== 'playing') return;
-
-  const ready = botSeats(room).find((seat) => xmjBotMove(room.projection.state, seat) !== null);
+  const ticket = {};
+  scheduledSearches.set(room, ticket);
+  if (room.stopping) return;
+  const state = room.projection.state;
+  const ready = botSeats(room).find((seat) => botMayAct(state, seat));
   if (!ready) return;
 
-  room.engineTimer = setTimeout(
-    () => {
-      const move = xmjBotMove(room.projection.state, ready);
-      if (move === null) return;
-      void ctx
-        .appendEvent(room, {
-          type: 'move-played',
-          at: Date.now(),
-          roomId: room.id,
-          color: ready,
-          move,
-        })
-        .then((seq) => {
-          const event = room.events[seq];
-          if (event) ctx.broadcastEventAppended(room, event, seq);
-        })
-        .catch((err) => {
-          logger.error({
-            kind: 'xiangqi_mahjong_bot_move_failure',
-            room_id: room.id,
-            seat: ready,
-            error: (err as Error).message,
-            at: Date.now(),
-          });
-        });
-    },
-    xmjBotDelayMs(room.projection.state, Date.now()),
+  const delay = xmjBotDelayMs(state, Date.now());
+  // Search during the display pause. Catch immediately, including queue/startup
+  // failures, so a rejection cannot go unhandled while the timer is waiting.
+  const decision = xmjBotMoveAsync(state, ready).then(
+    (move) => ({ move, error: null }),
+    (error: Error) => ({ move: null, error }),
   );
+  room.engineTimer = setTimeout(() => {
+    room.engineTimer = null;
+    void (async () => {
+      const result = await decision;
+      if (scheduledSearches.get(room) !== ticket || room.projection.state !== state) return;
+      if (room.projection.seats[ready] !== XMJ_BOT_CLIENT_ID || room.stopping) return;
+      if (result.error) throw result.error;
+      if (result.move === null) return;
+      const move = { ...result.move, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
+      if (!xmjIsLegalMove(state, move)) return;
+      const seq = await ctx.appendEvent(room, {
+        type: 'move-played',
+        at: Date.now(),
+        roomId: room.id,
+        color: ready,
+        move,
+      });
+      const event = room.events[seq];
+      if (event) ctx.broadcastEventAppended(room, event, seq);
+    })().catch((err) => {
+      logger.error({
+        kind: 'xiangqi_mahjong_bot_move_failure',
+        room_id: room.id,
+        seat: ready,
+        error: (err as Error).message,
+        at: Date.now(),
+      });
+    });
+  }, delay);
   room.engineTimer.unref();
 }
 
