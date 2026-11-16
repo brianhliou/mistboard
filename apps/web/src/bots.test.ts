@@ -623,6 +623,8 @@ describe('bot pages', () => {
     // Picking a level swaps the bot the card plays and links, and keeps one card.
     const level1 = pickLevel(root, 'fairy-stockfish', 'fairy-stockfish-level-1');
     expect(level1.dataset.botId).toBe('fairy-stockfish-level-1');
+    // A level with no games says so, never 0 games 0-0-0.
+    expect(level1.querySelector('.profile-summary-card-footer')?.textContent).toBe('No games yet');
     expect(level1.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
       '/bot/fairy-stockfish-level-1',
     );
@@ -1441,7 +1443,11 @@ describe('/bots covers every launched bot variant', () => {
   function stubFetch(
     bots: readonly unknown[],
     tkEngines: readonly unknown[],
-    rosters: { banqiEngines?: unknown[]; jungleFlipEngines?: unknown[] } = {},
+    rosters: {
+      banqiEngines?: unknown[];
+      jungleFlipEngines?: unknown[];
+      ffqBanqiEngines?: unknown[];
+    } = {},
   ) {
     return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       if (String(input) === '/api/bots') return jsonResponse({ bots });
@@ -1536,6 +1542,65 @@ describe('/bots covers every launched bot variant', () => {
     expect(threeKingdomsBanqiEngineOptions()).toBeUndefined();
   });
 
+  // Fanfanqi seats by engine id, like Three Kingdoms Banqi; its games are not
+  // split by level, so the foot is the per-game total, said as all levels.
+  it("offers Misty's Fanfanqi levels the server seats, playing the picked engine", async () => {
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const ffqMisty = misty({
+      supportedGameSpecIds: ['dark-chess', 'ffq-banqi'],
+      playOptions: [
+        { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
+        { gameSpecId: 'ffq-banqi', engineId: 'misty-ffq-banqi-level-4', playable: true },
+      ],
+      recordsByGameSpecId: { 'ffq-banqi': { games: 3, wins: 2, losses: 1, draws: 0 } },
+    });
+    const roster = [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+      id: `misty-ffq-banqi-level-${level}`,
+    }));
+    const fetchMock = stubFetch([ffqMisty], [], { ffqBanqiEngines: roster });
+    window.history.replaceState(null, '', '/bots?game=ffq-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
+    const card = cardFor(root, 'misty')!;
+    const select = card.querySelector<HTMLSelectElement>('select.bot-level-select');
+    expect([...(select?.options ?? [])].map((option) => option.textContent)).toEqual(
+      [8, 7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
+    );
+    expect(select?.value).toBe('misty-ffq-banqi-level-4');
+    const footer = card.querySelector('.profile-summary-card-footer')?.textContent;
+    expect(footer).toContain('All levels');
+    expect(footer).toContain('2-1-0');
+
+    const picked = pickLevel(root, 'misty', 'misty-ffq-banqi-level-2');
+    fetchMock.mockClear();
+    picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action')?.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    const body = JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body));
+    expect(body.engineId).toBe('misty-ffq-banqi-level-2');
+    expect(body.gameSpecId).toBe('ffq-banqi');
+    expect(body.botId).toBeUndefined();
+  });
+
+  it("keeps Misty's plain Fanfanqi card when the server sends no Fanfanqi roster", async () => {
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const ffqMisty = misty({
+      supportedGameSpecIds: ['ffq-banqi'],
+      playOptions: [
+        { gameSpecId: 'ffq-banqi', engineId: 'misty-ffq-banqi-level-4', playable: true },
+      ],
+    });
+    stubFetch([ffqMisty], []);
+    window.history.replaceState(null, '', '/bots?game=ffq-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(cardFor(root, 'misty')?.querySelector('select.bot-level-select')).toBeNull();
+  });
+
   // Misty's Banqi and Flip Jungle levels share her one bot id, so /api/bots
   // lists one profile; the card offers the homepage's ladder and posts the
   // level's engine id beside her bot id, as the homepage's rows do.
@@ -1567,7 +1632,7 @@ describe('/bots covers every launched bot variant', () => {
   }
 
   for (const { gameSpecId, base, label, rosterKey } of mistyLadderCases) {
-    it(`shows each ${label} level's own record and keeps unlabelled history separate`, async () => {
+    it(`shows the picked ${label} level's own record in the card foot`, async () => {
       vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
       const roster = [8, 7, 4, 1].map((level) => ({ id: engineIdAt(base, level) }));
       stubFetch(
@@ -1589,20 +1654,23 @@ describe('/bots covers every launched bot variant', () => {
       const root = document.createElement('div');
       const { mountBots } = await import('./bots.js');
       await mountBots(root);
-      const rows = () => [...cardFor(root, 'misty')!.querySelectorAll('.bot-level-record')];
-      expect(rows().map((row) => row.textContent)).toEqual([
-        'Level 8 · 0 games · 0-0-0',
-        'Level 7 · 1 game · 1-0-0',
-        'Level 4 · 0 games · 0-0-0',
-        'Level 1 · 2 games · 1-1-0',
-        'Earlier games, level not recorded · 2 games · 2-0-0',
-      ]);
-      expect(
-        cardFor(root, 'misty')!.querySelector('.profile-summary-card-footer')?.textContent,
-      ).toContain('4-1-0');
+      const foot = () => cardFor(root, 'misty')!.querySelector('.bot-card-foot')!;
+      // Opens on Level 4, which has no games: said in words, not 0-0-0, and
+      // with no rating, since Misty's rating is not per level.
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toBe(
+        'No games yet',
+      );
+      expect(foot().querySelector('.profile-summary-card-rating-value')).toBeNull();
+      expect(cardFor(root, 'misty')!.querySelector('.bot-level-records')).toBeNull();
       pickLevel(root, 'misty', engineIdAt(base, 1));
-      expect(rows()).toHaveLength(5);
-      expect(rows()[3]?.textContent).toContain('1-1-0');
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain(
+        '2 games',
+      );
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain('1-1-0');
+      // Another game's per-level rows and unlabelled history never leak in.
+      pickLevel(root, 'misty', engineIdAt(base, 7));
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain('1-0-0');
+      expect(foot().textContent).not.toContain('99');
     });
 
     it(`offers Misty's ${label} levels the server seats, opening on Level 4, playing the picked engine`, async () => {
@@ -1625,7 +1693,11 @@ describe('/bots covers every launched bot variant', () => {
         [8, 7, 6, 5, 4, 3, 2, 1].map((level) => [engineIdAt(base, level), `Level ${level}`]),
       );
       expect(select?.value).toBe(`${base}-level-4`);
-      // Her per-game record, rating and bio stay on the card.
+      // With no per-level records from the server, the foot is her per-game
+      // total, labelled as one, with its rating.
+      expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain(
+        'All levels',
+      );
       expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('4-1-0');
       expect(card.querySelector('.bot-level-records')).toBeNull();
       expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,620');
