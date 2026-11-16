@@ -212,3 +212,38 @@ test('scheduler sends only a redacted view, paces the answer and discards stale 
   await yieldLoop();
   assert.equal(appended.length, 1);
 });
+
+test('a failed search falls back to the heuristic move instead of stalling the game', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const state = createXmjRoomState({ ...createXmjSetup(seeded(7)), firstDealer: 'east' });
+  t.mock.method(xmjBotSearchWorker, 'search', () =>
+    Promise.reject(new Error('XMJ search queue full')),
+  );
+  type Room = Parameters<typeof scheduleXmjBotMove>[1];
+  type Context = Parameters<typeof scheduleXmjBotMove>[0];
+  const room = {
+    id: 'worker-fallback-test',
+    engineTimer: null,
+    events: [],
+    projection: { state, seats: { east: XMJ_BOT_CLIENT_ID, west: 'human' } },
+  } as unknown as Room;
+  const appended: { move?: unknown }[] = [];
+  const ctx = {
+    appendEvent: async (_room: Room, event: { move?: unknown }) => {
+      appended.push(event);
+      return 0;
+    },
+    broadcastEventAppended: () => {},
+  } as unknown as Context;
+  scheduleXmjBotMove(ctx, room);
+  await yieldLoop();
+  t.mock.timers.tick(700);
+  await yieldLoop();
+  assert.equal(appended.length, 1, 'Misty must still move when the search fails');
+  const expected = xmjBotAction(xmjViewFor(state, 'east'), 'east');
+  assert.ok(expected);
+  assert.equal(
+    JSON.stringify({ ...(appended[0]!.move as object), at: 0 }),
+    JSON.stringify({ ...expected, by: 'east', at: 0 }),
+  );
+});

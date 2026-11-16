@@ -15,6 +15,7 @@ import {
   type XmjRoomState,
   type XmjSeat,
   xmjAnswerAt,
+  xmjBotAction,
   xmjClaimAnswerEarliestAt,
   xmjIsLegalMove,
   xmjSearchBotAction,
@@ -87,6 +88,19 @@ export function xmjBotMove(
   return xmjIsLegalMove(state, move) ? move : null;
 }
 
+/** The pre-search heuristic: Misty's move when a live search fails, so a game never stalls. */
+export function xmjFallbackBotMove(
+  state: XmjRoomState,
+  seat: XmjSeat,
+  now: number = Date.now(),
+): XmjMove | null {
+  if (!botMayAct(state, seat)) return null;
+  const action = xmjBotAction(xmjViewFor(state, seat), seat);
+  if (action === null) return null;
+  const move = { ...action, by: seat, at: xmjAnswerAt(state, now) } as XmjMove;
+  return xmjIsLegalMove(state, move) ? move : null;
+}
+
 /** Live decision path: project on the server, search off its event loop. */
 export async function xmjBotMoveAsync(
   state: XmjRoomState,
@@ -136,9 +150,20 @@ export function scheduleXmjBotMove(
       const result = await decision;
       if (scheduledSearches.get(room) !== ticket || room.projection.state !== state) return;
       if (room.projection.seats[ready] !== XMJ_BOT_CLIENT_ID || room.stopping) return;
-      if (result.error) throw result.error;
-      if (result.move === null) return;
-      const move = { ...result.move, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
+      // A failed search (queue full, deadline, worker crash) must not stall the
+      // game: Misty plays the heuristic move it played before search.
+      if (result.error) {
+        logger.error({
+          kind: 'xiangqi_mahjong_bot_search_fallback',
+          room_id: room.id,
+          seat: ready,
+          error: result.error.message,
+          at: Date.now(),
+        });
+      }
+      const chosen = result.error ? xmjFallbackBotMove(state, ready) : result.move;
+      if (chosen === null) return;
+      const move = { ...chosen, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
       if (!xmjIsLegalMove(state, move)) return;
       const seq = await ctx.appendEvent(room, {
         type: 'move-played',
