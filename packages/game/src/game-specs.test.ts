@@ -52,6 +52,7 @@ test('canonical display order contains exactly the current public variant shelf'
     XIANGQI_SPEC_ID,
     JIEQI_SPEC_ID,
     BANQI_SPEC_ID,
+    FFQ_BANQI_SPEC_ID,
     THREE_KINGDOMS_BANQI_SPEC_ID,
     DUCK_XIANGQI_SPEC_ID,
     CRAZYHOUSE_XIANGQI_SPEC_ID,
@@ -64,13 +65,15 @@ test('canonical display order contains exactly the current public variant shelf'
   ]);
 });
 
-test('Fanfanqi sorts ahead of Banqi for the admins who see it, while staying off the public shelf', () => {
-  assert.equal(CANONICAL_VARIANT_ORDER.includes(FFQ_BANQI_SPEC_ID), false);
+test('Banqi, Fanfanqi, Three Kingdoms Banqi sort in that order on the public shelf', () => {
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(FFQ_BANQI_SPEC_ID), true);
+  assert.ok(canonicalVariantOrderIndex(JIEQI_SPEC_ID) < canonicalVariantOrderIndex(BANQI_SPEC_ID));
   assert.ok(
-    canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID) < canonicalVariantOrderIndex(BANQI_SPEC_ID),
+    canonicalVariantOrderIndex(BANQI_SPEC_ID) < canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID),
   );
   assert.ok(
-    canonicalVariantOrderIndex(JIEQI_SPEC_ID) < canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID),
+    canonicalVariantOrderIndex(FFQ_BANQI_SPEC_ID) <
+      canonicalVariantOrderIndex(THREE_KINGDOMS_BANQI_SPEC_ID),
   );
   const publicByIndex = [...CANONICAL_VARIANT_ORDER].sort(
     (a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b),
@@ -236,19 +239,19 @@ test('FFQ banqi has canonical metadata matching its distinct kernel rules', () =
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'ffq_banqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    publicSurface: 'casual',
+    runtimeStatus: 'live',
   });
   assert.equal(isGameSpecId(spec.id), true);
   assert.equal(gameSpecForId(FFQ_BANQI_SPEC_ID), spec);
   assert.equal(legacyLiveRoomForGameSpec(spec.id), null);
 });
 
-test('FFQ banqi stays out of public play, ratings, correspondence and studies', () => {
+test('FFQ banqi opens casual public play while keeping ratings, correspondence and studies closed', () => {
   const spec = maybeGameSpecForId('ffq-banqi');
   assert.ok(spec);
-  assert.equal(isPublicGameSpec(spec.id), false);
-  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(isPublicGameSpec(spec.id), true);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), true);
   assert.equal(isRetiredGameSpec(spec.id), false);
   assert.equal(ratingPoolForSpec(spec.id), null);
   assert.equal(isRatedPoolBase(spec.ratingPoolBase), false);

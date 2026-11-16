@@ -110,6 +110,8 @@ export type PublicStudySummary = StudySummary & {
 export type StudyChapterTags = {
   red?: string;
   black?: string;
+  /** The second seat in a game Black opens (Gomoku), where `black` is the first. */
+  white?: string;
   /** PGN result token: '1-0' | '0-1' | '1/2-1/2' | '*'. */
   result?: string;
   event?: string;
@@ -602,6 +604,12 @@ export async function listStudiesForOwner(
  *  hasMore false at limit=50 with studies unreachable). */
 export const STUDY_PAGE_MAX = 50;
 
+/** The public browse eligibility, shared with aggregate reporting (aliases s/u). */
+export function publicStudyFilter(access?: StudyListAccess): string {
+  return `s.visibility = 'public'
+        AND u.profile_visibility IN ('public', 'unlisted')${adminOnlyStudyFilter(access)}`;
+}
+
 /** Public studies, most recently updated first. Likes used to lead the order,
  *  but with a handful of likes on the whole site that key pinned the first
  *  studies ever liked above everything published since; recency is the honest
@@ -637,8 +645,7 @@ export async function listTopPublicStudies(
        JOIN users u ON u.id = s.owner_id
        LEFT JOIN study_chapters c ON c.study_id = s.id
        LEFT JOIN study_likes l ON l.study_id = s.id
-      WHERE s.visibility = 'public'
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
+      WHERE ${publicStudyFilter(access)}${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
       -- Newest first by creation, not by last edit: an edit to an old study
       -- (a fixed comment, a new translation) must not put it back at the top

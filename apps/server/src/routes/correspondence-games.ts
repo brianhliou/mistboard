@@ -49,11 +49,13 @@ type SeatBoardKey = Pick<CorrespondenceGameSummary, 'roomId' | 'gameSpecId' | 'm
 export type CorrespondenceGamesDeps = {
   list: (userId: string) => Promise<CorrespondenceGameSummary[]>;
   seatBoard: (game: SeatBoardKey) => Promise<unknown | null>;
+  moveNumber?: (game: SeatBoardKey) => Promise<number | null>;
 };
 
 const defaultDeps: CorrespondenceGamesDeps = {
   list: (userId) => persistence.listCorrespondenceGamesForUser(userId),
   seatBoard: (game) => correspondenceSeatBoard(game),
+  moveNumber: (game) => correspondenceMoveNumber(game),
 };
 
 export async function correspondenceGamesForUser(
@@ -62,6 +64,7 @@ export async function correspondenceGamesForUser(
 ): Promise<{ games: Record<string, unknown>[]; yourMoveCount: number }> {
   const games = await deps.list(userId);
   const boards = await Promise.all(games.map((game) => deps.seatBoard(game)));
+  const moveNumbers = await Promise.all(games.map((game) => deps.moveNumber?.(game) ?? null));
   return {
     games: games.map((game, index) => {
       const board = boards[index];
@@ -83,11 +86,27 @@ export async function correspondenceGamesForUser(
           : {}),
         dueAt: game.dueAt.toISOString(),
         rated: game.rated === true,
+        ...(moveNumbers[index] != null ? { moveNumber: moveNumbers[index] } : {}),
         ...(board !== null && board !== undefined ? { seatBoard: board } : {}),
       };
     }),
     yourMoveCount: games.reduce((count, game) => count + (game.isYourMove ? 1 : 0), 0),
   };
+}
+
+// Only the public move counter leaves the room here. In particular, a compact
+// homepage row does not need a position from a hidden-information game.
+export async function correspondenceMoveNumber(game: SeatBoardKey): Promise<number | null> {
+  const registration = variantTenantForRoomId(game.roomId);
+  if (!registration || registration.gameSpecId !== game.gameSpecId) return null;
+  try {
+    const room = await registration.getOrLoadRoom(game.roomId);
+    const number = room?.projection?.state.moveNumber;
+    return typeof number === 'number' && Number.isSafeInteger(number) && number > 0 ? number : null;
+  } catch (err) {
+    logger.warn({ err, roomId: game.roomId }, 'correspondence move number unavailable');
+    return null;
+  }
 }
 
 // The seat's own board, or null. The room must belong to a registered tenant

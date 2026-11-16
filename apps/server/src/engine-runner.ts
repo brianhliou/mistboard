@@ -16,6 +16,7 @@ import {
   heartbeatEngineGameTask,
   reconcileExperimentJob,
 } from './engine-experiments.js';
+import { captureEngineGameStampsOrNull, recordEngineGameStamps } from './engine-game-provenance.js';
 import { defaultStockfishPath, engineDir, enginePython, engineScript } from './engine-paths.js';
 import {
   type EngineDefinition,
@@ -478,6 +479,7 @@ async function createRunningGame(
   blackEngine: EngineDefinition,
 ): Promise<void> {
   const roomTimeControl = roomTimeControlFromEngine(normalizeEngineTimeControl(task.timeControl));
+  const stamps = await captureEngineGameStampsOrNull(whiteEngine, blackEngine);
   await pool.query(
     `INSERT INTO games
        (room_id, variant, result, termination, ply_count, started_at, ended_at,
@@ -499,6 +501,7 @@ async function createRunningGame(
   );
 
   await upsertEngineGameParticipants(pool, gameId, whiteEngine, blackEngine);
+  if (stamps) await recordEngineGameStamps(pool, gameId, stamps);
 
   await pool.query(
     `UPDATE engine_game_tasks
@@ -556,6 +559,7 @@ async function createRunningVariantGame(
   secondEngine: EngineDefinition,
 ): Promise<void> {
   const roomTimeControl = roomTimeControlFromEngine(normalizeEngineTimeControl(task.timeControl));
+  const stamps = await captureEngineGameStampsOrNull(firstEngine, secondEngine);
   await pool.query(
     `INSERT INTO games
        (room_id, variant, result, termination, ply_count, started_at, ended_at,
@@ -578,6 +582,7 @@ async function createRunningVariantGame(
     ],
   );
   await upsertEngineGameParticipants(pool, gameId, firstEngine, secondEngine, adapter.colors);
+  if (stamps) await recordEngineGameStamps(pool, gameId, stamps);
   await pool.query(`UPDATE engine_game_tasks SET game_id = $2 WHERE id = $1 AND game_id IS NULL`, [
     task.id,
     gameId,

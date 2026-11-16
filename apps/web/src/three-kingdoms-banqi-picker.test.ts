@@ -10,7 +10,7 @@ const L4 = `${ORIGINAL}-level-4`;
 const L8 = `${ORIGINAL}-level-8`;
 const options = Array.from({ length: 8 }, (_, i) => `${ORIGINAL}-level-${i + 1}`).map((id) => ({
   id,
-  name: `Misty level ${id.at(-1)}`,
+  name: `Misty Level ${id.at(-1)}`,
   familyName: 'Misty',
   kind: 'container',
 }));
@@ -72,7 +72,7 @@ describe('TK setup uses the server runtime roster', () => {
     expect([...select!.options].map((o) => o.value)).toEqual(options.map((e) => e.id));
     expect([...select!.options].map((o) => o.value)).not.toContain(ORIGINAL);
     expect([...select!.options].map((o) => o.textContent)).toEqual(
-      Array.from({ length: 8 }, (_, i) => `Misty level ${i + 1}`),
+      Array.from({ length: 8 }, (_, i) => `Misty Level ${i + 1}`),
     );
     expect(webVariantTenantForSpecId('three-kingdoms-banqi')!.landing!.defaultEngineId).toBe(L4);
     expect(select!.value).toBe(L4);

@@ -6,6 +6,40 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+test('grant resolves an account and revoke-grant revokes its event tokens atomically', async () => {
+  const { runBroadcastPushToken } = await import('./broadcast-push-token.mjs');
+  const calls = [];
+  const client = {
+    async query(sql, args) {
+      calls.push({ sql, args });
+      if (sql.includes('FROM users')) return { rows: [{ id: 'owner' }], rowCount: 1 };
+      if (sql.includes('SELECT source_url'))
+        return { rows: [{ source_url: null, poll_mode: 'off' }], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    },
+  };
+  const output = [];
+  for (const command of ['grant', 'revoke-grant']) {
+    await runBroadcastPushToken(
+      [command, '--account', '@ClockMaker', '--tour', 'test'],
+      client,
+      (line) => output.push(line),
+    );
+  }
+  assert.ok(calls.some((c) => c.sql.includes('INSERT INTO xiangqi_broadcast_push_grants')));
+  assert.ok(
+    calls.some(
+      (c) =>
+        c.sql.includes('UPDATE xiangqi_broadcast_push_tokens') &&
+        c.sql.includes('account_id') &&
+        c.args.includes('owner') &&
+        c.args.includes('test'),
+    ),
+  );
+  assert.equal(calls.filter((c) => c.sql === 'COMMIT').length, 2);
+  assert.deepEqual(output.map(JSON.parse), [{ ok: true }, { ok: true }]);
+});
+
 async function setup(t) {
   const mod = await import('./broadcast-push-token.mjs');
   const dir = await mkdtemp(join(tmpdir(), 'mbpush-test-'));
@@ -31,6 +65,8 @@ async function setup(t) {
               created_at: 'now',
               revoked_at: null,
               last_used_at: null,
+              account_id: 'clock-owner',
+              owner: 'clockmaker',
               token_hash: 'must-not-escape',
             },
           ],
@@ -121,6 +157,9 @@ test('admin commands create an unlisted nonpolling tour, revoke, list safely and
   await s.runBroadcastPushToken(['revoke', '--id', 'bpt_12345678'], s.client, s.log);
   assert.ok(s.calls.some((c) => /revoked_at = COALESCE/.test(c.sql)));
   await s.runBroadcastPushToken(['list', '--tour', 'test'], s.client, s.log);
+  const listed = JSON.parse(s.output.at(-1));
+  assert.equal(listed[0].account_id, 'clock-owner');
+  assert.equal(listed[0].owner, 'clockmaker');
   assert.equal(
     s.output.join('\n').includes('token_hash') || s.output.join('\n').includes('must-not-escape'),
     false,
@@ -152,6 +191,128 @@ test('invalid flags and values fail before touching the database', async (t) => 
   }
   assert.equal(s.calls.length, 0);
   await writeFile(s.out, 'existing');
+});
+
+test('set-source saves the device link with polling off and reports the change', async (t) => {
+  const s = await setup(t);
+  const url = 'https://device.example/broadcast';
+  await s.runBroadcastPushToken(['set-source', '--tour', 'test', '--url', url], s.client, s.log);
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.deepEqual(update.args, ['test', url, null]);
+  assert.match(update.sql, /source_url = \$2/);
+  assert.match(update.sql, /poll_mode = 'off'/);
+  assert.match(update.sql, /poll_enabled = false/);
+  assert.match(update.sql, /jsonb_set/);
+  assert.equal(s.calls.at(-1).sql, 'COMMIT');
+  assert.deepEqual(JSON.parse(s.output[0]), {
+    ok: true,
+    tour: 'test',
+    sourceUrl: url,
+    pollMode: 'off',
+  });
+});
+
+test('set-source stores the trimmed device credit and reports its name', async (t) => {
+  const s = await setup(t);
+  const url = 'https://device.example';
+  await s.runBroadcastPushToken(
+    ['set-source', '--tour', 'test', '--url', url, '--device', '  Recording Clock  '],
+    s.client,
+    s.log,
+  );
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.deepEqual(JSON.parse(update.args[2]), {
+    deviceCredit: { name: 'Recording Clock', url },
+  });
+  assert.equal(JSON.parse(s.output[0]).device, 'Recording Clock');
+  assert.equal(s.calls.at(-1).sql, 'COMMIT');
+});
+
+test('set-source accepts device names at both length boundaries after trimming', async (t) => {
+  const s = await setup(t);
+  for (const name of ['X', 'X'.repeat(60)]) {
+    await s.runBroadcastPushToken(
+      ['set-source', '--tour', 'test', '--url', 'https://device.example', '--device', ` ${name} `],
+      s.client,
+      s.log,
+    );
+  }
+  assert.deepEqual(
+    s.output.map((line) => JSON.parse(line).device),
+    ['X', 'X'.repeat(60)],
+  );
+});
+
+test('set-source rejects empty and overlong device names without writes', async (t) => {
+  const s = await setup(t);
+  const cli = new URL('./broadcast-push-token.mjs', import.meta.url);
+  for (const name of ['', '   ', 'x'.repeat(61)]) {
+    const args = [
+      'set-source',
+      '--tour',
+      'test',
+      '--url',
+      'https://device.example',
+      '--device',
+      name,
+    ];
+    await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /1-60/);
+    const result = spawnSync(process.execPath, [cli.pathname, ...args], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /1-60/);
+  }
+  assert.equal(s.calls.length, 0);
+  assert.equal(s.output.length, 0);
+});
+
+test('set-source refuses an event filled by polling and leaves it untouched', async (t) => {
+  const s = await setup(t);
+  const query = s.client.query;
+  s.client.query = async (sql, args = []) => {
+    if (!sql.includes('UPDATE xiangqi_broadcast_tours')) return query(sql, args);
+    s.calls.push({ sql, args });
+    return { rows: [], rowCount: 0 };
+  };
+  const args = [
+    'set-source',
+    '--tour',
+    'dpxq-event',
+    '--url',
+    'https://device.example',
+    '--device',
+    'Clock',
+  ];
+  await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /polled event/);
+  const update = s.calls.find((c) => c.sql.includes('UPDATE xiangqi_broadcast_tours'));
+  assert.match(update.sql, /WHERE slug = \$1 AND \(source_url IS NULL OR poll_mode = 'off'\)/);
+  assert.equal(s.calls.at(-1).sql, 'ROLLBACK');
+  assert.equal(s.output.length, 0);
+});
+
+test('set-source rejects non-HTTPS or invalid URLs before any database access', async (t) => {
+  const s = await setup(t);
+  const cli = new URL('./broadcast-push-token.mjs', import.meta.url);
+  for (const url of ['http://device.example', 'ftp://device.example', 'not-a-url']) {
+    const args = ['set-source', '--tour', 'test', '--url', url];
+    await assert.rejects(s.runBroadcastPushToken(args, s.client, s.log), /HTTPS/);
+    const result = spawnSync(process.execPath, [cli.pathname, ...args], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /HTTPS/);
+  }
+  assert.equal(s.calls.length, 0);
+  assert.equal(s.output.length, 0);
 });
 
 test('CLI entrypoint sanitizes invalid arguments and fails safely without DATABASE_URL', () => {

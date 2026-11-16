@@ -39,6 +39,7 @@
 // correspondence-model.ts. Browsing seeks also stays on the homepage lobby's
 // Correspondence tab; this page shows the same feed.
 
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import './current-games.css';
 import './account-profile.css';
 import './landing-play.css';
@@ -121,12 +122,16 @@ import {
   updateStartOptionButtonLabel,
   variantCardButton,
 } from './setup-panel-parts.js';
-import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
+import {
+  isLikelyAdmin,
+  isLikelyStatsExcluded,
+  statsExcludedResolvedEvent,
+} from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
-import { formatDayClock } from './web-utils.js';
+import { correspondenceTimeLeftLabel, formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
 // The "Challenges for you" section's id; the bell's challenge row links to it
@@ -500,7 +505,7 @@ export function buildInboxCard(
   const tick = (now: number): void => {
     const urgency = deadlineUrgency(game.dueAt, now);
     card.dataset.urgency = urgency;
-    onMove.clock.textContent = timeLeftLabel(game.dueAt, now);
+    onMove.clock.textContent = correspondenceTimeLeftLabel(game.dueAt, now);
     if (fill) {
       const fraction = deadlineFraction(game.dueAt, days, now) ?? 0;
       fill.style.width = `${Math.round(fraction * 1000) / 10}%`;
@@ -661,12 +666,6 @@ function buildPlaceholderTile(gameSpecId: string): HTMLElement {
 
 function cadenceLabel(days: number): string {
   return days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
-}
-
-function timeLeftLabel(dueAt: string, now: number): string {
-  const remaining = deadlineRemainingMs(dueAt, now);
-  if (remaining === null || remaining <= 0) return t('correspondence.dueNow');
-  return t('correspondence.timeLeft', { time: formatDayClock(remaining) });
 }
 
 // "Sat 1:30 AM" inside the coming week, else "Oct 8", in the site's locale.
@@ -896,7 +895,9 @@ export function buildStartForm(
 
   // Public specs, plus a playtest variant for an account the menu offers it to,
   // in the canonical shelf order so the tiles sit where Play a game puts them.
-  const specIds = [...correspondenceSpecIdsFor(webVariantOfferedInMenu)].sort(
+  const specIds = [
+    ...correspondenceSpecIdsFor((id) => isLikelyAdmin() && webVariantOfferedInMenu(id)),
+  ].sort(
     (a, b) =>
       canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
   );
@@ -1131,13 +1132,19 @@ export function buildStartForm(
       body: JSON.stringify(request.body),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          challengeUrl?: string | null;
-          error?: string;
-          limit?: number;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string | null;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         submit.disabled = false;
         if (!res.ok) {
+          if (renderFirstMoveOwed(status, body)) {
+            status.classList.add('is-error');
+            return;
+          }
           showStatus(postErrorText(body?.error, body?.limit), true);
           return;
         }
@@ -1290,7 +1297,9 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
   // The server's list is what the host plays; keep the client's order and
   // drop anything this build does not offer.
   const offered = new Set(info.gameSpecIds);
-  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu).filter((id) => offered.has(id));
+  const specIds = correspondenceSpecIdsFor(
+    (id) => isLikelyAdmin() && webVariantOfferedInMenu(id),
+  ).filter((id) => offered.has(id));
   const status = document.createElement('p');
   status.className = 'correspondence-form-status';
   status.setAttribute('role', 'status');
@@ -1346,17 +1355,24 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
       body: JSON.stringify({ gameSpecId: variant.value(), side: side.value() }),
     })
       .then(async (res) => {
-        const result = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-          limit?: number;
-        } | null;
+        const result = (await res.json().catch(() => null)) as
+          | ({
+              url?: string;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && result?.url) {
           navigate(result.url);
           return;
         }
         if (res.status === 401) {
           navigate(loginHrefForCurrentPage());
+          return;
+        }
+        if (renderFirstMoveOwed(status, result)) {
+          submit.disabled = false;
+          status.classList.add('is-error');
           return;
         }
         // A cap refusal stays refused until a game ends; anything else may pass on retry.
@@ -1648,11 +1664,15 @@ export async function renderIncomingChallenges(
   onCount?: (count: number) => void,
   options: IncomingChallengeOptions = {},
 ): Promise<void> {
-  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
-  const body = resp?.ok
-    ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
-    : null;
-  const challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  let challenges = options.challenges;
+  if (!challenges) {
+    const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+    const body = resp?.ok
+      ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
+      : null;
+    challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  }
+  if (options.isCurrent?.() === false) return;
   onCount?.(challenges.length);
   host.hidden = challenges.length === 0;
   if (challenges.length === 0) {
@@ -1690,6 +1710,11 @@ export async function renderIncomingChallenges(
 export type IncomingChallengeOptions = {
   // Test seam for Accept's navigation (seek-accept.ts).
   navigate?: (url: string) => void;
+  compact?: boolean;
+  isCurrent?: () => boolean;
+  // Already read by the caller (the homepage reads first, so it loads this
+  // module only when a challenge is waiting).
+  challenges?: IncomingChallenge[];
 };
 
 export function buildIncomingChallengeCard(
@@ -1755,6 +1780,26 @@ export function buildIncomingChallengeCard(
     details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
   }
   const challenger = displayLiveName(challenge.challengerName, t('games.anonymous'));
+  if (options.compact) {
+    card = document.createElement('article');
+    card.className = 'landing-corr-challenge';
+    card.dataset.seekId = challenge.id;
+    const who = document.createElement('a');
+    who.href = localizedHref(`/challenge/${encodeURIComponent(challenge.id)}`);
+    who.textContent = t('correspondence.challengeFrom', {
+      name: challenger,
+      variant: variantDisplayLabel(challenge.gameSpecId),
+    });
+    const terms = document.createElement('span');
+    terms.className = 'landing-corr-moves-meta';
+    terms.textContent = [
+      cadenceLabel(challenge.daysPerMove),
+      challenge.rated ? t('games.rated') : t('games.casual'),
+      ...details,
+    ].join(' · ');
+    card.append(who, terms, actions, error);
+    return card;
+  }
   card = buildSeekCard(
     {
       creatorHandle: challenge.challengerHandle ?? null,
@@ -1796,15 +1841,15 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     who.className = 'correspondence-own-target';
     appendWithNameNode(
       who,
-      (token) => t('correspondence.challengeTo', { name: token }),
+      (token) => t('challenge.sentTo', { name: token }),
       playerNameEl(
-        seek.targetName,
+        seek.targetHandle ? `@${seek.targetHandle}` : seek.targetName,
         profileTargetFor({ handle: seek.targetHandle }),
         'correspondence-own-target-name',
       ),
     );
     waiting = who;
-    ariaLabel = `${variant}, ${t('correspondence.challengeTo', { name: seek.targetName })}`;
+    ariaLabel = `${variant}, ${who.textContent}`;
   } else {
     const label =
       seek.visibility === 'private'
@@ -1845,11 +1890,14 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
   const cancel = document.createElement('button');
   cancel.type = 'button';
   cancel.className = 'correspondence-ghost is-quiet';
-  cancel.textContent = t('correspondence.cancel');
+  cancel.textContent = seek.targetName ? t('challenge.withdraw') : t('correspondence.cancel');
   cancel.addEventListener('click', () => {
     cancel.disabled = true;
     void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}`, { method: 'DELETE' })
-      .then(() => onChange())
+      .then((res) => {
+        if (!res.ok && res.status !== 404) throw new Error(`withdraw ${res.status}`);
+        onChange();
+      })
       .catch(() => {
         cancel.disabled = false;
       });

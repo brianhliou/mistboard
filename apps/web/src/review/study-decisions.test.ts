@@ -85,3 +85,46 @@ it('uses Banqi validation and its review overlay, refusing unknown variants and 
   }));
   expect(await fetchStudyChapterDecisions('banqi', 's', 'c', saved)).toBeNull();
 });
+
+it('reads Three Kingdoms pool-mean grades in its own 1-based move dialect', async () => {
+  const saved = {
+    replay: 'three-kingdoms-banqi-public-v1',
+    root: { children: [{ uci: '@a1:R', children: [] }] },
+  };
+  const row = {
+    ply: 1,
+    mover: 'red',
+    bestWin: 70,
+    playedWin: 50,
+    realizedWin: 62,
+    playedRank: 2,
+    candidates: [
+      { move: 'b1b1', win: 70 },
+      { move: 'a1a1', win: 50, played: true },
+    ],
+  };
+  const fetcher = vi.fn(async () => ({ status: 200, json: async () => ({ decisions: [row] }) }));
+  vi.stubGlobal('fetch', fetcher);
+  const overlay = await fetchStudyChapterDecisions('three-kingdoms-banqi', 's', 'c', saved);
+  expect(overlay?.byPly.get(1)).toMatchObject({ judgment: 'blunder', luck: 12, playedRank: 2 });
+  expect(overlay?.byPly.get(1)?.candidates?.[0]).toMatchObject({ label: 'b1 flip', uci: 'b1b1' });
+  expect(overlay?.red.reveals).toBe(1);
+  expect(
+    await fetchStudyChapterDecisions('three-kingdoms-banqi', 's', 'c', saved, {
+      ...saved,
+      root: { children: [{ uci: '@b1:R', children: [] }] },
+    }),
+  ).toBeNull();
+  for (const bad of [
+    { bestWin: NaN },
+    { candidates: [{ move: 'a0a0', win: 70 }] },
+    { capturedRole: 'horse' },
+    { candidates: [{ move: 'a1a1', win: 70, capturedRole: 'horse' }] },
+  ]) {
+    vi.stubGlobal('fetch', async () => ({
+      status: 200,
+      json: async () => ({ decisions: [{ ...row, ...bad }] }),
+    }));
+    expect(await fetchStudyChapterDecisions('three-kingdoms-banqi', 's', 'c', saved)).toBeNull();
+  }
+});

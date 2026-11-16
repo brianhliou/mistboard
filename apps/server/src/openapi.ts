@@ -70,6 +70,20 @@ const GAME_ID_NOTE =
   'A room id: the last segment of a game’s review URL. This route matches the raw ' +
   'request line, so it takes no query string at all.';
 
+const CHAMPIONS: Schema = {
+  type: 'array',
+  description: 'Current champion ladders for a linkable human account; never internal account ids.',
+  items: {
+    type: 'object',
+    required: ['variant', 'timeClass'],
+    additionalProperties: false,
+    properties: {
+      variant: { type: 'string' },
+      timeClass: { type: 'string', enum: ['bullet', 'blitz', 'rapid', 'correspondence'] },
+    },
+  },
+};
+
 export function buildOpenApiDocument(origin: string): Record<string, unknown> {
   // Keep hidden playtest channels out of the public API reference.
   const watchChannelIds = WATCH_CHANNEL_IDS.filter(
@@ -95,7 +109,16 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       timeControl: { type: ['object', 'null'] },
       initialMs: { type: ['integer', 'null'] },
       incrementMs: { type: ['integer', 'null'] },
-      participants: { type: 'array', items: { type: 'object' } },
+      participants: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            handle: { type: 'string' },
+            champions: CHAMPIONS,
+          },
+        },
+      },
     },
     required: ['roomId', 'variant', 'result', 'termination', 'plyCount'],
   };
@@ -107,6 +130,11 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       name: { type: 'string', description: '`Anonymous` for a seat its owner made private.' },
       rating: { type: ['integer', 'null'] },
       kind: { type: 'string', enum: ['account', 'guest', 'engine'] },
+      handle: { type: ['string', 'null'] },
+      botId: { type: ['string', 'null'] },
+      title: { type: ['string', 'null'] },
+      flair: { type: ['string', 'null'] },
+      champions: CHAMPIONS,
     },
   };
 
@@ -137,6 +165,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       handle: { type: 'string' },
       displayName: { type: 'string' },
       title: { type: ['string', 'null'] },
+      champions: CHAMPIONS,
       eloRating: { type: 'integer' },
       gamesPlayed: { type: 'integer' },
       provisional: { type: 'boolean' },
@@ -345,6 +374,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                     title: { type: ['string', 'null'] },
                     rating: { type: ['object', 'null'] },
                     playing: { type: 'boolean' },
+                    champions: CHAMPIONS,
                   },
                 },
               },
@@ -698,7 +728,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
               profile: {
                 type: 'object',
                 properties: {
-                  user: { type: 'object' },
+                  user: { type: 'object', properties: { champions: CHAMPIONS } },
                   ratings: { type: 'array', items: { type: 'object' } },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
                   puzzleStreak: ref('PlayStreak'),

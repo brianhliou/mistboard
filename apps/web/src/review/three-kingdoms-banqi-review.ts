@@ -13,6 +13,8 @@ import {
   THREE_KINGDOMS_BANQI_POINTS,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
+  type ThreeKingdomsBanqiReplayMove,
+  type ThreeKingdomsBanqiReplayState,
   type ThreeKingdomsBanqiState,
   threeKingdomsBanqiMoveLabel,
   threeKingdomsBanqiStateToDealtFen,
@@ -30,7 +32,10 @@ import { tkPoints } from '../three-kingdoms-banqi-score.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
 import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
-import { makeThreeKingdomsBanqiTreeAdapter } from './three-kingdoms-banqi-tree-adapter.js';
+import {
+  makeThreeKingdomsBanqiReplayTreeAdapter,
+  makeThreeKingdomsBanqiTreeAdapter,
+} from './three-kingdoms-banqi-tree-adapter.js';
 import {
   mountTreeReview,
   type TreePresentation,
@@ -137,6 +142,38 @@ export function mountThreeKingdomsBanqiReview(
   if (!config.root) throw new Error('three kingdoms banqi review needs a dealt root position');
   const faceDown = withFaceDownReview(presentation.adapter, config);
   return mountTreeReview(root, { ...presentation, adapter: faceDown.adapter }, faceDown.config);
+}
+
+/** Study replay over public occupancy and recorded outcomes. No dealt root,
+ * hidden-face reveal, engine request or sampled branch is available here. */
+export function mountThreeKingdomsBanqiPublicReplayReview(
+  root: HTMLElement,
+  config: TreeReviewConfig<
+    ThreeKingdomsBanqiReplayMove,
+    ThreeKingdomsBanqiReplayState,
+    TkBoardArrow
+  >,
+): TreeReviewHandle {
+  const {
+    adapter: _adapter,
+    fen: _fen,
+    engine: _engine,
+    moveEvalVisible: _moveEvalVisible,
+    moveLuckMarker: _moveLuckMarker,
+    moveListLuck: _moveListLuck,
+    gamePhases: _gamePhases,
+    material: _material,
+    ...boardPresentation
+  } = presentation;
+  return mountTreeReview(
+    root,
+    {
+      ...boardPresentation,
+      adapter: makeThreeKingdomsBanqiReplayTreeAdapter(),
+      engine: null,
+    },
+    config,
+  );
 }
 
 /** A recorded flip names the piece it turned up, read from the view after the

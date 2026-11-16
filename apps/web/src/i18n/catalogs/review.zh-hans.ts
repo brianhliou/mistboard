@@ -313,6 +313,8 @@ export const ZH_HANS_REVIEW = {
   'study.phone.searchChapters': '搜索章节',
   'study.phone.noChapterMatch': '没有符合的章节。',
   'study.phone.closeChapters': '关闭章节列表',
+  'study.moveNote': '着法注释',
+  'study.readMoveNote': '阅读完整着法注释',
   'study.phone.info': '信息',
   'study.phone.closeInfo': '关闭研究信息',
   'study.chapterSettings': '章节设置',

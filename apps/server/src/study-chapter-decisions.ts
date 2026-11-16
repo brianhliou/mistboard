@@ -3,15 +3,23 @@
 import {
   applyBanqiMove,
   applyJieqiMove,
+  applyThreeKingdomsBanqiMove,
+  applyThreeKingdomsBanqiReplayMove,
   BANQI_STUDY_MOVE_OPTIONS,
   type BanqiMove,
+  createInitialThreeKingdomsBanqiReplayState,
   engineUciToBanqiMove,
+  getThreeKingdomsBanqiLegalMoves,
   hasOwnKey,
   type JieqiMove,
   parseBanqiFen,
   parseJieqiFen,
+  parseThreeKingdomsBanqiFen,
+  parseThreeKingdomsBanqiReplayMove,
   serializedTreeMainline,
   serializedTreeRootFen,
+  THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
+  type ThreeKingdomsBanqiReplayState,
 } from '@mistboard/game';
 
 export type StudyJieqiDecision = {
@@ -200,10 +208,103 @@ function validateBanqiDecisions(tree: unknown, value: unknown): StudyDecisionsIn
   return { engineId: input.engineId, source: input.source, decisions };
 }
 
+/** Candidates are public actions in the engine's 1-based coordinate dialect.
+ * Recorded flips supply only their observed outcome; no hidden deal is sampled. */
+function validateThreeKingdomsBanqiDecisions(tree: unknown, value: unknown): StudyDecisionsInput {
+  const input = decisionInput(value);
+  const root = object(tree);
+  const fen = serializedTreeRootFen(tree);
+  const publicReplay = root.replay === THREE_KINGDOMS_BANQI_PUBLIC_REPLAY;
+  let state: ThreeKingdomsBanqiReplayState;
+  if (publicReplay) {
+    if (root.rootFen !== undefined) throw new Error('public replay must not carry a dealt root');
+    state = createInitialThreeKingdomsBanqiReplayState('study');
+  } else {
+    if (root.replay !== undefined || !fen) throw new Error('invalid Three Kingdoms root');
+    const parsed = parseThreeKingdomsBanqiFen(fen);
+    if (!parsed.ok || parsed.sampled) throw new Error('chapter needs a dealt root');
+    state = parsed.state;
+  }
+  const flips = new Map<number, { mover: 'red' | 'black'; legal: Set<string> }>();
+  for (const [index, token] of serializedTreeMainline(tree).entries()) {
+    const plain = /^([a-i][1-5])([a-i][1-5])$/.exec(token);
+    const move = publicReplay
+      ? parseThreeKingdomsBanqiReplayMove(token)
+      : plain
+        ? ({ from: plain[1], to: plain[2] } as Parameters<typeof applyThreeKingdomsBanqiMove>[1])
+        : null;
+    if (!move || state.status.type !== 'playing')
+      throw new Error('invalid Three Kingdoms mainline');
+    const mover = state.status.turn;
+    const before = state;
+    if (publicReplay) state = applyThreeKingdomsBanqiReplayMove(state, move);
+    else
+      state = applyThreeKingdomsBanqiMove(
+        state as Parameters<typeof applyThreeKingdomsBanqiMove>[0],
+        move,
+      );
+    if (state === before) throw new Error('invalid Three Kingdoms mainline');
+    if (move.from === move.to)
+      flips.set(index + 1, {
+        mover,
+        legal: new Set(
+          getThreeKingdomsBanqiLegalMoves(before).map((move) => `${move.from}${move.to}`),
+        ),
+      });
+  }
+  const seen = new Set<number>();
+  const decisions = input.decisions.map((raw): StudyBanqiDecision => {
+    const row = object(raw);
+    keys(row, ['ply', 'mover', 'bestWin', 'playedWin', 'realizedWin', 'playedRank', 'candidates']);
+    const ply = row.ply;
+    if (typeof ply !== 'number' || !Number.isInteger(ply) || !flips.has(ply) || seen.has(ply))
+      throw new Error('ply must identify a unique mainline flip (first move = 1)');
+    const flip = flips.get(ply)!;
+    if (row.mover !== flip.mover) throw new Error('mover does not match chapter');
+    seen.add(ply);
+    if (
+      row.playedRank !== null &&
+      (typeof row.playedRank !== 'number' ||
+        !Number.isInteger(row.playedRank) ||
+        row.playedRank < 1)
+    )
+      throw new Error('invalid playedRank');
+    if (!Array.isArray(row.candidates) || !row.candidates.length)
+      throw new Error('candidates must include the preferred move and its expected score');
+    const candidates = row.candidates.map((raw) => {
+      const candidate = object(raw);
+      keys(candidate, ['move', 'win', 'played']);
+      if (typeof candidate.move !== 'string' || !flip.legal.has(candidate.move))
+        throw new Error('invalid candidate UCI');
+      if (candidate.played !== undefined && typeof candidate.played !== 'boolean')
+        throw new Error('invalid candidate played');
+      return {
+        move: candidate.move,
+        win: win(candidate.win),
+        ...(candidate.played === undefined ? {} : { played: candidate.played as boolean }),
+      };
+    });
+    const bestWin = win(row.bestWin);
+    if (candidates[0]!.win !== bestWin || candidates.some((candidate) => candidate.win > bestWin))
+      throw new Error('preferred move score must match bestWin');
+    return {
+      ply,
+      mover: flip.mover,
+      bestWin,
+      playedWin: win(row.playedWin),
+      realizedWin: win(row.realizedWin),
+      playedRank: row.playedRank as number | null,
+      candidates,
+    };
+  });
+  return { engineId: input.engineId, source: input.source, decisions };
+}
+
 /** Every supported variant has its own validator; there is no fallback. */
 export const STUDY_DECISION_VARIANTS = {
   jieqi: { validate: validateJieqiDecisions },
   banqi: { validate: validateBanqiDecisions },
+  'three-kingdoms-banqi': { validate: validateThreeKingdomsBanqiDecisions },
 } as const;
 
 /** Reject rather than strip unknown fields: no captured identity can enter storage. */

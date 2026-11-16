@@ -11,6 +11,7 @@ import {
   summarizeDecisions as summarizeBanqi,
 } from './banqi-decisions.js';
 import { type JieqiDecision, jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
+import { threeKingdomsBanqiDecisionOverlay } from './three-kingdoms-banqi-decisions.js';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -30,6 +31,44 @@ function isLuckRow(raw: unknown): raw is JieqiDecision {
   );
 }
 
+function isThreeKingdomsRow(raw: unknown): boolean {
+  if (
+    !isLuckRow(raw) ||
+    !isWin(raw.bestWin) ||
+    Object.keys(raw).some(
+      (key) =>
+        ![
+          'ply',
+          'mover',
+          'bestWin',
+          'playedWin',
+          'realizedWin',
+          'playedRank',
+          'candidates',
+        ].includes(key),
+    ) ||
+    !(
+      raw.playedRank === null ||
+      (typeof raw.playedRank === 'number' && Number.isInteger(raw.playedRank) && raw.playedRank > 0)
+    ) ||
+    !Array.isArray(raw.candidates) ||
+    !raw.candidates.length
+  )
+    return false;
+  return (
+    raw.candidates.every(
+      (candidate) =>
+        isObject(candidate) &&
+        Object.keys(candidate).every((key) => ['move', 'win', 'played'].includes(key)) &&
+        typeof candidate.move === 'string' &&
+        /^[a-i][1-5][a-i][1-5]$/.test(candidate.move) &&
+        isWin(candidate.win) &&
+        candidate.win <= (raw.bestWin as number) &&
+        (candidate.played === undefined || typeof candidate.played === 'boolean'),
+    ) && raw.candidates[0].win === raw.bestWin
+  );
+}
+
 /** Variant id -> row validator + the same overlay used by that variant's review. */
 export const STUDY_DECISION_VARIANTS: Readonly<
   Record<
@@ -40,6 +79,10 @@ export const STUDY_DECISION_VARIANTS: Readonly<
     }
   >
 > = {
+  'three-kingdoms-banqi': {
+    validate: isThreeKingdomsRow,
+    overlay: (rows) => threeKingdomsBanqiDecisionOverlay(rows as BanqiDecision[]),
+  },
   jieqi: {
     validate: isLuckRow,
     // Imported Jieqi rows remain reveal-luck only, as before.

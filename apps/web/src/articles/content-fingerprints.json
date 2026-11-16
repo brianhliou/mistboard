@@ -12,16 +12,16 @@
     "updatedAt": "2026-10-07"
   },
   "atomic-xiangqi": {
-    "hash": "f5369caac1459998",
-    "updatedAt": "2026-11-03"
+    "hash": "ea182bfe8a39702e",
+    "updatedAt": "2026-11-15"
   },
   "atomic-xiangqi-build": {
     "hash": "1bfea4fd5ead6c00",
     "updatedAt": null
   },
   "banqi": {
-    "hash": "205c217df45c8d7a",
-    "updatedAt": "2026-11-07"
+    "hash": "a95b9c7b6e4635d9",
+    "updatedAt": "2026-11-15"
   },
   "banqi-chariot-endgame": {
     "hash": "82fb17bd22906b81",
@@ -48,24 +48,24 @@
     "updatedAt": null
   },
   "chess": {
-    "hash": "488b95e002e4618d",
-    "updatedAt": null
+    "hash": "4210c6383158ef2c",
+    "updatedAt": "2026-11-15"
   },
   "chess960-starting-positions": {
     "hash": "1e0ce946b3aa4d0c",
     "updatedAt": "2026-10-15"
   },
   "crazyhouse-xiangqi": {
-    "hash": "d2fcdd3ebd5556ed",
-    "updatedAt": null
+    "hash": "4e9ee8c2537cbb96",
+    "updatedAt": "2026-11-15"
   },
   "dou-shou-qi-engine": {
     "hash": "3e938e69da8dd82c",
     "updatedAt": null
   },
   "duck-xiangqi": {
-    "hash": "f7f2f3ed476d6882",
-    "updatedAt": "2026-10-16"
+    "hash": "007e61d56ddc537a",
+    "updatedAt": "2026-11-15"
   },
   "duck-xiangqi-game-tree": {
     "hash": "7ca223a21374dede",
@@ -79,37 +79,41 @@
     "hash": "c9787f57dba369bf",
     "updatedAt": "2026-10-15"
   },
+  "fanfanqi": {
+    "hash": "1e631a444f30c317",
+    "updatedAt": null
+  },
   "flip-jungle-skill-ceiling": {
     "hash": "081e5cc9952dcb31",
     "updatedAt": null
   },
   "fog-chess": {
-    "hash": "1e2ac1faa6270bf0",
-    "updatedAt": "2026-06-04"
+    "hash": "5179ab8dc7b32733",
+    "updatedAt": "2026-11-15"
   },
   "fog-future": {
     "hash": "d5d6d6ad339aabbc",
     "updatedAt": null
   },
   "fog-xiangqi": {
-    "hash": "f17d4ad9306b6bd1",
-    "updatedAt": "2026-07-23"
+    "hash": "c9ee249ec8db2b6e",
+    "updatedAt": "2026-11-15"
   },
   "fortress-and-atomic-xiangqi-on-hold": {
     "hash": "c38a532ebb0d735d",
     "updatedAt": null
   },
   "fortress-xiangqi": {
-    "hash": "aae75f50c1e3011d",
-    "updatedAt": "2026-09-03"
+    "hash": "bdef85f0eb5188f6",
+    "updatedAt": "2026-11-15"
   },
   "general-blunder-challenge": {
     "hash": "2766874a101bfb37",
     "updatedAt": "2026-10-24"
   },
   "gomoku": {
-    "hash": "8cbe8e6a246c2aaf",
-    "updatedAt": "2026-11-07"
+    "hash": "91ab8e5f6cceed5e",
+    "updatedAt": "2026-11-15"
   },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",
@@ -136,8 +140,8 @@
     "updatedAt": null
   },
   "jieqi-platform": {
-    "hash": "7eb1ee5272d6d934",
-    "updatedAt": "2026-11-09"
+    "hash": "a1a4a3f6b245c0c1",
+    "updatedAt": "2026-11-13"
   },
   "jieqi-puzzle-search": {
     "hash": "32b508e6f756c6d1",
@@ -148,16 +152,16 @@
     "updatedAt": null
   },
   "jungle": {
-    "hash": "fe08dd6c2e99ee91",
-    "updatedAt": "2026-09-17"
+    "hash": "0fac97a3a55afbcf",
+    "updatedAt": "2026-11-15"
   },
   "jungle-den-term": {
     "hash": "f78b1e9cc48339b4",
     "updatedAt": "2026-10-16"
   },
   "jungle-flip": {
-    "hash": "07fd7e0f5d8e804f",
-    "updatedAt": "2026-09-25"
+    "hash": "252f8e21b4000de8",
+    "updatedAt": "2026-11-15"
   },
   "katago-jungle": {
     "hash": "1307d633e9e4a811",
@@ -176,8 +180,8 @@
     "updatedAt": null
   },
   "mahjong": {
-    "hash": "83d992e11d94b497",
-    "updatedAt": "2026-11-06"
+    "hash": "59beac96b863ab54",
+    "updatedAt": "2026-11-15"
   },
   "meng-fanrui": {
     "hash": "7788cf6a3869bc7a",
@@ -224,8 +228,8 @@
     "updatedAt": null
   },
   "shogi4": {
-    "hash": "833315d6cd688a17",
-    "updatedAt": "2026-06-06"
+    "hash": "c4d268160cd5b013",
+    "updatedAt": "2026-11-15"
   },
   "shortest-stalemate-xiangqi": {
     "hash": "8087e9a6ea932d7e",
@@ -248,8 +252,8 @@
     "updatedAt": "2026-11-09"
   },
   "three-kingdoms-banqi": {
-    "hash": "32e7d8e0ee1f1adf",
-    "updatedAt": null
+    "hash": "a4ed3f33fa8cc304",
+    "updatedAt": "2026-11-15"
   },
   "titled-players": {
     "hash": "ab311579f749c5a4",
@@ -264,8 +268,8 @@
     "updatedAt": null
   },
   "xiangqi": {
-    "hash": "a4987c4241f8f412",
-    "updatedAt": "2026-11-12"
+    "hash": "a122fed02035354b",
+    "updatedAt": "2026-11-15"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",

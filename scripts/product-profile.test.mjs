@@ -9,6 +9,7 @@ test('product profile contains exactly the intended live game specs', () => {
     'duck-xiangqi',
     'atomic-xiangqi',
     'crazyhouse-xiangqi',
+    'ffq-banqi',
     'banqi',
     'three-kingdoms-banqi',
     'jungle',

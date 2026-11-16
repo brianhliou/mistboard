@@ -12,9 +12,14 @@ const NOTATION_CITATION =
 const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
   'apps/web/src/i18n/catalogs/play.zh-hans.ts': [
     { sentence: '翻翻棋最多允许连续捉子四次。这步棋会是第五次。请走别的着法。', count: 1 },
+    { sentence: "'variant.ffqBanqi.name': '翻翻棋',", count: 1 },
   ],
   'apps/web/src/i18n/catalogs/play.zh-hant.ts': [
     { sentence: '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。', count: 1 },
+    { sentence: "'variant.ffqBanqi.name': '翻翻棋',", count: 1 },
+  ],
+  'apps/web/src/articles/content/fanfanqi.ts': [
+    { sentence: 'Fanfanqi (翻翻棋, “flip-flip chess”)', count: 1 },
   ],
   'apps/web/src/articles/content/jieqi-openings.ts': [{ sentence: NOTATION_CITATION, count: 1 }],
   'apps/web/src/articles/content/khai-cuoc-co-up.ts': [
@@ -26,6 +31,51 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
     },
   ],
   'apps/web/src/article-i18n.ts': [
+    // Fanfanqi rules translations: exact new source and translated sentences.
+    // The rules title and its search title (翻翻棋规则：玩法、大小顺序与扣血).
+    { sentence: '翻翻棋规则', count: 2 },
+    { sentence: '翻翻棋在 4×8 的棋盘上进行，棋子暗置，双方从 60 点血开始。', count: 1 },
+    { sentence: '想学翻翻棋，或想比较其血量规则与暗棋差异的玩家。', count: 1 },
+    {
+      sentence:
+        'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP.',
+      count: 2,
+    },
+    { sentence: '翻翻棋是一种以血量（HP）计分、对局更短的[暗棋](/rules/banqi)。', count: 1 },
+    {
+      sentence: '腾讯的《天天象棋》App 在 2016 年 7 月加入了以 60 点血计分的翻翻棋模式。',
+      count: 1,
+    },
+    {
+      sentence: '暗棋的炮可以像其他棋子一样走一格，翻翻棋的炮却不能：炮只能通过吃子来移动。',
+      count: 1,
+    },
+    { sentence: '翻翻棋与暗棋的区别', count: 1 },
+    { sentence: '来下翻翻棋', count: 1 },
+    // The rules title and its search title (翻翻棋規則：玩法、大小順序與扣血).
+    { sentence: '翻翻棋規則', count: 2 },
+    { sentence: '翻翻棋在 4×8 的棋盤上進行，棋子暗置，雙方從 60 點血開始。', count: 1 },
+    { sentence: '想學翻翻棋，或想比較其血量規則與暗棋差異的玩家。', count: 1 },
+    { sentence: '翻翻棋是一種以血量（HP）計分、對局更短的[暗棋](/rules/banqi)。', count: 1 },
+    {
+      sentence: '騰訊的《天天象棋》App 在 2016 年 7 月加入了以 60 點血計分的翻翻棋模式。',
+      count: 1,
+    },
+    {
+      sentence: '暗棋的炮可以像其他棋子一樣走一格，翻翻棋的炮卻不能：炮只能透過吃子來移動。',
+      count: 1,
+    },
+    { sentence: '翻翻棋與暗棋的區別', count: 1 },
+    { sentence: '來下翻翻棋', count: 1 },
+    // Fanfanqi launch (2026-11-15): the banqi house-rules link, two update notes
+    // and the shared comparison table header.
+    { sentence: '[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的变体。', count: 1 },
+    { sentence: '[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的變體。', count: 1 },
+    { sentence: '家规一节现在链接到翻翻棋：炮可以打暗子的变体。', count: 1 },
+    { sentence: '家規一節現在連結到翻翻棋：炮可以打暗子的變體。', count: 1 },
+    { sentence: '对照表现在加入了翻翻棋。', count: 1 },
+    { sentence: '對照表現在加入了翻翻棋。', count: 1 },
+    { sentence: "Fanfanqi: '翻翻棋',", count: 2 },
     { sentence: NOTATION_CITATION, count: 2 },
     {
       sentence:

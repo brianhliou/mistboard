@@ -18,6 +18,7 @@ import {
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { type FlairKey, parseFlair } from './../flair.js';
 import * as persistence from './../persistence.js';
+import { tryHandle as tryHandleBroadcastPush } from './account-broadcast-push.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
 const emailChangeRateWindowMs = 10 * 60 * 1000;
@@ -29,10 +30,12 @@ const booleanAccountPreferenceKeys = new Set<persistence.AccountPreferenceKey>([
   'lowTimeSound',
   'premoves',
   'confirmGameActions',
+  'confirmCorrespondenceMoves',
   'inboxBell',
   'inboxEmail',
   'correspondenceBell',
   'challengesBell',
+  'liveInvites',
   'forumBell',
   'followersBell',
   'correspondenceDeadlineEmail',
@@ -47,6 +50,7 @@ export async function tryHandle(
   response: ServerResponse,
   pathname: string,
 ): Promise<boolean> {
+  if (await tryHandleBroadcastPush(request, response, pathname)) return true;
   if (pathname === '/api/account/closure/start') {
     if (!requireMethod(request, response, 'POST')) return true;
     if (!requirePersistence(response)) return true;
@@ -465,7 +469,11 @@ export async function tryHandle(
     return true;
   }
   const body = await readJsonBody(request);
-  const handle = normalizeProfileHandle(typeof body.handle === 'string' ? body.handle : null);
+  const usernamePromptHandled = body.usernamePromptHandled === true;
+  const dismissOnly = usernamePromptHandled && body.handle === undefined;
+  const handle = dismissOnly
+    ? user.handle
+    : normalizeProfileHandle(typeof body.handle === 'string' ? body.handle : null);
   if (!handle) {
     writeJson(response, 400, { error: 'invalid_handle' });
     return true;
@@ -474,7 +482,9 @@ export async function tryHandle(
   // there is no separate display-name input to validate.
   const result = await persistence.updateUserProfile(
     user.id,
-    { handle, displayName: handle },
+    dismissOnly
+      ? { usernamePromptHandled: true }
+      : { handle, displayName: handle, usernamePromptHandled },
     new Date(),
   );
   if (!result.ok) {

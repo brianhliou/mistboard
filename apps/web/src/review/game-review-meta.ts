@@ -33,7 +33,7 @@ import {
 } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
-import { profileTargetFor } from '../profile-link.js';
+import { type ProfileIdentity, profileTargetFor } from '../profile-link.js';
 import { correspondenceLabelFromMs } from '../replay-meta.js';
 import { localizedRulesHrefForRoom } from '../variant-public-surfaces.js';
 import { variantMiniIdForGameSpec } from '../variants.js';
@@ -48,15 +48,11 @@ import { buildSpectatorChat } from './spectator-chat.js';
 
 /** A persisted postgame participant as the shared `postgameGameSummary` server
  *  builder emits it (see apps/server/src/routes/lib.ts). */
-export type ReviewMetaPlayer = {
+export type ReviewMetaPlayer = ProfileIdentity & {
   color: string;
   name: string;
   rating?: number | null;
   kind?: 'account' | 'guest' | 'engine';
-  /** Linkable seat identity, at most one set. `kind` cannot substitute: it
-   *  collapses users and bots into 'account'. */
-  handle?: string | null;
-  botId?: string | null;
 };
 
 /** The subset of the postgame `game` envelope the meta card reads. Every variant

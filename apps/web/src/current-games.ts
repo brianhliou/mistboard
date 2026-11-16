@@ -91,7 +91,7 @@ import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
-import { formatClock, formatDayClock } from './web-utils.js';
+import { correspondenceTimeLeftLabel, formatClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
@@ -298,8 +298,8 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       card.root.remove();
       cards.delete(roomId);
     }
-    // Live first (people, then bots), then correspondence by deadline, then the
-    // seeks waiting for a second player. A card already in place is moved only
+    // Live first (people, then bots), then correspondence, each newest started first,
+    // then the seeks waiting for a second player. A card already in place is moved only
     // when the order changed, so a live board is not detached on every poll.
     const sections = splitSections(games);
     const order = [
@@ -819,9 +819,7 @@ function tickCard(card: CardState, now: number): void {
   for (const [color, el] of Object.entries(card.clockEls)) {
     if (correspondence) {
       const onMove = game.deadline?.seat === color;
-      el.textContent = onMove
-        ? t('games.deadline', { time: formatDayClock(Date.parse(game.deadline!.dueAt) - now) })
-        : '';
+      el.textContent = onMove ? correspondenceTimeLeftLabel(game.deadline!.dueAt, now) : '';
       el.classList.toggle('is-deadline', onMove);
       el.hidden = !onMove;
       continue;
@@ -1099,7 +1097,7 @@ function finishedSeatRow(
   row.title = name;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
-  label.textContent = cardSeatName(name);
+  label.textContent = cardSeatName(name, variantDisplayLabel(game.variant));
   label.title = name;
   if (variantSeatsHaveInk(game.variant)) {
     row.append(

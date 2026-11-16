@@ -14,6 +14,7 @@ import {
   CANONICAL_VARIANT_ORDER,
   CHESS_SPEC_ID,
   correspondenceTimeControl,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   GOMOKU_SPEC_ID,
   isCorrespondenceRatedSpec,
@@ -76,7 +77,7 @@ test('every correspondence-eligible spec is a real game spec', () => {
   }
 });
 
-test('public correspondence follows the shelf with XMJ held off', () => {
+test('public correspondence follows the shelf with XMJ and Fanfanqi held off', () => {
   // Brian: "all of them should support it". The shelf is CANONICAL_VARIANT_ORDER,
   // the one list every picker reads; mahjong and study-only chess are not on it.
   // A variant added to the shelf without correspondence fails here, not in a
@@ -84,7 +85,9 @@ test('public correspondence follows the shelf with XMJ held off', () => {
   // Xiangqi Mahjong is on the shelf but held out (Brian, 2026-10-25).
   assert.deepEqual(
     [...CORRESPONDENCE_ELIGIBLE_SPECS].sort(),
-    CANONICAL_VARIANT_ORDER.filter((id) => id !== XIANGQI_MAHJONG_SPEC_ID).sort(),
+    CANONICAL_VARIANT_ORDER.filter(
+      (id) => id !== XIANGQI_MAHJONG_SPEC_ID && id !== FFQ_BANQI_SPEC_ID,
+    ).sort(),
   );
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(MAHJONG_SPEC_ID));
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(CHESS_SPEC_ID));

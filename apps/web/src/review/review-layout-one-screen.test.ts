@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { JIEQI_GEO } from '../live-jieqi-render.js';
 import { LIVE_BOARD_GEO } from '../xiangqi-board.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
-import { oneScreenBoardWidth } from './review-layout.js';
+import { createReviewScaffold, oneScreenBoardWidth } from './review-layout.js';
 
 // #619: on a phone the game review's board shrinks so the board, the arrow bar
 // and the move strip share one screen. happy-dom has no layout, so the boxes are
@@ -51,6 +51,7 @@ function stubPhone(matches: boolean): void {
 
 describe('oneScreenBoardWidth', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     document.body.replaceChildren();
   });
@@ -70,6 +71,94 @@ describe('oneScreenBoardWidth', () => {
     stubPhone(false);
     vi.stubGlobal('innerHeight', 568);
     expect(oneScreenBoardWidth(phoneReview(), 333, 0.9)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it.each([640, 844])(
+    'fills the study note from the fitted board at %ipx without drift',
+    (height) => {
+      stubPhone(true);
+      vi.stubGlobal('innerHeight', height);
+      vi.useFakeTimers();
+      vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      const note = document.createElement('section');
+      note.className = 'review-comment-panel--study';
+      const moves = document.createElement('section');
+      moves.className = 'review-move-list';
+      const board = document.createElement('div');
+      const abort = new AbortController();
+      const scaffold = createReviewScaffold(root, {
+        signal: abort.signal,
+        reviewSurface: 'study',
+        ariaLabel: 'Study',
+        title: 'Study',
+        summary: '',
+        boards: [{ key: 'board', tier: 'primary', el: board }],
+        boardAspect: 1,
+        moves,
+        navigation: document.createElement('nav'),
+        navigationNote: note,
+        phoneOneScreen: true,
+      });
+      const stage = scaffold.stage.el;
+      const fittedHeight = () =>
+        Number.parseFloat(stage.style.getPropertyValue('--review-stage-primary-max')) || 333;
+      const sizedBox = () => ({ ...box(90, 90 + fittedHeight()), width: fittedHeight() });
+      stage.getBoundingClientRect = sizedBox;
+      board.getBoundingClientRect = sizedBox;
+      stage.querySelector<HTMLElement>('.review-stage__primary')!.getBoundingClientRect = sizedBox;
+      stage.closest<HTMLElement>('.review-shell__center')!.style.display = 'contents';
+      const cluster = stage.closest<HTMLElement>('.review-shell__cluster')!;
+      cluster.style.rowGap = '4px';
+      cluster.getBoundingClientRect = () => ({ ...box(90, 600), width: 350 });
+      moves.getBoundingClientRect = () => box(90 + fittedHeight() + 100, 90 + fittedHeight() + 140);
+      const dock = document.createElement('div');
+      dock.className = 'study-phone-dock';
+      dock.getBoundingClientRect = () => box(height - 60, height);
+      root.append(dock);
+      const shell = stage.closest<HTMLElement>('.review-shell')!;
+      scaffold.refit();
+      const first = shell.style.getPropertyValue('--study-note-height');
+      expect(Number.parseFloat(first)).toBeGreaterThanOrEqual(30);
+      expect(
+        moves.getBoundingClientRect().bottom + 4 + Number.parseFloat(first),
+      ).toBeLessThanOrEqual(height - 60);
+      if (height === 844) expect(Number.parseFloat(first)).toBeGreaterThan(100);
+      scaffold.refit();
+      expect(shell.style.getPropertyValue('--study-note-height')).toBe(first);
+      abort.abort();
+    },
+  );
+
+  it.each([640, 667, 740, 844])('reserves a study note and its fixed dock at %ipx', (height) => {
+    stubPhone(true);
+    vi.stubGlobal('innerHeight', height);
+    const stage = phoneReview();
+    const shell = stage.closest<HTMLElement>('.review-shell')!;
+    shell.classList.add('review-shell--study');
+    const page = document.createElement('div');
+    shell.before(page);
+    page.append(shell);
+    const dock = document.createElement('div');
+    dock.className = 'study-phone-dock';
+    dock.getBoundingClientRect = () => box(height - 60, height);
+    const note = document.createElement('section');
+    note.className = 'review-comment-panel--study';
+    note.getBoundingClientRect = () => box(567, 597);
+    shell.append(note);
+    page.append(dock);
+    const width = oneScreenBoardWidth(stage, 333, 0.9);
+    expect(90 + width / 0.9 + 140 + 24 + 30).toBeLessThanOrEqual(height - 60);
+    // A tall note left over from another viewport never steals board height.
+    note.getBoundingClientRect = () => box(567, 767);
+    expect(oneScreenBoardWidth(stage, 333, 0.9)).toBe(width);
+    // A chapter without move notes gives the band back to the board.
+    note.hidden = true;
+    expect(oneScreenBoardWidth(stage, 333, 0.9)).toBeGreaterThan(width);
   });
 
   it.each([

@@ -27,6 +27,8 @@ export type CorrespondenceGame = {
   // means the name renders as plain text (profile-link.ts, fail-closed).
   opponentHandle?: string | null;
   dueAt: string;
+  // Canonical full-move number, without a position, for compact homepage rows.
+  moveNumber?: number;
   // Rated correspondence (2026-10-02); absent from an older server reads as casual.
   rated?: boolean;
   // The board THIS player's seat sees, exactly the state of that seat's own

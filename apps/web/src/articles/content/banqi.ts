@@ -13,7 +13,7 @@ import {
   BANQI_STEP,
 } from '../../banqi-rules-diagrams.js';
 import { BANQI_CHASE_RULE_STEPS } from '../banqi-chase-diagrams.js';
-import { BANQI_RULES_THUMBNAIL } from '../diagrams.js';
+import { BANQI_RULES_THUMBNAIL, playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // Re-cut 2026-09-21 on Brian's read of the page: the custom diagrams go, and
@@ -53,9 +53,9 @@ export const banqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-11-07',
+  updatedAt: '2026-11-15',
   updateNote:
-    'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.',
+    'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip. The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -271,7 +271,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).',
+          text: 'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.',
         },
       ],
     },
@@ -280,19 +280,20 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.',
+          text: '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.',
         },
         {
           kind: 'embed',
-          path: '/embed/study/FsA5sowX/F8fezAhm',
-          title: 'Banqi: an engine game under the competition rules',
+          // Built by scripts/variant-lab/rules-page-games (plans/banqi.plan.json).
+          path: '/embed/study/49WEgbqa/WDgABhew',
+          title: 'Banqi: Level 7 versus Level 8, annotated',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
           aspect: [702, 446],
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.',
+          text: 'The [companion study](/study/FsA5sowX) has twenty games of MistyBanqi against itself at ten million nodes a move, one chapter each, with a note on how it went. Two hundred games from that run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.',
         },
       ],
     },
@@ -330,21 +331,14 @@ export const banqiArticle: Article = {
         },
       ],
     },
-    {
+    playClosing({
       heading: 'Play on Mistboard',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'Play the computer or send a friend a link. No account needed.',
-        },
-        {
-          kind: 'cta',
-          buttons: [
-            { label: 'Play vs computer', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
-            { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
-          ],
-        },
+      lead: 'Play the computer or send a friend a link. No account needed.',
+      playLabel: 'Play vs computer',
+      playHref: '/?play=computer&gameSpecId=banqi',
+      secondary: [
+        { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
       ],
-    },
+    }),
   ],
 };

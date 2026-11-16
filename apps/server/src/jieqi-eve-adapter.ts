@@ -74,15 +74,16 @@ export const jieqiEveAdapter: VariantEveAdapter<
         throw new Error('jieqi EvE game has no room-created event');
       },
     );
-    const search = await jieqiLiveEngineMove(engineId, window.fen, {
-      movetimeMs: opts.movetimeMs,
-      moves: window.moves,
-      newGame: window.gameMoves.length <= 1,
-    });
     const state = replayTenantEvents(
       jieqiTenant,
       context.events as readonly TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>[],
     ).state;
+    const search = await jieqiLiveEngineMove(engineId, window.fen, {
+      movetimeMs: opts.movetimeMs,
+      moves: window.moves,
+      newGame: window.gameMoves.length <= 1,
+      adjudicationRule: state.adjudicationRule,
+    });
     const guarded = await guardJieqiRuleEnding({
       state,
       search,
@@ -92,6 +93,7 @@ export const jieqiEveAdapter: VariantEveAdapter<
           movetimeMs: Math.max(50, Math.floor(opts.movetimeMs / 2)),
           moves: window.moves,
           searchMoves,
+          adjudicationRule: state.adjudicationRule,
         }),
     });
     return guarded.search;

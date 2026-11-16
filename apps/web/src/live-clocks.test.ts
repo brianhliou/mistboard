@@ -269,3 +269,45 @@ describe('pregame seat rows follow the board (#1058)', () => {
     expect(refs.playerBottom.textContent).toContain('White');
   });
 });
+
+describe('legacy chess seat championships', () => {
+  it.each([false, true])(
+    'shows crowns with armed=%s and clears them on an empty payload',
+    (armed) => {
+      liveState.seat = 'white';
+      liveState.seatDisplayNames = { white: 'Alice', black: 'Bob' };
+      liveState.seatProfiles = {
+        white: {
+          handle: 'alice',
+          champions: [
+            { variant: 'xiangqi', timeClass: 'blitz' },
+            { variant: 'fog', timeClass: 'rapid' },
+          ],
+        },
+        black: { handle: 'bob' },
+      };
+      const refs = makeRefs();
+      const view = playingView();
+      if (!armed) view.clock = undefined;
+      renderClocks(refs, view);
+      const icons = [...refs.playerBottom.querySelectorAll<HTMLImageElement>('.champion-crown')];
+      expect(icons.map((icon) => icon.alt)).toEqual([
+        'Xiangqi blitz champion, Fog Chess rapid champion',
+      ]);
+      expect(
+        icons.every(
+          (icon) =>
+            icon.title === icon.alt &&
+            icon.getAttribute('aria-label') === icon.alt &&
+            icon.width === 20,
+        ),
+      ).toBe(true);
+      expect(refs.playerTop.querySelector('.champion-crowns')).toBeNull();
+      liveState.seatProfiles = { white: { handle: 'alice', champions: [] } };
+      renderClocks(refs, view);
+      expect(refs.playerBottom.querySelector('.champion-crowns')).toBeNull();
+      liveState.seatDisplayNames = {};
+      liveState.seatProfiles = {};
+    },
+  );
+});

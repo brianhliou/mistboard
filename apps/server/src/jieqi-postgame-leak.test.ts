@@ -20,6 +20,7 @@ import {
   createInitialJieqiState,
   JIEQI_SPEC_ID,
   type JieqiDeal,
+  type JieqiInitialStateOptions,
   jieqiHomeSquares,
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
@@ -51,7 +52,7 @@ const ROOM_ID = 'jq_leak';
 
 // Red's b3 cannon jumps the b8 screen and takes Black's face-down b10 piece;
 // Black's a10 chariot (revealed by moving) takes the cannon back; Red resigns.
-function finishedEvents(deal: JieqiDeal): JieqiEvent[] {
+function finishedEvents(deal: JieqiDeal & JieqiInitialStateOptions): JieqiEvent[] {
   return [
     { type: 'room-created', at: 1, roomId: ROOM_ID, gameSpecId: JIEQI_SPEC_ID, setup: deal },
     { type: 'seat-assigned', at: 2, roomId: ROOM_ID, clientId: 'r', seat: 'red' },
@@ -170,12 +171,36 @@ test('finished jieqi leak: the review API is the same whatever was dealt face-do
   );
   const standard = payloads[0];
   assert.ok(standard);
+  assert.equal('adjudicationRule' in standard.state, false, 'legacy stays unstamped for review');
   // Not vacuous: the pieces that moved are named, the dark capture is not.
   assert.deepEqual(standard.view.board.b10, { color: 'black', role: 'chariot', faceDown: false });
   assert.deepEqual(standard.view.captured, [
     { owner: 'black', role: null },
     { owner: 'red', role: 'cannon' },
   ]);
+});
+
+test('stamped postgame payload carries the public rule without leaking hidden identities or history', async () => {
+  for (const build of [jieqiPostgameForApi, jieqiWatchPostgameForApi]) {
+    const payloads = await Promise.all(
+      DEALS.map((deal) =>
+        build(ROOM_ID, {
+          getGameSummary: async () => record(),
+          loadRoomEvents: async () =>
+            finishedEvents({ ...deal, repetition: true, adjudicationRule: 'jqe-v1' }),
+        }),
+      ),
+    );
+    const wires = payloads.map((payload) => JSON.stringify(payload));
+    assertSameForEveryDeal('stamped postgame', wires);
+    assert.equal(payloads[0]?.state.adjudicationRule, 'jqe-v1');
+    for (const wire of wires) {
+      assert.doesNotMatch(
+        wire,
+        /"(?:positionCounts|repetitionLog|chase|deal|redHidden|blackHidden)"/,
+      );
+    }
+  }
 });
 
 test('finished jieqi leak: the watch payload is the same whatever was dealt face-down', async () => {
@@ -186,6 +211,7 @@ test('finished jieqi leak: the watch payload is the same whatever was dealt face
   }
   clearJieqiWatchPostgameCache();
   assert.ok(payloads[0]);
+  assert.equal('adjudicationRule' in payloads[0].state, false);
   assertSameForEveryDeal(
     'watch',
     payloads.map((payload) => JSON.stringify(payload)),

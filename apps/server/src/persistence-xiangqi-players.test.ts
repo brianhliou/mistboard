@@ -268,7 +268,7 @@ test('player teaching games resolve canonical slugs and exclude non-A and empty 
         })),
       };
     }
-    assert.match(sql, /SELECT \* FROM xiangqi_broadcast_boards WHERE id = \$1/);
+    assert.match(sql, /FROM xiangqi_broadcast_boards boards[\s\S]*WHERE boards\.id = \$1/);
     boardReads.push(String(values[0]));
     return { rows: [{ payload: { ...(pack.boards[0] as object), id: values[0] }, ply_count: 3 }] };
   });

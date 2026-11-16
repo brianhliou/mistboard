@@ -25,7 +25,9 @@ import {
   banqiEngineDisplayName,
   banqiEngineTierFor,
 } from './banqi-engine.js';
+import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import type { Champion } from './persistence-leaderboards.js';
 import {
   threeKingdomsBanqiEngineDisplayName,
   threeKingdomsBanqiEngineTierFor,
@@ -48,6 +50,21 @@ export type FirstPartyBotProfile = {
    *  bookmarked /bot/<id> URLs, replayed roomCreated events). */
   legacyBotIds?: readonly string[];
 };
+
+// Snapshot only at game write time. Historical aliases must not be resolved
+// through the current ladder: the unnumbered full-strength id moved to L7.
+export function mistyLevelForEngine(
+  variant: string,
+  engineId: string | null | undefined,
+): number | null {
+  const tiers =
+    variant === 'banqi'
+      ? BANQI_PLAYABLE_ENGINES
+      : variant === 'jungle-flip'
+        ? JUNGLE_FLIP_PLAYABLE_ENGINES
+        : [];
+  return tiers.find((tier) => tier.id === engineId)?.level ?? null;
+}
 
 export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
@@ -118,9 +135,11 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'jungle-flip': 'misty-jungle-flip',
       // The in-process tile bot (packages/game xiangqi-mahjong-bot.ts).
       'xiangqi-mahjong': 'misty-xiangqi-mahjong',
+      'ffq-banqi': 'misty-ffq-banqi-level-4',
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [
+      ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
       'python-v2-v1.0',
       'python-v2-v1.1',
       'python-v2-v1.2',
@@ -141,6 +160,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
     seatNamesByEngineId: Object.fromEntries([
+      ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ['misty-jungle-flip-level-7', 'Misty Level 7'],
@@ -322,7 +342,7 @@ export function persistedSeatDisplayName(participant: {
       return threeKingdomsBanqiEngineDisplayName(subjectId);
     }
     const oldName = /^MistyThreeKingdomsBanqi(?: level ([1-8]))?$/.exec(displayName);
-    if (oldName) return oldName[1] ? `Misty level ${oldName[1]}` : 'Misty';
+    if (oldName) return oldName[1] ? `Misty Level ${oldName[1]}` : 'Misty';
   }
   if (subjectType === 'engine-version' || subjectType === 'bot') {
     const banqiId = subjectType === 'engine-version' ? subjectId : engineId;
@@ -382,7 +402,11 @@ export function botEngineAttributions(): BotEngineAttribution[] {
  * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
  * cannot be linkable on /watch and plain on /games.
  */
-export type LiveSeatProfile = { handle?: string; botId?: string };
+/** Every engine id Misty's own builds use (misty-banqi-level-3,
+ *  misty-three-kingdoms-banqi-level-1, misty-ffq-banqi-level-4, ...). */
+const MISTY_OWN_ENGINE_ID = /^misty-/;
+
+export type LiveSeatProfile = { handle?: string; botId?: string; champions?: Champion[] };
 
 export function liveSeatProfileIdentity(
   engineClientId: string | null,
@@ -393,7 +417,10 @@ export function liveSeatProfileIdentity(
     // Same order as liveSeatEngineName: the name and the page it links to come
     // from one source.
     const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-    return bot ? { botId: bot.id } : {};
+    if (bot) return { botId: bot.id };
+    // Misty's own engines with no attribution row (Three Kingdoms Banqi, FFQ
+    // banqi) are still Misty; their seat links her page, never an engine page.
+    return MISTY_OWN_ENGINE_ID.test(engineClientId) ? { botId: 'misty' } : {};
   }
   return userHandle ? { handle: userHandle } : {};
 }

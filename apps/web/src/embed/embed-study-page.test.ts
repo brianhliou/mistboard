@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  banqiPieceLetter,
   createInitialJungleFlipState,
   type JieqiSquare,
   jungleFlipPieceLetter,
@@ -14,15 +15,13 @@ import { JUNGLE_ART } from '../jungle-art.js';
 import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
 import type { StudyChapterPayload, StudyTreeNode } from '../study-chapter-spec.js';
+import { threeKingdomsBanqiStudyLine } from '../three-kingdoms-banqi-study-replay.js';
 import { xiangqiMarkerSvg } from '../xiangqi-board.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
 /** Study variants the embed card deliberately refuses by name, each with why. */
-const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
-  'three-kingdoms-banqi':
-    'admin-only until the public launch (#628): an embed is a public surface, and the study API 404s it to everyone else',
-};
+const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {};
 
 const CHAPTER = {
   id: 'Ue0EgpS7',
@@ -910,6 +909,44 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it.each([
+    {
+      variant: 'jungle',
+      move: 'a1b1',
+      family: 'jungle',
+      first: 'red',
+      rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
+    },
+    { variant: 'chess', move: 'e2e4', family: 'chess', first: 'white', rootFen: undefined },
+  ])(
+    'gives an embedded $variant score chart its own seat family',
+    async ({ variant, move, family, first, rootFen }) => {
+      stubFetch(200, {
+        study: { id: 's' },
+        chapters: [
+          {
+            id: 'chapter1',
+            name: 'Seat inks',
+            variant,
+            root: { rootFen, root: { children: [{ uci: move, children: [] }] } },
+            scoreSeries: {
+              side: 'red',
+              series: [{ name: 'Engine', color: 'a', values: [0.7, 0.3] }],
+            },
+          },
+        ],
+      });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'chapter1' });
+      const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+      expect(chart?.dataset.seatInkFamily).toBe(family);
+      expect(chart?.querySelector(`.advantage-chart__area--${first}`)).not.toBeNull();
+      expect(chart?.querySelector('.advantage-chart__area--black')).not.toBeNull();
+      root.remove();
+    },
+  );
+
   it("draws a jieqi chapter's score series under the board, its cursor on the board's ply", async () => {
     // 40 plies, so 41 positions: index 0 the deal, index n after ply n.
     const ab = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.01);
@@ -1788,6 +1825,37 @@ describe('Gomoku study embeds', () => {
     });
   }
 
+  it('shows a chapter glyph on the sheet and beside its stone, and the comment under its move', async () => {
+    const annotated = chapter(dealt);
+    annotated.root.root = {
+      children: [
+        {
+          uci: 'a2',
+          annotations: { glyphs: [4], comments: [{ text: 'White blocks too late.' }] },
+          children: [{ uci: 'o14', children: [] }],
+        },
+      ],
+    } as never;
+    stubFetch(200, { chapters: [annotated] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+    expect(root.querySelector('.review-move-list__suffix')?.textContent?.trim()).toBe('??');
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'White blocks too late.',
+    );
+    // No badge before the move, one beside a2 on it, none once the next move is shown.
+    expect(root.querySelector('.gomoku-glyph')).toBeNull();
+    const next = root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!;
+    next.click();
+    const badge = root.querySelector('.gomoku-glyph[data-square="a2"]');
+    expect(badge?.querySelector('.xq-marker--blunder')).not.toBeNull();
+    expect(badge?.textContent).toContain('??');
+    next.click();
+    expect(root.querySelector('.gomoku-glyph')).toBeNull();
+    root.remove();
+  });
+
   it('opens a dealt root without moves and clamps a deep link to the legal prefix', async () => {
     for (const [moves, total] of [
       [[], 0],
@@ -2079,5 +2147,131 @@ describe('shared study embed analysis', () => {
     root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
     expect(root.querySelector('.luck-mark')).toBeNull();
     root.remove();
+  });
+});
+
+describe('Three Kingdoms study embed', () => {
+  const chapter: StudyChapterPayload = {
+    id: 'tk',
+    name: 'Public flips',
+    variant: 'three-kingdoms-banqi',
+    hasDecisions: true,
+    root: {
+      replay: 'three-kingdoms-banqi-public-v1',
+      root: {
+        children: [
+          {
+            uci: '@a1:R',
+            annotations: { comments: [{ text: 'The first public flip.' }] },
+            children: [{ uci: '@b1:s', children: [{ uci: 'a1b1', children: [] }] }],
+          },
+        ],
+      },
+    },
+    scoreSeries: {
+      side: 'red',
+      series: [{ name: 'Stored', color: 'a', values: [0.5, 0.62, 0.6, 0.7] }],
+    },
+  };
+  it('renders the server-admitted chapter, stepping masked boards with grades, luck and the shared chart', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.endsWith('/decisions')
+            ? {
+                decisions: [
+                  {
+                    ply: 1,
+                    mover: 'red',
+                    bestWin: 70,
+                    playedWin: 50,
+                    realizedWin: 62,
+                    playedRank: 2,
+                    candidates: [
+                      { move: 'b1b1', win: 70 },
+                      { move: 'a1a1', win: 50, played: true },
+                    ],
+                  },
+                ],
+              }
+            : { study: { id: 's' }, chapters: [chapter] },
+      };
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'tk' });
+    expect(root.querySelector('.tk-banqi-live-board svg')).not.toBeNull();
+    expect(root.querySelector('.embed-note')).toBeNull();
+    expect(root.querySelector('.embed-score-chart')?.getAttribute('data-ply')).toBe('0');
+    expect(root.textContent).toContain('Blunder. b1 flip was best.');
+    expect(root.textContent).toContain('The first public flip.');
+    expect(root.querySelector('.review-move-list__luck')).not.toBeNull();
+    const initial = root.querySelector('.embed-board')!.innerHTML;
+    expect(initial).not.toMatch(/horse|soldier|chariot/);
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(root.querySelector('.embed-score-chart')?.getAttribute('data-ply')).toBe('1');
+    expect(root.querySelector('.embed-board .xq-marker--blunder')).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+    expect(root.querySelector('.embed-board')!.innerHTML).toBe(initial);
+    expect(calls).toEqual(['/api/studies/s', '/api/studies/s/chapters/tk/decisions']);
+    expect(JSON.stringify(chapter)).not.toMatch(/rootFen|capturedRole|deal|seed|"role"/);
+  });
+  it('serializes the whole public replay without identities on any covered tile', () => {
+    const line = threeKingdomsBanqiStudyLine(chapter);
+    const serialized = JSON.stringify(line);
+    expect(serialized).not.toMatch(/rootFen|deal|seed|capturedRole/);
+    const payload = JSON.parse(serialized);
+    expect(payload.views).toHaveLength(4);
+    for (const view of payload.views)
+      for (const tile of Object.values(view.board))
+        if ((tile as { faceDown: boolean }).faceDown) expect(tile).toEqual({ faceDown: true });
+    expect(payload.views[0].board.a1).toEqual({ faceDown: true });
+    expect(payload.views[1].board.a1).toEqual({ faceDown: false, color: 'red', role: 'chariot' });
+    expect(payload.views[1].board.b1).toEqual({ faceDown: true });
+    expect(payload.views[2].board.b1).toEqual({ faceDown: false, color: 'black', role: 'soldier' });
+  });
+  it('replays all 78 recorded plies without exposing any covered identity', () => {
+    const fixture = JSON.parse(
+      readFileSync('../../packages/game/fixtures/three-kingdoms-banqi-78.json', 'utf8'),
+    );
+    const moves = fixture.plies.map(
+      (ply: { uci: string; revealed?: Parameters<typeof banqiPieceLetter>[0] }) =>
+        ply.revealed ? `${ply.uci}:${banqiPieceLetter(ply.revealed)}` : ply.uci,
+    );
+    const line = threeKingdomsBanqiStudyLine({
+      ...chapter,
+      root: { replay: 'three-kingdoms-banqi-public-v1', root: chainTree(moves) as StudyTreeNode },
+    });
+    expect(line.played).toHaveLength(78);
+    expect(line.views.at(-1)?.status).toEqual({
+      type: 'finished',
+      winner: 'black',
+      reason: 'score',
+    });
+    for (const view of JSON.parse(JSON.stringify(line.views)))
+      for (const tile of Object.values(view.board))
+        if ((tile as { faceDown: boolean }).faceDown) expect(tile).toEqual({ faceDown: true });
+  });
+  it('refuses unresolved, inconsistent or mixed public/dealt replay roots', () => {
+    for (const root of [
+      {},
+      { replay: 'three-kingdoms-banqi-public-v1', rootFen: 'secret' },
+      { replay: 'three-kingdoms-banqi-public-v1', root: { children: [{ uci: 'a1a1' }] } },
+      { replay: 'three-kingdoms-banqi-public-v1', root: { children: [{ uci: '@e3:R' }] } },
+    ])
+      expect(() =>
+        threeKingdomsBanqiStudyLine({ ...chapter, root: root as StudyChapterPayload['root'] }),
+      ).toThrow();
+  });
+  it('relies on server refusal and never reads decisions for an unavailable study', async () => {
+    const fetcher = vi.fn(async () => ({ ok: false, status: 404 }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'tk' });
+    expect(root.textContent).toBe('This study is not available.');
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

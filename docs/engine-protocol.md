@@ -1,5 +1,7 @@
 # Engine protocol
 
+For release pins and reviewed bot-rating updates, see [Engine pin bumps](engine-pin-bumps.md).
+
 Mistboard speaks to Fog of War engines through this redacted protocol (other
 variants use UCI engines; see [`ARCHITECTURE.md`](ARCHITECTURE.md)). This document
 specifies what the server sends, what an engine returns, and the redaction

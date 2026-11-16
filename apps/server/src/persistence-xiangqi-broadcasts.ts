@@ -279,10 +279,26 @@ function scheduleFromRow(row: TourRow): XiangqiBroadcastTourSchedule {
   };
 }
 
+// Stored JSON may predate validation or have been edited by an operator.
+function readDeviceCredit(value: unknown): XiangqiBroadcastTour['deviceCredit'] | null {
+  if (!value || typeof value !== 'object') return null;
+  const { name, url } = value as Record<string, unknown>;
+  if (typeof name !== 'string' || !name.trim() || typeof url !== 'string') return null;
+  try {
+    if (new URL(url).protocol !== 'https:') return null;
+  } catch {
+    return null;
+  }
+  return { name: name.trim(), url };
+}
+
 function tourFromRow(row: TourRow): StoredXiangqiBroadcastTour {
   const schedule = scheduleFromRow(row);
+  const { deviceCredit: storedCredit, ...payload } = row.payload;
+  const deviceCredit = readDeviceCredit(storedCredit);
   return {
-    ...row.payload,
+    ...payload,
+    ...(deviceCredit ? { deviceCredit } : {}),
     listed: row.listed,
     pollMode: schedule.pollMode,
     pollEnabled: xiangqiBroadcastPollState({ ...schedule, now: Date.now() }).polling,
@@ -1087,12 +1103,14 @@ export async function deleteXiangqiBroadcastTour(slug: string): Promise<boolean>
   });
 }
 
+export const LISTED_BROADCAST_TOUR = 'listed';
+
 export async function listXiangqiBroadcastTours(
   options: { includeUnlisted?: boolean } = {},
 ): Promise<StoredXiangqiBroadcastTour[]> {
   const { rows } = await getPool().query<TourRow>(
     `SELECT * FROM xiangqi_broadcast_tours
-      WHERE listed OR $1
+      WHERE ${LISTED_BROADCAST_TOUR} OR $1
       ORDER BY starts_at DESC NULLS LAST, slug`,
     [options.includeUnlisted === true],
   );
@@ -1337,10 +1355,17 @@ export async function getXiangqiBroadcastBoard(
   boardId: string,
 ): Promise<StoredXiangqiBroadcastBoard | null> {
   const { rows } = await getPool().query<BoardRow>(
-    `SELECT * FROM xiangqi_broadcast_boards WHERE id = $1`,
+    `SELECT boards.*, COALESCE(boards.source_url, rounds.source_url, tours.source_url) AS source_url
+       FROM xiangqi_broadcast_boards boards
+       JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
+       JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
+      WHERE boards.id = $1`,
     [boardId],
   );
-  return rows[0] ? boardFromRow(rows[0]) : null;
+  const row = rows[0];
+  return row
+    ? { ...boardFromRow(row), ...(row.source_url !== null ? { sourceUrl: row.source_url } : {}) }
+    : null;
 }
 
 export async function setXiangqiBroadcastTourSchedule(

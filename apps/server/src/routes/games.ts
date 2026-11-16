@@ -12,7 +12,7 @@ import {
   devArtifactPayloads,
   devArtifactSummaries,
 } from './../dev-decision-log-artifacts.js';
-import { ffqBanqiAdmits, isFFQBanqiGame } from '../ffq-banqi-access.js';
+import { ffqBanqiCorrespondenceAdmits } from '../ffq-banqi-access.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
@@ -28,6 +28,7 @@ import {
 } from '../replayable-games.js';
 import { eventReplayResponse, parsePositiveInteger, withDelayedAir } from './../server-policy.js';
 import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
+import { isUnlistedFFQBanqiGame } from '../watch-channels.js';
 import {
   collectLiveTvCandidates,
   electLiveTvFeatured,
@@ -358,7 +359,7 @@ export async function tryHandle(
       ]);
       // Also protect rail metadata (including top-player names) before it is
       // cached or serialized. Active replay validation happens below.
-      const discoverable = unlocked.filter((game) => !isFFQBanqiGame(game));
+      const discoverable = unlocked.filter((game) => !isUnlistedFFQBanqiGame(game));
       return {
         channel: candidate,
         sealedCount,
@@ -475,7 +476,7 @@ export async function tryHandle(
       return true;
     }
     response.setHeader('Cache-Control', 'no-store');
-    const excludeFFQ = !ffqBanqiAdmits(await currentAccountUser(request));
+    const excludeFFQ = !ffqBanqiCorrespondenceAdmits(await currentAccountUser(request));
     const filters = { ...parsed.value, excludeFFQ };
     const [page, aggregates, facets] = await Promise.all([
       persistence.queryGames(filters),
@@ -745,11 +746,17 @@ function gameWithPostgamePlayers(
     ...game,
     // The legacy raw roster also travels in this envelope. Apply the same
     // metadata gate there, including for in-memory summaries.
-    participants: (game.participants ?? []).map(({ title, flair, ...seat }, index) => ({
-      ...seat,
-      ...(players[index]?.title != null ? { title } : {}),
-      ...(players[index]?.flair != null ? { flair } : {}),
-    })),
+    participants: (game.participants ?? []).map(
+      ({ title, flair, handle, champions, ...seat }, index) => ({
+        ...seat,
+        ...(players[index]?.handle != null ? { handle } : {}),
+        ...(players[index]?.title != null ? { title } : {}),
+        ...(players[index]?.flair != null ? { flair } : {}),
+        ...(champions && players[index]?.champions != null
+          ? { champions: players[index].champions }
+          : {}),
+      }),
+    ),
     players,
   };
 }

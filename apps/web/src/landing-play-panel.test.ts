@@ -1,10 +1,18 @@
 import { readFileSync } from 'node:fs';
-import { GAME_SPECS, isPublicGameSpec, RATED_TIME_CONTROLS } from '@mistboard/game';
+import {
+  FFQ_BANQI_SPEC_ID,
+  GAME_SPECS,
+  gameSpecForId,
+  isPublicGameSpec,
+  RATED_TIME_CONTROLS,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
+import { findArticle } from './articles-data.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
+import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { landingBotLadder } from './landing-bot-policy.js';
 import type { YourMoveFeed } from './landing-correspondence-moves.js';
 import { enabledLandingVariantGameSpecs, setRoomNavigator } from './landing-play.js';
@@ -18,7 +26,11 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
+import {
+  setResolvedAdmin,
+  setResolvedSignedIn,
+  setResolvedStatsExcluded,
+} from './signed-in-state.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 
 const flush = async (): Promise<void> => {
@@ -72,6 +84,41 @@ function rememberLivePace(): void {
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('homepage play panel', () => {
+  it('offers launched FFQ to guests and waits for the runtime computer roster', () => {
+    const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+    const original = spec.publicSurface;
+    setResolvedAdmin(false);
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        setFFQBanqiEngineOptions([]);
+        const board = buildPlayPanel('en', { hydrate: false });
+        expect(board.querySelector('.pp-person-rows [data-game-spec="ffq-banqi"]') !== null).toBe(
+          surface === 'casual',
+        );
+        expect(board.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]')).toBeNull();
+        setFFQBanqiEngineOptions(
+          [1, 4].map((level) => ({
+            id: `misty-ffq-banqi-level-${level}`,
+            name: `Misty Level ${level}`,
+            familyName: 'Misty',
+            kind: 'container',
+          })),
+        );
+        const loaded = buildPlayPanel('en', { hydrate: false });
+        expect(loaded.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]') !== null).toBe(
+          surface === 'casual',
+        );
+        if (surface === 'casual')
+          expect(stepValue(row(loaded, FFQ_BANQI_SPEC_ID), 'level')).toBe('Level 4');
+      }
+    } finally {
+      spec.publicSurface = original;
+      setFFQBanqiEngineOptions([]);
+      setResolvedAdmin(undefined);
+    }
+  });
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
     sessionStorage.clear();
@@ -100,6 +147,111 @@ describe('homepage play panel', () => {
     );
     expect(specs).toEqual(expect.arrayContaining(['xiangqi', 'jieqi', 'banqi']));
     expect(new Set(specs).size).toBe(specs.length);
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'links every game name on both tabs to its public rules in %s',
+    (locale) => {
+      for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
+        vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
+      }
+      const board = buildPlayPanel(locale, { hydrate: false });
+      const prefix = locale === 'en' ? '' : `/${locale.toLowerCase()}`;
+      for (const selector of ['.pp-row-bot', '.pp-person-rows .pp-tile']) {
+        const rows = board.querySelectorAll<HTMLElement>(selector);
+        expect(rows.length).toBeGreaterThan(5);
+        for (const game of rows) {
+          const spec = game.dataset.gameSpec!;
+          const slug = spec === 'xiangqi-mahjong' ? 'xiangqi-mahjong-32' : spec;
+          const link = game.querySelector<HTMLAnchorElement>('a.pp-name');
+          expect(link?.getAttribute('href'), spec).toBe(`${prefix}/rules/${slug}`);
+          expect(link?.getAttribute('target'), spec).toBeNull();
+          expect(link?.textContent, spec).not.toBe('');
+        }
+      }
+    },
+  );
+
+  it.each(['draft', 'scheduled', 'missing'] as const)(
+    'keeps a game name plain when its rules page is %s',
+    (visibility) => {
+      const article = findArticle('jieqi')!;
+      const { slug, status, publishedAt } = article;
+      if (visibility === 'draft') article.status = 'draft';
+      if (visibility === 'scheduled') article.publishedAt = '2999-01-01';
+      if (visibility === 'missing') article.slug = 'missing-jieqi-rules';
+      vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+      try {
+        const board = buildPlayPanel('en', { hydrate: false });
+        for (const kind of ['bot', 'person'] as const) {
+          const game = row(board, 'jieqi', kind);
+          expect(game.querySelector('a.pp-name')).toBeNull();
+          expect(game.querySelector('.pp-name')?.textContent).toContain('Jieqi');
+        }
+      } finally {
+        Object.assign(article, { slug, status, publishedAt });
+      }
+    },
+  );
+
+  it('keeps bot, clock and person pace picks unchanged when a rules name is clicked', () => {
+    const fetchSpy = vi.fn(async () => Response.json({}));
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    document.body.append(board);
+    const bot = row(board, 'xiangqi');
+    clickNext(bot, 'level');
+    clickNext(bot, 'clock');
+    const level = stepValue(bot, 'level');
+    const clock = stepValue(bot, 'clock');
+    const clickName = (game: HTMLElement): void => {
+      const link = game.querySelector<HTMLAnchorElement>('a.pp-name');
+      expect(link).not.toBeNull();
+      link!.addEventListener('click', (event) => event.preventDefault(), { once: true });
+      const stored = localStorage.getItem('mistboard.playPanel.v1');
+      link!.click();
+      expect(localStorage.getItem('mistboard.playPanel.v1')).toBe(stored);
+    };
+    clickName(bot);
+    expect(stepValue(bot, 'level')).toBe(level);
+    expect(stepValue(bot, 'clock')).toBe(clock);
+    board.querySelectorAll<HTMLButtonElement>('.pp-tab')[1]!.click();
+    clickNext(paceBar(board), 'clock');
+    const pace = stepValue(paceBar(board), 'clock');
+    clickName(row(board, 'xiangqi', 'person'));
+    expect(stepValue(paceBar(board), 'clock')).toBe(pace);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(true);
+  });
+
+  it('separates 44px phone rules and arrow targets without adding row height', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const phone = css.slice(css.indexOf('@media (max-width: 640px)'));
+    const rule = (selector: string, source = phone): string =>
+      source.match(
+        new RegExp(`^\\s*${selector.replace(/[.>:]/g, '\\$&')} \\{([^}]*)\\}`, 'm'),
+      )?.[1] ?? '';
+    const px = (block: string, prop: string): number =>
+      Number(block.match(new RegExp(`(?:^|\\s)${prop}: (-?[\\d.]+)px;`))?.[1] ?? 0);
+    const target = rule('.pp-rules-link::before');
+    expect(px(target, 'height')).toBeGreaterThanOrEqual(44);
+    expect(target).toContain('position: absolute;');
+    const arrow = phone.match(/@media \(pointer: coarse\) \{\s*\.pp-step-btn \{([^}]*)/)?.[1] ?? '';
+    // Transparent borders enlarge the hit area; negative margins return all
+    // that space so the existing row height is preserved.
+    const border = px(arrow, 'border-block-width');
+    expect(px(rule('.pp-step-btn', css), 'height') + 2 * border).toBeGreaterThanOrEqual(44);
+    expect(px(arrow, 'margin-block')).toBe(-border);
+    // The level arrows follow the engine text, under the clock column. The
+    // clock's left arrow is now the closest arrow to the name horizontally.
+    expect(rule('.pp-row-bot .pp-step-level .pp-step-value')).toContain('order: -1;');
+    const arrowTouch = css.match(/@media \(pointer: coarse\) \{\s*\.pp-step-btn \{([^}]*)/)!;
+    const sideBorder = Number(arrowTouch[1].match(/border-width: \d+px (\d+)px/)?.[1]);
+    const gap =
+      px(rule('.pp-row'), 'column-gap') +
+      px(rule('.pp-row-bot > .pp-rules-link'), 'margin-right') -
+      sideBorder;
+    expect(gap).toBeGreaterThanOrEqual(4);
   });
 
   it('walks the xiangqi ladder to full-strength Pikafish and stops there', () => {
@@ -143,8 +295,8 @@ describe('homepage play panel', () => {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
     // Intentional homepage omissions: Fog games remain in the setup dialog.
-    // Keep this explicit; newly launched public PvE variants get no exemption.
-    const excluded = ['dark-xiangqi', 'dark-chess'];
+    // Fanfanqi waits for its runtime-only engine roster, absent from this fixture.
+    const excluded = ['dark-xiangqi', 'dark-chess', 'ffq-banqi'];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) =>
@@ -224,13 +376,15 @@ describe('homepage play panel', () => {
       orderPanelSpecs(
         enabledLandingVariantGameSpecs('pvp', 'en')
           .filter(
-            (spec) => isPublicGameSpec(spec.gameSpecId) && !excluded.includes(spec.gameSpecId),
+            (spec) =>
+              isPublicGameSpec(spec.gameSpecId) &&
+              !['dark-xiangqi', 'dark-chess'].includes(spec.gameSpecId),
           )
           .map((spec) => spec.gameSpecId),
       ),
     );
     for (const spec of [
-      ...excluded,
+      ...excluded.filter((id) => id !== 'ffq-banqi'),
       ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
     ]) {
       expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
@@ -245,7 +399,7 @@ describe('homepage play panel', () => {
     for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
     }
-    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
     const board = buildPlayPanel('en', { hydrate: false });
     for (const spec of [
       'xiangqi',

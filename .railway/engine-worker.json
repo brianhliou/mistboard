@@ -1,6 +1,6 @@
 {
-  "$schema": "https://railway.com/railway.schema.json",
   "build": {
+    "builder": "RAILPACK",
     "watchPatterns": [
       "/apps/server/**",
       "!/apps/server/src/**/*.test.ts",
@@ -9,18 +9,12 @@
       "!/apps/server/integration/**",
       "!/apps/server/loadtest/**",
       "!/apps/server/scripts/**",
-      "/apps/web/**",
-      "!/apps/web/src/**/*.test.ts",
       "/packages/game/**",
       "!/packages/game/src/**/*.test.ts",
       "/packages/board-render/**",
       "!/packages/board-render/src/**/*.test.ts",
-      "/scripts/build.mjs",
-      "/scripts/start.mjs",
-      "/package.json",
-      "/package-lock.json",
-      "/fairy-stockfish-xiangqi.ref",
       "/stockfish.ref",
+      "/fairy-stockfish-xiangqi.ref",
       "/fairy-stockfish-duck-xiangqi.ref",
       "/fairy-stockfish-duck-xiangqi.patch",
       "/fairy-stockfish-atomic-xiangqi.ref",
@@ -44,15 +38,19 @@
       "/scripts/fetch-katago-jungle-net.sh",
       "/scripts/fetch-release-asset.sh",
       "/scripts/fetch-private-net.sh",
+      "/engine.ref",
+      "/scripts/build.mjs",
+      "/scripts/start.mjs",
+      "/package.json",
+      "/package-lock.json",
       "/railpack.json",
-      "/railway.web.json",
       "/tsconfig.base.json"
     ]
   },
   "deploy": {
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30,
-    "drainingSeconds": 20,
+    "healthcheckTimeout": 120,
+    "drainingSeconds": 75,
     "startCommand": "node scripts/start.mjs"
   }
 }

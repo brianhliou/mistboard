@@ -182,6 +182,25 @@
   text-overflow: ellipsis;
 }
 
+.pp-board .pp-rules-link {
+  position: relative;
+  overflow: visible;
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.pp-board .pp-rules-link:hover,
+.pp-board .pp-rules-link:focus-visible {
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.pp-rules-link:hover .pp-name-label,
+.pp-rules-link:focus-visible .pp-name-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .pp-playing {
   color: var(--pp-gold-text);
   font-size: 12px;
@@ -596,6 +615,11 @@
   line-height: 1.4;
 }
 
+.pp-tile .pp-name-label {
+  display: block;
+  line-height: inherit;
+}
+
 .pp-tile-meta {
   overflow: hidden;
   color: var(--site-muted);
@@ -845,6 +869,35 @@
 
   .pp-name {
     font-size: 14px;
+  }
+
+  /* Expand the hit area without changing the name's line boxes or row height.
+     Text clips in the inner label, leaving the link's hit area unclipped. */
+  .pp-rules-link::before {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    transform: translateY(-50%);
+    content: "";
+  }
+
+  /* Leave a gap before the clock's expanded left arrow. The level arrows sit
+     to the right of their text, away from the name's 44px hit area above. */
+  .pp-row-bot > .pp-rules-link {
+    margin-right: 6px;
+  }
+
+  .pp-row-bot .pp-step-level .pp-step-value {
+    order: -1;
+  }
+
+  @media (pointer: coarse) {
+    .pp-step-btn {
+      margin-block: -10px;
+      border-block-width: 10px;
+    }
   }
 
   .pp-act {

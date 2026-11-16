@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { GAME_SPECS, type GameSpec, type GameSpecId, publicSpecPredicate } from '@mistboard/game';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import { RATING_VARIANT_LABEL_KEY } from './champion-crowns.js';
 import { TITLES } from './champions-page.js';
 import { FLAIR_KEYS, flairOfferedInPicker } from './flair.js';
 import { type LandingGameSpecId, landingVariantSupportsRated } from './landing-play.js';
@@ -39,6 +37,7 @@ const CHAMPIONS_TITLE_SPECS = new Set<GameSpecId>([
   'gomoku',
 ]);
 const KNOWN_FLAIR_GAPS = new Set<GameSpecId>([
+  'ffq-banqi', // Casual launch without variant flair, matching the server.
   'three-kingdoms-banqi', // Launched without flair; assert absence, not a silent skip.
   'xiangqi-mahjong', // Same known gap on server and web.
 ]);
@@ -49,21 +48,8 @@ const declarations: Declaration[] = GAME_SPECS.map((spec) => ({
   championsTitle: CHAMPIONS_TITLE_SPECS.has(spec.id),
 }));
 
-// This hand-list is private to profile.ts. Read its literal without exporting
-// it or importing the entire profile UI just for a test-only conformance pin.
-const profileSource = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), 'profile.ts'),
-  'utf8',
-);
-const profileLabelsLiteral = profileSource.match(
-  /const PROFILE_VARIANT_LABEL_KEY[^=]*=\s*\{([\s\S]*?)\n\};/,
-);
-expect(profileLabelsLiteral, 'profile label map must remain discoverable').not.toBeNull();
-const profileLabelPools = new Set(
-  [...(profileLabelsLiteral?.[1] ?? '').matchAll(/^\s*(\w+):\s*'variant\.[^']+\.name'/gm)].map(
-    (match) => match[1],
-  ),
-);
+// The rating-pool label map profile rows and champion crowns share.
+const profileLabelPools = new Set<string>(Object.keys(RATING_VARIANT_LABEL_KEY));
 
 // Study-only Chess borrows nominal `fog` metadata but owns no rating pool.
 const ownedPool = (spec: GameSpec) => (spec.id === 'chess' ? spec.id : spec.ratingPoolBase);

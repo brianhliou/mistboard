@@ -121,9 +121,11 @@ definePersistenceTests('account routes', () => {
     for (const body of [
       { clockTenths: 'always' },
       { premoves: false },
+      { confirmCorrespondenceMoves: false },
       { inboxEmail: false },
       { correspondenceDeadlineEmail: false },
       { correspondenceStartEmail: false },
+      { liveInvites: false },
     ]) {
       const response = captureResponse();
       const handled = await tryHandle(
@@ -142,10 +144,12 @@ definePersistenceTests('account routes', () => {
       lowTimeSound: true,
       premoves: false,
       confirmGameActions: true,
+      confirmCorrespondenceMoves: false,
       inboxBell: true,
       inboxEmail: false,
       correspondenceBell: true,
       challengesBell: true,
+      liveInvites: false,
       forumBell: true,
       followersBell: true,
       correspondenceStartEmail: false,

@@ -2881,15 +2881,14 @@
 /* ── Phone home (mobile pass #576, #573) ─────────────────────────────────────
    Under 600px (the site header's phone breakpoint) the home is one column built
    for a phone rather than the desktop grid squeezed: the TV board with a strip
-   naming it, the Play button with the two opponent choices under it, six
+   naming it, a single Play button, six
    shortcut tiles, the blog row as a swipeable strip, then the remaining widgets.
    The bot-variant rows (.landing-lobby-panel) are left out here: at phone width
    each row wrapped onto three lines and nine of them filled two screens (#573);
    the setup dialog the buttons open picks variant, level and time. The new
-   pieces (TV strip, quick row, tiles) are display:none above the breakpoint, so
+   pieces (TV strip and tiles) are display:none above the breakpoint, so
    tablet and desktop paint what they did. */
 .landing-tv-strip,
-.landing-play-quick,
 .landing-phone-tiles {
   display: none;
 }
@@ -3062,47 +3061,11 @@
     display: none;
   }
 
-  /* The pair sits as close as the shortcut tiles below it: one 6px gutter. */
-  .landing-play-quick {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .landing-play-quick-action {
-    min-height: 46px;
-    padding: 4px 8px;
-    border: 1px solid var(--site-border);
-    border-radius: 10px;
-    background: var(--site-panel);
-    color: var(--site-text);
-    cursor: pointer;
-    font: inherit;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.2;
-  }
-
-  /* iPhone SE (320px): "Play the computer" fits one line. */
-  @media (max-width: 374px) {
-    .landing-play-quick-action {
-      padding-inline: 4px;
-      font-size: 14px;
-      letter-spacing: -0.1px;
-    }
-  }
-
-  .landing-play-quick-action:hover,
-  .landing-play-quick-action:focus-visible {
-    border-color: var(--site-accent);
-    outline: none;
-  }
-
   /* Shortcut tiles: three by two, each a sticker drawing over its label
      (home-tile-art.ts). Brian, 2026-10-27: less empty space in each tile,
      with a larger drawing and label, so the tile is 84px (was 92px) around a
      52px drawing (was 44px) and a 15px label (was 14px). They sit one 6px
-     gutter under the Play pair, as the pair sits under Play a game, so the
+     gutter under Play a game, so the
      buttons and tiles read as one block (2026-11-08; the page gap is 10px). */
   .landing-phone-tiles {
     display: grid;

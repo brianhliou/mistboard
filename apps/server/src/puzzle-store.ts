@@ -94,6 +94,8 @@ export async function playerPuzzleCount(
 
 const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID, XIANGQI_SPEC_ID]);
 
+export const SERVED_PUZZLE_FILTER = 'hidden_reason IS NULL';
+
 const SEED_SYNC_SLOT = 'puzzles';
 const SEED_SYNC_LOCK_KEY = 'mistboard:puzzle-seed-sync';
 // Short enough that miner-appended rows show up without a redeploy, long
@@ -311,7 +313,7 @@ async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
   // no rating can fix, but re-mining to recover one is expensive and the reason
   // string is worth keeping. Clearing the column serves it again.
   const { rows } = await getPool().query<{ data: StoredPuzzle; position_only: boolean }>(
-    'SELECT data, position_only FROM puzzles WHERE hidden_reason IS NULL ORDER BY seq, id',
+    `SELECT data, position_only FROM puzzles WHERE ${SERVED_PUZZLE_FILTER} ORDER BY seq, id`,
   );
   const puzzles: StoredPuzzle[] = [];
   for (const row of rows) {

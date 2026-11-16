@@ -279,6 +279,7 @@ export const CRAWLER_PUBLIC_GAME: ProfileGameRecord = {
 };
 export const CRAWLER_PROFILE: UserProfile = {
   user: {
+    champions: [],
     handle: 'crawler-player',
     displayName: 'Crawler player',
     bio: '',
@@ -343,6 +344,7 @@ export const CRAWLER_BOT: BotProfilePage = {
   updatedAt: at,
   gamesTotal: 20,
   record: { games: 20, wins: 12, losses: 6, draws: 2 },
+  levelRecordsByGameSpecId: {},
   recordsByGameSpecId: {
     xiangqi: { games: 20, wins: 12, losses: 6, draws: 2 },
     jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },

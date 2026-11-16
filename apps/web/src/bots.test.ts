@@ -298,7 +298,7 @@ describe('bot pages', () => {
       record: 'Record here',
       variants: 'Variants',
       recent: 'Recent games',
-      sample: 'Elo from 48 engine games',
+      sample: 'Elo from 48 engine games · Jun 2026',
       railSample: '48 engine games',
       play: 'Play Fog Chess',
       random: 'random side',
@@ -325,7 +325,7 @@ describe('bot pages', () => {
       record: '本站战绩',
       variants: '棋种',
       recent: '最近对局',
-      sample: 'Elo 来自 48 局引擎对局',
+      sample: 'Elo 来自 48 局引擎对局 · 2026年6月',
       railSample: '48 局引擎对局',
       play: '下迷雾国际象棋',
       random: '随机执方',
@@ -352,7 +352,7 @@ describe('bot pages', () => {
       record: '本站戰績',
       variants: '棋種',
       recent: '最近對局',
-      sample: 'Elo 來自 48 局引擎對局',
+      sample: 'Elo 來自 48 局引擎對局 · 2026年6月',
       railSample: '48 局引擎對局',
       play: '下迷霧西洋棋',
       random: '隨機執方',
@@ -941,8 +941,20 @@ describe('bot pages', () => {
         jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
       },
       gamesByGameSpecId: { xiangqi: [], jieqi: [] },
-      rating: ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 }),
-      ratings: [ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 })],
+      rating: ratingSnapshot({
+        gameSpecId: 'xiangqi',
+        rating: 2334,
+        games: 36,
+        createdAt: '2026-09-02T07:00:00.000Z',
+      }),
+      ratings: [
+        ratingSnapshot({
+          gameSpecId: 'xiangqi',
+          rating: 2334,
+          games: 36,
+          createdAt: '2026-09-02T07:00:00.000Z',
+        }),
+      ],
     });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
     const root = document.createElement('div');
@@ -951,7 +963,8 @@ describe('bot pages', () => {
     await mountBotProfile(root, 'pikafish');
 
     const spotlight = root.querySelector('.profile-chart-detail')?.textContent ?? '';
-    expect(spotlight).toBe('Elo from 36 engine games');
+    // Dated: a rating measures one engine build, so the reader sees its age.
+    expect(spotlight).toBe('Elo from 36 engine games · Sep 2026');
     expect(spotlight).not.toMatch(/rated/i);
     expect(spotlight).not.toMatch(/blitz/i);
 
@@ -1446,7 +1459,7 @@ describe('/bots covers every launched bot variant', () => {
     );
   }
 
-  it('lists a game for every live public variant a first-party bot or engine plays, never FFQ', async () => {
+  it('lists a game for every live public variant a first-party bot or engine plays', async () => {
     for (const flag of FLAGS) vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     const { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots } =
       await serverFixtures();
@@ -1470,7 +1483,7 @@ describe('/bots covers every launched bot variant', () => {
     expect([...rail].sort()).toEqual([...expected].sort());
     expect(rail).toContain('three-kingdoms-banqi');
     expect(rail).toContain('jungle-flip');
-    expect(rail).not.toContain('ffq-banqi');
+    expect(rail).toContain('ffq-banqi');
     expect(root.textContent).not.toMatch(/FFQ|Fu Fu Qi/i);
   });
 
@@ -1554,6 +1567,44 @@ describe('/bots covers every launched bot variant', () => {
   }
 
   for (const { gameSpecId, base, label, rosterKey } of mistyLadderCases) {
+    it(`shows each ${label} level's own record and keeps unlabelled history separate`, async () => {
+      vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
+      const roster = [8, 7, 4, 1].map((level) => ({ id: engineIdAt(base, level) }));
+      stubFetch(
+        [mistyFor(gameSpecId, base)].map((bot) => ({
+          ...bot,
+          levelRecordsByGameSpecId: {
+            [gameSpecId]: [
+              { level: 1, games: 2, wins: 1, losses: 1, draws: 0 },
+              { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+              { level: null, games: 2, wins: 2, losses: 0, draws: 0 },
+            ],
+            'dark-chess': [{ level: 1, games: 99, wins: 99, losses: 0, draws: 0 }],
+          },
+        })),
+        [],
+        { [rosterKey]: roster },
+      );
+      window.history.replaceState(null, '', `/bots?game=${gameSpecId}`);
+      const root = document.createElement('div');
+      const { mountBots } = await import('./bots.js');
+      await mountBots(root);
+      const rows = () => [...cardFor(root, 'misty')!.querySelectorAll('.bot-level-record')];
+      expect(rows().map((row) => row.textContent)).toEqual([
+        'Level 8 · 0 games · 0-0-0',
+        'Level 7 · 1 game · 1-0-0',
+        'Level 4 · 0 games · 0-0-0',
+        'Level 1 · 2 games · 1-1-0',
+        'Earlier games, level not recorded · 2 games · 2-0-0',
+      ]);
+      expect(
+        cardFor(root, 'misty')!.querySelector('.profile-summary-card-footer')?.textContent,
+      ).toContain('4-1-0');
+      pickLevel(root, 'misty', engineIdAt(base, 1));
+      expect(rows()).toHaveLength(5);
+      expect(rows()[3]?.textContent).toContain('1-1-0');
+    });
+
     it(`offers Misty's ${label} levels the server seats, opening on Level 4, playing the picked engine`, async () => {
       vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
       const roster = [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({ id: engineIdAt(base, level) }));
@@ -1576,6 +1627,7 @@ describe('/bots covers every launched bot variant', () => {
       expect(select?.value).toBe(`${base}-level-4`);
       // Her per-game record, rating and bio stay on the card.
       expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('4-1-0');
+      expect(card.querySelector('.bot-level-records')).toBeNull();
       expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,620');
       expect(card.querySelector('.profile-summary-card-bio')?.textContent).toContain(label);
 

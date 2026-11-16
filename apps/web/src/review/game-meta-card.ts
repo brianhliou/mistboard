@@ -40,6 +40,8 @@ export type GameMetaPlayer = {
   /** A game whose seats play no colour (Xiangqi Mahjong): no disc at all. */
   noDisc?: boolean;
   name: string;
+  /** The full name for the hover text when `name` is a shortened card name. */
+  fullName?: string;
   rating?: number | null;
   /** Engine/bot seats get a small BOT tag (playstrategy-style). */
   isEngine?: boolean;
@@ -200,7 +202,7 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
         row.append(bot);
       }
       const name = playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name');
-      name.title = player.name;
+      name.title = player.fullName ?? player.name;
       row.append(name);
       if (player.rating !== null && player.rating !== undefined) {
         const rating = document.createElement('span');

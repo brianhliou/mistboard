@@ -21,6 +21,7 @@ import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
 import { mayPlayVariant } from '../persistence.js';
+import { refreshSeatChampions } from '../persistence-leaderboards.js';
 import {
   adminDebugTokenFromProtocolHeader,
   canObserveRoom,
@@ -270,6 +271,7 @@ export function createTenantWsRuntime<
     // The browser's durable id; a guest seat is attributed to it at game end.
     const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
+    await refreshSeatChampions();
     rememberExcludedDevice(deviceId, accountUser);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
     // Allowlist-gated variants (139) ask the grant table before handing out a

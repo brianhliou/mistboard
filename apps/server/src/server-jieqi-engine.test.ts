@@ -24,6 +24,7 @@ import {
   jieqiLiveEngineMove,
   jieqiLivePool,
 } from './jieqi-engine.js';
+import { jieqiEveAdapter } from './jieqi-eve-adapter.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jieqiLiveMoveBudgetMs, playJieqiEngineMoveIfReady } from './server-jieqi-engine.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
@@ -209,6 +210,54 @@ test('jqe live moves run in their own pool, which waits out a queued move', () =
 
 type JieqiRoomEvent = TenantRoomEvent<'red' | 'black', JieqiMove, typeof JIEQI_SPEC_ID>;
 
+test('EvE Pikafish requests select each stored game rule on the shared warm process', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jieqi-eve-rule-'));
+  const bin = join(dir, 'pikafish.mjs');
+  const log = join(dir, 'commands.log');
+  writeLoggingEngine(bin, log, 'e0e1');
+  const prior = process.env.MISTBOARD_PIKAFISH_PATH;
+  process.env.MISTBOARD_PIKAFISH_PATH = bin;
+  try {
+    for (const adjudicationRule of ['jqe-v1', undefined, 'jqe-v1'] as const) {
+      const roomId = 'jq_eve_rule';
+      const events: JieqiRoomEvent[] = [
+        {
+          type: 'room-created',
+          at: 1,
+          roomId,
+          gameSpecId: JIEQI_SPEC_ID,
+          setup: { ...BASE_DEAL, repetition: true, adjudicationRule },
+        },
+      ];
+      assert.equal(
+        (
+          await jieqiEveAdapter.search(
+            'pikafish-jieqi-strongest',
+            [],
+            { movetimeMs: 50 },
+            { events, color: 'red' },
+          )
+        ).best,
+        'e0e1',
+      );
+    }
+    const commands = readFileSync(log, 'utf8').trim().split('\n');
+    assert.deepEqual(
+      commands.filter((line) => line.startsWith('setoption name Jieqi Rule ')),
+      [
+        'setoption name Jieqi Rule value jqe-v1',
+        'setoption name Jieqi Rule value legacy',
+        'setoption name Jieqi Rule value jqe-v1',
+      ],
+    );
+    assert.equal(commands.filter((line) => line === 'uci').length, 1);
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_PIKAFISH_PATH;
+    else process.env.MISTBOARD_PIKAFISH_PATH = prior;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 const roles = (line: string) => line.split(' ') as JieqiPieceRole[];
 const BASE_DEAL: JieqiDeal = {
   red: roles(
@@ -226,6 +275,50 @@ const LINE: JieqiMove[] = [
   { from: 'a7', to: 'a6' },
   { from: 'b3', to: 'b10' },
 ] as JieqiMove[];
+
+test('live retries and draw-guard re-search preserve stamped and legacy rules', async () => {
+  for (const adjudicationRule of [undefined, 'jqe-v1'] as const) {
+    const roomId = 'jq_rule_requests';
+    const hydrated = createTenantRuntimeRoomFromEvents(jieqiTenant, [
+      {
+        type: 'room-created',
+        at: 1,
+        roomId,
+        gameSpecId: JIEQI_SPEC_ID,
+        setup: { ...BASE_DEAL, repetition: true, adjudicationRule },
+      },
+      { type: 'seat-assigned', at: 2, roomId, clientId: 'pikafish-jieqi-strongest', seat: 'red' },
+      { type: 'seat-assigned', at: 3, roomId, clientId: 'human', seat: 'black' },
+    ]);
+    if (!hydrated.ok) throw new Error(hydrated.error);
+    const room = hydrated.room as unknown as Parameters<typeof playJieqiEngineMoveIfReady>[1];
+    room.projection.state.noCaptureClock = (adjudicationRule ? 80 : 120) - 2;
+    let calls = 0;
+    let researched = false;
+    const appended: JieqiRoomEvent[] = [];
+    const ctx = {
+      appendEvent: async (_room: unknown, event: JieqiRoomEvent) => {
+        appended.push(event);
+        return appended.length;
+      },
+      broadcastEventAppended: () => {},
+    } as unknown as Parameters<typeof playJieqiEngineMoveIfReady>[0];
+    await playJieqiEngineMoveIfReady(ctx, room, async (_engine, _fen, opts) => {
+      calls += 1;
+      assert.equal(opts?.adjudicationRule, adjudicationRule);
+      assert.deepEqual(opts?.moves, []);
+      if (opts?.searchMoves) {
+        researched = true;
+        assert.ok(!opts.searchMoves.includes('e0e1'));
+        return { best: opts.searchMoves[0]!, cp: 400, mate: null, depth: 3 };
+      }
+      return { best: calls === 1 ? 'invalid' : 'e0e1', cp: 400, mate: null, depth: 3 };
+    });
+    assert.equal(calls, 3, 'invalid answer retry followed by one draw-guard re-search');
+    assert.equal(researched, true);
+    assert.ok(appended.some((event) => event.type === 'move-played'));
+  }
+});
 const MOVED_OR_CAPTURED = new Set(['h3', 'h10', 'a7', 'b3', 'b10']);
 
 /** The deal with the roles on `squares` of `color` rotated by one. */

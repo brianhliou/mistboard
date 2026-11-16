@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-15 (real-time challenges) ── 好友 / 选择棋手 / 当前在线 / 实时 follow the play and account catalogs.
+  'Challenge someone you follow to a game right now.': '邀请你关注的棋手立即对局。',
+  'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.':
+    '打开“开始对局”，选择“好友”，再点“选择棋手”。列表会显示你关注的人和关注你的人，以及其中谁当前在线。对方无论在哪个页面都会收到你的邀请，并有一分钟时间接受，之后你们就进入同一盘对局。登录后即可对弈。你可以在设置中关闭接收实时对局邀请。',
+  'Challenge a player': '挑战棋手',
   // ── 2026-11-13 (rated correspondence) ── 计分 / 休闲 follow the play catalog's
   // Casual/Rated switch, 外部协助 its fair-play pledge (account.registerFairPlay).
   'Correspondence games can now be rated.': '通信对局现在可以计分了。',
@@ -598,6 +603,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-15 (real-time challenges) ── 好友 / 選擇棋手 / 目前在線 / 即時 follow the play and account catalogs.
+  'Challenge someone you follow to a game right now.': '邀請你關注的棋手立即對局。',
+  'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.':
+    '打開「開始對局」，選擇「好友」，再點「選擇棋手」。列表會顯示你關注的人和關注你的人，以及其中誰目前在線。對方無論在哪個頁面都會收到你的邀請，並有一分鐘時間接受，之後你們就進入同一盤對局。登入後即可對弈。你可以在設定中關閉接收即時對局邀請。',
+  'Challenge a player': '挑戰棋手',
   // ── 2026-11-13 (rated correspondence) ──
   'Correspondence games can now be rated.': '通信對局現在可以計分了。',
   'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.':
@@ -1181,7 +1191,7 @@ export function localizeAnnouncement(
   locale: AnnouncementLocale,
 ): Announcement {
   const dict = dictFor(locale);
-  if (!dict) return entry;
+  if (entry.englishOnly || !dict) return entry;
   return {
     ...entry,
     headline: localizeAnnouncementString(entry.headline, locale),

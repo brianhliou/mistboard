@@ -10,6 +10,12 @@ import {
 import './account-profile.css';
 import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
+import {
+  buildChampionCrowns,
+  buildProfileChampionships,
+  type Championship,
+  RATING_VARIANT_LABEL_KEY,
+} from './champion-crowns.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
@@ -126,6 +132,7 @@ type UserProfile = {
     // Set while a donation is active; drives the cosmetic Patron badge. Absent
     // /null = not a patron. Server-derived (see routes/patron.ts).
     patronSince?: string | null;
+    champions?: readonly Championship[];
     createdAt: string;
   };
   ratings: ProfileBucketRating[];
@@ -147,6 +154,7 @@ const PROFILE_GAMES_PAGE = 15;
 const FAVORITE_GAMES_PAGE = 15;
 
 type LeaderboardEntry = {
+  champions?: readonly Championship[];
   rank: number;
   handle: string;
   displayName: string;
@@ -182,6 +190,7 @@ type OnlinePlayerEntry = {
   title?: string | null;
   rating: { variant: string; eloRating: number; provisional: boolean } | null;
   playing?: boolean;
+  champions?: Championship[];
 };
 
 type OnlinePlayersResult = {
@@ -193,6 +202,7 @@ type OnlinePlayersResult = {
 // One row of a compact ladder table: the value column is a rating for variant
 // ladders and a games count for the active-players ladder.
 type LeaderboardTableRow = {
+  champions?: readonly Championship[];
   rank: number;
   handle: string;
   displayName: string;
@@ -213,31 +223,12 @@ const LEADERBOARD_BUCKETS: {
   gameSpecId: v.gameSpecId,
 }));
 
-const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
-  fog: 'variant.darkChess.name',
-  dark_xiangqi: 'variant.darkXiangqi.name',
-  jieqi: 'variant.jieqi.name',
-  banqi: 'variant.banqi.name',
-  three_kingdoms_banqi: 'variant.threeKingdomsBanqi.name',
-  jungle: 'variant.jungle.name',
-  jungle_flip: 'variant.jungleFlip.name',
-  fortress_xiangqi: 'variant.fortressXiangqi.name',
-  duck_xiangqi: 'variant.duckXiangqi.name',
-  atomic_xiangqi: 'variant.atomicXiangqi.name',
-  crazyhouse_xiangqi: 'variant.crazyhouseXiangqi.name',
-  xiangqi: 'variant.xiangqi.name',
-  // Rated, but allowlisted: the server keeps this pool off every profile, and
-  // its VARIANTS entry stays out of PROFILE_VARIANT_ORDER until the spec is public.
-  xiangqi_mahjong: 'variant.xiangqiMahjong.name',
-  gomoku: 'variant.gomoku.name',
-};
-
 // Profile rating grid is subject-scoped and follows the baseline rating variant
 // registry.
 const PROFILE_VARIANT_ORDER: ProfileRatingVariant[] = profileRatingVariants.map((v) => v.id);
 
 function isProfileRatingVariant(value: string): value is ProfileRatingVariant {
-  return hasOwnKey(PROFILE_VARIANT_LABEL_KEY, value);
+  return hasOwnKey(RATING_VARIANT_LABEL_KEY, value);
 }
 
 class ProfileNotFound extends Error {}
@@ -467,6 +458,7 @@ function renderPaceSections(
           handle: entry.handle,
           displayName: entry.displayName,
           title: entry.title,
+          champions: entry.champions,
           value: entry.eloRating,
           provisional: entry.provisional,
         })),
@@ -845,6 +837,8 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
       link.append(dot);
       prependTitleBadge(link, player.title, locale);
       link.append(name);
+      const crowns = buildChampionCrowns(player.champions, { size: 16, locale });
+      if (crowns) link.append(crowns);
       if (player.playing) {
         const playingMark = document.createElement('span');
         playingMark.className = 'leaderboard-online-playing';
@@ -897,7 +891,7 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
 // Label for a rating-pool name coming off the wire, or null if the client
 // does not know the pool (fail soft: an unknown pool just loses its tooltip).
 function maybeVariantLabel(variant: string, locale: Locale): string | null {
-  if (!(variant in PROFILE_VARIANT_LABEL_KEY)) return null;
+  if (!(variant in RATING_VARIANT_LABEL_KEY)) return null;
   return profileVariantLabel(variant as ProfileRatingVariant, locale);
 }
 
@@ -1008,6 +1002,8 @@ function renderLeaderboardTable(
     link.append(presence);
     prependTitleBadge(link, row.title, locale);
     link.append(name);
+    const crowns = buildChampionCrowns(row.champions, { size: 16, locale });
+    if (crowns) link.append(crowns);
     nameTd.append(link);
 
     const valueTd = document.createElement('td');
@@ -1104,6 +1100,8 @@ export function buildProfileIdentity(
   const flair = buildFlairIconIfSet(profile.user.flair, { locale });
   if (flair) heading.append(flair);
   identity.append(heading);
+  const championships = buildProfileChampionships(profile.user.champions, locale);
+  if (championships) identity.append(championships);
 
   // Badge line: verified title, admin, and patron badges (the join date now
   // lives in the side column, lichess-style).
@@ -3099,7 +3097,7 @@ function profileVariantLabel(
   variant: ProfileRatingVariant,
   locale: Locale = currentLocale(),
 ): string {
-  return t(PROFILE_VARIANT_LABEL_KEY[variant], {}, locale);
+  return t(RATING_VARIANT_LABEL_KEY[variant], {}, locale);
 }
 
 async function fetchUserGamesPage(

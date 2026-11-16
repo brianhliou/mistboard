@@ -117,3 +117,30 @@ it('announces the casual Three Kingdoms Banqi launch in English, Chinese and Vie
     expect(JSON.stringify(translated)).not.toContain('—');
   }
 });
+
+it('announces Fanfanqi once in English at the November 17 boundary', () => {
+  vi.stubEnv('DEV', false);
+  try {
+    const entries = allAnnouncements().filter((entry) => entry.headline.includes('Fanfanqi'));
+    expect(entries).toHaveLength(1);
+    const entry = entries[0]!;
+    expect(entry).toMatchObject({
+      date: '2026-11-15',
+      kind: 'release',
+      englishOnly: true,
+      href: '/rules/fanfanqi',
+      cta: 'Read the English rules',
+    });
+    expect(entry.body).toContain('60 HP');
+    expect(entry.body).toContain('All games are casual.');
+    const boundary = articleGoesLiveAt(entry.date);
+    expect(announcements(boundary - 1)).not.toContainEqual(entry);
+    expect(announcements(boundary)).toContainEqual(entry);
+    for (const locale of ['zh-Hans', 'zh-Hant', 'vi'] as const) {
+      expect(localizeAnnouncement(entry, locale)).toBe(entry);
+    }
+    expect(JSON.stringify(entry)).not.toContain('—');
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

@@ -7,6 +7,31 @@
 import type { AccountI18nKey } from './account.js';
 
 export const ZH_HANS_ACCOUNT = {
+  'account.liveInvites': '允许接收实时对局邀请',
+  'account.liveInvitesHelp':
+    '在线时，你关注的人或关注你的人可以邀请你对局。关闭挑战铃声不会阻止邀请。此设置会在所有设备上阻止收到实时对局邀请。',
+
+  'account.chooseUsername': '选择你的用户名',
+  'account.chooseUsernameCopy': '用户名会公开显示。你可以保留此名称，也可以选择其他名称。',
+  'account.suggestUsernameCopy': '你的用户名可能包含部分邮箱地址。你可以按需选择其他名称。',
+  'account.usernameContinue': '继续',
+  'account.usernameNotNow': '暂不更改',
+  'account.broadcastPush': '直播推送',
+  'account.broadcastPushHelp': '创建令牌，让你的记谱设备或应用向赛事推送棋谱。',
+  'account.broadcastPushLabel': '令牌名称',
+  'account.broadcastPushCreate': '创建令牌',
+  'account.broadcastPushOnce': '请立即复制此令牌。以后将无法再次查看。',
+  'account.broadcastPushCopy': '复制',
+  'account.broadcastPushCopied': '令牌已复制。',
+  'account.broadcastPushCopyFailed': '无法复制。请选中上方令牌并手动复制。',
+  'account.broadcastPushDismiss': '隐藏令牌',
+  'account.broadcastPushRevoke': '撤销',
+  'account.broadcastPushRevoked': '已撤销',
+  'account.broadcastPushCreated': '创建时间',
+  'account.broadcastPushLastUsed': '最近使用',
+  'account.broadcastPushNever': '从未使用',
+  'account.broadcastPushFailed': '无法完成请求，请重试。',
+  'account.broadcastPushLimit': '每个赛事最多可有 5 个有效令牌。请先撤销一个，再创建新令牌。',
   'account.loading': '正在加载账号',
   'account.signedIn': '已登录',
   'account.viewProfile': '查看资料',
@@ -54,6 +79,9 @@ export const ZH_HANS_ACCOUNT = {
   'account.settingsGameBehavior': '对局行为',
   'account.premoves': '预走',
   'account.premovesHelp': '轮到你时执行预先准备的着法，前提是该着法仍然合法。',
+  'account.confirmCorrespondenceMoves': '确认通信对局着法',
+  'account.confirmCorrespondenceMovesHelp':
+    '预览通信对局的每步着法，确认后再发送。计时对局立即发送。',
   'account.confirmGameActions': '确认认输和中止',
   'account.confirmGameActionsHelp': '通过对局操作结束对局前先询问确认。',
   'account.forumAutoTranslate': '论坛帖子显示为译文',

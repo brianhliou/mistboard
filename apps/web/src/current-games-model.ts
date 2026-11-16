@@ -71,7 +71,15 @@ export type CurrentGamesResponse = {
 // (2026-10-21). On those cards only, the engine goes by its usual short name;
 // the full name stays in the tooltip. Playing now cards wrap the full name onto
 // a second line instead (decided 2026-11-12), and bot and game pages keep it.
-export function cardSeatName(name: string): string {
+// Misty takes the game's name on game pages ("Misty Three Kingdoms Banqi
+// Level 2"), which cut her level on these cards; here she is "Misty Level 2"
+// (decided 2026-11-14), since the board already shows which game it is.
+export function cardSeatName(name: string, variantLabel?: string): string {
+  const misty = variantLabel ? `Misty ${variantLabel}` : null;
+  if (misty && name.startsWith(misty)) {
+    const rest = name.slice(misty.length);
+    if (rest === '' || /^ Level \d+$/.test(rest)) return `Misty${rest}`;
+  }
   return name.replace(/^Fairy-Stockfish(?= Level \d+$)/, 'FSF');
 }
 
@@ -79,8 +87,8 @@ export function cardSeatName(name: string): string {
 
 export type CurrentGameSections<T> = { live: T[]; correspondence: T[] };
 
-// Live games keep the server's order (people first, then bots, most recently
-// active first); correspondence keeps soonest deadline first.
+// Both sections keep the server's order: people first, then bots, then
+// correspondence, each newest started first.
 export function splitSections<T extends Pick<CurrentGame, 'timeClass'>>(
   games: readonly T[],
 ): CurrentGameSections<T> {

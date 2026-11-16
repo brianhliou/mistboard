@@ -52,6 +52,7 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
       mode: liveState.roomMode,
       seated,
       rematch,
+      correspondence: liveState.timeControl?.daysPerMove !== undefined,
       reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
       correspondenceAgain: chessShellCorrespondenceAgain(),
     });

@@ -1,9 +1,10 @@
 import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
+import { cardSeatName } from './current-games-model.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
 import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
-import { createGameTable } from './game-table.js';
+import { centeredScrollOffsets, createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
@@ -553,6 +554,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watchPly = ply;
     watchMaxPly = maxPly;
     moveList?.update(ply, jumpBoardToPly);
+    revealWatchPhoneMove(watch.movesRoot);
     moveScrubber.setBounds(ply, maxPly);
     if (moveScrubber.status)
       moveScrubber.status.textContent = maxPly > 0 ? `${ply} / ${maxPly}` : '';
@@ -573,6 +575,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   const clearPovToggle = (): void => {
     watch.povRoot.replaceChildren();
+    delete watch.el.dataset.watchPov;
   };
 
   // (Re)build the fog-perspective toggle under the board for the freshly loaded
@@ -924,7 +927,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
       noDisc: !variantSeatsHaveInk(featured.gameSpecId),
-      name: displayLiveName(p.name, t('watch.guest'), { ...p, gameSpecId: featured.gameSpecId }),
+      ...watchSeatNames(
+        displayLiveName(p.name, t('watch.guest'), { ...p, gameSpecId: featured.gameSpecId }),
+        featured.gameSpecId,
+      ),
       rating: null,
       isEngine: p.isEngine,
       profile: profileTargetFor(p),
@@ -934,6 +940,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // Left meta card + right-rail seat rows for the featured game. No LIVE chip:
   // the running clock already says the game is live.
   const renderLiveMeta = (featured: LiveFeatured): void => {
+    delete watch.el.dataset.watchPov;
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
@@ -954,7 +961,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watch.gameTableRoot.hidden = false;
     renderWatchHeadline(watch.headlineRoot, {
       matchup: playersMatchupLabel(players),
-      detail: `${t('watch.liveBadge')} · ${variantName}`,
+      detail: t('watch.liveBadge'),
+      variantName,
+      variantHref: localizedRulesHref(featured.gameSpecId),
+      info: [t('watch.inProgress')],
     });
     renderWatchPlayerRows(watch.playerTop, watch.playerBottom, players);
   };
@@ -1397,7 +1407,7 @@ async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
   return data.events;
 }
 
-function mergeWatchMetadata(
+export function mergeWatchMetadata(
   target: Record<string, GameMeta>,
   namesTarget: Record<string, { first: string; second: string }>,
   feed: WatchFeed | null | undefined,
@@ -1409,9 +1419,11 @@ function mergeWatchMetadata(
     // shared seat model (red/black for xiangqi + jungle, white/black
     // otherwise). The chess path reads names from metadataByRoomId.
     const [firstSeat, secondSeat] = matchupSeats(game);
+    // The tiles are as narrow as a finished /games card, so they shorten alike.
+    const label = variantDisplayLabel(game.variant);
     namesTarget[game.roomId] = {
-      first: displayParticipantName(game, firstSeat),
-      second: displayParticipantName(game, secondSeat),
+      first: cardSeatName(displayParticipantName(game, firstSeat), label),
+      second: cardSeatName(displayParticipantName(game, secondSeat), label),
     };
   }
 }
@@ -1621,6 +1633,9 @@ function renderWatchPovToggle(
   const buttons: HTMLButtonElement[] = [];
   const select = (kind: 'white' | 'truth' | 'black'): void => {
     handle.setPov?.(kind);
+    // Match the phone's board-relative bands to the existing POV orientation.
+    const shell = root.closest<HTMLElement>('.watch-review-shell');
+    if (shell) shell.dataset.watchPov = kind;
     onPovChange?.();
     for (const button of buttons) {
       const active = button.dataset.pov === kind;
@@ -1705,11 +1720,8 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
   const center = document.createElement('div');
   center.className = 'watch-center';
 
-  // Phone-only headline above the board. On col1 the left rail (which carries
-  // the meta card) drops to the bottom of the stack, so the page used to open
-  // on a board with nothing above it: no players, no variant, no indication of
-  // what you were looking at. Hidden from col2 up, where the console beside the
-  // board already names both players.
+  // Phone-only replacement for the detailed desktop card: matchup/result and
+  // one linked variant/time/date subline above the board.
   const headlineRoot = document.createElement('div');
   headlineRoot.className = 'watch-headline';
 
@@ -1806,16 +1818,24 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
   const scores = seatResultScores(game.result, seats);
   return seats.map((seat, index) => {
     const participant = participantForColor(game, seat);
+    const fullName = displayParticipantName(game, seat);
     return {
       color: seatInkForVariant(game.variant, seat, game.firstColor ?? null),
       noDisc: !variantSeatsHaveInk(game.variant),
-      name: displayParticipantName(game, seat),
+      // The card and seat rows say "Misty Level 2", as /games cards do; the
+      // board already names the game. The tooltip keeps the full name.
+      ...watchSeatNames(fullName, game.variant),
       rating: watchParticipantRating(participant),
       isEngine: participant?.subjectType === 'engine-version' || participant?.subjectType === 'bot',
       score: scores[index] ?? null,
       profile: participantProfileTarget(participant),
     };
   });
+}
+
+function watchSeatNames(fullName: string, variant: string): { name: string; fullName?: string } {
+  const name = cardSeatName(fullName, variantDisplayLabel(variant));
+  return name === fullName ? { name } : { name, fullName };
 }
 
 function watchParticipantRating(participant: GameParticipant | null): number | null {
@@ -1855,7 +1875,14 @@ function renderWatchActiveGame(
     game
       ? {
           matchup: watchQueueMatchupLabel(game),
-          detail: `${variantDisplayLabel(game.variant)} · ${watchGameStatusLine(game)}`,
+          detail: watchGameStatusLine(game),
+          variantName: variantDisplayLabel(game.variant),
+          variantHref: localizedRulesHref(game.variant),
+          info: [
+            timeControlLabelForGame(game),
+            watchRatedSegment(game),
+            timeAgoLabel(game.endedAt),
+          ],
         }
       : null,
   );
@@ -1908,17 +1935,19 @@ function setWatchMainLinkChip(link: HTMLAnchorElement, text: string): void {
   if (chip) chip.textContent = text;
 }
 
+function watchRatedSegment(game: FeaturedGame): string | null {
+  return game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
+}
+
 function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void {
   root.replaceChildren();
   if (!game) return;
   const players = watchGamePlayers(game);
-  const ratedSegment =
-    game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
   const card = createGameMetaCard({
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
     // No "Human vs engine" segment: the BOT tag on the player row already says
     // it, and the extra words wrapped the headline onto two lines.
-    headline: [timeControlLabelForGame(game), ratedSegment],
+    headline: [timeControlLabelForGame(game), watchRatedSegment(game)],
     variantName: variantDisplayLabel(game.variant),
     variantHref: localizedRulesHref(game.variant),
     subline: timeAgoLabel(game.endedAt) || null,
@@ -1928,23 +1957,47 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
   root.append(card.el);
 }
 
-// The phone headline: who is playing on the first line, what you are watching on
-// the second. Both watch paths (a finished FeaturedGame and the live featured
-// payload) funnel through here so the two never drift apart.
+// Both watch paths reuse the desktop card's localized labels and rules link.
 export function renderWatchHeadline(
   root: HTMLElement,
-  headline: { matchup: string; detail: string } | null,
+  headline: {
+    matchup: string;
+    detail: string;
+    variantName: string;
+    variantHref: string | null;
+    info: Array<string | null>;
+  } | null,
 ): void {
   root.replaceChildren();
   root.hidden = !headline;
   if (!headline) return;
   const matchup = document.createElement('p');
   matchup.className = 'watch-headline__matchup';
-  matchup.textContent = headline.matchup;
+  matchup.textContent = [headline.matchup, headline.detail].filter(Boolean).join(' · ');
   const detail = document.createElement('p');
   detail.className = 'watch-headline__detail';
-  detail.textContent = headline.detail;
+  const variant = document.createElement(headline.variantHref ? 'a' : 'span');
+  variant.className = 'watch-headline__variant';
+  variant.textContent = headline.variantName;
+  if (variant instanceof HTMLAnchorElement && headline.variantHref)
+    variant.href = headline.variantHref;
+  detail.append(variant);
+  const info = headline.info.filter(Boolean).join(' · ');
+  if (info) detail.append(document.createTextNode(` · ${info}`));
   root.append(matchup, detail);
+}
+
+// Reuse the room's two-axis centering, confined to the phone strip. The review
+// list's own revealer handles desktop vertical scrolling as before.
+export function revealWatchPhoneMove(scroller: HTMLElement): void {
+  if (!window.matchMedia('(max-width: 799px)').matches) return;
+  const current = scroller.querySelector<HTMLElement>('.review-move-list__move--current');
+  if (!current) return;
+  scroller.scrollLeft = centeredScrollOffsets(
+    scroller,
+    scroller.getBoundingClientRect(),
+    current.getBoundingClientRect(),
+  ).left;
 }
 
 // "Name vs Name" from an already-resolved seat list (the live path has no
@@ -1998,7 +2051,9 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   // the disc renders the neutral ring rather than guessing a side.
   // A seat with no colour (the mahjong family) draws no disc, as in its room.
   if (!player.noDisc) row.append(seatDiscEl(player.color, 'watch-player-disc'));
-  row.append(playerNameEl(player.name, player.profile ?? null, 'clock-name'));
+  const name = playerNameEl(player.name, player.profile ?? null, 'clock-name');
+  if (player.fullName) name.title = player.fullName;
+  row.append(name);
   if (player.isEngine) {
     const bot = document.createElement('span');
     bot.className = 'watch-player-bot';

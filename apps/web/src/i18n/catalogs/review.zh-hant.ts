@@ -313,6 +313,8 @@ export const ZH_HANT_REVIEW = {
   'study.phone.searchChapters': '搜尋章節',
   'study.phone.noChapterMatch': '沒有符合的章節。',
   'study.phone.closeChapters': '關閉章節列表',
+  'study.moveNote': '著法註釋',
+  'study.readMoveNote': '閱讀完整著法註釋',
   'study.phone.info': '資訊',
   'study.phone.closeInfo': '關閉研究資訊',
   'study.chapterSettings': '章節設定',

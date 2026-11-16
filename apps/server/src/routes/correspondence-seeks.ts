@@ -499,6 +499,10 @@ export type CreateSeekOptions = {
   // The host route mails both players its own start emails once the game is
   // made, so the private seek it posts must not also mail a challenge (#1057).
   skipChallengeEmail?: boolean;
+  // The host route posts as the host, who answers many players at once; a first
+  // move the host owes elsewhere must not lock everyone else out (#1131). The
+  // player accepting is still checked.
+  skipFirstMoveOwed?: boolean;
 };
 
 /** Options for an accept made on a player's behalf (the correspondence host route). */
@@ -522,6 +526,8 @@ export async function createSeekResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+  const owed = options.skipFirstMoveOwed ? null : await firstMoveOwedResult(user.id);
+  if (owed) return owed;
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
   // A retired variant takes no new games: the same 410 the request gate gives.
   if (isRetiredGameSpec(gameSpecId)) {
@@ -756,6 +762,8 @@ export async function acceptSeekResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+  const owed = await firstMoveOwedResult(user.id);
+  if (owed) return owed;
   if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
@@ -959,6 +967,7 @@ export type QuickPairDeps = {
   listBoardSeeks: () => Promise<QuickPairSeek[]>;
   accept: (user: UserAccount, seekId: string) => Promise<SeekRouteResult>;
   post: (user: UserAccount, body: Record<string, unknown>) => Promise<SeekRouteResult>;
+  firstMoveOwed?: (userId: string) => Promise<SeekRouteResult | null>;
 };
 
 function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
@@ -971,6 +980,7 @@ function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
     listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
     accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),
     post: (user, body) => createSeekResult(ctx, user, body, 'quick-pair'),
+    firstMoveOwed: firstMoveOwedResult,
   };
 }
 
@@ -1006,6 +1016,9 @@ export async function quickPairResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+
+  const owed = await deps.firstMoveOwed?.(user.id);
+  if (owed) return owed;
 
   // 1. Already waiting: hand back the open seek instead of stacking another.
   const own = (await deps.listOwnSeeks(user.id)).find(isQuickPairOffer);
@@ -1060,6 +1073,12 @@ function quickPairSeekAnswer(seekId: string, existing: boolean): SeekRouteResult
       daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
     },
   };
+}
+
+async function firstMoveOwedResult(userId: string): Promise<SeekRouteResult | null> {
+  if (!persistence.isInitialized()) return null;
+  const owed = await persistence.firstMoveOwedForUser(userId);
+  return owed ? { status: 409, body: { error: 'first_move_owed', ...owed } } : null;
 }
 
 /** What a signed-out visitor holding a challenge link may read (#1058). */

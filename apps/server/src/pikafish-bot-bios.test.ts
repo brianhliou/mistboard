@@ -56,7 +56,9 @@ test('persistence: Pikafish bio migration preserves profiles and removes retired
         ],
       );
 
-      await runMigrations(client, MIGRATIONS_DIR);
+      // Apply the bio migration alone: later migrations change other columns.
+      await cp(join(MIGRATIONS_DIR, BIO_MIGRATION), join(priorDir, BIO_MIGRATION));
+      await runMigrations(client, priorDir);
       const after = await readProfiles();
       assert.deepEqual(
         after.filter(({ bio }) => bio.includes(RETIRED_ENGINE_NAME)),

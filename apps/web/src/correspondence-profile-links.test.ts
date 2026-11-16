@@ -132,7 +132,7 @@ describe('outgoing directed challenge row', () => {
     const host = await render([{ ...directed, targetHandle: 'finn' }]);
     const card = host.querySelector('[data-seek-id="seek_3"]');
     const name = card?.querySelector('.correspondence-own-target');
-    expect(name?.textContent).toBe('Challenge to Finn');
+    expect(name?.textContent).toBe('Sent to @finn');
     expect(name?.querySelector('a.player-name-link')?.getAttribute('href')).toBe('/@/finn');
     expect(card && nestedAnchors(card)).toBe(0);
   });
@@ -140,7 +140,7 @@ describe('outgoing directed challenge row', () => {
   it('keeps a recipient with no handle plain', async () => {
     const host = await render([{ ...directed, targetHandle: null }]);
     const name = host.querySelector('[data-seek-id="seek_3"] .correspondence-own-target');
-    expect(name?.textContent).toBe('Challenge to Finn');
+    expect(name?.textContent).toBe('Sent to Finn');
     expect(name?.querySelector('a')).toBeNull();
   });
 });

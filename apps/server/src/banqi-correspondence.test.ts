@@ -4,6 +4,7 @@ import {
   type BanqiDeal,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
+  gameSpecForId,
   isCorrespondenceRatedSpec,
 } from '@mistboard/game';
 import { mayPlayCorrespondence, mayPlayCorrespondenceByUserId } from './correspondence-access.js';
@@ -144,6 +145,8 @@ for (const spec of restricted) {
       }
       if (sql.includes('SELECT 1 AS one FROM users')) return { rows: [{ one: 1 }], rowCount: 1 };
       if (sql.includes('FROM user_relations')) return { rows: [], rowCount: 0 };
+      // #1131: neither account owes a first move in another correspondence game.
+      if (sql.includes('AS opponent_name')) return { rows: [], rowCount: 0 };
       if (sql.includes('FROM correspondence_seeks'))
         return {
           rows: [
@@ -393,3 +396,33 @@ for (const spec of specs) {
     assert.equal(reads, cases.length);
   });
 }
+
+test('FFQ public live launch keeps correspondence admin-only, including directed accounts', async (t) => {
+  flags(t, true);
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'casual';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(close);
+  let roleReads = 0;
+  t.mock.method(getPool(), 'query', async (sql: string, args: unknown[]) => {
+    // Other gates (such as the first-move-owed check) query too; only the role read answers.
+    if (!sql.includes('account_role AS')) return { rows: [] };
+    roleReads += 1;
+    return { rows: [{ accountRole: args[0] }] };
+  });
+  for (const user of [null, player, admin]) {
+    assert.equal(await mayPlayCorrespondence(user, 'ffq-banqi'), user === admin);
+  }
+  assert.equal(await mayPlayCorrespondenceByUserId('player', 'ffq-banqi'), false);
+  assert.equal(await mayPlayCorrespondenceByUserId('admin', 'ffq-banqi'), true);
+  assert.deepEqual(await seeksVisibleTo([{ gameSpecId: 'ffq-banqi' }], player), []);
+  assert.deepEqual(
+    await createSeekResult(ctx, player, { gameSpecId: 'ffq-banqi', daysPerMove: 3 }, 'board'),
+    { status: 403, body: { error: 'variant_not_granted' } },
+  );
+  assert.ok(roleReads > 0);
+});

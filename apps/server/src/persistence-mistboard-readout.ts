@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import type pg from 'pg';
+import { collectStaleBotRatings } from './bot-rating-provenance.js';
+import { refreshCalibrationBotRatings } from './bot-rating-refresh.js';
 import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
@@ -40,6 +42,7 @@ import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
+import { collectReadoutMilestones } from './persistence-readout-milestones.js';
 import { getWeeklyGuestSignIns } from './persistence-sessions.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
@@ -53,6 +56,30 @@ import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 import { findUnservableXiangqiBroadcastBoards } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// Rating provenance is an add-on to the daily readout: a failure there (pins
+// unreadable in the image, a bad row) rolls back only its own writes and the
+// report still commits.
+async function withinSavepoint<T>(
+  client: Pick<pg.PoolClient, 'query'>,
+  name: string,
+  run: () => Promise<T>,
+): Promise<T | null> {
+  await client.query(`SAVEPOINT ${name}`);
+  try {
+    const value = await run();
+    await client.query(`RELEASE SAVEPOINT ${name}`);
+    return value;
+  } catch (error) {
+    await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    console.warn(`[readout] ${name} skipped: ${errorText(error)}`);
+    return null;
+  }
+}
 
 type Queryable = Pick<pg.Pool, 'query'>;
 
@@ -121,6 +148,13 @@ export async function generateMistboardReadout(input: {
 
   if (input.dryRun) {
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
+    if (input.trigger !== 'manual' && facts.engines) {
+      const refresh = await refreshCalibrationBotRatings(db, now, false).catch((error) => {
+        console.warn(`[readout] bot rating refresh preview skipped: ${errorText(error)}`);
+        return null;
+      });
+      if (refresh) facts.engines.heldRatings = refresh.heldRatings;
+    }
     return {
       report: buildMistboardReadout({
         snapshotId: `readout_dry_${randomUUID()}`,
@@ -151,10 +185,27 @@ export async function generateMistboardReadout(input: {
       }
     }
 
+    // Calibration and the report commit atomically under the existing daily lock.
+    // Monday's weekly readout replaces the daily, so it refreshes too.
+    const refresh =
+      input.trigger === 'manual'
+        ? null
+        : await withinSavepoint(client, 'bot_rating_refresh', () =>
+            refreshCalibrationBotRatings(client, now, true),
+          );
+
     // Keep the advisory lock on this transaction while independent read-only
     // collectors use the pool. Parallel query() calls on one PoolClient rely on
     // pg's deprecated implicit queuing and will stop working in pg 9.
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
+    if (refresh && facts.engines) {
+      facts.engines.heldRatings = refresh.heldRatings;
+      // Pool collectors cannot see the snapshots inserted in this transaction yet.
+      facts.engines.staleRatings =
+        (await withinSavepoint(client, 'stale_bot_ratings', () =>
+          collectStaleBotRatings(client),
+        )) ?? facts.engines.staleRatings;
+    }
     const report = buildMistboardReadout({
       snapshotId: `readout_${randomUUID()}`,
       trigger: input.trigger,
@@ -313,7 +364,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend, comparison] = await Promise.all([
+  const [collectors, trend, comparison, milestones] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -329,6 +380,7 @@ export async function collectMistboardReadoutFacts(
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
     collectReadoutComparison(db, now).catch(() => null),
+    collectReadoutMilestones(db, now),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -347,6 +399,7 @@ export async function collectMistboardReadoutFacts(
       : [],
   );
   return {
+    milestones,
     product: settledValue(collectors[0]),
     puzzles: settledValue(collectors[1]),
     mining: settledValue(collectors[2]),
@@ -803,7 +856,7 @@ export async function collectBotTiming(
 
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {
   const { periodStart } = readoutPeriods(now);
-  const [tasks, workers] = await Promise.all([
+  const [tasks, workers, staleRatings] = await Promise.all([
     db.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count
        FROM engine_game_tasks
@@ -824,6 +877,10 @@ async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadou
        FROM engine_worker_runs`,
       [now],
     ),
+    collectStaleBotRatings(db).catch((error) => {
+      console.warn(`[readout] stale bot ratings skipped: ${errorText(error)}`);
+      return [];
+    }),
   ]);
   const taskMap = Object.fromEntries(tasks.rows.map((row) => [row.status, row.count]));
   return {
@@ -831,6 +888,7 @@ async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadou
     failedTasks: taskMap.failed ?? 0,
     activeWorkers: workers.rows[0]?.active_workers ?? 0,
     staleWorkers: workers.rows[0]?.stale_workers ?? 0,
+    staleRatings,
   };
 }
 

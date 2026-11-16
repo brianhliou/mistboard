@@ -8,9 +8,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
+import { accountRoomCreated, accountRoomSeats } from '../account-room.js';
 import * as persistence from '../persistence.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
-import { appendTenantSeatAssigned } from './events.js';
+import { appendTenantSeatAssigned, persistenceRecordForTenantSeatToken } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
 import { mintTenantSeatToken } from './seat-session.js';
 import type {
@@ -109,6 +110,7 @@ export async function createTenantLiveRoom<
   } = {},
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
+  const accounts = accountRoomSeats();
   const lobbyMatch = options.lobbyMatch ?? lobbyMatchScope.getStore() === true;
   // Passing reservations transfers their ownership to this creation attempt.
   // Until the room is published, every failure must return all admitted seats.
@@ -119,6 +121,9 @@ export async function createTenantLiveRoom<
       throw new Error('pass either engine or engines, not both');
     }
     const engineSeats: readonly TenantRoomEngineSeat<C>[] = engines ?? (engine ? [engine] : []);
+    if (accounts && (engineSeats.length || tenant.colors.length !== 2))
+      throw new Error('account rooms require two human seats');
+    if (accounts && !ctx.isPersistenceEnabled()) return { ok: false, error: 'persistence_failure' };
     const firstEngine = engineSeats[0];
     const seats = new Set<C>();
     const reservations = new Set<string>();
@@ -159,6 +164,22 @@ export async function createTenantLiveRoom<
       });
       if (!created.ok) return created;
       const room = created.room;
+      const colors = tenantTurnOrder(tenant, room.projection.state);
+      if (accounts) {
+        for (const [seat, identity] of [
+          [colors[0]!, accounts.first],
+          [colors[1]!, accounts.second],
+        ] as const) {
+          const { state } = mintTenantSeatToken(room, seat, identity);
+          appendTenantRuntimeEvent(tenant, room, {
+            type: 'seat-assigned',
+            at: Date.now(),
+            roomId,
+            clientId: state.clientId,
+            seat,
+          });
+        }
+      }
       // PvE: seat the engine before persistence so the seat-assigned event is part
       // of the room's initial event log (durable + replays on hydration). The human
       // then takes the only empty seat on connect.
@@ -181,27 +202,46 @@ export async function createTenantLiveRoom<
         let writingSeq = 0;
         let writingEventType = 'room-created';
         try {
-          for (const [seq, event] of room.events.entries()) {
-            writingSeq = seq;
-            writingEventType = event.type;
-            await ctx.appendRoomEvent(roomId, seq, event);
-          }
-          if (ctx.recordGameStart) {
-            writingSeq = room.events.length;
-            writingEventType = 'game-start';
-            await ctx.recordGameStart(roomId, {
-              variant: tenant.gameSpecId,
-              mode,
-              startedAt: new Date(room.events[0]?.at ?? Date.now()),
-              whiteClient: null,
-              blackClient: null,
-              whiteName: null,
-              blackName: null,
-              corpusId: null,
-              // Public from the start (lichess model): human games are no longer
-              // private. Fog live-spectate stays gated separately.
-              visibility: 'public',
-            });
+          if (accounts) {
+            await persistence.persistAccountRoom(
+              roomId,
+              room.events,
+              colors.map((color) => persistenceRecordForTenantSeatToken(room.seatTokens[color]!)),
+              {
+                variant: tenant.gameSpecId,
+                mode: 'pvp',
+                startedAt: new Date(room.events[0]!.at),
+                whiteClient: room.projection.seats[colors[0]!] ?? null,
+                blackClient: room.projection.seats[colors[1]!] ?? null,
+                whiteName: accounts.first.userDisplayName,
+                blackName: accounts.second.userDisplayName,
+                corpusId: null,
+                visibility: 'public',
+              },
+            );
+          } else {
+            for (const [seq, event] of room.events.entries()) {
+              writingSeq = seq;
+              writingEventType = event.type;
+              await ctx.appendRoomEvent(roomId, seq, event);
+            }
+            if (ctx.recordGameStart) {
+              writingSeq = room.events.length;
+              writingEventType = 'game-start';
+              await ctx.recordGameStart(roomId, {
+                variant: tenant.gameSpecId,
+                mode,
+                startedAt: new Date(room.events[0]?.at ?? Date.now()),
+                whiteClient: null,
+                blackClient: null,
+                whiteName: null,
+                blackName: null,
+                corpusId: null,
+                // Public from the start (lichess model): human games are no longer
+                // private. Fog live-spectate stays gated separately.
+                visibility: 'public',
+              });
+            }
           }
         } catch (err) {
           ctx.recordPersistenceError(roomId, writingSeq, writingEventType, err as Error);
@@ -209,6 +249,7 @@ export async function createTenantLiveRoom<
         }
       }
       ctx.rooms.set(roomId, room);
+      if (accounts) accountRoomCreated(roomId, colors[0]!, colors[1]!);
       published = true;
       return { ok: true, room };
     }

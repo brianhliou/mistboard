@@ -36,10 +36,12 @@ export type AccountPreferenceKey =
   | 'lowTimeSound'
   | 'premoves'
   | 'confirmGameActions'
+  | 'confirmCorrespondenceMoves'
   | 'inboxBell'
   | 'inboxEmail'
   | 'correspondenceBell'
   | 'challengesBell'
+  | 'liveInvites'
   | 'forumBell'
   | 'followersBell'
   | 'correspondenceDeadlineEmail'
@@ -51,12 +53,15 @@ export type AccountPreferences = {
   lowTimeSound: boolean;
   premoves: boolean;
   confirmGameActions: boolean;
+  confirmCorrespondenceMoves: boolean;
   inboxBell: boolean;
   inboxEmail: boolean;
   correspondenceBell: boolean;
   // Bell mutes for the sources that arrived after the first two: pending
   // challenges, forum replies/quotes, new followers. All default on.
   challengesBell: boolean;
+  // Server-enforced incoming real-time invitation opt-out, independent of bells.
+  liveInvites: boolean;
   forumBell: boolean;
   followersBell: boolean;
   correspondenceDeadlineEmail: boolean;
@@ -77,10 +82,12 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   lowTimeSound: true,
   premoves: true,
   confirmGameActions: true,
+  confirmCorrespondenceMoves: true,
   inboxBell: true,
   inboxEmail: true,
   correspondenceBell: true,
   challengesBell: true,
+  liveInvites: true,
   forumBell: true,
   followersBell: true,
   correspondenceDeadlineEmail: true,
@@ -124,6 +131,7 @@ export type UserAccount = {
   emailVerifiedAt: Date | null;
   handle: string;
   handleChangedAt: Date | null;
+  usernamePromptDismissedAt?: Date | null;
   displayName: string;
   displayNameChangedAt: Date | null;
   bio: string;
@@ -191,6 +199,7 @@ export const USER_COLUMNS = [
   'email_verified_at',
   'handle',
   'handle_changed_at',
+  'username_prompt_dismissed_at',
   'display_name',
   'display_name_changed_at',
   'bio',
@@ -336,6 +345,7 @@ export type UserRow = {
   email_verified_at: Date | null;
   handle: string;
   handle_changed_at: Date | null;
+  username_prompt_dismissed_at?: Date | null;
   display_name: string;
   display_name_changed_at: Date | null;
   bio: string;
@@ -367,6 +377,7 @@ export function userFromRow(row: UserRow): UserAccount {
     emailVerifiedAt: row.email_verified_at,
     handle: row.handle,
     handleChangedAt: row.handle_changed_at,
+    usernamePromptDismissedAt: row.username_prompt_dismissed_at ?? null,
     displayName: row.display_name,
     displayNameChangedAt: row.display_name_changed_at,
     bio: row.bio,
@@ -409,6 +420,10 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       : DEFAULT_ACCOUNT_PREFERENCES.clockTenths,
     lowTimeSound: booleanOrDefault(parsed.lowTimeSound, DEFAULT_ACCOUNT_PREFERENCES.lowTimeSound),
     premoves: booleanOrDefault(parsed.premoves, DEFAULT_ACCOUNT_PREFERENCES.premoves),
+    confirmCorrespondenceMoves: booleanOrDefault(
+      parsed.confirmCorrespondenceMoves,
+      DEFAULT_ACCOUNT_PREFERENCES.confirmCorrespondenceMoves,
+    ),
     confirmGameActions: booleanOrDefault(
       parsed.confirmGameActions,
       DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,
@@ -423,6 +438,7 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       parsed.challengesBell,
       DEFAULT_ACCOUNT_PREFERENCES.challengesBell,
     ),
+    liveInvites: booleanOrDefault(parsed.liveInvites, DEFAULT_ACCOUNT_PREFERENCES.liveInvites),
     forumBell: booleanOrDefault(parsed.forumBell, DEFAULT_ACCOUNT_PREFERENCES.forumBell),
     followersBell: booleanOrDefault(
       parsed.followersBell,

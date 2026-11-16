@@ -27,6 +27,7 @@ import {
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { holdBoardSettle } from '../board-anim.js';
+import { correspondencePreview, renderCorrespondenceRoom } from '../correspondence-room.js';
 import { brandedEngineName, seatNameForGame } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
@@ -491,7 +492,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function displayedView(): V | null {
-    return replay.currentView(state.view);
+    return replay.isLive()
+      ? correspondencePreview(state.room, state.view)
+      : replay.currentView(state.view);
   }
 
   function canActNow(): boolean {
@@ -872,7 +875,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
 
     const view = state.view;
     captureReplayView(view);
-    const displayed = replay.currentView(view);
+    const displayed = displayedView();
     const lifecycleEffect = updateLifecycleEffects(view);
     // The game-start sound for every tenant rides the same frame as the start
     // pulse, so a new variant on this client sounds its start with no wiring.
@@ -919,6 +922,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       boardBusyUntil = typeof busyMs === 'number' && busyMs > 0 ? Date.now() + busyMs : 0;
     }
     syncFinishBadges(view, lifecycleEffect);
+    renderCorrespondenceRoom(state.room, replay.isLive());
   }
 
   // After the board render so the badges measure the pieces they sit on.

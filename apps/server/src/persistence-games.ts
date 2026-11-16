@@ -5,6 +5,7 @@ import { engineVersionDisplayName } from './engine-registry.js';
 import {
   botEngineAttributions,
   firstPartyBotForEngine,
+  mistyLevelForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
 import type { FlairKey } from './flair.js';
@@ -18,6 +19,7 @@ import type {
   GameVisibility,
 } from './persistence-game-lifecycle.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import { bucketForGame } from './rating-buckets.js';
 import {
@@ -93,6 +95,7 @@ export type GameParticipant = {
   // closed/private accounts, non-user seats and unset values.
   title?: PlayerTitle | null;
   flair?: FlairKey | null;
+  champions?: Champion[];
   // Engine build version for engine-version seats whose subject_id is version-less (the
   // variant-tenant UCI engines — jieqi/banqi, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
@@ -1061,7 +1064,7 @@ export type HeadToHeadTally = {
 };
 
 // Bound params: $1 variant, $2/$3 subject a, $4/$5 subject b.
-const HEAD_TO_HEAD_FROM_SQL = `FROM games
+const headToHeadFromSql = () => `FROM games
      JOIN game_participants a
        ON a.game_id = games.room_id
       AND a.subject_type = $2
@@ -1100,7 +1103,7 @@ export async function queryHeadToHeadGames(
     a_color: GameParticipantColor;
   }>(
     `SELECT games.room_id, games.variant, games.result, games.ended_at, a.color AS a_color
-     ${HEAD_TO_HEAD_FROM_SQL}
+     ${headToHeadFromSql()}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $6`,
     [...headToHeadParams(a, b, variant), boundedLimit],
@@ -1127,7 +1130,7 @@ export async function tallyHeadToHeadGames(
     count: number;
   }>(
     `SELECT a.color AS a_color, games.result, count(*)::int AS count
-     ${HEAD_TO_HEAD_FROM_SQL}
+     ${headToHeadFromSql()}
      GROUP BY a.color, games.result`,
     headToHeadParams(a, b, variant),
   );
@@ -1138,7 +1141,7 @@ export async function tallyHeadToHeadGames(
 // any signed-in account; private games are saveable only by an account recorded
 // as a participant. Keeping this predicate beside every favorite query prevents
 // a later visibility flip from leaking a stale bookmark through the saved list.
-const FAVORITE_ACCESS_SQL = `games.status = 'completed'
+const favoriteAccessSql = () => `games.status = 'completed'
        AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND (
@@ -1160,7 +1163,7 @@ export async function getGameFavoriteState(
     `SELECT
        EXISTS (
          SELECT 1 FROM games
-         WHERE games.room_id = $1 AND ${FAVORITE_ACCESS_SQL}
+         WHERE games.room_id = $1 AND ${favoriteAccessSql()}
        ) AS accessible,
        EXISTS (
          SELECT 1 FROM game_favorites
@@ -1183,7 +1186,7 @@ export async function setGameFavorite(
       `INSERT INTO game_favorites (game_id, user_id)
        SELECT games.room_id, $2
        FROM games
-       WHERE games.room_id = $1 AND ${FAVORITE_ACCESS_SQL}
+       WHERE games.room_id = $1 AND ${favoriteAccessSql()}
        ON CONFLICT (user_id, game_id) DO NOTHING`,
       [roomId, userId],
     );
@@ -1593,15 +1596,20 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
       await client.query(
         `INSERT INTO game_participants
            (game_id, color, subject_type, subject_id, display_name, visibility, engine_version,
-            engine_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            engine_id, bot_level)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (game_id, color) DO UPDATE SET
            subject_type = EXCLUDED.subject_type,
            subject_id = EXCLUDED.subject_id,
            display_name = EXCLUDED.display_name,
            visibility = EXCLUDED.visibility,
            engine_version = EXCLUDED.engine_version,
-           engine_id = EXCLUDED.engine_id`,
+           engine_id = EXCLUDED.engine_id,
+           bot_level = CASE
+             WHEN game_participants.engine_id IS NOT DISTINCT FROM EXCLUDED.engine_id
+               THEN game_participants.bot_level
+             ELSE EXCLUDED.bot_level
+           END`,
         [
           roomId,
           participant.color,
@@ -1611,6 +1619,9 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
           participant.visibility,
           participant.engineVersion ?? null,
           participant.engineId ?? null,
+          participant.subjectType === 'bot' && participant.subjectId === 'misty'
+            ? mistyLevelForEngine(summary.variant, participant.engineId)
+            : null,
         ],
       );
     }
@@ -1734,6 +1745,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
               CASE game_participants.color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
     [roomIds],
   );
+  const champions = rows.some(
+    (row) => row.visibility !== 'private' && row.subject_type === 'user' && !!row.handle,
+  )
+    ? await getChampions()
+    : [];
   const byGame = new Map<string, GameParticipant[]>();
   for (const row of rows) {
     const linkableUser =
@@ -1759,6 +1775,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
       // participant shape, same convention as the fields below.
       ...(row.handle != null ? { handle: row.handle } : {}),
+      // Crowns follow the same gate as title/flair; server-side readers keep the
+      // handle, and the public game envelope strips it for private seats.
+      ...(linkableUser
+        ? { champions: championsForUser(champions, row.subject_id, row.handle) }
+        : {}),
       ...(linkableUser && row.title != null ? { title: row.title } : {}),
       ...(linkableUser && row.flair != null ? { flair: row.flair } : {}),
       // Omitted-when-null so the participant shape is unchanged for games without a

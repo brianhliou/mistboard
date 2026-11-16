@@ -16,6 +16,7 @@ import {
   publicUser,
   randomEmailLoginCode,
   sendEmailLoginCode,
+  shouldSuggestUsername,
 } from './../account-session.js';
 import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
@@ -306,7 +307,11 @@ export async function tryHandle(
     writeJson(
       response,
       200,
-      { user: publicUser(user), isNewUser: isNew },
+      {
+        user: publicUser(user),
+        isNewUser: isNew,
+        suggestUsername: !isNew && shouldSuggestUsername(user),
+      },
       {
         // Issue the canonical cookie and, when a Domain is configured, evict any
         // legacy host-only `mistboard_session` duplicate so the browser stops

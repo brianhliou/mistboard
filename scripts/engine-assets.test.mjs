@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { railwayWatchConfigFiles } from './lib/railway-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = resolve(repoRoot, 'scripts/engine-assets.sh');
@@ -59,10 +60,10 @@ test('the Pikafish licence is copied from the file upstream ships at the pin', (
 });
 
 test('the CC0 patch is hashed and watched by the release workflow and all Railway services', () => {
-  assert.match(recipe, /^RECIPE_VERSION=4$/m);
+  assert.match(recipe, /^RECIPE_VERSION=5$/m);
   assert.ok(recipeInputs().includes(pikafishPatch));
   assert.ok(workflow.includes(`      - ${pikafishPatch}\n`));
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     assert.ok(build.watchPatterns.includes(`/${pikafishPatch}`), file);
   }
@@ -135,7 +136,7 @@ test('the Build engines workflow re-runs on every recipe input, the script and i
 });
 
 test('every Railway service watches every recipe input, so a pin bump deploys', () => {
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     for (const input of [...recipeInputs(), 'scripts/engine-assets.sh']) {
       assert.ok(build.watchPatterns.includes(`/${input}`), `${file} must watch /${input}`);
@@ -188,6 +189,21 @@ test('the recipe builds and verifies the same ten binaries the image expects', (
   // KataGo-AnimalChess: the Eigen CPU backend with AVX2, linked static (katago-jungle.ref).
   assert.match(recipe, /^KATA_CMAKE_FLAGS=".*-DUSE_BACKEND=EIGEN .*-DUSE_AVX2=1 .*-static"$/m);
   assert.match(recipe, /echo "kata-cmake=\$KATA_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
+});
+
+test('jieqi NNUE builds the renamed binary and ships the embedded net license', () => {
+  const ref = readFileSync(resolve(repoRoot, 'pikafish-jieqi.ref'), 'utf8').split('\n')[0];
+  assert.equal(ref, 'bc398e6ef546fe33b35b73989457bc446ea2882a');
+  const step = recipe.slice(
+    recipe.indexOf('  ref=$(pin pikafish-jieqi.ref)'),
+    recipe.indexOf('  ref=$(pin pikafish.ref)'),
+  );
+  assert.match(step, /cp "\$work\/pikafish-jieqi\/src\/pikafish" "\$bin\/pikafish-jieqi"/);
+  assert.match(
+    step,
+    /cp "\$work\/pikafish-jieqi\/src\/jieqi-net-LICENSE" "\$bin\/jieqi-net-LICENSE"/,
+  );
+  assert.doesNotMatch(step, /src\/PikaJieQi|curl|wget/);
 });
 
 test('Rapfi pins its native recipe, data extractor and full source SHA', async () => {
@@ -306,6 +322,7 @@ test('Rapfi native data and licences enter the tarball and checksum manifest', a
     }
     writeFileSync(resolve(bin, 'pikafish.nnue'), 'fixture net');
     writeFileSync(resolve(bin, 'COPYING'), 'fixture Pikafish licence');
+    writeFileSync(resolve(bin, 'jieqi-net-LICENSE'), 'fixture jieqi MIT net license');
     writeFileSync(resolve(bin, 'it014.jqn'), 'fixture net');
     const out = resolve(bin, 'dist');
     run('package', bin, out);
@@ -503,7 +520,7 @@ test('every script railpack runs exists, fails fast, and redeploys every service
       assert.match(readFileSync(path, 'utf8'), /^set -eu$/m, `scripts/${name} must set -eu`);
     }
   }
-  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+  for (const file of railwayWatchConfigFiles(repoRoot)) {
     const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
     for (const name of scripts) {
       assert.ok(
@@ -579,17 +596,17 @@ test('every release asset railpack fetches has a pinned sha256', () => {
   assert.match(largeboard, /^sha=[0-9a-f]{64}$/m, 'the largeboard binary pins a sha256');
 });
 
-test('Three Kingdoms fetch pins the noise-capable 0.3.0 binary and matching served version', () => {
+test('Three Kingdoms fetch pins the 0.3.1 binary (search through repetition) and matching served version', () => {
   const fetch = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
   const entry = fetch.match(/^ {2}three-kingdoms-engine\)\n([\s\S]*?);;/m);
   assert.ok(entry);
-  assert.match(entry[1], /repo=brianhliou\/misty-three-kingdoms-banqi tag=v0\.3\.0 mode=exec/);
-  assert.match(entry[1], /sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26\b/);
+  assert.match(entry[1], /repo=brianhliou\/misty-three-kingdoms-banqi tag=v0\.3\.1 mode=exec/);
+  assert.match(entry[1], /sha=d7e01dd0e0ce7022066de47cf8ff991588864df43e4a90e6b4b4863b3a0ee6a9\b/);
   const provider = readFileSync(
     resolve(repoRoot, 'apps/server/src/three-kingdoms-banqi-engine.ts'),
     'utf8',
   );
-  assert.match(provider, /THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0\.3\.0'/);
+  assert.match(provider, /THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0\.3\.1'/);
 });
 
 test('FFQ banqi fetch pins the public v0.1.0 engine and railpack installs it', () => {
@@ -672,6 +689,7 @@ test('the actual archive file list excludes Pikafish even when the net is staged
       'xiangqi-c07e94a5c7cb.nnue',
       'fixture-rapfi.bin',
       'COPYING',
+      'jieqi-net-LICENSE',
     ]) {
       writeFileSync(resolve(bin, file), 'fixture');
     }
@@ -702,6 +720,7 @@ if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
       'it014.jqn',
       'fixture-rapfi.bin',
       'COPYING',
+      'jieqi-net-LICENSE',
       pikafishPatch,
     ]);
     assert.ok(!files.includes('pikafish.nnue'));

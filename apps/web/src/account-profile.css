@@ -1140,6 +1140,11 @@
 }
 
 .account-auth-reset,
+.account-actions .account-username-dismiss {
+  min-height: 40px;
+}
+
+.account-auth-reset,
 .account-auth-email-suggestion {
   border: 0;
   background: transparent;
@@ -1181,6 +1186,15 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
+}
+
+/* A phone keyboard must not trigger Safari's focus zoom. */
+@media (pointer: coarse), (max-width: 600px) {
+  .account-settings-shell input:not([type="checkbox"]):not([type="radio"]),
+  .account-settings-shell textarea,
+  .account-settings-shell select {
+    font-size: 16px;
+  }
 }
 
 /* Touch floor (#576): 18px of text, padded to a 40px target. */
@@ -2784,6 +2798,17 @@ button.profile-puzzle-row[aria-pressed="true"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A champion's crown sits against the name; the crown, not the name, takes the
+   slack that pushes the playing mark and rating to the right edge. */
+.leaderboard-online-list .leaderboard-online-name:has(+ .champion-crowns) {
+  flex: 0 1 auto;
+}
+
+.leaderboard-online-list .leaderboard-online-name + .champion-crowns {
+  margin-right: auto;
+  margin-left: -4px;
 }
 
 .leaderboard-online-rating {

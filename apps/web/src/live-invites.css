@@ -1,0 +1,52 @@
+.live-invites {
+  position: fixed;
+  z-index: 90;
+  inset-inline-end: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: 70dvh;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.live-invites[hidden] {
+  display: none;
+}
+
+.live-invite {
+  padding: 1rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+  box-shadow: 0 4px 20px #0002;
+  overflow-wrap: anywhere;
+}
+
+.live-invite h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.live-invite p {
+  margin-block: 0.5rem;
+}
+
+.live-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.live-invite-actions button,
+.live-invite-actions a {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-bg);
+  color: var(--site-text);
+  cursor: pointer;
+}

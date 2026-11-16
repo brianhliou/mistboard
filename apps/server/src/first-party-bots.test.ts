@@ -10,11 +10,29 @@ import {
   firstPartyBotForId,
   liveSeatEngineName,
   liveSeatProfileIdentity,
+  mistyLevelForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
+
+test('Misty level snapshots resolve only engines offered for that variant', () => {
+  for (const [variant, base] of [
+    ['banqi', 'misty-banqi'],
+    ['jungle-flip', 'misty-jungle-flip'],
+  ]) {
+    assert.equal(mistyLevelForEngine(variant!, base), 7);
+    for (const level of [1, 2, 3, 4, 5, 6, 8]) {
+      assert.equal(mistyLevelForEngine(variant!, `${base}-level-${level}`), level);
+    }
+    assert.equal(mistyLevelForEngine(variant!, null), null);
+    assert.equal(mistyLevelForEngine(variant!, 'unknown'), null);
+  }
+  assert.equal(mistyLevelForEngine('banqi', 'misty-jungle-flip-level-1'), null);
+  assert.equal(mistyLevelForEngine('jungle-flip', 'misty-banqi-level-1'), null);
+  assert.equal(mistyLevelForEngine('dark-chess', 'python-v2-v1.6'), null);
+});
 
 test('the merged Misty identity fronts every house variant', () => {
   const misty = firstPartyBotForId('misty');
@@ -168,7 +186,7 @@ test('old Three Kingdoms engine seats read short names without changing their id
       return [
         `misty-three-kingdoms-banqi-level-${level}`,
         `MistyThreeKingdomsBanqi level ${level}`,
-        `Misty level ${level}`,
+        `Misty Level ${level}`,
       ];
     }),
   ];
@@ -325,4 +343,15 @@ test('bot seats without an engine id attribute by (bot, variant) through the cur
   // No (bot, variant) pair maps to two engines.
   const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
   assert.equal(new Set(keys).size, keys.length);
+});
+
+test('Misty engines with no bot row still link her page on live seats', () => {
+  for (const engineId of [
+    'misty-three-kingdoms-banqi-level-1',
+    'misty-three-kingdoms-banqi',
+    'misty-ffq-banqi-level-4',
+  ]) {
+    assert.deepEqual(liveSeatProfileIdentity(engineId, null), { botId: 'misty' });
+  }
+  assert.deepEqual(liveSeatProfileIdentity('some-unknown-engine', null), {});
 });

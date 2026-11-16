@@ -13,6 +13,7 @@ import { ATOMIC_XIANGQI_FSF_ENGINE_REF } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_ENGINE_VERSION } from './banqi-engine.js';
 import { DUCK_XIANGQI_FSF_ENGINE_REF } from './duck-xiangqi-fsf-engine.js';
 import { loadEngine } from './engines/registry.js';
+import { ffqBanqiEngineVersion } from './ffq-banqi-engine.js';
 import {
   ABJCHESS_JIEQI_ENGINE_VERSION,
   JIEQI_ABJCHESS_ENGINE_ID,
@@ -69,6 +70,8 @@ function registryVersion(engineId: string): string | null {
 
 /** The version string for one engine id, or null when none is recorded. */
 export function botEngineVersion(engineId: string): string | null {
+  const ffqVersion = ffqBanqiEngineVersion(engineId);
+  if (ffqVersion) return ffqVersion;
   if (engineId.startsWith('rapfi-level-')) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;

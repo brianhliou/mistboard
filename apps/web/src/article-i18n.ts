@@ -204,6 +204,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'shogi4',
   'jieqi',
   'banqi',
+  // Machine-drafted, not native-reviewed, from the signed-off English launch rules.
+  'fanfanqi',
   // Machine-drafted 2026-09-22 (zh-Hant first, Taiwanese vocabulary: 砲、覆盤、
   // 回合), not native-reviewed, locked the day the English copy published.
   'banqi-statistics',
@@ -238,8 +240,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-11-06, not native-reviewed, from the English updated
   // 2026-11-06. A hidden playtest page; zh inherits its noindex by slug.
   'gomoku',
-  // three-kingdoms-banqi joins this list when it is published: its dictionary
-  // entries are in below and three-kingdoms-banqi-rules.test.ts checks them.
+  // Machine-drafted 2026-11-14, not native-reviewed, from the signed-off English.
+  // Piece names follow the banqi rules translations.
+  'three-kingdoms-banqi',
 ] as const;
 
 // Published articles that deliberately have no zh pages, each with its reason.
@@ -250,8 +253,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
-  'three-kingdoms-banqi':
-    'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -286,6 +287,207 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // #1150 rules summaries: machine-drafted Simplified, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或从持子中打入一枚。吃掉的棋子变成己方颜色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象开局时都在持子中，只能在己方半盘移动或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '将死对方即获胜，无合法着法的一方判负。打入可以将军，也可以将死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其余部分都被隐藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉对方的王即获胜。没有将军或将死，王车易位可以经过受攻击的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出现三次、双方各走五十步而没有兵的移动或吃子，或一方无合法着法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到达的交叉点。隐藏的阻挡棋子会改变视野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉对方将帅即获胜。没有将军，将帅照面时可以沿无子相隔的直线吃掉对方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出现三次，或连续六十个半回合没有吃子，判为和棋。无合法着法的一方判负。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鸭子放到一个新的空点上。吃掉将帅时立即结束，不再放鸭子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鸭子不能被吃。它能挡住直线、蹩马腿、塞象眼，也能充当炮架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉对方将帅即获胜。没有将军，无法完成合法回合的一方判负。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盘为七路八横线，双方九宫位于对角。宝在己方半盘内可向任意方向走一个交叉点。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或从持子中打入一枚。被吃的棋子改换阵营，进入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '将死对方即获胜，无合法着法的一方判负。士、象和宝打入时仍受各自活动范围限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '进入对方兽穴、吃光对方所有动物，或使对方无合法着法，即获胜。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '动物能吃同级或更低级的动物。陆地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。狮和虎可以跳河，但水路上有鼠就不能跳；动物进入对方陷阱后失去等级。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚动物棋子在四乘四棋盘上全部盖放。第一枚翻开的棋子决定先手的颜色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻开一枚盖子，或把一枚已翻开的己方动物横向或纵向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高级吃低级，同级相吃时双方同时移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光对方颜色的动物，或使对方既无法翻子也无法走子，即获胜。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '通过摸牌和弃牌组成四副面子和一对将眼。本桌规定，完整牌型至少三番才能和牌。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '吃牌只能吃上家的弃牌；碰、杠或和牌可以认领任一对手的弃牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季节牌放到一旁并补牌。若活牌墙摸尽仍无人和牌，该手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盘为九路十横线，红方先行。将帅和士不能离开九宫，象不能过河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '炮吃子必须恰好隔一个炮架。马和象会被蹩腿、塞眼；兵卒过河后可以横走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '将死对方即获胜，无合法着法的一方判负。双方将帅不能在同一路上无子相隔地照面。',
+  // #1149 rules summaries: machine-drafted, using the existing rules terminology.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子会移除执行吃子的棋子、被吃的棋子，以及相邻四个交叉点上的棋子。爆炸旁的兵卒不受影响。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子时只移除炮和被吃的棋子，不波及目标旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉对方将帅即获胜。威胁炸掉将帅也算将军。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，双方轮流移动一枚棋子。每种棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被将军时必须应将，不能让自己的王处于受攻击的状态。将死对方即获胜。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方没有合法着法但未被将军时，形成逼和，双方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面标示的方向移动，也可以跳过己方棋子。王以外的棋子到达最远一行时进化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子转归对方，可以打入空格，但不能打入最远一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉对方的王即获胜，没有将军或将死。',
+  // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
+  'Fanfanqi Rules': '翻翻棋规则',
+  'Fanfanqi Rules: How to Play, Ranks and HP': '翻翻棋规则：玩法、大小顺序与扣血',
+  'Flip hidden pieces and race to zero HP.': '翻开暗子，把对方的血量打到零。',
+  'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
+    '翻翻棋在 4×8 的棋盘上进行，棋子暗置，双方从 60 点血开始。了解大小顺序、只能吃子的炮、各子扣血值、捉子上限与和棋规则。',
+  'Players learning Fanfanqi or comparing its HP rules with banqi.':
+    '想学翻翻棋，或想比较其血量规则与暗棋差异的玩家。',
+  'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.':
+    '开局有四颗明子。每回合翻开一颗暗子，或走一颗已翻开的己方棋子。',
+  'Captures follow a rank ladder. Cannons only capture and can take covered pieces of either color.':
+    '吃子按大小顺序。炮只能吃子，还能打任一颜色的暗子。',
+  'Both players start with 60 HP. A captured piece costs its owner HP, even when the owner made the capture.':
+    '双方各从 60 点血开始。棋子被吃时，扣的是该子所属一方的血，即使是自己吃掉的。',
+  'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.':
+    '翻翻棋是一种以血量（HP）计分、对局更短的[暗棋](/rules/banqi)。暗子与大小顺序让每次翻子都很重要；每次吃子，扣的都是被吃棋子所属一方的血。把对方的血量打到零就赢了。',
+  'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.':
+    '腾讯的《天天象棋》App 在 2016 年 7 月加入了以 60 点血计分的翻翻棋模式。Mistboard 采用自己的版本，与腾讯没有任何关联。',
+  'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up, showing whatever pieces the shuffle put there. The other 28 start face down.':
+    '棋盘有 4×8 格。每方各有一将、二士、二象、二车、二马、二炮、五兵。把全部 32 颗棋子洗乱后铺在棋盘上。四个固定格子上的棋子开局时就翻开，洗到什么子就显示什么子，其余 28 颗盖着。',
+  'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.':
+    '红方先走。双方座位从开局就有固定颜色，翻子不会改变你的颜色。双方都能看到还有哪些棋子未翻开，但不知道每一颗暗子具体是什么。下图是一盘棋第一步之前的布局。',
+  'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or shoots with a face-up red cannon, like the one in this deal. Then Black moves, and the players alternate from there.':
+    '开局每一格都有子，所以第一步没有棋子能走到空格。红方可以翻一颗暗子，也可以用已翻开的红炮吃子，就像这盘布局里的那颗炮。接着轮到黑方，之后双方轮流走。',
+  'Turns and flips': '回合与翻子',
+  'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent.':
+    '轮到你时，翻开一颗暗子，或走一颗已翻开的己方棋子。翻子就用完这一回合。你可以翻任何一颗暗子，即使翻出来的是对方的棋子。',
+  'Steps and the rank ladder': '走法与大小顺序',
+  'Every piece except the cannon moves one square up, down, left or right. It can step onto an empty square or capture a face-up enemy it outranks or matches. It cannot land on a covered piece or a friendly piece. There are no diagonal moves.':
+    '除炮以外，每种棋子都只能向上、下、左、右走一格。可以走到空格，也可以吃掉已翻开、与自己同级或比自己小的敌子。不能走到暗子或己方棋子所在的格子，也不能斜走。',
+  'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with three exceptions: a general cannot capture a soldier, a soldier can capture a general, and a cannon ignores rank when it captures (see [Cannons only capture](#cannons-only-capture)).':
+    '大小顺序从大到小是**将 > 士 > 象 > 车 > 马 > 炮 > 卒**。每种棋子可以吃同级或比自己小的子，但有三处例外：将不能吃兵，兵可以吃将，炮吃子时不论大小（见[炮只能吃子](#cannons-only-capture)）。',
+  'There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.':
+    '这里没有将军一说。将被吃时，与其他棋子被吃一样，按血量规则扣血。下图中，兵可以吃旁边的将，将却不能吃兵。',
+  'The ring marks a capture; dots mark empty destinations.':
+    '圆环表示可吃的棋子；圆点表示可走的空格。',
+  'Dots mark empty destinations. The soldier has no capture ring.':
+    '圆点表示可走的空格。兵上没有表示可吃的圆环。',
+  'HP and capture damage': '血量与吃子扣血',
+  'Both players start with **60 HP**. Each capture removes HP from the owner of the captured piece. The damage depends on that piece:':
+    '双方各从 **60 点血**开始。每次吃子，扣的是被吃棋子所属一方的血。扣多少取决于被吃的棋子：',
+  'Captured piece': '被吃的棋子',
+  'HP lost': '扣除血量',
+  'HP stops at zero, and a player at zero loses. Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.':
+    '血量最低为零，降到零的一方判负。每方十六颗棋子的扣血值合计为 100，而起始血量只有 60，所以还远未被吃光，对局就会结束。丢将会一下扣掉起始血量的一半。',
+  'Cannons only capture': '炮只能吃子',
+  'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.':
+    '暗棋的炮可以像其他棋子一样走一格，翻翻棋的炮却不能：炮只能通过吃子来移动。没有子可打的炮只能留在原地，受到威胁时也不能走到空格避险。',
+  'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.':
+    '找炮能打哪颗子时，沿着同一行或同一列，从炮往外看。遇到的第一颗子就是**炮架**，炮要跳过它。炮架可以是任何棋子：己方或对方、明子或暗子都行。炮架之后的下一颗子就是**目标**，距离多远都行，也不论大小。下图中，黑卒是炮架，炮可以吃掉它后面的将。',
+  'The ring marks the target.': '圆环表示目标。',
+  'The target must be a face-up enemy or a face-down piece of either color. If the next piece after the screen is a face-up piece of your own, there is no shot along that line. Only a cannon can capture a face-down piece, and the shot is a gamble, because it may be your own. Below, the red cannon from the opening deal shoots down, over the back beside it.':
+    '目标必须是已翻开的敌子，或任一颜色的暗子。如果炮架之后的下一颗子是已翻开的己方棋子，炮就不能沿这条线吃子。只有炮能打暗子，而打暗子是在赌，因为可能打中自己的子。下图中，开局布局里的红炮向下开火，跳过旁边的那颗暗子。',
+  'Before: the dots mark the cannon’s two shots.': '吃子前：圆点表示炮的两个可打目标。',
+  'After: the tint marks the shot.': '吃子后：底色标出这一步吃子。',
+  'The captured piece is turned face up as it leaves the board, so both players see its color and type. Here it was a black soldier, and Black loses its HP.':
+    '被吃的棋子离开棋盘时会翻开，双方都能看到它的颜色和种类。这里被吃的是黑卒，所以扣黑方的血。',
+  'Had it been a red piece, Red would have lost the HP instead. Pieces still face down on the board stay hidden from both players, even after the game ends.':
+    '如果打中的是红子，扣的就会是红方的血。棋盘上仍盖着的暗子，即使对局结束，也不会向任何一方揭示。',
+  Chases: '捉子',
+  'A chase is a step, with no flip and no capture, that ends next to a face-up enemy piece the moved piece could capture. A step that ends next to only stronger pieces or covered pieces is not a chase. Ending next to two pieces you could take is still one chase. Cannons never step, so they never chase.':
+    '捉子是指不翻子也不吃子、走完后落在一颗已翻开且能被自己吃掉的敌子旁边的一步。如果旁边只有比自己大的子或暗子，就不算捉子。走到两颗可吃的子旁边，也只算一次捉子。炮不能走空格，所以不会捉子。',
+  'Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either.':
+    '下图中，红马走到黑炮旁边算捉子。走到象旁边不算，因为马不能吃象；走到暗子旁边也不算。',
+  'Dots mark the horse’s steps.': '圆点表示马可走的位置。',
+  'You may chase four times in a row. The game does not offer a fifth chase in a row, so you pick another move instead; it is never an automatic loss. Below, a red chariot chases a black horse back and forth until it reaches the limit.':
+    '你可以连续捉子四次。游戏不会提供连续第五次捉子的走法，你必须改走别的着法，不会因此自动判负。下图中，红车来回追捉黑马，直到达到上限。',
+  'Crosses mark the steps the chase limit removes. The dot is the chariot’s one step left.':
+    '叉号表示因捉子上限而被禁止的走法。圆点表示车仅剩的一步走法。',
+  'A step that is not a chase resets your own count. A flip or a capture by either player resets both counts. Your opponent’s steps do not reset yours. If every move you have left would be a fifth chase, you have no legal move and lose.':
+    '走一步不捉子的棋，会把自己的捉子计数归零。任一方翻子或吃子，会把双方的计数都归零。对方走子不会把你的计数归零。如果剩下的每一步都会是连续第五次捉子，你就没有合法着法，判负。',
+  'Reduce your opponent to zero HP to win. A player with no legal move on their turn loses. A flip is a legal move while any covered piece remains.':
+    '把对方的血量打到零就获胜。轮到自己却没有合法着法的一方判负。只要还有暗子，翻子就是合法着法。',
+  'After 30 plies without a flip or capture, the game is a draw. A ply is one player’s turn. Any flip or capture resets this count, including a cannon’s capture of a covered friendly piece.':
+    '连续 30 步没有翻子或吃子，就判和棋。这里一步指一方的一回合。任何翻子或吃子都会把这个计数归零，包括炮吃掉己方暗子。',
+  'HP is checked before the draw count. The draw count is checked before the no-legal-move loss. At 30 quiet plies, the game draws even if a player cannot move.':
+    '先检查血量，再检查和棋计数，最后才检查是否因没有合法着法而判负。连续 30 步没有翻子或吃子时，即使有一方无法走棋，也判和棋。',
+  'How Fanfanqi differs from banqi': '翻翻棋与暗棋的区别',
+  'The rank ladder and the one-square steps are the same as in [banqi](/rules/banqi). Six rules differ:':
+    '大小顺序和每次走一格的走法都与[暗棋](/rules/banqi)相同。以下六条规则不同：',
+  Colors: '颜色',
+  'Set by the first flip': '由第一次翻子决定',
+  'Fixed by seat: the first player is Red': '按座位固定：先手执红',
+  Start: '开局',
+  'All 32 pieces face down': '32 颗棋子全部盖着',
+  'Four face up, 28 face down': '四颗明子，28 颗暗子',
+  'Steps one square, or captures over a screen': '走一格，或隔炮架吃子',
+  'Only captures, and may shoot a face-down piece of either color':
+    '只能吃子，可以打任一颜色的暗子',
+  'Your opponent has no legal move': '对方没有合法着法',
+  'Your opponent reaches zero HP or has no legal move': '对方血量降到零，或没有合法着法',
+  '60 plies with no flip or capture, or a threefold repetition':
+    '连续 60 步无翻子或吃子，或三次重复局面',
+  '30 plies with no flip or capture': '连续 30 步无翻子或吃子',
+  'A chase may not repeat a position a third time': '不得以捉子使同一局面第三次出现',
+  'At most four chases in a row': '最多连续捉子四次',
+  'Which player is Red?': '哪一方执红？',
+  'The player who moves first. Colors belong to the seats from the start, so flipping a black piece on your first turn does not make you Black.':
+    '先走的一方。双方座位从开局就有固定颜色，所以第一步翻出黑子，也不会让你变成黑方。',
+  'Can I flip one of my opponent’s pieces?': '可以翻对方的棋子吗？',
+  'Yes. You may flip any face-down piece. If it turns out to be your opponent’s, it stays theirs and they can move it on their turn.':
+    '可以。你可以翻任何一颗暗子。如果翻出来是对方的，它仍归对方，对方在自己的回合就能走它。',
+  'Can a cannon move without capturing?': '炮可以不吃子只移动吗？',
+  'No. A cannon only moves by capturing over a screen. When it has no shot, it cannot move at all.':
+    '不行。炮只能隔着炮架吃子来移动。没有子可打时，炮完全不能动。',
+  'What happens if my cannon captures my own face-down piece?': '如果炮吃掉了己方暗子，会怎样？',
+  'You lose that piece’s HP: 30 for your own general. The capture still counts as progress, so it resets the 30-ply draw count.':
+    '扣的是你自己的血，打中己方的将就扣 30 点。这次吃子仍算有进展，会把无翻子、无吃子的 30 步和棋计数归零。',
+  'Play Fanfanqi': '来下翻翻棋',
+  'The black horse has two free squares. The red chariot outranks it, so any step that ends beside the horse is a chase.':
+    '黑马有两个空格可走。红车比马大，所以只要走到马旁边就算捉子。',
+  'Chase 1.': '第 1 次捉子。',
+  'The horse runs to its other square.': '马逃到另一个格子。',
+  'Chase 2.': '第 2 次捉子。',
+  'The horse runs back.': '马逃回原来的格子。',
+  'Chase 3.': '第 3 次捉子。',
+  'The horse runs again.': '马再次逃开。',
+  'Chase 4.': '第 4 次捉子。',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can still step away to the dot, or Red can flip a piece, which resets both counts.':
+    '红方已连续捉子四次，所以马旁边的两个走法都被打了叉。车仍可走到圆点处避开，红方也可以翻子，让双方的计数都归零。',
+  'RED SEES': '红方看到',
+  'BLACK SEES': '黑方看到',
+  'a black soldier was taken': '被吃的是黑卒',
+  'Black HP: 60 → 58': '黑方血量：60 → 58',
+  'WHAT EACH PLAYER SEES': '双方各自看到的信息',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
   'Training our own xiangqi net': '训练我们自己的象棋网络',
@@ -506,8 +708,6 @@ const ZH_HANS: Record<string, string> = {
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盘 Mistboard 实战的捉子例子，一步一步展示捉子规则禁止的那一步。',
   // Expanded jieqi rules (2026-11-05).
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
@@ -612,9 +812,11 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules': '五子棋规则',
   'Gomoku board': '五子棋棋盘',
   'Five in a row wins': '连五获胜',
+  // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三国暗棋规则',
+  'Three Kingdoms Banqi Rules: How to Play and Score': '三国暗棋规则：玩法与计分',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
-    '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
+    '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋，棋子开局全部盖着。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
   'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
     '三十二颗棋子开局时全部盖着。轮到你时，翻开一颗暗子，或走一颗己方棋子。',
   'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':
@@ -624,7 +826,7 @@ const ZH_HANS: Record<string, string> = {
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神来也（Gamesofa）的暗棋 App 里玩过三国模式、想看到成文规则的暗棋玩家，以及对计分版暗棋感兴趣的象棋棋手。',
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
-    '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键就在于该翻哪颗子、该吃哪颗子、哪颗子可以先放着不管。',
+    '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键在于该翻哪颗子、该吃哪颗子，以及哪些子可以暂时让对方有机会吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
     '神来也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三国暗棋。Mistboard 采用自己的版本，与神来也没有任何关联。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
@@ -664,7 +866,7 @@ const ZH_HANS: Record<string, string> = {
   'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
     '先得到 **100 分**的一方立即获胜，即使棋盘上还有棋子。每一方的十六颗棋子共值 135 分，所以还没被吃光，对局就已经结束了。',
   'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
-    '如果连续 40 步（双方各走一步各算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜，分数相同则为和棋。没有合法着法的一方判负，但这种情况很少见：必须已经没有可翻的暗子，而且所有已翻开的己方棋子都被困住。',
+    '如果连续 40 步（一方走一次算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜，分数相同则为和棋。没有合法着法的一方判负，但这种情况很少见：必须已经没有可翻的暗子，而且所有已翻开的己方棋子都被困住。',
   'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
     '这里重复局面不会判和，这一点和[暗棋](/rules/banqi)不同；最后由 40 步的计数来决定。唯一的限制在捉子上。',
   'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
@@ -672,7 +874,7 @@ const ZH_HANS: Record<string, string> = {
   'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
     '如果一步捉子会让同一局面（且轮到同一方走）出现第三次，你就不能走这一步。',
   'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
-    '被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；如果追捉让对方的子走到新的交叉点，局面就不会重复。',
+    '被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；追捉走到新的交叉点时，局面就不会重复。',
   'If forbidding the chase would leave you with no legal move, you may play it.':
     '如果禁止这步捉子后你就没有其他合法着法，那么仍然可以走这一步。',
   'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
@@ -687,13 +889,19 @@ const ZH_HANS: Record<string, string> = {
   'Any piece takes any piece': '任何棋子都能吃任何棋子',
   'Take or trap every enemy piece': '吃光或困住所有敌子',
   'First to 100 points': '先得 100 分',
+  'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip. The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.':
+    '引擎对局换成了第 7 级对第 8 级，按本站机器人的实际设置对弈，附胜率图、着法评分和每次翻子的运气。家规一节现在链接到翻翻棋：炮可以打暗子的变体。',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate. The comparison table now includes Fanfanqi.':
+    '新增一盘引擎对局：Misty 第 8 级对第 7 级，附着法评分、每次翻子的运气和一张图，画出两个级别各自的估计。对照表现在加入了翻翻棋。',
+  Fanfanqi: '翻翻棋',
+  'One square; the cannon only moves to capture': '每次走一格；炮只能吃子，不能平移',
+  'By rank; the cannon can also take face-down pieces': '按大小吃子；炮还能打暗子',
+  'Bring your opponent from 60 HP to zero': '把对方的 60 点血打到零',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋规则：两人在 15×15 棋盘上轮流落子，先在横、竖或斜线上连成五子者获胜。学会落子、连成五子，以及如何在 Mistboard 发放的开局里跟着回合提示走棋。',
-  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
-    '更新了开局示意图，与现在每局的开局方式一致：两枚黑子、三枚白子，轮到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一个空的交叉点上放一枚棋子。棋子落下后就不再移动。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -3212,12 +3420,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '这盘名局现在是一份研究，每步棋都有 Pikafish 的评判，走错的地方附上它的着法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍采用 60 个半回合的无吃子上限，而普通象棋采用 120 个半回合。',
   Repetition: '重复局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有全程将军，则判和。',
@@ -3592,12 +3796,8 @@ const ZH_HANS: Record<string, string> = {
   'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
     '炮通常不隔子，和其他子一样按大小吃相邻的子',
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 采用的是台湾规则。',
-  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
-    'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.':
+    'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的变体。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和将。炮只比兵大一级，所以马和比马大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的马可以斜走或斜吃吗？',
@@ -4898,8 +5098,8 @@ const ZH_HANS: Record<string, string> = {
     '从自己的对局中尝试另一条变化，与原来的走法比较。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已结束的揭棋对局中的一条变化，复盘页面已开启浏览器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分为八级。前七级限制搜索，并允许引擎选择较弱着法；第 8 级使用完整搜索预算。我们通过机器人之间以及与随机走棋基准的对局，测量各级的实力。[等级如何建立](/blog/jieqi-bot-wins)介绍了这些级别。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八个 Pikafish 等级和浏览器分析棋盘，运行的都是 Pikafish 揭棋 NNUE 分支的[本站构建版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我们用 [jqe](https://github.com/devinokeefe/jieqi) 评分的局面训练的网络。该网络不含任何 Pikafish 权重，采用 [MIT 许可](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身为 GPL-3.0。前七级限制搜索，并可能选择较弱着法；第 8 级使用完整搜索预算。[等级如何建立](/blog/jieqi-bot-wins)介绍了各级设置。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盘对抗中以 248 比 136 获胜，取得高于 Pikafish 的位置。可以[了解这位冠军](/blog/ab-jchess)，或查看[当前机器人和等级分](/bots)，认识最新挑战者。每个机器人只能使用自己这一方有权看到的信息，绝不会获得隐藏的暗子布局。',
   'Explore your own games': '探索自己的对局',
@@ -6168,6 +6368,21 @@ const ZH_HANS: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一颗兵，或吃将。',
   'An engine game': '一盘引擎对局',
+  // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
+  '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
+    '[MistyBanqi](/blog/mistybanqi) 第 7 级对第 8 级。第 7 级执黑，第 8 级执红；第 7 级无子可走时，第 8 级获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 7 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。',
+  'The [companion study](/study/FsA5sowX) has twenty games of MistyBanqi against itself at ten million nodes a move, one chapter each, with a note on how it went. Two hundred games from that run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了二十盘 MistyBanqi 自我对弈，每步搜索一千万个节点，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  'Banqi: Level 7 versus Level 8, annotated': '暗棋：第 7 级对第 8 级，附注解',
+  'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.':
+    'Misty 第 8 级执红，第 7 级执黑。78 步后第 7 级以 100 比 45 获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 8 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。终局时仍背面朝上的七个子始终不公开。',
+  'Three Kingdoms Banqi: Level 7 versus Level 8, annotated': '三国暗棋：第 7 级对第 8 级，附注解',
+  'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone makes five on row 3. Step through it with the arrows.':
+    'Rapfi 是 Mistboard 五子棋机器人背后的引擎，它自己跟自己下：第 8 级执黑，第 7 级执白，从发放的开局开始。前 25 子局面一直均势。白方第 13 子 f4 挡在了三连错误的一端，从那以后黑方有必胜。黑方用冲四（差一子成五、白方必须马上挡的线）牵制白方，第 27 子在第 3 行连成五子。用箭头一步步看。',
+  'Gomoku: Rapfi Level 8 against Rapfi Level 7, annotated':
+    '五子棋：Rapfi 第 8 级对 Rapfi 第 7 级，附注解',
+  'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
+    '新增一盘引擎对局：Rapfi 第 8 级对第 7 级，附注解和一张图，画出两个级别各自估计的黑方胜率。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到红，所以翻的人这盘是红方。',
@@ -6700,17 +6915,13 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等级机器人和浏览器分析已更新为 Pikafish NNUE，使用以 jqe 标注数据训练的 MIT 许可网络。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉赖理兄 2022 年世界快棋冠军的话。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '示例对局换成了一盘在本站与引擎下的对局。',
-  'Added a sample game from the site.': '新增一盘本站的示例对局。',
-  'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
-  'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
+  'Added a short summary at the top.': '在文章顶部添加了简短摘要。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -6720,12 +6931,6 @@ const ZH_HANS: Record<string, string> = {
     '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 级现在在这套搜索上加入了一个训练好的神经网络。第 1 到第 7 级就是本文介绍的经典引擎。这个网络暂未公开，之后会发布，届时本页会更新说明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '宝的示意图现在显示规则允许的五种走法，而不是八种。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再称鸭子象棋为 Mistboard 原创；它是把 Tim Paulden 的鸭子国际象棋搬到了象棋棋盘上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增将帅对面的论证、88 个中占 8 个的统计、对局长度的中位数，以及关于 9 月 29 日引擎漏洞的说明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
@@ -7195,6 +7400,207 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // #1150 rules summaries: machine-drafted Traditional, using existing rules terminology.
+  'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.':
+    '每回合走一枚棋子，或從持子中打入一枚。吃掉的棋子變成己方顏色，加入持子。',
+  'Advisors and elephants start in hand and may move or drop only on their own half of the board.':
+    '士和象開局時都在持子中，只能在己方半盤移動或打入。',
+  'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.':
+    '將死對方即獲勝，無合法著法的一方判負。打入可以將軍，也可以將死。',
+  'You see your own pieces and the squares they can move to. Everything else is hidden.':
+    '你能看到己方棋子及其可以走到的格子，其餘部分都被隱藏。',
+  'Capture the enemy king to win. There is no check or checkmate, and castling through attack is allowed.':
+    '吃掉對方的王即獲勝。沒有將軍或將死，王車易位可以經過受攻擊的格子。',
+  'Threefold repetition, fifty moves without a pawn move or capture, or having no legal move draws the game.':
+    '同一局面出現三次、雙方各走五十步而沒有兵的移動或吃子，或一方無合法著法，均判和棋。',
+  'You see your own pieces and the points they can reach. Hidden blockers can change that view.':
+    '你能看到己方棋子及其可到達的交叉點。隱藏的阻擋棋子會改變視野。',
+  'Capture the enemy general to win. There is no check, and facing generals may capture across a clear file.':
+    '吃掉對方將帥即獲勝。沒有將軍，將帥照面時可以沿無子相隔的直線吃掉對方。',
+  'Threefold repetition or sixty plies without a capture draws the game. A player with no legal move loses.':
+    '同一局面出現三次，或連續六十個半回合沒有吃子，判為和棋。無合法著法的一方判負。',
+  'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.':
+    '每回合先走一枚棋子，再把鴨子放到一個新的空點上。吃掉將帥時立即結束，不再放鴨子。',
+  'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.':
+    '鴨子不能被吃。牠能擋住直線、蹩馬腿、塞象眼，也能充當砲架。',
+  'Capture the enemy general to win. There is no check, and a player with no legal turn loses.':
+    '吃掉對方將帥即獲勝。沒有將軍，無法完成合法回合的一方判負。',
+  'Play on a 7 by 8 board with palaces in opposite corners. The Treasure moves one point in any direction on its own half.':
+    '棋盤為七路八橫線，雙方九宮位於對角。寶在己方半盤內可向任意方向走一個交叉點。',
+  'Each turn, move a piece or drop one from your reserve. Captured pieces change sides and enter the capturer’s reserve.':
+    '每回合走一枚棋子，或從持子中打入一枚。被吃的棋子改換陣營，進入吃子一方的持子。',
+  'Checkmate wins, and a player with no legal move loses. Advisors, elephants and Treasures keep their territory limits when dropped.':
+    '將死對方即獲勝，無合法著法的一方判負。士、象和寶打入時仍受各自活動範圍限制。',
+  'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.':
+    '進入對方獸穴、吃光對方所有動物，或使對方無合法著法，即獲勝。',
+  'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.':
+    '動物能吃同級或更低級的動物。陸地上的鼠能吃象，但象不能吃鼠。',
+  'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.':
+    '只有鼠能下水。獅和虎可以跳河，但水路上有鼠就不能跳；動物進入對方陷阱後失去等級。',
+  'Sixteen animals start face-down on a 4 by 4 board. The first flip sets the first player’s color.':
+    '十六枚動物棋子在四乘四棋盤上全部蓋放。第一枚翻開的棋子決定先手的顏色。',
+  'Each turn, flip a tile or move a revealed animal one square along a row or column.':
+    '每回合翻開一枚蓋子，或把一枚已翻開的己方動物橫向或縱向走一格。',
+  'Higher ranks capture lower ones; equal ranks remove each other. A rat can capture an elephant, but an elephant cannot capture a rat.':
+    '高級吃低級，同級相吃時雙方同時移除。鼠能吃象，但象不能吃鼠。',
+  'Win by eliminating the other color or leaving your opponent with no legal flip or move.':
+    '吃光對方顏色的動物，或使對方既無法翻子也無法走子，即獲勝。',
+  'Draw and discard to build four sets and a pair. A complete hand must score at least three faan to win at this table.':
+    '透過摸牌和棄牌組成四副面子和一對將眼。本桌規定，完整牌型至少三番才能食糊。',
+  'A chow may claim only the previous seat’s discard. A pung, kong or win may claim any opponent’s discard.':
+    '上牌只能上上家的棄牌；碰、槓或食糊可以取用任一對手的棄牌。',
+  'Flowers and seasons are set aside and replaced. If the live wall runs out before anyone wins, the hand is drawn.':
+    '花牌和季節牌放到一旁並補牌。若活牌牆摸盡仍無人食糊，該手流局。',
+  'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.':
+    '棋盤為九路十橫線，紅方先行。將帥和士不能離開九宮，象不能過河。',
+  'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.':
+    '砲吃子必須恰好隔一個砲架。馬和象會被蹩腿、塞眼；兵卒過河後可以橫走。',
+  'Checkmate wins, and a player with no legal move loses. Generals may never face each other on a clear file.':
+    '將死對方即獲勝，無合法著法的一方判負。雙方將帥不能在同一路上無子相隔地照面。',
+  // #1149 rules summaries: Traditional overrides follow the shared base.
+  'A capture removes the capturer, its target and the pieces on the four neighbouring points. Soldiers beside the blast survive.':
+    '吃子會移除執行吃子的棋子、被吃的棋子，以及相鄰四個交叉點上的棋子。爆炸旁的兵卒不受影響。',
+  'A cannon capture removes only the cannon and its target, with no blast beside the target.':
+    '炮吃子時只移除炮和被吃的棋子，不波及目標旁的棋子。',
+  'Blowing up the enemy general wins. A threat to do so counts as check.':
+    '炸掉對方將帥即獲勝。威脅炸掉將帥也算將軍。',
+  'White moves first, then players alternate moving one piece. Each type of piece moves in its own way.':
+    '白方先走，雙方輪流移動一枚棋子。每種棋子有自己的走法。',
+  'You must answer check and may never leave your king under attack. Checkmate wins the game.':
+    '被將軍時必須應將，不能讓自己的王處於受攻擊的狀態。將死對方即獲勝。',
+  'A player with no legal move who is not in check is stalemated, and the game is drawn.':
+    '一方沒有合法著法但未被將軍時，形成逼和，雙方和棋。',
+  'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.':
+    '棋子按棋面標示的方向移動，也可以跳過己方棋子。王以外的棋子到達最遠一行時進化。',
+  'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.':
+    '被吃的棋子轉歸對方，可以打入空格，但不能打入最遠一行。',
+  'Capture the enemy royal to win. There is no check or checkmate.':
+    '吃掉對方的王即獲勝，沒有將軍或將死。',
+  // Fanfanqi rules: machine-drafted, not native-reviewed; terms follow the banqi rules.
+  'Fanfanqi Rules': '翻翻棋規則',
+  'Fanfanqi Rules: How to Play, Ranks and HP': '翻翻棋規則：玩法、大小順序與扣血',
+  'Flip hidden pieces and race to zero HP.': '翻開暗子，把對方的血量打到零。',
+  'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.':
+    '翻翻棋在 4×8 的棋盤上進行，棋子暗置，雙方從 60 點血開始。了解大小順序、只能吃子的炮、各子扣血值、捉子上限與和棋規則。',
+  'Players learning Fanfanqi or comparing its HP rules with banqi.':
+    '想學翻翻棋，或想比較其血量規則與暗棋差異的玩家。',
+  'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.':
+    '開局有四顆明子。每回合翻開一顆暗子，或走一顆已翻開的己方棋子。',
+  'Captures follow a rank ladder. Cannons only capture and can take covered pieces of either color.':
+    '吃子按大小順序。炮只能吃子，還能打任一顏色的暗子。',
+  'Both players start with 60 HP. A captured piece costs its owner HP, even when the owner made the capture.':
+    '雙方各從 60 點血開始。棋子被吃時，扣的是該子所屬一方的血，即使是自己吃掉的。',
+  'Fanfanqi (翻翻棋, “flip-flip chess”) is a shorter form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.':
+    '翻翻棋是一種以血量（HP）計分、對局更短的[暗棋](/rules/banqi)。暗子與大小順序讓每次翻子都很重要；每次吃子，扣的都是被吃棋子所屬一方的血。把對方的血量打到零就贏了。',
+  'Tencent’s Tiantian Xiangqi app added a Fanfanqi mode scored by 60 HP in July 2016. Mistboard plays its own version and is not affiliated with Tencent.':
+    '騰訊的《天天象棋》App 在 2016 年 7 月加入了以 60 點血計分的翻翻棋模式。Mistboard 採用自己的版本，與騰訊沒有任何關聯。',
+  'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up, showing whatever pieces the shuffle put there. The other 28 start face down.':
+    '棋盤有 4×8 格。每方各有一將、二士、二象、二車、二馬、二炮、五兵。把全部 32 顆棋子洗亂後鋪在棋盤上。四個固定格子上的棋子開局時就翻開，洗到什麼子就顯示什麼子，其餘 28 顆蓋著。',
+  'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.':
+    '紅方先走。雙方座位從開局就有固定顏色，翻子不會改變你的顏色。雙方都能看到還有哪些棋子未翻開，但不知道每一顆暗子具體是什麼。下圖是一盤棋第一步之前的佈局。',
+  'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or shoots with a face-up red cannon, like the one in this deal. Then Black moves, and the players alternate from there.':
+    '開局每一格都有子，所以第一步沒有棋子能走到空格。紅方可以翻一顆暗子，也可以用已翻開的紅炮吃子，就像這盤佈局裡的那顆炮。接著輪到黑方，之後雙方輪流走。',
+  'Turns and flips': '回合與翻子',
+  'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent.':
+    '輪到你時，翻開一顆暗子，或走一顆已翻開的己方棋子。翻子就用完這一回合。你可以翻任何一顆暗子，即使翻出來的是對方的棋子。',
+  'Steps and the rank ladder': '走法與大小順序',
+  'Every piece except the cannon moves one square up, down, left or right. It can step onto an empty square or capture a face-up enemy it outranks or matches. It cannot land on a covered piece or a friendly piece. There are no diagonal moves.':
+    '除炮以外，每種棋子都只能向上、下、左、右走一格。可以走到空格，也可以吃掉已翻開、與自己同級或比自己小的敵子。不能走到暗子或己方棋子所在的格子，也不能斜走。',
+  'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with three exceptions: a general cannot capture a soldier, a soldier can capture a general, and a cannon ignores rank when it captures (see [Cannons only capture](#cannons-only-capture)).':
+    '大小順序從大到小是**將 > 士 > 象 > 車 > 馬 > 炮 > 卒**。每種棋子可以吃同級或比自己小的子，但有三處例外：將不能吃兵，兵可以吃將，炮吃子時不論大小（見[炮只能吃子](#cannons-only-capture)）。',
+  'There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.':
+    '這裡沒有將軍一說。將被吃時，與其他棋子被吃一樣，按血量規則扣血。下圖中，兵可以吃旁邊的將，將卻不能吃兵。',
+  'The ring marks a capture; dots mark empty destinations.':
+    '圓環表示可吃的棋子；圓點表示可走的空格。',
+  'Dots mark empty destinations. The soldier has no capture ring.':
+    '圓點表示可走的空格。兵上沒有表示可吃的圓環。',
+  'HP and capture damage': '血量與吃子扣血',
+  'Both players start with **60 HP**. Each capture removes HP from the owner of the captured piece. The damage depends on that piece:':
+    '雙方各從 **60 點血**開始。每次吃子，扣的是被吃棋子所屬一方的血。扣多少取決於被吃的棋子：',
+  'Captured piece': '被吃的棋子',
+  'HP lost': '扣除血量',
+  'HP stops at zero, and a player at zero loses. Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.':
+    '血量最低為零，降到零的一方判負。每方十六顆棋子的扣血值合計為 100，而起始血量只有 60，所以還遠未被吃光，對局就會結束。丟將會一下扣掉起始血量的一半。',
+  'Cannons only capture': '炮只能吃子',
+  'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.':
+    '暗棋的炮可以像其他棋子一樣走一格，翻翻棋的炮卻不能：炮只能透過吃子來移動。沒有子可打的炮只能留在原地，受到威脅時也不能走到空格避險。',
+  'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.':
+    '找炮能打哪顆子時，沿著同一行或同一列，從炮往外看。遇到的第一顆子就是**炮架**，炮要跳過它。炮架可以是任何棋子：己方或對方、明子或暗子都行。炮架之後的下一顆子就是**目標**，距離多遠都行，也不論大小。下圖中，黑卒是炮架，炮可以吃掉它後面的將。',
+  'The ring marks the target.': '圓環表示目標。',
+  'The target must be a face-up enemy or a face-down piece of either color. If the next piece after the screen is a face-up piece of your own, there is no shot along that line. Only a cannon can capture a face-down piece, and the shot is a gamble, because it may be your own. Below, the red cannon from the opening deal shoots down, over the back beside it.':
+    '目標必須是已翻開的敵子，或任一顏色的暗子。如果炮架之後的下一顆子是已翻開的己方棋子，炮就不能沿這條線吃子。只有炮能打暗子，而打暗子是在賭，因為可能打中自己的子。下圖中，開局佈局裡的紅炮向下開火，跳過旁邊的那顆暗子。',
+  'Before: the dots mark the cannon’s two shots.': '吃子前：圓點表示炮的兩個可打目標。',
+  'After: the tint marks the shot.': '吃子後：底色標出這一步吃子。',
+  'The captured piece is turned face up as it leaves the board, so both players see its color and type. Here it was a black soldier, and Black loses its HP.':
+    '被吃的棋子離開棋盤時會翻開，雙方都能看到它的顏色和種類。這裡被吃的是黑卒，所以扣黑方的血。',
+  'Had it been a red piece, Red would have lost the HP instead. Pieces still face down on the board stay hidden from both players, even after the game ends.':
+    '如果打中的是紅子，扣的就會是紅方的血。棋盤上仍蓋著的暗子，即使對局結束，也不會向任何一方揭示。',
+  Chases: '捉子',
+  'A chase is a step, with no flip and no capture, that ends next to a face-up enemy piece the moved piece could capture. A step that ends next to only stronger pieces or covered pieces is not a chase. Ending next to two pieces you could take is still one chase. Cannons never step, so they never chase.':
+    '捉子是指不翻子也不吃子、走完後落在一顆已翻開且能被自己吃掉的敵子旁邊的一步。如果旁邊只有比自己大的子或暗子，就不算捉子。走到兩顆可吃的子旁邊，也只算一次捉子。炮不能走空格，所以不會捉子。',
+  'Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either.':
+    '下圖中，紅馬走到黑炮旁邊算捉子。走到象旁邊不算，因為馬不能吃象；走到暗子旁邊也不算。',
+  'Dots mark the horse’s steps.': '圓點表示馬可走的位置。',
+  'You may chase four times in a row. The game does not offer a fifth chase in a row, so you pick another move instead; it is never an automatic loss. Below, a red chariot chases a black horse back and forth until it reaches the limit.':
+    '你可以連續捉子四次。遊戲不會提供連續第五次捉子的走法，你必須改走別的著法，不會因此自動判負。下圖中，紅車來回追捉黑馬，直到達到上限。',
+  'Crosses mark the steps the chase limit removes. The dot is the chariot’s one step left.':
+    '叉號表示因捉子上限而被禁止的走法。圓點表示車僅剩的一步走法。',
+  'A step that is not a chase resets your own count. A flip or a capture by either player resets both counts. Your opponent’s steps do not reset yours. If every move you have left would be a fifth chase, you have no legal move and lose.':
+    '走一步不捉子的棋，會把自己的捉子計數歸零。任一方翻子或吃子，會把雙方的計數都歸零。對方走子不會把你的計數歸零。如果剩下的每一步都會是連續第五次捉子，你就沒有合法著法，判負。',
+  'Reduce your opponent to zero HP to win. A player with no legal move on their turn loses. A flip is a legal move while any covered piece remains.':
+    '把對方的血量打到零就獲勝。輪到自己卻沒有合法著法的一方判負。只要還有暗子，翻子就是合法著法。',
+  'After 30 plies without a flip or capture, the game is a draw. A ply is one player’s turn. Any flip or capture resets this count, including a cannon’s capture of a covered friendly piece.':
+    '連續 30 步沒有翻子或吃子，就判和棋。這裡一步指一方的一回合。任何翻子或吃子都會把這個計數歸零，包括炮吃掉己方暗子。',
+  'HP is checked before the draw count. The draw count is checked before the no-legal-move loss. At 30 quiet plies, the game draws even if a player cannot move.':
+    '先檢查血量，再檢查和棋計數，最後才檢查是否因沒有合法著法而判負。連續 30 步沒有翻子或吃子時，即使有一方無法走棋，也判和棋。',
+  'How Fanfanqi differs from banqi': '翻翻棋與暗棋的區別',
+  'The rank ladder and the one-square steps are the same as in [banqi](/rules/banqi). Six rules differ:':
+    '大小順序和每次走一格的走法都與[暗棋](/rules/banqi)相同。以下六條規則不同：',
+  Colors: '顏色',
+  'Set by the first flip': '由第一次翻子決定',
+  'Fixed by seat: the first player is Red': '按座位固定：先手執紅',
+  Start: '開局',
+  'All 32 pieces face down': '32 顆棋子全部蓋著',
+  'Four face up, 28 face down': '四顆明子，28 顆暗子',
+  'Steps one square, or captures over a screen': '走一格，或隔炮架吃子',
+  'Only captures, and may shoot a face-down piece of either color':
+    '只能吃子，可以打任一顏色的暗子',
+  'Your opponent has no legal move': '對方沒有合法著法',
+  'Your opponent reaches zero HP or has no legal move': '對方血量降到零，或沒有合法著法',
+  '60 plies with no flip or capture, or a threefold repetition':
+    '連續 60 步無翻子或吃子，或三次重複局面',
+  '30 plies with no flip or capture': '連續 30 步無翻子或吃子',
+  'A chase may not repeat a position a third time': '不得以捉子使同一局面第三次出現',
+  'At most four chases in a row': '最多連續捉子四次',
+  'Which player is Red?': '哪一方執紅？',
+  'The player who moves first. Colors belong to the seats from the start, so flipping a black piece on your first turn does not make you Black.':
+    '先走的一方。雙方座位從開局就有固定顏色，所以第一步翻出黑子，也不會讓你變成黑方。',
+  'Can I flip one of my opponent’s pieces?': '可以翻對方的棋子嗎？',
+  'Yes. You may flip any face-down piece. If it turns out to be your opponent’s, it stays theirs and they can move it on their turn.':
+    '可以。你可以翻任何一顆暗子。如果翻出來是對方的，它仍歸對方，對方在自己的回合就能走它。',
+  'Can a cannon move without capturing?': '炮可以不吃子只移動嗎？',
+  'No. A cannon only moves by capturing over a screen. When it has no shot, it cannot move at all.':
+    '不行。炮只能隔著炮架吃子來移動。沒有子可打時，炮完全不能動。',
+  'What happens if my cannon captures my own face-down piece?': '如果炮吃掉了己方暗子，會怎樣？',
+  'You lose that piece’s HP: 30 for your own general. The capture still counts as progress, so it resets the 30-ply draw count.':
+    '扣的是你自己的血，打中己方的將就扣 30 點。這次吃子仍算有進展，會把無翻子、無吃子的 30 步和棋計數歸零。',
+  'Play Fanfanqi': '來下翻翻棋',
+  'The black horse has two free squares. The red chariot outranks it, so any step that ends beside the horse is a chase.':
+    '黑馬有兩個空格可走。紅車比馬大，所以只要走到馬旁邊就算捉子。',
+  'Chase 1.': '第 1 次捉子。',
+  'The horse runs to its other square.': '馬逃到另一個格子。',
+  'Chase 2.': '第 2 次捉子。',
+  'The horse runs back.': '馬逃回原來的格子。',
+  'Chase 3.': '第 3 次捉子。',
+  'The horse runs again.': '馬再次逃開。',
+  'Chase 4.': '第 4 次捉子。',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can still step away to the dot, or Red can flip a piece, which resets both counts.':
+    '紅方已連續捉子四次，所以馬旁邊的兩個走法都被打了叉。車仍可走到圓點處避開，紅方也可以翻子，讓雙方的計數都歸零。',
+  'RED SEES': '紅方看到',
+  'BLACK SEES': '黑方看到',
+  'a black soldier was taken': '被吃的是黑卒',
+  'Black HP: 60 → 58': '黑方血量：60 → 58',
+  'WHAT EACH PLAYER SEES': '雙方各自看到的資訊',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
   'Training our own xiangqi net': '訓練我們自己的象棋網路',
@@ -7415,8 +7821,6 @@ const ZH_HANT: Record<string, string> = {
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
-  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
-    '新增一盤 Mistboard 實戰的捉子例子，一步一步展示捉子規則禁止的那一步。',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
@@ -7521,9 +7925,11 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules': '五子棋規則',
   'Gomoku board': '五子棋棋盤',
   'Five in a row wins': '連五獲勝',
+  // Three Kingdoms Banqi: machine-drafted 2026-11-14, not native-reviewed.
   'Three Kingdoms Banqi Rules': '三國暗棋規則',
+  'Three Kingdoms Banqi Rules: How to Play and Score': '三國暗棋規則：玩法與計分',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
-    '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
+    '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋，棋子開局全部蓋著。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
   'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
     '三十二顆棋子開局時全部蓋著。輪到你時，翻開一顆暗子，或走一顆己方棋子。',
   'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':
@@ -7533,7 +7939,7 @@ const ZH_HANT: Record<string, string> = {
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神來也（Gamesofa）的暗棋 App 裡玩過三國模式、想看到成文規則的暗棋玩家，以及對計分版暗棋感興趣的象棋棋手。',
   'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
-    '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵就在於該翻哪顆子、該吃哪顆子、哪顆子可以先放著不管。',
+    '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵在於該翻哪顆子、該吃哪顆子，以及哪些子可以暫時讓對方有機會吃掉。',
   'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
     '神來也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三國暗棋。Mistboard 採用自己的版本，與神來也沒有任何關聯。',
   'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
@@ -7573,7 +7979,7 @@ const ZH_HANT: Record<string, string> = {
   'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
     '先得到 **100 分**的一方立即獲勝，即使棋盤上還有棋子。每一方的十六顆棋子共值 135 分，所以還沒被吃光，對局就已經結束了。',
   'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
-    '如果連續 40 步（雙方各走一步各算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝，分數相同則為和棋。沒有合法著法的一方判負，但這種情況很少見：必須已經沒有可翻的暗子，而且所有已翻開的己方棋子都被困住。',
+    '如果連續 40 步（一方走一次算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝，分數相同則為和棋。沒有合法著法的一方判負，但這種情況很少見：必須已經沒有可翻的暗子，而且所有已翻開的己方棋子都被困住。',
   'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
     '這裡重複局面不會判和，這一點和[暗棋](/rules/banqi)不同；最後由 40 步的計數來決定。唯一的限制在捉子上。',
   'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
@@ -7581,7 +7987,7 @@ const ZH_HANT: Record<string, string> = {
   'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
     '如果一步捉子會讓同一局面（且輪到同一方走）出現第三次，你就不能走這一步。',
   'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
-    '被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；如果追捉讓對方的子走到新的交叉點，局面就不會重複。',
+    '被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；追捉走到新的交叉點時，局面就不會重複。',
   'If forbidding the chase would leave you with no legal move, you may play it.':
     '如果禁止這步捉子後你就沒有其他合法著法，那麼仍然可以走這一步。',
   'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
@@ -7596,13 +8002,19 @@ const ZH_HANT: Record<string, string> = {
   'Any piece takes any piece': '任何棋子都能吃任何棋子',
   'Take or trap every enemy piece': '吃光或困住所有敵子',
   'First to 100 points': '先得 100 分',
+  'The engine game is now Level 7 against Level 8 at the settings the site’s bots play, with a graph, move grades and the luck of each flip. The house rules section now links to Fanfanqi, the variant whose cannon shoots face-down pieces.':
+    '引擎對局換成了第 7 級對第 8 級，按本站機器人的實際設定對弈，附勝率圖、著法評分和每次翻子的運氣。家規一節現在連結到翻翻棋：炮可以打暗子的變體。',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate. The comparison table now includes Fanfanqi.':
+    '新增一盤引擎對局：Misty 第 8 級對第 7 級，附著法評分、每次翻子的運氣和一張圖，畫出兩個級別各自的估計。對照表現在加入了翻翻棋。',
+  Fanfanqi: '翻翻棋',
+  'One square; the cannon only moves to capture': '每次走一格；炮只能吃子，不能平移',
+  'By rank; the cannon can also take face-down pieces': '按大小吃子；炮還能打暗子',
+  'Bring your opponent from 60 HP to zero': '把對方的 60 點血打到零',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋規則：兩人在 15×15 棋盤上輪流落子，先在橫、豎或斜線上連成五子者獲勝。學會落子、連成五子，以及如何在 Mistboard 發放的開局裡跟著回合提示走棋。',
-  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
-    '更新了開局示意圖，與現在每局的開局方式一致：兩枚黑子、三枚白子，輪到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一個空的交叉點上放一枚棋子。棋子落下後就不再移動。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -10486,12 +10898,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'The famous game is now a study, with every move graded by Pikafish and its line where a move went wrong.':
-    '這盤名局現在是一份研究，每步棋都有 Pikafish 的評判，走錯的地方附上它的著法。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
-  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
-    '澄清原子象棋仍採用 60 個半回合的無吃子上限，而普通象棋採用 120 個半回合。',
   Repetition: '重複局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有全程將軍，則判和。',
@@ -10842,12 +11250,8 @@ const ZH_HANT: Record<string, string> = {
   'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
     '炮通常不隔子，和其他子一樣按大小吃相鄰的子',
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 採用的是台灣規則。',
-  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
-    'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right). [Fanfanqi](/rules/fanfanqi) is the variant whose cannon shoots face-down pieces.':
+    'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。[翻翻棋](/rules/fanfanqi)就是炮可以打暗子的變體。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和將。炮只比兵大一級，所以馬和比馬大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的馬可以斜走或斜吃嗎？',
@@ -11843,8 +12247,8 @@ const ZH_HANT: Record<string, string> = {
     '從自己的對局中嘗試另一條變化，與原來的走法比較。',
   'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
     '已結束的揭棋對局中的一條變化，復盤頁面已開啓瀏覽器引擎。',
-  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
-    'Pikafish 分為八級。前七級限制搜索，並允許引擎選擇較弱著法；第 8 級使用完整搜索預算。我們通過機器人之間以及與隨機走棋基準的對局，測量各級的實力。[等級如何建立](/blog/jieqi-bot-wins)介紹了這些級別。',
+  'All eight Pikafish levels and the browser analysis board run [our build](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard) of Pikafish’s jieqi NNUE branch, with a net we trained on positions scored by [jqe](https://github.com/devinokeefe/jieqi). The net contains no Pikafish weights and is [MIT licensed](/engine/pikafish-jieqi/jieqi-net-LICENSE); the engine is GPL-3.0. The seven easier levels limit search and can choose weaker moves; Level 8 uses the full search budget. [How we built the ladder](/blog/jieqi-bot-wins) explains the settings.':
+    '全部八個 Pikafish 等級和瀏覽器分析棋盤，運行的都是 Pikafish 揭棋 NNUE 分支的[本站建置版本](https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard)，搭配我們用 [jqe](https://github.com/devinokeefe/jieqi) 評分的局面訓練的網路。該網路不含任何 Pikafish 權重，採用 [MIT 授權](/engine/pikafish-jieqi/jieqi-net-LICENSE)；引擎本身為 GPL-3.0。前七級限制搜索，並可能選擇較弱著法；第 8 級使用完整搜索預算。[等級如何建立](/blog/jieqi-bot-wins)介紹了各級設定。',
   '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
     '[AB-JChess](/bot/ab-jchess) 在 400 盤對抗中以 248 比 136 獲勝，取得高於 Pikafish 的位置。可以[瞭解這位冠軍](/blog/ab-jchess)，或查看[當前機器人和等級分](/bots)，認識最新挑戰者。每個機器人只能使用自己這一方有權看到的信息，絕不會獲得隱藏的暗子佈局。',
   'Explore your own games': '探索自己的對局',
@@ -13109,6 +13513,21 @@ const ZH_HANT: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一顆兵，或吃將。',
   'An engine game': '一盤引擎對局',
+  // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
+  '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
+    '[MistyBanqi](/blog/mistybanqi) 第 7 級對第 8 級。第 7 級執黑，第 8 級執紅；第 7 級無子可走時，第 8 級獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 7 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。',
+  'The [companion study](/study/FsA5sowX) has twenty games of MistyBanqi against itself at ten million nodes a move, one chapter each, with a note on how it went. Two hundred games from that run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了二十盤 MistyBanqi 自我對弈，每步搜尋一千萬個節點，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  'Banqi: Level 7 versus Level 8, annotated': '暗棋：第 7 級對第 8 級，附註解',
+  'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.':
+    'Misty 第 8 級執紅，第 7 級執黑。78 步後第 7 級以 100 比 45 獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 8 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。終局時仍背面朝上的七個子始終不公開。',
+  'Three Kingdoms Banqi: Level 7 versus Level 8, annotated': '三國暗棋：第 7 級對第 8 級，附註解',
+  'Rapfi, the engine behind Mistboard’s Gomoku bots, plays itself: Level 8 as Black against Level 7 as White, from a dealt opening. For 25 stones the game stays even. White’s 13th stone, f4, blocks a three in a row at the wrong end, and from there Black has a forced win. Black uses fours, lines one stone short of five that White must block at once, to keep White busy, and Black’s 27th stone makes five on row 3. Step through it with the arrows.':
+    'Rapfi 是 Mistboard 五子棋機器人背後的引擎，它自己跟自己下：第 8 級執黑，第 7 級執白，從發放的開局開始。前 25 子局面一直均勢。白方第 13 子 f4 擋在了三連錯誤的一端，從那以後黑方有必勝。黑方用衝四（差一子成五、白方必須馬上擋的線）牽制白方，第 27 子在第 3 行連成五子。用箭頭一步步看。',
+  'Gomoku: Rapfi Level 8 against Rapfi Level 7, annotated':
+    '五子棋：Rapfi 第 8 級對 Rapfi 第 7 級，附註解',
+  'Added an annotated engine game: Rapfi Level 8 against Level 7, with notes and a graph of each level’s own estimate of Black’s winning chances.':
+    '新增一盤引擎對局：Rapfi 第 8 級對第 7 級，附註解和一張圖，畫出兩個級別各自估計的黑方勝率。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到紅，所以翻的人這盤是紅方。',
@@ -13425,17 +13844,13 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
-  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
-    '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
+  'Updated the jieqi levels and browser analysis to Pikafish NNUE with an MIT net trained on jqe labels.':
+    '揭棋等級機器人和瀏覽器分析已更新為 Pikafish NNUE，使用以 jqe 標註資料訓練的 MIT 授權網路。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
     '更正了一句漏掉賴理兄 2022 年世界快棋冠軍的話。',
-  'Replaced the sample game with a game played against the engine on the site.':
-    '範例對局換成了一盤在本站與引擎下的對局。',
-  'Added a sample game from the site.': '新增一盤本站的範例對局。',
-  'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
-  'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
+  'Added a short summary at the top.': '在文章頂部新增了簡短摘要。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -13445,12 +13860,6 @@ const ZH_HANT: Record<string, string> = {
     '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
   "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
     '第 8 級現在在這套搜尋上加入了一個訓練好的神經網路。第 1 到第 7 級就是本文介紹的經典引擎。這個網路暫未公開，之後會發布，屆時本頁會更新說明。',
-  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
-    '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
-  'The Treasure figure now shows the five moves the rules allow, not eight.':
-    '寶的示意圖現在顯示規則允許的五種走法，而不是八種。',
-  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
-    '不再稱鴨子象棋為 Mistboard 原創；它是把 Tim Paulden 的鴨子西洋棋搬到了象棋棋盤上。',
   'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
     '新增將帥對面的論證、88 個中占 8 個的統計、對局長度的中位數，以及關於 9 月 29 日引擎漏洞的說明。',
   "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":

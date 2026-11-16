@@ -21,11 +21,12 @@
  *   from data the client has always had.
  */
 
+import { buildChampionCrowns, type Championship } from './champion-crowns.js';
 import type { GameParticipant } from './game-display.js';
 
 /** A player-name destination: a member profile, or a bot profile. */
 export type ProfileTarget =
-  | { readonly kind: 'user'; readonly handle: string }
+  | { readonly kind: 'user'; readonly handle: string; readonly champions?: readonly Championship[] }
   | { readonly kind: 'bot'; readonly botId: string }
   /** A professional's page built from the broadcast archive (/players/<slug>). */
   | { readonly kind: 'player'; readonly slug: string };
@@ -34,6 +35,7 @@ export type ProfileTarget =
  *  Both fields absent/null means "no page" — the common case (guests, corpus
  *  seats, engine versions with no bot in front of them). */
 export type ProfileIdentity = {
+  champions?: readonly Championship[];
   handle?: string | null;
   botId?: string | null;
 };
@@ -54,14 +56,20 @@ export function profileTargetFor(
   identity: ProfileIdentity | null | undefined,
 ): ProfileTarget | null {
   if (!identity) return null;
-  if (identity.handle) return { kind: 'user', handle: identity.handle };
+  if (identity.handle)
+    return {
+      kind: 'user',
+      handle: identity.handle,
+      ...(identity.champions != null ? { champions: identity.champions } : {}),
+    };
   if (identity.botId) return { kind: 'bot', botId: identity.botId };
   return null;
 }
 
 /** The target for a persisted game participant. Bots link off `subjectId` (it is
  *  the bot slug); users need the separately-carried `handle`, since `subjectId`
- *  is an internal user id. Every other subject type has no public page. */
+ *  is an internal user id. A Misty engine version links Misty; every other
+ *  subject type has no public page. */
 export function participantProfileTarget(
   participant: GameParticipant | null | undefined,
 ): ProfileTarget | null {
@@ -70,7 +78,14 @@ export function participantProfileTarget(
     return participant.subjectId ? { kind: 'bot', botId: participant.subjectId } : null;
   }
   if (participant.subjectType === 'user') {
-    return participant.handle ? { kind: 'user', handle: participant.handle } : null;
+    return participant.handle
+      ? profileTargetFor({ handle: participant.handle, champions: participant.champions })
+      : null;
+  }
+  // Misty's own engines with no bot row (Three Kingdoms Banqi, FFQ banqi) are
+  // recorded as engine versions; the seat is still Misty and links her page.
+  if (participant.subjectType === 'engine-version' && /^misty-/.test(participant.subjectId ?? '')) {
+    return { kind: 'bot', botId: 'misty' };
   }
   return null;
 }
@@ -131,6 +146,14 @@ export function playerNameEl(
   link.href = profileHref(target);
   link.textContent = name;
   link.title = name;
+  const crowns = buildChampionCrowns(target.kind === 'user' ? target.champions : undefined);
+  if (crowns) {
+    link.classList.add('player-name--champion');
+    const text = document.createElement('span');
+    text.className = 'player-name-text';
+    text.textContent = name;
+    link.replaceChildren(text, crowns);
+  }
   return link;
 }
 

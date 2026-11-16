@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
@@ -27,6 +29,40 @@ const ROSTER = [
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {
+  it('offers FFQ computer levels only from the runtime roster and withdraws them on failure', async () => {
+    const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+    const original = spec.publicSurface;
+    spec.publicSurface = 'casual';
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const options = [
+      {
+        id: 'misty-ffq-banqi-level-4',
+        name: 'Misty Level 4',
+        familyName: 'Misty',
+        kind: 'container',
+      },
+    ];
+    try {
+      setFFQBanqiEngineOptions([]);
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse({ engines: ROSTER, ffqBanqiEngines: options })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toEqual(options);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response('', { status: 503 })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+    } finally {
+      spec.publicSurface = original;
+      setFFQBanqiEngineOptions([]);
+    }
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -535,16 +571,14 @@ describe('homepage band layout (CSS)', () => {
     expect(rule('.landing-event-banner-icon')).toMatch(/width: 34px;\s*height: 34px;/);
   });
 
-  it('sizes the phone shortcut tiles for their drawings, one 6px gutter with the Play pair', () => {
-    // Brian, 2026-10-27: bigger tiles with less gap between them, and the
-    // Play the computer / Play a friend pair as close as the tiles. Then less
-    // empty space inside each tile: a shorter tile, a larger drawing and label.
+  it('sizes the phone shortcut tiles for their drawings with one 6px gutter', () => {
+    // Compact tiles below the single Play entry keep the larger drawings.
     const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
     const rule = (selector: string) =>
       phone.match(new RegExp(`^  ${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
       '';
     expect(rule('.landing-phone-tiles')).toMatch(/gap: 6px;/);
-    expect(rule('.landing-play-quick')).toMatch(/gap: 6px;/);
+    expect(phone).not.toContain('.landing-play-quick');
     expect(rule('.landing-phone-tile')).toMatch(/height: 84px;/);
     expect(rule('.landing-phone-tile')).toMatch(/font-size: 15px;/);
     expect(rule('.landing-phone-tile-art')).toMatch(/width: 52px;\s*height: 52px;/);

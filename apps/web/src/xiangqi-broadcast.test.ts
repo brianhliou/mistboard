@@ -685,6 +685,24 @@ describe('broadcastRecordsCredit', () => {
     expect(broadcastRecordsCredit([{}, {}])).toBeNull();
   });
 
+  // A device partner's push (#1107): the device is the source of the records,
+  // credited by name, even when the boards carry no source of their own.
+  it('credits the recording device on a pushed event', () => {
+    const deviceCredit = { name: 'Recording Clock', url: 'https://www.device.example/event' };
+    expect(broadcastRecordsCredit([{}, {}], { slug: 't', deviceCredit })).toEqual({
+      host: 'device.example',
+      href: 'https://www.device.example/event',
+      name: 'Recording Clock',
+    });
+    // Planted: an unusable device credit falls back to the boards' own origin.
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_1.html' }], {
+        slug: 't',
+        deviceCredit: { name: 'Recording Clock', url: 'http://device.example' },
+      }),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
   it('links the iqipu event while retaining its host as the visible credit', () => {
     expect(
       broadcastRecordsCredit(
@@ -1148,6 +1166,33 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     history: { truth: replay.views.map((view, ply) => ({ ply, view })) },
   };
 
+  it.each([false, true])(
+    'credits the device under the round list on live boards only when supplied (%s)',
+    async (hasDevice) => {
+      const deviceCredit = { name: 'Recording Clock', url: 'https://device.example' };
+      const context = { ...ROUND, tour: { ...ROUND.tour, ...(hasDevice ? { deviceCredit } : {}) } };
+      stubFetchJson((url) =>
+        url.includes('/api/xiangqi/broadcasts/boards/')
+          ? {
+              ...BOARD_RESPONSE,
+              board: { ...BOARD_RESPONSE.board, sourceUrl: 'https://device.example/game' },
+            }
+          : context,
+      );
+      stubEventSource();
+      const root = document.createElement('div');
+      await mountXiangqiBroadcastBoard(root, 't-r-b1');
+      const line = root.querySelector('.xqb-side-rail .xqb-records-credit');
+      if (hasDevice) {
+        expect(line?.textContent).toBe('Game records from Recording Clock');
+        expect(line?.querySelector('a')?.getAttribute('href')).toBe(deviceCredit.url);
+        expect(line?.closest('details')).toBeNull();
+      } else {
+        expect(line).toBeNull();
+      }
+    },
+  );
+
   it('lists sibling boards in a rail with the current board highlighted', async () => {
     stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/') ? BOARD_RESPONSE : ROUND,
@@ -1480,6 +1525,36 @@ describe('event page (tabs, default round, standings)', () => {
     expect(rows.map((row) => row[4])).toEqual(['2', '1', '1', '0']);
   });
 
+  it.each([false, true])(
+    'credits the device in the overview records line only when supplied (%s)',
+    async (hasDevice) => {
+      const deviceCredit = { name: 'Recording Clock', url: 'https://device.example' };
+      stubFetchJson(() => ({
+        ...ROUND,
+        tour: {
+          ...ROUND.tour,
+          sourceUrl: deviceCredit.url,
+          ...(hasDevice ? { deviceCredit } : {}),
+        },
+      }));
+      stubEventSource();
+      const root = document.createElement('div');
+      await mountXiangqiBroadcastRound(root, 't', 'r');
+      (root.querySelectorAll('.xqb-tab')[0] as HTMLButtonElement).click();
+      const link = root.querySelector<HTMLAnchorElement>('.xqb-overview-strip a');
+      expect(link?.textContent).toBe('Source');
+      expect(link?.getAttribute('href')).toBe(deviceCredit.url);
+      expect(link?.rel).toBe('noreferrer');
+      const credit = root.querySelector('.xqb-records-credit');
+      if (hasDevice) {
+        expect(credit?.textContent).toBe('Game records: Recording Clock');
+        expect(credit?.querySelector('a')?.getAttribute('href')).toBe(deviceCredit.url);
+      } else {
+        expect(root.textContent).not.toContain('Recording Clock');
+      }
+    },
+  );
+
   it('says why a round has no games instead of showing a bare zero', async () => {
     stubFetchJson(() => ({
       ...ROUND,
@@ -1619,6 +1694,24 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     expect(broadcastOpenedCalls()).toEqual([
       { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'complete', locale: 'en' },
     ]);
+  });
+
+  it('credits the device beside a finished board and in its Game info', async () => {
+    const deviceCredit = { name: 'Recording Clock', url: 'https://device.example' };
+    const context = { ...ROUND, tour: { ...ROUND.tour, deviceCredit } };
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? { ...COMPLETE, context } : context,
+    );
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+    const line = root.querySelector('.xqb-side-rail .xqb-records-credit');
+    expect(line?.textContent).toBe('Game records from Recording Clock');
+    expect(line?.closest('details')).toBeNull();
+    expect(line?.querySelector('a')?.getAttribute('href')).toBe(deviceCredit.url);
+    const source = root.querySelector('.review-provenance a');
+    expect(source?.textContent).toBe('Recording Clock');
+    expect(source?.getAttribute('href')).toBe(deviceCredit.url);
   });
 
   it('credits XQBase by name in a finished game provenance', async () => {

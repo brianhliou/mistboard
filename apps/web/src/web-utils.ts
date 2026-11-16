@@ -1,4 +1,6 @@
 import type { Color, Square } from '@mistboard/game';
+import { t } from './i18n/catalog.js';
+import type { Locale } from './i18n/locale.js';
 
 export const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
 export const ranks = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -43,6 +45,13 @@ export function formatDayClock(ms: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return formatClock(bounded);
+}
+
+/** One deadline label for correspondence cards and compact inbox rows. */
+export function correspondenceTimeLeftLabel(dueAt: string, now: number, locale?: Locale): string {
+  const remaining = Date.parse(dueAt) - now;
+  if (!Number.isFinite(remaining) || remaining <= 0) return t('correspondence.dueNow', {}, locale);
+  return t('correspondence.timeLeft', { time: formatDayClock(remaining) }, locale);
 }
 
 export function oppositeColor(color: Color): Color {

@@ -25,8 +25,8 @@ definePersistenceTests('fair play', () => {
       });
       for (const timeClass of ['blitz', 'correspondence']) {
         await getPool().query(
-          `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, games_played, rating_deviation)
-           VALUES ($1, 'xiangqi', $2, 1500, 20, $3)`,
+          `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, games_played, rating_deviation, last_rated_at)
+           VALUES ($1, 'xiangqi', $2, 1500, 20, $3, now())`,
           [id, timeClass, id === 'provisional' ? 200 : 80],
         );
       }

@@ -1,4 +1,5 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
+import type { Championship } from './champion-crowns.js';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
@@ -19,6 +20,7 @@ export const MISTBOARD_ENGINE_MISTY_ID = 'python-v2-v1.6';
 export const MISTBOARD_ENGINE_MISTY_NAME = 'Misty 1.6';
 
 export type GameParticipant = {
+  champions?: Championship[];
   // east/west: xiangqi mahjong, whose seats are winds, not colours (variant-seat-label.ts SEAT_NAMING).
   color: 'white' | 'black' | 'red' | 'east' | 'west';
   displayName: string;
@@ -40,6 +42,7 @@ export type GameParticipant = {
 // review/game-review-meta.ts. Optional on FeaturedGame because the showcase/list
 // feeds don't carry it; every postgame endpoint does.
 export type PostgamePlayerRow = {
+  champions?: readonly Championship[];
   color: string;
   name: string;
   rating: number | null;
@@ -370,7 +373,7 @@ export function secondMoverColorName(gameSpecId: string): string {
 export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
   gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
-  'ffq-banqi': null,
+  'ffq-banqi': 'variant.ffqBanqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'xiangqi-mahjong': 'variant.xiangqiMahjong.name',

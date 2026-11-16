@@ -42,7 +42,7 @@ export const isFFQBanqiEngineClientId = (id: string | undefined): boolean =>
   ffqBanqiEngineTierFor(id) !== null;
 export const ffqBanqiEngineDisplayName = (id: string): string => {
   const tier = ffqBanqiEngineTierFor(id);
-  return tier ? `Misty level ${tier.level}` : id;
+  return tier ? `Misty Level ${tier.level}` : id;
 };
 export const ffqBanqiEngineVersion = (id: string | undefined): string | null =>
   isFFQBanqiEngineClientId(id) ? FFQ_BANQI_ENGINE_VERSION : null;

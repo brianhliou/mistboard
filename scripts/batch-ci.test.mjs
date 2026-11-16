@@ -47,18 +47,25 @@ import fs from 'node:fs';
 const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(commands)}, JSON.stringify(args) + '\\n');
 const state = JSON.parse(fs.readFileSync(${JSON.stringify(state)}, 'utf8'));
-console.log(JSON.stringify(args[1] === 'view' ? { jobs: state.jobs } : state.runs));
+if (args[1] === 'rerun') {
+  state.runs = state.runs.map(run => ({ ...run, attempt: 2, conclusion: 'success' }));
+  fs.writeFileSync(${JSON.stringify(state)}, JSON.stringify(state));
+} else if (args.includes('--log-failed')) {
+  console.log(state.failedLog);
+} else console.log(JSON.stringify(args[1] === 'view' ? { jobs: state.jobs } : state.runs));
 `,
   );
   chmodSync(path.join(bin, 'gh'), 0o755);
   const green = (sha = revision) => ({
     databaseId: 123,
+    attempt: 1,
     headSha: sha,
     status: 'completed',
     conclusion: 'success',
     url: 'https://example.test/ci/123',
   });
-  const setState = (runs, jobs = []) => writeFileSync(state, JSON.stringify({ runs, jobs }));
+  const setState = (runs, jobs = [], failedLog = '') =>
+    writeFileSync(state, JSON.stringify({ runs, jobs, failedLog }));
   setState([green()]);
   const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   const invoke = (...args) =>
@@ -263,7 +270,7 @@ test('failed, cancelled, pending and mismatched runs cannot be reused', (t) => {
   }
 });
 
-test('release uses the tree-checked lookup and falls back to fresh CI if lookup fails', (t) => {
+test('release uses the tree-checked lookup and reports unavailable batch evidence', (t) => {
   const repo = fixture(t);
   const start = releaseSource.indexOf('function findReusableBatchRun(');
   assert.ok(start > 0);
@@ -275,9 +282,10 @@ test('release uses the tree-checked lookup and falls back to fresh CI if lookup 
       'workdir',
       'release',
       'findGithubRun',
+      'listBatchRuns',
       'console',
       `${declaration}\nreturn findReusableBatchRun();`,
-    )(findReusableBatchCi, repo.root, { headRevision: repo.revision }, findGithubRun, {
+    )(findReusableBatchCi, repo.root, { headRevision: repo.revision }, findGithubRun, () => [], {
       log: (line) => logs.push(line),
     });
   assert.equal(build(() => repo.green()).headSha, repo.revision);
@@ -287,5 +295,58 @@ test('release uses the tree-checked lookup and falls back to fresh CI if lookup 
     }),
     null,
   );
-  assert.match(logs.join('\n'), /testing a fresh candidate/);
+  assert.match(logs.join('\n'), /batch:ci evidence unavailable/);
+});
+
+test('identical complete trees can reuse CI across metadata-only commits', (t) => {
+  const repo = fixture(t);
+  repo.git('commit', '--allow-empty', '-qm', 'same tree, different SHA');
+  const headRevision = repo.git('rev-parse', 'HEAD');
+  const result = findReusableBatchCi({
+    root: repo.root,
+    headRevision,
+    findRun: () => null,
+    listRuns: () => [repo.green()],
+  });
+  assert.equal(result?.headSha, repo.revision);
+});
+
+test('batch:ci recovers a stale listed failure with exactly gh run rerun --failed', (t) => {
+  const repo = fixture(t);
+  repo.setState(
+    [{ ...repo.green(), conclusion: 'failure' }],
+    [
+      {
+        databaseId: 456,
+        name: 'Unit tests',
+        conclusion: 'failure',
+        steps: [{ name: 'Unit tests (server)', conclusion: 'failure' }],
+      },
+    ],
+    "not ok 1 - cold analysis cache\n  location: '/home/runner/work/mistboard/mistboard/apps/server/src/banqi-analysis-runner.test.ts:15:1'",
+  );
+  const result = repo.invoke(repo.root);
+  assert.equal(result.status, 0, result.stderr);
+  const commands = readFileSync(repo.commands, 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    commands.filter((args) => args[1] === 'rerun'),
+    [['run', 'rerun', '123', '--failed']],
+  );
+  assert.match(result.stdout, /re-running failed jobs once/);
+});
+
+test('historical lookup cannot override the newest failed attempt for the same revision', (t) => {
+  const repo = fixture(t);
+  assert.equal(
+    findReusableBatchCi({
+      root: repo.root,
+      headRevision: repo.revision,
+      findRun: () => ({ ...repo.green(), conclusion: 'failure' }),
+      listRuns: () => [repo.green()],
+    }),
+    null,
+  );
 });
