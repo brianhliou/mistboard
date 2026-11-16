@@ -10,6 +10,7 @@ import {
   botOpponentById,
   botOpponentForBotId,
   canonicalVariantOrderIndex,
+  FFQ_BANQI_SPEC_ID,
   type GameSpecId,
   JUNGLE_FLIP_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
@@ -24,6 +25,7 @@ import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
 import { threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { ffqBanqiOffered, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { botNameForGame, type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import {
   JIEQI_FIRST_GAME_LEVEL,
@@ -199,6 +201,7 @@ export type EngineRosters = {
   banqi?: readonly { id: string }[];
   jungleFlip?: readonly { id: string }[];
   threeKingdomsBanqi?: readonly WebTenantEngineOption[];
+  ffqBanqi?: readonly WebTenantEngineOption[];
 };
 
 // Never throws: a failed fetch is a roster that said nothing.
@@ -210,14 +213,19 @@ async function fetchEngineRosters(): Promise<EngineRosters> {
       banqiEngines?: { id: string }[];
       jungleFlipEngines?: { id: string }[];
       threeKingdomsBanqiEngines?: WebTenantEngineOption[];
+      ffqBanqiEngines?: WebTenantEngineOption[];
     };
     if (threeKingdomsBanqiOffered() && data.threeKingdomsBanqiEngines !== undefined) {
       setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
+    }
+    if (ffqBanqiOffered() && data.ffqBanqiEngines !== undefined) {
+      setFFQBanqiEngineOptions(data.ffqBanqiEngines);
     }
     return {
       banqi: data.banqiEngines,
       jungleFlip: data.jungleFlipEngines,
       threeKingdomsBanqi: data.threeKingdomsBanqiEngines,
+      ffqBanqi: data.ffqBanqiEngines,
     };
   } catch {
     return {};
@@ -352,7 +360,7 @@ const MISTY_LADDER_DEFAULT_LEVEL = 4;
  *    offered under the same door as its play (threeKingdomsBanqiOffered). An
  *    explicit live roster is the truth, even empty; without one, a public build
  *    seeds Levels 1-7 (no net), as the homepage does.
- *  FFQ Banqi is admin-only and never listed here. */
+ *  Fanfanqi follows below, seated by engine id like Three Kingdoms Banqi. */
 export function engineLadderOpponents(
   bots: readonly BotProfile[],
   rosters: EngineRosters,
@@ -399,6 +407,25 @@ export function engineLadderOpponents(
       { engineOnly: true },
     );
     if (ladder) opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [ladder]);
+  }
+
+  // Fanfanqi's levels seat by engine id with no botId, as the homepage's rows
+  // do (the server takes a level override only on Banqi and Flip Jungle). The
+  // card keeps Misty's key so it replaces her plain card; with no roster from
+  // the server it stays that plain card.
+  if (misty && ffqBanqiOffered() && offersGame(misty, FFQ_BANQI_SPEC_ID) && rosters.ffqBanqi) {
+    const engineIds = new Set(rosters.ffqBanqi.map((engine) => engine.id));
+    const rungs = landingBotLadder(FFQ_BANQI_SPEC_ID, undefined, engineIds);
+    const ladder = mistyLadder(
+      'misty',
+      rungs,
+      (engineId): BotProfile => ({
+        ...misty,
+        activeEngineId: engineId,
+        playOptions: [{ gameSpecId: FFQ_BANQI_SPEC_ID, engineId, playable: true }],
+      }),
+    );
+    if (ladder) opponents.set(FFQ_BANQI_SPEC_ID, [ladder]);
   }
   return opponents;
 }
@@ -576,9 +603,35 @@ function buildOpponentCard(
     picker.value = memberKey(selected);
   }
 
+  // Misty's ladders are one profile under every level; Fairy-Stockfish's and
+  // Pikafish's are one bot account per level.
+  const sharedProfile =
+    levelled && new Set(opponent.members.map((member) => member.bot.id)).size === 1;
+
   const build = (): HTMLElement => {
     const bot = selected.bot;
-    const card = buildBotSummaryCard(gameScopedProfile(bot, gameSpecId), {
+    // One card pattern for every ladder (decided 2026-11-15): the foot shows
+    // the picked level's games and record. A ladder of separate bots has them
+    // on each member; a shared profile takes the level's row from its
+    // per-level records, and its rating, which is not per level, stays on the
+    // bot page. With no per-level records (Three Kingdoms Banqi, Fanfanqi:
+    // games kept on engine ids) the foot is the total, labelled all levels.
+    const levelRecord =
+      sharedProfile && selected.level !== null
+        ? levelRecordFor(bot, gameSpecId, selected.level)
+        : null;
+    const scoped = gameScopedProfile(bot, gameSpecId);
+    const profile: BotProfile = levelRecord
+      ? {
+          ...scoped,
+          ratings: [],
+          rating: null,
+          record: levelRecord,
+          gamesTotal: levelRecord.games,
+          recordsByGameSpecId: { [gameSpecId]: levelRecord },
+        }
+      : scoped;
+    const card = buildBotSummaryCard(profile, {
       ratingGameSpecId: gameSpecId,
       primaryPlayGameSpecId: gameSpecId,
       ...(name ? { name } : {}),
@@ -605,39 +658,7 @@ function buildOpponentCard(
     });
     card.dataset.opponentId = opponent.key;
     layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);
-    const levelRecords = bot.levelRecordsByGameSpecId?.[gameSpecId];
-    if (levelRecords && selected.play) {
-      const levels = opponent.members.flatMap((member) =>
-        member.level === null ? [] : [member.level],
-      );
-      const recorded = new Map(levelRecords.map((record) => [record.level, record]));
-      const list = document.createElement('ul');
-      list.className = 'bot-level-records';
-      // Keep historical recorded levels even when their engines are no longer
-      // offered. An absent field (old API) makes no per-level claims at all.
-      const allLevels = new Set([
-        ...levels,
-        ...levelRecords.flatMap((record) => (record.level === null ? [] : [record.level])),
-      ]);
-      const append = (level: number | null, record: BotRecord) => {
-        const row = document.createElement('li');
-        row.className = 'bot-level-record';
-        const label =
-          level === null ? t('bots.earlierGamesLevelNotRecorded') : t('bots.levelName', { level });
-        const games = t(record.games === 1 ? 'bots.gameCountOne' : 'bots.gameCountMany', {
-          count: record.games,
-        });
-        row.textContent = `${label} · ${games} · ${recordLabel(record)}`;
-        row.title = t('bots.recordTitle');
-        list.append(row);
-      };
-      for (const level of [...allLevels].sort((a, b) => b - a)) {
-        append(level, recorded.get(level) ?? EMPTY_RECORD);
-      }
-      const earlier = recorded.get(null);
-      if (earlier && earlier.games > 0) append(null, earlier);
-      card.querySelector('.profile-summary-card-footer')?.after(list);
-    }
+    finishLevelFooter(card, profile.record, levelled && sharedProfile && !levelRecord);
     return card;
   };
 
@@ -652,6 +673,39 @@ function buildOpponentCard(
     picker.focus();
   });
   return card;
+}
+
+/** A shared profile's record at one level; null when the server sent no
+ *  per-level records for this game (an older API makes no per-level claims). */
+function levelRecordFor(bot: BotProfile, gameSpecId: string, level: number): BotRecord | null {
+  const records = bot.levelRecordsByGameSpecId?.[gameSpecId];
+  if (!records) return null;
+  const row = records.find((record) => record.level === level);
+  return row
+    ? { games: row.games, wins: row.wins, losses: row.losses, draws: row.draws }
+    : EMPTY_RECORD;
+}
+
+// A card with no games says so in words; a total across levels says it is
+// one, and says nothing when empty, since those games may sit on engine ids.
+function finishLevelFooter(card: HTMLElement, record: BotRecord, allLevels: boolean): void {
+  const footer = card.querySelector('.profile-summary-card-footer');
+  if (!footer) return;
+  if (record.games === 0) {
+    if (allLevels) {
+      footer.remove();
+      return;
+    }
+    const empty = document.createElement('span');
+    empty.textContent = t('bots.noGamesYet');
+    footer.replaceChildren(empty);
+    return;
+  }
+  if (allLevels) {
+    const label = document.createElement('span');
+    label.textContent = t('bots.allLevels');
+    footer.prepend(label);
+  }
 }
 
 function engineOnlyBio(gameSpecId: string, level: number | null): string | null {
