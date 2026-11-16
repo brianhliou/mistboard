@@ -352,6 +352,15 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
         mountFFQBanqiPostgame(root, roomId),
       ),
+    // The finished-game replay /games cards and /watch draw: the server's masked
+    // public postgame read, unflipped pieces face-down (watch-ffq-banqi-replay.ts).
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-ffq-banqi-replay.js').then(({ mountFFQBanqiWatchReplay }) =>
+          mountFFQBanqiWatchReplay(root, roomId, options),
+        ),
+    },
     // Spectators use the room; the server enforces admission and masked views.
     landing: {
       capabilities: {
