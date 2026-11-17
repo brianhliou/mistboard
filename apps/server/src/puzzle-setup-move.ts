@@ -30,6 +30,7 @@ import {
 } from '@mistboard/game';
 import type { HistoricalXiangqiVisibility } from './persistence-historical-xiangqi.js';
 import {
+  isXiangqiPlayerPair,
   romanizeXiangqiPlayerName,
   translateXiangqiEventName,
   translateXiangqiTeamName,
@@ -217,6 +218,7 @@ function englishOnly(text: string | undefined): string | undefined {
 export function englishSourcePlayerName(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!CJK.test(trimmed)) return undefined;
+  if (isXiangqiPlayerPair(trimmed)) return englishOnly(romanizeXiangqiPlayerName(trimmed));
   const tokens = trimmed.split(/\s+/u);
   // The player is the last token, or every trailing Latin token when the
   // player is written in Latin letters ("金州 Son X Nguyen").

@@ -62,6 +62,35 @@ function boardFor(input: { red: string; black: string; event: string; round: str
   return converted.snapshot.boards[0]!;
 }
 
+test('DPXQ pairs survive combined tags and archive titles without becoming affiliations', () => {
+  const event = '2025年第八届“一带一路”锦江杯成都全球象棋双人赛 双人赛';
+  const live = liveBoardPage({
+    red: '卢玄斌 谢汶谕',
+    black: '洪智 唐丹',
+    plies: 8,
+    event,
+  });
+  const archive =
+    `<title>卢玄斌 谢汶谕 和 洪智 唐丹 - ${event} - 第01轮 - 东萍象棋网</title>` +
+    `[DhtmlXQ_movelist]${FULL_MOVELIST.slice(0, 32)}[/DhtmlXQ_movelist]`;
+  for (const page of [live, archive]) {
+    const normalized = normalizeDpxqPageToFrameHtml(page);
+    assert.ok(normalized.ok);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.html);
+    assert.ok(converted.ok);
+    const translated = translateXiangqiBroadcastSnapshot(converted.snapshot);
+    const board = translated.boards[0]!;
+    assert.equal(board.red.name, '卢玄斌 谢汶谕');
+    assert.equal(board.red.nameEn, 'Lu Xuanbin / Xie Wenyu');
+    assert.equal(board.red.federation, undefined);
+    assert.equal(board.black.nameEn, 'Hong Zhi / Tang Dan');
+    assert.equal(
+      translated.tour.nameEn,
+      '2025 8th Belt and Road Jinjiang Cup Chengdu Global Xiangqi Pairs',
+    );
+  }
+});
+
 test('independent same-event games compose into distinct boards grouped by round', () => {
   // Regression: single-game dpxq pages once all collapsed to (tour, default
   // round, board-1) and clobbered each other with incompatible_update.
