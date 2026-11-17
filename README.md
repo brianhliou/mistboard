@@ -57,31 +57,42 @@ advantage scores for layout QA, not engine evaluations. Review examples:
 Run the production probes locally before deploying:
 
 ```bash
-npm run release:local-smoke
-# Or reuse a batch's running, production-shaped HTTP origin:
-npm run smoke:local -- --base http://127.0.0.1:3099
+npm run smoke:local
+# Reuse the exact build just checked by the release gate:
+npm run smoke:local -- --skip-build
 ```
 
-The managed command builds both apps, ensures Postgres, migrates, starts a local
-server serving the built web app on port 3099, runs the probes, and stops its
-server on success or failure. Use `-- --port 3119` for another worktree. The
-existing-origin command requires an explicit loopback URL; inherited production
-URLs cannot redirect a probe. Use the built app served by the server, rather
-than Vite: these probes check production framing headers and prerendered pages.
+This command builds both apps, ensures the shared Postgres on port 5435, creates
+its own uniquely named `mistboard_smoke_*` database, migrates and seeds the
+committed finished-game fixtures for every checked variant, and starts a server
+serving the built web app on port 3099. It also starts its own local engine
+service for Fog Xiangqi. It stops its services and drops its database on success
+or failure. It ignores inherited `DATABASE_URL` and production base URLs, so it
+never seeds or reads the shared dev database. Use `-- --port 3119` for another
+worktree. The built app supplies production framing headers and prerendered pages.
+Its build enables the product profile's browser flags and verifies source maps
+offline. `--skip-build` requires an existing build with those flags enabled.
 
-Both commands run the site, correspondence and builtin-engine checks, the seven
+The gate runs the site, correspondence and builtin-engine checks, the seven
 main variant PvE smokes (Fog Xiangqi, Duck, Xiangqi, Jieqi, Banqi, Jungle and Flip
-Jungle), and every ceval backend. They require the local variant engine binaries,
-the browser engine assets (including the pinned Pikafish net), Postgres, and
-Playwright Chromium. A missing engine or failed search fails the gate; all probes
-run sequentially so an early failure cannot hide a ceval regression. Install
-Chromium with `npx playwright install chromium` when preparing the machine.
+Jungle), and every ceval backend. Banqi review uses the seeded fixture's explicit
+room ID, never a game discovered in the watch feed. The server enables
+`builtin-random-legal` for its engine probe. Probes run sequentially, and an early
+failure cannot hide a ceval regression.
 
-`release:prod` runs this gate before draining or pushing a deploy, reusing the
-build only when its preceding gate built both apps. For a batch runner, append
-`npm run smoke:local -- --base <batch-local-origin>` after starting that batch's
-built local pair. `--plan` prints the probes without running them. Choosing an
-automatic gate for the broader `tests/e2e/` suite remains a separate step.
+Only a proven missing native engine executable may report `SKIPPED`, with its
+name and configuration hint. Every other failure, disabled-variant skip,
+assets-only result or missing success result fails the gate. Browser WASM checks
+always run. Install Chromium with `npx playwright install chromium` when preparing
+the machine; a blocked or unavailable browser fails the stage.
+
+`release:prod` invokes the same runner through `release:local-smoke` before
+draining or pushing, including its build with the browser flags enabled.
+No `--skip-local-ci` is needed for absent native binaries. To inspect the
+probe plan without running it, use
+`node scripts/local-prod-smoke.mjs --base http://127.0.0.1:3099 --plan`.
+Choosing an automatic gate for the broader `tests/e2e/` suite remains a separate
+step.
 
 ## Code
 

@@ -18,8 +18,8 @@
 //           panel that answers at all proves the net loaded.
 //   misty - Misty single-threaded wasm on /analysis/jungle,
 //           /analysis/jungle-flip, plus MistyBanqi on a finished banqi game's
-//           review page. The game id is DISCOVERED at runtime from the public
-//           /api/watch?channel=banqi feed, never hardcoded.
+//           review page. --banqi-room selects an explicitly seeded fixture for
+//           a local gate; otherwise discover from /api/watch?channel=banqi.
 //           Note: the review document carries COEP, so the dedicated worker
 //           script must itself be served with a compatible COEP header or
 //           Chrome blocks the load (net::ERR_BLOCKED_BY_RESPONSE) - the exact
@@ -32,6 +32,7 @@
 // wait for a real eval + at least one PV line. Fails on engine console errors.
 //
 // Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|pikafish|misty|pika|all]
+//        [--base <url>] [--banqi-room <finished-room-id>]
 // Defaults to prod + all backends; point MISTBOARD_WEB_URL at a local build to
 // smoke locally. MISTBOARD_CEVAL_SMOKE_BACKEND is the env equivalent.
 import { readFileSync } from 'node:fs';
@@ -339,7 +340,7 @@ async function checkMistyBanqiAnalysis(browser) {
 }
 
 async function checkMistyBanqiGame(browser) {
-  const roomId = await discoverFinishedBanqiGame();
+  const roomId = options.banqiRoomId ?? (await discoverFinishedBanqiGame());
   if (!roomId) {
     // Watch feed had no finished banqi game to open (feed drained). The asset
     // preflight above already passed; report the degraded mode loudly instead
@@ -720,6 +721,7 @@ function parseArgs(args) {
   const parsed = {
     backend: process.env.MISTBOARD_CEVAL_SMOKE_BACKEND ?? 'all',
     baseUrl: null,
+    banqiRoomId: null,
   };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -727,9 +729,14 @@ function parseArgs(args) {
       parsed.backend = args[++index];
     } else if (arg === '--base') {
       parsed.baseUrl = args[++index];
+    } else if (arg === '--banqi-room') {
+      parsed.banqiRoomId = args[++index];
+      if (!parsed.banqiRoomId || parsed.banqiRoomId.startsWith('--')) {
+        throw new Error('--banqi-room requires a room id');
+      }
     } else {
       throw new Error(
-        `unknown argument: ${arg} (usage: [--backend fsf|pikafish|misty|pika|all] [--base <url>])`,
+        `unknown argument: ${arg} (usage: [--backend fsf|pikafish|misty|pika|all] [--base <url>] [--banqi-room <finished-room-id>])`,
       );
     }
   }
