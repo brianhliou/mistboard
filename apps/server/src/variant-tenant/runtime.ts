@@ -453,6 +453,7 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'game-aborted',
   'seat-forfeited',
   'game-adjudicated',
+  'game-tournament-capped',
   'clock-paused',
   'clock-resumed',
   'draw-offered',
@@ -728,6 +729,15 @@ export function applyTenantEvent<
       ...projection,
       clock: freezeTenantClock(projection.clock, event.at),
       state: tenant.rules.adjudicate(projection.state, event.winner, event.reason),
+    };
+  }
+  if (event.type === 'game-tournament-capped') {
+    if (status.type !== 'playing' || !tenant.rules.finishTournamentCap) return projection;
+    const { paused: _paused, drawOffer: _offer, drawCooldown: _cooldown, ...rest } = projection;
+    return {
+      ...rest,
+      clock: freezeTenantClock(projection.clock, event.at),
+      state: tenant.rules.finishTournamentCap(projection.state),
     };
   }
   if (event.type === 'clock-paused') {
@@ -1535,6 +1545,9 @@ export function isTenantEvent<
       (event.winner === null || tenant.rules.isColor(event.winner)) &&
       isTenantAdjudicationReason(event.reason)
     );
+  }
+  if (event.type === 'game-tournament-capped') {
+    return tenant.rules.finishTournamentCap !== undefined;
   }
   if (event.type === 'clock-paused') {
     return (

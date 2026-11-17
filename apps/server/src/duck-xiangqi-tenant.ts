@@ -123,6 +123,7 @@ const DUCK_XIANGQI_TERMINATION: Record<string, persistence.GameTermination> = {
   resignation: 'resignation',
   abandonment: 'abandonment',
   agreement: 'draw',
+  'tournament-cap': 'truncated',
 };
 
 export const duckXiangqiTenant: DuckXiangqiTenantType = {
@@ -143,6 +144,10 @@ export const duckXiangqiTenant: DuckXiangqiTenantType = {
     finishDraw: (state) => ({
       ...state,
       status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
+    finishTournamentCap: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'tournament-cap' },
     }),
     abort: (state, reason: AbortReason) => ({
       ...state,

@@ -152,6 +152,10 @@ export const fortressXiangqiTenant: FortressXiangqiTenant = {
       ...state,
       status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
+    finishTournamentCap: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'tournament-cap' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -197,7 +201,11 @@ export const fortressXiangqiTenant: FortressXiangqiTenant = {
       return 'draw';
     },
     termination: (reason: string) =>
-      reason === 'agreement' ? 'draw' : (reason as persistence.GameTermination),
+      reason === 'tournament-cap'
+        ? 'truncated'
+        : reason === 'agreement'
+          ? 'draw'
+          : (reason as persistence.GameTermination),
     logKindPrefix: 'fortress_xiangqi',
     logLabel: 'Fortress Xiangqi',
   },

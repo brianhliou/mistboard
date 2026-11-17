@@ -101,6 +101,8 @@ export type XiangqiGameEndReason =
   | 'abandonment'
   // Both players agreed a draw (an accepted draw offer).
   | 'agreement'
+  // A server-authored tournament limit, not a rules adjudication.
+  | 'tournament-cap'
   | 'repetition'
   // Perpetual check: a repetition one side manufactured by checking on every
   // move of the cycle. Xiangqi scores it as a LOSS for the checker, not a draw.
