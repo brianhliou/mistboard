@@ -140,6 +140,18 @@ describe('site-wide real-time invitations', () => {
     );
   });
 
+  it('notifies a waiting control before navigating an already accepted response', async () => {
+    incoming = [];
+    controller.setUser('alice');
+    await flush();
+    const host = document.createElement('div');
+    const onJoined = vi.fn(() => expect(navigate).not.toHaveBeenCalled());
+    const unmount = controller.mountWaiting(host, accepted({ isMine: true }), onJoined);
+    expect(onJoined).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('/room/xq_reserved');
+    unmount();
+  });
+
   it.each(['declined', 'expired', 'unavailable', 'accepted'] as const)(
     'inspects a missing outgoing offer and renders %s, navigating the sender on acceptance',
     async (status) => {
@@ -150,7 +162,8 @@ describe('site-wide real-time invitations', () => {
       await flush();
       const host = document.createElement('div');
       document.body.append(host);
-      const unmount = controller.mountWaiting(host, sent);
+      const onJoined = vi.fn(() => expect(navigate).not.toHaveBeenCalled());
+      const unmount = controller.mountWaiting(host, sent, onJoined);
       expect(host.textContent).toContain('you play Red');
       outgoing = [];
       fetcher.mockImplementation(async (url: string) => {
@@ -168,6 +181,7 @@ describe('site-wide real-time invitations', () => {
         status === 'unavailable' ? 'Player unavailable' : `Invitation ${status}`,
       );
       expect(navigate).toHaveBeenCalledTimes(status === 'accepted' ? 1 : 0);
+      expect(onJoined).toHaveBeenCalledTimes(status === 'accepted' ? 1 : 0);
       if (status === 'accepted') expect(navigate).toHaveBeenCalledWith('/room/xq_reserved');
       unmount();
       expect(host.childElementCount).toBe(0);

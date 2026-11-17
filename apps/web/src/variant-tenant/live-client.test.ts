@@ -1287,14 +1287,14 @@ describe('tenant game lifecycle analytics', () => {
       winner: 'blue',
       reason: 'no-moves',
       moveNumber: 21,
+      seat: 'red',
+      result: 'loss',
     });
   });
 
-  it('emits nothing for a spectator: watching is not starting or finishing a game', () => {
-    // game_started is the number (human games started per week). Live rooms
-    // admit spectators (open variants since 2026-09-11, hidden-identity since
-    // 2026-09-20), and a visitor opening one sees the same status transitions a
-    // player does; without this gate every spectator counted as a game.
+  it('labels spectator finishes without counting watching as a game start', () => {
+    // Viewers see the same status transitions as players. Finish metadata
+    // identifies them explicitly without adding a start to the player funnel.
     const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
     h.feedHello({ seat: 'spectator', state: view({ status: { type: 'playing', turn: 'red' } }) });
     h.feedSnapshot({
@@ -1302,7 +1302,21 @@ describe('tenant game lifecycle analytics', () => {
       state: view({ status: { type: 'finished', winner: 'blue', reason: 'no-moves' } }),
     });
     expect(named('game_started')).toHaveLength(0);
-    expect(named('game_finished')).toHaveLength(0);
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({ seat: 'spectator', result: null });
+  });
+
+  it('preserves the public abort reason and marks its result as aborted', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    h.feedHello({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    h.feedSnapshot({ state: view({ status: { type: 'aborted', reason: 'pregame-timeout' } }) });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({
+      seat: 'red',
+      result: 'aborted',
+      reason: 'pregame-timeout',
+      winner: null,
+    });
   });
 
   // game_started fires when the room opens, before anyone moves; this is the

@@ -62,7 +62,7 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
   document.body.append(tray);
   const records = new Map<string, LiveInviteView>();
   const cards = new Map<string, { element: HTMLElement; signature: string }>();
-  const waiting = new Map<HTMLElement, string>();
+  const waiting = new Map<HTMLElement, { id: string; onJoined?: () => void }>();
   const dismissed = new Set<string>();
   const joined = new Set<string>();
   const busy = new Set<string>();
@@ -132,7 +132,12 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
     } catch {
       // The in-memory set still prevents repeat navigation in this document.
     }
-    if (stripLocalePrefix(window.location.pathname) !== path) navigate(localizedHref(path));
+    if (stripLocalePrefix(window.location.pathname) !== path) {
+      for (const entry of waiting.values()) {
+        if (entry.id === invite.id) entry.onJoined?.();
+      }
+      navigate(localizedHref(path));
+    }
   }
 
   function remember(invite: LiveInviteView): void {
@@ -439,7 +444,7 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
     tray.hidden = !userId || suspended || cards.size === 0;
     updateTitle();
     tick(tray);
-    for (const [host, id] of waiting) {
+    for (const [host, { id }] of waiting) {
       const invite = records.get(id);
       host.replaceChildren(
         ...(invite && userId && !suspended && !dismissed.has(id) ? [card(invite)] : []),
@@ -537,9 +542,9 @@ export function createLiveInviteController(options: { navigate?: (url: string) =
       remember(invite);
       render();
     },
-    mountWaiting(host: HTMLElement, invite: LiveInviteView): () => void {
+    mountWaiting(host: HTMLElement, invite: LiveInviteView, onJoined?: () => void): () => void {
+      waiting.set(host, { id: invite.id, onJoined });
       this.watch(invite);
-      waiting.set(host, invite.id);
       render();
       return () => {
         waiting.delete(host);
@@ -578,7 +583,11 @@ export function disposeLiveInvites(): void {
 
 /** Reusable by send controls: pass the POST response's participant view. The
  * document controller continues tracking the offer after the sender UI unmounts. */
-export function mountLiveInviteWaiting(host: HTMLElement, invite: LiveInviteView): () => void {
+export function mountLiveInviteWaiting(
+  host: HTMLElement,
+  invite: LiveInviteView,
+  onJoined?: () => void,
+): () => void {
   if (!controller) throw new Error('Live invite controller is not initialized');
-  return controller.mountWaiting(host, invite);
+  return controller.mountWaiting(host, invite, onJoined);
 }
