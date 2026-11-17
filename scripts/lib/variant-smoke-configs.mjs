@@ -94,6 +94,15 @@ export const VARIANT_SMOKE_CONFIGS = {
     // a later 'misty-banqi-v2' does not red a healthy engine (bfb02b95).
     engineSeat: { prefix: 'misty-banqi' },
   },
+  'ffq-banqi': {
+    name: 'ffq-banqi',
+    label: 'Fanfanqi',
+    usage: 'npm run prod:smoke:ffq-banqi -- [options]',
+    gameSpecId: 'ffq-banqi',
+    defaultTimeoutMs: 30_000,
+    // Accept any rung so changing the default level does not break the probe.
+    engineSeat: { prefix: 'misty-ffq-banqi-level-' },
+  },
   jieqi: {
     name: 'jieqi',
     label: 'Jieqi',
