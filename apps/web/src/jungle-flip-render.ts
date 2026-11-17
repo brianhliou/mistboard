@@ -164,6 +164,31 @@ export interface JungleFlipBoardMarker extends SvgBoardMarkerStyle {
   text?: string;
 }
 
+const CAPTURE_TINT =
+  'fill: var(--board-move-hint, rgba(31, 111, 91, 0.72)); opacity: 0.5; mix-blend-mode: multiply;';
+
+/** A capture target's mark: its cell tinted in the move-hint green, drawn over
+ *  the tile because the tile fills nine tenths of the cell and would hide a
+ *  tint beneath it. Multiplied at half strength, the paint of a 3D capture
+ *  target's face (board-select-3d.css), so the animal still reads through. */
+function captureCells(
+  board: JungleFlipRenderBoard,
+  targets: readonly JungleFlipSquare[],
+  geom: GridGeometry,
+): string {
+  const marks = targets
+    .filter((square) => board[square] !== undefined)
+    .map((square) => {
+      const { file, rank } = cellRef(square);
+      const { x, y } = geom.topLeft(file, rank);
+      return `<rect class="jungle-capture-target" x="${x}" y="${y}" width="${geom.cell}" height="${geom.cell}" style="${CAPTURE_TINT}"/>`;
+    })
+    .join('');
+  return marks
+    ? `<g class="jungle-capture-targets" aria-hidden="true" pointer-events="none">${marks}</g>`
+    : '';
+}
+
 function cellRef(square: JungleFlipSquare): GridCellRef {
   const { file, rank } = jungleFlipCoordOf(square);
   return { file, rank };
@@ -388,12 +413,16 @@ export function renderJungleFlipBoardSvg(
         options.tile3d ?? piece3dEnabled(),
         options.faceDownFaces,
       ) +
+      captureCells(board, options.targets ?? [], geom) +
       `<g class="jungle-flip-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${jungleFlipMarkerLayer(options.markers ?? [], geom)}</g>` +
       `<g class="jungle-flip-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleFlipArrowLayer(options.arrows ?? [], geom)}</g>`,
     // Last-move is drawn inside terrain (over the bushy board); the core's own last-move
     // layer sits under renderPieces and would be hidden by the board image.
     lastMove: null,
     selected: options.selected ? cellRef(options.selected) : null,
+    // Occupied targets are tinted cells over the tiles (captureCells), not
+    // the grid's round ring, which the square tile cuts off at its corners.
+    captureRing: false,
     targets: (options.targets ?? []).map((sq) => {
       const ref = cellRef(sq);
       return { ...ref, occupied: board[sq] !== undefined };

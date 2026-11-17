@@ -153,6 +153,13 @@ export type JungleRenderOptions = {
 export interface JungleBoardArrow extends SvgBoardArrowStyle {
   from: JungleSquare;
   to: JungleSquare;
+  /** Start the shaft at the edge of the moving piece's square instead of near
+   *  its centre, so a teaching arrow never covers the animal. */
+  clearFrom?: boolean;
+  /** Stop the tip at the edge of the destination square: set it when a piece
+   *  stands there. A one-step arrow with both set has no room left, so engine
+   *  and review arrows keep the centre-to-centre default. */
+  clearTo?: boolean;
 }
 
 export interface JungleBoardMarker extends SvgBoardMarkerStyle {
@@ -162,6 +169,31 @@ export interface JungleBoardMarker extends SvgBoardMarkerStyle {
   text?: string;
   /** A drawn mark for kind 'glyph' in place of the label (puzzle ✓ / ✗). */
   icon?: SvgBoardGlyphIcon;
+}
+
+const CAPTURE_TINT =
+  'fill: var(--board-move-hint, rgba(31, 111, 91, 0.72)); opacity: 0.5; mix-blend-mode: multiply;';
+
+/** A capture target's mark: its cell tinted in the move-hint green, drawn over
+ *  the tile because the tile fills nine tenths of the cell and would hide a
+ *  tint beneath it. Multiplied at half strength, the paint of a 3D capture
+ *  target's face (board-select-3d.css), so the animal still reads through. */
+function captureCells(
+  board: JungleBoard,
+  targets: readonly JungleSquare[],
+  geom: GridGeometry,
+): string {
+  const marks = targets
+    .filter((square) => board[square] !== undefined)
+    .map((square) => {
+      const { file, rank } = cellRef(square);
+      const { x, y } = geom.topLeft(file, rank);
+      return `<rect class="jungle-capture-target" x="${x}" y="${y}" width="${geom.cell}" height="${geom.cell}" style="${CAPTURE_TINT}"/>`;
+    })
+    .join('');
+  return marks
+    ? `<g class="jungle-capture-targets" aria-hidden="true" pointer-events="none">${marks}</g>`
+    : '';
 }
 
 function cellRef(square: JungleSquare): GridCellRef {
@@ -390,12 +422,16 @@ export function renderJungleBoardSvg(
         options.cueBadges ?? true,
         options.cueBadgeOverrides,
       ) +
+      captureCells(board, options.targets ?? [], geom) +
       `<g class="jungle-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jungleMarkerSvg(marker, geom)).join('')}</g>` +
       `<g class="jungle-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleArrowLayer(options.arrows ?? [], geom)}</g>`,
     // Last-move is drawn inside furniture (over the grass terrain); the core's own
     // last-move layer sits under renderPieces and would be hidden by the grass.
     lastMove: null,
     selected: options.selected ? cellRef(options.selected) : null,
+    // Occupied targets are tinted cells over the tiles (captureCells), not
+    // the grid's round ring, which the square tile cuts off at its corners.
+    captureRing: false,
     targets: (options.targets ?? []).map((sq) => {
       const ref = cellRef(sq);
       return { ...ref, occupied: board[sq] !== undefined };
@@ -432,6 +468,8 @@ export function jungleMarkerSvg(marker: JungleBoardMarker, geom: GridGeometry): 
   });
 }
 
+const JUNGLE_ARROW_WIDTH = 6;
+
 function jungleArrowLayer(arrows: readonly JungleBoardArrow[], geom: GridGeometry): string {
   return arrows.map((arrow) => jungleArrowSvgWithGeometry(arrow, geom)).join('');
 }
@@ -443,14 +481,18 @@ function jungleArrowSvgWithGeometry(arrow: JungleBoardArrow, geom: GridGeometry)
     ...arrow,
     width: arrow.width === undefined ? undefined : arrow.width * (CELL / 72),
   };
-  return svgBoardArrow(
-    scaledArrow,
-    geom.center(from.file, from.rank),
-    geom.center(to.file, to.rank),
-    {
-      baseClassName: 'xq-arrow',
-      defaultWidth: 6,
-      startInset: 8,
-    },
-  );
+  const start = geom.center(from.file, from.rank);
+  const end = geom.center(to.file, to.rank);
+  // Distance from a square's centre to its edge along the arrow's direction.
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const edge = dx + dy > 0 ? ((geom.cell / 2) * Math.hypot(dx, dy)) / Math.max(dx, dy) : 0;
+  const width = scaledArrow.width ?? JUNGLE_ARROW_WIDTH;
+  return svgBoardArrow(scaledArrow, start, end, {
+    baseClassName: 'xq-arrow',
+    defaultWidth: JUNGLE_ARROW_WIDTH,
+    // The shaft's round cap reaches half a width behind its start point.
+    startInset: arrow.clearFrom ? edge + width / 2 : 8,
+    tipInset: arrow.clearTo ? edge : 0,
+  });
 }

@@ -160,3 +160,22 @@ test('a custom palette arrow colour overrides the default', () => {
   );
   assert.match(svg, /stroke="#b5322b"/);
 });
+
+test('captureRing false leaves occupied targets unringed and keeps the empty-cell dots', () => {
+  const targets = [
+    { file: 1, rank: 2, occupied: true },
+    { file: 2, rank: 3, occupied: false },
+  ];
+  for (const interactive of [false, true]) {
+    const ringed = renderGridBoardSvg(chess, { ...noPieces, targets, interactive });
+    const bare = renderGridBoardSvg(chess, {
+      ...noPieces,
+      targets,
+      interactive,
+      captureRing: false,
+    });
+    assert.equal((ringed.match(/mb-grid-target-ring/g) ?? []).length, 1);
+    assert.doesNotMatch(bare, /mb-grid-target-ring/);
+    assert.equal((bare.match(/mb-grid-target-dot/g) ?? []).length, 1);
+  }
+});
