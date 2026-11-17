@@ -2349,6 +2349,86 @@ describe('standard xiangqi puzzles', () => {
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
   });
 
+  it.each(['', '?theme=matein2', '?player=fixture-player', '?player=fixture-player&theme=matein2'])(
+    'replaces the bare puzzle URL with the served id, keeping filters "%s"',
+    async (query) => {
+      stubWindowLocalStorage(memoryStorage());
+      const puzzle = XIANGQI_PUZZLES[0]!;
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles' || url.startsWith('/api/puzzles?')) {
+          return json({
+            puzzles: [{ ...publicSummary(puzzle), tags: ['matein2', 'player:fixture-player'] }],
+          });
+        }
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', `/puzzles${query}`);
+      const historyLength = window.history.length;
+      const replace = vi.spyOn(window.history, 'replaceState');
+      const push = vi.spyOn(window.history, 'pushState');
+      const root = document.createElement('div');
+
+      await mountPuzzles(root);
+
+      const servedId = root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id');
+      expect(servedId).toBe(puzzle.id);
+      expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${servedId}`);
+      expect(window.location.pathname + window.location.search).toBe(
+        `/puzzles/${servedId}${query}`,
+      );
+      expect(replace).toHaveBeenCalledExactlyOnceWith(null, '', `/puzzles/${servedId}${query}`);
+      expect(push).not.toHaveBeenCalled();
+      expect(window.history.length).toBe(historyLength);
+    },
+  );
+
+  it('keeps an unfinished puzzle URL on reload without rewriting history', async () => {
+    const [unfinished, other] = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    stubWindowLocalStorage(memoryStorage());
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+      { type: 'reload' } as PerformanceNavigationTiming,
+    ]);
+    resetPuzzleReloadCheckForTest();
+    window.history.replaceState(null, '', `/puzzles/${unfinished.id}`);
+    const replace = vi.spyOn(window.history, 'replaceState');
+    const push = vi.spyOn(window.history, 'pushState');
+    const fetchSpy = xiangqiFetchMock([unfinished, other]);
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+
+    await mountPuzzles(root, unfinished.id);
+
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(unfinished.id);
+    expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${unfinished.id}`);
+    expect(fetchSpy).not.toHaveBeenCalledWith(`/api/puzzles/${other.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${unfinished.id}`);
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('varies the first puzzle on fresh bare visits and names each served puzzle', async () => {
+    const puzzles = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    vi.stubGlobal('fetch', xiangqiFetchMock(puzzles));
+    const random = vi.spyOn(Math, 'random');
+    const servedIds = [];
+    for (const draw of [0, 0.99]) {
+      stubWindowLocalStorage(memoryStorage());
+      window.history.replaceState(null, '', '/puzzles');
+      random.mockReturnValue(draw);
+      const root = document.createElement('div');
+
+      await mountPuzzles(root);
+
+      const servedId = root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id');
+      servedIds.push(servedId);
+      expect(window.location.pathname).toBe(`/puzzles/${servedId}`);
+    }
+    expect(new Set(servedIds).size).toBe(2);
+  });
+
   it('a reload past a finished puzzle opens the next unseen one; a link still opens it', async () => {
     // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
     // opened. Solving it and reloading used to serve the solved puzzle again.
