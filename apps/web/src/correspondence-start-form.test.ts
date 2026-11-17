@@ -240,8 +240,7 @@ describe('correspondence Start a game: restricted banqi', () => {
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     expect(offered()).toContain('ffq-banqi');
     setResolvedAdmin(false);
-    expect(offered()).not.toContain('ffq-banqi');
-    setResolvedAdmin(true);
+    expect(offered()).toContain('ffq-banqi');
     setRatedModeEnabled(true, true);
     for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {
       const panel = buildStartForm(() => {}, { gameSpecId, rated: true });

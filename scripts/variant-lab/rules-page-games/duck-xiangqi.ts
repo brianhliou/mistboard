@@ -9,11 +9,12 @@
 //     --out scripts/variant-lab/rules-page-games/plans/duck-xiangqi.rows.jsonl
 //   npx tsx scripts/variant-lab/rules-page-games/duck-xiangqi.ts build \
 //     --rows scripts/variant-lab/rules-page-games/plans/duck-xiangqi.rows.jsonl
+//     [--out /tmp/duck-xiangqi.plan.json]
 //
 // FSF_DUCK is the prod recipe's binary (scripts/engine-assets.sh): Fairy-Stockfish at
 // fairy-stockfish-duck-xiangqi.ref with fairy-stockfish-duck-xiangqi.patch, largeboards,
 // classical eval, passing the recipe's three perft gates (2554, 430, 431).
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   applyDuckXiangqiTurn,
@@ -90,7 +91,8 @@ const engineOptions = [
 const uci = moves.map(uciOfToken);
 const CONFIRM_MS = 12_000;
 
-/** Red's expected score from a row in the side to move's view at position i. */
+/** Red's expected score from a side-to-move row at position i. Odd i is Black
+ *  to move: complementing its win chance turns e.g. +300 into Red's -300. */
 const redOf = (i: number, r: { cp?: number | null; mate?: number | null }) => {
   const w = winPercent(r.cp ?? null, r.mate ?? null) / 100;
   return i % 2 === 0 ? w : 1 - w;
@@ -194,7 +196,7 @@ if (mode === 'jobs') {
   }
   const notes = readNotes('duck-xiangqi');
   const tree = annotateFromEngine({ ...base, sidelines, ...noted(notes, sidelines) });
-  writePlan('duck-xiangqi', 'plan', {
+  const plan = {
     create: {
       owner: 'mistboard',
       name: 'Duck Xiangqi: a sample game, annotated',
@@ -206,13 +208,24 @@ if (mode === 'jobs') {
         variant: 'duck-xiangqi',
         orientation: 'red',
         tree,
-        // No score chart: the engine's score swings by thirty points with the side to move,
-        // so a per-position series would draw a sawtooth, not the game.
+        // Point i is the unrestricted position search p{i} (P{i} when confirmed),
+        // after i complete turns, including the duck placement, not the m{i}
+        // search restricted to the played move. Point 0 is the start; the last
+        // point is Red's known loss after the general capture (which places no duck).
+        // redOf normalizes each side-to-move score to Red before it reaches this series.
+        scoreSeries: {
+          side: 'red',
+          series: [{ name: 'Fairy-Stockfish', color: 'a', values: redScore }],
+        },
         tags: { red: game.red, black: game.black, result: '0-1', event: game.event },
       },
     },
     ops: [],
-  });
+  };
+  writeFileSync(
+    arg('--out', resolve(PLANS, 'duck-xiangqi.plan.json')),
+    `${JSON.stringify(plan, null, 2)}\n`,
+  );
   report(marks, sidelines);
 } else {
   throw new Error('mode: jobs | build');

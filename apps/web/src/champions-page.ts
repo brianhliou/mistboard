@@ -211,12 +211,15 @@ export const TITLES: readonly Title[] = [
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
     credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
-    // Title match xq-title-pikafish-vs-fsf-2026-11-11 on prod's engine queue: 40 games,
-    // colours alternated, level 8 against Fairy-Stockfish level 8, 24.5/40.
+    // Title match xq-title-pikafish-vs-fsf-2026-11-14 on prod's engine queue: 40 games
+    // queued, colours alternated, level 8 against Fairy-Stockfish level 8. 38 finished
+    // (two worker aborts, not counted): 26/38 (Elo +134, 95% +60 to +223), with
+    // Fairy-Stockfish on the 120-ply no-capture draw rule (#1115) and each Pikafish level
+    // on its own engine session. It replaces the 11-13 (15-20-5) and 11-11 (15-19-6) runs.
     reign: {
-      wins: 15,
-      draws: 19,
-      losses: 6,
+      wins: 17,
+      draws: 18,
+      losses: 3,
       tookKey: 'champions.tookPikafish',
       gamesHref: '/study/Tf6bUHnC',
       about: (locale) => [t('champions.aboutPikafish', {}, locale)],

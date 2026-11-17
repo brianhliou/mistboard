@@ -2890,12 +2890,18 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
    wide) and ~300px carries the header, both seat rows, the controls and a few
    rows of moves. The viewport cap keeps the entire widget usable on short
    phones; the embed shrinks its board and retains an independently scrolling
-   move list. An explicit height turns off the inline aspect-ratio. */
+   move list. Studies with notes are the exception: their reported reading
+   height keeps the board full width, the note complete and four move rows
+   visible, so the article scrolls past the card. An explicit height turns off
+   the inline aspect-ratio. */
 @container article-embed (max-width: 559px) {
   .article-embed-frame {
     height: calc(100cqi * 1.12 + 300px);
     max-height: calc(100svh - 80px);
     scroll-margin-block: 72px 8px;
+  }
+  .article-embed-frame.embed-full-reading-height {
+    max-height: none;
   }
 }
 

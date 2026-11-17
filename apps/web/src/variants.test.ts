@@ -263,7 +263,7 @@ describe('web variant launch registry', () => {
       expect(row?.textContent).toContain('Three Kingdoms Banqi');
       expect(row?.textContent).toContain('1612');
       expect(row?.classList.contains('profile-rating-row-empty')).toBe(false);
-      expect(row?.previousElementSibling?.getAttribute('data-variant')).toBe('banqi');
+      expect(row?.previousElementSibling?.getAttribute('data-variant')).toBe('ffq-banqi');
     } finally {
       vi.unstubAllEnvs();
       vi.resetModules();

@@ -569,3 +569,83 @@ test('reserved FFQ reads close without persistence or touching runtime state', a
     }
   }
 });
+
+// Exercise the public door and the insider door together so widening play access
+// cannot silently widen private reads, for ongoing and completed correspondence.
+test('non-admin FFQ HTTP reads admit public live and correspondence, never private games', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  const flag = process.env[FLAG];
+  spec.publicSurface = 'casual';
+  process.env[FLAG] = 'true';
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(async () => {
+    await close();
+    spec.publicSurface = surface;
+    if (flag === undefined) delete process.env[FLAG];
+    else process.env[FLAG] = flag;
+  });
+  let role = 'player';
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    assert.ok(sql.includes('UPDATE account_sessions'));
+    return { rows: [{ id: 'reader', handle: 'reader', account_role: role }] };
+  });
+  for (const correspondence of [false, true])
+    for (const finished of [false, true])
+      for (const visibility of ['public', 'private'])
+        for (const accountRole of ['player', 'admin']) {
+          role = accountRole;
+          const context = {
+            inMemoryGameSummary: () => ({
+              roomId: 'ffq_boundary',
+              variant: 'ffq-banqi',
+              visibility,
+              mode: 'pvp',
+              result: finished ? 'red-wins' : 'in-progress',
+              timeControl: correspondence ? { daysPerMove: 3 } : null,
+              state: { board: SECRET },
+              setup: { deal: SECRET },
+            }),
+          } as unknown as HttpApiContext;
+          for (const [method, path] of [
+            ['GET', '/api/games/ffq_boundary'],
+            ['GET', '/api/ffq-banqi/games/ffq_boundary'],
+            ['GET', '/room/ffq_boundary'],
+            ['GET', '/ffq-banqi/game/ffq_boundary'],
+            ...['analysis', 'decisions'].flatMap((kind) => [
+              ['GET', `/api/ffq-banqi/games/ffq_boundary/${kind}`],
+              ['POST', `/api/ffq-banqi/games/ffq_boundary/${kind}`],
+              ['GET', `/api/ffq-banqi/games/ffq_boundary/${kind}/jobs/job`],
+            ]),
+          ] as Array<[string, string]>) {
+            const result = await invoke(
+              async (req, res) => {
+                if (
+                  !(await guardFFQBanqiHttpRead(
+                    context,
+                    req,
+                    res,
+                    new URL(path, 'http://localhost'),
+                  ))
+                ) {
+                  res.writeHead(204);
+                  res.end();
+                }
+              },
+              method,
+              path,
+              true,
+            );
+            assert.equal(
+              result.status,
+              visibility === 'private' && role !== 'admin'
+                ? 404
+                : path === '/api/games/ffq_boundary'
+                  ? 200
+                  : 204,
+              JSON.stringify({ correspondence, finished, visibility, role, method, path }),
+            );
+            assert.ok(!result.body.includes(SECRET));
+          }
+        }
+});

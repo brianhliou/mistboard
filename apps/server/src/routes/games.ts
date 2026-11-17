@@ -12,7 +12,7 @@ import {
   devArtifactPayloads,
   devArtifactSummaries,
 } from './../dev-decision-log-artifacts.js';
-import { ffqBanqiCorrespondenceAdmits } from '../ffq-banqi-access.js';
+import { ffqBanqiInsider } from '../ffq-banqi-access.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
@@ -476,7 +476,7 @@ export async function tryHandle(
       return true;
     }
     response.setHeader('Cache-Control', 'no-store');
-    const excludeFFQ = !ffqBanqiCorrespondenceAdmits(await currentAccountUser(request));
+    const excludeFFQ = !ffqBanqiInsider(await currentAccountUser(request));
     const filters = { ...parsed.value, excludeFFQ };
     const [page, aggregates, facets] = await Promise.all([
       persistence.queryGames(filters),

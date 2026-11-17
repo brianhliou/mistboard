@@ -59,6 +59,11 @@ const CONTROLS_PX = 39;
 // In the stacked layout the sheet keeps at least this much height: the result
 // foot and three rows of moves (embed.css keeps the same number).
 const STACKED_MOVES_MIN_PX = 112;
+// Study phones keep four 44px move rows, list padding and the result foot.
+// Their control bar is 45px including its border (6px above the desktop bar).
+// embed.css keeps these floors; notes add their full wrapped height below.
+const STUDY_STACKED_MOVES_MIN_PX = 232;
+const STUDY_STACKED_CONTROLS_EXTRA_PX = 6;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
 
@@ -159,6 +164,9 @@ export type EmbedCardOptions = {
    *  controls (a study chapter's win-chance graph, where the article replay
    *  draws its chart). One fixed height, for belowCard's reason. */
   underBoard?: HTMLElement;
+  /** A study's current note moves outside the sheet when stacked. Desktop
+   *  keeps the inline notes. The root's comment has no move entry of its own. */
+  mobileNotes?: { rootNote?: string };
   mountBoard: (
     host: HTMLElement,
     hooks: { onPlyChange: (ply: number, maxPly: number) => void },
@@ -294,9 +302,14 @@ export function naturalBoxHeight(
 
 /** The message a framed card sends its host with the frame height it needs
  *  (embed-autosize.ts listens). `height: null` hands the height back to the
- *  host's own CSS. */
+ *  host's own CSS. Studies request their full reading height so a phone's
+ *  viewport cap cannot shrink the board to make room for notes. */
 export const EMBED_HEIGHT_MESSAGE = 'mistboard:embed-height';
-export type EmbedHeightMessage = { type: typeof EMBED_HEIGHT_MESSAGE; height: number | null };
+export type EmbedHeightMessage = {
+  type: typeof EMBED_HEIGHT_MESSAGE;
+  height: number | null;
+  fullReadingHeight?: boolean;
+};
 
 // Drawn, not typed: the media glyphs and the arrows resolve from different
 // fallback fonts, never match in weight, and on some platforms the media pair
@@ -361,6 +374,7 @@ export async function mountEmbedCard(
   }
   const card = document.createElement('div');
   card.className = 'embed-card';
+  if (options.mobileNotes) card.classList.add('embed-card--study');
   if (options.inkFamily) card.dataset.seatInkFamily = options.inkFamily;
 
   const boardCol = document.createElement('div');
@@ -388,7 +402,13 @@ export async function mountEmbedCard(
   resultFoot.textContent = options.result;
   railInner.append(movesRoot, resultFoot);
   rail.append(railInner);
-  card.append(boardCol, rail);
+  const currentNote = options.mobileNotes ? document.createElement('p') : null;
+  if (currentNote) {
+    currentNote.className = 'embed-card-current-note';
+    currentNote.hidden = true;
+    currentNote.setAttribute('aria-live', 'polite');
+  }
+  card.append(boardCol, ...(currentNote ? [currentNote] : []), rail);
 
   // The sheet stays built underneath (so it is current the moment it shows),
   // hidden and inert: the moves, a study's comments under them, and the
@@ -405,6 +425,7 @@ export async function mountEmbedCard(
     rail.classList.remove('embed-card-rail--solution-hidden');
     railInner.inert = false;
     railInner.removeAttribute('aria-hidden');
+    renderCurrentNote();
     if (hiddenLabels) {
       headerTitle.textContent = options.header;
       credit.textContent = options.credit.text;
@@ -458,11 +479,29 @@ export async function mountEmbedCard(
   let moveList: MoveList | null = null;
   let currentPly = 0;
   let maxPly = 0;
+  let annotations: ReadonlyMap<number, EmbedSheetAnnotation> = new Map();
   let rowsForBottom: 'first' | 'second' | null = null;
   // The sideline the board is showing, or null for the mainline. Stepping
   // inside a line moves its cursor; stepping back past its first move, or
   // clicking any mainline move, returns to the game.
   let line: { atPly: number; cursor: number; length: number } | null = null;
+  function renderCurrentNote(): void {
+    if (!currentNote) return;
+    const entry = annotateEntries(handle?.moveEntries?.() ?? [], annotations).find(
+      (entry) => entry.ply === (line?.atPly ?? currentPly),
+    );
+    const text = solutionCover
+      ? ''
+      : line
+        ? (entry?.line?.note ?? '')
+        : currentPly === 0
+          ? (options.mobileNotes?.rootNote ?? '')
+          : (entry?.note ?? '');
+    if (currentNote.textContent === text) return;
+    currentNote.textContent = text;
+    currentNote.hidden = !text;
+    fitBoard();
+  }
   const clampPly = (ply: number): number => Math.max(0, Math.min(maxPly, ply));
   const jump = (ply: number): void => {
     if (line) {
@@ -475,6 +514,7 @@ export async function mountEmbedCard(
     handle?.jumpToPly?.(target);
     // Leaving a branch can return to the mainline ply already anchored under
     // it. Watch renderers suppress duplicate ply notifications in that case.
+    renderCurrentNote();
     status.textContent = maxPly > 0 ? `${target} / ${maxPly}` : '';
   };
 
@@ -505,6 +545,7 @@ export async function mountEmbedCard(
     line = { atPly, cursor, length };
     handle.jumpToLine(atPly, cursor);
     moveList?.highlightLine(line);
+    renderCurrentNote();
     status.textContent = `${atPly - 1}+${cursor}`;
   };
   const stepLine = (delta: number): boolean => {
@@ -530,6 +571,7 @@ export async function mountEmbedCard(
     status.textContent = max > 0 ? `${ply} / ${max}` : '';
     orientRows();
     renderClocks();
+    renderCurrentNote();
   };
 
   // Size the board to the box before the renderer paints, so the first frame
@@ -554,20 +596,38 @@ export async function mountEmbedCard(
   const postHeight = (height: number | null): void => {
     if (window.parent === window || height === lastPosted) return;
     lastPosted = height;
-    const message: EmbedHeightMessage = { type: EMBED_HEIGHT_MESSAGE, height };
-    // Only a height leaves the frame, so any host may read it.
+    const message: EmbedHeightMessage = {
+      type: EMBED_HEIGHT_MESSAGE,
+      height,
+      ...(options.mobileNotes ? { fullReadingHeight: true } : {}),
+    };
+    // Only layout information leaves the frame, so any host may read it.
     window.parent.postMessage(message, '*');
   };
   const fitBoard = (): void => {
     const rect = frame.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const stacked = rect.width < STACK_BELOW_PX;
+    card.classList.toggle('embed-card--stacked', stacked);
     const box = {
       width: rect.width,
+      // Phone studies read down the page. A short frame must scroll, never
+      // trade away board width for a longer note or the four move rows.
       height:
-        rect.height - header.offsetHeight - credit.offsetHeight - 2 * FRAME_GAP_PX - belowHeight(),
+        stacked && options.mobileNotes
+          ? Number.POSITIVE_INFINITY
+          : rect.height -
+            header.offsetHeight -
+            credit.offsetHeight -
+            2 * FRAME_GAP_PX -
+            belowHeight(),
     };
-    if (box.width <= 0 || box.height <= 0) return;
-    const stacked = box.width < STACK_BELOW_PX;
-    card.classList.toggle('embed-card--stacked', stacked);
+    if (box.height <= 0) {
+      // A placeholder iframe may not yet have room for its header and panes.
+      // Still ask the parent for the full reading height.
+      reportHeight();
+      return;
+    }
     const boardWidth = fitBoardWidth(box, aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
     // Beside the board the card is the board plus the sheet at its floor, the
@@ -583,21 +643,28 @@ export async function mountEmbedCard(
     card.style.width = stacked ? '' : `${boardWidth + railWidth + CARD_BORDER_PX}px`;
     reportHeight();
   };
+  const studyStackedHeight = (stacked: boolean): number =>
+    stacked && options.mobileNotes
+      ? STUDY_STACKED_MOVES_MIN_PX -
+        STACKED_MOVES_MIN_PX +
+        STUDY_STACKED_CONTROLS_EXTRA_PX +
+        (currentNote?.offsetHeight ?? 0)
+      : 0;
   // Tell the host the frame height that fits this width exactly, so a host that
   // listens (articles, the forum) sizes the frame to the card instead of a
   // hand-set aspect that leaves empty space under it (Brian, 2026-10-03: "big
   // vertical space after the embeds"). The height comes from the same model
   // fitBoardWidth sizes the board by, never from a measurement: a measured card
   // and a modelled one that disagree by a pixel make the host and the card
-  // resize each other forever. Stacked, the host's CSS keeps the height: its
-  // phone rule leaves the move sheet more room than the floor here.
+  // resize each other forever. Stacked study cards also add their note's wrapped
+  // height and the room for four touch rows; other stacked cards keep the host's CSS.
   const reportHeight = (): void => {
     const rect = frame.getBoundingClientRect();
     if (rect.width <= 0) return;
     const stacked = rect.width < STACK_BELOW_PX;
     // A pane under the card or the board is height the host's phone rule knows
     // nothing about, so a card with one reports its height stacked too.
-    if (stacked && !below && !underBoard) {
+    if (stacked && !below && !underBoard && !options.mobileNotes) {
       postHeight(null);
       return;
     }
@@ -606,13 +673,20 @@ export async function mountEmbedCard(
     const chrome = window.innerHeight - rect.height;
     postHeight(
       Math.ceil(
-        box + header.offsetHeight + credit.offsetHeight + 2 * FRAME_GAP_PX + belowHeight() + chrome,
+        box +
+          header.offsetHeight +
+          credit.offsetHeight +
+          2 * FRAME_GAP_PX +
+          belowHeight() +
+          chrome +
+          studyStackedHeight(stacked),
       ),
     );
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(fitBoard).observe(frame);
+    if (currentNote) new ResizeObserver(fitBoard).observe(currentNote);
   }
 
   handle = await options.mountBoard(boardHost, { onPlyChange });
@@ -625,7 +699,6 @@ export async function mountEmbedCard(
   }
 
   // Marks from the stored analysis (setAnnotations), folded into every build of the sheet.
-  let annotations: ReadonlyMap<number, EmbedSheetAnnotation> = new Map();
   const sheetEntries = (): MoveListEntry[] =>
     annotateEntries(handle?.moveEntries?.() ?? [], annotations);
   const entries: MoveListEntry[] = sheetEntries();
@@ -643,6 +716,7 @@ export async function mountEmbedCard(
     moveList = fresh;
     moveList.update(currentPly, jump);
     if (line) moveList.highlightLine(line);
+    renderCurrentNote();
     // The fresh sheet has no scroll position yet: bring the current move back into
     // view once it has been laid out (marks add notes, so the rows moved).
     requestAnimationFrame(() => {

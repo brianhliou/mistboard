@@ -336,6 +336,19 @@ export function rapfiPlySeed(gameSeed: number, ply: number): number {
 }
 
 export type RapfiLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type RapfiEngineId = `rapfi-level-${RapfiLevel}` | 'rapfi-strongest';
+
+export function isRapfiEngineId(id: unknown): id is RapfiEngineId {
+  return (
+    id === 'rapfi-strongest' ||
+    (typeof id === 'string' && id.length === 13 && /^rapfi-level-[1-8]$/.test(id))
+  );
+}
+
+// Time-only native top policy, separate from the calibrated eight-level ladder.
+// Fresh-process Apple M3 Max measurements and ceiling rationale: docs/rapfi-strongest.md.
+export const RAPFI_STRONGEST = Object.freeze({ timeMs: 5_000 });
+
 export const RAPFI_LEVELS: readonly {
   readonly level: RapfiLevel;
   readonly nodes: number;
@@ -363,11 +376,10 @@ export const RAPFI_LEVELS: readonly {
 /** Shared with the offline ladder so calibration exercises browser commands. */
 export function rapfiCommands(
   position: RapfiPosition,
-  tier: { nodes: number; timeMs: number; candidateCount?: number },
+  tier: { nodes?: number; timeMs: number; candidateCount?: number },
 ): { lines: string[]; timeMs: number } {
   if (
-    !Number.isSafeInteger(tier.nodes) ||
-    tier.nodes < 1 ||
+    (tier.nodes !== undefined && (!Number.isSafeInteger(tier.nodes) || tier.nodes < 1)) ||
     !Number.isSafeInteger(tier.timeMs) ||
     tier.timeMs < 1
   )
@@ -380,7 +392,7 @@ export function rapfiCommands(
     lines: [
       'START 15',
       'INFO rule 0',
-      `INFO max_node ${tier.nodes}`,
+      ...(tier.nodes === undefined ? [] : [`INFO max_node ${tier.nodes}`]),
       `INFO timeout_turn ${tier.timeMs}`,
       ...(count !== undefined ? ['INFO show_detail 2'] : []),
       // BOARD's 1 means us, 2 means opponent, regardless of stone color; the order decides
@@ -395,6 +407,15 @@ export function rapfiCommands(
       ...(count !== undefined && position.stones.length ? [`YXNBEST ${count}`] : []),
     ],
   };
+}
+
+/** Native best move only: no node anchor, candidate sampling or weak-move options. */
+export function rapfiStrongestRequest(position: RapfiPosition): {
+  lines: string[];
+  timeMs: number;
+  choice?: never;
+} {
+  return rapfiCommands(position, RAPFI_STRONGEST);
 }
 
 /** Identical search policy for native PvE, browser analysis and calibration. */

@@ -11,6 +11,7 @@ import {
   type BotRatingPins,
   findStaleBotRatings,
   loadBotRatingPins,
+  requiresBotRatingPolicy,
 } from './bot-rating-provenance.js';
 import { type BotVsBotVariantPlan, botVsBotConfigFromEnv } from './bot-vs-bot-scheduler.js';
 import {
@@ -76,9 +77,11 @@ export function currentStampedCalibrationGames(
         return (
           id !== null &&
           Object.hasOwn(pins.nets, id) &&
+          (!requiresBotRatingPolicy(id) || pins.policies?.[id] !== undefined) &&
           stamp != null &&
           stamp.recipe === pins.recipe &&
-          stamp.netSha256 === pins.nets[id]
+          stamp.netSha256 === pins.nets[id] &&
+          stamp.policy === pins.policies?.[id]
         );
       }),
   );

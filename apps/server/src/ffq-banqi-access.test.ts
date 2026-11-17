@@ -483,17 +483,8 @@ test('missing FFQ registration never selects chess', async (t) => {
 });
 
 for (const role of [null, 'player', 'admin'] as const) {
-  test(`FFQ public live launch keeps existing correspondence sockets private: ${role ?? 'guest'}`, async (t) => {
+  test(`FFQ correspondence sockets follow live admission: ${role ?? 'guest'}`, async (t) => {
     const { headers, logs } = fixture(t, 'true', role, 'casual');
-    const direct = await createFFQBanqiRoom(
-      role ? { accountRole: role } : null,
-      correspondenceTimeControl(3),
-    );
-    assert.equal(
-      direct.ok,
-      role === 'admin',
-      'the factory cannot turn live admission into correspondence',
-    );
     for (const persisted of [false, true]) {
       for (const occupied of [false, true]) {
         for (const finished of [false, true]) {
@@ -509,14 +500,27 @@ for (const role of [null, 'player', 'admin'] as const) {
             ffqBanqiRooms.set(id, room.room);
           }
           const socket = await connect(id, headers());
-          if (role === 'admin') assertMasked(socket);
-          else {
-            assert.deepEqual(socket.closes, [[1008, 'game spec disabled']]);
-            assert.deepEqual(socket.sent, []);
-          }
+          const hello = assertMasked(socket);
+          if (occupied) assert.equal(hello.seat, 'spectator');
+          else if (role) assert.equal(hello.seat, 'red');
+          assert.ok(JSON.stringify(socket.sent).includes('"faceDown":true'));
+          const leaked = new Socket();
+          leaked.sent = [
+            ...socket.sent,
+            { accidentalTruth: replayTenantEvents(ffqBanqiTenant, events).state.board },
+          ];
+          assert.throws(
+            () => assertMasked(leaked),
+            'a planted identity leak must fail the whole-payload check',
+          );
         }
       }
     }
+    const direct = await createFFQBanqiRoom(
+      role ? { accountRole: role } : null,
+      correspondenceTimeControl(3),
+    );
+    assert.equal(direct.ok, true, 'the factory follows live admission');
     const create = await post(
       '/api/rooms',
       { gameSpecId: 'ffq-banqi', mode: 'correspondence', daysPerMove: 3 },

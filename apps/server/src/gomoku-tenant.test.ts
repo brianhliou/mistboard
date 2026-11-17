@@ -406,7 +406,10 @@ test('Gomoku route rejects rated PvE and unsupported modes before calling its fa
   }
 });
 
-test('Gomoku recognizes exactly eight Rapfi ids and names every level', () => {
+test('Gomoku recognizes exactly eight Rapfi levels and the distinct strongest identity', () => {
+  assert.equal(isGomokuEngineClientId('rapfi-strongest'), true);
+  assert.equal(gomokuTenant.engine?.displayName('rapfi-strongest'), 'Rapfi Strongest');
+  assert.equal(gomokuTenant.engine?.engineVersion?.('rapfi-strongest'), '1387d11312');
   for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
     const id = `rapfi-level-${level}`;
     assert.equal(isGomokuEngineClientId(id), true, id);
@@ -424,16 +427,24 @@ test('Gomoku recognizes exactly eight Rapfi ids and names every level', () => {
     'rapfi-level-1\n',
     'rapfi-level-8\n',
     'rapfi-level-8 ',
+    'rapfi-strongest\n',
+    'rapfi-strongest\r',
+    'rapfi-strongest ',
+    'Rapfi-strongest',
+    'rapfi-strongest-1',
   ]) {
     assert.equal(isGomokuEngineClientId(id), false, String(id));
-    if (id !== undefined)
+    if (id !== undefined) {
       assert.throws(() => gomokuTenant.engine?.displayName(id), /unknown engine/);
+      assert.throws(() => gomokuTenant.engine?.engineVersion?.(id), /unknown engine/);
+    }
   }
 });
 
-test('Gomoku PvE creates all eight Rapfi levels opposite either human colour and rejects unknown ids', async () => {
+test('Gomoku PvE creates all eight Rapfi levels and strongest opposite either human colour and rejects unknown ids', async () => {
   for (const human of ['black', 'white'] as const) {
-    for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 0, 9]) {
+    for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 'strongest']) {
+      const engineId = level === 'strongest' ? 'rapfi-strongest' : `rapfi-level-${level}`;
       let status = 0;
       let payload = '';
       await handleGomokuCreate(
@@ -455,7 +466,7 @@ test('Gomoku PvE creates all eight Rapfi levels opposite either human colour and
           gameSpecId: 'gomoku',
           mode: 'pve',
           preferredColor: human,
-          engineId: `rapfi-level-${level}`,
+          engineId,
         },
       );
       const result = JSON.parse(payload);
@@ -469,7 +480,7 @@ test('Gomoku PvE creates all eight Rapfi levels opposite either human colour and
       assert.ok(live);
       assert.equal(live.rated, false);
       const bot = human === 'black' ? 'white' : 'black';
-      assert.equal(live.projection.seats[bot], `rapfi-level-${level}`);
+      assert.equal(live.projection.seats[bot], engineId);
       assert.equal(live.projection.seats[human], undefined);
       const wire = tenantSnapshotPayload(gomokuTenant, live, {
         id: 'human',
@@ -477,7 +488,7 @@ test('Gomoku PvE creates all eight Rapfi levels opposite either human colour and
         solo: false,
       });
       assert.equal(wire.roomMode, 'pve');
-      assert.equal(wire.pveEngineId, `rapfi-level-${level}`);
+      assert.equal(wire.pveEngineId, engineId);
       assert.deepEqual(replayTenantEvents(gomokuTenant, live.events), live.projection);
     }
   }

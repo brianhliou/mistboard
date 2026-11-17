@@ -371,3 +371,106 @@ test('Fanfanqi rejects illegal, mismatched and identity-bearing decision imports
     }),
   );
 });
+
+const flipPlan = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../../scripts/variant-lab/rules-page-games/plans/jungle-flip.plan.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
+const flipLuck = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../../scripts/variant-lab/rules-page-games/plans/jungle-flip.luck.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
+const flipTree = flipPlan.create.chapter.tree;
+
+test('Flip Jungle validates the complete rules-game mainline and its identity-free embed payload', () => {
+  const checked = validateStudyDecisions('jungle-flip', flipTree, flipLuck);
+  assert.deepEqual(checked, flipLuck);
+  assert.equal(checked.decisions.length, 16);
+  // The finished study's dealt root is the sole identity-bearing exception.
+  const { tree, ...chapter } = flipPlan.create.chapter;
+  const payload = JSON.parse(
+    JSON.stringify({
+      study: { id: '7d1IkHPE', visibility: 'public' },
+      chapters: [{ ...chapter, id: 'vUJ3Yodx', root: tree, hasDecisions: true }],
+      decisions: checked,
+    }),
+  );
+  assert.equal(payload.chapters[0].root.rootFen, flipTree.rootFen);
+  delete payload.chapters[0].root.rootFen;
+  const serialized = JSON.stringify(payload);
+  assert.doesNotMatch(serialized, /"(?:role|faceDown|capturedRole|deal|seed|board|rootFen)"/);
+  assert.ok(!serialized.includes(flipTree.rootFen.split(' ').at(-1)));
+  assert.doesNotMatch(serialized, /[a-d][0-4](?:[a-d][0-4])?:[RCDWPTLErcdwptle]/);
+});
+
+test('Flip Jungle rejects wrong flip plies, movers, illegal candidates and planted identities', () => {
+  assert.deepEqual(validateStudyDecisions('jungle-flip', flipTree, flipLuck), flipLuck);
+  const row = flipLuck.decisions[0];
+  for (const bad of [
+    { ply: 0 },
+    { ply: 1.5 },
+    { ply: 7 },
+    { ply: 99 },
+    { mover: 'black' },
+    { bestWin: Infinity },
+    { playedWin: NaN },
+    { realizedWin: -1 },
+    { realizedWin: 101 },
+    { playedRank: 0 },
+    { playedRank: 1.5 },
+    { playedRank: undefined },
+    { candidates: [] },
+    { bestWin: 71 },
+    { capturedRole: 'elephant' },
+    { faceDown: { role: 'rat', color: 'red' } },
+    { candidates: [{ move: 'a0b0', win: row.bestWin }] },
+    { candidates: [{ move: 'e0e0', win: row.bestWin }] },
+    { candidates: [{ move: 'a4a4', win: row.bestWin }] },
+    { candidates: [{ move: 'a0a0 ', win: row.bestWin }] },
+    { candidates: [{ move: 'a0a0:R', win: row.bestWin }] },
+    { candidates: [{ move: 'a0a0', win: NaN }] },
+    { candidates: [{ move: 'a0a0', win: row.bestWin, played: 'yes' }] },
+    { candidates: [{ move: 'a0a0', win: row.bestWin, role: 'rat' }] },
+    {
+      candidates: [
+        { move: 'a0a0', win: row.bestWin },
+        { move: 'b0b0', win: 100 },
+      ],
+    },
+  ])
+    assert.throws(
+      () =>
+        validateStudyDecisions('jungle-flip', flipTree, {
+          ...flipLuck,
+          decisions: [{ ...row, ...bad }],
+        }),
+      JSON.stringify(bad),
+    );
+  assert.throws(() =>
+    validateStudyDecisions('jungle-flip', flipTree, { ...flipLuck, decisions: [row, row] }),
+  );
+  assert.throws(() =>
+    validateStudyDecisions('jungle-flip', flipTree, { ...flipLuck, deal: 'secret' }),
+  );
+  for (const root of [
+    {},
+    { ...flipTree, rootFen: 'invalid' },
+    { ...flipTree, rootFen: flipTree.rootFen.split(' ').slice(0, 5).join(' ') },
+    { ...flipTree, root: { children: [{ uci: 'a1b1', children: [] }] } },
+    {
+      ...flipTree,
+      root: { children: [{ uci: 'a1a1', children: [{ uci: 'a1a1', children: [] }] }] },
+    },
+  ])
+    assert.throws(() => validateStudyDecisions('jungle-flip', root, flipLuck));
+});

@@ -19,10 +19,15 @@ function frame(aspect = '702 / 780'): HTMLIFrameElement {
   return el;
 }
 
-function post(from: Window | null, height: number | null, origin = window.location.origin): void {
+function post(
+  from: Window | null,
+  height: number | null,
+  origin = window.location.origin,
+  fullReadingHeight?: boolean,
+): void {
   window.dispatchEvent(
     new MessageEvent('message', {
-      data: { type: EMBED_HEIGHT_MESSAGE, height },
+      data: { type: EMBED_HEIGHT_MESSAGE, height, fullReadingHeight },
       origin,
       source: from,
     }),
@@ -34,6 +39,35 @@ afterEach(() => {
 });
 
 describe('autosizeEmbedFrame', () => {
+  it('uncaps only the study frame reporting a full reading height', () => {
+    const study = frame();
+    const game = frame();
+    post(study.contentWindow, 926, window.location.origin, true);
+    post(game.contentWindow, 926);
+    expect(study.classList.contains('embed-full-reading-height')).toBe(true);
+    expect(game.classList.contains('embed-full-reading-height')).toBe(false);
+    expect(study.style.height).toBe('926px');
+    expect(game.style.height).toBe('926px');
+  });
+
+  it('restores the cap when the frame stops reporting a full reading height', () => {
+    const el = frame();
+    post(el.contentWindow, 926, window.location.origin, true);
+    // Apply the cap change even when the one-pixel oscillation guard keeps the height.
+    post(el.contentWindow, 925);
+    expect(el.style.height).toBe('926px');
+    expect(el.classList.contains('embed-full-reading-height')).toBe(false);
+    post(el.contentWindow, 926, window.location.origin, true);
+    post(el.contentWindow, null);
+    expect(el.classList.contains('embed-full-reading-height')).toBe(false);
+  });
+
+  it('does not uncap a frame for a full reading height message from another origin', () => {
+    const el = frame();
+    post(el.contentWindow, 926, 'https://elsewhere.example', true);
+    expect(el.classList.contains('embed-full-reading-height')).toBe(false);
+  });
+
   it('sizes the frame to the height its embed reports', () => {
     const el = frame();
     post(el.contentWindow, 661.4);

@@ -460,11 +460,13 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
   });
 
-  it('links FFQ finished games to review and lists public record downloads', () => {
+  // Launched 2026-11-15: finished games are listed on /games and TV, which draw
+  // them through the tenant's watch replay (the masked public postgame read).
+  it('links FFQ finished games to review, registers the watch replay and lists record downloads', () => {
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
     expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.reviewRouteBase).toBe('/ffq-banqi/game');
-    expect(tenant?.watch).toBeUndefined();
+    expect(tenant?.watch?.family).toBe('xiangqi');
     expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual(['pgn', 'json']);
     expect(finishedGameHref('ffq_finished', FFQ_BANQI_SPEC_ID)).toBe(
       '/ffq-banqi/game/ffq_finished',
@@ -490,11 +492,12 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(seatInkForVariant('ffq-banqi', 'black', 'black')).toBe('black');
   });
 
-  it('maps cached public FFQ analysis while finished-game cards and TV stay closed', () => {
+  // TV and /games use the watch replay registered above; only the
+  // finished-game embed card stays closed.
+  it('maps cached public FFQ analysis while finished-game embed cards stay closed', () => {
     expect(EMBED_ANALYSIS_VARIANTS['ffq-banqi']).toMatchObject({ route: 'ffq-banqi' });
     expect(embedAnalysisVariant('ffq-banqi')).not.toBeNull();
     expect(embedRendererKindForVariant('ffq-banqi')).toBeNull();
-    expect(webVariantTenantForSpecId('ffq-banqi')?.watch).toBeUndefined();
   });
 
   it('supports casual play, rules and observed study embeds without ratings, correspondence, standalone analysis, editor or game embeds', () => {
@@ -544,7 +547,7 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(true);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
-    expect(tenant?.landing?.engineOptions).toHaveLength(8);
+    expect(tenant?.landing?.engineOptions).toHaveLength(9);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);

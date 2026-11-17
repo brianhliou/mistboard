@@ -78,6 +78,7 @@ export * from './xiangqi-import.js';
 export * from './xiangqi-judgment-comment.js';
 export * from './xiangqi-mahjong.js';
 export * from './xiangqi-mahjong-bot.js';
+export * from './xiangqi-mahjong-bot-search.js';
 export * from './xiangqi-mahjong-room.js';
 export * from './xiangqi-move-classification.js';
 export * from './xiangqi-notation-format.js';

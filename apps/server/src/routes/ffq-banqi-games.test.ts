@@ -570,7 +570,7 @@ test('FFQ decisions are finished-only, cache-first and checkpoint-job compatible
   }
 });
 
-test('FFQ default review admission prepares public masked replay but keeps correspondence and private games closed', async (t) => {
+test('FFQ default review admission prepares public masked replay but opens public correspondence and keeps private games closed', async (t) => {
   const spec = gameSpecForId('ffq-banqi');
   const surface = spec.publicSurface;
   const flag = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
@@ -612,6 +612,23 @@ test('FFQ default review admission prepares public masked replay but keeps corre
     }
     assert.fail(`unexpected review query: ${sql}`);
   });
+  const analysisHandler = createFFQBanqiAnalysisRoutes(undefined, {
+    engineAvailable: () => true,
+    cache: {
+      get: async () =>
+        Array.from({ length: moves.length + 1 }, (_, ply) => ({
+          ply,
+          cp: 42,
+          mate: null,
+          best: null,
+        })),
+      save: async () => assert.fail('cached reads never write analysis'),
+    },
+    decisionsCache: {
+      get: async () => [],
+      save: async () => assert.fail('cached reads never write decisions'),
+    },
+  });
   for (const publicSurface of ['hidden', 'casual'] as const)
     for (const enabled of [false, true])
       for (const account of [null, 'player', 'admin'] as const)
@@ -625,9 +642,7 @@ test('FFQ default review admission prepares public masked replay but keeps corre
             if (correspondence && log[0]?.type === 'room-created')
               log[0].timeControl = correspondenceTimeControl(3);
             const admitted =
-              enabled &&
-              (account === 'admin' ||
-                (publicSurface === 'casual' && !correspondence && !privateGame));
+              enabled && (account === 'admin' || (publicSurface === 'casual' && !privateGame));
             const before = eventReads;
             const res = fakeResponse();
             await handleFFQBanqiPostgame(
@@ -643,8 +658,61 @@ test('FFQ default review admission prepares public masked replay but keeps corre
               admitted ? 200 : 404,
               JSON.stringify({ publicSurface, enabled, account, correspondence, privateGame }),
             );
-            if (admitted) serialized(res.captured.body);
-            else assert.deepEqual(res.captured.body, { error: 'not_found' });
+            if (admitted) {
+              const wire = serialized(res.captured.body);
+              if (correspondence) {
+                assert.ok(wire.includes('"faceDown":true'));
+                // A planted truth board anywhere in the envelope must be caught.
+                const leaked = {
+                  ...(res.captured.body as object),
+                  accidentalTruth: replayTenantEvents(ffqBanqiTenant, log).state.board,
+                };
+                assert.throws(() => serialized(leaked));
+                const swappedLog = events(swapped);
+                if (swappedLog[0]?.type === 'room-created')
+                  swappedLog[0].timeControl = correspondenceTimeControl(3);
+                log = swappedLog;
+                const alternate = fakeResponse();
+                await handleFFQBanqiPostgame(
+                  {
+                    method: 'GET',
+                    headers: account ? { cookie: 'mistboard_session=reviewer.fixture' } : {},
+                  } as IncomingMessage,
+                  alternate.response,
+                  `/api/ffq-banqi/games/${ROOM}`,
+                );
+                assert.equal(alternate.captured.status, 200);
+                assert.equal(wire, serialized(alternate.captured.body));
+              }
+            } else assert.deepEqual(res.captured.body, { error: 'not_found' });
+            for (const endpoint of ['analysis', 'decisions']) {
+              for (const method of ['GET', 'POST']) {
+                const response = fakeResponse();
+                await analysisHandler(
+                  {
+                    method,
+                    headers: account ? { cookie: 'mistboard_session=reviewer.fixture' } : {},
+                    socket: { remoteAddress: '127.0.0.1' },
+                  } as IncomingMessage,
+                  response.response,
+                  `/api/ffq-banqi/games/${ROOM}/${endpoint}`,
+                );
+                assert.equal(
+                  response.captured.status,
+                  !admitted ? 404 : method === 'POST' && !account ? 401 : 200,
+                  JSON.stringify({
+                    publicSurface,
+                    enabled,
+                    account,
+                    correspondence,
+                    privateGame,
+                    endpoint,
+                    method,
+                  }),
+                );
+                serialized(response.captured.body);
+              }
+            }
             if (!enabled || (publicSurface === 'hidden' && account !== 'admin'))
               assert.equal(eventReads, before);
           }

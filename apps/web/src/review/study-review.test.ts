@@ -104,10 +104,8 @@ describe('Fanfanqi observed study review', () => {
     try {
       expect(overlay?.byPly.get(1)).toMatchObject({ judgment: 'blunder', luck: 12, playedRank: 2 });
       expect(overlay?.byPly.get(1)?.candidates?.[0]?.label).toBe('a2 flip');
-      expect(overlay?.totals).toEqual({
-        red: { luck: 12, decisionLoss: 20 },
-        black: { luck: -5, decisionLoss: 0 },
-      });
+      // Decided 2026-11-15: per-move luck only, no per-seat totals.
+      expect(overlay).not.toHaveProperty('totals');
       expect(handle.serialize()).toEqual(tree);
       expect(JSON.stringify(handle.serialize())).not.toMatch(/rootFen|deal|seed|board|general/);
       await vi.waitFor(() =>

@@ -293,6 +293,7 @@ export const CRAWLER_PROFILE: UserProfile = {
     patronSince: null,
     createdAt: at,
   },
+  activity: [],
   ratings: [
     {
       variant: 'xiangqi',

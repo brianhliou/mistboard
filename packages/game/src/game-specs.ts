@@ -891,8 +891,8 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    // Fanfanqi launches live only. Its existing admin correspondence playtest
-    // remains restricted even when its live public surface is enabled.
+    // FFQ correspondence follows its tenant runtime gate, including the kill
+    // switch after launch. Restricted means tenant-gated, not insider-only.
     correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
       (id) => id !== FFQ_BANQI_SPEC_ID && isPublic(id),
     ),

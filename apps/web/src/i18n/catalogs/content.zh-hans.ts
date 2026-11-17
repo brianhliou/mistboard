@@ -260,7 +260,7 @@ export const ZH_HANS_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：斗兽棋版 KataGo（AnimalChess2025 分支），本站最强的斗兽棋机器人，MIT；经作者许可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基于的引擎，MIT。',
-  'source.rapfi': 'Rapfi，作者 dhbloo 及贡献者：八个五子棋机器人等级，GPL-3.0。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及贡献者：五子棋最强对手及八个机器人等级，GPL-3.0。',
   'source.rapfiNetworks': 'Rapfi 项目提供的 Rapfi 神经网络，CC0 1.0。',
   'source.rapfiBuild':
     'rapfi-wasm，作者 Brian H. Liou：五子棋复盘分析使用的可复现 Rapfi 浏览器构建，GPL-3.0。',
@@ -536,7 +536,7 @@ export const ZH_HANS_CONTENT = {
   'champions.statLosses': '负',
   'champions.barLabel': '{wins} 胜，{draws} 和，{losses} 负',
   'champions.tookPikafish':
-    '2026-11-11 在对 Fairy-Stockfish 8 级的头衔赛中获胜，共 40 局，得分率 61%。',
+    '2026-11-14 在对 Fairy-Stockfish 8 级的头衔赛中获胜，共 38 局，得分率 68%。',
   'champions.aboutPikafish':
     '源自 Stockfish 的开源象棋引擎。在这里它使用公开的 CC0 Fairy-Stockfish 象棋网络。',
   'champions.tookAbJchess2': '2026-10-31 从 jqe 手中夺回头衔，共 600 局，得分率 57%。',
@@ -597,8 +597,10 @@ export const ZH_HANS_CONTENT = {
     '本站最强的斗兽棋机器人：hzyhhzy 的斗兽棋版 KataGo，使用 Dandelion 4 神经网络，经作者许可在本站运行。',
   'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的贡献者',
   'thanks.rapfiBuildAuthor': '浏览器构建：Brian H. Liou',
+  'thanks.rapfiBotBio':
+    '本站最强的五子棋对手，强于等级 8。Rapfi 由 dhbloo 及贡献者开发，使用 Rapfi 项目提供的神经网络。每步思考约 4-5 秒。',
   'thanks.rapfiBody':
-    '驱动全部八个五子棋机器人等级，使用 Rapfi 项目提供的神经网络；rapfi-wasm 构建负责五子棋复盘页面的分析。',
+    '驱动五子棋最强对手及全部八个机器人等级，使用 Rapfi 项目提供的神经网络；rapfi-wasm 构建负责五子棋复盘页面的分析。',
   'thanks.communityBotBy': '来自社区开发者的机器人。',
   'thanks.statGames': 'Mistboard 上的对局',
   'thanks.statRating': '{variant}等级分',

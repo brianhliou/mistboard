@@ -12,6 +12,10 @@ import {
 } from './banqi-decisions.js';
 import { ffqBanqiDecisionOverlay } from './ffq-banqi-decisions.js';
 import { type JieqiDecision, jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
+import {
+  jungleFlipDecisionOverlay,
+  summarizeDecisions as summarizeJungleFlip,
+} from './jungle-flip-decisions.js';
 import { threeKingdomsBanqiDecisionOverlay } from './three-kingdoms-banqi-decisions.js';
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -32,7 +36,7 @@ function isLuckRow(raw: unknown): raw is JieqiDecision {
   );
 }
 
-function isPoolMeanRow(raw: unknown, coordinate: RegExp): boolean {
+function isFlipRow(raw: unknown, movePattern: RegExp): boolean {
   if (
     !isLuckRow(raw) ||
     !isWin(raw.bestWin) ||
@@ -62,15 +66,13 @@ function isPoolMeanRow(raw: unknown, coordinate: RegExp): boolean {
         isObject(candidate) &&
         Object.keys(candidate).every((key) => ['move', 'win', 'played'].includes(key)) &&
         typeof candidate.move === 'string' &&
-        coordinate.test(candidate.move) &&
+        movePattern.test(candidate.move) &&
         isWin(candidate.win) &&
         candidate.win <= (raw.bestWin as number) &&
         (candidate.played === undefined || typeof candidate.played === 'boolean'),
     ) && raw.candidates[0].win === raw.bestWin
   );
 }
-const isThreeKingdomsRow = (raw: unknown) => isPoolMeanRow(raw, /^[a-i][1-5][a-i][1-5]$/);
-const isFFQRow = (raw: unknown) => isPoolMeanRow(raw, /^[a-d][0-7][a-d][0-7]$/);
 const ffqStudyDecisionOverlay = (rows: unknown[]) =>
   ffqBanqiDecisionOverlay({ engineId: 'study', depth: 0, decisions: rows as BanqiDecision[] });
 
@@ -84,10 +86,17 @@ export const STUDY_DECISION_VARIANTS: Readonly<
     }
   >
 > = {
-  'ffq-banqi': { validate: isFFQRow, overlay: ffqStudyDecisionOverlay },
+  'ffq-banqi': {
+    validate: (raw) => isFlipRow(raw, /^[a-d][0-7][a-d][0-7]$/),
+    overlay: ffqStudyDecisionOverlay,
+  },
   'three-kingdoms-banqi': {
-    validate: isThreeKingdomsRow,
+    validate: (raw) => isFlipRow(raw, /^[a-i][1-5][a-i][1-5]$/),
     overlay: (rows) => threeKingdomsBanqiDecisionOverlay(rows as BanqiDecision[]),
+  },
+  'jungle-flip': {
+    validate: (raw) => isFlipRow(raw, /^[a-d][0-3][a-d][0-3]$/),
+    overlay: (rows) => jungleFlipDecisionOverlay(summarizeJungleFlip(rows as BanqiDecision[])),
   },
   jieqi: {
     validate: isLuckRow,

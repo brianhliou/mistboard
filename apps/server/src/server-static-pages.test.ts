@@ -2930,6 +2930,7 @@ function profilePreviewFixture(): UserProfile {
       patronSince: null,
       createdAt: new Date('2026-01-01T00:00:00Z'),
     },
+    activity: [],
     ratings: [
       {
         variant: 'xiangqi',
