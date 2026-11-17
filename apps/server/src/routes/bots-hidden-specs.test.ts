@@ -80,6 +80,42 @@ test('a missing Flip Jungle engine lists the variant as unplayable, not missing'
   }
 });
 
+test('Three Kingdoms bot options follow visibility, native availability and the kill switch', (t) => {
+  const spec = gameSpecForId('three-kingdoms-banqi');
+  const surface = spec.publicSurface;
+  const keys = [
+    'MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED',
+    'MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH',
+  ] as const;
+  const saved = keys.map((key) => process.env[key]);
+  t.after(() => {
+    spec.publicSurface = surface;
+    keys.forEach((key, index) => {
+      if (saved[index] === undefined) delete process.env[key];
+      else process.env[key] = saved[index];
+    });
+  });
+  const misty = {
+    id: 'misty',
+    defaultGameSpecId: 'dark-chess',
+    activeEngineId: 'python-v2-v1.6',
+    supportedGameSpecIds: ['dark-chess', 'three-kingdoms-banqi'],
+  };
+  process.env[keys[0]] = 'true';
+  process.env[keys[1]] = '/nonexistent/three-kingdoms-banqi-engine';
+  spec.publicSurface = 'hidden';
+  assert.ok(!botPlayOptions(misty).some((option) => option.gameSpecId === spec.id));
+  spec.publicSurface = 'casual';
+  const option = () => botPlayOptions(misty).find((option) => option.gameSpecId === spec.id);
+  assert.equal(option()?.engineId, 'misty-three-kingdoms-banqi-level-4');
+  assert.ok(option()?.version);
+  assert.equal(option()?.playable, false, 'a missing binary must not advertise playability');
+  process.env[keys[1]] = process.execPath;
+  assert.equal(option()?.playable, true);
+  process.env[keys[0]] = 'false';
+  assert.equal(option()?.playable, false);
+});
+
 test('FFQ bot cards follow launch, native availability and the kill switch; Misty seats casual tiers', async (t) => {
   const spec = gameSpecForId('ffq-banqi');
   const surface = spec.publicSurface;
