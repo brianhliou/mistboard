@@ -258,6 +258,49 @@ describe('profile ratings rail', () => {
     expect(rows[2]!.querySelector('.champion-crowns')).toBeNull();
   });
 
+  it('shows the correspondence ladders when the rated switch lands during the first fetches', async () => {
+    const { setRatedModeEnabled } = await import('./rated-flag.js');
+    const requested: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/leaderboard/summary') {
+        const timeClass = url.searchParams.get('timeClass') ?? '';
+        requested.push(timeClass);
+        // /api/server-status answers while the first ladders are in flight.
+        if (requested.length === 1) setRatedModeEnabled(true, true);
+        return new Response(
+          JSON.stringify({
+            ladders: [
+              {
+                variant: 'xiangqi',
+                leaderboard: [
+                  {
+                    rank: 1,
+                    handle: `top-${timeClass}`,
+                    displayName: `Top ${timeClass}`,
+                    eloRating: 1720,
+                    provisional: true,
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+      }
+      return new Response(JSON.stringify({ players: [] }));
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector('.leaderboard-pace-section[data-time-class="correspondence"]'),
+      ).not.toBeNull(),
+    );
+    expect(requested).toContain('correspondence');
+    expect(root.textContent).toContain('Top correspondence');
+  });
+
   it.each([
     ['/player', '/'],
     ['/zh-hans', '/zh-hans/'],
