@@ -374,13 +374,12 @@ export function sourceGameLines(
   if (puzzle.variant === XIANGQI_SPEC_ID && puzzle.credit) {
     const c = puzzle.credit;
     const event = sourceText(c.event, c.eventEn) ?? c.event;
-    const header = puzzleInfoLine(
-      event ? `${t('puzzle.fromGame')} · ${event}` : t('puzzle.fromGame'),
-      'puzzle-source-event',
-    );
-    header.title = event ?? '';
+    const header = puzzleInfoLine(t('puzzle.fromGame'), 'puzzle-source-header');
+    const eventLine = puzzleInfoLine(event ?? '', 'puzzle-source-event');
+    eventLine.title = event ?? '';
     return [
       header,
+      ...(event ? [eventLine] : []),
       sourceGamePlayerLine('red', sourceText(c.red, c.redEn) ?? c.red, undefined),
       sourceGamePlayerLine('black', sourceText(c.black, c.blackEn) ?? c.black, undefined),
       sourceCreditLine(c),
@@ -400,7 +399,9 @@ export function sourceGameLines(
   if (!source || !hasAttribution) {
     return [puzzleInfoLine(t('puzzle.fromSet', { variant: variantLabel(puzzle.variant) }))];
   }
-  const lines: HTMLElement[] = [sourceGameHeaderLine(source)];
+  const { label, event } = sourceGameHeader(source);
+  const lines: HTMLElement[] = [sourceGameHeaderLine(source, label)];
+  if (event) lines.push(sourceGameHeaderLine(source, event, 'puzzle-source-event'));
   if (source.redName !== undefined || source.blackName !== undefined) {
     lines.push(
       sourceGamePlayerLine('red', sourceText(source.redName, source.redNameEn), source.result),
@@ -430,25 +431,22 @@ export function withSelectedSource(
 // The header, a link to the game's page at the puzzle's move when the server
 // says it hosts the game (the same route as historicalXiangqiReviewUrl, not
 // imported: that module brings the game search's styles with it).
-// One line, cut with an ellipsis (lichess's "From game 3+2 • Blitz" fits; an
-// event name often does not), with the whole header as the tooltip.
+// The label and event are separate rows; both keep their full text as a tooltip
+// and link to the source game when it is hosted.
 function sourceGameHeaderLine(
   source: NonNullable<PuzzleSummary['sourceGame']>,
-  header: string = sourceGameHeader(source),
+  header: string,
+  className = 'puzzle-source-header',
 ): HTMLElement {
-  if (!source.hosted) {
-    const line = puzzleInfoLine(header, 'puzzle-source-event');
-    line.title = header;
-    return line;
-  }
-  const line = document.createElement('span');
-  line.className = 'puzzle-source-event';
+  const line = puzzleInfoLine(header, className);
+  line.title = header;
+  if (!source.hosted) return line;
   const link = document.createElement('a');
   link.className = 'puzzle-source-link';
   link.href = `/historical-xiangqi/game/${encodeURIComponent(source.gameId)}?ply=${source.ply}`;
   link.textContent = header;
   link.title = `${header}\n${t('puzzle.openSourceGame')}`;
-  line.append(link);
+  line.replaceChildren(link);
   return line;
 }
 
@@ -482,7 +480,7 @@ export function sourceText(
   return original && !CJK.test(original) ? original : undefined;
 }
 
-// "From game · <event> (<year>)" — event and year are both optional, and the
+// The event sits below "From game"; event and year are both optional, and the
 // year is left off an event name that already says it ("2026 National Xiangqi
 // Team Championship", not "... (2026)").
 // An online platform game: no event and pseudonymous players, so the card
@@ -493,7 +491,10 @@ export function onlineGameHeader(gameId: string): string {
   return t('puzzle.fromGameId', { id });
 }
 
-function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): string {
+function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): {
+  label: string;
+  event?: string;
+} {
   const event = sourceText(source.event, source.eventEn);
   const playedYear = source.playedOn?.slice(0, 4);
   const year = playedYear && !event?.includes(playedYear) ? playedYear : undefined;
@@ -501,8 +502,10 @@ function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): str
     (part): part is string => part !== undefined && part.length > 0,
   );
   // No event a reader can read: a plain description ("From a 2025 game").
-  if (!event) return year ? t('puzzle.fromGameYear', { year }) : t('puzzle.fromGame');
-  return t('puzzle.fromGameWith', { details: parts.join(' ') });
+  if (!event) {
+    return { label: year ? t('puzzle.fromGameYear', { year }) : t('puzzle.fromGame') };
+  }
+  return { label: t('puzzle.fromGame'), event: parts.join(' ') };
 }
 
 // One player row: a color disc, the player name, and a result glyph on the

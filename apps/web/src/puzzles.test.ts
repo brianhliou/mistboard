@@ -3214,9 +3214,8 @@ describe('standard xiangqi puzzles', () => {
       const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
       expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
       expect(link?.textContent).toContain('From game');
-      // The event is clipped to one line in the sidebar, so the full text rides
-      // on the hover title.
-      expect(link?.closest('.puzzle-source-event')).not.toBeNull();
+      // The label links to the game and keeps the open-game tooltip.
+      expect(link?.closest('.puzzle-source-header')).not.toBeNull();
       expect(link?.title.split('\n')[0]).toBe(link?.textContent);
     });
 
@@ -3322,6 +3321,25 @@ describe('puzzleMoveRowNumber', () => {
 });
 
 describe('sourceGameLines', () => {
+  it.each([false, true])('puts a long event below From game (hosted: %s)', (hosted) => {
+    const event = '2025 8th Yidaiyilu Jinjiangbei World Xiangqi Championship';
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { gameId: 'view_m_138334', ply: 53, event, hosted },
+    });
+    expect(lines[0]?.textContent).toBe('From game');
+    expect(lines[1]?.className).toBe('puzzle-source-event');
+    expect(lines[1]?.textContent).toBe(event);
+    expect(lines[1]?.title).toContain(event);
+    if (hosted) {
+      for (const line of lines) {
+        expect(line.querySelector('a')?.getAttribute('href')).toBe(
+          '/historical-xiangqi/game/view_m_138334?ply=53',
+        );
+      }
+    }
+  });
+
   it('renders a "From game" header with both players when a xiangqi puzzle carries attribution', () => {
     const lines = sourceGameLines({
       variant: XIANGQI_SPEC_ID,
@@ -3335,14 +3353,15 @@ describe('sourceGameLines', () => {
         blackName: 'Black Player',
       },
     });
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
     // The event already names its year, so the year is not added again.
-    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship');
-    expect(lines[1]?.textContent).toContain('Red Player');
-    expect(lines[2]?.textContent).toContain('Black Player');
+    expect(lines[0]?.textContent).toBe('From game');
+    expect(lines[1]?.textContent).toBe('2026 Team Championship');
+    expect(lines[2]?.textContent).toContain('Red Player');
+    expect(lines[3]?.textContent).toContain('Black Player');
     // Draw shows ½ on both players.
-    expect(lines[1]?.textContent).toContain('½');
     expect(lines[2]?.textContent).toContain('½');
+    expect(lines[3]?.textContent).toContain('½');
   });
 
   it('marks only the winner on a decisive result', () => {
@@ -3359,16 +3378,20 @@ describe('sourceGameLines', () => {
       sourceGameLines({
         variant: XIANGQI_SPEC_ID,
         sourceGame: { gameId: 'g', ply: 1, event, playedOn: '2025-11-08', redName: 'R' },
-      })[0]?.textContent;
-    expect(header('Guangdong Ten Tigers Match')).toBe(
-      'From game · Guangdong Ten Tigers Match (2025)',
-    );
-    expect(header('2025 Guangdong Ten Tigers Match')).toBe(
-      'From game · 2025 Guangdong Ten Tigers Match',
-    );
+      })
+        .filter((line) => line.matches('.puzzle-source-header, .puzzle-source-event'))
+        .map((line) => line.textContent);
+    expect(header('Guangdong Ten Tigers Match')).toEqual([
+      'From game',
+      'Guangdong Ten Tigers Match (2025)',
+    ]);
+    expect(header('2025 Guangdong Ten Tigers Match')).toEqual([
+      'From game',
+      '2025 Guangdong Ten Tigers Match',
+    ]);
     // No event an English reader can read: a plain description.
-    expect(header(undefined)).toBe('From a 2025 game');
-    expect(header('某某杯')).toBe('From a 2025 game');
+    expect(header(undefined)).toEqual(['From a 2025 game']);
+    expect(header('某某杯')).toEqual(['From a 2025 game']);
   });
 
   it('shows the player without the team, the full string in the tooltip', () => {
@@ -3488,10 +3511,11 @@ describe('sourceGameLines locale', () => {
     window.history.replaceState(null, '', '/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
     const text = lines.map((line) => line.textContent ?? '');
-    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship');
-    expect(text[1]).toContain('Huang Leilei');
-    expect(text[1]).not.toContain('Shandong');
-    expect(text[2]).toContain('Shi Fenglan');
+    expect(text[0]).toBe('From game');
+    expect(text[1]).toBe('2026 National Xiangqi Team Championship');
+    expect(text[2]).toContain('Huang Leilei');
+    expect(text[2]).not.toContain('Shandong');
+    expect(text[3]).toContain('Shi Fenglan');
     for (const line of text) expect(line).not.toMatch(CJK);
   });
 
@@ -3507,10 +3531,10 @@ describe('sourceGameLines locale', () => {
   it('keeps the original Chinese on a Chinese page', () => {
     window.history.replaceState(null, '', '/zh-hans/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
-    expect(lines[0]?.textContent).toContain('2026年全国象棋团体赛');
+    expect(lines[1]?.textContent).toContain('2026年全国象棋团体赛');
     // The Chinese original puts the team first; the name shows, the team is
     // in the tooltip.
-    const red = lines[1]?.querySelector<HTMLElement>('.puzzle-source-player-name');
+    const red = lines[2]?.querySelector<HTMLElement>('.puzzle-source-player-name');
     expect(red?.textContent).toBe('黄蕾蕾');
     expect(red?.title).toBe('山东省棋牌运动管理中心 黄蕾蕾');
   });
