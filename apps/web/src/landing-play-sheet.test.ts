@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from './analytics.js';
 import {
   buildLandingPlayPanel,
   type LandingGameSpecId,
@@ -24,6 +25,7 @@ import { navPhoneMediaQuery } from './site-shell.js';
 // centred dialog with the grid.
 describe('setup dialog on a phone', () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
+  const capture = vi.fn();
 
   const stubViewport = (phone: boolean): void => {
     vi.stubGlobal(
@@ -38,6 +40,8 @@ describe('setup dialog on a phone', () => {
   };
 
   beforeEach(() => {
+    capture.mockReset();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
     resetLiveStatsCacheForTests();
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
@@ -364,6 +368,8 @@ describe('setup dialog on a phone', () => {
       expect(dialog()?.textContent).toContain('Waiting for a reply');
       expect(document.querySelector<HTMLElement>('.landing-setup-accordion')?.hidden).toBe(true);
       expect(document.querySelectorAll('.live-invite')).toHaveLength(2);
+      const closes = () => capture.mock.calls.filter(([name]) => name === 'setup_dialog_closed');
+      expect(closes()).toHaveLength(0);
       if (outcome === 'cancelled') {
         [...dialog()!.querySelectorAll<HTMLButtonElement>('button')]
           .find((button) => button.textContent === 'Cancel')!
@@ -379,10 +385,15 @@ describe('setup dialog on a phone', () => {
         // The sender is taken into the room, where the finished card has no job left.
         expect(window.location.pathname).toBe('/room/sheet_reserved');
         expect(document.querySelectorAll('.live-invite')).toHaveLength(0);
+        window.dispatchEvent(new Event('pagehide'));
+        expect(closes()).toHaveLength(1);
+        expect(closes()[0][1]).toMatchObject({ how: 'started', mode: 'pvp' });
         return;
       }
       expect(dialog()?.textContent).toContain(`Invitation ${outcome}`);
       document.querySelector<HTMLButtonElement>('.landing-setup-close')!.click();
+      expect(closes()).toHaveLength(1);
+      expect(closes()[0][1]).toMatchObject({ how: 'dismissed' });
       expect(document.querySelector('.live-invites')?.textContent).toContain(
         `Invitation ${outcome}`,
       );

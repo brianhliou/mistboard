@@ -206,10 +206,6 @@ function updateLifecycleEffects(replayIsLive: boolean): void {
 
 function trackGameLifecycle(view: PlayerView | null): void {
   if (!view || !isLive()) return;
-  // game_started is the number (human games started per week): a spectator
-  // opening a live room is not a game starting, and a stranger opening a
-  // finished one is not a game finishing. Seated viewers only.
-  if (!isPlayableSeat(liveState.seat)) return;
   const statusType = view.status.type;
   const baseProps = {
     gameId: view.id,
@@ -224,19 +220,17 @@ function trackGameLifecycle(view: PlayerView | null): void {
     }),
   };
   const outcome =
-    statusType === 'finished'
-      ? (() => {
-          const finished = view.status as {
-            type: 'finished';
-            winner: 'white' | 'black' | null;
-            reason: string;
-          };
-          return { winner: finished.winner, reason: finished.reason, moveNumber: view.moveNumber };
-        })()
-      : null;
+    view.status.type === 'playing'
+      ? null
+      : {
+          winner: view.status.type === 'finished' ? view.status.winner : null,
+          reason: view.status.reason,
+          moveNumber: view.moveNumber,
+        };
   lifecycleTracker.update({
     statusType,
     baseProps,
+    seat: liveState.seat,
     outcome,
     ownMoveCount: seatOwnMoveCount(liveState.events, liveState.seat),
     moveNumber: view.moveNumber,

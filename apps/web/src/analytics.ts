@@ -466,6 +466,9 @@ export type GameLifecycleTracker = {
     input: {
       statusType: GameLifecycleStatusType;
       baseProps: Record<string, unknown>;
+      // The server-confirmed seat. Spectators receive finish metadata without
+      // contributing starts or first moves to the player funnel.
+      seat?: string | null;
       outcome?: GameFinishedOutcome | null;
       ownMoveCount?: number | null;
       moveNumber?: number | null;
@@ -481,6 +484,7 @@ export type GameLifecycleTracker = {
 export function createGameLifecycleTracker(): GameLifecycleTracker {
   let lastStatusType: GameLifecycleStatusType | null = null;
   let playingSinceMs: number | null = null;
+  let wasSpectator = false;
   // Keyed by game id, so reset() keeps them: a reconnect that resets the tracker
   // between the empty board and the accepted move must still see the move land,
   // and a rematch is a new id.
@@ -490,7 +494,13 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     if (!input) return;
     const { statusType, baseProps, ownMoveCount } = input;
     const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
-    if (!gameId || typeof ownMoveCount !== 'number') return;
+    if (
+      !gameId ||
+      typeof ownMoveCount !== 'number' ||
+      input.seat === 'spectator' ||
+      input.seat === null
+    )
+      return;
     if (ownMoveCount <= 0) {
       if (statusType !== 'finished' && statusType !== 'aborted') sawNoOwnMove.add(gameId);
       return;
@@ -512,19 +522,30 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     reset() {
       lastStatusType = null;
       playingSinceMs = null;
+      wasSpectator = false;
     },
     update(input) {
       if (!input) return;
       const { statusType, baseProps } = input;
-      if (statusType === 'playing' && statusType !== lastStatusType) {
+      const spectator = input.seat === 'spectator' || input.seat === null;
+      if (
+        statusType === 'playing' &&
+        (statusType !== lastStatusType || (wasSpectator && !spectator))
+      ) {
         playingSinceMs = Date.now();
-        const source = trackGameStarted(baseProps);
+        const source = spectator ? null : trackGameStarted(baseProps);
         if (source !== null && typeof baseProps.gameId === 'string') {
           startSources.set(baseProps.gameId, source);
         }
       }
       trackFirstMove(input);
-      if (statusType === 'finished' && input.outcome) {
+      if ((statusType === 'finished' && input.outcome) || statusType === 'aborted') {
+        const outcome = input.outcome ?? {
+          winner: null,
+          reason: 'aborted',
+          moveNumber: input.moveNumber ?? 0,
+        };
+        const seat = input.seat ?? 'spectator';
         const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
         // Status transitions alone re-fire after a reconnect or a fresh page.
         // Mark before capture (which may queue until analytics initializes).
@@ -533,15 +554,29 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
           if (gameId) markGameFinishTracked(gameId);
           track('game_finished', {
             ...baseProps,
-            winner: input.outcome.winner,
-            reason: input.outcome.reason,
-            moveNumber: input.outcome.moveNumber,
+            winner: outcome.winner,
+            reason: outcome.reason,
+            moveNumber: outcome.moveNumber,
+            seat,
+            // A watcher has no win/loss perspective. Keep decisive results null
+            // rather than counting every watcher as a losing player.
+            result:
+              statusType === 'aborted'
+                ? 'aborted'
+                : outcome.winner === null
+                  ? 'draw'
+                  : seat === 'spectator'
+                    ? null
+                    : outcome.winner === seat
+                      ? 'win'
+                      : 'loss',
             durationMs: playingSinceMs !== null ? Date.now() - playingSinceMs : null,
           });
         }
         playingSinceMs = null;
       }
       lastStatusType = statusType;
+      wasSpectator = spectator;
     },
   };
 }

@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { track, trackCorrespondenceSeekPosted } from './analytics.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
-import { buildLandingPlayPanel, openLandingSetupDialog, setRoomNavigator } from './landing-play.js';
+import {
+  buildLandingPlayPanel,
+  closeActiveLandingDialog,
+  openLandingSetupDialog,
+  setRoomNavigator,
+} from './landing-play.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 import { navPhoneMediaQuery } from './site-shell.js';
@@ -110,6 +115,130 @@ describe('#1123 opponent-first setup', () => {
     expect(button, selector).not.toBeNull();
     button!.click();
   };
+
+  const closes = () =>
+    vi.mocked(track).mock.calls.filter(([event]) => event === 'setup_dialog_closed');
+
+  it.each(['button', 'escape', 'backdrop'])(
+    'records one dismissed close via %s, with its open duration and picks',
+    (via) => {
+      open('pvp');
+      if (via === 'button') click('.landing-setup-close');
+      if (via === 'escape') document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      if (via === 'backdrop') click('.landing-setup-overlay');
+      closeActiveLandingDialog();
+      window.dispatchEvent(new Event('pagehide'));
+      expect(closes()).toHaveLength(1);
+      expect(closes()[0][1]).toMatchObject({
+        how: 'dismissed',
+        mode: 'pvp',
+        gameSpecId: 'jieqi',
+        game_spec: 'jieqi',
+        ms_open: expect.any(Number),
+      });
+      expect(closes()[0][1]!.ms_open).toBeGreaterThanOrEqual(0);
+    },
+  );
+
+  it.each(['pagehide', 'in-place'])('records navigation with setup open once (%s)', (via) => {
+    open('pvp');
+    if (via === 'in-place') closeActiveLandingDialog();
+    window.dispatchEvent(new Event('pagehide'));
+    closeActiveLandingDialog();
+    expect(closes()).toHaveLength(1);
+    expect(closes()[0][1]).toMatchObject({ how: 'navigated', ms_open: expect.any(Number) });
+    expect(closes()[0][1]!.ms_open).toBeGreaterThanOrEqual(0);
+  });
+
+  it('pairs each mode-switch reopen with exactly one close', () => {
+    open('pvp');
+    click('[data-play-mode="lobby"]');
+    click('[data-play-mode="pve"]');
+    click('.landing-setup-close');
+    window.dispatchEvent(new Event('pagehide'));
+    expect(closes().map(([, props]) => props!.mode)).toEqual(['pvp', 'lobby', 'pve']);
+    expect(closes().every(([, props]) => props!.how === 'dismissed')).toBe(true);
+  });
+
+  it('measures elapsed time from its matching open and clamps clock changes', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    try {
+      open('pvp');
+      now.mockReturnValue(10_250);
+      click('.landing-setup-close');
+      expect(closes()[0][1]!.ms_open).toBe(250);
+      open('pvp');
+      now.mockReturnValue(10_000);
+      click('.landing-setup-close');
+      expect(closes()[1][1]!.ms_open).toBe(0);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('closes a replaced dialog and removes its navigation listener', () => {
+    open('pvp');
+    open('lobby');
+    window.dispatchEvent(new Event('pagehide'));
+    expect(closes().map(([, props]) => [props!.mode, props!.how])).toEqual([
+      ['pvp', 'dismissed'],
+      ['lobby', 'navigated'],
+    ]);
+  });
+
+  it('records started before real-time room navigation', async () => {
+    fetchSpy.mockImplementation(async () => json({ url: '/room/new' }, 201));
+    open('pvp');
+    start().click();
+    await flush();
+    expect(navigate).toHaveBeenCalledWith('/room/new');
+    window.dispatchEvent(new Event('pagehide'));
+    expect(closes()).toHaveLength(1);
+    expect(closes()[0][1]).toMatchObject({ how: 'started', time_mode: 'realtime' });
+  });
+
+  it('records started when the lobby matches, before full-page navigation', async () => {
+    fetchSpy.mockImplementation(async () => json({ status: 'matched', url: '/room/matched' }));
+    open('lobby');
+    start().click();
+    await flush();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(closes()).toHaveLength(1);
+    expect(closes()[0][1]).toMatchObject({ how: 'started', mode: 'lobby' });
+  });
+
+  it.each(['pvp', 'lobby'] as const)(
+    'records started once before correspondence navigation from %s',
+    async (mode) => {
+      open(mode, true);
+      navigate.mockImplementation(() => {
+        expect(closes()).toHaveLength(1);
+        window.dispatchEvent(new Event('pagehide'));
+        closeActiveLandingDialog();
+      });
+      start().click();
+      await flush();
+      expect(navigate).toHaveBeenCalled();
+      expect(closes()).toHaveLength(1);
+      expect(closes()[0][1]).toMatchObject({
+        how: 'started',
+        mode,
+        time_mode: 'correspondence',
+        ms_open: expect.any(Number),
+      });
+      expect(closes()[0][1]!.ms_open).toBeGreaterThanOrEqual(0);
+    },
+  );
+
+  it('keeps failed creation open and records the later dismissal', async () => {
+    fetchSpy.mockImplementation(async () => json({ error: 'unavailable' }, 503));
+    open('pvp', true);
+    start().click();
+    await flush();
+    expect(closes()).toHaveLength(0);
+    click('.landing-setup-close');
+    expect(closes()[0][1]).toMatchObject({ how: 'dismissed' });
+  });
 
   it('keeps rated off when the homepage reopens a human opponent while rated play is off', () => {
     setRatedModeEnabled(false, true);

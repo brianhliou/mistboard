@@ -9,6 +9,7 @@ export function createLandingLiveChallenge(options: {
   waiting: HTMLElement;
   locale: Locale;
   onSent(): void;
+  onStarted(): void;
   onAccountRequired(): void;
   onUnavailable(): void;
   onSettled(): void;
@@ -60,7 +61,14 @@ export function createLandingLiveChallenge(options: {
         }
         const data = (await response.json()) as { invite: LiveInviteView };
         if (disposed) return;
-        unmount = mountLiveInviteWaiting(options.waiting, data.invite);
+        const stopWaiting = mountLiveInviteWaiting(options.waiting, data.invite, options.onStarted);
+        // An already accepted response may have joined and disposed this UI
+        // synchronously while mounting the waiting state.
+        if (disposed) {
+          stopWaiting();
+          return;
+        }
+        unmount = stopWaiting;
         options.onSent();
       } catch {
         if (!disposed) options.status.textContent = t('challenge.liveRetry', {}, options.locale);

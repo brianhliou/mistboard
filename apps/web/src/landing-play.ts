@@ -388,9 +388,16 @@ export function setRoomNavigator(nav: RoomNavigator | null): void {
 // transition must dismiss the dialog (it lives on document.body, outside #app,
 // so the DOM swap would otherwise strand it and its document-level keydown
 // listener).
-let activeDialogClose: (() => void) | null = null;
-export function closeActiveLandingDialog(): void {
-  activeDialogClose?.();
+type SetupDialogCloseHow = 'started' | 'dismissed' | 'navigated';
+let activeDialogClose: ((how: SetupDialogCloseHow) => void) | null = null;
+export function closeActiveLandingDialog(how: SetupDialogCloseHow = 'navigated'): void {
+  activeDialogClose?.(how);
+}
+
+function navigateFromSetup(url: string): void {
+  // Mark and close before either a full reload or the SPA teardown can run.
+  closeActiveLandingDialog('started');
+  roomNavigator(url);
 }
 
 // What had focus when the setup dialog first opened, so closing it hands focus
@@ -1764,6 +1771,7 @@ function defaultLandingGameSpecId(
 }
 
 export function openLandingSetupDialog(choice: LandingPlayChoice): void {
+  closeActiveLandingDialog('dismissed');
   const locale = choice.locale ?? currentLocale();
   rememberLastSetupMode(choice.mode);
   if (!setupDialogReopening) {
@@ -1834,6 +1842,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // dialog opened on. game_started is the bottom; the gap between them is the
   // dialog's own drop-off. Mode switches inside the dialog are a reopen and
   // carry their own source so they do not read as new arrivals.
+  const openedAt = Date.now();
   track('setup_dialog_opened', {
     source: choice.source ?? 'reopen',
     ...(choice.source === 'hero' ? { mode_from: choice.modeFrom ?? 'default' } : {}),
@@ -2390,6 +2399,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       actions.hidden = true;
       inviteWaiting.hidden = false;
     },
+    onStarted: () => close('started'),
     onAccountRequired: requireAccount,
     onUnavailable: () => challengePlayer.markUnavailable(),
     onSettled: () => syncAccountRequirement(),
@@ -2465,12 +2475,25 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     }
     syncGameSpecificSections();
   });
-  const close = () => {
+  let closed = false;
+  const close = (how: SetupDialogCloseHow = 'dismissed') => {
+    if (closed) return;
+    closed = true;
+    track('setup_dialog_closed', {
+      how,
+      ms_open: Math.max(0, Date.now() - openedAt),
+      mode: choice.mode,
+      time_mode: selectedCorrespondenceDays === null ? 'realtime' : 'correspondence',
+      gameSpecId: selectedGameSpecId,
+      ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
+    });
     stopRosterWatch();
     challengePlayer.dispose();
     liveChallenge.dispose();
     cancelLobbyWait?.();
     document.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('pagehide', onPageHide);
+    window.removeEventListener('popstate', onPageHide);
     overlay.remove();
     if (activeDialogClose === close) activeDialogClose = null;
     if (setupDialogReopening) return;
@@ -2479,6 +2502,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     setupDialogOpener = null;
     if (opener?.isConnected) opener.focus({ preventScroll: true });
   };
+  const onPageHide = () => close('navigated');
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       if (playerPickerOpen) setPlayerPickerOpen(false);
@@ -2510,6 +2534,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (event.target === overlay) close();
   });
   document.addEventListener('keydown', onKeyDown);
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('popstate', onPageHide);
 
   // Keep game type visible in the bot flow too. Bot games are always casual,
   // but Rated stays clickable there: it switches the player to Find opponent
@@ -2953,7 +2979,7 @@ function reopenSetupDialogInMode(
   const locale = choice.locale ?? currentLocale();
   setupDialogReopening = true;
   try {
-    closeActiveLandingDialog();
+    closeActiveLandingDialog('dismissed');
     openLandingSetupDialog({
       engineId: choice.engineId,
       engines: choice.engines,
@@ -3092,7 +3118,7 @@ async function createCorrespondenceFromPlay(
         });
       }
       if (!status.isConnected) return;
-      roomNavigator(data.challengeUrl);
+      navigateFromSetup(data.challengeUrl);
       return;
     }
     const failure = await readRoomCreationFailure(response);
@@ -3158,7 +3184,7 @@ async function createGuestCorrespondenceRoom(
     const data = (await response.json()) as { url?: string };
     if (!data.url) throw new Error('room creation did not return a URL');
     if (!status.isConnected) return;
-    roomNavigator(data.url);
+    navigateFromSetup(data.url);
     return;
   }
   const failure = await readRoomCreationFailure(response);
@@ -3285,7 +3311,7 @@ export async function postCorrespondenceSeekFromPlay(
         });
       }
       if (!status.isConnected) return;
-      roomNavigator('/correspondence');
+      navigateFromSetup('/correspondence');
       return;
     }
     const failure = await readRoomCreationFailure(response);
@@ -3813,7 +3839,7 @@ async function createRoomFromPlay(
         if (!data.url) throw new Error('room creation did not return a URL');
         rememberBotRoomRequest(requestBody);
         if (status && !status.isConnected) return;
-        roomNavigator(data.url);
+        navigateFromSetup(data.url);
         return;
       }
       const failure = await readRoomCreationFailure(response);
@@ -4234,6 +4260,7 @@ export function joinLobbyFromPlay(
       .then(() => createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }))
       .then(
         (url) => {
+          closeActiveLandingDialog('started');
           window.location.href = url;
         },
         () => {
@@ -4309,6 +4336,7 @@ export function joinLobbyFromPlay(
     release();
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
     if (opts?.startSource) rememberGameStartSource(opts.startSource);
+    closeActiveLandingDialog('started');
     window.location.href = ticket.url;
     return true;
   };
