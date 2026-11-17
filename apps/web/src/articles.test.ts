@@ -233,14 +233,13 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Rapfi against KataGomo, scheduled for Friday 2026-11-27.
+      '/blog/rapfi-vs-katagomo',
       // The xiangqi own-net engineering post, a draft dated Tuesday 2026-11-24.
       '/blog/xiangqi-nnue-training',
       // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
       '/blog/meng-fanrui',
       '/blog/fog-future',
-      // Rapfi against KataGomo, the first Gomoku title match, scheduled for
-      // 2026-11-13 (DEV shows it early for review).
-      '/blog/rapfi-vs-katagomo',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/ten-thousand-games',

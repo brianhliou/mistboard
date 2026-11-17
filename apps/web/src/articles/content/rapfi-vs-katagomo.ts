@@ -91,6 +91,8 @@ export const KATAGOMO_SCORE = 1 - E.score;
 export const LEVEL8_SHARE = Math.round(ET.rapfiNodesMedian / L8.nodes);
 
 const F = match.featured;
+const BLACK_WIN = match.examples.blackWin;
+const LOSS = match.examples.loss;
 
 /** How long Rapfi took over the voided move, from the referee's reason. */
 export const VOIDED_MS = Number(/(\d+)ms$/.exec(match.equal.voided.reason)?.[1]);
@@ -123,7 +125,12 @@ const featuredBoard = (): string => gomokuRulesBoard(featuredGameState());
  *  is created on prod; then these ids are swapped for the prod ones. */
 export const RAPFI_KATAGOMO_STUDY = {
   id: 'gVo12Ybf',
-  chapters: { featured: 'Yhg41QMH', draw: 'pnDEEhxT' } as Record<string, string>,
+  chapters: {
+    featured: 'Yhg41QMH',
+    draw: 'pnDEEhxT',
+    blackWin: 'DXEtwnPn',
+    loss: 'zYUV16pA',
+  } as Record<string, string>,
 } as const;
 
 function p(text: string): ArticleBlock {
@@ -212,6 +219,15 @@ export const rapfiVsKatagomoArticle: Article = {
       ],
     },
     {
+      heading: 'Rapfi wins with Black',
+      blocks: [
+        p(
+          `In game ${BLACK_WIN.index + 1}, Rapfi had Black and completed a five at ${BLACK_WIN.moves.at(-1)}, ${BLACK_WIN.moves.length} moves after the deal. Follow the rising lines for Black, then step through Rapfi's attack toward the left edge.`,
+        ),
+        studyEmbed('blackWin', BLACK_WIN.moves.length, `Rapfi vs KataGomo, game ${BLACK_WIN.index + 1}`),
+      ],
+    },
+    {
       heading: `Decisive games end in about ${Math.round(D.lengths.decisiveMedian)} moves, and every draw fills the board`,
       blocks: [
         p(
@@ -296,6 +312,10 @@ export const rapfiVsKatagomoArticle: Article = {
         p(
           `KataGomo's losses turned early, from near even, mostly in one move. Rapfi's finished a slide, and KataGomo won them slowly: after the losing move it played a median ${BR.winnerQuietMovesMedian} moves that made no three or four before its five. In ${BR.oracleBlocked} of the ${BR.oracleDisagreed} positions where the deeper search chose a different move from Rapfi, its move took a point where a KataGomo stone would have made a three or a four.`,
         ),
+        p(
+          `In game ${LOSS.index + 1}, Rapfi had Black, and KataGomo completed a five with White after ${LOSS.moves.length} moves from the deal. Watch Black's chances ebb while KataGomo builds its position, well before the final five.`,
+        ),
+        studyEmbed('loss', LOSS.moves.length, `Rapfi vs KataGomo, game ${LOSS.index + 1}`),
         p(
           `**More search finds most of them.** Given ten times its match search, ${millions(BR.tenX.nodes)} positions, Rapfi plays the deeper search's move in ${BR.tenX.oracleMove} of the ${BR.located} positions, and in ${BR.tenX.holds} the position after its move no longer reads as lost. Replayed at its match search, it plays the losing move again in ${BR.matchSearch.repeats}. In ${BR.oracleSameMove} of the ${BR.located}, the deeper search would have played Rapfi's move too.`,
         ),

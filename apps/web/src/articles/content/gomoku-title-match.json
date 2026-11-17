@@ -235,5 +235,230 @@
       "g4",
       "b9"
     ]
+  },
+  "examples": {
+    "blackWin": {
+      "match": "equal",
+      "sourceFile": "run-equal-3s/games/051-gmk-080-rapfi-black.json",
+      "index": 51,
+      "opening": {
+        "id": "gmk-080",
+        "source": "mined-2B3W-7x7",
+        "stones": [
+          {
+            "square": "g7",
+            "color": "black"
+          },
+          {
+            "square": "h9",
+            "color": "black"
+          },
+          {
+            "square": "f7",
+            "color": "white"
+          },
+          {
+            "square": "h6",
+            "color": "white"
+          },
+          {
+            "square": "j10",
+            "color": "white"
+          }
+        ],
+        "turn": "black",
+        "screening": {
+          "score": 0,
+          "winrate": 0.5,
+          "finalScore": 40,
+          "nodes": 1000000,
+          "depth": 21,
+          "forcedWin": false
+        }
+      },
+      "rapfiColor": "black",
+      "winner": "black",
+      "reason": "five",
+      "moves": [
+        "i8",
+        "g6",
+        "i6",
+        "h5",
+        "i4",
+        "j5",
+        "g10",
+        "j7",
+        "i5",
+        "i7",
+        "j8",
+        "k7",
+        "l7",
+        "h8",
+        "f9",
+        "e8",
+        "d9",
+        "g9",
+        "f11",
+        "e12",
+        "f10",
+        "f8",
+        "f12",
+        "f13",
+        "e10",
+        "h7",
+        "h4",
+        "d8",
+        "g8",
+        "c8",
+        "b8",
+        "h10",
+        "d11",
+        "c12",
+        "d10",
+        "c10",
+        "e11",
+        "c9",
+        "c11",
+        "g11",
+        "b11"
+      ]
+    },
+    "loss": {
+      "match": "equal",
+      "sourceFile": "run-equal-3s/games/105-gmk-222-rapfi-black.json",
+      "index": 105,
+      "opening": {
+        "id": "gmk-222",
+        "source": "mined-2B3W-7x7",
+        "stones": [
+          {
+            "square": "f6",
+            "color": "black"
+          },
+          {
+            "square": "i8",
+            "color": "black"
+          },
+          {
+            "square": "f5",
+            "color": "white"
+          },
+          {
+            "square": "j9",
+            "color": "white"
+          },
+          {
+            "square": "j11",
+            "color": "white"
+          }
+        ],
+        "turn": "black",
+        "screening": {
+          "score": 9,
+          "winrate": 0.511248,
+          "finalScore": -11,
+          "nodes": 1000000,
+          "depth": 23,
+          "forcedWin": false
+        }
+      },
+      "rapfiColor": "black",
+      "winner": "white",
+      "reason": "five",
+      "moves": [
+        "j8",
+        "k8",
+        "i10",
+        "i11",
+        "i7",
+        "i9",
+        "k9",
+        "h6",
+        "k11",
+        "h5",
+        "h4",
+        "g4",
+        "l10",
+        "m11",
+        "g5",
+        "e7",
+        "e6",
+        "f7",
+        "k10",
+        "j10",
+        "j12",
+        "i13",
+        "k12",
+        "k13",
+        "l12",
+        "i12",
+        "m10",
+        "l11",
+        "k7",
+        "j6",
+        "l7",
+        "j7",
+        "i6",
+        "l6",
+        "d6",
+        "g6",
+        "i4",
+        "i5",
+        "j5",
+        "k6",
+        "m7",
+        "m9",
+        "o9",
+        "o7",
+        "h7",
+        "g8",
+        "k4",
+        "l3",
+        "n12",
+        "m12",
+        "n9",
+        "n10",
+        "g10",
+        "f8",
+        "j4",
+        "l4",
+        "e8",
+        "h13",
+        "g13",
+        "f11",
+        "c6",
+        "b6",
+        "j2",
+        "i3",
+        "j3",
+        "j1",
+        "e10",
+        "h10",
+        "g9",
+        "i2",
+        "h3",
+        "g7",
+        "e9",
+        "g14",
+        "f15",
+        "i14",
+        "i15",
+        "j15",
+        "g12",
+        "g11",
+        "h11",
+        "f12",
+        "e13",
+        "f10",
+        "f9",
+        "d7",
+        "c7",
+        "j14",
+        "h12",
+        "h14",
+        "k14",
+        "f14"
+      ]
+    }
   }
 }

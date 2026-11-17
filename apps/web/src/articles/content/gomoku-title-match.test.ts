@@ -4,6 +4,11 @@
 // that the post states the record's numbers, so an edit to either cannot drift
 // unseen.
 
+import {
+  applyGomokuRoomMove,
+  createGomokuRoomState,
+  type GomokuSquare,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { articleProse } from '../../article-prose.js';
 import blindspots from './gomoku-title-blindspots.json' with { type: 'json' };
@@ -102,6 +107,33 @@ describe('gomoku title match record', () => {
     expect(FEATURED_FIVE.every((sq) => white.has(sq))).toBe(true);
     expect(FEATURED_FIVE).toContain(FEATURED_LAST);
   });
+
+  it.each([
+    ['blackWin', 'black'],
+    ['loss', 'white'],
+  ] as const)('the %s example replays every recorded move to its five', (key, winner) => {
+    const game = match.examples[key];
+    expect(game.match).toBe('equal');
+    expect(game.rapfiColor).toBe('black');
+    expect(game.winner).toBe(winner);
+    expect(game.reason).toBe('five');
+    expect(game.index).not.toBe(match.equal.voided.index);
+    expect(game.sourceFile).toContain(`${String(game.index).padStart(3, '0')}-${game.opening.id}-rapfi-${game.rapfiColor}.json`);
+    let state = createGomokuRoomState(`example-${key}`, {
+      stones: game.opening.stones.map((s) => ({
+        square: s.square as GomokuSquare,
+        color: s.color as 'black' | 'white',
+      })),
+      turn: game.opening.turn as 'black' | 'white',
+    });
+    for (const to of game.moves) {
+      expect(state.status.type).toBe('playing');
+      const next = applyGomokuRoomMove(state, { to: to as GomokuSquare });
+      expect(next).not.toBe(state);
+      state = next;
+    }
+    expect(state.status).toMatchObject({ type: 'finished', winner, reason: 'five' });
+  });
 });
 
 describe('rapfi-vs-katagomo prose', () => {
@@ -161,17 +193,42 @@ describe('rapfi-vs-katagomo prose', () => {
     expect(LEVEL8_SHARE).toBe(6);
   });
 
-  it('shows game 1 and a draw from the match study, each opened on its last move', () => {
+  it('shows game 1, a Black win, a draw and a loss from the study on their last moves', () => {
     const embeds = rapfiVsKatagomoArticle.sections.flatMap((s) =>
       (s.blocks ?? []).flatMap((b) => (b.kind === 'embed' ? [b.path] : [])),
     );
     expect(embeds).toEqual([
       `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.featured}?ply=${match.featured.moves.length}`,
+      `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.blackWin}?ply=${match.examples.blackWin.moves.length}`,
       // Every draw filled the board, so the draw's last move is the record's draw length.
       `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.draw}?ply=${decisive.lengths.drawMoves}`,
+      `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.loss}?ply=${match.examples.loss.moves.length}`,
     ]);
     expect(RAPFI_KATAGOMO_STUDY.id).toMatch(/^[A-Za-z0-9_-]{8}$/);
     for (const id of Object.values(RAPFI_KATAGOMO_STUDY.chapters)) expect(id).toMatch(/^[A-Za-z0-9_-]{8}$/);
+  });
+
+  it('explains each new game beside its embed using the record, without a caption', () => {
+    for (const key of ['blackWin', 'loss'] as const) {
+      const game = match.examples[key];
+      const chapterId = RAPFI_KATAGOMO_STUDY.chapters[key];
+      const blocks = rapfiVsKatagomoArticle.sections.find((s) =>
+        s.blocks?.some((b) => b.kind === 'embed' && b.path.includes(chapterId)),
+      )!.blocks!;
+      const at = blocks.findIndex((b) => b.kind === 'embed' && b.path.includes(chapterId));
+      const paragraph = blocks[at - 1];
+      expect(paragraph.kind).toBe('paragraph');
+      if (paragraph.kind !== 'paragraph') throw new Error('missing game explanation');
+      expect(paragraph.text).toContain(`game ${game.index + 1}`);
+      expect(paragraph.text).toContain('Rapfi had Black');
+      expect(paragraph.text).toContain(`${game.moves.length} moves`);
+      expect(paragraph.text).not.toContain('\u2014');
+      expect(blocks[at]).not.toHaveProperty('caption');
+    }
+    const lossSection = rapfiVsKatagomoArticle.sections.find((s) =>
+      s.heading === "Rapfi's losing moves came late, in positions already behind",
+    );
+    expect(lossSection?.blocks?.some((b) => b.kind === 'embed' && b.path.includes(RAPFI_KATAGOMO_STUDY.chapters.loss))).toBe(true);
   });
 });
 
