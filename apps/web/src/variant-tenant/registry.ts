@@ -70,6 +70,8 @@ export type WebTenantEngineOption = {
   id: string;
   name: string;
   familyName: string;
+  /** A named strength above the numbered levels, localized in setup. */
+  levelLabelKey?: I18nKey;
   kind: string;
 };
 
@@ -352,6 +354,15 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
         mountFFQBanqiPostgame(root, roomId),
       ),
+    // The finished-game replay /games cards and /watch draw: the server's masked
+    // public postgame read, unflipped pieces face-down (watch-ffq-banqi-replay.ts).
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-ffq-banqi-replay.js').then(({ mountFFQBanqiWatchReplay }) =>
+          mountFFQBanqiWatchReplay(root, roomId, options),
+        ),
+    },
     // Spectators use the room; the server enforces admission and masked views.
     landing: {
       capabilities: {
@@ -412,12 +423,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      engineOptions: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
-        id: `rapfi-level-${level}`,
-        name: `Rapfi Level ${level}`,
-        familyName: 'Rapfi',
-        kind: 'browser',
-      })),
+      engineOptions: [
+        ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+          id: `rapfi-level-${level}`,
+          name: `Rapfi Level ${level}`,
+          familyName: 'Rapfi',
+          kind: 'browser',
+        })),
+        {
+          id: 'rapfi-strongest',
+          name: 'Rapfi Full strength',
+          familyName: 'Rapfi',
+          levelLabelKey: 'bots.fullStrength',
+          kind: 'container',
+        },
+      ],
       defaultEngineId: 'rapfi-level-1',
       // The picker stays unlisted. Admins have the same ?play deep-link door
       // as Three Kingdoms banqi, for a friend room or the browser bot.

@@ -282,7 +282,9 @@ describe('FFQ hidden admin room entry', () => {
       rated: false,
     });
 
-    expect(tenant?.watch).toBeUndefined();
+    // Finished games draw on /games and TV from the masked public read.
+    expect(tenant?.watch?.family).toBe('xiangqi');
+    expect(tenant?.watch?.mountReplay).toBeTypeOf('function');
     // Finished games open the private review page (#808).
     expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.mountPostgame).toBeTypeOf('function');

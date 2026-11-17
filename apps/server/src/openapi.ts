@@ -730,6 +730,19 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                 properties: {
                   user: { type: 'object', properties: { champions: CHAMPIONS } },
                   ratings: { type: 'array', items: { type: 'object' } },
+                  activity: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        variant: { type: 'string', enum: ['ffq-banqi'] },
+                        totalGamesPlayed: { type: 'integer' },
+                        wins: { type: 'integer' },
+                        draws: { type: 'integer' },
+                        losses: { type: 'integer' },
+                      },
+                    },
+                  },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
                   puzzleStreak: ref('PlayStreak'),
                   games: { type: 'array', items: { type: 'object' } },
@@ -761,7 +774,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           query(
             'variant',
             { type: 'string' },
-            'Rating pool, e.g. `xiangqi`; unknown values list every variant.',
+            'Rating pool, e.g. `xiangqi`, or casual activity spec `ffq-banqi`; unknown values list every variant.',
           ),
           query(
             'result',

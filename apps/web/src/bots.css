@@ -245,18 +245,6 @@
   padding-top: 0;
 }
 
-.bot-level-records {
-  display: grid;
-  gap: 0.3rem;
-  margin: 0;
-  padding: 0 0.8rem 0.4rem;
-  list-style: none;
-  color: var(--site-muted);
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
 /* ── Bot profile (/bot/:id) ───────────────────────────────────────────────── */
 
 .bot-rating-spotlight {

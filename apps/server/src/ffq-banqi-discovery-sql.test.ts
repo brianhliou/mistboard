@@ -37,7 +37,7 @@ function hiddenFixture(t: TestContext) {
   });
 }
 
-test('FFQ public totals follow launch and keep correspondence private', (t) => {
+test('FFQ public totals include correspondence only after launch', (t) => {
   hiddenFixture(t);
   const previous = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
   process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
@@ -55,8 +55,7 @@ test('FFQ public totals follow launch and keep correspondence private', (t) => {
     assert.ok(!offPublicGameSpecIds().includes(FFQ_BANQI_SPEC_ID));
     assert.doesNotMatch(publicVariant('games'), /variant NOT IN \('ffq-banqi'\)/);
     for (const sql of [publicVariant('games'), countedPublicGame('games')]) {
-      assert.match(sql, /variant <> 'ffq-banqi' OR NOT EXISTS/);
-      assert.match(sql, /payload->'timeControl' \? 'daysPerMove'/);
+      assert.doesNotMatch(sql, /ffq-banqi|daysPerMove/);
     }
   } finally {
     spec.publicSurface = surface;
@@ -104,6 +103,9 @@ test('FFQ SQL discovery filters run before ordering, pagination and window total
     ['owner profile history and total', () => getUserGamesPage('admin', 'admin', 0, 15)],
     ['initial profile and totals', () => getUserProfileByHandle('admin', null)],
     ['rating history', () => getUserRatingHistory('admin', null, 'banqi')],
+    ['game list and totals', () => queryGames({ excludeFFQ: true, visibility: 'public' })],
+    ['game aggregates', () => gameAggregates({ excludeFFQ: true, visibility: 'public' })],
+    ['game facets', () => gameFacets(true)],
   ];
   const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
   const surface = spec.publicSurface;
@@ -122,9 +124,20 @@ test('FFQ SQL discovery filters run before ordering, pagination and window total
           if (launch === 'hidden') assert.match(sql, /games\.variant NOT IN \('ffq-banqi'\)/);
           else {
             assert.doesNotMatch(sql, /games\.variant NOT IN \('ffq-banqi'\)/);
-            assert.match(sql, /games\.variant <> 'ffq-banqi' OR NOT EXISTS/);
-            assert.match(sql, /payload->'timeControl' \? 'daysPerMove'/);
+            assert.doesNotMatch(sql, /games\.variant <> 'ffq-banqi' OR NOT EXISTS/);
+            assert.doesNotMatch(sql, /\blc\./);
+            if (sql.includes('WITH matching_games') || label.startsWith('game '))
+              assert.doesNotMatch(sql, /daysPerMove/);
+            // TV keeps its independent, all-variant correspondence exclusion.
+            if (label.includes('showcase') || label.includes('watch'))
+              assert.match(sql, /rc\.payload->'timeControl' \? 'daysPerMove'/);
           }
+          if (label === 'public profile history and total') {
+            assert.match(sql, /games\.visibility <> 'private'/);
+            assert.match(sql, /game_participants\.visibility <> 'private'/);
+          }
+          if (label === 'owner profile history and total')
+            assert.doesNotMatch(sql, /visibility <> 'private'/);
         }
       });
     }

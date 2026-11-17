@@ -95,7 +95,6 @@ export const EN_REVIEW = {
   'replay.start': 'Start',
   'replay.previous': 'Previous',
   'replay.next': 'Next',
-  'review.chanceTotals': '{side}: luck {luck} pp · chance decision loss {loss} pp',
   'replay.red': 'Red',
   'replay.black': 'Black',
   'replay.white': 'White',

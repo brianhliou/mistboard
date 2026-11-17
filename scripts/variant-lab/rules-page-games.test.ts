@@ -15,7 +15,13 @@ import { checkCreate, type StudyCreateSpec } from '../../apps/server/src/study-e
 import { parseChapterScoreSeries } from '../../apps/server/src/study-score-series.ts';
 import * as decisions from '../../apps/server/src/three-kingdoms-banqi-decisions.ts';
 import type { ThreeKingdomsBanqiEngineRequest } from '../../apps/server/src/three-kingdoms-banqi-engine.ts';
-import { MOVE_NAG, moveGlyphFor, type StudyNode } from '../study-annotate.ts';
+import {
+  annotateFromEngine,
+  judgedMoves,
+  MOVE_NAG,
+  moveGlyphFor,
+  type StudyNode,
+} from '../study-annotate.ts';
 import { banqiPublicLine, replayBanqiGame } from './rules-page-games/banqi.ts';
 import {
   artifactKey,
@@ -24,6 +30,7 @@ import {
   type StudyEval,
   token,
 } from './rules-page-games/hidden-study.ts';
+import { jungleFlipGrading } from './rules-page-games/jungle-flip.ts';
 import {
   publicRequest,
   replayThreeKingdomsGame,
@@ -511,3 +518,73 @@ for (const variant of ['banqi', 'three-kingdoms-banqi'] as const) {
     assert.ok(branches > 0, 'the study includes replayable evidence lines');
   });
 }
+
+test('Flip Jungle grades flips on pool means, confirms marks and suppresses search drift', () => {
+  const redScore = [0.5, 0.99];
+  const best = ['b1b1'];
+  const decision = {
+    ply: 1,
+    mover: 'red' as const,
+    bestWin: 70,
+    playedWin: 50,
+    realizedWin: 99,
+    playedRank: 2,
+    candidates: [
+      { move: 'b0b0', win: 70 },
+      { move: 'a0a0', win: 50, played: true },
+    ],
+  };
+  const args = { rootFen: 'dealt', moves: ['a1a1'], redScore, best, decisions: [decision] };
+  const unconfirmed = jungleFlipGrading({ ...args, requireConfirmation: false });
+  assert.equal(judgedMoves(unconfirmed)[0]?.glyph, '??');
+  assert.deepEqual(
+    jungleFlipGrading({
+      ...args,
+      decisions: [{ ...decision, realizedWin: 1 }],
+      requireConfirmation: false,
+    }),
+    unconfirmed,
+  );
+  assert.throws(() => jungleFlipGrading(args), /confirm.*1/);
+  const confirmed = { ply: 1, before: 0.69, after: 0.5, best: 'b1b1' };
+  const annotated = annotateFromEngine(jungleFlipGrading({ ...args, confirmations: [confirmed] }));
+  assert.deepEqual(annotated.root.children[0]?.annotations?.glyphs, [4]);
+  assert.equal(
+    judgedMoves(jungleFlipGrading({ ...args, confirmations: [confirmed] }))[0]?.glyph,
+    '??',
+  );
+  for (const after of [0.59, 0.3]) {
+    assert.deepEqual(
+      judgedMoves(jungleFlipGrading({ ...args, confirmations: [{ ...confirmed, after }] })),
+      [],
+    );
+  }
+});
+
+test('Flip Jungle confirms quiet moves from the second mover POV without changing the chart', () => {
+  const redScore = [0.5, 0.4, 0.7];
+  const grading = jungleFlipGrading({
+    rootFen: 'dealt',
+    moves: ['a1a1', 'b1c1'],
+    redScore,
+    best: ['a1a1', 'a2a1'],
+    decisions: [
+      {
+        ply: 1,
+        mover: 'red',
+        bestWin: 50,
+        playedWin: 50,
+        realizedWin: 99,
+        playedRank: 1,
+        candidates: [{ move: 'a0a0', win: 50, played: true }],
+      },
+    ],
+    confirmations: [{ ply: 2, before: 0.59, after: 0.31, best: 'a2a1' }],
+  });
+  const [mark] = judgedMoves(grading);
+  assert.equal(mark?.mover, 'black');
+  assert.ok(Math.abs(mark!.before - 0.59) < 1e-10);
+  assert.ok(Math.abs(mark!.after - 0.31) < 1e-10);
+  assert.equal(mark?.glyph, '??');
+  assert.deepEqual(grading.redScore, redScore);
+});

@@ -26,7 +26,7 @@
 // stalled mid-air. Fog games can never appear live: the server's visibility
 // policy is fail-closed.
 
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
 import { liveMatchupNames } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -69,6 +69,18 @@ export function airWindowFor(entry: ShowcaseEntry): AirWindow | null {
   return { entry, startMs: endedAt, endMs: endedAt + (endedAt - startedAt) };
 }
 
+// Whether the homepage board may show a game of this spec. Fog games stay off
+// the homepage (decided 2026-11-15): their delayed air drew a dark board that
+// read as broken. A spec with no watch renderer of its own resolves to the
+// chessground fallback ('chess'), which drew an empty 8x8 chess board for a
+// live Fanfanqi game (2026-11-15), so it is refused too: an unregistered or
+// unknown spec fails closed and the board keeps its last game or skeleton.
+export function homepageTvAdmits(specId: string): boolean {
+  if (showcaseRendererKindForSpec(specId) === 'chess') return false;
+  const spec = maybeGameSpecForId(specId === 'fog' ? 'dark-chess' : specId);
+  return spec !== null && spec.visibility !== 'dark';
+}
+
 export type LandingTvMode = 'live' | 'replay' | 'frozen';
 
 type LiveFeatured = {
@@ -91,6 +103,10 @@ export type LandingTvOptions = {
   // Which /api/watch/live channel to follow. The homepage follows 'top' (the
   // cross-channel election); the TV embed can pin one variant's channel.
   channel?: string;
+  // Which specs this board may show, from the live feed and the finished pool
+  // alike; the rest are dropped as if absent. The homepage passes
+  // homepageTvAdmits; the TV embed shows its whole channel.
+  admitSpec?: (specId: string) => boolean;
 };
 
 export type LandingTvController = {
@@ -119,7 +135,8 @@ export async function mountLandingTv(
   let mode: LandingTvMode | null = null;
   let currentRoomId: string | null = null;
   let currentSpecId: string | null = null;
-  let completedPool = initialPool.slice();
+  const admits = options.admitSpec ?? (() => true);
+  let completedPool = initialPool.filter((entry) => admits(entry.specId));
   // The delayed air on the board (mode 'replay'), kept until its window closes.
   let airing: AirWindow | null = null;
   // When the frozen game on the board finished, so a pool update only replaces it
@@ -498,8 +515,9 @@ export async function mountLandingTv(
       if (resp.ok) {
         const data = (await resp.json()) as { featured: LiveFeatured | null };
         answered = true;
-        if (data.featured) {
-          const featured = data.featured;
+        // A featured game this board may not show reads as no live game.
+        const featured = data.featured && admits(data.featured.gameSpecId) ? data.featured : null;
+        if (featured) {
           enqueue(() => showLive(featured));
         } else if (mode === 'live') {
           enqueue(finishLiveHandoff);
@@ -553,7 +571,7 @@ export async function mountLandingTv(
   return {
     updateCompletedPool: (entries, opts) => {
       if (destroyed) return;
-      completedPool = entries.slice();
+      completedPool = entries.filter((entry) => admits(entry.specId));
       if (mode === 'live') return; // live wins; the poll hands off when it ends
       const rebaseline = opts?.jumpNow === true;
       enqueue(() => syncChannel({ rebaseline }));

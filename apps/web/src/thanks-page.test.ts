@@ -43,11 +43,12 @@ describe('thanks page', () => {
     },
   );
 
-  it('aggregates exactly eight Rapfi levels in the credits', () => {
+  it('aggregates Rapfi and its eight levels exactly once in the credits', () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
-    expect(enabledEngineCredits().find((credit) => credit.id === 'rapfi')?.botIds).toEqual(
-      Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
-    );
+    expect(enabledEngineCredits().find((credit) => credit.id === 'rapfi')?.botIds).toEqual([
+      'rapfi',
+      ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+    ]);
     const page = buildThanks('en');
     fillEngineStats(
       page,
@@ -59,13 +60,14 @@ describe('thanks page', () => {
             gamesTotal: i + 1,
           }),
         ),
+        bot({ id: 'rapfi', supportedGameSpecIds: ['gomoku'], gamesTotal: 7 }),
         bot({ id: 'rapfi-level-0', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
         bot({ id: 'rapfi-level-9', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
       ],
       'en',
     );
     const row = page.querySelector('[data-engine="rapfi"]');
-    expect(row?.querySelector('.thanks-engine-stat-games dd')?.textContent).toBe('36');
+    expect(row?.querySelector('.thanks-engine-stat-games dd')?.textContent).toBe('43');
     expect(row?.querySelector('.thanks-engine-stat-rating dd')?.textContent).toBe('');
   });
 

@@ -15,6 +15,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Gomoku has a full-strength Rapfi above Level 8 on its bot card ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
+- Misty plays Xiangqi Mahjong with a stronger search bot ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
+- Fanfanqi correspondence is open to everyone, casual only ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
+- Every bot card ends in one standard footer with the picked level's record, and the Fanfanqi bots page lists Misty's levels ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Fanfanqi is open to everyone, casual only, with rules in English and Chinese ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - A player who owes the first move in a correspondence game makes it before starting or accepting another ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Homepage game names link to their rules in the selected language ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
@@ -69,6 +73,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The Flip Jungle rules-page game shows flip luck ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
+- Study embeds on phones show each move's full note under a full-width board ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - The Banqi, Three Kingdoms Banqi and Gomoku rules pages show an annotated Level 7 vs Level 8 game with a chart, move grades and flip luck ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Every rules page opens with a short summary of its rules ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Studies fit one phone screen, and each move note sits in a fixed slot that opens in full on a tap ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))
@@ -100,6 +106,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Finished Fanfanqi games draw their boards on /games and TV, covered pieces still face-down ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Study charts can draw one line per engine, each in its seat colour ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Bot names on /watch fit their card and link to the bot's page ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - The watch page on phones puts channels above the game, the clocks above and below the board and the moves in one scrolling row ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
@@ -140,6 +147,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Community
 
+- Player profiles show a Fanfanqi row with each player's games and results ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - A message left unread for 12 hours now sends you an email reminder, at most one a day, with a one-click unsubscribe ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 
@@ -193,11 +201,15 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Removed
 
+- The per-side luck totals line in Fanfanqi review ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Hong Kong mahjong is closed to new games ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ### Fixed
 
+- The homepage board no longer sticks on a fog game it cannot draw ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
+- The champions page shows Pikafish's re-run title match ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
+- Crazyhouse Xiangqi study embeds draw move grades, drops included ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - The Gomoku study chart labelled Black's winning chances as White's ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Fanfanqi and Three Kingdoms Banqi bot names write Level with a capital L like the other bots ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Misty's name fits on finished game cards, shown as Misty Level N ([a58e0368](https://github.com/brianhliou/mistboard/commit/a58e0368))

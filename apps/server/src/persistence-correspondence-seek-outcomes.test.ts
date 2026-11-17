@@ -7,7 +7,11 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
-import { CORRESPONDENCE_RESTRICTED_SPEC_IDS, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  gameSpecForId,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import {
   type AccountSession,
   createAccountSession,
@@ -51,7 +55,13 @@ definePersistenceTests('correspondence seek outcomes', () => {
     }
   });
 
-  for (const loss of ['flag disabled', 'admin demoted'] as const) {
+  // Decided 2026-11-15 (#994): casual Fanfanqi correspondence is open to every
+  // account once Fanfanqi is public, so demotion is a loss of access only while
+  // it is hidden. The kill switch still is.
+  const ffqPublic = gameSpecForId('ffq-banqi').publicSurface !== 'hidden';
+  for (const loss of ffqPublic
+    ? (['flag disabled'] as const)
+    : (['flag disabled', 'admin demoted'] as const)) {
     test(`a restricted seek creator can list, view and cancel after ${loss}`, async (t) => {
       const prior = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
       process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
@@ -213,12 +223,14 @@ definePersistenceTests('correspondence seek outcomes', () => {
         await callSeekRoute('GET', '/api/correspondence/seeks/so-hidden-expired', ownerCookie),
         expiredView,
       );
+      // With the kill switch on and the variant public, a stranger reads the
+      // expiry notice like any public seek's (as Three Kingdoms does).
+      const publicSpec = gameSpecForId(gameSpecId).publicSurface !== 'hidden';
       assert.deepEqual(
         responses,
-        Array.from({ length: 5 }, () => ({
-          status: 404,
-          json: { error: 'seek_not_found' },
-        })),
+        Array.from({ length: 5 }, (_, i) =>
+          i === 4 && publicSpec ? expiredView : { status: 404, json: { error: 'seek_not_found' } },
+        ),
       );
     });
   }

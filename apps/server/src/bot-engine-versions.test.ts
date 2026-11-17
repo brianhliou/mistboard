@@ -42,6 +42,7 @@ test('pinned source builds show the short sha of their .ref', () => {
   const cases: [engineId: string, refFile: string][] = [
     ['rapfi-level-1', 'rapfi.ref'],
     ['rapfi-level-8', 'rapfi.ref'],
+    ['rapfi-strongest', 'rapfi.ref'],
     ['pikafish-jieqi-level-3', 'pikafish-jieqi.ref'],
     ['pikafish-jieqi-strongest', 'pikafish-jieqi.ref'],
     ['fairy-stockfish-xiangqi-level-5', 'fairy-stockfish-xiangqi.ref'],
@@ -88,6 +89,15 @@ test('Misty shows each engine build she plays', () => {
 });
 
 test('an engine with no recorded version shows nothing rather than a guess', () => {
+  for (const id of [
+    'rapfi-level-0',
+    'rapfi-level-9',
+    'rapfi-level-01',
+    'rapfi-level-1\n',
+    'rapfi-strongest\n',
+    'rapfi-strongest-extra',
+  ])
+    assert.equal(botEngineVersion(id), null, id);
   assert.equal(botEngineVersion('misty-xiangqi-mahjong'), null);
   assert.equal(botEngineVersion('python-no-such-build'), null);
   assert.equal(botEngineVersion('made-up-engine'), null);
