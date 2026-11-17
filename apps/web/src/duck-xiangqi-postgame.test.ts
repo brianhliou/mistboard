@@ -6,6 +6,8 @@ import {
   getDuckXiangqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from './display-preferences.js';
+import * as duckXiangqiBoard from './duck-xiangqi-board.js';
 import {
   type DuckXiangqiPostgameResponse,
   duckXiangqiPostgameApiUrl,
@@ -24,6 +26,7 @@ const TURNS: DuckXiangqiTurn[] = [
 
 describe('Duck Xiangqi postgame page', () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -91,6 +94,85 @@ describe('Duck Xiangqi postgame page', () => {
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
     expect(duckSquare()).toBe('e6');
+  });
+
+  it('glides adjacent replay steps in either direction, but not the first paint or jumps', async () => {
+    const fixture = postgameFixture();
+    vi.stubGlobal('fetch', async () => jsonResponse(fixture));
+    const animate = vi.spyOn(duckXiangqiBoard, 'animateDuckXiangqiTurn');
+    const root = document.createElement('div');
+
+    mountDuckXiangqiPostgame(root, ROOM_ID);
+    await flushPromises();
+
+    const board = root.querySelector('.duck-xiangqi-postgame__board');
+    const history = fixture.history!.truth!;
+    const navigate = (action: string): void =>
+      root.querySelector<HTMLButtonElement>(`[data-replay="${action}"]`)!.click();
+    expect(animate).not.toHaveBeenCalled();
+    navigate('first');
+    expect(animate).not.toHaveBeenCalled();
+
+    for (const ply of [1, 2]) {
+      navigate('next');
+      expect(animate).toHaveBeenCalledExactlyOnceWith(
+        board,
+        history[ply - 1]!.view,
+        history[ply]!.view,
+        'red',
+        { reverse: false },
+      );
+      expect(board?.querySelector('.dkx-duck')?.getAttribute('data-duck-square')).toBe(
+        history[ply]!.view.duck,
+      );
+      animate.mockClear();
+    }
+
+    for (const ply of [2, 1]) {
+      navigate('prev');
+      expect(animate).toHaveBeenCalledExactlyOnceWith(
+        board,
+        history[ply - 1]!.view,
+        history[ply]!.view,
+        'red',
+        { reverse: true },
+      );
+      animate.mockClear();
+    }
+
+    navigate('latest');
+    expect(animate).not.toHaveBeenCalled();
+    expect(board?.querySelector('.dkx-duck')?.getAttribute('data-duck-square')).toBe('e6');
+  });
+
+  it('repaints flips and appearance changes without gliding, then steps from the new orientation', async () => {
+    const fixture = postgameFixture();
+    vi.stubGlobal('fetch', async () => jsonResponse(fixture));
+    const animate = vi.spyOn(duckXiangqiBoard, 'animateDuckXiangqiTurn');
+    const root = document.createElement('div');
+
+    mountDuckXiangqiPostgame(root, ROOM_ID);
+    await flushPromises();
+
+    const flip = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
+      (item) => item.textContent?.trim() === 'Flip board',
+    );
+    expect(flip).toBeDefined();
+    flip!.click();
+    expect(animate).not.toHaveBeenCalled();
+
+    root.querySelector<HTMLButtonElement>('[data-replay="prev"]')!.click();
+    expect(animate).toHaveBeenCalledExactlyOnceWith(
+      root.querySelector('.duck-xiangqi-postgame__board'),
+      fixture.history!.truth![1]!.view,
+      fixture.history!.truth![2]!.view,
+      'black',
+      { reverse: true },
+    );
+    animate.mockClear();
+
+    window.dispatchEvent(new Event(DISPLAY_PREFERENCES_CHANGE_EVENT));
+    expect(animate).not.toHaveBeenCalled();
   });
 });
 

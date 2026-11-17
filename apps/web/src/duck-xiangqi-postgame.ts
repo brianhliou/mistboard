@@ -6,7 +6,7 @@ import type {
 } from '@mistboard/game';
 import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
 import { DISPLAY_PREFERENCES_CHANGE_EVENT } from './display-preferences.js';
-import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { animateDuckXiangqiTurn, duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
 // board ground, grid, palace and river; `duck-xiangqi.css` only adds the duck and
@@ -175,6 +175,7 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     status,
   });
 
+  let lastRendered: { ply: number; flipped: boolean } | null = null;
   root.replaceChildren(buildNav());
   mountReviewLayout(root, {
     pageClassName: 'duck-xiangqi-review',
@@ -209,6 +210,19 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
         phase: { kind: 'piece', selected: null },
         targets: [],
       });
+      const previous = lastRendered;
+      lastRendered = { ply, flipped };
+      if (previous && previous.flipped === flipped && Math.abs(ply - previous.ply) === 1) {
+        // The higher ply carries the turn in both directions; the lower ply
+        // supplies the duck's origin, including its absence before turn one.
+        const before = postgameViewAtPly(postgame, 'truth', Math.min(previous.ply, ply));
+        const after = postgameViewAtPly(postgame, 'truth', Math.max(previous.ply, ply));
+        if (before && after) {
+          animateDuckXiangqiTurn(boardHost, before, after, perspective, {
+            reverse: ply < previous.ply,
+          });
+        }
+      }
     },
     // Jump-to-ply routes through the layout's own `go`, the same path the
     // control bar and the keyboard use.
