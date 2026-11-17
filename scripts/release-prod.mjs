@@ -1748,6 +1748,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:banqi', baseArgs()),
     },
     {
+      label: 'prod Three Kingdoms Banqi smoke',
+      tag: 'three-kingdoms-banqi',
+      command: npmCommand('prod:smoke:three-kingdoms-banqi', baseArgs()),
+    },
+    {
       label: 'prod Jungle smoke',
       tag: 'jungle',
       command: npmCommand('prod:smoke:jungle', baseArgs()),

@@ -48,6 +48,11 @@ function smokedGameSpecIds(): Set<string> {
   return new Set(Object.values(VARIANT_SMOKE_CONFIGS).map((config) => config.gameSpecId));
 }
 
+test('Three Kingdoms Banqi executable engine has a prod smoke without an exemption', () => {
+  assert.ok(smokedGameSpecIds().has('three-kingdoms-banqi'));
+  assert.ok(!('three-kingdoms-banqi' in EXEMPT));
+});
+
 test('the bot roster is readable and non-trivial', () => {
   // Guards the assertion below: an import that silently yielded nothing would
   // make the coverage test pass by measuring an empty set.

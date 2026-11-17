@@ -94,6 +94,16 @@ export const VARIANT_SMOKE_CONFIGS = {
     // a later 'misty-banqi-v2' does not red a healthy engine (bfb02b95).
     engineSeat: { prefix: 'misty-banqi' },
   },
+  'three-kingdoms-banqi': {
+    name: 'three-kingdoms-banqi',
+    label: 'Three Kingdoms Banqi',
+    usage: 'npm run prod:smoke:three-kingdoms-banqi -- [options]',
+    gameSpecId: 'three-kingdoms-banqi',
+    defaultTimeoutMs: 30_000,
+    // Two player seats despite the three piece factions. The default search
+    // engine takes red; accept its historical id and the numbered ladder.
+    engineSeat: { prefix: 'misty-three-kingdoms-banqi' },
+  },
   jieqi: {
     name: 'jieqi',
     label: 'Jieqi',
