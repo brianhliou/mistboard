@@ -213,7 +213,7 @@ export const rapfiVsKatagomoArticle: Article = {
       heading: 'Game 1',
       blocks: [
         p(
-          `Each game starts from one of the site's [dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} of them as close to even, and each was played twice with colours swapped. In game 1 KataGomo had Black, and Rapfi won with its ${FEATURED_RAPFI_MOVES}th move, ${FEATURED_LAST}, a diagonal five from ${FEATURED_FIVE[0]} to ${FEATURED_FIVE.at(-1)}. Under the board, both engines read every position of the game: the teal line is Rapfi's win chance for Black, the orange line KataGomo's.`,
+          `Each game starts from one of the site's [dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} in the pool at the time as close to even, though KataGomo put ${KV.openings.outsideFortySixty} of the ${KV.openings.read} played outside 40-60% (more below). Each was played twice with colours swapped. In game 1 KataGomo had Black, and Rapfi won with its ${FEATURED_RAPFI_MOVES}th move, ${FEATURED_LAST}, a diagonal five from ${FEATURED_FIVE[0]} to ${FEATURED_FIVE.at(-1)}. Under the board, both engines read every position of the game: the teal line is Rapfi's win chance for Black, the orange line KataGomo's.`,
         ),
         studyEmbed('featured', F.moves.length, 'KataGomo vs Rapfi, game 1'),
       ],
