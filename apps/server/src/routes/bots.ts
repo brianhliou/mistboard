@@ -22,6 +22,10 @@ import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
 import type { ProfileGameRecord } from '../persistence-games.js';
 import { markUnavailableGames } from '../replayable-games.js';
+import {
+  isThreeKingdomsBanqiEngineClientId,
+  threeKingdomsBanqiEngineAvailable,
+} from '../three-kingdoms-banqi-engine.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 // The bot page's "Load more" page size, and the most one request may ask for
@@ -69,15 +73,17 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
     // it drops out of /api/bots and its profile 404s.
     const serveable = isFFQBanqiEngineClientId(engineId)
       ? ffqBanqiEngineAvailable(engineId)
-      : isJungleFlipEngineClientId(engineId)
-        ? jungleFlipEngineAvailable(engineId)
-        : engineId === JIEQI_ABJCHESS_ENGINE_ID
-          ? abJchessAvailable()
-          : engineId === JIEQI_JQE_ENGINE_ID
-            ? jqeAvailable()
-            : engineId === KATAGO_JUNGLE_ENGINE_ID
-              ? katagoJungleAvailable()
-              : true;
+      : isThreeKingdomsBanqiEngineClientId(engineId)
+        ? threeKingdomsBanqiEngineAvailable(engineId)
+        : isJungleFlipEngineClientId(engineId)
+          ? jungleFlipEngineAvailable(engineId)
+          : engineId === JIEQI_ABJCHESS_ENGINE_ID
+            ? abJchessAvailable()
+            : engineId === JIEQI_JQE_ENGINE_ID
+              ? jqeAvailable()
+              : engineId === KATAGO_JUNGLE_ENGINE_ID
+                ? katagoJungleAvailable()
+                : true;
     const version = botEngineVersion(engineId);
     options.push({
       gameSpecId,

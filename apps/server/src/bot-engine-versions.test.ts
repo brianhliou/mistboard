@@ -13,6 +13,10 @@ import {
   PIKAFISH_XIANGQI_VERSION,
 } from './bot-engine-versions.js';
 import { FIRST_PARTY_BOT_PROFILES } from './first-party-bots.js';
+import {
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  threeKingdomsBanqiEngineVersion,
+} from './three-kingdoms-banqi-engine.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8');
@@ -104,11 +108,22 @@ test('an engine with no recorded version shows nothing rather than a guess', () 
     'rapfi-level-1\n',
     'rapfi-strongest\n',
     'rapfi-strongest-extra',
+    'misty-three-kingdoms-banqi-level-0',
+    'misty-three-kingdoms-banqi-level-9',
+    'misty-three-kingdoms-banqi-level-01',
   ])
     assert.equal(botEngineVersion(id), null, id);
   assert.equal(botEngineVersion('misty-xiangqi-mahjong'), null);
   assert.equal(botEngineVersion('python-no-such-build'), null);
   assert.equal(botEngineVersion('made-up-engine'), null);
+});
+
+test('Three Kingdoms bot versions preserve each current and historical engine build', () => {
+  for (const tier of THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
+    const version = threeKingdomsBanqiEngineVersion(tier.id);
+    assert.ok(version, tier.id);
+    assert.equal(botEngineVersion(tier.id), version, tier.id);
+  }
 });
 
 test('every first-party engine except the named exceptions has a version', () => {

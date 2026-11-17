@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
+import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
 import {
   botEngineAttributions,
   FIRST_PARTY_BOT_PROFILES,
@@ -15,6 +16,7 @@ import {
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
+import { THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS } from './three-kingdoms-banqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
 test('Rapfi fronts the distinct strongest Gomoku engine without absorbing Levels 1-8', () => {
@@ -57,6 +59,46 @@ test('Misty level snapshots resolve only engines offered for that variant', () =
   assert.equal(mistyLevelForEngine('banqi', 'misty-jungle-flip-level-1'), null);
   assert.equal(mistyLevelForEngine('jungle-flip', 'misty-banqi-level-1'), null);
   assert.equal(mistyLevelForEngine('dark-chess', 'python-v2-v1.6'), null);
+});
+
+test('Misty owns every Three Kingdoms and FFQ tier with its exact seat label and level', () => {
+  for (const [variant, tiers] of [
+    ['three-kingdoms-banqi', THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS],
+    ['ffq-banqi', FFQ_BANQI_PLAYABLE_ENGINES],
+  ] as const) {
+    assert.equal(firstPartyBotEngineFor('misty', variant), `misty-${variant}-level-4`);
+    for (const tier of tiers) {
+      assert.equal(firstPartyBotForEngine(tier.id)?.id, 'misty', tier.id);
+      const label = tier.level === undefined ? 'Misty' : `Misty Level ${tier.level}`;
+      assert.equal(
+        liveSeatEngineName(tier.id, undefined, () => 'Old engine name'),
+        label,
+      );
+      assert.equal(
+        liveSeatEngineName(tier.id, 'misty', () => 'Old engine name'),
+        label,
+      );
+      assert.equal(
+        persistedSeatDisplayName({
+          subjectType: 'bot',
+          subjectId: 'misty',
+          engineId: tier.id,
+          displayName: 'Misty',
+        }),
+        label,
+      );
+      assert.equal(mistyLevelForEngine(variant, tier.id), tier.level ?? null);
+      const otherVariant = variant === 'ffq-banqi' ? 'three-kingdoms-banqi' : 'ffq-banqi';
+      assert.equal(mistyLevelForEngine(otherVariant, tier.id), null);
+    }
+    for (const id of [
+      `misty-${variant}-level-0`,
+      `misty-${variant}-level-9`,
+      `misty-${variant}-other`,
+    ]) {
+      assert.equal(firstPartyBotForEngine(id), null, id);
+    }
+  }
 });
 
 test('the merged Misty identity fronts every house variant', () => {

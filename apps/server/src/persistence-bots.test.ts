@@ -27,6 +27,140 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('bot profiles', () => {
+  test('reattributes historical Three Kingdoms and FFQ seats to Misty in bot API records', async (t) => {
+    const variants = ['three-kingdoms-banqi', 'ffq-banqi'] as const;
+    for (const variant of variants) {
+      const spec = gameSpecForId(variant);
+      const previous = spec.publicSurface;
+      spec.publicSurface = 'casual';
+      t.after(() => {
+        spec.publicSurface = previous;
+      });
+    }
+    await insertBotProfile('misty', 'Misty', 'public', {
+      supportedGameSpecIds: ['dark-chess', 'ffq-banqi'],
+    });
+    const seed = async (
+      id: string,
+      variant: string,
+      engineId: string,
+      subjectType: 'engine-version' | 'bot' | 'guest' = 'engine-version',
+      visibility: 'public' | 'private' = 'public',
+    ) =>
+      recordGameEnd(id, {
+        variant,
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        startedAt: new Date('2026-11-16T00:00:00Z'),
+        endedAt: new Date('2026-11-16T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: engineId,
+        whiteName: 'Guest',
+        blackName: 'Old engine',
+        corpusId: null,
+        rated: false,
+        visibility,
+        participants: [
+          { color: 'red', displayName: 'Guest', subjectType: 'guest', subjectId: null, visibility },
+          {
+            color: 'black',
+            displayName: 'Old engine',
+            subjectType,
+            subjectId: subjectType === 'bot' ? 'misty' : engineId,
+            engineId: subjectType === 'bot' ? engineId : null,
+            engineVersion: '0.2.0',
+            visibility,
+          },
+        ],
+      });
+    for (const variant of variants) {
+      for (let level = 1; level <= 8; level += 1) {
+        await seed(`${variant}-${level}`, variant, `misty-${variant}-level-${level}`);
+      }
+    }
+    await seed('tk-unnumbered', variants[0], 'misty-three-kingdoms-banqi');
+    await seed('ffq-already-bot', variants[1], 'misty-ffq-banqi-level-4', 'bot');
+    await seed(
+      'private-tk',
+      variants[0],
+      'misty-three-kingdoms-banqi-level-1',
+      'engine-version',
+      'private',
+    );
+    await seed('human-id', variants[0], 'misty-three-kingdoms-banqi-level-1', 'guest');
+    await seed('wrong-variant', variants[0], 'misty-ffq-banqi-level-1');
+    await seed('unknown-tier', variants[1], 'misty-ffq-banqi-level-9');
+
+    const migration = readFileSync(
+      new URL('../migrations/207_misty_three_kingdoms_ffq_attribution.sql', import.meta.url),
+      'utf8',
+    );
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      // Model a correctly attributed FFQ row written before level snapshots.
+      await client.query(
+        "UPDATE game_participants SET bot_level = NULL WHERE game_id = 'ffq-already-bot'",
+      );
+      await client.query(migration);
+      const snapshot = async () =>
+        (await client.query('SELECT * FROM game_participants ORDER BY game_id, color')).rows;
+      const once = await snapshot();
+      await client.query(migration);
+      assert.deepEqual(await snapshot(), once, 'the backfill is idempotent');
+      for (const variant of variants) {
+        for (let level = 1; level <= 8; level += 1) {
+          const row = once.find(
+            (row) => row.game_id === `${variant}-${level}` && row.color === 'black',
+          );
+          assert.ok(row);
+          assert.equal(row.subject_type, 'bot');
+          assert.equal(row.subject_id, 'misty');
+          assert.equal(row.engine_id, `misty-${variant}-level-${level}`);
+          assert.equal(row.engine_version, '0.2.0');
+          assert.equal(row.display_name, `Misty Level ${level}`);
+          assert.equal(row.bot_level, level);
+          assert.equal(row.visibility, 'public');
+        }
+      }
+      const historic = once.find((row) => row.game_id === 'tk-unnumbered' && row.color === 'black');
+      assert.equal(historic?.subject_id, 'misty');
+      assert.equal(historic?.engine_id, 'misty-three-kingdoms-banqi');
+      assert.equal(historic?.bot_level, null);
+      assert.equal(
+        once.find((row) => row.game_id === 'ffq-already-bot' && row.color === 'black')?.bot_level,
+        4,
+      );
+      const privateSeat = once.find((row) => row.game_id === 'private-tk' && row.color === 'black');
+      assert.equal(privateSeat?.subject_id, 'misty');
+      assert.equal(privateSeat?.visibility, 'private');
+      for (const id of ['human-id', 'wrong-variant', 'unknown-tier']) {
+        const row = once.find((row) => row.game_id === id && row.color === 'black');
+        assert.equal(row?.subject_type, id === 'human-id' ? 'guest' : 'engine-version');
+        assert.equal(row?.display_name, 'Old engine');
+      }
+    } finally {
+      await client.end();
+    }
+    const expected = { games: 9, wins: 9, losses: 0, draws: 0 };
+    const profile = await getPublicBotProfile('misty');
+    const listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    for (const variant of variants) {
+      assert.deepEqual(profile?.recordsByGameSpecId[variant], expected);
+      assert.deepEqual(listed?.recordsByGameSpecId[variant], expected);
+      assert.equal(profile?.gamesByGameSpecId[variant]?.length, 9);
+    }
+    const response = await routeGet('/api/bots/misty');
+    assert.equal(response.status, 200);
+    const bot = JSON.parse(response.body).bot;
+    for (const variant of variants) {
+      assert.deepEqual(bot.recordsByGameSpecId[variant], expected);
+      assert.equal(bot.gamesByGameSpecId[variant].length, 9);
+    }
+  });
+
   test('lists unnumbered Rapfi for Gomoku on /api/bots only while public and enabled', async (t) => {
     const previousFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
     const spec = gameSpecForId('gomoku');

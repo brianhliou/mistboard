@@ -25,6 +25,7 @@ import {
 import { JUNGLE_RUST_ENGINE_VERSION, jungleRustTierFor } from './jungle-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION } from './jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, KATAGO_JUNGLE_ENGINE_VERSION } from './jungle-katago-engine.js';
+import { threeKingdomsBanqiEngineVersion } from './three-kingdoms-banqi-engine.js';
 import { XIANGQI_FSF_ENGINE_REF } from './xiangqi-fsf-engine.js';
 import { PIKAFISH_XIANGQI_VERSION } from './xiangqi-pikafish-engine.js';
 
@@ -73,6 +74,8 @@ function registryVersion(engineId: string): string | null {
 export function botEngineVersion(engineId: string): string | null {
   const ffqVersion = ffqBanqiEngineVersion(engineId);
   if (ffqVersion) return ffqVersion;
+  const threeKingdomsVersion = threeKingdomsBanqiEngineVersion(engineId);
+  if (threeKingdomsVersion) return threeKingdomsVersion;
   if (isRapfiEngineId(engineId)) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;
