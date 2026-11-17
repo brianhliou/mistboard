@@ -123,6 +123,22 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_started')).toHaveLength(seat === 'spectator' ? 0 : 1);
   });
 
+  it('emits no finish for a watcher who opens an already finished room', () => {
+    const tracker = createGameLifecycleTracker();
+    const finished = {
+      statusType: 'finished',
+      baseProps: base,
+      outcome: { winner: 'red', reason: 'resign', moveNumber: 12 },
+    } as const;
+    tracker.update({ ...finished, seat: 'spectator' });
+    tracker.update({ ...finished, seat: 'spectator' });
+    expect(named('game_finished')).toHaveLength(0);
+    // The seated player's own finish on this browser is still counted.
+    tracker.update({ ...finished, seat: 'red' });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({ seat: 'red', result: 'win' });
+  });
+
   it('records an abort once across repeats and reconnects, without calling it a draw', () => {
     const tracker = createGameLifecycleTracker();
     const aborted = {

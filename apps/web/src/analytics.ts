@@ -550,7 +550,10 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
         // Status transitions alone re-fire after a reconnect or a fresh page.
         // Mark before capture (which may queue until analytics initializes).
         // Without an id, retain the legacy per-transition behavior.
-        if (gameId ? !hasTrackedGameFinish(gameId) : statusType !== lastStatusType) {
+        // A watcher reports a finish only when this tracker saw the game being
+        // played: opening an already finished room is not a game finishing.
+        const sawItEnd = !spectator || lastStatusType === 'playing';
+        if (sawItEnd && (gameId ? !hasTrackedGameFinish(gameId) : statusType !== lastStatusType)) {
           if (gameId) markGameFinishTracked(gameId);
           track('game_finished', {
             ...baseProps,

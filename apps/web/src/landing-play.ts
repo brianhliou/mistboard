@@ -2481,6 +2481,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     closed = true;
     track('setup_dialog_closed', {
       how,
+      // A mode switch closes this dialog and opens the next one: not a drop-off.
+      mode_switch: setupDialogReopening,
       ms_open: Math.max(0, Date.now() - openedAt),
       mode: choice.mode,
       time_mode: selectedCorrespondenceDays === null ? 'realtime' : 'correspondence',

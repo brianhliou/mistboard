@@ -158,6 +158,8 @@ describe('#1123 opponent-first setup', () => {
     window.dispatchEvent(new Event('pagehide'));
     expect(closes().map(([, props]) => props!.mode)).toEqual(['pvp', 'lobby', 'pve']);
     expect(closes().every(([, props]) => props!.how === 'dismissed')).toBe(true);
+    // Only the last close is a real exit; the mode switches say so.
+    expect(closes().map(([, props]) => props!.mode_switch)).toEqual([true, true, false]);
   });
 
   it('measures elapsed time from its matching open and clamps clock changes', () => {
