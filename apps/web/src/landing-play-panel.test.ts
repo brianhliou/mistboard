@@ -1652,7 +1652,9 @@ describe('homepage play panel', () => {
       window.dispatchEvent(new Event('pagehide'));
       await settle();
 
-      expect(net.deletes()).toEqual([{ url: '/api/lobby/t1', method: 'DELETE', keepalive: true }]);
+      expect(net.deletes()).toEqual([
+        { url: '/api/lobby/t1?how=left', method: 'DELETE', keepalive: true },
+      ]);
     });
 
     it('stops listening for pagehide once the seek is cancelled or matched', async () => {

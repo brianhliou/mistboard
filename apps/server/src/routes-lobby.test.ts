@@ -7,9 +7,10 @@ import {
   type RoomTimeControl,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
+import { setServerCaptureTransport } from './analytics-server.js';
 import { jieqiEnabled, jungleEnabled, xiangqiMahjongEnabled } from './feature-flags.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
-import { LOBBY_TICKET_STALE_MS, tryHandle } from './routes/lobby.js';
+import { LOBBY_TICKET_STALE_MS, sameLobbyPlayer, tryHandle } from './routes/lobby.js';
 import type { LobbyTicket, Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
@@ -40,14 +41,14 @@ function responseJson(response: ResponseCapture): Record<string, unknown> {
   return JSON.parse(response.body) as Record<string, unknown>;
 }
 
-function lobbyPost(body: Record<string, unknown>): IncomingMessage {
+function lobbyPost(body: Record<string, unknown>, device?: string): IncomingMessage {
   const json = JSON.stringify(body);
   async function* chunks() {
     yield Buffer.from(json);
   }
   const req = chunks() as unknown as IncomingMessage & Record<string, unknown>;
   req.method = 'POST';
-  req.headers = {};
+  req.headers = device ? { 'x-mistboard-device-id': device } : {};
   return req;
 }
 
@@ -177,9 +178,13 @@ function testContext(overrides: Partial<HttpApiContext> = {}): {
 
 const tc = { initialMs: 180000, incrementMs: 2000 };
 
-async function post(ctx: HttpApiContext, body: Record<string, unknown>): Promise<ResponseCapture> {
+async function post(
+  ctx: HttpApiContext,
+  body: Record<string, unknown>,
+  device?: string,
+): Promise<ResponseCapture> {
   const response = captureResponse();
-  const handled = await tryHandle(ctx, lobbyPost(body), response, '/api/lobby');
+  const handled = await tryHandle(ctx, lobbyPost(body, device), response, '/api/lobby');
   assert.equal(handled, true);
   return response;
 }
@@ -638,4 +643,225 @@ test('lobby: the open list shows launched xiangqi mahjong to a reader without a 
     assert.equal(listed.length, 2, 'both public seeks are listed');
     assert.ok(listed.some((seek) => seek.gameSpecId === XIANGQI_MAHJONG_SPEC_ID));
   });
+});
+
+test('#1194: bot prompt data excludes rated, other variants and the viewer own seek', async () => {
+  await withFlag(true, async () => {
+    const { ctx } = clockedContext();
+    const own = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc }, 'viewer-browser');
+    await post(
+      ctx,
+      { gameSpecId: JIEQI_SPEC_ID, timeControl: { initialMs: 300000, incrementMs: 5000 } },
+      'other-browser',
+    );
+    // Seed a rated seek beside the casual ones without requiring an account DB.
+    const rated = { ...ctx.lobbyQueue[0]!, id: 'rated-seek', rated: true };
+    ctx.lobbyQueue.push(rated);
+    ctx.lobbyTickets.set(rated.id, rated);
+    await post(ctx, { timeControl: tc }, 'chess-browser');
+    const response = captureResponse();
+    const request = {
+      method: 'GET',
+      url: '/api/lobby?prompt=jieqi',
+      headers: { 'x-mistboard-device-id': 'viewer-browser' },
+    } as unknown as IncomingMessage;
+    await tryHandle(ctx, request, response, '/api/lobby');
+    const seeks = responseJson(response).requests as Array<Record<string, unknown>>;
+    assert.equal(seeks.length, 1);
+    assert.equal(seeks[0]!.gameSpecId, 'jieqi');
+    assert.equal(seeks[0]!.rated, false);
+    assert.equal(typeof seeks[0]!.seekId, 'string');
+    assert.equal(
+      JSON.stringify(seeks).includes('ticketId'),
+      false,
+      'withdrawal tokens stay private',
+    );
+    assert.deepEqual(seeks[0]!.timeControl, { initialMs: 300000, incrementMs: 5000 });
+    assert.equal(JSON.stringify(seeks).includes('browser'), false, 'ownership stays private');
+    // Even the matching path must refuse the same browser at the same pace.
+    const repeat = await post(
+      ctx,
+      { gameSpecId: JIEQI_SPEC_ID, timeControl: tc },
+      'viewer-browser',
+    );
+    assert.equal(repeat.status, 202);
+    const accepted = await post(
+      ctx,
+      { gameSpecId: JIEQI_SPEC_ID, timeControl: tc },
+      'accepting-browser',
+    );
+    assert.equal(accepted.status, 201);
+    const original = await getPath(ctx, `/api/lobby/${responseJson(own).ticketId}`);
+    assert.equal(responseJson(original).roomId, responseJson(accepted).roomId);
+  });
+});
+
+for (const how of ['matched', 'cancelled', 'left', 'expired'] as const) {
+  test(`#1194: lobby_seek_ended records ${how} exactly once per seek`, async () => {
+    const events: Array<{ event: string; properties: Record<string, unknown> }> = [];
+    process.env.MISTBOARD_POSTHOG_KEY = 'test-public-key';
+    process.env.MISTBOARD_POSTHOG_HOST = 'https://analytics.invalid';
+    const previous = setServerCaptureTransport(async (_url, body) => {
+      events.push(JSON.parse(body));
+    });
+    try {
+      const { ctx, advance } = clockedContext();
+      const seek = await post(ctx, { timeControl: tc }, 'seeker-browser');
+      const ticketId = responseJson(seek).ticketId as string;
+      advance(2000);
+      if (how === 'matched') {
+        await post(ctx, { timeControl: tc }, 'joiner-browser');
+      } else if (how === 'cancelled') {
+        await tryHandle(
+          ctx,
+          { method: 'DELETE', headers: {} } as IncomingMessage,
+          captureResponse(),
+          `/api/lobby/${ticketId}`,
+        );
+      } else if (how === 'left') {
+        advance(LOBBY_TICKET_STALE_MS);
+      } else {
+        for (let second = 2; second < 300; second++) {
+          await getPath(ctx, `/api/lobby/${ticketId}`);
+          advance(1000);
+        }
+      }
+      await openRequests(ctx);
+      await openRequests(ctx);
+      await tryHandle(
+        ctx,
+        { method: 'DELETE', headers: {} } as IncomingMessage,
+        captureResponse(),
+        `/api/lobby/${ticketId}`,
+      );
+      advance(300000);
+      await openRequests(ctx);
+      const ended = events.filter(
+        (event) => event.event === 'lobby_seek_ended' && event.properties.ticketId === ticketId,
+      );
+      assert.equal(ended.length, 1);
+      assert.equal(ended[0]!.properties.how, how);
+      assert.equal(
+        ended[0]!.properties.ms_open,
+        how === 'expired' ? 300000 : how === 'left' ? 10000 : 2000,
+      );
+      assert.equal(ended[0]!.properties.gameSpecId, 'dark-chess');
+      assert.equal(ended[0]!.properties.initialMs, tc.initialMs);
+      if (how === 'matched') assert.equal(events.length, 2, 'one event for each matched ticket');
+    } finally {
+      setServerCaptureTransport(previous);
+      delete process.env.MISTBOARD_POSTHOG_KEY;
+      delete process.env.MISTBOARD_POSTHOG_HOST;
+    }
+  });
+}
+
+test('#1194: pagehide DELETE records left rather than cancelled', async () => {
+  const events: Array<{ properties: Record<string, unknown> }> = [];
+  process.env.MISTBOARD_POSTHOG_KEY = 'test-public-key';
+  process.env.MISTBOARD_POSTHOG_HOST = 'https://analytics.invalid';
+  const previous = setServerCaptureTransport(async (_url, body) => {
+    events.push(JSON.parse(body));
+  });
+  try {
+    const { ctx } = clockedContext();
+    const seek = await post(ctx, { timeControl: tc });
+    const path = `/api/lobby/${responseJson(seek).ticketId}`;
+    const req = { method: 'DELETE', url: `${path}?how=left`, headers: {} } as IncomingMessage;
+    await tryHandle(ctx, req, captureResponse(), path);
+    await tryHandle(ctx, req, captureResponse(), path);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]!.properties.how, 'left');
+  } finally {
+    setServerCaptureTransport(previous);
+    delete process.env.MISTBOARD_POSTHOG_KEY;
+    delete process.env.MISTBOARD_POSTHOG_HOST;
+  }
+});
+
+test('#1194: ownership follows the account across browsers and the device across sign-in', () => {
+  assert.equal(
+    sameLobbyPlayer(
+      { userId: 'one', deviceId: 'old-browser' },
+      { userId: 'one', deviceId: 'new-browser' },
+    ),
+    true,
+  );
+  assert.equal(
+    sameLobbyPlayer({ deviceId: 'same-browser' }, { userId: 'one', deviceId: 'same-browser' }),
+    true,
+  );
+  assert.equal(sameLobbyPlayer({ userId: 'one' }, { userId: 'two' }), false);
+  assert.equal(sameLobbyPlayer(undefined, undefined), false);
+});
+
+test('#1194: simultaneous accepts claim a waiting seek only once', async () => {
+  let finish!: (room: Room) => void;
+  let creations = 0;
+  const { ctx } = testContext({
+    createRoom: async () => {
+      creations++;
+      return new Promise<Room>((resolve) => {
+        finish = resolve;
+      });
+    },
+  });
+  await post(ctx, { timeControl: tc }, 'waiting-browser');
+  const firstJoin = post(ctx, { timeControl: tc }, 'first-browser');
+  while (creations === 0) await Promise.resolve();
+  const secondJoin = await post(ctx, { timeControl: tc }, 'second-browser');
+  assert.equal(secondJoin.status, 202);
+  assert.equal(creations, 1);
+  finish({ id: 'claimed-once', region: 'global' } as Room);
+  assert.equal((await firstJoin).status, 201);
+});
+
+test('#1194: a failed room creation returns its waiting seek to the lobby', async () => {
+  const { ctx } = testContext({
+    createRoom: async () => {
+      throw new Error('factory unavailable');
+    },
+  });
+  const seek = await post(ctx, { timeControl: tc }, 'waiting-browser');
+  await assert.rejects(post(ctx, { timeControl: tc }, 'joining-browser'), /factory unavailable/);
+  assert.equal(ctx.lobbyQueue.length, 1);
+  assert.equal(ctx.lobbyQueue[0]!.id, responseJson(seek).ticketId);
+});
+
+test('#1194: unidentified viewers get no bot prompt rather than their own seek', async () => {
+  await withFlag(true, async () => {
+    const { ctx } = clockedContext();
+    await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc }, 'waiting-browser');
+    const response = captureResponse();
+    const req = { method: 'GET', url: '/api/lobby?prompt=jieqi', headers: {} } as IncomingMessage;
+    await tryHandle(ctx, req, response, '/api/lobby');
+    assert.deepEqual(responseJson(response).requests, []);
+  });
+});
+
+test('#1194: a disconnected seek ends without another lobby request', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const events: Array<{ properties: Record<string, unknown> }> = [];
+  process.env.MISTBOARD_POSTHOG_KEY = 'test-public-key';
+  process.env.MISTBOARD_POSTHOG_HOST = 'https://analytics.invalid';
+  const previous = setServerCaptureTransport(async (_url, body) => {
+    events.push(JSON.parse(body));
+  });
+  try {
+    const { ctx, advance } = clockedContext();
+    await post(ctx, { timeControl: tc });
+    advance(LOBBY_TICKET_STALE_MS);
+    t.mock.timers.tick(LOBBY_TICKET_STALE_MS);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]!.properties.how, 'left');
+    assert.equal(events[0]!.properties.ms_open, LOBBY_TICKET_STALE_MS);
+    assert.equal(ctx.lobbyQueue.length, 0);
+    t.mock.timers.tick(300000);
+    await openRequests(ctx);
+    assert.equal(events.length, 1);
+  } finally {
+    setServerCaptureTransport(previous);
+    delete process.env.MISTBOARD_POSTHOG_KEY;
+    delete process.env.MISTBOARD_POSTHOG_HOST;
+  }
 });

@@ -986,6 +986,21 @@
   font-weight: 800;
 }
 
+.landing-seek-prompt {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--site-accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.landing-seek-prompt[hidden] {
+  display: none;
+}
+
 /* Sign-in uses the same primary action and touch target as Play. */
 a.landing-setup-start:not([hidden]) {
   display: grid;

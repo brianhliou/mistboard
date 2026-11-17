@@ -195,6 +195,7 @@ type LobbyTicketResponse = {
   url?: string;
 };
 export type OpenLobbyRequest = {
+  seekId?: string;
   gameSpecId?: string;
   rated?: boolean;
   timeControl: {
@@ -1891,6 +1892,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
   let syncGameSpecificSections = () => {};
+  let syncSeekPrompt = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
   let syncSetupAccordion = () => {};
@@ -2356,6 +2358,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   status.setAttribute('aria-live', 'polite');
 
   let cancelLobbyWait: (() => void) | null = null;
+  let stopSeekPrompt = () => {};
   const startButton = document.createElement('button');
   startButton.type = 'button';
   startButton.className = 'landing-setup-start';
@@ -2366,6 +2369,104 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? t('setup.createRoom', {}, locale)
         : t('setup.startGame', {}, locale);
   const playLabel = startButton.textContent;
+  const seekPrompt = document.createElement('button');
+  seekPrompt.type = 'button';
+  seekPrompt.className = 'landing-seek-prompt';
+  seekPrompt.hidden = true;
+  let offeredSeek: OpenLobbyRequest | undefined;
+  let promptTimer: number | undefined;
+  let promptGeneration = 0;
+  let promptStopped = false;
+  let acceptingSeek = false;
+  const shownSeeks = new Set<string>();
+  const promptProps = (seek: OpenLobbyRequest) => ({
+    seekId: seek.seekId,
+    gameSpecId: JIEQI_SPEC_ID,
+    ...gameSpecAnalyticsPropsForId(JIEQI_SPEC_ID),
+    ...seek.timeControl,
+  });
+  const refreshSeekPrompt = async (generation: number): Promise<void> => {
+    try {
+      const response = await postWithBrowserIdentity('/api/lobby?prompt=jieqi', { method: 'GET' });
+      if (!response.ok) throw new Error('seek prompt unavailable');
+      const data = (await response.json()) as { requests?: OpenLobbyRequest[] };
+      if (generation !== promptGeneration || promptStopped || acceptingSeek) return;
+      offeredSeek = data.requests?.find(
+        (seek) => seek.gameSpecId === JIEQI_SPEC_ID && seek.rated === false && Boolean(seek.seekId),
+      );
+      seekPrompt.hidden = !offeredSeek;
+      if (offeredSeek) {
+        seekPrompt.textContent = `${t('setup.waitingPlayer', {}, locale)} (${formatTimeControl(offeredSeek.timeControl)})`;
+        if (!shownSeeks.has(offeredSeek.seekId!)) {
+          shownSeeks.add(offeredSeek.seekId!);
+          track('lobby_seek_prompt_shown', promptProps(offeredSeek));
+        }
+      }
+    } catch {
+      if (generation === promptGeneration && !acceptingSeek) {
+        offeredSeek = undefined;
+        seekPrompt.hidden = true;
+      }
+    } finally {
+      if (generation === promptGeneration && !promptStopped) {
+        promptTimer = window.setTimeout(() => void refreshSeekPrompt(generation), 1000);
+      }
+    }
+  };
+  syncSeekPrompt = () => {
+    promptGeneration += 1;
+    window.clearTimeout(promptTimer);
+    offeredSeek = undefined;
+    seekPrompt.hidden = true;
+    if (
+      choice.mode === 'pve' &&
+      selectedGameSpecId === JIEQI_SPEC_ID &&
+      overlay.isConnected &&
+      !promptStopped
+    ) {
+      void refreshSeekPrompt(promptGeneration);
+    }
+  };
+  stopSeekPrompt = () => {
+    promptStopped = true;
+    promptGeneration += 1;
+    window.clearTimeout(promptTimer);
+  };
+  seekPrompt.addEventListener('click', () => {
+    if (!offeredSeek || acceptingSeek) return;
+    const seek = offeredSeek;
+    acceptingSeek = true;
+    seekPrompt.disabled = true;
+    startButton.disabled = true;
+    const restoreBotSetup = () => {
+      acceptingSeek = false;
+      offeredSeek = undefined;
+      seekPrompt.hidden = true;
+      seekPrompt.disabled = false;
+      startButton.disabled = false;
+    };
+    cancelLobbyWait = joinLobbyFromPlay(
+      seekPrompt,
+      {
+        gameSpecId: JIEQI_SPEC_ID,
+        rated: false,
+        timeControl: seek.timeControl,
+        preferredColor: 'random',
+      },
+      status,
+      locale,
+      undefined,
+      {
+        startSource: 'lobby-seek',
+        onNoInstantMatch: restoreBotSetup,
+        onError: restoreBotSetup,
+        onMatched: () => {
+          stopSeekPrompt();
+          track('lobby_seek_prompt_accepted', promptProps(seek));
+        },
+      },
+    );
+  });
   const signInButton = document.createElement('a');
   signInButton.className = 'landing-setup-start';
   signInButton.textContent = t('correspondence.hostSignIn', {}, locale);
@@ -2396,6 +2497,10 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   });
   startButton.addEventListener('click', () => {
     if (needsAccount() || (challengePlayer.choosingPlayer() && !challengePlayer.canSend())) return;
+    if (choice.mode === 'pve') {
+      stopSeekPrompt();
+      seekPrompt.hidden = true;
+    }
     rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend posts a link challenge (the invite link the friend
@@ -2467,6 +2572,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   });
   const close = () => {
     stopRosterWatch();
+    stopSeekPrompt();
     challengePlayer.dispose();
     liveChallenge.dispose();
     cancelLobbyWait?.();
@@ -2666,6 +2772,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     syncVariantControls();
     syncColorPreferenceControls();
     syncSetupAccordion();
+    syncSeekPrompt();
   };
   syncGameSpecificSections();
 
@@ -2816,7 +2923,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const accordion = document.createElement('div');
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
-  actions.append(startButton, correspondenceAccountNotice, signInButton);
+  actions.append(seekPrompt, startButton, correspondenceAccountNotice, signInButton);
   const notice = choice.notice ? document.createElement('p') : null;
   if (notice) {
     notice.className = 'landing-setup-notice';
@@ -2882,6 +2989,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   overlay.append(dialog);
   document.body.append(overlay);
   activeDialogClose = close;
+  syncSeekPrompt();
   if (openLayout) {
     // Focus the panel itself: focusing Start drew a focus ring around it the
     // moment the panel opened, which read as a stray border.
@@ -4121,6 +4229,8 @@ export function joinLobbyFromPlay(
      *  instantly (the offer was taken in the refresh window), delete the
      *  freshly-created ticket and hand control back to the caller. */
     onNoInstantMatch?: () => void;
+    onMatched?: () => void;
+    onError?: () => void;
     /** Labels the game this wait ends in (game_started.entry_source). */
     startSource?: GameStartSource;
     /** The bot the 15 s "nobody came" offer starts when no engine id is given:
@@ -4164,8 +4274,11 @@ export function joinLobbyFromPlay(
 
   // keepalive: the DELETE usually races a navigation (a bot game, a closed
   // tab), and an ordinary fetch is dropped when the page goes away.
-  const deleteTicket = (id: string): Promise<void> =>
-    fetch(`/api/lobby/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive: true }).then(
+  const deleteTicket = (id: string, left = false): Promise<void> =>
+    fetch(`/api/lobby/${encodeURIComponent(id)}${left ? '?how=left' : ''}`, {
+      method: 'DELETE',
+      keepalive: true,
+    }).then(
       () => undefined,
       () => undefined,
     );
@@ -4173,7 +4286,7 @@ export function joinLobbyFromPlay(
   // Leaving the page while waiting (a link, the back button, closing the tab)
   // withdraws the seek; sendBeacon cannot DELETE, a keepalive fetch can.
   const onPageHide = () => {
-    if (active && ticketId) void deleteTicket(ticketId);
+    if (active && ticketId) void deleteTicket(ticketId, true);
   };
   let unregister: (() => void) | null = null;
   const release = () => {
@@ -4309,7 +4422,8 @@ export function joinLobbyFromPlay(
     release();
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
     if (opts?.startSource) rememberGameStartSource(opts.startSource);
-    window.location.href = ticket.url;
+    opts?.onMatched?.();
+    roomNavigator(ticket.url);
     return true;
   };
 
@@ -4322,6 +4436,7 @@ export function joinLobbyFromPlay(
     button.removeAttribute('aria-busy');
     setButtonLabel(button, t('setup.tryAgain', {}, locale));
     status.textContent = t('setup.couldNotJoinLobby', {}, locale);
+    opts?.onError?.();
     window.setTimeout(() => {
       if (button.disabled) return;
       setButtonLabel(button, originalText);

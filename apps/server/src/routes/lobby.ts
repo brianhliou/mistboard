@@ -6,10 +6,12 @@ import {
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { captureServerEvent } from '../analytics-server.js';
 import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from './../feature-flags.js';
 import { ffqBanqiAdmits, isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
+import { liveGameIdentityForRequest } from '../live-game-admission.js';
 import * as persistence from './../persistence.js';
 import type { LobbyTicket, Room } from './../server-types.js';
 import {
@@ -36,6 +38,22 @@ const lobbyPollAfterMs = 1_000;
 // never entered (prod, 2026-10-02). Ten polls of slack covers a slow network or
 // a throttled background timer; a seeker that misses all ten is gone.
 export const LOBBY_TICKET_STALE_MS = 10_000;
+const seekTimers = new WeakMap<LobbyTicket, ReturnType<typeof setTimeout>>();
+
+function scheduleSeekExpiry(ctx: HttpApiContext, ticket: LobbyTicket): void {
+  clearTimeout(seekTimers.get(ticket));
+  if (ticket.roomId !== null) return;
+  const deadline = Math.min(
+    ticket.createdAt + lobbyTicketTtlMs,
+    ticket.lastPolledAt + LOBBY_TICKET_STALE_MS,
+  );
+  const timer = setTimeout(
+    () => pruneLobbyTickets(ctx, lobbyNow(ctx)),
+    Math.max(0, deadline - lobbyNow(ctx)),
+  );
+  timer.unref();
+  seekTimers.set(ticket, timer);
+}
 
 function lobbyNow(ctx: HttpApiContext): number {
   return ctx.now?.() ?? Date.now();
@@ -58,7 +76,10 @@ export async function tryHandle(
   if (pathname === '/api/lobby') {
     if (method === 'GET') {
       pruneLobbyTickets(ctx, lobbyNow(ctx));
-      writeJson(response, 200, { requests: await lobbyOpenRequests(ctx, request) });
+      const prompt =
+        new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get('prompt') ===
+        'jieqi';
+      writeJson(response, 200, { requests: await lobbyOpenRequests(ctx, request, prompt) });
       return true;
     }
     if (!requireMethod(request, response, 'POST')) return true;
@@ -130,7 +151,7 @@ export async function tryHandle(
     // Rated requires the flag on AND a signed-in requester. Reject explicit
     // guest/off-surface rated requests instead of silently creating casual
     // tickets that looked rated in the setup UI.
-    const accountUser = body.rated === true ? await currentAccountUser(request) : null;
+    const accountUser = await currentAccountUser(request);
     if (body.rated === true && tenantLobby && !tenantLobby.supportsRated) {
       writeJson(response, 501, { error: 'rated_unsupported_surface' });
       return true;
@@ -198,6 +219,7 @@ export async function tryHandle(
       registration ?? null,
       timeControl ?? undefined,
       lobbyRated,
+      liveGameIdentityForRequest(request, accountUser),
     );
     writeJson(response, ticket.roomId ? 201 : 202, lobbyTicketResponse(ticket));
     return true;
@@ -216,11 +238,14 @@ export async function tryHandle(
     if (method === 'GET') {
       // The seeker's own poll is the heartbeat that keeps its seek listed.
       ticket.lastPolledAt = now;
+      scheduleSeekExpiry(ctx, ticket);
       writeJson(response, 200, lobbyTicketResponse(ticket));
       return true;
     }
     if (method === 'DELETE') {
-      cancelLobbyTicket(ctx, ticketId);
+      const left =
+        new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get('how') === 'left';
+      cancelLobbyTicket(ctx, ticketId, left ? 'left' : 'cancelled');
       writeJson(response, 200, { ok: true });
       return true;
     }
@@ -238,6 +263,7 @@ async function joinLobby(
   registration: VariantTenantRegistration | null,
   timeControl: RoomTimeControl | undefined,
   rated = false,
+  owner: LobbyTicket['owner'] = undefined,
 ): Promise<LobbyTicket> {
   const now = lobbyNow(ctx);
   pruneLobbyTickets(ctx, now);
@@ -249,12 +275,15 @@ async function joinLobby(
   const matchedTicket = ctx.lobbyQueue.find(
     (ticket) =>
       isLiveSeek(ticket, now) &&
+      !sameLobbyPlayer(ticket.owner, owner) &&
       ticket.gameSpecId === gameSpecId &&
       ticket.rated === rated &&
       timeControlKey(ticket.timeControl) === timeKey,
   );
   const ticket: LobbyTicket = {
     id: randomUUID(),
+    seekId: randomUUID(),
+    owner,
     createdAt: now,
     lastPolledAt: now,
     gameSpecId,
@@ -268,14 +297,20 @@ async function joinLobby(
 
   if (!matchedTicket) {
     ctx.lobbyQueue.push(ticket);
+    scheduleSeekExpiry(ctx, ticket);
     return ticket;
   }
 
   let room: { id: string; region: string };
+  // Claim the waiting seek before the asynchronous room factory, so concurrent
+  // acceptances cannot pair the same waiting player twice.
+  const matchedIndex = ctx.lobbyQueue.indexOf(matchedTicket);
+  if (matchedIndex >= 0) ctx.lobbyQueue.splice(matchedIndex, 1);
   try {
     room = await createLobbyRoom(ctx, registration, timeControl, rated);
   } catch (err) {
     ctx.lobbyTickets.delete(ticket.id);
+    if (ctx.lobbyTickets.has(matchedTicket.id)) ctx.lobbyQueue.push(matchedTicket);
     throw err;
   }
   const matchedAt = lobbyNow(ctx);
@@ -285,9 +320,41 @@ async function joinLobby(
   ticket.matchedAt = matchedAt;
   ticket.roomId = room.id;
   ticket.region = room.region;
-  const matchedIndex = ctx.lobbyQueue.findIndex((candidate) => candidate.id === matchedTicket.id);
-  if (matchedIndex >= 0) ctx.lobbyQueue.splice(matchedIndex, 1);
+  endLobbySeek(ctx, matchedTicket, 'matched', matchedAt);
+  endLobbySeek(ctx, ticket, 'matched', matchedAt);
   return ticket;
+}
+
+export function sameLobbyPlayer(a: LobbyTicket['owner'], b: LobbyTicket['owner']): boolean {
+  return Boolean(
+    (a?.userId && a.userId === b?.userId) || (a?.deviceId && a.deviceId === b?.deviceId),
+  );
+}
+
+function endLobbySeek(
+  ctx: HttpApiContext,
+  ticket: LobbyTicket,
+  how: 'matched' | 'cancelled' | 'left' | 'expired',
+  now: number,
+): void {
+  if (ticket.seekEnded) return;
+  ticket.seekEnded = true;
+  clearTimeout(seekTimers.get(ticket));
+  seekTimers.delete(ticket);
+  void captureServerEvent({
+    event: 'lobby_seek_ended',
+    distinctId: ticket.owner?.userId ?? ticket.owner?.deviceId ?? ticket.id,
+    properties: {
+      ticketId: ticket.id,
+      seekId: ticket.seekId,
+      gameSpecId: ticket.gameSpecId,
+      rated: ticket.rated,
+      initialMs: ticket.timeControl?.initialMs ?? ctx.liveClockInitialMs,
+      incrementMs: ticket.timeControl?.incrementMs ?? ctx.liveClockIncrementMs,
+      how,
+      ms_open: Math.max(0, now - ticket.createdAt),
+    },
+  });
 }
 
 // Dispatch lobby room creation by game spec. Chess goes through the shared room
@@ -318,9 +385,10 @@ async function createLobbyRoom(
   return { id: room.id, region: room.region ?? 'global' };
 }
 
-function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string): void {
+function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string, how: 'cancelled' | 'left'): void {
   const ticket = ctx.lobbyTickets.get(ticketId);
   if (!ticket || ticket.roomId !== null) return;
+  endLobbySeek(ctx, ticket, how, lobbyNow(ctx));
   ctx.lobbyTickets.delete(ticketId);
   const queueIndex = ctx.lobbyQueue.findIndex((candidate) => candidate.id === ticketId);
   if (queueIndex >= 0) ctx.lobbyQueue.splice(queueIndex, 1);
@@ -331,6 +399,19 @@ function pruneLobbyTickets(ctx: HttpApiContext, now: number): void {
     const expired = now - ticket.createdAt >= lobbyTicketTtlMs;
     const abandonedSeek = ticket.roomId === null && !isLiveSeek(ticket, now);
     if (expired || abandonedSeek) {
+      if (ticket.roomId === null) {
+        const expiresAt = ticket.createdAt + lobbyTicketTtlMs;
+        const leftAt = ticket.lastPolledAt + LOBBY_TICKET_STALE_MS;
+        // A quiet lobby may not be read until long after the owner left. Use
+        // the first deadline crossed, rather than reporting an idle tab as a
+        // five-minute expiry or counting idle time until the next visitor.
+        endLobbySeek(
+          ctx,
+          ticket,
+          expiresAt <= leftAt ? 'expired' : 'left',
+          Math.min(expiresAt, leftAt),
+        );
+      }
       ctx.lobbyTickets.delete(ticketId);
     }
   }
@@ -364,9 +445,23 @@ function lobbyTicketResponse(ticket: LobbyTicket): Record<string, unknown> {
 async function lobbyOpenRequests(
   ctx: HttpApiContext,
   request: IncomingMessage,
+  prompt = false,
 ): Promise<Array<Record<string, unknown>>> {
   const now = lobbyNow(ctx);
-  const live = ctx.lobbyQueue.filter((ticket) => isLiveSeek(ticket, now));
+  const viewer = prompt
+    ? liveGameIdentityForRequest(request, await currentAccountUser(request))
+    : undefined;
+  const identifiedViewer = Boolean(viewer?.userId || viewer?.deviceId);
+  const live = ctx.lobbyQueue.filter(
+    (ticket) =>
+      isLiveSeek(ticket, now) &&
+      (!prompt ||
+        (identifiedViewer &&
+          ticket.gameSpecId === 'jieqi' &&
+          !ticket.rated &&
+          Boolean(ticket.owner?.userId || ticket.owner?.deviceId) &&
+          !sameLobbyPlayer(ticket.owner, viewer))),
+  );
   const gated = [
     ...new Set(
       live
@@ -389,6 +484,9 @@ async function lobbyOpenRequests(
     )
     .slice(0, 20)
     .map((ticket) => ({
+      // ticket.id authorizes heartbeat and withdrawal; it stays private to the
+      // creator. The separate public id only deduplicates prompt impressions.
+      ...(prompt ? { seekId: ticket.seekId } : {}),
       gameSpecId: ticket.gameSpecId,
       rated: ticket.rated,
       timeControl: ticket.timeControl ?? {

@@ -140,6 +140,9 @@ export type Room = {
 
 export type LobbyTicket = {
   id: string;
+  owner?: { userId?: string | null; deviceId?: string | null };
+  seekId?: string;
+  seekEnded?: boolean;
   createdAt: number;
   // Last GET /api/lobby/:id by this ticket's own tab (creation counts). An
   // unmatched ticket older than LOBBY_TICKET_STALE_MS here is an abandoned seek.
