@@ -566,13 +566,15 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
-| `harness.ts` | `startTestServer({seatVacateGraceMs})`, `connectClient({url, room, seatToken})`, `TestClient` with `waitFor` / `expectMessage`, `waitUntil`, `sleep`, `uniqueRoomId` |
+| `harness.ts` | `startTestServer({seatVacateGraceMs})`, `connectClient({url, room, seatToken})`, `TestClient` with `waitFor` / `expectMessage` and monotonic handler receipt timestamps, `waitUntil`, `sleep`, `uniqueRoomId` |
 | `core-loop.test.ts` | 9 scenarios: resign+winner, rematch round-trip, redirect replay on reconnect, pregame grace (in/out), presence, seat-token reseat, one-sided offer, move broadcast |
 | `drain.test.ts` | Drain endpoint, two-phase restart commit/status, matchmaking gate, and WS-broadcast tests |
 | `loadtest-smoke.test.ts` | Builtin-engine load smoke |
 | `persist-resign.test.ts` | Postgres-on resign-termination integration test |
 
 Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --workspace @mistboard/server`. Narrow a run with `-- --test-name-pattern=<name>` or a file path such as `-- integration/drain.test.ts`; `apps/server/scripts/integration-tests.mjs` forwards test-runner flags before files so filters do not accidentally run the slow loadtest smoke. Persistence is intentionally disabled for the in-memory contract; `persist-resign` requires `TEST_DATABASE_URL`.
+
+`apps/server/loadtest/runner.ts` drives loopback-only concurrent games and records both seats' authoritative move acknowledgments separately from reply latency. `benchmark.ts` retains raw attempts, activity transitions and nearest-rank summaries for every repetition; `cli.ts --benchmark` runs the documented local protocol. `loadtest/runner.test.ts` is exercised by the normal server test bridge `src/loadtest.test.ts`. Reproduction and sanitized records: `docs/perf/move-latency/`.
 
 **Change move validation or game flow** → `room-manager.ts`
 **Change room creation, hydration, abandon, or stale-room sweeps** → `server-room-lifecycle.ts`
