@@ -40,8 +40,9 @@ import {
   type XiangqiSquare,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fanfanqiEngineGameSection } from './articles/content/fanfanqi.js';
 import type { ArticleBlock } from './articles/types.js';
-import { buildArticlePage } from './articles.js';
+import { buildArticlePage, renderBlock } from './articles.js';
 import { articles } from './articles-data.js';
 import { replayBanqiLine, replayBanqiLineFrom } from './banqi-replay-board.js';
 import { mountEmbedStudy } from './embed/embed-study-page.js';
@@ -157,16 +158,26 @@ describe('rules page sample games', () => {
     expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
   });
 
-  it('fanfanqi: previews the local study in An engine game before Play', () => {
+  it('fanfanqi: the engine game section stays out of the tested (production) article', () => {
+    // Decided 2026-11-15: dev previews the local study; the production id,
+    // updatedAt and updateNote land together after review.
+    expect(embedPaths('fanfanqi')).toEqual([]);
     const page = buildArticlePage('fanfanqi');
-    expect(embedPaths('fanfanqi')).toEqual(['/embed/study/HLQzHlhK/O92BsOOd']);
-    expect(page.querySelector('iframe')?.getAttribute('src')).toContain(
-      '/embed/study/HLQzHlhK/O92BsOOd',
+    expect(page.querySelector('iframe')).toBeNull();
+    expect([...page.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain(
+      'An engine game',
     );
-    const headings = [...page.querySelectorAll('h2')].map((h) => h.textContent);
-    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
-    expect(page.textContent).toContain(
+  });
+
+  it('fanfanqi: the dev preview section embeds the local study under its intro', () => {
+    const section = fanfanqiEngineGameSection('/embed/study/HLQzHlhK/O92BsOOd');
+    expect(section.heading).toBe('An engine game');
+    const [intro, embed] = section.blocks.map((block) => renderBlock(block));
+    expect(intro?.textContent).toBe(
       "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+    );
+    expect(embed?.querySelector('iframe')?.getAttribute('src') ?? embed?.outerHTML).toContain(
+      '/embed/study/HLQzHlhK/O92BsOOd',
     );
   });
 
