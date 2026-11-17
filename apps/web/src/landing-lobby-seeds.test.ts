@@ -295,24 +295,46 @@ describe('landing lobby bot seeks', () => {
     expect(chip?.querySelector('.landing-quickpair-chip-text')?.textContent).toBe('3+2');
   });
 
-  it('promotes the whole product catalog in the quick-pair table, in canonical order', () => {
+  it('lifts the last played game in quick-pair without reordering the Computer table', () => {
+    const botOrder = (panel: HTMLElement) =>
+      [...panel.querySelectorAll<HTMLElement>('.landing-lobby-seed')].map(
+        (row) => `${row.dataset.botId}|${row.dataset.gameSpec}`,
+      );
+    const canonical = buildLobbyPanel('en', { hydrate: false });
+    window.localStorage.setItem('mistboard:last-played-variant', 'jungle-flip');
     const panel = buildLobbyPanel('en', { hydrate: false });
-    const specs = [
-      ...panel.querySelectorAll<HTMLElement>('.landing-quickpair-row[data-game-spec]'),
-    ].map((row) => row.dataset.gameSpec);
-
-    expect(specs).toEqual([
-      'xiangqi',
-      'jieqi',
-      'banqi',
-      'duck-xiangqi',
-      'crazyhouse-xiangqi',
-      'dark-xiangqi',
-      'dark-chess',
-      'jungle',
-      'jungle-flip',
-    ]);
+    const rows = [...panel.querySelectorAll<HTMLElement>('.landing-quickpair-row[data-game-spec]')];
+    expect(rows[0]?.dataset.gameSpec).toBe('jungle-flip');
+    expect(rows.slice(1).map((row) => row.dataset.gameSpec)).toEqual(
+      [...canonical.querySelectorAll<HTMLElement>('.landing-quickpair-row[data-game-spec]')]
+        .map((row) => row.dataset.gameSpec)
+        .filter((spec) => spec !== 'jungle-flip'),
+    );
+    expect(botOrder(panel)).toEqual(botOrder(canonical));
   });
+
+  it.each([null, 'unknown-variant', 'fortress-xiangqi'])(
+    'keeps canonical quick-pair order with no offered last game (%s)',
+    (last) => {
+      if (last !== null) window.localStorage.setItem('mistboard:last-played-variant', last);
+      const panel = buildLobbyPanel('en', { hydrate: false });
+      const specs = [
+        ...panel.querySelectorAll<HTMLElement>('.landing-quickpair-row[data-game-spec]'),
+      ].map((row) => row.dataset.gameSpec);
+
+      expect(specs).toEqual([
+        'xiangqi',
+        'jieqi',
+        'banqi',
+        'duck-xiangqi',
+        'crazyhouse-xiangqi',
+        'dark-xiangqi',
+        'dark-chess',
+        'jungle',
+        'jungle-flip',
+      ]);
+    },
+  );
 
   it('uses the same pinned bot and default pace in Quick Pairing', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
