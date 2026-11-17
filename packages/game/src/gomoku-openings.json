@@ -50,7 +50,16 @@
         "maxWinrate": 0.52,
         "screened": 31402,
         "deepScreened": 5557,
-        "accepted": 197
+        "accepted": 197,
+        "secondScreen": {
+          "engine": "KataGomo b10_freestyle15x",
+          "visits": 1600,
+          "perspective": "black",
+          "minBlack": 0.35,
+          "maxBlack": 0.65,
+          "read": 197,
+          "dealt": 162
+        }
       }
     }
   },
@@ -1826,6 +1835,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4727,
+        "visits": 1600
       }
     },
     {
@@ -1861,6 +1874,10 @@
         "nodes": 1000000,
         "depth": 30,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5061,
+        "visits": 1600
       }
     },
     {
@@ -1896,6 +1913,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4708,
+        "visits": 1600
       }
     },
     {
@@ -1931,6 +1952,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4613,
+        "visits": 1600
       }
     },
     {
@@ -1966,6 +1991,10 @@
         "nodes": 1000000,
         "depth": 30,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.1665,
+        "visits": 1600
       }
     },
     {
@@ -2001,6 +2030,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6909,
+        "visits": 1600
       }
     },
     {
@@ -2036,6 +2069,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6641,
+        "visits": 1600
       }
     },
     {
@@ -2071,6 +2108,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5628,
+        "visits": 1600
       }
     },
     {
@@ -2106,6 +2147,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.484,
+        "visits": 1600
       }
     },
     {
@@ -2141,6 +2186,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5366,
+        "visits": 1600
       }
     },
     {
@@ -2176,6 +2225,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5924,
+        "visits": 1600
       }
     },
     {
@@ -2211,6 +2264,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3997,
+        "visits": 1600
       }
     },
     {
@@ -2246,6 +2303,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.561,
+        "visits": 1600
       }
     },
     {
@@ -2281,6 +2342,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5726,
+        "visits": 1600
       }
     },
     {
@@ -2316,6 +2381,10 @@
         "nodes": 1000000,
         "depth": 31,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6843,
+        "visits": 1600
       }
     },
     {
@@ -2351,6 +2420,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4174,
+        "visits": 1600
       }
     },
     {
@@ -2386,6 +2459,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7079,
+        "visits": 1600
       }
     },
     {
@@ -2421,6 +2498,10 @@
         "nodes": 1001000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6225,
+        "visits": 1600
       }
     },
     {
@@ -2456,6 +2537,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.8366,
+        "visits": 1600
       }
     },
     {
@@ -2491,6 +2576,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4746,
+        "visits": 1600
       }
     },
     {
@@ -2526,6 +2615,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5043,
+        "visits": 1600
       }
     },
     {
@@ -2561,6 +2654,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6093,
+        "visits": 1600
       }
     },
     {
@@ -2596,6 +2693,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3522,
+        "visits": 1600
       }
     },
     {
@@ -2631,6 +2732,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4927,
+        "visits": 1600
       }
     },
     {
@@ -2666,6 +2771,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5162,
+        "visits": 1600
       }
     },
     {
@@ -2701,6 +2810,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4411,
+        "visits": 1600
       }
     },
     {
@@ -2736,6 +2849,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6188,
+        "visits": 1600
       }
     },
     {
@@ -2771,6 +2888,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5339,
+        "visits": 1600
       }
     },
     {
@@ -2806,6 +2927,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.523,
+        "visits": 1600
       }
     },
     {
@@ -2841,6 +2966,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5943,
+        "visits": 1600
       }
     },
     {
@@ -2876,6 +3005,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5292,
+        "visits": 1600
       }
     },
     {
@@ -2911,6 +3044,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4014,
+        "visits": 1600
       }
     },
     {
@@ -2946,6 +3083,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7702,
+        "visits": 1600
       }
     },
     {
@@ -2981,6 +3122,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4965,
+        "visits": 1600
       }
     },
     {
@@ -3016,6 +3161,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4173,
+        "visits": 1600
       }
     },
     {
@@ -3051,6 +3200,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.529,
+        "visits": 1600
       }
     },
     {
@@ -3086,6 +3239,10 @@
         "nodes": 1001000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4682,
+        "visits": 1600
       }
     },
     {
@@ -3121,6 +3278,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5143,
+        "visits": 1600
       }
     },
     {
@@ -3156,6 +3317,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7918,
+        "visits": 1600
       }
     },
     {
@@ -3191,6 +3356,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3258,
+        "visits": 1600
       }
     },
     {
@@ -3226,6 +3395,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3696,
+        "visits": 1600
       }
     },
     {
@@ -3261,6 +3434,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5493,
+        "visits": 1600
       }
     },
     {
@@ -3296,6 +3473,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6433,
+        "visits": 1600
       }
     },
     {
@@ -3331,6 +3512,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5921,
+        "visits": 1600
       }
     },
     {
@@ -3366,6 +3551,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3612,
+        "visits": 1600
       }
     },
     {
@@ -3401,6 +3590,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.399,
+        "visits": 1600
       }
     },
     {
@@ -3436,6 +3629,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5812,
+        "visits": 1600
       }
     },
     {
@@ -3471,6 +3668,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5285,
+        "visits": 1600
       }
     },
     {
@@ -3506,6 +3707,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.504,
+        "visits": 1600
       }
     },
     {
@@ -3541,6 +3746,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4788,
+        "visits": 1600
       }
     },
     {
@@ -3576,6 +3785,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5744,
+        "visits": 1600
       }
     },
     {
@@ -3611,6 +3824,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6886,
+        "visits": 1600
       }
     },
     {
@@ -3646,6 +3863,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5014,
+        "visits": 1600
       }
     },
     {
@@ -3681,6 +3902,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.507,
+        "visits": 1600
       }
     },
     {
@@ -3716,6 +3941,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4889,
+        "visits": 1600
       }
     },
     {
@@ -3751,6 +3980,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5141,
+        "visits": 1600
       }
     },
     {
@@ -3786,6 +4019,10 @@
         "nodes": 1001000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4481,
+        "visits": 1600
       }
     },
     {
@@ -3821,6 +4058,10 @@
         "nodes": 1001000,
         "depth": 29,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5704,
+        "visits": 1600
       }
     },
     {
@@ -3856,6 +4097,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4339,
+        "visits": 1600
       }
     },
     {
@@ -3891,6 +4136,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5296,
+        "visits": 1600
       }
     },
     {
@@ -3926,6 +4175,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6118,
+        "visits": 1600
       }
     },
     {
@@ -3961,6 +4214,10 @@
         "nodes": 1000000,
         "depth": 30,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5157,
+        "visits": 1600
       }
     },
     {
@@ -3996,6 +4253,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.786,
+        "visits": 1600
       }
     },
     {
@@ -4031,6 +4292,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4987,
+        "visits": 1600
       }
     },
     {
@@ -4066,6 +4331,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4244,
+        "visits": 1600
       }
     },
     {
@@ -4101,6 +4370,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.8099,
+        "visits": 1600
       }
     },
     {
@@ -4136,6 +4409,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4957,
+        "visits": 1600
       }
     },
     {
@@ -4171,6 +4448,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5285,
+        "visits": 1600
       }
     },
     {
@@ -4206,6 +4487,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5161,
+        "visits": 1600
       }
     },
     {
@@ -4241,6 +4526,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4518,
+        "visits": 1600
       }
     },
     {
@@ -4276,6 +4565,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5217,
+        "visits": 1600
       }
     },
     {
@@ -4311,6 +4604,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.597,
+        "visits": 1600
       }
     },
     {
@@ -4346,6 +4643,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5821,
+        "visits": 1600
       }
     },
     {
@@ -4381,6 +4682,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4529,
+        "visits": 1600
       }
     },
     {
@@ -4416,6 +4721,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5095,
+        "visits": 1600
       }
     },
     {
@@ -4451,6 +4760,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3568,
+        "visits": 1600
       }
     },
     {
@@ -4486,6 +4799,10 @@
         "nodes": 1001000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4493,
+        "visits": 1600
       }
     },
     {
@@ -4521,6 +4838,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.524,
+        "visits": 1600
       }
     },
     {
@@ -4556,6 +4877,10 @@
         "nodes": 1000000,
         "depth": 29,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.497,
+        "visits": 1600
       }
     },
     {
@@ -4591,6 +4916,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4251,
+        "visits": 1600
       }
     },
     {
@@ -4626,6 +4955,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5327,
+        "visits": 1600
       }
     },
     {
@@ -4661,6 +4994,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5055,
+        "visits": 1600
       }
     },
     {
@@ -4696,6 +5033,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5371,
+        "visits": 1600
       }
     },
     {
@@ -4731,6 +5072,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4985,
+        "visits": 1600
       }
     },
     {
@@ -4766,6 +5111,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4895,
+        "visits": 1600
       }
     },
     {
@@ -4801,6 +5150,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4021,
+        "visits": 1600
       }
     },
     {
@@ -4836,6 +5189,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5278,
+        "visits": 1600
       }
     },
     {
@@ -4871,6 +5228,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4036,
+        "visits": 1600
       }
     },
     {
@@ -4906,6 +5267,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4385,
+        "visits": 1600
       }
     },
     {
@@ -4941,6 +5306,10 @@
         "nodes": 1000000,
         "depth": 29,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4894,
+        "visits": 1600
       }
     },
     {
@@ -4976,6 +5345,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.8456,
+        "visits": 1600
       }
     },
     {
@@ -5011,6 +5384,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4844,
+        "visits": 1600
       }
     },
     {
@@ -5046,6 +5423,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3599,
+        "visits": 1600
       }
     },
     {
@@ -5081,6 +5462,10 @@
         "nodes": 1001000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5015,
+        "visits": 1600
       }
     },
     {
@@ -5116,6 +5501,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5452,
+        "visits": 1600
       }
     },
     {
@@ -5151,6 +5540,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6055,
+        "visits": 1600
       }
     },
     {
@@ -5186,6 +5579,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6867,
+        "visits": 1600
       }
     },
     {
@@ -5221,6 +5618,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4704,
+        "visits": 1600
       }
     },
     {
@@ -5256,6 +5657,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5812,
+        "visits": 1600
       }
     },
     {
@@ -5291,6 +5696,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5888,
+        "visits": 1600
       }
     },
     {
@@ -5326,6 +5735,10 @@
         "nodes": 1001000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4728,
+        "visits": 1600
       }
     },
     {
@@ -5361,6 +5774,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5648,
+        "visits": 1600
       }
     },
     {
@@ -5396,6 +5813,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5159,
+        "visits": 1600
       }
     },
     {
@@ -5431,6 +5852,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.537,
+        "visits": 1600
       }
     },
     {
@@ -5466,6 +5891,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.2123,
+        "visits": 1600
       }
     },
     {
@@ -5501,6 +5930,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4943,
+        "visits": 1600
       }
     },
     {
@@ -5536,6 +5969,10 @@
         "nodes": 1001000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5445,
+        "visits": 1600
       }
     },
     {
@@ -5571,6 +6008,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4951,
+        "visits": 1600
       }
     },
     {
@@ -5606,6 +6047,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.2539,
+        "visits": 1600
       }
     },
     {
@@ -5641,6 +6086,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.8413,
+        "visits": 1600
       }
     },
     {
@@ -5676,6 +6125,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.472,
+        "visits": 1600
       }
     },
     {
@@ -5711,6 +6164,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5767,
+        "visits": 1600
       }
     },
     {
@@ -5746,6 +6203,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3494,
+        "visits": 1600
       }
     },
     {
@@ -5781,6 +6242,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4964,
+        "visits": 1600
       }
     },
     {
@@ -5816,6 +6281,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5219,
+        "visits": 1600
       }
     },
     {
@@ -5851,6 +6320,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.549,
+        "visits": 1600
       }
     },
     {
@@ -5886,6 +6359,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.537,
+        "visits": 1600
       }
     },
     {
@@ -5921,6 +6398,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4336,
+        "visits": 1600
       }
     },
     {
@@ -5956,6 +6437,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5926,
+        "visits": 1600
       }
     },
     {
@@ -5991,6 +6476,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4962,
+        "visits": 1600
       }
     },
     {
@@ -6026,6 +6515,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.415,
+        "visits": 1600
       }
     },
     {
@@ -6061,6 +6554,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5866,
+        "visits": 1600
       }
     },
     {
@@ -6096,6 +6593,10 @@
         "nodes": 1001000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.1926,
+        "visits": 1600
       }
     },
     {
@@ -6131,6 +6632,10 @@
         "nodes": 1001000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4952,
+        "visits": 1600
       }
     },
     {
@@ -6166,6 +6671,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5405,
+        "visits": 1600
       }
     },
     {
@@ -6201,6 +6710,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5636,
+        "visits": 1600
       }
     },
     {
@@ -6236,6 +6749,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5678,
+        "visits": 1600
       }
     },
     {
@@ -6271,6 +6788,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6535,
+        "visits": 1600
       }
     },
     {
@@ -6306,6 +6827,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4232,
+        "visits": 1600
       }
     },
     {
@@ -6341,6 +6866,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7346,
+        "visits": 1600
       }
     },
     {
@@ -6376,6 +6905,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4054,
+        "visits": 1600
       }
     },
     {
@@ -6411,6 +6944,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5407,
+        "visits": 1600
       }
     },
     {
@@ -6446,6 +6983,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4544,
+        "visits": 1600
       }
     },
     {
@@ -6481,6 +7022,10 @@
         "nodes": 1000000,
         "depth": 20,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3085,
+        "visits": 1600
       }
     },
     {
@@ -6516,6 +7061,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4495,
+        "visits": 1600
       }
     },
     {
@@ -6551,6 +7100,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5663,
+        "visits": 1600
       }
     },
     {
@@ -6586,6 +7139,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6568,
+        "visits": 1600
       }
     },
     {
@@ -6621,6 +7178,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5484,
+        "visits": 1600
       }
     },
     {
@@ -6656,6 +7217,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.406,
+        "visits": 1600
       }
     },
     {
@@ -6691,6 +7256,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7079,
+        "visits": 1600
       }
     },
     {
@@ -6726,6 +7295,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.9415,
+        "visits": 1600
       }
     },
     {
@@ -6761,6 +7334,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.9305,
+        "visits": 1600
       }
     },
     {
@@ -6796,6 +7373,10 @@
         "nodes": 1000000,
         "depth": 29,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7184,
+        "visits": 1600
       }
     },
     {
@@ -6831,6 +7412,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4698,
+        "visits": 1600
       }
     },
     {
@@ -6866,6 +7451,10 @@
         "nodes": 1000000,
         "depth": 31,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4819,
+        "visits": 1600
       }
     },
     {
@@ -6901,6 +7490,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4981,
+        "visits": 1600
       }
     },
     {
@@ -6936,6 +7529,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5177,
+        "visits": 1600
       }
     },
     {
@@ -6971,6 +7568,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5256,
+        "visits": 1600
       }
     },
     {
@@ -7006,6 +7607,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6179,
+        "visits": 1600
       }
     },
     {
@@ -7041,6 +7646,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4812,
+        "visits": 1600
       }
     },
     {
@@ -7076,6 +7685,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3082,
+        "visits": 1600
       }
     },
     {
@@ -7111,6 +7724,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7294,
+        "visits": 1600
       }
     },
     {
@@ -7146,6 +7763,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5713,
+        "visits": 1600
       }
     },
     {
@@ -7181,6 +7802,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5591,
+        "visits": 1600
       }
     },
     {
@@ -7216,6 +7841,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5463,
+        "visits": 1600
       }
     },
     {
@@ -7251,6 +7880,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5833,
+        "visits": 1600
       }
     },
     {
@@ -7286,6 +7919,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.472,
+        "visits": 1600
       }
     },
     {
@@ -7321,6 +7958,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.2735,
+        "visits": 1600
       }
     },
     {
@@ -7356,6 +7997,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4599,
+        "visits": 1600
       }
     },
     {
@@ -7391,6 +8036,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3492,
+        "visits": 1600
       }
     },
     {
@@ -7426,6 +8075,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4729,
+        "visits": 1600
       }
     },
     {
@@ -7461,6 +8114,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4951,
+        "visits": 1600
       }
     },
     {
@@ -7496,6 +8153,10 @@
         "nodes": 1001000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3794,
+        "visits": 1600
       }
     },
     {
@@ -7531,6 +8192,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4627,
+        "visits": 1600
       }
     },
     {
@@ -7566,6 +8231,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4712,
+        "visits": 1600
       }
     },
     {
@@ -7601,6 +8270,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.638,
+        "visits": 1600
       }
     },
     {
@@ -7636,6 +8309,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5416,
+        "visits": 1600
       }
     },
     {
@@ -7671,6 +8348,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5731,
+        "visits": 1600
       }
     },
     {
@@ -7706,6 +8387,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4365,
+        "visits": 1600
       }
     },
     {
@@ -7741,6 +8426,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5894,
+        "visits": 1600
       }
     },
     {
@@ -7776,6 +8465,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5339,
+        "visits": 1600
       }
     },
     {
@@ -7811,6 +8504,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3868,
+        "visits": 1600
       }
     },
     {
@@ -7846,6 +8543,10 @@
         "nodes": 1000000,
         "depth": 27,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4622,
+        "visits": 1600
       }
     },
     {
@@ -7881,6 +8582,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5398,
+        "visits": 1600
       }
     },
     {
@@ -7916,6 +8621,10 @@
         "nodes": 1001000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3471,
+        "visits": 1600
       }
     },
     {
@@ -7951,6 +8660,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.518,
+        "visits": 1600
       }
     },
     {
@@ -7986,6 +8699,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4901,
+        "visits": 1600
       }
     },
     {
@@ -8021,6 +8738,10 @@
         "nodes": 1001000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.7329,
+        "visits": 1600
       }
     },
     {
@@ -8056,6 +8777,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5963,
+        "visits": 1600
       }
     },
     {
@@ -8091,6 +8816,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.472,
+        "visits": 1600
       }
     },
     {
@@ -8126,6 +8855,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4101,
+        "visits": 1600
       }
     },
     {
@@ -8161,6 +8894,10 @@
         "nodes": 1001000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5616,
+        "visits": 1600
       }
     },
     {
@@ -8196,6 +8933,10 @@
         "nodes": 1000000,
         "depth": 21,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5004,
+        "visits": 1600
       }
     },
     {
@@ -8231,6 +8972,10 @@
         "nodes": 1000000,
         "depth": 20,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4405,
+        "visits": 1600
       }
     },
     {
@@ -8266,6 +9011,10 @@
         "nodes": 1000000,
         "depth": 28,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6077,
+        "visits": 1600
       }
     },
     {
@@ -8301,6 +9050,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.3794,
+        "visits": 1600
       }
     },
     {
@@ -8336,6 +9089,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6427,
+        "visits": 1600
       }
     },
     {
@@ -8371,6 +9128,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4236,
+        "visits": 1600
       }
     },
     {
@@ -8406,6 +9167,10 @@
         "nodes": 1000000,
         "depth": 26,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4647,
+        "visits": 1600
       }
     },
     {
@@ -8441,6 +9206,10 @@
         "nodes": 1000000,
         "depth": 29,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4847,
+        "visits": 1600
       }
     },
     {
@@ -8476,6 +9245,10 @@
         "nodes": 1000000,
         "depth": 24,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5785,
+        "visits": 1600
       }
     },
     {
@@ -8511,6 +9284,10 @@
         "nodes": 1000000,
         "depth": 22,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.8164,
+        "visits": 1600
       }
     },
     {
@@ -8546,6 +9323,10 @@
         "nodes": 1000000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.6251,
+        "visits": 1600
       }
     },
     {
@@ -8581,6 +9362,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4597,
+        "visits": 1600
       }
     },
     {
@@ -8616,6 +9401,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.5998,
+        "visits": 1600
       }
     },
     {
@@ -8651,6 +9440,10 @@
         "nodes": 1000000,
         "depth": 23,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.739,
+        "visits": 1600
       }
     },
     {
@@ -8686,6 +9479,10 @@
         "nodes": 1001000,
         "depth": 25,
         "forcedWin": false
+      },
+      "kataGomo": {
+        "black": 0.4795,
+        "visits": 1600
       }
     }
   ]

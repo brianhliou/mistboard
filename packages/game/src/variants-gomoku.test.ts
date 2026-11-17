@@ -199,11 +199,8 @@ test('the Rapfi pool contains at least 200 distinct, legal, nonterminal near-eve
 
 test('the dealt pool contains only mined two-black three-white openings with Black to move', () => {
   assert.ok(game.GOMOKU_DEALT_OPENINGS.length > 0);
-  assert.deepEqual(
-    game.GOMOKU_DEALT_OPENINGS,
-    game.GOMOKU_OPENINGS.filter((entry) => entry.source === 'mined-2B3W-7x7'),
-  );
   for (const entry of game.GOMOKU_DEALT_OPENINGS) {
+    assert.equal(entry.source, 'mined-2B3W-7x7', entry.id);
     assert.equal(entry.stones.length, 5, entry.id);
     assert.equal(entry.stones.filter((stone) => stone.color === 'black').length, 2, entry.id);
     assert.equal(entry.stones.filter((stone) => stone.color === 'white').length, 3, entry.id);
@@ -213,6 +210,24 @@ test('the dealt pool contains only mined two-black three-white openings with Bla
     });
     assert.equal(entry.turn, 'black', entry.id);
   }
+});
+
+test('the dealt pool keeps only openings KataGomo also reads as close to even', () => {
+  const band = game.GOMOKU_SECOND_SCREEN;
+  const mined = game.GOMOKU_OPENINGS.filter((entry) => entry.source === 'mined-2B3W-7x7');
+  for (const entry of mined) assert.ok(entry.kataGomo, `${entry.id} has no KataGomo read`);
+  const inBand = mined.filter(
+    (entry) => entry.kataGomo!.black >= band.minBlack && entry.kataGomo!.black <= band.maxBlack,
+  );
+  assert.deepEqual(game.GOMOKU_DEALT_OPENINGS, inBand);
+  assert.equal(band.read, mined.length);
+  assert.equal(band.dealt, inBand.length);
+  // KataGomo gave Black 94% here at 1,600 visits; Rapfi had passed it as even.
+  const lopsided = mined.find((entry) => entry.id === 'gmk-191');
+  assert.ok(lopsided && lopsided.kataGomo!.black > band.maxBlack);
+  assert.ok(!game.GOMOKU_DEALT_OPENINGS.includes(lopsided));
+  // Dropped openings stay in the full pool so recorded games still replay.
+  assert.ok(game.GOMOKU_OPENINGS.includes(lopsided));
 });
 
 test('mined importer rejects score 41, forced wins and reflected pool duplicates', async () => {
