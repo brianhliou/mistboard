@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { crawlerCharCount } from '../../../scripts/lib/crawler-text.mjs';
 import { CRAWLER_CONTENT_MANIFEST } from '../../server/src/crawler-content-manifest.js';
 import { crawlerCopyProblems } from '../scripts/prerender-copy-check.mjs';
 import { renderAnalysisShellForPrerender } from './analysis-page.js';
@@ -107,6 +108,27 @@ it.each(SUPPORTED_LOCALES)(
       expect(crawlerCopyProblems(html)).toEqual([]);
       expect(new DOMParser().parseFromString(html, 'text/html').querySelector('h1')).not.toBeNull();
     }
+    // Field values and placeholders a visitor reads are spelled out as text
+    // (#957): the start position in each box's own FEN spelling, and the hints.
+    expect(contentText(analysis)).toContain(
+      'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1',
+    );
+    for (const key of [
+      'analysis.setPosition',
+      'analysis.pasteGamePlaceholder',
+      'analysis.importMoves',
+      'analysis.openBoardEditor',
+    ] as const)
+      expect(contentText(analysis)).toContain(t(key, {}, locale));
+    expect(contentText(editor)).toContain(
+      'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1',
+    );
+    for (const key of ['editor.colorRed', 'editor.practicePlay'] as const)
+      expect(contentText(editor)).toContain(t(key, {}, locale));
+    // Other variants' analysis copy is unchanged: no xiangqi FEN box text.
+    expect(contentText(await renderAnalysisShellForPrerender(locale, 'banqi'))).not.toContain(
+      t('analysis.importMoves', {}, locale),
+    );
   },
 );
 
@@ -225,8 +247,10 @@ it.each(SUPPORTED_LOCALES)('tool copy keeps honest manifest gaps in %s', async (
     ))
       node.remove();
     const text = (doc.body.textContent ?? '').replace(/\s+/gu, ' ').trim();
+    // The floor's own counter (crawler-floor.mjs): CJK ideographs count twice.
+    const chars = crawlerCharCount(text);
     expect
-      .soft(text.length >= entry.minChars, `${entry.path}: ${text.length} chars`)
+      .soft(chars >= entry.minChars, `${entry.path}: ${chars} chars`)
       .toBe(!entry.knownGap || entry.knownGap.includes('alternates'));
   }
 });

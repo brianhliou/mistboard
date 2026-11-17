@@ -948,22 +948,34 @@ export function renderEditorShellForPrerender(
   variant: EditorVariantId,
 ): Promise<string> {
   return prerenderMount(locale, (root) => {
+    const spec = editorSpec(variant);
     const heading = document.createElement('h1');
     heading.textContent = t('editor.pageTitle', { variant: variantDisplayLabel(variant) });
     root.append(heading, buildVariantPicker(variant, '/editor'));
-    for (const key of [
-      'editor.sideToMove',
-      'editor.startPosition',
-      'editor.clearBoard',
-      'editor.flipBoard',
-      'editor.fenLabel',
-      'editor.setFen',
-      'editor.copyFen',
-      'editor.analysisBoard',
-    ] as const) {
+    const line = (...parts: string[]): void => {
       const label = document.createElement('p');
-      label.textContent = t(key);
+      label.textContent = parts.join(' ');
       root.append(label);
+    };
+    // The visible controls in page order (mountEditorPage). The side-to-move
+    // choices and the FEN box's start position are input labels and values,
+    // so inert crawler HTML spells them out; the FEN is the board in notation.
+    line(
+      t('editor.sideToMove'),
+      ...[...spec.colors, ...(spec.openingTurn ? (['-'] as const) : [])].map((turn) =>
+        turn === '-' ? t('editor.opening') : t(COLOR_LABEL_KEY[turn]),
+      ),
+    );
+    for (const key of ['editor.startPosition', 'editor.clearBoard', 'editor.flipBoard'] as const)
+      line(t(key));
+    line(t('editor.fenLabel'), spec.toFen(spec.start()));
+    for (const key of ['editor.setFen', 'editor.copyFen', 'editor.analysisBoard'] as const)
+      line(t(key));
+    // Xiangqi only: the practice hand-off card (buildPracticeHandOff).
+    if (variant === 'xiangqi') {
+      line(t('editor.practiceGoal'), t('editor.practiceGoalMate'), t('editor.practiceGoalDraw'));
+      line(t('editor.practiceSide'), t('editor.practiceSideRed'), t('editor.practiceSideBlack'));
+      line(t('editor.practicePlay'));
     }
   });
 }

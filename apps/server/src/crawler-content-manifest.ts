@@ -1660,7 +1660,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
@@ -1675,7 +1674,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: Chinese editor alternates remain below the content floor',
     baselineChars: 0,
   },
   {
@@ -1690,7 +1688,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
@@ -1718,7 +1715,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
@@ -1733,7 +1729,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: visible editor controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
@@ -1748,7 +1743,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#957: visible editor controls are below the 150-character floor',
     baselineChars: 0,
   },
   {

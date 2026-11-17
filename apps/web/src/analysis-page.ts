@@ -1,3 +1,4 @@
+import { createInitialStandardXiangqiState, standardXiangqiEngineFen } from '@mistboard/game';
 import type { Locale } from './i18n/locale.js';
 import { prerenderMount } from './prerender-copy.js';
 // Generic /analysis/<variant> entry: builds the variant dropdown (lichess's
@@ -132,6 +133,37 @@ export function renderAnalysisShellForPrerender(
     const edit = document.createElement('a');
     edit.textContent = t('analysis.editPosition');
     edit.href = localizedHref(`/editor/${variant}`, locale);
-    root.append(heading, buildVariantPicker(variant), edit);
+    root.append(heading, buildVariantPicker(variant));
+    if (variant === 'xiangqi') root.append(xiangqiImportPanelCopy(locale));
+    root.append(edit);
   });
+}
+
+// The text a visitor reads in the xiangqi board's FEN + moves boxes on first
+// load (tree-review.ts createImportPanel): the FEN box holds the start
+// position, the empty moves box shows its hint. Field values and placeholders
+// are attributes, so inert crawler HTML spells them out as text; the FEN (the
+// same engine spelling xiangqi-review.ts mirrors into the box) is the
+// board position in notation.
+function xiangqiImportPanelCopy(locale: Locale): HTMLElement {
+  const section = document.createElement('section');
+  const line = (...parts: string[]): HTMLParagraphElement => {
+    const p = document.createElement('p');
+    p.textContent = parts.join(' ');
+    return p;
+  };
+  const editor = document.createElement('a');
+  editor.textContent = t('analysis.openBoardEditor');
+  editor.href = localizedHref('/editor/xiangqi', locale);
+  section.append(
+    line(
+      t('analysis.fen'),
+      standardXiangqiEngineFen(createInitialStandardXiangqiState('analysis')),
+    ),
+    line(t('analysis.setPosition')),
+    line(t('replay.moves'), t('analysis.pasteGamePlaceholder')),
+    line(t('analysis.importMoves')),
+    editor,
+  );
+  return section;
 }
