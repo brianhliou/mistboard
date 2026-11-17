@@ -150,10 +150,25 @@ describe('reviewMetaPlayers', () => {
       undefined,
       null,
       'banqi',
-    ).map((player) => player.name);
-    // A person who calls themselves Misty keeps the name; the bot seat is
-    // "Misty Banqi" with its level.
-    expect(names).toEqual(['Misty', 'Misty Banqi Level 4']);
+    ).map((player) => [player.name, player.fullName]);
+    // A person who calls themselves Misty keeps the name. The bot seat is
+    // "Misty Banqi" with its level; the card's head already names the game, so
+    // the row says "Misty Level 4" and the tooltip the full name.
+    expect(names).toEqual([
+      ['Misty', undefined],
+      ['Misty Level 4', 'Misty Banqi Level 4'],
+    ]);
+  });
+
+  it('leaves a person named like the bot alone on the card', () => {
+    const [person] = reviewMetaPlayers(
+      [{ color: 'red', name: 'Misty Banqi Level 4', rating: null, kind: 'account', handle: 'mb4' }],
+      undefined,
+      null,
+      'banqi',
+    );
+    expect(person?.name).toBe('Misty Banqi Level 4');
+    expect(person?.fullName).toBeUndefined();
   });
 
   it('links a user seat by handle and a bot seat by bot id, and leaves the rest plain', () => {
