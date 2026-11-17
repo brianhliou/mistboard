@@ -22,6 +22,8 @@ import { chapterAnnotations, GLYPH_SUFFIX_CLASS } from './study-chapter-annotati
 import type { StudyChapterPayload } from './study-chapter-spec.js';
 import { threeKingdomsBanqiLastMoverInk } from './three-kingdoms-banqi-board.js';
 import {
+  animateThreeKingdomsBanqiBoardMove,
+  animateThreeKingdomsBanqiReveal,
   renderThreeKingdomsBanqiLiveBoardSvg,
   type TkBoardMarker,
 } from './three-kingdoms-banqi-diagrams.js';
@@ -120,6 +122,7 @@ export function mountThreeKingdomsBanqiStudyReplay(
     (role, color) => flipLuckPieceSvg('banqi', role, color),
   );
   let ply = 0;
+  let inLine = false;
   const render = (view = line.views[ply]!, mainline = true) => {
     const glyph = mainline ? (line.annotations.glyphs[ply] ?? marks.get(ply)?.suffix) : undefined;
     const lastMove = view.lastMove;
@@ -152,15 +155,32 @@ export function mountThreeKingdomsBanqiStudyReplay(
     },
     jumpToPly: (next) => {
       if (!Number.isFinite(next)) return;
-      ply = Math.max(0, Math.min(line.played.length, Math.trunc(next)));
+      const nextPly = Math.max(0, Math.min(line.played.length, Math.trunc(next)));
+      const move = !inLine && nextPly === ply + 1 ? line.played[ply] : undefined;
+      const before = line.views[ply];
+      ply = nextPly;
+      inLine = false;
       render();
+      // Animate only a forward step along the displayed mainline. A flip
+      // uses the observed face in that frame, never a hidden deal lookup.
+      if (move) {
+        if (move.from !== move.to) animateThreeKingdomsBanqiBoardMove(frame, move);
+        else {
+          const drawn = line.views[ply]?.board[move.to];
+          if (before?.board[move.to]?.faceDown && drawn && !drawn.faceDown)
+            animateThreeKingdomsBanqiReveal(frame, move.to);
+        }
+      }
       hooks.onPlyChange(ply, line.played.length);
     },
     jumpToLine: (atPly, cursor) => {
       const branch = line.lines.get(atPly);
       if (!branch || !Number.isFinite(cursor)) return;
       const view = branch.views[Math.max(0, Math.min(branch.played.length, Math.trunc(cursor)))];
-      if (view) render(view, false);
+      if (view) {
+        inLine = true;
+        render(view, false);
+      }
     },
     plyCount: () => line.played.length,
     playedMoves: () => line.played.map((move, i) => ({ ...move, ply: i + 1 })),
