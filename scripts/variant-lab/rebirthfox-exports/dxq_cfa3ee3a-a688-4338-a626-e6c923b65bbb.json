@@ -1,0 +1,405 @@
+{
+  "schema_version": "1.1",
+  "game_id": "dxq_cfa3ee3a-a688-4338-a626-e6c923b65bbb",
+  "source": {
+    "name": "Mistboard",
+    "url": "https://mistboard.com",
+    "game_url": "https://mistboard.com/dark-xiangqi/game/dxq_cfa3ee3a-a688-4338-a626-e6c923b65bbb"
+  },
+  "variant": "dark-xiangqi",
+  "mode": "pvp",
+  "time_control": { "initial_ms": 86400000, "increment_ms": 0, "label": "86400+0" },
+  "players": { "red": { "handle": "rebirthfox333" }, "black": { "handle": "brianhliou-dev" } },
+  "started_at": "2026-10-08T08:32:37.360Z",
+  "ended_at": "2026-10-10T07:15:40.891Z",
+  "result": "black",
+  "termination": "general-captured",
+  "ply_count": 48,
+  "license": "CC BY 4.0",
+  "plies": [
+    {
+      "ply": 1,
+      "mover": "red",
+      "uci": "i0i1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 2,
+      "mover": "black",
+      "uci": "h7h5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 3,
+      "mover": "red",
+      "uci": "i1d1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 4,
+      "mover": "black",
+      "uci": "h5i5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 5,
+      "mover": "red",
+      "uci": "b2e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 6,
+      "mover": "black",
+      "uci": "c9e7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 7,
+      "mover": "red",
+      "uci": "h2h4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 8,
+      "mover": "black",
+      "uci": "h9g7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 9,
+      "mover": "red",
+      "uci": "h4e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 10,
+      "mover": "black",
+      "uci": "b7c7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 11,
+      "mover": "red",
+      "uci": "d1d8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 12,
+      "mover": "black",
+      "uci": "b9d8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 13,
+      "mover": "red",
+      "uci": "a0a1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 14,
+      "mover": "black",
+      "uci": "a9a8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 15,
+      "mover": "red",
+      "uci": "a1d1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 16,
+      "mover": "black",
+      "uci": "i9h9",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 17,
+      "mover": "red",
+      "uci": "g3g4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 18,
+      "mover": "black",
+      "uci": "h9h0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 19,
+      "mover": "red",
+      "uci": "c3c4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 20,
+      "mover": "black",
+      "uci": "c6c5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 21,
+      "mover": "red",
+      "uci": "c4c5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 22,
+      "mover": "black",
+      "uci": "c7c0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 23,
+      "mover": "red",
+      "uci": "d0e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 24,
+      "mover": "black",
+      "uci": "h0g0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 25,
+      "mover": "red",
+      "uci": "c5b5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 26,
+      "mover": "black",
+      "uci": "a8c8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 27,
+      "mover": "red",
+      "uci": "e2h2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 28,
+      "mover": "black",
+      "uci": "i5e5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 29,
+      "mover": "red",
+      "uci": "h2h8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 30,
+      "mover": "black",
+      "uci": "e5e3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 31,
+      "mover": "red",
+      "uci": "e1f2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 32,
+      "mover": "black",
+      "uci": "c0f0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 33,
+      "mover": "red",
+      "uci": "h8c8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 34,
+      "mover": "black",
+      "uci": "f0b0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 35,
+      "mover": "red",
+      "uci": "e0e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 36,
+      "mover": "black",
+      "uci": "g0g1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 37,
+      "mover": "red",
+      "uci": "e1e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 38,
+      "mover": "black",
+      "uci": "g1d1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 39,
+      "mover": "red",
+      "uci": "e4c4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 40,
+      "mover": "black",
+      "uci": "e3h3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 41,
+      "mover": "red",
+      "uci": "c8a8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 42,
+      "mover": "black",
+      "uci": "d9e8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 43,
+      "mover": "red",
+      "uci": "c4a4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 44,
+      "mover": "black",
+      "uci": "h3h2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 45,
+      "mover": "red",
+      "uci": "f2e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 46,
+      "mover": "black",
+      "uci": "b0e0",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 47,
+      "mover": "red",
+      "uci": "a8a9",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 48,
+      "mover": "black",
+      "uci": "e0e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    }
+  ]
+}

@@ -36,6 +36,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 export const TRANSLATED_ARTICLE_SLUGS = [
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'xiangqi-nnue-training',
+  // Machine-drafted 2026-11-11, not native-reviewed, from the English signed
+  // off that day. Terms follow the zh shell catalog (通信棋, 研究) and the
+  // ab-jchess-vs-jqe article (期望得分, 百分点).
+  'one-opponent-four-variants',
   // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
   // off that day. Badge names follow the legacy badge catalog.
   'fog-future',
@@ -603,6 +607,56 @@ const ZH_HANS: Record<string, string> = {
   'Chess where you see only the squares your pieces can reach.': '只能看见己方棋子能走到的格子。',
   'Ranked animals race to enter the enemy den.': '动物按大小吃子，抢进对方兽穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻将，每手五张牌。',
+  // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
+  'Won the fog game, lost the other three': '赢了迷雾象棋，输了另外三盘',
+  'Won the fog game, lost three': '赢了迷雾象棋，输了另外三盘',
+  'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
+    '迷雾象棋、暗棋、揭棋和鸭子象棋：与同一位对手的四盘棋',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '与同一位棋手同时下的四盘通信棋，分别是迷雾象棋、暗棋、揭棋和鸭子象棋。每一步都由引擎评分，每次翻子都拆成选择和运气两部分。',
+  '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
+    '我和 @rebirthfox333 同时下了四盘通信棋，迷雾象棋、暗棋、揭棋和鸭子象棋各一盘。',
+  "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
+    '下面每个棋盘都能逐步回放对局，附有引擎的标记和得分走势图；暗棋和揭棋还会把每次翻子拆成选择和运气两部分。',
+  "On October 8, @rebirthfox333 and I started four correspondence games at once, one day a move, each in a different variant. I won the first and lost the other three. Each board is a study you can step through, with the engine's marks (?!, ? and ??), its lines and its score chart. A few notes follow each one.":
+    '10 月 8 日，我和 @rebirthfox333 同时开了四盘通信棋，每步限时一天，每盘一种变体。第一盘我赢了，另外三盘都输了。每个棋盘都是一个可以逐步回放的研究，带有引擎的标记（?!、? 和 ??）、它给出的变着和得分走势图。每盘后面附几句说明。',
+  'Fog Xiangqi: the chariot the fog hid': '迷雾象棋：迷雾藏住的车',
+  'In [Fog Xiangqi](/rules/fog-xiangqi) each side sees only the points its own pieces can reach, and the game ends when a general is taken. I was Black.':
+    '在[迷雾象棋](/rules/fog-xiangqi)中，每方只能看见己方棋子能走到的点，吃掉将或帅，对局就结束。我执黑。',
+  'Fog Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '迷雾象棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  "Red's sixth move decided it: the chariot went to a point my horse guarded from under the fog, and the horse took it. The engine sees the whole board, so its marks show what a move cost, not what either of us could see. Not all of mine have that excuse: on my first two moves my cannon could have taken a horse in plain view.":
+    '红方第 6 步决定了胜负：车走到了我的马在迷雾下护着的点，被马吃掉。引擎看得见整个棋盘，所以它的标记反映的是一步棋的代价，而不是我们当时各自看得到什么。我的失误并不都能这样开脱：头两步我的炮本可以吃掉一个就在眼前的马。',
+  'Banqi: the flips that dealt the game': '暗棋：翻子定了这盘棋',
+  'In [banqi](/rules/banqi) all 32 pieces start face down on half a board. A turn is a flip or a move, and the first flip decides the colours. Mine turned up a black elephant.':
+    '在[暗棋](/rules/banqi)中，32 个棋子全部背面朝上摆在半个棋盘上。每回合要么翻一个子，要么走一步，第一次翻子决定双方颜色。我翻出的是一个黑象。',
+  'Banqi, @brianhliou-dev vs @rebirthfox333, annotated':
+    '暗棋，@brianhliou-dev 对 @rebirthfox333，附注解',
+  "The board grades each flip twice: once for the choice to flip, once for what came up ([how that works](/blog/skill-vs-luck)). One flip went badly for me, a red cannon that took my cannon on the next move. But over the game my choices cost me more than the luck did, and I flipped 19 times to rebirthfox's 10.":
+    '棋盘给每次翻子打两次分：一次评翻子这个选择，一次评翻出了什么（[原理见此](/blog/skill-vs-luck)）。有一次翻子对我很不利，翻出一个红炮，下一步就吃掉了我的炮。但整盘算下来，我的选择让我损失的比运气更多，而且我翻了 19 次，rebirthfox 只翻了 10 次。',
+  'Jieqi: the chariot move and the face-down recapture': '揭棋：一步车和一次暗子回吃',
+  'In [jieqi](/rules/jieqi) every piece but the generals starts face down, moves as the piece whose home point it stands on, and turns face up once it moves.':
+    '在[揭棋](/rules/jieqi)中，除将帅外的棋子都背面朝上开局，按所在原位的棋子走法行棋，走动后翻开。',
+  'Jieqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '揭棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  'It was level until move 22, when my chariot went to f3 and the engine had me losing; f2 would have held. Red took back with a face-down piece, which turned out to be an elephant, and went on to mate me.':
+    '第 22 回合之前局面一直均势，那一步我的车走到 f3，引擎随即判我要输；走 f2 本可以守住。红方用一个暗子吃回，翻开是一枚相，之后把我将死。',
+  'Duck Xiangqi: the endgame lost by waiting': '鸭子象棋：残局里一味等着，输了',
+  'In [Duck Xiangqi](/rules/duck-xiangqi) every turn is a move and then a duck placement on an empty point, which blocks it for both sides. The game is won by taking the general.':
+    '在[鸭子象棋](/rules/duck-xiangqi)中，每回合先走一步棋，再把鸭子放到一个空点上，这个点双方都不能用。吃掉对方的将帅即获胜。',
+  'Duck Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '鸭子象棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  "I was ahead until move 20, when I left my horse where Red's chariot could take it. In the endgame I shuffled my general back and forth while Red's soldiers crossed the river, and Red went on to win.":
+    '第 20 回合之前我一直领先，那一步我把马留在了红车吃得到的地方。残局里我把将来回挪动，红方的兵趁机过河，最后红方赢了。',
+  'Why the chart is smoothed': '走势图为何经过平滑',
+  "The duck engine scores a position about 10 points better for whichever side is to move, so its raw numbers zigzag every turn. The chart averages each position with the one before, and each move is graded against the same player's next turn.":
+    '鸭子象棋引擎会给轮到走棋的一方多算大约 10 个百分点，所以原始数值每回合都来回跳动。走势图把每个局面与前一个局面取平均，每步棋都与同一棋手的下一回合对比评分。',
+  'Congratulations to @rebirthfox333 on winning the match 3-1, and thanks for the games.':
+    '恭喜 @rebirthfox333 以 3 比 1 赢下这场比赛，也谢谢这几盘棋。',
+  CORRESPONDENCE: '通信棋',
+  'ONE OPPONENT': '同一位对手',
+  'FOUR VARIANTS': '四种变体',
+  'A card reading one opponent, four variants': '一张写着“同一位对手，四种变体”的卡片',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
@@ -7712,6 +7766,56 @@ const ZH_HANT: Record<string, string> = {
   'Chess where you see only the squares your pieces can reach.': '只能看見己方棋子能走到的格子。',
   'Ranked animals race to enter the enemy den.': '動物按大小吃子，搶進對方獸穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻將，每手五張牌。',
+  // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
+  'Won the fog game, lost the other three': '贏了迷霧象棋，輸了另外三盤',
+  'Won the fog game, lost three': '贏了迷霧象棋，輸了另外三盤',
+  'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
+    '迷霧象棋、暗棋、揭棋和鴨子象棋：與同一位對手的四盤棋',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '與同一位棋手同時下的四盤通信棋，分別是迷霧象棋、暗棋、揭棋和鴨子象棋。每一步都由引擎評分，每次翻子都拆成選擇和運氣兩部分。',
+  '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
+    '我和 @rebirthfox333 同時下了四盤通信棋，迷霧象棋、暗棋、揭棋和鴨子象棋各一盤。',
+  "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
+    '下面每個棋盤都能逐步回放對局，附有引擎的標記和得分走勢圖；暗棋和揭棋還會把每次翻子拆成選擇和運氣兩部分。',
+  "On October 8, @rebirthfox333 and I started four correspondence games at once, one day a move, each in a different variant. I won the first and lost the other three. Each board is a study you can step through, with the engine's marks (?!, ? and ??), its lines and its score chart. A few notes follow each one.":
+    '10 月 8 日，我和 @rebirthfox333 同時開了四盤通信棋，每步限時一天，每盤一種變體。第一盤我贏了，另外三盤都輸了。每個棋盤都是一個可以逐步回放的研究，帶有引擎的標記（?!、? 和 ??）、它給出的變化和得分走勢圖。每盤後面附幾句說明。',
+  'Fog Xiangqi: the chariot the fog hid': '迷霧象棋：迷霧藏住的車',
+  'In [Fog Xiangqi](/rules/fog-xiangqi) each side sees only the points its own pieces can reach, and the game ends when a general is taken. I was Black.':
+    '在[迷霧象棋](/rules/fog-xiangqi)中，每方只能看見己方棋子能走到的點，吃掉將或帥，對局就結束。我執黑。',
+  'Fog Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '迷霧象棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  "Red's sixth move decided it: the chariot went to a point my horse guarded from under the fog, and the horse took it. The engine sees the whole board, so its marks show what a move cost, not what either of us could see. Not all of mine have that excuse: on my first two moves my cannon could have taken a horse in plain view.":
+    '紅方第 6 步決定了勝負：車走到了我的馬在迷霧下護著的點，被馬吃掉。引擎看得見整個棋盤，所以它的標記反映的是一步棋的代價，而不是我們當時各自看得到什麼。我的失誤並不都能這樣開脫：頭兩步我的炮本可以吃掉一隻就在眼前的馬。',
+  'Banqi: the flips that dealt the game': '暗棋：翻子定了這盤棋',
+  'In [banqi](/rules/banqi) all 32 pieces start face down on half a board. A turn is a flip or a move, and the first flip decides the colours. Mine turned up a black elephant.':
+    '在[暗棋](/rules/banqi)中，32 顆棋子全部背面朝上擺在半個棋盤上。每回合要麼翻一顆子，要麼走一步，第一次翻子決定雙方顏色。我翻出的是一顆黑象。',
+  'Banqi, @brianhliou-dev vs @rebirthfox333, annotated':
+    '暗棋，@brianhliou-dev 對 @rebirthfox333，附註解',
+  "The board grades each flip twice: once for the choice to flip, once for what came up ([how that works](/blog/skill-vs-luck)). One flip went badly for me, a red cannon that took my cannon on the next move. But over the game my choices cost me more than the luck did, and I flipped 19 times to rebirthfox's 10.":
+    '棋盤給每次翻子打兩次分：一次評翻子這個選擇，一次評翻出了什麼（[原理見此](/blog/skill-vs-luck)）。有一次翻子對我很不利，翻出一顆紅炮，下一步就吃掉了我的砲。但整盤算下來，我的選擇讓我損失的比運氣更多，而且我翻了 19 次，rebirthfox 只翻了 10 次。',
+  'Jieqi: the chariot move and the face-down recapture': '揭棋：一步車和一次暗子回吃',
+  'In [jieqi](/rules/jieqi) every piece but the generals starts face down, moves as the piece whose home point it stands on, and turns face up once it moves.':
+    '在[揭棋](/rules/jieqi)中，除將帥外的棋子都背面朝上開局，按所在原位的棋子走法行棋，走動後翻開。',
+  'Jieqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '揭棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  'It was level until move 22, when my chariot went to f3 and the engine had me losing; f2 would have held. Red took back with a face-down piece, which turned out to be an elephant, and went on to mate me.':
+    '第 22 回合之前局面一直均勢，那一步我的車走到 f3，引擎隨即判我要輸；走 f2 本可以守住。紅方用一顆暗子吃回，翻開是一顆相，之後把我將死。',
+  'Duck Xiangqi: the endgame lost by waiting': '鴨子象棋：殘局裡一味等著，輸了',
+  'In [Duck Xiangqi](/rules/duck-xiangqi) every turn is a move and then a duck placement on an empty point, which blocks it for both sides. The game is won by taking the general.':
+    '在[鴨子象棋](/rules/duck-xiangqi)中，每回合先走一步棋，再把鴨子放到一個空點上，這個點雙方都不能用。吃掉對方的將帥即獲勝。',
+  'Duck Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '鴨子象棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  "I was ahead until move 20, when I left my horse where Red's chariot could take it. In the endgame I shuffled my general back and forth while Red's soldiers crossed the river, and Red went on to win.":
+    '第 20 回合之前我一直領先，那一步我把馬留在了紅車吃得到的地方。殘局裡我把將來回挪動，紅方的兵趁機過河，最後紅方贏了。',
+  'Why the chart is smoothed': '走勢圖為何經過平滑',
+  "The duck engine scores a position about 10 points better for whichever side is to move, so its raw numbers zigzag every turn. The chart averages each position with the one before, and each move is graded against the same player's next turn.":
+    '鴨子象棋引擎會給輪到走棋的一方多算大約 10 個百分點，所以原始數值每回合都來回跳動。走勢圖把每個局面與前一個局面取平均，每步棋都與同一棋手的下一回合對比評分。',
+  'Congratulations to @rebirthfox333 on winning the match 3-1, and thanks for the games.':
+    '恭喜 @rebirthfox333 以 3 比 1 贏下這場比賽，也謝謝這幾盤棋。',
+  CORRESPONDENCE: '通信棋',
+  'ONE OPPONENT': '同一位對手',
+  'FOUR VARIANTS': '四種變體',
+  'A card reading one opponent, four variants': '一張寫著「同一位對手，四種變體」的卡片',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.

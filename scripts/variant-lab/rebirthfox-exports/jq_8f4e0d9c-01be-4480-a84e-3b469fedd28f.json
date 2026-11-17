@@ -1,0 +1,564 @@
+{
+  "schema_version": "1.1",
+  "game_id": "jq_8f4e0d9c-01be-4480-a84e-3b469fedd28f",
+  "source": {
+    "name": "Mistboard",
+    "url": "https://mistboard.com",
+    "game_url": "https://mistboard.com/jieqi/game/jq_8f4e0d9c-01be-4480-a84e-3b469fedd28f"
+  },
+  "variant": "jieqi",
+  "mode": "pvp",
+  "time_control": { "initial_ms": 86400000, "increment_ms": 0, "label": "86400+0" },
+  "players": { "red": { "handle": "rebirthfox333" }, "black": { "handle": "brianhliou-dev" } },
+  "started_at": "2026-10-08T08:33:42.595Z",
+  "ended_at": "2026-10-14T04:23:00.623Z",
+  "result": "red",
+  "termination": "checkmate",
+  "ply_count": 65,
+  "license": "CC BY 4.0",
+  "plies": [
+    {
+      "ply": 1,
+      "mover": "red",
+      "uci": "g3g4",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 2,
+      "mover": "black",
+      "uci": "c6c5",
+      "san": null,
+      "revealed": { "color": "black", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 3,
+      "mover": "red",
+      "uci": "c3c4",
+      "san": null,
+      "revealed": { "color": "red", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 4,
+      "mover": "black",
+      "uci": "c9e7",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 5,
+      "mover": "red",
+      "uci": "b2b5",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 6,
+      "mover": "black",
+      "uci": "h7h3",
+      "san": null,
+      "revealed": { "color": "black", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 7,
+      "mover": "red",
+      "uci": "b5c5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 8,
+      "mover": "black",
+      "uci": "e6e5",
+      "san": null,
+      "revealed": { "color": "black", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 9,
+      "mover": "red",
+      "uci": "i3i4",
+      "san": null,
+      "revealed": { "color": "red", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 10,
+      "mover": "black",
+      "uci": "a6a5",
+      "san": null,
+      "revealed": { "color": "black", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 11,
+      "mover": "red",
+      "uci": "b0a2",
+      "san": null,
+      "revealed": { "color": "red", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 12,
+      "mover": "black",
+      "uci": "a5a2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 13,
+      "mover": "red",
+      "uci": "c0a2",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 14,
+      "mover": "black",
+      "uci": "g9i7",
+      "san": null,
+      "revealed": { "color": "black", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 15,
+      "mover": "red",
+      "uci": "i4h5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 16,
+      "mover": "black",
+      "uci": "h9g7",
+      "san": null,
+      "revealed": { "color": "black", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 17,
+      "mover": "red",
+      "uci": "e3e4",
+      "san": null,
+      "revealed": { "color": "red", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 18,
+      "mover": "black",
+      "uci": "b7b4",
+      "san": null,
+      "revealed": { "color": "black", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 19,
+      "mover": "red",
+      "uci": "e4f2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 20,
+      "mover": "black",
+      "uci": "d9e8",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 21,
+      "mover": "red",
+      "uci": "f2d3",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 22,
+      "mover": "black",
+      "uci": "b4b6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 23,
+      "mover": "red",
+      "uci": "c5c6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 24,
+      "mover": "black",
+      "uci": "b6b5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 25,
+      "mover": "red",
+      "uci": "d3e5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 26,
+      "mover": "black",
+      "uci": "b5h5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 27,
+      "mover": "red",
+      "uci": "h2h5",
+      "san": null,
+      "revealed": { "color": "red", "role": "advisor" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 28,
+      "mover": "black",
+      "uci": "b9d8",
+      "san": null,
+      "revealed": { "color": "black", "role": "chariot" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 29,
+      "mover": "red",
+      "uci": "e5g6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 30,
+      "mover": "black",
+      "uci": "d8d4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 31,
+      "mover": "red",
+      "uci": "c4c1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 32,
+      "mover": "black",
+      "uci": "d4e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 33,
+      "mover": "red",
+      "uci": "f0e1",
+      "san": null,
+      "revealed": { "color": "red", "role": "cannon" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 34,
+      "mover": "black",
+      "uci": "g7f7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 35,
+      "mover": "red",
+      "uci": "h0g2",
+      "san": null,
+      "revealed": { "color": "red", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 36,
+      "mover": "black",
+      "uci": "f7f5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 37,
+      "mover": "red",
+      "uci": "e1e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 38,
+      "mover": "black",
+      "uci": "f5f1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 39,
+      "mover": "red",
+      "uci": "d0e1",
+      "san": null,
+      "revealed": { "color": "red", "role": "horse" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 40,
+      "mover": "black",
+      "uci": "f1f5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 41,
+      "mover": "red",
+      "uci": "h5i6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 42,
+      "mover": "black",
+      "uci": "i7h6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 43,
+      "mover": "red",
+      "uci": "e1c2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 44,
+      "mover": "black",
+      "uci": "f5f2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 45,
+      "mover": "red",
+      "uci": "c1e1",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 46,
+      "mover": "black",
+      "uci": "e4e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 47,
+      "mover": "red",
+      "uci": "g0e2",
+      "san": null,
+      "revealed": { "color": "red", "role": "elephant" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 48,
+      "mover": "black",
+      "uci": "f2e2",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 49,
+      "mover": "red",
+      "uci": "c2d4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 50,
+      "mover": "black",
+      "uci": "e2e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 51,
+      "mover": "red",
+      "uci": "d4b5",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 52,
+      "mover": "black",
+      "uci": "e4g4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 53,
+      "mover": "red",
+      "uci": "g6e7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 54,
+      "mover": "black",
+      "uci": "g4e4",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 55,
+      "mover": "red",
+      "uci": "e7c8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 56,
+      "mover": "black",
+      "uci": "e9d9",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 57,
+      "mover": "red",
+      "uci": "c8a9",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 58,
+      "mover": "black",
+      "uci": "e8e7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 59,
+      "mover": "red",
+      "uci": "b5c7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 60,
+      "mover": "black",
+      "uci": "d9d8",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 61,
+      "mover": "red",
+      "uci": "a9b7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 62,
+      "mover": "black",
+      "uci": "d8d7",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 63,
+      "mover": "red",
+      "uci": "c7d9",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 64,
+      "mover": "black",
+      "uci": "f9e8",
+      "san": null,
+      "revealed": { "color": "black", "role": "soldier" },
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    },
+    {
+      "ply": 65,
+      "mover": "red",
+      "uci": "c6d6",
+      "san": null,
+      "red_clock_ms_after": null,
+      "black_clock_ms_after": null
+    }
+  ]
+}
