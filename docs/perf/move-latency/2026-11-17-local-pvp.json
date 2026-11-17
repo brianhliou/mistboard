@@ -1,0 +1,2489 @@
+{
+  "schemaVersion": 1,
+  "metric": "mover-submit-to-authoritative-event-receipt",
+  "percentileMethod": "nearest-rank",
+  "metadata": {
+    "sourceRevision": "97bdd8aaccf308d93807d1d81f0d0c0bb952c576",
+    "sourceDirty": true,
+    "harnessSha256": "8e90bae296a716e19326ae75d654141de5c67292f8c727b21b0cdd32bed32dad",
+    "node": "v26.11.1",
+    "hardware": {
+      "platform": "darwin",
+      "release": "27.2.0",
+      "arch": "arm64",
+      "cpu": "Apple M3 Max",
+      "logicalCpus": 14,
+      "memoryBytes": 38654705664
+    },
+    "persistence": "memory",
+    "placement": {
+      "client": "local load-generator process",
+      "server": "same-host-separate-process"
+    },
+    "target": "ws://127.0.0.1:31851",
+    "nonProduction": true
+  },
+  "protocol": {
+    "scenario": {
+      "name": "pvp-blitz",
+      "mode": "pvp",
+      "variant": "dark-chess",
+      "timeControl": {
+        "id": "3m2",
+        "label": "3 + 2",
+        "initialMs": 180000,
+        "incrementMs": 2000,
+        "timeClass": "blitz",
+        "rated": true
+      },
+      "maxMoves": 250,
+      "maxGameMs": 240000,
+      "moveTimeoutMs": 10000
+    },
+    "concurrencies": [
+      1,
+      50
+    ],
+    "repetitions": 3,
+    "seed": 42,
+    "warmupMs": 10000,
+    "measurementMs": 60000,
+    "minimumSamplesPerRepetition": 100
+  },
+  "eligible": false,
+  "runs": [
+    {
+      "concurrency": 1,
+      "repetition": 1,
+      "startedAt": "2026-11-17T02:54:54.088Z",
+      "elapsedMs": 15.038625000000025,
+      "activity": [
+        {
+          "atMs": 0.00899999999998613,
+          "activeGames": 0
+        },
+        {
+          "atMs": 14.917957999999999,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.829417000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    },
+    {
+      "concurrency": 1,
+      "repetition": 2,
+      "startedAt": "2026-11-17T02:54:54.104Z",
+      "elapsedMs": 2.126374999999996,
+      "activity": [
+        {
+          "atMs": 0.0014590000000112013,
+          "activeGames": 0
+        },
+        {
+          "atMs": 2.0987090000000137,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 2.0880420000000015,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    },
+    {
+      "concurrency": 1,
+      "repetition": 3,
+      "startedAt": "2026-11-17T02:54:54.106Z",
+      "elapsedMs": 1.9770839999999907,
+      "activity": [
+        {
+          "atMs": 0.0008330000000000837,
+          "activeGames": 0
+        },
+        {
+          "atMs": 1.9655830000000094,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 1.9603329999999914,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    },
+    {
+      "concurrency": 50,
+      "repetition": 1,
+      "startedAt": "2026-11-17T02:54:54.108Z",
+      "elapsedMs": 21.840666999999996,
+      "activity": [
+        {
+          "atMs": 0.001291000000009035,
+          "activeGames": 0
+        },
+        {
+          "atMs": 21.810790999999995,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.78158400000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 1,
+          "seed": 1013856694,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.565042000000005,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 2,
+          "seed": 3668441285,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.38508300000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 3,
+          "seed": 2027914772,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.25812499999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 4,
+          "seed": 387337127,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.15154100000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 5,
+          "seed": 3041864954,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 21.051375000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 6,
+          "seed": 1400934921,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.930417000000006,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 7,
+          "seed": 4055777616,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.7825,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 8,
+          "seed": 2415202531,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.69999999999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 9,
+          "seed": 774758958,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.634500000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 10,
+          "seed": 3429226333,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.575874999999996,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 11,
+          "seed": 1787890828,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.518916999999988,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 12,
+          "seed": 148418111,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.464292,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 13,
+          "seed": 2801985890,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.410667000000018,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 14,
+          "seed": 1162557585,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.345416999999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 15,
+          "seed": 3816587224,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.289207999999974,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 16,
+          "seed": 2174991115,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.228124999999977,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 17,
+          "seed": 535557254,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.180083999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 18,
+          "seed": 3188739541,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.139834000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 19,
+          "seed": 1549439268,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.101875000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 20,
+          "seed": 4202897527,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.06087500000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 21,
+          "seed": 2564084682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 20.001750000000015,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 22,
+          "seed": 921345817,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.959334000000013,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 23,
+          "seed": 3575731296,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.911209000000014,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 24,
+          "seed": 1937368499,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.87008399999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 25,
+          "seed": 296847646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.837124999999986,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 26,
+          "seed": 2949466189,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.803499999999985,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 27,
+          "seed": 1308895164,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.769292000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 28,
+          "seed": 3965647599,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.725167,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 29,
+          "seed": 2325134418,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.689459,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 30,
+          "seed": 681604481,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.644791999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 31,
+          "seed": 3338117832,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.606874999999974,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 32,
+          "seed": 1698689083,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.572542,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 33,
+          "seed": 54788886,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.536292000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 34,
+          "seed": 2710525605,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.500958999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 35,
+          "seed": 1071045748,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.465041999999983,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 36,
+          "seed": 3726122247,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.430000000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 37,
+          "seed": 2082555610,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.388042000000013,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 38,
+          "seed": 443394153,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.341541000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 39,
+          "seed": 3098930992,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.298790999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 40,
+          "seed": 1459473091,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.25483299999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 41,
+          "seed": 4114183566,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.21620900000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 42,
+          "seed": 2473606461,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.179541999999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 43,
+          "seed": 833286892,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.125417,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 44,
+          "seed": 3487729567,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.083167000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 45,
+          "seed": 1842639682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.048417,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 46,
+          "seed": 202059505,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 19.01487499999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 47,
+          "seed": 2856555960,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 18.981374999999986,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 48,
+          "seed": 1220035947,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 18.947833000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 49,
+          "seed": 3874692646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 18.907375000000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    },
+    {
+      "concurrency": 50,
+      "repetition": 2,
+      "startedAt": "2026-11-17T02:54:54.130Z",
+      "elapsedMs": 17.51325,
+      "activity": [
+        {
+          "atMs": 0.0009999999999763531,
+          "activeGames": 0
+        },
+        {
+          "atMs": 17.494749999999982,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.480041999999997,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 1,
+          "seed": 1013856694,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.338625000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 2,
+          "seed": 3668441285,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.27837500000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 3,
+          "seed": 2027914772,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.23512500000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 4,
+          "seed": 387337127,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.19987500000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 5,
+          "seed": 3041864954,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.168042000000014,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 6,
+          "seed": 1400934921,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.12337500000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 7,
+          "seed": 4055777616,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.084125,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 8,
+          "seed": 2415202531,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.055624999999992,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 9,
+          "seed": 774758958,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.028208000000006,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 10,
+          "seed": 3429226333,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 17.000999999999976,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 11,
+          "seed": 1787890828,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.967457999999993,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 12,
+          "seed": 148418111,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.93745800000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 13,
+          "seed": 2801985890,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.896917000000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 14,
+          "seed": 1162557585,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.866124999999982,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 15,
+          "seed": 3816587224,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.835624999999993,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 16,
+          "seed": 2174991115,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.809082999999987,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 17,
+          "seed": 535557254,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.782332999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 18,
+          "seed": 3188739541,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.756083999999987,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 19,
+          "seed": 1549439268,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.72958399999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 20,
+          "seed": 4202897527,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.682833000000016,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 21,
+          "seed": 2564084682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.649166000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 22,
+          "seed": 921345817,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.62029100000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 23,
+          "seed": 3575731296,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.593416999999988,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 24,
+          "seed": 1937368499,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.566125,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 25,
+          "seed": 296847646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.539208000000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 26,
+          "seed": 2949466189,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.50241700000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 27,
+          "seed": 1308895164,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.471749999999986,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 28,
+          "seed": 3965647599,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.441958,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 29,
+          "seed": 2325134418,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.41300000000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 30,
+          "seed": 681604481,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.37866600000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 31,
+          "seed": 3338117832,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.348040999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 32,
+          "seed": 1698689083,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.32012499999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 33,
+          "seed": 54788886,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.282125000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 34,
+          "seed": 2710525605,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.25287499999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 35,
+          "seed": 1071045748,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.21437499999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 36,
+          "seed": 3726122247,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.17587499999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 37,
+          "seed": 2082555610,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.142708999999996,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 38,
+          "seed": 443394153,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.111499999999978,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 39,
+          "seed": 3098930992,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.07929199999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 40,
+          "seed": 1459473091,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 16.042125,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 41,
+          "seed": 4114183566,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.995416000000006,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 42,
+          "seed": 2473606461,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.957999999999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 43,
+          "seed": 833286892,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.923957999999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 44,
+          "seed": 3487729567,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.894709000000006,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 45,
+          "seed": 1842639682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.866250000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 46,
+          "seed": 202059505,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.834041000000013,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 47,
+          "seed": 2856555960,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.805082999999996,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 48,
+          "seed": 1220035947,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.777500000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 49,
+          "seed": 3874692646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.747625,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    },
+    {
+      "concurrency": 50,
+      "repetition": 3,
+      "startedAt": "2026-11-17T02:54:54.147Z",
+      "elapsedMs": 15.683833000000021,
+      "activity": [
+        {
+          "atMs": 0.001167000000009466,
+          "activeGames": 0
+        },
+        {
+          "atMs": 15.663834000000008,
+          "activeGames": 0
+        }
+      ],
+      "games": [
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 0,
+          "seed": 2654435739,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.651499999999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 1,
+          "seed": 1013856694,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.57695799999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 2,
+          "seed": 3668441285,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.523459000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 3,
+          "seed": 2027914772,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.486208000000005,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 4,
+          "seed": 387337127,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.45279099999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 5,
+          "seed": 3041864954,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.41941700000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 6,
+          "seed": 1400934921,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.390457999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 7,
+          "seed": 4055777616,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.352666999999997,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 8,
+          "seed": 2415202531,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.317709000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 9,
+          "seed": 774758958,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.28325000000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 10,
+          "seed": 3429226333,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.250875000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 11,
+          "seed": 1787890828,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.213832999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 12,
+          "seed": 148418111,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.18308300000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 13,
+          "seed": 2801985890,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.157083,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 14,
+          "seed": 1162557585,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.126875000000013,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 15,
+          "seed": 3816587224,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.098709000000014,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 16,
+          "seed": 2174991115,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.071416999999997,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 17,
+          "seed": 535557254,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.04362500000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 18,
+          "seed": 3188739541,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 15.017583000000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 19,
+          "seed": 1549439268,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.983125000000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 20,
+          "seed": 4202897527,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.931333000000024,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 21,
+          "seed": 2564084682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.902332999999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 22,
+          "seed": 921345817,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.876584000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 23,
+          "seed": 3575731296,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.842792000000003,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 24,
+          "seed": 1937368499,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.806709000000012,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 25,
+          "seed": 296847646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.768499999999989,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 26,
+          "seed": 2949466189,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.735375000000005,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 27,
+          "seed": 1308895164,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.707415999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 28,
+          "seed": 3965647599,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.675749999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 29,
+          "seed": 2325134418,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.628667000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 30,
+          "seed": 681604481,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.596000000000004,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 31,
+          "seed": 3338117832,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.565374999999989,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 32,
+          "seed": 1698689083,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.537583000000012,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 33,
+          "seed": 54788886,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.508959000000004,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 34,
+          "seed": 2710525605,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.465125,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 35,
+          "seed": 1071045748,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.426625000000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 36,
+          "seed": 3726122247,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.395542000000006,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 37,
+          "seed": 2082555610,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.362334000000004,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 38,
+          "seed": 443394153,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.32095799999999,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 39,
+          "seed": 3098930992,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.289040999999997,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 40,
+          "seed": 1459473091,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.263833000000005,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 41,
+          "seed": 4114183566,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.237166000000002,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 42,
+          "seed": 2473606461,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.210833000000008,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 43,
+          "seed": 833286892,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.185374999999993,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 44,
+          "seed": 3487729567,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.155000000000001,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 45,
+          "seed": 1842639682,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.129874999999998,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 46,
+          "seed": 202059505,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.096708000000007,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 47,
+          "seed": 2856555960,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.052415999999994,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 48,
+          "seed": 1220035947,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 14.015457999999995,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        },
+        {
+          "scenario": "pvp-blitz",
+          "gameIdx": 49,
+          "seed": 3874692646,
+          "moveLatencies": [],
+          "moveAttempts": [],
+          "durationMs": 13.984707999999983,
+          "finishedNaturally": false,
+          "failures": [
+            "transport-or-setup-failed"
+          ],
+          "error": "transport-or-setup-failed"
+        }
+      ],
+      "summary": {
+        "eligible": false,
+        "reasons": [
+          "game-failures",
+          "insufficient-samples",
+          "incomplete-window"
+        ],
+        "minimumSamples": 100,
+        "sampleCount": 0,
+        "attemptedMoves": 0,
+        "outcomes": {
+          "acknowledged": 0,
+          "rejected": 0,
+          "timeout": 0,
+          "disconnected": 0,
+          "window-ended": 0
+        },
+        "failures": [
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed",
+          "transport-or-setup-failed"
+        ],
+        "achievedMovesPerSecond": 0,
+        "activeGames": {
+          "definition": "paired sockets with authoritative playing state; excludes setup and teardown",
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "acknowledgmentMs": null
+      }
+    }
+  ],
+  "ineligibleReasons": [
+    "failed-or-insufficient-repetition"
+  ],
+  "execution": {
+    "status": "blocked",
+    "serverStartup": {
+      "startedAt": "2026-11-17T02:53:37.804Z",
+      "status": "blocked",
+      "code": "EPERM",
+      "syscall": "listen",
+      "address": "127.0.0.1",
+      "port": 31851
+    },
+    "note": "Isolated memory server could not bind loopback. All client repetitions were attempted; no measurement window completed and no latency claim is generated."
+  }
+}
