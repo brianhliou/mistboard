@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
+import * as analytics from './analytics.js';
 import { findArticle } from './articles-data.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
 import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
@@ -32,6 +33,7 @@ import {
   setResolvedStatsExcluded,
 } from './signed-in-state.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
+import { ENGINE_OFFER_AFTER_MS } from './web-utils.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -1150,6 +1152,65 @@ describe('homepage play panel', () => {
     await vi.advanceTimersByTimeAsync(3_000);
   });
 
+  it('#1194: the waiting row reports shown and accepted for casual jieqi and xiangqi only', async () => {
+    vi.useFakeTimers();
+    rememberLivePace();
+    const tracked = vi.spyOn(analytics, 'track');
+    const tc = { initialMs: 600_000, incrementMs: 5_000 };
+    let requests: Array<Record<string, unknown>> = [
+      { gameSpecId: 'banqi', rated: false, timeControl: tc, waitingMs: 1_000 },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string, init?: RequestInit) => {
+        if (input === '/api/lobby' && init?.method === 'POST') {
+          return Response.json(
+            { status: 'matched', ticketId: 'j1', url: '/room/jq_paired' },
+            { status: 201 },
+          );
+        }
+        if (input === '/api/lobby') return Response.json({ requests });
+        return Response.json({});
+      }),
+    );
+    const navigate = vi.fn();
+    setRoomNavigator(navigate);
+    const shown = () => tracked.mock.calls.filter(([name]) => name === 'lobby_seek_prompt_shown');
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+    // A casual banqi seek gets the row, not the prompt events.
+    expect(board.querySelector('.pp-feature-waiting')?.textContent).toContain('Banqi');
+    expect(shown()).toHaveLength(0);
+
+    requests = [{ gameSpecId: 'jieqi', rated: true, timeControl: tc, waitingMs: 1_000 }];
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(shown()).toHaveLength(0);
+
+    requests = [{ gameSpecId: 'jieqi', rated: false, timeControl: tc, waitingMs: 1_000 }];
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(board.querySelector('.pp-feature-waiting')?.textContent).toContain('10+5');
+    // Once per variant and clock, however often the list refreshes.
+    expect(shown()).toHaveLength(1);
+    expect(shown()[0]?.[1]).toMatchObject({ surface: 'play-panel', gameSpecId: 'jieqi', ...tc });
+
+    board.querySelector<HTMLButtonElement>('.pp-feature-waiting .pp-act')!.click();
+    await flush();
+    expect(navigate).toHaveBeenCalledWith('/room/jq_paired');
+    expect(tracked).toHaveBeenCalledWith(
+      'lobby_seek_prompt_accepted',
+      expect.objectContaining({ surface: 'play-panel', gameSpecId: 'jieqi' }),
+    );
+    setRoomNavigator(null);
+    board.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
   it('does not offer you your own seek while you wait', async () => {
     vi.useFakeTimers();
     rememberLivePace();
@@ -1643,6 +1704,27 @@ describe('homepage play panel', () => {
       expect(del).toBeLessThan(net.index('/api/rooms', 'POST'));
     });
 
+    it('#1194: taking the bot offer ends the seek as bot_accepted before the bot game starts', async () => {
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+      await settle(ENGINE_OFFER_AFTER_MS);
+      const play = board.querySelector<HTMLButtonElement>(
+        '.landing-engine-offer .landing-setup-start',
+      );
+      expect(play).not.toBeNull();
+      play!.click();
+      await settle();
+
+      expect(net.deletes()).toEqual([
+        { url: '/api/lobby/t1?how=bot_accepted', method: 'DELETE', keepalive: true },
+      ]);
+      expect(net.index('/api/lobby/t1?how=bot_accepted', 'DELETE')).toBeLessThan(
+        net.index('/api/rooms', 'POST'),
+      );
+    });
+
     it('withdraws the seek with a keepalive DELETE when the page goes away', async () => {
       const net = lobbyFetch();
       const board = buildPlayPanel('en', { hydrate: false });
@@ -1652,7 +1734,9 @@ describe('homepage play panel', () => {
       window.dispatchEvent(new Event('pagehide'));
       await settle();
 
-      expect(net.deletes()).toEqual([{ url: '/api/lobby/t1', method: 'DELETE', keepalive: true }]);
+      expect(net.deletes()).toEqual([
+        { url: '/api/lobby/t1?how=left', method: 'DELETE', keepalive: true },
+      ]);
     });
 
     it('stops listening for pagehide once the seek is cancelled or matched', async () => {

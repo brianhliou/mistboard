@@ -7,6 +7,7 @@
 import type { PlayI18nKey } from './play.js';
 
 export const ZH_HANS_PLAY = {
+  'setup.waitingPlayer': '有玩家在等待{variant}对局，{clock}。和对方下棋',
   'live.gomokuBotThinking': 'Rapfi 正在思考…',
   'live.gomokuBotFailed': 'Rapfi 无法加载或找到落子位置，请重试以继续。',
   'live.gomokuBotPaused': 'Rapfi 已暂停。',
