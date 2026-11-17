@@ -9,6 +9,12 @@ waiter. A sample must match color, from, to and promotion, and have an integer
 Frames already in the buffer, stale sequences, unrelated events, filtered
 opponent events and duplicate frames cannot acknowledge a new submission.
 
+One case has no delta. When a move ends the game (a king capture in Fog chess)
+the server sends every client a full `snapshot` with a finished status instead.
+That snapshot acknowledges the move only when its event list holds the mover's
+own `move-played` at an index newer than the submission; the index is recorded
+as the sample's `seq`.
+
 The old `moveLatencies` field is retained separately: white's submission to
 its next own-turn state receipt, which includes the opponent's reply. It is
 not the acknowledgment metric. The geographic HTTP probe is unchanged.
@@ -22,36 +28,50 @@ is deliberately rejected to avoid DNS ambiguity. Do not point a tunnel or
 proxy on loopback at a production service. The persistence and placement
 arguments are operator declarations; the client cannot verify them remotely.
 
-From the repository root, launch a separate, memory-only server in one terminal
-(no engines, no persistent database, no credentials):
+Provision a disposable Postgres database in the local dev container, migrate
+it, and start one server against it on a loopback port of your own (the port
+must be free; do not let it move). `<db>` is a database name used for nothing
+else:
 
 ```sh
-env -u DATABASE_URL -u TEST_DATABASE_URL NODE_ENV=test \
-  MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true \
-  node --import tsx --input-type=module -e '
-    const {startServer, installShutdownHandlers} = await import("./apps/server/src/index.ts");
-    installShutdownHandlers();
-    await startServer({host: "127.0.0.1", port: 31851});
-  '
+TEST_DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/<db> \
+  node scripts/ensure-test-database.mjs
+env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/<db> \
+  npm run migrate --workspace @mistboard/server
+cd apps/server && env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/<db> \
+  PORT=3140 MISTBOARD_BIND_HOST=127.0.0.1 npx tsx src/main.ts
 ```
 
-In another terminal, run all six repetitions (about seven minutes plus setup
-and bounded teardown). Keep this complete record, including failed attempts:
+In another terminal, from the repository root, run the two bundles (about two
+and a half minutes each). Keep every record, including failed attempts:
 
 ```sh
 node --import tsx apps/server/loadtest/cli.ts --benchmark \
-  --server ws://127.0.0.1:31851 --mode pvp-blitz \
-  --concurrency 1,50 --seed 42 --warmup 10s --duration 60s --repetitions 3 \
-  --persistence memory --placement same-host-separate-process \
-  --out /tmp/mistboard-local-pvp.json > /tmp/mistboard-local-pvp.stdout.json
+  --server ws://127.0.0.1:3140 --mode pvp-blitz --seed 42 \
+  --warmup 10s --duration 30s --think 1s --repetitions 3 \
+  --persistence disposable-postgres --placement same-host-separate-process \
+  --concurrency 10,50 --out /tmp/mistboard-local-pvp-n10-n50.json
+# and again with: --concurrency 200 --out /tmp/mistboard-local-pvp-n200.json
 ```
 
-Stop only the server you started with Ctrl-C. For a persistence benchmark,
-provision a dedicated disposable Postgres database, migrate it and launch the
-isolated server against it in your own terminal; label the client run
-`--persistence disposable-postgres`. Never use the shared development database
-or production data. Memory mode is useful for driver verification but does not
-measure transaction or database costs.
+Stop only the server you started, then drop the database. Never use the shared
+development database or production data. A memory-only server
+(`MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true`, no `DATABASE_URL`, labelled
+`--persistence memory`) is enough to check the driver but leaves out
+transaction and database costs.
+
+`--think` is the mean pause before each submission, drawn uniformly from half
+to one and a half times the value so games do not move in lockstep. It comes
+before the submit timestamp and is never part of a sample. It is required in
+practice: the server allows each socket 40 messages per 10 seconds
+(`MISTBOARD_WS_MESSAGE_LIMIT`), so a loop with no pause measures the rate
+limiter. One second gives about one move per second per game, roughly four
+times the pace of a real blitz game.
+
+Workers open their first rooms spread over 10 ms per game, capped at half the
+warmup (`protocol.rampMsPerGame`). Opening 200 rooms in one tick overflows the
+128-connection listen backlog on macOS and the refused connections read as
+setup failures.
 
 `pvp-blitz` uses the existing Fog chess scenario, two sockets per game and
 seeded random legal moves. Workers replace capped or finished games for the
@@ -62,7 +82,8 @@ There is no promise of identical samples or game order across executions.
 Warmup and measurement share the same workload. Only moves submitted after
 warmup **and** acknowledged before the measurement deadline contribute to
 percentiles. An in-flight move at the deadline is retained as `window-ended`,
-with no invented timeout or latency. An earlier timeout or rejected move is a
+with no invented timeout or latency, and so is a wait for the opponent's move
+that the deadline cut short. An earlier timeout or rejected move is a
 failure. A failing worker stops rather than generating a retry storm; other
 workers and all subsequent repetitions still run. Connection failures close
 any sockets already opened, and previous successful samples remain in the raw
@@ -102,15 +123,14 @@ means eligible; exit 1 means failed/ineligible; exit 2 means invalid invocation
 or a fatal harness error. `--out` (compact) and stdout (indented) contain the same
 structured JSON.
 
-A record named `<UTC-date>-local-pvp.json` belongs beside this guide. The initial
-record documents the sandbox attempt: the server cannot bind loopback
-(`listen EPERM`), all six repetitions retain room-creation failures and zero
-samples, and no percentile claim is emitted. A successful local replay is still
-required before treating these changes as measured evidence.
+A record named `<UTC-date>-local-pvp.json` belongs beside this guide, and a
+test rebuilds its percentiles from the raw samples. `2026-11-17-local-pvp.json`
+is the 10 and 50 game bundle from the commands above. The 200 game bundle is
+about 5 MB and is not committed.
 
 ## Limits and checks
 
-This is a closed-loop, same-host driver. It measures server handling plus local
+This is a same-host driver with a fixed think time. It measures server handling plus local
 transport, client event-loop scheduling and JSON parsing/serialization effects;
 it omits browser rendering, real users' think time, internet paths and geographic
 latency. Client and server contend for the same hardware. It does not correct
