@@ -22,7 +22,7 @@ import {
   JQE_JIEQI_ENGINE_VERSION,
   PIKAFISH_JIEQI_ENGINE_REF,
 } from './jieqi-engine.js';
-import { JUNGLE_RUST_ENGINE_VERSION } from './jungle-engine.js';
+import { JUNGLE_RUST_ENGINE_VERSION, jungleRustTierFor } from './jungle-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION } from './jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, KATAGO_JUNGLE_ENGINE_VERSION } from './jungle-katago-engine.js';
 import { XIANGQI_FSF_ENGINE_REF } from './xiangqi-fsf-engine.js';
@@ -93,7 +93,7 @@ export function botEngineVersion(engineId: string): string | null {
   // The dropped 100K rung retains its historical build; every live tier is 0.6.0.
   if (engineId === 'misty-jungle-flip-level-7') return '0.5.1';
   if (engineId.startsWith('misty-jungle-flip')) return JUNGLE_FLIP_ENGINE_VERSION;
-  if (engineId.startsWith('misty-jungle-level-')) return JUNGLE_RUST_ENGINE_VERSION;
+  if (jungleRustTierFor(engineId)) return JUNGLE_RUST_ENGINE_VERSION;
   if (engineId.startsWith('python-')) return registryVersion(engineId);
   return null;
 }

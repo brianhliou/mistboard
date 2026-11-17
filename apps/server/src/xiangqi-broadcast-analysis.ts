@@ -17,6 +17,7 @@
 
 import type { XiangqiBroadcastBoard, XiangqiMove } from '@mistboard/game';
 import { enqueueAnalysisJob, pendingAnalysisJobCount } from './game-analysis-jobs.js';
+import { observeBackgroundJob } from './obs.js';
 import * as persistence from './persistence.js';
 import { createGameAnalysisRoutes } from './routes/game-analysis-route.js';
 import { resolveXiangqiAnalysis } from './routes/xiangqi-games.js';
@@ -173,7 +174,9 @@ export function createBroadcastAnalysisSweep(
 
   /** Fill the free slots (one, by default) and wait for those games; resolves
    *  to how many it started. */
-  async function tick(): Promise<number> {
+  const tick = () => observeBackgroundJob('xiangqi_broadcast_analysis', runTick);
+
+  async function runTick(): Promise<number> {
     if (filling) return 0;
     filling = true;
     const jobs: Promise<void>[] = [];

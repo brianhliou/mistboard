@@ -475,6 +475,16 @@ describe('landing bot ladder (homepage play panel)', () => {
     expect(ids('not-a-variant')).toEqual([]);
   });
 
+  it('adds only server-confirmed classical Jungle levels and preserves a remembered full-strength pick', () => {
+    const ids = Array.from({ length: 6 }, (_, i) => `misty-jungle-classical-level-${i + 1}`);
+    const ladder = landingBotLadder('jungle', new Set(['katago']), new Set(ids));
+    expect(ladder.map((r) => r.level)).toEqual([1, 2, 3, 4, 5, 6, 7, null]);
+    expect(ladder[6]?.engineId).toBe('misty-jungle-level-2');
+    expect(landingBotLadderIndex(ladder, 'misty-jungle-level-2')).toBe(6);
+    expect(landingBotLadderIndex(ladder, 'misty')).toBe(6);
+    expect(landingBotLadderIndex(ladder, 'misty-jungle-level-1')).toBe(-1);
+  });
+
   it('puts KataGo above Misty in jungle only where the server can seat it', () => {
     const jungle = (playable: string[]) =>
       landingBotLadder('jungle', new Set(playable)).map((rung) => rung.botId);

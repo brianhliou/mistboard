@@ -18,7 +18,7 @@ import { clockPolicyKindFor } from '@mistboard/game';
 import { sweepDeadlineWarnings } from '../correspondence-deadline-warning.js';
 import { sweepCorrespondenceTurnDigests } from '../correspondence-turn-digest.js';
 import { sweepInboxEmails } from '../inbox-email.js';
-import { logger } from '../obs.js';
+import { logger, observeBackgroundJob } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { registeredVariantTenants, variantTenantForRoomId } from './registry.js';
 
@@ -71,7 +71,9 @@ export function startTenantDeadlineSweeper(
     options.sweepExpiredSeeks ?? ((at: Date) => persistence.deleteExpiredCorrespondenceSeeks(at));
   const loadedRoomIds = options.loadedRoomIds ?? loadedCorrespondenceRoomIds;
 
-  async function tick(): Promise<void> {
+  const tick = () => observeBackgroundJob('tenant_deadline_sweep', runTick);
+
+  async function runTick(): Promise<void> {
     if (!isInitialized()) return;
     let due: Array<{ roomId: string; gameSpecId: string }>;
     try {

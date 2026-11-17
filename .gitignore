@@ -118,3 +118,6 @@ apps/web/public/engine/rapfi/rapfi-single-simd128.data
 # Playwright e2e suite (playwright.config.ts): per-run artifacts
 test-results/
 playwright-report/
+
+# Local Jungle level review captures (generated, not source).
+/scratchpad/jungle-levels/review/

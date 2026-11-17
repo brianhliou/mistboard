@@ -14,6 +14,7 @@
 // the tour, so when the dpxq index sweep moves an end date later (a league's
 // next stage) polling resumes with no operator step.
 
+import { observeBackgroundJob } from './obs.js';
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { seedXiangqiBroadcastSiblingTourOn } from './persistence-xiangqi-broadcasts.js';
@@ -172,7 +173,9 @@ export function createXiangqiBroadcastScheduler(
   let ticking = false;
   let interval: NodeJS.Timeout | null = null;
 
-  async function tick(): Promise<void> {
+  const tick = () => observeBackgroundJob('xiangqi_broadcast_poll', runTick);
+
+  async function runTick(): Promise<void> {
     if (ticking) return;
     ticking = true;
     try {

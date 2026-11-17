@@ -19,7 +19,7 @@
 import { randomUUID } from 'node:crypto';
 import { type AnalysisJobProgress, withAnalysisJobProgress } from './analysis-job-progress.js';
 import { VacuousAnalysisError } from './game-analysis-sweep.js';
-import { logger } from './obs.js';
+import { inFlightWork, logger } from './obs.js';
 
 export type AnalysisJobKind = 'analysis' | 'decisions';
 export type AnalysisJobStatus = 'pending' | 'done' | 'failed';
@@ -167,6 +167,9 @@ export function enqueueAnalysisJob(args: {
 
   const lane = laneFor(args.variant);
   chains[lane] = chains[lane].then(async () => {
+    const endWork = inFlightWork.startJob(
+      args.kind === 'analysis' ? 'game_analysis' : 'game_decisions',
+    );
     try {
       job.startedAt = Date.now();
       job.result = await withAnalysisJobProgress((update) => {
@@ -195,6 +198,7 @@ export function enqueueAnalysisJob(args: {
         'Whole-game analysis job failed',
       );
     } finally {
+      endWork();
       job.finishedAt = Date.now();
       // Retain for polling, then drop. .unref() so a pending GC timer never
       // keeps the process alive (repo hard rule on speculative timers).

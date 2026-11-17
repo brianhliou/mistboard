@@ -14,6 +14,11 @@ import {
   JUNGLE_FLIP_PLAYABLE_ENGINES,
   jungleFlipEngineAvailable,
 } from '../jungle-flip-engine.js';
+import {
+  isJunglePlayableEngineClientId,
+  JUNGLE_PLAYABLE_ENGINE_IDS,
+  jungleEngineDisplayName,
+} from '../server-jungle-engine.js';
 import { threeKingdomsBanqiAdmits } from '../three-kingdoms-banqi-access.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
@@ -95,6 +100,14 @@ export async function tryHandle(
       ...(ffqBanqiEngines ? { ffqBanqiEngines } : {}),
       banqiEngines,
       jungleFlipEngines,
+      jungleEngines: JUNGLE_PLAYABLE_ENGINE_IDS.filter(isJunglePlayableEngineClientId).map(
+        (id) => ({
+          id,
+          name: jungleEngineDisplayName(id),
+          familyName: id === 'katago-jungle' ? 'KataGo' : 'Misty',
+          kind: 'container',
+        }),
+      ),
       ...(threeKingdomsBanqiEngines ? { threeKingdomsBanqiEngines } : {}),
     },
     { 'cache-control': 'private, no-store' },

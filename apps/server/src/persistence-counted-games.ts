@@ -54,6 +54,7 @@ export const MIN_COUNTED_PLIES = 2;
 // Keep this filter module loadable directly by native-TypeScript reporting
 // scripts, without importing the server's unbuilt .js source graph.
 export const INTERNAL_BANQI_CORPUS_ID = 'internal-banqi-provider';
+export const RELEASE_SMOKE_CORPUS_ID = 'release-smoke';
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used
@@ -136,6 +137,7 @@ export function bothSidesMoved(gamesAlias: string): string {
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -242,6 +244,7 @@ export function humanSeatExists(gamesAlias: string): string {
 export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${humanSeatExists(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -252,7 +255,9 @@ export function countedAbortedGame(gamesAlias = 'g'): string {
 // exclusion is visible rather than silent.
 export function internalHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
-    AND (${gamesAlias}.corpus_id IS NOT DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}' OR ${excludedFromStats(gamesAlias)})`;
+    AND (${gamesAlias}.corpus_id IS NOT DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+      OR ${gamesAlias}.corpus_id IS NOT DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
+      OR ${excludedFromStats(gamesAlias)})`;
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
@@ -260,6 +265,7 @@ export function internalHumanGame(gamesAlias = 'g'): string {
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
     AND NOT ${sinceLaunch(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
 }
@@ -270,6 +276,7 @@ export function preLaunchHumanGame(gamesAlias = 'g'): string {
 export function shortHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND NOT ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;

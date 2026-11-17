@@ -10,7 +10,7 @@
 // Everything that touches Postgres or the engine comes in through `deps`, so the
 // orchestration is testable with fakes and the CLI can run it dry.
 
-import { logger } from '../obs.js';
+import { logger, observeBackgroundJob } from '../obs.js';
 import * as persistence from '../persistence.js';
 import type { StudyWithChapters } from '../persistence-studies.js';
 import { resolveXiangqiAnalysis } from '../routes/xiangqi-games.js';
@@ -490,7 +490,9 @@ export function startStudyCurator(options: StudyCuratorOptions = {}): StudyCurat
   const now = options.now ?? Date.now;
   let running = false;
 
-  async function tick(): Promise<void> {
+  const tick = () => observeBackgroundJob('study_curator', runTick);
+
+  async function runTick(): Promise<void> {
     if (!isInitialized() || !enabled() || running) return;
     running = true;
     const startedAt = now();

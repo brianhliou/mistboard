@@ -544,10 +544,12 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
   renderPaceSections(ladders, paceLadders, onlineHandles, locale);
   renderOnlinePlayers(onlineBody, onlinePlayers, locale);
 
-  // The rated switch lands with /api/server-status, possibly after the first
-  // render: re-render when it adds (or removes) the correspondence pace.
+  // The rated switch lands with /api/server-status, before, during or after the
+  // fetches above: re-render when it adds (or removes) the correspondence pace.
+  // The check also runs once now, since a switch that landed during the fetches
+  // fired before this listener existed.
   let renderedPaces = paceLadders.map((pace) => pace.timeClass).join(',');
-  onRatedModeChange(() => {
+  const syncPaces = (): void => {
     const paces = leaderboardPaces();
     if (paces.join(',') === renderedPaces) return;
     renderedPaces = paces.join(',');
@@ -555,7 +557,9 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
       if (renderedPaces !== paces.join(',')) return;
       renderPaceSections(ladders, next, onlineHandles, locale);
     });
-  });
+  };
+  onRatedModeChange(syncPaces);
+  syncPaces();
 }
 
 // The pace /player/rating-stats opens on for a variant: the pool with the most

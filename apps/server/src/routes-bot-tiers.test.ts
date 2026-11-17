@@ -7,6 +7,7 @@ import test from 'node:test';
 import { close, getPool, init } from './persistence-db.js';
 import { handleBanqiCreate } from './routes/banqi-rooms.js';
 import { handleJungleFlipCreate } from './routes/jungle-flip-rooms.js';
+import { handleJungleCreate } from './routes/jungle-rooms.js';
 import { resolveBotRoomRequest } from './routes/rooms.js';
 import './variant-tenant/register-tenants.js';
 
@@ -27,7 +28,11 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
   const dir = mkdtempSync(join(tmpdir(), 'landing-misty-tiers-'));
   const bin = join(dir, 'engine');
   const net = join(dir, 'net');
-  writeFileSync(bin, 'fixture binary');
+  writeFileSync(
+    bin,
+    `#!${process.execPath}\nconsole.log('id name MistyJungle 0.0.7'); console.log('info string classical_skill 1');\n`,
+    { mode: 0o755 },
+  );
   writeFileSync(net, 'fixture net');
   const keys = [
     'MISTBOARD_BANQI_ENABLED',
@@ -36,6 +41,9 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
     'MISTBOARD_JUNGLE_FLIP_ENGINE_PATH',
     'MISTBOARD_BANQI_NET',
     'MISTBOARD_JUNGLE_FLIP_NET',
+    'MISTBOARD_JUNGLE_ENABLED',
+    'MISTBOARD_JUNGLE_RUST_ENGINE',
+    'MISTBOARD_JUNGLE_ENGINE_PATH',
   ] as const;
   const saved = keys.map((key) => process.env[key]);
   process.env[keys[0]] = 'true';
@@ -44,6 +52,9 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
   process.env[keys[3]] = bin;
   delete process.env[keys[4]];
   delete process.env[keys[5]];
+  process.env[keys[6]] = 'true';
+  process.env[keys[7]] = 'true';
+  process.env[keys[8]] = bin;
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(async () => {
     await close();
@@ -62,7 +73,7 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
           id: args[0],
           active_engine_id: 'python-v2-v1.6',
           default_game_spec_id: 'dark-chess',
-          supported_game_spec_ids: ['dark-chess', 'banqi', 'jungle-flip'],
+          supported_game_spec_ids: ['dark-chess', 'banqi', 'jungle-flip', 'jungle'],
           play_initial_ms: 180000,
           play_increment_ms: 2000,
           visibility: 'public',
@@ -71,8 +82,8 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
     };
   });
 
-  for (const spec of ['banqi', 'jungle-flip'] as const) {
-    const base = `misty-${spec}`;
+  for (const spec of ['banqi', 'jungle-flip', 'jungle'] as const) {
+    const base = spec === 'jungle' ? 'misty-jungle-classical' : `misty-${spec}`;
     const body = {
       botId: 'misty',
       gameSpecId: spec,
@@ -103,6 +114,12 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
         seatResponse.response,
         resolved,
       );
+    } else if (spec === 'jungle') {
+      await handleJungleCreate(
+        { ...ctx, createJungleRoom: createRoom },
+        seatResponse.response,
+        resolved,
+      );
     } else {
       await handleJungleFlipCreate(
         { ...ctx, createJungleFlipRoom: createRoom },
@@ -114,7 +131,7 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
     assert.deepEqual(seated, [{ engineId: body.engineId, botId: 'misty', seat: 'black' }]);
     assert.equal(
       (await resolveBotRoomRequest(response, { ...body, engineId: undefined }))?.engineId,
-      base,
+      spec === 'jungle' ? 'misty-jungle-level-2' : base,
     );
 
     for (const engineId of [
@@ -134,6 +151,7 @@ test('Misty homepage tier requests resolve and seat only playable tiers of the r
       assert.equal(rejected.capture.status, 400);
       assert.equal(JSON.parse(rejected.capture.body).error, 'bot_engine_conflict');
     }
+    if (spec === 'jungle') continue;
     const unavailable = captureResponse();
     assert.equal(
       await resolveBotRoomRequest(unavailable.response, { ...body, engineId: `${base}-level-8` }),

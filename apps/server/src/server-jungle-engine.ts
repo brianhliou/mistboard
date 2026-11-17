@@ -20,6 +20,7 @@ import {
   type JungleMove,
   type JunglePieceRole,
   type JungleSquare,
+  jungleClassicalSeed,
   jungleCoordOf,
   jungleRepSeedFens,
   jungleTrapOwner,
@@ -35,7 +36,9 @@ import {
 import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
 import { liveBotMoveTime } from './engine-time-budget.js';
 import {
+  JUNGLE_PLAYABLE_MISTY_TIERS,
   JUNGLE_RUST_ENGINE_VERSION,
+  jungleClassicalBinaryAvailable,
   jungleEngineBinaryAvailable,
   jungleLiveEngineMove,
   jungleRustEngineEnabled,
@@ -71,28 +74,15 @@ const ENGINE_MOVE_MAX_ATTEMPTS = 2;
 
 export const JUNGLE_ENGINE_VERSION = '0.1.0';
 
-// Jungle ships ONE bot (2026-07-27). `misty-jungle-level-2` is it, at full strength;
-// levels 1 and 3 are RETIRED — no new game may be created against them. They stay
-// defined because engine ids are persisted: games played before the collapse carry a
-// retired id in their seats, and replay, postgame pve-vs-pvp detection, and engine
-// attribution all ask "is this seat an engine?" of those old rows. Deleting the ids
-// would answer "no" and silently reclassify finished games as PvP.
-//
-// Hence two predicates, deliberately different:
-//   isJunglePlayableEngineClientId — may a NEW room be created against this id?
-//   isJungleEngineClientId         — is this seat an engine at all? (every id, ever)
-// The create route takes the first; the tenant runtime takes the second. Collapsing
-// them back into one is the bug this split exists to prevent.
-//
-// 2026-10: KataGo-AnimalChess (jungle-katago-engine.ts) takes the TOP seat above
-// Misty, because it won the jungle challenge (#434). Misty stays the default and
-// the rung below; the KataGo seat is creatable only where its binary, net and
-// config resolve, like AB-JChess for jieqi.
+// Seven classical Misty levels. The existing full-strength id remains L7;
+// legacy L1/L3 stay retired so persisted games keep their original budgets.
+// Recognition includes every historical id; create-time admission also checks
+// the binary's skill capability for the six new ids. KataGo stays separate.
 export const JUNGLE_PLAYABLE_ENGINE_ID = 'misty-jungle-level-2';
 /** Every id a new room may take, strongest first (the web picker mirrors this). */
 export const JUNGLE_PLAYABLE_ENGINE_IDS: readonly string[] = [
   KATAGO_JUNGLE_ENGINE_ID,
-  JUNGLE_PLAYABLE_ENGINE_ID,
+  ...[...JUNGLE_PLAYABLE_MISTY_TIERS].reverse().map((tier) => tier.id),
 ];
 export const JUNGLE_RETIRED_ENGINE_IDS: readonly string[] = [
   'misty-jungle-level-1',
@@ -135,6 +125,14 @@ export type JungleEngineTier = {
 // that the one bot is the strongest one. The retired tiers keep the depths they shipped
 // with, so a legacy room that somehow resumes plays as it originally did.
 export const JUNGLE_ENGINE_TIERS: readonly JungleEngineTier[] = [
+  ...JUNGLE_PLAYABLE_MISTY_TIERS.filter((tier) => tier.level !== 7).map((tier) => ({
+    id: tier.id,
+    name: `Misty Level ${tier.level}`,
+    version: JUNGLE_RUST_ENGINE_VERSION,
+    depth: 0,
+    softPickRank: 0,
+    softPickWindow: 0,
+  })),
   {
     id: 'misty-jungle-level-1',
     name: 'Misty Jungle level 1',
@@ -190,6 +188,8 @@ export const KATAGO_JUNGLE_DISPLAY_NAME = 'KataGo';
 
 export function jungleEngineDisplayName(engineId: string): string {
   if (engineId === KATAGO_JUNGLE_ENGINE_ID) return KATAGO_JUNGLE_DISPLAY_NAME;
+  const level = jungleRustTierFor(engineId)?.level;
+  if (level) return `Misty Level ${level}`;
   return jungleEngineTierFor(engineId)?.name ?? engineId;
 }
 
@@ -212,6 +212,9 @@ export function isJungleEngineClientId(clientId: string | undefined): boolean {
 // retired id is rejected rather than quietly honoured.
 export function isJunglePlayableEngineClientId(clientId: string | undefined): boolean {
   if (clientId === KATAGO_JUNGLE_ENGINE_ID) return katagoJungleAvailable();
+  if (JUNGLE_PLAYABLE_MISTY_TIERS.some((tier) => tier.id === clientId && tier.level !== 7)) {
+    return jungleClassicalBinaryAvailable();
+  }
   return clientId === JUNGLE_PLAYABLE_ENGINE_ID;
 }
 
@@ -246,7 +249,7 @@ export function scheduleJungleEngineMove(ctx: JungleEngineContext, room: JungleE
 export type JungleEngineMoveProvider = (
   engineId: string,
   fen: string,
-  opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[] },
+  opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[]; seed?: number },
 ) => Promise<UciEval>;
 
 /** KataGo's provider: our full-board FEN and the side to move, nothing else (its
@@ -314,6 +317,11 @@ export async function playJungleEngineMoveIfReady(
 
   const tier = jungleEngineTierFor(engineId);
   if (!tier) return;
+  // These levels have no TS substitute: their measured policy lives in Rust.
+  if (engineId.startsWith('misty-jungle-classical-') && !jungleRustEngineEnabled()) {
+    await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
+    return;
+  }
 
   // Rust `jungle-engine` binary is the intended engine when MISTBOARD_JUNGLE_RUST_ENGINE
   // is on. If it is intended but the binary is missing — a broken deploy the boot check
@@ -342,7 +350,16 @@ export async function playJungleEngineMoveIfReady(
         ceilingMs: rustTier.movetimeCapMs,
         tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
         search: (fen, movetimeCapMs) =>
-          moveProvider(engineId, fen, { nodes: rustTier.nodes, movetimeCapMs, repSeedFens }),
+          moveProvider(engineId, fen, {
+            nodes: rustTier.nodes,
+            movetimeCapMs,
+            repSeedFens,
+            seed: jungleClassicalSeed(
+              room.projection.state.id,
+              (room.projection.state.moveNumber - 1) * 2 + (seat === 'black' ? 1 : 0),
+              rustTier.level ?? 7,
+            ),
+          }),
       },
     );
     return;
