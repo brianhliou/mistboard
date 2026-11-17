@@ -4,6 +4,7 @@ import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   type XiangqiMove,
+  type XiangqiPuzzle,
 } from '@mistboard/game';
 import { positionPuzzleFixture } from './fixtures/xiangqi-position-packet.js';
 import {
@@ -25,6 +26,44 @@ test('position-only credit never loads a source game or reconstructs history', a
   const text = JSON.stringify(fields);
   for (const key of ['sourceGame', 'setupMove', 'history', 'PRIVATE_SOURCE'])
     assert.ok(!text.includes(key));
+});
+
+test('credit detail carries only its validated capturing setup move, without loading the game', async () => {
+  const initial = applyStandardXiangqiMove(createInitialXiangqiState('credit'), {
+    from: 'h3',
+    to: 'h10',
+  });
+  const stored = {
+    ...positionPuzzleFixture(),
+    initial,
+    setupMove: { from: 'h3', to: 'h10', captured: { color: 'black', role: 'horse' } },
+  } as XiangqiPuzzle & { setupMove: unknown };
+  let calls = 0;
+  const fields = await puzzleDetailSourceFields(stored, async () => {
+    calls++;
+    throw new Error('PRIVATE_SOURCE_MUST_NOT_BE_LOADED');
+  });
+  assert.equal(calls, 0);
+  assert.deepEqual(fields.setupMove, stored.setupMove);
+  assert.equal(fields.history, undefined);
+  assert.equal(fields.sourceGame, undefined);
+  assert.deepEqual(Object.keys(fields).sort(), ['credit', 'setupMove']);
+  assert.doesNotMatch(JSON.stringify(fields), /history|sourceGame|PRIVATE_SOURCE/);
+});
+
+test('a credit setup that cannot replay to initial is omitted', async () => {
+  const stored = {
+    ...positionPuzzleFixture(),
+    initial: applyStandardXiangqiMove(createInitialXiangqiState('credit-invalid'), {
+      from: 'h3',
+      to: 'h10',
+    }),
+    setupMove: { from: 'h3', to: 'h10', captured: null },
+  } as XiangqiPuzzle;
+  const fields = await puzzleDetailSourceFields(stored, null);
+  assert.equal(fields.setupMove, undefined);
+  assert.equal(fields.history, undefined);
+  assert.ok(fields.credit);
 });
 
 // A short legal game. A puzzle starting at ply N has GAME[N-1] as its setup

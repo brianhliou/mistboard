@@ -4,11 +4,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  applyStandardXiangqiMove,
+  createInitialXiangqiState,
+  getStandardXiangqiLegalMoves,
+  readXiangqiPositionOnlyPuzzle,
+  standardXiangqiEngineFen,
+  type XiangqiMove,
+  xiangqiMoveToPikafishUci,
+} from '../../packages/game/src/index.ts';
+import {
   assembleMinedXiangqiPuzzle,
   XIANGQI_SOLVER_GATE_DEFAULTS,
 } from '../../packages/game/src/puzzles-xiangqi-mining.ts';
 import type { XiangqiGameState } from '../../packages/game/src/variants-xiangqi.ts';
 import { parseXiangqiScoredLines } from './xiangqi-pikafish-uci.ts';
+import { buildXiangqiPositionPacket } from './xiangqi-position-packet.ts';
 import {
   buildGatedLine,
   dhtmlxqMeta,
@@ -17,6 +27,84 @@ import {
   type XiangqiPuzzleMinerMetrics,
   type XiangqiPuzzleMinerOptions,
 } from './xiangqi-puzzle-miner.ts';
+
+test('DPXQ packet creation derives one captured setup move from the local game before auditing', async () => {
+  const id = 'xq-mined-dpxq-packet-2';
+  const moves: XiangqiMove[] = [
+    { from: 'h3', to: 'h10' },
+    { from: 'i10', to: 'h10' },
+    { from: 'b3', to: 'b10' },
+    { from: 'a7', to: 'a6' },
+    { from: 'b10', to: 'd10' },
+  ];
+  let state = createInitialXiangqiState(id);
+  for (const move of moves.slice(0, 2)) state = applyStandardXiangqiMove(state, move);
+  const puzzle = readXiangqiPositionOnlyPuzzle({
+    id,
+    variant: 'xiangqi',
+    title: 'Red winning advantage',
+    initial: {
+      id,
+      board: state.board,
+      status: state.status,
+      moveNumber: 1,
+      progressClock: 0,
+      positionCounts: {},
+      progressClockLimit: 60,
+    },
+    solution: moves.slice(2),
+    goal: { type: 'winning-advantage', winner: 'red', centipawns: 1000 },
+    themes: ['winning', 'winning-material'],
+    credit: {
+      name: 'DPXQ',
+      event: 'Fixture',
+      red: 'Red',
+      black: 'Black',
+      url: 'http://www.dpxq.com/hldcg/search/view_m_1.html',
+    },
+  });
+  const positions = new Map<string, { state: XiangqiGameState; best: XiangqiMove }>();
+  let current = puzzle.initial;
+  for (const [ply, move] of puzzle.solution.entries()) {
+    if (ply % 2 === 0)
+      positions.set(standardXiangqiEngineFen(current), { state: current, best: move });
+    current = applyStandardXiangqiMove(current, move);
+  }
+  const engine = {
+    newGame: async () => {},
+    analyzeFen: async (fen: string) => {
+      const position = positions.get(fen)!;
+      assert.ok(position);
+      const other = getStandardXiangqiLegalMoves(position.state)
+        .filter((m) => m.from !== position.best.from || m.to !== position.best.to)
+        .slice(0, 2);
+      return [position.best, ...other].map((m, i) => ({
+        rank: i + 1,
+        score: { cp: i === 0 ? 1000 : -100 * i, mate: null },
+        depth: 30,
+        pvUci: [xiangqiMoveToPikafishUci(m)],
+      }));
+    },
+  };
+  const input = {
+    puzzles: [puzzle],
+    games: [{ id: 'dpxq-packet', moves }],
+    reviewNote: 'Fixture review',
+    engine,
+  };
+  const packet = await buildXiangqiPositionPacket(input);
+  const emitted = packet.items[0]!.puzzle;
+  assert.deepEqual(emitted.setupMove, {
+    from: 'i10',
+    to: 'h10',
+    captured: { color: 'red', role: 'cannon' },
+  });
+  assert.deepEqual(emitted.initial.lastMove, moves[1]);
+  assert.equal(puzzle.initial.lastMove, undefined);
+  assert.doesNotMatch(JSON.stringify(packet), /sourceGame|history|moveLog/);
+  assert.equal(JSON.stringify(packet).includes(JSON.stringify(moves[0])), false);
+  await assert.rejects(buildXiangqiPositionPacket({ ...input, games: [] }), /Missing local/);
+});
 
 const initial: XiangqiGameState = {
   id: 'miner-endpoint',

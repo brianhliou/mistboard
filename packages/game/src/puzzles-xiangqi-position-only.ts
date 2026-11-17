@@ -4,6 +4,10 @@ import {
   type XiangqiPuzzle,
 } from './puzzles-xiangqi.js';
 import { xiangqiPuzzleHasStartingChoice, xiangqiPuzzleTitle } from './puzzles-xiangqi-mining.js';
+import {
+  type XiangqiPuzzleSetupMove,
+  xiangqiPuzzlePreSetupState,
+} from './puzzles-xiangqi-setup.js';
 
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -29,7 +33,7 @@ function text(value: unknown, max: number): value is string {
 export function readXiangqiPositionOnlyPuzzle(value: unknown): XiangqiPuzzle {
   fields(
     value,
-    ['id', 'variant', 'title', 'initial', 'solution', 'goal', 'themes', 'credit'],
+    ['id', 'variant', 'title', 'initial', 'solution', 'goal', 'themes', 'credit', 'setupMove'],
     'puzzle',
   );
   if (!text(value.id, 200) || value.variant !== 'xiangqi')
@@ -45,6 +49,7 @@ export function readXiangqiPositionOnlyPuzzle(value: unknown): XiangqiPuzzle {
       'progressClock',
       'positionCounts',
       'progressClockLimit',
+      'lastMove',
     ],
     'state',
   );
@@ -81,6 +86,36 @@ export function readXiangqiPositionOnlyPuzzle(value: unknown): XiangqiPuzzle {
   }
   if (generals.red !== 1 || generals.black !== 1)
     throw new Error('Position-only puzzle needs both generals');
+  let setupMove: XiangqiPuzzleSetupMove | undefined;
+  if ('setupMove' in value || 'lastMove' in state) {
+    fields(value.setupMove, ['from', 'to', 'captured'], 'setup move');
+    fields(state.lastMove, ['from', 'to'], 'last move');
+    const setup = value.setupMove;
+    if (
+      typeof setup.from !== 'string' ||
+      !/^[a-i](?:[1-9]|10)$/.test(setup.from) ||
+      typeof setup.to !== 'string' ||
+      !/^[a-i](?:[1-9]|10)$/.test(setup.to) ||
+      setup.from !== state.lastMove.from ||
+      setup.to !== state.lastMove.to
+    )
+      throw new Error('Invalid position-only setup move');
+    if (setup.captured !== null) {
+      fields(setup.captured, ['color', 'role'], 'setup capture');
+      if (
+        !['red', 'black'].includes(String(setup.captured.color)) ||
+        !['advisor', 'elephant', 'horse', 'chariot', 'cannon', 'soldier'].includes(
+          String(setup.captured.role),
+        )
+      )
+        throw new Error('Invalid position-only setup capture');
+    }
+    setupMove = {
+      from: setup.from,
+      to: setup.to,
+      captured: setup.captured === null ? null : { ...setup.captured },
+    } as XiangqiPuzzleSetupMove;
+  }
   const credit = value.credit;
   fields(credit, ['name', 'event', 'red', 'black', 'url'], 'credit');
   if (
@@ -134,6 +169,7 @@ export function readXiangqiPositionOnlyPuzzle(value: unknown): XiangqiPuzzle {
       progressClock: 0,
       positionCounts: {},
       progressClockLimit: state.progressClockLimit,
+      ...(setupMove ? { lastMove: { from: setupMove.from, to: setupMove.to } } : {}),
     },
     solution: value.solution.map((m) => ({ from: m.from, to: m.to })),
     goal: {
@@ -149,7 +185,10 @@ export function readXiangqiPositionOnlyPuzzle(value: unknown): XiangqiPuzzle {
       black: credit.black,
       url: credit.url,
     },
+    ...(setupMove ? { setupMove } : {}),
   } as XiangqiPuzzle;
+  if (setupMove && !xiangqiPuzzlePreSetupState(puzzle.initial, setupMove))
+    throw new Error('Position-only setup move does not reproduce initial');
   if (
     puzzle.title !==
     xiangqiPuzzleTitle(state.status.turn as 'red' | 'black', puzzle.goal, puzzle.solution.length)
