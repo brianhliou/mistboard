@@ -326,7 +326,6 @@ export const darkChessArticle: Article = {
             href: '/?play=friend&gameSpecId=dark-chess',
             emphasis: 'secondary',
           },
-          { label: 'Eleven engine games', href: '/study/MbaW80XR', emphasis: 'secondary' },
         ],
       }),
     ],

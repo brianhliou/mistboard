@@ -274,7 +274,13 @@ export const crazyhouseXiangqiArticle: Article = {
       lead: 'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder, a friend with an invite link, or whoever is waiting in the lobby.',
       playLabel: 'Play the computer',
       playHref: '/?play=computer&gameSpecId=crazyhouse-xiangqi',
-      secondary: [{ label: 'The six engine games', href: '/study/nlZy4yNA', emphasis: 'secondary' }],
+      secondary: [
+        {
+          label: 'Challenge a friend',
+          href: '/?play=friend&gameSpecId=crazyhouse-xiangqi',
+          emphasis: 'secondary',
+        },
+      ],
     }),
   ],
 };

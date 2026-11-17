@@ -92,6 +92,7 @@ import {
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import { autosizeEmbedFrame } from './embed/embed-autosize.js';
 import { embedPathWithSolutionHidden } from './embed/embed-route.js';
+import { ffqBanqiOffered, loadFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -2938,14 +2939,17 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
     });
     row.append(a);
   }
-  // TK's bots come from the server's playable roster, which only the landing
-  // page loads; fetch it here and redraw the row once a bot is there.
-  if (
-    gameSpecId === 'three-kingdoms-banqi' &&
-    !variantSupportsPve(gameSpecId) &&
-    threeKingdomsBanqiOffered()
-  ) {
-    void loadThreeKingdomsBanqiEngineOptions().then(() => {
+  // TK's and Fanfanqi's bots come from the server's playable roster, which
+  // only the landing page loads; fetch it here and redraw the row once a bot
+  // is there.
+  const loadRoster =
+    gameSpecId === 'three-kingdoms-banqi' && threeKingdomsBanqiOffered()
+      ? loadThreeKingdomsBanqiEngineOptions
+      : gameSpecId === 'ffq-banqi' && ffqBanqiOffered()
+        ? loadFFQBanqiEngineOptions
+        : null;
+  if (loadRoster && !variantSupportsPve(gameSpecId)) {
+    void loadRoster().then(() => {
       if (!variantSupportsPve(gameSpecId) || !row.isConnected) return;
       const fresh = buildRulesPlayCta(slug, title, locale);
       if (fresh) row.replaceWith(fresh);
