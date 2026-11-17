@@ -284,7 +284,6 @@ export const jungleArticle: Article = {
           href: '/?play=friend&gameSpecId=jungle',
           emphasis: 'secondary',
         },
-        { label: 'The 200 engine games', href: '/study/0t8xpyv6', emphasis: 'secondary' },
       ],
     }),
   ],

@@ -221,7 +221,6 @@ export const fortressXiangqiArticle: Article = {
           href: '/rules/crazyhouse-xiangqi',
           emphasis: 'secondary',
         },
-        { label: 'Twenty engine games', href: '/study/NUVBVjFf', emphasis: 'secondary' },
       ],
     }),
   ],
