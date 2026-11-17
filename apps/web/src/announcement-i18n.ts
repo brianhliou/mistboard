@@ -198,6 +198,9 @@ const ZH_HANS: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的页面',
+  'The fog bots go offline on December 8.': '迷雾机器人将于 12 月 8 日下线。',
+  "Misty, the bot for Fog Chess and Fog Xiangqi, stops playing on December 8, 2026. Games against a friend, both rules pages and every finished game stay. Beat Misty while signed in before then and that game's legacy badge stays on your profile. The article explains why the bots cost too much to run and what it would take to bring them back.":
+    '迷雾国际象棋和迷雾象棋的机器人 Misty 将于 2026 年 12 月 8 日停止对局。和朋友对局、两个规则页面以及所有已完成的对局都会保留。在此之前登录并战胜 Misty，该局的留名徽章会一直留在你的个人主页上。文章说明了这些机器人为什么运行成本太高，以及要让它们回来需要什么。',
   'A player page for Meng Fanrui.': '孟繁睿有了自己的棋手页面。',
   "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.":
     '2025 年中国象棋协会男子冠军，在年终总决赛决赛中通过快棋加赛夺冠，并以积分榜第一结束全年。页面复盘他 2026 年的三盘胜局，每个转折点都从实战分出引擎的最佳变化，提供英文和中文版。',
@@ -765,6 +768,9 @@ const ZH_HANT: Record<string, string> = {
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局覆盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
+  'The fog bots go offline on December 8.': '迷霧機器人將於 12 月 8 日下線。',
+  "Misty, the bot for Fog Chess and Fog Xiangqi, stops playing on December 8, 2026. Games against a friend, both rules pages and every finished game stay. Beat Misty while signed in before then and that game's legacy badge stays on your profile. The article explains why the bots cost too much to run and what it would take to bring them back.":
+    '迷霧西洋棋和迷霧象棋的機器人 Misty 將於 2026 年 12 月 8 日停止對局。和朋友對局、兩個規則頁面以及所有已完成的對局都會保留。在此之前登入並戰勝 Misty，該局的留名徽章會一直留在你的個人頁面上。文章說明了這些機器人為什麼運行成本太高，以及要讓它們回來需要什麼。',
   'A player page for Meng Fanrui.': '孟繁睿有了自己的棋手頁面。',
   "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.":
     '2025 年中國象棋協會男子冠軍，在年終總決賽決賽中通過快棋加賽奪冠，並以積分榜第一結束全年。頁面復盤他 2026 年的三盤勝局，每個轉折點都從實戰分出引擎的最佳變化，提供英文和中文版。',
