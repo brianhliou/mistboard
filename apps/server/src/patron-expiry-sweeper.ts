@@ -6,7 +6,7 @@
 // Single-instance deployment today; the UPDATE is idempotent, so a second
 // instance would only race harmlessly.
 
-import { logger } from './obs.js';
+import { logger, observeBackgroundJob } from './obs.js';
 import * as persistence from './persistence.js';
 
 export const PATRON_EXPIRY_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
@@ -32,7 +32,9 @@ export function startPatronExpirySweeper(
   const expire = options.expire ?? ((at: Date) => persistence.expireLapsedPatrons(at));
   const now = options.now ?? Date.now;
 
-  async function tick(): Promise<void> {
+  const tick = () => observeBackgroundJob('patron_expiry_sweep', runTick);
+
+  async function runTick(): Promise<void> {
     if (!isInitialized()) return;
     try {
       const expired = await expire(new Date(now()));

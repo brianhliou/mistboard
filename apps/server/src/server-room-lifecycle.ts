@@ -8,6 +8,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import { accountRoomCreated, accountRoomSeats } from './account-room.js';
+import { observeBackgroundJob } from './obs.js';
 import * as persistence from './persistence.js';
 import { hydrateRoomOnce } from './room-hydration.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
@@ -518,7 +519,10 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     }, config.abortPolicySweepMs);
   }
 
-  async function runAbortPolicySweep(): Promise<void> {
+  const runAbortPolicySweep = () =>
+    observeBackgroundJob('guest_abort_sweep', runAbortPolicySweepWork);
+
+  async function runAbortPolicySweepWork(): Promise<void> {
     try {
       const result = await persistence.abortStaleGuestPrestartGames(
         new Date(),
@@ -561,7 +565,10 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
 
   let tenantStaleResumeRunning = false;
 
-  async function runStalePausedSweep(): Promise<void> {
+  const runStalePausedSweep = () =>
+    observeBackgroundJob('stale_paused_sweep', runStalePausedSweepWork);
+
+  async function runStalePausedSweepWork(): Promise<void> {
     const now = new Date();
     // Tenant resumes are spaced and can take minutes on a backlog, and their
     // failure must not stop the chess-stack finalize: run them after it, on
