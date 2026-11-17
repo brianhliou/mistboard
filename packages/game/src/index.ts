@@ -24,6 +24,7 @@ export * from './jieqi-chase.js';
 export * from './jieqi-fen.js';
 export * from './jieqi-public-deal.js';
 export * from './js-compat.js';
+export * from './jungle-classical-levels.js';
 export * from './jungle-fen.js';
 export * from './jungle-flip-fen.js';
 export * from './jungle-katago-gtp.js';

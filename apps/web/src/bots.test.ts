@@ -1446,6 +1446,7 @@ describe('/bots covers every launched bot variant', () => {
     rosters: {
       banqiEngines?: unknown[];
       jungleFlipEngines?: unknown[];
+      jungleEngines?: unknown[];
       ffqBanqiEngines?: unknown[];
     } = {},
   ) {
@@ -1742,6 +1743,39 @@ describe('/bots covers every launched bot variant', () => {
       expect(values).toEqual([7, 6, 5, 4, 3, 2, 1].map((level) => engineIdAt(base, level)));
     });
   }
+
+  it('offers one seven-level Jungle Misty card and seats the selected historical-safe engine id', async () => {
+    const idAt = (level: number) =>
+      level === 7 ? 'misty-jungle-level-2' : `misty-jungle-classical-level-${level}`;
+    const levels = [7, 6, 5, 4, 3, 2, 1];
+    const fetchMock = stubFetch([mistyFor('jungle', idAt(7))], [], {
+      jungleEngines: levels.map((level) => ({ id: idAt(level) })),
+    });
+    window.history.replaceState(null, '', '/bots?game=jungle');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    const card = cardFor(root, 'misty')!;
+    expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
+    const select = card.querySelector<HTMLSelectElement>('select.bot-level-select')!;
+    expect([...select.options].map((o) => [o.value, o.textContent])).toEqual(
+      levels.map((level) => [idAt(level), `Level ${level}`]),
+    );
+    expect(select.value).toBe(idAt(4));
+    for (const level of [1, 7]) {
+      const picked = pickLevel(root, 'misty', idAt(level));
+      fetchMock.mockClear();
+      picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action')!.click();
+      await flushPromises();
+      const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String((roomCall?.[1] as RequestInit)?.body))).toMatchObject({
+        botId: 'misty',
+        engineId: idAt(level),
+        gameSpecId: 'jungle',
+        rated: false,
+      });
+    }
+  });
 
   it("keeps Misty's levels 1-7 when the roster fetch fails, never Level 8", async () => {
     const fetchMock = stubFetch([mistyFor('banqi', 'misty-banqi')], []);

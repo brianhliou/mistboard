@@ -1488,3 +1488,9 @@ The provider guide's postgame section separates existing grading/luck algorithms
 `apps/server/src/persistence-room-deadlines.ts` + `correspondence-first-move.test.ts` + `persistence-correspondence-first-move.test.ts`: oldest correspondence first-move debt, shared seek/challenge/quick-pair admission, release after moving, and the private stalling-account audit written atomically with a pregame abort in `persistence-game-lifecycle.ts` (#1131).
 
 `apps/web/src/correspondence-first-move.ts` + `.test.ts`: localized first-move reminder and safe game link across correspondence posting, seek acceptance, challenges, homepage setup and postgame challenges.
+
+`packages/game/src/jungle-classical-levels.ts`: shared seven-level classical Jungle policy, historical-safe engine IDs, deterministic move seeds and UCI command builder.
+
+`apps/server/src/jungle-classical-serving.test.ts`: skill-binary capability checks, replacement invalidation, live command policy and historical level attribution.
+
+`scripts/jungle-classical-ladder.ts` + `.test.ts`: serial per-worker, sharded paired-opening calibration through the real Jungle kernel, resumable versioned manifests, move/search records and paired score intervals.

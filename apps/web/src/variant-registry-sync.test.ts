@@ -32,7 +32,6 @@ import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from '../../server/src/jungle-flip-engine.js';
 import {
-  JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
   jungleEngineDisplayName,
 } from '../../server/src/server-jungle-engine.js';
@@ -47,7 +46,9 @@ import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import {
   jieqiEngineOptions,
+  jungleEngineOptions,
   jungleFlipEngineOptions,
+  setJungleEngineOptions,
   webVariantTenants,
 } from './variant-tenant/registry.js';
 import { VARIANTS } from './variants.js';
@@ -70,6 +71,27 @@ describe('Banqi engine picker mirror', () => {
       'misty-banqi',
     ]);
     expect(landing.defaultEngineId).toBe('misty-banqi-level-4');
+  });
+});
+
+describe('Jungle runtime level availability', () => {
+  it('keeps the existing Misty default on an older binary and never picks KataGo as fallback', () => {
+    const all = jungleEngineOptions(null);
+    const tenant = webVariantTenants().find((item) => item.gameSpecId === 'jungle')!;
+    try {
+      setJungleEngineOptions(
+        all.filter((engine) => !engine.id.startsWith('misty-jungle-classical-')),
+      );
+      expect((tenant.landing!.engineOptions ?? []).map((engine) => engine.id)).toEqual([
+        'katago-jungle',
+        'misty-jungle-level-2',
+      ]);
+      expect(tenant.landing!.defaultEngineId).toBe('misty-jungle-level-2');
+      setJungleEngineOptions(all);
+      expect(tenant.landing!.defaultEngineId).toBe('misty-jungle-classical-level-4');
+    } finally {
+      setJungleEngineOptions(all);
+    }
   });
 });
 
@@ -302,7 +324,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
       JUNGLE_PLAYABLE_ENGINE_IDS.map((id) => ({ id, name: jungleEngineDisplayName(id) })),
     );
-    expect(tenant?.landing?.defaultEngineId).toBe(JUNGLE_PLAYABLE_ENGINE_ID);
+    expect(tenant?.landing?.defaultEngineId).toBe('misty-jungle-classical-level-4');
   });
 
   it('every server watch channel has a variant marker', () => {

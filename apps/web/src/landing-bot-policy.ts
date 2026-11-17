@@ -11,6 +11,7 @@ import {
   isAllowedEngineTimeControl,
   isPublicGameSpec,
   JIEQI_SPEC_ID,
+  JUNGLE_CLASSICAL_POLICIES,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
@@ -508,7 +509,17 @@ export function landingBotLadder(
       net: 'neural',
       gated: true,
     };
-    return [misty, katago].filter((rung) => !rung.gated || playable.has(rung.botId));
+    const levels: LandingBotRung[] = JUNGLE_CLASSICAL_POLICIES.filter(
+      (tier) => tier.level === 7 || playableEngines.has(tier.id),
+    ).map((tier) => ({
+      botId: 'misty',
+      engineId: tier.id,
+      level: tier.level,
+      name: `Misty Level ${tier.level}`,
+      engine: 'Misty',
+      net: null,
+    }));
+    return [...levels, katago].filter((rung) => !rung.gated || playable.has(rung.botId!));
   }
   return [misty];
 }

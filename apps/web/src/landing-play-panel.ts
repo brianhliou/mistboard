@@ -57,6 +57,7 @@ import {
   variantLabelForGameSpec,
 } from './landing-play.js';
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
+import { setJungleEngineOptions } from './variant-tenant/registry.js';
 import './landing-play-panel.css';
 import { fetchLiveStats } from './live-stats-client.js';
 import { type LastBotGame, lastBotGame, rememberedPveEngine } from './pve-memory.js';
@@ -1403,6 +1404,7 @@ export function buildPlayPanel(
         r.ok
           ? (r.json() as Promise<{
               banqiEngines?: { id: string }[];
+              jungleEngines?: WebTenantEngineOption[];
               jungleFlipEngines?: { id: string }[];
               ffqBanqiEngines?: WebTenantEngineOption[];
               threeKingdomsBanqiEngines?: WebTenantEngineOption[];
@@ -1418,8 +1420,13 @@ export function buildPlayPanel(
           setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
         }
         setFFQBanqiEngineOptions(data.ffqBanqiEngines ?? []);
+        setJungleEngineOptions(data.jungleEngines ?? []);
         playableEngines = new Set(
-          [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
+          [
+            ...(data.banqiEngines ?? []),
+            ...(data.jungleFlipEngines ?? []),
+            ...(data.jungleEngines ?? []),
+          ].map((e) => e.id),
         );
         refreshBotLadders();
       })

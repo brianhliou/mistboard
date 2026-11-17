@@ -16,9 +16,11 @@ import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
+import { JUNGLE_PLAYABLE_MISTY_TIERS } from '../jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { isJunglePlayableEngineClientId } from '../server-jungle-engine.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
 import { handleCorrespondenceCreate, requestsCorrespondence } from './correspondence-rooms.js';
 import {
@@ -387,7 +389,9 @@ export async function resolveBotRoomRequest(
           ? BANQI_PLAYABLE_ENGINES
           : gameSpecId === 'jungle-flip'
             ? JUNGLE_FLIP_PLAYABLE_ENGINES
-            : [];
+            : gameSpecId === 'jungle'
+              ? JUNGLE_PLAYABLE_MISTY_TIERS
+              : [];
     const tier = tiers.find((candidate) => candidate.id === body.engineId);
     if (!tier) {
       writeJson(response, 400, { error: 'bot_engine_conflict' });
@@ -396,7 +400,9 @@ export async function resolveBotRoomRequest(
     const available =
       gameSpecId === 'banqi'
         ? banqiEngineAvailable(tier.id)
-        : gameSpecId === 'jungle-flip' && jungleFlipEngineAvailable(tier.id);
+        : gameSpecId === 'jungle-flip'
+          ? jungleFlipEngineAvailable(tier.id)
+          : gameSpecId === 'jungle' && isJunglePlayableEngineClientId(tier.id);
     if (!available) {
       writeJson(response, 400, { error: 'invalid_engine' });
       return null;

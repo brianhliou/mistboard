@@ -15,8 +15,14 @@
 //
 // Strength is a NODE budget (CPU-independent), not a clock; a movetime cap bounds latency.
 
-import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import {
+  buildJungleClassicalGoCommand,
+  JUNGLE_CLASSICAL_POLICIES,
+  type JungleClassicalPolicy,
+} from '@mistboard/game';
 import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // The binary self-reports "MistyJungle <version>" over UCI; bump on every shipped
@@ -24,7 +30,7 @@ import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js
 // analysis cache id (jungle-analysis.ts), so a RULES change bumps it too: 0.0.6 gives
 // the tiger the lion's sideways river jump (#430), and every eval cached under 0.0.4
 // was computed with a tiger that could not.
-export const JUNGLE_RUST_ENGINE_VERSION = '0.0.6';
+export const JUNGLE_RUST_ENGINE_VERSION = '0.0.7';
 
 export type JungleRustTier = {
   id: string;
@@ -33,12 +39,15 @@ export type JungleRustTier = {
   nodes: number;
   // Latency cap: `go nodes N movetime CAP` halts at whichever hits first.
   movetimeCapMs: number;
+  level?: number;
+  depth?: number;
+  noise?: number;
 };
 
-// Node budgets for every jungle engine id, playable or retired. Jungle ships ONE bot
-// (2026-07-27): `misty-jungle-level-2` is the only id a new room may be created against
-// — see JUNGLE_PLAYABLE_ENGINE_ID in server-jungle-engine.ts for why the retired ids
-// stay defined rather than deleted.
+// The seven-level classical ladder shares one policy table with the client
+// and offline calibration. Retired L1/L3 retain their historical budgets;
+// today's full-strength id misty-jungle-level-2 becomes the displayed L7.
+// The following measurements explain that unchanged full-strength budget.
 //
 // The playable tier carries the STRONGEST budget, which is the whole point of collapsing
 // a three-rung ladder into one bot: there is no longer a stronger setting being held
@@ -100,12 +109,12 @@ const JUNGLE_RUST_TIERS: ReadonlyMap<string, JungleRustTier> = new Map([
   ['misty-jungle-level-1', { id: 'misty-jungle-level-1', nodes: 20_000, movetimeCapMs: 1_500 }],
   ['misty-jungle-level-2', { id: 'misty-jungle-level-2', nodes: 5_000_000, movetimeCapMs: 6_000 }],
   ['misty-jungle-level-3', { id: 'misty-jungle-level-3', nodes: 1_000_000, movetimeCapMs: 5_000 }],
+  ...JUNGLE_CLASSICAL_POLICIES.map((tier): [string, JungleRustTier] => [tier.id, tier]),
 ]);
 
-// Every defined tier, so the single-bot invariant (the playable id is the strongest one
-// defined) is testable rather than eyeballed. With the ladder gone, "strictly increasing
-// rungs" is no longer the property worth guarding — "no retired id out-searches the bot
-// players actually get" is.
+export const JUNGLE_PLAYABLE_MISTY_TIERS = JUNGLE_CLASSICAL_POLICIES;
+
+// Every current and historical tier. New numbered levels never reuse retired ids.
 export const JUNGLE_RUST_TIER_LIST: readonly JungleRustTier[] = [...JUNGLE_RUST_TIERS.values()];
 
 export function jungleRustEngineEnabled(): boolean {
@@ -124,6 +133,36 @@ export function jungleEngineBinaryAvailable(): boolean {
   try {
     jungleEnginePath();
     return true;
+  } catch {
+    return false;
+  }
+}
+
+let skillBinaryCache: { signature: string; supported: boolean } | undefined;
+
+/** Probe once per binary revision. Old UCI builds ignore skill parameters. */
+export function jungleClassicalBinaryAvailable(): boolean {
+  if (!jungleRustEngineEnabled()) return false;
+  try {
+    const bin = jungleEnginePath();
+    const stat = statSync(bin);
+    const signature = `${bin}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+    if (skillBinaryCache?.signature === signature) return skillBinaryCache.supported;
+    const probe = spawnSync(bin, [], {
+      input: 'uci\nquit\n',
+      encoding: 'utf8',
+      timeout: 1500,
+      maxBuffer: 16_384,
+      // The executable probe needs no web-process environment or credentials.
+      env: {},
+    });
+    const lines = probe.stdout?.split(/\r?\n/) ?? [];
+    const supported =
+      probe.status === 0 &&
+      lines.includes(`id name MistyJungle ${JUNGLE_RUST_ENGINE_VERSION}`) &&
+      lines.includes('info string classical_skill 1');
+    skillBinaryCache = { signature, supported };
+    return supported;
   } catch {
     return false;
   }
@@ -170,16 +209,27 @@ export function jungleEnginePath(): string {
 export async function jungleLiveEngineMove(
   engineId: string,
   fen: string,
-  opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[] } = {},
+  opts: {
+    nodes?: number;
+    movetimeCapMs?: number;
+    repSeedFens?: readonly string[];
+    seed?: number;
+  } = {},
 ): Promise<UciEval> {
   const tier = jungleRustTierFor(engineId);
   if (!tier) throw new Error(`unknown Jungle engine: ${engineId}`);
+  if (engineId.startsWith('misty-jungle-classical-') && !jungleClassicalBinaryAvailable()) {
+    throw new Error('Jungle classical levels require the skill-capable engine');
+  }
   const release = await enginePool.acquire();
   try {
     return await jungleEngineSearch(fen, {
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
+      ...(tier.id.startsWith('misty-jungle-classical-')
+        ? { policy: tier as JungleClassicalPolicy, seed: opts.seed }
+        : {}),
     });
   } finally {
     release();
@@ -210,6 +260,8 @@ export function jungleEngineSearch(
     nodes?: number;
     movetimeCapMs?: number;
     repSeedFens?: readonly string[];
+    policy?: JungleClassicalPolicy;
+    seed?: number;
   } = {},
 ): Promise<UciEval> {
   const nodes = opts.nodes ?? 1_000_000;
@@ -221,13 +273,24 @@ export function jungleEngineSearch(
     'ucinewgame',
     'isready',
     buildJunglePositionCommand(fen, opts.repSeedFens),
-    `go nodes ${nodes} movetime ${movetimeCapMs}`,
+    opts.policy
+      ? buildJungleClassicalGoCommand({ ...opts.policy, nodes }, opts.seed ?? 0, movetimeCapMs)
+      : `go nodes ${nodes} movetime ${movetimeCapMs}`,
   ];
   return runUciEval({
     bin: jungleEnginePath(),
     commands,
     timeoutMs: movetimeCapMs + 4000,
     timeoutMessage: 'jungle-engine move timed out',
+    // An older binary ignores the new go parameters. Reject it rather than
+    // silently serving full strength under an easy-level identity.
+    ...(opts.policy
+      ? {
+          rejectOutputLine: (line: string) =>
+            line.startsWith('id name ') &&
+            line !== `id name MistyJungle ${JUNGLE_RUST_ENGINE_VERSION}`,
+        }
+      : {}),
   });
 }
 

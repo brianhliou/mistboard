@@ -1,10 +1,6 @@
-// EvE adapter for Jungle (斗兽棋): scheduled data games between the site's own
-// jungle engine tiers (#488), on the engines prod serves. Jungle offers two bots:
-// KataGo-AnimalChess on top (katago-jungle, jungle-katago-engine.ts) and Misty
-// (misty-jungle-level-2, the Rust binary in jungle-engine.ts); Misty's retired
-// levels 1 and 3 still resolve and attribute to her (first-party-bots.ts), so the
-// scheduler has a four-rung ladder to pair. Not a rating adapter: there is no
-// random floor, so no job of this variant carries a rating_policy.
+// EvE adapter for Jungle: KataGo plus the classical Misty ladder. Historical
+// Misty IDs remain resolvable for stored games. There is no random anchor or
+// published level rating; calibration lives in scripts/jungle-classical-ladder.ts.
 //
 // Each engine is fed what its live path feeds it (server-jungle-engine.ts): Misty
 // the full-board FEN and the repetition seeds of the game so far, KataGo the FEN
@@ -17,6 +13,7 @@ import {
   type JungleColor,
   type JungleGameState,
   type JungleMove,
+  jungleClassicalSeed,
 } from '@mistboard/game';
 import {
   jungleEngineBinaryAvailable,
@@ -88,6 +85,11 @@ export const jungleEveAdapter: VariantEveAdapter<
     return jungleLiveEngineMove(engineId, fen, {
       movetimeCapMs: opts.movetimeMs,
       repSeedFens: jungleRepSeedFens(states),
+      seed: jungleClassicalSeed(
+        state.id,
+        states.length - 1,
+        jungleRustTierFor(engineId)?.level ?? 7,
+      ),
     });
   },
   // A jungle task may seat either engine, so a worker claims one only when it can

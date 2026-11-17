@@ -19,6 +19,7 @@ import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-en
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES, jqeEnabled } from './jieqi-engine.js';
+import { jungleClassicalBinaryAvailable } from './jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipNetPath } from './jungle-flip-engine.js';
 import { JUNGLE_PLAYABLE_ENGINE_IDS } from './server-jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
@@ -58,7 +59,12 @@ const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
       (tier) => tier.evaluation !== 'nnue' || jungleFlipNetPath() !== null,
     ).map((tier) => tier.id),
   // JUNGLE_PLAYABLE_ENGINE_IDS runs strongest first.
-  jungle: () => [...JUNGLE_PLAYABLE_ENGINE_IDS].reverse(),
+  jungle: () =>
+    [...JUNGLE_PLAYABLE_ENGINE_IDS]
+      .reverse()
+      .filter(
+        (id) => !id.startsWith('misty-jungle-classical-') || jungleClassicalBinaryAvailable(),
+      ),
 };
 
 /** A variant's public bot ladder, weakest first, or null when it has none. */

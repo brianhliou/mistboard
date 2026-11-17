@@ -26,6 +26,7 @@ import {
   banqiEngineTierFor,
 } from './banqi-engine.js';
 import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
+import { JUNGLE_PLAYABLE_MISTY_TIERS } from './jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
 import type { Champion } from './persistence-leaderboards.js';
 import {
@@ -62,7 +63,9 @@ export function mistyLevelForEngine(
       ? BANQI_PLAYABLE_ENGINES
       : variant === 'jungle-flip'
         ? JUNGLE_FLIP_PLAYABLE_ENGINES
-        : [];
+        : variant === 'jungle'
+          ? JUNGLE_PLAYABLE_MISTY_TIERS
+          : [];
   return tiers.find((tier) => tier.id === engineId)?.level ?? null;
 }
 
@@ -139,6 +142,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     },
     defaultGameSpecId: 'dark-chess',
     attributionEngineIds: [
+      ...JUNGLE_PLAYABLE_MISTY_TIERS.filter((tier) => tier.level !== 7).map((tier) => tier.id),
       ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
       'python-v2-v1.0',
       'python-v2-v1.1',
@@ -160,6 +164,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
     seatNamesByEngineId: Object.fromEntries([
+      ...JUNGLE_PLAYABLE_MISTY_TIERS.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...FFQ_BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
       ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),

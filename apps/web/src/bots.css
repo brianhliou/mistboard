@@ -229,6 +229,12 @@
   font-weight: 600;
 }
 
+@media (max-width: 640px) {
+  .bots-directory .bot-card-foot .bot-level-select[data-game-spec-id="jungle"] {
+    font-size: 16px;
+  }
+}
+
 .bots-directory .bot-card-foot .profile-summary-card-action {
   display: inline-flex;
   align-items: center;

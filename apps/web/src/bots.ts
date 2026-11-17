@@ -13,10 +13,12 @@ import {
   FFQ_BANQI_SPEC_ID,
   type GameSpecId,
   JUNGLE_FLIP_SPEC_ID,
+  JUNGLE_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
+import { setJungleEngineOptions } from './variant-tenant/registry.js';
 import './account-profile.css';
 import './bots.css';
 import './current-games.css';
@@ -199,6 +201,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
  *  failed fetch or an older server). */
 export type EngineRosters = {
   banqi?: readonly { id: string }[];
+  jungle?: readonly { id: string }[];
   jungleFlip?: readonly { id: string }[];
   threeKingdomsBanqi?: readonly WebTenantEngineOption[];
   ffqBanqi?: readonly WebTenantEngineOption[];
@@ -211,6 +214,7 @@ async function fetchEngineRosters(): Promise<EngineRosters> {
     if (!resp.ok) return {};
     const data = (await resp.json()) as {
       banqiEngines?: { id: string }[];
+      jungleEngines?: WebTenantEngineOption[];
       jungleFlipEngines?: { id: string }[];
       threeKingdomsBanqiEngines?: WebTenantEngineOption[];
       ffqBanqiEngines?: WebTenantEngineOption[];
@@ -221,9 +225,11 @@ async function fetchEngineRosters(): Promise<EngineRosters> {
     if (ffqBanqiOffered() && data.ffqBanqiEngines !== undefined) {
       setFFQBanqiEngineOptions(data.ffqBanqiEngines);
     }
+    setJungleEngineOptions(data.jungleEngines ?? []);
     return {
       banqi: data.banqiEngines,
       jungleFlip: data.jungleFlipEngines,
+      jungle: data.jungleEngines,
       threeKingdomsBanqi: data.threeKingdomsBanqiEngines,
       ffqBanqi: data.ffqBanqiEngines,
     };
@@ -370,6 +376,7 @@ export function engineLadderOpponents(
   for (const [gameSpecId, roster] of [
     [BANQI_SPEC_ID, rosters.banqi],
     [JUNGLE_FLIP_SPEC_ID, rosters.jungleFlip],
+    [JUNGLE_SPEC_ID, rosters.jungle],
   ] as const) {
     if (!misty || !offersGame(misty, gameSpecId)) continue;
     const offered = new Set(roster?.map((engine) => engine.id) ?? []);
@@ -591,6 +598,7 @@ function buildOpponentCard(
   const picker = levelled ? document.createElement('select') : null;
   if (picker) {
     picker.className = 'site-select bot-level-select';
+    picker.dataset.gameSpecId = gameSpecId;
     picker.setAttribute('aria-label', t('bots.levelPicker', { name: name ?? '' }));
     // Members come weakest first; the picker lists the strongest level first,
     // like the cards (decided 2026-11-12). The level it opens on is unchanged.
