@@ -127,7 +127,14 @@ function jungleMoveDiagram(opts: {
       perspective: 'red',
       selected: from,
       targets: [...steps, ...leaps.filter((to) => board[to] !== undefined)],
-      arrows: arrows.map((to) => ({ from, to, ...LEAP_ARROW })),
+      // Edge to edge, so the arrow never covers the mover or the piece it takes.
+      arrows: arrows.map((to) => ({
+        from,
+        to,
+        ...LEAP_ARROW,
+        clearFrom: true,
+        clearTo: board[to] !== undefined,
+      })),
     }),
     opts.maxWidth ?? PAIR_WIDTH,
   );

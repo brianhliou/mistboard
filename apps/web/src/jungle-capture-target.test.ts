@@ -51,3 +51,53 @@ describe('Jungle capture targets', () => {
     expectCellTint(svg, ['c4'], 48);
   });
 });
+
+// Rules-diagram arrows run edge to edge, so a leap's arrow never covers the
+// lion it starts from or the wolf it lands on. The default (engine and review
+// arrows) stays centre to centre and pins where the two centres are.
+describe('Jungle arrows that clear the tiles', () => {
+  const board = {
+    b3: { color: 'red', role: 'lion' },
+    b7: { color: 'black', role: 'wolf' },
+  } as const;
+  const TILE_HALF = 48 * 0.45;
+
+  function arrow(clear: boolean) {
+    const svg = renderJungleBoardSvg(board, {
+      ...SKIN,
+      cueBadges: false,
+      arrows: [{ from: 'b3', to: 'b7', width: 9, clearFrom: clear, clearTo: clear }],
+    });
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    const line = doc.querySelector('.jungle-board-arrows line');
+    const tip = doc
+      .querySelector('.jungle-board-arrows polygon')
+      ?.getAttribute('points')
+      ?.split(' ')[0];
+    expect(line).not.toBeNull();
+    expect(tip).toBeDefined();
+    const [tipX, tipY] = (tip ?? '').split(',').map(Number);
+    return {
+      start: { x: Number(line?.getAttribute('x1')), y: Number(line?.getAttribute('y1')) },
+      tip: { x: tipX, y: tipY },
+      width: Number(line?.getAttribute('stroke-width')),
+    };
+  }
+
+  it('starts outside the mover and stops outside the piece it lands on', () => {
+    const centre = arrow(false);
+    const target = centre.tip;
+    const dir = Math.sign(target.y - centre.start.y);
+    const source = { x: centre.start.x, y: centre.start.y - dir * 8 };
+    const cleared = arrow(true);
+    expect(cleared.start.x).toBe(source.x);
+    expect(cleared.tip.x).toBe(target.x);
+    // The shaft's round cap reaches half a width behind its start.
+    expect(Math.abs(cleared.start.y - source.y) - cleared.width / 2).toBeGreaterThanOrEqual(
+      TILE_HALF,
+    );
+    expect(Math.abs(cleared.tip.y - target.y)).toBeGreaterThanOrEqual(TILE_HALF);
+    // Still pointing from the lion to the wolf.
+    expect(Math.sign(cleared.tip.y - cleared.start.y)).toBe(dir);
+  });
+});

@@ -153,6 +153,13 @@ export type JungleRenderOptions = {
 export interface JungleBoardArrow extends SvgBoardArrowStyle {
   from: JungleSquare;
   to: JungleSquare;
+  /** Start the shaft at the edge of the moving piece's square instead of near
+   *  its centre, so a teaching arrow never covers the animal. */
+  clearFrom?: boolean;
+  /** Stop the tip at the edge of the destination square: set it when a piece
+   *  stands there. A one-step arrow with both set has no room left, so engine
+   *  and review arrows keep the centre-to-centre default. */
+  clearTo?: boolean;
 }
 
 export interface JungleBoardMarker extends SvgBoardMarkerStyle {
@@ -461,6 +468,8 @@ export function jungleMarkerSvg(marker: JungleBoardMarker, geom: GridGeometry): 
   });
 }
 
+const JUNGLE_ARROW_WIDTH = 6;
+
 function jungleArrowLayer(arrows: readonly JungleBoardArrow[], geom: GridGeometry): string {
   return arrows.map((arrow) => jungleArrowSvgWithGeometry(arrow, geom)).join('');
 }
@@ -472,14 +481,18 @@ function jungleArrowSvgWithGeometry(arrow: JungleBoardArrow, geom: GridGeometry)
     ...arrow,
     width: arrow.width === undefined ? undefined : arrow.width * (CELL / 72),
   };
-  return svgBoardArrow(
-    scaledArrow,
-    geom.center(from.file, from.rank),
-    geom.center(to.file, to.rank),
-    {
-      baseClassName: 'xq-arrow',
-      defaultWidth: 6,
-      startInset: 8,
-    },
-  );
+  const start = geom.center(from.file, from.rank);
+  const end = geom.center(to.file, to.rank);
+  // Distance from a square's centre to its edge along the arrow's direction.
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const edge = dx + dy > 0 ? ((geom.cell / 2) * Math.hypot(dx, dy)) / Math.max(dx, dy) : 0;
+  const width = scaledArrow.width ?? JUNGLE_ARROW_WIDTH;
+  return svgBoardArrow(scaledArrow, start, end, {
+    baseClassName: 'xq-arrow',
+    defaultWidth: JUNGLE_ARROW_WIDTH,
+    // The shaft's round cap reaches half a width behind its start point.
+    startInset: arrow.clearFrom ? edge + width / 2 : 8,
+    tipInset: arrow.clearTo ? edge : 0,
+  });
 }
