@@ -138,7 +138,7 @@ export type RatingPoolBaseId =
   | 'banqi'
   | 'jungle'
   | 'jungle_flip'
-  // Never rated: no user_ratings CHECK entry exists or is owed until a launch.
+  // Migration 195 adds the live Three Kingdoms Banqi pool.
   | 'three_kingdoms_banqi'
   // Reserved metadata only; excluded from RatingVariant and RATED_POOL_BASES.
   | 'ffq_banqi'
@@ -161,12 +161,12 @@ export type GameSpecId =
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
-  // FFQ banqi (翻翻棋): kernel and hidden metadata only, no tenant or launch flag.
+  // Fanfanqi: public casual live play with hidden identities and HP scoring.
   | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
-  // 100. Launched casual and unrated; runtime flags remain kill-switches. Rules engine:
+  // 100. Rated human PvP; runtime flags remain kill-switches. Rules engine:
   // packages/game/src/variants-three-kingdoms-banqi.ts.
   | 'three-kingdoms-banqi'
   | 'fortress-xiangqi'
@@ -382,7 +382,10 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // and sort with the unlisted specs.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
+  // Banqi leads its family; Fanfanqi follows until it shows its own pull
+  // (decided 2026-11-14, reversing the 2026-11-11 order).
   BANQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   // Keep the launched banqi family together.
   THREE_KINGDOMS_BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -400,9 +403,12 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
 ];
 
 /** Sort index for {@link CANONICAL_VARIANT_ORDER}; unlisted specs sort to the end. */
+// Ranks by the whole shelf, not only its public part, so a shelf spec still in
+// playtest sorts in its place for the admins who see it. Public specs keep the
+// same relative order; anything off the shelf sorts after it.
 export function canonicalVariantOrderIndex(id: GameSpecId): number {
-  const index = CANONICAL_VARIANT_ORDER.indexOf(id);
-  return index === -1 ? CANONICAL_VARIANT_ORDER.length : index;
+  const index = VARIANT_SHELF_ORDER.indexOf(id);
+  return index === -1 ? VARIANT_SHELF_ORDER.length : index;
 }
 
 export const GAME_SPECS: readonly GameSpec[] = [
@@ -551,10 +557,9 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Kernel only: 4x8, fixed inks, four initial reveals, 60 HP, capture-only
-    // cannons, 30-ply no-progress draw and four consecutive chases permitted.
-    // No serving tenant yet: every room request is rejected, and this entry
-    // opens no public play, ratings, correspondence, studies or exports.
+    // Public casual live play: fixed inks, four initial reveals, 60 HP,
+    // capture-only cannons, 30-ply draw and four consecutive chases.
+    // Ratings, public correspondence, studies and exports remain closed.
     id: FFQ_BANQI_SPEC_ID,
     publicName: 'Fanfanqi',
     family: 'xiangqi',
@@ -566,8 +571,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'ffq_banqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    publicSurface: 'casual',
+    runtimeStatus: 'live',
   },
   {
     // Hong Kong Old Style (清章). Four seats, one human against three bots.
@@ -760,7 +765,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     // Three Kingdoms banqi: banqi's 32 pieces on 9x5 points, first to 100.
-    // Launched casual and unrated; server and build flags remain kill-switches.
+    // Rated human PvP; PvE and correspondence remain casual.
     id: THREE_KINGDOMS_BANQI_SPEC_ID,
     publicName: 'Three Kingdoms Banqi',
     family: 'xiangqi',
@@ -772,6 +777,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'three_kingdoms_banqi',
+    rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
@@ -873,7 +879,7 @@ export type LaunchLists = {
   readonly correspondenceEligible: readonly GameSpecId[];
   /** CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: correspondence for granted accounts. */
   readonly correspondenceAllowlisted: readonly GameSpecId[];
-  /** Hidden correspondence specs, admitted by their existing tenant access policy. */
+  /** Restricted correspondence specs, admitted by their existing tenant access policy. */
   readonly correspondenceRestricted: readonly GameSpecId[];
   /** ALLOWLISTED_GAME_SPEC_IDS: playable only with a per-account grant. */
   readonly allowlisted: readonly GameSpecId[];
@@ -885,8 +891,14 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
-    correspondenceRestricted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) => !isPublic(id)),
+    // FFQ correspondence follows its tenant runtime gate, including the kill
+    // switch after launch. Restricted means tenant-gated, not insider-only.
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id !== FFQ_BANQI_SPEC_ID && isPublic(id),
+    ),
+    correspondenceRestricted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id === FFQ_BANQI_SPEC_ID || !isPublic(id),
+    ),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),
@@ -947,6 +959,7 @@ export type RatingVariant = Extract<
   | 'banqi'
   | 'jungle'
   | 'jungle_flip'
+  | 'three_kingdoms_banqi'
   | 'fortress_xiangqi'
   // Standard Xiangqi pool. Owes a user_ratings CHECK migration adding 'xiangqi'
   // before the global rated flag + MISTBOARD_XIANGQI_ENABLED are both on.
@@ -984,14 +997,14 @@ export function ratingPoolForSpec(id: GameSpecId): RatingVariant | null {
 // casual or rated, and a rated one writes the variant's pool under its OWN
 // 'correspondence' time class, never a live one. THE single predicate every surface
 // asks (seek create, accept, the rating bucket, the web Rated toggle): a spec qualifies
-// when it is correspondence-eligible AND has an active rating pool, except Gomoku:
-// Gomoku correspondence is casual-only even though live play has a rating pool.
+// when it is correspondence-eligible AND has an active rating pool, except Gomoku
+// and Three Kingdoms Banqi, whose correspondence stays casual-only.
 // The rating write is generic over pools and seat colors,
 // and the tenant seek factory carries `rated` into the room (createTenantCorrespondence
 // GameForSeek), which correspondence-eligibility.test.ts proves for every spec this
 // returns true for. A casual-only spec (no pool) is cleanly excluded.
 export function isCorrespondenceRatedSpec(id: string | null | undefined): boolean {
-  if (id === GOMOKU_SPEC_ID) return false;
+  if (id === GOMOKU_SPEC_ID || id === THREE_KINGDOMS_BANQI_SPEC_ID) return false;
   if (!id || !CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id as GameSpecId)) return false;
   const spec = maybeGameSpecForId(id);
   return spec !== null && ratingPoolForSpec(spec.id) !== null;

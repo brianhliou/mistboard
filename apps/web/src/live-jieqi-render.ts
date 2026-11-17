@@ -57,7 +57,7 @@ import {
   faceDownFaceSvg,
   faceDownSlotClass,
 } from './review/face-down-faces.js';
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphs, animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -566,8 +566,7 @@ export function animateJieqiBoardMove(
   if (from.x !== to.x || from.y !== to.y) {
     // Reveal and move badges settle with the piece, without a second fade
     // after it lands. Refreshes keep this same animation timeline.
-    const fade = Math.min(100, duration);
-    animateMoveGlyphs(host, fade, duration - fade);
+    animateMoveGlyphsOnLanding(host, duration);
   }
   // The gold band rides on the piece for the whole glide (the square grid's
   // marks fade in as it lands). A reverse step renders the PRIOR move's marks

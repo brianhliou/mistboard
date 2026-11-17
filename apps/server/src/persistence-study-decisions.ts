@@ -1,5 +1,9 @@
 import { getPool, isInitialized } from './persistence-db.js';
-import { type StudyDecisionsInput, validateStudyDecisions } from './study-chapter-decisions.js';
+import {
+  STUDY_DECISION_VARIANTS,
+  type StudyDecisionsInput,
+  validateStudyDecisions,
+} from './study-chapter-decisions.js';
 
 export type StudyChapterDecisionsRecord = StudyDecisionsInput & {
   chapterId: string;
@@ -58,8 +62,8 @@ export async function getStudyChapterDecisionsForRead(studyId: string, chapterId
 export async function decidedStudyChapterIds(chapterIds: readonly string[]): Promise<Set<string>> {
   if (!isInitialized() || !chapterIds.length) return new Set<string>();
   const { rows } = await getPool().query<{ chapter_id: string }>(
-    `SELECT d.chapter_id FROM study_chapter_decisions d JOIN study_chapters c ON c.id = d.chapter_id WHERE c.variant = 'jieqi' AND c.id = ANY($1::text[])`,
-    [chapterIds],
+    `SELECT d.chapter_id FROM study_chapter_decisions d JOIN study_chapters c ON c.id = d.chapter_id WHERE c.variant = ANY($2::text[]) AND c.id = ANY($1::text[])`,
+    [chapterIds, Object.keys(STUDY_DECISION_VARIANTS)],
   );
   return new Set(rows.map((row) => row.chapter_id));
 }

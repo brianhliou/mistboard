@@ -15,8 +15,8 @@ export const jieqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-11-07',
-  updateNote: 'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.',
+  updatedAt: '2026-11-12',
+  updateNote: 'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.',
   audience: 'Players learning jieqi, with or without experience of xiangqi.',
   thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
   tldr: [
@@ -166,19 +166,21 @@ export const jieqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.',
+          text: 'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.',
         },
         {
           kind: 'embed',
-          path: '/embed/study/SwSUugEY/SDQPHsxM',
-          title: 'Jieqi: AB-JChess against jqe, Black mates on move 30',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/jieqi.plan.json);
+          // swapped for the prod ids when the study is created there.
+          path: '/embed/study/4KNglJHs/olxXB9Ny',
+          title: 'Jieqi: jqe against AB-JChess, Black mates on move 25',
           // A placeholder until the card reports its height: the 702px column
           // holds the board, seat rows, win-chance graph, controls and credit.
           aspect: [702, 800],
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.',
+          text: 'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.',
         },
       ],
     },

@@ -21,20 +21,28 @@ import {
   tenantSeatProfiles,
 } from './variant-tenant/runtime.js';
 
-test('all eight Rapfi levels carry the same linkable bot identity live and in finished games', () => {
-  for (let level = 1; level <= 8; level += 1) {
-    const id = `rapfi-level-${level}`;
-    const bot = firstPartyBotForEngine(id);
+const rapfiSeats = [
+  ...Array.from({ length: 8 }, (_, index) => ({
+    botId: `rapfi-level-${index + 1}`,
+    engineId: `rapfi-level-${index + 1}`,
+    name: `Rapfi Level ${index + 1}`,
+  })),
+  { botId: 'rapfi', engineId: 'rapfi-strongest', name: 'Rapfi' },
+];
+
+test('all eight Rapfi levels and unnumbered Rapfi carry the same linkable bot identity live and in finished games', () => {
+  for (const { botId: id, engineId, name } of rapfiSeats) {
+    const bot = firstPartyBotForEngine(engineId);
     assert.ok(bot, `${id} needs a public bot profile`);
     assert.equal(bot.id, id);
-    assert.equal(firstPartyBotEngineFor(id, 'gomoku'), id);
-    assert.equal(bot.displayName, `Rapfi Level ${level}`);
+    assert.equal(firstPartyBotEngineFor(id, 'gomoku'), engineId);
+    assert.equal(bot.displayName, name);
     for (const color of gomokuTenant.colors) {
       for (const pveBotId of [null, id]) {
         const created = createTenantRuntimeRoom(gomokuTenant, 'gmk_bot_profile', { now: 1000 });
         assert.ok(created.ok);
         const room = created.room;
-        room.projection.seats[color] = id;
+        room.projection.seats[color] = engineId;
         room.pveBotId = pveBotId;
         assert.deepEqual(tenantSeatProfiles(gomokuTenant, room)[color], { botId: id });
         assert.equal(tenantSeatDisplayNames(gomokuTenant, room)[color], bot.displayName);
@@ -42,10 +50,10 @@ test('all eight Rapfi levels carry the same linkable bot identity live and in fi
         const participant = tenantParticipant(gomokuTenant, color, room, 'public');
         assert.equal(participant.subjectType, 'bot');
         assert.equal(participant.subjectId, id);
-        assert.equal(participant.engineId, id);
+        assert.equal(participant.engineId, engineId);
         assert.equal(participant.displayName, bot.displayName);
         assert.equal(postgamePlayers([participant])[0]?.botId, id);
-        assert.deepEqual(liveSeatProfileIdentity(id, null, pveBotId), { botId: id });
+        assert.deepEqual(liveSeatProfileIdentity(engineId, null, pveBotId), { botId: id });
       }
     }
   }
@@ -60,20 +68,19 @@ test('Rapfi bot pages are playable only while Gomoku is public and enabled', (t)
     else process.env.MISTBOARD_GOMOKU_ENABLED = previousFlag;
     spec.publicSurface = previousSurface;
   });
-  for (let level = 1; level <= 8; level += 1) {
-    const id = `rapfi-level-${level}`;
+  for (const { botId: id, engineId } of rapfiSeats) {
     const bot = {
       id,
-      activeEngineId: id,
+      activeEngineId: engineId,
       defaultGameSpecId: 'gomoku',
       supportedGameSpecIds: ['gomoku'],
     };
     process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
     spec.publicSurface = 'casual';
     assert.deepEqual(botPlayOptions(bot), [
-      { gameSpecId: 'gomoku', engineId: id, playable: true, version: botEngineVersion(id) },
+      { gameSpecId: 'gomoku', engineId, playable: true, version: botEngineVersion(engineId) },
     ]);
-    assert.ok(botEngineVersion(id), `${id} shows its rapfi.ref version`);
+    assert.ok(botEngineVersion(engineId), `${id} shows its rapfi.ref version`);
     process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
     assert.equal(
       botPlayOptions(bot).some((option) => option.playable),
@@ -149,6 +156,73 @@ test('persistence: Rapfi migration seeds unmeasured profiles and links historica
         .length,
       1,
     );
+  } finally {
+    await client.query('ROLLBACK');
+    await client.end();
+  }
+});
+
+test('persistence: strongest Rapfi migration is idempotent and preserves the ladder and ratings', {
+  skip: databaseUrl ? false : 'set TEST_DATABASE_URL to enable',
+}, async () => {
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`
+      CREATE TEMP TABLE bot_profiles (
+        id text PRIMARY KEY, display_name text, bio text, active_engine_id text,
+        default_game_spec_id text, supported_game_spec_ids text[], play_initial_ms integer,
+        play_increment_ms integer, visibility text, updated_at timestamptz DEFAULT now()
+      ) ON COMMIT DROP;
+      CREATE TEMP TABLE bot_rating_snapshots (bot_id text, rating integer) ON COMMIT DROP;
+      CREATE TEMP TABLE games (room_id text, variant text, mode text) ON COMMIT DROP;
+      CREATE TEMP TABLE game_participants (
+        game_id text, subject_type text, subject_id text, engine_id text
+      ) ON COMMIT DROP;
+    `);
+    await client.query(
+      await readFile(new URL('../migrations/191_rapfi_bot_profiles.sql', import.meta.url), 'utf8'),
+    );
+    // Existing calibration is a sentinel: registration must neither overwrite
+    // it nor copy it onto the stronger, separately measured policy.
+    await client.query("INSERT INTO bot_rating_snapshots VALUES ('rapfi-level-8', 1234)");
+    const ladder = (await client.query('SELECT * FROM bot_profiles ORDER BY id')).rows;
+    const ratings = (await client.query('SELECT * FROM bot_rating_snapshots')).rows;
+    const migration = await readFile(
+      new URL('../migrations/205_rapfi_strongest_bot.sql', import.meta.url),
+      'utf8',
+    );
+    await client.query(migration);
+    const once = (await client.query('SELECT * FROM bot_profiles ORDER BY id')).rows;
+    await client.query(migration);
+    assert.deepEqual((await client.query('SELECT * FROM bot_profiles ORDER BY id')).rows, once);
+    assert.equal(once.length, 9);
+    assert.deepEqual(
+      once.filter((profile) => profile.id !== 'rapfi'),
+      ladder,
+    );
+    const top = once.find((profile) => profile.id === 'rapfi');
+    assert.ok(top);
+    assert.equal(top.display_name, 'Rapfi');
+    assert.equal(top.active_engine_id, 'rapfi-strongest');
+    assert.equal(top.default_game_spec_id, 'gomoku');
+    assert.deepEqual(top.supported_game_spec_ids, ['gomoku']);
+    assert.equal(top.play_initial_ms, 600000);
+    assert.equal(top.play_increment_ms, 5000);
+    assert.equal(top.visibility, 'public');
+    assert.match(top.bio, /dhbloo/);
+    assert.match(top.bio, /github\.com\/dhbloo\/rapfi/);
+    assert.match(top.bio, /GPL-3\.0/);
+    assert.match(top.bio, /CC0/);
+    assert.ok(!top.bio.includes('—'));
+    assert.deepEqual((await client.query('SELECT * FROM bot_rating_snapshots')).rows, ratings);
+    // A rerun repairs only this profile's mutable registration fields.
+    await client.query(
+      "UPDATE bot_profiles SET active_engine_id = 'stale', visibility = 'hidden' WHERE id = 'rapfi'",
+    );
+    await client.query(migration);
+    assert.deepEqual((await client.query('SELECT * FROM bot_profiles ORDER BY id')).rows, once);
   } finally {
     await client.query('ROLLBACK');
     await client.end();

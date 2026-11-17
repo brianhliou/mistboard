@@ -27,6 +27,7 @@ import {
   isPublicGameSpec,
   isRetiredGameSpec,
   JIEQI_SPEC_ID,
+  JUNGLE_CLASSICAL_POLICIES,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
@@ -59,6 +60,7 @@ import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
+import { notifyRuntimeEngineRostersChanged } from '../runtime-engine-rosters.js';
 import { hasLikelyVariantGrant } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOptions,
@@ -69,6 +71,8 @@ export type WebTenantEngineOption = {
   id: string;
   name: string;
   familyName: string;
+  /** A named strength above the numbered levels, localized in setup. */
+  levelLabelKey?: I18nKey;
   kind: string;
 };
 
@@ -215,8 +219,6 @@ const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): 
 const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
-// Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
-// The server repeats this check for create, HTTP shells and every connection.
 
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
@@ -309,13 +311,45 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
   return [abJchess!, JIEQI_JQE_ENGINE_OPTION, ...below];
 }
 
+let jungleRuntimeEngineIds: ReadonlySet<string> | null = null;
+
+export function setJungleEngineOptions(engines: readonly WebTenantEngineOption[]): void {
+  const ids = new Set(engines.map((engine) => engine.id));
+  if (
+    jungleRuntimeEngineIds &&
+    ids.size === jungleRuntimeEngineIds.size &&
+    [...ids].every((id) => jungleRuntimeEngineIds!.has(id))
+  )
+    return;
+  jungleRuntimeEngineIds = ids;
+  notifyRuntimeEngineRostersChanged();
+}
+
+export function jungleEngineOptions(
+  available: ReadonlySet<string> | null = jungleRuntimeEngineIds,
+): readonly WebTenantEngineOption[] {
+  const all: WebTenantEngineOption[] = [
+    { id: 'katago-jungle', name: 'KataGo', familyName: 'KataGo', kind: 'container' },
+    ...[...JUNGLE_CLASSICAL_POLICIES].reverse().map(
+      (tier): WebTenantEngineOption => ({
+        id: tier.id,
+        name: `Misty Level ${tier.level}`,
+        familyName: 'Misty',
+        kind: 'container',
+      }),
+    ),
+  ];
+  return all.filter((engine) => available === null || available.has(engine.id));
+}
+
 let jungleFlipNeuralEngineAvailable = false;
 
 /** Runtime confirmation only: a build flag cannot know whether the private net exists. */
 export function setJungleFlipEngineOptions(engines: readonly WebTenantEngineOption[]): void {
-  jungleFlipNeuralEngineAvailable = engines.some(
-    (engine) => engine.id === 'misty-jungle-flip-level-8',
-  );
+  const withNet = engines.some((engine) => engine.id === 'misty-jungle-flip-level-8');
+  if (withNet === jungleFlipNeuralEngineAvailable) return;
+  jungleFlipNeuralEngineAvailable = withNet;
+  notifyRuntimeEngineRostersChanged();
 }
 
 export function jungleFlipEngineOptions(
@@ -352,7 +386,16 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
         mountFFQBanqiPostgame(root, roomId),
       ),
-    // No watch channel or public discovery. Spectators use the gated room.
+    // The finished-game replay /games cards and /watch draw: the server's masked
+    // public postgame read, unflipped pieces face-down (watch-ffq-banqi-replay.ts).
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-ffq-banqi-replay.js').then(({ mountFFQBanqiWatchReplay }) =>
+          mountFFQBanqiWatchReplay(root, roomId, options),
+        ),
+    },
+    // Spectators use the room; the server enforces admission and masked views.
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
@@ -362,7 +405,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: ffqBanqiOffered,
       acceptsDeepLink: ffqBanqiOffered,
-      modes: ['pvp', 'pve'],
+      get modes() {
+        return isPublicGameSpec(FFQ_BANQI_SPEC_ID)
+          ? (['pvp', 'pve', 'lobby'] as const)
+          : (['pvp', 'pve'] as const);
+      },
       get engineOptions() {
         return ffqBanqiEngineOptions();
       },
@@ -408,12 +455,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      engineOptions: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
-        id: `rapfi-level-${level}`,
-        name: `Rapfi Level ${level}`,
-        familyName: 'Rapfi',
-        kind: 'browser',
-      })),
+      engineOptions: [
+        ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+          id: `rapfi-level-${level}`,
+          name: `Rapfi Level ${level}`,
+          familyName: 'Rapfi',
+          kind: 'browser',
+        })),
+        {
+          id: 'rapfi-strongest',
+          name: 'Rapfi Full strength',
+          familyName: 'Rapfi',
+          levelLabelKey: 'bots.fullStrength',
+          kind: 'container',
+        },
+      ],
       defaultEngineId: 'rapfi-level-1',
       // The picker stays unlisted. Admins have the same ?play deep-link door
       // as Three Kingdoms banqi, for a friend room or the browser bot.
@@ -767,28 +823,17 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleEnabled,
       acceptsDeepLink: jungleEnabled,
-      // Strongest first: KataGo-AnimalChess on top (2026-10, #434: it won the
-      // jungle challenge), then Misty at full strength. Misty's old three-rung
-      // ladder was collapsed on 2026-07-27 and the server REJECTS a create request
-      // naming level 1 or 3 (they stay resolvable only so finished games that
-      // recorded them still replay as PvE). Hand mirror of the server's
-      // JUNGLE_PLAYABLE_ENGINE_IDS; variant-registry-sync.test.ts asserts parity.
-      // Misty stays the default: the top seat is a challenge, not a first game.
-      engineOptions: [
-        {
-          id: 'katago-jungle',
-          name: 'KataGo',
-          familyName: 'KataGo',
-          kind: 'container',
-        },
-        {
-          id: 'misty-jungle-level-2',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'builtin',
-        },
-      ],
-      defaultEngineId: 'misty-jungle-level-2',
+      // One classical Misty ladder, with KataGo kept as a separate opponent.
+      get engineOptions() {
+        return jungleEngineOptions();
+      },
+      get defaultEngineId() {
+        return jungleEngineOptions().some(
+          (engine) => engine.id === 'misty-jungle-classical-level-4',
+        )
+          ? 'misty-jungle-classical-level-4'
+          : 'misty-jungle-level-2';
+      },
     },
   },
   {
@@ -1216,8 +1261,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Public casual Three Kingdoms Banqi. Play respects the build-time gate;
-    // the server independently admits sockets and creates. Always unrated.
+    // Public Three Kingdoms Banqi. Play respects the build-time gate;
+    // the server independently admits sockets and creates. Rated human PvP.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
@@ -1257,7 +1302,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        supportsRated: false,
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],

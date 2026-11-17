@@ -26,6 +26,7 @@
 // entirely normal and replays as nonsense.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { replayMetadataFromGame } from '../apps/web/src/xiangqi-replay-metadata.js';
 import {
   ARBITER_ADJUDICATED_DRAWS,
   applyMove,
@@ -89,10 +90,14 @@ function rename(raw) {
 const iccs = rows.map((r) => r.uci).join(' ');
 const spec = {
   iccs,
+  ...(Number.isSafeInteger(data.engine?.nodes) && data.engine.nodes > 0
+    ? { analysisNodes: data.engine.nodes }
+    : {}),
   red: rename(game.red),
   black: rename(game.black),
   event: argOf('event', game.event ?? ''),
   resultText: game.result ?? '',
+  metadata: replayMetadataFromGame(game),
   // No `engine` field: the boards stopped carrying an engine credit line when
   // it turned out to be the same sentence fifteen times down one page.
   annotations: { byPly },

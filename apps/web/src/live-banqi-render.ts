@@ -45,7 +45,7 @@ import {
   faceDownFaceSvg,
   faceDownSlotClass,
 } from './review/face-down-faces.js';
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphs, animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -402,7 +402,7 @@ export function animateBanqiBoardMove(
   const from = cellCenter(originSquare);
   const to = cellCenter(settleSquare);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphsOnLanding(host, duration);
   // A reverse step renders the prior move's marker at a different square, so
   // fading it in would not track the reverse glide.
   if (!opts.reverse) {

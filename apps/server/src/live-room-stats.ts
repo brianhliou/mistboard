@@ -10,10 +10,9 @@
 
 import { isStaleLiveRoom } from './current-games.js';
 import { isGameInPlay } from './deploy-gate.js';
-import { isFFQBanqiGame } from './ffq-banqi-access.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
-import { listedOnSurface } from './watch-channels.js';
+import { isUnlistedFFQBanqiGame, listedOnSurface } from './watch-channels.js';
 
 export interface LiveRoomStats {
   // Games genuinely in play, per the shared isGameInPlay predicate — NOT the
@@ -80,7 +79,11 @@ export function collectLiveRoomStats(
     playingBySpec[specId] = (playingBySpec[specId] ?? 0) + 1;
   };
   for (const [roomId, room] of ctx.rooms.entries()) {
-    const discoverable = !isFFQBanqiGame({ roomId, gameSpecId: room.gameSpecId });
+    const discoverable = !isUnlistedFFQBanqiGame({
+      roomId,
+      gameSpecId: room.gameSpecId,
+      timeControl: room.timeControl,
+    });
     const roomPlaying = room.projection.state.status.type === 'playing';
     // EvE (engine-vs-engine) counts as a game in play: this is an activity
     // count, not a "humans playing now" count. playingUserIds below still
@@ -106,7 +109,11 @@ export function collectLiveRoomStats(
   for (const tenant of registeredVariantTenants()) {
     const linkable = tenant.enabled() && listedOnSurface(tenant.gameSpecId);
     for (const [roomId, room] of tenant.rooms.entries()) {
-      const discoverable = !isFFQBanqiGame({ roomId, gameSpecId: tenant.gameSpecId });
+      const discoverable = !isUnlistedFFQBanqiGame({
+        roomId,
+        gameSpecId: tenant.gameSpecId,
+        timeControl: room.projection?.timeControl,
+      });
       const roomPlaying = room.projection?.state.status.type === 'playing';
       let inPlay = false;
       if (roomPlaying) {

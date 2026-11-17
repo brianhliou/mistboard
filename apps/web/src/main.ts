@@ -17,6 +17,7 @@ import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
 import { captureException, initializeAnalytics, trackLocaleResolved } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import { initializeAuthSourceTracking } from './auth-redirect.js';
 import {
   chunkLoadFailureContext,
   chunkReloadPending,
@@ -144,6 +145,7 @@ if (!isEmbedDocument)
       /* banner stays hidden; WS broadcast still covers in-game users */
     });
 
+if (!isEmbedDocument) initializeAuthSourceTracking();
 void initializeAnalytics(isEmbedDocument);
 
 const app = document.querySelector<HTMLDivElement>('#app');

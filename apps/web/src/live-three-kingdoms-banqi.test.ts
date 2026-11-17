@@ -187,7 +187,7 @@ describe('Three Kingdoms banqi live room', () => {
   );
 
   it('keeps the shared phone height budget and scrolls material inside the remaining space', () => {
-    const css = readFileSync(resolve(__dirname, 'three-kingdoms-banqi-board.css'), 'utf-8');
+    const css = readFileSync(resolve(__dirname, 'banqi-seat-panel.css'), 'utf-8');
     const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
     expect(phone).not.toContain('--phone-room-slack:');
     expect(phone).not.toMatch(/\.review-shell__center\s*\{[^}]*height:\s*auto/);

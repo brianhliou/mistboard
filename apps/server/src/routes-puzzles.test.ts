@@ -684,6 +684,7 @@ test('player puzzle listing matches exact provenance, intersects filters and wit
   const rows = [matching, other, untagged, hidden].map((data) => ({
     data,
     hidden: data.id === hidden.id,
+    position_only: false,
   }));
   resetPuzzleStoreForTests();
   init('postgres://unused@127.0.0.1:9/never');
@@ -693,7 +694,7 @@ test('player puzzle listing matches exact provenance, intersects filters and wit
   });
   t.mock.method(getPool(), 'query', async (sql: string) => {
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    if (sql.includes('SELECT data FROM puzzles')) {
+    if (sql.includes('SELECT data, position_only FROM puzzles')) {
       assert.match(sql, /WHERE hidden_reason IS NULL/);
       return { rows: rows.filter((row) => !row.hidden) };
     }

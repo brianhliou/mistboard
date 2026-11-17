@@ -14,8 +14,8 @@
 //     disagreed on `mate 0`),
 //   - analyzeXiangqiSolverPly, the ONE way a solver ply is judged: search the
 //     standalone FEN via standardXiangqiEngineFen (history-free, the position
-//     a solver actually sees) at MultiPV 2, then apply the shared
-//     winning-floor gate isXiangqiSolverMoveUnique,
+//     a solver actually sees), expanding MultiPV past immediate wins, then
+//     apply the shared winning-chance separation gate,
 //   - the gate's default knobs, so the two CLIs cannot drift on defaults.
 //
 // The gate itself (and its scalar unit tests) stays engine-free in
@@ -28,58 +28,97 @@
 // never needs a local Pikafish install.
 
 import { type ChildProcessByStdio, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { Readable, Writable } from 'node:stream';
 import {
   classifyXiangqiSolverMoveUniqueness,
-  standardXiangqiEngineFen,
-  type XiangqiGameState,
+  XIANGQI_SOLVER_GATE_DEFAULTS,
+  XIANGQI_SOLVER_SCORE_PROFILE,
   type XiangqiSolverUniquenessOptions,
   type XiangqiUciScore,
   type XiangqiVerifyLine,
+  xiangqiSolverMoveCoverage,
   xiangqiUciScoreToCp,
-} from '../../packages/game/src/index.ts';
+} from '../../packages/game/src/puzzles-xiangqi-mining.ts';
+import type { XiangqiGameState } from '../../packages/game/src/variants-xiangqi.ts';
+import { standardXiangqiEngineFen } from '../../packages/game/src/xiangqi-position.ts';
 
 // ── Shared gate defaults ─────────────────────────────────────────────────────
 
-/** Default winning-floor gate knobs, shared by the miner's and the audit's CLI
- *  so their defaults cannot drift apart. winHi 0.80 ~ +240cp and winLo 0.60 ~
- *  +70cp on the K=400 logistic (xiangqiWinRate). */
-export const XIANGQI_SOLVER_GATE_DEFAULTS: XiangqiSolverUniquenessOptions = {
-  winHi: 0.8,
-  winLo: 0.6,
-  minGapCp: 200,
-};
+// Defaults live beside the pure gate so every caller shares the same scale.
+export { XIANGQI_SOLVER_GATE_DEFAULTS };
 
 // ── UCI `info` line parsing ──────────────────────────────────────────────────
 
 /** One MultiPV line of a completed search: raw UCI score (side-to-move POV,
  *  exactly one of cp/mate set) plus the full PV move-token list. */
-export type XiangqiScoredLine = { rank: number; score: XiangqiUciScore; pvUci: string[] };
+export type XiangqiScoredLine = {
+  rank: number;
+  score: XiangqiUciScore;
+  pvUci: string[];
+  depth?: number;
+  nodes?: number;
+};
 
 const MULTIPV_RE = /\bmultipv (\d+)\b/;
 const SCORE_RE = /\bscore (cp|mate) (-?\d+)\b/;
 const PV_RE = /\bpv (.+)$/;
 
-/** Keep only the last `info` line per multipv rank (the deepest completed
- *  one), sorted by rank. Scores stay raw: fold mates onto the cp axis with
- *  xiangqiScoredLineToVerifyLine / xiangqiUciScoreToCp, never locally. */
-export function parseXiangqiScoredLines(lines: readonly string[]): XiangqiScoredLine[] {
-  const byRank = new Map<number, XiangqiScoredLine>();
+/** Compare one complete MultiPV output snapshot. Pikafish prints ranks 1..N
+ * together, but an interrupted update can mix depths, reorder moves and emit
+ * bounds. Never join ranks across updates: that can invent a common depth and
+ * even duplicate a root move. Keep the deepest complete exact snapshot. */
+export function parseXiangqiScoredLines(
+  lines: readonly string[],
+  expectedRanks?: number,
+): XiangqiScoredLine[] {
+  const count =
+    expectedRanks ??
+    Math.max(
+      0,
+      ...lines
+        .filter((line) => line.startsWith('info ') && SCORE_RE.test(line) && PV_RE.test(line))
+        .map((line) => Number(MULTIPV_RE.exec(line)?.[1] ?? '1')),
+    );
+  if (count < 1) return [];
+  let snapshot: XiangqiScoredLine[] = [];
+  let exact = true;
+  let best: XiangqiScoredLine[] = [];
   for (const line of lines) {
     if (!line.startsWith('info ')) continue;
     const score = SCORE_RE.exec(line);
     const pv = PV_RE.exec(line);
-    if (!score || !pv) continue;
+    const depth = /\bdepth (\d+)/.exec(line);
+    if (!score || !pv || !depth) continue;
     const rank = Number(MULTIPV_RE.exec(line)?.[1] ?? '1');
-    const kind = score[1];
+    if (rank === 1) {
+      snapshot = [];
+      exact = true;
+    }
+    if (rank !== snapshot.length + 1) {
+      snapshot = [];
+      continue;
+    }
+    exact &&= !/\b(?:lowerbound|upperbound)\b/.test(line);
     const value = Number(score[2]);
-    byRank.set(rank, {
+    snapshot.push({
       rank,
-      score: kind === 'mate' ? { cp: null, mate: value } : { cp: value, mate: null },
+      score: score[1] === 'mate' ? { cp: null, mate: value } : { cp: value, mate: null },
       pvUci: pv[1]!.trim().split(/\s+/),
+      depth: Number(depth[1]),
+      nodes: Number(/\bnodes (\d+)/.exec(line)?.[1] ?? 0),
     });
+    if (
+      snapshot.length === count &&
+      exact &&
+      snapshot.every((entry) => entry.depth === snapshot[0]!.depth) &&
+      new Set(snapshot.map((entry) => entry.pvUci[0])).size === count &&
+      (snapshot[0]!.depth ?? 0) >= (best[0]?.depth ?? 0)
+    )
+      best = [...snapshot];
   }
-  return [...byRank.values()].sort((a, b) => a.rank - b.rank);
+  return best;
 }
 
 /** Normalize a parsed line to the gate's input shape via the SHARED
@@ -97,15 +136,15 @@ export function xiangqiScoredLineToVerifyLine(
 
 // ── Engine driver ────────────────────────────────────────────────────────────
 
-/** Search budget: at least one of depth/nodes. A depth floor (not just a node
- *  cap) keeps best-vs-second ordering stable: too-low search mis-orders the
- *  top moves and makes the uniqueness gap lie. */
-export type XiangqiSearchLimits = { depth?: number; nodes?: number };
+/** Search stops at the first reached limit. Depth is a target, not a minimum
+ * when combined with a node/time cap; callers must inspect completed depth. */
+export type XiangqiSearchLimits = { depth?: number; nodes?: number; movetimeMs?: number };
 
 function goCommand(limits: XiangqiSearchLimits): string {
   const parts = ['go'];
   if (limits.depth) parts.push(`depth ${limits.depth}`);
   if (limits.nodes) parts.push(`nodes ${limits.nodes}`);
+  if (limits.movetimeMs) parts.push(`movetime ${limits.movetimeMs}`);
   if (parts.length === 1) throw new Error('XiangqiSearchLimits needs depth and/or nodes');
   return parts.join(' ');
 }
@@ -126,8 +165,23 @@ export class PikafishEngine {
   } | null = null;
   #multipv = 1;
   net: string;
+  lastSearch?: {
+    limits: XiangqiSearchLimits;
+    multipv: number;
+    elapsedMs: number;
+    rawInfo: string[];
+  };
 
-  constructor(binary: string, net: string) {
+  constructor(
+    binary: string,
+    net: string,
+    readonly hashMb = 16,
+  ) {
+    if (
+      createHash('sha256').update(readFileSync(net)).digest('hex') !==
+      XIANGQI_SOLVER_SCORE_PROFILE.networkSha256
+    )
+      throw new Error('Puzzle score calibration requires the pinned CC0 network');
     this.#proc = spawn(binary, [], { stdio: ['pipe', 'pipe', 'ignore'] });
     this.#proc.stdout.setEncoding('utf8');
     this.#proc.stdout.on('data', (chunk: string) => this.#onData(chunk));
@@ -169,23 +223,35 @@ export class PikafishEngine {
     await this.#request(['uci'], (l) => l === 'uciok');
     // Mainline Pikafish requires an absolute NNUE EvalFile (same setoption the
     // server engine path sends in xiangqi-pikafish-engine.ts).
-    await this.#request([`setoption name EvalFile value ${this.net}`, 'isready'], (l) =>
-      l.startsWith('readyok'),
+    await this.#request(
+      [
+        'setoption name Threads value 1',
+        `setoption name Hash value ${this.hashMb}`,
+        `setoption name EvalFile value ${this.net}`,
+        'isready',
+      ],
+      (l) => l.startsWith('readyok'),
     );
   }
 
   async newGame(): Promise<void> {
-    await this.#request(['ucinewgame', 'isready'], (l) => l.startsWith('readyok'));
+    await this.#request(['ucinewgame', 'setoption name Clear Hash', 'isready'], (l) =>
+      l.startsWith('readyok'),
+    );
   }
 
-  #search(position: string, limits: XiangqiSearchLimits, multipv: number): Promise<string[]> {
+  async #search(position: string, limits: XiangqiSearchLimits, multipv: number): Promise<string[]> {
     const cmds: string[] = [];
     if (multipv !== this.#multipv) {
       cmds.push(`setoption name MultiPV value ${multipv}`);
       this.#multipv = multipv;
     }
     cmds.push(position, goCommand(limits));
-    return this.#request(cmds, (l) => l.startsWith('bestmove'));
+    const started = Date.now();
+    this.lastSearch = undefined;
+    const rawInfo = await this.#request(cmds, (l) => l.startsWith('bestmove'));
+    this.lastSearch = { limits: { ...limits }, multipv, elapsedMs: Date.now() - started, rawInfo };
+    return rawInfo;
   }
 
   /** Analyze a game-history position (`position startpos moves ...`). The
@@ -197,7 +263,7 @@ export class PikafishEngine {
   ): Promise<XiangqiScoredLine[]> {
     const position =
       movesUci.length > 0 ? `position startpos moves ${movesUci.join(' ')}` : 'position startpos';
-    return parseXiangqiScoredLines(await this.#search(position, limits, multipv));
+    return parseXiangqiScoredLines(await this.#search(position, limits, multipv), multipv);
   }
 
   /** Analyze a standalone position (`position fen ...`), history-free. This is
@@ -209,7 +275,10 @@ export class PikafishEngine {
     limits: XiangqiSearchLimits,
     multipv: number,
   ): Promise<XiangqiScoredLine[]> {
-    return parseXiangqiScoredLines(await this.#search(`position fen ${fen}`, limits, multipv));
+    return parseXiangqiScoredLines(
+      await this.#search(`position fen ${fen}`, limits, multipv),
+      multipv,
+    );
   }
 
   kill(): void {
@@ -238,10 +307,11 @@ export type XiangqiSolverPlyAnalysis = {
   /** Normalized best / runner-up, solver POV (gate inputs). */
   best: XiangqiVerifyLine | undefined;
   second: XiangqiVerifyLine | undefined;
-  /** The shared winning-floor gate's verdict on this ply. */
+  /** The shared separation gate's verdict on this ply. */
   unique: boolean;
   /** Structured reason for metrics/audit output, including deterministic near ties. */
   reason: ReturnType<typeof classifyXiangqiSolverMoveUniqueness>['reason'];
+  moveCoverage: ReturnType<typeof xiangqiSolverMoveCoverage>;
 };
 
 /** Judge one solver ply the ONE canonical way, shared by the miner's verify
@@ -254,15 +324,27 @@ export async function analyzeXiangqiSolverPly(
   state: XiangqiGameState,
   limits: XiangqiSearchLimits,
   gate: XiangqiSolverUniquenessOptions,
+  minimumMultiPv = 2,
 ): Promise<XiangqiSolverPlyAnalysis> {
   // Every solver position must start with a fresh hash. The gated re-mine's
   // four residual near-ties came from two processes giving boundary positions
   // different hash/history context. Clearing here makes miner and later audit
   // searches independent and apples-to-apples.
   await engine.newGame();
-  const lines = await engine.analyzeFen(standardXiangqiEngineFen(state), limits, 2);
+  const moveCoverage = xiangqiSolverMoveCoverage(state);
+  const lines = await engine.analyzeFen(
+    standardXiangqiEngineFen(state),
+    limits,
+    Math.min(moveCoverage.legalMoveCount, Math.max(minimumMultiPv, moveCoverage.requiredMultiPv)),
+  );
   const best = xiangqiScoredLineToVerifyLine(lines[0]);
   const second = xiangqiScoredLineToVerifyLine(lines[1]);
-  const verdict = classifyXiangqiSolverMoveUniqueness(best, second, gate);
-  return { lines, best, second, unique: verdict.unique, reason: verdict.reason };
+  const normalized = lines
+    .map(xiangqiScoredLineToVerifyLine)
+    .filter((line): line is XiangqiVerifyLine => line !== undefined);
+  const verdict = classifyXiangqiSolverMoveUniqueness(best, second, gate, {
+    lines: normalized,
+    legalMoveCount: moveCoverage.legalMoveCount,
+  });
+  return { lines, best, second, unique: verdict.unique, reason: verdict.reason, moveCoverage };
 }

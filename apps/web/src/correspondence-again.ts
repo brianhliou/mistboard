@@ -25,6 +25,7 @@ import {
   finishedGameDaysPerMove,
   finishedGameViewerSeat,
 } from './challenge-model.js';
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { rememberCorrespondenceStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
@@ -69,6 +70,8 @@ export function correspondenceAgainButton(
   button.dataset.correspondenceAgain = '';
   button.textContent = t('live.correspondenceAgain');
   let sending = false;
+  const owedStatus = document.createElement('span');
+  owedStatus.setAttribute('role', 'status');
   button.addEventListener('click', () => {
     if (sending) return;
     const body = correspondenceAgainRequestBody(offer, webVariantOfferedInMenu);
@@ -77,6 +80,7 @@ export function correspondenceAgainButton(
       return;
     }
     sending = true;
+    owedStatus.hidden = true;
     button.disabled = true;
     button.textContent = t('live.correspondenceAgainSending');
     const fail = (text: string) => {
@@ -90,10 +94,12 @@ export function correspondenceAgainButton(
       body: JSON.stringify(body),
     })
       .then(async (res) => {
-        const json = (await res.json().catch(() => null)) as {
-          challengeUrl?: string | null;
-          error?: string;
-        } | null;
+        const json = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string | null;
+              error?: string;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && json?.challengeUrl) {
           rememberCorrespondenceStartSource(
             context.surface === 'review' ? 'review-correspondence' : 'postgame-correspondence',
@@ -106,6 +112,11 @@ export function correspondenceAgainButton(
             surface: context.surface,
           });
           window.location.assign(json.challengeUrl);
+          return;
+        }
+        if (renderFirstMoveOwed(owedStatus, json)) {
+          button.insertAdjacentElement('afterend', owedStatus);
+          fail(t('live.correspondenceAgain'));
           return;
         }
         fail(correspondenceAgainErrorText(res.status, json?.error, offer.opponentHandle));

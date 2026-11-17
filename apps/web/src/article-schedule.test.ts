@@ -6,9 +6,13 @@ import { articles } from './articles-data.js';
 // week, not seven; the four already dated 10-12 to 10-16 keep their days). When an article is ready, date it into the next free slot;
 // a future date goes live on its own at 09:00 Pacific (articles/publish-time.ts),
 // so spreading them out costs no extra ship. News entries are not limited.
+// From 2026-11-11 Wednesday is a third slot (decided 2026-11-11: the site was
+// already averaging about 2.5 a week through exceptions, and ready articles were
+// queuing nine days out); still at most one a day.
 // Dates before each rule are history and are left alone.
 const ONE_A_DAY_FROM = '2026-10-10';
 const TUESDAY_FRIDAY_FROM = '2026-10-17';
+const WEDNESDAY_FROM = '2026-11-11';
 // Off-day dates Brian approved one at a time, with the day and his reason. Each
 // still counts against the one-a-day test.
 const OFF_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {
@@ -42,6 +46,11 @@ function weekday(day: string): number {
   return new Date(`${day}T12:00:00Z`).getUTCDay();
 }
 
+function isSlotDay(day: string): boolean {
+  const d = weekday(day);
+  return d === 2 || d === 5 || (d === 3 && day >= WEDNESDAY_FROM);
+}
+
 describe('article schedule', () => {
   it('puts at most one published article on each day', () => {
     const byDay = new Map<string, string[]>();
@@ -50,14 +59,21 @@ describe('article schedule', () => {
       byDay.set(day, [...(byDay.get(day) ?? []), slug]);
     }
     const crowded = [...byDay].filter(([, slugs]) => slugs.length > 1);
-    expect(crowded, 'move all but one to the next free Tuesday or Friday').toEqual([]);
+    expect(crowded, 'move all but one to the next free Tuesday, Wednesday or Friday').toEqual([]);
   });
 
-  it('publishes only on a Tuesday or a Friday', () => {
+  it('publishes only on a Tuesday, Wednesday or Friday', () => {
     const offDay = publishedDays(TUESDAY_FRIDAY_FROM).filter(
-      ([slug, day]) => weekday(day) !== 2 && weekday(day) !== 5 && OFF_DAY_EXCEPTIONS[slug] !== day,
+      ([slug, day]) => !isSlotDay(day) && OFF_DAY_EXCEPTIONS[slug] !== day,
     );
-    expect(offDay, 'date it the next free Tuesday or Friday').toEqual([]);
+    expect(offDay, 'date it the next free Tuesday, Wednesday or Friday').toEqual([]);
+  });
+
+  it('opens Wednesday from 2026-11-11 only', () => {
+    expect(isSlotDay('2026-11-18')).toBe(true);
+    expect(isSlotDay('2026-11-04')).toBe(false);
+    expect(isSlotDay('2026-11-19')).toBe(false);
+    expect(isSlotDay('2026-11-17')).toBe(true);
   });
 
   it('reads weekdays from the calendar date, not the local clock', () => {

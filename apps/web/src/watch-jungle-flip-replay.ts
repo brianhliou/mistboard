@@ -53,6 +53,7 @@ export function mountJungleFlipWatchReplay(
     JungleFlipPlayerView,
     JungleFlipWatchViewKey
   >(root, roomId, options, {
+    variant: 'jungle-flip',
     installStyles: () => {},
     loadPostgame: loadJungleFlipPostgame,
     maxPly: replayMaxPly,

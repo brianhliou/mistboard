@@ -133,7 +133,7 @@ export function relatedClosing(opts: {
 
 export function playClosing(opts: {
   heading: string;
-  lead: string;
+  lead?: string;
   playLabel: string;
   playHref: string;
   secondary?: CtaButton[];
@@ -142,7 +142,7 @@ export function playClosing(opts: {
   return {
     heading: opts.heading,
     blocks: [
-      { kind: 'paragraph', text: opts.lead },
+      ...(opts.lead ? [{ kind: 'paragraph' as const, text: opts.lead }] : []),
       {
         kind: 'cta',
         buttons: [

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import test from 'node:test';
-import { GAME_SPECS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import { GAME_SPECS, gameSpecForId, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { gomokuRooms } from './gomoku-registration.js';
@@ -218,17 +218,23 @@ const FFQ_SELECTORS = [
   { gameSpecId: 'unknown', variant: 'ffq-banqi' },
 ];
 
-for (const registered of [false, true]) {
+const ffqRegistrations = (['hidden', 'casual'] as const).flatMap((surface) =>
+  [false, true].map((registered) => ({ surface, registered })),
+);
+for (const { surface, registered } of ffqRegistrations) {
   for (const flag of [undefined, false, true]) {
     for (const accountRole of [null, 'player', 'admin'] as const) {
-      test(`FFQ selectors: registered=${registered}, flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
+      test(`FFQ selectors: surface=${surface}, registered=${registered}, flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
+        const spec = gameSpecForId('ffq-banqi');
+        const priorSurface = spec.publicSurface;
+        spec.publicSurface = surface;
         const registration = variantTenantForSpecId('ffq-banqi');
         assert.ok(registration);
         const original = registration.gameSpecId;
         if (!registered) registration.gameSpecId = 'test-missing-ffq';
         try {
           withFlag('MISTBOARD_FFQ_BANQI_ENABLED', flag, () => {
-            const enabled = flag === true && accountRole === 'admin';
+            const enabled = flag === true && (surface === 'casual' || accountRole === 'admin');
             for (const input of FFQ_SELECTORS) {
               assert.deepEqual(
                 gateGameSpecRequest(input, accountRole ? { accountRole } : null),
@@ -246,6 +252,7 @@ for (const registered of [false, true]) {
           });
         } finally {
           registration.gameSpecId = original;
+          spec.publicSurface = priorSurface;
         }
       });
     }

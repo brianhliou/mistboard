@@ -1,4 +1,4 @@
-import { FFQ_BANQI_SPEC_ID } from '@mistboard/game';
+import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import type { UserAccount } from './persistence.js';
 
@@ -6,7 +6,6 @@ import type { UserAccount } from './persistence.js';
 // registration must never turn an FFQ connection into a chess room.
 export const FFQ_BANQI_ROOM_ID_PREFIX = 'ffq_';
 
-// Discovery never advertises the playtest, even to admins with the flag on.
 // The reserved prefix also protects rows without variant metadata; the spec
 // protects persisted legacy ids until every room is minted with that prefix.
 export function isFFQBanqiGame(game: {
@@ -21,9 +20,19 @@ export function isFFQBanqiGame(game: {
   );
 }
 
-// Every FFQ door requires BOTH the runtime flag and an admin account, in
-// local development as well as production. There is no flag-only bypass.
+// Play admission follows publicSurface; admins may test while it is hidden.
+// The runtime flag remains a kill switch for live and casual correspondence.
 export function ffqBanqiAdmits(accountUser: Pick<UserAccount, 'accountRole'> | null): boolean {
+  return (
+    ffqBanqiEnabled() &&
+    (gameSpecForId(FFQ_BANQI_SPEC_ID).publicSurface !== 'hidden' ||
+      accountUser?.accountRole === 'admin')
+  );
+}
+
+// Insider reads stay flag + admin only, independently of play admission.
+// Decided 2026-11-15 (#994): casual correspondence follows ffqBanqiAdmits.
+export function ffqBanqiInsider(accountUser: Pick<UserAccount, 'accountRole'> | null): boolean {
   return ffqBanqiEnabled() && accountUser?.accountRole === 'admin';
 }
 

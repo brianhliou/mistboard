@@ -15,6 +15,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   GOMOKU_SPEC_ID,
@@ -26,6 +27,7 @@ import {
   maybeGameSpecForId,
   type RatingVariant,
   ratingPoolForSpec,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -37,6 +39,7 @@ import {
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
+  threeKingdomsBanqiEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -66,6 +69,8 @@ const crazyhouseXiangqiOn = crazyhouseXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
+const threeKingdomsBanqiOn =
+  isPublicGameSpec(THREE_KINGDOMS_BANQI_SPEC_ID) && threeKingdomsBanqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
@@ -111,7 +116,7 @@ export const VARIANT_MINI_BY_GAME_SPEC: Readonly<Record<GameSpecId, VariantMiniI
   [XIANGQI_MAHJONG_SPEC_ID]: 'xiangqi-mahjong',
   // Behind a server flag and a per-account grant; no variant surface shows it.
   mahjong: null,
-  // Public casual variant: its marker is available without a rating row.
+  // Shared by play and rating surfaces.
   'three-kingdoms-banqi': 'three-kingdoms-banqi',
   // Study-only (game-specs.ts): never playable, so never a variant marker.
   chess: null,
@@ -159,6 +164,16 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: banqiOn,
     onProfile: banqiOn,
+  },
+  {
+    id: currentRatingVariantForSpec(THREE_KINGDOMS_BANQI_SPEC_ID),
+    gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+    apiParam: THREE_KINGDOMS_BANQI_SPEC_ID,
+    label: gameSpecForId(THREE_KINGDOMS_BANQI_SPEC_ID).publicName,
+    miniId: 'three-kingdoms-banqi',
+    enabled: false,
+    onLeaderboard: threeKingdomsBanqiOn,
+    onProfile: threeKingdomsBanqiOn,
   },
   // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
   // rating-ready on the same terms as Fortress; the lobby seek stays unrated
@@ -288,6 +303,16 @@ export const leaderboardVariants = VARIANTS.filter((v) => v.onLeaderboard);
 
 /** Variants shown on subject-scoped profile rating surfaces. */
 export const profileRatingVariants = VARIANTS.filter((v) => v.onProfile);
+
+// Profile activity can exist without a rating pool. Keep this registry apart
+// from VARIANTS so casual-only games never reach ladders or champion crowns.
+export const profileActivityVariants = [
+  {
+    id: FFQ_BANQI_SPEC_ID,
+    gameSpecId: FFQ_BANQI_SPEC_ID,
+    miniId: 'ffq-banqi' as const,
+  } as const,
+].filter((v) => isPublicGameSpec(v.gameSpecId));
 
 /** Variants selectable in the lobby. */
 export const enabledVariants = VARIANTS.filter((v) => v.enabled);

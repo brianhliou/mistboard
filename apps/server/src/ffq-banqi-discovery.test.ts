@@ -1,28 +1,43 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import test from 'node:test';
-import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
+import test, { afterEach, beforeEach } from 'node:test';
+import {
+  createFFQBanqiDeal,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  FFQ_BANQI_SPEC_ID,
+  type FFQBanqiMove,
+  gameSpecForId,
+} from '@mistboard/game';
 import { collectCurrentGames } from './current-games.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiRooms } from './ffq-banqi-registration.js';
+import { type FFQBanqiEvent, ffqBanqiTenant } from './ffq-banqi-tenant.js';
+import { ffqBanqiLiveWatchPayloadFor } from './routes/ffq-banqi-games.js';
+import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import './variant-tenant/register-tenants.js';
 import { collectLiveRoomStats } from './live-room-stats.js';
 import { onlineFollowingRows } from './online-following.js';
 import { close, getPool, init } from './persistence-db.js';
+import { listRecentPublicGames } from './persistence-games.js';
 import { filterReplayableGames, markUnavailableGames } from './replayable-games.js';
 import { clearWatchInitialReplayCache, tryHandle } from './routes/games.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard } from './server-policy.js';
 import { registeredVariantTenants, type TenantManagedRoom } from './variant-tenant/registry.js';
 import { listedOnSurface, listWatchChannels, watchChannelForId } from './watch-channels.js';
-import {
-  collectLiveTvCandidates,
-  liveWatchPayloadForFeatured,
-  registerLiveWatchPayloadBuilder,
-} from './watch-live.js';
+import { collectLiveTvCandidates, liveWatchPayloadForFeatured } from './watch-live.js';
 import { clearWatchRailCache } from './watch-rail-cache.js';
 
 const FLAG = 'MISTBOARD_FFQ_BANQI_ENABLED';
+const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+const originalSurface = spec.publicSurface;
+// These prelaunch fixtures intentionally exercise the hidden state.
+beforeEach(() => {
+  spec.publicSurface = 'hidden';
+});
+afterEach(() => {
+  spec.publicSurface = originalSurface;
+});
 const ROOM = 'ffq_discovery';
 const SECRET = 'FFQ-CANONICAL-SETUP-MUST-NOT-REACH-DISCOVERY';
 const now = 1_800_000_000_000;
@@ -100,14 +115,11 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
   const registration = registeredVariantTenants().find(
     (entry) => entry.gameSpecId === FFQ_BANQI_SPEC_ID,
   )!;
-  for (const capability of ['watch', 'lobby', 'export', 'card'] as const)
+  assert.equal(registration.lobby, null);
+  assert.equal(registration.watch?.channelId, FFQ_BANQI_SPEC_ID);
+  for (const capability of ['export', 'card'] as const)
     assert.equal(registration[capability], null, capability);
   t.after(() => rooms.clear());
-  let built = 0;
-  registerLiveWatchPayloadBuilder(FFQ_BANQI_SPEC_ID, async () => {
-    built += 1;
-    return { setup: SECRET };
-  });
   assert.equal(canServeLiveBoard(FFQ_BANQI_SPEC_ID), true, 'the public mask remains valid');
   assert.equal(listedOnSurface(FFQ_BANQI_SPEC_ID), false);
   assert.equal(watchChannelForId(FFQ_BANQI_SPEC_ID), null);
@@ -145,13 +157,22 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
     } as Parameters<typeof liveWatchPayloadForFeatured>[0]),
     null,
   );
-  assert.equal(built, 0, 'even a stale election cannot invoke the FFQ payload builder');
 
   const spec = gameSpecForId(FFQ_BANQI_SPEC_ID) as { publicSurface: string };
   const surface = spec.publicSurface;
   spec.publicSurface = 'casual';
   try {
-    assert.equal(listedOnSurface(FFQ_BANQI_SPEC_ID), false, 'exclusion is permanent');
+    assert.equal(listedOnSurface(FFQ_BANQI_SPEC_ID), true);
+    assert.equal(watchChannelForId(FFQ_BANQI_SPEC_ID)?.label, 'Fanfanqi');
+    for (const channel of ['top', 'engines'])
+      assert.ok(watchChannelForId(channel)?.legacyVariants.includes(FFQ_BANQI_SPEC_ID));
+    assert.equal(collectCurrentGames(ctx, now)[0]?.roomId, ROOM);
+    const launched = collectLiveRoomStats(ctx, now);
+    assert.equal(launched.playingBySpec[FFQ_BANQI_SPEC_ID], 1);
+    assert.equal(launched.playingRoomByUserId.get('admin-red'), ROOM);
+    process.env[FLAG] = 'false';
+    assert.equal(watchChannelForId(FFQ_BANQI_SPEC_ID), null);
+    assert.deepEqual(collectCurrentGames(ctx, now), []);
   } finally {
     spec.publicSurface = surface;
   }
@@ -235,4 +256,194 @@ test('FFQ never seeds initial watch replay or leaks through serialized public li
       }
     }
   }
+});
+
+function roomFor(
+  setup: ReturnType<typeof createFFQBanqiDeal>,
+  correspondence = false,
+  finished = false,
+) {
+  const moves: FFQBanqiMove[] = Array.from({ length: 32 }, (_, index) => index)
+    .filter((index) => !(FFQ_BANQI_FACE_UP_SQUARES as readonly number[]).includes(index))
+    .slice(0, 8)
+    .map((index) => ({ from: index, to: index }));
+
+  const events: FFQBanqiEvent[] = [
+    {
+      type: 'room-created',
+      at: now - 60_000,
+      roomId: ROOM,
+      gameSpecId: FFQ_BANQI_SPEC_ID,
+      setup: { deal: setup },
+      timeControl: {
+        initialMs: correspondence ? 259_200_000 : 300_000,
+        incrementMs: correspondence ? 0 : 5_000,
+        ...(correspondence ? { daysPerMove: 3 } : {}),
+      },
+    },
+    { type: 'seat-assigned', at: now - 59_000, roomId: ROOM, clientId: 'r', seat: 'red' },
+    { type: 'seat-assigned', at: now - 58_000, roomId: ROOM, clientId: 'b', seat: 'black' },
+    ...moves.map(
+      (move, index): FFQBanqiEvent => ({
+        type: 'move-played',
+        at: now - 9_000 + index * 1_000,
+        roomId: ROOM,
+        color: index % 2 === 0 ? 'red' : 'black',
+        move,
+      }),
+    ),
+  ];
+  if (finished) events.push({ type: 'seat-resigned', roomId: ROOM, color: 'black', at: now });
+  const created = createTenantRuntimeRoomFromEvents(ffqBanqiTenant, events);
+  assert.ok(created.ok);
+  return created.room;
+}
+
+test('launched FFQ discovery lists correspondence while live TV stays masked and live-only', async (t) => {
+  const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+  const surface = spec.publicSurface;
+  const flag = process.env[FLAG];
+  spec.publicSurface = 'casual';
+  process.env[FLAG] = 'true';
+  t.after(() => {
+    spec.publicSurface = surface;
+    if (flag === undefined) delete process.env[FLAG];
+    else process.env[FLAG] = flag;
+    ffqBanqiRooms.clear();
+  });
+  const deal = createFFQBanqiDeal(800);
+  const swapped = [...deal];
+  const i = 24;
+  const j = swapped.findIndex(
+    (piece, index) =>
+      !FFQ_BANQI_FACE_UP_SQUARES.includes(index as 6) &&
+      index > i &&
+      JSON.stringify(piece) !== JSON.stringify(deal[i]),
+  );
+  assert.ok(j > i);
+  [swapped[i], swapped[j]] = [swapped[j], swapped[i]];
+  const room = roomFor(deal);
+  const payload = ffqBanqiLiveWatchPayloadFor(ROOM, room);
+  assert.ok(payload);
+  const serialized = JSON.stringify(payload);
+  assert.equal(serialized, JSON.stringify(ffqBanqiLiveWatchPayloadFor(ROOM, roomFor(swapped))));
+  JSON.parse(serialized, (key, value) => {
+    assert.ok(!['setup', 'deal', 'seed'].includes(key));
+    if (value && typeof value === 'object' && value.faceDown === true)
+      assert.deepEqual(value, { faceDown: true });
+    return value;
+  });
+  ffqBanqiRooms.set(ROOM, room);
+  assert.equal(collectCurrentGames(ctx, now)[0]?.roomId, ROOM);
+  const candidate = collectLiveTvCandidates(ctx, now)[0];
+  assert.ok(candidate);
+  assert.deepEqual(await liveWatchPayloadForFeatured(candidate), payload);
+  const rows = [{ roomId: ROOM, variant: FFQ_BANQI_SPEC_ID }];
+  const deps = {
+    registrationForRoomId: () => ({ replays: () => true }),
+    loadRoomsEvents: async () => new Map([[ROOM, room.events]]),
+    gamePageUrl: () => `/ffq-banqi/game/${ROOM}`,
+  };
+  assert.deepEqual(await filterReplayableGames(rows, deps), rows);
+  assert.deepEqual(await markUnavailableGames(rows, deps), rows);
+  const correspondence = roomFor(deal, true);
+  ffqBanqiRooms.set(ROOM, correspondence);
+  assert.equal(ffqBanqiLiveWatchPayloadFor(ROOM, correspondence), null);
+  assert.equal(collectCurrentGames(ctx, now)[0]?.roomId, ROOM);
+  assert.equal(collectCurrentGames(ctx, now)[0]?.timeClass, 'correspondence');
+  assert.deepEqual(collectLiveTvCandidates(ctx, now), []);
+  assert.equal(collectLiveRoomStats(ctx, now).playing, 1);
+  assert.deepEqual(
+    await filterReplayableGames([{ ...rows[0]!, timeControl: { daysPerMove: 3 } }], deps),
+    [{ ...rows[0]!, timeControl: { daysPerMove: 3 } }],
+  );
+  process.env[FLAG] = 'false';
+  assert.equal(ffqBanqiLiveWatchPayloadFor(ROOM, room), null);
+});
+
+test('finished public FFQ correspondence lists the whole summary without covered identities', async (t) => {
+  spec.publicSurface = 'casual';
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(() => close());
+  t.mock.method(getPool(), 'connect', () => assert.fail('unexpected database connection'));
+  const deal = createFFQBanqiDeal(800);
+  const swapped = [...deal];
+  const i = 24;
+  const j = swapped.findIndex(
+    (piece, index) =>
+      index > i &&
+      !(FFQ_BANQI_FACE_UP_SQUARES as readonly number[]).includes(index) &&
+      JSON.stringify(piece) !== JSON.stringify(deal[i]),
+  );
+  assert.ok(j > i);
+  [swapped[i], swapped[j]] = [swapped[j], swapped[i]];
+  const rooms = [roomFor(deal, true, true), roomFor(swapped, true, true)];
+  let current = rooms[0]!;
+  const registration = registeredVariantTenants().find(
+    (entry) => entry.gameSpecId === FFQ_BANQI_SPEC_ID,
+  )!;
+  const deps = {
+    registrationForRoomId: () => registration,
+    loadRoomsEvents: async () => new Map([[ROOM, current.events]]),
+    gamePageUrl: () => `/ffq-banqi/game/${ROOM}`,
+  };
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('FROM game_participants')) return { rows: [] };
+    assert.ok(sql.includes('FROM games'), sql);
+    assert.match(sql, /games.visibility = 'public'/);
+    return {
+      rows: [
+        {
+          room_id: ROOM,
+          variant: FFQ_BANQI_SPEC_ID,
+          mode: 'pvp',
+          result: 'red-wins',
+          termination: 'resignation',
+          ply_count: 8,
+          started_at: new Date(now - 60_000),
+          ended_at: new Date(now),
+          white_name: 'Red',
+          black_name: 'Black',
+          corpus_id: null,
+          rated: false,
+          visibility: 'public',
+          initial_ms: 259_200_000,
+          increment_ms: 0,
+          job_id: null,
+          game_index: null,
+          white_engine_id: null,
+          black_engine_id: null,
+          time_control: current.projection.timeControl,
+        },
+      ],
+    };
+  });
+  const outputs: string[] = [];
+  const profileOutputs: string[] = [];
+  for (const room of rooms) {
+    current = room;
+    assert.notEqual(room.projection.state.status.type, 'playing');
+    assert.equal(room.projection.state.board[i]?.faceDown, true);
+    assert.equal(room.projection.state.board[j]?.faceDown, true);
+    const rows = await listRecentPublicGames();
+    const listed = await filterReplayableGames(rows, deps);
+    assert.equal(listed.length, 1, 'finished public correspondence must be listed');
+    const profile = await markUnavailableGames(rows, deps);
+    assert.equal(profile.length, 1);
+    profileOutputs.push(JSON.stringify(profile));
+    // Serialize the actual complete list result, with no field picking or redaction.
+    const serialized = JSON.stringify(listed);
+    assert.doesNotMatch(serialized, /"(?:setup|deal|seed|piece|role|board)"/);
+    outputs.push(serialized);
+    spec.publicSurface = 'hidden';
+    assert.deepEqual(
+      await filterReplayableGames(rows, deps),
+      [],
+      'the same game stays unlisted before launch',
+    );
+    assert.deepEqual(await markUnavailableGames(rows, deps), []);
+    spec.publicSurface = 'casual';
+  }
+  assert.equal(outputs[0], outputs[1], 'swapping covered pieces cannot change a listed row');
+  assert.deepEqual(profileOutputs, outputs, 'profile summaries share the same safe list rows');
 });

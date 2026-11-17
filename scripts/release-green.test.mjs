@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { retryHostedCi, waitForExactCi } from './lib/ci-flake-retry.mjs';
 
 const { test } = process.env.VITEST ? await import('vitest') : await import('node:test');
 
@@ -17,6 +18,8 @@ function declaration(name, text = source) {
 
 // Execute the real release orchestration, replacing only its external effects.
 // Nothing invokes git, gh, production, the keychain, or a real drain here.
+// Routine releases supply prior green evidence through the batch lookup seam.
+// Only fresh-candidate CI scenarios explicitly use the emergency path.
 async function releaseScenario({
   ciError,
   liveGames = 1,
@@ -25,13 +28,18 @@ async function releaseScenario({
   ciRequired = true,
   localCi = false,
   branchError = false,
-  batchRun = null,
+  batchRun = { headSha: HEAD, status: 'completed', conclusion: 'success' },
+  extraShip = null,
+  mergeDuringGate = false,
+  recoveredRun = null,
 } = {}) {
   const events = [];
   const pushes = [];
+  const errors = [];
   const release = { adopted: [], drainOwner: 'test-owner', stages: [], shipWindow: {} };
   const options = {
     push: true,
+    extraShip,
     head: 'HEAD',
     remote: 'origin',
     targetBranch: 'main',
@@ -45,7 +53,7 @@ async function releaseScenario({
     release,
     startedAt: 0,
     performance: { now: () => 0 },
-    console: { log: noop, error: noop },
+    console: { log: noop, error: (message) => errors.push(message) },
     process: {
       exit: (code) => {
         throw new Error(`exit ${code}`);
@@ -69,6 +77,7 @@ async function releaseScenario({
     runPlan: () => ({ deployRequired: true, reason: 'test' }),
     planHostedCi: () => ({ ciRequired, reason: 'test', changedFiles: ['apps/web/src/main.ts'] }),
     printHostedCiPlan: noop,
+    printEnginePin: noop,
     localGateFor: () => ({ kind: 'full' }),
     runLocalGate: async () => {
       events.push('local gate');
@@ -76,8 +85,14 @@ async function releaseScenario({
     },
     fetchActiveGameCount: async () => (Array.isArray(liveGames) ? liveGames.shift() : liveGames),
     requireUsableDrainToken: () => events.push('token'),
-    catchUpWithMain: noop,
-    findReusableBatchRun: () => batchRun,
+    catchUpWithMain: () => {
+      if (mergeDuringGate) release.headRevision = 'c'.repeat(40);
+    },
+    findReusableBatchRun: () => {
+      events.push('batch lookup');
+      return mergeDuringGate && release.headRevision !== HEAD ? null : batchRun;
+    },
+    recoverFailedBatchRun: async () => recoveredRun,
     safeDeployBaseArgs: () => ['--owner', 'test-owner'],
     runTimed: (label, command) => {
       events.push(label);
@@ -116,11 +131,32 @@ async function releaseScenario({
   } catch (caught) {
     error = caught;
   }
-  return { events, pushes, release, error };
+  return { events, pushes, release, error, errors };
 }
 
+// Fresh candidate CI is only reached without prior evidence on an extra ship.
+function freshCandidateScenario(options) {
+  return releaseScenario({
+    batchRun: null,
+    extraShip: 'Fixture emergency path',
+    ...options,
+  });
+}
+
+test('a routine release without prior green batch CI refuses before changelog, gates, drain or push', async () => {
+  const { events, pushes, error, errors } = await releaseScenario({
+    batchRun: null,
+    localCi: true,
+  });
+  assert.ok(error, 'missing batch CI must refuse the release');
+  assert.match(errors.join('\n'), /batch:ci/);
+  assert.deepEqual(pushes, []);
+  assert.ok(!events.includes('local gate'));
+  assert.ok(!events.includes('production drain start'));
+});
+
 test('release publishes an exact candidate, overlaps the pending drain with CI, then promotes main', async () => {
-  const { events, pushes, release, error } = await releaseScenario();
+  const { events, pushes, release, error } = await freshCandidateScenario();
   assert.equal(error, undefined);
   assert.deepEqual(pushes, [`${HEAD}:refs/heads/release/${HEAD}`, `${HEAD}:refs/heads/main`]);
   const ci = events.indexOf('ci');
@@ -151,7 +187,7 @@ test('a green assembled batch authorizes the changelog HEAD without a new candid
 });
 
 test('unmarked branch accounting refuses push before a lock, CI, drain or push', async () => {
-  const { events, pushes, error } = await releaseScenario({ branchError: true });
+  const { events, pushes, error } = await freshCandidateScenario({ branchError: true });
   assert.ok(error);
   assert.deepEqual(events, ['branch accounting']);
   assert.deepEqual(pushes, []);
@@ -159,7 +195,7 @@ test('unmarked branch accounting refuses push before a lock, CI, drain or push',
 
 for (const branchError of [2, 3, 4]) {
   test(`new unmarked work at accounting check ${branchError} prevents promotion`, async () => {
-    const { events, pushes, release, error } = await releaseScenario({ branchError });
+    const { events, pushes, release, error } = await freshCandidateScenario({ branchError });
     assert.ok(error);
     assert.equal(release.pushCompleted, undefined);
     assert.ok(!events.includes('git push release head'));
@@ -174,7 +210,7 @@ for (const branchError of [2, 3, 4]) {
 
 for (const ciError of ['red CI', 'cancelled CI', 'timed out waiting for CI']) {
   test(`${ciError} cancels the pending drain and leaves main untouched`, async () => {
-    const { pushes, events, release, error } = await releaseScenario({ ciError });
+    const { pushes, events, release, error } = await freshCandidateScenario({ ciError });
     assert.ok(error);
     assert.deepEqual(pushes, [`${HEAD}:refs/heads/release/${HEAD}`]);
     assert.ok(events.includes('cancel drain'));
@@ -187,14 +223,14 @@ for (const ciError of ['red CI', 'cancelled CI', 'timed out waiting for CI']) {
 }
 
 test('a main that moves during candidate CI requires a fresh candidate', async () => {
-  const { pushes, events, error } = await releaseScenario({ movedMain: true });
+  const { pushes, events, error } = await freshCandidateScenario({ movedMain: true });
   assert.ok(error);
   assert.deepEqual(pushes, [`${HEAD}:refs/heads/release/${HEAD}`]);
   assert.ok(events.includes('cancel drain'));
 });
 
 test('an empty game pool still gates promotion on exact CI without requiring a token', async () => {
-  const { pushes, events, error } = await releaseScenario({ liveGames: 0 });
+  const { pushes, events, error } = await freshCandidateScenario({ liveGames: 0 });
   assert.equal(error, undefined);
   assert.equal(pushes.length, 2);
   assert.ok(!events.includes('token'));
@@ -203,7 +239,7 @@ test('an empty game pool still gates promotion on exact CI without requiring a t
 });
 
 test('games that start during CI are drained before main advances', async () => {
-  const { events, error } = await releaseScenario({ liveGames: [0, 0, 2] });
+  const { events, error } = await freshCandidateScenario({ liveGames: [0, 0, 2] });
   assert.equal(error, undefined);
   assert.ok(events.indexOf('token') > events.indexOf('ci'));
   assert.ok(events.indexOf('production drain') > events.indexOf('ci'));
@@ -211,19 +247,19 @@ test('games that start during CI are drained before main advances', async () => 
 });
 
 test('games that start during the local gate drain while candidate CI runs', async () => {
-  const { events, error } = await releaseScenario({ liveGames: [0, 2] });
+  const { events, error } = await freshCandidateScenario({ liveGames: [0, 2] });
   assert.equal(error, undefined);
   assert.ok(events.indexOf('production drain start') < events.indexOf('ci'));
 });
 
 test('docs-only candidates still require hosted CI', async () => {
-  const { events, error } = await releaseScenario({ ciRequired: false });
+  const { events, error } = await freshCandidateScenario({ ciRequired: false });
   assert.equal(error, undefined);
   assert.ok(events.includes('ci'));
 });
 
 test('local production smokes pass before publishing a candidate or starting its drain', async () => {
-  const { events, error } = await releaseScenario({ localCi: true });
+  const { events, error } = await freshCandidateScenario({ localCi: true });
   assert.equal(error, undefined);
   const smoke = events.indexOf('local production smokes');
   assert.ok(smoke > events.indexOf('local gate'));
@@ -248,7 +284,7 @@ for (const failStage of [
   'git push release head',
 ]) {
   test(`${failStage} failure never reports a production push or runs smoke`, async () => {
-    const { pushes, events, release, error } = await releaseScenario({ failStage });
+    const { pushes, events, release, error } = await freshCandidateScenario({ failStage });
     assert.ok(error);
     assert.ok(!pushes.includes(`${HEAD}:refs/heads/main`));
     assert.ok(!events.includes('smoke'));
@@ -279,6 +315,10 @@ function candidateWait(run) {
     'findGithubRun',
     'GITHUB_POLL_MS',
     'console',
+    'waitForExactCi',
+    'retryHostedCi',
+    'sleep',
+    'workdir',
     `${declaration('waitForGithubCi')}\nreturn waitForGithubCi({ headRevision: '${HEAD}', branch: 'release/${HEAD}', exact: true });`,
   );
   return wait(
@@ -290,6 +330,10 @@ function candidateWait(run) {
     },
     10000,
     { log: () => {} },
+    waitForExactCi,
+    retryHostedCi,
+    async () => {},
+    '/fixture',
   );
 }
 
@@ -451,4 +495,79 @@ test('the main pre-push hook recognizes the exact hosted-CI-verified SHA', () =>
   });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /release candidate passed hosted CI/);
+});
+
+test('a merge during the local gate invalidates earlier batch evidence before promotion', async () => {
+  const { error, errors, pushes, events } = await releaseScenario({
+    extraShip: null,
+    mergeDuringGate: true,
+    batchRun: { headSha: HEAD, status: 'completed', conclusion: 'success' },
+  });
+  assert.ok(error);
+  assert.match(errors.join('\n'), /batch:ci/);
+  assert.deepEqual(pushes, []);
+  assert.ok(!events.includes('production drain start'));
+});
+
+test('a listed failed prior batch can authorize release only after its retry turns green', async () => {
+  const green = { headSha: HEAD, status: 'completed', conclusion: 'success', attempt: 2 };
+  const { error, pushes, release } = await releaseScenario({
+    batchRun: null,
+    recoveredRun: green,
+  });
+  assert.equal(error, undefined);
+  assert.deepEqual(pushes, [`${HEAD}:refs/heads/main`]);
+  assert.equal(release.reusedCiRun, green);
+});
+
+test('release recovery waits on the existing failed candidate and records its single retry', async () => {
+  const failed = {
+    databaseId: 123,
+    headSha: HEAD,
+    status: 'completed',
+    conclusion: 'failure',
+    attempt: 1,
+  };
+  const green = { ...failed, conclusion: 'success', attempt: 2 };
+  const states = [failed, failed, green];
+  const release = { headRevision: HEAD, ciReruns: [] };
+  let retries = 0;
+  const recover = new AsyncFunction(
+    'findReusableBatchCi',
+    'workdir',
+    'release',
+    'findGithubRun',
+    'listBatchRuns',
+    'waitForExactCi',
+    'retryHostedCi',
+    'options',
+    'GITHUB_POLL_MS',
+    'sleep',
+    'console',
+    `${declaration('recoverFailedBatchRun')}\nreturn recoverFailedBatchRun();`,
+  );
+  const run = await recover(
+    ({ acceptRun }) => (acceptRun(failed) ? failed : null),
+    '/fixture',
+    release,
+    (sha, branch) => {
+      assert.equal(sha, HEAD);
+      assert.equal(branch, `release/${HEAD}`);
+      return states.shift();
+    },
+    () => [],
+    waitForExactCi,
+    async ({ record }) => {
+      retries++;
+      record({ runId: 123, attempt: 2 });
+      return true;
+    },
+    { timeoutMs: 1000 },
+    0,
+    async () => {},
+    { log: () => {} },
+  );
+  assert.equal(run, green);
+  assert.equal(retries, 1);
+  assert.deepEqual(release.ciReruns, [{ runId: 123, attempt: 2 }]);
 });

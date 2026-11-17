@@ -355,6 +355,7 @@ export const laiLyHuynhArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'lFuIFiQp/2w9ZjlPu',
           spec: { ...G_M_135652, startPly: 39, perspective: 'black' },
           caption: "Mingjian Li vs Lại Lý Huynh, 23 September 2025, round 3. The board opens after red's 20th move, with Lại to play as black.",
         },
@@ -364,6 +365,7 @@ export const laiLyHuynhArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'lFuIFiQp/C2K0v9WJ',
           spec: { ...G_M_135792, startPly: 33, perspective: 'black' },
           caption: "Chong Heung Ming vs Lại Lý Huynh, 25 September 2025, round 7. The board opens after red's 17th move, with Lại to play as black.",
         },
@@ -373,6 +375,7 @@ export const laiLyHuynhArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'lFuIFiQp/bdcTqU58',
           spec: { ...G_M_135534, startPly: 53, perspective: 'black' },
           caption: "Yin Sheng vs Lại Lý Huynh, 27 September 2025, the final. The board opens after red's 27th move, with Lại to play as black.",
         },
@@ -403,6 +406,7 @@ export const laiLyHuynhArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'lFuIFiQp/Yy4o37SW',
           spec: { ...G_M_139842, startPly: 29, perspective: 'black' },
           caption: "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.",
         },
@@ -412,6 +416,7 @@ export const laiLyHuynhArticle: Article = {
         },
         {
           kind: 'xq-replay',
+          study: 'lFuIFiQp/wYVeCUN8',
           spec: { ...G_M_140313, startPly: 34, perspective: 'red' },
           caption: "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.",
         },

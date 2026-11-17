@@ -58,6 +58,7 @@ test('no tracked script, app or package names a retired Pikafish build', () => {
 test('offline scripts resolve the engine through the shared resolver', () => {
   for (const [script, specifier] of [
     ['scripts/article-line-evals.mjs', '../apps/server/src/xiangqi-pikafish-paths.ts'],
+    ['scripts/article-variation-tree.mjs', '../apps/server/src/xiangqi-pikafish-paths.ts'],
     ['scripts/trim-sideline-tails.mjs', '../apps/server/src/xiangqi-pikafish-paths.ts'],
     ['scripts/probe-win-curve-wdl.mjs', '../apps/server/src/xiangqi-pikafish-paths.ts'],
     ['scripts/xq-positive-annotations.mjs', '../apps/server/src/xiangqi-pikafish-paths.ts'],

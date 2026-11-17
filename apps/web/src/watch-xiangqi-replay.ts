@@ -47,6 +47,7 @@ export function mountXiangqiWatchReplay(
     StandardXiangqiPlayerView,
     XiangqiPostgameViewKey
   >(root, roomId, options, {
+    variant: 'xiangqi',
     installStyles: () => {},
     appearanceEvent: xiangqiAppearanceChangedEvent,
     loadPostgame: loadXiangqiPostgame,

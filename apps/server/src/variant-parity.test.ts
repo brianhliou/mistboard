@@ -15,6 +15,7 @@ import { registeredVariantTenants } from './variant-tenant/registry.js';
 // `rated` already exists. The manifest step will add `flair` and `routeBase`.
 // Until then, public playable specs owe flair and a direct game route.
 const KNOWN_FLAIR_GAPS = new Set<GameSpecId>([
+  'ffq-banqi', // Public casual launch does not add variant flair.
   'three-kingdoms-banqi', // Launched without variant flair; pin the absence explicitly.
   'xiangqi-mahjong', // Launched without variant flair; do not silently skip it.
 ]);
@@ -133,9 +134,9 @@ for (const surface of [
   'GAME_VARIANTS_BY_RATING_POOL',
   'latest user_ratings CHECK',
 ] as const) {
-  test(`variant parity rejects planted Three Kingdoms rated on: ${surface}`, () => {
+  test(`variant parity rejects planted Three Kingdoms rated off: ${surface}`, () => {
     const planted = declarations.map((spec) =>
-      spec.id === 'three-kingdoms-banqi' ? { ...spec, rated: true } : spec,
+      spec.id === 'three-kingdoms-banqi' ? { ...spec, rated: false } : spec,
     );
     assert.throws(() => assertParity(planted, surface), {
       code: 'ERR_ASSERTION',

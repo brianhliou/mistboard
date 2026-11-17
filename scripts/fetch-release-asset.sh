@@ -25,11 +25,11 @@ case "$name" in
     repo=brianhliou/misty-flip-jungle tag=v0.5.1 mode=data
     sha=65b275f494048ec41be1db48836f167e315859e9c3c317ee66d7751a27cc9eba ;;
   jungle-engine)
-    repo=brianhliou/misty-jungle tag=v0.0.6 mode=exec
-    sha=0e7a4e18418be3a813a2eac5fe04b055af74e1da922d3fa666d99253fbac4423 ;;
+    repo=brianhliou/misty-jungle tag=v0.0.7 mode=exec
+    sha=4493c1749286e96d1b9b0dc852509b89d1b6e84bafd7e66932ee610de14de376 ;;
   three-kingdoms-engine)
-    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.3.0 mode=exec
-    sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26 ;;
+    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.3.1 mode=exec
+    sha=d7e01dd0e0ce7022066de47cf8ff991588864df43e4a90e6b4b4863b3a0ee6a9 ;;
   ffq-banqi-engine)
     repo=brianhliou/misty-ffq-banqi tag=v0.1.0 mode=exec
     sha=62e74d73d6caca517a73036e01e884027316c8f7a7a6c6394e0ac016b4e427ca ;;

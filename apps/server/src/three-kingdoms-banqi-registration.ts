@@ -1,7 +1,7 @@
-/** Three Kingdoms Banqi registry: casual lobby, TV, cards and casual correspondence.
- * Public admission and listing follow the runtime access gate; games are always
- * unrated. No export: covered identities stay masked after the game (#1002), and
- * an export would carry the deal, which names pieces nobody turned over. */
+/** Three Kingdoms Banqi registry: rated PvP, TV, cards and casual correspondence.
+ * Public admission and listing follow the runtime access gate. The export is the
+ * masked public record (three-kingdoms-banqi-game-export.ts): covered identities
+ * stay masked after the game (#1002), so it never carries the deal. */
 
 import {
   type BanqiSeat,
@@ -23,6 +23,7 @@ import {
   type ThreeKingdomsBanqiEngineRoom,
 } from './server-three-kingdoms-banqi-engine.js';
 import { threeKingdomsBanqiAdmits } from './three-kingdoms-banqi-access.js';
+import { threeKingdomsBanqiExport } from './three-kingdoms-banqi-game-export.js';
 import {
   type ThreeKingdomsBanqiEvent,
   type ThreeKingdomsBanqiRuntimeRoom,
@@ -58,6 +59,7 @@ export async function createThreeKingdomsBanqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: BanqiSeat | 'random',
   engine?: { engineId: string; seat: BanqiSeat; botId?: string },
+  rated = false,
 ): Promise<ThreeKingdomsBanqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     threeKingdomsBanqiTenant,
@@ -70,7 +72,7 @@ export async function createThreeKingdomsBanqiRoom(
       recordPersistenceError: (roomId, seq, eventType, err) =>
         recordTenantPersistenceError(threeKingdomsBanqiTenant, roomId, seq, eventType, err),
     },
-    { timeControl, creatorPreference, engine, rated: false },
+    { timeControl, creatorPreference, engine, rated: engine ? false : rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'
@@ -143,16 +145,16 @@ registerVariantTenant({
       ),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createThreeKingdomsBanqiRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createThreeKingdomsBanqiRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`three_kingdoms_banqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
   },
   reviewRouteBase: '/three-kingdoms-banqi/game',
-  export: null,
+  export: threeKingdomsBanqiExport,
   card: tenantCardBinding(threeKingdomsBanqiTenant, {
     variant: 'three-kingdoms-banqi',
     analysis: null,

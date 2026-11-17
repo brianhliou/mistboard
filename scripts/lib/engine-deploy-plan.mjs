@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, fsyncSync, openSync, readFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { RAILWAY_SERVICE_CONFIGS, readRailwayServiceConfigAt } from './railway-config.mjs';
 
 const ENGINE_REPO = 'brianhliou/mistboard-engine';
 const SHA = /^[a-f0-9]{40}$/;
@@ -210,10 +211,11 @@ export function compareWorker(base, head, run = commandOutput) {
   if (!SHA.test(base) || !SHA.test(head)) throw new Error('Worker diff requires full SHAs.');
   // A missing/shallow/divergent baseline must not produce an empty change list.
   run('git', ['merge-base', '--is-ancestor', base, head]);
-  const before = JSON.parse(run('git', ['show', `${base}:railway.engine-worker.json`])).build
-    .watchPatterns;
-  const after = JSON.parse(run('git', ['show', `${head}:railway.engine-worker.json`])).build
-    .watchPatterns;
+  // .railway/engine-worker.json, or railway.engine-worker.json at a baseline
+  // from before the IaC move (#980).
+  const show = (spec) => run('git', ['show', spec]);
+  const before = readRailwayServiceConfigAt(base, 'engine-worker', show).build?.watchPatterns;
+  const after = readRailwayServiceConfigAt(head, 'engine-worker', show).build?.watchPatterns;
   if (![before, after].every((patterns) => Array.isArray(patterns) && patterns.length > 0))
     throw new Error('Missing worker build watch patterns.');
   const patterns = [...new Set([...before, ...after])].filter(
@@ -229,6 +231,7 @@ export function compareWorker(base, head, run = commandOutput) {
     'scripts/fetch-release-asset.sh',
     'scripts/deploy-engine-worker.mjs',
     'scripts/lib/engine-deploy-plan.mjs',
+    RAILWAY_SERVICE_CONFIGS['engine-worker'],
   );
   const log = run('git', [
     'log',

@@ -205,11 +205,12 @@ async function threeKingdomsListedOnWeb() {
   };
 }
 
-it('Three Kingdoms Banqi is launched, casual and unrated', async () => {
+it('Three Kingdoms Banqi is launched and live-rated, with casual-only correspondence', async () => {
   const game = await import('@mistboard/game');
   expect(game.gameSpecForId('three-kingdoms-banqi')).toMatchObject({ publicSurface: 'casual' });
-  expect(game.gameSpecForId('three-kingdoms-banqi').rated).not.toBe(true);
-  expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBeNull();
+  expect(game.gameSpecForId('three-kingdoms-banqi').rated).toBe(true);
+  expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBe('three_kingdoms_banqi');
+  expect(game.isCorrespondenceRatedSpec('three-kingdoms-banqi')).toBe(false);
   const listed = await threeKingdomsListedOnWeb();
   expect(listed).toEqual(everyValue(listed, true));
   // Correspondence follows launch (#1002 built it), casual only.
@@ -233,4 +234,21 @@ it('hiding Three Kingdoms Banqi removes every public web listing again', async (
   const listed = await threeKingdomsListedOnWeb();
   expect(listed).toEqual(everyValue(listed, false));
   vi.unstubAllEnvs();
+});
+
+it('Fanfanqi launches public casual play and search listings without rating or correspondence listings', async () => {
+  const game = await import('@mistboard/game');
+  const surfaces = await import('./variant-public-surfaces.js');
+  const variants = await import('./variants.js');
+  const id = game.FFQ_BANQI_SPEC_ID;
+  expect(game.gameSpecForId(id)).toMatchObject({ publicSurface: 'casual', runtimeStatus: 'live' });
+  expect(surfaces.variantPublicSurfaceEnabled(id)).toBe(true);
+  expect(surfaces.rulesHrefForGameSpec(id)).toBe('/rules/fanfanqi');
+  expect(surfaces.articleIsNoindex({ kind: 'rules', slug: 'fanfanqi' })).toBe(false);
+  expect(game.CANONICAL_VARIANT_ORDER).toContain(id);
+  for (const rated of [variants.leaderboardVariants, variants.profileRatingVariants]) {
+    expect(rated.some((variant) => variant.gameSpecId === id)).toBe(false);
+  }
+  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain(id);
+  expect(game.CORRESPONDENCE_ALLOWLISTED_SPEC_IDS).not.toContain(id);
 });

@@ -27,7 +27,6 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ],
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
-  ['gomoku', 'PvE is unrated; no Gomoku EvE adapter or ladder run yet'],
   [
     'xiangqi-mahjong',
     'one in-process heuristic tile bot over a four-hand match; no ladder, nothing to rank it against',
@@ -61,6 +60,7 @@ test('data-only adapters have no random floor, so nothing can rate them', () => 
 test('binary-backed adapters ask workers for their engine, and the worker probes it', () => {
   assert.equal(eveAdapterFor('ffq-banqi')?.requiredCapability, 'ffq_banqi_engine');
   assert.equal(eveAdapterFor('banqi')?.requiredCapability, 'banqi_engine');
+  assert.equal(eveAdapterFor('gomoku')?.requiredCapability, 'gomoku_engine');
   assert.equal(eveAdapterFor('jungle')?.requiredCapability, 'jungle_engine');
   assert.equal(eveAdapterFor('jungle-flip')?.requiredCapability, 'jungle_flip_engine');
   assert.equal(
@@ -71,6 +71,7 @@ test('binary-backed adapters ask workers for their engine, and the worker probes
   assert.deepEqual(Object.keys(capabilities).sort(), [
     'banqi_engine',
     'ffq_banqi_engine',
+    'gomoku_engine',
     'jungle_engine',
     'jungle_flip_engine',
     'three_kingdoms_banqi_engine',
@@ -83,22 +84,26 @@ test('binary-backed adapters ask workers for their engine, and the worker probes
     flip: process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH,
     ffq: process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH,
     tk: process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH,
+    rapfi: process.env.RAPFI_BIN,
   };
   process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH = '/nonexistent/ffq-banqi-engine';
   process.env.MISTBOARD_BANQI_ENGINE_PATH = '/nonexistent/banqi-engine';
   process.env.MISTBOARD_JUNGLE_ENGINE_PATH = '/nonexistent/jungle-engine';
   process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = '/nonexistent/jungle-flip-engine';
   process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = '/nonexistent/three-kingdoms-engine';
+  process.env.RAPFI_BIN = '/nonexistent/rapfi';
   try {
     assert.deepEqual(eveWorkerCapabilities(), {
       banqi_engine: false,
       ffq_banqi_engine: false,
+      gomoku_engine: false,
       jungle_engine: false,
       jungle_flip_engine: false,
       three_kingdoms_banqi_engine: false,
     });
   } finally {
     for (const [key, value] of [
+      ['RAPFI_BIN', saved.rapfi],
       ['MISTBOARD_FFQ_BANQI_ENGINE_PATH', saved.ffq],
       ['MISTBOARD_BANQI_ENGINE_PATH', saved.banqi],
       ['MISTBOARD_JUNGLE_ENGINE_PATH', saved.jungle],
@@ -183,6 +188,7 @@ test('EvE room ids sit under the tenant prefix', () => {
   assert.equal(eveRoomId(eveAdapterFor('duck-xiangqi')!, 'task1'), 'dkx_eve_task1');
   assert.equal(eveRoomId(eveAdapterFor('three-kingdoms-banqi')!, 'task1'), 'tkb_eve_task1');
   assert.equal(eveRoomId(eveAdapterFor('jungle-flip')!, 'task1'), 'jgf_eve_task1');
+  assert.equal(eveRoomId(eveAdapterFor('gomoku')!, 'task1'), 'gmk_eve_task1');
   assert.equal(eveAdapterFor('crossroads-chess'), null);
 });
 
@@ -204,4 +210,40 @@ test('EvE rows store terminations the games table accepts, and only a public ask
 test('retired atomic cannot be run by EvE even while its catalogue remains', () => {
   assert.equal(eveAdapterFor('atomic-xiangqi'), null);
   assert.ok(!EVE_VARIANT_IDS.includes('atomic-xiangqi'));
+});
+
+// A bot-vs-bot game plays the rules a live game plays. Live rooms stamp their rule
+// version on the setup (xiangqi's 120-ply progress clock, jieqi's repetition and
+// adjudication rule); an EvE setup that omits a stamp replays under the legacy rule
+// (xiangqi ladders and the 2026-11-11 title match drew at 60 capture-free plies).
+// The deal itself is random, so only the scalar stamps must match.
+test('every EvE adapter stamps the rules its live tenant stamps', () => {
+  for (const variant of EVE_VARIANT_IDS) {
+    const adapter = eveAdapterFor(variant);
+    assert.ok(adapter, variant);
+    const rules = adapter.tenant.rules as { createSetup?: () => unknown };
+    const live = rules.createSetup?.();
+    if (live === undefined) continue;
+    assert.ok(adapter.createSetup, `${variant}: live rooms stamp a setup, EvE rooms do not`);
+    const eve = adapter.createSetup(1n) as Record<string, unknown>;
+    if (live === null || typeof live !== 'object' || Array.isArray(live)) continue;
+    for (const [key, value] of Object.entries(live)) {
+      if (value !== null && typeof value === 'object') continue;
+      // Gomoku's dealt turn varies with the opening, rather than stamping a rule.
+      if (variant === 'gomoku' && key === 'turn') continue;
+      assert.deepEqual(eve?.[key], value, `${variant}: EvE setup.${key}`);
+    }
+  }
+});
+
+test('every native Rapfi catalogue rung is executable by the Gomoku adapter', () => {
+  const adapter = eveAdapterFor('gomoku');
+  assert.ok(adapter);
+  assert.deepEqual(adapter.colors, ['black', 'white']);
+  for (const id of knownEngineIds()) {
+    const engine = loadEngine(id);
+    if (engine.config.kind !== 'rapfi-gomocup') continue;
+    assert.deepEqual(adapter.tierFor(id), { id, movetimeMs: engine.config.movetime_ms });
+  }
+  assert.equal(adapter.randomEngineId, 'random-legal-gomoku');
 });

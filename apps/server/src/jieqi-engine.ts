@@ -1,6 +1,6 @@
 // Pikafish-jieqi move provider for Jieqi (揭棋) PvE.
 //
-// The engine is the Pikafish `jieqi` / `jieqi_old` branch (our "PikaJieQi" binary)
+// The engine is Pikafish's `jieqi` NNUE branch with ChanceMix enabled by default,
 // driven as a UCI subprocess — the same Tier-B pattern as xiangqi/Fairy-Stockfish,
 // NOT the redaction-shaped Obscuro engine-worker (the fog engine). Unlike xiangqi
 // (perfect information, replayed from `position startpos moves ...`), jieqi has hidden
@@ -11,13 +11,14 @@
 // in direct compaction whenever the prod host runs out of free huge pages (#335). A
 // parked process pays that once, and its 8 s deadline covers only the search.
 //
-// LAUNCH config is the no-net `jieqi_old` classical-eval build (handcrafted eval, no
-// NNUE weights — clean GPL-3 with no net-licensing problem). The strength track swaps in
-// the NNUE `jieqi` branch + our own-trained net via MISTBOARD_PIKAFISH_NET (EvalFile).
+// The 256-wide net is embedded: trained from random initialization on jqe labels,
+// MIT licensed, with no Pikafish weights. Engine code remains GPL-3.0-or-later.
+// MISTBOARD_PIKAFISH_NET is an optional EvalFile override, not a startup requirement.
 
 import { existsSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { resolve } from 'node:path';
+import { type JieqiAdjudicationRule, parseJieqiAdjudicationRule } from '@mistboard/game';
 import { logger } from './obs.js';
 import {
   boundedEnvInt,
@@ -31,7 +32,7 @@ import {
 
 export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier). The shipped
-// engine is the no-net classical Pikafish jieqi_old build; bump on any engine/config change.
+// engine is Pikafish jieqi NNUE; bump on any engine/config change.
 // 0.3.0 (2026-08-31): new binary (ScoreCalc flip-node fix, pikafish-jieqi.ref 4f857757).
 // 0.3.1 (2026-09-03): live moves on warm sessions (hash allocated once per process, the
 // 8 s deadline covers only the search), `ucinewgame` at a game's first engine move.
@@ -39,7 +40,9 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // `go movetime` via a Threads.stop check and a main-thread check_time() at its entry.
 // 0.3.3 (2026-10-02): new binary (pikafish-jieqi.ref bcc83f88, #497): reveals scored
 // honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
-export const JIEQI_ENGINE_VERSION = '0.3.3';
+// 0.4.0 (2026-11-13, #1104): jieqi NNUE + ChanceMix, embedded MIT jqe-label net.
+// 0.4.1 (2026-11-15, #1151): bc398e6e adds selectable jqe-v1 adjudication.
+export const JIEQI_ENGINE_VERSION = '0.4.1';
 
 // AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): a
 // jieqi engine with its own NNUE, the top jieqi slot again from AB-JChess-20261031 (a new
@@ -82,22 +85,16 @@ export const ABJCHESS_ENGINE_REF = 'efc83867';
 // where a dark piece moves, so every cached sweep predates the engine that would produce
 // it now. The ref below moves in the same commit; this bump is belt-and-braces.
 // 0.5.0 (2026-10-02): new binary (#497); every reveal eval can change. Ref moves too.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.5.0';
+// 0.6.0 (2026-11-13, #1104): NNUE + ChanceMix; every evaluation can change.
+// 0.6.1 (2026-11-15, #1151): jqe-v1 adjudication; invalidate all prior evaluations.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.6.1';
 
-// Short form of the commit the prod image builds (pikafish-jieqi.ref). Since 2026-08-31
-// that is OUR fork's `jieqi_old-mistboard` branch, not upstream: upstream 23b9466c plus a
-// single src/misc.h patch, so ScoreCalc no longer averages a forced loss away at flip nodes.
-// It belongs in the ANALYSIS cache key because that key's whole promise is "same inputs,
-// same evals": the binary is an input, and until 2026-08-28 the build cloned branch tip on
-// every deploy, so two deploys either side of an upstream commit filed evals from different
-// engines under one identical key. Version alone could not catch that, being hand-maintained.
-// jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
-// cannot land without moving the key and forcing a recompute.
-// e75cee3a (2026-09-03): qsearch honours Threads.stop / movetime. A node- or
-// depth-limited analysis search now stops on the exact node it should, so evals can
-// differ from 4f857757 by the tail it used to overrun; hence the key moves.
-// bcc83f88 (2026-10-02, #497): reveal scoring fixed; most reveal evals change.
-export const PIKAFISH_JIEQI_ENGINE_REF = 'bcc83f88';
+// Short form of pikafish-jieqi.ref, included in both analysis cache keys.
+// fd1a6f82 (2026-11-13, #1104): jieqi-mistboard NNUE + ChanceMix replaces the
+// classical build. Every evaluation can change, so cached sweeps must recompute.
+// bc398e6e (2026-11-15, #1151): selectable legacy/jqe-v1 repetition and clock rules.
+// jieqi-engine-ref.test.ts prevents the build pin and cache identity drifting.
+export const PIKAFISH_JIEQI_ENGINE_REF = 'bc398e6e';
 
 export type JieqiEngineTier = {
   id: string;
@@ -106,7 +103,7 @@ export type JieqiEngineTier = {
   // Optional hard search-depth cap: `go depth N movetime T` stops at whichever binds.
   // The top tier omits it (full strength, time-bounded).
   depth?: number;
-  // Stockfish-style Skill Level (-20..20). jieqi_old has NO Skill Level / UCI_Elo
+  // Stockfish-style Skill Level (-20..20). This build has NO Skill Level / UCI_Elo
   // option, so the server applies Stockfish's own pick rule to the engine's MultiPV
   // table (pickSkillMove below). Omitted = full strength, no MultiPV.
   skill?: number;
@@ -124,13 +121,16 @@ export type JieqiLiveEngine = 'ab-jchess' | 'jqe';
 // Fairy-Stockfish ladder copies (xiangqi-fsf-engine.ts): skill -9..16, depth 5/5/5/5/5/8/13,
 // 50..500 ms. Level 8 is the full-strength bot every jieqi game used to get, under its
 // old id so its history and rating carry over. Strength per level is a starting point
-// until the EvE run rates it (jieqi-eve-adapter.ts).
+// until the EvE run rates it (jieqi-eve-adapter.ts). Level 5 moved from skill 7, depth 5
+// to skill 9, depth 6 on 2026-11-14 (#1125): over 100 games it scored +17 Elo
+// [-51, +87] against Level 4, so the two played alike; the new Level 5 scored +186
+// [+116, +274] against Level 4 and Level 6 +111 [+44, +189] against it.
 const JIEQI_LADDER_TIERS = [
   { level: 1, skill: -9, depth: 5, movetimeMs: 50 },
   { level: 2, skill: -5, depth: 5, movetimeMs: 100 },
   { level: 3, skill: -1, depth: 5, movetimeMs: 150 },
   { level: 4, skill: 3, depth: 5, movetimeMs: 200 },
-  { level: 5, skill: 7, depth: 5, movetimeMs: 300 },
+  { level: 5, skill: 9, depth: 6, movetimeMs: 300 },
   { level: 6, skill: 11, depth: 8, movetimeMs: 400 },
   { level: 7, skill: 16, depth: 13, movetimeMs: 500 },
 ].map(
@@ -144,7 +144,7 @@ const JIEQI_LADDER_TIERS = [
 const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
   ...JIEQI_LADDER_TIERS,
   {
-    // Level 8: no depth cap, no skill, and the movetime matches mainline Pikafish's top
+    // Level 8: no depth cap, no skill, and the movetime matches Pikafish's top
     // xiangqi rung (level-8, 4000ms). Measured at the jieqi start position on an 8-core
     // dev box: this config reaches depth 32.
     // Named like the rungs below it (migration 173 renames stored games).
@@ -328,7 +328,7 @@ export function pikaJieqiPath(): string {
   }
   const home = process.env.HOME;
   if (home) {
-    const dev = resolve(home, 'projects', 'tools', 'pikafish-jieqi-old', 'src', 'PikaJieQi');
+    const dev = resolve(home, 'projects', 'tools', 'pikafish-jieqi-wt-pin', 'src', 'pikafish');
     if (existsSync(dev)) return dev;
   }
   for (const candidate of [
@@ -453,9 +453,8 @@ export function abJchessAvailable(): boolean {
   }
 }
 
-// The classical jieqi_old build needs no net. When serving the NNUE `jieqi` branch,
-// point MISTBOARD_PIKAFISH_NET at an ABSOLUTE path to our trained .nnue (the engine
-// rejects a relative EvalFile).
+// The pinned NNUE net is embedded. An optional MISTBOARD_PIKAFISH_NET override
+// is resolved to an absolute EvalFile path; normal startup needs no external net.
 function netOption(): string[] {
   const net = process.env.MISTBOARD_PIKAFISH_NET;
   if (!net) return [];
@@ -573,6 +572,16 @@ function jieqiGoCommand(opts: JieqiEvalBudget & { searchMoves?: readonly string[
   return opts.searchMoves?.length ? `${go} searchmoves ${opts.searchMoves.join(' ')}` : go;
 }
 
+/** Set this on every Pikafish search: warm processes serve games with different stamps.
+ *  Other Jieqi engines have their own rule options and do not support Jieqi Rule. */
+function jieqiRuleOptions(
+  rule: JieqiAdjudicationRule | undefined,
+  engine?: JieqiLiveEngine | JieqiAnalysisEngine,
+): string[] {
+  if (engine === 'ab-jchess' || engine === 'jqe') return [];
+  return [`setoption name Jieqi Rule value ${parseJieqiAdjudicationRule(rule) ?? 'legacy'}`];
+}
+
 /** The exact UCI block a fixed-budget analysis eval sends. Exported so the analysis
  *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
  *  by (room, engine, depth) and promises a CPU-independent result, which a second
@@ -584,6 +593,7 @@ export function buildJieqiAnalysisCommands(fen: string, opts: JieqiAnalysisReque
     ...jieqiAnalysisResourceOptions(),
     'ucinewgame',
     'isready',
+    ...jieqiRuleOptions(opts.adjudicationRule),
     buildJieqiPositionCommand(fen, opts.moves),
     jieqiGoCommand(opts),
   ];
@@ -612,9 +622,11 @@ export async function evaluateJieqiFen(fen: string, opts: JieqiAnalysisRequest):
   }
 }
 
-/** One analysis eval request on a session: the budget, the repetition window, and two
+/** One analysis eval request on a session: the budget, the repetition window, and
  *  per-request switches a shared session needs because it outlives any one search. */
 export type JieqiAnalysisRequest = JieqiEvalBudget & {
+  /** Absent is the stored game's legacy rule, never the engine's current option. */
+  adjudicationRule?: JieqiAdjudicationRule;
   moves?: readonly string[];
   /** Kernel-legal nonterminal roots. Terminal moves are scored by the kernel. */
   searchMoves?: readonly string[];
@@ -688,6 +700,7 @@ export async function withJieqiAnalysisSession<T>(
   const request = (fen: string, opts: JieqiAnalysisRequest, multiPv: number) => ({
     positionCommand: [
       opts.fresh ? 'ucinewgame' : null,
+      ...jieqiRuleOptions(opts.adjudicationRule, engine),
       `setoption name MultiPV value ${Math.max(1, Math.floor(multiPv))}`,
       buildJieqiPositionCommand(fen, opts.moves),
     ]
@@ -751,6 +764,8 @@ export function jieqiEngineVersion(clientId: string | undefined): string | null 
 // prior FEN-only behavior. Safe under redaction: a window has no reveal, so the window-start
 // FEN's dark tiles stay dark and the replayed moves are all of already-revealed pieces.
 export type JieqiEngineOptions = {
+  /** Public game-rule stamp; absent selects legacy explicitly on Pikafish. */
+  adjudicationRule?: JieqiAdjudicationRule;
   movetimeMs?: number;
   depth?: number;
   moves?: readonly string[];
@@ -837,6 +852,7 @@ export async function jieqiLiveEngineMove(
     newGame?: boolean;
     rng?: () => number;
     searchMoves?: readonly string[];
+    adjudicationRule?: JieqiAdjudicationRule;
   } = {},
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
@@ -858,6 +874,7 @@ export async function jieqiLiveEngineMove(
       rng: opts.rng,
       engine: tier.engine,
       searchMoves: opts.searchMoves,
+      adjudicationRule: opts.adjudicationRule,
     });
   } finally {
     release();
@@ -895,6 +912,7 @@ export function buildJieqiGoCommand(opts: JieqiEngineOptions = {}): string {
 export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
   return [
     ...buildJieqiLiveInitCommands(opts.engine),
+    ...jieqiRuleOptions(opts.adjudicationRule, opts.engine),
     buildJieqiPositionCommand(fen, opts.moves),
     buildJieqiGoCommand(opts),
   ];
@@ -964,6 +982,7 @@ export async function jieqiEngineSearch(
   // same depth in a quarter of the nodes per line).
   const prefix = [
     opts.newGame ? 'ucinewgame' : null,
+    ...jieqiRuleOptions(opts.adjudicationRule, opts.engine),
     `setoption name MultiPV value ${skilled ? JIEQI_SKILL_MULTIPV : 1}`,
   ].filter((line): line is string => line !== null);
   const request = {

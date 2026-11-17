@@ -34,6 +34,14 @@ export type PublicSiteStats = {
   weeklyCompletedGames?: PublicStatsWeek[];
   // Per-variant series on the same week axis; optional like the above.
   weeklyByVariant?: Array<{ variant: string; total: number; weeks: PublicStatsWeek[] }>;
+  weeklyByPlay?: Array<{
+    weekStart: string;
+    vsBot: number;
+    casualLive: number;
+    ratedLive: number;
+    casualCorrespondence: number;
+    ratedCorrespondence: number;
+  }>;
   modeTotals: Record<PublicStatsMode, number>;
   variantTotals: Array<{ variant: string; count: number }>;
   dailyCompletedGames: PublicStatsDay[];

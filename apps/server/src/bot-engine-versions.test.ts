@@ -42,6 +42,7 @@ test('pinned source builds show the short sha of their .ref', () => {
   const cases: [engineId: string, refFile: string][] = [
     ['rapfi-level-1', 'rapfi.ref'],
     ['rapfi-level-8', 'rapfi.ref'],
+    ['rapfi-strongest', 'rapfi.ref'],
     ['pikafish-jieqi-level-3', 'pikafish-jieqi.ref'],
     ['pikafish-jieqi-strongest', 'pikafish-jieqi.ref'],
     ['fairy-stockfish-xiangqi-level-5', 'fairy-stockfish-xiangqi.ref'],
@@ -79,7 +80,12 @@ test('Misty shows each engine build she plays', () => {
   for (const level of [1, 2, 3, 4, 5, 6, 8]) {
     assert.equal(botEngineVersion(`misty-banqi-level-${level}`), '0.3.0');
   }
-  assert.equal(botEngineVersion('misty-jungle-level-2'), '0.0.6');
+  for (const level of [1, 2, 3]) {
+    assert.equal(botEngineVersion(`misty-jungle-level-${level}`), '0.0.7');
+  }
+  for (const level of [1, 2, 3, 4, 5, 6]) {
+    assert.equal(botEngineVersion(`misty-jungle-classical-level-${level}`), '0.0.7');
+  }
   assert.equal(botEngineVersion('misty-jungle-flip'), '0.6.0');
   for (const level of [1, 2, 3, 4, 5, 6, 8]) {
     assert.equal(botEngineVersion(`misty-jungle-flip-level-${level}`), '0.6.0');
@@ -88,6 +94,18 @@ test('Misty shows each engine build she plays', () => {
 });
 
 test('an engine with no recorded version shows nothing rather than a guess', () => {
+  for (const id of [
+    'misty-jungle-classical-level-7',
+    'misty-jungle-classical-level-01',
+    'misty-jungle-level-9',
+    'rapfi-level-0',
+    'rapfi-level-9',
+    'rapfi-level-01',
+    'rapfi-level-1\n',
+    'rapfi-strongest\n',
+    'rapfi-strongest-extra',
+  ])
+    assert.equal(botEngineVersion(id), null, id);
   assert.equal(botEngineVersion('misty-xiangqi-mahjong'), null);
   assert.equal(botEngineVersion('python-no-such-build'), null);
   assert.equal(botEngineVersion('made-up-engine'), null);

@@ -25,7 +25,7 @@ import {
 } from '@mistboard/board-render';
 import type { Color, Move, PieceRole, PlayerView, Square } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { animateMoveGlyphs } from './review/move-glyph.js';
+import { animateMoveGlyphsOnLanding } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 import './dark-chess-render.css';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -194,7 +194,7 @@ export function animateChessBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphsOnLanding(host, duration);
 }
 
 function cellCentre(square: Square, geom: GridGeometry): { x: number; y: number } {

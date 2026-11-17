@@ -30,6 +30,7 @@ import { isInternalEngineTestLog } from './internal-engine-test.js';
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
+import { isReleaseSmokeRoom } from './release-smoke.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -235,6 +236,7 @@ function candidateFromChessRoom(
   channels: readonly WatchChannel[],
   now: number,
 ): LiveTvCandidate | null {
+  if (room.mode === 'pve' && isReleaseSmokeRoom(room, isServerEngineClient)) return null;
   if (room.projection.state.status.type !== 'playing') return null;
   if (!canServeLiveBoard(room.gameSpecId)) return null;
   const channel = channels.find((entry) => entry.gameSpecIds.includes(room.gameSpecId));
@@ -281,6 +283,7 @@ function candidateFromTenantRoom(
   now: number,
 ): LiveTvCandidate | null {
   if (isInternalEngineTestLog(room.events)) return null;
+  if (isReleaseSmokeRoom(room, isEngine)) return null;
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;

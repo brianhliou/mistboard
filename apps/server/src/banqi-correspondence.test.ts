@@ -4,6 +4,7 @@ import {
   type BanqiDeal,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
+  gameSpecForId,
   isCorrespondenceRatedSpec,
 } from '@mistboard/game';
 import { mayPlayCorrespondence, mayPlayCorrespondenceByUserId } from './correspondence-access.js';
@@ -37,7 +38,7 @@ import './variant-tenant/register-tenants.js';
 
 type Room = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 const specs = ['ffq-banqi', 'three-kingdoms-banqi'] as const;
-// FFQ is still an admin playtest; Three Kingdoms launched (casual) on 2026-11-10.
+// FFQ correspondence uses its runtime room gate; both variants stay casual-only.
 const restricted = ['ffq-banqi'] as const;
 const admin = { id: 'admin', accountRole: 'admin' } as UserAccount;
 const player = { id: 'player', accountRole: 'player' } as UserAccount;
@@ -88,9 +89,9 @@ test('picker/seek access follows the FFQ room door', async (t) => {
   }
   process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
   assert.deepEqual(await seeksVisibleTo(seeks, admin), seeks);
-  assert.deepEqual(await seeksVisibleTo(seeks, player), []);
+  assert.deepEqual(await seeksVisibleTo(seeks, player), seeks);
   assert.equal(await mayPlayCorrespondence(admin, 'ffq-banqi'), true);
-  assert.equal(await mayPlayCorrespondence(player, 'ffq-banqi'), false);
+  assert.equal(await mayPlayCorrespondence(player, 'ffq-banqi'), true);
   for (const spec of restricted) {
     assert.deepEqual(
       await createSeekResult(ctx, admin, { gameSpecId: spec, daysPerMove: 0 }, 'board'),
@@ -128,6 +129,12 @@ test('three-kingdoms-banqi: launched correspondence is casual and follows the ki
 
 for (const spec of restricted) {
   test(`${spec}: directed target and both accepting accounts are rechecked before consuming the seek`, async (t) => {
+    const gameSpec = gameSpecForId(spec);
+    const surface = gameSpec.publicSurface;
+    gameSpec.publicSurface = 'hidden';
+    t.after(() => {
+      gameSpec.publicSurface = surface;
+    });
     flags(t, false);
     process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
     init('postgres://mistboard@127.0.0.1:9/never-connect');
@@ -144,6 +151,8 @@ for (const spec of restricted) {
       }
       if (sql.includes('SELECT 1 AS one FROM users')) return { rows: [{ one: 1 }], rowCount: 1 };
       if (sql.includes('FROM user_relations')) return { rows: [], rowCount: 0 };
+      // #1131: neither account owes a first move in another correspondence game.
+      if (sql.includes('AS opponent_name')) return { rows: [], rowCount: 0 };
       if (sql.includes('FROM correspondence_seeks'))
         return {
           rows: [
@@ -391,5 +400,131 @@ for (const spec of specs) {
       assert.equal(room.events.length, count);
     }
     assert.equal(reads, cases.length);
+  });
+}
+
+// Decided 2026-11-15 (#994): signed-in live FFQ players may play casual correspondence.
+for (const action of [
+  'post',
+  'challenge',
+  'accept',
+  'rated post',
+  'rated challenge',
+  'rated accept',
+] as const) {
+  test(`FFQ public correspondence: non-admin ${action}`, async (t) => {
+    flags(t, true);
+    const spec = gameSpecForId('ffq-banqi');
+    const surface = spec.publicSurface;
+    spec.publicSurface = 'casual';
+    t.after(() => {
+      spec.publicSurface = surface;
+    });
+    const priorRated = process.env.MISTBOARD_RATED_ENABLED;
+    const priorCorrRated = process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+    process.env.MISTBOARD_RATED_ENABLED = 'true';
+    process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
+    t.after(() => {
+      if (priorRated === undefined) delete process.env.MISTBOARD_RATED_ENABLED;
+      else process.env.MISTBOARD_RATED_ENABLED = priorRated;
+      if (priorCorrRated === undefined) delete process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED;
+      else process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = priorCorrRated;
+    });
+    init('postgres://mistboard@127.0.0.1:9/never-connect');
+    t.after(close);
+    const rated = action.startsWith('rated');
+    let inserts = 0;
+    let consumes = 0;
+    let creates = 0;
+    t.mock.method(getPool(), 'query', async (sql: string, args: unknown[]) => {
+      if (sql.includes('account_role AS')) {
+        assert.ok(sql.includes('closed_at IS NULL'));
+        return { rows: args[0] === 'missing' ? [] : [{ accountRole: 'player' }] };
+      }
+      if (sql.includes('AS opponent_name')) return { rows: [] };
+      if (sql.includes('AS marked')) return { rows: [{ marked: false }] };
+      if (sql.includes('SELECT 1 AS one FROM users')) return { rows: [{ one: 1 }] };
+      if (sql.includes('FROM user_relations')) return { rows: [] };
+      if (sql.startsWith('INSERT INTO correspondence_seeks')) {
+        inserts++;
+        assert.equal(args[2], 'ffq-banqi');
+        assert.equal(args[8], false);
+        return { rows: [], rowCount: 1 };
+      }
+      if (sql.startsWith('DELETE FROM correspondence_seeks')) {
+        consumes++;
+        return { rows: [], rowCount: 1 };
+      }
+      if (sql.includes('FROM correspondence_seeks WHERE id'))
+        return {
+          rows: [
+            {
+              id: 'seek_open_ffq',
+              creator_user_id: 'creator',
+              game_spec_id: 'ffq-banqi',
+              days_per_move: 3,
+              preferred_color: 'first',
+              target_user_id: null,
+              visibility: 'public',
+              expires_at: new Date(Date.now() + 86_400_000),
+              rated,
+            },
+          ],
+        };
+      if (sql.includes('FROM correspondence_seeks')) return { rows: [] };
+      if (sql.includes('correspondence_seek_outcomes')) return { rows: [], rowCount: 1 };
+      // Start-email lookups return no recipients, keeping the route test local.
+      if (sql.includes('FROM users')) return { rows: [] };
+      assert.fail(`unexpected FFQ correspondence SQL: ${sql}`);
+    });
+    const registration = correspondenceTenantForSpecId('ffq-banqi')!;
+    const createGame: NonNullable<typeof registration.createCorrespondenceGameForSeek> = async (
+      args,
+    ) => {
+      creates++;
+      assert.equal(args.rated, false);
+      assert.deepEqual(args.first, { userId: 'creator' });
+      assert.deepEqual(args.second, { userId: player.id });
+      return {
+        ok: true,
+        room: { id: 'ffq_open', gameSpecId: 'ffq-banqi', rated: false },
+        seats: { first: 'red', second: 'black' },
+      };
+    };
+    const originalCreate = registration.createCorrespondenceGameForSeek;
+    registration.createCorrespondenceGameForSeek = createGame;
+    t.after(() => {
+      registration.createCorrespondenceGameForSeek = originalCreate;
+    });
+    const result = action.endsWith('accept')
+      ? await acceptSeekResult(ctx, player, 'seek_open_ffq')
+      : await createSeekResult(
+          ctx,
+          player,
+          {
+            gameSpecId: 'ffq-banqi',
+            daysPerMove: 3,
+            rated,
+            ...(action.endsWith('challenge') ? { targetUserId: 'target' } : {}),
+          },
+          'board',
+          { skipChallengeEmail: true },
+        );
+    if (rated) {
+      assert.deepEqual(result, { status: 501, body: { error: 'rated_unsupported_spec' } });
+      assert.equal(inserts + consumes + creates, 0, 'rated refusal precedes any write or room');
+    } else {
+      assert.equal(result.status, 201);
+      assert.equal(result.body.rated ?? (result.body.seek as { rated: boolean }).rated, false);
+      assert.equal(inserts, action === 'accept' ? 0 : 1);
+      assert.equal(consumes, action === 'accept' ? 1 : 0);
+      assert.equal(creates, action === 'accept' ? 1 : 0);
+    }
+    assert.equal(await mayPlayCorrespondence(null, 'ffq-banqi'), false);
+    assert.equal(await mayPlayCorrespondenceByUserId('missing', 'ffq-banqi'), false);
+    assert.equal(await mayPlayCorrespondenceByUserId('target', 'ffq-banqi'), true);
+    assert.deepEqual(await seeksVisibleTo([{ gameSpecId: 'ffq-banqi' }], player), [
+      { gameSpecId: 'ffq-banqi' },
+    ]);
   });
 }

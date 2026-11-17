@@ -315,6 +315,7 @@ export {
   loadRoom,
   loadRoomEvents,
   loadRoomsEvents,
+  persistAccountRoom,
   recordGameDebugArtifact,
   recordGameStart,
   recordRoomLifecycleAudit,
@@ -405,13 +406,18 @@ export { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbo
 export type {
   ActivePlayerEntry,
   BestRatingEntry,
+  Champion,
+  LadderChampion,
   LeaderboardEntry,
   LeaderboardQuery,
   LeaderboardSummaryLadder,
 } from './persistence-leaderboards.js';
 export {
+  championsForUser,
+  clearChampionsCache,
   getBestRatings,
   getBestRatingsAnyTimeClass,
+  getChampions,
   getGamesTotals,
   getLeaderboard,
   getLeaderboardSummary,
@@ -519,6 +525,7 @@ export type {
 export {
   countHostCorrespondenceGames,
   deleteRoomDeadline,
+  firstMoveOwedForUser,
   listActiveCorrespondenceRoomIds,
   listActiveRoomDeadlines,
   listCorrespondenceGamesForUser,
@@ -632,12 +639,21 @@ export {
   playableAllowlistedSpecs,
   revokeVariantAccess,
 } from './persistence-variant-access.js';
+export type { XiangqiBroadcastPushToken } from './persistence-xiangqi-broadcast-push.js';
+export {
+  findXiangqiBroadcastPushToken,
+  findXiangqiBroadcastPushTokenOn,
+  revokeXiangqiBroadcastPushTokenOn,
+  touchXiangqiBroadcastPushToken,
+  touchXiangqiBroadcastPushTokenOn,
+} from './persistence-xiangqi-broadcast-push.js';
 export type {
   StoredXiangqiBroadcastBoard,
   StoredXiangqiBroadcastRound,
   StoredXiangqiBroadcastTour,
   XiangqiBroadcastBoardSearchFilters,
   XiangqiBroadcastBoardSearchItem,
+  XiangqiBroadcastBoardUpdateOptions,
   XiangqiBroadcastBoardUpdateResult,
   XiangqiBroadcastBoardUpdateStatus,
   XiangqiBroadcastImportError,

@@ -4,7 +4,7 @@
 
 import './profile-summary-card.css';
 import type { RatingVariant } from '@mistboard/game';
-import { bindBotPlayControl } from './bot-play.js';
+import { type BotPlayTarget, bindBotPlayControl } from './bot-play.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
@@ -120,6 +120,8 @@ export function buildUserCard(
 // passes nothing and renders the record as it is.
 export type BotCardOptions = {
   name?: string;
+  /** Preserve the host page's selected variant and strength on the profile. */
+  profileHref?: string;
   subtitle?: string;
   badge?: string;
   /** Replaces the stored bio; null drops it. The stored bio is English-only. */
@@ -128,6 +130,11 @@ export type BotCardOptions = {
   ratingGameSpecId?: string;
   /** This variant's chip reads "Play <variant>" and leads the row as the primary action. */
   primaryPlayGameSpecId?: string;
+  /** Play posts this bot and engine pair instead of the profile's bot id: a
+   *  ladder level the profile does not name by itself (Misty's Banqi and Flip
+   *  Jungle levels: botId plus engineId; Three Kingdoms Banqi, which has no
+   *  bot profile that plays it: engineId alone). */
+  playTarget?: BotPlayTarget;
 };
 
 // A bot that plays one variant keeps the compact shape: bio, its rating, one
@@ -166,7 +173,7 @@ export function buildBotSummaryCard(
     : buildBotRatingGrid(profile);
   if (ratings) card.append(ratings);
 
-  const actions = buildBotActions(profile, options.primaryPlayGameSpecId);
+  const actions = buildBotActions(profile, options.primaryPlayGameSpecId, options.playTarget);
   if (actions) card.append(actions);
   card.append(buildBotFooter(profile));
   return card;
@@ -228,7 +235,7 @@ function buildBotVariantRows(
       if (row.record.games > 0) meta.push(recordLabel(row.record));
     }
     const version = showVersions ? row.option?.version : undefined;
-    if (version) meta.push(t('bots.versionValue', { version }));
+    if (version) meta.push(t('bots.versionValue', { version: shortEngineVersion(version) }));
     if (meta.length > 0) {
       const metaEl = document.createElement('span');
       metaEl.className = 'profile-summary-card-variant-meta';
@@ -353,7 +360,7 @@ function buildBotHeader(
   identity.className = 'profile-summary-card-identity';
   const name = document.createElement('a');
   name.className = 'profile-summary-card-name';
-  name.href = `/bot/${encodeURIComponent(profile.id)}`;
+  name.href = options.profileHref ?? `/bot/${encodeURIComponent(profile.id)}`;
   name.textContent = options.name ?? profile.displayName;
   const owner = document.createElement('span');
   owner.className = 'profile-summary-card-subtitle';
@@ -362,8 +369,8 @@ function buildBotHeader(
   if (version) {
     const versionEl = document.createElement('span');
     versionEl.className = 'profile-summary-card-version';
-    versionEl.title = t('bots.engineVersion');
-    versionEl.textContent = t('bots.versionValue', { version });
+    versionEl.title = `${t('bots.engineVersion')}: ${version}`;
+    versionEl.textContent = t('bots.versionValue', { version: shortEngineVersion(version) });
     owner.append(' · ', versionEl);
   }
   identity.append(name, owner);
@@ -476,6 +483,7 @@ function buildBotRatingGrid(profile: BotSummaryProfile): HTMLElement | null {
 function buildBotActions(
   profile: BotSummaryProfile,
   primaryGameSpecId?: string,
+  playTarget?: BotPlayTarget,
 ): HTMLElement | null {
   const options = botPlayOptions(profile);
   if (options.length === 0) return null;
@@ -487,7 +495,7 @@ function buildBotActions(
   const row = document.createElement('div');
   row.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
   for (const option of ordered) {
-    row.append(buildBotPlayControl(profile, option, option === primary));
+    row.append(buildBotPlayControl(profile, option, option === primary, undefined, playTarget));
   }
   return row;
 }
@@ -497,6 +505,7 @@ function buildBotPlayControl(
   option: BotSummaryPlayOption,
   primary = false,
   labelOverride?: string,
+  playTarget?: BotPlayTarget,
 ): HTMLElement {
   const variant = gameSpecLabel(option.gameSpecId);
   const label = labelOverride ?? (primary ? t('bots.playVariant', { variant }) : variant);
@@ -517,7 +526,10 @@ function buildBotPlayControl(
   if (labelOverride) control.setAttribute('aria-label', t('bots.playVariant', { variant }));
   bindBotPlayControl(
     control,
-    () => ({ botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' }),
+    () =>
+      playTarget
+        ? { ...playTarget, gameSpecId: option.gameSpecId, preferredColor: 'random' }
+        : { botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' },
     {
       onStateChange: (state) => {
         control.textContent =
@@ -860,4 +872,12 @@ function formatJoined(value: string | undefined, locale: Locale): string | null 
     month: 'long',
     year: 'numeric',
   }).format(date);
+}
+
+/**
+ * A recorded version can name several pins ("<build> · <net> · <branch>"); a card shows
+ * only the build, like every other bot, and the full string stays in the hover title.
+ */
+export function shortEngineVersion(version: string): string {
+  return version.split(' · ')[0] ?? version;
 }

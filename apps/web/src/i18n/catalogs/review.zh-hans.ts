@@ -7,6 +7,9 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANS_REVIEW = {
+  'review.article.showReplies': '显示 {count} 个应手分支',
+  'review.article.hideReplies': '隐藏 {count} 个应手分支',
+  'review.article.variation': '变化',
   'review.chooseLine': '选择分支',
   'review.mainLine': '主线',
   // Remaining review widgets and dynamically generated move advice (#855).
@@ -135,9 +138,11 @@ export const ZH_HANS_REVIEW = {
   'practice.position.title': '从局面开始练习',
   'practice.position.badFen': '这个链接里没有可读取的象棋局面。',
   'practice.position.finished': '这个局面已经结束，没有可走的棋。',
-  'practice.position.badGoal': '这个链接没有说明是要将死对手还是守和。',
+  'practice.position.badGoal': '这个链接没有说明是要将死对手、争取胜势还是守和。',
   'practice.position.badSide': '这个链接没有说明你执哪一方。',
   'practice.position.toEditor': '在棋盘编辑器里摆一个局面',
+  'practice.position.youPlay': '你执{side}，对手是引擎。',
+  'practice.position.backToArticle': '返回文章',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '开始',
   'practice.card.soldier': '兵不能后退',
@@ -145,6 +150,7 @@ export const ZH_HANS_REVIEW = {
   'practice.card.horse': '当心蹩马腿',
   'practice.card.cannon': '要有炮架',
   'practice.card.insufficient': '守住和棋',
+  'practice.goal.sideTo': '{color}走棋，{goal}',
   'practice.goal.mate': '将死对手',
   'practice.goal.mateIn': '{moves} 回合内将死对手',
   'practice.goal.win': '取胜',
@@ -306,6 +312,8 @@ export const ZH_HANS_REVIEW = {
   'study.phone.searchChapters': '搜索章节',
   'study.phone.noChapterMatch': '没有符合的章节。',
   'study.phone.closeChapters': '关闭章节列表',
+  'study.moveNote': '着法注释',
+  'study.readMoveNote': '阅读完整着法注释',
   'study.phone.info': '信息',
   'study.phone.closeInfo': '关闭研究信息',
   'study.chapterSettings': '章节设置',
@@ -491,6 +499,7 @@ export const ZH_HANS_REVIEW = {
   'replay.saveFailed': '保存失败：{message}',
   'replay.editingNote': '正在编辑批注（{severity}）',
   'replay.loadingGame': '正在加载对局',
+  'replay.watchAsPlayed': '按对局节奏回放',
   'replay.gameNotFound': '找不到对局',
   'replay.postgameUnavailable': '无法查看赛后复盘',
   'replay.postgameServiceUnavailable': '赛后复盘服务不可用。',
@@ -563,6 +572,7 @@ export const ZH_HANS_REVIEW = {
   'historical.minPlies': '最少步数',
   'historical.minPliesHint': '短于此步数的本站对局不显示。默认为 {plies}；清空即显示全部对局。',
   'historical.floorNote': '已隐藏本站少于 {plies} 步的对局。',
+  'historical.dataLink': '本站对局的每月下载',
   'historical.floorShowAll': '显示这些对局',
   'historical.maxPlies': '最多步数',
   'historical.sortLabel': '排序',
@@ -924,6 +934,13 @@ export const ZH_HANS_REVIEW = {
   'engine.gomokuWhiteInShort': '白 {moves} 步胜',
   'engine.gomokuBlackWinsShort': '黑胜',
   'engine.gomokuWhiteWinsShort': '白胜',
+  'engine.ruleShort': '长将',
+  'engine.ruleRedWins':
+    '并非将死。引擎把即将出现的重复局面判为红方胜：按 Mistboard 规则，长将一方判负。',
+  'engine.ruleBlackWins':
+    '并非将死。引擎把即将出现的重复局面判为黑方胜：按 Mistboard 规则，长将一方判负。',
+  'engine.ruleRecordNote':
+    '按 Mistboard 规则，此着走成长将重复，应判负；本场比赛未执行此规则，故不评级。',
   'engine.depth': '深度 {depth}',
   'engine.nodes': '{nodes} 节点',
   'engine.thinking': '思考中…',
@@ -1085,6 +1102,7 @@ export const ZH_HANS_REVIEW = {
   'review.luckCard.bothEffect.unlucky': '{side}胜率比平均结果低{points}个百分点',
   'review.luckCard.bothEffect.even': '{side}胜率与平均结果相当',
   'replay.solutionHidden': '找出杀法。',
+  'replay.whatWouldYouPlay': '你会怎么走？',
   'replay.showSolution': '显示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
   'analysis.banqiTablebase.clockDraw': '依 {limit} 步规则判和',

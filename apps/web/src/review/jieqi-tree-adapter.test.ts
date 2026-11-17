@@ -1,5 +1,6 @@
 import {
   createInitialJieqiState,
+  JIEQI_ADJUDICATION_RULE,
   jieqiHomeSquares,
   jieqiStateToDealtFen,
   jieqiTruthView,
@@ -110,5 +111,30 @@ describe('review captured pool', () => {
     expect(masked).toEqual(shown);
     expect(masked[0]?.takenFaceDown).toBeUndefined();
     expect(masked[0]?.role).not.toBeNull();
+  });
+});
+
+describe('Jieqi review adjudication provenance', () => {
+  it('retains legacy for an unstamped game and carries the current stamp through replay', () => {
+    const legacy = makeJieqiTreeAdapter('jq_provenance', STANDARD_JIEQI_DEAL);
+    const current = makeJieqiTreeAdapter('jq_provenance', STANDARD_JIEQI_DEAL, {
+      adjudicationRule: JIEQI_ADJUDICATION_RULE,
+    });
+    const oldRoot = legacy.initialTruth();
+    const newRoot = current.initialTruth();
+    expect(oldRoot.adjudicationRule).toBeUndefined();
+    expect(newRoot.adjudicationRule).toBe('jqe-v1');
+    // Public projections disclose neither hidden identities nor rule bookkeeping.
+    expect(JSON.stringify(current.project(newRoot))).toBe(JSON.stringify(legacy.project(oldRoot)));
+    expect(JSON.stringify(current.project(newRoot))).not.toMatch(
+      /adjudicationRule|positionCounts|repetitionLog|chase/,
+    );
+    const move = { from: 'a4', to: 'a5' } as const;
+    const oldAfter = legacy.applyMove({ ...oldRoot, noCaptureClock: 79 }, move);
+    const newAfter = current.applyMove({ ...newRoot, noCaptureClock: 79 }, move);
+    expect(oldAfter.status.type).toBe('playing');
+    expect(newAfter.adjudicationRule).toBe('jqe-v1');
+    expect(newAfter.status).toEqual({ type: 'finished', winner: null, reason: 'no-capture-clock' });
+    expect(newRoot.noCaptureClock).toBe(0);
   });
 });

@@ -1,6 +1,35 @@
 #!/usr/bin/env node
 // npm run prod:db -- node scripts/study-chapter-decisions.mjs --study ID --chapter ID --file luck.json [--apply]
 // Dry run by default. Luck grades the reveal only, never a face-down victim.
+//
+// Analysis on a study embed
+// 1. Compute one side's win chances for every MAINLINE POSITION (start included),
+//    then pass a plan to npm run study:edit (dry run first; --apply writes):
+//    {"study":"STUDY_ID","ops":[{"op":"series","chapter":"CHAPTER_ID",
+//      "scoreSeries":{"side":"red","series":[
+//        {"name":"Engine","color":"a","values":[0.5,0.62,0.48]}]}}]}
+//    The shape is identical for Banqi and Jieqi (and every other embed board).
+//    side: red|black; color: a|b|c|d; values: [0,1], exactly mainline plies + 1.
+// 2. Compute flip/reveal decisions offline, save the following JSON to luck.json,
+//    then use the command above (dry run first; --apply writes). All scores below
+//    are mover/SEAT-POV percentages [0,100], ply 1 = the first mainline move.
+//    Banqi (a1a1 played, b1b1 preferred; candidate UCI uses ranks 0..3):
+//    {"engineId":"banqi-engine","source":"offline pool sweep","decisions":[
+//      {"ply":1,"mover":"red","bestWin":70,"playedWin":50,"realizedWin":62,
+//       "playedRank":2,"candidates":[{"move":"b0b0","win":70},
+//         {"move":"a0a0","win":50,"played":true}]}]}
+//    bestWin: expected score BEFORE the flip / best available move's expectation;
+//    playedWin: played flip averaged over every tile in its public pool, BEFORE
+//    seeing the draw; realizedWin: score AFTER the tile turned. Choice cost is
+//    max(0, bestWin - playedWin); draw luck is realizedWin - playedWin. Candidates
+//    are best first; include the preferred move and its bestWin. playedRank is a
+//    positive integer or null. No deal, hidden identity or captured role belongs here.
+//    Jieqi (luck-only rendering; optional bestWin, playedRank and candidates):
+//    {"engineId":"jieqi-engine","source":"offline pool sweep","decisions":[
+//      {"ply":1,"mover":"red","playedWin":50,"realizedWin":62}]}
+//    Optional candidates: [{"move":"i3i4","win":50,"played":true}] (ranks 0..9).
+//    Jieqi grades only the mover's face-down reveal, never a hidden captured victim.
+//    Decisions may cover a subset of mainline chance plies; tree edits invalidate them.
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import pg from 'pg';

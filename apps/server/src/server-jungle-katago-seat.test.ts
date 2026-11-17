@@ -98,10 +98,9 @@ function recordingProvider(reply: (state: JungleGameState) => string | null) {
 }
 
 test('KataGo is the strongest seat, offered only where its binary and net resolve', async () => {
-  assert.deepEqual(JUNGLE_PLAYABLE_ENGINE_IDS, [
-    KATAGO_JUNGLE_ENGINE_ID,
-    JUNGLE_PLAYABLE_ENGINE_ID,
-  ]);
+  assert.equal(JUNGLE_PLAYABLE_ENGINE_IDS.length, 8);
+  assert.equal(JUNGLE_PLAYABLE_ENGINE_IDS[0], KATAGO_JUNGLE_ENGINE_ID);
+  assert.equal(JUNGLE_PLAYABLE_ENGINE_IDS[1], JUNGLE_PLAYABLE_ENGINE_ID);
   await withAssets(true, () => {
     assert.equal(katagoJungleAvailable(), true);
     assert.equal(isJunglePlayableEngineClientId(KATAGO_JUNGLE_ENGINE_ID), true);

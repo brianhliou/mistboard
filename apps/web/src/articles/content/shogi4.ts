@@ -30,12 +30,16 @@ export const shogi4Article: Article = {
     showInIndex: false,
     status: 'published',
     publishedAt: '2026-06-05',
-    updatedAt: '2026-06-06',
-    updateNote:
-      'Reworked the diagrams, the history and the prose.',
+    updatedAt: '2026-11-15',
+    updateNote: 'Added a short summary at the top.',
     audience:
       'Players and shogi-curious readers who want the full, primary-sourced rules of Shogi4, a 4×4 drop-shogi.',
     thumbnail: { kind: 'svg', svg: SHOGI4_RULES_THUMBNAIL },
+    tldr: [
+      'Pieces step in the directions on their tiles and may jump over a friendly piece. Non-royal pieces evolve on reaching the far row.',
+      'Captured pieces switch sides and can be dropped back onto an empty square, except on the far row.',
+      'Capture the enemy royal to win. There is no check or checkmate.',
+    ],
     intro: [
       {
         kind: 'paragraph',

@@ -11,6 +11,7 @@ import {
   type CevalHandle,
   type CevalLine,
   type CevalLoadProgress,
+  type CevalRequest,
   type CevalUpdate,
   type CevalVariant,
   cevalEngineName,
@@ -34,12 +35,14 @@ export interface EnginePanel {
    *  standard start position; pass `initialFen` to analyse a mid-game base
    *  position (e.g. a puzzle) with `movesUci` applied on top. `searchable`
    *  is false for a terminal position whose engine has no move to search.
-   *  `noProgressLimit` is the game's no-progress draw limit, for engines that score it. */
+   *  `noProgressLimit` is the game's no-progress draw limit, for engines that score it.
+   *  `jieqiRule` selects the public Jieqi rule; omit for standalone analysis. */
   setPosition(
     movesUci: string[],
     initialFen?: string,
     searchable?: boolean,
     noProgressLimit?: number,
+    jieqiRule?: CevalRequest['jieqiRule'],
   ): void;
   /** Drive the arrow toggle from outside the popover (the `a` shortcut), keeping
    *  the checkbox in sync. Fires onShowArrowsChange like a click would. */
@@ -233,6 +236,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let currentFen: string | undefined;
   let currentSearchable = true;
   let currentNoProgressLimit: number | undefined;
+  let currentJieqiRule: CevalRequest['jieqiRule'];
   // Side to move at the base position: startpos is Red, but an initialFen (a
   // mid-game puzzle position) may hand the engine a Black-to-move base. Read it
   // from the FEN's turn token so the eval normalises scores to the right POV.
@@ -311,6 +315,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
         ...(currentNoProgressLimit !== undefined
           ? { noProgressLimit: currentNoProgressLimit }
           : {}),
+        ...(currentJieqiRule !== undefined ? { jieqiRule: currentJieqiRule } : {}),
         multiPv,
         effort,
         onUpdate: (update) => {
@@ -341,10 +346,12 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     initialFen?: string,
     searchable: boolean = true,
     noProgressLimit?: number,
+    jieqiRule?: CevalRequest['jieqiRule'],
   ): void {
     currentMoves = [...movesUci];
     currentFen = initialFen;
     currentNoProgressLimit = noProgressLimit;
+    currentJieqiRule = jieqiRule;
     currentSearchable = searchable;
     // The shared score axis is the first seat: Black in Gomoku, Red in xiangqi.
     currentBaseSide =

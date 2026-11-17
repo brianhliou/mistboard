@@ -469,6 +469,155 @@
   align-self: stretch;
 }
 
+/* ---- Post a seek: the Play a game panel (landing-play.css, open layout) ----
+   The panel carries .landing-setup-dialog--open, so the shared rows, option
+   groups, variant tiles and side pieces style it; only the dialog frame, the
+   heading and the phone sheet are set here. */
+.correspondence-dialog.correspondence-dialog--setup {
+  width: min(660px, calc(100vw - 32px));
+  max-width: none;
+  border-color: color-mix(in srgb, var(--site-accent) 22%, transparent);
+}
+
+.correspondence-dialog > .correspondence-panel.correspondence-seek {
+  padding: 0;
+}
+
+.correspondence-seek .landing-setup-header > .landing-setup-title {
+  margin: 0;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.correspondence-seek-form {
+  display: grid;
+}
+
+/* The dialog scrolls as a whole when it must; no scroller inside it. */
+.correspondence-seek.landing-setup-dialog--open .landing-setup-accordion {
+  overflow: visible;
+}
+
+.correspondence-seek.landing-setup-dialog--open .landing-setup-actions {
+  gap: 10px;
+}
+
+.correspondence-seek .correspondence-form-status {
+  text-align: center;
+}
+
+/* Every variant shows: the seek list is short, and the dialog scrolls as a
+   whole on a short screen rather than nesting a scroller in the grid. */
+.correspondence-seek.landing-setup-dialog--open .landing-variant-grid {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* The phone's variant row: the Play a game row over a see-through native
+   select, so a tap opens the phone's own picker. Hidden on a larger screen,
+   where the tile grid picks. */
+.correspondence-seek .correspondence-seek-variant-row {
+  position: relative;
+  display: none;
+}
+
+.correspondence-seek-variant-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.correspondence-seek .correspondence-seek-variant-row:focus-within {
+  border-color: var(--site-accent);
+  outline: 2px solid var(--site-focus);
+}
+
+/* A phone gets the Play a game sheet: full width from the bottom edge, each
+   label above its control, the variant as one row. */
+@media (max-width: 600px) {
+  .correspondence-dialog.correspondence-dialog--setup {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .correspondence-seek .landing-variant-grid {
+    display: none;
+  }
+
+  .correspondence-seek .correspondence-seek-variant-row {
+    display: flex;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row:not(:first-child) {
+    grid-template-columns: none;
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-accordion {
+    padding: 2px 16px;
+  }
+
+  /* Side pieces at Play a game's phone sizes, so Random's pair and its word
+     fit a third of a 390px row. */
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph:has(.landing-color-piece) {
+    height: 28px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.jungle,
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.chess,
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.xiangqi {
+    width: 28px;
+    height: 28px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.jungle,
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.chess,
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.xiangqi {
+    width: 22px;
+    height: 22px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-row .landing-color-piece.stone {
+    width: 22px;
+    height: 22px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open
+    .landing-setup-row
+    .landing-color-glyph.random
+    .landing-color-piece.stone {
+    width: 20px;
+    height: 20px;
+  }
+
+  .correspondence-seek.landing-setup-dialog--open .landing-setup-actions {
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .correspondence-host-signin {
   align-self: flex-start;
 }
@@ -722,12 +871,12 @@
   gap: 48px;
 }
 
+/* A compact strip, not a poster: the games in play below it are the picture. */
 .correspondence-hero {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 32px 56px;
-  padding: 36px;
+  align-items: flex-end;
+  gap: 20px 40px;
+  padding: 22px 28px;
   border: 1px solid var(--site-border);
   border-radius: 14px;
   background:
@@ -736,11 +885,17 @@
 }
 
 .correspondence-hero-copy {
-  flex: 1 1 380px;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
+}
+
+.correspondence-hero-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .correspondence-eyebrow {
@@ -754,8 +909,8 @@
 
 .correspondence-hero-title {
   margin: 0;
-  font-size: clamp(2.1rem, 5vw, 3.4rem);
-  line-height: 1.05;
+  font-size: clamp(1.6rem, 3.2vw, 2.2rem);
+  line-height: 1.1;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--site-heading);
@@ -763,10 +918,16 @@
 
 .correspondence-hero-pitch {
   margin: 0;
-  max-width: 46ch;
-  font-size: 1.08rem;
-  line-height: 1.55;
+  max-width: 68ch;
+  font-size: 0.98rem;
+  line-height: 1.5;
   color: var(--site-text);
+}
+
+.correspondence-hero-facts {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--site-muted);
 }
 
 .correspondence-signedout-actions {
@@ -775,75 +936,16 @@
   gap: 10px;
 }
 
+.correspondence-hero > .correspondence-signedout-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
 .correspondence-signedout-actions .correspondence-btn,
 .correspondence-signedout-actions .correspondence-ghost {
   min-height: 46px;
   padding: 0 22px;
   font-size: 0.95rem;
-}
-
-.correspondence-hero-facts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.correspondence-hero-facts li {
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--site-border);
-  color: var(--site-muted);
-  font-size: 0.82rem;
-}
-
-.correspondence-hero-note {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--site-muted);
-}
-
-.correspondence-hero-board {
-  flex: 0 1 340px;
-  min-width: 0;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.correspondence-hero-board-host {
-  aspect-ratio: 9 / 10;
-  border-radius: 10px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-}
-
-.correspondence-static-board {
-  width: 100%;
-  height: 100%;
-}
-
-.correspondence-static-board svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.correspondence-hero-caption {
-  font-size: 0.82rem;
-  color: var(--site-muted);
-  text-align: center;
-}
-
-.correspondence-hero-caption a {
-  color: var(--site-link);
-  text-decoration: none;
-}
-
-.correspondence-hero-caption a:hover {
-  text-decoration: underline;
 }
 
 /* Every correspondence game in play, as a board grid like /games. */
@@ -985,6 +1087,18 @@
   padding: 0 22px;
 }
 
+/* Below a laptop the buttons drop under the copy and take the full width. */
+@media (max-width: 760px) {
+  .correspondence-hero {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .correspondence-hero > .correspondence-signedout-actions {
+    flex: 1 1 100%;
+  }
+}
+
 @media (max-width: 520px) {
   .correspondence-header h1 {
     font-size: 1.6rem;
@@ -1042,7 +1156,7 @@
   }
 
   .correspondence-hero {
-    padding: 22px 18px;
+    padding: 18px;
   }
 
   .correspondence-signedout-actions > * {
@@ -1053,11 +1167,6 @@
   .correspondence-signedout-actions .correspondence-ghost {
     padding: 0 12px;
     white-space: nowrap;
-  }
-
-  .correspondence-hero-board {
-    flex-basis: 100%;
-    max-width: 300px;
   }
 
   /* Two boards a row on a phone, so the wall stays a wall. */

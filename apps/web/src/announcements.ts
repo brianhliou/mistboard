@@ -29,6 +29,7 @@ export type AnnouncementKind = 'status' | 'article' | 'release' | 'update';
 
 export type Announcement = {
   date: string; // ISO YYYY-MM-DD
+  englishOnly?: boolean; // Explicit editorial scope; localized feeds keep the English copy.
   kind: AnnouncementKind;
   headline: string;
   body?: string;
@@ -46,6 +47,55 @@ export type Announcement = {
 };
 
 const baseAnnouncements: Announcement[] = [
+  {
+    date: '2026-11-18',
+    kind: 'article',
+    headline: 'A player page for Meng Fanrui.',
+    body: "The men's 2025 Chinese Xiangqi Association champion, who won the year-end final in a rapid playoff and finished the year first on the points list. The page replays three of his 2026 wins, with the engine's best lines branching off the game at each turning point, in English and Chinese.",
+    href: '/blog/meng-fanrui',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-11-17',
+    kind: 'release',
+    headline: 'Jungle Chess now has seven Misty levels.',
+    body: 'Misty used to play Jungle Chess at one strength. Levels 1 to 6 are new and easier, Level 7 is the Misty you know, and KataGo still sits above them all. Pick a level on the bot card or when you start a game against the computer.',
+    href: '/?play=computer&gameSpecId=jungle',
+    cta: 'Play Jungle Chess',
+  },
+  {
+    date: '2026-11-17',
+    kind: 'article',
+    headline: 'The fog bots go offline on December 8.',
+    body: "Misty, the bot for Fog Chess and Fog Xiangqi, stops playing on December 8, 2026. Games against a friend, both rules pages and every finished game stay. Beat Misty while signed in before then and that game's legacy badge stays on your profile. The article explains why the bots cost too much to run and what it would take to bring them back.",
+    href: '/blog/fog-future',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-11-15',
+    kind: 'release',
+    englishOnly: true,
+    headline: 'Fanfanqi is open to everyone.',
+    body: 'Play Fanfanqi against Misty, find an opponent or invite a friend. Each side starts with 60 HP on a 4 by 8 board. Flip hidden pieces and capture to bring your opponent to zero. All games are casual. The English rules explain capture damage, cannon shots and the chase limit.',
+    href: '/rules/fanfanqi',
+    cta: 'Read the English rules',
+  },
+  {
+    date: '2026-11-15',
+    kind: 'release',
+    headline: 'Challenge someone you follow to a game right now.',
+    body: 'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.',
+    href: '/?play=friend',
+    cta: 'Challenge a player',
+  },
+  {
+    date: '2026-11-13',
+    kind: 'release',
+    headline: 'Correspondence games can now be rated.',
+    body: 'When you start a correspondence game or challenge someone to one, you can choose Rated. Each variant has its own correspondence rating, separate from your live ratings, and it shows on your profile. Games stay casual unless you pick Rated. Engines and other outside help are not allowed in rated games.',
+    href: '/correspondence',
+    cta: 'Play by correspondence',
+  },
   {
     date: '2026-11-10',
     kind: 'release',

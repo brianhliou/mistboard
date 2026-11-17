@@ -7,6 +7,8 @@ import test from 'node:test';
 import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { parseArticleSchedule, resetArticleScheduleCache } from './article-schedule.js';
+import { broadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
+import { broadcastPageFor } from './broadcast-pages.js';
 import type { TenantGameCardStore } from './og-game-tenant.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type {
@@ -1762,6 +1764,38 @@ test('a variant analysis link with a FEN gets its own title, og:url, and a posit
 
 // --- broadcast pages, /games, puzzle deep links -------------------------------
 
+test('unlisted event, round and both live/finished board HTML keeps its content and one noindex tag', async () => {
+  const { tours, rounds, boards, sources } = broadcastDiscoveryFixture();
+  const hidden = tours[1]!;
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-unlisted-broadcast-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf8');
+  const paths = [
+    `/broadcast/xiangqi/${hidden.slug}`,
+    `/broadcast/xiangqi/${hidden.slug}/round/${rounds[1]!.id}`,
+    ...boards
+      .filter((board) => board.tourSlug === hidden.slug)
+      .map((board) => `/broadcast/xiangqi/board/${board.id}`),
+  ];
+  for (const pathname of paths) {
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.com',
+        playerPage: async () => null,
+        gameMeta: async () => null,
+        broadcastPage: (path) => broadcastPageFor(path, sources),
+      }),
+      true,
+    );
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], pathname);
+    assert.ok(response.body.includes(hidden.name), pathname);
+    assert.match(response.body, /<main><p>/, pathname);
+  }
+});
+
 // Until 2026-10-17 every URL of sitemap-broadcasts.xml served the empty shell:
 // no canonical, no heading, nothing in #app, and Search Console folded them as
 // duplicates of one another.
@@ -2882,6 +2916,7 @@ test('an unlisted study previews with its own title but stays noindex and cardle
 function profilePreviewFixture(): UserProfile {
   return {
     user: {
+      champions: [],
       handle: 'Player_1',
       displayName: 'Lin & "棋" <player>',
       bio: 'PROFILE_BIO_SENTINEL',
@@ -2895,6 +2930,7 @@ function profilePreviewFixture(): UserProfile {
       patronSince: null,
       createdAt: new Date('2026-01-01T00:00:00Z'),
     },
+    activity: [],
     ratings: [
       {
         variant: 'xiangqi',

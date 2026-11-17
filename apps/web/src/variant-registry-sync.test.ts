@@ -17,6 +17,7 @@ import {
   BOT_DEFAULT_TIME_CONTROL_ID,
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
+  FFQ_BANQI_SPEC_ID,
   GOMOKU_SPEC_ID,
   isAllowedEngineTimeControl,
   isRetiredGameSpec,
@@ -31,7 +32,6 @@ import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from '../../server/src/jungle-flip-engine.js';
 import {
-  JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
   jungleEngineDisplayName,
 } from '../../server/src/server-jungle-engine.js';
@@ -46,7 +46,9 @@ import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import {
   jieqiEngineOptions,
+  jungleEngineOptions,
   jungleFlipEngineOptions,
+  setJungleEngineOptions,
   webVariantTenants,
 } from './variant-tenant/registry.js';
 import { VARIANTS } from './variants.js';
@@ -72,6 +74,27 @@ describe('Banqi engine picker mirror', () => {
   });
 });
 
+describe('Jungle runtime level availability', () => {
+  it('keeps the existing Misty default on an older binary and never picks KataGo as fallback', () => {
+    const all = jungleEngineOptions(null);
+    const tenant = webVariantTenants().find((item) => item.gameSpecId === 'jungle')!;
+    try {
+      setJungleEngineOptions(
+        all.filter((engine) => !engine.id.startsWith('misty-jungle-classical-')),
+      );
+      expect((tenant.landing!.engineOptions ?? []).map((engine) => engine.id)).toEqual([
+        'katago-jungle',
+        'misty-jungle-level-2',
+      ]);
+      expect(tenant.landing!.defaultEngineId).toBe('misty-jungle-level-2');
+      setJungleEngineOptions(all);
+      expect(tenant.landing!.defaultEngineId).toBe('misty-jungle-classical-level-4');
+    } finally {
+      setJungleEngineOptions(all);
+    }
+  });
+});
+
 describe('Flip Jungle engine picker mirror', () => {
   it('keeps historical classical L7 and neural L8 separate, with L4 selected by default', () => {
     for (const withNet of [false, true]) {
@@ -89,24 +112,57 @@ describe('Flip Jungle engine picker mirror', () => {
   });
 });
 
-describe('FFQ banqi hidden admin playtest', () => {
-  it('registers private live and review clients without public discovery', () => {
+describe('FFQ banqi launch preparation', () => {
+  it('registers live and review clients alongside server discovery metadata', () => {
     const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(web?.roomIdPrefix).toBe('ffq_');
     expect(web?.loadLiveRoomClient).toBeTypeOf('function');
-    expect(web?.watch).toBeUndefined();
+    expect(web?.watch?.mountReplay).toBeTypeOf('function');
     expect(web?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(web?.mountPostgame).toBeTypeOf('function');
     const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(server).toMatchObject({
       roomIdPrefix: 'ffq_',
-      watch: null,
-      lobby: null,
+      watch: { channelId: 'ffq-banqi', family: 'xiangqi' },
       export: null,
       card: null,
     });
     expect(server?.admitsConnection).toBeTypeOf('function');
     expect(server?.reviewRouteBase).toBe('/ffq-banqi/game');
+  });
+
+  it('keeps the live lobby casual and follows admission in hidden and launched states', () => {
+    const spec = maybeGameSpecForId(FFQ_BANQI_SPEC_ID)!;
+    const original = spec.publicSurface;
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === FFQ_BANQI_SPEC_ID)!;
+    const server = registeredVariantTenants().find(
+      (tenant) => tenant.gameSpecId === FFQ_BANQI_SPEC_ID,
+    )!;
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        for (const flag of ['false', 'true']) {
+          vi.stubEnv('VITE_FFQ_BANQI_ENABLED', flag);
+          vi.stubEnv('MISTBOARD_FFQ_BANQI_ENABLED', flag);
+          expect(web.enabled()).toBe(flag === 'true');
+          expect(web.landing?.capabilities.supportsRated).toBe(false);
+          expect(server.lobby !== null).toBe(surface === 'casual' && flag === 'true');
+          if (server.lobby) {
+            expect(server.lobby.supportsRated).toBe(web.landing?.capabilities.supportsRated);
+            expect(server.lobby.allowsTimeControl?.({ initialMs: 300000, incrementMs: 5000 })).toBe(
+              true,
+            );
+            expect(
+              server.lobby.allowsTimeControl?.({ daysPerMove: 3, initialMs: 0, incrementMs: 0 }),
+            ).toBe(false);
+          }
+          expect(web.landing?.modes?.includes('lobby')).toBe(surface === 'casual');
+        }
+      }
+    } finally {
+      spec.publicSurface = original;
+      vi.unstubAllEnvs();
+    }
   });
 
   it('serves only the owned game shell; HTTP authorization precedes shell dispatch', () => {
@@ -268,7 +324,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
       JUNGLE_PLAYABLE_ENGINE_IDS.map((id) => ({ id, name: jungleEngineDisplayName(id) })),
     );
-    expect(tenant?.landing?.defaultEngineId).toBe(JUNGLE_PLAYABLE_ENGINE_ID);
+    expect(tenant?.landing?.defaultEngineId).toBe('misty-jungle-classical-level-4');
   });
 
   it('every server watch channel has a variant marker', () => {
@@ -447,7 +503,7 @@ describe('Gomoku hidden registration', () => {
   });
 
   it.each(['false', 'true'])(
-    'registers matching casual tenants, eight browser bots and a gated review with flag %s',
+    'registers matching casual tenants, eight stable levels, unnumbered Rapfi and a gated review with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
@@ -471,13 +527,19 @@ describe('Gomoku hidden registration', () => {
         secondColor: 'white',
         supportsRated: true,
       });
-      expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
-        [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
-      );
+      expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual([
+        ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
+        'rapfi-strongest',
+      ]);
       for (const option of web?.landing?.engineOptions ?? []) {
-        expect(option.kind).toBe('browser');
+        expect(option.kind).toBe(option.id === 'rapfi-strongest' ? 'container' : 'browser');
         expect(server?.isEngineClientId?.(option.id)).toBe(true);
       }
+      expect(web?.landing?.engineOptions?.at(-1)).toMatchObject({
+        id: 'rapfi-strongest',
+        name: 'Rapfi Full strength',
+        levelLabelKey: 'bots.fullStrength',
+      });
       // Browser choices and server recognition agree on all eight stable ids.
       for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
         expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);
@@ -581,19 +643,19 @@ describe('retired variants: replay kept on both sides, play offered on neither',
   });
 });
 
-describe('launched casual Three Kingdoms Banqi registry parity', () => {
-  it('registers its own review and TV board, with an unrated lobby', () => {
+describe('launched Three Kingdoms Banqi registry parity', () => {
+  it('registers its own review and TV board, with a rated lobby', () => {
     const server = registeredVariantTenants().find(
       (tenant) => tenant.gameSpecId === 'three-kingdoms-banqi',
     )!;
     const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'three-kingdoms-banqi')!;
     expect(maybeGameSpecForId(server.gameSpecId)?.publicSurface).toBe('casual');
-    expect(server.lobby?.supportsRated).toBe(false);
-    expect(web.landing?.capabilities.supportsRated).toBe(false);
+    expect(server.lobby?.supportsRated).toBe(true);
+    expect(web.landing?.capabilities.supportsRated).toBe(true);
     expect(server.watch?.channelId).toBe('three-kingdoms-banqi');
     expect(web.watch?.family).toBe(server.watch?.family);
-    // No export: covered identities stay masked after the game (#1002).
-    expect(server.export).toBeNull();
+    // The export is the masked public record (#1002): flips named, no deal.
+    expect(server.export?.gameRouteBase).toBe('/three-kingdoms-banqi/game');
     expect(server.card?.variant).toBe('three-kingdoms-banqi');
     expect(isClientRoute('/three-kingdoms-banqi/game/tkb_launched')).toBe(true);
   });

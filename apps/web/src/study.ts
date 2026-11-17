@@ -35,6 +35,8 @@ import {
   embedScoreSeries,
   scoreChartSeatNames,
 } from './embed/embed-score-chart.js';
+import { embedScoreSeatColors, studyScoreSeatColors } from './embed/embed-score-seat-colors.js';
+import { isFlipSeatVariant } from './flip-seat-ink.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -668,7 +670,7 @@ function renderStudy(
   };
 
   /** A chapter switch reuses the document chrome; other edits rebuild the page. */
-  function renderActive(chapterSwitch = false): Promise<void> {
+  async function renderActive(chapterSwitch = false): Promise<void> {
     const chapter = chapters.find((entry) => entry.id === activeId) ?? chapters[0];
     // Fail-closed: a chapter whose variant has no board on this client (an older
     // client, or a variant retired from the study catalog) reports unsupported
@@ -1026,8 +1028,35 @@ function renderStudy(
       : null;
     const positions = serializedTreeMainline(mountedTree).length + 1;
     const series = embedScoreSeries(chapter.scoreSeries, positions);
+    // Series are seat-keyed; the recorded opening flip binds each seat's ink.
+    // Use the same replays as the embed, including identity-free public games.
+    let seatColors = studyScoreSeatColors(variant, mountedTree);
+    if (series && isFlipSeatVariant(variant)) {
+      let firstColor: 'red' | 'black' | null = null;
+      const moves = serializedTreeMainline(mountedTree);
+      if (variant === 'banqi' && mountedTree.rootFen) {
+        const { replayBanqiLine } = await import('./banqi-replay-board.js');
+        firstColor =
+          replayBanqiLine({ rootFen: mountedTree.rootFen, moves }).states.at(-1)?.firstColor ??
+          null;
+      } else if (variant === 'jungle-flip') {
+        const { replayJungleFlipLine } = await import('./jungle-flip-replay-board.js');
+        firstColor =
+          replayJungleFlipLine(mountedTree.rootFen, moves)?.states.at(-1)?.firstColor ?? null;
+      } else if (variant === 'three-kingdoms-banqi') {
+        const { threeKingdomsBanqiStudyLine } = await import(
+          './three-kingdoms-banqi-study-replay.js'
+        );
+        firstColor =
+          threeKingdomsBanqiStudyLine({ id: chapter.id, root: mountedTree }).views.at(-1)
+            ?.firstColor ?? null;
+      }
+      seatColors = embedScoreSeatColors(variant, firstColor);
+    }
     const scoreChart = series
       ? createEmbedScoreChart(series, {
+          variant,
+          seatColors,
           onJump: (ply) => handle?.jumpToPly(ply),
           moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
           seatNames: scoreChartSeatNames(variant),
@@ -1038,10 +1067,9 @@ function renderStudy(
       onPlyChange: (ply) => scoreChart?.setPly(ply),
       analysisExtra: scoreChart?.el,
       storedAnalysis,
-      storedDecisions:
-        variant === 'jieqi' && chapter.hasDecisions
-          ? fetchStudyChapterDecisions(study.id, chapter.id, chapter.root, mountedTree)
-          : null,
+      storedDecisions: chapter.hasDecisions
+        ? fetchStudyChapterDecisions(variant, study.id, chapter.id, chapter.root, mountedTree)
+        : null,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),

@@ -99,7 +99,7 @@ test('the goal and its explanation sit under the board and stay there', async ()
   // position, not off in the side panel.
   const briefEl = host.querySelector('.practice__board-col .practice__brief');
   expect(briefEl, 'the brief belongs in the board column').not.toBeNull();
-  expect(text(host, '.practice__brief-goal')).toBe('Checkmate');
+  expect(text(host, '.practice__brief-goal')).toMatch(/^(Red|Black) to play and checkmate$/);
   expect(text(host, '.gamebook__feedback')).toBe('Your move.');
 });
 
@@ -489,4 +489,25 @@ test('a draw the engine reads as lost ends the run and is reported as a failure'
   await handle.play(getStandardXiangqiLegalMoves(opened)[0]!);
   expect(handle.view().phase, 'the fake must actually end the run').toBe('defeat');
   expect(failures).toEqual([{ verdict: 'defeat', moves: 1 }]);
+});
+
+test('only a single-position mount takes the phone one-screen layout', async () => {
+  const row = entry('soldier-vs-bare-general');
+  const mount = (single: boolean): HTMLElement => {
+    const host = document.createElement('div');
+    mountXiangqiPractice(host, {
+      initialTruth: endgameEntryState(row),
+      goal: { kind: 'win', centipawns: 600 },
+      orientation: row.turn,
+      evaluate: steady(900),
+      replyDelayMs: 0,
+      aside: document.createElement('section'),
+      single,
+    });
+    return host.querySelector<HTMLElement>('.gamebook.practice')!;
+  };
+  // /practice/position passes a card too, so the class cannot key on the rail.
+  expect(mount(true).classList.contains('practice--single')).toBe(true);
+  expect(mount(false).classList.contains('practice--single')).toBe(false);
+  expect(mount(true).querySelector('.gamebook__aside')).not.toBeNull();
 });

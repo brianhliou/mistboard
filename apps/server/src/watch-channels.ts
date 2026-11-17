@@ -7,6 +7,7 @@ import {
   isRetiredGameSpec,
   maybeGameSpecForId,
 } from '@mistboard/game';
+import { isFFQBanqiGame } from './ffq-banqi-access.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 
@@ -174,14 +175,22 @@ const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set([
   'xiangqi-mahjong',
   'gomoku',
   'three-kingdoms-banqi',
+  FFQ_BANQI_SPEC_ID,
 ]);
 
-/** Public listing policy: permanent FFQ exclusion, then each existing surface gate. */
+/** Public listing policy follows each variant's launch surface. */
 export function listedOnSurface(gameSpecId: string): boolean {
-  // The admin-only FFQ playtest never enters discovery, regardless of flag
-  // or publicSurface. Retain the existing surface rules for other variants.
-  if (gameSpecId === FFQ_BANQI_SPEC_ID) return false;
   return !LISTED_ONLY_WHEN_PUBLIC.has(gameSpecId) || gameSpecIsPublic(gameSpecId);
+}
+
+// Live and correspondence listings share the public launch gate. TV enforces
+// its own all-variant correspondence exclusion independently.
+export function isUnlistedFFQBanqiGame(
+  game: Parameters<typeof isFFQBanqiGame>[0] & {
+    timeControl?: { daysPerMove?: number } | null;
+  },
+): boolean {
+  return isFFQBanqiGame(game) && !gameSpecIsPublic(FFQ_BANQI_SPEC_ID);
 }
 
 export function listWatchChannels(): readonly WatchChannel[] {

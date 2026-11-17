@@ -70,6 +70,13 @@ function buildStaticPageRail(
         link.classList.add('static-page-rail-link-with-icon');
         link.prepend(buildUiIcon(item.icon, 'static-page-rail-icon'));
       }
+      if ('leavesRail' in item && item.leavesRail) {
+        const out = document.createElement('span');
+        out.className = 'static-page-rail-out';
+        out.setAttribute('aria-hidden', 'true');
+        out.textContent = '↗';
+        link.append(out);
+      }
       if (item.key === activeKey) {
         link.classList.add('active');
         link.setAttribute('aria-current', 'page');

@@ -22,9 +22,11 @@ import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs
 import { articleIsLive } from './articles/publish-time.js';
 import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
+import { navPhoneMediaQuery } from './site-shell.js';
 import './community-rail.css';
 import './articles.css';
 import './hover-grammar.css';
+import { trackArticleDecisionFrame } from './article-embed-engagement.js';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -965,13 +967,19 @@ function initSingleCarousel(carousel: HTMLElement): void {
   let index = 0;
   let dir = 1;
   let timer: number | null = null;
+  let inView = false;
+  let hovered = false;
+  let touched = false;
+  let observer: IntersectionObserver | null = null;
+  const phone = (): boolean => window.matchMedia?.(navPhoneMediaQuery).matches ?? false;
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   const stepPx = (): number => {
     if (cards.length < 2) return 0;
     return cards[1]!.getBoundingClientRect().left - cards[0]!.getBoundingClientRect().left;
   };
-  const overflow = (): number => Math.max(0, track.scrollWidth - carousel.clientWidth);
+  const overflow = (): number =>
+    Math.max(0, (phone() ? carousel.scrollWidth : track.scrollWidth) - carousel.clientWidth);
   const maxIndex = (): number => {
     const step = stepPx();
     if (step <= 0) return 0;
@@ -980,9 +988,10 @@ function initSingleCarousel(carousel: HTMLElement): void {
     return Math.ceil(overflow() / step - 0.05);
   };
 
-  const apply = () => {
+  const apply = (move = false) => {
     const mi = maxIndex();
     carousel.classList.toggle('is-static', mi <= 0);
+    index = Math.max(0, Math.min(index, mi));
     if (prev) prev.disabled = index <= 0;
     if (next) next.disabled = index >= mi;
     if (mi <= 0) {
@@ -990,8 +999,13 @@ function initSingleCarousel(carousel: HTMLElement): void {
       track.style.transform = 'none';
       return;
     }
-    index = Math.max(0, Math.min(index, mi));
-    track.style.transform = `translateX(${-Math.min(index * stepPx(), overflow())}px)`;
+    const left = Math.min(index * stepPx(), overflow());
+    if (phone()) {
+      track.style.transform = 'none';
+      if (move) carousel.scrollTo({ left, behavior: reduceMotion ? 'instant' : 'smooth' });
+    } else {
+      track.style.transform = `translateX(${-left}px)`;
+    }
   };
 
   const tick = () => {
@@ -1000,7 +1014,7 @@ function initSingleCarousel(carousel: HTMLElement): void {
     if (index >= mi) dir = -1;
     else if (index <= 0) dir = 1;
     index += dir;
-    apply();
+    apply(true);
   };
 
   const stop = () => {
@@ -1009,34 +1023,71 @@ function initSingleCarousel(carousel: HTMLElement): void {
       timer = null;
     }
   };
-  const start = () => {
+  // Only explicit input ends rotation. Native scroll events also fire for
+  // scrollTo, so listening to them would stop after the first automatic card.
+  const stopForever = () => {
+    touched = true;
     stop();
-    if (reduceMotion) return;
-    timer = window.setInterval(() => {
-      if (!document.body.contains(carousel)) {
-        stop();
-        return;
-      }
-      tick();
-    }, LANDING_CAROUSEL_ROTATION_MS);
+    observer?.disconnect();
+  };
+  const onResize = () => {
+    if (!carousel.isConnected) {
+      stopForever();
+      window.removeEventListener('resize', onResize);
+      return;
+    }
+    apply();
   };
 
   const nudge = (delta: number) => {
+    stopForever();
     const mi = maxIndex();
     if (mi <= 0) return;
     index = Math.max(0, Math.min(index + delta, mi));
     dir = delta >= 0 ? 1 : -1;
-    apply();
+    apply(true);
   };
   prev?.addEventListener('click', () => nudge(-1));
   next?.addEventListener('click', () => nudge(1));
 
-  carousel.addEventListener('mouseenter', stop);
-  carousel.addEventListener('mouseleave', start);
-  window.addEventListener('resize', apply);
+  for (const event of ['pointerdown', 'touchstart', 'focusin']) {
+    carousel.addEventListener(event, stopForever, { passive: true, once: true });
+  }
+  // A sideways wheel or trackpad swipe is input on the row; a vertical wheel
+  // only scrolls the page past it and leaves rotation running.
+  carousel.addEventListener(
+    'wheel',
+    (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) stopForever();
+    },
+    { passive: true },
+  );
+  carousel.addEventListener('mouseenter', () => {
+    hovered = true;
+  });
+  carousel.addEventListener('mouseleave', () => {
+    hovered = false;
+  });
+  window.addEventListener('resize', onResize);
 
   apply();
-  start();
+  if (!reduceMotion && typeof IntersectionObserver !== 'undefined') {
+    observer = new IntersectionObserver(
+      (entries) => {
+        inView = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5);
+      },
+      { threshold: [0, 0.5] },
+    );
+    observer.observe(carousel);
+    timer = window.setInterval(() => {
+      if (!carousel.isConnected) {
+        stopForever();
+        window.removeEventListener('resize', onResize);
+        return;
+      }
+      if (!touched && inView && !hovered && document.visibilityState !== 'hidden') tick();
+    }, LANDING_CAROUSEL_ROTATION_MS);
+  }
 }
 
 export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement {
@@ -1546,11 +1597,11 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
 }
 
 // Explicit placement for rules pages outside the canonical public shelf, as an
-// offset from a shelf entry. The banqi family is ordered by player base
-// (decided 2026-11-07): Fanfanqi, then Banqi, then Three Kingdoms Banqi.
+// offset from a shelf entry. The banqi family runs Banqi, Fanfanqi, then
+// Three Kingdoms Banqi (decided 2026-11-14, until Fanfanqi has players here).
 // Gomoku, a separate board-game family, follows the shelf's end.
 const RULES_RAIL_PLACEMENT: Record<string, { spec: string; offset: number }> = {
-  fanfanqi: { spec: 'banqi', offset: -0.5 },
+  fanfanqi: { spec: 'banqi', offset: 0.25 },
   'three-kingdoms-banqi': { spec: 'banqi', offset: 0.5 },
   gomoku: { spec: 'xiangqi-mahjong', offset: 0.5 },
 };
@@ -1808,7 +1859,7 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
-  if (block.kind === 'image-figure') return renderImageFigureBlock(block);
+  if (block.kind === 'image-figure') return renderImageFigureBlock(block, lang);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'animated-svg') return renderAnimatedSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
@@ -1823,7 +1874,11 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'list') return renderListBlock(block);
   if (block.kind === 'image-row') return renderImageRowBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
-  if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
+  if (block.kind === 'xq-replay') {
+    return block.study
+      ? renderEmbedBlock(xiangqiReplayStudyEmbed(block))
+      : renderXiangqiReplayBlock(block, lang);
+  }
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'crazyhouse-xiangqi-replay')
@@ -1946,6 +2001,7 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'xq-replay';
+  if (block.id) figure.id = block.id;
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -2241,7 +2297,7 @@ function articleContactNote(slug: string, locale: Locale): HTMLElement {
   return note;
 }
 
-function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
+function renderImageFigureBlock(block: ImageFigureBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-image';
   if (block.className) figure.classList.add(...block.className.split(/\s+/).filter(Boolean));
@@ -2279,7 +2335,13 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = block.credit.text;
-      cap.append(`${block.caption ? ' ' : ''}Photo: `, link);
+      // The catalog string is 'Photo: {source}'; split it so the source stays a link.
+      const [before, after = ''] = t(
+        'broadcast.playerPhotoCredit',
+        { source: '\u0000' },
+        articleLocale(lang),
+      ).split('\u0000');
+      cap.append(`${block.caption ? ' ' : ''}${before}`, link, after);
     }
     figure.append(cap);
   }
@@ -2628,6 +2690,26 @@ function renderImageRowBlock(block: ImageRowBlock): HTMLElement {
   return figure;
 }
 
+const STUDY_CHAPTER_REF = /^[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/;
+
+/** A game board that names its study chapter, as that chapter's embed: the
+ *  frame the rules pages use, opened on the move the stepper would have.
+ *  Exported for tests. */
+export function xiangqiReplayStudyEmbed(block: XiangqiReplayBlock): EmbedBlock {
+  const ref = block.study ?? '';
+  if (!STUDY_CHAPTER_REF.test(ref)) {
+    throw new Error(`xq-replay study must be studyId/chapterId: ${ref}`);
+  }
+  const ply = block.spec.startPly ? `?ply=${block.spec.startPly}` : '';
+  return {
+    kind: 'embed',
+    path: `/embed/study/${ref}${ply}`,
+    title: block.spec.event ?? `${block.spec.red} vs ${block.spec.black}`,
+    caption: block.caption,
+    aspect: [702, 800],
+  };
+}
+
 function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-embed';
@@ -2641,6 +2723,7 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   // its width, so no block's guess leaves empty space under it.
   iframe.style.aspectRatio = `${w} / ${h}`;
   autosizeEmbedFrame(iframe);
+  if (block.hideSolution) trackArticleDecisionFrame(iframe);
   figure.append(iframe);
   if (block.caption) {
     const caption = document.createElement('figcaption');

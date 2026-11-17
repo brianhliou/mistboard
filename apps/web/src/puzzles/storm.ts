@@ -1,7 +1,7 @@
 import { track } from '../analytics.js';
 import { t } from '../i18n/catalog.js';
 import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
-import { colorLabel, type PuzzleDetail, type PuzzleSession } from './adapter.js';
+import { type PuzzleDetail, type PuzzleSession, puzzleSolvePrompt } from './adapter.js';
 import { fetchPuzzleDetail, type PuzzleAttempt, PuzzlePlayDisabledError } from './api.js';
 import { puzzleResultChips } from './result-chips.js';
 import { signInCta } from './sign-in-cta.js';
@@ -189,8 +189,10 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     panel.setAttribute('aria-busy', String(session.submitting));
     const status =
       run?.deadlineAt === null
-        ? t('puzzle.stormMoveToStart')
-        : t('puzzle.toMove', { color: colorLabel(session.puzzle.sideToMove) });
+        ? session.puzzle.goal.type === 'checkmate'
+          ? `${puzzleSolvePrompt(session.puzzle)} · ${t('puzzle.stormMoveToStart')}`
+          : t('puzzle.stormMoveToStart')
+        : puzzleSolvePrompt(session.puzzle);
     const delta = document.createElement('span');
     delta.dataset.stormChange = 'true';
     delta.setAttribute('role', 'status');

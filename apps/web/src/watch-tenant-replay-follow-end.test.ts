@@ -38,6 +38,7 @@ describe('tenant replay following the latest position', () => {
     const root = document.createElement('div');
     const animateMove = vi.fn();
     const adapter: TenantWatchAdapter<Postgame, View, 'truth'> = {
+      variant: 'banqi',
       installStyles: () => {},
       loadPostgame: async () => ({ ok: true, postgame }),
       maxPly: (game) => game.game.plyCount,

@@ -30,6 +30,12 @@ import { threeKingdomsBanqiMoveLabel } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
+import {
+  seatPanelBlock,
+  seatPanelLine,
+  seatPanelNone,
+  seatPanelPieces,
+} from './banqi-seat-panel.js';
 import { pieceAnimationDurationMs, pieceFlipDurationMs } from './board-anim.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -379,24 +385,13 @@ function seatBlock(
   poolRow: HTMLElement | null,
   faceDownKey: string,
 ): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'tk-seat';
-  block.dataset.seat = seat;
-  const ink = liveSeatInk(seat);
-  if (ink) block.dataset.ink = ink;
-  const head = document.createElement('div');
-  head.className = 'tk-seat__head';
-  const label = document.createElement('span');
-  label.className = 'tk-seat__name';
-  label.textContent = t(seatLabel(seat));
-  const value = document.createElement('span');
-  value.className = 'tk-seat__points';
-  value.textContent = tkPoints(points);
-  head.append(label, value);
-  block.append(head);
-  captures.className = 'captures-row review-captures-row tk-seat__pieces';
-  if (!captures.querySelector('.review-capture-piece')) captures.replaceChildren(noneMark());
-  block.append(seatLine('captured', t('live.tk.captured'), captures));
+  const block = seatPanelBlock({
+    name: t(seatLabel(seat)),
+    score: pointsTag(points),
+    seat,
+    ink: liveSeatInk(seat),
+  });
+  block.append(seatPanelLine('captured', t('live.tk.captured'), seatPanelPieces(captures)));
   block.append(faceDownLine(poolRow, faceDownKey));
   return block;
 }
@@ -404,25 +399,22 @@ function seatBlock(
 // One ink's face-down pieces before the opening flip, named by the ink, with
 // the same rows a seat block has after it.
 function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'tk-seat';
-  if (poolRow.dataset.ink) block.dataset.ink = poolRow.dataset.ink;
-  const head = document.createElement('div');
-  head.className = 'tk-seat__head';
-  const label = document.createElement('span');
-  label.className = 'tk-seat__name';
-  label.textContent = poolRow.querySelector('.hidden-pool__label')?.textContent ?? '';
-  const value = document.createElement('span');
-  value.className = 'tk-seat__points';
-  value.textContent = tkPoints(0);
-  head.append(label, value);
-  block.append(head);
-  const captures = document.createElement('div');
-  captures.className = 'captures-row review-captures-row tk-seat__pieces';
-  captures.replaceChildren(noneMark());
-  block.append(seatLine('captured', t('live.tk.captured'), captures));
+  const block = seatPanelBlock({
+    name: poolRow.querySelector('.hidden-pool__label')?.textContent ?? '',
+    score: pointsTag(0),
+    ink: poolRow.dataset.ink,
+  });
+  const captures = seatPanelPieces(document.createElement('div'));
+  block.append(seatPanelLine('captured', t('live.tk.captured'), captures));
   block.append(faceDownLine(poolRow, faceDownKey));
   return block;
+}
+
+function pointsTag(points: number): HTMLElement {
+  const value = document.createElement('span');
+  value.className = 'tk-seat__points';
+  value.textContent = tkPoints(points);
+  return value;
 }
 
 // Every seat shows both lines in every state, an empty one saying "None", so
@@ -431,29 +423,11 @@ function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
 function faceDownLine(poolRow: HTMLElement | null, key: string): HTMLElement {
   const found = poolRow?.querySelector<HTMLElement>('.hidden-pool__pieces');
   const pieces = found ?? document.createElement('div');
-  if (!found || pieces.querySelector('.hidden-pool__none')) pieces.replaceChildren(noneMark());
+  if (!found || pieces.querySelector('.hidden-pool__none')) pieces.replaceChildren(seatPanelNone());
   pieces.classList.add('tk-seat__pieces');
-  const line = seatLine('face-down', key, pieces);
+  const line = seatPanelLine('face-down', key, pieces);
   const note = poolRow?.querySelector('.hidden-pool__note');
   if (note) line.append(note);
-  return line;
-}
-
-function noneMark(): HTMLElement {
-  const none = document.createElement('span');
-  none.className = 'tk-seat__none';
-  none.textContent = t('live.tk.none');
-  return none;
-}
-
-function seatLine(kind: string, key: string, pieces: HTMLElement): HTMLElement {
-  const line = document.createElement('div');
-  line.className = 'tk-seat__line';
-  line.dataset.line = kind;
-  const name = document.createElement('span');
-  name.className = 'tk-seat__key';
-  name.textContent = key;
-  line.append(name, pieces);
   return line;
 }
 

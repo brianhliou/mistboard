@@ -1,4 +1,4 @@
-// Create route for public casual Three Kingdoms Banqi (#628). With the
+// Create route for public Three Kingdoms Banqi (#628, rated PvP #1070). With the
 // runtime kill-switch off, only an admin may create a test room; everyone
 // else gets 404 three_kingdoms_banqi_disabled, the same answer as before. PvE
 // search tiers need the engine binary, and L8 also needs its explicit net.
@@ -24,6 +24,7 @@ export type ThreeKingdomsBanqiCreateContext = {
     timeControl?: RoomTimeControl,
     creatorPreference?: Seat | 'random',
     engine?: { engineId: string; seat: Seat; botId?: string },
+    rated?: boolean,
   ): Promise<
     | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | {
@@ -49,8 +50,8 @@ const route = createTenantRoomsRoute<ThreeKingdomsBanqiCreateContext, Seat | 'ra
         : undefined,
     seats: ['red', 'black'],
   },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createThreeKingdomsBanqiRoom(timeControl, preferredColor, engine),
+  createRoom: (ctx, { timeControl, preferredColor, engine, rated }) =>
+    ctx.createThreeKingdomsBanqiRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsThreeKingdomsBanqi = route.matchesCreateRequest;

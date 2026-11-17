@@ -1,6 +1,9 @@
 // Content translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_CONTENT = {
+  'articles.replay.round': 'Round',
+  'articles.replay.roundN': 'Round {n}',
+  'articles.replay.timeIncrement': '{minutes} min + {seconds} sec',
   'videos.heading': 'Video library',
   'videos.intro':
     'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
@@ -288,6 +291,11 @@ export const EN_CONTENT = {
   'stats.gamesPerWeekLabel': 'Completed games per week, most recent {count} weeks',
   'stats.gamesPerWeekSeries': 'Games',
   'stats.allGames': 'All games',
+  'stats.chartView': 'Weekly chart view',
+  'stats.versusPeople': 'Versus people',
+  'stats.casual': 'Casual',
+  'stats.rated': 'Rated',
+  'stats.thisWeekSeriesSoFar': 'So far this week: {series}',
   'stats.thisWeekSoFar': '{count} so far this week',
   'stats.byVariant': 'Games by variant',
   'stats.byMode': 'Games by mode',
@@ -310,7 +318,7 @@ export const EN_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi levels and browser analysis, with AB-JChess grading reviews, GPL-3.0.",
+    "Pikafish's jieqi NNUE branch: the jieqi levels and browser analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed. AB-JChess grades reviews.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':
@@ -324,7 +332,8 @@ export const EN_CONTENT = {
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
-  'source.rapfi': 'Rapfi by dhbloo and contributors: the eight Gomoku bot levels, GPL-3.0.',
+  'source.rapfi':
+    'Rapfi by dhbloo and contributors: the top Gomoku opponent and eight bot levels, GPL-3.0.',
   'source.rapfiNetworks': 'Rapfi neural networks by the Rapfi project, CC0 1.0.',
   'source.rapfiBuild':
     'rapfi-wasm by Brian H. Liou: the reproducible Rapfi browser build behind the Gomoku review analysis, GPL-3.0.',
@@ -453,6 +462,10 @@ export const EN_CONTENT = {
     'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
   'champions.aboutAbJchess2':
     "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
+  'champions.tookPikafish':
+    'Won the title match against Fairy-Stockfish Level 8 on 2026-11-14, over 38 games, scoring 68%.',
+  'champions.aboutPikafish':
+    'An open-source xiangqi engine from the Stockfish line. Here it runs on the public CC0 Fairy-Stockfish xiangqi network.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.tookGomoku':
@@ -503,8 +516,9 @@ export const EN_CONTENT = {
     "Much of Mistboard rests on other people's work: the engines you play against, the games and photos other sites let us show, and the players who told us what was broken. This page thanks them by name.",
   'thanks.enginesHeading': 'The engines you play',
   'thanks.pikafishAuthors': 'The Pikafish developers',
+  'thanks.pikafishJieqiBuild': 'Jieqi NNUE build with an MIT net trained on jqe labels',
   'thanks.pikafishBody':
-    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi branch runs the jieqi bots and jieqi analysis.",
+    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi NNUE branch runs the jieqi levels and browser analysis, with an MIT net trained on jqe labels.",
   'thanks.fairyStockfishAuthors': 'Fabian Fichter and the Fairy-Stockfish contributors',
   'thanks.fairyStockfishBody':
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
@@ -518,8 +532,10 @@ export const EN_CONTENT = {
     "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
   'thanks.rapfiAuthors': 'dhbloo and the Rapfi contributors',
   'thanks.rapfiBuildAuthor': 'Browser build by Brian H. Liou',
+  'thanks.rapfiBotBio':
+    'Our strongest Gomoku opponent, above Level 8. Rapfi by dhbloo and contributors, with neural networks from the Rapfi project. Thinks for about 4-5 seconds per move.',
   'thanks.rapfiBody':
-    'Plays all eight Gomoku bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
+    'Plays the top Gomoku opponent and all eight bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
   'thanks.communityBotBy': 'A bot from a community developer.',
   'thanks.statGames': 'games on Mistboard',
   'thanks.statRating': '{variant} rating',
@@ -712,6 +728,14 @@ export const EN_CONTENT = {
   'data.countOneMonth': '{games} in {months} month',
   'data.countManyMonths': '{games} in {months} months',
   'data.noMonths': 'No finished month has games yet.',
+  'data.levelFilter': 'Level',
+  'data.allLevels': 'All levels',
+  'data.notBuilt': 'Built on first download; size and checksum appear after.',
+  'data.notBuiltFormat': '{format}: built on first download',
+  'data.unavailableNone': 'No downloads for {variant} yet.',
+  'data.firstArchive':
+    'The first {variant} games were played in {month}. Their file appears once that month ends, on {date}.',
+  'data.searchLink': 'Browse these games one at a time in game search',
   'data.currentMonthNote': '{month} is added when the month ends.',
   'data.downloadLabel': 'Download {format}: {file}',
   'data.aboutHeading': 'About the data',
@@ -895,6 +919,11 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'stats.gamesPerWeekLabel',
   'stats.gamesPerWeekSeries',
   'stats.allGames',
+  'stats.chartView',
+  'stats.versusPeople',
+  'stats.casual',
+  'stats.rated',
+  'stats.thisWeekSeriesSoFar',
   'stats.thisWeekSoFar',
   'stats.byVariant',
   'stats.byMode',
@@ -922,6 +951,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'thanks.rapfiAuthors',
   'thanks.rapfiBuildAuthor',
   'thanks.rapfiBody',
+  'thanks.rapfiBotBio',
   'source.dandelion',
   'source.chessdb',
   'source.pieceSetLacquer',
@@ -1046,6 +1076,13 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'data.countOneMonth',
   'data.countManyMonths',
   'data.noMonths',
+  'data.levelFilter',
+  'data.allLevels',
+  'data.notBuilt',
+  'data.notBuiltFormat',
+  'data.unavailableNone',
+  'data.firstArchive',
+  'data.searchLink',
   'data.currentMonthNote',
   'data.downloadLabel',
   'data.aboutHeading',

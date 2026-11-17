@@ -6,6 +6,8 @@ import type { UiIconName } from './ui-icon.js';
 // the boundary while the phone menu flattens both groups under Mistboard.
 // A long rail is fine: keep existing information and project pages discoverable
 // here unless their content is consolidated into another destination.
+// `leavesRail` marks a destination that does not render this rail (its own page
+// layout); the rail shows a trailing arrow so the jump is not a surprise.
 export const ABOUT_NAV_GROUPS = [
   [
     { key: 'about', label: 'About Mistboard', labelKey: 'about.heading', href: '/about' },
@@ -21,7 +23,13 @@ export const ABOUT_NAV_GROUPS = [
       labelKey: 'verifyTitle.heading',
       href: '/verify-title',
     },
-    { key: 'patron', label: 'Mistboard Patron', labelKey: 'patron.heading', href: '/patron' },
+    {
+      key: 'patron',
+      label: 'Mistboard Patron',
+      labelKey: 'patron.heading',
+      href: '/patron',
+      leavesRail: true,
+    },
     { key: 'terms', label: 'Terms of Use', labelKey: 'terms.heading', href: '/terms' },
     { key: 'privacy', label: 'Privacy', labelKey: 'privacy.heading', href: '/privacy' },
   ],
@@ -37,7 +45,7 @@ export const ABOUT_NAV_GROUPS = [
       icon: 'title-champion',
     },
     { key: 'developers', label: 'Developers', labelKey: 'developers.heading', href: '/developers' },
-    { key: 'data', label: 'Game data', labelKey: 'data.heading', href: '/data' },
+    { key: 'data', label: 'Game data', labelKey: 'data.heading', href: '/data', leavesRail: true },
     { key: 'apiDocs', label: 'API', labelKey: 'apiDocs.heading', href: '/api-docs' },
     { key: 'thanks', label: 'Thank you', labelKey: 'thanks.heading', href: '/thanks' },
   ],
@@ -48,5 +56,6 @@ export const ABOUT_NAV_GROUPS = [
     labelKey: I18nKey;
     href: string;
     icon?: UiIconName;
+    leavesRail?: boolean;
   }>
 >;

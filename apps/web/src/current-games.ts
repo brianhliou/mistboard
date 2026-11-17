@@ -34,7 +34,7 @@
 // Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import type { GameEvent } from '@mistboard/game';
+import { type GameEvent, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
 import {
   type BoardSeat,
   type CurrentGame,
@@ -65,6 +65,7 @@ import {
   seatInkForVariant,
   variantSeatsHaveInk,
 } from './flip-seat-ink.js';
+import { buildFogTile } from './fog-tile.js';
 import {
   displayLiveName,
   displayParticipantName,
@@ -73,6 +74,7 @@ import {
   matchupSeats,
   namesMatchupLabel,
   terminationLabel,
+  terminationVariant,
   variantDisplayLabel,
 } from './game-display.js';
 import { gameMetaForGame, timeControlLabelForGame } from './game-meta.js';
@@ -89,7 +91,7 @@ import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
-import { formatClock, formatDayClock } from './web-utils.js';
+import { correspondenceTimeLeftLabel, formatClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
@@ -296,8 +298,8 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       card.root.remove();
       cards.delete(roomId);
     }
-    // Live first (people, then bots), then correspondence by deadline, then the
-    // seeks waiting for a second player. A card already in place is moved only
+    // Live first (people, then bots), then correspondence, each newest started first,
+    // then the seeks waiting for a second player. A card already in place is moved only
     // when the order changed, so a live board is not detached on every poll.
     const sections = splitSections(games);
     const order = [
@@ -358,11 +360,11 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     const hasInk = variantSeatsHaveInk(game.gameSpecId);
     const ink = (seat: CurrentGamePlayer | null): string | null | false =>
       !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
-    const topRow = buildSeatRow(top, clockEls, ink(top));
+    const topRow = buildSeatRow(top, clockEls, ink(top), game.gameSpecId);
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom), game.gameSpecId);
     article.append(open, topRow, boardRoot, bottomRow);
     stampSeatInkFamily(article, game.gameSpecId);
 
@@ -599,7 +601,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
     } catch (err) {
       console.warn('[current-games] finished board failed', err);
-      host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
+      host.replaceChildren(buildFogTile(game.variant, null));
     }
   }
 
@@ -624,7 +626,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           winner === 'east' || winner === 'west' ? winner : null,
           readStoredXiangqiPieceSet(),
           t('games.finalHands'),
-          terminationLabel(final.reason === 'tie' ? 'draw' : final.reason) || null,
+          terminationLabel(
+            final.reason === 'tie' ? 'draw' : final.reason,
+            XIANGQI_MAHJONG_SPEC_ID,
+          ) || null,
         );
         drawn = true;
       }
@@ -748,6 +753,7 @@ export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
   ink: string | null | false,
+  gameSpecId?: string,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
@@ -755,20 +761,25 @@ export function buildSeatRow(
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  const fullName = displayLiveName(player?.name, t('games.guest'));
-  const nameEl = playerNameEl(
-    player?.isEngine ? cardSeatName(fullName) : fullName,
-    profileTargetFor(player),
-    'current-game-seat-name',
+  const fullName = displayLiveName(
+    player?.name,
+    t('games.guest'),
+    player ? { ...player, gameSpecId } : undefined,
   );
+  // The whole name, wrapping onto a second line rather than cut (decided
+  // 2026-11-12), with the BOT tag following its last word.
+  const label = document.createElement('span');
+  label.className = 'current-game-seat-label';
+  const nameEl = playerNameEl(fullName, profileTargetFor(player), 'current-game-seat-name');
   nameEl.title = fullName;
-  who.append(nameEl);
+  label.append(nameEl);
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
     badge.textContent = t('games.bot');
-    who.append(badge);
+    label.append(' ', badge);
   }
+  who.append(label);
   const clock = document.createElement('span');
   clock.className = 'current-game-seat-clock';
   row.append(who, clock);
@@ -808,9 +819,7 @@ function tickCard(card: CardState, now: number): void {
   for (const [color, el] of Object.entries(card.clockEls)) {
     if (correspondence) {
       const onMove = game.deadline?.seat === color;
-      el.textContent = onMove
-        ? t('games.deadline', { time: formatDayClock(Date.parse(game.deadline!.dueAt) - now) })
-        : '';
+      el.textContent = onMove ? correspondenceTimeLeftLabel(game.deadline!.dueAt, now) : '';
       el.classList.toggle('is-deadline', onMove);
       el.hidden = !onMove;
       continue;
@@ -846,9 +855,9 @@ function clockRemaining(
 // The tile shown where a board is not (yet) drawn. A hidden-information game
 // gets the misty tile for its whole life on this page; an open game shows its
 // variant marker until the live renderer mounts.
-function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
+export function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   if (liveTileKind(game) === 'fog') {
-    root.replaceChildren(buildFogTile(variantDisplayLabel(game.gameSpecId), t('games.inTheFog')));
+    root.replaceChildren(buildFogTile(game.gameSpecId, t('games.inTheFog')));
     return;
   }
   root.replaceChildren();
@@ -868,28 +877,6 @@ function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   label.textContent = variantDisplayLabel(game.gameSpecId);
   tile.append(label);
   root.append(tile);
-}
-
-const FOG_WAVES =
-  '<svg viewBox="0 0 44 30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8c6-5 12 5 19 0s13-5 19 0M3 16c6-5 12 5 19 0s13-5 19 0M3 24c6-5 12 5 19 0s13-5 19 0"/></svg>';
-
-function buildFogTile(variant: string, note: string | null): HTMLElement {
-  const tile = document.createElement('div');
-  tile.className = 'current-game-fog';
-  const waves = document.createElement('span');
-  waves.className = 'current-game-fog-waves';
-  waves.innerHTML = FOG_WAVES;
-  const name = document.createElement('span');
-  name.className = 'current-game-fog-variant';
-  name.textContent = variant;
-  tile.append(waves, name);
-  if (note) {
-    const text = document.createElement('span');
-    text.className = 'current-game-fog-note';
-    text.textContent = note;
-    tile.append(text);
-  }
-  return tile;
 }
 
 function renderMeta(root: HTMLElement, game: CurrentGame): void {
@@ -929,8 +916,11 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
 } {
   const [top, bottom] = seatOrder(game);
   return {
-    first: displayLiveName(bottom?.name, t('games.guest')),
-    second: displayLiveName(top?.name, t('games.guest')),
+    first: displayLiveName(bottom?.name, t('games.guest'), {
+      ...bottom,
+      gameSpecId: game.gameSpecId,
+    }),
+    second: displayLiveName(top?.name, t('games.guest'), { ...top, gameSpecId: game.gameSpecId }),
   };
 }
 
@@ -1029,7 +1019,7 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   board.className = 'current-game-board';
   setBoardAspect(board, finishedBoardAspect(game.variant));
   if (kind === 'fog') {
-    board.append(buildFogTile(variantDisplayLabel(game.variant), null));
+    board.append(buildFogTile(game.variant, null));
   } else {
     board.classList.add('is-loading');
   }
@@ -1039,7 +1029,7 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const result = document.createElement('span');
   result.className = 'current-game-result';
   result.textContent = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination);
+  const reason = terminationLabel(game.termination, terminationVariant(game.variant));
   if (reason) result.title = reason;
   const when = document.createElement('time');
   when.className = 'current-game-finished-when';
@@ -1107,7 +1097,7 @@ function finishedSeatRow(
   row.title = name;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
-  label.textContent = cardSeatName(name);
+  label.textContent = cardSeatName(name, variantDisplayLabel(game.variant));
   label.title = name;
   if (variantSeatsHaveInk(game.variant)) {
     row.append(

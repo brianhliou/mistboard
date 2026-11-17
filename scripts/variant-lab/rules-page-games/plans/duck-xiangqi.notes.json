@@ -1,0 +1,38 @@
+{
+  "title": "Fairy-Stockfish against itself, eight seconds a move",
+  "intro": "Fairy-Stockfish against itself at eight seconds a move, read again by the same engine. Its score leans toward the side to move, so each move is graded against the engine's best move from the same position, and every mark held up when that position was searched again for 12 seconds. Inaccuracies are left unmarked: two searches of one move differ by more than their width. Twice Red plays the engine's own piece move and puts the duck on the wrong point.",
+  "judged": {
+    "11": "The cannon that took a soldier on e7 swings to h7. The engine would put it on g7, and Red's chances drop by 11 points.",
+    "13": "The other cannon takes a soldier on c7: a second soldier for Red, but the raid costs 10 points.",
+    "15": "The elephant comes up to e3. The engine would play g1-e3 with the duck on b2; this one costs 11 points.",
+    "22": "Black's cannon goes to the edge on a6. The engine would bring an advisor up to e9 first.",
+    "25": "The cannon steps to i3, where Black's horse takes it on move 14. Red wins the horse back with the chariot on move 16, but Red's chances drop by 27 points.",
+    "33": "The cannon leaves c7 for f7 and retreats to f2 two moves later. A 19-point drop.",
+    "40": "Black's chariot steps to g7. The engine would take the elephant on e3 with the cannon, and Black's chances drop by 19 points without it.",
+    "41": "The right horse move with the duck on the wrong point. The engine plays the same g3-f5 and puts the duck on f6; on g9 it costs Red 26 points.",
+    "51": "The chariot steps to h7 and goes straight back to h8 on move 27. A lost turn, and a 25-point drop.",
+    "52": "Black answers with the chariot to d7, where the engine would play f7-f3.",
+    "61": "The horse retreats to d4. Two moves later it goes to c2, and Black's chariot takes it there.",
+    "63": "The duck again: the engine plays the same g3-g2 with the duck on f3, not f2. A 19-point drop, and the horse falls on move 33."
+  },
+  "lines": {
+    "11": "The engine's choice.",
+    "13": "The engine's choice.",
+    "15": "The engine's choice.",
+    "22": "The engine's choice.",
+    "25": "The engine's choice.",
+    "33": "The engine's choice.",
+    "40": "The engine's choice: the cannon takes the elephant.",
+    "41": "The engine's choice: the same horse move, the duck on f6.",
+    "51": "The engine's choice.",
+    "52": "The engine's choice.",
+    "61": "The engine's choice.",
+    "63": "The engine's choice: the same cannon move, the duck on f3."
+  },
+  "comments": {
+    "9": "e3-e7: the cannon takes the middle soldier.",
+    "28": "g4-i3: Black's horse takes the cannon.",
+    "31": "i1-i3: the chariot takes the horse back.",
+    "120": "e1-e2: the chariot takes the general. There is no checkmate in Duck Xiangqi; a game ends when a general is captured, and the move that does it places no duck."
+  }
+}

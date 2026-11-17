@@ -23,6 +23,7 @@ import {
   makeFFQBanqiTreeAdapter,
 } from './review/ffq-banqi-tree-adapter.js';
 import { createGameTree } from './review/game-tree.js';
+import { setResolvedSignedIn } from './signed-in-state.js';
 import { ffqBanqiWatchRecord, mountFFQBanqiWatchReplay } from './watch-ffq-banqi-replay.js';
 
 const ROOM = 'ffq_review_web';
@@ -110,7 +111,7 @@ function assertHpBars(host: HTMLElement, ply: number): void {
   expect(host.querySelectorAll('progress')).toHaveLength(2);
   for (const side of ['red', 'black'] as const) {
     const bars = host.querySelectorAll<HTMLProgressElement>(
-      `.ffq-banqi-hp[data-side="${side}"] progress`,
+      `:is(.ffq-banqi-hp, .ffq-banqi-hp-meter)[data-side="${side}"] progress`,
     );
     expect(bars).toHaveLength(1);
     expect(bars[0]!.max).toBe(FFQ_BANQI_START_HP);
@@ -120,19 +121,22 @@ function assertHpBars(host: HTMLElement, ply: number): void {
 }
 
 beforeEach(() => {
+  setResolvedSignedIn(true);
   vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
   window.history.replaceState(null, '', '/');
   vi.stubGlobal(
     'fetch',
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify(record), { headers: { 'content-type': 'application/json' } }),
+    vi.fn(async (input: RequestInfo | URL) =>
+      /\/(analysis|decisions)$/.test(String(input))
+        ? new Response(null, { status: 204 })
+        : new Response(JSON.stringify(record), { headers: { 'content-type': 'application/json' } }),
     ),
   );
 });
 afterEach(() => {
   for (const stop of destroy.splice(0)) stop();
   for (const host of roots.splice(0)) host.remove();
+  setResolvedSignedIn(undefined);
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -150,7 +154,7 @@ describe('FFQ masked review', () => {
     );
   });
 
-  it('steps the board, both HP counters and capture damage together without hidden faces', () => {
+  it('steps the board, both HP meters and each seat captures together without hidden faces', () => {
     const host = root();
     const handle = mountFFQBanqiReview(host, record.history.truth, {
       moves: played,
@@ -169,18 +173,45 @@ describe('FFQ masked review', () => {
     ]) {
       handle.jumpToPly(ply);
       assertHpBars(host, ply);
-      const damage = record.history.truth[ply]!.damage;
+      const frame = record.history.truth[ply]!;
       for (const side of ['red', 'black'] as const) {
-        const material = host.querySelector(`[data-side="${side}"]`)!.parentElement!;
-        if (damage[side]) expect(material.textContent).toContain(`${damage[side]} damage`);
-        else expect(material.textContent).not.toContain('damage');
+        // The seat row: the pieces this seat took, then its HP (as Three
+        // Kingdoms shows points), with no damage note or counters.
+        const material = host.querySelector(`.ffq-banqi-hp-meter[data-side="${side}"]`)!
+          .parentElement!;
+        expect(material.textContent).toContain(`${frame.view.hp[side]}/${FFQ_BANQI_START_HP} HP`);
+        expect(material.textContent).not.toMatch(/damage|progress|chase/i);
+        expect(material.querySelectorAll('.review-capture-piece').length).toBe(
+          new Set(
+            frame.view.captured
+              .filter((capture) => capture.capturedBy === side)
+              .map((capture) => `${capture.owner}:${capture.role}:${capture.wasFaceDown}`),
+          ).size,
+        );
       }
-      if (damage.red + damage.black)
-        expect(handle.mainlineMoveLabel(ply)).toContain(`${damage.red + damage.black} damage`);
+      // A capture's damage shows in the HP bars only; the move list keeps the move.
+      if (ply > 0) expect(handle.mainlineMoveLabel(ply)).not.toMatch(/damage|·/);
       expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
     }
     assertMasked(handle.serialize());
     expect(record.view.board.some((piece) => piece?.faceDown)).toBe(true);
+  });
+
+  it('lays the review out as banqi and Three Kingdoms do: a gauge track and the phone fork picker', () => {
+    const host = root();
+    const handle = mountFFQBanqiReview(host, record.history.truth, {
+      moves: played,
+      ariaLabel: 'Review',
+      title: gameSpecForId(FFQ_BANQI_SPEC_ID).publicName,
+      summary: '',
+      seatLabels: true,
+      analysis: null,
+    });
+    destroy.push(handle.destroy);
+    // No engine, so no eval bar: the spacer keeps the columns where an engine
+    // page puts them.
+    expect(host.querySelectorAll('.review-shell__gauge-spacer')).toHaveLength(1);
+    expect(host.querySelectorAll('.review-fork-picker')).toHaveLength(1);
   });
 
   it('mounts the gated page with canonical name and no exports, share card or embed', async () => {
@@ -192,14 +223,136 @@ describe('FFQ masked review', () => {
     expect(host.querySelector('a[href$="export.pgn"]')).toBeNull();
     expect(host.querySelector('a[href$="export.json"]')).toBeNull();
     expect(host.querySelector(`a[href*="/og/game/${ROOM}.png"]`)).toBeNull();
-    expect(host.querySelector('a[href$="?watch=1"]')).not.toBeNull();
+    // The left column is the meta card alone, as on banqi and Three Kingdoms;
+    // the as-played replay link sits with the share rows.
+    expect(host.querySelector('.review-actions--rail')).toBeNull();
+    const watch = host.querySelector<HTMLAnchorElement>('a[href$="?watch=1"]');
+    expect(watch?.closest('.review-share__row')).not.toBeNull();
+    expect(watch?.closest('.review-rail-group')).toBeNull();
+    expect(watch?.textContent).toBe('Replay as played');
     expect(host.querySelector('.game-favorite-action, .review-spectator-chat')).toBeNull();
     expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
       ffqBanqiPostgameApiUrl(ROOM),
+      `${ffqBanqiPostgameApiUrl(ROOM)}/analysis`,
     ]);
-    expect(host.textContent).not.toContain('Request computer analysis');
+    expect(host.textContent).toContain('Request computer analysis');
     expect(host.querySelector('textarea')?.value ?? '').not.toContain('/embed/');
     expect(ffqBanqiPostgameApiUrl('ffq a')).toBe('/api/ffq-banqi/games/ffq%20a');
+  });
+
+  it('requests analysis, renders the chart and move marks, and reloads the cache', async () => {
+    let cached = false;
+    const chancePlies = record.timeline.flatMap(({ move }, i) =>
+      record.history.truth[i]!.view.board[move!.to]?.faceDown ? [i + 1] : [],
+    );
+    const judgedPly = record.timeline.findIndex((_, i) => !chancePlies.includes(i + 1)) + 1;
+    expect(judgedPly).toBeGreaterThan(0);
+    const cp = judgedPly % 2 === 1 ? -1500 : 1500;
+    const analysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      plies: record.history.truth.map(({ ply }) => ({
+        ply,
+        cp: ply < judgedPly ? 0 : cp,
+        mate: null,
+        best: null,
+      })),
+      chancePlies,
+    };
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/decisions'))
+        return new Response(
+          JSON.stringify({ engineId: 'misty-ffq-banqi-decisions@test', depth: 12, decisions: [] }),
+        );
+      if (!String(input).endsWith('/analysis')) return new Response(JSON.stringify(record));
+      if (init?.method === 'POST') cached = true;
+      return cached ? new Response(JSON.stringify(analysis)) : new Response(null, { status: 204 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const host = root();
+    mountFFQBanqiPostgame(host, ROOM);
+    await vi.waitFor(() => expect(host.querySelector('.xiangqi-review__analyse')).not.toBeNull());
+    expect(host.querySelector('.advantage-chart')).toBeNull();
+    host.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
+    await vi.waitFor(() => expect(host.querySelector('.advantage-chart__line')).not.toBeNull());
+    expect(host.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(host.querySelectorAll('.analysis-summary__player')).toHaveLength(2);
+    host.querySelector<HTMLButtonElement>('.review-move--blunder')!.click();
+    expect(host.querySelector('.xq-marker--blunder')).not.toBeNull();
+    const reloaded = root();
+    mountFFQBanqiPostgame(reloaded, ROOM);
+    await vi.waitFor(() => expect(reloaded.querySelector('.advantage-chart__line')).not.toBeNull());
+    expect(reloaded.querySelector('.xiangqi-review__analyse')).toBeNull();
+    expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
+  });
+
+  it('shows luck on flips and covered captures, with no per-seat totals, from cached decisions without POST', async () => {
+    const chance = record.timeline.flatMap(({ move, color }, i) =>
+      record.history.truth[i]!.view.board[move!.to]?.faceDown
+        ? [{ ply: i + 1, color, capture: move!.from !== move!.to }]
+        : [],
+    );
+    const flip = chance.find((row) => !row.capture)!;
+    const capture = chance.find((row) => row.capture)!;
+    expect(capture).toBeDefined();
+    const decisions = [
+      {
+        ply: flip.ply,
+        mover: flip.color!,
+        bestWin: 70,
+        playedWin: 50,
+        realizedWin: 80,
+        playedRank: 2,
+      },
+      {
+        ply: capture.ply,
+        mover: capture.color!,
+        bestWin: 60,
+        playedWin: 60,
+        realizedWin: 30,
+        playedRank: 1,
+      },
+    ];
+    const analysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      plies: record.history.truth.map(({ ply }) => ({ ply, cp: 0, mate: null, best: null })),
+      chancePlies: chance.map((row) => row.ply),
+    };
+    const spy = vi.fn(
+      async (input: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            String(input).endsWith('/analysis')
+              ? analysis
+              : String(input).endsWith('/decisions')
+                ? { engineId: 'misty-ffq-banqi-decisions@test', depth: 12, decisions }
+                : record,
+          ),
+        ),
+    );
+    vi.stubGlobal('fetch', spy);
+    const host = root();
+    mountFFQBanqiPostgame(host, ROOM);
+    await vi.waitFor(() => expect(host.textContent).toContain('🎲 +30%'));
+    expect(host.textContent).toContain('🎲 -30%');
+    // Decided 2026-11-15: the per-move luck is the whole story; no per-seat totals line.
+    expect(host.textContent).not.toContain('decision loss');
+    expect(host.textContent).not.toMatch(/luck [+-]?\d+\.\d pp/);
+    expect(spy.mock.calls).toHaveLength(3);
+    assertMasked(decisions);
+  });
+
+  it('translates native FFQ engine coordinates only into the recorded continuation', () => {
+    const adapter = makeFFQBanqiTreeAdapter(record.history.truth, played);
+    for (let ply = 0; ply < played.length; ply++) {
+      const native = record.timeline[ply]!.move!;
+      const square = (n: number) => `${String.fromCharCode(97 + (n % 4))}${Math.floor(n / 4)}`;
+      const uci = square(native.from) + square(native.to);
+      expect(adapter.toEngineUci(played[ply]!)).toBe(uci);
+      expect(adapter.fromUci(uci, record.history.truth[ply]!)).toEqual(played[ply]);
+    }
+    expect(adapter.fromUci('a0a0', record.history.truth.at(-1)!)).toBeNull();
   });
 
   it('does not fetch when disabled and handles the server access refusal', async () => {

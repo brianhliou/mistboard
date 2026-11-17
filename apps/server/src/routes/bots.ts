@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
 import { botEngineVersion } from '../bot-engine-versions.js';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
+import { ffqBanqiEngineAvailable, isFFQBanqiEngineClientId } from '../ffq-banqi-engine.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
 import { parseGamePageCursor } from '../game-page-cursor.js';
 import {
@@ -10,7 +11,12 @@ import {
   JIEQI_JQE_ENGINE_ID,
   jqeAvailable,
 } from '../jieqi-engine.js';
-import { isJungleFlipEngineClientId, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
+import {
+  isJungleFlipEngineClientId,
+  jungleFlipEngineAvailable,
+  jungleFlipEngineTierFor,
+  jungleFlipNetPath,
+} from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
@@ -53,20 +59,25 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);
     if (!engineId) continue;
-    // A missing private net must never advertise the neural rung as playable.
-    if (isJungleFlipEngineClientId(engineId) && !jungleFlipEngineAvailable(engineId)) continue;
+    // A missing private net must never advertise the neural rung at all.
+    if (jungleFlipEngineTierFor(engineId)?.evaluation === 'nnue' && jungleFlipNetPath() === null)
+      continue;
     // An engine the box cannot run is unplayable, not missing: AB-JChess and KataGo
-    // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), which a
-    // dev box usually lacks. jqe also needs MISTBOARD_JQE_ENABLED, held off until its
-    // author's OK, so off it drops out of /api/bots and its profile 404s.
-    const serveable =
-      engineId === JIEQI_ABJCHESS_ENGINE_ID
-        ? abJchessAvailable()
-        : engineId === JIEQI_JQE_ENGINE_ID
-          ? jqeAvailable()
-          : engineId === KATAGO_JUNGLE_ENGINE_ID
-            ? katagoJungleAvailable()
-            : true;
+    // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), and
+    // Misty's Flip Jungle its binary, which a dev box usually lacks; the variant
+    // stays listed so /bots still shows it. jqe also needs MISTBOARD_JQE_ENABLED, held off until its author's OK, so off
+    // it drops out of /api/bots and its profile 404s.
+    const serveable = isFFQBanqiEngineClientId(engineId)
+      ? ffqBanqiEngineAvailable(engineId)
+      : isJungleFlipEngineClientId(engineId)
+        ? jungleFlipEngineAvailable(engineId)
+        : engineId === JIEQI_ABJCHESS_ENGINE_ID
+          ? abJchessAvailable()
+          : engineId === JIEQI_JQE_ENGINE_ID
+            ? jqeAvailable()
+            : engineId === KATAGO_JUNGLE_ENGINE_ID
+              ? katagoJungleAvailable()
+              : true;
     const version = botEngineVersion(engineId);
     options.push({
       gameSpecId,
@@ -99,6 +110,8 @@ export function withoutHiddenSpecs<T extends BotProfile>(bot: T): T {
   if (page.recordsByGameSpecId)
     page.recordsByGameSpecId = pickVisibleSpecs(page.recordsByGameSpecId);
   if (page.gamesByGameSpecId) page.gamesByGameSpecId = pickVisibleSpecs(page.gamesByGameSpecId);
+  if (page.levelRecordsByGameSpecId)
+    page.levelRecordsByGameSpecId = pickVisibleSpecs(page.levelRecordsByGameSpecId);
   return visible;
 }
 

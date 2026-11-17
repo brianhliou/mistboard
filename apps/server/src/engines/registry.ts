@@ -37,6 +37,7 @@ import {
   FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION,
   type FortressXiangqiEngineTier,
 } from '../fortress-xiangqi-fsf-engine.js';
+import { GOMOKU_CATALOG_ENGINES, GOMOKU_RANDOM_ENGINE_ID } from '../gomoku-engine-catalog.js';
 import {
   ABJCHESS_JIEQI_ENGINE_VERSION,
   JIEQI_ALL_ENGINE_TIERS,
@@ -151,7 +152,9 @@ function extraPlayableEngineIds(): Set<string> {
 export function playableLiveEngines(): EngineDefinition[] {
   const extras = extraPlayableEngineIds();
   return Object.values(KNOWN_ENGINES).filter(
-    (engine) => PROD_PLAYABLE_ENGINE_IDS.has(engine.id) || extras.has(engine.id),
+    (engine) =>
+      engine.id !== GOMOKU_RANDOM_ENGINE_ID &&
+      (PROD_PLAYABLE_ENGINE_IDS.has(engine.id) || extras.has(engine.id)),
   );
 }
 
@@ -1287,9 +1290,9 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
 const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   JUNGLE_RUST_TIER_LIST.map((tier) => {
     // The names server-jungle-engine.ts shows: the offered tier is Misty herself.
-    const level = tier.id.replace('misty-jungle-level-', '');
-    const name = tier.id === 'misty-jungle-level-2' ? 'Misty' : `Misty Jungle level ${level}`;
-    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}`;
+    const level = tier.level ?? tier.id.replace('misty-jungle-level-', '');
+    const name = tier.level ? `Misty Level ${level}` : `Misty Jungle level ${level} (retired)`;
+    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.depth}`}`;
     return [
       tier.id,
       {
@@ -1301,7 +1304,12 @@ const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
         gameSpecId: 'jungle',
         configHash: signature,
         playSignature: signature,
-        config: { kind: 'jungle-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+        config: {
+          kind: 'jungle-uci',
+          nodes: tier.nodes,
+          movetime_ms: tier.movetimeCapMs,
+          ...(tier.depth === undefined ? {} : { depth: tier.depth, noise: tier.noise }),
+        },
         notes: `MistyJungle ${JUNGLE_RUST_ENGINE_VERSION} Rust UCI engine, ${tier.nodes} nodes under a ${tier.movetimeCapMs} ms cap.`,
       } satisfies EngineDefinition,
     ];
@@ -1425,6 +1433,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...KATAGO_JUNGLE_ENGINES,
   ...THREE_KINGDOMS_BANQI_ENGINES,
   ...FFQ_BANQI_ENGINES,
+  ...Object.fromEntries(GOMOKU_CATALOG_ENGINES.map((engine) => [engine.id, engine])),
 };
 
 /**
@@ -1510,7 +1519,9 @@ export async function upsertBuiltinEngineVersions(
               ? 'python-subprocess'
               : engine.config.kind === 'builtin'
                 ? 'in-process-typescript'
-                : 'uci-subprocess',
+                : engine.config.kind === 'rapfi-gomocup'
+                  ? 'gomocup-subprocess'
+                  : 'uci-subprocess',
         },
         engine.notes ?? 'Built-in TypeScript worker engine for EvE data collection MVP.',
       ],

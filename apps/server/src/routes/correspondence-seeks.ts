@@ -23,6 +23,7 @@ import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
+import { isFairPlayMarked, isUserIdFairPlayMarked } from '../fair-play.js';
 import { correspondenceEnabled, correspondenceRatedEnabled } from './../feature-flags.js';
 import { logger } from './../obs.js';
 import type {
@@ -99,7 +100,14 @@ export function ratedSeekError(
   gameSpecId: string,
   timeControl: RoomTimeControl,
   enabled: boolean = correspondenceRatedEnabled(),
-): 'rated_disabled' | 'rated_unsupported_spec' | 'rated_unsupported_time_control' | null {
+  account: Pick<UserAccount, 'fairPlayMarkedAt'> | null = null,
+):
+  | 'rated_account_marked'
+  | 'rated_disabled'
+  | 'rated_unsupported_spec'
+  | 'rated_unsupported_time_control'
+  | null {
+  if (isFairPlayMarked(account)) return 'rated_account_marked';
   if (!enabled) return 'rated_disabled';
   if (!isCorrespondenceRatedSpec(gameSpecId)) return 'rated_unsupported_spec';
   if (!isOfficialCorrespondenceTimeControl(timeControl)) return 'rated_unsupported_time_control';
@@ -107,7 +115,7 @@ export function ratedSeekError(
 }
 
 function ratedSeekErrorStatus(error: NonNullable<ReturnType<typeof ratedSeekError>>): number {
-  if (error === 'rated_disabled') return 403;
+  if (error === 'rated_disabled' || error === 'rated_account_marked') return 403;
   if (error === 'rated_unsupported_spec') return 501;
   return 400;
 }
@@ -491,6 +499,10 @@ export type CreateSeekOptions = {
   // The host route mails both players its own start emails once the game is
   // made, so the private seek it posts must not also mail a challenge (#1057).
   skipChallengeEmail?: boolean;
+  // The host route posts as the host, who answers many players at once; a first
+  // move the host owes elsewhere must not lock everyone else out (#1131). The
+  // player accepting is still checked.
+  skipFirstMoveOwed?: boolean;
 };
 
 /** Options for an accept made on a player's behalf (the correspondence host route). */
@@ -514,6 +526,8 @@ export async function createSeekResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+  const owed = options.skipFirstMoveOwed ? null : await firstMoveOwedResult(user.id);
+  if (owed) return owed;
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
   // A retired variant takes no new games: the same 410 the request gate gives.
   if (isRetiredGameSpec(gameSpecId)) {
@@ -543,7 +557,7 @@ export async function createSeekResult(
   // honoured is refused, never quietly downgraded to casual.
   const rated = body.rated === true;
   if (rated) {
-    const ratedError = ratedSeekError(gameSpecId, timeControl);
+    const ratedError = ratedSeekError(gameSpecId, timeControl, undefined, user);
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
@@ -587,6 +601,9 @@ export async function createSeekResult(
     // anyone else could never be accepted, and would show them the variant.
     if (allowlisted && !(await mayPlayCorrespondenceByUserId(targetUserId, gameSpecId))) {
       return { status: 403, body: { error: 'target_variant_not_granted' } };
+    }
+    if (rated && (await isUserIdFairPlayMarked(targetUserId))) {
+      return { status: 403, body: { error: 'rated_account_marked' } };
     }
     // A rated challenge to an uncounted account could never become a rated game.
     if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
@@ -745,6 +762,8 @@ export async function acceptSeekResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+  const owed = await firstMoveOwedResult(user.id);
+  if (owed) return owed;
   if (ctx.refusesCreate()) {
     return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
@@ -796,7 +815,10 @@ export async function acceptSeekResult(
   // qualifying since it was posted), and both players must be free to play: the
   // accepter's lock is checked above, the creator's here, because accepting seats them.
   if (seek.rated) {
-    const ratedError = ratedSeekError(seek.gameSpecId, timeControl);
+    if (isFairPlayMarked(user) || (await isUserIdFairPlayMarked(seek.creatorUserId))) {
+      return { status: 403, body: { error: 'rated_account_marked' } };
+    }
+    const ratedError = ratedSeekError(seek.gameSpecId, timeControl, undefined, user);
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
@@ -945,6 +967,7 @@ export type QuickPairDeps = {
   listBoardSeeks: () => Promise<QuickPairSeek[]>;
   accept: (user: UserAccount, seekId: string) => Promise<SeekRouteResult>;
   post: (user: UserAccount, body: Record<string, unknown>) => Promise<SeekRouteResult>;
+  firstMoveOwed?: (userId: string) => Promise<SeekRouteResult | null>;
 };
 
 function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
@@ -957,6 +980,7 @@ function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
     listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
     accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),
     post: (user, body) => createSeekResult(ctx, user, body, 'quick-pair'),
+    firstMoveOwed: firstMoveOwedResult,
   };
 }
 
@@ -992,6 +1016,9 @@ export async function quickPairResult(
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
   }
+
+  const owed = await deps.firstMoveOwed?.(user.id);
+  if (owed) return owed;
 
   // 1. Already waiting: hand back the open seek instead of stacking another.
   const own = (await deps.listOwnSeeks(user.id)).find(isQuickPairOffer);
@@ -1046,6 +1073,12 @@ function quickPairSeekAnswer(seekId: string, existing: boolean): SeekRouteResult
       daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
     },
   };
+}
+
+async function firstMoveOwedResult(userId: string): Promise<SeekRouteResult | null> {
+  if (!persistence.isInitialized()) return null;
+  const owed = await persistence.firstMoveOwedForUser(userId);
+  return owed ? { status: 409, body: { error: 'first_move_owed', ...owed } } : null;
 }
 
 /** What a signed-out visitor holding a challenge link may read (#1058). */

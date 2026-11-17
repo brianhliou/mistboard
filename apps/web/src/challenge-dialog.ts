@@ -1,7 +1,13 @@
 import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { targetedChallengeRequestBody } from './challenge-model.js';
+import {
+  type CorrespondenceGameType,
+  rememberCorrespondenceGameType,
+  storedCorrespondenceGameType,
+} from './correspondence-game-type.js';
 import { correspondenceRatedAvailable, correspondenceSpecIdsFor } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -40,8 +46,8 @@ export function openChallengeDialog(opts: {
   const variant = document.createElement('select');
   variant.className = 'challenge-dialog-field';
   variant.setAttribute('aria-label', t('challenge.variant', {}, locale));
-  // A playtest variant (xiangqi mahjong) joins only for an account the menu offers
-  // it to; the server also refuses a target without the grant.
+  // Tenant-gated variants join for accounts the live menu offers them to.
+  // The server independently rechecks both accounts on create and accept.
   const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
   for (const specId of specIds) {
     const opt = document.createElement('option');
@@ -116,6 +122,13 @@ export function openChallengeDialog(opts: {
   const notCounted = isLikelyStatsExcluded();
   const ratedAvailable = (): boolean =>
     !notCounted && correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
+  // Opens on the player's last pick, Casual until they make one
+  // (correspondence-game-type.ts); a forced Casual is not saved.
+  let wantedGameType: CorrespondenceGameType = storedCorrespondenceGameType();
+  rated.addEventListener('change', () => {
+    wantedGameType = rated.value === 'rated' ? 'rated' : 'casual';
+    rememberCorrespondenceGameType(wantedGameType);
+  });
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
@@ -123,7 +136,7 @@ export function openChallengeDialog(opts: {
       ratedOption.disabled = !available;
       if (notCounted) ratedOption.textContent = t('setup.ratedNotCounted', {}, locale);
     }
-    if (!available) rated.value = 'casual';
+    rated.value = available ? wantedGameType : 'casual';
   };
   syncRated();
   // Absent, not just disabled, while rated correspondence is held (flag off).
@@ -176,10 +189,12 @@ export function openChallengeDialog(opts: {
       body: JSON.stringify(request.body),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          challengeUrl?: string;
-          error?: string;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string;
+              error?: string;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && body?.challengeUrl) {
           trackCorrespondenceSeekPosted({
             gameSpecId: variant.value,
@@ -190,7 +205,9 @@ export function openChallengeDialog(opts: {
           location.href = body.challengeUrl;
           return;
         }
-        error.textContent = challengeErrorText(res.status, body?.error, name, locale);
+        if (!renderFirstMoveOwed(error, body, locale)) {
+          error.textContent = challengeErrorText(res.status, body?.error, name, locale);
+        }
         error.hidden = false;
         send.disabled = false;
       })

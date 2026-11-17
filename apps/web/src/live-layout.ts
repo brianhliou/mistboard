@@ -37,6 +37,8 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
     'live-route--three-kingdoms-banqi',
     gameSpecId === 'three-kingdoms-banqi',
   );
+  // Fanfanqi's seat panel under the board (banqi-seat-panel.css).
+  target.classList.toggle('live-route--ffq-banqi', gameSpecId === 'ffq-banqi');
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');
   target.classList.toggle('live-route--jungle-flip', gameSpecId === 'jungle-flip');
   target.classList.toggle('live-route--mahjong', gameSpecId === 'mahjong');

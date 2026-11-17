@@ -163,7 +163,11 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     ...gameExportShareExtra(DUCK_XIANGQI_SPEC_ID, postgame.game.roomId),
   });
 
-  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
+  const status = reviewOutcomeLine(
+    gameOutcome(postgame.game.result),
+    postgame.game.termination,
+    DUCK_XIANGQI_SPEC_ID,
+  );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: DUCK_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(DUCK_XIANGQI_SPEC_ID),

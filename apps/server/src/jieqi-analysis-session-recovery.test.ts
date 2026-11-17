@@ -27,6 +27,7 @@ function writeFakeEngine(name: string, body: string): string {
 // The session's initCommands set Hash and Threads, and the harness fails init if a
 // configured option was never advertised — so the fake must advertise both.
 const PREAMBLE = `let buf = '';
+let rule = 'legacy';
 const respond = (s) => process.stdout.write(s);
 process.stdin.on('data', (chunk) => {
   buf += chunk;
@@ -40,6 +41,7 @@ process.stdin.on('data', (chunk) => {
       respond('uciok\\n');
     }
     if (line === 'isready') respond('readyok\\n');
+    if (line.startsWith('setoption name Jieqi Rule value ')) rule = line.split(' ').at(-1);
     if (line.startsWith('go')) {`;
 
 const POSTAMBLE = `    }
@@ -58,7 +60,7 @@ ${PREAMBLE}
         fs.writeFileSync(sentinel, 'crashed');
         process.exit(1);
       }
-      respond('info depth 3 score cp 42\\nbestmove a0a1\\n');
+      respond('info depth 3 score cp ' + (rule === 'jqe-v1' ? 84 : 42) + ' pv a0a1\\nbestmove a0a1\\n');
 ${POSTAMBLE}`,
 );
 
@@ -121,5 +123,23 @@ test('an engine that dies every time surfaces instead of respawning forever', as
         withJieqiAnalysisSession((evaluateFen) => evaluateFen(FEN, BUDGET), 'pikafish-jieqi'),
       ),
     'a permanently broken engine must fail the sweep, not spin',
+  );
+});
+
+test('respawn retries the stamped request and later eval/MultiPV requests reset the rule', async () => {
+  const sentinel = join(fixtureDir, `rule-sentinel-${Date.now()}`);
+  await withEngine(crashOnceBin, sentinel, () =>
+    withJieqiAnalysisSession(async (evaluateFen, multiPv) => {
+      const stamped = { ...BUDGET, adjudicationRule: 'jqe-v1' as const, fresh: true };
+      assert.equal(
+        (await evaluateFen(FEN, stamped)).cp,
+        84,
+        'the replacement process receives the stamp',
+      );
+      assert.ok(existsSync(sentinel), 'the stamped request really killed its first process');
+      assert.equal((await evaluateFen(FEN, BUDGET)).cp, 42);
+      assert.equal((await multiPv(FEN, { ...stamped, multiPv: 4 }))[0]?.cp, 84);
+      assert.equal((await multiPv(FEN, { ...BUDGET, multiPv: 1 }))[0]?.cp, 42);
+    }, 'pikafish-jieqi'),
   );
 });

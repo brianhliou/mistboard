@@ -1,6 +1,34 @@
 // Account translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_ACCOUNT = {
+  'account.liveInvites': 'Allow incoming real-time invitations',
+  'account.liveInvitesHelp':
+    'People you follow or who follow you can invite you while you are online. Muting the challenge bell does not block invitations. This setting blocks incoming real-time invitations on every device.',
+
+  'account.chooseUsername': 'Choose your username',
+  'account.chooseUsernameCopy': 'Your username is public. Keep this one or choose another.',
+  'account.suggestUsernameCopy':
+    'Your username may include part of your email address. Choose a different one if you prefer.',
+  'account.usernameContinue': 'Continue',
+  'account.usernameNotNow': 'Not now',
+  'account.broadcastPush': 'Broadcast push',
+  'account.broadcastPushHelp':
+    'Create a token for your recording device or app to send games to an event.',
+  'account.broadcastPushLabel': 'Token label',
+  'account.broadcastPushCreate': 'Create token',
+  'account.broadcastPushOnce': 'Copy this token now. It will not be shown again.',
+  'account.broadcastPushCopy': 'Copy',
+  'account.broadcastPushCopied': 'Token copied.',
+  'account.broadcastPushCopyFailed': 'Could not copy. Select and copy the token above.',
+  'account.broadcastPushDismiss': 'Hide token',
+  'account.broadcastPushRevoke': 'Revoke',
+  'account.broadcastPushRevoked': 'Revoked',
+  'account.broadcastPushCreated': 'Created',
+  'account.broadcastPushLastUsed': 'Last used',
+  'account.broadcastPushNever': 'Never',
+  'account.broadcastPushFailed': 'Could not complete the request. Please try again.',
+  'account.broadcastPushLimit':
+    'You can have up to 5 active tokens per event. Revoke one before creating another.',
   'account.loading': 'Loading account',
   'account.signedIn': 'Signed in',
   'account.viewProfile': 'View profile',
@@ -30,6 +58,7 @@ export const EN_ACCOUNT = {
   'account.flair': 'Flair',
   'account.flairHelp': 'A small icon shown beside your name across the site.',
   'account.flairNone': 'No flair',
+  'account.flairGroupXiangqiSet': 'Xiangqi: {set}',
   'account.publicProfileSaved': 'Public profile saved.',
   'account.invalidPublicProfile': 'Check the biography, location, and public links.',
   'account.settingsCopy': 'Email signs you in. Your username is public.',
@@ -42,7 +71,7 @@ export const EN_ACCOUNT = {
   'account.displayBoardHighlights': 'Board highlights (last move and check)',
   'account.displayPieceDestinations': 'Piece destinations (valid moves and premoves)',
   'account.displayBoardCoordinates': 'Board coordinates (A-H, 1-8)',
-  'account.displayConfirmMovesOnTouch': 'Confirm moves on touch screens',
+  'account.displayConfirmMovesOnTouch': 'Confirm touch moves',
   'account.displayMoveListWhilePlaying': 'Move list while playing',
   'account.displayZenMode': 'Zen mode',
   'account.displayBoardResizeHandle': 'Show board resize handle',
@@ -64,6 +93,9 @@ export const EN_ACCOUNT = {
   'account.settingsGameBehavior': 'Game behavior',
   'account.premoves': 'Premoves',
   'account.premovesHelp': 'Play a prepared move when your turn begins, if it is still legal.',
+  'account.confirmCorrespondenceMoves': 'Confirm correspondence moves',
+  'account.confirmCorrespondenceMovesHelp':
+    'Preview each correspondence move, then confirm to send it. Timed games send immediately.',
   'account.confirmGameActions': 'Confirm game-ending actions',
   'account.confirmGameActionsHelp':
     'Ask before resigning, aborting, or playing a move that loses by repetition.',
@@ -220,6 +252,11 @@ export const EN_ACCOUNT = {
 export type AccountI18nKey = keyof typeof EN_ACCOUNT;
 
 export const CRITICAL_ACCOUNT_I18N_KEYS = [
+  'account.chooseUsername',
+  'account.chooseUsernameCopy',
+  'account.suggestUsernameCopy',
+  'account.usernameContinue',
+  'account.usernameNotNow',
   'account.loading',
   'account.signedIn',
   'account.viewProfile',

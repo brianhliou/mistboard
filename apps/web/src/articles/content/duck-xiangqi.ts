@@ -25,9 +25,13 @@ export const duckXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-09',
-  updatedAt: '2026-10-16',
-  updateNote:
-    "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.",
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
+  tldr: [
+    'Each turn, move one piece, then place the duck on a new empty point. Capturing the general ends the game immediately.',
+    'The duck cannot be captured. It blocks lines, horse legs and elephant eyes, and serves as a cannon screen.',
+    'Capture the enemy general to win. There is no check, and a player with no legal turn loses.',
+  ],
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },
@@ -168,7 +172,9 @@ export const duckXiangqiArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/uMbk76wd/RPLi9LsH',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/duck-xiangqi.plan.json);
+          // swapped for the prod ids when the prod study is created from that plan.
+          path: '/embed/study/Hkwqd2kn/ZlZFbv0q',
           title: 'Duck Xiangqi: an engine game, Black captures the general on move 60',
           // Shorter than atomic's 700: duck notation (b3-b5@d9) widens the
           // move sheet, so the board gets less of the 702px column (408px).

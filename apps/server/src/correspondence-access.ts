@@ -5,8 +5,9 @@ import { getPool } from './persistence-db.js';
 import { threeKingdomsBanqiAdmits } from './three-kingdoms-banqi-access.js';
 import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
 
-// Reuse the room doors. A grant must never bypass an admin-only playtest,
-// and TK's admin door remains available while its public listing flag is off.
+// Decided 2026-11-15 (#994): signed-in FFQ live players may also play casual
+// correspondence. Insider read privileges remain separate; TK admins may test
+// while its public flag is off.
 export async function mayPlayCorrespondence(
   user: UserAccount | null,
   specId: string,

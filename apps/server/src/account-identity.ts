@@ -51,7 +51,9 @@ export function normalizeEmail(value: string | null): string | null {
   return email;
 }
 
-export function handleBaseForEmail(email: string): string {
+// Only for recognizing legacy generated handles. Never use an email stem to
+// allocate a new public identity.
+export function historicalEmailHandleStem(email: string): string | null {
   const local = email.split('@', 1)[0] ?? '';
   const publicStem = local.split('+', 1)[0] ?? '';
   const normalized = publicStem
@@ -60,16 +62,28 @@ export function handleBaseForEmail(email: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, maxHandleLength)
     .replace(/-+$/g, '');
-  // The reserved set guards signup generation too: reports@example.com must
-  // not mint the handle `reports` (suffixed collision variants are fine, only
-  // the bare stem shadows a route literal).
-  if (normalized.length < 3 || reservedHandles.has(normalized)) return randomFallbackHandle();
+  // Historical signup never minted a bare reserved or too-short stem.
+  if (normalized.length < 3 || reservedHandles.has(normalized)) return null;
   return normalized;
 }
 
-// A fully-random `player-xxxxx` handle (36^5 ≈ 60M space). Used both when an
-// email yields no safe stem and as the last-resort signup fallback so handle
-// congestion alone can never hard-fail account creation.
+// True when a handle is one historical signup minted from this email: the
+// bare stem, or the stem cut to fit plus the five-digit collision suffix
+// (`stem-48213`), which still shows the stem.
+export function isHistoricalEmailHandle(handle: string, email: string): boolean {
+  const stem = historicalEmailHandleStem(email);
+  if (!stem) return false;
+  const value = handle.toLowerCase();
+  if (value === stem) return true;
+  const prefix = stem.slice(0, maxHandleLength - 6).replace(/-+$/g, '');
+  return (
+    value.length === prefix.length + 6 &&
+    value.startsWith(`${prefix}-`) &&
+    /^[0-9]{5}$/.test(value.slice(prefix.length + 1))
+  );
+}
+
+// A fully-random `player-xxxxx` handle (36^5 ≈ 60M space), independent of email.
 export function randomFallbackHandle(): string {
   return `${fallbackHandlePrefix}-${randomHandleSuffix()}`;
 }

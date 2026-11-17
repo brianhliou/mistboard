@@ -9,10 +9,12 @@
 // recorded version (the in-process xiangqi mahjong bot) returns null and the page
 // shows nothing; a version is never guessed.
 
+import { isRapfiEngineId } from '@mistboard/game';
 import { ATOMIC_XIANGQI_FSF_ENGINE_REF } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_ENGINE_VERSION } from './banqi-engine.js';
 import { DUCK_XIANGQI_FSF_ENGINE_REF } from './duck-xiangqi-fsf-engine.js';
 import { loadEngine } from './engines/registry.js';
+import { ffqBanqiEngineVersion } from './ffq-banqi-engine.js';
 import {
   ABJCHESS_JIEQI_ENGINE_VERSION,
   JIEQI_ABJCHESS_ENGINE_ID,
@@ -20,7 +22,7 @@ import {
   JQE_JIEQI_ENGINE_VERSION,
   PIKAFISH_JIEQI_ENGINE_REF,
 } from './jieqi-engine.js';
-import { JUNGLE_RUST_ENGINE_VERSION } from './jungle-engine.js';
+import { JUNGLE_RUST_ENGINE_VERSION, jungleRustTierFor } from './jungle-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION } from './jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, KATAGO_JUNGLE_ENGINE_VERSION } from './jungle-katago-engine.js';
 import { XIANGQI_FSF_ENGINE_REF } from './xiangqi-fsf-engine.js';
@@ -69,7 +71,9 @@ function registryVersion(engineId: string): string | null {
 
 /** The version string for one engine id, or null when none is recorded. */
 export function botEngineVersion(engineId: string): string | null {
-  if (engineId.startsWith('rapfi-level-')) return RAPFI_ENGINE_REF;
+  const ffqVersion = ffqBanqiEngineVersion(engineId);
+  if (ffqVersion) return ffqVersion;
+  if (isRapfiEngineId(engineId)) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;
   if (engineId.startsWith('fairy-stockfish-xiangqi-')) return XIANGQI_FSF_ENGINE_REF;
@@ -89,7 +93,7 @@ export function botEngineVersion(engineId: string): string | null {
   // The dropped 100K rung retains its historical build; every live tier is 0.6.0.
   if (engineId === 'misty-jungle-flip-level-7') return '0.5.1';
   if (engineId.startsWith('misty-jungle-flip')) return JUNGLE_FLIP_ENGINE_VERSION;
-  if (engineId.startsWith('misty-jungle-level-')) return JUNGLE_RUST_ENGINE_VERSION;
+  if (jungleRustTierFor(engineId)) return JUNGLE_RUST_ENGINE_VERSION;
   if (engineId.startsWith('python-')) return registryVersion(engineId);
   return null;
 }

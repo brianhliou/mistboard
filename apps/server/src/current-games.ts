@@ -43,6 +43,7 @@ import { isGameInPlay } from './deploy-gate.js';
 import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
+import { isReleaseSmokeRoom } from './release-smoke.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient, liveObservePolicy } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -52,7 +53,7 @@ import {
   type VariantTenantRegistration,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { listedOnSurface, listWatchChannels } from './watch-channels.js';
+import { isUnlistedFFQBanqiGame, listedOnSurface, listWatchChannels } from './watch-channels.js';
 import {
   hasLiveWatchPayloadBuilder,
   lastMoveAt,
@@ -238,6 +239,7 @@ function gameFromChessRoom(
   now: number,
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
+  if (room.mode === 'pve' && isReleaseSmokeRoom(room, isServerEngineClient)) return null;
   if (room.projection.state.status.type !== 'playing') return null;
   if (!isGameInPlay(room, now)) return null;
   const seats = room.projection.seats;
@@ -287,9 +289,18 @@ function gameFromTenantRoom(
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
   if (isInternalEngineTestLog(room.events)) return null;
+  if (isReleaseSmokeRoom(room, isEngine)) return null;
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;
+  if (
+    isUnlistedFFQBanqiGame({
+      roomId: room.id,
+      gameSpecId: registration.gameSpecId,
+      timeControl: projection.timeControl,
+    })
+  )
+    return null;
   if (!isGameInPlay(room as Parameters<typeof isGameInPlay>[0], now)) return null;
   const seats = projection.seats ?? {};
   const players: CurrentGamePlayer[] = [];
@@ -437,22 +448,21 @@ function firstEventAt(events: readonly { at?: number }[]): number | null {
   return typeof first?.at === 'number' ? first.at : null;
 }
 
-// Live (clock-driven) games lead, human games before engine games, most
-// recently active first. Correspondence games follow, soonest deadline first:
-// on a page that is mostly correspondence, the game about to be decided is the
-// one worth a look.
+// Live (clock-driven) games lead, human games before engine games;
+// correspondence games follow. Within each group the newest game leads and the
+// rest keep their start order, so a new game pushes the others down once and a
+// move never reshuffles the page (decided 2026-11-14; activity and deadline
+// order moved cards on every move). A game with no start time yet is the newest.
 export function sortCurrentGames(games: CurrentGame[]): CurrentGame[] {
   const tier = (game: CurrentGame): number =>
     (game.timeClass === 'correspondence' ? 0 : 10) + (game.composition === 'pvp' ? 1 : 0);
+  const started = (game: CurrentGame): number => game.startedAt ?? Number.POSITIVE_INFINITY;
   return [...games].sort((a, b) => {
     const byTier = tier(b) - tier(a);
     if (byTier !== 0) return byTier;
-    if (a.timeClass === 'correspondence' && b.timeClass === 'correspondence') {
-      const dueA = a.deadline ? Date.parse(a.deadline.dueAt) : Number.POSITIVE_INFINITY;
-      const dueB = b.deadline ? Date.parse(b.deadline.dueAt) : Number.POSITIVE_INFINITY;
-      if (dueA !== dueB) return dueA - dueB;
-    }
-    return (b.lastActivityAt ?? 0) - (a.lastActivityAt ?? 0);
+    const byStart = started(b) - started(a);
+    if (byStart !== 0 && !Number.isNaN(byStart)) return byStart;
+    return a.roomId < b.roomId ? -1 : a.roomId > b.roomId ? 1 : 0;
   });
 }
 

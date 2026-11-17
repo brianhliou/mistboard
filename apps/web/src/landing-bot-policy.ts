@@ -11,6 +11,7 @@ import {
   isAllowedEngineTimeControl,
   isPublicGameSpec,
   JIEQI_SPEC_ID,
+  JUNGLE_CLASSICAL_POLICIES,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
@@ -123,6 +124,7 @@ const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 // 'pikafish-xiangqi-level-8'; unmapped, a homepage Level 5 player reopened the
 // dialog on the newcomer default.
 export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
+  if (gameSpecId === GOMOKU_SPEC_ID) return id === 'rapfi' ? 'rapfi-strongest' : id;
   if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
   if (gameSpecId === XIANGQI_SPEC_ID) {
     if (id === 'pikafish') return 'pikafish-xiangqi-level-8';
@@ -411,13 +413,28 @@ export function landingBotLadder(
     ).filter((rung) => playableEngines.has(rung.engineId!));
   }
   if (gameSpecId === GOMOKU_SPEC_ID) {
-    return Array.from({ length: 8 }, (_, i) => ({
-      botId: `rapfi-level-${i + 1}`,
-      level: i + 1,
-      name: `Rapfi Level ${i + 1}`,
-      engine: 'Rapfi',
-      net: null,
-    }));
+    const rungs: LandingBotRung[] = [
+      ...Array.from(
+        { length: 8 },
+        (_, i): LandingBotRung => ({
+          botId: `rapfi-level-${i + 1}`,
+          level: i + 1,
+          name: `Rapfi Level ${i + 1}`,
+          engine: 'Rapfi',
+          net: null,
+        }),
+      ),
+      {
+        botId: 'rapfi',
+        gated: true,
+        engineId: 'rapfi-strongest',
+        level: null,
+        name: 'Rapfi',
+        engine: 'Rapfi',
+        net: null,
+      },
+    ];
+    return rungs.filter((rung) => !rung.gated || playable.has(rung.botId!));
   }
   if (gameSpecId === BANQI_SPEC_ID || gameSpecId === JUNGLE_FLIP_SPEC_ID) {
     const base = gameSpecId === BANQI_SPEC_ID ? 'misty-banqi' : 'misty-jungle-flip';
@@ -508,7 +525,17 @@ export function landingBotLadder(
       net: 'neural',
       gated: true,
     };
-    return [misty, katago].filter((rung) => !rung.gated || playable.has(rung.botId));
+    const levels: LandingBotRung[] = JUNGLE_CLASSICAL_POLICIES.filter(
+      (tier) => tier.level === 7 || playableEngines.has(tier.id),
+    ).map((tier) => ({
+      botId: 'misty',
+      engineId: tier.id,
+      level: tier.level,
+      name: `Misty Level ${tier.level}`,
+      engine: 'Misty',
+      net: null,
+    }));
+    return [...levels, katago].filter((rung) => !rung.gated || playable.has(rung.botId!));
   }
   return [misty];
 }

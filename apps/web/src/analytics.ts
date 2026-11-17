@@ -11,9 +11,11 @@ import {
 import { chunkReloadPending } from './chunk-load-recovery.js';
 import {
   hasTrackedCorrespondenceStart,
+  hasTrackedGameFinish,
   hasTrackedGameFirstMove,
   hasTrackedLiveGameStart,
   markCorrespondenceStartTracked,
+  markGameFinishTracked,
   markGameFirstMoveTracked,
   markLiveGameStartTracked,
   takeCorrespondenceStartSource,
@@ -449,9 +451,9 @@ export type GameFinishedOutcome = {
 
 export type GameLifecycleTracker = {
   // Call on every render with the current game status. Emits `game_started` on
-  // the first transition into `playing` and `game_finished` on entering
-  // `finished`. Repeated calls with the same status are no-ops, so it is safe to
-  // drive from a render loop. `baseProps` should carry game-spec/time-control
+  // the first transition into `playing` and `game_finished` once per game id
+  // per browser, including across resets and page revisits. Repeated calls
+  // are safe from a render loop. `baseProps` should carry game-spec/time-control
   // identity (see gameSpecAnalyticsProps) so the funnel is sliceable by variant.
   //
   // `ownMoveCount` drives `game_first_move`: how many moves this client's seated
@@ -474,8 +476,8 @@ export type GameLifecycleTracker = {
 
 // One implementation of the start/finish funnel, shared by every live runtime
 // (chess + the tenant clients) so the event schema can't drift between parallel
-// stacks. Each caller holds its own instance — state is per-tracker, never
-// global, so two runtimes can't bleed transitions into each other.
+// stacks. Each caller holds its own transitions and duration; persisted event
+// markers dedupe the same game across trackers, reconnects and page revisits.
 export function createGameLifecycleTracker(): GameLifecycleTracker {
   let lastStatusType: GameLifecycleStatusType | null = null;
   let playingSinceMs: number | null = null;
@@ -522,15 +524,21 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
         }
       }
       trackFirstMove(input);
-      if (statusType === lastStatusType) return;
       if (statusType === 'finished' && input.outcome) {
-        track('game_finished', {
-          ...baseProps,
-          winner: input.outcome.winner,
-          reason: input.outcome.reason,
-          moveNumber: input.outcome.moveNumber,
-          durationMs: playingSinceMs !== null ? Date.now() - playingSinceMs : null,
-        });
+        const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+        // Status transitions alone re-fire after a reconnect or a fresh page.
+        // Mark before capture (which may queue until analytics initializes).
+        // Without an id, retain the legacy per-transition behavior.
+        if (gameId ? !hasTrackedGameFinish(gameId) : statusType !== lastStatusType) {
+          if (gameId) markGameFinishTracked(gameId);
+          track('game_finished', {
+            ...baseProps,
+            winner: input.outcome.winner,
+            reason: input.outcome.reason,
+            moveNumber: input.outcome.moveNumber,
+            durationMs: playingSinceMs !== null ? Date.now() - playingSinceMs : null,
+          });
+        }
         playingSinceMs = null;
       }
       lastStatusType = statusType;
@@ -640,6 +648,8 @@ export function trackCorrespondenceSeekPosted(props: {
   daysPerMove: number;
   kind: CorrespondenceSeekKind;
   surface: 'correspondence' | 'lobby' | 'profile' | 'home-button' | 'postgame' | 'review';
+  source?: 'setup';
+  send_to?: 'link' | 'player';
 }): void {
   track('correspondence_seek_posted', props);
 }

@@ -92,6 +92,17 @@ export type PuzzleSummary = {
     // An online platform's game: the server sends no event, players or link.
     online?: boolean;
   };
+  /** Archive credit for a position-only puzzle; there is no hosted game. */
+  credit?: {
+    name: string;
+    event: string;
+    red: string;
+    black: string;
+    url: string;
+    eventEn?: string;
+    redEn?: string;
+    blackEn?: string;
+  };
 };
 
 // The opponent's setup move (initial.lastMove) with the piece it captured,
@@ -170,6 +181,9 @@ export type PuzzleSession = {
   // across renderSession() rebuilds so the engine toggle + eval + arrows
   // survive a full re-render. Disposed when the session is replaced.
   analysis?: PuzzleAnalysisController | null;
+  // Local post-completion exploration, separate from the graded solution.
+  exploration?: { rootPly: number; moves: PuzzleMove[]; cursor: number } | null;
+  solutionPlaybackCancelled?: boolean;
   // The miss that ended the attempt, kept when the board then plays the line
   // out (Puzzle Streak's game over): the move list marks it beside the move
   // that was right at that ply. `ply` indexes playedMoves.
@@ -229,6 +243,8 @@ export type PuzzleBoardContext = {
   renderSession: () => void;
   /** Submit a candidate solution move through the shared attempt path. */
   submitMove: (move: PuzzleMove) => Promise<void>;
+  /** Local legal moves after completion; never books a puzzle attempt. */
+  exploreMove?: (move: PuzzleMove) => void;
   /** Verdict badges for the painted position: ✓ on a found solver move, ✗ on
    *  a wrong try held before its take-back. Adapters pin each at `square`. */
   moveMarks: readonly PuzzleMoveMark[];
@@ -352,6 +368,24 @@ export function oppositePuzzleColor(color: PuzzleColor): PuzzleColor {
 export function colorLabel(color: PuzzleColor | null): string {
   if (color === 'black') return t('setup.black');
   return t('setup.red');
+}
+
+export function puzzleGoalLabel(puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount'>): string {
+  if (puzzle.goal.type === 'checkmate')
+    return t('puzzle.mateIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
+  if (puzzle.goal.type === 'win')
+    return t('puzzle.winIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
+  return t('puzzle.winning');
+}
+
+/** The bound defines a mating task: show it before grading slower wins. */
+export function puzzleSolvePrompt(
+  puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount' | 'sideToMove'>,
+): string {
+  const color = colorLabel(puzzle.sideToMove);
+  return puzzle.goal.type === 'checkmate'
+    ? t('puzzle.goalToMove', { goal: puzzleGoalLabel(puzzle), color })
+    : t('puzzle.toMove', { color });
 }
 
 export function dropRoleLabel(role: string): string {

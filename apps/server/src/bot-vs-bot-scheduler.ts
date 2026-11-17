@@ -50,6 +50,7 @@ import {
 import { upsertBuiltinEngineVersions } from './engine-registry.js';
 import { timeControlBucket } from './engine-time-policy.js';
 import { botVsBotEnabled } from './feature-flags.js';
+import { observeBackgroundJob } from './obs.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { eveAdapterFor } from './variant-eve-registry.js';
 
@@ -498,7 +499,9 @@ export function createBotVsBotScheduler(
     });
   }
 
-  async function tick(): Promise<void> {
+  const tick = () => observeBackgroundJob('bot_vs_bot_scheduler', runTick);
+
+  async function runTick(): Promise<void> {
     if (ticking) return;
     if (!deps.enabled()) return;
     ticking = true;

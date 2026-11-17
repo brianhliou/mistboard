@@ -174,10 +174,7 @@ const JIEQI_AB_JCHESS_20261031: Title = {
   // Built on jqe's MIT code. The net (abjchess-20261030.nnue) ships in the authors'
   // AB-JChess-20261031 release (scripts/fetch-abjchess-net.sh), never re-hosted.
   credits: {
-    code: [
-      { name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' },
-      { name: 'jqe', href: 'https://github.com/devinokeefe/jieqi' },
-    ],
+    code: [{ name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' }],
     network: [
       {
         name: 'abjchess-20261030.nnue',
@@ -247,6 +244,19 @@ export const TITLES: readonly Title[] = [
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
     credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
+    // Title match xq-title-pikafish-vs-fsf-2026-11-14 on prod's engine queue: 40 games
+    // queued, colours alternated, level 8 against Fairy-Stockfish level 8. 38 finished
+    // (two worker aborts, not counted): 26/38 (Elo +134, 95% +60 to +223), with
+    // Fairy-Stockfish on the 120-ply no-capture draw rule (#1115) and each Pikafish level
+    // on its own engine session. It replaces the 11-13 (15-20-5) and 11-11 (15-19-6) runs.
+    reign: {
+      wins: 17,
+      draws: 18,
+      losses: 3,
+      tookKey: 'champions.tookPikafish',
+      gamesHref: '/study/Tf6bUHnC',
+      about: (locale) => [t('champions.aboutPikafish', {}, locale)],
+    },
   },
   JIEQI_AB_JCHESS_20261031,
   { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY, credits: mistyRepo('misty-banqi') },
@@ -535,11 +545,6 @@ export function buildChampions(locale: Locale = currentLocale()): HTMLElement {
     proseSubheading(t('champions.openHeading', {}, locale)),
     proseParagraph([t('champions.openIntro', {}, locale)]),
     open,
-    // One link to the rules for the whole grid; a button on every card all
-    // pointed at the same #challenge (Brian, 2026-10-28: "bad redundant UI").
-    el('div', 'champions-actions champions-open-cta', [
-      button(t('champions.challengeHeading', {}, locale), '#challenge'),
-    ]),
 
     proseSubheading(t('champions.historyHeading', {}, locale)),
     list(TITLE_HISTORY.map((entry) => matchLine(locale, entry.textKey, entry, entry.textParams))),

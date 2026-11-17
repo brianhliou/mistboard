@@ -1,0 +1,76 @@
+{"id": "p0", "best": "a3a4", "cp": 83, "depth": 14, "nodes": 2427797, "wdl": null, "pv": ["a3a4"]}
+{"id": "m0", "best": "a3a4", "cp": 76, "depth": 16, "nodes": 3915045, "wdl": null, "pv": ["a3a4"]}
+{"id": "p1", "best": "b9c7", "cp": -263, "depth": 15, "nodes": 2960570, "wdl": null, "pv": ["b9c7"]}
+{"id": "m1", "best": "b9c7", "cp": -260, "depth": 16, "nodes": 3146064, "wdl": null, "pv": ["b9c7"]}
+{"id": "p2", "best": "i3i4", "cp": 288, "depth": 14, "nodes": 2198328, "wdl": null, "pv": ["i3i4"]}
+{"id": "m2", "best": "i3i4", "cp": 279, "depth": 16, "nodes": 3432042, "wdl": null, "pv": ["i3i4"]}
+{"id": "p3", "best": "h9g7", "cp": -613, "depth": 15, "nodes": 2846920, "wdl": null, "pv": ["h9g7"]}
+{"id": "m3", "best": "h9g7", "cp": -615, "depth": 17, "nodes": 3212818, "wdl": null, "pv": ["h9g7"]}
+{"id": "p4", "best": "a4c4", "cp": 759, "depth": 15, "nodes": 2549679, "wdl": null, "pv": ["a4c4", "e6e5"]}
+{"id": "p5", "best": "c9e7", "cp": -759, "depth": 15, "nodes": 2797389, "wdl": null, "pv": ["c9e7"]}
+{"id": "m5", "best": "e6e5", "cp": -750, "depth": 17, "nodes": 3200875, "wdl": null, "pv": ["e6e5"]}
+{"id": "p6", "best": "i4h4", "cp": 903, "depth": 16, "nodes": 2288655, "wdl": null, "pv": ["i4h4", "h7h2"]}
+{"id": "m6", "best": "c4c6", "cp": 883, "depth": 16, "nodes": 1760582, "wdl": null, "pv": ["c4c6", "f9e8"]}
+{"id": "p7", "best": "d9e8", "cp": -867, "depth": 16, "nodes": 3262740, "wdl": null, "pv": ["d9e8"]}
+{"id": "m7", "best": "f9e8", "cp": -862, "depth": 18, "nodes": 3831396, "wdl": null, "pv": ["f9e8"]}
+{"id": "p8", "best": "i4h4", "cp": 972, "depth": 17, "nodes": 3416182, "wdl": null, "pv": ["i4h4", "h7h2"]}
+{"id": "p9", "best": "h7h2", "cp": -968, "depth": 17, "nodes": 3605972, "wdl": null, "pv": ["h7h2"]}
+{"id": "m9", "best": "h7h2", "cp": -969, "depth": 17, "nodes": 2418792, "wdl": null, "pv": ["h7h2"]}
+{"id": "p10", "best": "c6c7", "cp": 861, "depth": 16, "nodes": 2353489, "wdl": null, "pv": ["c6c7", "b7b3"]}
+{"id": "p11", "best": "b7b3", "cp": -866, "depth": 16, "nodes": 2469883, "wdl": null, "pv": ["b7b3"]}
+{"id": "m11", "best": "b7b3", "cp": -873, "depth": 17, "nodes": 2346570, "wdl": null, "pv": ["b7b3"]}
+{"id": "p12", "best": "c7b7", "cp": 991, "depth": 17, "nodes": 3505319, "wdl": null, "pv": ["c7b7", "g6g5"]}
+{"id": "p13", "best": "c9e7", "cp": -993, "depth": 17, "nodes": 3613895, "wdl": null, "pv": ["c9e7"]}
+{"id": "m13", "best": "c9a7", "cp": -998, "depth": 18, "nodes": 3336310, "wdl": null, "pv": ["c9a7"]}
+{"id": "p14", "best": "a0a6", "cp": 926, "depth": 17, "nodes": 2879957, "wdl": null, "pv": ["a0a6"]}
+{"id": "m14", "best": "a0a6", "cp": 955, "depth": 18, "nodes": 3825370, "wdl": null, "pv": ["a0a6"]}
+{"id": "p15", "best": "a7e7", "cp": -910, "depth": 17, "nodes": 3822049, "wdl": null, "pv": ["a7e7", "c0e2"]}
+{"id": "p16", "best": "g0e2", "cp": 912, "depth": 16, "nodes": 3027656, "wdl": null, "pv": ["g0e2"]}
+{"id": "m16", "best": "g7g6", "cp": 920, "depth": 18, "nodes": 3409471, "wdl": null, "pv": ["g7g6", "e7e3", "g6d6", "g9e7"]}
+{"id": "p17", "best": "e7e3", "cp": -932, "depth": 16, "nodes": 2853551, "wdl": null, "pv": ["e7e3", "g6d6", "g9e7"]}
+{"id": "m17", "best": "e7e3", "cp": -925, "depth": 18, "nodes": 2978928, "wdl": null, "pv": ["e7e3", "g6g5", "g9e7"]}
+{"id": "p18", "best": "g6g5", "cp": 917, "depth": 17, "nodes": 3514394, "wdl": null, "pv": ["g6g5", "g9e7"]}
+{"id": "m18", "best": "c0a2", "cp": 871, "depth": 18, "nodes": 3690841, "wdl": null, "pv": ["c0a2"]}
+{"id": "p19", "best": "g9e7", "cp": -793, "depth": 16, "nodes": 1960956, "wdl": null, "pv": ["g9e7"]}
+{"id": "p20", "best": "g6g5", "cp": 890, "depth": 17, "nodes": 2557607, "wdl": null, "pv": ["g6g5", "g9e7"]}
+{"id": "m20", "best": "g0i2", "cp": 843, "depth": 18, "nodes": 1667284, "wdl": null, "pv": ["g0i2"]}
+{"id": "p21", "best": "i6i5", "cp": -703, "depth": 18, "nodes": 3989743, "wdl": null, "pv": ["i6i5"]}
+{"id": "m21", "best": "i6i5", "cp": -699, "depth": 18, "nodes": 3004828, "wdl": null, "pv": ["i6i5"]}
+{"id": "p22", "best": "b0d1", "cp": 363, "depth": 17, "nodes": 3869467, "wdl": null, "pv": ["b0d1"]}
+{"id": "m22", "best": "b0d1", "cp": 355, "depth": 19, "nodes": 3572066, "wdl": null, "pv": ["b0d1"]}
+{"id": "p23", "best": "b3c5", "cp": -347, "depth": 18, "nodes": 3927064, "wdl": null, "pv": ["b3c5", "c3c4"]}
+{"id": "p24", "best": "g6d6", "cp": 329, "depth": 18, "nodes": 3662067, "wdl": null, "pv": ["g6d6", "c5e4", "g3g4"]}
+{"id": "m24", "best": "c3c4", "cp": 315, "depth": 19, "nodes": 3831279, "wdl": null, "pv": ["c3c4"]}
+{"id": "p25", "best": "i5f5", "cp": -261, "depth": 18, "nodes": 2829291, "wdl": null, "pv": ["i5f5", "c4a4", "c5a4", "h4a4", "f5f2", "g3g4"]}
+{"id": "m25", "best": "g9e7", "cp": -287, "depth": 18, "nodes": 1946600, "wdl": null, "pv": ["g9e7"]}
+{"id": "p26", "best": "b2b6", "cp": -140, "depth": 17, "nodes": 2788988, "wdl": null, "pv": ["b2b6"]}
+{"id": "m26", "best": "g3g4", "cp": -238, "depth": 19, "nodes": 3866056, "wdl": null, "pv": ["g3g4"]}
+{"id": "p27", "best": "e5e4", "cp": 293, "depth": 18, "nodes": 3405568, "wdl": null, "pv": ["e5e4", "g4f3", "i5d5", "h4e4", "e7e4", "f3e4", "d5d1", "g6g3", "e3e2", "g3g4", "a9a6"]}
+{"id": "p28", "best": "b2b6", "cp": -350, "depth": 17, "nodes": 2550773, "wdl": null, "pv": ["b2b6"]}
+{"id": "p29", "best": "c5a4", "cp": 288, "depth": 19, "nodes": 2630757, "wdl": null, "pv": ["c5a4", "b2b4"]}
+{"id": "p30", "best": "b2b4", "cp": -237, "depth": 19, "nodes": 3157689, "wdl": null, "pv": ["b2b4"]}
+{"id": "m30", "best": "b2b9", "cp": -382, "depth": 18, "nodes": 1098530, "wdl": null, "pv": ["b2b9"]}
+{"id": "p31", "best": "a9b9", "cp": 343, "depth": 19, "nodes": 2563194, "wdl": null, "pv": ["a9b9"]}
+{"id": "p32", "best": "c4b4", "cp": -179, "depth": 18, "nodes": 3385255, "wdl": null, "pv": ["c4b4", "d7d2", "c6c3", "e5e4", "g4f3", "d2e2", "f0e1"]}
+{"id": "p33", "best": "a4c3", "cp": 419, "depth": 17, "nodes": 1375589, "wdl": null, "pv": ["a4c3", "c4b4", "c3d1", "b9c7", "d1f2", "h0f1"]}
+{"id": "p34", "best": "a3a4", "cp": -202, "depth": 19, "nodes": 3230454, "wdl": null, "pv": ["a3a4", "d2e2", "f0e1"]}
+{"id": "p35", "best": "e5e4", "cp": 220, "depth": 17, "nodes": 2252619, "wdl": null, "pv": ["e5e4", "a3a4", "i5d5", "c6b6", "d2c2", "b6b4", "a9b9"]}
+{"id": "p36", "best": "a3a4", "cp": -209, "depth": 17, "nodes": 2302976, "wdl": null, "pv": ["a3a4", "i5d5", "c6b6", "a9b9"]}
+{"id": "p37", "best": "i5d5", "cp": 238, "depth": 17, "nodes": 3204653, "wdl": null, "pv": ["i5d5", "c6b6", "a9b9"]}
+{"id": "p38", "best": "c6b6", "cp": -244, "depth": 18, "nodes": 3680678, "wdl": null, "pv": ["c6b6", "d9e8"]}
+{"id": "p39", "best": "d9e8", "cp": 215, "depth": 17, "nodes": 2581351, "wdl": null, "pv": ["d9e8"]}
+{"id": "m39", "best": "d9e8", "cp": 241, "depth": 19, "nodes": 3033132, "wdl": null, "pv": ["d9e8"]}
+{"id": "p40", "best": "c4c9", "cp": -163, "depth": 18, "nodes": 1684748, "wdl": null, "pv": ["c4c9", "a9b9"]}
+{"id": "p41", "best": "a9b9", "cp": 211, "depth": 19, "nodes": 3730107, "wdl": null, "pv": ["a9b9"]}
+{"id": "m41", "best": "a9b9", "cp": 287, "depth": 20, "nodes": 3771235, "wdl": null, "pv": ["a9b9"]}
+{"id": "p42", "best": "c9f9", "cp": -342, "depth": 19, "nodes": 2901570, "wdl": null, "pv": ["c9f9", "d2e2", "f0e1"]}
+{"id": "p43", "best": "d2d0", "cp": 193, "depth": 20, "nodes": 3266128, "wdl": null, "pv": ["d2d0", "e0e1", "d5c5", "b6b9", "c5c1", "e1e2", "e9d9", "b3d5", "d0d5", "c9f9", "d9d8", "f9f8", "e8c6", "b9b2", "d5d3", "e2f2", "c1g1", "h3h8", "d3d0", "b2b8", "d8d9", "b8b9", "d9d8", "f8f3", "c6e8"]}
+{"id": "p44", "best": "f0e1", "cp": -94, "depth": 21, "nodes": 2846130, "wdl": null, "pv": ["f0e1"]}
+{"id": "m44", "best": "f0e1", "cp": -77, "depth": 22, "nodes": 2942561, "wdl": null, "pv": ["f0e1"]}
+{"id": "p45", "best": "e2g2", "cp": 10000, "depth": 38, "nodes": 3579585, "wdl": null, "pv": ["e2g2", "e0f0", "g2f2", "h0f1"]}
+{"id": "p46", "best": "e0f0", "cp": -10000, "depth": 44, "nodes": 3551614, "wdl": null, "pv": ["e0f0", "g2f2", "h0f1"]}
+{"id": "p47", "best": "g2f2", "cp": 10000, "depth": 43, "nodes": 3411376, "wdl": null, "pv": ["g2f2", "h0f1"]}
+{"id": "p48", "best": "h0f1", "cp": -10000, "depth": 111, "nodes": 1095, "wdl": null, "pv": ["h0f1"]}
+{"id": "m48", "best": "h0f1", "cp": -10000, "depth": 111, "nodes": 1095, "wdl": null, "pv": ["h0f1"]}
+{"id": "p49", "best": "d5d0", "mate": 1, "depth": 111, "nodes": 4773, "wdl": null, "pv": ["d5d0"]}
+{"id": "m49", "best": "d5d0", "mate": 1, "depth": 111, "nodes": 111, "wdl": null, "pv": ["d5d0"]}

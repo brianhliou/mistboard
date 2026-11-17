@@ -90,7 +90,7 @@ test('playable API gates TK by public launch and runtime assets, with an admin f
   );
   assert.deepEqual(
     full.threeKingdomsBanqiEngines?.map((e) => e.name),
-    levels.map((_, i) => `Misty level ${i + 1}`),
+    levels.map((_, i) => `Misty Level ${i + 1}`),
   );
   assert.equal(headers['cache-control'], 'private, no-store');
   assert.deepEqual(Object.keys(full.threeKingdomsBanqiEngines![7]!).sort(), [

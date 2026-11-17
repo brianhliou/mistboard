@@ -13,6 +13,7 @@ import {
   type GomokuRoomState,
   getGomokuPlayerView,
   isGomokuColor,
+  isRapfiEngineId,
   parseGomokuMove,
 } from '@mistboard/game';
 import type { GameTermination } from './persistence.js';
@@ -29,7 +30,7 @@ export type GomokuRuntimeRoom = TenantRuntimeRoom<
 >;
 
 export function isGomokuEngineClientId(id: string | undefined): boolean {
-  return typeof id === 'string' && /^rapfi-level-[1-8]$/.test(id) && id.length === 13;
+  return isRapfiEngineId(id);
 }
 
 function moveFromMessage(message: Record<string, unknown>): GomokuMove | null {
@@ -116,9 +117,13 @@ export const gomokuTenant: VariantTenant<
     isEngineClientId: isGomokuEngineClientId,
     displayName: (id) => {
       if (!isGomokuEngineClientId(id)) throw new Error(`gomoku: unknown engine ${id}`);
+      if (id === 'rapfi-strongest') return 'Rapfi Strongest';
       return `Rapfi Level ${id.at(-1)}`;
     },
-    engineVersion: () => '1387d11312',
+    engineVersion: (id) => {
+      if (!isGomokuEngineClientId(id)) throw new Error(`gomoku: unknown engine ${id}`);
+      return '1387d11312';
+    },
     reservationReleaseTag: 'gomoku-rapfi',
   },
   wire: {

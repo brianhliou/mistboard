@@ -1,0 +1,18 @@
+{
+  "intro": "Fairy-Stockfish against itself at five seconds a move, read again by Fairy-Stockfish at four seconds a position. Red falls behind when it drops its chariot straight back on f1, and stays behind until the horse takes the middle soldier on move 21. Black's soldier drop on d5 on move 25 is the move that loses.",
+  "judged": {
+    "17": "Red drops the chariot it has just won back on f1, and Black takes over. The engine would drop an elephant there and keep the chariot in hand.",
+    "50": "Black drops a soldier on d5, and its chances fall from four in ten to one in four. The engine would first drop an elephant on d7 to cover the palace.",
+    "52": "The horse steps back to c8, and Red is winning from here."
+  },
+  "lines": {
+    "17": "The engine's choice.",
+    "50": "The engine's choice.",
+    "52": "The engine's choice."
+  },
+  "comments": {
+    "22": "d5-g5: Black's cannon wins a soldier.",
+    "41": "f5-e7: the horse takes the middle soldier, and the game turns. Red is ahead for the rest of the game.",
+    "44": "N@e9: Black spends the horse it just won on defence, and Red is clearly better."
+  }
+}

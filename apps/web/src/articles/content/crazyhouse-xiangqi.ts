@@ -35,7 +35,14 @@ export const crazyhouseXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-01',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
+  tldr: [
+    'Each turn, move a piece or drop one from your hand. Captured pieces join your hand in your color.',
+    'Advisors and elephants start in hand and may move or drop only on their own half of the board.',
+    'Checkmate wins, and a player with no legal move loses. Drops may give check or mate.',
+  ],
   audience:
     'Xiangqi players trying the drop version for the first time, and Crazyhouse players who want the xiangqi rules stated precisely.',
   thumbnail: { kind: 'svg', svg: CRAZYHOUSE_XIANGQI_START_BOARD },
@@ -214,7 +221,9 @@ export const crazyhouseXiangqiArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/nlZy4yNA/EBLNng54',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/crazyhouse-xiangqi.plan.json);
+          // swapped for the prod ids when the prod study is created from that plan.
+          path: '/embed/study/NI4LXant/RyY4z1M3',
           title: 'Crazyhouse Xiangqi: a comeback, and a soldier drop mates',
           caption:
             'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.',

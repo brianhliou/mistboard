@@ -505,6 +505,8 @@ function darkXiangqiRoomFixture({
     rematch: { offers: {} },
     engineTimer: null,
     engineReservationId: null,
+    engineReservationIds: {},
+    engineBotIds: {},
     pveBotId: null,
   };
 }

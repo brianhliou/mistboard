@@ -10,14 +10,17 @@ import { currentAccountUser } from './../account-session.js';
 import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
+import { isFairPlayMarked } from '../fair-play.js';
 import { ratedEnabled } from './../feature-flags.js';
 import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
+import { JUNGLE_PLAYABLE_MISTY_TIERS } from '../jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { isJunglePlayableEngineClientId } from '../server-jungle-engine.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
 import { handleCorrespondenceCreate, requestsCorrespondence } from './correspondence-rooms.js';
 import {
@@ -163,6 +166,10 @@ export async function tryHandle(
     }
     // A stats-excluded account never rates: an explicit rated request is
     // refused, and the signed-in default (rated unless asked casual) is casual.
+    if (body.rated === true && isFairPlayMarked(accountUser)) {
+      writeJson(response, 403, { error: 'rated_account_marked' });
+      return true;
+    }
     const statsExcluded = persistence.isStatsExcluded(accountUser);
     if (body.rated === true && statsExcluded) {
       response.writeHead(403, { 'content-type': 'application/json' });
@@ -172,7 +179,11 @@ export async function tryHandle(
     const rated =
       mode === 'pve'
         ? false
-        : ratedEnabled() && body.rated !== false && accountUser !== null && !statsExcluded;
+        : ratedEnabled() &&
+          body.rated !== false &&
+          accountUser !== null &&
+          !statsExcluded &&
+          !isFairPlayMarked(accountUser);
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'invalid_time_control' }));
@@ -378,7 +389,9 @@ export async function resolveBotRoomRequest(
           ? BANQI_PLAYABLE_ENGINES
           : gameSpecId === 'jungle-flip'
             ? JUNGLE_FLIP_PLAYABLE_ENGINES
-            : [];
+            : gameSpecId === 'jungle'
+              ? JUNGLE_PLAYABLE_MISTY_TIERS
+              : [];
     const tier = tiers.find((candidate) => candidate.id === body.engineId);
     if (!tier) {
       writeJson(response, 400, { error: 'bot_engine_conflict' });
@@ -387,7 +400,9 @@ export async function resolveBotRoomRequest(
     const available =
       gameSpecId === 'banqi'
         ? banqiEngineAvailable(tier.id)
-        : gameSpecId === 'jungle-flip' && jungleFlipEngineAvailable(tier.id);
+        : gameSpecId === 'jungle-flip'
+          ? jungleFlipEngineAvailable(tier.id)
+          : gameSpecId === 'jungle' && isJunglePlayableEngineClientId(tier.id);
     if (!available) {
       writeJson(response, 400, { error: 'invalid_engine' });
       return null;

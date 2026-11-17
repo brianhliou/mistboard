@@ -83,12 +83,7 @@ definePersistenceTests('correspondence variants e2e', () => {
         const game = collectCurrentGames({ rooms: new Map() } as HttpApiContext).find(
           (game) => game.roomId === created.room.id,
         );
-        // FFQ correspondence reuses the admin playtest's permanent exclusion
-        // from public discovery; reserving named seats does not open that door.
-        if (specId === 'ffq-banqi') {
-          assert.equal(game, undefined, 'FFQ stays off /games with its flag on');
-          continue;
-        }
+        // Public Fanfanqi correspondence lists like any variant (decided 2026-11-15).
         assert.ok(game, `${specId}: listed on /games`);
         assert.equal(game.players.length, 2);
         for (const [color, id] of [

@@ -6,6 +6,7 @@ import {
   type CrazyhouseXiangqiGameState,
   type CrazyhouseXiangqiMove,
   createInitialCrazyhouseXiangqiState,
+  gameSpecForId,
 } from '@mistboard/game';
 import {
   type CrazyhouseXiangqiEvent,
@@ -300,7 +301,13 @@ test('hydrating a room whose log no longer replays fails soft', () => {
   assert.equal(good.ok, true);
 });
 
-test('FFQ personal history is opt-in and discovery still excludes it', async () => {
+test('hidden FFQ personal history is opt-in and discovery still excludes it', async (t) => {
+  const spec = gameSpecForId('ffq-banqi');
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
   await import('./variant-tenant/register-tenants.js');
   const rows = [{ roomId: 'ffq_personal', variant: 'ffq-banqi' }];
   const deps: ReplayableGameDeps = {

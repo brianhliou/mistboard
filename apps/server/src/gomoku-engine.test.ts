@@ -144,7 +144,11 @@ afterEach(() => {
   else process.env.MISTBOARD_ENGINE_MAX_PROCESSES = totalCap;
 });
 
-function fixture(seat: GomokuColor = 'black', level = 1, state?: GomokuRoomState) {
+function fixture(
+  seat: GomokuColor = 'black',
+  level: number | 'strongest' = 1,
+  state?: GomokuRoomState,
+) {
   const created = createTenantRuntimeRoom(
     {
       ...gomokuTenant,
@@ -164,7 +168,12 @@ function fixture(seat: GomokuColor = 'black', level = 1, state?: GomokuRoomState
       at: Date.now(),
       roomId: room.id,
       seat: color,
-      clientId: color === seat ? `rapfi-level-${level}` : 'human-player',
+      clientId:
+        color === seat
+          ? level === 'strongest'
+            ? 'rapfi-strongest'
+            : `rapfi-level-${level}`
+          : 'human-player',
     });
   if (state) room.projection.state = { ...state, id: room.id };
   const broadcasts: string[] = [];
@@ -276,6 +285,97 @@ test('empty legacy boards use BEGIN without requiring candidates', async () => {
   }
 });
 
+test('strongest uses the native final move without node limits or weak selection for either colour', async () => {
+  for (const seat of ['black', 'white'] as const) {
+    const opening = GOMOKU_OPENINGS.find((o) => o.turn === seat)!;
+    const state = createGomokuRoomState('strongest-native', opening);
+    // PVs favour f7; the native final move is j10. No candidate selector may replace it.
+    const engine = fakeEngine({ output: recorded.replace(/5,6$/, '9,9') });
+    assert.deepEqual(await gomokuLiveEngineMove(state, 'rapfi-strongest', engine), { to: 'j10' });
+    const commands = engine.commands[0]!;
+    assert.ok(commands.includes(`INFO timeout_turn ${5_000}`));
+    assert.ok(commands.includes('INFO thread_num 1'));
+    assert.ok(commands.includes('INFO max_memory 33554432'));
+    assert.ok(commands.includes('BOARD'));
+    assert.equal(
+      commands.some((line) => /max_node|YXNBEST|YXBOARD/.test(line)),
+      false,
+    );
+    assert.deepEqual(engine.counts(), { active: 0, peak: 1, closed: 1 });
+    assert.equal(commands.at(-1), 'END');
+  }
+  const engine = fakeEngine({ output: '7,7' });
+  assert.deepEqual(
+    await gomokuLiveEngineMove(createGomokuRoomState('strongest-empty'), 'rapfi-strongest', engine),
+    { to: 'h8' },
+  );
+  assert.ok(engine.commands[0]!.includes('BEGIN'));
+});
+
+test('strongest timeout_turn obeys the caller clock budget and fixed time ceiling', async () => {
+  for (const movetimeMs of [125, 1500.9, 5_000 * 2]) {
+    const engine = fakeEngine({ output: '7,7' });
+    await gomokuLiveEngineMove(createGomokuRoomState('strongest-budget'), 'rapfi-strongest', {
+      ...engine,
+      movetimeMs,
+    });
+    assert.ok(
+      engine.commands[0]!.includes(`INFO timeout_turn ${Math.min(Math.floor(movetimeMs), 5_000)}`),
+    );
+    assert.equal(
+      engine.commands[0]!.some((line) => line.startsWith('INFO max_node ')),
+      false,
+    );
+  }
+});
+
+test('strongest room budgeting shrinks to the clock floor, skips expired clocks and records no node anchor', async () => {
+  for (const remaining of [null, 180_000, 4_000, 500, 0]) {
+    const { room, ctx } = fixture('black', 'strongest');
+    if (remaining !== null) {
+      room.projection.clock = createTenantClock(gomokuTenant, remaining, 0);
+      room.projection.clock.runningSince = null;
+    }
+    const engine = fakeEngine({ output: '7,7' });
+    await playGomokuEngineMoveIfReady(ctx, room, (state, id, options) =>
+      gomokuLiveEngineMove(state, id, { ...engine, ...options }),
+    );
+    if (remaining === 0) {
+      assert.equal(engine.commands.length, 0);
+      assert.equal(room.projection.state.ply, 0);
+      continue;
+    }
+    const timeout = engine.commands[0]!.find((line) => line.startsWith('INFO timeout_turn '))!;
+    const budget = Number(timeout.split(' ').at(-1));
+    assert.ok(budget > 0 && budget <= 5_000);
+    if (remaining === 4_000) assert.ok(budget <= 100, timeout);
+    if (remaining === 500) assert.equal(budget, 50);
+    if (remaining === null) assert.equal(budget, 5_000);
+    assert.equal(room.events.at(-1)?.type, 'move-played');
+    const payload = room.pendingDebugArtifacts![0]!.payload;
+    assert.equal(payload.engine_id, 'rapfi-strongest');
+    assert.equal(payload.tier_nodes, null);
+    assert.equal(payload.movetime_ms, budget);
+  }
+});
+
+test('malformed strongest and numbered identities fail before spawning', async () => {
+  for (const id of [
+    'rapfi-strongest\n',
+    'rapfi-strongest ',
+    'rapfi-strongest-1',
+    'rapfi-level-9',
+    'rapfi-level-01',
+  ]) {
+    const engine = fakeEngine();
+    await assert.rejects(
+      gomokuLiveEngineMove(createGomokuRoomState('invalid-id'), id, engine),
+      /Unknown Rapfi engine/,
+    );
+    assert.equal(engine.commands.length, 0);
+  }
+});
+
 test('calibration seed and telemetry hooks preserve the live request and selected move', async () => {
   const opening = GOMOKU_OPENINGS[0]!;
   const state = createGomokuRoomState('live-seed-reference', opening);
@@ -328,7 +428,11 @@ test('live concurrency is global across rooms and slots include child reaping', 
   const engine = fakeEngine({ delayMs: 10, reapMs: 10 });
   await Promise.all(
     Array.from({ length: 5 }, (_, index) =>
-      gomokuLiveEngineMove(createGomokuRoomState(`gmk_cap_${index}`), 'rapfi-level-8', engine),
+      gomokuLiveEngineMove(
+        createGomokuRoomState(`gmk_cap_${index}`),
+        index % 2 ? 'rapfi-strongest' : 'rapfi-level-8',
+        engine,
+      ),
     ),
   );
   assert.deepEqual(engine.counts(), { active: 0, peak: 1, closed: 5 });
@@ -341,7 +445,11 @@ test('Rapfi also respects the physical process cap shared with other engines', a
   const engine = fakeEngine({ delayMs: 10, reapMs: 10 });
   await Promise.all(
     Array.from({ length: 4 }, (_, index) =>
-      gomokuLiveEngineMove(createGomokuRoomState(`gmk_physical_${index}`), 'rapfi-level-8', engine),
+      gomokuLiveEngineMove(
+        createGomokuRoomState(`gmk_physical_${index}`),
+        index % 2 ? 'rapfi-strongest' : 'rapfi-level-8',
+        engine,
+      ),
     ),
   );
   assert.deepEqual(engine.counts(), { active: 0, peak: 1, closed: 4 });
@@ -405,7 +513,7 @@ test('a queued stale room never spawns a process', async () => {
   process.env.RAPFI_MAX_PROCESSES = '1';
   const engine = fakeEngine({ output: '7,7', delayMs: 15 });
   const first = gomokuLiveEngineMove(createGomokuRoomState('gmk_queue_1'), 'rapfi-level-8', engine);
-  const stale = gomokuLiveEngineMove(createGomokuRoomState('gmk_queue_2'), 'rapfi-level-8', {
+  const stale = gomokuLiveEngineMove(createGomokuRoomState('gmk_queue_2'), 'rapfi-strongest', {
     ...engine,
     isCurrent: () => false,
   });
@@ -437,43 +545,44 @@ test('paused, finished, unfilled and human turns never compute a bot move', asyn
 });
 
 test('duplicate scheduling coalesces; pause, resign and changed positions discard in-flight success and failure', async () => {
-  for (const mutation of ['pause', 'resign', 'position'] as const) {
-    for (const failure of [false, true]) {
-      const { room, ctx, broadcasts } = fixture();
-      let release!: () => void;
-      let calls = 0;
-      const provider: GomokuMoveProvider = async () => {
-        calls++;
-        await new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        if (failure) throw new Error('late failure');
-        return { to: 'h8' };
-      };
-      const pending = playGomokuEngineMoveIfReady(ctx, room, provider);
-      await playGomokuEngineMoveIfReady(ctx, room, provider);
-      scheduleGomokuEngineMove(ctx, room, provider);
-      assert.equal(calls, 1);
-      if (mutation === 'pause') room.projection.paused = { at: Date.now(), activeColor: 'black' };
-      if (mutation === 'resign')
-        room.projection.state = gomokuTenant.rules.finish(
-          room.projection.state,
-          'white',
-          'resignation',
-        );
-      // A restored position can have the same ply and turn, but a different board.
-      if (mutation === 'position') {
-        const board = [...room.projection.state.board];
-        board[0] = 'white';
-        room.projection.state = { ...room.projection.state, board };
+  for (const level of [1, 'strongest'] as const)
+    for (const mutation of ['pause', 'resign', 'position'] as const) {
+      for (const failure of [false, true]) {
+        const { room, ctx, broadcasts } = fixture('black', level);
+        let release!: () => void;
+        let calls = 0;
+        const provider: GomokuMoveProvider = async () => {
+          calls++;
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          if (failure) throw new Error('late failure');
+          return { to: 'h8' };
+        };
+        const pending = playGomokuEngineMoveIfReady(ctx, room, provider);
+        await playGomokuEngineMoveIfReady(ctx, room, provider);
+        scheduleGomokuEngineMove(ctx, room, provider);
+        assert.equal(calls, 1);
+        if (mutation === 'pause') room.projection.paused = { at: Date.now(), activeColor: 'black' };
+        if (mutation === 'resign')
+          room.projection.state = gomokuTenant.rules.finish(
+            room.projection.state,
+            'white',
+            'resignation',
+          );
+        // A restored position can have the same ply and turn, but a different board.
+        if (mutation === 'position') {
+          const board = [...room.projection.state.board];
+          board[0] = 'white';
+          room.projection.state = { ...room.projection.state, board };
+        }
+        release();
+        await pending;
+        clearTenantRuntimeTimers(room);
+        assert.deepEqual(broadcasts, []);
+        assert.equal(room.projection.state.ply, 0);
       }
-      release();
-      await pending;
-      clearTenantRuntimeTimers(room);
-      assert.deepEqual(broadcasts, []);
-      assert.equal(room.projection.state.ply, 0);
     }
-  }
 });
 
 test('event writer schedules server replies; hydration preserves the bot seat and replay', async () => {
@@ -645,4 +754,39 @@ test('fresh-process search watchdog allows cold network startup beyond the searc
   assert.deepEqual(await pending, [{ status: 'fulfilled', value: { to: 'h8' } }]);
   assert.deepEqual(engine.kills, []);
   assert.equal(engine.counts().closed, 1);
+});
+
+test('live Rapfi applies a clock ceiling without changing its node anchor or move policy', async () => {
+  const engine = fakeEngine({ output: '7,7' });
+  assert.deepEqual(
+    await gomokuLiveEngineMove(createGomokuRoomState('gmk_budget'), 'rapfi-level-8', {
+      ...engine,
+      movetimeMs: 125,
+    }),
+    { to: 'h8' },
+  );
+  assert.ok(engine.commands[0]!.includes('INFO timeout_turn 125'));
+  assert.ok(engine.commands[0]!.includes('INFO max_node 80000'));
+});
+
+test('Gomoku records selected-candidate search telemetry before appending its move', async () => {
+  const { room, ctx } = fixture('black', 1, createGomokuRoomState('telemetry'));
+  // A nonempty position exercises the lower-tier candidate selection policy.
+  room.projection.state = applyGomokuRoomMove(room.projection.state, { to: 'a1' });
+  room.projection.state = applyGomokuRoomMove(room.projection.state, { to: 'b1' });
+  const engine = fakeEngine();
+  const append = ctx.appendEvent;
+  ctx.appendEvent = async (target, event) => {
+    assert.equal(target.pendingDebugArtifacts?.length, 1);
+    return append(target, event);
+  };
+  await playGomokuEngineMoveIfReady(ctx, room, (state, id, options) =>
+    gomokuLiveEngineMove(state, id, { ...engine, ...options }),
+  );
+  const payload = room.pendingDebugArtifacts![0]!.payload;
+  assert.equal(payload.engine_version, '1387d11312');
+  assert.equal(payload.tier_nodes, 5000);
+  assert.equal(payload.pace_reason, 'off');
+  assert.equal((payload.search as { nodes: number }).nodes, 4370);
+  assert.equal(payload.move, payload.engine_move);
 });

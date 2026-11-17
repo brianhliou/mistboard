@@ -359,21 +359,26 @@ describe('landing bot ladder (homepage play panel)', () => {
     }
   });
 
-  it('offers Gomoku Rapfi Levels 1-8 and keeps remembered levels', () => {
-    const ladder = landingBotLadder('gomoku');
-    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(ladder.map((rung) => rung.botId)).toEqual(
-      Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
-    );
+  it('offers Rapfi above unchanged Gomoku Levels 1-8 and keeps both remembered identities', () => {
+    expect(landingBotLadder('gomoku')).toHaveLength(8);
+    const ladder = landingBotLadder('gomoku', new Set(['rapfi']));
+    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, null]);
+    expect(ladder.map((rung) => rung.botId)).toEqual([
+      ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+      'rapfi',
+    ]);
     expect(landingBotOffer('gomoku')?.botId).toBe('rapfi-level-1');
     expect(landingBotLadderIndex(ladder, 'rapfi-level-5')).toBe(4);
+    expect(landingBotLadderIndex(ladder, 'rapfi')).toBe(8);
+    expect(landingBotLadderIndex(ladder, 'rapfi-strongest')).toBe(8);
+    expect(pveEngineIdForRememberedPick('gomoku', 'rapfi')).toBe('rapfi-strongest');
   });
 
   it('offers TK engine-only Misty Levels 1-8 exactly as the runtime roster permits', () => {
     const spec = 'three-kingdoms-banqi';
     const engines = Array.from({ length: 8 }, (_, i) => `misty-${spec}-level-${i + 1}`);
     expect(LANDING_BOT_GAME_SPEC_IDS.indexOf(spec)).toBe(
-      LANDING_BOT_GAME_SPEC_IDS.indexOf('banqi') + 1,
+      LANDING_BOT_GAME_SPEC_IDS.indexOf('ffq-banqi') + 1,
     );
     expect(landingBotLadder(spec)).toEqual([]);
     expect(landingBotLadder(spec, new Set(['misty']))).toEqual([]);
@@ -470,6 +475,16 @@ describe('landing bot ladder (homepage play panel)', () => {
     expect(ids('not-a-variant')).toEqual([]);
   });
 
+  it('adds only server-confirmed classical Jungle levels and preserves a remembered full-strength pick', () => {
+    const ids = Array.from({ length: 6 }, (_, i) => `misty-jungle-classical-level-${i + 1}`);
+    const ladder = landingBotLadder('jungle', new Set(['katago']), new Set(ids));
+    expect(ladder.map((r) => r.level)).toEqual([1, 2, 3, 4, 5, 6, 7, null]);
+    expect(ladder[6]?.engineId).toBe('misty-jungle-level-2');
+    expect(landingBotLadderIndex(ladder, 'misty-jungle-level-2')).toBe(6);
+    expect(landingBotLadderIndex(ladder, 'misty')).toBe(6);
+    expect(landingBotLadderIndex(ladder, 'misty-jungle-level-1')).toBe(-1);
+  });
+
   it('puts KataGo above Misty in jungle only where the server can seat it', () => {
     const jungle = (playable: string[]) =>
       landingBotLadder('jungle', new Set(playable)).map((rung) => rung.botId);
@@ -522,7 +537,7 @@ describe('landing bot ladder (homepage play panel)', () => {
     for (const spec of LANDING_BOT_GAME_SPEC_IDS) {
       // Engine-only TK waits for its runtime roster and uses the setup's
       // default tier; its generic Misty offer is not a public bot profile.
-      if (spec === 'three-kingdoms-banqi') continue;
+      if (spec === 'three-kingdoms-banqi' || spec === 'ffq-banqi') continue;
       const offer = landingBotOffer(spec);
       expect(landingBotLadderIndex(landingBotLadder(spec), offer?.botId)).toBeGreaterThanOrEqual(0);
     }

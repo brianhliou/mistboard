@@ -27,7 +27,8 @@ export async function listBroadcastRoundDates(): Promise<BroadcastRoundDate[]> {
             COALESCE(rounds.starts_at, MAX(boards.updated_at)) AS last_game_at
        FROM xiangqi_broadcast_boards boards
        JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
-      WHERE boards.status <> 'scheduled'
+       JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
+      WHERE tours.listed AND boards.status <> 'scheduled'
       GROUP BY boards.tour_slug, boards.round_id, rounds.starts_at
       ORDER BY boards.tour_slug, boards.round_id`,
   );

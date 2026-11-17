@@ -12,6 +12,7 @@ import {
   type Locale,
   localizedHref,
 } from './i18n/locale.js';
+import { initializeLiveInvites, setLiveInviteUser } from './live-invites.js';
 import { clearSeatTokenForRoom, liveState } from './live-state.js';
 import { clearNotificationBells, mountNotificationBell } from './notification-nav.js';
 import {
@@ -84,6 +85,8 @@ let userPromise: Promise<AuthUser | null> | null = null;
 let navObserver: MutationObserver | null = null;
 
 export function initializeAccountNav(): void {
+  initializeLiveInvites();
+  if (cachedUser !== undefined) setLiveInviteUser(cachedUser?.id ?? null);
   // A language picked in the phone site menu persists to the account, as the
   // profile dropdown's picker does; signed out, the menu's own redirect is all.
   registerMenuLocaleSelectHandler((next) => {
@@ -116,6 +119,7 @@ export function setAccountNavUser(user: AuthUser | null): void {
   applyResolvedAccountLocale(user);
   if (user) replaceAccountPreferences(user.accountPreferences);
   cachedUser = user;
+  setLiveInviteUser(user?.id ?? null);
   userPromise = Promise.resolve(user);
   setResolvedSignedIn(user !== null);
   setResolvedAdmin(user?.accountRole === 'admin');
@@ -492,6 +496,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       applyResolvedAccountLocale(user);
       if (user) replaceAccountPreferences(user.accountPreferences);
       cachedUser = user;
+      setLiveInviteUser(user?.id ?? null);
       setResolvedSignedIn(user !== null);
       setResolvedAdmin(user?.accountRole === 'admin');
       setResolvedStatsExcluded(user?.statsExcluded === true);
@@ -510,6 +515,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
     })
     .catch(() => {
       cachedUser = null;
+      setLiveInviteUser(null);
       setResolvedSignedIn(false);
       setResolvedAdmin(false);
       setResolvedStatsExcluded(false);
@@ -533,6 +539,7 @@ async function fetchCurrentUser(): Promise<AuthUser | null> {
 }
 
 function invalidateAccountCache(): void {
+  setLiveInviteUser(null);
   cachedUser = undefined;
   setResolvedSignedIn(undefined);
   setResolvedAdmin(undefined);

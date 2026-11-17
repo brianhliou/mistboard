@@ -7,8 +7,10 @@
  * stays the source of truth; this table only decides which rooms to look at.
  */
 
-import { linkableHandleSql } from './persistence-correspondence-seeks.js';
+import type { FlairKey } from './flair.js';
+import { linkableIdentitySql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
 
 export type RoomDeadlineRecord = {
   roomId: string;
@@ -36,8 +38,11 @@ export type CorrespondenceGameSummary = {
   isYourMove: boolean;
   opponentName: string | null;
   // The opponent's handle for a /@/<handle> link; null for a closed or private
-  // account (linkableHandleSql) and for a seat with no account behind it.
+  // account (linkableIdentitySql) and for a seat with no account behind it.
   opponentHandle?: string | null;
+  // Same identity gate as the handle; unset/withheld metadata is omitted.
+  opponentTitle?: PlayerTitle | null;
+  opponentFlair?: FlairKey | null;
   dueAt: Date;
   // Rated correspondence: read off the room's own room-created event (seq 0), the
   // durable home of the flag, so the index needs no copy of it.
@@ -69,6 +74,40 @@ export async function deleteRoomDeadline(roomId: string): Promise<void> {
   await getPool().query('DELETE FROM room_deadlines WHERE room_id = $1', [roomId]);
 }
 
+export type FirstMoveOwed = { roomId: string; opponentName: string | null };
+
+// Read the durable log, not a possibly stale room held by another process.
+// The deadline index limits this to seated, unfinished correspondence games;
+// both account seats exclude PvE. A second ply closes the pregame window.
+export async function firstMoveOwedForUser(userId: string): Promise<FirstMoveOwed | null> {
+  const { rows } = await getPool().query<{ room_id: string; opponent_name: string | null }>(
+    `SELECT rd.room_id, COALESCE(u.display_name, u.handle) AS opponent_name
+     FROM room_deadlines rd
+     JOIN room_seat_tokens mine ON mine.room_id = rd.room_id AND mine.seat = rd.seat
+       AND mine.user_id = $1 AND mine.revoked_at IS NULL
+     JOIN room_seat_tokens opp ON opp.room_id = rd.room_id AND opp.seat <> mine.seat
+       AND opp.user_id IS NOT NULL AND opp.revoked_at IS NULL
+     JOIN events created ON created.room_id = rd.room_id AND created.seq = 0
+     LEFT JOIN users u ON u.id = opp.user_id
+     WHERE (created.payload->'timeControl'->>'daysPerMove')::double precision > 0
+       AND created.payload->>'pveBotId' IS NULL
+       AND COALESCE(created.payload->'engineBotIds', '{}'::jsonb) = '{}'::jsonb
+       AND NOT EXISTS (
+         SELECT 1 FROM events terminal WHERE terminal.room_id = rd.room_id
+           AND terminal.type IN ('game-aborted', 'seat-resigned', 'seat-forfeited',
+                                 'clock-expired', 'game-adjudicated', 'draw-agreed')
+       )
+       AND (SELECT count(*) FROM (
+         SELECT 1 FROM events e WHERE e.room_id = rd.room_id AND e.type = 'move-played' LIMIT 2
+       ) moves) < 2
+     ORDER BY created.created_at, rd.room_id
+     LIMIT 1`,
+    [userId],
+  );
+  const row = rows[0];
+  return row ? { roomId: row.room_id, opponentName: row.opponent_name } : null;
+}
+
 // All of a player's in-flight correspondence games, your-move-first then
 // soonest-deadline. Joins the deadline index (active days-per-move rooms) to
 // the seat the player holds, and resolves the opponent's name from the other
@@ -86,11 +125,15 @@ export async function listCorrespondenceGamesForUser(
     due_at: Date;
     opponent_name: string | null;
     opponent_handle: string | null;
+    opponent_title: PlayerTitle | null;
+    opponent_flair: FlairKey | null;
     rated: boolean;
   }>(
     `SELECT rd.room_id, rd.game_spec_id, mine.seat AS my_seat, rd.seat AS on_move_seat,
             rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
-            ${linkableHandleSql('opp_user')} AS opponent_handle,
+            ${linkableIdentitySql('opp_user', 'handle')} AS opponent_handle,
+            ${linkableIdentitySql('opp_user', 'title')} AS opponent_title,
+            ${linkableIdentitySql('opp_user', 'flair')} AS opponent_flair,
             COALESCE((created.payload->>'rated')::boolean, false) AS rated
      FROM room_seat_tokens mine
      JOIN room_deadlines rd ON rd.room_id = mine.room_id
@@ -109,6 +152,8 @@ export async function listCorrespondenceGamesForUser(
     isYourMove: row.on_move_seat === row.my_seat,
     opponentName: row.opponent_name,
     opponentHandle: row.opponent_handle,
+    ...(row.opponent_title != null ? { opponentTitle: row.opponent_title } : {}),
+    ...(row.opponent_flair != null ? { opponentFlair: row.opponent_flair } : {}),
     dueAt: row.due_at,
     rated: row.rated,
   }));

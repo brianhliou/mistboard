@@ -195,6 +195,16 @@ definePersistenceTests('study chapter decisions', () => {
       JSON.parse((await get(`/api/studies/${other.study.id}`)).body).chapters[0].hasDecisions,
       undefined,
     );
+    // Every registered variant is flagged, so its page fetches the luck it has.
+    const banqi = await setup('banqi', 'public', 'banqi');
+    await getPool().query(
+      'INSERT INTO study_chapter_decisions (chapter_id, engine_id, source, decisions) VALUES ($1, $2, $3, $4)',
+      [banqi.chapter, 'e', 'direct', JSON.stringify(decisions)],
+    );
+    assert.equal(
+      JSON.parse((await get(`/api/studies/${banqi.study.id}`)).body).chapters[0].hasDecisions,
+      true,
+    );
     const jieqi = await setup('safe');
     await getPool().query(
       'INSERT INTO study_chapter_decisions (chapter_id, engine_id, source, decisions) VALUES ($1, $2, $3, $4)',

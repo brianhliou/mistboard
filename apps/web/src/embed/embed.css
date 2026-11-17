@@ -47,13 +47,14 @@
   text-align: center;
 }
 
-/* Fit the frame exactly, and never hand the reader a second scrollbar.
+/* Fit the frame exactly, except for stacked studies with reading notes below.
    An embedder gives us a box of their choosing. In an article the page scrolls
    and the board can take its natural height from the column width; in a frame
    there is no page to scroll, so a board sized by width overflows a shorter box
    and the iframe's own document starts scrolling behind the move list's. The
    board is therefore sized by HEIGHT here, and the move list keeps the internal
-   scroll it already had. */
+   scroll it already had. A phone study keeps the board full width and lets
+   this document scroll if its host cannot grant the full reading height. */
 html,
 body.embed-body {
   height: 100%;
@@ -520,6 +521,13 @@ body.embed-body {
   /* Panning the score sheet, including at its ends, must not move the host
      article and carry the board out of view. The page scrolls outside it. */
   overscroll-behavior-y: contain;
+  /* The sheet scrolls down only. The banqi and jieqi rows, luck chips
+     included, fill the rail to the pixel, so a scrollbar that takes width (a
+     mouse, or "always show scroll bars") would push them into a sideways
+     scroll. The sheet scrolls by wheel, touch and the stepper, which keeps the
+     current move in view, without a drawn bar. */
+  overflow-x: hidden;
+  scrollbar-width: none;
 }
 
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
@@ -687,6 +695,52 @@ body.embed-body {
   min-height: 112px;
   border-left: 0;
   border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+/* Current study notes use the page's scroll on phones. Keep every inline note
+   on desktop, where the sheet has the full board height to read it in. */
+body.embed-body:has(.embed-card--study.embed-card--stacked) {
+  overflow-y: auto;
+}
+.embed-card--study.embed-card--stacked {
+  flex: 0 0 auto;
+  max-height: none;
+}
+.embed-card-current-note {
+  display: none;
+}
+.embed-card--study.embed-card--stacked .embed-card-current-note:not([hidden]) {
+  display: block;
+  box-sizing: border-box;
+  flex: none;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  color: var(--site-text);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.embed-card--study.embed-card--stacked .embed-card-rail {
+  min-height: 232px;
+}
+.embed-card--study.embed-card--stacked .embed-score-chart {
+  height: 88px;
+}
+.embed-card--study.embed-card--stacked .review-move-list__note,
+.embed-card--study.embed-card--stacked
+  .review-move-list__branch:not(:has(.review-move-list__line)) {
+  display: none;
+}
+.embed-card--study.embed-card--stacked .embed-card-control,
+.embed-card--study.embed-card--stacked .embed-card-menu-item,
+.embed-card--study.embed-card--stacked .review-move-list__move,
+.embed-card--study.embed-card--stacked .review-move-list__line-move {
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
 }
 
 /* ── Shared board column (.embed-board: game and TV) ─────────────────────────

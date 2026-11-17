@@ -56,14 +56,14 @@ function database(t: TestContext) {
       return { rows: ['alice', 'bob'].includes(String(values[0])) ? [{ id: values[0] }] : [] };
     }
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    if (sql.includes('SELECT data FROM puzzles')) {
+    if (sql.includes('SELECT data, position_only FROM puzzles')) {
       assert.match(sql, /WHERE hidden_reason IS NULL/);
       return {
         rows: [
           ...xiangqi,
           jungle,
           { ...xiangqi[0], id: 'retired', variant: 'fortress-xiangqi' },
-        ].map((data) => ({ data })),
+        ].map((data) => ({ data, position_only: false })),
       };
     }
     assert.match(sql, /FROM puzzle_attempts/);

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import * as localeModule from './i18n/locale.js';
 
@@ -126,6 +126,18 @@ async function flushPromises(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function cardFor(root: HTMLElement, opponentId: string): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`.profile-summary-card[data-opponent-id="${opponentId}"]`);
+}
+
+function pickLevel(root: HTMLElement, opponentId: string, botId: string): HTMLElement {
+  const select = cardFor(root, opponentId)?.querySelector<HTMLSelectElement>('.bot-level-select');
+  expect(select).toBeTruthy();
+  select!.value = botId;
+  select!.dispatchEvent(new Event('change'));
+  return cardFor(root, opponentId)!;
+}
+
 describe('bot pages', () => {
   it('credits only AB-JChess on its own page; jqe keeps its credit on the jqe page', async () => {
     const { botCredits } = await import('./bots.js');
@@ -168,12 +180,20 @@ describe('bot pages', () => {
       });
       const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
       const root = document.createElement('div');
+      window.history.replaceState(null, '', '/bots?game=gomoku');
       await mountBots(root);
+      window.history.replaceState(null, '', '/');
+      // One Rapfi card; every level is in its picker and the card opens on Level 1.
+      expect(root.querySelectorAll('.profile-summary-card')).toHaveLength(1);
+      expect(root.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+        '/bot/rapfi-level-1',
+      );
       expect(
-        Array.from(root.querySelectorAll('.profile-summary-card-name'), (link) =>
-          link.getAttribute('href'),
+        Array.from(
+          root.querySelectorAll<HTMLOptionElement>('.bot-level-select option'),
+          (option) => option.value,
         ),
-      ).toEqual(bots.map((bot) => `/bot/${bot.id}`));
+      ).toEqual(bots.map((bot) => bot.id).reverse());
       for (const bot of bots) {
         const row = buildProfileGameRow({
           roomId: `gmk_${bot.id}`,
@@ -228,6 +248,236 @@ describe('bot pages', () => {
     }
   });
 
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'combines Full strength and Levels 8 to 1 in one Rapfi card in %s',
+    async (locale) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      await ensureLocaleCatalog(locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
+      const { t } = await import('./i18n/catalog.js');
+      const { mountBots, mountBotProfile } = await import('./bots.js');
+      const bots = [...Array.from({ length: 8 }, (_, i) => i + 1), null].map((level) => {
+        const id = level === null ? 'rapfi' : `rapfi-level-${level}`;
+        const engineId = level === null ? 'rapfi-strongest' : id;
+        return misty({
+          id,
+          displayName: level === null ? 'Rapfi' : `Rapfi Level ${level}`,
+          activeEngineId: engineId,
+          defaultGameSpecId: 'gomoku',
+          supportedGameSpecIds: ['gomoku'],
+          rating: null,
+          ratings: [],
+          playOptions: [{ gameSpecId: 'gomoku', engineId, playable: true }],
+          record:
+            level === null
+              ? { games: 37, wins: 30, losses: 5, draws: 2 }
+              : { games: level, wins: level, losses: 0, draws: 0 },
+        });
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
+      window.history.replaceState(null, '', '/bots?game=gomoku');
+      const root = document.createElement('div');
+      await mountBots(root);
+      expect(
+        [...root.querySelectorAll<HTMLElement>('.profile-summary-card')].map(
+          (c) => c.dataset.opponentId,
+        ),
+      ).toEqual(['rapfi']);
+      const initial = cardFor(root, 'rapfi')!;
+      const picker = initial.querySelector<HTMLSelectElement>('.bot-level-select')!;
+      expect(picker.value).toBe('rapfi-level-1');
+      expect([...picker.options].map((option) => option.textContent)).toEqual([
+        t('bots.fullStrength'),
+        ...[8, 7, 6, 5, 4, 3, 2, 1].map((level) => t('bots.levelName', { level })),
+      ]);
+      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
+      const initialFooter = initial.querySelector('.profile-summary-card-footer')?.textContent;
+      const top = pickLevel(root, 'rapfi', 'rapfi');
+      expect(top.dataset.botId).toBe('rapfi');
+      expect(top.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+        '/bot/rapfi',
+      );
+      expect(top.querySelector('.profile-summary-card-subtitle')?.textContent).toContain(
+        t('bots.hosted'),
+      );
+      expect(top.querySelector('.profile-summary-card-badge-callout')).toBeNull();
+      const bio = top.querySelector('.profile-summary-card-bio')?.textContent ?? '';
+      expect(bio).toContain('dhbloo');
+      expect(bio).toContain('4');
+      expect(bio).toContain('5');
+      expect(bio).not.toContain('—');
+      expect(top.querySelector('.bot-card-credits a')?.getAttribute('href')).toBe(
+        'https://github.com/dhbloo/rapfi',
+      );
+      expect(top.querySelector<HTMLSelectElement>('.bot-level-select')?.value).toBe('rapfi');
+      expect(bio).toBe(t('thanks.rapfiBotBio'));
+      const footer = top.querySelector('.profile-summary-card-footer')?.textContent ?? '';
+      expect(footer).toContain('37');
+      expect(footer).toContain('30');
+      expect(footer).not.toBe(initialFooter);
+      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
+      expect(top.lastElementChild?.classList.contains('bot-card-foot')).toBe(true);
+      expect(top.querySelector('.bot-card-foot .profile-summary-card-footer')).not.toBeNull();
+      expect(top.querySelector('.bot-card-foot .profile-summary-card-action')?.textContent).toBe(
+        t('bots.playVariant', { variant: locale === 'en' ? 'Gomoku' : '五子棋' }),
+      );
+      vi.mocked(fetch).mockResolvedValue(jsonResponse({ url: '/room/gmk_full_strength' }));
+      top.querySelector<HTMLButtonElement>('.profile-summary-card-action')!.click();
+      await flushPromises();
+      const post = vi.mocked(fetch).mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+        botId: 'rapfi',
+        gameSpecId: 'gomoku',
+        mode: 'pve',
+      });
+      expect(bots.find((bot) => bot.id === 'rapfi')?.activeEngineId).toBe('rapfi-strongest');
+      expect(window.location.pathname).toBe('/room/gmk_full_strength');
+      const restored = pickLevel(root, 'rapfi', 'rapfi-level-8');
+      expect(restored.dataset.botId).toBe('rapfi-level-8');
+      expect(restored.querySelector('.profile-summary-card-footer')?.textContent).toContain('8');
+      expect(restored.querySelector('.profile-summary-card-badge-callout')).toBeNull();
+      vi.mocked(fetch).mockResolvedValue(jsonResponse({ bot: bots[8] }));
+      await mountBotProfile(root, 'rapfi');
+      expect(root.querySelector('.bot-profile-credits a')?.getAttribute('href')).toBe(
+        'https://github.com/dhbloo/rapfi',
+      );
+      expect(root.textContent).toContain('dhbloo');
+    },
+  );
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'labels Rapfi Full strength in %s setup without changing the default, and posts its engine',
+    async (locale) => {
+      await ensureLocaleCatalog(locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
+      const { t } = await import('./i18n/catalog.js');
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      const { maybeOpenPlayDeepLink, setRoomNavigator } = await import('./landing-play.js');
+      const store = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
+        clear: () => store.clear(),
+      });
+      const navigate = vi.fn();
+      setRoomNavigator(navigate);
+      const fetchSpy = vi.fn(
+        async (_input: RequestInfo | URL, _init?: RequestInit) =>
+          new Response(JSON.stringify({ url: '/room/gmk_rapfi' }), { status: 201 }),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', '/?play=computer&gameSpecId=gomoku');
+      maybeOpenPlayDeepLink([]);
+      const select = document.querySelector<HTMLSelectElement>('.landing-engine-select')!;
+      expect([...select.options].map((o) => o.value)).toEqual([
+        ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+        'rapfi-strongest',
+      ]);
+      expect(select.value).toBe('rapfi-level-1');
+      expect(select.options[8]?.textContent).toBe(`Rapfi ${t('bots.fullStrength')}`);
+      expect(select.textContent).not.toContain(t('bots.levelName', { level: 0 }));
+      select.value = 'rapfi-strongest';
+      select.dispatchEvent(new Event('change'));
+      document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/room/gmk_rapfi'));
+      const { closeActiveLandingDialog } = await import('./landing-play.js');
+      closeActiveLandingDialog();
+      setRoomNavigator(null);
+      window.localStorage.clear();
+      const post = fetchSpy.mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+        gameSpecId: 'gomoku',
+        mode: 'pve',
+        engineId: 'rapfi-strongest',
+      });
+    },
+  );
+
+  it('the homepage top rung waits for the roster and plays Rapfi strongest above Level 8', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/gmk_top' });
+      if (String(input) === '/api/bots')
+        return jsonResponse({
+          bots: [{ id: 'rapfi', playOptions: [{ gameSpecId: 'gomoku', playable: true }] }],
+        });
+      return jsonResponse({ requests: [], seeks: [], engines: [], online: 0, playing: 0 });
+    });
+    const { buildPlayPanel } = await import('./landing-play-panel.js');
+    const panel = buildPlayPanel('en');
+    document.body.append(panel);
+    const row = () => panel.querySelector<HTMLElement>('[data-game-spec="gomoku"]')!;
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url === '/api/bots')).toBe(true),
+    );
+    await flushPromises();
+    for (let i = 0; i < 8; i++)
+      row().querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]!.click();
+    expect(row().querySelector('.pp-step-level .pp-step-value')?.textContent).toBe('Rapfi');
+    expect(
+      row().querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]!.disabled,
+    ).toBe(true);
+    row().querySelector<HTMLButtonElement>('.pp-act')!.click();
+    await flushPromises();
+    const call = fetchMock.mock.calls.find(([url]) => url === '/api/rooms');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+      botId: 'rapfi',
+      engineId: 'rapfi-strongest',
+      gameSpecId: 'gomoku',
+      timeControl: { initialMs: 600000, incrementMs: 5000 },
+    });
+    panel.remove();
+  });
+
+  it.each(['directory', 'profile'] as const)(
+    'the Rapfi %s Play action targets the canonical strongest bot',
+    async (surface) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      const bot = misty({
+        id: 'rapfi',
+        displayName: 'Rapfi',
+        activeEngineId: 'rapfi-strongest',
+        defaultGameSpecId: 'gomoku',
+        supportedGameSpecIds: ['gomoku'],
+        playOptions: [{ gameSpecId: 'gomoku', engineId: 'rapfi-strongest', playable: true }],
+      });
+      const fetchMock = vi
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(async (input) =>
+          jsonResponse(
+            String(input) === '/api/rooms' ? { url: '/room/gmk_rapfi_play' } : { bots: [bot], bot },
+          ),
+        );
+      const { mountBots, mountBotProfile } = await import('./bots.js');
+      const root = document.createElement('div');
+      window.history.replaceState(null, '', '/bots?game=gomoku');
+      if (surface === 'directory') await mountBots(root);
+      else await mountBotProfile(root, 'rapfi');
+      root
+        .querySelector<HTMLButtonElement>(
+          surface === 'directory' ? '.profile-summary-card-action' : '.bot-profile-actions button',
+        )!
+        .click();
+      await flushPromises();
+      const call = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+        mode: 'pve',
+        botId: 'rapfi',
+        gameSpecId: 'gomoku',
+        preferredColor: 'random',
+        rated: false,
+      });
+      expect(window.location.pathname).toBe('/room/gmk_rapfi_play');
+    },
+  );
+
   it('links the reigning champion badge to the title record, scoped to the selected variant', async () => {
     const { mountBotProfile } = await import('./bots.js');
     const profile = misty({
@@ -262,7 +512,12 @@ describe('bot pages', () => {
     expect(root.querySelector('.bot-champion-title')).toBeNull();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const { closeActiveLandingDialog, setRoomNavigator } = await import('./landing-play.js');
+    closeActiveLandingDialog();
+    setRoomNavigator(null);
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     document.body.replaceChildren();
     window.history.replaceState(null, '', '/');
     vi.restoreAllMocks();
@@ -278,7 +533,7 @@ describe('bot pages', () => {
       record: 'Record here',
       variants: 'Variants',
       recent: 'Recent games',
-      sample: 'Elo from 48 engine games',
+      sample: 'Elo from 48 engine games · Jun 2026',
       railSample: '48 engine games',
       play: 'Play Fog Chess',
       random: 'random side',
@@ -305,7 +560,7 @@ describe('bot pages', () => {
       record: '本站战绩',
       variants: '棋种',
       recent: '最近对局',
-      sample: 'Elo 来自 48 局引擎对局',
+      sample: 'Elo 来自 48 局引擎对局 · 2026年6月',
       railSample: '48 局引擎对局',
       play: '下迷雾国际象棋',
       random: '随机执方',
@@ -332,7 +587,7 @@ describe('bot pages', () => {
       record: '本站戰績',
       variants: '棋種',
       recent: '最近對局',
-      sample: 'Elo 來自 48 局引擎對局',
+      sample: 'Elo 來自 48 局引擎對局 · 2026年6月',
       railSample: '48 局引擎對局',
       play: '下迷霧西洋棋',
       random: '隨機執方',
@@ -452,141 +707,263 @@ describe('bot pages', () => {
     });
   });
 
-  // The page is for "play xiangqi against the computer": the ladder leads, named
-  // by level, Pikafish is its top rung, the first-timer level says Start here,
-  // and Misty (no xiangqi) follows under Other games.
-  // General Blunder plays xiangqi but is off the ladder: it goes below Level 1,
-  // never in the top-rung slot that reads Strongest.
-  it('puts General Blunder below Level 1, not as a top rung', async () => {
+  // /bots picks the game first (the rail, ?game=), then lists one card per
+  // opponent for it. A ladder is one card with a level picker; General Blunder
+  // runs on Fairy-Stockfish but is its own card, never a rung (bot-opponents.ts).
+  function generalBlunder(): Record<string, unknown> {
+    return pikafish({
+      id: 'general-blunder',
+      displayName: 'General Blunder',
+      bio: 'Plays the worst move it can find.',
+      activeEngineId: 'fairy-stockfish-xiangqi-worst',
+      supportedGameSpecIds: ['xiangqi'],
+      playOptions: [
+        { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
+      ],
+    });
+  }
+
+  it('puts General Blunder in its own card after the ladder, never Strongest', async () => {
     const payload = rosterPayload();
-    payload.bots.push(
-      pikafish({
-        id: 'general-blunder',
-        displayName: 'General Blunder',
-        bio: 'Plays the worst move it can find.',
-        activeEngineId: 'fairy-stockfish-xiangqi-worst',
-        supportedGameSpecIds: ['xiangqi'],
-        playOptions: [
-          { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
-        ],
-      }),
-    );
+    payload.bots.push(generalBlunder());
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
 
-    const names = [
-      ...root.querySelectorAll(
-        '.bot-roster-section:nth-of-type(1) .profile-summary-card .profile-summary-card-name',
-      ),
-    ].map((el) => el.textContent);
-    expect(names[0]).toBe('General Blunder');
-    expect(names.at(-1)).toBe('Pikafish');
+    const cards = [
+      ...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card'),
+    ];
+    // Strongest first: Pikafish, the Fairy-Stockfish ladder, then General Blunder.
+    expect(cards.map((card) => card.dataset.opponentId)).toEqual([
+      'pikafish',
+      'fairy-stockfish',
+      'general-blunder',
+    ]);
+    expect(cardFor(root, 'general-blunder')?.querySelector('.bot-level-select')).toBeNull();
     expect(
-      root.querySelector(
-        '.profile-summary-card[data-bot-id="general-blunder"] .profile-summary-card-badge',
-      )?.textContent,
+      [
+        ...(cardFor(root, 'fairy-stockfish')?.querySelectorAll('.bot-level-select option') ?? []),
+      ].map((option) => (option as HTMLOptionElement).value),
+    ).not.toContain('general-blunder');
+    expect(
+      cardFor(root, 'general-blunder')?.querySelector('.profile-summary-card-badge')?.textContent,
     ).not.toBe('Strongest');
   });
 
-  it('leads with the xiangqi ladder by level, Pikafish on top, Misty in her own section', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
+  it('lists jieqi strongest first: the first card says Strongest and the picker opens the list at the top level', async () => {
+    const jqe = misty({
+      id: 'jqe',
+      displayName: 'jqe',
+      activeEngineId: 'jqe-jieqi',
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+      playOptions: [{ gameSpecId: 'jieqi', engineId: 'jqe-jieqi', playable: true }],
+      ratings: [],
+    });
+    const ladder = [1, 2, 3].map((level) =>
+      pikafish({
+        id: `pikafish-level-${level}`,
+        displayName: `Pikafish Level ${level}`,
+        supportedGameSpecIds: ['jieqi'],
+        playOptions: [{ gameSpecId: 'jieqi', engineId: `p${level}`, playable: true }],
+      }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({ bots: [...ladder, pikafish(), jqe] }),
+    );
+    window.history.replaceState(null, '', '/bots?game=jieqi');
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
+    window.history.replaceState(null, '', '/');
 
-    expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
-    expect(
-      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
-    ).toEqual(['Xiangqi, level by level', 'Misty, the house bot']);
-    // Community rail is shared with /player; Bots is the active entry.
-    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe('Bots');
-
-    const sectionNames = (index: number) =>
-      [
-        ...root.querySelectorAll(
-          `.bot-roster-section:nth-of-type(${index}) .profile-summary-card .profile-summary-card-name`,
-        ),
-      ].map((el) => el.textContent);
-    expect(sectionNames(1)).toEqual([
-      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Level ${level}`),
-      'Pikafish',
-    ]);
-    expect(sectionNames(2)).toEqual(['Misty']);
-    // The stored bios are English-only; the page carries its own localized lines.
-    expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
-    expect(root.textContent).not.toContain('Searches hidden positions');
-    // Misty plays two variants, so her card has a row per variant (rating,
-    // games, record, Play) and no lifetime footer summing them.
-    const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
-    const mistyRow = (gameSpecId: string) =>
-      mistyCard?.querySelector(`.profile-summary-card-variant[data-game-spec-id="${gameSpecId}"]`);
-    expect(
-      mistyRow('dark-chess')?.querySelector('.profile-summary-card-rating-value')?.textContent,
-    ).toBe('1,812');
-    expect(mistyRow('dark-chess')?.textContent).toContain('12 games · 8-3-1');
-    expect(mistyRow('banqi')?.textContent).toContain('0 games');
-    expect(mistyRow('banqi')?.textContent).not.toContain('0-0-0');
-    expect(
-      mistyRow('banqi')?.querySelector('.profile-summary-card-rating-value')?.textContent,
-    ).toBe('1,620');
-    expect(mistyCard?.querySelector('.profile-summary-card-footer')).toBeNull();
-
-    const badge = (botId: string) =>
-      root.querySelector(
-        `.profile-summary-card[data-bot-id="${botId}"] .profile-summary-card-badge`,
-      )?.textContent;
-    expect(badge('fairy-stockfish-level-2')).toBe('Start here');
-    expect(badge('fairy-stockfish-level-1')).toBe('BOT');
-    expect(badge('pikafish')).toBe('Strongest');
-    // Each rung leads with its xiangqi row, whose Play is the one filled button.
-    const firstRow = root.querySelector(
-      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-variant',
-    );
-    expect(firstRow?.getAttribute('data-game-spec-id')).toBe('xiangqi');
-    const primary = firstRow?.querySelector('.profile-summary-card-action');
-    expect(primary?.textContent).toBe('Play');
-    expect(primary?.getAttribute('aria-label')).toBe('Play Xiangqi');
-    expect(primary?.classList.contains('profile-summary-card-action-primary')).toBe(true);
-    expect(
-      root.querySelectorAll(
-        '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action-primary',
-      ),
-    ).toHaveLength(1);
-
-    const ladderCards = [
-      ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
+    const cards = [
+      ...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card'),
     ];
-    expect(ladderCards).toHaveLength(8);
-    expect(
-      ladderCards.map((card) =>
-        card.querySelector<HTMLAnchorElement>('.profile-summary-card-name')?.getAttribute('href'),
-      ),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((level) => `/bot/fairy-stockfish-level-${level}`));
-    for (const card of ladderCards) {
-      expect(card.getAttribute('data-subject-kind')).toBe('bot');
-      expect(card.querySelector('.profile-summary-card-avatar')).not.toBeNull();
-      expect(card.querySelector('.profile-summary-card-bio')).toBeNull();
-      expect(
-        [...card.querySelectorAll('.profile-summary-card-variant')].map((row) =>
-          row.getAttribute('data-game-spec-id'),
-        ),
-      ).toEqual(['xiangqi', 'fortress-xiangqi']);
-    }
-    // Pikafish (xiangqi + jieqi) leads with xiangqi in the xiangqi section.
-    expect(
-      root
-        .querySelector(
-          '.profile-summary-card[data-bot-id="pikafish"] .profile-summary-card-variant',
-        )
-        ?.getAttribute('data-game-spec-id'),
-    ).toBe('xiangqi');
+    expect(cards.map((card) => card.dataset.opponentId)).toEqual(['jqe', 'pikafish']);
+    expect(cards[0]?.querySelector('.profile-summary-card-badge')?.textContent).toBe('Strongest');
+    expect(cards[1]?.querySelector('.profile-summary-card-badge')?.textContent).not.toBe(
+      'Strongest',
+    );
+    const select = cardFor(root, 'pikafish')?.querySelector<HTMLSelectElement>('.bot-level-select');
+    expect([...(select?.options ?? [])].map((option) => option.value)).toEqual([
+      'pikafish',
+      'pikafish-level-3',
+      'pikafish-level-2',
+      'pikafish-level-1',
+    ]);
+    // Newcomers still open on the first-game level, not the top of the list.
+    expect(select?.value).toBe('pikafish-level-2');
   });
 
-  it('shows the xiangqi blitz rating per FSF card, dash and ?-suffix included', async () => {
+  it('opens on xiangqi: one ladder card with a level picker, Pikafish strongest, one game per card', async () => {
+    window.history.replaceState(null, '', '/bots');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
+    const root = document.createElement('div');
+    document.body.append(root);
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    expect(root.querySelector('h1')?.textContent).toBe('Play against the computer');
+    // Community rail is shared with /player; Bots is the active entry.
+    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe('Bots');
+    // The game rail: every game a listed bot offers, in shelf order, xiangqi active.
+    const railLinks = [...root.querySelectorAll<HTMLAnchorElement>('.bots-game-rail a')];
+    expect(railLinks.map((link) => link.dataset.gameSpecId).sort()).toEqual(
+      ['banqi', 'dark-chess', 'fortress-xiangqi', 'jieqi', 'xiangqi'].sort(),
+    );
+    expect(root.querySelector('.bots-game-rail a[aria-current="page"]')?.getAttribute('href')).toBe(
+      '/bots',
+    );
+    expect(
+      railLinks.find((link) => link.dataset.gameSpecId === 'jieqi')?.getAttribute('href'),
+    ).toBe('/bots?game=jieqi');
+    expect(
+      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
+    ).toEqual(['Xiangqi']);
+
+    const ladder = cardFor(root, 'fairy-stockfish')!;
+    expect(ladder.querySelector('.profile-summary-card-name')?.textContent).toBe('Fairy-Stockfish');
+    // Opens on the first-game level, which says Start here, and links that bot.
+    expect(ladder.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+      '/bot/fairy-stockfish-level-2',
+    );
+    expect(ladder.querySelector('.profile-summary-card-badge')?.textContent).toBe('Start here');
+    expect(
+      [...ladder.querySelectorAll<HTMLOptionElement>('.bot-level-select option')].map((option) => [
+        option.value,
+        option.textContent,
+      ]),
+    ).toEqual(
+      [8, 7, 6, 5, 4, 3, 2, 1].map((level) => [`fairy-stockfish-level-${level}`, `Level ${level}`]),
+    );
+    // Only xiangqi: one Play button, no fortress row.
+    expect(ladder.querySelector('[data-game-spec-id="fortress-xiangqi"]')).toBeNull();
+    expect(ladder.querySelector('.profile-summary-card-variants')).toBeNull();
+    const play = ladder.querySelectorAll('.profile-summary-card-action');
+    expect(play).toHaveLength(1);
+    expect(play[0]?.textContent).toBe('Play Xiangqi');
+    // The ladder card carries its level's bio, and the level select and Play
+    // share the bottom row: select first, Play last.
+    expect(ladder.querySelector('.profile-summary-card-bio')?.textContent).toContain('2');
+    const playRow = ladder.querySelector('.bot-card-foot .profile-summary-card-bot-actions');
+    expect(playRow?.firstElementChild?.matches('select.site-select.bot-level-select')).toBe(true);
+    expect(playRow?.lastElementChild?.textContent).toBe('Play Xiangqi');
+    expect(ladder.lastElementChild?.classList.contains('bot-card-foot')).toBe(true);
+
+    // Picking a level swaps the bot the card plays and links, and keeps one card.
+    const level1 = pickLevel(root, 'fairy-stockfish', 'fairy-stockfish-level-1');
+    expect(level1.dataset.botId).toBe('fairy-stockfish-level-1');
+    // A level with no games says so, never 0 games 0-0-0.
+    expect(level1.querySelector('.profile-summary-card-footer')?.textContent).toBe('No games yet');
+    expect(level1.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
+      '/bot/fairy-stockfish-level-1',
+    );
+    expect(level1.querySelector('.profile-summary-card-badge')?.textContent).toBe('BOT');
+    expect(
+      root.querySelectorAll('.profile-summary-card[data-opponent-id="fairy-stockfish"]'),
+    ).toHaveLength(1);
+    expect(document.activeElement).toBe(level1.querySelector('.bot-level-select'));
+
+    // Pikafish plays xiangqi and jieqi; here it shows xiangqi only, as the top.
+    // It holds the xiangqi title, so the card carries that and no "Strongest".
+    const top = cardFor(root, 'pikafish')!;
+    expect(top.querySelector('.bot-level-select')).toBeNull();
+    expect(top.querySelector('.bot-champion-title')?.textContent).toBe('Xiangqi Champion');
+    expect(top.querySelector('.profile-summary-card-badge')?.textContent).not.toBe('Strongest');
+    expect(top.querySelector('.profile-summary-card-action')?.textContent).toBe('Play Xiangqi');
+    expect(top.querySelector('[data-game-spec-id="jieqi"]')).toBeNull();
+  });
+
+  it('switches game from the rail and reads ?game= on load', async () => {
+    window.history.replaceState(null, '', '/bots?game=dark-chess');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({
+        bots: [
+          ...rosterPayload().bots,
+          misty({ id: 'my-engine', displayName: 'My Engine', ownerType: 'user', bio: 'Mine.' }),
+        ],
+      }),
+    );
+    const root = document.createElement('div');
+    // Attached: a detached page ignores popstate (it has been navigated away).
+    document.body.append(root);
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    expect(
+      [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
+    ).toEqual(['Fog Chess', 'Community bots']);
+    const mistyCard = cardFor(root, 'misty')!;
+    // Her Fog Chess record only, not the lifetime sum across her variants.
+    expect(mistyCard.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(
+      '1,812',
+    );
+    expect(mistyCard.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
+    expect(mistyCard.querySelector('[data-game-spec-id="banqi"]')).toBeNull();
+    // The stored bios are English-only; the page carries its own localized lines.
+    expect(root.textContent).toContain("Mistboard's own Fog Chess engine.");
+    expect(root.textContent).not.toContain('Searches hidden positions');
+    // A community bot keeps its own name and bio.
+    expect(cardFor(root, 'my-engine')?.textContent).toContain('Mine.');
+
+    root.querySelector<HTMLAnchorElement>('.bots-game-rail a[data-game-spec-id="jieqi"]')!.click();
+    expect(window.location.search).toBe('?game=jieqi');
+    expect(
+      [...root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card')].map(
+        (card) => card.dataset.opponentId,
+      ),
+    ).toEqual(['pikafish']);
+    expect(
+      cardFor(root, 'pikafish')?.querySelector('.profile-summary-card-action')?.textContent,
+    ).toBe('Play Jieqi');
+
+    window.history.replaceState(null, '', '/bots?game=nope');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(
+      root
+        .querySelector('.bots-game-rail a[aria-current="page"]')
+        ?.getAttribute('data-game-spec-id'),
+    ).toBe('xiangqi');
+    window.history.replaceState(null, '', '/');
+  });
+
+  // Grouping is presentation only, so no bot may fall out of it: every bot in
+  // the payload is reachable from /bots, as a card or a level, in every game
+  // it plays, including a system bot the map does not know yet.
+  it('reaches every listed bot in every game it plays', async () => {
+    const { directoryGames, directoryOpponents } = await import('./bots.js');
+    const bots = [
+      ...rosterPayload().bots,
+      generalBlunder(),
+      pikafish({
+        id: 'pikafish-level-3',
+        playOptions: [{ gameSpecId: 'jieqi', engineId: 'p3', playable: true }],
+      }),
+      misty({ id: 'new-system-bot', displayName: 'New' }),
+      misty({ id: 'my-engine', ownerType: 'user' }),
+    ] as unknown as Parameters<typeof directoryGames>[0];
+    for (const bot of bots) {
+      for (const option of bot.playOptions ?? []) {
+        const reached = directoryOpponents(bots, option.gameSpecId).flatMap((opponent) =>
+          opponent.members.map((member) => member.bot.id),
+        );
+        expect(reached, `${bot.id} in ${option.gameSpecId}`).toContain(bot.id);
+      }
+    }
+    const jieqi = directoryOpponents(bots, 'jieqi').find((opponent) => opponent.key === 'pikafish');
+    expect(jieqi?.members.map((member) => [member.bot.id, member.level])).toEqual([
+      ['pikafish-level-3', 3],
+      ['pikafish', 8],
+    ]);
+  });
+
+  it('shows the xiangqi blitz rating of the picked level, dash and ?-suffix included', async () => {
     const payload = {
       bots: [
         ladderBot(1, {
@@ -614,12 +991,11 @@ describe('bot pages', () => {
 
     await mountBots(root);
 
-    const ratings = [
-      ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
-    ].map(
-      (card) =>
-        card.querySelector('[data-game-spec-id="xiangqi"] .profile-summary-card-rating-value')
-          ?.textContent || '—',
+    const ratings = [1, 2, 3].map(
+      (level) =>
+        pickLevel(root, 'fairy-stockfish', `fairy-stockfish-level-${level}`).querySelector(
+          '.profile-summary-card-rating-value',
+        )?.textContent || '—',
     );
     expect(ratings).toEqual(['1,450', '1,710?', '—']);
   });
@@ -632,14 +1008,13 @@ describe('bot pages', () => {
         if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_fog' });
         return jsonResponse({}, { status: 404 });
       });
+    window.history.replaceState(null, '', '/bots?game=dark-chess');
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
-    const fogChip = root.querySelector<HTMLButtonElement>(
-      '[data-game-spec-id="dark-chess"] button.profile-summary-card-action',
-    );
-    expect(fogChip?.getAttribute('aria-label')).toBe('Play Fog Chess');
+    const fogChip = root.querySelector<HTMLButtonElement>('button.profile-summary-card-action');
+    expect(fogChip?.textContent).toBe('Play Fog Chess');
     fogChip?.click();
     // The chip itself shows the starting state while the room is created.
     expect(fogChip?.textContent).toContain('Starting...');
@@ -663,23 +1038,24 @@ describe('bot pages', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(jsonResponse({ bots: [ladderBot(4)] }));
+    window.history.replaceState(null, '', '/bots?game=fortress-xiangqi');
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
     const offChip = root.querySelector<HTMLElement>('.profile-summary-card-action-unavailable');
-    expect(offChip?.closest('[data-game-spec-id]')?.getAttribute('data-game-spec-id')).toBe(
-      'fortress-xiangqi',
-    );
-    expect(offChip?.textContent).toBe('Play');
+    expect(offChip?.textContent).toBe('Play Fortress Xiangqi');
     expect(offChip?.title).toBe('Not available right now');
     expect(offChip?.tagName).not.toBe('BUTTON');
     offChip?.click();
     await flushPromises();
+    window.history.replaceState(null, '', '/');
 
-    // Only the roster fetch; the muted chip never creates a room.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/bots');
+    // Only the roster fetches; the muted chip never creates a room.
+    expect(fetchMock.mock.calls.map(([input]) => String(input)).sort()).toEqual([
+      '/api/bots',
+      '/api/engines/playable',
+    ]);
   });
 
   it('renders the bot profile on the shared profile shell with a play row per option', async () => {
@@ -802,8 +1178,20 @@ describe('bot pages', () => {
         jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
       },
       gamesByGameSpecId: { xiangqi: [], jieqi: [] },
-      rating: ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 }),
-      ratings: [ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 })],
+      rating: ratingSnapshot({
+        gameSpecId: 'xiangqi',
+        rating: 2334,
+        games: 36,
+        createdAt: '2026-09-02T07:00:00.000Z',
+      }),
+      ratings: [
+        ratingSnapshot({
+          gameSpecId: 'xiangqi',
+          rating: 2334,
+          games: 36,
+          createdAt: '2026-09-02T07:00:00.000Z',
+        }),
+      ],
     });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
     const root = document.createElement('div');
@@ -812,7 +1200,8 @@ describe('bot pages', () => {
     await mountBotProfile(root, 'pikafish');
 
     const spotlight = root.querySelector('.profile-chart-detail')?.textContent ?? '';
-    expect(spotlight).toBe('Elo from 36 engine games');
+    // Dated: a rating measures one engine build, so the reader sees its age.
+    expect(spotlight).toBe('Elo from 36 engine games · Sep 2026');
     expect(spotlight).not.toMatch(/rated/i);
     expect(spotlight).not.toMatch(/blitz/i);
 
@@ -1147,14 +1536,16 @@ describe('bot pages', () => {
       root.querySelector(`.profile-summary-card[data-bot-id="${botId}"]`);
     const level1 = card('fairy-stockfish-level-1');
     expect(level1?.querySelector('.profile-summary-card-subtitle')?.textContent).toBe(
-      'Fairy-Stockfish · Version 1b5bdd40',
+      'Hosted bot · Version 1b5bdd40',
     );
     // A one-variant bot keeps the compact card: one Play sized to its label, a footer.
     expect(level1?.querySelector('.profile-summary-card-variants')).toBeNull();
     expect(level1?.querySelectorAll('.profile-summary-card-action')).toHaveLength(1);
     expect(level1?.querySelector('.profile-summary-card-footer')).not.toBeNull();
 
-    const mistyCard = card('misty');
+    // A card that lists several variants (the hover card; /bots shows one game).
+    const { buildBotSummaryCard } = await import('./profile-summary-card.js');
+    const mistyCard = buildBotSummaryCard(payload.bots[1] as never);
     expect(mistyCard?.querySelector('.profile-summary-card-version')).toBeNull();
     const rowText = (gameSpecId: string) =>
       mistyCard?.querySelector(`[data-game-spec-id="${gameSpecId}"]`)?.textContent ?? '';
@@ -1182,10 +1573,20 @@ describe('bot pages', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
+    const { buildBotSummaryCard } = await import('./profile-summary-card.js');
 
     await mountBots(root);
+    // The /bots rail offers only what the bot plays (in shelf order); banqi's
+    // old record adds no game.
+    expect(
+      [...root.querySelectorAll<HTMLElement>('.bots-game-rail a')].map((a) => a.dataset.gameSpecId),
+    ).toEqual(['dark-xiangqi', 'dark-chess']);
 
-    const rows = [...root.querySelectorAll('.profile-summary-card-variant')];
+    const rows = [
+      ...buildBotSummaryCard(payload.bots[0] as never).querySelectorAll(
+        '.profile-summary-card-variant',
+      ),
+    ];
     expect(rows.map((row) => row.getAttribute('data-game-spec-id'))).toEqual([
       'dark-chess',
       'dark-xiangqi',
@@ -1221,5 +1622,539 @@ describe('bot pages', () => {
     expect(version()).toBe('1.6');
     root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="banqi"]')?.click();
     expect(version()).toBe('0.3.0');
+  });
+});
+
+describe('/bots covers every launched bot variant', () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+    });
+  });
+  afterEach(() => {
+    document.body.replaceChildren();
+    window.localStorage.removeItem('mistboard:setup:pve');
+    window.localStorage.removeItem('mistboard:last-bot-game');
+    window.history.replaceState(null, '', '/');
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  const FLAGS = [
+    'XIANGQI',
+    'JUNGLE_FLIP',
+    'XIANGQI_MAHJONG',
+    'GOMOKU',
+    'THREE_KINGDOMS_BANQI',
+    'FFQ_BANQI',
+    'MAHJONG',
+  ];
+
+  async function serverFixtures() {
+    const { FIRST_PARTY_BOT_PROFILES } = await import('../../server/src/first-party-bots.js');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await import(
+      '../../server/src/three-kingdoms-banqi-engine.js'
+    );
+    const { maybeGameSpecForId } = await import('@mistboard/game');
+    // As /api/bots serves them: every first-party bot, every spec it has an
+    // engine for (all playable), hidden specs dropped as botPlayOptions does.
+    const bots = FIRST_PARTY_BOT_PROFILES.map((bot) => {
+      const specs = Object.keys(bot.engines).filter(
+        (id) => maybeGameSpecForId(id)?.publicSurface !== 'hidden',
+      );
+      return misty({
+        id: bot.id,
+        displayName: bot.displayName,
+        defaultGameSpecId: specs[0],
+        supportedGameSpecIds: specs,
+        playOptions: specs.map((gameSpecId) => ({
+          gameSpecId,
+          engineId: bot.engines[gameSpecId],
+          playable: true,
+        })),
+        rating: null,
+        ratings: [],
+        recordsByGameSpecId: {},
+      });
+    });
+    return { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots };
+  }
+
+  function stubFetch(
+    bots: readonly unknown[],
+    tkEngines: readonly unknown[],
+    rosters: {
+      banqiEngines?: unknown[];
+      jungleFlipEngines?: unknown[];
+      jungleEngines?: unknown[];
+      ffqBanqiEngines?: unknown[];
+    } = {},
+  ) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/bots') return jsonResponse({ bots });
+      if (String(input) === '/api/engines/playable') {
+        return jsonResponse({ threeKingdomsBanqiEngines: tkEngines, ...rosters });
+      }
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_tk' });
+      return jsonResponse({}, { status: 404 });
+    });
+  }
+
+  function railGames(root: HTMLElement): (string | undefined)[] {
+    return [...root.querySelectorAll<HTMLElement>('.bots-game-rail a')].map(
+      (a) => a.dataset.gameSpecId,
+    );
+  }
+
+  it('lists a game for every live public variant a first-party bot or engine plays', async () => {
+    for (const flag of FLAGS) vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
+    const { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots } =
+      await serverFixtures();
+    const { GAME_SPECS, isPublicGameSpec } = await import('@mistboard/game');
+    stubFetch(bots, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    // Engine-only bots (TK) have no bot profile: count their engine catalog too,
+    // or a profile omission hides the missing game again.
+    const botSpecs = new Set([
+      ...FIRST_PARTY_BOT_PROFILES.flatMap((bot) => Object.keys(bot.engines)),
+      ...THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.map(() => 'three-kingdoms-banqi'),
+    ]);
+    const expected = GAME_SPECS.filter(
+      (spec) => spec.runtimeStatus === 'live' && isPublicGameSpec(spec.id) && botSpecs.has(spec.id),
+    ).map((spec) => spec.id);
+    const rail = railGames(root);
+    expect([...rail].sort()).toEqual([...expected].sort());
+    expect(rail).toContain('three-kingdoms-banqi');
+    expect(rail).toContain('jungle-flip');
+    expect(rail).toContain('ffq-banqi');
+    expect(root.textContent).not.toMatch(/FFQ|Fu Fu Qi/i);
+  });
+
+  it('shows Misty on Three Kingdoms Banqi with its levels, opening on Level 4, playing by engine id', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await serverFixtures();
+    const fetchMock = stubFetch([misty()], THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots?game=three-kingdoms-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    const card = root.querySelector<HTMLElement>(
+      '.profile-summary-card[data-opponent-id="misty-three-kingdoms-banqi"]',
+    );
+    expect(card?.querySelector('.profile-summary-card-name')?.textContent).toBe(
+      'Misty Three Kingdoms Banqi',
+    );
+    const select = card?.querySelector<HTMLSelectElement>('select.bot-level-select');
+    expect(select?.value).toBe('misty-three-kingdoms-banqi-level-4');
+    expect(card?.querySelector('.profile-summary-card-bio')?.textContent).toContain(
+      'Three Kingdoms Banqi',
+    );
+    // Misty's profile games are not TK's: no "0 games" footer.
+    expect(card?.querySelector('.profile-summary-card-footer')).toBeNull();
+    const play = card?.querySelector<HTMLButtonElement>('button.profile-summary-card-action');
+    expect(play?.textContent).toBe('Play Three Kingdoms Banqi');
+    play?.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body))).toEqual({
+      mode: 'pve',
+      engineId: 'misty-three-kingdoms-banqi-level-4',
+      gameSpecId: 'three-kingdoms-banqi',
+      preferredColor: 'random',
+      rated: false,
+    });
+  });
+
+  it('a visitor without the TK flag sees no TK game, even when the roster names TK tiers', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await serverFixtures();
+    stubFetch([misty()], THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(railGames(root)).not.toContain('three-kingdoms-banqi');
+    const { threeKingdomsBanqiEngineOptions } = await import('./three-kingdoms-banqi-access.js');
+    expect(threeKingdomsBanqiEngineOptions()).toBeUndefined();
+  });
+
+  // Fanfanqi seats by engine id, like Three Kingdoms Banqi; its games are not
+  // split by level, so the foot is the per-game total, said as all levels.
+  it("offers Misty's Fanfanqi levels the server seats, playing the picked engine", async () => {
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const ffqMisty = misty({
+      supportedGameSpecIds: ['dark-chess', 'ffq-banqi'],
+      playOptions: [
+        { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
+        { gameSpecId: 'ffq-banqi', engineId: 'misty-ffq-banqi-level-4', playable: true },
+      ],
+      recordsByGameSpecId: { 'ffq-banqi': { games: 3, wins: 2, losses: 1, draws: 0 } },
+    });
+    const roster = [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+      id: `misty-ffq-banqi-level-${level}`,
+    }));
+    const fetchMock = stubFetch([ffqMisty], [], { ffqBanqiEngines: roster });
+    window.history.replaceState(null, '', '/bots?game=ffq-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
+    const card = cardFor(root, 'misty')!;
+    const select = card.querySelector<HTMLSelectElement>('select.bot-level-select');
+    expect([...(select?.options ?? [])].map((option) => option.textContent)).toEqual(
+      [8, 7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
+    );
+    expect(select?.value).toBe('misty-ffq-banqi-level-4');
+    const footer = card.querySelector('.profile-summary-card-footer')?.textContent;
+    expect(footer).toContain('All levels');
+    expect(footer).toContain('2-1-0');
+
+    const picked = pickLevel(root, 'misty', 'misty-ffq-banqi-level-2');
+    fetchMock.mockClear();
+    picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action')?.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    const body = JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body));
+    expect(body.engineId).toBe('misty-ffq-banqi-level-2');
+    expect(body.gameSpecId).toBe('ffq-banqi');
+    expect(body.botId).toBeUndefined();
+  });
+
+  it("keeps Misty's plain Fanfanqi card when the server sends no Fanfanqi roster", async () => {
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const ffqMisty = misty({
+      supportedGameSpecIds: ['ffq-banqi'],
+      playOptions: [
+        { gameSpecId: 'ffq-banqi', engineId: 'misty-ffq-banqi-level-4', playable: true },
+      ],
+    });
+    stubFetch([ffqMisty], []);
+    window.history.replaceState(null, '', '/bots?game=ffq-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(cardFor(root, 'misty')?.querySelector('select.bot-level-select')).toBeNull();
+  });
+
+  // Misty's Banqi and Flip Jungle levels share her one bot id, so /api/bots
+  // lists one profile; the card offers the homepage's ladder and posts the
+  // level's engine id beside her bot id, as the homepage's rows do.
+  const mistyLadderCases = [
+    { gameSpecId: 'banqi', base: 'misty-banqi', label: 'Banqi', rosterKey: 'banqiEngines' },
+    {
+      gameSpecId: 'jungle-flip',
+      base: 'misty-jungle-flip',
+      label: 'Flip Jungle',
+      rosterKey: 'jungleFlipEngines',
+    },
+  ] as const;
+  const engineIdAt = (base: string, level: number): string =>
+    level === 7 ? base : `${base}-level-${level}`;
+
+  function mistyFor(gameSpecId: string, base: string) {
+    return misty({
+      supportedGameSpecIds: ['dark-chess', gameSpecId],
+      playOptions: [
+        { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
+        { gameSpecId, engineId: base, playable: true },
+      ],
+      ratings: [ratingSnapshot({ gameSpecId, rating: 1620, games: 12 })],
+      recordsByGameSpecId: {
+        'dark-chess': { games: 12, wins: 8, losses: 3, draws: 1 },
+        [gameSpecId]: { games: 5, wins: 4, losses: 1, draws: 0 },
+      },
+    });
+  }
+
+  for (const { gameSpecId, base, label, rosterKey } of mistyLadderCases) {
+    it(`shows the picked ${label} level's own record in the card foot`, async () => {
+      vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
+      const roster = [8, 7, 4, 1].map((level) => ({ id: engineIdAt(base, level) }));
+      stubFetch(
+        [mistyFor(gameSpecId, base)].map((bot) => ({
+          ...bot,
+          levelRecordsByGameSpecId: {
+            [gameSpecId]: [
+              { level: 1, games: 2, wins: 1, losses: 1, draws: 0 },
+              { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+              { level: null, games: 2, wins: 2, losses: 0, draws: 0 },
+            ],
+            'dark-chess': [{ level: 1, games: 99, wins: 99, losses: 0, draws: 0 }],
+          },
+        })),
+        [],
+        { [rosterKey]: roster },
+      );
+      window.history.replaceState(null, '', `/bots?game=${gameSpecId}`);
+      const root = document.createElement('div');
+      const { mountBots } = await import('./bots.js');
+      await mountBots(root);
+      const foot = () => cardFor(root, 'misty')!.querySelector('.bot-card-foot')!;
+      // Opens on Level 4, which has no games: said in words, not 0-0-0, and
+      // with no rating, since Misty's rating is not per level.
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toBe(
+        'No games yet',
+      );
+      expect(foot().querySelector('.profile-summary-card-rating-value')).toBeNull();
+      expect(cardFor(root, 'misty')!.querySelector('.bot-level-records')).toBeNull();
+      pickLevel(root, 'misty', engineIdAt(base, 1));
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain(
+        '2 games',
+      );
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain('1-1-0');
+      // Another game's per-level rows and unlabelled history never leak in.
+      pickLevel(root, 'misty', engineIdAt(base, 7));
+      expect(foot().querySelector('.profile-summary-card-footer')?.textContent).toContain('1-0-0');
+      expect(foot().textContent).not.toContain('99');
+    });
+
+    it(`offers Misty's ${label} levels the server seats, opening on Level 4, playing the picked engine`, async () => {
+      vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
+      const roster = [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({ id: engineIdAt(base, level) }));
+      const fetchMock = stubFetch([mistyFor(gameSpecId, base)], [], { [rosterKey]: roster });
+      window.history.replaceState(null, '', `/bots?game=${gameSpecId}`);
+      const root = document.createElement('div');
+      const { mountBots } = await import('./bots.js');
+      await mountBots(root);
+
+      // One Misty card, now a ladder, named after the game it plays.
+      expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
+      const card = cardFor(root, 'misty')!;
+      expect(card.querySelector('.profile-summary-card-name')?.textContent).toBe(`Misty ${label}`);
+      const select = card.querySelector<HTMLSelectElement>('select.bot-level-select');
+      expect(
+        [...(select?.options ?? [])].map((option) => [option.value, option.textContent]),
+      ).toEqual(
+        [8, 7, 6, 5, 4, 3, 2, 1].map((level) => [engineIdAt(base, level), `Level ${level}`]),
+      );
+      expect(select?.value).toBe(`${base}-level-4`);
+      // With no per-level records from the server, the foot is her per-game
+      // total, labelled as one, with its rating.
+      expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain(
+        'All levels',
+      );
+      expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('4-1-0');
+      expect(card.querySelector('.bot-level-records')).toBeNull();
+      expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,620');
+      expect(card.querySelector('.profile-summary-card-bio')?.textContent).toContain(label);
+
+      const playAt = async (engineId: string) => {
+        const picked = pickLevel(root, 'misty', engineId);
+        const play = picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action');
+        expect(play?.textContent).toBe(`Play ${label}`);
+        fetchMock.mockClear();
+        play?.click();
+        await flushPromises();
+        const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+        return JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body));
+      };
+      expect(await playAt(`${base}-level-4`)).toEqual({
+        mode: 'pve',
+        botId: 'misty',
+        engineId: `${base}-level-4`,
+        gameSpecId,
+        preferredColor: 'random',
+        rated: false,
+      });
+      // Level 7 keeps the legacy engine id, as the homepage posts it.
+      expect((await playAt(base)).engineId).toBe(base);
+      expect((await playAt(`${base}-level-8`)).engineId).toBe(`${base}-level-8`);
+    });
+
+    it(`leaves ${label} Level 8 off when the server cannot seat its net`, async () => {
+      vi.stubEnv('VITE_JUNGLE_FLIP_ENABLED', 'true');
+      const roster = [7, 6, 5, 4, 3, 2, 1].map((level) => ({ id: engineIdAt(base, level) }));
+      stubFetch([mistyFor(gameSpecId, base)], [], { [rosterKey]: roster });
+      window.history.replaceState(null, '', `/bots?game=${gameSpecId}`);
+      const root = document.createElement('div');
+      const { mountBots } = await import('./bots.js');
+      await mountBots(root);
+      const values = [
+        ...(cardFor(root, 'misty')?.querySelectorAll<HTMLOptionElement>(
+          '.bot-level-select option',
+        ) ?? []),
+      ].map((option) => option.value);
+      expect(values).toEqual([7, 6, 5, 4, 3, 2, 1].map((level) => engineIdAt(base, level)));
+    });
+  }
+
+  const jungleIdAt = (level: number): string =>
+    level === 7 ? 'misty-jungle-level-2' : `misty-jungle-classical-level-${level}`;
+
+  function profileFetch(jungleEngines: unknown[] | undefined) {
+    const bot = mistyFor('jungle', jungleIdAt(7));
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/bots/misty') return jsonResponse({ bot });
+      if (String(input) === '/api/engines/playable') return jsonResponse({ jungleEngines });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/jungle_profile' });
+      return jsonResponse({}, { status: 404 });
+    });
+  }
+
+  it('opens the Jungle profile at the linked level, preserves it across variants, and plays that exact tier', async () => {
+    const fetchMock = profileFetch(
+      [1, 2, 3, 4, 5, 6, 7].map((level) => ({ id: jungleIdAt(level) })),
+    );
+    const { rememberPveEngine } = await import('./pve-memory.js');
+    rememberPveEngine('jungle', jungleIdAt(6));
+    window.history.replaceState(null, '', '/bot/misty?game=jungle&level=2');
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+    await mountBotProfile(root, 'misty');
+    const picker = () => root.querySelector<HTMLSelectElement>('.bot-profile-actions select')!;
+    expect(picker().value).toBe(jungleIdAt(2));
+    expect([...picker().options].map((option) => option.textContent)).toEqual(
+      [7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
+    );
+    expect(root.querySelector('.profile-counts .bot-profile-record-scope')?.textContent).toBe(
+      'All levels',
+    );
+    expect(root.querySelector('.bot-profile-games .bot-profile-record-scope')?.textContent).toBe(
+      'All levels',
+    );
+    picker().value = jungleIdAt(5);
+    picker().dispatchEvent(new Event('change'));
+    expect(window.location.search).toBe('?game=jungle&level=5');
+    root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="dark-chess"]')!.click();
+    expect(root.querySelector('.bot-profile-actions select')).toBeNull();
+    expect(window.location.search).toBe('?game=dark-chess');
+    root.querySelector<HTMLButtonElement>('.bot-profile-actions button')!.click();
+    await flushPromises();
+    const fogCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String(fogCall?.[1]?.body))).toMatchObject({
+      gameSpecId: 'dark-chess',
+      botId: 'misty',
+    });
+    expect(JSON.parse(String(fogCall?.[1]?.body))).not.toHaveProperty('engineId');
+    fetchMock.mockClear();
+    root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="jungle"]')!.click();
+    expect(picker().value).toBe(jungleIdAt(5));
+    root.querySelector<HTMLButtonElement>('.bot-profile-actions button')!.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String(roomCall?.[1]?.body))).toEqual({
+      mode: 'pve',
+      botId: 'misty',
+      gameSpecId: 'jungle',
+      engineId: jungleIdAt(5),
+      preferredColor: 'random',
+      rated: false,
+    });
+    const { rememberedPveEngine, lastBotGame } = await import('./pve-memory.js');
+    expect(rememberedPveEngine('jungle')).toBe(jungleIdAt(5));
+    expect(lastBotGame()?.botId).toBe(jungleIdAt(5));
+  });
+
+  it.each([
+    { roster: [7, 4, 1], requested: '8', remembered: 1, expected: 1 },
+    { roster: [7, 4, 1], requested: '8', remembered: 6, expected: 4 },
+    { roster: [7], requested: '1', remembered: 1, expected: 7 },
+    { roster: undefined, requested: '1', remembered: 1, expected: 7 },
+    { roster: [], requested: '2', remembered: 2, expected: null },
+  ])(
+    'offers only supported profile tiers ($roster) and safely resolves stale choices',
+    async ({ roster, requested, remembered, expected }) => {
+      profileFetch(roster?.map((level) => ({ id: jungleIdAt(level) })));
+      const { rememberPveEngine } = await import('./pve-memory.js');
+      rememberPveEngine('jungle', jungleIdAt(remembered));
+      window.history.replaceState(null, '', `/bot/misty?game=jungle&level=${requested}`);
+      const root = document.createElement('div');
+      const { mountBotProfile } = await import('./bots.js');
+      await mountBotProfile(root, 'misty');
+      const picker = root.querySelector<HTMLSelectElement>('.bot-profile-actions select');
+      if (expected === null) {
+        expect(picker).toBeNull();
+        expect(root.querySelector<HTMLButtonElement>('.bot-profile-actions button')?.disabled).toBe(
+          true,
+        );
+      } else {
+        expect(picker?.value).toBe(jungleIdAt(expected));
+        expect(window.location.search).toBe(`?game=jungle&level=${expected}`);
+      }
+    },
+  );
+
+  it('the directory remembers a supported Jungle tier and carries its variant and selected level to the profile', async () => {
+    const { rememberPveEngine } = await import('./pve-memory.js');
+    rememberPveEngine('jungle', jungleIdAt(3));
+    stubFetch([mistyFor('jungle', jungleIdAt(7))], [], {
+      jungleEngines: [1, 2, 3, 4, 5, 6, 7].map((level) => ({ id: jungleIdAt(level) })),
+    });
+    window.history.replaceState(null, '', '/bots?game=jungle');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(cardFor(root, 'misty')?.querySelector<HTMLSelectElement>('select')?.value).toBe(
+      jungleIdAt(3),
+    );
+    const link = () =>
+      cardFor(root, 'misty')
+        ?.querySelector<HTMLAnchorElement>('.profile-summary-card-name')
+        ?.getAttribute('href');
+    expect(link()).toBe('/bot/misty?game=jungle&level=3');
+    pickLevel(root, 'misty', jungleIdAt(6));
+    expect(link()).toBe('/bot/misty?game=jungle&level=6');
+  });
+
+  it('offers one seven-level Jungle Misty card and seats the selected historical-safe engine id', async () => {
+    const idAt = (level: number) =>
+      level === 7 ? 'misty-jungle-level-2' : `misty-jungle-classical-level-${level}`;
+    const levels = [7, 6, 5, 4, 3, 2, 1];
+    const fetchMock = stubFetch([mistyFor('jungle', idAt(7))], [], {
+      jungleEngines: levels.map((level) => ({ id: idAt(level) })),
+    });
+    window.history.replaceState(null, '', '/bots?game=jungle');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    const card = cardFor(root, 'misty')!;
+    expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
+    const select = card.querySelector<HTMLSelectElement>('select.bot-level-select')!;
+    expect([...select.options].map((o) => [o.value, o.textContent])).toEqual(
+      levels.map((level) => [idAt(level), `Level ${level}`]),
+    );
+    expect(select.value).toBe(idAt(4));
+    for (const level of [1, 7]) {
+      const picked = pickLevel(root, 'misty', idAt(level));
+      fetchMock.mockClear();
+      picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action')!.click();
+      await flushPromises();
+      const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+      expect(JSON.parse(String((roomCall?.[1] as RequestInit)?.body))).toMatchObject({
+        botId: 'misty',
+        engineId: idAt(level),
+        gameSpecId: 'jungle',
+        rated: false,
+      });
+    }
+  });
+
+  it("keeps Misty's levels 1-7 when the roster fetch fails, never Level 8", async () => {
+    const fetchMock = stubFetch([mistyFor('banqi', 'misty-banqi')], []);
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
+      String(input) === '/api/bots'
+        ? jsonResponse({ bots: [mistyFor('banqi', 'misty-banqi')] })
+        : jsonResponse({}, { status: 503 }),
+    );
+    window.history.replaceState(null, '', '/bots?game=banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    const select = cardFor(root, 'misty')?.querySelector<HTMLSelectElement>('.bot-level-select');
+    expect([...(select?.options ?? [])].map((option) => option.textContent)).toEqual(
+      [7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
+    );
+    expect(select?.value).toBe('misty-banqi-level-4');
   });
 });

@@ -1,0 +1,138 @@
+{
+  "engineId": "jieqi-engine",
+  "source": "AB-JChess-20261031, 4M nodes a position, public positions",
+  "decisions": [
+    {
+      "ply": 1,
+      "mover": "red",
+      "playedWin": 55.1,
+      "realizedWin": 67
+    },
+    {
+      "ply": 2,
+      "mover": "black",
+      "playedWin": 33.2,
+      "realizedWin": 31.5
+    },
+    {
+      "ply": 3,
+      "mover": "red",
+      "playedWin": 67.9,
+      "realizedWin": 83.9
+    },
+    {
+      "ply": 4,
+      "mover": "black",
+      "playedWin": 16.1,
+      "realizedWin": 11.5
+    },
+    {
+      "ply": 6,
+      "mover": "black",
+      "playedWin": 11.7,
+      "realizedWin": 8.1
+    },
+    {
+      "ply": 8,
+      "mover": "black",
+      "playedWin": 9,
+      "realizedWin": 6.8
+    },
+    {
+      "ply": 10,
+      "mover": "black",
+      "playedWin": 6.9,
+      "realizedWin": 9
+    },
+    {
+      "ply": 12,
+      "mover": "black",
+      "playedWin": 8.7,
+      "realizedWin": 6.5
+    },
+    {
+      "ply": 14,
+      "mover": "black",
+      "playedWin": 6.4,
+      "realizedWin": 7.6
+    },
+    {
+      "ply": 15,
+      "mover": "red",
+      "playedWin": 92.9,
+      "realizedWin": 92
+    },
+    {
+      "ply": 19,
+      "mover": "red",
+      "playedWin": 91.2,
+      "realizedWin": 89.4
+    },
+    {
+      "ply": 21,
+      "mover": "red",
+      "playedWin": 90.6,
+      "realizedWin": 86.9
+    },
+    {
+      "ply": 22,
+      "mover": "black",
+      "playedWin": 13.2,
+      "realizedWin": 27.4
+    },
+    {
+      "ply": 23,
+      "mover": "red",
+      "playedWin": 72.2,
+      "realizedWin": 71.8
+    },
+    {
+      "ply": 25,
+      "mover": "red",
+      "playedWin": 70,
+      "realizedWin": 66.9
+    },
+    {
+      "ply": 26,
+      "mover": "black",
+      "playedWin": 31.6,
+      "realizedWin": 59.3
+    },
+    {
+      "ply": 27,
+      "mover": "red",
+      "playedWin": 34.5,
+      "realizedWin": 31.3
+    },
+    {
+      "ply": 31,
+      "mover": "red",
+      "playedWin": 26.4,
+      "realizedWin": 28.4
+    },
+    {
+      "ply": 40,
+      "mover": "black",
+      "playedWin": 65.7,
+      "realizedWin": 60.8
+    },
+    {
+      "ply": 42,
+      "mover": "black",
+      "playedWin": 68.4,
+      "realizedWin": 71.5
+    },
+    {
+      "ply": 45,
+      "mover": "red",
+      "playedWin": 44.8,
+      "realizedWin": 0
+    },
+    {
+      "ply": 49,
+      "mover": "red",
+      "playedWin": 0,
+      "realizedWin": 0
+    }
+  ]
+}

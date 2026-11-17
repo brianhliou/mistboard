@@ -195,6 +195,7 @@ function needsBroadColdGate(file) {
     file === 'docker-compose.yml' ||
     file === 'railpack.json' ||
     /^railway.*\.json$/.test(file) ||
+    file.startsWith('.railway/') ||
     /^tsconfig.*\.json$/.test(file) ||
     file.includes('vite.config')
   );
@@ -211,6 +212,7 @@ function isCiOrDeployWatchedPath(file) {
     file === 'railpack.json' ||
     file === '.github/workflows/ci.yml' ||
     /^railway.*\.json$/.test(file) ||
+    file.startsWith('.railway/') ||
     /^tsconfig.*\.json$/.test(file)
   );
 }

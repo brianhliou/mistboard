@@ -4,6 +4,7 @@
 // these share the loadProfileUser + profileVisibilityClause privacy gate.
 // Split out of persistence-accounts.ts; the shared users-row plumbing
 // (USER_COLUMNS, userFromRow) stays there.
+import { FFQ_BANQI_SPEC_ID, isPublicGameSpec } from '@mistboard/game';
 import type { FlairKey } from './flair.js';
 import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
@@ -26,6 +27,7 @@ import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
 import { attachGameParticipants } from './persistence-games.js';
+import { type Champion, championsForUser, getChampions } from './persistence-leaderboards.js';
 import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
@@ -56,6 +58,7 @@ export const GAME_VARIANTS_BY_RATING_POOL = {
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
   banqi: ['banqi'],
+  three_kingdoms_banqi: ['three-kingdoms-banqi'],
   jungle: ['jungle'],
   jungle_flip: ['jungle-flip'],
   xiangqi: ['xiangqi'],
@@ -96,6 +99,7 @@ export type UpdateUserProfileResult =
 
 export type PublicProfileUser = {
   handle: string;
+  champions: Champion[];
   displayName: string;
   bio: string;
   location: string;
@@ -143,9 +147,20 @@ export type ProfilePuzzleRating = {
   attempts: number;
 };
 
+// Activity is separate from rating pools: casual-only variants cannot become
+// ladder or champion candidates just because their games appear on profiles.
+export type ProfileVariantActivity = {
+  variant: typeof FFQ_BANQI_SPEC_ID;
+  totalGamesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
+};
+
 export type UserProfile = {
   user: PublicProfileUser;
   ratings: ProfileBucketRating[];
+  activity: ProfileVariantActivity[];
   // Per-variant puzzle ratings (empty when the user has attempted no puzzles).
   puzzleRatings: ProfilePuzzleRating[];
   // Consecutive days with a puzzle solved, on the calendar of the time zone the
@@ -176,7 +191,9 @@ export type ProfileRatingHistory = {
 
 export async function updateUserProfile(
   userId: string,
-  updates: { handle: string; displayName: string },
+  updates:
+    | { handle: string; displayName: string; usernamePromptHandled?: boolean }
+    | { usernamePromptHandled: true },
   at: Date,
 ): Promise<UpdateUserProfileResult> {
   const handleCooldownMs = 30 * 24 * 60 * 60 * 1000;
@@ -193,8 +210,10 @@ export async function updateUserProfile(
       const current = rows[0] ? userFromRow(rows[0]) : null;
       if (!current) throw new Error(`missing user ${userId}`);
 
-      const nextHandle = updates.handle;
-      const nextDisplayName = updates.displayName;
+      // Dismissal keeps the identity loaded under this lock, even if another
+      // tab changed it after the route resolved the account session.
+      const nextHandle = 'handle' in updates ? updates.handle : current.handle;
+      const nextDisplayName = 'displayName' in updates ? updates.displayName : current.displayName;
       const handleChanged = nextHandle !== current.handle;
       const displayNameChanged = nextDisplayName !== current.displayName;
 
@@ -240,10 +259,19 @@ export async function updateUserProfile(
            handle_changed_at = CASE WHEN $4 THEN $6 ELSE handle_changed_at END,
            display_name = $3,
            display_name_changed_at = CASE WHEN $5 THEN $6 ELSE display_name_changed_at END,
+           username_prompt_dismissed_at = CASE WHEN $7 THEN COALESCE(username_prompt_dismissed_at, $6) ELSE username_prompt_dismissed_at END,
            updated_at = $6
        WHERE id = $1
        RETURNING ${USER_COLUMNS}`,
-        [userId, nextHandle, nextDisplayName, handleChanged, displayNameChanged, at],
+        [
+          userId,
+          nextHandle,
+          nextDisplayName,
+          handleChanged,
+          displayNameChanged,
+          at,
+          updates.usernamePromptHandled === true,
+        ],
       );
       return { ok: true, user: userFromRow(updatedRows[0]!) };
     });
@@ -417,6 +445,8 @@ export type ProfileGameFilters = {
   includeFFQ?: boolean;
   /** Rating pool (the rail's variant), legacy variant strings included. */
   ratingVariant?: RatingVariant | null;
+  /** Casual-only activity, independent of the rating-pool vocabulary. */
+  activityVariant?: ProfileVariantActivity['variant'] | null;
   /** Win, loss or draw from the profile owner's seat. */
   result?: ProfileGameResultFilter | null;
   /** The other seat's handle, case-insensitive, exact. */
@@ -485,6 +515,10 @@ function profileGameFilterSql(
     clauses.push(
       `AND ${RATED_POOL_VARIANTS_SQL} AND ${RATING_POOL_FROM_GAME_SQL} = $${firstParam + params.length - 1}`,
     );
+  }
+  if (filters.activityVariant) {
+    params.push(filters.activityVariant);
+    clauses.push(`AND games.variant = $${firstParam + params.length - 1}`);
   }
   if (filters.result) clauses.push(resultFilterSql(filters.result));
   if (filters.opponent) {
@@ -769,6 +803,43 @@ export async function getUserProfileByHandle(
     }
   }
 
+  const activity: ProfileVariantActivity[] = [];
+  const activityVariants = [FFQ_BANQI_SPEC_ID].filter(isPublicGameSpec);
+  if (activityVariants.length > 0) {
+    const { rows } = await getPool().query<{
+      variant: ProfileVariantActivity['variant'];
+      games_played: string;
+      wins: string;
+      draws: string;
+      losses: string;
+    }>(
+      `SELECT games.variant, COUNT(*)::text AS games_played,
+         COUNT(*) FILTER (WHERE ${OWNER_WON_SQL})::text AS wins,
+         COUNT(*) FILTER (WHERE games.result = 'draw')::text AS draws,
+         COUNT(*) FILTER (WHERE games.result IS DISTINCT FROM 'draw'
+           AND NOT ${OWNER_WON_SQL})::text AS losses
+       FROM game_participants
+       JOIN games ON games.room_id = game_participants.game_id
+       WHERE game_participants.subject_type = 'user'
+         AND game_participants.subject_id = $1
+         AND games.status = 'completed'
+         AND games.variant = ANY($2::text[])
+         ${options.includeFFQ ? '' : `AND ${notFFQBanqiGame()}`}
+         ${visibilityClause}
+       GROUP BY games.variant`,
+      [user.id, activityVariants],
+    );
+    for (const row of rows) {
+      activity.push({
+        variant: row.variant,
+        totalGamesPlayed: Number(row.games_played),
+        wins: Number(row.wins),
+        draws: Number(row.draws),
+        losses: Number(row.losses),
+      });
+    }
+  }
+
   // Puzzle ratings (separate Glicko-2 pool). Show only variants the user has
   // actually attempted, so an untouched pool never renders a default 1500.
   const { rows: puzzleRatingRows } = await getPool().query<{
@@ -792,14 +863,18 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const [puzzleStreak, achievements] = await Promise.all([
+  const [puzzleStreak, achievements, champions] = await Promise.all([
     getPuzzleStreak(user.id, { timeZone: options.timeZone }),
     getUserAchievements(user.id),
+    user.profileVisibility !== 'private' && !user.closedAt
+      ? getChampions().then((entries) => championsForUser(entries, user.id, user.handle))
+      : [],
   ]);
 
   return {
     user: {
       handle: user.handle,
+      champions,
       displayName: user.displayName,
       bio: user.bio,
       location: user.location,
@@ -813,6 +888,7 @@ export async function getUserProfileByHandle(
       createdAt: user.createdAt,
     },
     ratings,
+    activity,
     puzzleRatings,
     puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
     achievements,

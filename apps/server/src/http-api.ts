@@ -46,6 +46,7 @@ import * as jungleFlipGamesRoute from './routes/jungle-flip-games.js';
 import * as jungleGamesRoute from './routes/jungle-games.js';
 import * as leaderboardRoute from './routes/leaderboard.js';
 import type { HttpApiContext } from './routes/lib.js';
+import * as liveInvitesRoute from './routes/live-invites.js';
 import * as lobbyRoute from './routes/lobby.js';
 import * as metaRoute from './routes/meta.js';
 import * as notificationsRoute from './routes/notifications.js';
@@ -62,6 +63,7 @@ import * as studiesRoute from './routes/studies.js';
 import * as threeKingdomsBanqiGamesRoute from './routes/three-kingdoms-banqi-games.js';
 import * as titlesRoute from './routes/titles.js';
 import * as usersRoute from './routes/users.js';
+import * as xiangqiBroadcastPushRoute from './routes/xiangqi-broadcast-push.js';
 import * as xiangqiBroadcastsRoute from './routes/xiangqi-broadcasts.js';
 import * as xiangqiExplorerRoute from './routes/xiangqi-explorer.js';
 import * as xiangqiGamesRoute from './routes/xiangqi-games.js';
@@ -127,6 +129,8 @@ export const routes: RouteModule[] = [
   currentGamesRoute,
   dataRoute,
   lobbyRoute,
+  liveInvitesRoute,
+  xiangqiBroadcastPushRoute,
   xiangqiBroadcastsRoute,
   historicalXiangqiGamesRoute,
   xiangqiExplorerRoute,

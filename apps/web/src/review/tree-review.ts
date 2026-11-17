@@ -67,19 +67,26 @@ import {
   setAlternativesEnabled,
   trimAlternatives,
 } from './alternatives-pref.js';
-import type { CevalLine, CevalVariant } from './engine/ceval.js';
+import type { CevalLine, CevalRequest, CevalVariant } from './engine/ceval.js';
 import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engine-arrow-pref.js';
 import { createEnginePanel } from './engine/engine-panel.js';
 import { createEvalBar } from './engine/eval-bar.js';
 import { advantageSymbol, formatEval } from './engine/eval-format.js';
+import {
+  formatRuleEvalShort,
+  formatRuleEvalTitle,
+  ruleRecordNote,
+} from './engine/rule-eval-format.js';
 import { installFaceDownPeek } from './face-down-faces.js';
 import {
   type GameAnalysis,
   type GamePhases,
   type MovePraise,
   mergeDecisionAnalysis,
+  type PlyEval,
   regradeBestPlayed,
   withPraise,
+  withRuleVerdicts,
 } from './game-analysis.js';
 import {
   createGameTree,
@@ -107,6 +114,7 @@ import {
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
 import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
+import { createStudyMoveNote } from './study-move-note.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
 
@@ -195,6 +203,9 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   /** The no-progress draw limit `truth` is played under, for a `'fen'` engine whose
    *  search scores that draw (banqi: 60, or 40 for a game created before 2026-10-17). */
   noProgressLimit?(truth: Truth): number;
+  /** Public Jieqi rule for this position. Legacy games must select `legacy`
+   *  explicitly; omitting the hook uses the engine's standalone-analysis default. */
+  jieqiRule?(truth: Truth): CevalRequest['jieqiRule'];
   /** Prettify a PV move (engine UCI) for the engine panel. */
   formatPvMove(uci: string): string;
   /** Decode the engine's UCI dialect into the board/tree move dialect. Omit when
@@ -223,6 +234,16 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
      *  was taken in the main line, or when no piece was offered. */
     pvAfterCapture: readonly string[];
   }): MovePraise | null;
+  /** Whether a whole-game eval's mate score is a rule verdict rather than a checkmate
+   *  (xiangqi: the engine scoring a perpetual-check repetition as "mate 1"; @mistboard/game
+   *  xiangqiRuleMate). `history` is the mainline moves before the evaluated position, from
+   *  `root`. Tags evals the server sweep did not (rows cached before the tag). Omit for a
+   *  variant whose engine reports no such verdicts. */
+  ruleVerdict?(input: {
+    root: Truth;
+    history: readonly Move[];
+    entry: PlyEval;
+  }): 'perpetual-check' | null;
   /** On-board arrows for live MultiPV lines. Omit while a board renderer has no
    *  overlay capability; the engine panel then hides its arrow setting. */
   engineArrowsFromLines?(lines: CevalLine[]): Arrow[];
@@ -257,6 +278,11 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   quoteEvalBestMove?: boolean;
   /** Omit centipawn loss for variants whose scores do not represent material. */
   hideAcpl?: boolean;
+  /** False when the moves are a record whose event did not play under our repetition rules
+   *  (a broadcast, an archive, an imported or pasted game): a move that walks into a
+   *  rule-verdict eval (PlyEval.rule) is then left ungraded with a note instead of read as a
+   *  blunder. Default true: in a game played here the rule decided the result. */
+  ruleVerdictsEnforced?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -691,6 +717,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   config: TreeReviewConfig<Move, Truth, Arrow>,
 ): TreeReviewHandle {
   const evalText = presentation.formatEval ?? formatEval;
+  /** One whole-game eval as the move list, chart and phone readout write it: a rule
+   *  verdict in words, never as the "#1" its mate score would format to. */
+  const entryEvalText = (entry: Pick<PlyEval, 'cp' | 'mate' | 'rule'>): string =>
+    entry.rule ? formatRuleEvalShort() : evalText(entry.cp, entry.mate);
   type Node = GameTreeNode<Move, Truth>;
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
@@ -1627,6 +1657,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return serializeTree(tree, adapter, {
       skip: (node) => compKeys.has(pathKey(tree.pathTo(node))),
       rootFen: config.root?.fen,
+      replay: config.initialTree?.replay,
     });
   }
 
@@ -1705,10 +1736,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const importPanel = config.importPanel
     ? createImportPanel(config.importPanel, { editorLink: config.boardEditorHref !== undefined })
     : null;
-  // Authored comment for the CURRENT node, under the board. The move list shows
-  // only a bubble marker per commented move; navigation brings the text here.
-  const commentPanelEl = document.createElement('section');
-  commentPanelEl.className = 'review-comment-panel';
+  // Authored comment for the current node. Study notes get a stable rail slot;
+  // other reviews keep their underboard panel. Move cells retain their marker.
+  const studyNote =
+    config.reviewSurface === 'study' ? createStudyMoveNote(root, mountAbort.signal) : null;
+  const commentPanelEl = studyNote?.el ?? document.createElement('section');
+  if (!studyNote) commentPanelEl.className = 'review-comment-panel';
   commentPanelEl.hidden = true;
   commentPanelEl.setAttribute('aria-live', 'polite');
   const analysisSummaryEl = document.createElement('div');
@@ -1723,6 +1756,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // line under the list on the tree surface.
   const formatBestForAdvice = presentation.formatBestMove ?? defaultFormatBestMove;
   let chart: AdvantageChart | null = null;
+
+  function updateCommentPanel(): void {
+    // A study's root comment is the chapter introduction, often several hundred
+    // characters; it renders in the About tab, so this slot only ever holds a
+    // note about one move (the longest measured on the site is ~106 characters).
+    const authoredComment =
+      config.reviewSurface === 'study' && currentPath.length === 0
+        ? ''
+        : (displayComment(currentNode().annotations?.comments?.[0]) ?? '');
+    if (studyNote) {
+      const hasNotes = (node: typeof tree.root): boolean =>
+        Boolean(node.parent && displayComment(node.annotations?.comments?.[0])?.trim()) ||
+        node.children.some(hasNotes);
+      const wasHidden = commentPanelEl.hidden;
+      studyNote.update(authoredComment, hasNotes(tree.root));
+      if (wasHidden !== commentPanelEl.hidden) scaffold.refit();
+    } else {
+      commentPanelEl.textContent = authoredComment;
+      commentPanelEl.hidden = !authoredComment;
+    }
+  }
 
   // ── Accuracy summary (rail) ──
   // One renderer for every path that shows the summary (base analysis, the jieqi
@@ -1892,9 +1946,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           tree.annotateAt(currentPath, { comments: text.trim() ? [{ text }] : [] });
           refreshMoveTreeAnnotations();
           moveTree.setCurrent(currentPath); // the rebuild dropped the highlight
-          const trimmed = text.trim();
-          commentPanelEl.textContent = trimmed;
-          commentPanelEl.hidden = !trimmed;
+          updateCommentPanel();
           notifyChange();
         },
         onClearShapes: () => {
@@ -2004,7 +2056,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     boardCols: presentation.boardCols,
     boardMaxPx: presentation.boardMaxPx,
     underboard: composeUnderboard(
-      commentPanelEl,
+      studyNote ? undefined : commentPanelEl,
       // A played game always has Share & export (and usually Move times), so the
       // panel shows for those too; the analysis board keeps its own gate.
       config.analysis ||
@@ -2020,12 +2072,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       config.underboardNote,
     ),
     underboardOverflows: true,
-    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar),
+    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar) || Boolean(studyNote),
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
     railBelow: explorerBelowRail ? config.explorer?.el : undefined,
     navigation: controls.el,
+    navigationNote: studyNote?.el,
     analysisSummary: analysisSummaryEl,
     gauge: evalBar?.el ?? (presentation.reserveGaugeTrack ? gaugeSpacer() : undefined),
     materialTop,
@@ -2297,34 +2350,21 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           presentation.engine.fen(node.truth),
           searchable,
           presentation.engine.noProgressLimit?.(node.truth),
+          presentation.engine.jieqiRule?.(node.truth),
         );
       } else {
-        enginePanel.setPosition(uciTo(node), engineBaseFen, searchable);
+        enginePanel.setPosition(
+          uciTo(node),
+          engineBaseFen,
+          searchable,
+          undefined,
+          presentation.engine?.jieqiRule?.(node.truth),
+        );
       }
     }
     paintOverlays();
     annotationEditor?.setAnnotations(node.annotations);
-    // Under-board comment panel: the current node's authored text (hidden when
-    // the node carries none). The move list only marks commented moves.
-    //
-    // A STUDY's root comment is excluded. It is the chapter's introduction --
-    // chapter-level prose, often several hundred characters -- while every other
-    // node here carries a note about one move, and the longest of those measured
-    // across the site is 106 characters. Sharing one slot between the two meant
-    // stepping off the start of a chapter resized the page by ~300px, and a
-    // reader clicking through an annotated game felt it on every chapter. The
-    // study surface renders that intro in the About tab instead, which is where
-    // the chapter's other chapter-level facts already are.
-    const authoredComment =
-      config.reviewSurface === 'study' && currentPath.length === 0
-        ? ''
-        : (displayComment(node.annotations?.comments?.[0]) ?? '');
-    commentPanelEl.textContent = authoredComment;
-    // Only a move with a note gets the box. An uncommented move shows no empty
-    // box between the board and the tabs; stepping onto or off a note moves what
-    // is below the board by the note's height (Brian, 2026-10-02, over the
-    // reserved two-line box that never reflowed).
-    commentPanelEl.hidden = !authoredComment;
+    updateCommentPanel();
     moveTree.setCurrent(currentPath);
     if (forkPicker) {
       const hadFork = !forkPicker.el.hidden;
@@ -2389,7 +2429,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         gameAnalysis && mainlineNodes()[node.ply] === node
           ? gameAnalysis.evals.find((entry) => entry.ply === node.ply)
           : undefined;
-      phoneAnalysis.setEval(gameAnalysis ? (point ? evalText(point.cp, point.mate) : '–') : null);
+      phoneAnalysis.setEval(gameAnalysis ? (point ? entryEvalText(point) : '–') : null);
     }
     moveTimesChart?.setPly(node.ply);
     config.onPlyChange?.(node.ply);
@@ -2476,7 +2516,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return out;
   }
 
-  function applyAnalysis(raw: GameAnalysis): void {
+  /** Tag the rule-verdict evals the server left untagged (rows cached before it tagged
+   *  them), then re-grade a record without the rule (see ruleVerdictsEnforced). */
+  function withRuleTags(raw: GameAnalysis): GameAnalysis {
+    const judge = presentation.engine?.ruleVerdict;
+    let evals = raw.evals;
+    if (judge && evals.some((entry) => entry.mate != null && !entry.rule)) {
+      const nodes = mainlineNodes();
+      const root = nodes[0]?.truth;
+      const moves: Move[] = [];
+      for (const node of nodes.slice(1)) {
+        if (node.move === undefined || node.move === null) break;
+        moves.push(node.move);
+      }
+      if (root !== undefined) {
+        evals = evals.map((entry) => {
+          if (entry.rule || entry.mate == null || entry.ply > moves.length) return entry;
+          const rule = judge({ root, history: moves.slice(0, entry.ply), entry });
+          return rule ? { ...entry, rule } : entry;
+        });
+      }
+    }
+    return withRuleVerdicts(raw, evals, presentation.ruleVerdictsEnforced !== false);
+  }
+
+  function applyAnalysis(untagged: GameAnalysis): void {
+    const raw = withRuleTags(untagged);
     const regraded = regradeBestPlayed(raw, bestPlayedPlies(raw));
     const analysis = withPraise(regraded, praiseByPly(regraded));
     gameAnalysis = analysis;
@@ -2491,7 +2556,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
-      formatScore: evalText,
+      formatScore: (cp, mate, entry) => (entry ? entryEvalText(entry) : evalText(cp, mate)),
       winK: winPercentK(analysis.engineId),
       phases: gamePhases,
       phaseLabels: {
@@ -2552,6 +2617,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // The luck legend ("Accuracy grades your choices; 🎲 marks the luck of each
       // reveal.") used to sit here. Removed 2026-08-22: the 🎲 badges and the
       // luck-free accuracy carry the story without a caption under the summary.
+      // Per-seat luck and decision-loss totals were shown here; removed 2026-11-15:
+      // the per-move 🎲 luck carries it, and the totals read as clutter.
       decisionSummaryEl.replaceChildren();
     }
     // The advantage chart's "if reveals ran average" ghost line is intentionally NOT drawn for now:
@@ -2605,6 +2672,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (gameAnalysis || decisionOverlay) {
       const nodes = mainlineNodes();
       const evalByPly = new Map((gameAnalysis?.evals ?? []).map((entry) => [entry.ply, entry]));
+      const rulePlies = new Set(gameAnalysis?.rulePlies ?? []);
       for (const [ply, mark] of analysisMarkByPly) {
         const node = nodes[ply];
         if (!node) continue;
@@ -2628,14 +2696,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           luckByPathKey.set(nodeKey, { move: node.move, luck, before: node.parent.truth });
         }
         if (mark.grade) gradePlyByPathKey.set(nodeKey, ply);
+        const evalShown = entry && presentation.moveEvalVisible?.(node.truth) !== false;
+        // A record's move that walked into a rule verdict the event never applied: left
+        // ungraded (computeGameAnalysis), with the reason where the grade would have been.
+        const ruleNote = entry?.rule && rulePlies.has(ply) && !mark.comment;
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
-          eval:
-            entry && presentation.moveEvalVisible?.(node.truth) !== false
-              ? evalText(entry.cp, entry.mate)
-              : undefined,
-          comment: hidden ? undefined : mark.comment,
+          eval: evalShown ? entryEvalText(entry) : undefined,
+          ...(evalShown && entry.rule ? { evalTitle: formatRuleEvalTitle(entry.mate) } : {}),
+          comment: hidden ? undefined : ruleNote ? ruleRecordNote() : mark.comment,
           commentClass: mark.commentClass,
           ...(luck === undefined
             ? {}

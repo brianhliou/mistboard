@@ -1,4 +1,4 @@
-import type { Color, GameEvent, GameSpecId, GameState, Move } from '@mistboard/game';
+import type { Color, GameEvent, GameSpecId, GameState, Move, RapfiEngineId } from '@mistboard/game';
 import type { LiveEngineReservationHolder } from '../server-live-engine-reservations.js';
 
 export type EngineKind = 'builtin' | 'typescript-bundle' | 'wasm' | 'container';
@@ -90,8 +90,11 @@ export type EngineId =
   | 'random-legal-jungle-flip'
   // MistyJungle Rust tiers (Jungle): level 2 is the one offered bot, 1 and 3 retired
   | `misty-jungle-level-${1 | 2 | 3}`
+  | `misty-jungle-classical-level-${1 | 2 | 3 | 4 | 5 | 6}`
   // KataGo-AnimalChess (Jungle): the top seat above Misty (jungle-katago-engine.ts)
-  | 'katago-jungle';
+  | 'katago-jungle'
+  | RapfiEngineId
+  | 'random-legal-gomoku';
 
 /**
  * A seat's client id that denotes a registered engine. Superset of `EngineId`
@@ -162,7 +165,8 @@ export type EngineConfigKind =
   | 'ffq-banqi-uci'
   | 'jungle-flip-uci'
   | 'jungle-uci'
-  | 'katago-gtp';
+  | 'katago-gtp'
+  | 'rapfi-gomocup';
 
 /** In-process TypeScript baseline engines (capture-seeker, random-legal). */
 export type BuiltinEngineConfig = {
@@ -255,6 +259,8 @@ export type JungleUciEngineConfig = {
   kind: 'jungle-uci';
   nodes: number;
   movetime_ms: number;
+  depth?: number;
+  noise?: number;
 };
 
 /** KataGo-AnimalChess over GTP (jungle-katago-engine.ts KATAGO_JUNGLE_TIER_LIST):
@@ -268,6 +274,37 @@ export type KatagoGtpEngineConfig = {
 // FFQ provisional classical node-budget ladder (#809).
 export type FFQBanqiUciEngineConfig = { kind: 'ffq-banqi-uci'; nodes: number; movetime_ms: number };
 
+/** Native Gomocup serving policy, distinct from the browser WASM build. */
+export type RapfiGomocupEngineConfig = {
+  kind: 'rapfi-gomocup';
+  version: string;
+  source_ref: string;
+  network: string;
+  net_sha256: string;
+  threads: 1;
+  hash_bytes: number;
+  rule: 0;
+  process: 'fresh-per-move';
+  clock_policy: 'live-bot-move-time-v1';
+  movetime_ms: number;
+  nodes?: number;
+} & (
+  | {
+      selection: 'native-best';
+      candidateCount?: never;
+      evalMargin?: never;
+      bestRate?: never;
+      seed_policy?: never;
+    }
+  | {
+      selection: 'seeded-candidates-v1';
+      candidateCount: number;
+      evalMargin: number;
+      bestRate?: number;
+      seed_policy: 'game-absolute-ply-v1';
+    }
+);
+
 export type EngineConfig =
   | BuiltinEngineConfig
   | PythonSubprocessEngineConfig
@@ -279,7 +316,8 @@ export type EngineConfig =
   | ThreeKingdomsBanqiUciEngineConfig
   | JungleFlipUciEngineConfig
   | JungleUciEngineConfig
-  | KatagoGtpEngineConfig;
+  | KatagoGtpEngineConfig
+  | RapfiGomocupEngineConfig;
 
 export type EngineDefinition = {
   id: EngineId;

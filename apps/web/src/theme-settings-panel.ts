@@ -676,7 +676,7 @@ function createBoardCoordinatesField(locale: Locale): HTMLLabelElement {
 
 function createTouchConfirmationField(locale: Locale): HTMLLabelElement {
   const field = document.createElement('label');
-  field.className = 'theme-control-check-field';
+  field.className = 'theme-control-check-field touch-confirm-field';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.dataset.confirmMovesOnTouchToggle = '';

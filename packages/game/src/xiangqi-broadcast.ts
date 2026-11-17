@@ -38,6 +38,7 @@ export type XiangqiBroadcastTour = {
   nameEn?: string;
   location?: string;
   sourceUrl?: string;
+  deviceCredit?: { name: string; url: string };
   startsAt?: string;
   endsAt?: string;
 };
@@ -83,6 +84,14 @@ export type XiangqiBroadcastGameDetails = {
   opening?: string;
 };
 
+/** Snapshot after the latest move; `at` is the server receipt time in Unix
+ *  milliseconds. Push request fields `red`/`black` map to `redMs`/`blackMs`. */
+export type XiangqiBroadcastClock = {
+  redMs: number;
+  blackMs: number;
+  at: number;
+};
+
 export type XiangqiBroadcastBoard = {
   schema: typeof XIANGQI_BROADCAST_SCHEMA;
   id: string;
@@ -95,6 +104,7 @@ export type XiangqiBroadcastBoard = {
   status: XiangqiBroadcastBoardStatus;
   result: XiangqiBroadcastResult;
   moves: XiangqiMove[];
+  clock?: XiangqiBroadcastClock;
   sourceUrl?: string;
   details?: XiangqiBroadcastGameDetails;
   /** Set on a finished game the source published a record for that we do not
@@ -277,10 +287,23 @@ export function validateXiangqiBroadcastBoard(
   validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
   if (value.details !== undefined) validateGameDetails(value.details, errors);
+  if (value.clock !== undefined) validateClock(value.clock, errors);
   if (value.recordWithheld !== undefined) validateRecordWithheld(value, errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+function validateClock(value: unknown, errors: string[]): void {
+  if (!isRecord(value)) {
+    errors.push('board.clock must be an object');
+    return;
+  }
+  for (const key of ['redMs', 'blackMs', 'at'] as const) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0) {
+      errors.push(`board.clock.${key} must be a finite non-negative number`);
+    }
+  }
 }
 
 const RECORD_WITHHELD = new Set<XiangqiBroadcastRecordWithheld>(['ambiguous']);
@@ -590,11 +613,31 @@ export function broadcastRecordsSourceName(sourceUrl: string | undefined): strin
  * tour's own dpxq page when known, otherwise a public tour URL on the same
  * source as the records. Fall back to the source's site when no such page
  * is available; never send one provider's credit to another provider.
+ * An event filled by a device partner's push credits the recording device,
+ * by name, with its link (#1107).
  */
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
-  tour?: { slug: string; sourceUrl?: string | null } | null,
+  tour?: {
+    slug: string;
+    sourceUrl?: string | null;
+    deviceCredit?: { name: string; url: string } | null;
+  } | null,
 ): { host: string; href: string; name?: string } | null {
+  if (tour?.deviceCredit) {
+    try {
+      const url = new URL(tour.deviceCredit.url);
+      if (url.protocol === 'https:' && tour.deviceCredit.name.trim()) {
+        return {
+          host: url.host.replace(/^www\./, ''),
+          href: tour.deviceCredit.url,
+          name: tour.deviceCredit.name.trim(),
+        };
+      }
+    } catch {
+      // The server validates on read; an unusable credit falls back below.
+    }
+  }
   const origins = new Map<string, string>();
   // The database name, kept only while every voting board agrees on it.
   const names = new Set<string | null>();

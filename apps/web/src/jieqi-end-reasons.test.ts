@@ -11,8 +11,8 @@ describe('jieqi check and chase endings', () => {
     expect(jieqiReasonPhrase('perpetual-chase')).toBe('result.perpetualChase');
     expect(t(jieqiReasonPhrase('chasing'), undefined, 'en')).toBe('perpetual check');
     expect(t(jieqiReasonPhrase('perpetual-chase'), undefined, 'en')).toBe('perpetual chase');
-    expect(terminationLabel('chasing', 'en')).toBe('Perpetual check');
-    expect(terminationLabel('perpetual-chase', 'en')).toBe('Perpetual chase');
+    expect(terminationLabel('chasing', 'jieqi', 'en')).toBe('Perpetual check');
+    expect(terminationLabel('perpetual-chase', 'jieqi', 'en')).toBe('Perpetual chase');
   });
 
   it('uses the established Chinese terms in both live and replay strings', async () => {
@@ -23,14 +23,15 @@ describe('jieqi check and chase endings', () => {
       await ensureLocaleCatalog(locale);
       expect(t(jieqiReasonPhrase('chasing'), undefined, locale)).toBe(check);
       expect(t(jieqiReasonPhrase('perpetual-chase'), undefined, locale)).toBe(chase);
-      expect(terminationLabel('chasing', locale)).toBe(check);
-      expect(terminationLabel('perpetual-chase', locale)).toBe(chase);
+      expect(terminationLabel('chasing', 'jieqi', locale)).toBe(check);
+      expect(terminationLabel('perpetual-chase', 'jieqi', locale)).toBe(chase);
     }
   });
 
   it('marks a chase as a move ending and gives the losing general the chase badge', () => {
     expect(MOVE_ENDED_TERMINATIONS.has('perpetual-chase')).toBe(true);
     const badges = finishBadgesForResult({
+      variant: 'jieqi',
       colors: ['red', 'black'],
       winner: 'black',
       reason: 'perpetual-chase',

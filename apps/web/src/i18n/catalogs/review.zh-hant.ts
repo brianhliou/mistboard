@@ -7,6 +7,9 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANT_REVIEW = {
+  'review.article.showReplies': '顯示 {count} 個應手分支',
+  'review.article.hideReplies': '隱藏 {count} 個應手分支',
+  'review.article.variation': '變化',
   'review.chooseLine': '選擇分支',
   'review.mainLine': '主線',
   // Remaining review widgets and dynamically generated move advice (#855).
@@ -135,9 +138,11 @@ export const ZH_HANT_REVIEW = {
   'practice.position.title': '從局面開始練習',
   'practice.position.badFen': '這個連結裡沒有可讀取的象棋局面。',
   'practice.position.finished': '這個局面已經結束，沒有可走的棋。',
-  'practice.position.badGoal': '這個連結沒有說明是要將死對手還是守和。',
+  'practice.position.badGoal': '這個連結沒有說明是要將死對手、爭取勝勢還是守和。',
   'practice.position.badSide': '這個連結沒有說明你執哪一方。',
   'practice.position.toEditor': '在棋盤編輯器裡擺一個局面',
+  'practice.position.youPlay': '你執{side}，對手是引擎。',
+  'practice.position.backToArticle': '返回文章',
   'practice.ribbon.done': '完成',
   'practice.ribbon.play': '開始',
   'practice.card.soldier': '兵不能後退',
@@ -145,6 +150,7 @@ export const ZH_HANT_REVIEW = {
   'practice.card.horse': '當心蹩馬腿',
   'practice.card.cannon': '要有砲架',
   'practice.card.insufficient': '守住和棋',
+  'practice.goal.sideTo': '{color}走棋，{goal}',
   'practice.goal.mate': '將死對手',
   'practice.goal.mateIn': '{moves} 回合內將死對手',
   'practice.goal.win': '取勝',
@@ -306,6 +312,8 @@ export const ZH_HANT_REVIEW = {
   'study.phone.searchChapters': '搜尋章節',
   'study.phone.noChapterMatch': '沒有符合的章節。',
   'study.phone.closeChapters': '關閉章節列表',
+  'study.moveNote': '著法註釋',
+  'study.readMoveNote': '閱讀完整著法註釋',
   'study.phone.info': '資訊',
   'study.phone.closeInfo': '關閉研究資訊',
   'study.chapterSettings': '章節設定',
@@ -491,6 +499,7 @@ export const ZH_HANT_REVIEW = {
   'replay.saveFailed': '儲存失敗：{message}',
   'replay.editingNote': '正在編輯批註（{severity}）',
   'replay.loadingGame': '正在載入對局',
+  'replay.watchAsPlayed': '按對局節奏回放',
   'replay.gameNotFound': '找不到對局',
   'replay.postgameUnavailable': '無法查看賽後覆盤',
   'replay.postgameServiceUnavailable': '賽後覆盤服務不可用。',
@@ -563,6 +572,7 @@ export const ZH_HANT_REVIEW = {
   'historical.minPlies': '最少步數',
   'historical.minPliesHint': '短於此步數的本站對局不顯示。預設為 {plies}；清空即顯示全部對局。',
   'historical.floorNote': '已隱藏本站少於 {plies} 步的對局。',
+  'historical.dataLink': '本站對局的每月下載',
   'historical.floorShowAll': '顯示這些對局',
   'historical.maxPlies': '最多步數',
   'historical.sortLabel': '排序',
@@ -924,6 +934,13 @@ export const ZH_HANT_REVIEW = {
   'engine.gomokuWhiteInShort': '白 {moves} 步勝',
   'engine.gomokuBlackWinsShort': '黑勝',
   'engine.gomokuWhiteWinsShort': '白勝',
+  'engine.ruleShort': '長將',
+  'engine.ruleRedWins':
+    '並非將死。引擎把即將出現的重複局面判為紅方勝：按 Mistboard 規則，長將一方判負。',
+  'engine.ruleBlackWins':
+    '並非將死。引擎把即將出現的重複局面判為黑方勝：按 Mistboard 規則，長將一方判負。',
+  'engine.ruleRecordNote':
+    '按 Mistboard 規則，此著走成長將重複，應判負；本場比賽未執行此規則，故不評級。',
   'engine.depth': '深度 {depth}',
   'engine.nodes': '{nodes} 節點',
   'engine.thinking': '思考中…',
@@ -1085,6 +1102,7 @@ export const ZH_HANT_REVIEW = {
   'review.luckCard.bothEffect.unlucky': '{side}勝率比平均結果低{points}個百分點',
   'review.luckCard.bothEffect.even': '{side}勝率與平均結果相當',
   'replay.solutionHidden': '找出殺法。',
+  'replay.whatWouldYouPlay': '你會怎麼走？',
   'replay.showSolution': '顯示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
   'analysis.banqiTablebase.clockDraw': '依 {limit} 步規則判和',

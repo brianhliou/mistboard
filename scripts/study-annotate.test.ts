@@ -89,6 +89,30 @@ describe('study-annotate', () => {
     assert.equal(moveGlyphFor(0.39, 0.08), '??');
   });
 
+  it('drops glyphs milder than the floor and keeps the rest', () => {
+    // Red loses 6 points (?!), Black 11 (?), Red 31 (??).
+    const input = {
+      rootFen: 'root',
+      moves: ['a1a2', 'a10a9', 'a2a3'],
+      redScore: [0.5, 0.44, 0.55, 0.24],
+    };
+    assert.deepEqual(
+      judgedMoves(input).map((m) => m.glyph),
+      ['?!', '?', '??'],
+    );
+    assert.deepEqual(
+      judgedMoves({ ...input, floor: '?' }).map((m) => [m.ply, m.glyph]),
+      [
+        [2, '?'],
+        [3, '??'],
+      ],
+    );
+    assert.deepEqual(
+      judgedMoves({ ...input, floor: '??' }).map((m) => m.ply),
+      [3],
+    );
+  });
+
   it('builds the tree: move glyphs on the mainline, a verdict only at each line end', () => {
     // Red's move at ply 3 drops red from 60% to 20%, a move the engine did not choose.
     const input = {

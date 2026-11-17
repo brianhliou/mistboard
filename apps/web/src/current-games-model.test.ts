@@ -108,9 +108,11 @@ describe('finishedTileKind', () => {
   // Every Three Kingdoms banqi card was the misty tile (tkb_d52a34fc,
   // 2026-11-10): the spec was never added to the public-view list, although
   // its finished board is public on /watch and the game page.
-  it('draws Three Kingdoms banqi, and keeps FFQ banqi (no watch replay) in the mist', () => {
+  // Every Fanfanqi card was the variant tile after its 2026-11-15 launch: the
+  // web had a replay but never registered it as the tenant's watch renderer.
+  it('draws Three Kingdoms banqi and Fanfanqi', () => {
     expect(finishedTileKind('three-kingdoms-banqi')).toBe('board');
-    expect(finishedTileKind('ffq-banqi')).toBe('fog');
+    expect(finishedTileKind('ffq-banqi')).toBe('board');
   });
 
   // The registration gap above, closed structurally: a hidden-identity spec
@@ -124,6 +126,7 @@ describe('finishedTileKind', () => {
         !!webVariantTenantForSpecId(spec.id)?.watch,
     ).map((spec) => spec.id);
     expect(replayable).toContain('three-kingdoms-banqi');
+    expect(replayable).toContain('ffq-banqi');
     for (const id of replayable) expect([id, finishedTileKind(id)]).toEqual([id, 'board']);
   });
 
@@ -142,7 +145,7 @@ describe('finishedTileKind', () => {
     expect(finishedHandsUrl('xmj_a b')).toBe('/api/xiangqi-mahjong/games/xmj_a%20b?final=1');
   });
 
-  it('draws exactly the open and fog specs plus jieqi, banqi, Flip Jungle and Three Kingdoms banqi', () => {
+  it('draws exactly the open and fog specs plus jieqi, banqi, Flip Jungle, Three Kingdoms banqi and Fanfanqi', () => {
     const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
       (spec) => spec.id,
     );
@@ -150,7 +153,7 @@ describe('finishedTileKind', () => {
       (spec) => spec.visibility === 'open' || spec.visibility === 'dark',
     ).map((spec) => spec.id);
     expect(drawn.sort()).toEqual(
-      [...open, 'banqi', 'jieqi', 'jungle-flip', 'three-kingdoms-banqi'].sort(),
+      [...open, 'banqi', 'jieqi', 'jungle-flip', 'three-kingdoms-banqi', 'ffq-banqi'].sort(),
     );
   });
 

@@ -1,9 +1,11 @@
 // Generated, fictional local data. Never import player/game content from prod.
 import {
+  createFFQBanqiDeal,
   createThreeKingdomsBanqiSetup,
   createXmjSetup,
   darkChessVariant,
   type GameEvent,
+  getFFQBanqiLegalMoves,
   getThreeKingdomsBanqiLegalMoves,
   maybeGameSpecForId,
   replayGameEvents,
@@ -18,6 +20,7 @@ import {
   CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
 } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DARK_CHESS_ANALYSIS_DEPTH, DARK_CHESS_ANALYSIS_ENGINE_ID } from './dark-chess-analysis.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { JIEQI_ANALYSIS_DEPTH, JIEQI_ANALYSIS_ENGINE_ID } from './jieqi-analysis.js';
 import { JUNGLE_ANALYSIS_DEPTH, JUNGLE_ANALYSIS_ENGINE_ID } from './jungle-analysis.js';
 import {
@@ -161,7 +164,13 @@ export function buildQaGame(specId: string, index: number, now: number): QaGame 
             enumerate: getThreeKingdomsBanqiLegalMoves,
             makeSetup: createThreeKingdomsBanqiSetup,
           }
-        : VARIANTS.find((entry) => entry.tenant.gameSpecId === specId);
+        : specId === 'ffq-banqi'
+          ? {
+              tenant: ffqBanqiTenant,
+              enumerate: getFFQBanqiLegalMoves,
+              makeSetup: (rng) => ({ deal: createFFQBanqiDeal(rng) }),
+            }
+          : VARIANTS.find((entry) => entry.tenant.gameSpecId === specId);
     if (!spec && specId !== 'xiangqi-mahjong')
       throw new Error(`No QA legal-play generator for ${specId}`);
     const tenant = specId === 'xiangqi-mahjong' ? xiangqiMahjongTenant : spec!.tenant;

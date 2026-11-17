@@ -7,6 +7,7 @@ import {
   variantForId,
 } from '@mistboard/game';
 import { type CaptureTally, computeCaptures } from './captures.js';
+import { correspondencePreview } from './correspondence-room.js';
 import {
   currentReplayIndex,
   getFogSnapshotToEventsLen,
@@ -39,7 +40,7 @@ export function currentView(): PlayerView | null {
   if (usesAlternateRenderer()) return liveState.state;
   const projection = currentProjection();
   const perspective = liveState.seat === 'black' ? 'black' : 'white';
-  if (isLive()) return liveState.state;
+  if (isLive()) return correspondencePreview(liveState.room, liveState.state);
   // Historical fog position: use the server-provided snapshot captured at that event count.
   // viewForProjection cannot reconstruct accurate historical fog views because events from
   // WebSocket snapshots are fog-filtered and structured differently from replayGameEvents.

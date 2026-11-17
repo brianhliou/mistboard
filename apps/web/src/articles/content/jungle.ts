@@ -29,10 +29,14 @@ export const jungleArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-09-17',
-  updateNote:
-    'Added a capture table and an FAQ.',
+  updatedAt: '2026-11-15',
+  updateNote: 'Added a short summary at the top.',
   playableOnMistboard: true,
+  tldr: [
+    'Enter the enemy den, capture every enemy animal, or leave your opponent with no legal move to win.',
+    'Animals capture equal or lower ranks. A rat on land can capture an elephant, but an elephant cannot capture a rat.',
+    'Only rats swim. Lions and tigers jump rivers unless a rat blocks the path; enemy traps strip an animal of its rank.',
+  ],
   audience:
     'Experienced Jungle Chess players who want a clear reference, plus chess and xiangqi players meeting it for the first time.',
   intro: [
@@ -210,7 +214,9 @@ export const jungleArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/0t8xpyv6/QMMg2Yz8',
+          // Local study ids (scripts/variant-lab/rules-page-games/plans/jungle.plan.json);
+          // swapped for the prod ids when the prod study is created from that plan.
+          path: '/embed/study/lVSs3WaU/9itqMaqN',
           title: 'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry',
           // Width-bound at the 702px column: the 7x9 board gets the column
           // minus the move sheet, plus seat rows, controls, header and credit.

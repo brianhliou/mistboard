@@ -1,3 +1,4 @@
+import { buildChampionCrowns, type Championship } from './champion-crowns.js';
 import { t } from './i18n/catalog.js';
 import { prependTitleBadge } from './player-titles.js';
 import { buildSiteBox } from './site-box.js';
@@ -19,6 +20,7 @@ type PublicStudy = {
 };
 
 type LeaderboardEntry = {
+  champions?: readonly Championship[];
   handle: string;
   displayName: string;
   title?: string | null;
@@ -160,6 +162,8 @@ function leaderboardRow(category: string, leader: LeaderboardEntry): HTMLElement
   player.className = 'landing-leaderboard-player hover-title';
   prependTitleBadge(player, leader.title);
   player.append(leader.displayName);
+  const crowns = buildChampionCrowns(leader.champions, { size: 16 });
+  if (crowns) player.append(crowns);
   row.append(
     text('landing-leaderboard-category', category),
     player,

@@ -31,12 +31,85 @@ type TestUser = {
 };
 
 describe('account page auth flow', () => {
+  it('creates, copies and revokes a broadcast token; remounting never redisplays its value', async () => {
+    window.history.replaceState(null, '', '/account/settings/account');
+    const tokens: unknown[] = [];
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const token = {
+      id: 'bpt_12345678',
+      label: '<Clock>',
+      createdAt: '2026-11-13T00:00:00Z',
+      lastUsedAt: null,
+      revokedAt: null,
+    };
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return jsonResponse({ user: testUser('misty') });
+      if (init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toEqual({ label: '<Clock>' });
+        tokens.push(token);
+        return jsonResponse({ token: 'synthetic-one-time-value', metadata: token }, 201);
+      }
+      if (init?.method === 'DELETE') return jsonResponse({ revoked: true });
+      return jsonResponse({ grants: [{ tourSlug: 'test', name: '<Test>', tokens }] });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { mountAccountSettings } = await import('./account.js');
+    const root = document.querySelector<HTMLElement>('#app')!;
+    await mountAccountSettings(root);
+    await flushDom();
+    const section = root.querySelector<HTMLElement>('.account-broadcast-push')!;
+    const input = section.querySelector<HTMLInputElement>('input')!;
+    input.value = '<Clock>';
+    section
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushDom();
+    expect(section.textContent).toContain('It will not be shown again.');
+    expect(section.querySelector('code')?.textContent).toBe('synthetic-one-time-value');
+    expect(section.querySelector('script')).toBeNull();
+    [...section.querySelectorAll('button')].find((b) => b.textContent === 'Copy')!.click();
+    await flushDom();
+    expect(writeText).toHaveBeenCalledWith('synthetic-one-time-value');
+    await mountAccountSettings(root);
+    await flushDom();
+    expect(root.textContent).not.toContain('synthetic-one-time-value');
+    expect(root.textContent).toContain('<Clock>');
+    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Revoke')!.click();
+    await flushDom();
+    expect(root.textContent).toContain('Revoked');
+    expect(fetch).toHaveBeenCalledWith('/api/account/broadcast-push/test/bpt_12345678', {
+      method: 'DELETE',
+    });
+  });
+
+  it.each([false, true])('shows Broadcast push only with a grant (%s)', async (granted) => {
+    window.history.replaceState(null, '', '/account/settings/account');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: testUser('misty') });
+        if (String(input) === '/api/account/broadcast-push')
+          return jsonResponse({
+            grants: granted ? [{ tourSlug: 'test', name: 'Clock test', tokens: [] }] : [],
+          });
+        throw new Error('unexpected fetch');
+      }),
+    );
+    const { mountAccountSettings } = await import('./account.js');
+    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    await flushDom();
+    expect(document.body.textContent?.includes('Broadcast push')).toBe(granted);
+    if (granted) expect(document.body.textContent).toContain('Clock test');
+  });
   beforeEach(() => {
     vi.resetModules();
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: memoryStorage(),
     });
+    window.sessionStorage.clear();
     window.history.replaceState(null, '', '/account?tab=login');
     document.body.innerHTML = '<div id="app"></div>';
   });
@@ -46,6 +119,224 @@ describe('account page auth flow', () => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
+
+  it.each([
+    '/?play=friend&variant=jieqi&tc=5m5&rated=1&side=black',
+    '/?play=lobby&variant=banqi&tc=corr&days=7&rated=1&side=random',
+  ])('#1111 sign-in returns to the complete play setup: %s', async (referrer) => {
+    window.history.replaceState(
+      null,
+      '',
+      `/account?tab=login&referrer=${encodeURIComponent(referrer)}`,
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('login-setup', '12345678'), 202);
+        if (String(input) === '/api/auth/email/confirm')
+          return jsonResponse({ user: testUser('setup-player'), isNewUser: false });
+        throw new Error(`unexpected fetch: ${input}`);
+      }),
+    );
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app')!);
+    document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+    submitAccountForm();
+    await flushDom();
+    submitAccountForm();
+    await flushDom();
+    expect(window.location.pathname + window.location.search).toBe(referrer);
+  });
+
+  it.each([' 12345678\n', '1234 5678', 'code: 1234567890'])(
+    'cleans pasted and typed login codes before keeping the first eight digits: %j',
+    async (pasted) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) =>
+          String(input) === '/api/auth/me'
+            ? jsonResponse({ user: null })
+            : jsonResponse(authStartData('paste-code'), 202),
+        ),
+      );
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      const code = document.querySelector<HTMLInputElement>('input[name="code"]')!;
+      expect(code.hasAttribute('maxlength')).toBe(false);
+      expect(code.inputMode).toBe('numeric');
+      expect(code.autocomplete).toBe('one-time-code');
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', pasted);
+      code.dispatchEvent(new ClipboardEvent('paste', { clipboardData, cancelable: true }));
+      expect(code.value).toBe('12345678');
+      code.value = pasted;
+      code.dispatchEvent(new Event('input'));
+      expect(code.value).toBe('12345678');
+      document.querySelectorAll<HTMLButtonElement>('.account-auth-reset')[1]!.click();
+    },
+  );
+
+  it.each(['player-abc12', 'chosen-name'])(
+    'offers a pre-filled username after signup and saves Continue as %s',
+    async (chosen) => {
+      const user = testUser('player-abc12');
+      const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('new-user', '12345678'), 202);
+        if (String(input) === '/api/auth/email/confirm')
+          return jsonResponse({ user, isNewUser: true });
+        if (String(input) === '/api/account/profile') {
+          expect(JSON.parse(String(init?.body))).toEqual({
+            handle: chosen,
+            usernamePromptHandled: true,
+          });
+          return jsonResponse({ user: testUser(chosen) });
+        }
+        throw new Error(`unexpected fetch: ${input}`);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      expect(window.location.pathname).toBe('/account');
+      expect(document.querySelector('h1')?.textContent).toBe('Choose your username');
+      const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+      expect(handle.value).toBe('player-abc12');
+      expect(document.querySelector('.account-username-dismiss')).toBeNull();
+      handle.value = chosen;
+      submitAccountForm();
+      await flushDom();
+      expect(
+        fetch.mock.calls.filter(([input]) => String(input) === '/api/account/profile'),
+      ).toHaveLength(1);
+      expect(window.location.pathname).toBe('/');
+    },
+  );
+
+  it.each(['handle_taken', 'invalid_handle'])(
+    'keeps the username step open on %s',
+    async (error) => {
+      const { t } = await import('./i18n/catalog.js');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+          if (String(input) === '/api/auth/email/start')
+            return jsonResponse(authStartData('username-error', '12345678'), 202);
+          if (String(input) === '/api/auth/email/confirm')
+            return jsonResponse({ user: testUser('player-abc12'), isNewUser: true });
+          return jsonResponse({ error }, 400);
+        }),
+      );
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value = 'player@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+      handle.value = error === 'invalid_handle' ? 'admin' : 'taken-name';
+      submitAccountForm();
+      await flushDom();
+      expect(document.querySelector('.account-status')?.textContent).toBe(
+        t(error === 'handle_taken' ? 'account.handleTaken' : 'account.invalidHandle'),
+      );
+      expect(window.location.pathname).toBe('/account');
+      expect(handle.getAttribute('aria-invalid')).toBe('true');
+      expect(document.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(
+        false,
+      );
+    },
+  );
+
+  it('allows dismissing the server-selected legacy username suggestion before redirecting', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+      if (String(input) === '/api/auth/email/start')
+        return jsonResponse(authStartData('legacy-user', '12345678'), 202);
+      if (String(input) === '/api/auth/email/confirm')
+        return jsonResponse({
+          user: testUser('legacy-user'),
+          isNewUser: false,
+          suggestUsername: true,
+        });
+      expect(String(input)).toBe('/api/account/profile');
+      expect(JSON.parse(String(init?.body))).toEqual({ usernamePromptHandled: true });
+      return jsonResponse({ user: testUser('legacy-user') });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app')!);
+    document.querySelector<HTMLInputElement>('input[name="email"]')!.value =
+      'legacy-user@example.com';
+    submitAccountForm();
+    await flushDom();
+    submitAccountForm();
+    await flushDom();
+    const handle = document.querySelector<HTMLInputElement>('input[name="handle"]')!;
+    handle.value = 'unsaved-edit';
+    document.querySelector<HTMLButtonElement>('.account-username-dismiss')!.click();
+    await flushDom();
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it.each([true, false])(
+    'tracks the complete auth funnel without private properties (new=%s)',
+    async (isNewUser) => {
+      const user = testUser('private-handle');
+      window.history.replaceState(
+        null,
+        '',
+        '/account?tab=login&source=rated-toggle&referrer=%2F%3Femail%3Dprivate%40example.com%26code%3D87654321',
+      );
+      const fetch = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse(authStartData('login-private', '87654321'), 202);
+        if (String(input) === '/api/auth/email/confirm') return jsonResponse({ user, isNewUser });
+        throw new Error(`unexpected fetch: ${input}`);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const analytics = await import('./analytics.js');
+      const track = vi.spyOn(analytics, 'track');
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app')!);
+      document.querySelector<HTMLInputElement>('input[name="email"]')!.value =
+        'private@example.com';
+      submitAccountForm();
+      await flushDom();
+      submitAccountForm();
+      await flushDom();
+      const events = track.mock.calls.filter(([event]) =>
+        ['auth_opened', 'auth_code_sent', 'auth_signed_in'].includes(event),
+      );
+      expect(events).toEqual([
+        ['auth_opened', { source: 'rated-toggle', path: '/' }],
+        ['auth_code_sent', { source: 'rated-toggle' }],
+        ['auth_signed_in', { source: 'rated-toggle', is_new_account: isNewUser }],
+      ]);
+      expect(JSON.stringify(events.map(([, props]) => props))).not.toMatch(
+        /@|87654321|private|email|handle|loginId/,
+      );
+      const confirm = fetch.mock.calls.find(
+        ([input]) => String(input) === '/api/auth/email/confirm',
+      );
+      expect(
+        new Headers((confirm?.[1] as RequestInit)?.headers).get('x-mistboard-device-id'),
+      ).toBeTruthy();
+    },
+  );
 
   it.each([
     ['gmial.com', 'gmail.com'],
@@ -101,7 +392,7 @@ describe('account page auth flow', () => {
     email.dispatchEvent(new Event('input'));
     email.dispatchEvent(new Event('change'));
     document.querySelector<HTMLButtonElement>('.account-auth-email-suggestion')?.click();
-    expect(track.mock.calls).toEqual([
+    expect(track.mock.calls.filter(([event]) => event !== 'auth_opened')).toEqual([
       ['auth_email_domain_suggestion_shown', { suggested_domain: 'gmail.com' }],
       ['auth_email_domain_suggestion_accepted', { suggested_domain: 'gmail.com' }],
     ]);
@@ -631,6 +922,37 @@ describe('account page auth flow', () => {
     expect(
       JSON.parse(window.localStorage.getItem(accountPreferencesStorageKey) ?? '{}'),
     ).toMatchObject({ premoves: false, clockTenths: 'always' });
+  });
+
+  it('saves and reloads incoming live invite permission in Privacy, separately from the bell', async () => {
+    window.history.replaceState(null, '', '/account/settings/privacy');
+    const user = testUser('misty');
+    const requests: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/account/preferences') {
+          const body = JSON.parse(String(init?.body));
+          requests.push(body);
+          Object.assign(user.accountPreferences, body);
+        }
+        return jsonResponse({ user });
+      }),
+    );
+    const { mountAccountSettings } = await import('./account.js');
+    const root = document.querySelector<HTMLElement>('#app')!;
+    await mountAccountSettings(root);
+    const off = root.querySelector<HTMLInputElement>('input[name="liveInvites"][value="false"]');
+    expect(off).not.toBeNull();
+    expect(root.textContent).toContain('Muting the challenge bell does not block invitations');
+    off!.checked = true;
+    off!.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+    expect(requests).toEqual([{ liveInvites: false }]);
+    await mountAccountSettings(root);
+    expect(
+      root.querySelector<HTMLInputElement>('input[name="liveInvites"][value="false"]')?.checked,
+    ).toBe(true);
   });
 
   it('renders notification channels as a matrix and saves each available switch', async () => {
@@ -1187,6 +1509,61 @@ describe('account page auth flow', () => {
     await flushDom();
 
     expect(requests.map((request) => request.flair)).toEqual(['piece-red-cannon', null]);
+  });
+
+  it('shows every flair at once in labelled groups that stay one radio choice', async () => {
+    window.history.replaceState(null, '', '/account/settings');
+    const user = { ...testUser('misty'), flair: 'piece-lacquer-red-chariot' };
+    const requests: { flair?: unknown }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ user });
+        if (url === '/api/account/public-profile') {
+          const body = JSON.parse(String(init?.body)) as { flair?: unknown };
+          requests.push(body);
+          return jsonResponse({ user: { ...user, flair: body.flair ?? null } });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    const { mountAccountSettings } = await import('./account.js');
+    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    await flushDom();
+
+    const labels = Array.from(
+      document.querySelectorAll('.account-flair-field .account-flair-set-label'),
+    ).map((label) => label.textContent);
+    expect(labels.slice(0, 3)).toEqual([
+      'Variants',
+      'Xiangqi: International',
+      'Xiangqi: Traditional',
+    ]);
+    expect(labels.slice(-2)).toEqual(['Jungle Chess', 'Chess']);
+    const lacquer = document.querySelector('[data-flair-group="xiangqi-lacquer"]');
+    expect(lacquer?.getAttribute('aria-labelledby')).toBe('account-flair-group-xiangqi-lacquer');
+    expect(lacquer?.querySelectorAll('input[name="flair"]')).toHaveLength(14);
+    expect(
+      document.querySelector<HTMLInputElement>(
+        'input[name="flair"][value="piece-lacquer-red-chariot"]',
+      )?.checked,
+    ).toBe(true);
+
+    const knight = document.querySelector<HTMLInputElement>(
+      'input[name="flair"][value="chess-white-knight"]',
+    );
+    if (!knight) throw new Error('missing chess flair option');
+    knight.checked = true;
+    document
+      .querySelector<HTMLFormElement>('.account-public-profile-form')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushDom();
+
+    expect(requests.map((request) => request.flair)).toEqual(['chess-white-knight']);
+    // One radio name across every group, so picking in one grid clears the others.
+    expect(document.querySelectorAll('input[name="flair"]:checked')).toHaveLength(1);
   });
 });
 

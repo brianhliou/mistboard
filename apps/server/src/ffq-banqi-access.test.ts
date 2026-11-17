@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import test, { type TestContext } from 'node:test';
-import { createFFQBanqiDeal, type FFQBanqiPlayerView } from '@mistboard/game';
+import {
+  correspondenceTimeControl,
+  createFFQBanqiDeal,
+  type FFQBanqiPlayerView,
+  gameSpecForId,
+} from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { FFQ_BANQI_ROOM_ID_PREFIX, ffqBanqiAdmits } from './ffq-banqi-access.js';
 import { createFFQBanqiRoom, ffqBanqiRooms } from './ffq-banqi-registration.js';
@@ -23,7 +28,12 @@ import {
   type TenantManagedRoom,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { createTenantRuntimeRoomFromEvents, replayTenantEvents } from './variant-tenant/runtime.js';
+import {
+  createTenantRuntimeRoomFromEvents,
+  replayTenantEvents,
+  tenantRoomIsLobbyMatch,
+  tenantSnapshotPayload,
+} from './variant-tenant/runtime.js';
 import { clearTenantRuntimeTimers } from './variant-tenant/ws.js';
 
 const FLAG = 'MISTBOARD_FFQ_BANQI_ENABLED';
@@ -51,7 +61,18 @@ const WS_CTX = {
   wsMessageWindowMs: 1000,
 } as WebSocketConnectionContext;
 
-function fixture(t: TestContext, flag: string | undefined, role: 'player' | 'admin' | null) {
+function fixture(
+  t: TestContext,
+  flag: string | undefined,
+  role: 'player' | 'admin' | null,
+  surface: 'hidden' | 'casual' = 'hidden',
+) {
+  const spec = gameSpecForId('ffq-banqi');
+  const priorSurface = spec.publicSurface;
+  spec.publicSurface = surface;
+  t.after(() => {
+    spec.publicSurface = priorSurface;
+  });
   const before = process.env[FLAG];
   if (flag === undefined) delete process.env[FLAG];
   else process.env[FLAG] = flag;
@@ -90,20 +111,31 @@ function fixture(t: TestContext, flag: string | undefined, role: 'player' | 'adm
   });
   const headers = (id = 'fixture-user') =>
     role ? { cookie: `mistboard_session=${id}.fixture` } : {};
-  return { logs, reads, headers, admitted: flag === 'true' && role === 'admin' };
+  return {
+    logs,
+    reads,
+    headers,
+    admitted: flag === 'true' && (surface === 'casual' || role === 'admin'),
+  };
 }
 
 class Socket {
   sent: Record<string, unknown>[] = [];
   closes: unknown[] = [];
+  handlers = new Map<string, (data: string) => void>();
   send(data: string) {
     this.sent.push(JSON.parse(data));
   }
   close(code: number, reason: string) {
     this.closes.push([code, reason]);
   }
-  on() {
+  on(event: string, handler: (data: string) => void) {
+    this.handlers.set(event, handler);
     return this;
+  }
+  async receive(message: object) {
+    this.handlers.get('message')?.(JSON.stringify(message));
+    for (let i = 0; i < 10; i++) await new Promise((resolve) => setImmediate(resolve));
   }
 }
 
@@ -182,10 +214,14 @@ function eventsFor(id: string, occupied: boolean, finished: boolean): FFQBanqiEv
   ];
 }
 
-for (const flag of [undefined, 'false', 'true']) {
+const launches = (['hidden', 'casual'] as const).flatMap((surface) =>
+  [undefined, 'false', 'true'].map((flag) => ({ surface, flag })),
+);
+
+for (const { surface, flag } of launches) {
   for (const role of [null, 'player', 'admin'] as const) {
-    test(`FFQ creation and connection matrix: flag=${flag}, account=${role ?? 'guest'}`, async (t) => {
-      const { admitted, headers, logs, reads } = fixture(t, flag, role);
+    test(`FFQ creation and connection matrix: surface=${surface}, flag=${flag}, account=${role ?? 'guest'}`, async (t) => {
+      const { admitted, headers, logs, reads } = fixture(t, flag, role, surface);
       assert.equal(ffqBanqiAdmits(role ? { accountRole: role } : null), admitted);
       assert.equal(ffqBanqiTenant.roomIdPrefix, FFQ_BANQI_ROOM_ID_PREFIX);
       assert.equal(variantTenantForRoomId('ffq_reserved')?.gameSpecId, 'ffq-banqi');
@@ -210,13 +246,27 @@ for (const flag of [undefined, 'false', 'true']) {
           assert.equal(observer.seat, 'spectator');
           assert.doesNotMatch(JSON.stringify(result.body), /setup|deal|seed/);
         } else assert.deepEqual(result.body, { error: 'ffq_banqi_disabled' });
-        const lobby = await post('/api/lobby', selectors, headers(), refusedCtx);
-        assert.equal(lobby.status, admitted ? 501 : 404);
-        assert.deepEqual(lobby.body, {
-          error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
-        });
+        const publicLobby = admitted && surface === 'casual';
+        const lobby = await post(
+          '/api/lobby',
+          selectors,
+          headers(),
+          publicLobby
+            ? {
+                ...CTX,
+                lobbyQueue: [],
+                lobbyTickets: new Map(),
+              }
+            : refusedCtx,
+        );
+        assert.equal(lobby.status, publicLobby ? 202 : admitted ? 501 : 404);
+        if (publicLobby) assert.equal(lobby.body.status, 'waiting');
+        else
+          assert.deepEqual(lobby.body, {
+            error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
+          });
       }
-      // PvE has exactly the same flag + admin door; bot games stay casual.
+      // PvE follows live admission; bot games stay casual.
       for (const preferredColor of ['red', 'black'] as const) {
         const pve = await post(
           '/api/rooms',
@@ -273,18 +323,21 @@ for (const flag of [undefined, 'false', 'true']) {
       for (const selectors of CONFLICTS) {
         for (const path of ['/api/rooms', '/api/lobby'] as const) {
           const result = await post(path, selectors, headers(), refusedCtx);
-          assert.equal(result.status, admitted && path === '/api/lobby' ? 501 : 404);
+          assert.equal(
+            result.status,
+            admitted && surface === 'hidden' && path === '/api/lobby' ? 501 : 404,
+          );
           assert.equal(
             result.body.error,
             !admitted
               ? 'ffq_banqi_disabled'
-              : path === '/api/lobby'
+              : surface === 'hidden' && path === '/api/lobby'
                 ? 'ffq_banqi_unsupported_surface'
                 : 'unknown_game_spec',
           );
         }
       }
-      for (const surface of [{ rated: true }, { botId: 'misty' }]) {
+      for (const surface of [{ rated: true }]) {
         const result = await post('/api/rooms', { gameSpecId: 'ffq-banqi', ...surface }, headers());
         assert.equal(result.status, admitted ? 501 : 404);
         assert.equal(
@@ -340,6 +393,50 @@ for (const flag of [undefined, 'false', 'true']) {
   }
 }
 
+for (const role of [null, 'player'] as const) {
+  test(`launched FFQ plays PvE and casual PvP through production handlers: ${role ?? 'guest'}`, async (t) => {
+    // Use the committed launch state rather than substituting a hypothetical switch.
+    const surface = gameSpecForId('ffq-banqi').publicSurface;
+    assert.equal(surface, 'casual');
+    const { headers } = fixture(t, 'true', role, surface);
+    const pvp = await post('/api/rooms', { gameSpecId: 'ffq-banqi' }, headers());
+    assert.equal(pvp.status, 201);
+    const red = await connect(pvp.body.roomId, headers('red-player'));
+    const black = await connect(pvp.body.roomId, headers('black-player'));
+    assertMasked(red);
+    assertMasked(black);
+    await red.receive({ type: 'move', from: 0, to: 0 });
+    await black.receive({ type: 'move', from: 1, to: 1 });
+    const room = ffqBanqiRooms.get(pvp.body.roomId)!;
+    assert.equal(room.projection.state.ply, 2);
+    assert.equal(room.rated, false);
+    assert.doesNotMatch(JSON.stringify([...red.sent, ...black.sent]), /"(?:setup|deal|seed)"/);
+
+    const pve = await post(
+      '/api/rooms',
+      {
+        gameSpecId: 'ffq-banqi',
+        mode: 'pve',
+        engineId: 'misty-ffq-banqi-level-1',
+        preferredColor: 'red',
+      },
+      headers(),
+    );
+    assert.equal(pve.status, 201);
+    const human = await connect(pve.body.roomId, headers('human-player'));
+    assertMasked(human);
+    await human.receive({ type: 'move', from: 0, to: 0 });
+    const botRoom = ffqBanqiRooms.get(pve.body.roomId)!;
+    const deadline = Date.now() + 8_000;
+    while (botRoom.projection.state.ply < 2 && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(botRoom.projection.state.ply, 2, 'the real Level 1 bot replies');
+    assert.equal(botRoom.rated, false);
+    assert.ok(human.sent.some((frame) => frame.type === 'snapshot'));
+    assert.doesNotMatch(JSON.stringify(human.sent), /"(?:setup|deal|seed)"/);
+  });
+}
+
 test('missing FFQ registration never selects chess', async (t) => {
   const { headers } = fixture(t, 'true', 'admin');
   const registrations = registeredVariantTenants().filter(
@@ -383,4 +480,95 @@ test('missing FFQ registration never selects chess', async (t) => {
   } finally {
     registration.gameSpecId = original;
   }
+});
+
+for (const role of [null, 'player', 'admin'] as const) {
+  test(`FFQ correspondence sockets follow live admission: ${role ?? 'guest'}`, async (t) => {
+    const { headers, logs } = fixture(t, 'true', role, 'casual');
+    for (const persisted of [false, true]) {
+      for (const occupied of [false, true]) {
+        for (const finished of [false, true]) {
+          const id = `ffq_corr-${persisted}-${occupied}-${finished}`;
+          const events = eventsFor(id, occupied, finished);
+          const created = events[0]!;
+          assert.equal(created.type, 'room-created');
+          if (created.type === 'room-created') created.timeControl = correspondenceTimeControl(3);
+          logs.set(id, events);
+          if (!persisted) {
+            const room = createTenantRuntimeRoomFromEvents(ffqBanqiTenant, events);
+            assert.ok(room.ok);
+            ffqBanqiRooms.set(id, room.room);
+          }
+          const socket = await connect(id, headers());
+          const hello = assertMasked(socket);
+          if (occupied) assert.equal(hello.seat, 'spectator');
+          else if (role) assert.equal(hello.seat, 'red');
+          assert.ok(JSON.stringify(socket.sent).includes('"faceDown":true'));
+          const leaked = new Socket();
+          leaked.sent = [
+            ...socket.sent,
+            { accidentalTruth: replayTenantEvents(ffqBanqiTenant, events).state.board },
+          ];
+          assert.throws(
+            () => assertMasked(leaked),
+            'a planted identity leak must fail the whole-payload check',
+          );
+        }
+      }
+    }
+    const direct = await createFFQBanqiRoom(
+      role ? { accountRole: role } : null,
+      correspondenceTimeControl(3),
+    );
+    assert.equal(direct.ok, true, 'the factory follows live admission');
+    const create = await post(
+      '/api/rooms',
+      { gameSpecId: 'ffq-banqi', mode: 'correspondence', daysPerMove: 3 },
+      headers(),
+    );
+    assert.equal(create.status, 501);
+    assert.deepEqual(create.body, { error: 'ffq_banqi_unsupported_surface' });
+  });
+}
+
+test('FFQ guest casual lobby matches only after launch and never accepts rated or correspondence', async (t) => {
+  fixture(t, 'true', null, 'casual');
+  const spec = gameSpecForId('ffq-banqi');
+  const tc = { initialMs: 180_000, incrementMs: 2_000 };
+  const ctx = { ...CTX, lobbyQueue: [], lobbyTickets: new Map() } as HttpApiContext;
+  const postSeek = async (_ctx: HttpApiContext, gameSpecId: string, extra: object = {}) =>
+    (await post('/api/lobby', { gameSpecId, timeControl: tc, ...extra }, {}, ctx)).body;
+  spec.publicSurface = 'casual';
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+  const seek = await postSeek(ctx, spec.id);
+  assert.equal(seek.status, 'waiting');
+  const match = await postSeek(ctx, spec.id);
+  assert.equal(match.status, 'matched');
+  const room = ffqBanqiRooms.get(match.roomId as string);
+  assert.ok(room);
+  assert.equal(tenantRoomIsLobbyMatch(room), true);
+  assert.equal(room.rated, false);
+  assert.equal(room.projection.rated, false);
+  const snapshot = tenantSnapshotPayload(ffqBanqiTenant, room, {
+    id: 'guest',
+    seat: 'spectator',
+    solo: false,
+  });
+  assert.doesNotMatch(JSON.stringify({ seek, match, snapshot }), /"(?:setup|deal|seed)"/);
+  assert.equal(ctx.lobbyQueue.length, 0);
+  for (const extra of [
+    { rated: true },
+    { mode: 'correspondence', daysPerMove: 3 },
+    { timeControl: { initialMs: 259_200_000, incrementMs: 0, daysPerMove: 3 } },
+    { variant: 'banqi' },
+  ]) {
+    const refused = await postSeek(ctx, spec.id, extra);
+    assert.ok(refused.error, JSON.stringify(extra));
+    assert.equal(ctx.lobbyQueue.length, 0);
+  }
+  spec.publicSurface = 'hidden';
+  assert.deepEqual(await postSeek(ctx, spec.id), { error: 'ffq_banqi_disabled' });
+  spec.publicSurface = 'casual';
+  process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'false';
+  assert.deepEqual(await postSeek(ctx, spec.id), { error: 'ffq_banqi_disabled' });
 });

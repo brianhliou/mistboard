@@ -10,8 +10,9 @@ import {
   TK_SOLDIER,
   TK_THUMBNAIL,
 } from '../../three-kingdoms-banqi-diagrams.js';
+import { playClosing } from '../diagrams.js';
 import { BANQI_FAMILY_COMPARISON } from './banqi-family-comparison.js';
-import type { Article, ArticleBlock } from '../types.js';
+import type { Article } from '../types.js';
 
 // Launched rules for #628, checked against the kernel. Five rules the app
 // leaves unwritten (perpetual chase, what resets the 40-ply count, face-down
@@ -20,33 +21,21 @@ import type { Article, ArticleBlock } from '../types.js';
 // this mode, so the page presents them as Mistboard's rules, not Gamesofa's;
 // change the engine and this page together.
 
-const PLAY: ArticleBlock = {
-  kind: 'cta',
-  buttons: [
-    {
-      label: 'Play a friend',
-      href: '/?play=friend&gameSpecId=three-kingdoms-banqi',
-      emphasis: 'primary',
-    },
-    {
-      label: 'Play a bot',
-      href: '/?play=computer&gameSpecId=three-kingdoms-banqi',
-      emphasis: 'secondary',
-    },
-  ],
-};
-
 export const threeKingdomsBanqiArticle: Article = {
   slug: 'three-kingdoms-banqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Three Kingdoms Banqi Rules',
+  seoTitle: 'Three Kingdoms Banqi Rules: How to Play and Score',
   tagline: 'Face-down pieces, any piece takes any piece, first to 100 wins.',
   summary:
     'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-10',
+  updatedAt: '2026-11-15',
+  updateNote:
+    'Added an annotated engine game: Misty Level 8 against Level 7, with move grades, the luck of each flip and a graph of each level’s own estimate. The comparison table now includes Fanfanqi.',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   tldr: [
     'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.',
@@ -189,8 +178,28 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [BANQI_FAMILY_COMPARISON],
     },
     {
-      heading: 'Play on Mistboard',
-      blocks: [PLAY],
+      heading: 'An engine game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Misty Level 8 plays red; Level 7 plays black. Level 7 wins 100 to 45 after 78 plies. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 8’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw. The seven pieces still face down at the end stay unknown.',
+        },
+        {
+          kind: 'embed',
+          // Built by scripts/variant-lab/rules-page-games (plans/three-kingdoms-banqi.plan.json).
+          path: '/embed/study/fcx7JEzH/7lZCHESh',
+          title: 'Three Kingdoms Banqi: Level 7 versus Level 8, annotated',
+          aspect: [702, 480],
+        },
+      ],
     },
+    playClosing({
+      heading: 'Play on Mistboard',
+      playLabel: 'Play a friend',
+      playHref: '/?play=friend&gameSpecId=three-kingdoms-banqi',
+      secondary: [
+        { label: 'Play a bot', href: '/?play=computer&gameSpecId=three-kingdoms-banqi', emphasis: 'secondary' },
+      ],
+    }),
   ],
 };

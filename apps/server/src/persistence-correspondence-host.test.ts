@@ -75,8 +75,14 @@ definePersistenceTests('correspondence host', () => {
     assert.equal(annInfo.json.activeWithYou, 1);
     assert.equal(annInfo.json.canPlay, true);
 
+    // Ann owes her first move, so she makes it before starting another (#1131).
+    const owed = await callHostRoute('POST', annCookie, { gameSpecId: XIANGQI_SPEC_ID });
+    assert.equal(owed.status, 409);
+    assert.equal(owed.json.error, 'first_move_owed');
+    await passTurnToHost(ann, host);
     const second = await callHostRoute('POST', annCookie, { gameSpecId: XIANGQI_SPEC_ID });
     assert.equal(second.status, 201);
+    await passTurnToHost(ann, host);
     const third = await callHostRoute('POST', annCookie, { gameSpecId: XIANGQI_SPEC_ID });
     assert.equal(third.status, 409);
     assert.equal(third.json.error, 'player_limit_reached');
@@ -86,6 +92,17 @@ definePersistenceTests('correspondence host', () => {
     assert.deepEqual(await countHostCorrespondenceGames(host, bo), { total: 3, withPlayer: 1 });
   });
 });
+
+// Stands in for the player's move: the deadline index now waits on the host.
+async function passTurnToHost(player: string, host: string): Promise<void> {
+  await getPool().query(
+    `UPDATE room_deadlines rd SET seat_user_id = $2, seat = host.seat
+     FROM room_seat_tokens host
+     WHERE rd.seat_user_id = $1 AND host.room_id = rd.room_id AND host.user_id = $2
+       AND host.revoked_at IS NULL`,
+    [player, host],
+  );
+}
 
 async function seedUser(handle: string, displayName: string): Promise<string> {
   const id = `user-${handle}`;

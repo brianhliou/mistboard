@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
@@ -13,8 +15,11 @@ import {
 } from './landing.js';
 import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
-import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
-import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiEngineOptions,
+} from './three-kingdoms-banqi-access.js';
+import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
@@ -24,6 +29,40 @@ const ROSTER = [
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {
+  it('offers FFQ computer levels only from the runtime roster and withdraws them on failure', async () => {
+    const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+    const original = spec.publicSurface;
+    spec.publicSurface = 'casual';
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const options = [
+      {
+        id: 'misty-ffq-banqi-level-4',
+        name: 'Misty Level 4',
+        familyName: 'Misty',
+        kind: 'container',
+      },
+    ];
+    try {
+      setFFQBanqiEngineOptions([]);
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse({ engines: ROSTER, ffqBanqiEngines: options })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toEqual(options);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response('', { status: 503 })),
+      );
+      await fetchPlayableEnginesOnce();
+      expect(ffqBanqiEngineOptions()).toBeUndefined();
+    } finally {
+      spec.publicSurface = original;
+      setFFQBanqiEngineOptions([]);
+    }
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -81,6 +120,44 @@ describe('playable engines loading', () => {
     expect(jungleFlipEngineOptions().map((engine) => engine.id)).not.toContain(
       'misty-jungle-flip-level-8',
     );
+  });
+
+  it('keeps a loaded runtime roster while its own request is in flight', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const tk = Array.from({ length: 8 }, (_, i) => ({
+      id: `misty-three-kingdoms-banqi-level-${i + 1}`,
+      name: `Misty Level ${i + 1}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
+    // Another fetch (the hero panel's) already loaded both rosters.
+    setThreeKingdomsBanqiEngineOptions(tk);
+    setJungleFlipEngineOptions(jungleFlipEngineOptions(true));
+    let respond: (resp: Response) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (respond = resolve))),
+    );
+    try {
+      const pending = fetchPlayableEnginesOnce();
+      await Promise.resolve();
+      expect(threeKingdomsBanqiEngineOptions()?.map((engine) => engine.id)).toEqual(
+        tk.map((engine) => engine.id),
+      );
+      expect(jungleFlipEngineOptions()[0]!.id).toBe('misty-jungle-flip-level-8');
+      respond(
+        jsonResponse({
+          engines: ROSTER,
+          threeKingdomsBanqiEngines: tk,
+          jungleFlipEngines: jungleFlipEngineOptions(true),
+        }),
+      );
+      expect(await pending).toEqual(ROSTER);
+      expect(threeKingdomsBanqiEngineOptions()).toHaveLength(8);
+    } finally {
+      setThreeKingdomsBanqiEngineOptions([]);
+      setJungleFlipEngineOptions([]);
+    }
   });
 
   it('retries transient failures and resolves once the roster is available', async () => {
@@ -176,8 +253,8 @@ describe('landing shell', () => {
       vi.stubGlobal('fetch', fetchSpy);
       const shell = document.createElement('div');
       shell.innerHTML = renderLandingPageForPrerender(readFileSync('index.html', 'utf8'), 'en');
-      for (const kind of ['bot', 'person']) {
-        const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+      for (const selector of ['.pp-row-bot', '.pp-person-rows .pp-tile']) {
+        const specs = [...shell.querySelectorAll<HTMLElement>(selector)].map(
           (el) => el.dataset.gameSpec,
         );
         expect(specs.at(-1)).toBe('gomoku');
@@ -262,14 +339,16 @@ describe('landing shell', () => {
     // blog row below.
     const deepDives = demo?.querySelector(':scope > .landing-dives-row');
     expect(deepDives).not.toBeNull();
-    expect(
-      deepDives?.querySelector('.landing-article-card[href="/blog/yin-sheng"]'),
-    ).not.toBeNull();
-    expect(
-      demo?.querySelector(
-        ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
-      ),
-    ).toBeNull();
+    // The row holds the newest deep dives, so which player pages show moves
+    // as new ones publish; a player page is never in the blog row below.
+    expect(deepDives?.querySelector('.landing-article-card')).not.toBeNull();
+    for (const slug of ['yin-sheng', 'zuo-wenjing', 'tang-dan']) {
+      expect(
+        demo?.querySelector(
+          `:scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/${slug}"]`,
+        ),
+      ).toBeNull();
+    }
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
     // The other row is labelled too, and its label line links to the blog index.
     const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
@@ -328,6 +407,30 @@ describe('landing shell', () => {
     const actions = wrap.querySelectorAll('.landing-play-column .landing-play-action');
     expect(actions.length).toBe(1);
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
+  });
+
+  it('keeps the Your move card under Play on a phone and leaves desktop to the panel tab', () => {
+    // 2026-11-11: desktop lists these games in the Play panel's Your move tab,
+    // so the rail card is phone-only there; the phone home has no panel and
+    // keeps the card at every width.
+    const desktop = buildLandingStage(fallbackPlayableEngines(), {
+      skipLiveWidgets: true,
+      phone: false,
+    }).el;
+    expect(desktop.querySelector('.landing-lobby-panel .pp-tab-moves')).not.toBeNull();
+    expect(
+      desktop
+        .querySelector('.landing-play-stack .landing-corr-moves')
+        ?.classList.contains('is-phone-only'),
+    ).toBe(true);
+    const phone = buildLandingStage(fallbackPlayableEngines(), {
+      skipLiveWidgets: true,
+      phone: true,
+    }).el;
+    expect(phone.querySelector('.pp-board')).toBeNull();
+    const card = phone.querySelector('.landing-play-stack .landing-corr-moves');
+    expect(card).not.toBeNull();
+    expect(card?.classList.contains('is-phone-only')).toBe(false);
   });
 
   describe.each(SUPPORTED_LOCALES)('%s intro', (locale) => {
@@ -396,21 +499,17 @@ describe('homepage band layout (CSS)', () => {
     expect(forum).toMatch(/\.landing-forum-topic-excerpt \{[^}]*-webkit-line-clamp: 1;/);
   });
 
-  it('fits Play a person without a scrollbar, with room for two more variants', () => {
-    // Brian, 2026-10-27: the person tab scrolled at 46px rows. A 32px floor
-    // and 4px bar padding fit 12 rows in the 11-bot-row computer tab height.
+  it('fits Play a person without a scrollbar', () => {
+    // 2026-10-27: the person tab must not scroll. Since the shared pace bar
+    // (2026-11-11) the tiles sit in a grid that flexes into the height left
+    // under the open games, rows from their content up to 46px.
     const panel = readFileSync('src/landing-play-panel.css', 'utf8');
     expect(panel).toMatch(
-      /\.pp-view-person \.pp-row-person \{\s*flex: 1 0 auto;\s*min-height: 32px;\s*max-height: 46px;/,
+      /\.pp-person-rows \{\s*flex: 1 1 auto;\s*min-height: 0;\s*grid-auto-rows: minmax\(min-content, 46px\);/,
     );
-    // Brian, 2026-10-27: "compress it even a tiny bit more" and account for
-    // the Casual/Rated bar: a 2px bar that never wraps, and 40px rows in the
-    // three-column band, the bot rows' floor.
+    // The Casual/Rated bar: 2px padding and a note that never wraps.
     expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
     expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
-    expect(panel).toMatch(
-      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
-    );
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {
@@ -472,16 +571,14 @@ describe('homepage band layout (CSS)', () => {
     expect(rule('.landing-event-banner-icon')).toMatch(/width: 34px;\s*height: 34px;/);
   });
 
-  it('sizes the phone shortcut tiles for their drawings, one 6px gutter with the Play pair', () => {
-    // Brian, 2026-10-27: bigger tiles with less gap between them, and the
-    // Play the computer / Play a friend pair as close as the tiles. Then less
-    // empty space inside each tile: a shorter tile, a larger drawing and label.
+  it('sizes the phone shortcut tiles for their drawings with one 6px gutter', () => {
+    // Compact tiles below the single Play entry keep the larger drawings.
     const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
     const rule = (selector: string) =>
       phone.match(new RegExp(`^  ${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
       '';
     expect(rule('.landing-phone-tiles')).toMatch(/gap: 6px;/);
-    expect(rule('.landing-play-quick')).toMatch(/gap: 6px;/);
+    expect(phone).not.toContain('.landing-play-quick');
     expect(rule('.landing-phone-tile')).toMatch(/height: 84px;/);
     expect(rule('.landing-phone-tile')).toMatch(/font-size: 15px;/);
     expect(rule('.landing-phone-tile-art')).toMatch(/width: 52px;\s*height: 52px;/);

@@ -173,6 +173,7 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
   const status = reviewOutcomeLine(
     jungleFlipOutcome(postgame.game.result, firstColor),
     postgame.game.termination,
+    JUNGLE_FLIP_SPEC_ID,
   );
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: JUNGLE_FLIP_SPEC_ID,

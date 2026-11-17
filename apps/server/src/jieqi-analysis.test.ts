@@ -30,6 +30,7 @@ import {
   type JieqiGameAnalysis,
   jieqiAnalysisRepetitionWindows,
   jieqiChancePlies,
+  jieqiDecisionDepsFromSession,
   jieqiDeterministicPlies,
   PIKAFISH_JIEQI_ANALYSIS_PROFILE,
   reconcileJieqiSeries,
@@ -104,6 +105,74 @@ test('analyzeJieqiPostgame reconstructs N+1 plies from the deal and evaluates ea
   assert.deepEqual(seenTurns, ['red', 'black', 'red', 'black', 'red', 'black', 'red']);
   assert.ok(analysis.plies.every((ply) => ply.cp === 42));
   assert.equal(analysis.engineId, JIEQI_ANALYSIS_ENGINE_ID);
+});
+
+test('stamped and legacy sweeps and decisions carry the rule alongside public history and roots', async () => {
+  const moves: JieqiMove[] = [
+    { from: 'e1', to: 'e2' },
+    { from: 'e10', to: 'e9' },
+    { from: 'a4', to: 'a5' },
+  ];
+  for (const adjudicationRule of [undefined, 'jqe-v1'] as const) {
+    const rules = { repetition: true, adjudicationRule };
+    let sweepCalls = 0;
+    await analyzeJieqiPostgame(
+      moves,
+      STANDARD_JIEQI_DEAL,
+      (state, window, nodes) =>
+        evaluateJieqiPosition(
+          state,
+          async (_fen, opts) => {
+            sweepCalls += 1;
+            assert.equal(opts.adjudicationRule, adjudicationRule);
+            assert.deepEqual(opts.moves, window.moves);
+            assert.ok(opts.searchMoves?.length);
+            return { cp: 0, mate: null, best: opts.searchMoves[0]! };
+          },
+          window,
+          nodes,
+        ),
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      rules,
+    );
+    assert.equal(sweepCalls, moves.length + 1);
+    let ranked = 0;
+    let evaluated = 0;
+    const dependencies = jieqiDecisionDepsFromSession(
+      {
+        multiPv: async (_fen, opts) => {
+          ranked += 1;
+          assert.equal(opts.adjudicationRule, adjudicationRule);
+          assert.deepEqual(opts.moves, ['e0e1', 'e9e8']);
+          assert.ok(opts.searchMoves?.includes('a3a4'));
+          assert.equal(opts.fresh, true);
+          return [mpvLine(1, 'a3a4', 0)];
+        },
+        evaluateFen: async (_fen, opts) => {
+          evaluated += 1;
+          assert.equal(opts.adjudicationRule, adjudicationRule);
+          assert.deepEqual(opts.moves, [], 'reveal starts a new repetition window');
+          assert.ok(opts.searchMoves?.length);
+          assert.equal(opts.fresh, true);
+          assert.ok(opts.nodes! >= 200_000, '#1000 reveal budget floor survives');
+          return { cp: 0, mate: null, best: opts.searchMoves[0]!, depth: 3 };
+        },
+      },
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+    );
+    const decisions = await analyzeJieqiDecisions(
+      moves,
+      STANDARD_JIEQI_DEAL,
+      dependencies,
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      rules,
+    );
+    assert.equal(decisions.length, 1);
+    assert.equal(ranked, 1);
+    assert.ok(evaluated > 0, 'the pool mean really reached the session');
+  }
 });
 
 test('jieqiChancePlies flags reveals and face-down captures, not already-revealed moves', async () => {

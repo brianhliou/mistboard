@@ -41,9 +41,9 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
-  searchStillCurrent,
 } from './engine-move-guard.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { createReplyTurn, replyPace, replyPacePayload } from './engine-reply-pacing.js';
+import { liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -194,6 +194,14 @@ export async function playBanqiEngineMoveIfReady(
   const seat = banqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
+  const turn = createReplyTurn(
+    room,
+    () =>
+      engineToMove(room, seat) &&
+      room.projection.seats[seat] === engineId &&
+      (!room.projection.clock ||
+        tenantClockRemainingMs(room.projection.clock, seat, ctx.now?.() ?? Date.now()) > 0),
+  );
   const internal = internalEngineTestFor(room.events);
   moveProvider = internal
     ? internalBanqiMoveProvider(internal)
@@ -207,6 +215,7 @@ export async function playBanqiEngineMoveIfReady(
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, now) : null;
   const incrementMs = clock?.incrementMs ?? 0;
+  const startedAt = Date.now();
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const { fen, moves, gameMoves } = banqiEngineRepWindow(room);
@@ -222,47 +231,38 @@ export async function playBanqiEngineMoveIfReady(
   // clock-aware time-pressure guard (shared allocator). Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink
   // when timed. Replaces the old naive min(cap, remaining - safety) clamp.
-  const { computeBudgetMs: movetimeCapMs } = budgetForMove({
+  const paceInput = {
+    variant: 'banqi',
+    initialMs: clock?.initialMs,
+    correspondence: room.projection.timeControl?.daysPerMove !== undefined,
+    roomId: room.id,
+    ply: state.ply,
+    legalCount: getBanqiLegalMoves(room.projection.state).length,
     remainingMs,
     incrementMs,
+    engineVsEngine: (['red', 'black'] as const).every((color) =>
+      isBanqiEngineClientId(room.projection.seats[color]),
+    ),
+  };
+  const budgetInput = {
+    ...paceInput,
+    engineId,
     ceilingMs: tier.movetimeCapMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
-  });
+  };
+  let { movetimeMs: movetimeCapMs } = liveBotMoveTime(budgetInput);
+  if (movetimeCapMs <= 0 || !turn.current()) return;
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
   // than silently substituting a threat-blind legal move.
-  const startedAt = Date.now();
   const strictProvider = moveProvider.failurePolicy === 'fail-closed';
   const engineVersion = strictProvider
     ? (moveProvider.engineVersion ?? 'unversioned-external')
     : BANQI_ENGINE_VERSION;
-  const turnPly = state.ply;
-  const currentSearch = searchStillCurrent(room, () => engineToMove(room, seat));
-  const stillOnTurn = (): boolean => {
-    if (!currentSearch()) return false;
-    if (!strictProvider) return true;
-    const currentClock = room.projection.clock;
-    return (
-      room.projection.state.ply === turnPly &&
-      (!currentClock || tenantClockRemainingMs(currentClock, seat, ctx.now?.() ?? Date.now()) > 0)
-    );
-  };
-  const providerRequest = strictProvider
-    ? buildBanqiProviderRequest({
-        state,
-        requestId: randomUUID(),
-        engineId,
-        nowMs: startedAt,
-        budgetMs: movetimeCapMs,
-        remainingMs,
-        incrementMs,
-        nodes: tier.nodes,
-        repetitionWindow: { fen, moves },
-      })
-    : undefined;
   let lastSearch: UciEval | null = null;
+  let budgetExhausted = false;
   const {
     chosen: validated,
     attempts,
@@ -270,6 +270,28 @@ export async function playBanqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove<BanqiMove>({
     maxAttempts: strictProvider ? 1 : ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
+      movetimeCapMs = liveBotMoveTime({
+        ...budgetInput,
+        waitedMs: Date.now() - startedAt,
+      }).movetimeMs;
+      if (movetimeCapMs <= 0) {
+        budgetExhausted = true;
+        return null;
+      }
+      const providerRequest = strictProvider
+        ? buildBanqiProviderRequest({
+            state,
+            requestId: randomUUID(),
+            engineId,
+            nowMs: Date.now(),
+            budgetMs: movetimeCapMs,
+            remainingMs:
+              remainingMs === null ? null : Math.max(0, remainingMs - (Date.now() - startedAt)),
+            incrementMs,
+            nodes: tier.nodes,
+            repetitionWindow: { fen, moves },
+          })
+        : undefined;
       const search = await moveProvider(
         engineId,
         fen,
@@ -292,7 +314,7 @@ export async function playBanqiEngineMoveIfReady(
       const parsed = engineUciToBanqiMove(uci);
       return parsed && isBanqiLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn,
+    stillOnTurn: () => !budgetExhausted && turn.current(),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -308,7 +330,7 @@ export async function playBanqiEngineMoveIfReady(
         'Banqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !stillOnTurn()) return;
+  if (aborted || !turn.current()) return;
 
   let chosen = validated;
   if (chosen === null && forbidden.length > 0 && !strictProvider) {
@@ -361,6 +383,16 @@ export async function playBanqiEngineMoveIfReady(
   }
 
   reportEngineMoveOk();
+  const thinkTimeMs = Date.now() - startedAt;
+  const search = lastSearch as UciEval | null;
+  const pace = replyPace({
+    ...paceInput,
+    cp: search?.cp ?? null,
+    mate: search?.mate ?? null,
+    computeMs: thinkTimeMs,
+  });
+  if (!(await turn.wait(pace.waitMs)) || !turn.current()) return;
+
   const event: TenantRoomEvent<BanqiSeat, BanqiMove, BanqiSpecId> = {
     type: 'move-played',
     at: Date.now(),
@@ -371,9 +403,8 @@ export async function playBanqiEngineMoveIfReady(
   // Queue BEFORE the append: if this move ends the game, the tenant event writer
   // records the game end and flushes the queue inside that same append, and a
   // decision queued afterwards would never be written.
-  queueEngineDecision(
-    room,
-    buildLiveEngineDecisionPayload({
+  queueEngineDecision(room, {
+    ...buildLiveEngineDecisionPayload({
       variant: 'banqi',
       roomId: room.id,
       engineId,
@@ -385,13 +416,14 @@ export async function playBanqiEngineMoveIfReady(
       incrementMs,
       tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
       search: lastSearch,
-      thinkTimeMs: Date.now() - startedAt,
+      thinkTimeMs,
       attempts,
       move: banqiMoveToEngineUci(chosen),
       fen,
       legalCount: getBanqiLegalMoves(room.projection.state).length,
     }),
-  );
+    ...replyPacePayload(pace),
+  });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

@@ -21,6 +21,7 @@ import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
 import { mayPlayVariant } from '../persistence.js';
+import { refreshSeatChampions } from '../persistence-leaderboards.js';
 import {
   adminDebugTokenFromProtocolHeader,
   canObserveRoom,
@@ -62,6 +63,7 @@ import {
   tenantClockRemainingMs,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantRoomMode,
   tenantRoomOffersRematch,
   tenantSnapshotPayload,
 } from './runtime.js';
@@ -248,7 +250,7 @@ export function createTenantWsRuntime<
     // A paused game takes no moves, and an engine move refused mid-think reads
     // to the engine loop as a failure it answers by resigning the bot's seat.
     // The resume event runs this again once the clock is back.
-    if (room.projection.paused) return;
+    if (room.projection.paused || tenantRoomMode(tenant, room) === 'eve') return;
     options.scheduleEngineMove?.(lifecycleCtx, room);
   }
 
@@ -269,6 +271,7 @@ export function createTenantWsRuntime<
     // The browser's durable id; a guest seat is attributed to it at game end.
     const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
+    await refreshSeatChampions();
     rememberExcludedDevice(deviceId, accountUser);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
     // Allowlist-gated variants (139) ask the grant table before handing out a

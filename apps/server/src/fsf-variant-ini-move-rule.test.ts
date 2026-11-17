@@ -9,7 +9,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { ATOMIC_XIANGQI_RULES, DUCK_XIANGQI_PROGRESS_LIMIT } from '@mistboard/game';
+import {
+  ATOMIC_XIANGQI_RULES,
+  DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT,
+  DUCK_XIANGQI_PROGRESS_LIMIT,
+} from '@mistboard/game';
 
 // Resolved from the repo root: tests also run from dist/, where tsc copies no .ini.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -23,6 +27,7 @@ function nMoveRule(path: string): number | null {
 
 // null = the kernel has no no-capture draw, so the rule must be off (0).
 const KERNEL_PROGRESS_PLIES: Record<string, number | null> = {
+  'standard-xiangqi.ini': DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT,
   'duck-xiangqi.ini': DUCK_XIANGQI_PROGRESS_LIMIT,
   'atomic-xiangqi.ini': ATOMIC_XIANGQI_RULES.progressClock,
   // Fortress ends only on mate, stalemate and repetition.
@@ -43,6 +48,23 @@ for (const [ini, plies] of Object.entries(KERNEL_PROGRESS_PLIES)) {
     );
   });
 }
+
+test('standard xiangqi explicitly resets the quiet clock only on captures', () => {
+  assert.match(
+    readFileSync(resolve(serverDir, 'standard-xiangqi.ini'), 'utf8'),
+    /^nMoveRuleTypes\s*=\s*-\s*$/m,
+  );
+});
+
+// Launch audit (#1115): PvE, EvE (xiangqi-eve-adapter -> engine catalog), and
+// General Blunder all use standardXiangqiFsfRules; xiangqi-fsf-engine.test.ts
+// checks their session commands. fetch-fsf-xiangqi-net.sh tests NNUE on the
+// production-native pin with this ini. engine-boot-check.ts resolves paths only;
+// engine-assets.sh's built-in-xiangqi probe is UCI discovery, without a search.
+// Browser standard-xiangqi analysis dispatches to Pikafish (ceval.ts), not FSF.
+// Not covered here: standalone variant-lab/fortress-modal-bakeoff.py and
+// variant-lab/lab/variants/xiangqi.ts experiments, and the WASM rebuild's
+// built-in-xiangqi opening perft (no evaluation or adjudication).
 
 test('the browser copy of fortress-xiangqi.ini keeps the same move rule', () => {
   assert.equal(

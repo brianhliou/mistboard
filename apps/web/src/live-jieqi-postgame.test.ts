@@ -3,11 +3,14 @@ import {
   createInitialJieqiState,
   getJieqiLegalMoves,
   getJieqiPlayerView,
+  jieqiPublicDeal,
+  jieqiStateToPikafishFen,
   jieqiTruthView,
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jieqiPostgameApiUrl, mountJieqiPostgame } from './live-jieqi-postgame.js';
+import * as ceval from './review/engine/ceval.js';
 
 // A deterministic legal opening move + its coordinate label, shared by the fixture
 // and the assertions (getJieqiLegalMoves is stable, so [0] is a fixed move).
@@ -26,10 +29,67 @@ describe('Jieqi postgame page', () => {
   });
 
   afterEach(() => {
+    window.dispatchEvent(new Event('pagehide'));
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     window.localStorage.clear();
   });
+
+  it.each(['jqe-v1', undefined] as const)(
+    'selects the browser review rule from the public game stamp %s',
+    async (adjudicationRule) => {
+      vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
+      const evaluate = vi.fn(async (_request: ceval.CevalRequest) => ({
+        depth: 0,
+        seldepth: 0,
+        nodes: 0,
+        nps: 0,
+        lines: [],
+      }));
+      vi.spyOn(ceval, 'createCeval').mockReturnValue({
+        variant: 'jieqi',
+        preload: async () => {},
+        evaluate,
+        stop: vi.fn(),
+        dispose: vi.fn(),
+      });
+      const fixture = postgameFixture();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          jsonResponse({
+            ...fixture,
+            state: { ...fixture.state, ...(adjudicationRule ? { adjudicationRule } : {}) },
+          }),
+        ),
+      );
+      const root = document.createElement('div');
+      document.body.append(root);
+      mountJieqiPostgame(root, 'jq_postgame');
+      await flushPromises();
+      root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
+      await vi.waitFor(() => expect(evaluate).toHaveBeenCalled());
+      const request = evaluate.mock.lastCall![0];
+      expect(request.jieqiRule).toBe(adjudicationRule ?? 'legacy');
+      const publicState = applyJieqiMove(
+        createInitialJieqiState('jq_postgame', jieqiPublicDeal(STANDARD_JIEQI_DEAL, [OPENING])),
+        OPENING,
+      );
+      // Serialize the entire transport request: no dealt field or hidden history.
+      expect(JSON.parse(JSON.stringify(request))).toEqual({
+        movesUci: [],
+        initialFen: jieqiStateToPikafishFen(publicState, { public: true }),
+        jieqiRule: adjudicationRule ?? 'legacy',
+        multiPv: 3,
+        effort: 'standard',
+      });
+      root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+      await vi.waitFor(() => expect(evaluate).toHaveBeenCalledTimes(2));
+      expect(evaluate.mock.lastCall![0].jieqiRule).toBe(adjudicationRule ?? 'legacy');
+    },
+  );
 
   it('builds the family-native public postgame API URL', () => {
     expect(jieqiPostgameApiUrl('jq room')).toBe('/api/jieqi/games/jq%20room');
@@ -187,7 +247,10 @@ function postgameFixture() {
   // deal (from history.truth's ply-0 board) and replay it: the standard fixed deal,
   // a deterministic legal opening move, then black resigns. Generating from the
   // kernel keeps the fixture legal.
-  const initial = createInitialJieqiState('jq_postgame', STANDARD_JIEQI_DEAL);
+  const initial = createInitialJieqiState(
+    'jq_postgame',
+    jieqiPublicDeal(STANDARD_JIEQI_DEAL, [OPENING]),
+  );
   const afterMove = applyJieqiMove(initial, OPENING);
   return {
     game: {
@@ -215,8 +278,8 @@ function postgameFixture() {
     ],
     view: getJieqiPlayerView(afterMove, 'red'),
     history: {
-      // Full-identity spoiler stream; the ply-0 board is the deal the adapter
-      // reconstructs from (jieqi's spoiler key is 'truth', not 'revealed').
+      // Public deal: only the opening mover is determined; every other
+      // identity stays unknown when the adapter reconstructs its placeholders.
       truth: [
         { ply: 0, view: jieqiTruthView(initial) },
         { ply: 1, view: jieqiTruthView(afterMove) },

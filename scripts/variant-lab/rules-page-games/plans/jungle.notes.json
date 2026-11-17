@@ -1,0 +1,23 @@
+{
+  "title": "KataGo-AnimalChess vs MistyJungle, read by KataGo",
+  "intro": "KataGo-AnimalChess (Red) against MistyJungle 0.0.6 (Blue), game 0 of their 200-game match on 2026-09-21. KataGo, on the match's own net, read every position again at 1,000 visits for this study. Marks (?!, ?, ??) grade each move against KataGo's choice, and the graph is Red's expected score as KataGo saw it, a draw counting half. For 43 moves neither side gives anything away; then Blue's elephant walks off its post twice in three moves.",
+  "judged": {
+    "44": "Blue's elephant steps off a7. KataGo wanted the rat forward to e5, and Red's score jumps from about even to four in five.",
+    "46": "The elephant steps again, and again KataGo wanted the rat to e5. Red's own elephant now walks up the g-file unopposed, and Red is all but sure to win."
+  },
+  "lines": {
+    "44": "KataGo's choice.",
+    "46": "KataGo's choice."
+  },
+  "comments": {
+    "22": "Blue's tiger jumps the left river sideways, from a6 to d6.",
+    "26": "Blue's lion jumps the right river the same way.",
+    "65": "Red's elephant takes the wolf.",
+    "73": "Red's cat takes the rat.",
+    "75": "Red's lion jumps the river lengthwise.",
+    "79": "Red's rat, standing on land, takes Blue's elephant: the one capture only a rat can make.",
+    "85": "Red's wolf takes Blue's tiger standing in Red's own trap, where the tiger has no rank left.",
+    "87": "Red's elephant takes the cat.",
+    "93": "Red's lion walks into Blue's den, and Red wins."
+  }
+}

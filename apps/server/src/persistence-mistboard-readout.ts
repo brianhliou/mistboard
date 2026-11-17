@@ -1,13 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import type pg from 'pg';
+import { collectStaleBotRatings } from './bot-rating-provenance.js';
+import { refreshCalibrationBotRatings } from './bot-rating-refresh.js';
 import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
+  BOT_TIME_LOSS_ROOM_ID_CAP,
   buildMistboardReadout,
   deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
   isDisruptiveDrain,
+  type MistboardReadoutBotTiming,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
   type MistboardReadoutComparison,
@@ -26,14 +30,20 @@ import {
   SUPPORTED_MISTBOARD_READOUT_SCHEMA_VERSIONS,
 } from './mistboard-readout.js';
 import {
+  botLostOnTime,
+  botSeat,
   COUNTED_USER,
   countedAbortedGame,
   countedHumanGame,
   countedPlayerSeat,
+  liveClockGame,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
+import { collectReadoutMilestones } from './persistence-readout-milestones.js';
+import { getWeeklyGuestSignIns } from './persistence-sessions.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
   listXiangqiBroadcastTourSourcesOn,
@@ -46,6 +56,30 @@ import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 import { findUnservableXiangqiBroadcastBoards } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// Rating provenance is an add-on to the daily readout: a failure there (pins
+// unreadable in the image, a bad row) rolls back only its own writes and the
+// report still commits.
+async function withinSavepoint<T>(
+  client: Pick<pg.PoolClient, 'query'>,
+  name: string,
+  run: () => Promise<T>,
+): Promise<T | null> {
+  await client.query(`SAVEPOINT ${name}`);
+  try {
+    const value = await run();
+    await client.query(`RELEASE SAVEPOINT ${name}`);
+    return value;
+  } catch (error) {
+    await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    console.warn(`[readout] ${name} skipped: ${errorText(error)}`);
+    return null;
+  }
+}
 
 type Queryable = Pick<pg.Pool, 'query'>;
 
@@ -114,6 +148,13 @@ export async function generateMistboardReadout(input: {
 
   if (input.dryRun) {
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
+    if (input.trigger !== 'manual' && facts.engines) {
+      const refresh = await refreshCalibrationBotRatings(db, now, false).catch((error) => {
+        console.warn(`[readout] bot rating refresh preview skipped: ${errorText(error)}`);
+        return null;
+      });
+      if (refresh) facts.engines.heldRatings = refresh.heldRatings;
+    }
     return {
       report: buildMistboardReadout({
         snapshotId: `readout_dry_${randomUUID()}`,
@@ -144,10 +185,27 @@ export async function generateMistboardReadout(input: {
       }
     }
 
+    // Calibration and the report commit atomically under the existing daily lock.
+    // Monday's weekly readout replaces the daily, so it refreshes too.
+    const refresh =
+      input.trigger === 'manual'
+        ? null
+        : await withinSavepoint(client, 'bot_rating_refresh', () =>
+            refreshCalibrationBotRatings(client, now, true),
+          );
+
     // Keep the advisory lock on this transaction while independent read-only
     // collectors use the pool. Parallel query() calls on one PoolClient rely on
     // pg's deprecated implicit queuing and will stop working in pg 9.
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
+    if (refresh && facts.engines) {
+      facts.engines.heldRatings = refresh.heldRatings;
+      // Pool collectors cannot see the snapshots inserted in this transaction yet.
+      facts.engines.staleRatings =
+        (await withinSavepoint(client, 'stale_bot_ratings', () =>
+          collectStaleBotRatings(client),
+        )) ?? facts.engines.staleRatings;
+    }
     const report = buildMistboardReadout({
       snapshotId: `readout_${randomUUID()}`,
       trigger: input.trigger,
@@ -306,7 +364,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend, comparison] = await Promise.all([
+  const [collectors, trend, comparison, milestones] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -316,11 +374,13 @@ export async function collectMistboardReadoutFacts(
       collectFeedback(db),
       collectDeploys(db, now),
       collectLoginEmailDelivery(db, now),
+      collectBotTiming(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
     collectReadoutComparison(db, now).catch(() => null),
+    collectReadoutMilestones(db, now),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -331,6 +391,7 @@ export async function collectMistboardReadoutFacts(
     'feedback',
     'deploys',
     'loginEmailDelivery',
+    'botTiming',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -338,6 +399,7 @@ export async function collectMistboardReadoutFacts(
       : [],
   );
   return {
+    milestones,
     product: settledValue(collectors[0]),
     puzzles: settledValue(collectors[1]),
     mining: settledValue(collectors[2]),
@@ -346,6 +408,7 @@ export async function collectMistboardReadoutFacts(
     feedback: settledValue(collectors[5]),
     deploys: settledValue(collectors[6]),
     loginEmailDelivery: settledValue(collectors[7]),
+    botTiming: settledValue(collectors[8]),
     collectorErrors,
     trend,
     comparison,
@@ -402,7 +465,7 @@ async function collectLoginEmailDelivery(db: Queryable, now: Date) {
 
 async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadoutProduct> {
   const { periodStart, periodEnd, previousPeriodStart } = readoutPeriods(now);
-  const [counts, modes, variants, players] = await Promise.all([
+  const [counts, modes, variants, players, guestSignInConversion] = await Promise.all([
     db.query<{
       accounts_created: number;
       previous_accounts_created: number;
@@ -443,6 +506,7 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
       [periodStart, periodEnd],
     ),
     collectPlayers(db, { periodStart, periodEnd, previousPeriodStart }),
+    getWeeklyGuestSignIns({ now, weeks: 6 }, db),
   ]);
   const row = counts.rows[0];
   return {
@@ -454,6 +518,7 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
     completedGamesByVariant: variants.rows,
     abortedGames: row?.aborted_games ?? 0,
     ...players,
+    guestSignInConversion,
   };
 }
 
@@ -693,9 +758,105 @@ export async function collectDeploys(db: Queryable, now: Date): Promise<Mistboar
   };
 }
 
+// Per-variant bot timing over the report window (#1065). Games are counted PvE
+// games (countedHumanGame, so no bot-vs-bot, imported or stats-excluded rows)
+// with a bot seat. Replies are their live-engine-decision artifacts, written at
+// game end, in games on a live clock: a correspondence reply has days, and its
+// compute would only blur the live percentile. A reply is the wall time the
+// engine took (think_time_ms, every attempt) plus the pacing wait added before
+// the move went out (pace_wait_ms, absent on unpaced variants and on decisions
+// from before #1061). Nearest-rank p95 (percentile_disc), so the figure is a
+// reply that happened.
+export async function collectBotTiming(
+  db: Queryable,
+  now: Date,
+): Promise<MistboardReadoutBotTiming> {
+  const { periodStart, periodEnd } = readoutPeriods(now);
+  const [games, replies] = await Promise.all([
+    db.query<{ variant: string; bot_games: number; time_losses: number; room_ids: string[] }>(
+      `SELECT g.variant,
+              count(*)::int AS bot_games,
+              count(*) FILTER (WHERE ${botLostOnTime('g')})::int AS time_losses,
+              COALESCE(
+                array_agg(g.room_id ORDER BY g.ended_at DESC, g.room_id DESC)
+                  FILTER (WHERE ${botLostOnTime('g')}),
+                '{}'
+              ) AS room_ids
+       FROM games g
+       WHERE ${COUNTED_GAME} AND g.mode = 'pve'
+         AND g.ended_at >= $1 AND g.ended_at < $2
+         AND EXISTS (
+           SELECT 1 FROM game_participants bp
+           WHERE bp.game_id = g.room_id AND ${botSeat('bp')}
+         )
+       GROUP BY g.variant
+       ORDER BY g.variant`,
+      [periodStart, periodEnd],
+    ),
+    db.query<{ variant: string; replies: number; p95_ms: number | null; paced: number }>(
+      `SELECT g.variant,
+              count(*)::int AS replies,
+              round(percentile_disc(0.95) WITHIN GROUP (ORDER BY r.reply_ms))::int AS p95_ms,
+              count(*) FILTER (WHERE r.wait_ms > 0)::int AS paced
+       FROM games g
+       JOIN game_debug_artifacts a
+         ON a.game_id = g.room_id AND a.artifact_type = $3
+       CROSS JOIN LATERAL (
+         SELECT
+           CASE WHEN jsonb_typeof(a.payload->'pace_wait_ms') = 'number'
+             THEN (a.payload->>'pace_wait_ms')::numeric ELSE 0 END AS wait_ms
+       ) w
+       CROSS JOIN LATERAL (
+         SELECT (a.payload->>'think_time_ms')::numeric + w.wait_ms AS reply_ms, w.wait_ms
+       ) r
+       WHERE ${COUNTED_GAME} AND g.mode = 'pve'
+         AND g.ended_at >= $1 AND g.ended_at < $2
+         AND ${liveClockGame('g')}
+         AND jsonb_typeof(a.payload->'think_time_ms') = 'number'
+       GROUP BY g.variant
+       ORDER BY g.variant`,
+      [periodStart, periodEnd, LIVE_ENGINE_DECISION_ARTIFACT_TYPE],
+    ),
+  ]);
+  const byVariant = new Map<string, MistboardReadoutBotTiming['variants'][number]>();
+  const entry = (variant: string) => {
+    let value = byVariant.get(variant);
+    if (!value) {
+      value = {
+        variant,
+        botGames: 0,
+        timeLosses: 0,
+        timeLossRoomIds: [],
+        replies: 0,
+        p95ReplyMs: null,
+        pacedReplies: 0,
+      };
+      byVariant.set(variant, value);
+    }
+    return value;
+  };
+  for (const row of games.rows) {
+    const value = entry(row.variant);
+    value.botGames = row.bot_games;
+    value.timeLosses = row.time_losses;
+    // Keep the newest past the cap, so a new loss is always listed (and so
+    // always reported); the ones cut were reported by earlier readouts.
+    value.timeLossRoomIds = row.room_ids.slice(0, BOT_TIME_LOSS_ROOM_ID_CAP).reverse();
+  }
+  for (const row of replies.rows) {
+    const value = entry(row.variant);
+    value.replies = row.replies;
+    value.p95ReplyMs = row.p95_ms;
+    value.pacedReplies = row.paced;
+  }
+  return {
+    variants: [...byVariant.values()].sort((a, b) => a.variant.localeCompare(b.variant)),
+  };
+}
+
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {
   const { periodStart } = readoutPeriods(now);
-  const [tasks, workers] = await Promise.all([
+  const [tasks, workers, staleRatings] = await Promise.all([
     db.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count
        FROM engine_game_tasks
@@ -716,6 +877,10 @@ async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadou
        FROM engine_worker_runs`,
       [now],
     ),
+    collectStaleBotRatings(db).catch((error) => {
+      console.warn(`[readout] stale bot ratings skipped: ${errorText(error)}`);
+      return [];
+    }),
   ]);
   const taskMap = Object.fromEntries(tasks.rows.map((row) => [row.status, row.count]));
   return {
@@ -723,6 +888,7 @@ async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadou
     failedTasks: taskMap.failed ?? 0,
     activeWorkers: workers.rows[0]?.active_workers ?? 0,
     staleWorkers: workers.rows[0]?.stale_workers ?? 0,
+    staleRatings,
   };
 }
 

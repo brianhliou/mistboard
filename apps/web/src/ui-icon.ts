@@ -10,7 +10,6 @@ import {
   ChessKnight,
   Crown,
   createElement,
-  Globe,
   Handshake,
   Heart,
   type IconNode,
@@ -34,6 +33,7 @@ import {
 } from 'lucide';
 import './ui-icon.css';
 import type { AnnouncementKind } from './announcements.js';
+import { TRANSLATE_ICON_PATH } from './translate-icon.js';
 
 export type UiIconName =
   | 'achievement-first-game'
@@ -94,10 +94,9 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'featured-channel': Crown,
   'find-opponent': Users,
   'forum-topic': MessagesSquare,
-  // Globe, not Lucide's Languages: lichess's 文A mark is a glyph in their own
-  // icon font (licon.Language, U+E06E), so there is nothing to import, and the
-  // nearest Lucide equivalent is six strokes that turn to mush in an 18px row.
-  language: Globe,
+  // Material's filled 文A (translate-icon.ts), not a globe: a globe reads as
+  // region or website. Lucide's outline Languages looked thin beside it.
+  language: [['path', { d: TRANSLATE_ICON_PATH, fill: 'currentColor', stroke: 'none' }]],
   notification: Bell,
   'play-engine': Bot,
   'play-game': Swords,

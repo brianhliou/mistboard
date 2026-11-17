@@ -45,6 +45,7 @@ vi.mock('./showcase-board.js', () => ({
 
 import {
   airWindowFor,
+  homepageTvAdmits,
   type LandingTvMode,
   LIVE_POLL_MAX_FAILURES,
   LIVE_POLL_TIMEOUT_MS,
@@ -89,8 +90,9 @@ async function tick(): Promise<void> {
 
 const modes: Array<{ roomId: string; mode: LandingTvMode }> = [];
 
-function mountController(initialPool: ShowcaseEntry[]) {
+function mountController(initialPool: ShowcaseEntry[], admitSpec?: (specId: string) => boolean) {
   return mountLandingTv(root, initialPool, {
+    ...(admitSpec ? { admitSpec } : {}),
     isConnected: () => true,
     loaderForId: async () => [],
     metadataByRoomId: {},
@@ -305,7 +307,7 @@ test('a guest seat (null name on the live frame) is labelled Guest, matching the
     },
   };
   await tick();
-  expect(namesByRoomId.liveG).toEqual({ first: 'Misty', second: 'Guest' });
+  expect(namesByRoomId.liveG).toEqual({ first: 'Misty Jungle Chess', second: 'Guest' });
   tv.destroy();
 });
 
@@ -579,5 +581,55 @@ test('showing the tab while a poll is in flight does not start a second poll loo
   await tick();
   // One loop: one poll per interval.
   expect(steady).toHaveBeenCalledTimes(2);
+  tv.destroy();
+});
+
+test('the homepage admits launched non-fog variants with their own renderer, and nothing else', () => {
+  expect(homepageTvAdmits('xiangqi')).toBe(true);
+  expect(homepageTvAdmits('jieqi')).toBe(true);
+  expect(homepageTvAdmits('ffq-banqi')).toBe(true);
+  // Fog: Fog Xiangqi has its own renderer and is still refused; Fog Chess and
+  // its persisted 'fog' alias would draw the chessground board.
+  expect(homepageTvAdmits('dark-xiangqi')).toBe(false);
+  expect(homepageTvAdmits('dark-chess')).toBe(false);
+  expect(homepageTvAdmits('fog')).toBe(false);
+  // Unknown ids resolve to the chess fallback and fail closed.
+  expect(homepageTvAdmits('not-a-variant')).toBe(false);
+});
+
+test('the homepage board skips a newer fog game in the pool and freezes on the newest it may show', async () => {
+  const tv = await mountController(
+    [
+      finished('fogGame', 'dark-xiangqi', 60_000, 10 * 60_000, true),
+      finished('chessFog', 'dark-chess', 30_000, 10 * 60_000, true),
+      finished('xqGame', 'xiangqi', 3 * 3_600_000, 20 * 60_000, false),
+    ],
+    homepageTvAdmits,
+  );
+  await flush();
+  expect(mounts.map((mount) => mount.roomId)).toEqual(['xqGame']);
+  expect(mounts[0]!.options.airStartMs).toBeUndefined();
+
+  // A refresh that brings only fog games changes nothing.
+  tv.updateCompletedPool([finished('fogLater', 'dark-xiangqi', 1_000, 60_000, true)]);
+  await flush();
+  expect(mounts.map((mount) => mount.roomId)).toEqual(['xqGame']);
+  tv.destroy();
+});
+
+test('the homepage board never mounts a featured live game it may not show', async () => {
+  featuredResponse = {
+    featured: { ...(liveFeatured('mystery', 2) as object), gameSpecId: 'not-a-variant' },
+  };
+  const tv = await mountController([entryA], homepageTvAdmits);
+  await flush();
+  await tick();
+  expect(mounts.map((mount) => mount.roomId)).toEqual(['gameA']);
+  expect(mounts.some((mount) => mount.options.live)).toBe(false);
+
+  // A live game it may show still takes over.
+  featuredResponse = { featured: liveFeatured('liveXq', 4) };
+  await tick();
+  expect(lastMode()).toEqual({ roomId: 'liveXq', mode: 'live' });
   tv.destroy();
 });

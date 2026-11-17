@@ -19,7 +19,7 @@ import { buildProfileGameRow } from './profile-ui.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { reviewMetaPlayers } from './review/game-review-meta.js';
 import { webVariantTenants } from './variant-tenant/registry.js';
-import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
+import { mergeWatchMetadata, watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 
 // Measured with the real components/CSS and loaded Noto Sans on the local pair,
 // 2026-11-10. Name space (not whole row width):
@@ -28,6 +28,8 @@ import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 //   1440 x 900     >=106.94px (250px card min)  139.66px     197.19px
 // The live grid can shrink to a 250px card between column breakpoints. Its
 // 106.94px at 13.6px is tighter than the phone's finished row at 12.48px.
+// Since 2026-11-12 a /games live name wraps onto a second line rather than
+// cut, so the guard now binds the finished and meta rows; the budget stays.
 // Guard the measured minimum, rounded DOWN. Proportional glyphs mean there is
 // no honest universal character limit: e.g. 12 W's overflow, 12 i's fit.
 const NAME_BUDGET_PX = 106;
@@ -132,7 +134,7 @@ describe('bot seat names fit game cards', () => {
         subjectType: 'engine-version',
         subjectId: 'misty-three-kingdoms-banqi-level-7',
       }),
-    ).toBe('Misty level 7');
+    ).toBe('Misty Level 7');
   });
 
   it('leaves a human literally named MistyThreeKingdomsBanqi alone', () => {
@@ -150,9 +152,9 @@ describe('bot seat names fit game cards', () => {
       'three-kingdoms-banqi',
       'misty-three-kingdoms-banqi-level-7',
       'MistyThreeKingdomsBanqi level 7',
-      'Misty level 7',
+      'Misty Three Kingdoms Banqi Level 7',
     ],
-    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Level 7'],
+    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Banqi Level 7'],
   ])(
     'carries old %s seat names through every finished-game display',
     (variant, subjectId, displayName, expected) => {
@@ -191,10 +193,29 @@ describe('bot seat names fit game cards', () => {
       const cardName = tile.querySelector<HTMLElement>(
         '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
       );
-      expect(cardName?.textContent).toBe(expected);
+      // A finished card drops the game from Misty's name (2026-11-14); the
+      // tooltip and every other surface keep the full name.
+      expect(cardName?.textContent).toBe(expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty'));
       expect(cardName?.title).toBe(expected);
       expect(watchQueueMatchupLabel(game)).toBe(`Ann vs ${expected}`);
-      expect(watchGamePlayers(game)[1]?.name).toBe(expected);
+      // /watch's card and seat rows shorten like finished cards and link Misty's
+      // page, since a Misty engine version is still Misty (2026-11-15).
+      const short = expected.replace(/^Misty .+?(?= Level \d+$)/, 'Misty');
+      const watchSeat = watchGamePlayers(game)[1];
+      expect(watchSeat?.name).toBe(short);
+      expect(watchSeat?.fullName ?? watchSeat?.name).toBe(expected);
+      expect(watchSeat?.profile).toEqual({ kind: 'bot', botId: 'misty' });
+      const watchMeta = createGameMetaCard({ headline: [], players: watchGamePlayers(game) });
+      const watchMetaName = watchMeta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
+      expect(watchMetaName?.textContent).toBe(short);
+      expect(watchMetaName?.title).toBe(expected);
+      expect(watchMetaName?.getAttribute('href')).toBe('/bot/misty');
+      // The "Previously on" tiles are as narrow as a /games card.
+      const tileNames: Record<string, { first: string; second: string }> = {};
+      mergeWatchMetadata({}, tileNames, {
+        unlocked: [game],
+      } as unknown as Parameters<typeof mergeWatchMetadata>[2]);
+      expect(tileNames[game.roomId]).toEqual({ first: 'Ann', second: short });
       const profileName = buildProfileGameRow(game).querySelector<HTMLElement>(
         '.profile-game-opponent-name',
       );
@@ -202,7 +223,7 @@ describe('bot seat names fit game cards', () => {
       expect(profileName?.title).toBe(expected);
       const meta = createGameMetaCard({
         headline: [],
-        players: reviewMetaPlayers(postgamePlayers(participants)),
+        players: reviewMetaPlayers(postgamePlayers(participants), undefined, null, variant),
       });
       const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
       expect(metaName?.textContent).toBe(expected);

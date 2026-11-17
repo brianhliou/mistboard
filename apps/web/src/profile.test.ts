@@ -13,6 +13,294 @@ describe('profile ratings rail', () => {
     document.body.innerHTML = '';
   });
 
+  it('shows public Fanfanqi activity after Banqi with counts and results, never ratings', async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+    const { mountProfile } = await import('./profile.js');
+    const requests: URL[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      requests.push(url);
+      return new Response(
+        JSON.stringify(
+          url.pathname.endsWith('/profile')
+            ? {
+                profile: {
+                  user: {
+                    handle: 'alice',
+                    displayName: 'Alice',
+                    accountRole: 'player',
+                    profileVisibility: 'public',
+                    createdAt: '2026-01-01T00:00:00Z',
+                  },
+                  ratings: [],
+                  activity: [
+                    { variant: 'ffq-banqi', totalGamesPlayed: 23, wins: 12, draws: 3, losses: 8 },
+                  ],
+                  games: [],
+                  gamesTotal: 23,
+                },
+              }
+            : { games: [], total: 23, players: [] },
+        ),
+      );
+    });
+    const root = document.createElement('main');
+    await mountProfile(root, 'alice');
+    const row = root.querySelector<HTMLButtonElement>(
+      '.profile-rating-row[data-variant="ffq-banqi"]',
+    );
+    expect(row).not.toBeNull();
+    expect(row?.previousElementSibling?.getAttribute('data-variant')).toBe('banqi');
+    expect(row?.textContent).toContain('Fanfanqi');
+    expect(row?.textContent).toContain('23 games');
+    expect(row?.classList.contains('profile-rating-row-empty')).toBe(false);
+    expect(
+      row?.querySelector('.profile-rating-value, .profile-rating-pace, .champion-crown'),
+    ).toBeNull();
+    row?.click();
+    await vi.waitFor(() =>
+      expect(
+        requests.some(
+          (url) =>
+            url.pathname.endsWith('/games') && url.searchParams.get('variant') === 'ffq-banqi',
+        ),
+      ).toBe(true),
+    );
+    const spotlight = root.querySelector('.profile-rating-spotlight');
+    expect(spotlight?.textContent).toContain('12 wins');
+    expect(spotlight?.textContent).toContain('3 draws');
+    expect(spotlight?.textContent).toContain('8 losses');
+    expect(spotlight?.querySelector('.profile-rating-chart, .profile-chart-ranges')).toBeNull();
+    expect(
+      requests.some(
+        (url) =>
+          url.pathname.endsWith('/rating-history') &&
+          url.searchParams.get('variant') === 'ffq-banqi',
+      ),
+    ).toBe(false);
+    root.querySelector<HTMLButtonElement>('[data-result="win"]')?.click();
+    await vi.waitFor(() =>
+      expect(
+        requests.some(
+          (url) =>
+            url.pathname.endsWith('/games') &&
+            url.searchParams.get('variant') === 'ffq-banqi' &&
+            url.searchParams.get('result') === 'win',
+        ),
+      ).toBe(true),
+    );
+    const { leaderboardVariants } = await import('./variants.js');
+    expect(leaderboardVariants.some((variant) => variant.gameSpecId === 'ffq-banqi')).toBe(false);
+    const { RATING_VARIANT_LABEL_KEY } = await import('./champion-crowns.js');
+    expect(Object.keys(RATING_VARIANT_LABEL_KEY)).not.toContain('ffq_banqi');
+  });
+
+  it('omits the Fanfanqi row when its spec is hidden, even with activity in the payload', async () => {
+    vi.resetModules();
+    const { gameSpecForId } = await import('@mistboard/game');
+    const spec = gameSpecForId('ffq-banqi');
+    const surface = spec.publicSurface;
+    try {
+      spec.publicSurface = 'hidden';
+      vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+      const { buildProfileRatings } = await import('./profile.js');
+      const section = buildProfileRatings([], 'en', {
+        activity: [{ variant: 'ffq-banqi', totalGamesPlayed: 23, wins: 12, draws: 3, losses: 8 }],
+      });
+      expect(section.querySelector('[data-variant="ffq-banqi"]')).toBeNull();
+    } finally {
+      spec.publicSurface = surface;
+    }
+  });
+
+  it.each([
+    ['en', ['Xiangqi blitz champion', 'Flip Jungle correspondence champion']],
+    ['zh-Hans', ['象棋闪电冠军', '翻翻兽棋通信对局冠军']],
+    ['zh-Hant', ['象棋閃電冠軍', '翻翻獸棋通信對局冠軍']],
+  ] as const)('shows labelled profile champion ladders in %s', async (locale, labels) => {
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    await ensureLocaleCatalog(locale);
+    const { buildProfileOverview } = await import('./profile.js');
+    const profile: Parameters<typeof buildProfileOverview>[0] = {
+      user: {
+        handle: 'alice',
+        displayName: 'Alice',
+        accountRole: 'player',
+        profileVisibility: 'public',
+        createdAt: '2026-01-01T00:00:00Z',
+        champions: [
+          { variant: 'xiangqi', timeClass: 'blitz' },
+          { variant: 'jungle_flip', timeClass: 'correspondence' },
+        ],
+      },
+      ratings: [],
+      games: [],
+      gamesTotal: 0,
+    };
+    const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+    const items = [...overview.querySelectorAll('.profile-championship')];
+    expect(items.map((item) => item.textContent)).toEqual(labels);
+    expect(items.map((item) => item.querySelector('img')?.getAttribute('alt'))).toEqual(labels);
+    for (const champions of [undefined, []]) {
+      profile.user.champions = champions;
+      const empty = buildProfileOverview(profile, document.createElement('div'), locale);
+      expect(empty.querySelector('.profile-championships')).toBeNull();
+      expect(empty.textContent).not.toContain('vacant');
+    }
+  });
+
+  it('shows one champion crown beside an online player who holds titles', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      return new Response(
+        JSON.stringify(
+          url.pathname === '/api/players/online'
+            ? {
+                players: [
+                  {
+                    handle: 'alice',
+                    displayName: 'Alice',
+                    rating: null,
+                    champions: [
+                      { variant: 'xiangqi', timeClass: 'blitz' },
+                      { variant: 'banqi', timeClass: 'rapid' },
+                    ],
+                  },
+                  { handle: 'bob', displayName: 'Bob', rating: null, champions: [] },
+                  { handle: 'cara', displayName: 'Cara', rating: null },
+                ],
+                count: 3,
+              }
+            : { ladders: [] },
+        ),
+      );
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    const links = [...root.querySelectorAll('.leaderboard-online-list a')];
+    expect(links).toHaveLength(3);
+    const crowns = [...links[0]!.querySelectorAll<HTMLImageElement>('.champion-crown')];
+    expect(crowns.map((icon) => icon.alt)).toEqual([
+      'Xiangqi blitz champion, Banqi rapid champion',
+    ]);
+    expect(crowns[0]!.width).toBe(16);
+    expect(links[1]!.querySelector('.champion-crowns')).toBeNull();
+    expect(links[2]!.querySelector('.champion-crowns')).toBeNull();
+  });
+
+  it('carries multiple champion crowns from leaderboard summaries into variant rows', async () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      return new Response(
+        JSON.stringify(
+          url.pathname === '/api/leaderboard/summary'
+            ? {
+                ladders: [
+                  {
+                    variant: 'xiangqi',
+                    leaderboard: [
+                      {
+                        rank: 1,
+                        handle: 'alice',
+                        displayName: 'Alice',
+                        eloRating: 2000,
+                        provisional: false,
+                        champions: [
+                          { variant: 'xiangqi', timeClass: 'blitz' },
+                          { variant: 'banqi', timeClass: 'rapid' },
+                        ],
+                      },
+                      {
+                        rank: 2,
+                        handle: 'bob',
+                        displayName: 'Bob',
+                        eloRating: 1900,
+                        provisional: false,
+                        champions: [],
+                      },
+                      {
+                        rank: 3,
+                        handle: 'guest',
+                        displayName: 'Guest',
+                        eloRating: 1800,
+                        provisional: false,
+                      },
+                    ],
+                  },
+                ],
+              }
+            : { players: [] },
+        ),
+      );
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    const rows = [
+      ...root.querySelectorAll(
+        '.leaderboard-pace-section[data-time-class="blitz"] .leaderboard-table tr',
+      ),
+    ];
+    expect(rows).toHaveLength(3);
+    const crowns = [...rows[0]!.querySelectorAll<HTMLImageElement>('.champion-crown')];
+    expect(crowns.map((icon) => icon.alt)).toEqual([
+      'Xiangqi blitz champion, Banqi rapid champion',
+    ]);
+    expect(crowns.map((icon) => icon.width)).toEqual([16]);
+    expect(crowns.map((icon) => icon.title)).toEqual(
+      crowns.map((icon) => icon.getAttribute('aria-label')),
+    );
+    expect(rows[1]!.querySelector('.champion-crowns')).toBeNull();
+    expect(rows[2]!.querySelector('.champion-crowns')).toBeNull();
+  });
+
+  it('shows the correspondence ladders when the rated switch lands during the first fetches', async () => {
+    const { setRatedModeEnabled } = await import('./rated-flag.js');
+    const requested: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/leaderboard/summary') {
+        const timeClass = url.searchParams.get('timeClass') ?? '';
+        requested.push(timeClass);
+        // /api/server-status answers while the first ladders are in flight.
+        if (requested.length === 1) setRatedModeEnabled(true, true);
+        return new Response(
+          JSON.stringify({
+            ladders: [
+              {
+                variant: 'xiangqi',
+                leaderboard: [
+                  {
+                    rank: 1,
+                    handle: `top-${timeClass}`,
+                    displayName: `Top ${timeClass}`,
+                    eloRating: 1720,
+                    provisional: true,
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+      }
+      return new Response(JSON.stringify({ players: [] }));
+    });
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector('.leaderboard-pace-section[data-time-class="correspondence"]'),
+      ).not.toBeNull(),
+    );
+    expect(requested).toContain('correspondence');
+    expect(root.textContent).toContain('Top correspondence');
+  });
+
   it.each([
     ['/player', '/'],
     ['/zh-hans', '/zh-hans/'],
@@ -288,9 +576,9 @@ describe('profile ratings rail', () => {
 
     expect(section.textContent).toContain('Fog Chess');
     // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) +
-    // Xiangqi Mahjong (launched 2026-10-25) + Gomoku = 7 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // Xiangqi Mahjong (launched 2026-10-25) + Gomoku + Fanfanqi activity = 8 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
     // kept but no profile lists them.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(7);
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(8);
     expect(section.textContent).toContain('Xiangqi Mahjong');
     expect(section.textContent).toContain('Gomoku');
     expect(section.textContent).not.toContain('Fortress Xiangqi');
@@ -718,9 +1006,15 @@ describe('profile ratings rail', () => {
     // Canonical ordering: the rail reads in the shared registry order (xiangqi
     // first) regardless of activity; played rows stand out by not dimming.
     const railRows = [...root.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    const { profileRatingVariants } = await import('./variants.js');
+    const { profileRatingVariants, profileActivityVariants } = await import('./variants.js');
+    const { canonicalVariantOrderIndex } = await import('@mistboard/game');
     expect(railRows.map((row) => row.dataset.variant)).toEqual(
-      profileRatingVariants.map((variant) => variant.id),
+      [...profileRatingVariants, ...profileActivityVariants]
+        .sort(
+          (a, b) =>
+            canonicalVariantOrderIndex(a.gameSpecId) - canonicalVariantOrderIndex(b.gameSpecId),
+        )
+        .map((variant) => variant.id),
     );
     const flipRow = railRows.find((row) => row.dataset.variant === 'jungle_flip');
     expect(flipRow?.classList.contains('profile-rating-row-empty')).toBe(false);
@@ -797,9 +1091,15 @@ describe('profile ratings rail', () => {
     const rows = [...section.querySelectorAll<HTMLElement>('.profile-rating-row')];
     // Canonical registry order throughout (crazyhouse before fog), with played
     // rows undimmed and every never-played row dimmed.
-    const { profileRatingVariants } = await import('./variants.js');
+    const { profileRatingVariants, profileActivityVariants } = await import('./variants.js');
+    const { canonicalVariantOrderIndex } = await import('@mistboard/game');
     expect(rows.map((row) => row.dataset.variant)).toEqual(
-      profileRatingVariants.map((variant) => variant.id),
+      [...profileRatingVariants, ...profileActivityVariants]
+        .sort(
+          (a, b) =>
+            canonicalVariantOrderIndex(a.gameSpecId) - canonicalVariantOrderIndex(b.gameSpecId),
+        )
+        .map((variant) => variant.id),
     );
     const played = new Set(['fog', 'crazyhouse_xiangqi']);
     for (const row of rows) {

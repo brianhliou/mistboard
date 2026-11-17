@@ -7,6 +7,7 @@
 // The credit link goes to the variant's analysis board rather than to a study
 // page, because there is none; the reader can open the same line there.
 import { createInitialJungleState, jungleStateToEngineFen } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
 import type { StudyChapterPayload } from '../study-chapter-spec.js';
 import type { EmbedLineRoute, EmbedLineSpec } from './embed-route.js';
 import { mountChapterEmbed } from './embed-study-page.js';
@@ -71,6 +72,15 @@ export async function mountEmbedLine(
     lineToChapter(route, line),
     {
       ...options,
+      ...(options.hideSolution
+        ? {
+            solutionHiddenLabels: {
+              header: line.event ?? t('replay.whatWouldYouPlay'),
+              credit: 'mistboard.com',
+              prompt: t('replay.whatWouldYouPlay'),
+            },
+          }
+        : {}),
       openingMoveArrow: line.arrows === true || Boolean(line.arrow),
       openingArrowMove: line.arrow ?? undefined,
     },

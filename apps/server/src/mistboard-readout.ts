@@ -1,7 +1,20 @@
 import { createHash } from 'node:crypto';
+import {
+  type StaleBotRating,
+  staleBotRatingKey,
+  staleBotRatingLabel,
+} from './bot-rating-provenance.js';
+import { type HeldBotRating, heldBotRatingKey } from './bot-rating-refresh.js';
 import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
+import type { GuestSignInWeek } from './persistence-sessions.js';
+import {
+  type MilestoneTotals,
+  milestoneActions,
+  milestoneTotalsSeen,
+  type ReadoutMilestones,
+} from './readout-milestones.js';
 
 export const MISTBOARD_READOUT_SCHEMA_VERSION = 2 as const;
 // v1 snapshots are still the comparison baseline the day after a deploy, so
@@ -39,6 +52,7 @@ export type MistboardReadoutAction = {
 };
 
 export type MistboardReadoutProduct = {
+  guestSignInConversion?: GuestSignInWeek[];
   accountsCreated: number;
   previousAccountsCreated: number;
   completedGames: number;
@@ -107,6 +121,9 @@ export type MistboardReadoutEngines = {
   failedTasks: number;
   staleWorkers: number;
   activeWorkers: number;
+  // Absent on old reports. Each row is the latest published variant/time-class snapshot.
+  staleRatings?: StaleBotRating[];
+  heldRatings?: HeldBotRating[];
 };
 
 // Whether every stored broadcast board would answer the board API. Ingestion
@@ -175,6 +192,38 @@ export type MistboardReadoutDeploys = {
   disruptive: MistboardReadoutDeployDrain[];
 };
 
+// Bot reply timing per variant over the report window (#1061, #1065): counted
+// PvE games only, so bot-vs-bot, imported and stats-excluded games stay out.
+// A bot losing on time is expected never to happen once replies are paced, so
+// any loss is an action item; the p95 reply is compute plus the pacing wait
+// (`think_time_ms + pace_wait_ms` on each live-engine-decision artifact), over
+// replies in games on a live clock. Optional so older snapshots still parse.
+export type MistboardReadoutBotTimingVariant = {
+  variant: string;
+  // Counted PvE games with an engine seat that ended in the window.
+  botGames: number;
+  // Of those, games a bot seat ended by running out of time.
+  timeLosses: number;
+  // Their room ids, oldest first: the newest BOT_TIME_LOSS_ROOM_ID_CAP of
+  // them, so a new loss is never the one cut. They are the identity the action
+  // rule dedupes on.
+  timeLossRoomIds: string[];
+  // Recorded bot replies (one live-engine-decision artifact each). Decisions
+  // are written at game end, so this covers finished games only.
+  replies: number;
+  // Nearest-rank 95th percentile of compute plus wait, in ms; null without
+  // replies.
+  p95ReplyMs: number | null;
+  // Replies the pacing held back for any time (pace_wait_ms > 0).
+  pacedReplies: number;
+};
+
+export type MistboardReadoutBotTiming = {
+  variants: MistboardReadoutBotTimingVariant[];
+};
+
+export const BOT_TIME_LOSS_ROOM_ID_CAP = 20;
+
 export const DEPLOY_HELD_CREATES_MS = 5 * 60 * 1000;
 // Brian's own bound: past this a deploy is the disruption he asked about.
 const DEPLOY_HELD_CREATES_ACTION_MS = 10 * 60 * 1000;
@@ -223,7 +272,8 @@ export type MistboardReadoutCollectorError = {
     | 'broadcasts'
     | 'feedback'
     | 'deploys'
-    | 'loginEmailDelivery';
+    | 'loginEmailDelivery'
+    | 'botTiming';
   code: 'collector_failed';
 };
 
@@ -271,9 +321,16 @@ export type MistboardReadoutV1 = {
   feedback?: MistboardReadoutFeedback | null;
   deploys?: MistboardReadoutDeploys | null;
   loginEmailDelivery?: MistboardReadoutLoginEmailDelivery | null;
+  botTiming?: MistboardReadoutBotTiming | null;
   // Last successful complaint observation, carried across failed collectors.
   // Absent on older snapshots; never turn missing delivery facts into zeros.
   loginEmailComplaintsSeen?: number;
+  // Preserve the edge baseline when the engine collector temporarily fails.
+  staleBotRatingsSeen?: string[];
+  heldBotRatingsSeen?: string[];
+  milestones?: ReadoutMilestones;
+  milestoneTotalsSeen?: MilestoneTotals;
+  milestoneHeadsUpsSeen?: string[];
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -286,6 +343,7 @@ export type MistboardReadoutV1 = {
 };
 
 export type MistboardReadoutFacts = {
+  milestones?: ReadoutMilestones;
   content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
@@ -295,6 +353,7 @@ export type MistboardReadoutFacts = {
   feedback?: MistboardReadoutFeedback | null;
   deploys?: MistboardReadoutDeploys | null;
   loginEmailDelivery?: MistboardReadoutLoginEmailDelivery | null;
+  botTiming?: MistboardReadoutBotTiming | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
   comparison?: MistboardReadoutComparison | null;
@@ -338,9 +397,15 @@ export function buildMistboardReadout(input: {
   const collectorErrors = [...(input.facts.collectorErrors ?? [])].sort((a, b) =>
     a.section.localeCompare(b.section),
   );
-  const actions = buildActions(input.facts, input.previousReport ?? null, input.runtime).sort(
-    (a, b) => a.dedupeKey.localeCompare(b.dedupeKey),
-  );
+  const actions = [
+    ...buildActions(input.facts, input.previousReport ?? null, input.runtime),
+    ...milestoneActions(
+      input.facts.milestones,
+      input.previousReport?.milestoneTotalsSeen,
+      input.previousReport?.milestoneHeadsUpsSeen ?? [],
+      input.now,
+    ),
+  ].sort((a, b) => a.dedupeKey.localeCompare(b.dedupeKey));
   const verdict = readoutVerdict(actions, collectorErrors, input.runtime);
   const reportWithoutFingerprint = {
     kind: 'mistboard-readout' as const,
@@ -354,15 +419,37 @@ export function buildMistboardReadout(input: {
     trigger: input.trigger,
     verdict,
     production: input.runtime,
+    milestones: input.facts.milestones,
+    milestoneTotalsSeen: milestoneTotalsSeen(
+      input.facts.milestones,
+      input.previousReport?.milestoneTotalsSeen,
+    ),
+    milestoneHeadsUpsSeen: [
+      ...new Set([
+        ...(input.previousReport?.milestoneHeadsUpsSeen ?? []),
+        ...actions.filter((a) => a.code === 'site-milestone-near').map((a) => a.dedupeKey),
+      ]),
+    ].sort(),
     content: input.facts.content,
     product: input.facts.product,
     puzzles: input.facts.puzzles,
     mining: input.facts.mining,
     engines: input.facts.engines,
+    staleBotRatingsSeen:
+      input.facts.engines?.staleRatings?.map(staleBotRatingKey) ??
+      input.previousReport?.staleBotRatingsSeen ??
+      input.previousReport?.engines?.staleRatings?.map(staleBotRatingKey) ??
+      [],
+    heldBotRatingsSeen:
+      input.facts.engines?.heldRatings?.map(heldBotRatingKey) ??
+      input.previousReport?.heldBotRatingsSeen ??
+      input.previousReport?.engines?.heldRatings?.map(heldBotRatingKey) ??
+      [],
     broadcasts: input.facts.broadcasts ?? null,
     feedback: input.facts.feedback ?? null,
     deploys: input.facts.deploys ?? null,
     loginEmailDelivery: input.facts.loginEmailDelivery ?? null,
+    botTiming: input.facts.botTiming ?? null,
     loginEmailComplaintsSeen:
       input.facts.loginEmailDelivery?.complaintsReceived ??
       input.previousReport?.loginEmailComplaintsSeen ??
@@ -391,6 +478,9 @@ function buildActions(
     ...feedbackActions(facts.feedback ?? null, previousReport),
     ...deployDisruptionActions(facts.deploys ?? null, previousReport),
     ...loginEmailDeliveryActions(facts.loginEmailDelivery ?? null, previousReport),
+    ...botTimeLossActions(facts.botTiming ?? null, previousReport),
+    ...staleBotRatingActions(facts.engines?.staleRatings, previousReport),
+    ...heldBotRatingActions(facts.engines?.heldRatings, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -699,6 +789,51 @@ function missingEngineKey(engine: MistboardReadoutMissingEngine): string {
   return `${engine.variant}:${engine.binary}`;
 }
 
+function heldBotRatingLabel(rating: HeldBotRating): string {
+  return `${rating.botId} (${rating.gameSpecId}, ${rating.timeClass}): calibration rating held (${rating.previousRating} → ${rating.estimatedRating} Elo, more than 200 Elo on the same build)`;
+}
+
+function heldBotRatingActions(
+  held: HeldBotRating[] | undefined,
+  previous: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const before = new Set(
+    previous?.heldBotRatingsSeen ?? previous?.engines?.heldRatings?.map(heldBotRatingKey) ?? [],
+  );
+  const fresh = (held ?? []).filter((rating) => !before.has(heldBotRatingKey(rating)));
+  return fresh.length === 0
+    ? []
+    : [
+        {
+          code: 'bot-ratings-calibration-held',
+          severity: 'action',
+          ownerIssue: null,
+          dedupeKey: `bot-ratings-calibration-held:${fresh.map(heldBotRatingKey).sort().join(',')}`,
+          text: `${fresh.map(heldBotRatingLabel).join('; ')}. Review the calibration games before importing a replacement; the published rating is unchanged.`,
+        },
+      ];
+}
+
+function staleBotRatingActions(
+  stale: StaleBotRating[] | undefined,
+  previous: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const before = new Set(
+    previous?.staleBotRatingsSeen ?? previous?.engines?.staleRatings?.map(staleBotRatingKey) ?? [],
+  );
+  const fresh = (stale ?? []).filter((rating) => !before.has(staleBotRatingKey(rating)));
+  if (fresh.length === 0) return [];
+  return [
+    {
+      code: 'bot-ratings-stale',
+      severity: 'action',
+      dedupeKey: `bot-ratings-stale:${fresh.map(staleBotRatingKey).sort().join(',')}`,
+      ownerIssue: null,
+      text: `${fresh.map(staleBotRatingLabel).join('; ')}. Queue rated ladders for the affected variants, review the results, then import.`,
+    },
+  ];
+}
+
 function renderMissingEngine(engine: MistboardReadoutMissingEngine): string {
   return `${engine.binary} (${engine.variant})`;
 }
@@ -822,6 +957,46 @@ function deployDisruptionActions(
   ];
 }
 
+// A bot loss on time is an event with its own game, so the edge is the room id:
+// a loss is reported by the first readout whose window holds it and never again,
+// however long it stays in the rolling window, and a new loss on a day an old
+// one ages out still reports (a flat count would hide it). With no previous
+// readout, one from before this section existed, or one whose botTiming
+// collector failed (so it listed nothing), every loss in the window is new, as
+// with deploy drains: a loss expected never to happen is worse missed than
+// told twice.
+function botTimeLossActions(
+  botTiming: MistboardReadoutBotTiming | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!botTiming) return [];
+  const reported = new Set(
+    (previousReport?.botTiming?.variants ?? []).flatMap((entry) =>
+      entry.timeLossRoomIds.map((roomId) => `${entry.variant}:${roomId}`),
+    ),
+  );
+  return botTiming.variants.flatMap((entry) => {
+    const fresh = entry.timeLossRoomIds.filter(
+      (roomId) => !reported.has(`${entry.variant}:${roomId}`),
+    );
+    if (fresh.length === 0) return [];
+    const plural = fresh.length === 1 ? '' : 's';
+    return [
+      {
+        code: 'bot-time-losses',
+        severity: 'action' as const,
+        dedupeKey: `bot-time-losses:${entry.variant}:${fresh.join(',')}`,
+        ownerIssue: 1061,
+        text:
+          `${entry.variant}: the bot lost ${fresh.length} new game${plural} on time ` +
+          `(${entry.timeLosses} in the last 7 days, expected 0): ${fresh.slice(0, 3).join(', ')}` +
+          `${fresh.length > 3 ? ', ...' : ''}. ` +
+          "Read those games' live-engine-decision artifacts for the reply that ran out the clock.",
+      },
+    ];
+  });
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -867,6 +1042,12 @@ const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
   'deploy-held-creates',
   'puzzle-outlier-set-changed',
   'login-email-complaint-new',
+  // Each bot loss on time is its own game; the key names the rooms.
+  'bot-time-losses',
+  'bot-ratings-stale',
+  'bot-ratings-calibration-held',
+  'site-milestone-crossed',
+  'site-milestone-near',
 ]);
 
 function alertKey(
@@ -901,6 +1082,7 @@ function decisionFingerprint(
     verdict: report.verdict,
     production: report.production,
     product: report.product,
+    milestones: report.milestones,
     puzzles: report.puzzles
       ? {
           checkpoint: report.puzzles.checkpoint,
@@ -913,6 +1095,7 @@ function decisionFingerprint(
     mining: report.mining,
     engines: report.engines,
     loginEmailDelivery: report.loginEmailDelivery,
+    botTiming: report.botTiming,
     actions: report.actions,
     collectorErrors: report.collectorErrors,
   };
@@ -973,6 +1156,19 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
         `- Busiest player: ${product.topPlayerGames} of the ${product.completedGames} completed games (${Math.round((product.topPlayerGames / product.completedGames) * 100)}%)`,
       );
     }
+    if (product.guestSignInConversion) {
+      lines.push(
+        '- Guest sign-in after playing a person (UTC game-finish week; distinct browsers; sign-in within 7 days):',
+      );
+      for (const week of product.guestSignInConversion) {
+        lines.push(
+          `  - ${week.weekStart}: ${week.signedInWithin7d}/${week.guests}${week.complete ? '' : ' (window still open)'}`,
+        );
+      }
+      lines.push(
+        '- Browser links are recorded from deployment; earlier sign-ins cannot be backfilled.',
+      );
+    }
     lines.push(
       `- New accounts: ${product.accountsCreated} (${signedDelta(product.accountsCreated - product.previousAccountsCreated)} week over week)`,
       '- Counts games that reached the database, which happens at game end. Games started, including the ones nobody finished, are a client metric and live in PostHog.',
@@ -1029,6 +1225,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
       `- Engines: ${report.engines.activeWorkers} active workers, ${report.engines.failedTasks} failed tasks, ${report.engines.staleWorkers} stale workers`,
     );
   }
+  for (const rating of report.engines?.staleRatings ?? []) {
+    lines.push(`- ${staleBotRatingLabel(rating)}.`);
+  }
+  for (const rating of report.engines?.heldRatings ?? []) {
+    lines.push(`- ${heldBotRatingLabel(rating)}.`);
+  }
   // Optional on the type because older snapshots predate the section; the
   // renderer meets those on /readouts.
   if (report.broadcasts) {
@@ -1048,6 +1250,11 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
         `${report.deploys.disruptive.length} held new games over ${DEPLOY_HELD_CREATES_MS / 60_000} min or refused a create`,
     );
   }
+  if (report.botTiming) {
+    lines.push(renderBotTiming(report.botTiming));
+  } else if (report.botTiming === null) {
+    lines.push('- Bot timing unavailable.');
+  }
   if (report.collectorErrors.length > 0) {
     lines.push(
       `- Unknown sections: ${report.collectorErrors.map((error) => error.section).join(', ')}`,
@@ -1061,6 +1268,24 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   );
   lines.push('', `<!-- mistboard-readout-snapshot:${report.snapshotId} -->`, '');
   return lines.join('\n');
+}
+
+// One line for every variant, busiest first. A snapshot from before the section
+// has no botTiming key and prints nothing here.
+export function renderBotTiming(botTiming: MistboardReadoutBotTiming): string {
+  if (botTiming.variants.length === 0) {
+    return '- Bot timing, last 7 days: no counted PvE games with a bot seat.';
+  }
+  const parts = [...botTiming.variants]
+    .sort((a, b) => b.botGames - a.botGames || a.variant.localeCompare(b.variant))
+    .map(
+      (entry) =>
+        `${entry.variant} ${entry.botGames} game${entry.botGames === 1 ? '' : 's'}, ` +
+        `${entry.timeLosses} lost on time, p95 reply ` +
+        (entry.p95ReplyMs === null ? 'n/a' : `${(entry.p95ReplyMs / 1000).toFixed(1)} s`) +
+        ` over ${entry.replies} repl${entry.replies === 1 ? 'y' : 'ies'}`,
+    );
+  return `- Bot timing, last 7 days (compute plus pacing wait): ${parts.join('; ')}`;
 }
 
 function signedDelta(value: number): string {

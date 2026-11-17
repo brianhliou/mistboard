@@ -1,0 +1,592 @@
+{
+  "KslJf": {
+    "id": "xq-mined-hxq_701089eb322fde82c23d791e-37",
+    "variant": "xiangqi",
+    "title": "Black mate in 3",
+    "goal": {
+      "type": "checkmate",
+      "winner": "black"
+    },
+    "themes": ["checkmate", "matein3", "crushing", "middlegame"],
+    "initial": {
+      "id": "xq-mined-hxq_701089eb322fde82c23d791e-37",
+      "board": {
+        "a1": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "b1": {
+          "role": "horse",
+          "color": "red"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e2": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e3": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e8": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "e9": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "h7": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "i2": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "b10": {
+          "role": "horse",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f10": {
+          "role": "general",
+          "color": "black"
+        },
+        "g10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "h10": {
+          "role": "horse",
+          "color": "black"
+        },
+        "i10": {
+          "role": "horse",
+          "color": "red"
+        }
+      },
+      "status": {
+        "turn": "black",
+        "type": "playing"
+      },
+      "lastMove": {
+        "to": "e2",
+        "from": "f1"
+      },
+      "moveNumber": 19,
+      "progressClock": 0,
+      "positionCounts": {
+        "black|a1rc,a4rs,a6bs,b1rh,b10bh,c1re,c10be,c4rs,c6bs,d1ra,d10ba,e1rg,e2ra,e3rc,e8bc,e9ba,f10bg,g1re,g10be,h10bh,h7bc,i10rh,i2rc,i4rs,i7bs": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "f7",
+        "from": "h7"
+      },
+      {
+        "to": "f2",
+        "from": "i2"
+      },
+      {
+        "to": "f2",
+        "from": "f7"
+      },
+      {
+        "to": "c3",
+        "from": "b1"
+      },
+      {
+        "to": "f1",
+        "from": "f2"
+      }
+    ]
+  },
+  "MHTdb": {
+    "id": "xq-mined-hxq_7d9088fec5f542467a5dc000-63",
+    "variant": "xiangqi",
+    "title": "Black winning advantage",
+    "goal": {
+      "type": "winning-advantage",
+      "winner": "black",
+      "centipawns": 516
+    },
+    "themes": ["winning", "winning-material", "crushing", "middlegame"],
+    "initial": {
+      "id": "xq-mined-hxq_7d9088fec5f542467a5dc000-63",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e3": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e5": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "e8": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "h9": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g10": {
+          "role": "chariot",
+          "color": "red"
+        }
+      },
+      "status": {
+        "turn": "black",
+        "type": "playing"
+      },
+      "lastMove": {
+        "to": "h9",
+        "from": "f9"
+      },
+      "moveNumber": 32,
+      "progressClock": 0,
+      "positionCounts": {
+        "black|a4rs,a7bs,c1re,c6bs,d1ra,e1rg,e10bg,e3rc,e5bc,e8bc,f1ra,f10ba,g1re,g10rc,h9rc,i4rs,i7bs": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "e3",
+        "from": "e5"
+      },
+      {
+        "to": "e2",
+        "from": "d1"
+      },
+      {
+        "to": "g3",
+        "from": "e3"
+      },
+      {
+        "to": "e3",
+        "from": "g1"
+      },
+      {
+        "to": "g10",
+        "from": "g3"
+      }
+    ]
+  },
+  "48gHj": {
+    "id": "xq-mined-hxq_1f2c71d5aaebf582a966b33f-46",
+    "variant": "xiangqi",
+    "title": "Red winning advantage",
+    "goal": {
+      "type": "winning-advantage",
+      "winner": "red",
+      "centipawns": 1167
+    },
+    "themes": ["winning", "middlegame"],
+    "initial": {
+      "id": "xq-mined-hxq_1f2c71d5aaebf582a966b33f-46",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "d5": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "d9": {
+          "role": "general",
+          "color": "black"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e3": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "e4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "e6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "e9": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "f9": {
+          "role": "horse",
+          "color": "red"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g5": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "g7": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "h9": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "b10": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "f10": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "g10": {
+          "role": "elephant",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveLog": [
+        {
+          "to": "c3",
+          "from": "b1"
+        },
+        {
+          "to": "e8",
+          "from": "b8"
+        },
+        {
+          "to": "g5",
+          "from": "g4"
+        },
+        {
+          "to": "c6",
+          "from": "c7"
+        },
+        {
+          "to": "e3",
+          "from": "c1"
+        },
+        {
+          "to": "c8",
+          "from": "b10"
+        },
+        {
+          "to": "e2",
+          "from": "d1"
+        },
+        {
+          "to": "b10",
+          "from": "a10"
+        },
+        {
+          "to": "b1",
+          "from": "a1"
+        },
+        {
+          "to": "b4",
+          "from": "b10"
+        },
+        {
+          "to": "h4",
+          "from": "h3"
+        },
+        {
+          "to": "d6",
+          "from": "c8"
+        },
+        {
+          "to": "g3",
+          "from": "h1"
+        },
+        {
+          "to": "b8",
+          "from": "e8"
+        },
+        {
+          "to": "b8",
+          "from": "b3"
+        },
+        {
+          "to": "b1",
+          "from": "b4"
+        },
+        {
+          "to": "b1",
+          "from": "c3"
+        },
+        {
+          "to": "c4",
+          "from": "d6"
+        },
+        {
+          "to": "f5",
+          "from": "g3"
+        },
+        {
+          "to": "e6",
+          "from": "e7"
+        },
+        {
+          "to": "c4",
+          "from": "h4"
+        },
+        {
+          "to": "h5",
+          "from": "h8"
+        },
+        {
+          "to": "g7",
+          "from": "f5"
+        },
+        {
+          "to": "i8",
+          "from": "i10"
+        },
+        {
+          "to": "c10",
+          "from": "c4"
+        },
+        {
+          "to": "e9",
+          "from": "d10"
+        },
+        {
+          "to": "b7",
+          "from": "b8"
+        },
+        {
+          "to": "b8",
+          "from": "i8"
+        },
+        {
+          "to": "e7",
+          "from": "b7"
+        },
+        {
+          "to": "d10",
+          "from": "e10"
+        },
+        {
+          "to": "c3",
+          "from": "b1"
+        },
+        {
+          "to": "b7",
+          "from": "b8"
+        },
+        {
+          "to": "d5",
+          "from": "c3"
+        },
+        {
+          "to": "d5",
+          "from": "h5"
+        },
+        {
+          "to": "f9",
+          "from": "g7"
+        },
+        {
+          "to": "g8",
+          "from": "h10"
+        },
+        {
+          "to": "g7",
+          "from": "e7"
+        },
+        {
+          "to": "i9",
+          "from": "g8"
+        },
+        {
+          "to": "h1",
+          "from": "i1"
+        },
+        {
+          "to": "b1",
+          "from": "b7"
+        },
+        {
+          "to": "d1",
+          "from": "e2"
+        },
+        {
+          "to": "i6",
+          "from": "i7"
+        },
+        {
+          "to": "h9",
+          "from": "h1"
+        },
+        {
+          "to": "b10",
+          "from": "b1"
+        },
+        {
+          "to": "f10",
+          "from": "c10"
+        },
+        {
+          "to": "d9",
+          "from": "d10"
+        }
+      ],
+      "lastMove": {
+        "to": "d9",
+        "from": "d10"
+      },
+      "moveNumber": 24,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rs,a7bs,b10bc,c6bs,d1ra,d5bc,d9bg,e1rg,e3re,e4rs,e6bs,e9ba,f1ra,f10rc,f9rh,g1re,g10be,g5rs,g7rc,h9rc,i4rs,i6bs,i9bh": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "e7",
+        "from": "f9"
+      },
+      {
+        "to": "d8",
+        "from": "d9"
+      },
+      {
+        "to": "f9",
+        "from": "f10"
+      }
+    ]
+  }
+}

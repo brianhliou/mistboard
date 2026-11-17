@@ -173,4 +173,15 @@ describe('phone About rail', () => {
     expect(crowned[0]!.textContent).toBe('Engine champions');
     expect(crowned[0]!.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('marks only rail links whose page has no rail with a trailing arrow', () => {
+    const layout = buildStaticPageLayout('developers', document.createElement('div'), 'en');
+    const marked = [...layout.querySelectorAll<HTMLAnchorElement>('.static-page-rail-link')]
+      .filter((link) => link.querySelector('.static-page-rail-out'))
+      .map((link) => link.getAttribute('href'));
+    expect(marked).toEqual(['/patron', '/data']);
+    const arrow = layout.querySelector('.static-page-rail-out')!;
+    expect(arrow.textContent).toBe('↗');
+    expect(arrow.getAttribute('aria-hidden')).toBe('true');
+  });
 });

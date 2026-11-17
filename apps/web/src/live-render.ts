@@ -13,6 +13,7 @@ import {
   roomModeAnalyticsProps,
 } from './analytics.js';
 import { chessgroundAnimation } from './board-anim.js';
+import { renderCorrespondenceRoom } from './correspondence-room.js';
 import { setReplayAnalysisHref } from './game-table.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
@@ -173,6 +174,7 @@ export function render(): void {
   renderBoard(view);
   renderBoardResult(view);
   renderPromotion();
+  renderCorrespondenceRoom(liveState.room, isLive());
 }
 
 function updateLifecycleEffects(replayIsLive: boolean): void {

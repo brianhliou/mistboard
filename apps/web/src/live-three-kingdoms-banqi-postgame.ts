@@ -156,6 +156,7 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
   const status = reviewOutcomeLine(
     banqiOutcome(postgame.game.result, firstColor),
     postgame.game.termination,
+    VARIANT,
   );
   const variantName = variantDisplayLabel(VARIANT);
   const { metaCard, details } = buildReviewMeta({

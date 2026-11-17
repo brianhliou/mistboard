@@ -1,5 +1,5 @@
 // Authored study comments must reach VIEWERS, not just the owner's editor box:
-// the current node's text renders in the under-board comment panel, commented
+// the current node's text renders in its reading panel, commented
 // moves carry a bubble marker in the move list, and right-arrow at a branch
 // point opens the variation picker (up/down select, right descends).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -26,7 +26,11 @@ const ANNOTATED_TREE: SerializedTree = {
   },
 };
 
-function mount(initialTree: SerializedTree = ANNOTATED_TREE): HTMLElement {
+function mount(
+  initialTree: SerializedTree = ANNOTATED_TREE,
+  study = false,
+  editing = false,
+): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
   mountXiangqiReview(root, {
@@ -36,6 +40,13 @@ function mount(initialTree: SerializedTree = ANNOTATED_TREE): HTMLElement {
     moves: [],
     initialTree,
     analysis: null,
+    ...(study ? { reviewSurface: 'study' as const } : {}),
+    ...(editing
+      ? {
+          annotationEditing: true,
+          aboutTab: { label: 'About', body: document.createElement('div') },
+        }
+      : {}),
   });
   return root;
 }
@@ -151,6 +162,108 @@ describe('viewer-visible study comments', () => {
     key('ArrowRight'); // h3e3 has ONE child: plain step, no picker
     expect(root.querySelector('.review-var-picker')).toBeNull();
     expect(root.querySelector('.review-move-list__move--current')?.textContent).toContain('h8-e8');
+    root.remove();
+  });
+});
+
+describe('study move-note placement', () => {
+  it('reserves an empty band in the right column directly after navigation', () => {
+    const root = mount(ANNOTATED_TREE, true);
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel')!;
+    expect(panel.closest('.review-shell__right')).not.toBeNull();
+    expect(panel.previousElementSibling?.classList.contains('review-controls')).toBe(true);
+    expect(panel.closest('.review-underboard-stack')).toBeNull();
+    expect(panel.dataset.col1Area).toBe('extra');
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toBe('');
+    key('ArrowLeft');
+    expect(panel.textContent).toBe('The cannon centralises.');
+    key('ArrowRight');
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toBe('');
+    root.remove();
+  });
+
+  it('reserves nothing for a chapter with only an introduction', () => {
+    const root = mount(
+      {
+        version: 1,
+        root: {
+          annotations: { comments: [{ text: 'Chapter introduction' }] },
+          children: [{ uci: 'h3e3', children: [] }],
+        },
+      },
+      true,
+    );
+    expect(root.querySelector<HTMLElement>('.review-comment-panel')?.hidden).toBe(true);
+    key('Home');
+    expect(root.querySelector<HTMLElement>('.review-comment-panel')?.hidden).toBe(true);
+    root.remove();
+  });
+
+  it('opens the full note in a sheet and restores focus when dismissed', () => {
+    const root = mount(ANNOTATED_TREE, true);
+    key('ArrowLeft');
+    const preview = root.querySelector<HTMLButtonElement>('.study-move-note__preview')!;
+    expect(preview).not.toBeNull();
+    preview.click();
+    const sheet = root.querySelector<HTMLElement>('.study-move-note-sheet')!;
+    expect(sheet.hidden).toBe(false);
+    expect(sheet.querySelector('.study-move-note-sheet__text')?.textContent).toBe(
+      'The cannon centralises.',
+    );
+    // Review navigation cannot change the current move behind the modal.
+    key('ArrowRight');
+    expect(preview.textContent).toBe('The cannon centralises.');
+    key('Tab');
+    expect(document.activeElement).toBe(sheet.querySelector('button'));
+    key('Escape');
+    expect(sheet.hidden).toBe(true);
+    expect(document.activeElement).toBe(preview);
+    root.remove();
+  });
+
+  it('reserves notes that occur only in a variation', () => {
+    const root = mount(
+      {
+        version: 1,
+        root: {
+          children: [
+            { uci: 'h3e3', children: [] },
+            { uci: 'b3e3', annotations: { comments: [{ text: 'Variation note' }] }, children: [] },
+          ],
+        },
+      },
+      true,
+    );
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel')!;
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toBe('');
+    key('Home');
+    key('ArrowRight');
+    key('ArrowDown');
+    key('ArrowRight');
+    expect(panel.textContent).toBe('Variation note');
+    expect(root.querySelector('.review-move-list__comment-marker')).not.toBeNull();
+    root.remove();
+  });
+
+  it('updates the reservation when the author adds or clears the first move note', () => {
+    const root = mount(
+      { version: 1, root: { children: [{ uci: 'h3e3', children: [] }] } },
+      true,
+      true,
+    );
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel')!;
+    const editor = root.querySelector<HTMLTextAreaElement>('.annotation-editor__comment')!;
+    expect(panel.hidden).toBe(true);
+    editor.value = 'New move note';
+    editor.dispatchEvent(new Event('input'));
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toBe('New move note');
+    editor.value = '';
+    editor.dispatchEvent(new Event('input'));
+    expect(panel.hidden).toBe(true);
     root.remove();
   });
 });

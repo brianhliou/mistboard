@@ -1,6 +1,7 @@
 /* The signed-in homepage row of correspondence games on the player's move
    (#1058). Hidden unless there is at least one. */
-.landing-corr-moves {
+.landing-corr-moves,
+.landing-corr-incoming {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -9,7 +10,8 @@
   background: var(--site-panel);
 }
 
-.landing-corr-moves[hidden] {
+.landing-corr-moves[hidden],
+.landing-corr-incoming[hidden] {
   display: none;
 }
 
@@ -24,10 +26,11 @@
   display: inline-block;
   min-width: 18px;
   padding: 0 6px;
-  border-radius: 9px;
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong);
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: #fff;
   font-size: 12px;
+  font-weight: 700;
   line-height: 18px;
   text-align: center;
 }
@@ -44,6 +47,7 @@
 .landing-corr-moves-game {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   padding: 4px 2px;
@@ -62,4 +66,45 @@
   flex-shrink: 0;
   color: var(--site-muted);
   font-size: 12px;
+}
+
+.landing-corr-incoming .correspondence-section-head h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.landing-corr-incoming .correspondence-incoming-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing-corr-challenge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.landing-corr-challenge > a {
+  color: var(--site-text);
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.landing-corr-challenge .correspondence-own-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.landing-corr-challenge button {
+  min-height: 40px;
+}
+
+/* Above the phone breakpoint (navPhoneMediaQuery, 600px) the Play panel lists
+   these games in its Your move tab, so the rail card would repeat them. */
+@media (min-width: 601px) {
+  .landing-corr-moves.is-phone-only {
+    display: none;
+  }
 }

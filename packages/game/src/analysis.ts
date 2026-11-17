@@ -142,6 +142,11 @@ export const RAPFI_WIN_PCT_K = 1 / 200;
 // until the served profile's K matches).
 const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
 
+// Fitted 2026-11-13: 300 level-7 FFQ self-play games, 2,004 public scores.
+// Equal-game-weight zero-intercept logistic cross-entropy; inputs/fit in
+// docs/ffq-win-calibration-2026-11-13.json. Older cache ids retain their curve.
+export const FFQ_BANQI_WIN_PCT_K = 0.00518009;
+
 /**
  * The logistic win-curve constant for an analysis stored under `engineId`.
  * AB-JChess ids pick the curve of the net they name; Rapfi has its own scale.
@@ -149,6 +154,12 @@ const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
  * directly to winPercent instead: not every engine uses a logistic model.
  */
 export function winPercentK(engineId: string | null | undefined): number {
+  if (
+    (engineId?.startsWith('misty-ffq-banqi-analysis@') ||
+      engineId?.startsWith('misty-ffq-banqi-decisions@')) &&
+    engineId.includes('-winfit20261113')
+  )
+    return FFQ_BANQI_WIN_PCT_K;
   if (engineId === 'pikafish-xiangqi-analysis@6') return PIKAFISH_CC0_WIN_PCT_K;
   if (engineId?.startsWith('rapfi-')) return RAPFI_WIN_PCT_K;
   if (!engineId?.startsWith('ab-jchess')) return WIN_PCT_K;

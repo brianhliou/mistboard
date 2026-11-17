@@ -20,6 +20,9 @@ function fixture(t) {
   mkdirSync(root);
   const env = {
     ...gitFreeEnv(),
+    // No real suites run in this fixture. Exercise the hosted skip instead of
+    // touching the machine lock; gate-lock.test.mjs covers local ownership.
+    CI: '1',
     GIT_CONFIG_GLOBAL: '/dev/null',
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_AUTHOR_DATE: '2026-01-01T00:00:00Z',
@@ -49,6 +52,7 @@ function fixture(t) {
   git('config', 'core.hooksPath', '/dev/null');
   write('CHANGELOG.md', '# Changelog\n');
   write('package-lock.json', '{}\n');
+  write('engine.ref', 'eca5313\n# engine pin\n');
   write('feature.txt', 'before\n');
   commit('initial');
   git('clone', '--bare', '-q', root, remote);
@@ -71,10 +75,21 @@ childProcess.spawnSync = (command, args, options) => {
     changelog: readFileSync('CHANGELOG.md', 'utf8') }) + '\\n');
   if (command === 'git') {
     if (args.includes('push')) throw new Error('unexpected remote write');
+    if (args[0] === 'ls-remote' && args[1] === 'git@github.com:brianhliou/mistboard-engine.git') {
+      if (process.env.FIXTURE_ENGINE_LOOKUP === 'failure') return result('', 128);
+      const sha = process.env.FIXTURE_ENGINE_LOOKUP === 'current' ? 'eca5313' : '11cac5f';
+      return result(sha + 'a'.repeat(33) + '\\trefs/heads/main\\n');
+    }
     return original(command, args, options);
   }
   if (command === 'node' && args[0] === 'scripts/prod-smoke-plan.mjs') {
     return result('prod-smoke-plan: deploy_required=' + (process.env.FIXTURE_NO_DEPLOY ? 'false' : 'true') + '\\nreason: fixture\\n');
+  }
+  if (command === 'gh' && args[0] === 'run' && args[1] === 'list') {
+    const headSha = args[args.indexOf('--commit') + 1];
+    return result(JSON.stringify(process.env.FIXTURE_GREEN_BATCH ? [
+      { headSha, status: 'completed', conclusion: 'success' },
+    ] : []));
   }
   if (command === 'node' && args[0] === 'scripts/pre-push-check.mjs') {
     return result(JSON.stringify({ kind: 'targeted', reason: 'fixture', commands: [['npm', 'run', 'fixture-gate']] }));
@@ -110,6 +125,63 @@ globalThis.fetch = async () => ({ ok: true, json: async () => ({ activeGames: 0 
   };
   return { directory, root, remote, env, git, write, commit, snapshot, run };
 }
+
+test('release dry run warns about a trailing engine pin without changing the batch', (t) => {
+  const f = fixture(t);
+  const before = f.snapshot();
+  for (const push of [[], ['--push']]) {
+    const result = f.run(['--dry-run', '--plan-file', 'scripts/example.mjs', ...push]);
+    assert.equal(result.status, 0, result.output);
+    assert.match(
+      result.stdout,
+      /engine_pin: behind \(engine.ref eca5313, mistboard-engine main 11cac5f\)/,
+    );
+    assert.match(result.stdout, /node scripts\/deploy-engine-worker.mjs --bump/);
+    assert.match(result.stdout, /next engine-worker deploy refuses/);
+    assert.equal(
+      result.events.filter(
+        ({ args }) => args[1] === 'git@github.com:brianhliou/mistboard-engine.git',
+      ).length,
+      1,
+    );
+    assert.deepEqual(f.snapshot(), before);
+  }
+});
+
+test('engine pin current and unknown reports let the dry run finish successfully', (t) => {
+  const f = fixture(t);
+  for (const [lookup, expected] of [
+    ['current', 'engine_pin: current (eca5313)'],
+    ['failure', 'engine_pin: unknown ('],
+  ]) {
+    const result = f.run(['--dry-run', '--plan-file', 'scripts/example.mjs'], {
+      FIXTURE_ENGINE_LOOKUP: lookup,
+    });
+    assert.equal(result.status, 0, result.output);
+    assert.ok(result.stdout.includes(expected), result.output);
+    assert.match(result.stdout, /ship_window: allow/);
+  }
+});
+
+test('push preflight reports a trailing or unknown engine pin and continues to the local gate', (t) => {
+  const f = fixture(t);
+  const before = f.snapshot();
+  for (const lookup of ['behind', 'failure']) {
+    // Fail a stubbed local gate before the script can attempt a remote write.
+    const result = f.run(['--push'], {
+      FIXTURE_ENGINE_LOOKUP: lookup,
+      FIXTURE_FAIL: 'fixture-gate',
+      FIXTURE_GREEN_BATCH: '1',
+    });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, lookup === 'behind' ? /engine_pin: behind/ : /engine_pin: unknown/);
+    assert.ok(result.events.some(({ command }) => command === 'npm'));
+    assert.ok(
+      !result.events.some(({ command, args }) => command === 'git' && args.includes('push')),
+    );
+    assert.deepEqual(f.snapshot(), before);
+  }
+});
 
 test('changelog files combine with arguments and validate each line before any stage', (t) => {
   const f = fixture(t);
@@ -277,4 +349,21 @@ test('a changelog HEAD reuses exactly its own additions and reports differing he
     assert.match(result.stderr, /[-+] (Fixed|Site):/);
   }
   assert.deepEqual(f.snapshot(), before);
+});
+
+test('push without batch CI refuses before changing its changelog or running gates', (t) => {
+  const f = fixture(t);
+  const before = f.snapshot();
+  const result = f.run(['--push', '--changelog', 'Fixed: Must stay uncommitted']);
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.stderr, /batch:ci/);
+  assert.deepEqual(f.snapshot(), before);
+  assert.ok(
+    !result.events.some(
+      (event) =>
+        event.command === 'npm' ||
+        (event.command === 'git' && (event.args.includes('push') || event.args.includes('commit'))),
+    ),
+  );
+  assert.equal(existsSync(f.env.MISTBOARD_RELEASE_LOCK), false);
 });

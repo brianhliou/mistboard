@@ -1,6 +1,7 @@
 // "Fairy-Stockfish Level 8" was cut to "Fairy-Stockfish Le..." on a /games
 // card (2026-10-21): the seat line has about 130px beside the BOT tag and the
-// clock. The cards call the engine FSF and keep the full name in the tooltip.
+// clock. Just finished cards call the engine FSF and keep the full name in the
+// tooltip; Playing now cards show the whole name, wrapping (2026-11-12).
 import { describe, expect, it } from 'vitest';
 import { buildFinishedTile, buildSeatRow } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
@@ -15,10 +16,10 @@ function participant(color: GameParticipant['color'], displayName: string): Game
   return { color, displayName, subjectType: 'user', subjectId: null, visibility: 'public' };
 }
 
-function finishedGame(participants: GameParticipant[]): FeaturedGame {
+function finishedGame(participants: GameParticipant[], variant = 'xiangqi'): FeaturedGame {
   return {
     roomId: 'finished-room',
-    variant: 'xiangqi',
+    variant,
     result: 'red-wins',
     termination: 'checkmate',
     plyCount: 2,
@@ -36,6 +37,22 @@ describe('cardSeatName', () => {
     expect(cardSeatName('Fairy-Stockfish Level 2')).toBe('FSF Level 2');
   });
 
+  it('drops the game from Misty only when it is this game', () => {
+    expect(cardSeatName('Misty Three Kingdoms Banqi Level 2', 'Three Kingdoms Banqi')).toBe(
+      'Misty Level 2',
+    );
+    expect(cardSeatName('Misty Banqi', 'Banqi')).toBe('Misty');
+    for (const name of [
+      'Misty Banqi Level 2',
+      'Misty Three Kingdoms Banqi fan',
+      'Misty Banqiing',
+    ]) {
+      expect(cardSeatName(name, name.includes('Three') ? 'Three Kingdoms Banqi' : 'Jungle')).toBe(
+        name,
+      );
+    }
+  });
+
   it('leaves every other name alone', () => {
     for (const name of ['Pikafish Level 7', 'Guest', 'Fairy-Stockfish', 'Fairy-Stockfish fan']) {
       expect(cardSeatName(name)).toBe(name);
@@ -44,11 +61,14 @@ describe('cardSeatName', () => {
 });
 
 describe('/games seat names', () => {
-  it('a live bot seat shows FSF and keeps the full name as its tooltip', () => {
+  it('a live bot seat shows its whole name, with the BOT tag after it', () => {
     const row = buildSeatRow(player('Fairy-Stockfish Level 8', true), {}, 'black');
     const name = row.querySelector<HTMLElement>('.current-game-seat-name');
-    expect(name?.textContent).toBe('FSF Level 8');
+    expect(name?.textContent).toBe('Fairy-Stockfish Level 8');
     expect(name?.title).toBe('Fairy-Stockfish Level 8');
+    const label = row.querySelector('.current-game-seat-label');
+    expect(label?.lastElementChild?.classList.contains('current-game-bot')).toBe(true);
+    expect(label?.contains(row.querySelector('.current-game-seat-clock'))).toBe(false);
   });
 
   it('a person is never renamed, whatever the name', () => {
@@ -72,22 +92,25 @@ describe('/games seat names', () => {
     );
   });
 
-  it('keeps an old recorded Three Kingdoms name readable on its name element', () => {
-    const fullName = 'MistyThreeKingdomsBanqi level 7';
+  it('a finished card calls Misty by her level and keeps the game name as its tooltip', () => {
+    const fullName = 'Misty Three Kingdoms Banqi Level 7';
     const tile = buildFinishedTile(
-      finishedGame([
-        participant('red', 'Ann'),
-        {
-          ...participant('black', fullName),
-          subjectType: 'engine-version',
-          subjectId: 'misty-three-kingdoms-banqi-level-7',
-        },
-      ]),
+      finishedGame(
+        [
+          participant('red', 'Ann'),
+          {
+            ...participant('black', 'MistyThreeKingdomsBanqi level 7'),
+            subjectType: 'engine-version',
+            subjectId: 'misty-three-kingdoms-banqi-level-7',
+          },
+        ],
+        'three-kingdoms-banqi',
+      ),
     );
     const name = tile.querySelector<HTMLElement>(
       '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
     );
-    expect(name?.textContent).toBe(fullName);
+    expect(name?.textContent).toBe('Misty Level 7');
     expect(name?.title).toBe(fullName);
   });
 });

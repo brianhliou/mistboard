@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   GOMOKU_SPEC_ID,
   publicSpecPredicate,
@@ -63,9 +62,7 @@ test('Gomoku games enter public figures only when its publicSurface becomes publ
   );
   assert.deepEqual(
     offPublicGameSpecIds(() => true),
-    GAME_SPECS.map((spec) => spec.id).filter(
-      (id) => id === FFQ_BANQI_SPEC_ID || RETIRED_GAME_SPEC_IDS.includes(id),
-    ),
+    GAME_SPECS.map((spec) => spec.id).filter((id) => RETIRED_GAME_SPEC_IDS.includes(id)),
   );
 });
 

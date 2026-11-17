@@ -1,4 +1,4 @@
-import { GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
+import { correspondenceTimeControl, GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
 import {
   abortRunningGame,
   createUser,
@@ -22,8 +22,102 @@ import {
   test,
 } from './persistence-test-support.js';
 import type { RatingVariant } from './rating-buckets.js';
+import { bucketForGame } from './rating-buckets.js';
+
+test('Three Kingdoms Banqi uses its own bullet, blitz and rapid pools, never correspondence', () => {
+  for (const [initialMs, incrementMs, timeClass] of [
+    [60_000, 1_000, 'bullet'],
+    [180_000, 2_000, 'blitz'],
+    [300_000, 5_000, 'rapid'],
+    [600_000, 5_000, 'rapid'],
+  ] as const) {
+    assert.deepEqual(bucketForGame({ variant: 'three-kingdoms-banqi', initialMs, incrementMs }), {
+      variant: 'three_kingdoms_banqi',
+      timeClass,
+    });
+  }
+  assert.equal(
+    bucketForGame({ variant: 'three-kingdoms-banqi', ...correspondenceTimeControl(1) }),
+    null,
+  );
+});
 
 definePersistenceTests('ratings', () => {
+  test('Three Kingdoms Banqi moves both accounts into its public pool; PvE never moves ratings', async () => {
+    const now = new Date();
+    for (const id of ['tkfirst', 'tksecond']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id,
+        displayName: id,
+        now,
+      });
+    }
+    const summary = {
+      variant: 'three-kingdoms-banqi',
+      mode: 'pvp' as const,
+      rated: true,
+      result: 'red-wins' as const,
+      termination: 'resignation' as const,
+      plyCount: 3,
+      startedAt: now,
+      endedAt: now,
+      initialMs: 180_000,
+      incrementMs: 2_000,
+      whiteClient: null,
+      blackClient: null,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      visibility: 'public' as const,
+      participants: (['red', 'black'] as const).map((color, index) => ({
+        color,
+        displayName: index === 0 ? 'tkfirst' : 'tksecond',
+        subjectType: 'user' as const,
+        subjectId: index === 0 ? 'tkfirst' : 'tksecond',
+        visibility: 'public' as const,
+      })),
+    };
+    await recordGameEnd('tk-rated-pvp', summary);
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const ratings = () =>
+        client.query<{ user_id: string; elo_rating: number }>(
+          'SELECT user_id, elo_rating FROM user_ratings ORDER BY user_id',
+        );
+      const before = (await ratings()).rows;
+      assert.equal(before.length, 2);
+      assert.ok(before.find((row) => row.user_id === 'tkfirst')!.elo_rating > 1500);
+      assert.ok(before.find((row) => row.user_id === 'tksecond')!.elo_rating < 1500);
+      const profile = await getUserProfileByHandle('tkfirst', null);
+      const row = profile?.ratings.find((rating) => rating.variant === 'three_kingdoms_banqi');
+      assert.equal(row?.ratedGamesPlayed, 1);
+      assert.equal(row?.totalGamesPlayed, 1);
+      assert.ok((row?.eloRating ?? 0) > 1500);
+      assert.ok(!profile?.ratings.some((rating) => rating.variant === 'banqi'));
+      const ladder = await getLeaderboard({ variant: 'three_kingdoms_banqi', timeClass: 'blitz' });
+      const ladders = await getLeaderboardSummary({ timeClass: 'blitz' });
+      assert.ok(ladders.some((entry) => entry.variant === 'three_kingdoms_banqi'));
+      for (const payload of [profile, ladder, ladders]) {
+        assert.doesNotMatch(JSON.stringify(payload), /"(?:board|setup|deal|events|snapshot)"\s*:/);
+      }
+      // Even a malformed rated PvE summary with two account participants may
+      // not move either account. The real room factory also forces casual.
+      await recordGameEnd('tk-pve', { ...summary, mode: 'pve' });
+      assert.deepEqual((await ratings()).rows, before);
+      await recordGameEnd('tk-correspondence', {
+        ...summary,
+        ...correspondenceTimeControl(1),
+      });
+      assert.deepEqual((await ratings()).rows, before);
+    } finally {
+      await client.end();
+    }
+  });
+
   test('rated PvP game updates both players Glicko ratings', async () => {
     const now = new Date();
     await createUser({
@@ -449,11 +543,11 @@ definePersistenceTests('ratings', () => {
       // pv has the highest RAW rating (1900) but RD 300 (provisional) → it sorts
       // LAST by conservative rating and is marked provisional, not hidden.
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('u_hi','fog','blitz',1600,60,0.06,20),
-          ('u_lo','fog','blitz',1550,60,0.06,20),
-          ('u_pv','fog','blitz',1900,300,0.06,3)`,
+          ('u_hi','fog','blitz',1600,60,0.06,20,now()),
+          ('u_lo','fog','blitz',1550,60,0.06,20,now()),
+          ('u_pv','fog','blitz',1900,300,0.06,3,now())`,
       );
     } finally {
       await client.end();
@@ -495,10 +589,10 @@ definePersistenceTests('ratings', () => {
     try {
       await client.query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'lx_test'`);
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('lx_real','jieqi','bullet',1500,200,0.06,1),
-          ('lx_test','jieqi','bullet',1900,60,0.06,40)`,
+          ('lx_real','jieqi','bullet',1500,200,0.06,1,now()),
+          ('lx_test','jieqi','bullet',1900,60,0.06,40,now())`,
       );
     } finally {
       await client.end();
@@ -539,13 +633,13 @@ definePersistenceTests('ratings', () => {
       // Jungle: three settled players + a private one that must not appear.
       // Jungle flip: one player, proving grouping keeps ladders separate.
       await client.query(
-        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played)
+        `INSERT INTO user_ratings (user_id, variant, time_class, elo_rating, rating_deviation, volatility, games_played, last_rated_at)
          VALUES
-          ('sum_a','jungle','blitz',1700,60,0.06,20),
-          ('sum_b','jungle','blitz',1600,60,0.06,20),
-          ('sum_c','jungle','blitz',1500,60,0.06,20),
-          ('sum_p','jungle','blitz',1900,60,0.06,20),
-          ('sum_a','jungle_flip','blitz',1400,60,0.06,10)`,
+          ('sum_a','jungle','blitz',1700,60,0.06,20,now()),
+          ('sum_b','jungle','blitz',1600,60,0.06,20,now()),
+          ('sum_c','jungle','blitz',1500,60,0.06,20,now()),
+          ('sum_p','jungle','blitz',1900,60,0.06,20,now()),
+          ('sum_a','jungle_flip','blitz',1400,60,0.06,10,now())`,
       );
     } finally {
       await client.end();

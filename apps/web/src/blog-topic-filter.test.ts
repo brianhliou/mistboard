@@ -252,6 +252,7 @@ describe('blog index engineering chip', () => {
       '/blog/rapfi-vs-katagomo',
       '/blog/server-enforced-fog',
       '/blog/unstyled-first-paint',
+      '/blog/xiangqi-nnue-training',
     ]);
     expect(slugsUnder('engineering')).toEqual(listedEngineering);
   });

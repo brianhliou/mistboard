@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import {
   countedPublicGame,
@@ -28,21 +28,35 @@ import {
   getUserRatingHistory,
 } from './persistence-profiles.js';
 
-test('FFQ is permanently excluded from public totals independently of the flag and surface', (t) => {
+function hiddenFixture(t: TestContext) {
+  const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+  const surface = spec.publicSurface;
+  spec.publicSurface = 'hidden';
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
+}
+
+test('FFQ public totals include correspondence only after launch', (t) => {
+  hiddenFixture(t);
   const previous = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
   process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
   t.after(() => {
     if (previous === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
     else process.env.MISTBOARD_FFQ_BANQI_ENABLED = previous;
   });
-  assert.ok(offPublicGameSpecIds(() => true).includes(FFQ_BANQI_SPEC_ID));
+  assert.ok(offPublicGameSpecIds().includes(FFQ_BANQI_SPEC_ID));
   assert.match(publicVariant('games'), /'ffq-banqi'/);
   assert.match(countedPublicGame('games'), /'ffq-banqi'/);
   const spec = gameSpecForId(FFQ_BANQI_SPEC_ID) as { publicSurface: string };
   const surface = spec.publicSurface;
   spec.publicSurface = 'casual';
   try {
-    assert.ok(offPublicGameSpecIds(() => true).includes(FFQ_BANQI_SPEC_ID));
+    assert.ok(!offPublicGameSpecIds().includes(FFQ_BANQI_SPEC_ID));
+    assert.doesNotMatch(publicVariant('games'), /variant NOT IN \('ffq-banqi'\)/);
+    for (const sql of [publicVariant('games'), countedPublicGame('games')]) {
+      assert.doesNotMatch(sql, /ffq-banqi|daysPerMove/);
+    }
   } finally {
     spec.publicSurface = surface;
   }
@@ -89,25 +103,49 @@ test('FFQ SQL discovery filters run before ordering, pagination and window total
     ['owner profile history and total', () => getUserGamesPage('admin', 'admin', 0, 15)],
     ['initial profile and totals', () => getUserProfileByHandle('admin', null)],
     ['rating history', () => getUserRatingHistory('admin', null, 'banqi')],
+    ['game list and totals', () => queryGames({ excludeFFQ: true, visibility: 'public' })],
+    ['game aggregates', () => gameAggregates({ excludeFFQ: true, visibility: 'public' })],
+    ['game facets', () => gameFacets(true)],
   ];
-  for (const [label, run] of cases) {
-    await t.test(label, async () => {
-      queries.length = 0;
-      await run();
-      const gameQueries = queries.filter((sql) => /(?:FROM|JOIN) games\b/.test(sql));
-      assert.ok(gameQueries.length > 0, 'exercises a real persistence query');
-      for (const sql of gameQueries) {
-        assert.match(
-          sql,
-          /games\.variant NOT IN \('ffq-banqi'\)/,
-          `${label}: exclusion must be in SQL, before LIMIT and COUNT(*) OVER()`,
-        );
-      }
-    });
+  const spec = gameSpecForId(FFQ_BANQI_SPEC_ID);
+  const surface = spec.publicSurface;
+  t.after(() => {
+    spec.publicSurface = surface;
+  });
+  for (const launch of ['hidden', 'casual'] as const) {
+    spec.publicSurface = launch;
+    for (const [label, run] of cases) {
+      await t.test(`${launch}: ${label}`, async () => {
+        queries.length = 0;
+        await run();
+        const gameQueries = queries.filter((sql) => /(?:FROM|JOIN) games\b/.test(sql));
+        assert.ok(gameQueries.length > 0, 'exercises a real persistence query');
+        for (const sql of gameQueries) {
+          if (launch === 'hidden') assert.match(sql, /games\.variant NOT IN \('ffq-banqi'\)/);
+          else {
+            assert.doesNotMatch(sql, /games\.variant NOT IN \('ffq-banqi'\)/);
+            assert.doesNotMatch(sql, /games\.variant <> 'ffq-banqi' OR NOT EXISTS/);
+            assert.doesNotMatch(sql, /\blc\./);
+            if (sql.includes('WITH matching_games') || label.startsWith('game '))
+              assert.doesNotMatch(sql, /daysPerMove/);
+            // TV keeps its independent, all-variant correspondence exclusion.
+            if (label.includes('showcase') || label.includes('watch'))
+              assert.match(sql, /rc\.payload->'timeControl' \? 'daysPerMove'/);
+          }
+          if (label === 'public profile history and total') {
+            assert.match(sql, /games\.visibility <> 'private'/);
+            assert.match(sql, /game_participants\.visibility <> 'private'/);
+          }
+          if (label === 'owner profile history and total')
+            assert.doesNotMatch(sql, /visibility <> 'private'/);
+        }
+      });
+    }
   }
 });
 
 test('authorized FFQ profile pages and admin queries keep the variant before pagination', async (t) => {
+  hiddenFixture(t);
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(() => close());
   const queries: string[] = [];

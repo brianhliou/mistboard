@@ -301,7 +301,7 @@ export function xiangqiPerpetualCheckLoser(
   initialState: XiangqiGameState = createInitialXiangqiState('adjudicate'),
 ): XiangqiColor | null {
   let state = initialState;
-  const plies: { mover: XiangqiColor; gaveCheck: boolean; key: string }[] = [];
+  const plies: XiangqiRepetitionPly[] = [];
   for (const move of moves) {
     if (state.status.type !== 'playing') break;
     const mover = state.status.turn;
@@ -317,6 +317,20 @@ export function xiangqiPerpetualCheckLoser(
     });
     plies.push({ mover, gaveCheck, key });
   }
+  return perpetualCheckLoserOfPlies(plies);
+}
+
+/** One ply of a repetition judgment: who moved, whether the move gave check,
+ *  and the repetition key of the position it reached (opponent to move). */
+export type XiangqiRepetitionPly = { mover: XiangqiColor; gaveCheck: boolean; key: string };
+
+/** The window judgment behind xiangqiPerpetualCheckLoser, over plies the caller
+ *  has already replayed. Split out so a reader that replays a record past
+ *  Mistboard's draw ruling (applyXiangqiRecordMove) can ask the same question
+ *  of the same window; the rule itself is unchanged. */
+export function perpetualCheckLoserOfPlies(
+  plies: readonly XiangqiRepetitionPly[],
+): XiangqiColor | null {
   if (plies.length === 0) return null;
   const repeatedKey = plies[plies.length - 1]!.key;
   const occurrences = plies.flatMap((ply, i) => (ply.key === repeatedKey ? [i] : []));

@@ -17,7 +17,7 @@ import { type I18nKey, t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
 import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
-import { colorLabel, type PuzzleSummary } from './adapter.js';
+import { colorLabel, type PuzzleSummary, puzzleGoalLabel, puzzleSolvePrompt } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
 import { PUZZLE_DIFFICULTIES, type PuzzleDifficulty, parsePuzzleDifficulty } from './storage.js';
@@ -48,7 +48,7 @@ export type QueuePanelProps = {
   ratingDelta: number | null;
   // The open puzzle's detail attribution: the list summaries carry no source
   // game, so the "From game" card reads it from here when the ids match.
-  selectedSource?: Pick<PuzzleSummary, 'id' | 'sourceGame'> | null;
+  selectedSource?: Pick<PuzzleSummary, 'id' | 'sourceGame' | 'credit'> | null;
   onVariantChange: (variant: PuzzleVariant) => Promise<void>;
   onAutoNextChange: (enabled: boolean) => void;
   onRatedChange: (enabled: boolean) => void;
@@ -288,7 +288,7 @@ export function puzzleInfoCard(
                 goal: goalLabel(puzzle),
                 color: colorLabel(puzzle.sideToMove),
               })
-            : t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) }),
+            : puzzleSolvePrompt(puzzle),
           'puzzle-info-goal',
         ),
       ],
@@ -369,8 +369,23 @@ function puzzleInfoLine(text: string, className?: string): HTMLSpanElement {
 // source-game attribution get a lichess-style "From game" header with the event
 // and both players; everything else falls back to "From set <variant>".
 export function sourceGameLines(
-  puzzle: Pick<PuzzleSummary, 'variant' | 'sourceGame'>,
+  puzzle: Pick<PuzzleSummary, 'variant' | 'sourceGame' | 'credit'>,
 ): HTMLElement[] {
+  if (puzzle.variant === XIANGQI_SPEC_ID && puzzle.credit) {
+    const c = puzzle.credit;
+    const event = sourceText(c.event, c.eventEn) ?? c.event;
+    const header = puzzleInfoLine(
+      event ? `${t('puzzle.fromGame')} · ${event}` : t('puzzle.fromGame'),
+      'puzzle-source-event',
+    );
+    header.title = event ?? '';
+    return [
+      header,
+      sourceGamePlayerLine('red', sourceText(c.red, c.redEn) ?? c.red, undefined),
+      sourceGamePlayerLine('black', sourceText(c.black, c.blackEn) ?? c.black, undefined),
+      sourceCreditLine(c),
+    ];
+  }
   const source = puzzle.sourceGame;
   if (puzzle.variant === XIANGQI_SPEC_ID && source?.online) {
     return [sourceGameHeaderLine(source, onlineGameHeader(source.gameId))];
@@ -403,10 +418,13 @@ export function sourceGameLines(
 /** The list summary with the open puzzle's detail attribution, when it is that puzzle. */
 export function withSelectedSource(
   puzzle: PuzzleSummary | null,
-  selected: Pick<PuzzleSummary, 'id' | 'sourceGame'> | null | undefined,
+  selected: Pick<PuzzleSummary, 'id' | 'sourceGame' | 'credit'> | null | undefined,
 ): PuzzleSummary | null {
-  if (!puzzle || !selected?.sourceGame || selected.id !== puzzle.id) return puzzle;
-  return { ...puzzle, sourceGame: selected.sourceGame };
+  if (!puzzle || !selected || selected.id !== puzzle.id) return puzzle;
+  if (selected.credit) return { ...puzzle, sourceGame: undefined, credit: selected.credit };
+  return selected.sourceGame
+    ? { ...puzzle, sourceGame: selected.sourceGame, credit: undefined }
+    : puzzle;
 }
 
 // The header, a link to the game's page at the puzzle's move when the server
@@ -626,13 +644,7 @@ export function puzzleThemeLabel(theme: string): string {
 }
 
 export function goalLabel(puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount'>): string {
-  if (puzzle.goal.type === 'checkmate') {
-    return t('puzzle.mateIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
-  }
-  if (puzzle.goal.type === 'win') {
-    return t('puzzle.winIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
-  }
-  return t('puzzle.winning');
+  return puzzleGoalLabel(puzzle);
 }
 
 function targetAvatarSvg(): string {

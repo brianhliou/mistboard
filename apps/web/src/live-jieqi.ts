@@ -190,6 +190,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   finishBadges: (view) =>
     view.status.type === 'finished'
       ? finishBadgesForResult({
+          variant: 'jieqi',
           colors: jieqiWebTenant.colors,
           winner: view.status.winner,
           reason: view.status.reason,

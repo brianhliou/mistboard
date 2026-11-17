@@ -39,19 +39,25 @@
 // correspondence-model.ts. Browsing seeks also stays on the homepage lobby's
 // Correspondence tab; this page shows the same feed.
 
+import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import './current-games.css';
 import './account-profile.css';
+import './landing-play.css';
 import './correspondence.css';
 import {
-  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
-  createInitialXiangqiState,
+  canonicalVariantOrderIndex,
   DAYS_PER_MOVE_OPTIONS,
   DEFAULT_DAYS_PER_MOVE,
-  getStandardXiangqiPlayerView,
+  type GameSpecId,
 } from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { openChallengeDialog } from './challenge-dialog.js';
+import {
+  type CorrespondenceGameType,
+  rememberCorrespondenceGameType,
+  storedCorrespondenceGameType,
+} from './correspondence-game-type.js';
 import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
@@ -61,7 +67,6 @@ import {
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
-  heroBoardGame,
   type InboxBoardSide,
   type IncomingChallenge,
   inboxBoardSide,
@@ -80,6 +85,7 @@ import {
   seekRequestBody,
   splitInbox,
   variantFact,
+  variantFactSpecIds,
 } from './correspondence-model.js';
 import {
   type CurrentGame,
@@ -87,6 +93,7 @@ import {
   liveCardShowsHands,
 } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
+import { buildFogTile } from './fog-tile.js';
 import type { FeaturedGame } from './game-display.js';
 import {
   displayLiveName,
@@ -105,10 +112,22 @@ import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-fla
 import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
-import { isLikelyStatsExcluded } from './signed-in-state.js';
+import {
+  buildSetupRowSection,
+  colorOptionButton,
+  landingGameSpecCapabilities,
+  type SetupColorPreference,
+  startOptionButton,
+  updateColorOptionButton,
+  updateStartOptionButtonLabel,
+  variantCardButton,
+} from './setup-panel-parts.js';
+import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
-import { formatDayClock } from './web-utils.js';
+import { variantMiniIdForGameSpec } from './variants.js';
+import { correspondenceTimeLeftLabel, formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
 // The "Challenges for you" section's id; the bell's challenge row links to it
@@ -316,6 +335,7 @@ function buildSignedIn(
       body: t('correspondence.seekTileBody'),
       buttonLabel: t('correspondence.seekTileButton'),
       panel: startForm,
+      dialogClass: 'correspondence-dialog--setup',
       onOpen: () => {
         if (formStatus) formStatus.hidden = true;
       },
@@ -481,7 +501,7 @@ export function buildInboxCard(
   const tick = (now: number): void => {
     const urgency = deadlineUrgency(game.dueAt, now);
     card.dataset.urgency = urgency;
-    onMove.clock.textContent = timeLeftLabel(game.dueAt, now);
+    onMove.clock.textContent = correspondenceTimeLeftLabel(game.dueAt, now);
     if (fill) {
       const fraction = deadlineFraction(game.dueAt, days, now) ?? 0;
       fill.style.width = `${Math.round(fraction * 1000) / 10}%`;
@@ -526,7 +546,7 @@ function buildBoardHost(
     const perspective = seatView.view.perspective;
     host.dataset.perspective =
       perspective === 'white' || perspective === 'red' ? 'first' : 'second';
-    host.append(buildFogTile(game.gameSpecId));
+    host.append(buildSeatFogTile(game.gameSpecId));
     void mountSeatBoard(ctx, host, seatView);
     return host;
   }
@@ -534,7 +554,7 @@ function buildBoardHost(
   host.dataset.perspective = side;
   const kind = inboxTileKind(game.gameSpecId, current);
   if (kind === 'fog') {
-    host.append(buildFogTile(game.gameSpecId));
+    host.append(buildSeatFogTile(game.gameSpecId));
     return host;
   }
   host.append(buildPlaceholderTile(game.gameSpecId));
@@ -622,29 +642,10 @@ function seatNames(current: CurrentGame): { first: string; second: string } {
   return { first: first?.name ?? '', second: second?.name ?? '' };
 }
 
-const FOG_WAVES =
-  '<svg viewBox="0 0 44 30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8c6-5 12 5 19 0s13-5 19 0M3 16c6-5 12 5 19 0s13-5 19 0M3 24c6-5 12 5 19 0s13-5 19 0"/></svg>';
-
-// The /games misty tile (same classes, same tokens), with a note for the seat:
-// the game page is where your own side of the fog is.
-function buildFogTile(gameSpecId: string): HTMLElement {
-  return buildFogTileWithNote(gameSpecId, t('correspondence.fogNote'));
-}
-
-function buildFogTileWithNote(gameSpecId: string, noteText: string): HTMLElement {
-  const tile = document.createElement('div');
-  tile.className = 'current-game-fog';
-  const waves = document.createElement('span');
-  waves.className = 'current-game-fog-waves';
-  waves.innerHTML = FOG_WAVES;
-  const name = document.createElement('span');
-  name.className = 'current-game-fog-variant';
-  name.textContent = variantDisplayLabel(gameSpecId);
-  const note = document.createElement('span');
-  note.className = 'current-game-fog-note';
-  note.textContent = noteText;
-  tile.append(waves, name, note);
-  return tile;
+// The /games misty tile (fog-tile.ts), with a note for the seat: the game
+// page is where your own side of the fog is.
+function buildSeatFogTile(gameSpecId: string): HTMLElement {
+  return buildFogTile(gameSpecId, t('correspondence.fogNote'));
 }
 
 function buildPlaceholderTile(gameSpecId: string): HTMLElement {
@@ -661,12 +662,6 @@ function buildPlaceholderTile(gameSpecId: string): HTMLElement {
 
 function cadenceLabel(days: number): string {
   return days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
-}
-
-function timeLeftLabel(dueAt: string, now: number): string {
-  const remaining = deadlineRemainingMs(dueAt, now);
-  if (remaining === null || remaining <= 0) return t('correspondence.dueNow');
-  return t('correspondence.timeLeft', { time: formatDayClock(remaining) });
 }
 
 // "Sat 1:30 AM" inside the coming week, else "Oct 8", in the site's locale.
@@ -798,65 +793,192 @@ function buildSelect(
   return { root: field, value: () => select.value };
 }
 
+// A choice drawn as one of the Play a game panel's option groups (landing-play.css):
+// a bordered track whose picked option is a green tint with a green ring.
+type OptionGroup<T extends string> = {
+  root: HTMLElement;
+  value: () => T;
+  button: (value: T) => HTMLButtonElement | undefined;
+  // Select a value programmatically (no onChange), and disable one option.
+  select: (value: T) => void;
+  setDisabled: (value: T, disabled: boolean) => void;
+};
+
+function buildOptionGroup<T extends string>(
+  className: string,
+  label: string,
+  options: readonly { value: T; button: HTMLButtonElement }[],
+  initial: T,
+  onChange?: (value: T) => void,
+): OptionGroup<T> {
+  const group = document.createElement('div');
+  group.className = className;
+  group.setAttribute('role', 'radiogroup');
+  group.setAttribute('aria-label', label);
+  // As many equal columns as options (the shared rule is two).
+  group.style.gridTemplateColumns = `repeat(${options.length}, minmax(0, 1fr))`;
+  let current = initial;
+  const buttons = new Map<T, HTMLButtonElement>();
+  const paint = (): void => {
+    for (const [value, button] of buttons) {
+      const on = value === current;
+      button.classList.toggle('selected', on);
+      button.setAttribute('aria-checked', String(on));
+    }
+  };
+  for (const { value, button } of options) {
+    button.dataset.value = value;
+    button.addEventListener('click', () => {
+      if (current === value) return;
+      current = value;
+      paint();
+      onChange?.(current);
+    });
+    buttons.set(value, button);
+    group.append(button);
+  }
+  paint();
+  return {
+    root: group,
+    value: () => current,
+    button: (value) => buttons.get(value),
+    select: (value) => {
+      if (!buttons.has(value)) return;
+      current = value;
+      paint();
+    },
+    setDisabled: (value, disabled) => {
+      const button = buttons.get(value);
+      if (button) button.disabled = disabled;
+    },
+  };
+}
+
+// The side a seek asks for, as the piece colour the Play a game side buttons draw.
+function seekSideColor(preference: SeekPreferredColor, gameSpecId: string): SetupColorPreference {
+  if (preference === 'random') return 'random';
+  const capabilities = landingGameSpecCapabilities(gameSpecId as GameSpecId);
+  return preference === 'first' ? capabilities.firstColor : capabilities.secondColor;
+}
+
+function seekSideLabel(preference: SeekPreferredColor, gameSpecId: string): string {
+  if (preference === 'first') return firstMoverColorName(gameSpecId);
+  if (preference === 'second') return secondMoverColorName(gameSpecId);
+  return t('correspondence.sideRandom');
+}
+
+// The Post a seek form, laid out as the homepage Play a game panel (its open
+// layout): the variant grid, then a row per choice with its label beside it,
+// and one full-width Post button. On a phone the grid is one row naming the
+// variant over a native select, and each label sits above its control.
 export function buildStartForm(
   onChanged: () => void,
   prefill: StartFormPrefill | null = null,
 ): HTMLElement {
+  const locale = currentLocale();
   const panel = document.createElement('section');
-  panel.className = 'correspondence-panel correspondence-start';
+  panel.className = 'correspondence-panel correspondence-seek landing-setup-dialog--open';
   panel.id = 'start';
+  const header = document.createElement('div');
+  header.className = 'landing-setup-header';
   const heading = document.createElement('h2');
+  heading.className = 'landing-setup-title';
   heading.textContent = t('correspondence.startGame');
+  header.append(heading);
   const form = document.createElement('form');
-  form.className = 'correspondence-start-form';
+  form.className = 'correspondence-seek-form';
   form.noValidate = true;
 
-  // Public specs, plus a playtest variant for an account the menu offers it to.
-  const specIds = correspondenceSpecIdsFor(webVariantOfferedInMenu);
-  const defaultVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
-  const variant = buildSelect(
-    t('correspondence.variantLabel'),
-    specIds.map((specId) => ({
-      value: specId,
-      label: variantDisplayLabel(specId),
-    })),
-    defaultVariant,
-    () => {
-      relabelSides();
-      syncRated();
-    },
+  // Public specs, plus a playtest variant for an account the menu offers it to,
+  // in the canonical shelf order so the tiles sit where Play a game puts them.
+  const specIds = [...correspondenceSpecIdsFor(webVariantOfferedInMenu)].sort(
+    (a, b) =>
+      canonicalVariantOrderIndex(a as GameSpecId) - canonicalVariantOrderIndex(b as GameSpecId),
   );
-  variant.root.hidden = specIds.length < 2;
+  let currentVariant = prefill?.gameSpecId ?? specIds[0] ?? 'xiangqi';
+  if (!specIds.includes(currentVariant)) currentVariant = specIds[0] ?? currentVariant;
 
-  const days = buildSegmented<string>(
+  // The variant: a grid of the Play a game tiles, and for a phone one row over a
+  // native select (its own picker sheet). The select holds the value.
+  const variantSection = document.createElement('div');
+  variantSection.className = 'correspondence-seek-variant';
+  const grid = document.createElement('div');
+  grid.className = 'landing-variant-grid';
+  grid.setAttribute('role', 'radiogroup');
+  grid.setAttribute('aria-label', t('correspondence.variantLabel'));
+  const cards = new Map<string, HTMLButtonElement>();
+  for (const specId of specIds) {
+    const card = variantCardButton(specId as GameSpecId, variantDisplayLabel(specId), locale);
+    card.addEventListener('click', () => setVariant(specId));
+    cards.set(specId, card);
+    grid.append(card);
+  }
+  const variantRow = document.createElement('label');
+  variantRow.className = 'landing-variant-row correspondence-seek-variant-row';
+  const rowThumb = document.createElement('span');
+  rowThumb.className = 'landing-variant-row-thumb';
+  rowThumb.setAttribute('aria-hidden', 'true');
+  const rowName = document.createElement('span');
+  rowName.className = 'landing-variant-row-name';
+  const rowChevron = document.createElement('span');
+  rowChevron.className = 'landing-variant-row-chevron';
+  rowChevron.setAttribute('aria-hidden', 'true');
+  rowChevron.textContent = '›';
+  const variantSelect = document.createElement('select');
+  variantSelect.className = 'correspondence-seek-variant-select';
+  variantSelect.setAttribute('aria-label', t('correspondence.variantLabel'));
+  for (const specId of specIds) {
+    const option = document.createElement('option');
+    option.value = specId;
+    option.textContent = variantDisplayLabel(specId);
+    variantSelect.append(option);
+  }
+  variantSelect.value = currentVariant;
+  variantSelect.addEventListener('change', () => setVariant(variantSelect.value));
+  variantRow.append(rowThumb, rowName, rowChevron, variantSelect);
+  variantSection.append(grid, variantRow);
+  const paintVariant = (): void => {
+    for (const [specId, card] of cards) {
+      const on = specId === currentVariant;
+      card.classList.toggle('selected', on);
+      card.setAttribute('aria-checked', String(on));
+    }
+    const label = variantDisplayLabel(currentVariant);
+    rowName.textContent = label;
+    const miniId = variantMiniIdForGameSpec(currentVariant as GameSpecId);
+    rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 100, label }) : '';
+  };
+
+  // Days per move: bare numbers under a "days per move" hint, as Play a game
+  // shows correspondence.
+  const dayChoices = DAYS_PER_MOVE_OPTIONS.map(String);
+  const initialDays = String(prefill?.daysPerMove ?? DEFAULT_DAYS_PER_MOVE);
+  const days = buildOptionGroup<string>(
+    'landing-time-presets landing-correspondence-presets',
     t('correspondence.daysPerMoveLabel'),
-    DAYS_PER_MOVE_OPTIONS.map((option) => ({ value: String(option), label: String(option) })),
-    String(prefill?.daysPerMove ?? DEFAULT_DAYS_PER_MOVE),
+    dayChoices.map((value) => ({ value, button: startOptionButton(value, false) })),
+    dayChoices.includes(initialDays) ? initialDays : String(DEFAULT_DAYS_PER_MOVE),
   );
 
   // Casual or Rated (2026-10-02). Rated writes the variant's own correspondence rating,
   // never a live one. Offered only where correspondenceRatedAvailable says so; anywhere
-  // else Rated is shown disabled and the seek posts casual.
-  const rated = buildSegmented<'casual' | 'rated'>(
+  // else Rated is shown disabled and the seek posts casual. It opens on the player's
+  // last pick, Casual until they make one (correspondence-game-type.ts).
+  let wantedGameType: CorrespondenceGameType =
+    prefill?.rated === true ? 'rated' : storedCorrespondenceGameType();
+  const rated = buildOptionGroup<CorrespondenceGameType>(
+    'landing-start-options',
     t('setup.gameType'),
     [
-      { value: 'casual', label: t('play.casual') },
-      { value: 'rated', label: t('play.rated') },
+      { value: 'casual', button: startOptionButton(t('play.casual'), false) },
+      { value: 'rated', button: startOptionButton(t('play.rated'), false) },
     ],
-    prefill?.rated === true ? 'rated' : 'casual',
+    wantedGameType,
+    (value) => {
+      wantedGameType = value;
+      rememberCorrespondenceGameType(value);
+    },
   );
-  const syncRated = (): void => {
-    // The whole control is absent while rated correspondence is held (flag off).
-    rated.root.hidden = !isCorrespondenceRatedModeEnabled();
-    // An account excluded from stats never rates (the server refuses it).
-    const available =
-      !isLikelyStatsExcluded() &&
-      correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled());
-    rated.setDisabled('rated', !available);
-    if (!available) rated.select('casual');
-  };
-  syncRated();
-  onRatedModeChange(syncRated);
 
   // Anyone or A link. A challenge to one player starts from that player's
   // profile (its Challenge button, challenge-dialog.ts), not from a typed
@@ -865,50 +987,113 @@ export function buildStartForm(
     link: 'correspondence.opponentLink',
     public: 'correspondence.opponentAnyone',
   };
-  const kind = buildSegmented<StartFormSeekKind>(
+  const kind = buildOptionGroup<StartFormSeekKind>(
+    'landing-start-options',
     t('correspondence.opponentLabel'),
-    START_FORM_SEEK_KINDS.map((value) => ({ value, label: t(kindLabels[value]) })),
+    START_FORM_SEEK_KINDS.map((value) => ({
+      value,
+      button: startOptionButton(t(kindLabels[value]), false),
+    })),
     'public',
     () => syncKind(),
   );
 
-  const side = buildSegmented<SeekPreferredColor>(
-    t('correspondence.yourSideLabel'),
-    [
-      { value: 'random', label: t('correspondence.sideRandom') },
-      { value: 'first', label: firstMoverColorName(defaultVariant) },
-      { value: 'second', label: secondMoverColorName(defaultVariant) },
-    ],
+  // The side buttons draw the variant's own pieces, first mover first, as Play a game.
+  const sideChoices: readonly SeekPreferredColor[] = ['first', 'random', 'second'];
+  const side = buildOptionGroup<SeekPreferredColor>(
+    'landing-start-options three',
+    t('setup.youPlay'),
+    sideChoices.map((value) => ({
+      value,
+      button: colorOptionButton(
+        seekSideColor(value, currentVariant),
+        seekSideLabel(value, currentVariant),
+        false,
+      ),
+    })),
     prefill?.preferredColor ?? 'random',
   );
   const relabelSides = (): void => {
-    side.relabel({
-      first: firstMoverColorName(variant.value()),
-      second: secondMoverColorName(variant.value()),
-    });
+    for (const value of sideChoices) {
+      const button = side.button(value);
+      if (!button) continue;
+      updateColorOptionButton(
+        button,
+        seekSideColor(value, currentVariant),
+        seekSideLabel(value, currentVariant),
+        currentVariant as GameSpecId,
+      );
+    }
   };
 
-  const hint = document.createElement('p');
-  hint.className = 'correspondence-hint';
+  const rows = {
+    variant: buildSetupRowSection('variant', t('correspondence.variantLabel'), variantSection, () =>
+      variantDisplayLabel(currentVariant),
+    ),
+    opponent: buildSetupRowSection('opponent', t('correspondence.opponentLabel'), kind.root, () =>
+      t(kindLabels[kind.value()]),
+    ),
+    days: buildSetupRowSection('time', t('setup.timeControl'), days.root, () => days.value(), {
+      hint: t('setup.dayUnits'),
+    }),
+    side: buildSetupRowSection('side', t('setup.youPlay'), side.root, () =>
+      seekSideLabel(side.value(), currentVariant),
+    ),
+    gameType: buildSetupRowSection('gameType', t('setup.gameType'), rated.root, () =>
+      t(rated.value() === 'rated' ? 'play.rated' : 'play.casual'),
+    ),
+  };
+  rows.variant.wrapper.hidden = specIds.length < 2;
+
+  const syncRated = (): void => {
+    // The whole row is absent while rated correspondence is held (flag off).
+    rows.gameType.wrapper.hidden = !isCorrespondenceRatedModeEnabled();
+    // An account excluded from stats never rates (the server refuses it), so its
+    // Rated button is disabled and says why, as in the challenge dialog.
+    const notCounted = isLikelyStatsExcluded();
+    const ratedButton = rated.button('rated');
+    if (ratedButton) {
+      updateStartOptionButtonLabel(
+        ratedButton,
+        t(notCounted ? 'setup.ratedNotCounted' : 'play.rated'),
+      );
+    }
+    const available =
+      !notCounted &&
+      correspondenceRatedAvailable(currentVariant, isCorrespondenceRatedModeEnabled());
+    rated.setDisabled('rated', !available);
+    rated.select(available ? wantedGameType : 'casual');
+  };
+
+  const setVariant = (specId: string): void => {
+    if (!specIds.includes(specId)) return;
+    currentVariant = specId;
+    variantSelect.value = specId;
+    paintVariant();
+    relabelSides();
+    syncRated();
+  };
+  paintVariant();
+  relabelSides();
+  syncRated();
+  onRatedModeChange(syncRated);
+  // The form may be drawn from the stored hint before /api/auth/me answers.
+  window.addEventListener(statsExcludedResolvedEvent, syncRated);
+
   const submit = document.createElement('button');
   submit.type = 'submit';
-  submit.className = 'correspondence-btn';
+  submit.className = 'landing-setup-start';
   const status = document.createElement('p');
   status.className = 'correspondence-form-status';
   status.setAttribute('role', 'status');
   status.hidden = true;
 
-  const hints: Record<StartFormSeekKind, I18nKey> = {
-    link: 'correspondence.kindHintLink',
-    public: 'correspondence.kindHintPublic',
-  };
   const submits: Record<StartFormSeekKind, I18nKey> = {
     link: 'correspondence.createLink',
     public: 'correspondence.postSeek',
   };
   const syncKind = (): void => {
     const value = kind.value();
-    hint.textContent = t(hints[value]);
     submit.textContent = t(submits[value]);
     status.hidden = true;
   };
@@ -925,12 +1110,12 @@ export function buildStartForm(
     const seekKind = kind.value();
     const request = seekRequestBody({
       daysPerMove: Number(days.value()),
-      gameSpecId: variant.value(),
+      gameSpecId: currentVariant,
       kind: seekKind,
       preferredColor: side.value(),
       rated:
         rated.value() === 'rated' &&
-        correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled()),
+        correspondenceRatedAvailable(currentVariant, isCorrespondenceRatedModeEnabled()),
     });
     if (!request.ok) return;
     submit.disabled = true;
@@ -941,20 +1126,26 @@ export function buildStartForm(
       body: JSON.stringify(request.body),
     })
       .then(async (res) => {
-        const body = (await res.json().catch(() => null)) as {
-          challengeUrl?: string | null;
-          error?: string;
-          limit?: number;
-        } | null;
+        const body = (await res.json().catch(() => null)) as
+          | ({
+              challengeUrl?: string | null;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         submit.disabled = false;
         if (!res.ok) {
+          if (renderFirstMoveOwed(status, body)) {
+            status.classList.add('is-error');
+            return;
+          }
           showStatus(postErrorText(body?.error, body?.limit), true);
           return;
         }
         if (res.status === 201) {
           trackCorrespondenceSeekPosted({
             daysPerMove: Number(days.value()),
-            gameSpecId: variant.value(),
+            gameSpecId: currentVariant,
             kind: seekKind,
             surface: 'correspondence',
           });
@@ -974,8 +1165,21 @@ export function buildStartForm(
       });
   });
 
-  form.append(variant.root, days.root, rated.root, kind.root, side.root, hint, submit, status);
-  panel.append(heading, form);
+  // Decision order, as Play a game: what to play, against whom, then the terms.
+  const accordion = document.createElement('div');
+  accordion.className = 'landing-setup-accordion';
+  accordion.append(
+    rows.variant.wrapper,
+    rows.opponent.wrapper,
+    rows.days.wrapper,
+    rows.side.wrapper,
+    rows.gameType.wrapper,
+  );
+  const actions = document.createElement('div');
+  actions.className = 'landing-setup-actions';
+  actions.append(submit, status);
+  form.append(accordion, actions);
+  panel.append(header, form);
   return panel;
 }
 
@@ -1143,17 +1347,24 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
       body: JSON.stringify({ gameSpecId: variant.value(), side: side.value() }),
     })
       .then(async (res) => {
-        const result = (await res.json().catch(() => null)) as {
-          url?: string;
-          error?: string;
-          limit?: number;
-        } | null;
+        const result = (await res.json().catch(() => null)) as
+          | ({
+              url?: string;
+              error?: string;
+              limit?: number;
+            } & FirstMoveOwedFailure)
+          | null;
         if (res.ok && result?.url) {
           navigate(result.url);
           return;
         }
         if (res.status === 401) {
           navigate(loginHrefForCurrentPage());
+          return;
+        }
+        if (renderFirstMoveOwed(status, result)) {
+          submit.disabled = false;
+          status.classList.add('is-error');
           return;
         }
         // A cap refusal stays refused until a game ends; anything else may pass on retry.
@@ -1445,11 +1656,15 @@ export async function renderIncomingChallenges(
   onCount?: (count: number) => void,
   options: IncomingChallengeOptions = {},
 ): Promise<void> {
-  const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
-  const body = resp?.ok
-    ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
-    : null;
-  const challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  let challenges = options.challenges;
+  if (!challenges) {
+    const resp = await fetch('/api/correspondence/seeks/incoming').catch(() => null);
+    const body = resp?.ok
+      ? ((await resp.json().catch(() => null)) as { challenges?: IncomingChallenge[] } | null)
+      : null;
+    challenges = Array.isArray(body?.challenges) ? body.challenges : [];
+  }
+  if (options.isCurrent?.() === false) return;
   onCount?.(challenges.length);
   host.hidden = challenges.length === 0;
   if (challenges.length === 0) {
@@ -1487,6 +1702,11 @@ export async function renderIncomingChallenges(
 export type IncomingChallengeOptions = {
   // Test seam for Accept's navigation (seek-accept.ts).
   navigate?: (url: string) => void;
+  compact?: boolean;
+  isCurrent?: () => boolean;
+  // Already read by the caller (the homepage reads first, so it loads this
+  // module only when a challenge is waiting).
+  challenges?: IncomingChallenge[];
 };
 
 export function buildIncomingChallengeCard(
@@ -1552,6 +1772,26 @@ export function buildIncomingChallengeCard(
     details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
   }
   const challenger = displayLiveName(challenge.challengerName, t('games.anonymous'));
+  if (options.compact) {
+    card = document.createElement('article');
+    card.className = 'landing-corr-challenge';
+    card.dataset.seekId = challenge.id;
+    const who = document.createElement('a');
+    who.href = localizedHref(`/challenge/${encodeURIComponent(challenge.id)}`);
+    who.textContent = t('correspondence.challengeFrom', {
+      name: challenger,
+      variant: variantDisplayLabel(challenge.gameSpecId),
+    });
+    const terms = document.createElement('span');
+    terms.className = 'landing-corr-moves-meta';
+    terms.textContent = [
+      cadenceLabel(challenge.daysPerMove),
+      challenge.rated ? t('games.rated') : t('games.casual'),
+      ...details,
+    ].join(' · ');
+    card.append(who, terms, actions, error);
+    return card;
+  }
   card = buildSeekCard(
     {
       creatorHandle: challenge.challengerHandle ?? null,
@@ -1593,15 +1833,15 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     who.className = 'correspondence-own-target';
     appendWithNameNode(
       who,
-      (token) => t('correspondence.challengeTo', { name: token }),
+      (token) => t('challenge.sentTo', { name: token }),
       playerNameEl(
-        seek.targetName,
+        seek.targetHandle ? `@${seek.targetHandle}` : seek.targetName,
         profileTargetFor({ handle: seek.targetHandle }),
         'correspondence-own-target-name',
       ),
     );
     waiting = who;
-    ariaLabel = `${variant}, ${t('correspondence.challengeTo', { name: seek.targetName })}`;
+    ariaLabel = `${variant}, ${who.textContent}`;
   } else {
     const label =
       seek.visibility === 'private'
@@ -1642,11 +1882,14 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
   const cancel = document.createElement('button');
   cancel.type = 'button';
   cancel.className = 'correspondence-ghost is-quiet';
-  cancel.textContent = t('correspondence.cancel');
+  cancel.textContent = seek.targetName ? t('challenge.withdraw') : t('correspondence.cancel');
   cancel.addEventListener('click', () => {
     cancel.disabled = true;
     void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}`, { method: 'DELETE' })
-      .then(() => onChange())
+      .then((res) => {
+        if (!res.ok && res.status !== 404) throw new Error(`withdraw ${res.status}`);
+        onChange();
+      })
       .catch(() => {
         cancel.disabled = false;
       });
@@ -1712,6 +1955,8 @@ function buildLauncher(opts: {
   photo?: boolean;
   disabled?: boolean;
   onOpen?: () => void;
+  /** An extra class on the dialog, for a panel with its own layout. */
+  dialogClass?: string;
 }): Launcher {
   const tile = document.createElement('section');
   tile.className = 'correspondence-panel correspondence-launcher';
@@ -1733,7 +1978,9 @@ function buildLauncher(opts: {
   // The dialog lives inside the tile, so it goes when the page re-renders, and
   // closing it keeps the form's choices for the next open.
   const dialog = document.createElement('dialog');
-  dialog.className = 'correspondence-dialog';
+  dialog.className = opts.dialogClass
+    ? `correspondence-dialog ${opts.dialogClass}`
+    : 'correspondence-dialog';
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'correspondence-dialog-close';
@@ -1797,7 +2044,7 @@ function buildSignedOut(
 ): HTMLElement {
   const shell = document.createElement('main');
   shell.className = 'correspondence-shell is-signed-out';
-  shell.append(buildHero(ctx, inPlay));
+  shell.append(buildHero());
   if (hostInfo) shell.append(buildHostCard(hostInfo));
 
   const seeks = seeksFeed.status === 'ok' ? othersSeeks(seeksFeed.seeks) : [];
@@ -1847,74 +2094,38 @@ function variantFactText(labels: readonly string[]): string {
     : t('correspondence.factVariantsMore', { list: fact.shown, count: fact.more });
 }
 
-function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
+// The signed-out header: a compact strip (headline, pitch and one fact line
+// beside the two account buttons) so the games in play below it are the
+// picture and start at the fold.
+function buildHero(): HTMLElement {
   const hero = document.createElement('section');
   hero.className = 'correspondence-hero';
 
   const copy = document.createElement('div');
   copy.className = 'correspondence-hero-copy';
+  const head = document.createElement('div');
+  head.className = 'correspondence-hero-head';
   const eyebrow = document.createElement('p');
   eyebrow.className = 'correspondence-eyebrow';
   eyebrow.textContent = t('correspondence.heading');
   const title = document.createElement('h1');
   title.className = 'correspondence-hero-title';
   title.textContent = t('correspondence.heroTitle');
+  head.append(eyebrow, title);
   const pitch = document.createElement('p');
   pitch.className = 'correspondence-hero-pitch';
   pitch.textContent = t('correspondence.heroPitch');
-  const facts = document.createElement('ul');
+  const facts = document.createElement('p');
   facts.className = 'correspondence-hero-facts';
-  for (const text of [
+  facts.textContent = [
     t('correspondence.factDays', { list: DAYS_PER_MOVE_OPTIONS.join(' / ') }),
-    variantFactText(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((specId) => variantDisplayLabel(specId))),
+    variantFactText(variantFactSpecIds().map((specId) => variantDisplayLabel(specId))),
     t('correspondence.factReminders'),
-  ]) {
-    const item = document.createElement('li');
-    item.textContent = text;
-    facts.append(item);
-  }
-  const note = document.createElement('p');
-  note.className = 'correspondence-hero-note';
-  note.textContent = t('correspondence.heroNote');
-  copy.append(eyebrow, title, pitch, buildAccountActions(), facts, note);
+  ].join(' · ');
+  copy.append(head, pitch, facts);
 
-  const figure = document.createElement('figure');
-  figure.className = 'correspondence-hero-board';
-  const host = document.createElement('div');
-  host.className = 'current-game-board correspondence-hero-board-host';
-  const caption = document.createElement('figcaption');
-  caption.className = 'correspondence-hero-caption';
-  const live = heroBoardGame(inPlay);
-  if (live?.payload) {
-    host.append(buildPlaceholderTile(live.gameSpecId));
-    void mountBoard(ctx, host, live.gameSpecId, live.roomId, live, live.payload);
-    const link = document.createElement('a');
-    link.href = live.url;
-    link.textContent = t('correspondence.heroLive', { matchup: showcaseMatchup(live) });
-    caption.append(link);
-  } else {
-    host.append(buildStartingBoard());
-    caption.textContent = t('correspondence.heroStart');
-  }
-  figure.append(host, caption);
-
-  hero.append(copy, figure);
+  hero.append(copy, buildAccountActions());
   return hero;
-}
-
-// A static xiangqi starting position, drawn by the site's own xiangqi board
-// renderer from the kernel's initial state, for when nothing is in play.
-function buildStartingBoard(): HTMLElement {
-  const board = document.createElement('div');
-  board.className = 'correspondence-static-board';
-  void Promise.all([import('./xiangqi-board.js'), import('./live-xiangqi.css')])
-    .then(([{ renderXiangqiBoardSvg }]) => {
-      const view = getStandardXiangqiPlayerView(createInitialXiangqiState('hero'), 'red');
-      board.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
-      board.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    })
-    .catch((err) => console.warn('[correspondence] hero board failed', err));
-  return board;
 }
 
 function showcaseMatchup(game: CurrentGame): string {
@@ -1944,7 +2155,7 @@ function buildShowcaseCard(ctx: PageContext, game: CurrentGame): HTMLElement {
   host.className = 'current-game-board';
   const kind = inboxTileKind(game.gameSpecId, game);
   if (kind === 'fog') {
-    host.append(buildFogTileWithNote(game.gameSpecId, t('games.inTheFog')));
+    host.append(buildFogTile(game.gameSpecId, t('games.inTheFog')));
   } else {
     host.append(buildPlaceholderTile(game.gameSpecId));
     if (kind === 'board' && game.payload) {

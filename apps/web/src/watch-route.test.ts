@@ -159,9 +159,9 @@ describe('watch route copy helpers', () => {
       whiteName: null,
     };
 
-    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; list rows show
-    // the brand.
-    expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty');
+    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; a row shows
+    // the brand named after its game.
+    expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty Fog Xiangqi');
     expect(resultLabel(game.result)).toBe('Red wins');
   });
 
@@ -218,7 +218,7 @@ describe('watch route copy helpers', () => {
         },
       ],
     };
-    expect(watchQueueResultLabel(base)).toBe('Misty wins');
+    expect(watchQueueResultLabel(base)).toBe('Misty Xiangqi Mahjong wins');
     expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
     expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
@@ -242,6 +242,34 @@ describe('watch route copy helpers', () => {
     expect(watchGameStatusLine({ ...game, termination: 'resignation' })).toBe(
       'Guest wins by resignation',
     );
+  });
+
+  // Gomoku's five in a row and Jungle's den entry share the stored code `race`;
+  // the watch page read "White wins by den entered" for a finished Gomoku game.
+  it('names a Gomoku race win five in a row, never den entered', () => {
+    const game: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 31,
+      result: 'white-wins',
+      roomId: 'gomoku_race',
+      termination: 'race',
+      variant: 'gomoku',
+      whiteName: null,
+      participants: [],
+    };
+    const line = watchGameStatusLine(game);
+    expect(line).toContain('by five in a row');
+    expect(line).not.toContain('den entered');
+    expect(
+      watchGameStatusLine({
+        ...game,
+        roomId: 'jungle_race',
+        variant: 'jungle',
+        result: 'red-wins',
+      }),
+    ).toContain('by den entered');
   });
 
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {
@@ -856,12 +884,20 @@ describe('renderWatchHeadline', () => {
   it('names the players and what is being watched, and collapses with no game', () => {
     const root = document.createElement('div');
 
-    renderWatchHeadline(root, { matchup: 'White vs Black', detail: 'Fog Chess · White wins' });
+    renderWatchHeadline(root, {
+      matchup: 'White vs Black',
+      detail: 'White wins',
+      variantName: 'Fog Chess',
+      variantHref: '/rules/fog-chess',
+      info: ['5:00', 'Casual', '2 days ago'],
+    });
 
     expect(root.hidden).toBe(false);
-    expect(root.querySelector('.watch-headline__matchup')?.textContent).toBe('White vs Black');
+    expect(root.querySelector('.watch-headline__matchup')?.textContent).toBe(
+      'White vs Black · White wins',
+    );
     expect(root.querySelector('.watch-headline__detail')?.textContent).toBe(
-      'Fog Chess · White wins',
+      'Fog Chess · 5:00 · Casual · 2 days ago',
     );
 
     renderWatchHeadline(root, null);
@@ -1003,5 +1039,64 @@ describe('setWatchSeatInkFamily', () => {
     setWatchSeatInkFamily(watch, 'jungle');
     setWatchSeatInkFamily(watch, null);
     expect(el.dataset.seatInkFamily).toBeUndefined();
+  });
+});
+
+describe('watch seat championships', () => {
+  it('keeps one crown for several titles with the named participant and removes missing or empty championships', async () => {
+    const { renderWatchPlayers } = await import('./watch-route.js');
+    const top = document.createElement('div');
+    const bottom = document.createElement('div');
+    for (const champions of [
+      [
+        { variant: 'xiangqi', timeClass: 'blitz' },
+        { variant: 'banqi', timeClass: 'rapid' },
+      ] as const,
+      [],
+      undefined,
+    ]) {
+      const game: FeaturedGame = {
+        roomId: 'watch-crowns',
+        variant: 'xiangqi',
+        result: 'red-wins',
+        termination: 'resignation',
+        plyCount: 1,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: 'red',
+            displayName: 'Alice',
+            subjectType: 'user',
+            subjectId: 'u1',
+            handle: 'alice',
+            visibility: 'public',
+            champions: champions ? [...champions] : undefined,
+          },
+          {
+            color: 'black',
+            displayName: 'Bob',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+        ],
+      };
+      renderWatchPlayers(top, bottom, game);
+      const icons = [...bottom.querySelectorAll<HTMLImageElement>('.champion-crown')];
+      expect(icons.map((icon) => icon.alt)).toEqual(
+        champions?.length ? ['Xiangqi blitz champion, Banqi rapid champion'] : [],
+      );
+      expect(
+        icons.every(
+          (icon) =>
+            icon.title === icon.alt &&
+            icon.getAttribute('aria-label') === icon.alt &&
+            icon.width === 20,
+        ),
+      ).toBe(true);
+      expect(top.querySelector('.champion-crowns')).toBeNull();
+    }
   });
 });

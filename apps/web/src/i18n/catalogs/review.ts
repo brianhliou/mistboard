@@ -1,6 +1,9 @@
 // Review translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_REVIEW = {
+  'review.article.showReplies': 'Show {count} reply variations',
+  'review.article.hideReplies': 'Hide {count} reply variations',
+  'review.article.variation': 'Variation',
   'review.chooseLine': 'Choose a line',
   'review.mainLine': 'Main line',
   // Remaining review widgets and dynamically generated move advice (#855).
@@ -267,6 +270,7 @@ export const EN_REVIEW = {
   'replay.editingNote': 'Editing note ({severity})',
   // Xiangqi postgame + analysis entry (xiangqi-postgame.ts, xiangqi-analysis.ts).
   'replay.loadingGame': 'Loading game',
+  'replay.watchAsPlayed': 'Replay as played',
   'replay.gameNotFound': 'Game not found',
   'replay.postgameUnavailable': 'Postgame unavailable',
   'replay.postgameServiceUnavailable': 'The postgame service is not available.',
@@ -342,6 +346,7 @@ export const EN_REVIEW = {
   'historical.minPliesHint':
     'Games played here shorter than this are hidden. {plies} unless you change it; clear it to show every game.',
   'historical.floorNote': 'Games played here shorter than {plies} plies are hidden.',
+  'historical.dataLink': 'Monthly downloads of the games played on Mistboard',
   'historical.floorShowAll': 'Show them',
   'historical.maxPlies': 'Max plies',
   'historical.sortLabel': 'Sort by',
@@ -675,9 +680,12 @@ export const EN_REVIEW = {
   'practice.position.title': 'Play out a position',
   'practice.position.badFen': 'This link does not hold a xiangqi position the board can read.',
   'practice.position.finished': 'This position is already over: there is no move left to play.',
-  'practice.position.badGoal': 'This link does not say whether to play for mate or hold the draw.',
+  'practice.position.badGoal':
+    'This link does not say whether to play for mate, play for a win or hold the draw.',
   'practice.position.badSide': 'This link does not say which side you play.',
   'practice.position.toEditor': 'Set up a position in the board editor',
+  'practice.position.youPlay': 'You play {side} against the engine.',
+  'practice.position.backToArticle': 'Back to the article',
   'practice.ribbon.done': 'Done',
   'practice.ribbon.play': 'Play!',
   'practice.card.soldier': 'It never moves back',
@@ -693,14 +701,15 @@ export const EN_REVIEW = {
   // here that must not be approximate. `describePracticeGoal` in packages/game
   // stays the English/default; this is the localized reading of the same goal,
   // kept in the web app so packages/game holds no presentation copy.
-  'practice.goal.mate': 'Checkmate',
-  'practice.goal.mateIn': 'Checkmate in {moves}',
-  'practice.goal.win': 'Win',
-  'practice.goal.winIn': 'Win in {moves}',
-  'practice.goal.reach': 'Reach +{cp}',
-  'practice.goal.reachIn': 'Reach +{cp} in {moves}',
-  'practice.goal.draw': 'Hold the draw',
-  'practice.goal.drawFor': 'Hold the draw for {moves} moves',
+  'practice.goal.sideTo': '{color} to play and {goal}',
+  'practice.goal.mate': 'checkmate',
+  'practice.goal.mateIn': 'checkmate in {moves}',
+  'practice.goal.win': 'win',
+  'practice.goal.winIn': 'win in {moves}',
+  'practice.goal.reach': 'reach +{cp}',
+  'practice.goal.reachIn': 'reach +{cp} in {moves}',
+  'practice.goal.draw': 'hold the draw',
+  'practice.goal.drawFor': 'hold the draw for {moves} moves',
   'practice.boardLabel': 'Xiangqi practice board',
   'practice.coachStrip': 'Practice with the engine',
   'practice.ofTotal': 'of {total}',
@@ -886,6 +895,8 @@ export const EN_REVIEW = {
   'study.phone.searchChapters': 'Search chapters',
   'study.phone.noChapterMatch': 'No chapter matches.',
   'study.phone.closeChapters': 'Close chapters',
+  'study.moveNote': 'Move note',
+  'study.readMoveNote': 'Read full move note',
   'study.phone.info': 'Info',
   'study.phone.closeInfo': 'Close study info',
   'study.chapterSettings': 'Chapter settings',
@@ -1006,6 +1017,13 @@ export const EN_REVIEW = {
   'engine.gomokuWhiteInShort': 'W in {moves}',
   'engine.gomokuBlackWinsShort': 'B wins',
   'engine.gomokuWhiteWinsShort': 'W wins',
+  'engine.ruleShort': 'Perpetual',
+  'engine.ruleRedWins':
+    'Not a checkmate. The engine scores the coming repetition as a win for Red: perpetual check loses under Mistboard rules.',
+  'engine.ruleBlackWins':
+    'Not a checkmate. The engine scores the coming repetition as a win for Black: perpetual check loses under Mistboard rules.',
+  'engine.ruleRecordNote':
+    'Repeats into a perpetual-check loss under Mistboard rules, which this event did not apply. Not graded.',
   'engine.depth': 'Depth {depth}',
   'engine.nodes': '{nodes} nodes',
   'engine.thinking': 'thinking…',
@@ -1174,6 +1192,7 @@ export const EN_REVIEW = {
     'Cost {side} {points} points of win chance vs. an average outcome',
   'review.luckCard.bothEffect.even': 'About as good for {side} as an average outcome',
   'replay.solutionHidden': 'Find the mate.',
+  'replay.whatWouldYouPlay': 'What would you play?',
   'replay.showSolution': 'Show the solution',
   // A hidden-solution embed's header until the reveal: the study, then the chapter's number.
   'replay.solutionHiddenHeader': '{study} · chapter {n}',

@@ -198,6 +198,31 @@ function stubFetch(overrides: Record<string, () => Response> = {}): void {
 }
 
 describe('metrics page', () => {
+  it('shows weekly guest conversion and open windows only in admin metrics', async () => {
+    window.history.replaceState(null, '', '/metrics?week=2026-07-13');
+    stubFetch({
+      '/api/stats/admin': () =>
+        json({
+          ...adminMetrics,
+          guestSignInConversion: [
+            { weekStart: '2026-07-13', guests: 4, signedInWithin7d: 1, complete: false },
+          ],
+        }),
+    });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.textContent).toContain(
+      'Guest sign-in after playing a person: 1 of 4 guest browsers signed in within 7 days (25%)',
+    );
+    expect(root.textContent).toContain('Window still open.');
+    expect(root.textContent).toContain('earlier sign-ins cannot be backfilled');
+    await mountMetrics(root, { admin: false });
+    expect(root.textContent).not.toContain('Guest sign-in after playing a person');
+    stubFetch({ '/api/stats/admin': () => json({}, 403) });
+    await mountMetrics(root, { admin: true });
+    expect(root.textContent).not.toContain('Guest sign-in after playing a person');
+  });
+
   it('renders login delivery counts for both windows only with admin data', async () => {
     window.history.replaceState(null, '', '/metrics?tab=operations');
     stubFetch();

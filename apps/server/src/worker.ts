@@ -365,7 +365,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Idempotent: SIGTERM starts the close and the main loop's `finally` awaits
  * the same promise, so in-flight turns finish before the pools are disposed.
- * Railway's drainingSeconds (railway.engine-worker.json) bounds the wait.
+ * Railway's drainingSeconds (.railway/engine-worker.json) bounds the wait.
  */
 function closeEngineHttpService(): Promise<void> {
   const service = engineHttpService;

@@ -6,6 +6,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
+  DEFAULT_SHIP_WINDOW_HOURS,
   describeShipWindow,
   evaluateShipWindow,
   lastProdPush,
@@ -62,6 +63,19 @@ test('a push inside the window refuses', () => {
   // Anchored on the end of the push stage, not on the run's start.
   assert.equal(last.at, Date.parse('2026-10-16T23:59:29.880Z') + 2949);
   assert.equal(verdict.opensAt, last.at + 4 * HOUR);
+});
+
+test('the default window fits three slots a day, even after a late 09:00 release', () => {
+  assert.equal(DEFAULT_SHIP_WINDOW_HOURS, 2);
+  // A 09:00 release that pushed at 10:20 PST leaves 12:30 open.
+  const late = lastProdPush({
+    records: [record({ pushAt: '2026-11-16T18:20:00.000Z' })],
+  });
+  const at1230 = Date.parse('2026-11-16T20:30:00.000Z');
+  assert.equal(evaluateShipWindow({ now: at1230, last: late }).decision, 'allow');
+  // A second push in the same slot is still refused.
+  const at1130 = Date.parse('2026-11-16T19:30:00.000Z');
+  assert.equal(evaluateShipWindow({ now: at1130, last: late }).decision, 'refuse');
 });
 
 test('a push older than the window allows', () => {
@@ -303,7 +317,7 @@ test('parked work is the agent branches ahead of main, with worktrees', () => {
     lines[0],
     /last production push 2026-10-16 16:59 PDT \(10m ago\) from \/Users\/brianliou\/projects\/mistboard-ship-1016-late/,
   );
-  assert.match(lines[1], /closed until 2026-10-16 20:59 PDT \(3h 50m from now; window is 4h\)/);
+  assert.match(lines[1], /closed until 2026-10-16 18:59 PDT \(1h 50m from now; window is 2h\)/);
   assert.ok(lines.some((line) => /agent\/banqi-post \(\+3\) \(no worktree\)/.test(line)));
   assert.ok(lines.some((line) => /agent\/release-guard .*<- this release/.test(line)));
 });

@@ -1,6 +1,8 @@
 // Profile + leaderboard pages — extracted from landing.ts.
 
 import {
+  canonicalVariantOrderIndex,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   hasOwnKey,
@@ -10,6 +12,12 @@ import {
 import './account-profile.css';
 import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
+import {
+  buildChampionCrowns,
+  buildProfileChampionships,
+  type Championship,
+  RATING_VARIANT_LABEL_KEY,
+} from './champion-crowns.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
@@ -31,6 +39,7 @@ import {
   hasProfileGamesFilter,
   NO_PROFILE_GAMES_FILTER,
   type ProfileGamesFilter,
+  type ProfileGamesVariant,
   profileGamesFilterFromSearch,
   profileGamesFilterParams,
   profileUrlWithFilter,
@@ -59,6 +68,7 @@ import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   leaderboardVariants,
+  profileActivityVariants,
   profileRatingVariants,
   type RatingVariantId,
   variantMiniIdForRating,
@@ -78,6 +88,14 @@ type ProfileBucketRating = {
   ratedGamesPlayed: number;
   totalGamesPlayed: number;
   provisional: boolean;
+};
+
+type ProfileVariantActivity = {
+  variant: typeof FFQ_BANQI_SPEC_ID;
+  totalGamesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
 };
 
 type ProfileRatingHistoryPoint = {
@@ -126,9 +144,11 @@ type UserProfile = {
     // Set while a donation is active; drives the cosmetic Patron badge. Absent
     // /null = not a patron. Server-derived (see routes/patron.ts).
     patronSince?: string | null;
+    champions?: readonly Championship[];
     createdAt: string;
   };
   ratings: ProfileBucketRating[];
+  activity?: ProfileVariantActivity[];
   // Per-variant puzzle ratings; absent/empty when the user has solved no puzzles.
   puzzleRatings?: ProfilePuzzleRating[];
   // Consecutive days with a completed game, on the viewer's calendar; absent
@@ -147,6 +167,7 @@ const PROFILE_GAMES_PAGE = 15;
 const FAVORITE_GAMES_PAGE = 15;
 
 type LeaderboardEntry = {
+  champions?: readonly Championship[];
   rank: number;
   handle: string;
   displayName: string;
@@ -182,6 +203,7 @@ type OnlinePlayerEntry = {
   title?: string | null;
   rating: { variant: string; eloRating: number; provisional: boolean } | null;
   playing?: boolean;
+  champions?: Championship[];
 };
 
 type OnlinePlayersResult = {
@@ -193,6 +215,7 @@ type OnlinePlayersResult = {
 // One row of a compact ladder table: the value column is a rating for variant
 // ladders and a games count for the active-players ladder.
 type LeaderboardTableRow = {
+  champions?: readonly Championship[];
   rank: number;
   handle: string;
   displayName: string;
@@ -213,30 +236,16 @@ const LEADERBOARD_BUCKETS: {
   gameSpecId: v.gameSpecId,
 }));
 
-const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
-  fog: 'variant.darkChess.name',
-  dark_xiangqi: 'variant.darkXiangqi.name',
-  jieqi: 'variant.jieqi.name',
-  banqi: 'variant.banqi.name',
-  jungle: 'variant.jungle.name',
-  jungle_flip: 'variant.jungleFlip.name',
-  fortress_xiangqi: 'variant.fortressXiangqi.name',
-  duck_xiangqi: 'variant.duckXiangqi.name',
-  atomic_xiangqi: 'variant.atomicXiangqi.name',
-  crazyhouse_xiangqi: 'variant.crazyhouseXiangqi.name',
-  xiangqi: 'variant.xiangqi.name',
-  // Rated, but allowlisted: the server keeps this pool off every profile, and
-  // its VARIANTS entry stays out of PROFILE_VARIANT_ORDER until the spec is public.
-  xiangqi_mahjong: 'variant.xiangqiMahjong.name',
-  gomoku: 'variant.gomoku.name',
-};
-
 // Profile rating grid is subject-scoped and follows the baseline rating variant
 // registry.
 const PROFILE_VARIANT_ORDER: ProfileRatingVariant[] = profileRatingVariants.map((v) => v.id);
 
 function isProfileRatingVariant(value: string): value is ProfileRatingVariant {
-  return hasOwnKey(PROFILE_VARIANT_LABEL_KEY, value);
+  return hasOwnKey(RATING_VARIANT_LABEL_KEY, value);
+}
+
+function isProfileGamesVariant(value: string): value is ProfileGamesVariant {
+  return isProfileRatingVariant(value) || profileActivityVariants.some((v) => v.id === value);
 }
 
 class ProfileNotFound extends Error {}
@@ -276,27 +285,28 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   // The Games filters live in the URL (?variant=&result=&vs=), so a filtered
   // list survives a reload and can be linked. A variant in the URL also selects
   // that row of the rating rail, the control that sets it.
-  const initialFilter = profileGamesFilterFromSearch(
-    window.location.search,
-    isProfileRatingVariant,
+  const initialFilter = profileGamesFilterFromSearch(window.location.search, isProfileGamesVariant);
+  const activity = (profile.activity ?? []).filter((entry) =>
+    profileActivityVariants.some((v) => v.id === entry.variant),
   );
-  const selectedVariant = initialFilter.variant ?? defaultSelectedProfileVariant(profile.ratings);
+  const selectedVariant =
+    initialFilter.variant ?? defaultSelectedProfileVariant(profile.ratings, activity);
   const selectedTimeClass =
-    preferredBucketForVariant(profile.ratings, selectedVariant)?.timeClass ??
-    DEFAULT_LEADERBOARD_TIME_CLASS;
-  let spotlight = buildProfileRatingSpotlight(
-    profile.ratings,
-    selectedVariant,
-    locale,
-    selectedTimeClass,
-  );
-  void hydrateProfileRatingSpotlight(
-    spotlight,
-    profile.user.handle,
-    selectedVariant,
-    locale,
-    selectedTimeClass,
-  );
+    (isProfileRatingVariant(selectedVariant)
+      ? preferredBucketForVariant(profile.ratings, selectedVariant)?.timeClass
+      : undefined) ?? DEFAULT_LEADERBOARD_TIME_CLASS;
+  const selectedSpotlight = (variant: ProfileGamesVariant, timeClass: ProfileRatingTimeClass) => {
+    if (variant === FFQ_BANQI_SPEC_ID) {
+      return buildProfileActivitySpotlight(
+        activity.find((entry) => entry.variant === variant),
+        locale,
+      );
+    }
+    const next = buildProfileRatingSpotlight(profile.ratings, variant, locale, timeClass);
+    void hydrateProfileRatingSpotlight(next, profile.user.handle, variant, locale, timeClass);
+    return next;
+  };
+  let spotlight = selectedSpotlight(selectedVariant, selectedTimeClass);
 
   // The overview merges the identity banner and the rating graph into one card
   // (lichess parity): identity + actions across the top, the graph on the left
@@ -310,18 +320,12 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const tabs = buildProfileTabs(profile, locale, initialFilter, puzzleHistory);
   void puzzleHistory?.load().catch(() => {});
   const ratings = buildProfileRatings(profile.ratings, locale, {
+    activity,
     selectedVariant,
     onSelect: (variant, timeClass) => {
-      const next = buildProfileRatingSpotlight(profile.ratings, variant, locale, timeClass);
+      const next = selectedSpotlight(variant, timeClass);
       spotlight.replaceWith(next);
       spotlight = next;
-      void hydrateProfileRatingSpotlight(
-        spotlight,
-        profile.user.handle,
-        variant,
-        locale,
-        timeClass,
-      );
       syncSelectedRating(ratings, variant);
       // Picking a variant scopes the games list to it as well; the spotlight
       // alone used to move while the list kept showing every variant.
@@ -466,6 +470,7 @@ function renderPaceSections(
           handle: entry.handle,
           displayName: entry.displayName,
           title: entry.title,
+          champions: entry.champions,
           value: entry.eloRating,
           provisional: entry.provisional,
         })),
@@ -539,10 +544,12 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
   renderPaceSections(ladders, paceLadders, onlineHandles, locale);
   renderOnlinePlayers(onlineBody, onlinePlayers, locale);
 
-  // The rated switch lands with /api/server-status, possibly after the first
-  // render: re-render when it adds (or removes) the correspondence pace.
+  // The rated switch lands with /api/server-status, before, during or after the
+  // fetches above: re-render when it adds (or removes) the correspondence pace.
+  // The check also runs once now, since a switch that landed during the fetches
+  // fired before this listener existed.
   let renderedPaces = paceLadders.map((pace) => pace.timeClass).join(',');
-  onRatedModeChange(() => {
+  const syncPaces = (): void => {
     const paces = leaderboardPaces();
     if (paces.join(',') === renderedPaces) return;
     renderedPaces = paces.join(',');
@@ -550,7 +557,9 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
       if (renderedPaces !== paces.join(',')) return;
       renderPaceSections(ladders, next, onlineHandles, locale);
     });
-  });
+  };
+  onRatedModeChange(syncPaces);
+  syncPaces();
 }
 
 // The pace /player/rating-stats opens on for a variant: the pool with the most
@@ -844,6 +853,8 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
       link.append(dot);
       prependTitleBadge(link, player.title, locale);
       link.append(name);
+      const crowns = buildChampionCrowns(player.champions, { size: 16, locale });
+      if (crowns) link.append(crowns);
       if (player.playing) {
         const playingMark = document.createElement('span');
         playingMark.className = 'leaderboard-online-playing';
@@ -896,7 +907,7 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
 // Label for a rating-pool name coming off the wire, or null if the client
 // does not know the pool (fail soft: an unknown pool just loses its tooltip).
 function maybeVariantLabel(variant: string, locale: Locale): string | null {
-  if (!(variant in PROFILE_VARIANT_LABEL_KEY)) return null;
+  if (!(variant in RATING_VARIANT_LABEL_KEY)) return null;
   return profileVariantLabel(variant as ProfileRatingVariant, locale);
 }
 
@@ -1007,6 +1018,8 @@ function renderLeaderboardTable(
     link.append(presence);
     prependTitleBadge(link, row.title, locale);
     link.append(name);
+    const crowns = buildChampionCrowns(row.champions, { size: 16, locale });
+    if (crowns) link.append(crowns);
     nameTd.append(link);
 
     const valueTd = document.createElement('td');
@@ -1103,6 +1116,8 @@ export function buildProfileIdentity(
   const flair = buildFlairIconIfSet(profile.user.flair, { locale });
   if (flair) heading.append(flair);
   identity.append(heading);
+  const championships = buildProfileChampionships(profile.user.champions, locale);
+  if (championships) identity.append(championships);
 
   // Badge line: verified title, admin, and patron badges (the join date now
   // lives in the side column, lichess-style).
@@ -1432,13 +1447,16 @@ function profileLinkLabel(href: string): string {
   }
 }
 
-function defaultSelectedProfileVariant(ratings: ProfileBucketRating[]): ProfileRatingVariant {
+function defaultSelectedProfileVariant(
+  ratings: ProfileBucketRating[],
+  activity: ProfileVariantActivity[],
+): ProfileGamesVariant {
   const best = ratings
     .filter((rating) => rating.eloRating != null && rating.ratedGamesPlayed > 0)
     .sort((a, b) => (b.eloRating ?? 0) - (a.eloRating ?? 0))[0];
   if (best) return best.variant;
 
-  const active = ratings
+  const active = [...ratings, ...activity]
     .filter((rating) => rating.totalGamesPlayed > 0)
     .sort((a, b) => b.totalGamesPlayed - a.totalGamesPlayed)[0];
   if (active) return active.variant;
@@ -1528,6 +1546,49 @@ function buildProfileRatingSpotlight(
   }
   headline.append(name, ...(value.textContent ? [value] : []), detail);
   return buildProfileChartSpotlight(headline, locale);
+}
+
+function activityGamesLabel(activity: ProfileVariantActivity | undefined, locale: Locale): string {
+  const count = activity?.totalGamesPlayed ?? 0;
+  return `${count} ${t(count === 1 ? 'profile.gameSingular' : 'profile.gamePlural', {}, locale).toLowerCase()}`;
+}
+
+function activityResultsLabel(
+  activity: ProfileVariantActivity | undefined,
+  locale: Locale,
+): string {
+  const results: [number, I18nKey, I18nKey][] = [
+    [activity?.wins ?? 0, 'result.win', 'profile.filterWins'],
+    [activity?.draws ?? 0, 'result.draw', 'profile.filterDraws'],
+    [activity?.losses ?? 0, 'result.loss', 'profile.filterLosses'],
+  ];
+  return results
+    .map(
+      ([count, one, many]) => `${count} ${t(count === 1 ? one : many, {}, locale).toLowerCase()}`,
+    )
+    .join(' · ');
+}
+
+function buildProfileActivitySpotlight(
+  activity: ProfileVariantActivity | undefined,
+  locale: Locale,
+): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'profile-rating-spotlight';
+  const headline = document.createElement('div');
+  headline.className = 'profile-chart-headline';
+  const name = document.createElement('span');
+  name.className = 'profile-chart-variant';
+  name.textContent = profileVariantLabel(FFQ_BANQI_SPEC_ID, locale);
+  const detail = document.createElement('span');
+  detail.className = 'profile-chart-detail';
+  detail.textContent = activityGamesLabel(activity, locale);
+  headline.append(name, detail);
+  const results = document.createElement('p');
+  results.className = 'profile-chart-detail';
+  results.textContent = activityResultsLabel(activity, locale);
+  section.append(headline, results);
+  return section;
 }
 
 function buildProfilePuzzleSpotlight(entry: ProfilePuzzleRating, locale: Locale): HTMLElement {
@@ -1977,7 +2038,7 @@ function chartDateLabel(
 // `setGamesVariant` exists because the rating rail lives OUTSIDE this block: the
 // tabs used to be built once inline and dropped, so nothing could re-render them
 // and picking a variant left the games list showing every variant.
-type ProfileTabsHandle = { el: HTMLElement; setGamesVariant(variant: ProfileRatingVariant): void };
+type ProfileTabsHandle = { el: HTMLElement; setGamesVariant(variant: ProfileGamesVariant): void };
 
 function buildProfileTabs(
   profile: UserProfile,
@@ -2547,8 +2608,9 @@ export function buildProfileRatings(
   ratings: ProfileBucketRating[],
   locale: Locale = currentLocale(),
   opts: {
-    selectedVariant?: ProfileRatingVariant;
-    onSelect?: (variant: ProfileRatingVariant, timeClass: ProfileRatingTimeClass) => void;
+    activity?: ProfileVariantActivity[];
+    selectedVariant?: ProfileGamesVariant;
+    onSelect?: (variant: ProfileGamesVariant, timeClass: ProfileRatingTimeClass) => void;
   } = {},
 ): HTMLElement {
   const section = document.createElement('section');
@@ -2561,7 +2623,9 @@ export function buildProfileRatings(
   heading.textContent = t('profile.ratings', {}, locale);
   section.append(heading);
 
-  const variantsShown = orderedProfileVariants(ratings);
+  const variantsShown = [...profileRatingVariants, ...profileActivityVariants].sort(
+    (a, b) => canonicalVariantOrderIndex(a.gameSpecId) - canonicalVariantOrderIndex(b.gameSpecId),
+  );
 
   if (variantsShown.length === 0) {
     const empty = document.createElement('p');
@@ -2575,7 +2639,15 @@ export function buildProfileRatings(
   rail.className = 'profile-ratings-rail';
 
   for (const variant of variantsShown) {
-    rail.append(buildRatingRailRow(ratings, variant, locale, opts));
+    rail.append(
+      variant.id === FFQ_BANQI_SPEC_ID
+        ? buildActivityRailRow(
+            opts.activity?.find((entry) => entry.variant === variant.id),
+            locale,
+            opts,
+          )
+        : buildRatingRailRow(ratings, variant.id, locale, opts),
+    );
   }
 
   section.append(rail);
@@ -2613,14 +2685,6 @@ function preferredBucketForVariant(
         LEADERBOARD_TIME_CLASSES.findIndex((pace) => pace.id === b.timeClass),
   )[0];
   return mostPlayed ?? forVariant[0];
-}
-
-// Rail order: the shared canonical registry order (xiangqi first), same as the
-// leaderboard and picker. The earlier per-subject activity ordering (#137,
-// played-most-first) was reverted 2026-07-10: every rating surface reads in
-// one order, and played rows already stand out because never-played rows dim.
-function orderedProfileVariants(_ratings: ProfileBucketRating[]): ProfileRatingVariant[] {
-  return [...PROFILE_VARIANT_ORDER];
 }
 
 // Puzzle-variant display names (the values are GameSpecIds from the puzzle pool,
@@ -2764,8 +2828,9 @@ function buildRatingRailRow(
   variant: ProfileRatingVariant,
   locale: Locale = currentLocale(),
   opts: {
-    selectedVariant?: ProfileRatingVariant;
-    onSelect?: (variant: ProfileRatingVariant, timeClass: ProfileRatingTimeClass) => void;
+    activity?: ProfileVariantActivity[];
+    selectedVariant?: ProfileGamesVariant;
+    onSelect?: (variant: ProfileGamesVariant, timeClass: ProfileRatingTimeClass) => void;
   } = {},
 ): HTMLButtonElement {
   // One row per variant, not per (variant, pace): 17 variants times three
@@ -2883,9 +2948,53 @@ function buildRatingRailRow(
   return row;
 }
 
+function buildActivityRailRow(
+  activity: ProfileVariantActivity | undefined,
+  locale: Locale,
+  opts: {
+    selectedVariant?: ProfileGamesVariant;
+    onSelect?: (variant: ProfileGamesVariant, timeClass: ProfileRatingTimeClass) => void;
+  },
+): HTMLButtonElement {
+  const variant = FFQ_BANQI_SPEC_ID;
+  const selected = opts.selectedVariant === variant;
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'profile-rating-row';
+  row.dataset.variant = variant;
+  row.setAttribute('aria-pressed', String(selected));
+  row.classList.toggle('profile-rating-row-selected', selected);
+  row.classList.toggle('profile-rating-row-empty', !activity?.totalGamesPlayed);
+  row.addEventListener('click', () => opts.onSelect?.(variant, DEFAULT_LEADERBOARD_TIME_CLASS));
+  row.append(
+    buildVariantThumb(
+      'ffq-banqi',
+      32,
+      'profile-rating-thumb',
+      t('profile.variantBoard', { variant: profileVariantLabel(variant, locale) }, locale),
+    ),
+  );
+  const meta = document.createElement('div');
+  meta.className = 'profile-rating-meta';
+  const name = document.createElement('span');
+  name.className = 'profile-rating-name';
+  name.textContent = profileVariantLabel(variant, locale);
+  const count = document.createElement('span');
+  count.className = 'profile-rating-games';
+  count.textContent = activityGamesLabel(activity, locale);
+  meta.append(name, count);
+  row.append(meta);
+  const chevron = document.createElement('span');
+  chevron.className = 'profile-rating-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '›';
+  row.append(chevron);
+  return row;
+}
+
 function syncSelectedRating(
   section: HTMLElement,
-  variant: ProfileRatingVariant | null,
+  variant: ProfileGamesVariant | null,
   puzzleVariant?: string,
 ): void {
   for (const row of section.querySelectorAll<HTMLElement>('.profile-rating-row')) {
@@ -3095,10 +3204,14 @@ function buildProfileGames(
 }
 
 function profileVariantLabel(
-  variant: ProfileRatingVariant,
+  variant: ProfileGamesVariant,
   locale: Locale = currentLocale(),
 ): string {
-  return t(PROFILE_VARIANT_LABEL_KEY[variant], {}, locale);
+  return t(
+    variant === FFQ_BANQI_SPEC_ID ? 'variant.ffqBanqi.name' : RATING_VARIANT_LABEL_KEY[variant],
+    {},
+    locale,
+  );
 }
 
 async function fetchUserGamesPage(
