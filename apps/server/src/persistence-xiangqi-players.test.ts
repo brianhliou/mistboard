@@ -12,6 +12,10 @@ import {
   listXiangqiPlayers,
   playerSlugBase,
 } from './persistence-xiangqi-players.js';
+import {
+  translatedXiangqiBroadcastPlayerTag,
+  translatedXiangqiBroadcastTour,
+} from './xiangqi-broadcast-translate.js';
 
 const FIXTURE_DIR = fileURLToPath(
   new URL('../../../packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample', import.meta.url),
@@ -61,6 +65,36 @@ function row(input: {
 }
 
 describe('player pages, derived from the archive', () => {
+  it('DPXQ player pages retain translated pairs and Japanese names from broadcasts', () => {
+    const tour = translatedXiangqiBroadcastTour({
+      name: '2025年第八届“一带一路”锦江杯成都全球象棋双人赛 双人赛',
+      nameEn: 'Stale event name',
+    });
+    const players = foldPlayers(
+      ['卢玄斌 谢汶谕', '池田彩歌', '山家爱美'].map((name) => {
+        const tag = translatedXiangqiBroadcastPlayerTag({ name, nameEn: 'Stale player name' });
+        return {
+          ...row({ name, nameEn: tag.nameEn, tour: '2026-shanghai-cup', games: 1 }),
+          tour_name: tour.name,
+          tour_name_en: tour.nameEn,
+        };
+      }),
+    );
+    for (const [name, nameEn, slug] of [
+      ['卢玄斌 谢汶谕', 'Lu Xuanbin / Xie Wenyu', 'lu-xuanbin-xie-wenyu'],
+      ['池田彩歌', 'Ikeda Ayaka', 'ikeda-ayaka'],
+      ['山家爱美', 'Japanese player', 'japanese-player'],
+    ]) {
+      const player = players.find((entry) => entry.name === name);
+      assert.equal(player?.nameEn, nameEn);
+      assert.equal(player?.slug, slug);
+      assert.equal(
+        player?.events[0]?.tourNameEn,
+        '2025 8th Belt and Road Jinjiang Cup Chengdu Global Xiangqi Pairs',
+      );
+    }
+  });
+
   it('gates on one finished game in an A-level event, then counts every event', () => {
     const players = foldPlayers([
       row({

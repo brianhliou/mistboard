@@ -67,6 +67,18 @@ export const XIANGQI_EVENT_GLOSSARY: ReadonlyArray<readonly [string, string]> = 
   ['黑将组', 'Team Black'],
   ['海选赛', 'Qualifier'],
   ['双人赛', 'Pairs'],
+  ['一带一路', 'Belt and Road'],
+  ['锦江杯', 'Jinjiang Cup'],
+  ['成都', 'Chengdu'],
+  ['全球', 'Global'],
+  ['冠军', 'Champion'],
+  ['棋类', 'Board Games'],
+  ['比赛', 'Competition'],
+  ['预赛A组', 'Preliminary Group A'],
+  ['预赛', 'Preliminary'],
+  ['甲组', 'Division A'],
+  ['乙组', 'Division B'],
+  ['个人', 'Individual'],
   ['快棋', 'Rapid'],
   // The World Open's groups (dpxq files each as its own tour): a bare 团体
   // fell through to pinyin, "Women Tuanti".
@@ -177,6 +189,11 @@ const GLOSSARY_BY_LENGTH = [...XIANGQI_EVENT_GLOSSARY, ...XIANGQI_STUDY_EVENT_TE
 
 const HAN = /\p{Script=Han}/u;
 
+/** DPXQ appends a section to an event even when it repeats the event's format. */
+export function normalizeXiangqiEventName(zh: string): string {
+  return zh.trim().replace(/(双人赛|个人赛|团体赛)(?:\s+\1)+$/u, '$1');
+}
+
 /**
  * An event name in English, or undefined when any part of it is not in the
  * glossary (or it holds no Chinese at all, so there is nothing to translate).
@@ -188,7 +205,7 @@ const HAN = /\p{Script=Han}/u;
  * original: "2025 Nonghang Cup" from a guess is worse than the Chinese.
  */
 export function translateXiangqiEventNameStrict(zh: string): string | undefined {
-  const trimmed = zh.trim();
+  const trimmed = normalizeXiangqiEventName(zh);
   if (!HAN.test(trimmed)) return undefined;
   const override = XIANGQI_EVENT_NAME_OVERRIDES.get(trimmed);
   if (override) return override;

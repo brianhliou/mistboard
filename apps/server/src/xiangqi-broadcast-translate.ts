@@ -16,6 +16,7 @@
 
 import {
   FEDERATION_PLAYER_TRADITIONAL_NAMES,
+  normalizeXiangqiEventName,
   ordinalEn,
   parseChineseNumeral,
   XIANGQI_EVENT_GLOSSARY,
@@ -67,6 +68,12 @@ const PLAYER_NAME_OVERRIDES = new Map<string, string>([
   // The 2025 world champion, entered in Chinese events without a federation
   // as often as with one; Vietnamese, spelled as the site's articles spell him.
   ['赖理兄', 'Lại Lý Huynh'],
+  // DPXQ puzzle credits (#1210): the issue supplies Ikeda's Japanese reading.
+  ['池田彩歌', 'Ikeda Ayaka'],
+  // The source gives no verified Japanese reading for 山家爱美. Omit the
+  // personal name in English rather than inventing a Mandarin romanization.
+  ['山家爱美', 'Japanese player'],
+  ['山家愛美', 'Japanese player'],
 ]);
 
 // The federation a source's team field names, for the players outside
@@ -464,6 +471,7 @@ const TEAM_GLOSSARY: Array<[string, string]> = [
   ['实业', 'Industrial'],
   ['香港', 'Hong Kong'],
   ['广东', 'Guangdong'],
+  ['二队', 'Second Team'],
   ['队', 'Team'],
   ...PLACE_GLOSSARY,
   ...EVENT_GLOSSARY,
@@ -571,6 +579,23 @@ function romanizeMixedToken(token: string): string {
 }
 
 /**
+ * Two short Han names separated by whitespace denote a pairs side. Known
+ * places and institutional/team qualifiers retain the team + player parsing.
+ * Share this check with DPXQ ingestion and puzzle credits so neither drops a
+ * partner before the name translator sees the source value.
+ */
+export function isXiangqiPlayerPair(raw: string): boolean {
+  const tokens = raw.trim().split(/\s+/u);
+  return (
+    tokens.length === 2 &&
+    tokens.every((token) => /^[\p{Script=Han}]{2,4}$/u.test(token)) &&
+    !PLACE_GLOSSARY.some(([place]) => tokens[0] === place) &&
+    !/[省市队会]$/u.test(tokens[0]!) &&
+    !TEAM_GLOSSARY.some(([key]) => key.length >= 2 && tokens[0]!.includes(key))
+  );
+}
+
+/**
  * A player's name, romanized. `federation` (the source's Chinese team or
  * federation field) scopes the overrides for players from outside mainland
  * China, whose Chinese names are common enough to belong to a mainland player
@@ -583,6 +608,12 @@ export function romanizeXiangqiPlayerName(zh: string, federation?: string): stri
   if (scoped) return scoped;
   const whole = PLAYER_NAME_OVERRIDES.get(trimmed);
   if (whole) return whole;
+  if (isXiangqiPlayerPair(trimmed)) {
+    return trimmed
+      .split(/\s+/u)
+      .map((name) => romanizeXiangqiPlayerName(name, federation))
+      .join(' / ');
+  }
 
   // Space/dot-separated tokens: the last token is the player name, leading
   // tokens are team/region qualifiers (广东 许银川 -> Guangdong Xu Yinchuan).
@@ -711,9 +742,10 @@ function translateGlossaryText(
 }
 
 export function translateXiangqiEventName(zh: string): string | undefined {
+  const normalized = normalizeXiangqiEventName(zh);
   return (
-    EVENT_NAME_OVERRIDES.get(zh.trim()) ??
-    translateGlossaryText(zh, EVENT_GLOSSARY_SORTED, EVENT_UNITS)
+    EVENT_NAME_OVERRIDES.get(normalized) ??
+    translateGlossaryText(normalized, EVENT_GLOSSARY_SORTED, EVENT_UNITS)
   );
 }
 

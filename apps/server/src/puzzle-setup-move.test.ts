@@ -210,6 +210,30 @@ test('an English name needs no English form', () => {
   assert.equal(englishSourcePlayerName('越南 阮成保'), 'Nguyễn Thành Bảo (Vietnam)');
 });
 
+test('DPXQ puzzle credits retain pairs, Japanese names and translated event words', async () => {
+  assert.equal(englishSourcePlayerName('卢玄斌 谢汶谕'), 'Lu Xuanbin / Xie Wenyu');
+  assert.equal(englishSourcePlayerName('日本 池田彩歌'), 'Ikeda Ayaka (Japan)');
+  assert.equal(englishSourcePlayerName('池田彩歌'), 'Ikeda Ayaka');
+  assert.equal(englishSourcePlayerName('山家爱美'), 'Japanese player');
+  assert.equal(
+    englishSourcePlayerName('上海棋类二队 唐丹'),
+    'Tang Dan (Shanghai Board Games Second Team)',
+  );
+  const stored = puzzle('xq_dpxq_pairs', 4, {
+    redName: '卢玄斌 谢汶谕',
+    blackName: '日本 池田彩歌',
+  });
+  stored.sourceGame.event = '2025年第八届“一带一路”锦江杯成都全球象棋双人赛 双人赛';
+  const fields = await puzzleDetailSourceFields(stored, null);
+  assert.equal(fields.sourceGame?.redNameEn, 'Lu Xuanbin / Xie Wenyu');
+  assert.equal(fields.sourceGame?.blackNameEn, 'Ikeda Ayaka (Japan)');
+  assert.equal(
+    fields.sourceGame?.eventEn,
+    '2025 8th Belt and Road Jinjiang Cup Chengdu Global Xiangqi Pairs',
+  );
+  assert.equal(fields.sourceGame?.redName, '卢玄斌 谢汶谕');
+});
+
 test('only the online platform event marks a game as an online platform game', () => {
   assert.equal(isOnlinePlatformEvent('ElephantChess PvP'), true);
   assert.equal(isOnlinePlatformEvent('Wuyang Cup'), false);
