@@ -15,7 +15,8 @@ the Fairy-Stockfish build). Driven from `apps/web/src/review/engine/misty-ceval.
 
 ## Regenerating the wasm
 
-Source lives in the private **misty-jungle** repo (`~/projects/misty-jungle`), crate
+Source lives in the public **misty-jungle** repo
+(https://github.com/brianhliou/misty-jungle, MIT, see `LICENSE.txt`; local checkout `~/projects/misty-jungle`), crate
 `jungle-wasm` (a cdylib that `#[path]`-includes the shared engine core — a single
 self-contained `engine.rs`, no game/endgame/flatdb split and no `rayon`, so unlike the
 Flip Jungle build there is no stub module). It exposes one-shot

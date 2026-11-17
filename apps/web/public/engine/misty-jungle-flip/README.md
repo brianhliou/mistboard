@@ -15,7 +15,8 @@ Driven from `apps/web/src/review/engine/misty-ceval.ts` via `worker.js` (a modul
 
 ## Regenerating the wasm
 
-Source lives in the private **misty-flip-jungle** repo (`~/projects/misty-flip-jungle`),
+Source lives in the public **misty-flip-jungle** repo
+(https://github.com/brianhliou/misty-flip-jungle, MIT, see `LICENSE.txt`; local checkout `~/projects/misty-flip-jungle`),
 crate `jungle-flip-wasm` (a cdylib that `#[path]`-includes the shared engine core plus a
 stub `flatdb` — the real one uses `rayon`, which does not compile to wasm — and exposes
 both finite `analyze` and stateful `AnalysisSession`). To rebuild after an engine change:

@@ -78,12 +78,30 @@ set per evaluation (`EvalFile` is a global option on a core that outlives any
 one board). Bump `ENGINE_ASSET_VERSION` in `ceval.ts` on any change to the files
 here.
 
-## License
+## License and source
 
-Fairy-Stockfish is licensed under the **GNU General Public License v3.0**. These
-vendored binaries are distributed under GPL-3.0; the corresponding source is the
-pinned upstream repository above. Full license text:
-https://www.gnu.org/licenses/gpl-3.0.txt
+Fairy-Stockfish is licensed under the **GNU General Public License v3.0**, and
+these binaries are distributed under it. The license text is
+[COPYING.txt](COPYING.txt).
 
-To rebuild: `sh scripts/engine-wasm/build-fairy-stockfish-wasm.sh`, then copy
-the three artifacts here and update the sha256 above.
+The corresponding source for `stockfish.js`, `stockfish.wasm` and
+`stockfish.worker.js` is three things, all public:
+
+1. [fairy-stockfish.wasm at `db432abaf83a1e7c265ff9c8554f83977d3441f5`](https://github.com/fairy-stockfish/fairy-stockfish.wasm/tree/db432abaf83a1e7c265ff9c8554f83977d3441f5)
+   ([source archive](https://github.com/fairy-stockfish/fairy-stockfish.wasm/archive/db432abaf83a1e7c265ff9c8554f83977d3441f5.tar.gz)).
+2. Our changes to it:
+   [fairy-stockfish-atomic-xiangqi.patch](fairy-stockfish-atomic-xiangqi.patch),
+   served here and identical to the copy at the root of the
+   [Mistboard repository](https://github.com/brianhliou/mistboard).
+3. The build recipe:
+   [build-fairy-stockfish-wasm.sh](build-fairy-stockfish-wasm.sh), a copy of
+   `scripts/engine-wasm/build-fairy-stockfish-wasm.sh` in the Mistboard
+   repository. Run it from a checkout of that repository; it needs Docker and
+   uses `emscripten/emsdk:2.0.26`.
+
+The three `.ini` variant definitions beside this file are loaded at run time and
+are not compiled in.
+
+After a rebuild, copy the three artifacts here, update the sha256 above, and
+copy the patch and recipe here again if either changed (a test fails when the
+copies drift).
