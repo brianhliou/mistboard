@@ -196,6 +196,14 @@ a.study-index__rail-tab.is-active:hover {
   border-bottom: 1px solid var(--site-border-soft);
 }
 
+.study-index__classical-list--collapsed li:nth-child(n + 11) {
+  display: none;
+}
+
+.study-index__classical-toggle {
+  margin: 0.75rem 1rem;
+}
+
 .study-index__classical-list a {
   display: flex;
   flex-direction: column;
@@ -460,6 +468,10 @@ a.study-index__rail-tab.is-active:hover {
 
 /* Narrow screens: rail above, single-column grid */
 @media (max-width: 720px) {
+  .study-index__classical-toggle {
+    width: calc(100% - 2rem);
+    min-height: 44px;
+  }
   .study-index {
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;

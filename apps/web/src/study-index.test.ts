@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createGomokuRoomState, gomokuFen, parseGomokuFen } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountStudyIndex } from './study-index.js';
@@ -19,6 +20,75 @@ describe('study index classical collections', () => {
     { id: 'elegant1', name: 'Elegant Pastime Manual, Vol. 1', chapterCount: 90 },
     { id: '9IIMlPp1', name: 'Secret in the Tangerine', chapterCount: 137 },
   ];
+
+  it('shows ten collections initially and toggles the remaining links in place', async () => {
+    window.history.replaceState({}, '', '/study');
+    const collections = Array.from({ length: 12 }, (_, i) => ({
+      id: `classic${i}`,
+      name: `Collection ${i + 1}`,
+      chapterCount: 1,
+    }));
+    const fetcher = vi.fn(async () => jsonResponse({ studies: [], classicalStudies: collections }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    const style = document.createElement('style');
+    style.textContent = readFileSync('src/study-index.css', 'utf8');
+    document.body.append(style, root);
+    mountStudyIndex(root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(12),
+    );
+    const shelf = root.querySelector('.study-index__classical')!;
+    const list = shelf.querySelector('ul')!;
+    const links = [...list.querySelectorAll('a')];
+    const hiddenItems = () =>
+      [...list.children].filter((item) => getComputedStyle(item).display === 'none');
+    const button = shelf.querySelector('button')!;
+    expect(hiddenItems()).toEqual([...list.children].slice(10));
+    expect(button.type).toBe('button');
+    expect(button.textContent).toBe('All 12 collections');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(button.getAttribute('aria-controls')).toBe(list.id);
+    expect(list.id).not.toBe('');
+
+    button.click();
+    expect(hiddenItems()).toHaveLength(0);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.textContent).toBe('Show fewer');
+    expect([...list.querySelectorAll('a')]).toEqual(links);
+
+    button.click();
+    expect(hiddenItems()).toHaveLength(2);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(button.textContent).toBe('All 12 collections');
+    expect([...list.querySelectorAll('a')]).toEqual(links);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the toggle for ten collections', async () => {
+    window.history.replaceState({}, '', '/study');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          studies: [],
+          classicalStudies: Array.from({ length: 10 }, (_, i) => ({
+            id: `classic${i}`,
+            name: `Collection ${i + 1}`,
+            chapterCount: 1,
+          })),
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(10),
+    );
+    expect(root.querySelector('.study-index__classical button')).toBeNull();
+  });
 
   it('shows the pinned shelf above the unchanged newest list and keeps its paging offset', async () => {
     window.history.replaceState({}, '', '/study');

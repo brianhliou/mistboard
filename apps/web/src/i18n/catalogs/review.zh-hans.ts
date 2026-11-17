@@ -216,6 +216,8 @@ export const ZH_HANS_REVIEW = {
   'study.errataAction': '报告勘误',
   'study.indexAll': '全部研习',
   'study.indexClassical': '古典棋谱集',
+  'study.indexClassicalAll': '全部 {count} 部棋谱集',
+  'study.indexClassicalFewer': '收起',
   'study.indexNewest': '最新研习',
   'study.indexMine': '我的研习',
   'study.indexFavorites': '收藏',

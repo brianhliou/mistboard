@@ -239,6 +239,7 @@ function classicalCollections(studies: ClassicalStudy[]): HTMLElement {
   section.setAttribute('aria-labelledby', heading.id);
   const list = document.createElement('ul');
   list.className = 'study-index__classical-list';
+  list.id = 'study-classical-list';
   for (const study of studies) {
     const item = document.createElement('li');
     const link = document.createElement('a');
@@ -256,6 +257,23 @@ function classicalCollections(studies: ClassicalStudy[]): HTMLElement {
     list.append(item);
   }
   section.append(heading, list);
+  if (studies.length > 10) {
+    list.classList.add('study-index__classical-list--collapsed');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'study-index__more-button study-index__classical-toggle';
+    button.textContent = t('study.indexClassicalAll', { count: studies.length });
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', list.id);
+    button.addEventListener('click', () => {
+      const collapsed = list.classList.toggle('study-index__classical-list--collapsed');
+      button.setAttribute('aria-expanded', String(!collapsed));
+      button.textContent = collapsed
+        ? t('study.indexClassicalAll', { count: studies.length })
+        : t('study.indexClassicalFewer');
+    });
+    section.append(button);
+  }
   return section;
 }
 
