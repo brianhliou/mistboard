@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Jungle Chess has seven Misty difficulty levels to pick from ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Gomoku has a full-strength Rapfi above Level 8 on its bot card ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
 - Misty plays Xiangqi Mahjong with a stronger search bot ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
 - Fanfanqi correspondence is open to everyone, casual only ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
@@ -207,6 +208,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The players page shows the correspondence ladders on every load ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
+- Automatic release checks no longer leave test games in Watch and recent games ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
+- Three Kingdoms Banqi games in studies and on the rules page now animate moves and flips ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - The homepage board no longer sticks on a fog game it cannot draw ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - The champions page shows Pikafish's re-run title match ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Crazyhouse Xiangqi study embeds draw move grades, drops included ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
@@ -288,6 +292,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Event-loop stall alerts name the requests and jobs that were running, and a restart's warm-up no longer alerts ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Bot ratings record the engine build and net they were measured on ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - The site counts where sign-ins start and how many guests who play a person go on to sign in ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
 - Xiangqi bots and server review analysis run patched Pikafish on the public CC0 network ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
