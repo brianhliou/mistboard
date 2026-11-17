@@ -101,7 +101,10 @@ describe('Banqi postgame page', () => {
     expect(root.querySelector('.game-meta-card')).not.toBeNull();
     expect(root.querySelector('[role="separator"][aria-label="Resize chat"]')).not.toBeNull();
     const playerRows = root.querySelectorAll('.game-meta-card__player');
-    expect(playerRows[0]?.textContent).toContain('Misty Banqi');
+    // The card's head names the game, so Misty drops it; the tooltip keeps it.
+    const mistyName = playerRows[0]?.querySelector<HTMLElement>('.game-meta-card__name');
+    expect(mistyName?.textContent).toBe('Misty');
+    expect(mistyName?.title).toBe('Misty Banqi');
     expect(playerRows[0]?.querySelector('.game-meta-card__disc')?.classList).toContain(
       'seat-disc--black',
     );
