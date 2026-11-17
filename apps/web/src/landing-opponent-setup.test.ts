@@ -365,7 +365,11 @@ describe('#1123 opponent-first setup', () => {
     expect(section('sendTo')?.querySelector('[aria-checked="true"]')?.textContent).toBe(
       'Share a link',
     );
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // The only read is #1194's waiting-player check in the Computer setup.
+    const otherCalls = fetchSpy.mock.calls.filter(
+      ([url]) => !String(url).startsWith('/api/lobby?prompt='),
+    );
+    expect(otherCalls).toEqual([]);
   });
 
   it('replaces setup with a searchable, deduplicated, online-first player list and sends a directed seek', async () => {

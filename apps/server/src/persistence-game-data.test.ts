@@ -268,7 +268,7 @@ definePersistenceTests('game data files', () => {
       VALUES ('data-bot', 'Renamed Engine', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi','banqi'], 300000, 3000, 'public'),
        ('private-bot', 'Private Engine', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi'], 300000, 3000, 'private'),
        ('empty-bot', 'No games', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi'], 300000, 3000, 'public'),
-       ('hidden-bot', 'Hidden Engine', '', 'system', 'test-engine', 'ffq-banqi', ARRAY['ffq-banqi'], 300000, 3000, 'public')`);
+       ('hidden-bot', 'Hidden Engine', '', 'system', 'test-engine', 'fortress-xiangqi', ARRAY['fortress-xiangqi'], 300000, 3000, 'public')`);
     // One game in the first seat, one in the second, and the excluded rows.
     await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'data-bot', display_name = 'Old Name'
       WHERE (game_id IN ('xq_data_a','xq_data_private','xq_data_operator','xq_data_imported','xq_data_open_month') AND color = 'red')
@@ -464,8 +464,8 @@ definePersistenceTests('game data files', () => {
     assert.ok(!listing.variants.includes('jungle'));
     assert.ok(listing.offeredVariants.includes('jungle'));
     assert.ok(listing.months.every((month) => month.month !== '2026-09'));
-    // Fanfanqi is public and exports nothing, so /data names it without a file.
-    assert.deepEqual(listing.unavailableVariants, [{ variant: 'ffq-banqi', reason: 'no-export' }]);
+    // Every public variant now exports a file, so /data names none without one.
+    assert.deepEqual(listing.unavailableVariants, []);
   });
 
   test('the listing counts closed months only, without the excluded games', async () => {

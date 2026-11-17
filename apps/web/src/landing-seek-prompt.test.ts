@@ -261,7 +261,8 @@ it('#1194: ignoring the prompt preserves bot choices and starts the bot', async 
     timeControl: { initialMs: 180000, incrementMs: 2000 },
   });
   expect(navigate).toHaveBeenCalledWith('/room/jq_bot');
-  expect(prompt()?.hidden).toBe(true);
+  // Starting closes the setup dialog, so the prompt is hidden or gone.
+  expect(prompt()?.hidden ?? true).toBe(true);
 });
 
 it('#1194: switching away from jieqi discards an in-flight prompt response', async () => {
