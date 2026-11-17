@@ -4,6 +4,12 @@
    a generic .static-prose style the newer pages (contribute / thanks / lag)
    reuse. */
 
+/* Reserve the document scrollbar on both short and long rail pages, so the
+   preserved header and columns do not move when the main column changes. */
+html:has(.static-page-layout) {
+  overflow-y: scroll;
+}
+
 .static-page-layout {
   display: grid;
   grid-template-columns: 194px minmax(0, 940px);
