@@ -267,6 +267,31 @@ const candidateOutput = [100, 80, -1000]
   ])
   .concat('MESSAGE +29999 | 1-1 | C1', '2,0');
 
+// The fake engine appends while tests poll, so a read can land mid-write: an
+// empty file or a torn last line is "not written yet", not a parse error.
+// Only a complete line (ending in a newline) is parsed.
+function readCommandLog(log) {
+  const text = readFileSync(log, 'utf8');
+  const complete = text.slice(0, text.lastIndexOf('\n') + 1);
+  return complete
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line));
+}
+
+test('the command log reader skips an empty file and a torn last line', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gomoku-log-'));
+  const log = join(dir, 'commands.jsonl');
+  try {
+    writeFileSync(log, '');
+    assert.deepEqual(readCommandLog(log), []);
+    writeFileSync(log, '{"pid":1,"line":"START 15"}\n{"pid":1,"li');
+    assert.deepEqual(readCommandLog(log), [{ pid: 1, line: 'START 15' }]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 async function withNativeFixture(output, check) {
   const dir = mkdtempSync(join(tmpdir(), 'gomoku-native-'));
   const binary = join(dir, 'rapfi');
@@ -292,7 +317,7 @@ require('node:readline').createInterface({input: process.stdin}).on('line', line
   let native;
   try {
     native = await ladder.loadNativeRapfi();
-    await check(native, binary, () => readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse));
+    await check(native, binary, () => readCommandLog(log));
   } finally {
     await native?.stop();
     if (previous === undefined) delete process.env.RAPFI_BIN;
@@ -303,11 +328,14 @@ require('node:readline').createInterface({input: process.stdin}).on('line', line
 
 test('native runner uses the live server seeded policy, fresh processes and binary fingerprint', async () => {
   await withNativeFixture(candidateOutput.join('\n'), async (native, binary, commands) => {
-    assert.deepEqual(native.pin, {
-      kind: 'native',
-      binaryPath: binary,
-      sha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
-    });
+    assert.equal(native.pin.kind, 'native');
+    assert.equal(native.pin.binaryPath, binary);
+    assert.equal(
+      native.pin.sha256,
+      createHash('sha256').update(readFileSync(binary)).digest('hex'),
+    );
+    assert.equal(native.pin.networkSha256, null);
+    assert.ok(native.pin.policies['rapfi-level-8'].policy);
     const tier = RAPFI_LEVELS[0];
     const player = native.player(tier);
     const state = game.createInitialGomokuState({
@@ -992,4 +1020,104 @@ test('--tiers overrides only the named fields and refuses typos', () => {
     /both candidateCount and evalMargin/,
   );
   assert.throws(() => applyTierOverrides(RAPFI_LEVELS, {}), /JSON array/);
+});
+
+test('strongest pairing is explicit, native-only and preserves every historical level plan', async () => {
+  const { RAPFI_STRONGEST } = await tsImport(
+    '../packages/game/src/rapfi-candidates.ts',
+    import.meta.url,
+  );
+  const before = structuredClone(RAPFI_LEVELS);
+  const [pair] = ladder.pairingPlan(RAPFI_LEVELS, '8-rapfi-strongest');
+  assert.equal(pair.id, '8-rapfi-strongest');
+  assert.deepEqual(pair.weaker, RAPFI_LEVELS[7]);
+  assert.deepEqual(pair.stronger, {
+    ...RAPFI_STRONGEST,
+    level: 'strongest',
+    engineId: 'rapfi-strongest',
+  });
+  assert.equal('nodes' in pair.stronger, false);
+  assert.equal(
+    ladder.pairingPlan().some((p) => p.id.includes('strongest')),
+    false,
+  );
+  assert.deepEqual(RAPFI_LEVELS, before);
+  for (const id of [
+    '7-rapfi-strongest',
+    'rapfi-strongest-8',
+    '8-rapfi-strongest,8-rapfi-strongest',
+  ])
+    assert.throws(() => ladder.pairingPlan(RAPFI_LEVELS, id), /pairing/i);
+  const saved = process.env.RAPFI_BIN;
+  const dir = mkdtempSync(join(tmpdir(), 'rapfi-strongest-plan-'));
+  const bin = join(dir, 'rapfi');
+  writeFileSync(bin, 'fixture binary, never executed');
+  writeFileSync(join(dir, 'mix9svqfreestyle_bsmix.bin.lz4'), 'fixture network');
+  process.env.RAPFI_BIN = bin;
+  const native = await ladder.loadNativeRapfi();
+  try {
+    assert.ok(native.player(pair.stronger).telemetry);
+    assert.throws(() => native.player({ ...pair.stronger, timeMs: 1 }), /live.*policy/);
+    assert.equal(native.pin.policies['rapfi-strongest'].config.movetime_ms, 5000);
+    assert.equal(native.pin.policies['rapfi-strongest'].config.selection, 'native-best');
+    assert.ok(native.pin.policies['rapfi-strongest'].policy);
+    assert.match(native.pin.networkSha256, /^[0-9a-f]{64}$/);
+  } finally {
+    await native.stop();
+    rmSync(dir, { recursive: true, force: true });
+    if (saved === undefined) delete process.env.RAPFI_BIN;
+    else process.env.RAPFI_BIN = saved;
+  }
+});
+
+test('bounded parallel native games keep deterministic pair order and drain failures', async () => {
+  const play = async (_state, { gameSeed }) => {
+    await delay(gameSeed % 3);
+    return { to: 'h8' };
+  };
+  const input = {
+    id: 'parallel',
+    seed: 42,
+    games: 8,
+    openings: Array(4).fill(opening),
+    weaker: play,
+    stronger: play,
+  };
+  const serial = await runPairing(input);
+  const parallel = await runPairing({ ...input, parallel: 6 });
+  assert.deepEqual(parallel.games, serial.games);
+  assert.equal(parallel.strongerScore, serial.strongerScore);
+  for (const n of [0, 7, 1.5])
+    await assert.rejects(runPairing({ ...input, parallel: n }), /parallel/);
+  let active = 0;
+  const fail = async () => {
+    active++;
+    await delay(5);
+    active--;
+    throw new Error('failed search');
+  };
+  await assert.rejects(
+    runPairing({ ...input, parallel: 6, stronger: fail, weaker: fail }),
+    /failed search/,
+  );
+  assert.equal(active, 0);
+});
+
+test('strongest native player uses the live time-only final move without weakening', async () => {
+  await withNativeFixture('7,7', async (native, _binary, commands) => {
+    const [{ stronger }] = ladder.pairingPlan(RAPFI_LEVELS, '8-rapfi-strongest');
+    const player = native.player(stronger);
+    const state = game.createInitialGomokuState();
+    assert.deepEqual(
+      await player.choose(state, { gameSeed: 17, plySeed: rapfi.rapfiPlySeed(17, 0) }),
+      { to: 'h8' },
+    );
+    const lines = commands().map(({ line }) => line);
+    assert.ok(lines.includes('INFO timeout_turn 5000'));
+    assert.ok(
+      !lines.some((line) => line.startsWith('INFO max_node ') || line.startsWith('YXNBEST ')),
+    );
+    assert.equal(player.telemetry.searches, 1);
+    assert.equal(player.telemetry.moves[0].to, 'h8');
+  });
 });

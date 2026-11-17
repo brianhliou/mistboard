@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Offline, serial, single-thread WASM (default) or live native server engine. No network or ratings.
+// Offline single-thread WASM (serial default) or bounded parallel live native games. No network or ratings.
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -26,6 +26,15 @@ const {
   winsInOne,
   mustBlock,
 } = await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
+const { RAPFI_STRONGEST } = await tsImport(
+  '../packages/game/src/rapfi-candidates.ts',
+  import.meta.url,
+);
+const STRONGEST = Object.freeze({
+  ...RAPFI_STRONGEST,
+  level: 'strongest',
+  engineId: 'rapfi-strongest',
+});
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 const BASELINE = Object.freeze({
   level: 'baseline',
@@ -69,6 +78,12 @@ export function pairingPlan(levels = RAPFI_LEVELS, pairs) {
       : pairs.split(',');
   if (new Set(ids).size !== ids.length) throw new Error('Duplicate pairing');
   return ids.map((id) => {
+    if (id === '8-rapfi-strongest') {
+      const weaker = levels.find((tier) => tier.level === 8);
+      if (!isDeepStrictEqual(weaker, RAPFI_LEVELS[7]))
+        throw new Error('Strongest pairing requires the live Level 8 policy');
+      return { id, weaker, stronger: STRONGEST };
+    }
     const match = /^(baseline|\d+)-(\d+)$/.exec(id === 'baseline' ? 'baseline-1' : id);
     const weaker =
       match?.[1] === 'baseline'
@@ -195,29 +210,42 @@ export async function runPairing({
   stronger,
   beforeGame = () => {},
   onGame = () => {},
+  parallel = 1,
 }) {
   if (!Number.isInteger(games) || games < 2 || games % 2)
     throw new Error('games must be a positive even count');
   if (openings.length < games / 2) throw new Error('Not enough paired openings');
+  if (!Number.isInteger(parallel) || parallel < 1 || parallel > 6)
+    throw new Error('parallel must be between 1 and 6');
   const result = { id, weakerWins: 0, strongerWins: 0, draws: 0, games: [] };
   const started = performance.now();
-  for (let index = 0; index < games; index += 1) {
-    await beforeGame();
-    const opening = openings[Math.floor(index / 2)];
-    const strongerColor = index % 2 ? 'black' : 'white';
-    const gameSeed = rapfiGameSeed(`${id}:${index}`, seed);
-    const game = await playGame({
-      opening,
-      seed: gameSeed,
-      black: strongerColor === 'black' ? stronger : weaker,
-      white: strongerColor === 'white' ? stronger : weaker,
-    });
-    if (game.winner === null) result.draws += 1;
-    else if (game.winner === strongerColor) result.strongerWins += 1;
-    else result.weakerWins += 1;
-    result.games.push({ opening, strongerColor, seed: gameSeed, ...game });
-    onGame(result, index + 1);
+  let nextIndex = 0,
+    completed = 0;
+  async function worker() {
+    while (nextIndex < games) {
+      const index = nextIndex++;
+      await beforeGame();
+      const opening = openings[Math.floor(index / 2)];
+      const strongerColor = index % 2 ? 'black' : 'white';
+      const gameSeed = rapfiGameSeed(`${id}:${index}`, seed);
+      const game = await playGame({
+        opening,
+        seed: gameSeed,
+        black: strongerColor === 'black' ? stronger : weaker,
+        white: strongerColor === 'white' ? stronger : weaker,
+      });
+      if (game.winner === null) result.draws += 1;
+      else if (game.winner === strongerColor) result.strongerWins += 1;
+      else result.weakerWins += 1;
+      result.games[index] = { opening, strongerColor, seed: gameSeed, ...game };
+      onGame(result, ++completed);
+    }
   }
+  const workers = await Promise.allSettled(
+    Array.from({ length: Math.min(parallel, games) }, worker),
+  );
+  const failure = workers.find((result) => result.status === 'rejected');
+  if (failure) throw failure.reason;
   result.wallTimeMs = Math.round(performance.now() - started);
   result.strongerScore = (result.strongerWins + result.draws / 2) / games;
   return result;
@@ -352,7 +380,27 @@ export async function loadNativeRapfi() {
     throw new Error(
       `Native Rapfi binary missing: ${binaryPath}. Set RAPFI_BIN or install it with scripts/engine-assets.sh.`,
     );
-  const pin = { kind: 'native', binaryPath, sha256: sha256(readFileSync(binaryPath)) };
+  const { GOMOKU_CATALOG_ENGINES, RAPFI_NATIVE_NETWORK } = await tsImport(
+    '../apps/server/src/gomoku-engine-catalog.ts',
+    import.meta.url,
+  );
+  const networkPath = resolve(dirname(binaryPath), RAPFI_NATIVE_NETWORK);
+  const pin = {
+    kind: 'native',
+    binaryPath,
+    sha256: sha256(readFileSync(binaryPath)),
+    networkPath,
+    networkSha256: existsSync(networkPath) ? sha256(readFileSync(networkPath)) : null,
+    policies: Object.fromEntries(
+      GOMOKU_CATALOG_ENGINES.map((engine) => [
+        engine.id,
+        {
+          policy: engine.playSignature,
+          config: engine.config,
+        },
+      ]),
+    ),
+  };
   const children = new Map();
   let stopped = false;
   const kill = () => {
@@ -378,7 +426,9 @@ export async function loadNativeRapfi() {
       if (
         !isDeepStrictEqual(
           tier,
-          RAPFI_LEVELS.find(({ level }) => level === tier.level),
+          tier.level === 'strongest'
+            ? STRONGEST
+            : RAPFI_LEVELS.find(({ level }) => level === tier.level),
         )
       )
         throw new Error(
@@ -394,7 +444,7 @@ export async function loadNativeRapfi() {
           try {
             return await gomokuLiveEngineMove(
               { ...state, id: `ladder-${context.gameSeed}` },
-              `rapfi-level-${tier.level}`,
+              tier.level === 'strongest' ? 'rapfi-strongest' : `rapfi-level-${tier.level}`,
               {
                 binaryPath,
                 gameSeed: context.gameSeed,
@@ -530,6 +580,7 @@ async function main() {
     '--tiers',
     '--output',
     '--label',
+    '--parallel',
   ]);
   for (let index = 0; index < args.length; index += 2) {
     if (!allowed.has(args[index]) || !args[index + 1])
@@ -540,6 +591,11 @@ async function main() {
   const engine = option('--engine', 'wasm');
   if (!['native', 'wasm'].includes(engine)) throw new Error('--engine must be native or wasm');
   const games = Number(option('--games', '20'));
+  const parallel = Number(option('--parallel', '1'));
+  if (!Number.isInteger(parallel) || parallel < 1 || parallel > 6)
+    throw new Error('--parallel must be between 1 and 6');
+  if (engine !== 'native' && parallel !== 1)
+    throw new Error('--parallel requires --engine native (WASM heaps are serial)');
   const seed = Number(option('--seed', '20261101'));
   if (
     !Number.isInteger(games) ||
@@ -568,6 +624,8 @@ async function main() {
       'Native calibration requires the live RAPFI_LEVELS policy; --tiers/--budgets overrides are WASM-only',
     );
   const plan = pairingPlan(levels, option('--pairs'));
+  if (engine !== 'native' && plan.some((pair) => pair.stronger.level === 'strongest'))
+    throw new Error('rapfi-strongest calibration requires --engine native');
   const output = option('--output');
   if (!output) throw new Error('--output <record.json> is required (existing runs are appended)');
   const startedAt = new Date().toISOString();
@@ -597,6 +655,7 @@ async function main() {
         id,
         seed,
         games,
+        parallel,
         openings,
         weaker: weaker.choose,
         stronger: stronger.choose,
@@ -625,6 +684,7 @@ async function main() {
         seedPolicy:
           'FNV-1a UTF-16: game:<runSeed>:<pairingId>:<zero-based game index>; ply:<gameSeed>:<absolute kernel ply>; one Mulberry32 sample per move',
         gamesPerPair: games,
+        parallel,
         levels,
         engine: strongerEngine.pin,
         hashPolicy:

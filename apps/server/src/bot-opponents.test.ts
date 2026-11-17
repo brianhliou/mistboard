@@ -41,5 +41,25 @@ test('bot opponents: each ladder is numbered 1 to N, Pikafish at level 8', () =>
 });
 
 test('bot opponents: ids are safe in a /data file path', () => {
+  assert.equal(new Set(BOT_OPPONENTS.map((opponent) => opponent.id)).size, BOT_OPPONENTS.length);
   for (const opponent of BOT_OPPONENTS) assert.match(opponent.id, /^[a-z0-9][a-z0-9-]{0,79}$/);
+});
+
+test('bot opponents: unnumbered Rapfi is separate from the unchanged rapfi ladder key', () => {
+  const top = botOpponentForBotId('rapfi');
+  assert.ok(top);
+  assert.equal(top.opponent.id, 'rapfi-strongest');
+  assert.equal(top.opponent.name, 'Rapfi');
+  assert.deepEqual(top.opponent.members, [{ botId: 'rapfi', level: null }]);
+  assert.equal(botOpponentById('rapfi-strongest'), top.opponent);
+  const ladder = botOpponentById('rapfi');
+  assert.ok(ladder);
+  assert.equal(ladder.name, 'Rapfi');
+  assert.deepEqual(
+    ladder.members,
+    Array.from({ length: 8 }, (_, index) => ({
+      botId: `rapfi-level-${index + 1}`,
+      level: index + 1,
+    })),
+  );
 });

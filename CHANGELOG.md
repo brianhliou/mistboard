@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Gomoku has a full-strength Rapfi above Level 8 on its bot card ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
+- Misty plays Xiangqi Mahjong with a stronger search bot ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
 - Fanfanqi correspondence is open to everyone, casual only ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Every bot card ends in one standard footer with the picked level's record, and the Fanfanqi bots page lists Misty's levels ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Fanfanqi is open to everyone, casual only, with rules in English and Chinese ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))

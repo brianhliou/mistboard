@@ -9,6 +9,7 @@
 // recorded version (the in-process xiangqi mahjong bot) returns null and the page
 // shows nothing; a version is never guessed.
 
+import { isRapfiEngineId } from '@mistboard/game';
 import { ATOMIC_XIANGQI_FSF_ENGINE_REF } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_ENGINE_VERSION } from './banqi-engine.js';
 import { DUCK_XIANGQI_FSF_ENGINE_REF } from './duck-xiangqi-fsf-engine.js';
@@ -72,7 +73,7 @@ function registryVersion(engineId: string): string | null {
 export function botEngineVersion(engineId: string): string | null {
   const ffqVersion = ffqBanqiEngineVersion(engineId);
   if (ffqVersion) return ffqVersion;
-  if (engineId.startsWith('rapfi-level-')) return RAPFI_ENGINE_REF;
+  if (isRapfiEngineId(engineId)) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;
   if (engineId.startsWith('fairy-stockfish-xiangqi-')) return XIANGQI_FSF_ENGINE_REF;

@@ -231,6 +231,13 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       defaultGameSpecId: 'gomoku',
     }),
   ),
+  // Separate time-only native policy above the unchanged eight-level ladder.
+  {
+    id: 'rapfi',
+    displayName: 'Rapfi',
+    engines: { gomoku: 'rapfi-strongest' },
+    defaultGameSpecId: 'gomoku',
+  },
   // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
   // not a level number, so a stronger engine can replace it later.
   {

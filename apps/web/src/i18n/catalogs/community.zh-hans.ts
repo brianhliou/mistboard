@@ -688,6 +688,7 @@ export const ZH_HANS_COMMUNITY = {
   'bots.communityTitle': '社区机器人',
   'bots.communityIntro': 'Mistboard 社区分享的引擎。',
   'bots.levelName': '第 {level} 级',
+  'bots.fullStrength': '全力',
   'bots.noGamesYet': '还没有对局',
   'bots.allLevels': '所有级别',
   'bots.startHere': '从这里开始',

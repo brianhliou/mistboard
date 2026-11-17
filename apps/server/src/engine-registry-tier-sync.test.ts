@@ -27,6 +27,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { RAPFI_LEVELS, RAPFI_STRONGEST } from '@mistboard/game';
 import {
   BANQI_ENGINE_VERSION,
   BANQI_PLAYABLE_ENGINES,
@@ -171,6 +172,7 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'jungle-flip-uci',
   'jungle-uci',
   'katago-gtp',
+  'rapfi-gomocup',
 ]);
 
 // Families the registry GENERATES from their tier list (Object.fromEntries over
@@ -212,7 +214,11 @@ const RETIRED_NO_LIVE_TIER: ReadonlyMap<string, string> = new Map([
 ]);
 
 test('every tier-backed registry entry is either checked or explicitly exempt', () => {
-  const covered = new Set(TIER_SYNC_CASES.map((entry) => entry.engineId));
+  const covered = new Set([
+    ...TIER_SYNC_CASES.map((entry) => entry.engineId),
+    ...RAPFI_LEVELS.map(({ level }) => `rapfi-level-${level}`),
+    'rapfi-strongest',
+  ]);
   const unaccounted: string[] = [];
   for (const engineId of knownEngineIds()) {
     const engine = loadEngine(engineId);
@@ -228,4 +234,21 @@ test('every tier-backed registry entry is either checked or explicitly exempt', 
     'these engines have a tier-backed config kind but nothing checks them against a live ' +
       'tier. Add them to TIER_SYNC_CASES, or to one of the exemption sets with a reason.',
   );
+});
+
+test('Rapfi catalogue budgets and weakening match the shared serving policy exactly', () => {
+  for (const tier of RAPFI_LEVELS) {
+    const config = loadEngine(`rapfi-level-${tier.level}`).config;
+    assert.equal(config.kind, 'rapfi-gomocup');
+    if (config.kind !== 'rapfi-gomocup') throw new Error('wrong Rapfi config kind');
+    assert.equal(config.nodes, tier.nodes);
+    assert.equal(config.movetime_ms, tier.timeMs);
+    assert.equal(config.candidateCount, tier.candidateCount);
+    assert.equal(config.evalMargin, tier.evalMargin);
+    assert.equal(config.bestRate, tier.bestRate);
+  }
+  const config = loadEngine('rapfi-strongest').config;
+  assert.ok(config.kind === 'rapfi-gomocup');
+  assert.equal(config.movetime_ms, RAPFI_STRONGEST.timeMs);
+  assert.equal(Object.hasOwn(config, 'nodes'), false);
 });

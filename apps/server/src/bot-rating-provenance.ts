@@ -1,13 +1,19 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { RAPFI_LEVELS } from '@mistboard/game';
+import { isRapfiEngineId } from '@mistboard/game';
 import type pg from 'pg';
 import { knownEngineIds, loadEngine } from './engine-registry.js';
 import { firstPartyBotEngineFor } from './first-party-bots.js';
+import { GOMOKU_RANDOM_ENGINE_ID } from './gomoku-engine-catalog.js';
 
-export type BotRatingStamp = { recipe: string; netSha256: string | null };
-export type BotRatingPins = { recipe: string; nets: Readonly<Record<string, string | null>> };
+export type BotRatingStamp = { recipe: string; netSha256: string | null; policy?: string };
+export type BotRatingPins = {
+  recipe: string;
+  nets: Readonly<Record<string, string | null>>;
+  /** Required for native Rapfi and its calibration floor; legacy families stay compatible. */
+  policies?: Readonly<Record<string, string>>;
+};
 export type BotRatingProvenanceSnapshot = {
   botId: string;
   gameSpecId: string;
@@ -23,6 +29,11 @@ export type StaleBotRating = Omit<BotRatingProvenanceSnapshot, 'sourceRef'> & {
 const ROOT = new URL('../../../', import.meta.url);
 const RECIPE = /^engines-[0-9a-f]{12}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
+const POLICY = /^[a-z0-9][a-z0-9._-]{0,255}$/;
+
+export function requiresBotRatingPolicy(engineId: string): boolean {
+  return isRapfiEngineId(engineId) || engineId === GOMOKU_RANDOM_ENGINE_ID;
+}
 
 /** Reads only committed build recipes, never environment files or credentials. */
 export function loadBotRatingPins(engineIds: Iterable<string>): BotRatingPins {
@@ -51,16 +62,9 @@ export function loadBotRatingPins(engineIds: Iterable<string>): BotRatingPins {
     return value;
   };
   const nets: Record<string, string | null> = {};
+  const policies: Record<string, string> = {};
   const known = new Set<string>(knownEngineIds());
   for (const id of new Set(engineIds)) {
-    if (RAPFI_LEVELS.some(({ level }) => id === `rapfi-level-${level}`)) {
-      const value = read('scripts/rapfi-assets.mjs').match(
-        /'mix9svqfreestyle_bsmix\.bin\.lz4',\s*\d+,\s*\d+,\s*'([0-9a-f]{64})'/,
-      )?.[1];
-      if (!value) throw new Error('missing Rapfi freestyle net checksum');
-      nets[id] = value;
-      continue;
-    }
     if (id === 'misty-xiangqi-mahjong') {
       nets[id] = null; // In-process tile bot, no external weights.
       continue;
@@ -70,7 +74,20 @@ export function loadBotRatingPins(engineIds: Iterable<string>): BotRatingPins {
     if (!known.has(id)) continue;
     const engine = loadEngine(id);
     const config = engine.config;
+    if (config.kind === 'rapfi-gomocup' || id === GOMOKU_RANDOM_ENGINE_ID) {
+      policies[id] = engine.playSignature;
+    }
     switch (config.kind) {
+      case 'rapfi-gomocup': {
+        const value = read('scripts/rapfi-assets.mjs').match(
+          /'mix9svqfreestyle_bsmix\.bin\.lz4',\s*\d+,\s*\d+,\s*'([0-9a-f]{64})'/,
+        )?.[1];
+        if (!value || value !== config.net_sha256) throw new Error('Rapfi catalogue/net pin drift');
+        if (read('rapfi.ref').split('\n')[0] !== config.source_ref)
+          throw new Error('Rapfi catalogue/source pin drift');
+        nets[id] = value;
+        break;
+      }
       case 'pikafish-xiangqi':
         nets[id] = sha('scripts/engine-assets.sh', 'PIKAFISH_NET_SHA256');
         break;
@@ -109,12 +126,12 @@ export function loadBotRatingPins(engineIds: Iterable<string>): BotRatingPins {
       }
     }
   }
-  return { recipe, nets };
+  return { recipe, nets, ...(Object.keys(policies).length ? { policies } : {}) };
 }
 
 /** A shared reference keeps --source-ref promotion of a whole import intact. */
 export function stampBotRatingSourceRef(sourceRef: string, pins: BotRatingPins): string {
-  if (sourceRef.split(';').some((part) => /^(recipe|netSha256\.[^=]+)=/.test(part))) {
+  if (sourceRef.split(';').some((part) => /^(recipe|netSha256\.[^=]+|policy\.[^=]+)=/.test(part))) {
     throw new Error('source-ref contains reserved engine stamp fields');
   }
   if (!RECIPE.test(pins.recipe)) throw new Error('invalid bot rating recipe stamp');
@@ -127,6 +144,12 @@ export function stampBotRatingSourceRef(sourceRef: string, pins: BotRatingPins):
         if (hash !== null && !SHA256.test(hash))
           throw new Error(`invalid bot rating net checksum: ${id}`);
         return `netSha256.${encodeURIComponent(id)}=${hash ?? 'none'}`;
+      }),
+    ...Object.entries(pins.policies ?? {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, policy]) => {
+        if (!POLICY.test(policy)) throw new Error(`invalid bot rating policy: ${id}`);
+        return `policy.${encodeURIComponent(id)}=${policy}`;
       }),
   ].join(';');
 }
@@ -143,7 +166,15 @@ export function readBotRatingStamp(
   if (recipes.length !== 1 || !RECIPE.test(recipes[0]!) || hashes.length !== 1) return null;
   const hash = hashes[0]!;
   if (hash !== 'none' && !SHA256.test(hash)) return null;
-  return { recipe: recipes[0]!, netSha256: hash === 'none' ? null : hash };
+  const policies = values(`policy.${encodeURIComponent(engineId)}`);
+  if (policies.length > 1 || (policies.length === 1 && !POLICY.test(policies[0]!))) return null;
+  // Older recipe+net-only measurements cannot establish which native policy ran.
+  if (requiresBotRatingPolicy(engineId) && policies.length !== 1) return null;
+  return {
+    recipe: recipes[0]!,
+    netSha256: hash === 'none' ? null : hash,
+    ...(policies.length ? { policy: policies[0]! } : {}),
+  };
 }
 
 export function findStaleBotRatings(
@@ -152,13 +183,23 @@ export function findStaleBotRatings(
 ): StaleBotRating[] {
   return snapshots.flatMap(({ sourceRef, ...snapshot }) => {
     const measured = readBotRatingStamp(sourceRef, snapshot.engineId);
-    const current = Object.hasOwn(pins.nets, snapshot.engineId)
-      ? { recipe: pins.recipe, netSha256: pins.nets[snapshot.engineId]! }
-      : null;
+    const current =
+      Object.hasOwn(pins.nets, snapshot.engineId) &&
+      (!requiresBotRatingPolicy(snapshot.engineId) ||
+        pins.policies?.[snapshot.engineId] !== undefined)
+        ? {
+            recipe: pins.recipe,
+            netSha256: pins.nets[snapshot.engineId]!,
+            ...(pins.policies?.[snapshot.engineId]
+              ? { policy: pins.policies[snapshot.engineId] }
+              : {}),
+          }
+        : null;
     return measured &&
       current &&
       measured.recipe === current.recipe &&
-      measured.netSha256 === current.netSha256
+      measured.netSha256 === current.netSha256 &&
+      measured.policy === current.policy
       ? []
       : [{ ...snapshot, measured, current }];
   });
@@ -201,9 +242,10 @@ export function staleBotRatingKey(rating: StaleBotRating): string {
     rating.engineId,
     rating.current?.recipe ?? 'unknown',
     rating.current?.netSha256 ?? 'none',
+    rating.current?.policy ?? 'legacy',
   ].join(':');
 }
 
 export function staleBotRatingLabel(rating: StaleBotRating): string {
-  return `${rating.botId} (${rating.gameSpecId}, ${rating.timeClass}): rating measured on an older build${rating.measured ? '' : ' (missing build/net stamp)'}`;
+  return `${rating.botId} (${rating.gameSpecId}, ${rating.timeClass}): rating measured on an older build${rating.measured ? '' : ' (missing build/net/policy stamp)'}`;
 }
