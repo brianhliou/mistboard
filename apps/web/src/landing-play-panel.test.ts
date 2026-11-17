@@ -913,7 +913,7 @@ describe('homepage play panel', () => {
     await flush();
 
     const jungle = row(board, 'jungle');
-    expect(stepValue(jungle, 'level')).toBe('Misty');
+    expect(stepValue(jungle, 'level')).toBe('Level 7');
     expect(jungle.querySelector('.pp-step-level.is-fixed')).toBeNull();
     const [easier, stronger] = jungle.querySelectorAll<HTMLButtonElement>(
       '.pp-step-level .pp-step-btn',
@@ -981,7 +981,7 @@ describe('homepage play panel', () => {
     await vi.advanceTimersByTimeAsync(0);
     await flush();
     const jungle = row(unplayable, 'jungle');
-    expect(stepValue(jungle, 'level')).toBe('Misty');
+    expect(stepValue(jungle, 'level')).toBe('Level 7');
     expect(jungle.querySelector('.pp-step-level.is-fixed')).not.toBeNull();
     unplayable.remove();
     await vi.advanceTimersByTimeAsync(3_000);

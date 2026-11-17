@@ -41,8 +41,10 @@ import { engineCounters, logger } from './obs.js';
 import { computeConnectedSeats, eventAppendedPayload, snapshotPayload } from './payloads.js';
 import type { GameSummary } from './persistence.js';
 import * as persistence from './persistence.js';
+import { RELEASE_SMOKE_CORPUS_ID } from './persistence-counted-games.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import { cachedSeatChampions } from './persistence-leaderboards.js';
+import { isReleaseSmokeRoom } from './release-smoke.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
 import { isServerEngineClient, modeForProjection } from './server-policy.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
@@ -397,6 +399,7 @@ export function buildGameSummary(ctx: RoomManagerContext, room: Room): GameSumma
   // authoritative gate: regardless of what room.rated was requested as, a game
   // only counts as rated if both seats resolved to real users.
   const rated = room.rated && participants.every((p) => p.subjectType === 'user');
+  const smoke = room.mode === 'pve' && isReleaseSmokeRoom(room, isServerEngineClient);
 
   return {
     variant: room.projection.variant,
@@ -410,12 +413,13 @@ export function buildGameSummary(ctx: RoomManagerContext, room: Room): GameSumma
     blackClient: room.projection.seats.black ?? null,
     whiteName: null,
     blackName: null,
-    corpusId: null,
+    corpusId: smoke ? RELEASE_SMOKE_CORPUS_ID : null,
+    visibility: smoke ? 'private' : 'public',
     rated,
     region: room.region ?? room.projection.region ?? 'global',
     initialMs: room.timeControl?.initialMs ?? null,
     incrementMs: room.timeControl?.incrementMs ?? null,
-    participants,
+    participants: smoke ? participants.map((p) => ({ ...p, visibility: 'private' })) : participants,
     // An engine cannot abandon: record the failure, not a win for the human.
     // This is the live fog-chess path (dark-chess rides the legacy shell).
     abortedAs: engineFailureAbort({

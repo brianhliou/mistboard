@@ -115,7 +115,7 @@ export const VARIANT_SMOKE_CONFIGS = {
     defaultTimeoutMs: 30_000,
     // 'misty-jungle-level-', NOT 'misty-jungle': the shorter prefix also
     // matches 'misty-jungle-flip', which is a different variant's engine.
-    engineSeat: { prefix: 'misty-jungle-level-' },
+    engineSeat: { prefixes: ['misty-jungle-level-', 'misty-jungle-classical-level-'] },
   },
   'jungle-flip': {
     name: 'jungle-flip',

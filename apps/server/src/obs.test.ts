@@ -1,14 +1,27 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import type { EngineAlertEmailPayload } from './engine-alert-email.js';
 import { alertThrottleKey } from './engine-alert-email.js';
 import {
   AuthCounters,
   EngineCounters,
   engineAlertFields,
+  httpRoutePattern,
+  InFlightWork,
+  inFlightWork,
   infraAlertFields,
   knownFailureSpikeAlert,
+  logger,
+  observeBackgroundJob,
+  observeHttpHandler,
+  startObservability,
+  trackHttpRequest,
   wsCounters,
 } from './obs.js';
+import { createHttpRequestHandler } from './server-http.js';
 
 test('daily RTT retains raw samples across metrics ticks and weights regions by sample count', () => {
   const at = Date.parse('2026-10-23T12:00:00Z');
@@ -188,7 +201,8 @@ test('engine alert fields separate critical failures from capacity pressure', ()
   assert.equal(engineAlertFields(retryCounters.snapshot()), null);
 });
 
-test('infra alert fields page on memory and loop-lag breaches', () => {
+test('infra alert fields page on memory and loop-lag breaches', (t) => {
+  t.mock.method(process, 'uptime', () => 120);
   // Calibrated to the 24 GB-per-replica box: warn at ~4 GB, critical at ~80% of ceiling.
   const limits = { rssWarnMb: 4096, rssMb: 19660, loopLagP99Ms: 400 };
 
@@ -245,6 +259,214 @@ test('infra alert fields page on memory and loop-lag breaches', () => {
     ),
     null,
   );
+});
+
+test('loop-lag alerts wait for process warm-up without suppressing memory alerts', () => {
+  const limits = { rssWarnMb: 4096, rssMb: 19660, loopLagP99Ms: 400 };
+  const spike = { rssMb: 370, loopLagP99Ms: 800, loopLagMaxMs: 1500 };
+  assert.equal(infraAlertFields(spike, limits, 119_999), null);
+  assert.equal(infraAlertFields(spike, limits, 120_000)?.loop_lag_max_ms, 1500);
+  assert.deepEqual(infraAlertFields({ ...spike, rssMb: 20000 }, limits, 0), {
+    severity: 'critical',
+    alert_kind: 'infra',
+    rss_mb: 20000,
+    rss_limit_mb: 19660,
+  });
+});
+
+test('HTTP work labels redact ids, queries, unknown paths and methods', (t) => {
+  t.mock.method(Date, 'now', () => 2000);
+  const tracker = new InFlightWork();
+  tracker.startHttp('GET', '/study/private-study/private-chapter?token=private-token', 1000);
+  tracker.startHttp('POST', '/api/xiangqi/games/private-game/analysis/jobs/private-job', 1000);
+  tracker.startHttp('private-method', '/api/private-account/private-email@example.com', 1000);
+  tracker.startHttp('GET', '/private-email@example.com', 1000);
+  const serialized = tracker.across([{ start: 1000, end: 2000 }], 2000).work;
+  assert.ok(!serialized.includes('private-'), serialized);
+  assert.ok(serialized.includes('/study/:id/:chapterId'));
+  assert.ok(serialized.includes('/api/xiangqi/games/:id/analysis/jobs/:jobId'));
+  assert.ok(serialized.includes('/api/:unclassified'));
+  assert.ok(serialized.includes('OTHER'));
+  assert.equal(
+    httpRoutePattern('/zh-hans/study/games/analysis?email=private'),
+    '/zh-hans/study/:id/:chapterId',
+  );
+  assert.equal(httpRoutePattern('//private-host/path'), '/:unclassified');
+  assert.equal(httpRoutePattern('/api/games/showcase?token=private'), '/api/games/showcase');
+});
+
+test('work spanning a stall survives completion, sorts longest first and expires at the tick', (t) => {
+  const tracker = new InFlightWork();
+  let now = 2000;
+  t.mock.method(Date, 'now', () => now);
+  const finishedEarly = tracker.startHttp('GET', '/api/live-stats', 900);
+  finishedEarly();
+  const endJob = tracker.startJob('study_curator', 1000);
+  const endRequest = tracker.startHttp('GET', '/study/secret/chapter', 2000);
+  now = 4000;
+  endRequest();
+  endRequest();
+  const windows = [{ start: 3000, end: 4000 }];
+  const work = JSON.parse(tracker.across(windows, 5000).work);
+  assert.deepEqual(
+    work.map((span: { name: string }) => span.name),
+    ['study_curator', '/study/:id/:chapterId'],
+  );
+  assert.equal(work[1].finished_at_ms, 4000);
+  assert.equal(work[1].elapsed_ms, 2000);
+  tracker.endTick();
+  assert.equal(JSON.parse(tracker.across(windows, 5000).work).length, 1);
+  endJob();
+  tracker.endTick();
+  assert.equal(tracker.across(windows, 5000).work, '[]');
+});
+
+test('retained diagnostics and reported candidates are bounded with omissions visible', (t) => {
+  const tracker = new InFlightWork();
+  t.mock.method(Date, 'now', () => 5000);
+  for (let i = 0; i < 1100; i += 1) tracker.startJob('study_curator', 1000)();
+  const result = tracker.across([{ start: 2000, end: 4000 }], 5000);
+  assert.equal(JSON.parse(result.work).length, 20);
+  assert.equal(result.omitted, 1080);
+  tracker.endTick();
+  assert.deepEqual(tracker.across([{ start: 2000, end: 4000 }]), { work: '[]', omitted: 0 });
+});
+
+test('request completion and disconnect remove listeners and active work', (t) => {
+  const windows = [{ start: 1000, end: 4000 }];
+  let now = 2000;
+  t.mock.method(Date, 'now', () => now);
+  for (const event of ['finish', 'close']) {
+    inFlightWork.endTick();
+    const response = new EventEmitter();
+    trackHttpRequest(
+      { method: 'GET', url: '/study/private/chapter' } as IncomingMessage,
+      response as ServerResponse,
+    );
+    assert.equal(JSON.parse(inFlightWork.across(windows, 3000).work).length, 1);
+    now += 100;
+    response.emit(event);
+    assert.equal(response.listenerCount('finish'), 0);
+    assert.equal(response.listenerCount('close'), 0);
+    inFlightWork.endTick();
+    assert.equal(inFlightWork.across(windows).work, '[]');
+  }
+});
+
+test('named background jobs clean up on resolve, rejection and synchronous failure', async () => {
+  for (const run of [
+    async () => 42,
+    async () => {
+      throw new Error('async');
+    },
+    () => {
+      throw new Error('sync');
+    },
+  ]) {
+    await observeBackgroundJob('study_curator', run).catch(() => {});
+    inFlightWork.endTick();
+    assert.equal(inFlightWork.across([{ start: 0, end: Date.now() + 1 }]).work, '[]');
+  }
+});
+
+test('a real loop block includes completed HTTP and job spans in the log and alert', async (t) => {
+  t.mock.method(process, 'uptime', () => 121);
+  const previousLimit = process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS;
+  // The email alert keys on p99, whose 20 ms sampling floor sits under 15 ms
+  // here, so the tick alerts and the test checks what the alert carries.
+  process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS = '15';
+  t.after(() => {
+    if (previousLimit === undefined) delete process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS;
+    else process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS = previousLimit;
+  });
+  const logs: Record<string, unknown>[] = [];
+  t.mock.method(logger, 'warn', (fields: Record<string, unknown>) => {
+    logs.push(fields);
+  });
+  t.mock.method(logger, 'info', () => {});
+  const alerts: EngineAlertEmailPayload[] = [];
+  const stop = startObservability({ roomCount: () => 0, wsClientCount: () => 0 }, 100, (alert) => {
+    alerts.push(alert);
+  });
+  t.after(stop);
+  await delay(30); // Let monitorEventLoopDelay and the work pulse start sampling.
+  const response = Object.assign(new EventEmitter(), {
+    setHeader() {},
+    writeHead() {},
+    end() {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+      response.emit('finish');
+    },
+  });
+  const handler = observeHttpHandler(
+    createHttpRequestHandler({
+      staticDir: '/tmp/burn-scratch/mistboard-burn-1183-name-what-was-running-when',
+      drainController: {
+        isDraining() {
+          // Stop dispatch through its normal error boundary before any I/O.
+          throw new URIError('fixture');
+        },
+      },
+    } as unknown as Parameters<typeof createHttpRequestHandler>[0]),
+  );
+  await observeBackgroundJob('study_curator', async () => {
+    handler(
+      {
+        method: 'POST',
+        url: '/study/private-study/private-chapter?token=private-token',
+        headers: {},
+      } as IncomingMessage,
+      response as unknown as ServerResponse,
+    );
+  }); // Both spans end before the metrics timer can run.
+  const attributed = (entry: EngineAlertEmailPayload) =>
+    entry.alert_kind === 'infra' && String(entry.in_flight_work ?? '').includes('study_curator');
+  for (let i = 0; i < 20 && !alerts.some(attributed); i += 1) await delay(20);
+  const alert = alerts.find(attributed);
+  assert.ok(alert, 'the blocked loop must emit an infra alert');
+  const work = JSON.parse(String(alert.in_flight_work));
+  assert.ok(work.some((span: { name: string }) => span.name === '/study/:id/:chapterId'));
+  assert.ok(work.some((span: { name: string }) => span.name === 'study_curator'));
+  assert.ok(!JSON.stringify(alert).includes('private-'));
+  assert.equal(typeof alert.heap_before_mb, 'number');
+  assert.equal(typeof alert.heap_after_mb, 'number');
+  assert.ok(
+    logs.some(
+      (entry) => entry.kind === 'loop_stall' && entry.in_flight_work === alert.in_flight_work,
+    ),
+  );
+  assert.ok(
+    logs.some(
+      (entry) => entry.kind === 'infra_alert' && entry.in_flight_work === alert.in_flight_work,
+    ),
+  );
+});
+
+test('a real warm-up stall still logs metrics without a lag alert', async (t) => {
+  t.mock.method(process, 'uptime', () => 119);
+  const previousLimit = process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS;
+  process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS = '40';
+  t.after(() => {
+    if (previousLimit === undefined) delete process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS;
+    else process.env.MISTBOARD_ALERT_LOOP_LAG_P99_MS = previousLimit;
+  });
+  const metrics: Record<string, unknown>[] = [];
+  t.mock.method(logger, 'info', (fields: Record<string, unknown>) => {
+    metrics.push(fields);
+  });
+  t.mock.method(logger, 'warn', () => {});
+  const alerts: EngineAlertEmailPayload[] = [];
+  const stop = startObservability({ roomCount: () => 0, wsClientCount: () => 0 }, 100, (alert) => {
+    alerts.push(alert);
+  });
+  t.after(stop);
+  await delay(30);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+  for (let i = 0; i < 20 && metrics.length === 0; i += 1) await delay(20);
+  assert.ok(
+    metrics.some((entry) => entry.kind === 'metrics' && Number(entry.loop_lag_max_ms) >= 40),
+  );
+  assert.ok(!alerts.some((alert) => alert.loop_lag_limit_ms !== undefined));
 });
 
 test('known engine failures are counted per signature and never raise an engine alert', () => {

@@ -9,6 +9,7 @@
 // gauges that matter for capacity decisions: room count, ws client count,
 // event-loop lag percentiles, heap/rss.
 
+import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import pino, { type Logger } from 'pino';
 import { DailyRttAccumulator, normalizeLatencyRegion } from './daily-rtt.js';
@@ -38,6 +39,183 @@ export const logger: Logger = pino(
 export interface ObsSources {
   roomCount: () => number;
   wsClientCount: () => number;
+}
+
+export const LOOP_LAG_WARMUP_GRACE_MS = 120_000;
+const WORK_PULSE_MS = 20;
+const MAX_COMPLETED_WORK = 1024;
+const MAX_STALL_WORK = 20;
+
+const HTTP_ROUTE_PATTERNS: [RegExp, string][] = [
+  [/^\/study\/[^/]+\/[^/]+\/?$/, '/study/:id/:chapterId'],
+  [/^\/study\/[^/]+\/?$/, '/study/:id'],
+  [
+    /^\/(game|watch|player|profile|u|bot|blog|articles|rules|practice|analysis|editor)\/[^/]+(?:\/.*)?$/,
+    '/$1/:id',
+  ],
+  [
+    /^\/api\/studies\/[^/]+\/chapters\/[^/]+(?:\/.*)?$/,
+    '/api/studies/:id/chapters/:chapterId/:action',
+  ],
+  [/^\/api\/studies\/[^/]+(?:\/.*)?$/, '/api/studies/:id/:action'],
+  [/^\/api\/(games|rooms)\/[^/]+(?:\/.*)?$/, '/api/$1/:id/:action'],
+  [
+    /^\/api\/(xiangqi|jieqi|banqi|jungle|jungle-flip|gomoku|fog-xiangqi|duck-xiangqi|ffq-banqi|three-kingdoms-banqi)\/games\/[^/]+\/(analysis|decisions)\/jobs\/[^/]+\/?$/,
+    '/api/$1/games/:id/$2/jobs/:jobId',
+  ],
+  [
+    /^\/api\/(xiangqi|jieqi|banqi|jungle|jungle-flip|gomoku|fog-xiangqi|duck-xiangqi|ffq-banqi|three-kingdoms-banqi)\/games\/[^/]+\/(analysis|decisions)\/?$/,
+    '/api/$1/games/:id/$2',
+  ],
+  [
+    /^\/api\/(xiangqi|jieqi|banqi|jungle|jungle-flip|gomoku|fog-xiangqi|duck-xiangqi|ffq-banqi|three-kingdoms-banqi)\/games\/[^/]+(?:\/.*)?$/,
+    '/api/$1/games/:id/:action',
+  ],
+  [/^\/(assets|og)\/.*$/, '/$1/:path'],
+  [/^\/api\/.*$/, '/api/:unclassified'],
+];
+
+// Only literal route grammar leaves this function. Unknown paths fail closed;
+// neither query strings nor user-controlled ids/slugs become diagnostic labels.
+export function httpRoutePattern(url: string): string {
+  const pathname = url.split('?', 1)[0] ?? '/';
+  const locale = pathname.match(/^\/(zh-hans|zh-hant|vi)(?=\/)/)?.[0] ?? '';
+  const path = pathname.slice(locale.length);
+  if (
+    /^\/(?:|health|metrics|api\/(?:live-stats|stats\/public|games\/showcase|rooms|lobby|bots|studies|games|auth\/(?:start|confirm|logout)|account|notifications))\/?$/.test(
+      path,
+    )
+  )
+    return locale + path;
+  for (const [pattern, label] of HTTP_ROUTE_PATTERNS) {
+    if (pattern.test(path)) return locale + path.replace(pattern, label);
+  }
+  return '/:unclassified';
+}
+
+type BackgroundJobName =
+  | 'engine_pool_wait_digest'
+  | 'tenant_deadline_sweep'
+  | 'patron_expiry_sweep'
+  | 'study_curator'
+  | 'xiangqi_broadcast_poll'
+  | 'xiangqi_broadcast_analysis'
+  | 'bot_vs_bot_scheduler'
+  | 'game_analysis'
+  | 'game_decisions'
+  | 'guest_abort_sweep'
+  | 'stale_paused_sweep';
+
+type WorkSpan = {
+  kind: 'http' | 'job';
+  name: string;
+  method?: string;
+  started_at_ms: number;
+  finished_at_ms?: number;
+};
+type StallWindow = { start: number; end: number };
+
+export class InFlightWork {
+  private active = new Map<number, WorkSpan>();
+  private completed: WorkSpan[] = [];
+  private completedCursor = 0;
+  private evicted = 0;
+  private nextId = 0;
+
+  startHttp(method: string, url: string, at = Date.now()): () => void {
+    return this.start({
+      kind: 'http',
+      name: httpRoutePattern(url),
+      method: /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|CONNECT|TRACE)$/.test(method)
+        ? method
+        : 'OTHER',
+      started_at_ms: at,
+    });
+  }
+
+  startJob(name: BackgroundJobName, at = Date.now()): () => void {
+    return this.start({ kind: 'job', name, started_at_ms: at });
+  }
+
+  private start(span: WorkSpan): () => void {
+    const id = this.nextId++;
+    this.active.set(id, span);
+    return () => {
+      if (!this.active.delete(id)) return;
+      span.finished_at_ms = Date.now();
+      // Work shorter than the sampling resolution cannot span a measured stall.
+      if (span.finished_at_ms - span.started_at_ms < WORK_PULSE_MS) return;
+      if (this.completed.length < MAX_COMPLETED_WORK) this.completed.push(span);
+      else {
+        this.completed[this.completedCursor] = span;
+        this.completedCursor = (this.completedCursor + 1) % MAX_COMPLETED_WORK;
+        this.evicted += 1;
+      }
+    };
+  }
+
+  across(windows: StallWindow[], now = Date.now()): { work: string; omitted: number } {
+    const candidates = [...this.active.values(), ...this.completed]
+      .filter((span) =>
+        windows.some(
+          ({ start, end }) => span.started_at_ms < end && (span.finished_at_ms ?? now) > start,
+        ),
+      )
+      .sort(
+        (a, b) =>
+          (b.finished_at_ms ?? now) -
+          b.started_at_ms -
+          ((a.finished_at_ms ?? now) - a.started_at_ms),
+      );
+    return {
+      work: JSON.stringify(
+        candidates.slice(0, MAX_STALL_WORK).map((span) => ({
+          ...span,
+          elapsed_ms: (span.finished_at_ms ?? now) - span.started_at_ms,
+        })),
+      ),
+      omitted: this.evicted + Math.max(0, candidates.length - MAX_STALL_WORK),
+    };
+  }
+
+  endTick(): void {
+    this.completed = [];
+    this.completedCursor = 0;
+    this.evicted = 0;
+  }
+}
+
+export const inFlightWork = new InFlightWork();
+
+export async function observeBackgroundJob<T>(
+  name: BackgroundJobName,
+  run: () => Promise<T>,
+): Promise<T> {
+  const end = inFlightWork.startJob(name);
+  try {
+    return await run();
+  } finally {
+    end();
+  }
+}
+
+export function trackHttpRequest(request: IncomingMessage, response: ServerResponse): void {
+  const end = inFlightWork.startHttp(request.method ?? 'OTHER', request.url ?? '/');
+  const finish = () => {
+    end();
+    response.off('finish', finish);
+    response.off('close', finish);
+  };
+  response.once('finish', finish);
+  response.once('close', finish);
+}
+
+/** Wrap the Node HTTP entry, whose responses have the real stream lifecycle. */
+export function observeHttpHandler(handler: RequestListener): RequestListener {
+  return (request, response) => {
+    trackHttpRequest(request, response);
+    handler(request, response);
+  };
 }
 
 // Engine-move counters. Incremented from the room-manager engine-move path.
@@ -507,6 +685,7 @@ export function infraAlertLimits(): InfraAlertLimits {
 export function infraAlertFields(
   gauges: InfraGauges,
   limits: InfraAlertLimits = infraAlertLimits(),
+  uptimeMs = process.uptime() * 1000,
 ): EngineAlertEmailPayload | null {
   const fields: EngineAlertEmailPayload = { severity: 'warning', alert_kind: 'infra' };
   let breached = false;
@@ -521,7 +700,11 @@ export function infraAlertFields(
     fields.rss_warn_mb = limits.rssWarnMb;
     breached = true; // anomalously high → likely a leak; warning, lots of runway left
   }
-  if (limits.loopLagP99Ms > 0 && gauges.loopLagP99Ms >= limits.loopLagP99Ms) {
+  if (
+    uptimeMs >= LOOP_LAG_WARMUP_GRACE_MS &&
+    limits.loopLagP99Ms > 0 &&
+    gauges.loopLagP99Ms >= limits.loopLagP99Ms
+  ) {
     fields.loop_lag_p99_ms = Math.round(gauges.loopLagP99Ms);
     fields.loop_lag_max_ms = Math.round(gauges.loopLagMaxMs);
     fields.loop_lag_limit_ms = limits.loopLagP99Ms;
@@ -725,14 +908,35 @@ function recordMemoryPoolWait(pool: string, waitMs: number, queueDepth: number):
   poolWaitDigestTimer.unref();
 }
 
-export function startObservability(sources: ObsSources, intervalMs = 5_000): () => void {
+export function startObservability(
+  sources: ObsSources,
+  intervalMs = 5_000,
+  notify: (alert: EngineAlertEmailPayload) => void = dispatchAlertEmail,
+): () => void {
   const histogram = monitorEventLoopDelay({ resolution: 20 });
   histogram.enable();
+  const limits = infraAlertLimits();
   let lastTickAt = Date.now();
+  let previousHeapMb = Math.round(process.memoryUsage().heapUsed / (1024 * 1024));
+  let lastPulseAt = lastTickAt;
+  let pulseLagMaxMs = 0;
+  let stalls: StallWindow[] = [];
+  const sampleStall = (now: number) => {
+    const limit = limits.loopLagP99Ms;
+    const lag = Math.max(0, now - lastPulseAt - WORK_PULSE_MS);
+    pulseLagMaxMs = Math.max(pulseLagMaxMs, lag);
+    if (limit > 0 && lag >= limit) {
+      stalls.push({ start: lastPulseAt, end: now });
+    }
+    lastPulseAt = now;
+  };
+  const pulse = setInterval(() => sampleStall(Date.now()), WORK_PULSE_MS);
+  pulse.unref();
   let digestRunning = false;
   const deliverDigest = (): void => {
     if (digestRunning) return;
     digestRunning = true;
+    const endWork = inFlightWork.startJob('engine_pool_wait_digest');
     void deliverEnginePoolWaitDigest()
       .then((result) => {
         if (result?.status === 'failed') logger.error({ kind: 'engine_pool_wait_digest_failed' });
@@ -741,6 +945,7 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
         logger.error({ kind: 'engine_pool_wait_digest_failed' });
       })
       .finally(() => {
+        endWork();
         digestRunning = false;
       });
   };
@@ -750,15 +955,19 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
 
   const timer = setInterval(() => {
     const now = Date.now();
+    const tickStart = lastTickAt;
     const tickMs = now - lastTickAt;
     lastTickAt = now;
+    sampleStall(now);
     const mem = process.memoryUsage();
     const engine = engineCounters.snapshot();
     const auth = authCounters.snapshot();
     const ws = wsCounters.snapshot();
     const loopLagP50Ms = nsToMs(histogram.percentile(50));
     const loopLagP99Ms = nsToMs(histogram.percentile(99));
-    const loopLagMaxMs = nsToMs(histogram.max);
+    // The perf histogram's own timer may run after this metrics timer on a
+    // blocked turn. The pulse captures that delay before histogram.reset().
+    const loopLagMaxMs = Math.max(nsToMs(histogram.max), pulseLagMaxMs);
     const rssMb = Math.round(mem.rss / (1024 * 1024));
     const heapUsedMb = Math.round(mem.heapUsed / (1024 * 1024));
 
@@ -766,22 +975,45 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
     if (engineAlert) {
       const logAlert = engineAlert.severity === 'critical' ? logger.error : logger.warn;
       logAlert.call(logger, { kind: 'engine_alert', ...engineAlert }, 'engine alert');
-      dispatchAlertEmail(engineAlert);
+      notify(engineAlert);
     }
     const spikeAlert = knownFailureSpikeAlert(engine);
     if (spikeAlert) {
       logger.warn({ kind: 'engine_alert', ...spikeAlert }, 'engine alert');
-      dispatchAlertEmail(spikeAlert);
+      notify(spikeAlert);
     }
 
     // Infra alerts: box-level health (RSS / event-loop lag) the engine-move counters
     // don't cover. The variant PvE engines run on this process, so a saturated loop or
     // runaway RSS is the overload symptom — nothing else pages on it.
-    const infraAlert = infraAlertFields({ rssMb, loopLagP99Ms, loopLagMaxMs });
+    const infraAlert = infraAlertFields({ rssMb, loopLagP99Ms, loopLagMaxMs }, limits);
+    const limit = limits.loopLagP99Ms;
+    const lagOverLimit = limit > 0 && Math.max(loopLagP99Ms, loopLagMaxMs) >= limit;
+    // Attribution is a set of overlapping candidates, not a claim of causation.
+    // Keep diagnostics in logs during warm-up as well as on alerting ticks.
+    if (stalls.length > 0 || lagOverLimit) {
+      const work = inFlightWork.across(
+        stalls.length > 0 ? stalls : [{ start: tickStart, end: now }],
+        now,
+      );
+      const attribution = {
+        attribution_window: stalls.length > 0 ? 'pulse' : 'metrics_tick',
+        in_flight_work: work.work,
+        stall_work_omitted: work.omitted,
+        heap_sample_interval_ms: tickMs,
+        heap_before_mb: previousHeapMb,
+        heap_after_mb: heapUsedMb,
+      };
+      logger.warn(
+        { kind: 'loop_stall', loop_lag_max_ms: loopLagMaxMs, ...attribution },
+        'loop stall',
+      );
+      if (infraAlert?.loop_lag_limit_ms !== undefined) Object.assign(infraAlert, attribution);
+    }
     if (infraAlert) {
       const logAlert = infraAlert.severity === 'critical' ? logger.error : logger.warn;
       logAlert.call(logger, { kind: 'infra_alert', ...infraAlert }, 'infra alert');
-      dispatchAlertEmail(infraAlert);
+      notify(infraAlert);
     }
 
     logger.info(
@@ -864,12 +1096,17 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
       'metrics',
     );
     histogram.reset();
+    inFlightWork.endTick();
+    stalls = [];
+    pulseLagMaxMs = 0;
+    previousHeapMb = heapUsedMb;
   }, intervalMs);
   timer.unref();
 
   return () => {
     clearInterval(timer);
     clearInterval(digestTimer);
+    clearInterval(pulse);
     histogram.disable();
   };
 }

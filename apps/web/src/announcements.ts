@@ -56,6 +56,22 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-11-17',
+    kind: 'release',
+    headline: 'Jungle Chess now has seven Misty levels.',
+    body: 'Misty used to play Jungle Chess at one strength. Levels 1 to 6 are new and easier, Level 7 is the Misty you know, and KataGo still sits above them all. Pick a level on the bot card or when you start a game against the computer.',
+    href: '/?play=computer&gameSpecId=jungle',
+    cta: 'Play Jungle Chess',
+  },
+  {
+    date: '2026-11-17',
+    kind: 'article',
+    headline: 'The fog bots go offline on December 8.',
+    body: "Misty, the bot for Fog Chess and Fog Xiangqi, stops playing on December 8, 2026. Games against a friend, both rules pages and every finished game stay. Beat Misty while signed in before then and that game's legacy badge stays on your profile. The article explains why the bots cost too much to run and what it would take to bring them back.",
+    href: '/blog/fog-future',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-11-15',
     kind: 'release',
     englishOnly: true,

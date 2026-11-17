@@ -958,7 +958,12 @@ describe('tenant room chrome bot rematch', () => {
   // bot: the server picked its default bot, and the home panel's Play again
   // row (which reads the last bot game this device started) skipped the
   // rematch and kept naming an older game.
-  it('rematches the same bot and records it for the home Play again row', async () => {
+  it.each([
+    ['duck-xiangqi', 'fairy-stockfish-duck-level-3'],
+    ['jungle', 'misty-jungle-classical-level-1'],
+    ['jungle', 'misty-jungle-classical-level-6'],
+    ['jungle', 'misty-jungle-level-2'],
+  ])('rematches %s against the same %s tier and remembers it', async (gameSpecId, engineId) => {
     localStorage.removeItem('mistboard:last-bot-game');
     const fetchSpy = vi.fn(
       async () => new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }),
@@ -970,10 +975,10 @@ describe('tenant room chrome bot rematch', () => {
         view: finished,
         seat: 'white',
         roomMode: 'pve',
-        pveEngineId: 'fairy-stockfish-duck-level-3',
+        pveEngineId: engineId,
         playAgainRequestBody: {
           mode: 'pve',
-          gameSpecId: 'duck-xiangqi',
+          gameSpecId,
           preferredColor: 'random',
           timeControl: { initialMs: 300_000, incrementMs: 3_000 },
         },
@@ -985,11 +990,11 @@ describe('tenant room chrome bot rematch', () => {
       await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
       const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
       expect(JSON.parse(String(init.body))).toMatchObject({
-        engineId: 'fairy-stockfish-duck-level-3',
+        engineId,
       });
       expect(lastBotGame()).toEqual({
-        gameSpecId: 'duck-xiangqi',
-        botId: 'fairy-stockfish-duck-level-3',
+        gameSpecId,
+        botId: engineId,
         timeControl: { initialMs: 300_000, incrementMs: 3_000 },
       });
     } finally {

@@ -70,6 +70,7 @@ import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import {
+  setJungleEngineOptions,
   setJungleFlipEngineOptions,
   type WebVariantTenant,
   webVariantTenantForRoomId,
@@ -552,6 +553,7 @@ export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | nul
     setThreeKingdomsBanqiEngineOptions([]);
     setFFQBanqiEngineOptions([]);
     setJungleFlipEngineOptions([]);
+    setJungleEngineOptions([]);
     return null;
   };
   try {
@@ -561,11 +563,13 @@ export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | nul
       engines: PlayableEngine[];
       ffqBanqiEngines?: PlayableEngine[];
       threeKingdomsBanqiEngines?: PlayableEngine[];
+      jungleEngines?: PlayableEngine[];
       jungleFlipEngines?: PlayableEngine[];
     };
     setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
     setFFQBanqiEngineOptions(data.ffqBanqiEngines ?? []);
     setJungleFlipEngineOptions(data.jungleFlipEngines ?? []);
+    setJungleEngineOptions(data.jungleEngines ?? []);
     return data.engines.length > 0 ? data.engines : null;
   } catch {
     return withdrawRuntimeRosters();

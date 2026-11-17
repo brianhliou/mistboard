@@ -13,10 +13,12 @@ import {
   FFQ_BANQI_SPEC_ID,
   type GameSpecId,
   JUNGLE_FLIP_SPEC_ID,
+  JUNGLE_SPEC_ID,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
+import { setJungleEngineOptions } from './variant-tenant/registry.js';
 import './account-profile.css';
 import './bots.css';
 import './current-games.css';
@@ -40,6 +42,7 @@ import {
   buildProfileOverviewShell,
   buildProfileTabsShell,
 } from './profile-ui.js';
+import { rememberedPveEngine } from './pve-memory.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import {
   setThreeKingdomsBanqiEngineOptions,
@@ -199,6 +202,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
  *  failed fetch or an older server). */
 export type EngineRosters = {
   banqi?: readonly { id: string }[];
+  jungle?: readonly { id: string }[];
   jungleFlip?: readonly { id: string }[];
   threeKingdomsBanqi?: readonly WebTenantEngineOption[];
   ffqBanqi?: readonly WebTenantEngineOption[];
@@ -211,6 +215,7 @@ async function fetchEngineRosters(): Promise<EngineRosters> {
     if (!resp.ok) return {};
     const data = (await resp.json()) as {
       banqiEngines?: { id: string }[];
+      jungleEngines?: WebTenantEngineOption[];
       jungleFlipEngines?: { id: string }[];
       threeKingdomsBanqiEngines?: WebTenantEngineOption[];
       ffqBanqiEngines?: WebTenantEngineOption[];
@@ -221,9 +226,11 @@ async function fetchEngineRosters(): Promise<EngineRosters> {
     if (ffqBanqiOffered() && data.ffqBanqiEngines !== undefined) {
       setFFQBanqiEngineOptions(data.ffqBanqiEngines);
     }
+    setJungleEngineOptions(data.jungleEngines ?? []);
     return {
       banqi: data.banqiEngines,
       jungleFlip: data.jungleFlipEngines,
+      jungle: data.jungleEngines,
       threeKingdomsBanqi: data.threeKingdomsBanqiEngines,
       ffqBanqi: data.ffqBanqiEngines,
     };
@@ -263,12 +270,52 @@ export async function mountBotProfile(root: HTMLElement, botId: string): Promise
   document.title = t('bots.profileTitle', { name: bot.displayName });
 
   const options = playOptionsFor(bot);
+  const params = new URL(window.location.href).searchParams;
   const primaryGameSpecId = primaryRating(bot)?.gameSpecId;
+  const jungleLevels =
+    bot.id === 'misty' && options.some((option) => option.gameSpecId === JUNGLE_SPEC_ID)
+      ? (engineLadderOpponents([bot], await fetchEngineRosters()).get(JUNGLE_SPEC_ID)?.[0]
+          ?.members ?? [])
+      : null;
+  let jungleLevel =
+    jungleLevels?.find((member) => String(member.level) === params.get('level')) ??
+    jungleLevels?.find((member) => member.play?.engineId === rememberedPveEngine(JUNGLE_SPEC_ID)) ??
+    jungleLevels?.find((member) => member.level === MISTY_LADDER_DEFAULT_LEVEL) ??
+    jungleLevels?.[0];
+  const syncUrl = (): void => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('game', selectedGameSpecId);
+    if (selectedGameSpecId === JUNGLE_SPEC_ID && jungleLevel?.level != null) {
+      url.searchParams.set('level', String(jungleLevel.level));
+    } else url.searchParams.delete('level');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+  };
+  const junglePlay =
+    jungleLevels === null
+      ? undefined
+      : {
+          members: jungleLevels,
+          selected: jungleLevel,
+          onSelect: (member: DirectoryMember): void => {
+            jungleLevel = member;
+            syncUrl();
+          },
+        };
   let selectedGameSpecId =
+    options.find((option) => option.gameSpecId === params.get('game'))?.gameSpecId ??
     options.find((option) => option.gameSpecId === primaryGameSpecId)?.gameSpecId ??
     options[0]?.gameSpecId ??
     bot.defaultGameSpecId;
-  let overview = buildBotOverview(bot, selectedGameSpecId);
+  const overviewFor = (): HTMLElement =>
+    buildBotOverview(
+      bot,
+      selectedGameSpecId,
+      selectedGameSpecId === JUNGLE_SPEC_ID && junglePlay
+        ? { ...junglePlay, selected: jungleLevel }
+        : undefined,
+    );
+  syncUrl();
+  let overview = overviewFor();
   // The games panel is rebuilt on variant switch too. It used to be built once,
   // outside this closure, so the list stayed on whatever variant loaded first --
   // and since the flat list was "most recent across all variants", the xiangqi
@@ -279,7 +326,8 @@ export async function mountBotProfile(root: HTMLElement, botId: string): Promise
     selectedGameSpecId,
     onSelect: (gameSpecId) => {
       selectedGameSpecId = gameSpecId;
-      const nextOverview = buildBotOverview(bot, selectedGameSpecId);
+      syncUrl();
+      const nextOverview = overviewFor();
       overview.replaceWith(nextOverview);
       overview = nextOverview;
       const nextGames = buildRecentGames(bot, selectedGameSpecId);
@@ -370,6 +418,7 @@ export function engineLadderOpponents(
   for (const [gameSpecId, roster] of [
     [BANQI_SPEC_ID, rosters.banqi],
     [JUNGLE_FLIP_SPEC_ID, rosters.jungleFlip],
+    [JUNGLE_SPEC_ID, rosters.jungle],
   ] as const) {
     if (!misty || !offersGame(misty, gameSpecId)) continue;
     const offered = new Set(roster?.map((engine) => engine.id) ?? []);
@@ -594,12 +643,16 @@ function buildOpponentCard(
   const levelled = opponent.members.length > 1;
   const memberKey = (member: DirectoryMember): string => member.key ?? member.bot.id;
   let selected =
+    (gameSpecId === JUNGLE_SPEC_ID
+      ? opponent.members.find((member) => member.play?.engineId === rememberedPveEngine(gameSpecId))
+      : undefined) ??
     opponent.members.find((member) => member.level !== null && member.level === openLevel) ??
     opponent.members[0]!;
 
   const picker = levelled ? document.createElement('select') : null;
   if (picker) {
     picker.className = 'site-select bot-level-select';
+    picker.dataset.gameSpecId = gameSpecId;
     picker.setAttribute('aria-label', t('bots.levelPicker', { name: name ?? '' }));
     // Members come weakest first; the picker lists the strongest level first,
     // like the cards (decided 2026-11-12). The level it opens on is unchanged.
@@ -646,6 +699,14 @@ function buildOpponentCard(
     const card = buildBotSummaryCard(profile, {
       ratingGameSpecId: gameSpecId,
       primaryPlayGameSpecId: gameSpecId,
+      profileHref:
+        bot.id === 'misty'
+          ? `/bot/misty?game=${encodeURIComponent(gameSpecId)}${
+              gameSpecId === JUNGLE_SPEC_ID && selected.level !== null
+                ? `&level=${selected.level}`
+                : ''
+            }`
+          : undefined,
       ...(name ? { name } : {}),
       ...(opponent.community
         ? {}
@@ -1014,13 +1075,23 @@ function buildRosterSection(group: BotRosterGroup): HTMLElement {
 
 // ── Profile ─────────────────────────────────────────────────────────────────
 
-function buildBotOverview(bot: BotProfile, gameSpecId: string): HTMLElement {
+type JungleProfilePlay = {
+  members: readonly DirectoryMember[];
+  selected: DirectoryMember | undefined;
+  onSelect: (member: DirectoryMember) => void;
+};
+
+function buildBotOverview(
+  bot: BotProfile,
+  gameSpecId: string,
+  junglePlay?: JungleProfilePlay,
+): HTMLElement {
   const option =
     playOptionsFor(bot).find((candidate) => candidate.gameSpecId === gameSpecId) ??
     playOptionsFor(bot)[0];
   const overview = buildProfileOverviewShell({
     identity: buildBotIdentity(bot, gameSpecId),
-    actions: option ? buildBotPlayAction(bot, option) : null,
+    actions: option ? buildBotPlayAction(bot, option, junglePlay) : null,
     primary: buildBotRatingSpotlight(bot, gameSpecId),
     side: buildBotSideInfo(bot, gameSpecId),
   });
@@ -1089,6 +1160,7 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   // "Games" invites the reader to reconcile numbers that were never the same
   // measurement.
   const record = botRecordFor(bot, gameSpecId);
+  if (bot.id === 'misty' && gameSpecId === JUNGLE_SPEC_ID) counts.append(allLevelsLabel());
   counts.append(
     buildBotCount(new Intl.NumberFormat().format(record.games), t('bots.gamesHere')),
     buildBotCount(recordLabel(record), t('bots.recordHere')),
@@ -1111,20 +1183,54 @@ function buildBotCount(value: string, label: string): HTMLElement {
   return count;
 }
 
-function buildBotPlayAction(bot: BotProfile, option: BotPlayOption): HTMLElement {
+function buildBotPlayAction(
+  bot: BotProfile,
+  option: BotPlayOption,
+  junglePlay?: JungleProfilePlay,
+): HTMLElement {
   const actions = document.createElement('div');
   actions.className = 'profile-relation-actions bot-profile-actions';
+  let selected = junglePlay?.selected;
+  const playable = option.playable && (!junglePlay || junglePlay.members.length > 0);
+  if (junglePlay && junglePlay.members.length > 0) {
+    const picker = document.createElement('select');
+    picker.className = 'site-select bot-level-select';
+    picker.dataset.gameSpecId = option.gameSpecId;
+    picker.setAttribute('aria-label', t('bots.levelPicker', { name: bot.displayName }));
+    for (const member of [...junglePlay.members].reverse()) {
+      const item = document.createElement('option');
+      item.value = member.play?.engineId ?? '';
+      item.textContent =
+        member.level === null
+          ? t('bots.fullStrength')
+          : t('bots.levelName', { level: member.level });
+      picker.append(item);
+    }
+    picker.value = selected?.play?.engineId ?? '';
+    picker.addEventListener('change', () => {
+      const next = junglePlay.members.find((member) => member.play?.engineId === picker.value);
+      if (!next) return;
+      selected = next;
+      junglePlay.onSelect(next);
+    });
+    actions.append(picker);
+  }
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = option.playable ? 'landing-setup-start' : 'landing-setup-back';
-  button.disabled = !option.playable;
-  button.textContent = option.playable
+  button.className = playable ? 'landing-setup-start' : 'landing-setup-back';
+  button.disabled = !playable;
+  button.textContent = playable
     ? t('bots.playVariant', { variant: gameSpecLabel(option.gameSpecId) })
     : t('play.unavailable');
-  if (option.playable) {
+  if (playable) {
     bindBotPlayControl(
       button,
-      () => ({ botId: bot.id, gameSpecId: option.gameSpecId, preferredColor: 'random' }),
+      () => ({
+        botId: bot.id,
+        gameSpecId: option.gameSpecId,
+        preferredColor: 'random',
+        ...(selected?.play?.engineId ? { engineId: selected.play.engineId } : {}),
+      }),
       { pendingLabel: t('bots.starting'), errorLabel: t('setup.tryAgain') },
     );
   }
@@ -1316,9 +1422,17 @@ function syncSelectedBotRating(section: HTMLElement, gameSpecId: string): void {
   }
 }
 
+function allLevelsLabel(): HTMLElement {
+  const label = document.createElement('span');
+  label.className = 'bot-profile-record-scope';
+  label.textContent = t('bots.allLevels');
+  return label;
+}
+
 function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-games bot-profile-games';
+  if (bot.id === 'misty' && gameSpecId === JUNGLE_SPEC_ID) section.append(allLevelsLabel());
 
   const games = botGamesFor(bot, gameSpecId);
   if (games.length === 0) {

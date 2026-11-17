@@ -27,6 +27,7 @@ import {
   isPublicGameSpec,
   isRetiredGameSpec,
   JIEQI_SPEC_ID,
+  JUNGLE_CLASSICAL_POLICIES,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
@@ -308,6 +309,37 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
   if (!withJqe) return JIEQI_LADDER_ENGINE_OPTIONS;
   const [abJchess, ...below] = JIEQI_LADDER_ENGINE_OPTIONS;
   return [abJchess!, JIEQI_JQE_ENGINE_OPTION, ...below];
+}
+
+let jungleRuntimeEngineIds: ReadonlySet<string> | null = null;
+
+export function setJungleEngineOptions(engines: readonly WebTenantEngineOption[]): void {
+  const ids = new Set(engines.map((engine) => engine.id));
+  if (
+    jungleRuntimeEngineIds &&
+    ids.size === jungleRuntimeEngineIds.size &&
+    [...ids].every((id) => jungleRuntimeEngineIds!.has(id))
+  )
+    return;
+  jungleRuntimeEngineIds = ids;
+  notifyRuntimeEngineRostersChanged();
+}
+
+export function jungleEngineOptions(
+  available: ReadonlySet<string> | null = jungleRuntimeEngineIds,
+): readonly WebTenantEngineOption[] {
+  const all: WebTenantEngineOption[] = [
+    { id: 'katago-jungle', name: 'KataGo', familyName: 'KataGo', kind: 'container' },
+    ...[...JUNGLE_CLASSICAL_POLICIES].reverse().map(
+      (tier): WebTenantEngineOption => ({
+        id: tier.id,
+        name: `Misty Level ${tier.level}`,
+        familyName: 'Misty',
+        kind: 'container',
+      }),
+    ),
+  ];
+  return all.filter((engine) => available === null || available.has(engine.id));
 }
 
 let jungleFlipNeuralEngineAvailable = false;
@@ -791,28 +823,17 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleEnabled,
       acceptsDeepLink: jungleEnabled,
-      // Strongest first: KataGo-AnimalChess on top (2026-10, #434: it won the
-      // jungle challenge), then Misty at full strength. Misty's old three-rung
-      // ladder was collapsed on 2026-07-27 and the server REJECTS a create request
-      // naming level 1 or 3 (they stay resolvable only so finished games that
-      // recorded them still replay as PvE). Hand mirror of the server's
-      // JUNGLE_PLAYABLE_ENGINE_IDS; variant-registry-sync.test.ts asserts parity.
-      // Misty stays the default: the top seat is a challenge, not a first game.
-      engineOptions: [
-        {
-          id: 'katago-jungle',
-          name: 'KataGo',
-          familyName: 'KataGo',
-          kind: 'container',
-        },
-        {
-          id: 'misty-jungle-level-2',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'builtin',
-        },
-      ],
-      defaultEngineId: 'misty-jungle-level-2',
+      // One classical Misty ladder, with KataGo kept as a separate opponent.
+      get engineOptions() {
+        return jungleEngineOptions();
+      },
+      get defaultEngineId() {
+        return jungleEngineOptions().some(
+          (engine) => engine.id === 'misty-jungle-classical-level-4',
+        )
+          ? 'misty-jungle-classical-level-4'
+          : 'misty-jungle-level-2';
+      },
     },
   },
   {
