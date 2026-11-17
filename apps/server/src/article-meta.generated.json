@@ -702,8 +702,8 @@
     "kind": "article",
     "description": "Rapfi, the engine behind Mistboard's Gomoku bots, beat KataGomo over 199 games at 3 seconds a move and is the first Gomoku champion.",
     "status": "published",
-    "publishedAt": "2026-11-13",
-    "liveAt": 1794585600000
+    "publishedAt": "2026-11-27",
+    "liveAt": 1795795200000
   },
   "riverbank-cannon": {
     "title": "The Riverbank Cannon Problem",

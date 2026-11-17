@@ -152,7 +152,7 @@ export const rapfiVsKatagomoArticle: Article = {
   summary: `Rapfi, the engine behind Mistboard's Gomoku bots, beat KataGomo over ${E.games} games at ${SECONDS} seconds a move and is the first Gomoku champion.`,
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-11-13',
+  publishedAt: '2026-11-27',
   method: [
     `${E.games} counted games from ${match.equal.played / 2} dealt openings, each played twice with colours swapped, at ${SECONDS} seconds a move for both engines; one game voided.`,
     `Elo ranges: 95% paired bootstrap over the opening pairs (${commas(100_000)} resamples).`,
