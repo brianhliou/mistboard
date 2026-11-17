@@ -8,6 +8,108 @@ import { parseChapterTags, setAdminOnlyStudyGateForTests, tryHandle } from './ro
 
 type ResponseCapture = { body: string; headers: Record<string, string>; status: number | null };
 
+test('the study index pins classical collections independently of new engine studies', async (t) => {
+  init('postgres://mistboard@127.0.0.1:9/never');
+  t.after(close);
+  setAdminOnlyStudyGateForTests(async () => false);
+  t.after(() => setAdminOnlyStudyGateForTests(null));
+  const now = new Date('2026-11-17T12:00:00Z');
+  const row = (id: string, name: string, owner = 'mistboard') => ({
+    id,
+    name,
+    i18n: {},
+    owner_handle: owner,
+    chapter_count: '10',
+    chapter_preview: [],
+    preview_board: null,
+    like_count: '0',
+    visibility: 'public',
+    created_at: now,
+    updated_at: now,
+  });
+  const newest = Array.from({ length: 31 }, (_, i) =>
+    row(`engine${i}`, 'AB-JChess vs jqe, all 600 games'),
+  );
+  const elegant = Array.from({ length: 6 }, (_, i) => {
+    const name = `Elegant Pastime Manual, Vol. ${i + 1}: 90 classical compositions`;
+    return i === 1
+      ? { ...row(`elegant${i + 1}`, '适情雅趣 卷二'), i18n: { en: { name } } }
+      : row(`elegant${i + 1}`, name);
+  });
+  const classics = [
+    row('uXnuObfx', 'Seven Stars', 'teacher'),
+    ...elegant,
+    row('9IIMlPp1', 'Secret in the Tangerine: 137 classical compositions'),
+    row('vQveCryp', 'Deep Abyss, Wide Sea: 315 classical compositions'),
+    row('SsKhaRTs', 'Dream of Divine Strategy: 152 classical compositions'),
+    row('plum', 'Plum Blossom Spring: 50 classical games'),
+    row('bamboo', 'Bamboo Fragrance Studio Manual: 208 classical compositions'),
+    row('rhrGqFnM', 'Eighteen Variations of the Golden Roc'),
+    row('forest', 'Forest of Affairs: 2 classical games'),
+    row('Dfi3NpRE', 'Secret in the Tangerine, Vol. 1'),
+    row('XBQuhA9n', 'Secret in the Tangerine, Vol. 2'),
+  ];
+  const audits = [
+    row('audit1', 'What the solver found: 47 classical compositions'),
+    row('audit2', 'Nine records whose printed line does not hold: classical compositions'),
+    row('audit3', '渊深海阔 第217局: classical compositions'),
+  ];
+  let classicalQueries = 0;
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    assert.match(sql, /s\.visibility = 'public'/);
+    assert.match(sql, /u\.profile_visibility IN \('public', 'unlisted'\)/);
+    if (sql.includes('LIMIT')) return { rows: newest };
+    classicalQueries++;
+    assert.doesNotMatch(sql, /OFFSET/);
+    return {
+      rows: [
+        ...newest,
+        ...audits,
+        ...[...classics].reverse(),
+        row('player', 'My classical compositions', 'player'),
+      ],
+    };
+  });
+  const read = async (query: string) => {
+    const response = captureResponse();
+    assert.equal(
+      await tryHandle(
+        {},
+        { method: 'GET', url: `/api/studies/public?${query}`, headers: {} } as IncomingMessage,
+        response,
+        '/api/studies/public',
+      ),
+      true,
+    );
+    assert.equal(response.status, 200);
+    return JSON.parse(response.body);
+  };
+  const body = await read('limit=30&classical=1');
+  assert.deepEqual(
+    body.classicalStudies,
+    classics.map((study) => ({
+      id: study.id,
+      name: study.name,
+      i18n: study.i18n,
+      chapterCount: Number(study.chapter_count),
+    })),
+  );
+  assert.equal(body.studies.length, 30);
+  assert.equal(body.hasMore, true);
+  assert.deepEqual(
+    body.studies.map((study: { id: string }) => study.id),
+    newest.slice(0, 30).map((study) => study.id),
+  );
+  for (const query of [
+    'limit=6',
+    'limit=30&classical=1&q=engine',
+    'limit=30&classical=1&offset=30',
+  ]) {
+    assert.equal((await read(query)).classicalStudies, undefined);
+  }
+  assert.equal(classicalQueries, 1, 'only the unfiltered first index page requests the collection');
+});
+
 test('study decision reads omit disabled luck and preserve the stored row for re-enabling', async (t) => {
   const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
   t.after(() => {

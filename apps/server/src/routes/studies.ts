@@ -30,7 +30,11 @@ import {
 import { currentAccountUser } from './../account-session.js';
 import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
 import * as persistence from './../persistence.js';
-import { STUDY_PAGE_MAX, type StudyListAccess } from './../persistence-studies.js';
+import {
+  listClassicalStudies,
+  STUDY_PAGE_MAX,
+  type StudyListAccess,
+} from './../persistence-studies.js';
 import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
 import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
@@ -334,6 +338,7 @@ export async function tryHandle(
     if (!requirePersistence(response)) return true;
     // ?limit lets the /study "All studies" browse ask for more than the homepage
     // widget's default 5. ?q filters by study name. listTopPublicStudies clamps.
+    // ?classical=1 adds the independent classical shelf on an unfiltered first page.
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
     const access = await listAccessFor(request);
     const page = await pageOf(
@@ -344,6 +349,9 @@ export async function tryHandle(
     writeJson(response, 200, {
       studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
       hasMore: page.hasMore,
+      ...(params.get('classical') === '1' && !params.get('q')?.trim() && parseOffset(params) === 0
+        ? { classicalStudies: await listClassicalStudies() }
+        : {}),
     });
     return true;
   }

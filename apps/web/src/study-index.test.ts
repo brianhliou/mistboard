@@ -8,6 +8,102 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
+describe('study index classical collections', () => {
+  const classicalStudies = [
+    {
+      id: 'uXnuObfx',
+      name: 'Seven Stars',
+      chapterCount: 1,
+      i18n: { 'zh-Hant': { name: '七星聚會' } },
+    },
+    { id: 'elegant1', name: 'Elegant Pastime Manual, Vol. 1', chapterCount: 90 },
+    { id: '9IIMlPp1', name: 'Secret in the Tangerine', chapterCount: 137 },
+  ];
+
+  it('shows the pinned shelf above the unchanged newest list and keeps its paging offset', async () => {
+    window.history.replaceState({}, '', '/study');
+    const study = (id: string) => ({
+      id,
+      name: id,
+      visibility: 'public',
+      chapterCount: 600,
+      updatedAt: '2026-11-17T12:00:00Z',
+    });
+    const fetcher = vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        input.toString().includes('offset=30')
+          ? { studies: [study('next-engine')], hasMore: false }
+          : {
+              studies: Array.from({ length: 30 }, (_, i) => study(`engine${i}`)),
+              hasMore: true,
+              classicalStudies,
+            },
+      ),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(3),
+    );
+    const shelf = root.querySelector('.study-index__classical')!;
+    expect(shelf.querySelector('h2')?.textContent).toBe('Classical collections');
+    expect([...shelf.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
+      '/study/uXnuObfx',
+      '/study/elegant1',
+      '/study/9IIMlPp1',
+    ]);
+    const content = root.querySelector('.study-index__content')!;
+    expect([...content.children].indexOf(shelf)).toBeLessThan(
+      [...content.children].indexOf(content.querySelector('.study-index__grid')!),
+    );
+    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/studies/public?limit=30&classical=1');
+    root.querySelector<HTMLButtonElement>('.study-index__more-button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.study-index__grid > li')).toHaveLength(31),
+    );
+    expect(fetcher.mock.calls[1]?.[0]).toBe('/api/studies/public?limit=30&offset=30');
+    expect(shelf.querySelectorAll('a')).toHaveLength(3);
+    expect(root.querySelector('.study-index__more-button')).toBeNull();
+  });
+
+  it('localizes the pinned heading, study names and links', async () => {
+    window.history.replaceState({}, '', '/zh-hant/study');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ studies: [], classicalStudies })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() =>
+      expect(root.querySelector('.study-index__classical h2')?.textContent).toBe('古典棋譜集'),
+    );
+    const link = root.querySelector<HTMLAnchorElement>('.study-index__classical a');
+    expect(link?.getAttribute('href')).toBe('/zh-hant/study/uXnuObfx');
+    expect(link?.textContent).toContain('七星聚會');
+  });
+
+  it.each(['/study?q=engine', '/study?tab=staff', '/study?tab=mine', '/study?tab=favorites'])(
+    'keeps the shelf out of a filtered browse (%s)',
+    async (path) => {
+      window.history.replaceState({}, '', path);
+      const fetcher = vi.fn(async (_input: RequestInfo | URL) =>
+        jsonResponse({ studies: [], classicalStudies }),
+      );
+      vi.stubGlobal('fetch', fetcher);
+      const root = document.createElement('div');
+      document.body.append(root);
+      mountStudyIndex(root);
+      await vi.waitFor(() => expect(root.querySelector('.study-index__content')).not.toBeNull());
+      expect(root.querySelector('.study-index__classical')).toBeNull();
+      expect(String(fetcher.mock.calls[0]?.[0])).not.toContain('classical=1');
+    },
+  );
+});
+
 describe('study index Staff picks', () => {
   it('loads the public curated collection without repeating badges on its cards', async () => {
     window.history.replaceState({}, '', '/study?tab=staff');
@@ -189,7 +285,7 @@ describe('study index paging', () => {
     await vi.waitFor(() =>
       expect(root.querySelector('.study-index__name')?.textContent).toBe('First page'),
     );
-    expect(calls[0]).toBe('/api/studies/public?limit=30');
+    expect(calls[0]).toBe('/api/studies/public?limit=30&classical=1');
 
     const more = root.querySelector<HTMLButtonElement>('.study-index__more-button');
     expect(more?.textContent).toBe('More studies');
