@@ -1475,6 +1475,8 @@ The provider guide's postgame section separates existing grading/luck algorithms
 
 `apps/server/src/fair-play.ts` + `fair-play.test.ts` + `persistence-fair-play.test.ts`: admin fair-play marks, bounded opponent rating refunds, repeat/dry-run safety and leaderboard exclusion; migration 197 adds the mark and refund ledger. `scripts/account-flags.mjs --mark-fair-play [--dry-run]` / `--unmark-fair-play` operates it (#1077).
 
+`apps/server/src/fair-play-summary.ts` + `.test.ts`: pure per-game, account and opponent engine-match/loss metrics, weighted sample counts, skip rules and variant/time-class groups (#1187). `fair-play-game-inputs.ts` + `.test.ts` replay finished logs into internal legal-move inputs without exposing hidden identities. `persistence-fair-play-summary.ts` + `.test.ts` load the latest 40 analyzed finished rated games and intervening missing-analysis games, current group ratings and final caches. `routes/admin-accounts.ts` + `.test.ts` serve the session-admin-only `GET /api/admin/fair-play/accounts/:id/summary`; no UI or automatic flagging.
+
 `apps/server/src/ffq-banqi-public-analysis.ts`: bounded two-slot public-FEN level-7 searches shared by FFQ review charts and chance decisions.
 
 `apps/server/src/ffq-banqi-decisions.ts` + `.test.ts`: public-FEN flip and covered-capture pool means, exact terminal HP scoring, top-plus-played ceiling, hidden-deal invariance and resumable checkpoints (#1092).
