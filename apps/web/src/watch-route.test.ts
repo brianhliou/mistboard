@@ -188,9 +188,7 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
   });
 
-  // Xiangqi mahjong's east/west are bookkeeping: the label read "Draw" for every
-  // decided match (no branch matched 'east-wins'). It names the winning player.
-  it('names the winning player of a xiangqi mahjong match, never the seat', () => {
+  it('names the winning seat of a xiangqi mahjong match, including unnamed players', () => {
     const base: FeaturedGame = {
       blackName: null,
       corpusId: null,
@@ -218,10 +216,12 @@ describe('watch route copy helpers', () => {
         },
       ],
     };
-    expect(watchQueueResultLabel(base)).toBe('Misty Xiangqi Mahjong wins');
-    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
+    expect(watchQueueResultLabel(base)).toBe('West wins');
+    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('East wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
-    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
+    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('West wins');
+    // East/West result words belong only to this spec, never an unknown variant.
+    expect(watchQueueResultLabel({ ...base, variant: 'unknown-variant' })).toBe('Draw');
   });
 
   // The meta line read "Guest wins by On points": "On points" is a phrase, not a reason noun.
@@ -238,9 +238,9 @@ describe('watch route copy helpers', () => {
       whiteName: null,
       participants: [],
     };
-    expect(watchGameStatusLine(game)).toBe('Guest wins on points');
+    expect(watchGameStatusLine(game)).toBe('East wins on points');
     expect(watchGameStatusLine({ ...game, termination: 'resignation' })).toBe(
-      'Guest wins by resignation',
+      'East wins by resignation',
     );
   });
 

@@ -1,11 +1,17 @@
 // Result words for a finished game row (the /watch queue and the /games "Just
 // finished" tiles). Import-light on purpose: no renderers, no route modules.
 
+import { XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
 import { banqiResultLabel } from './banqi-result-label.js';
-import { colorWinsLabel, displayParticipantName, type FeaturedGame } from './game-display.js';
+import {
+  colorWinsLabel,
+  type FeaturedGame,
+  firstMoverColorName,
+  secondMoverColorName,
+} from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { jungleFlipResultLabel } from './jungle-flip-result-label.js';
-import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
+import { seatColorWord } from './variant-seat-label.js';
 
 export function resultLabel(result: string): string {
   if (result === 'white-wins') return t('watch.whiteWins');
@@ -25,10 +31,10 @@ export function watchQueueResultLabel(game: FeaturedGame): string {
   if (game.variant === 'jungle-flip')
     return jungleFlipResultLabel(game.result, game.firstColor ?? null);
   const result = game.result;
-  // Xiangqi mahjong's east/west are bookkeeping: name the winning player, as its
-  // table does, never the seat (variant-seat-label.ts SEAT_NAMING).
-  if ((result === 'east-wins' || result === 'west-wins') && seatsNamePlayers(game.variant)) {
-    return colorWinsLabel(displayParticipantName(game, result === 'east-wins' ? 'east' : 'west'));
+  // Use the same localized East/West seat words as the variant's setup labels.
+  if (game.variant === XIANGQI_MAHJONG_SPEC_ID) {
+    if (result === 'east-wins') return colorWinsLabel(firstMoverColorName(game.variant));
+    if (result === 'west-wins') return colorWinsLabel(secondMoverColorName(game.variant));
   }
   if (result === 'red-wins') return colorWinsLabel(seatColorWord(game.variant, 'red'));
   if (result === 'black-wins') return colorWinsLabel(seatColorWord(game.variant, 'black'));
