@@ -13,6 +13,7 @@ import {
   xiangqiPuzzleTrainingTags,
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
+import { positionPuzzleFixture } from './fixtures/xiangqi-position-packet.js';
 import { close, getPool, init } from './persistence-db.js';
 import { puzzleServingRating } from './puzzle-rating.js';
 import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
@@ -1139,6 +1140,39 @@ test('puzzle detail 404s unknown puzzle ids', async () => {
 
   assert.equal(response.status, 404);
   assert.deepEqual(JSON.parse(response.body), { error: 'not_found' });
+});
+
+test('a credit puzzle detail publishes exactly one setup move and no source-game history', async (t) => {
+  resetPuzzleStoreForTests();
+  init('postgres://unused@127.0.0.1:9/never');
+  t.after(async () => {
+    await close();
+    resetPuzzleStoreForTests();
+  });
+  const puzzle = positionPuzzleFixture(true);
+  const setupMove = { from: 'g6', to: 'g5', captured: null };
+  const stored = {
+    ...puzzle,
+    initial: { ...puzzle.initial, lastMove: { from: 'g6', to: 'g5' } },
+    setupMove,
+  };
+  const queries: string[] = [];
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    queries.push(sql);
+    if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
+    if (sql.includes('SELECT data, position_only FROM puzzles'))
+      return { rows: [{ data: stored, position_only: true }] };
+    return { rows: [] };
+  });
+  const response = await route(`/api/puzzles/${puzzle.id}`);
+  assert.equal(response.status, 200);
+  const detail = JSON.parse(response.body).puzzle;
+  assert.deepEqual(detail.setupMove, setupMove);
+  assert.deepEqual(detail.initial.lastMove, { from: 'g6', to: 'g5' });
+  assert.equal(detail.credit.url, puzzle.credit!.url);
+  for (const key of ['sourceGame', 'history', 'moveLog', 'solution'])
+    assert.ok(!response.body.includes(`"${key}"`), key);
+  assert.doesNotMatch(queries.join('\n'), /historical_xiangqi_games/);
 });
 
 // A mined mate-in-one and a three-ply line, so the attempt tests below read the
