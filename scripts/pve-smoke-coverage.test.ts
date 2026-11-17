@@ -30,10 +30,6 @@ const EXEMPT: Readonly<Record<string, string>> = {
   // server suite plays two bots through a whole match
   // (xiangqi-mahjong-tenant.test.ts).
   'xiangqi-mahjong': 'in-process bot, covered by the server suite',
-  // Opened to everyone 2026-11-15. Its engine is an executable the server runs
-  // (MISTBOARD_FFQ_BANQI_ENGINE_PATH; ffq-banqi-engine.test.ts). A prod smoke
-  // row follows in its own change.
-  'ffq-banqi': 'launched 2026-11-15; prod smoke to follow',
 };
 
 function pveGameSpecIds(): string[] {

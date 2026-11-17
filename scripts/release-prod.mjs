@@ -1748,6 +1748,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:banqi', baseArgs()),
     },
     {
+      label: 'prod Fanfanqi smoke',
+      tag: 'ffq-banqi',
+      command: npmCommand('prod:smoke:ffq-banqi', baseArgs()),
+    },
+    {
       label: 'prod Jungle smoke',
       tag: 'jungle',
       command: npmCommand('prod:smoke:jungle', baseArgs()),
