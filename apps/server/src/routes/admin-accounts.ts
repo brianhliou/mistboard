@@ -9,6 +9,7 @@
 // the URL never quietly returns a different view.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { summarizeFairPlayAccount } from '../fair-play-summary.js';
 import {
   ADMIN_ACCOUNTS_MAX_LIMIT,
   type AdminAccountRow,
@@ -16,6 +17,7 @@ import {
   isAdminAccountSort,
   listAdminAccounts,
 } from './../persistence.js';
+import { loadFairPlaySummaryInputs } from '../persistence-fair-play-summary.js';
 import { requireAdminSession, requireMethod, requirePersistence, writeJson } from './lib.js';
 
 export const ADMIN_ACCOUNTS_DEFAULT_LIMIT = 200;
@@ -129,11 +131,33 @@ export async function tryHandle(
   pathname: string,
   parsedUrl: URL,
 ): Promise<boolean> {
-  if (pathname !== '/api/admin/accounts') return false;
+  const summaryMatch = pathname.match(/^\/api\/admin\/fair-play\/accounts\/([^/]+)\/summary$/);
+  if (pathname !== '/api/admin/accounts' && !summaryMatch) return false;
   if (!requireMethod(request, response, 'GET')) return true;
   if (!(await requireAdminSession(request, response))) return true;
   if (!requirePersistence(response)) return true;
+  if (summaryMatch) {
+    let accountId: string;
+    try {
+      accountId = decodeURIComponent(summaryMatch[1]!);
+    } catch {
+      writeJson(response, 400, { error: 'invalid_account_id' });
+      return true;
+    }
+    const result = await fairPlaySummaryForApi(accountId);
+    writeJson(response, result.status, result.payload);
+    return true;
+  }
   const result = await adminAccountsForApi(parsedUrl.searchParams);
   writeJson(response, result.status, result.payload);
   return true;
+}
+
+export async function fairPlaySummaryForApi(
+  accountId: string,
+  load: typeof loadFairPlaySummaryInputs = loadFairPlaySummaryInputs,
+): Promise<ApiResult> {
+  const games = await load(accountId);
+  if (games === null) return { status: 404, payload: { error: 'not_found' } };
+  return { status: 200, payload: summarizeFairPlayAccount(accountId, games) };
 }
