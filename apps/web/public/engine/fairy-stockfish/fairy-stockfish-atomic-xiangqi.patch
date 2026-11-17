@@ -1,0 +1,368 @@
+diff --git a/src/evaluate.cpp b/src/evaluate.cpp
+index ce30aa0..a305384 100644
+--- a/src/evaluate.cpp
++++ b/src/evaluate.cpp
+@@ -887,7 +887,7 @@ namespace {
+                 while (bExtBlast)
+                 {
+                     Square s = pop_lsb(bExtBlast);
+-                    if (((attacks_bb<KING>(s) | s) & pos.pieces(Them, pt)) && !(attacks_bb<KING>(s) & pos.pieces(Us, pt)))
++                    if (((pos.blast_squares(s) | s) & pos.pieces(Them, pt)) && !(pos.blast_squares(s) & pos.pieces(Us, pt)))
+                         explosions++;
+                 }
+                 int danger = 20 * attacks / (evasions + 1) + 40 * explosions;
+diff --git a/src/parser.cpp b/src/parser.cpp
+index cbd2404..bee7301 100644
+--- a/src/parser.cpp
++++ b/src/parser.cpp
+@@ -96,6 +96,13 @@ namespace {
+         return value == "makruk" || value == "asean" || value == "none";
+     }
+ 
++    template <> bool set(const std::string& value, BlastShape& target) {
++        target =  value == "wazir" ? BLAST_WAZIR
++                : value == "lines" ? BLAST_LINES
++                : BLAST_KING;
++        return value == "king" || value == "wazir" || value == "lines";
++    }
++
+     template <> bool set(const std::string& value, ChasingRule& target) {
+         target =  value == "axf"  ? AXF_CHASING
+                 : NO_CHASING;
+@@ -207,6 +214,7 @@ template <bool Current, class T> bool VariantParser<DoCheck>::parse_attribute(co
+                                   : std::is_same<T, MaterialCounting>() ? "MaterialCounting"
+                                   : std::is_same<T, CountingRule>() ? "CountingRule"
+                                   : std::is_same<T, ChasingRule>() ? "ChasingRule"
++                                  : std::is_same<T, BlastShape>() ? "BlastShape"
+                                   : std::is_same<T, EnclosingRule>() ? "EnclosingRule"
+                                   : std::is_same<T, Bitboard>() ? "Bitboard"
+                                   : std::is_same<T, CastlingRights>() ? "CastlingRights"
+@@ -418,6 +426,11 @@ Variant* VariantParser<DoCheck>::parse(Variant* v) {
+     parse_attribute("pieceDemotion", v->pieceDemotion);
+     parse_attribute("blastOnCapture", v->blastOnCapture);
+     parse_attribute("blastImmuneTypes", v->blastImmuneTypes, v->pieceToChar);
++    parse_attribute("blastShape", v->blastShape);
++    parse_attribute("blastShelter", v->blastShelter);
++    parse_attribute("cannonUnloaded", v->cannonUnloaded);
++    parse_attribute("cannonShotBlasts", v->cannonShotBlasts);
++    parse_attribute("lethalCheck", v->lethalCheck);
+     parse_attribute("mutuallyImmuneTypes", v->mutuallyImmuneTypes, v->pieceToChar);
+     parse_attribute("petrifyOnCaptureTypes", v->petrifyOnCaptureTypes, v->pieceToChar);
+     parse_attribute("petrifyBlastPieces", v->petrifyBlastPieces);
+@@ -637,8 +650,8 @@ Variant* VariantParser<DoCheck>::parse(Variant* v) {
+         // 3. Moving a (pseudo-)royal mutuallyImmuneType into a square threatened by the same type is legal.
+         if ((v->extinctionPseudoRoyal) || (v->pieceTypes & KING))
+         {
+-            if (v->blastImmuneTypes)
+-                std::cerr << "Can not use kings or pseudo-royal with blastImmuneTypes." << std::endl;
++            if (v->blastImmuneTypes && !v->extinctionPseudoRoyal)
++                std::cerr << "Can not use kings with blastImmuneTypes." << std::endl;
+             if (v->mutuallyImmuneTypes)
+                 std::cerr << "Can not use kings or pseudo-royal with mutuallyImmuneTypes." << std::endl;
+         }
+diff --git a/src/position.cpp b/src/position.cpp
+index 352b6d5..1d8146c 100644
+--- a/src/position.cpp
++++ b/src/position.cpp
+@@ -611,6 +611,36 @@ void Position::set_check_info(StateInfo* si) const {
+               si->pseudoRoyals |= pieces(~sideToMove, pt);
+       }
+   }
++  // atomic-xiangqi patch: "in check" for a side whose royal is a pseudo-royal,
++  // so the perpetual-check law can see checks that checkersBB (KING-only) cannot.
++  si->pseudoCheck = false;
++  if (var->extinctionPseudoRoyal && !count<KING>(sideToMove))
++      for (Bitboard b = si->pseudoRoyals & pieces(sideToMove); b;)
++      {
++          Square sr = pop_lsb(b);
++          if (attackers_to(sr, ~sideToMove))
++          {
++              si->pseudoCheck = true;
++              break;
++          }
++          // lethalCheck: a blast that would reach the pseudo-royal next move is
++          // check too. A capture on an occupied neighbour by any enemy piece
++          // whose capture blasts (every piece, or every piece but the cannon
++          // when cannonShotBlasts is off) reaches sr, since the blast mask is
++          // symmetric.
++          if (var->lethalCheck && blast_on_capture())
++          {
++              Bitboard blasters = pieces(~sideToMove) & ~(var->cannonShotBlasts ? Bitboard(0) : pieces(~sideToMove, CANNON));
++              for (Bitboard t = blast_squares(sr) & pieces(); t;)
++                  if (attackers_to(pop_lsb(t), ~sideToMove) & blasters)
++                  {
++                      si->pseudoCheck = true;
++                      break;
++                  }
++              if (si->pseudoCheck)
++                  break;
++          }
++      }
+ }
+ 
+ 
+@@ -1019,7 +1049,7 @@ Bitboard Position::checked_pseudo_royals(Color c) const {
+   {
+       Square sr = pop_lsb(pseudoRoyals);
+       // skip if capturing this piece would blast any of the attacker's pseudo-royal pieces
+-      if (!(blast_on_capture() && (pseudoRoyalsTheirs & attacks_bb<KING>(sr)))
++      if (!(blast_on_capture() && (pseudoRoyalsTheirs & blast_squares(sr)))
+           && attackers_to(sr, ~c))
+           checked |= sr;
+   }
+@@ -1031,7 +1061,7 @@ Bitboard Position::checked_pseudo_royals(Color c) const {
+       while (pseudoRoyalCandidates)
+       {
+           Square sr = pop_lsb(pseudoRoyalCandidates);
+-          if (!(blast_on_capture() && (pseudoRoyalsTheirs & attacks_bb<KING>(sr)))
++          if (!(blast_on_capture() && (pseudoRoyalsTheirs & blast_squares(sr)))
+               && attackers_to(sr, ~c))
+               allAttacked |= sr;
+           else
+@@ -1067,6 +1097,19 @@ bool Position::legal(Move m) const {
+   if (must_capture() && !capture(m) && has_capture())
+       return false;
+ 
++  // atomic-xiangqi patch, cannonUnloaded: a cannon on one of its own side's
++  // two cannon starting points of a 9x10 board (white b3/h3, black b8/h8) may
++  // not capture until it has moved. Keyed on the side so that check detection,
++  // which does not consult this rule, can never disagree with it: an unloaded
++  // cannon stands where it cannot bear on the enemy general.
++  if (var->cannonUnloaded && type_of(moved_piece(m)) == CANNON && capture(m) && type_of(m) != DROP)
++  {
++      File f = file_of(from);
++      Rank r = rank_of(from);
++      if ((f == FILE_B || f == FILE_H) && r == (us == WHITE ? RANK_3 : RANK_8))
++          return false;
++  }
++
+   // Illegal non-drop moves
+   if (must_drop() && count_in_hand(us, var->mustDropType) > 0)
+   {
+@@ -1139,7 +1182,7 @@ bool Position::legal(Move m) const {
+               // Loop over squares between the king and its final position
+               // Ensure to include the initial square if from == kto
+               for (Square s = from; from != kto ? s != kto : s == from; s += step)
+-                  if (  !(blast_on_capture() && (attacks_bb<KING>(s) & st->pseudoRoyals & pieces(~sideToMove)))
++                  if (  !(blast_on_capture() && (blast_squares(s) & st->pseudoRoyals & pieces(~sideToMove)))
+                       && attackers_to(s, occupied, ~us))
+                       return false;
+           // Move the rook
+@@ -1149,7 +1192,7 @@ bool Position::legal(Move m) const {
+       if (type_of(m) == EN_PASSANT)
+           occupied &= ~square_bb(capture_square(kto));
+       if (capture(m) && blast_on_capture())
+-          occupied &= ~((attacks_bb<KING>(kto) & ((pieces(WHITE) | pieces(BLACK)) ^ pieces(PAWN))) | kto);
++          occupied &= ~((blast_squares_for(kto, type_of(moved_piece(m))) & (pieces() & ~blast_immune_pieces())) | kto);
+       // Petrifying a pseudo-royal piece is illegal
+       if (capture(m) && (var->petrifyOnCaptureTypes & type_of(moved_piece(m))) && (st->pseudoRoyals & from))
+           return false;
+@@ -1176,13 +1219,19 @@ bool Position::legal(Move m) const {
+       Bitboard attackerCandidatesTheirs = occupied & ~square_bb(kto);
+       for (PieceSet ps = var->petrifyOnCaptureTypes & extinction_piece_types(); ps;)
+           attackerCandidatesTheirs &= ~pieces(~us, pop_lsb(ps));
++      // atomic-xiangqi patch: the flying general, for a side with no KING. The
++      // generals may not face down an open line on the post-blast board.
++      if (var->flyingGeneral && !count<KING>(us) && !(pseudoRoyalsTheirs & ~occupied))
++          for (Bitboard b = pseudoRoyals; b;)
++              if (attacks_bb(~us, ROOK, pop_lsb(b), occupied) & pseudoRoyalsTheirs & occupied)
++                  return false;
+       // Check for legality unless we capture a pseudo-royal piece
+       if (!(pseudoRoyalsTheirs & ~occupied))
+           while (pseudoRoyals)
+           {
+               Square sr = pop_lsb(pseudoRoyals);
+               // Touching pseudo-royal pieces are immune
+-              if (  !(blast_on_capture() && (pseudoRoyalsTheirs & attacks_bb<KING>(sr)))
++              if (  !(blast_on_capture() && (pseudoRoyalsTheirs & blast_squares(sr)))
+                   && (attackers_to(sr, occupied, ~us) & attackerCandidatesTheirs))
+                   return false;
+           }
+@@ -1199,7 +1248,7 @@ bool Position::legal(Move m) const {
+           {
+               Square sr = pop_lsb(pseudoRoyalCandidates);
+               // Touching pseudo-royal pieces are immune
+-              if (!(  !(blast_on_capture() && (pseudoRoyalsTheirs & attacks_bb<KING>(sr)))
++              if (!(  !(blast_on_capture() && (pseudoRoyalsTheirs & blast_squares(sr)))
+                     && (attackers_to(sr, occupied, ~us) & attackerCandidatesTheirs)))
+                   allCheck = false;
+           }
+@@ -1997,8 +2046,9 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
+           PieceType pt = pop_lsb(ps);
+           blastImmune |= pieces(pt);
+       };
+-      Bitboard blast = blast_on_capture() ? ((attacks_bb<KING>(to) & ((pieces(WHITE) | pieces(BLACK)) ^ pieces(PAWN))) | to)
+-                       & (pieces() ^ blastImmune) : var->petrifyOnCaptureTypes & type_of(pc) ? square_bb(to) : Bitboard(0);
++      // atomic-xiangqi patch: immunity spares the neighbours only; the capturing piece always dies.
++      Bitboard blast = blast_on_capture() ? ((blast_squares_for(to, type_of(pc)) & pieces() & ~blastImmune & ~pieces(PAWN)) | to)
++                       : var->petrifyOnCaptureTypes & type_of(pc) ? square_bb(to) : Bitboard(0);
+       while (blast)
+       {
+           Square bsq = pop_lsb(blast);
+@@ -2161,7 +2211,7 @@ void Position::undo_move(Move m) {
+   // Add the blast pieces
+   if (st->capturedPiece && (blast_on_capture() || var->petrifyOnCaptureTypes))
+   {
+-      Bitboard blast = attacks_bb<KING>(to) | to;
++      Bitboard blast = blast_squares(to) | to;
+       while (blast)
+       {
+           Square bsq = pop_lsb(blast);
+@@ -2395,7 +2445,7 @@ Value Position::blast_see(Move m) const {
+   Square to = to_sq(m);
+   Color us = color_of(moved_piece(m));
+   Bitboard fromto = type_of(m) == DROP ? square_bb(to) : from | to;
+-  Bitboard blast = ((attacks_bb<KING>(to) & ~pieces(PAWN)) | fromto) & (pieces(WHITE) | pieces(BLACK));
++  Bitboard blast = ((blast_squares_for(to, type_of(moved_piece(m))) & ~blast_immune_pieces()) | fromto) & (pieces(WHITE) | pieces(BLACK));
+ 
+   Value result = VALUE_ZERO;
+ 
+@@ -2654,8 +2704,8 @@ bool Position::is_optional_game_end(Value& result, int ply, int countStarted) co
+       {
+           StateInfo* stp = st->previous->previous;
+           int cnt = 0;
+-          bool perpetualThem = var->perpetualCheckIllegal && st->checkersBB && stp->checkersBB;
+-          bool perpetualUs = var->perpetualCheckIllegal && st->previous->checkersBB && stp->previous->checkersBB;
++          bool perpetualThem = var->perpetualCheckIllegal && (st->checkersBB || st->pseudoCheck) && (stp->checkersBB || stp->pseudoCheck);
++          bool perpetualUs = var->perpetualCheckIllegal && (st->previous->checkersBB || st->previous->pseudoCheck) && (stp->previous->checkersBB || stp->previous->pseudoCheck);
+           Bitboard chaseThem = undo_move_board(st->chased, st->previous->move) & stp->chased;
+           Bitboard chaseUs = undo_move_board(st->previous->chased, stp->move) & stp->previous->chased;
+           int moveRepetition = var->moveRepetitionIllegal
+@@ -2694,7 +2744,7 @@ bool Position::is_optional_game_end(Value& result, int ply, int countStarted) co
+               if (i != st->pliesFromNull)
+                   chaseThem = undo_move_board(chaseThem, stp->previous->move) & stp->previous->previous->chased;
+               stp = stp->previous->previous;
+-              perpetualThem &= bool(stp->checkersBB);
++              perpetualThem &= bool(stp->checkersBB || stp->pseudoCheck);
+ 
+               // Return a draw score if a position repeats once earlier but strictly
+               // after the root, or repeats twice before or at the root.
+@@ -2712,7 +2762,7 @@ bool Position::is_optional_game_end(Value& result, int ply, int countStarted) co
+ 
+               if (i + 1 <= end)
+               {
+-                  perpetualUs &= bool(stp->previous->checkersBB);
++                  perpetualUs &= bool(stp->previous->checkersBB || stp->previous->pseudoCheck);
+                   chaseUs = undo_move_board(chaseUs, stp->move) & stp->previous->chased;
+               }
+           }
+diff --git a/src/position.h b/src/position.h
+index 685c079..9c00b58 100644
+--- a/src/position.h
++++ b/src/position.h
+@@ -75,6 +75,7 @@ struct StateInfo {
+   Bitboard   flippedPieces;
+   Bitboard   pseudoRoyalCandidates;
+   Bitboard   pseudoRoyals;
++  bool       pseudoCheck; // atomic-xiangqi patch: side to move's pseudo-royal is attacked
+   OptBool    legalCapture;
+   bool       capturedpromoted;
+   bool       shak;
+@@ -141,6 +142,9 @@ public:
+   bool piece_demotion() const;
+   bool blast_on_capture() const;
+   PieceSet blast_immune_types() const;
++  Bitboard blast_squares(Square s) const;
++  Bitboard blast_squares_for(Square s, PieceType capturer) const;
++  Bitboard blast_immune_pieces() const;
+   PieceSet mutually_immune_types() const;
+   EndgameEval endgame_eval() const;
+   Bitboard double_step_region(Color c) const;
+@@ -513,6 +517,63 @@ inline PieceSet Position::blast_immune_types() const {
+   return var->blastImmuneTypes;
+ }
+ 
++// atomic-xiangqi patch: the points a blast at s reaches, per variant.
++inline Bitboard Position::blast_squares(Square s) const {
++  assert(var != nullptr);
++  // blastShelter: a blast never reaches a point inside either general's region
++  // (the palace). The captured square itself is handled by the callers.
++  Bitboard shelter = var->blastShelter
++      ? (var->mobilityRegion[WHITE][WAZIR] | var->mobilityRegion[BLACK][WAZIR]
++         | var->mobilityRegion[WHITE][KING] | var->mobilityRegion[BLACK][KING])
++      : Bitboard(0);
++  switch (var->blastShape)
++  {
++  case BLAST_WAZIR:
++      return attacks_bb<WAZIR>(s) & ~shelter;
++  case BLAST_LINES:
++  {
++      // Wazir everywhere; a diagonal only where a xiangqi palace draws one,
++      // which is between a palace corner and its centre (files d-f, ranks 1-3
++      // and 8-10 on a 9x10 board). Any other board gets the wazir mask.
++      Bitboard diag = 0;
++#ifdef LARGEBOARDS
++      if (max_file() == FILE_I && max_rank() == RANK_10 && file_of(s) >= FILE_D && file_of(s) <= FILE_F)
++      {
++          Rank r = rank_of(s);
++          Rank centreRank = r <= RANK_3 ? RANK_2 : r >= RANK_8 ? RANK_9 : RANK_NB;
++          if (centreRank != RANK_NB)
++          {
++              Square centre = make_square(FILE_E, centreRank);
++              if (s == centre)
++                  diag = attacks_bb<FERS>(s);
++              else if (attacks_bb<FERS>(s) & centre)
++                  diag = square_bb(centre);
++          }
++      }
++#endif
++      return (attacks_bb<WAZIR>(s) | diag) & ~shelter;
++  }
++  default:
++      return attacks_bb<KING>(s) & ~shelter;
++  }
++}
++
++// atomic-xiangqi patch, cannonShotBlasts = false: a cannon's capture removes the
++// cannon and its target and nothing beside the target.
++inline Bitboard Position::blast_squares_for(Square s, PieceType capturer) const {
++  assert(var != nullptr);
++  return (!var->cannonShotBlasts && capturer == CANNON) ? Bitboard(0) : blast_squares(s);
++}
++
++// atomic-xiangqi patch: pieces a blast never removes.
++inline Bitboard Position::blast_immune_pieces() const {
++  Bitboard immune = pieces(PAWN);
++  for (PieceSet ps = blast_immune_types(); ps;)
++      immune |= pieces(pop_lsb(ps));
++  return immune;
++}
++
++
+ inline PieceSet Position::mutually_immune_types() const {
+   assert(var != nullptr);
+   return var->mutuallyImmuneTypes;
+diff --git a/src/types.h b/src/types.h
+index 844d195..2247455 100644
+--- a/src/types.h
++++ b/src/types.h
+@@ -310,6 +310,13 @@ enum ChasingRule {
+   NO_CHASING, AXF_CHASING
+ };
+ 
++// atomic-xiangqi patch: the blast mask of blastOnCapture. KING is upstream's
++// hard-coded rule; WAZIR the four orthogonal neighbours; LINES the points
++// joined by a drawn line on a xiangqi board (wazir plus the palace diagonals).
++enum BlastShape {
++  BLAST_KING, BLAST_WAZIR, BLAST_LINES
++};
++
+ enum EnclosingRule {
+   NO_ENCLOSING, REVERSI, ATAXX, QUADWRANGLE, SNORT, ANYSIDE, TOP
+ };
+diff --git a/src/variant.h b/src/variant.h
+index 0e6d44c..d519243 100644
+--- a/src/variant.h
++++ b/src/variant.h
+@@ -65,6 +65,11 @@ struct Variant {
+   bool pieceDemotion = false;
+   bool blastOnCapture = false;
+   PieceSet blastImmuneTypes = NO_PIECE_SET;
++  BlastShape blastShape = BLAST_KING;
++  bool blastShelter = false;
++  bool cannonUnloaded = false;
++  bool cannonShotBlasts = true;
++  bool lethalCheck = false;
+   PieceSet mutuallyImmuneTypes = NO_PIECE_SET;
+   PieceSet petrifyOnCaptureTypes = NO_PIECE_SET;
+   bool petrifyBlastPieces = false;

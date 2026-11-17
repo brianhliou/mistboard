@@ -14,7 +14,8 @@ Fairy-Stockfish build). Driven from `apps/web/src/review/engine/misty-ceval.ts` 
 
 ## Regenerating the wasm
 
-Source lives in the private **misty-banqi** repo (`~/projects/misty-banqi`), crate
+Source lives in the public **misty-banqi** repo
+(https://github.com/brianhliou/misty-banqi, MIT, see `LICENSE.txt`; local checkout `~/projects/misty-banqi`), crate
 `banqi-wasm` (a cdylib that `#[path]`-includes the shared engine core). It exposes both
 one-shot `analyze(fen, nodes, multipv)` and `AnalysisSession.step(nodes)`. Continuous
 analysis retains the TT, killer/history ordering, and completed iterative-deepening state
