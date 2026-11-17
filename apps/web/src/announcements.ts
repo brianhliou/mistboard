@@ -56,6 +56,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-11-17',
+    kind: 'release',
+    headline: 'Jungle Chess now has seven Misty levels.',
+    body: 'Misty used to play Jungle Chess at one strength. Levels 1 to 6 are new and easier, Level 7 is the Misty you know, and KataGo still sits above them all. Pick a level on the bot card or when you start a game against the computer.',
+    href: '/?play=computer&gameSpecId=jungle',
+    cta: 'Play Jungle Chess',
+  },
+  {
     date: '2026-11-15',
     kind: 'release',
     englishOnly: true,
