@@ -7326,8 +7326,8 @@ const ZH_HANS: Record<string, string> = {
     '普通的棋类引擎只研究一个棋盘，就是眼前这一个。Misty 做不到，因为它只能看到你看得到的东西。它改为保存一份清单，列出迷雾背后每一个可能的局面，再选出在所有局面下都行得通的着法。',
   "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
     '**清单可能会暴涨。** 通常它只有几十个棋盘。但它每看不到一步，清单就成倍增长；在复杂的对局里，几步之内就可能从几千个跳到几百万个。一盘与真人的对局达到了 8,200 万个局面；一盘自我对弈达到了 3.46 亿个。',
-  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
-    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，一盘棋仍用掉了 7.7 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
+  "**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, the bot's server peaked at 7.3 GB. The 346-million game would have needed more than 150 GB.":
+    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，机器人的服务器峰值仍达到 7.3 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
   '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
     '**清单越长越慢。** 清单短时，Misty 大约五秒走一步；接近上限时，一步可能要将近一分钟。从 6 月至今，有 17 盘棋因为它超时或掉线而结束。',
   '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
@@ -14320,8 +14320,8 @@ const ZH_HANT: Record<string, string> = {
     '普通的棋類引擎只研究一個棋盤，就是眼前這一個。Misty 做不到，因為它只能看到你看得到的東西。它改為保存一份清單，列出迷霧背後每一個可能的局面，再選出在所有局面下都行得通的走法。',
   "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
     '**清單可能會暴漲。** 通常它只有幾十個棋盤。但它每看不到一步，清單就成倍增長；在複雜的對局裡，幾步之內就可能從幾千個跳到幾百萬個。一盤與真人的對局達到了 8,200 萬個局面；一盤自我對弈達到了 3.46 億個。',
-  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
-    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，一盤棋仍用掉了 7.7 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
+  "**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, the bot's server peaked at 7.3 GB. The 346-million game would have needed more than 150 GB.":
+    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，機器人的伺服器峰值仍達到 7.3 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
   '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
     '**清單越長越慢。** 清單短時，Misty 大約五秒走一步；接近上限時，一步可能要將近一分鐘。從 6 月至今，有 17 盤棋因為它超時或斷線而結束。',
   '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
