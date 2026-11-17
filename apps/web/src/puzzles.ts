@@ -127,6 +127,17 @@ const MATE_SLASH_DELAY_MS = 250;
 // Add a spec id here to unhide it.
 const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID];
 
+// Campaign tags on a landing URL (utm_*) survive the first-puzzle rewrite, so
+// analytics that loads after the trainer still credits the link's source.
+export function withCampaignParams(url: string, search: string): string {
+  const tags = [...new URLSearchParams(search)].filter(([key]) => key.startsWith('utm_'));
+  if (tags.length === 0) return url;
+  const [path, query = ''] = url.split('?');
+  const params = new URLSearchParams(query);
+  for (const [key, value] of tags) params.append(key, value);
+  return `${path}?${params.toString()}`;
+}
+
 export async function mountPuzzles(
   root: HTMLElement,
   initialPuzzleId: string | null = null,
@@ -585,7 +596,7 @@ export async function mountPuzzles(
       ? selectedId
       : (queue[0]?.id ?? null);
   if (firstId) {
-    const firstUrl = puzzleUrl(firstId);
+    const firstUrl = withCampaignParams(puzzleUrl(firstId), window.location.search);
     if (`${window.location.pathname}${window.location.search}` !== firstUrl) {
       // Name the first puzzle without adding a history entry, so Back leaves
       // the page rather than returning to the bare URL or a finished puzzle.
