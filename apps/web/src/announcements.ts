@@ -64,6 +64,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Play Jungle Chess',
   },
   {
+    date: '2026-11-17',
+    kind: 'article',
+    headline: 'The fog bots go offline on December 8.',
+    body: "Misty, the bot for Fog Chess and Fog Xiangqi, stops playing on December 8, 2026. Games against a friend, both rules pages and every finished game stay. Beat Misty while signed in before then and that game's legacy badge stays on your profile. The article explains why the bots cost too much to run and what it would take to bring them back.",
+    href: '/blog/fog-future',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-11-15',
     kind: 'release',
     englishOnly: true,

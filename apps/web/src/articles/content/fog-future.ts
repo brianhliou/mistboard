@@ -27,7 +27,7 @@ export const fogFutureArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**',
+      text: 'Since May, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**',
     },
     {
       kind: 'paragraph',
