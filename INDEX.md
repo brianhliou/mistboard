@@ -1455,6 +1455,8 @@ The provider guide's postgame section separates existing grading/luck algorithms
 
 `apps/server/src/internal-engine-test.ts` and `banqi-internal-provider.ts`: durable private Banqi worker identity, default-off operator routing, hydration/config checks and internal-count policy. `banqi-internal-provider.test.ts` covers gates, privacy, replay and worker version/deadline handling.
 
+`apps/server/src/release-smoke.ts` + `.test.ts`: anonymous smoke-client recognition limited to server-engine opponents; private finished-game persistence, live-discovery exclusions and stats provenance. `scripts/hide-smoke-games.mjs` + `.test.mjs`: owner-run dry-run/`--yes` cleanup using recorded guest client ids, with account and two-ply safety guards.
+
 `scripts/banqi-provider-game.mjs`: full local HTTP/WebSocket game through a separate opaque worker with persisted quiet-history hydration, private attribution and metrics/export assertions; `--keep` retains only its local review pair.
 
 `apps/server/src/analysis-job-progress.ts`: async-scoped numeric checkpoint observation; game-analysis-kernel reports cursor counts without checkpoint items. Recovery/projection/coalescing regressions are in routes/game-analysis-route.test.ts and game-analysis-kernel.test.ts.

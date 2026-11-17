@@ -43,6 +43,7 @@ import { isGameInPlay } from './deploy-gate.js';
 import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
+import { isReleaseSmokeRoom } from './release-smoke.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient, liveObservePolicy } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -238,6 +239,7 @@ function gameFromChessRoom(
   now: number,
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
+  if (room.mode === 'pve' && isReleaseSmokeRoom(room, isServerEngineClient)) return null;
   if (room.projection.state.status.type !== 'playing') return null;
   if (!isGameInPlay(room, now)) return null;
   const seats = room.projection.seats;
@@ -287,6 +289,7 @@ function gameFromTenantRoom(
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
   if (isInternalEngineTestLog(room.events)) return null;
+  if (isReleaseSmokeRoom(room, isEngine)) return null;
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;

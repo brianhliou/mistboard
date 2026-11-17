@@ -19,6 +19,8 @@ import {
 } from '../first-party-bots.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
+import { RELEASE_SMOKE_CORPUS_ID } from '../persistence-counted-games.js';
+import { isReleaseSmokeRoom } from '../release-smoke.js';
 import {
   releaseLiveEngineReservation,
   releaseLiveEngineReservations,
@@ -462,7 +464,8 @@ export function buildTenantGameSummary<
   // spectate gate; this only affects the concluded row's browsability. Guest
   // seats still render as "Guest" and non-account handles are never invented.
   const internal = internalEngineTestFor(room.events);
-  const visibility: persistence.GameVisibility = internal ? 'private' : 'public';
+  const smoke = isReleaseSmokeRoom(room, (id) => tenant.engine?.isEngineClientId(id) === true);
+  const visibility: persistence.GameVisibility = internal || smoke ? 'private' : 'public';
   const participants = tenant.colors.map((color) =>
     tenantParticipant(tenant, color, room, visibility),
   );
@@ -482,7 +485,7 @@ export function buildTenantGameSummary<
     blackClient: null,
     whiteName: null,
     blackName: null,
-    corpusId: internal ? INTERNAL_BANQI_CORPUS_ID : null,
+    corpusId: internal ? INTERNAL_BANQI_CORPUS_ID : smoke ? RELEASE_SMOKE_CORPUS_ID : null,
     initialMs: room.projection.timeControl?.initialMs ?? null,
     incrementMs: room.projection.timeControl?.incrementMs ?? null,
     rated,

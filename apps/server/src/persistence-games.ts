@@ -384,6 +384,8 @@ const ENGINE_SEATS_CTE = `
     WHERE game_participants.subject_type IN ('engine-version', 'bot')
       AND game_participants.subject_id IS NOT NULL
       AND games.status = 'completed'
+      AND games.visibility <> 'private'
+      AND game_participants.visibility <> 'private'
   )`;
 
 function engineSeatsParams(): [string[], string[], string[]] {
