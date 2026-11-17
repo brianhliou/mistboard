@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,6 +29,17 @@ const calibrationRecord = (file) => JSON.parse(readFileSync(new URL(file, LADDER
 const game = await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
 const rapfi = await tsImport('../apps/web/src/engine/rapfi.ts', import.meta.url);
 const { RAPFI_LEVELS } = rapfi;
+// Frozen policy measured by ladder-current-1105; promotion must not rewrite history.
+const NOVEMBER_5_LEVELS = [
+  { level: 1, nodes: 5000, timeMs: 1000, candidateCount: 64, evalMargin: 20000 },
+  { level: 2, nodes: 5500, timeMs: 1000, candidateCount: 64, evalMargin: 20000, bestRate: 0.6 },
+  { level: 3, nodes: 6000, timeMs: 1500, candidateCount: 64, evalMargin: 20000, bestRate: 0.85 },
+  { level: 4, nodes: 8000, timeMs: 1500, candidateCount: 8, evalMargin: 20000, bestRate: 0.9 },
+  { level: 5, nodes: 10000, timeMs: 2000, candidateCount: 3, evalMargin: 20000, bestRate: 0.97 },
+  { level: 6, nodes: 12000, timeMs: 1500 },
+  { level: 7, nodes: 25000, timeMs: 2500 },
+  { level: 8, nodes: 80000, timeMs: 3500 },
+];
 const opening = {
   turn: 'black',
   stones: [
@@ -666,12 +677,12 @@ test('checkpointing a new policy preserves historical runs, even with the same t
   const dir = mkdtempSync(join(tmpdir(), 'gomoku-ladder-'));
   try {
     const path = join(dir, 'record.json');
-    const historical = { startedAt: 'same-time', levels: RAPFI_LEVELS, pairings: [] };
+    const historical = { startedAt: 'same-time', levels: NOVEMBER_5_LEVELS, pairings: [] };
     writeFileSync(
       path,
-      JSON.stringify({ schemaVersion: 1, levels: RAPFI_LEVELS, runs: [historical] }),
+      JSON.stringify({ schemaVersion: 1, levels: NOVEMBER_5_LEVELS, runs: [historical] }),
     );
-    const levels = RAPFI_LEVELS.map((tier) => ({ ...tier, candidateCount: 3, evalMargin: 100 }));
+    const levels = RAPFI_LEVELS;
     const run = { runId: 'new', startedAt: 'same-time', levels, pairings: [{ id: 'baseline-1' }] };
     ladder.writeRun(path, run, levels);
     ladder.writeRun(path, { ...run, pairings: [...run.pairings, { id: '1-3' }] }, levels);
@@ -743,43 +754,43 @@ function currentRecords() {
   return files.map((file) => JSON.parse(readFileSync(new URL(file, CURRENT_DATA), 'utf8')));
 }
 
-function assertCurrentPolicy(record) {
+function assertNovember5Policy(record) {
   // Compare whole objects, including absent/extra fields, never only budgets.
-  assert.deepEqual(record.levels, RAPFI_LEVELS, 'current record full policy');
+  assert.deepEqual(record.levels, NOVEMBER_5_LEVELS, 'historical record full policy');
   assert.ok(record.runs.length, 'current record has no runs');
   for (const run of record.runs) {
-    assert.deepEqual(run.levels, RAPFI_LEVELS, 'current run full policy');
+    assert.deepEqual(run.levels, NOVEMBER_5_LEVELS, 'historical run full policy');
     assert.ok(run.pairings.length, 'current run has no measured pairings');
     for (const pair of run.pairings)
       for (const side of [pair.weaker, pair.stronger])
         if (side.level !== 'baseline')
           assert.deepEqual(
             side,
-            RAPFI_LEVELS.find((tier) => tier.level === side.level),
+            NOVEMBER_5_LEVELS.find((tier) => tier.level === side.level),
             'current pairing full policy',
           );
   }
 }
 
-test('current calibration records pin the full RAPFI_LEVELS policy including choice fields', {
+test('November 5 calibration records pin their historical policy including choice fields', {
   skip: currentSkip,
 }, () => {
   const records = currentRecords();
-  for (const record of records) assertCurrentPolicy(record);
+  for (const record of records) assertNovember5Policy(record);
   const runs = records.flatMap((record) => record.runs);
-  assertMeasuredPolicies({ levels: RAPFI_LEVELS, runs }, RAPFI_LEVELS);
-  for (const { level } of RAPFI_LEVELS.slice(1))
+  assertMeasuredPolicies({ levels: NOVEMBER_5_LEVELS, runs }, NOVEMBER_5_LEVELS);
+  for (const { level } of NOVEMBER_5_LEVELS.slice(1))
     assert.ok(
       runs.some((run) => run.pairings.some((pair) => pair.id === `${level - 1}-${level}`)),
       `missing current adjacent pair ${level - 1}-${level}`,
     );
 });
 
-test('current-policy check rejects a planted bestRate-only change in a real record', {
+test('historical policy check rejects a planted bestRate-only change in a real record', {
   skip: currentSkip,
 }, () => {
   const record = currentRecords()[0];
-  assertCurrentPolicy(record);
+  assertNovember5Policy(record);
   for (const location of ['record', 'run', 'pairing']) {
     const planted = structuredClone(record);
     const tier =
@@ -790,7 +801,7 @@ test('current-policy check rejects a planted bestRate-only change in a real reco
           : planted.runs[0].pairings[0].stronger;
     assert.equal(typeof tier.bestRate, 'number');
     tier.bestRate += 0.01;
-    assert.throws(() => assertCurrentPolicy(planted), /full policy/, location);
+    assert.throws(() => assertNovember5Policy(planted), /full policy/, location);
   }
 });
 
@@ -1020,6 +1031,48 @@ test('--tiers overrides only the named fields and refuses typos', () => {
     /both candidateCount and evalMargin/,
   );
   assert.throws(() => applyTierOverrides(RAPFI_LEVELS, {}), /JSON array/);
+});
+
+test('CLI defaults accept time-only Level 8 and keep historical budget overrides', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gomoku-default-budgets-'));
+  try {
+    const missing = join(dir, 'missing-rapfi');
+    const run = (args) =>
+      spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('./gomoku-level-ladder.mjs', import.meta.url)),
+          '--games',
+          '2',
+          '--output',
+          join(dir, 'record.json'),
+          ...args,
+        ],
+        { encoding: 'utf8', env: { ...process.env, RAPFI_BIN: missing }, timeout: 10_000 },
+      );
+    for (const pairs of [[], ['--pairs', '8-rapfi-strongest']]) {
+      const result = run(['--engine', 'native', ...pairs]);
+      assert.equal(result.status, 1, result.stderr);
+      assert.ok(result.stderr.includes(`Native Rapfi binary missing: ${missing}`), result.stderr);
+    }
+    const wasm = run(['--pairs', '8-rapfi-strongest']);
+    assert.equal(wasm.status, 1);
+    assert.match(wasm.stderr, /rapfi-strongest calibration requires --engine native/);
+    const budgets = NOVEMBER_5_LEVELS.map((tier) => tier.nodes).join(',');
+    const historical = run(['--budgets', budgets, '--pairs', 'invalid']);
+    assert.equal(historical.status, 1);
+    assert.match(historical.stderr, /Unknown pairing: invalid/);
+    const nativeOverride = run(['--engine', 'native', '--budgets', budgets]);
+    assert.equal(nativeOverride.status, 1);
+    assert.match(nativeOverride.stderr, /overrides are WASM-only/);
+    for (const invalid of [budgets.replace(/80000$/, ''), '1,2,3,4,5,6,7,7']) {
+      const rejected = run(['--budgets', invalid]);
+      assert.equal(rejected.status, 1);
+      assert.match(rejected.stderr, /--budgets needs 8 increasing positive integers/);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('strongest pairing is explicit, native-only and preserves every historical level plan', async () => {

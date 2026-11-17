@@ -1,5 +1,5 @@
 // The Gomoku rules page's sample game: Rapfi Level 8 (Black) against Rapfi Level 7
-// (White) from a dealt opening, both at the server's bot settings (RAPFI_LEVELS: L7
+// (White) from a dealt opening, both at the then-current server bot settings (L7
 // 25,000 nodes, L8 80,000), played through the live provider (gomokuLiveEngineMove)
 // and kept beside the plan as plans/gomoku.game.json. Read again by the same Rapfi
 // at 1,000,000 nodes a position and annotated by the pipeline.
@@ -68,7 +68,7 @@ type EvalRow = {
 
 const GAME = resolve(PLANS, 'gomoku.game.json');
 const ROWS = resolve(PLANS, 'gomoku.rows.jsonl');
-// Each level's own read of every position, at its served node budget.
+// Each level's own read of every position, at its served search budget.
 const LEVEL_ROWS = {
   7: resolve(PLANS, 'gomoku.level7.rows.jsonl'),
   8: resolve(PLANS, 'gomoku.level8.rows.jsonl'),
@@ -135,7 +135,7 @@ if (mode === 'play') {
   console.log('result', JSON.stringify(state.status), moves.length, 'moves');
 } else if (mode === 'analyse') {
   const binaryPath = arg('--rapfi', process.env.RAPFI_BIN);
-  // --level 7|8 reads at that level's served node budget into its own rows file;
+  // --level 7|8 reads at that level's served search budget into its own rows file;
   // without it, a deep read at --nodes (default 1,000,000) into gomoku.rows.jsonl.
   const level = arg('--level', '');
   const served = RAPFI_LEVELS.find((tier) => String(tier.level) === level);
@@ -178,8 +178,8 @@ if (mode === 'play') {
       'INFO thread_num 1',
       'INFO max_memory 268435456',
       'INFO show_detail 2',
-      `INFO max_node ${nodes}`,
-      'INFO timeout_turn 600000',
+      ...(nodes === undefined ? [] : [`INFO max_node ${nodes}`]),
+      `INFO timeout_turn ${nodes === undefined ? served!.timeMs : 600000}`,
     ].join('\n')}\n`,
   );
   writeFileSync(out, '');

@@ -493,18 +493,23 @@ describe('eight Rapfi levels', () => {
     ).toEqual([]);
   });
 
-  it('uses five seeded choice tiers then three increasing best-move budgets within six seconds', async () => {
+  it('uses five seeded choice tiers, two node-limited best-move tiers and time-only Level 8', async () => {
     expect(RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     const candidates = parseRapfiOutput(tierOutput);
     for (const [index, tier] of RAPFI_LEVELS.entries()) {
-      expect(tier.nodes).toBeGreaterThan(index ? RAPFI_LEVELS[index - 1].nodes : 0);
-      expect(tier.timeMs + RAPFI_MOVE_GRACE_MS).toBeLessThanOrEqual(6000);
+      if (tier.level < 8)
+        expect(tier.nodes).toBeGreaterThan(index ? RAPFI_LEVELS[index - 1].nodes! : 0);
+      else expect(tier.nodes).toBeUndefined();
+      expect(tier.timeMs + RAPFI_MOVE_GRACE_MS).toBeLessThanOrEqual(7000);
       const transport = controlled();
       const pos: RapfiPosition = { turn: 2, stones: [{ x: 7, y: 7, player: 1 }] };
       const seed = rapfiPlySeed(rapfiGameSeed('test-room'), 1);
       const pending = transport.engine.chooseMove(pos, tier.level, seed);
       transport.receive({ type: 'ready' });
       const commands = transport.postMessage.mock.lastCall?.[0].commands;
+      expect(commands.some((line: string) => line.startsWith('INFO max_node '))).toBe(
+        tier.nodes !== undefined,
+      );
       const choice = tier.level <= 5;
       expect(commands.includes('INFO show_detail 2')).toBe(choice);
       if (choice) {

@@ -198,7 +198,7 @@ test('Rapfi shared policy pins every calibrated dial and seeded identity', () =>
     { level: 5, nodes: 10000, timeMs: 2000, candidateCount: 3, evalMargin: 20000, bestRate: 0.97 },
     { level: 6, nodes: 12000, timeMs: 1500 },
     { level: 7, nodes: 25000, timeMs: 2500 },
-    { level: 8, nodes: 80000, timeMs: 3500 },
+    { level: 8, timeMs: 5000 },
   ]);
   const game = rapfiGameSeed('room-17', 20261101);
   assert.deepEqual(
@@ -253,8 +253,12 @@ test('server PvE gets a legal recorded-output reply at all eight levels and both
       assert.deepEqual(broadcasts, ['move-played']);
       assert.deepEqual(engine.counts(), { active: 0, peak: 1, closed: 1 });
       const commands = engine.commands[0]!;
+      assert.equal(
+        commands.some((command) => command.startsWith('INFO max_node ')),
+        tier.nodes !== undefined,
+      );
       for (const command of [
-        `INFO max_node ${tier.nodes}`,
+        ...(tier.nodes === undefined ? [] : [`INFO max_node ${tier.nodes}`]),
         `INFO timeout_turn ${tier.timeMs}`,
         'INFO thread_num 1',
         'INFO max_memory 33554432',
@@ -312,6 +316,30 @@ test('strongest uses the native final move without node limits or weak selection
   assert.ok(engine.commands[0]!.includes('BEGIN'));
 });
 
+test('Level 8 uses native final moves and clock-aware strongest limits', async () => {
+  for (const seat of ['black', 'white'] as const) {
+    const opening = GOMOKU_OPENINGS.find((entry) => entry.turn === seat)!;
+    for (const movetimeMs of [125, 1500.9, 10_000]) {
+      const engine = fakeEngine({ output: recorded.replace(/5,6$/, '9,9') });
+      assert.deepEqual(
+        await gomokuLiveEngineMove(createGomokuRoomState('level8', opening), 'rapfi-level-8', {
+          ...engine,
+          movetimeMs,
+        }),
+        { to: 'j10' },
+      );
+      assert.ok(
+        engine.commands[0]!.includes(`INFO timeout_turn ${Math.min(Math.floor(movetimeMs), 5000)}`),
+      );
+      assert.equal(
+        engine.commands[0]!.some((line) => /max_node|YXNBEST|YXBOARD/.test(line)),
+        false,
+      );
+      assert.deepEqual(engine.counts(), { active: 0, peak: 1, closed: 1 });
+    }
+  }
+});
+
 test('strongest timeout_turn obeys the caller clock budget and fixed time ceiling', async () => {
   for (const movetimeMs of [125, 1500.9, 5_000 * 2]) {
     const engine = fakeEngine({ output: '7,7' });
@@ -329,34 +357,35 @@ test('strongest timeout_turn obeys the caller clock budget and fixed time ceilin
   }
 });
 
-test('strongest room budgeting shrinks to the clock floor, skips expired clocks and records no node anchor', async () => {
-  for (const remaining of [null, 180_000, 4_000, 500, 0]) {
-    const { room, ctx } = fixture('black', 'strongest');
-    if (remaining !== null) {
-      room.projection.clock = createTenantClock(gomokuTenant, remaining, 0);
-      room.projection.clock.runningSince = null;
+test('Level 8 and strongest room budgets shrink to the clock floor, skip expired clocks and record no node anchor', async () => {
+  for (const level of [8, 'strongest'] as const)
+    for (const remaining of [null, 180_000, 4_000, 500, 0]) {
+      const { room, ctx } = fixture('black', level);
+      if (remaining !== null) {
+        room.projection.clock = createTenantClock(gomokuTenant, remaining, 0);
+        room.projection.clock.runningSince = null;
+      }
+      const engine = fakeEngine({ output: '7,7' });
+      await playGomokuEngineMoveIfReady(ctx, room, (state, id, options) =>
+        gomokuLiveEngineMove(state, id, { ...engine, ...options }),
+      );
+      if (remaining === 0) {
+        assert.equal(engine.commands.length, 0);
+        assert.equal(room.projection.state.ply, 0);
+        continue;
+      }
+      const timeout = engine.commands[0]!.find((line) => line.startsWith('INFO timeout_turn '))!;
+      const budget = Number(timeout.split(' ').at(-1));
+      assert.ok(budget > 0 && budget <= 5_000);
+      if (remaining === 4_000) assert.ok(budget <= 100, timeout);
+      if (remaining === 500) assert.equal(budget, 50);
+      if (remaining === null) assert.equal(budget, 5_000);
+      assert.equal(room.events.at(-1)?.type, 'move-played');
+      const payload = room.pendingDebugArtifacts![0]!.payload;
+      assert.equal(payload.engine_id, level === 8 ? 'rapfi-level-8' : 'rapfi-strongest');
+      assert.equal(payload.tier_nodes, null);
+      assert.equal(payload.movetime_ms, budget);
     }
-    const engine = fakeEngine({ output: '7,7' });
-    await playGomokuEngineMoveIfReady(ctx, room, (state, id, options) =>
-      gomokuLiveEngineMove(state, id, { ...engine, ...options }),
-    );
-    if (remaining === 0) {
-      assert.equal(engine.commands.length, 0);
-      assert.equal(room.projection.state.ply, 0);
-      continue;
-    }
-    const timeout = engine.commands[0]!.find((line) => line.startsWith('INFO timeout_turn '))!;
-    const budget = Number(timeout.split(' ').at(-1));
-    assert.ok(budget > 0 && budget <= 5_000);
-    if (remaining === 4_000) assert.ok(budget <= 100, timeout);
-    if (remaining === 500) assert.equal(budget, 50);
-    if (remaining === null) assert.equal(budget, 5_000);
-    assert.equal(room.events.at(-1)?.type, 'move-played');
-    const payload = room.pendingDebugArtifacts![0]!.payload;
-    assert.equal(payload.engine_id, 'rapfi-strongest');
-    assert.equal(payload.tier_nodes, null);
-    assert.equal(payload.movetime_ms, budget);
-  }
 });
 
 test('malformed strongest and numbered identities fail before spawning', async () => {
@@ -759,14 +788,14 @@ test('fresh-process search watchdog allows cold network startup beyond the searc
 test('live Rapfi applies a clock ceiling without changing its node anchor or move policy', async () => {
   const engine = fakeEngine({ output: '7,7' });
   assert.deepEqual(
-    await gomokuLiveEngineMove(createGomokuRoomState('gmk_budget'), 'rapfi-level-8', {
+    await gomokuLiveEngineMove(createGomokuRoomState('gmk_budget'), 'rapfi-level-7', {
       ...engine,
       movetimeMs: 125,
     }),
     { to: 'h8' },
   );
   assert.ok(engine.commands[0]!.includes('INFO timeout_turn 125'));
-  assert.ok(engine.commands[0]!.includes('INFO max_node 80000'));
+  assert.ok(engine.commands[0]!.includes('INFO max_node 25000'));
 });
 
 test('Gomoku records selected-candidate search telemetry before appending its move', async () => {

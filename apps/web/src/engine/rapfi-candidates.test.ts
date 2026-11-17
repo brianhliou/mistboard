@@ -311,7 +311,30 @@ describe('Rapfi structured output', () => {
 });
 
 describe('Rapfi candidate commands and selection', () => {
-  it('keeps strongest separate from Levels 1-8 with time-only best-move commands', () => {
+  it('makes Level 8 use strongest time-only commands for empty boards and both colours', () => {
+    expect(shared.RAPFI_LEVELS[7]).toEqual({ level: 8, ...shared.RAPFI_STRONGEST });
+    for (const position of [
+      empty,
+      { turn: 2 as const, stones: [{ x: 7, y: 7, player: 1 as const }] },
+      {
+        turn: 1 as const,
+        stones: [
+          { x: 7, y: 7, player: 1 as const },
+          { x: 8, y: 7, player: 2 as const },
+        ],
+      },
+    ]) {
+      const request = shared.rapfiLevelRequest(position, 8, 42);
+      expect(request.lines).toEqual(shared.rapfiStrongestRequest(position).lines);
+      expect(request.timeMs).toBe(5000);
+      expect(request.choice).toBeUndefined();
+      expect(request.lines.some((line) => /max_node|YXNBEST|YXBOARD|show_detail/.test(line))).toBe(
+        false,
+      );
+    }
+  });
+
+  it('keeps strongest identity with time-only best-move commands', () => {
     expect(shared.RAPFI_STRONGEST).toEqual({ timeMs: 5000 });
     expect(shared.RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     for (const position of [
