@@ -3,7 +3,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { gameSpecForId } from '@mistboard/game';
 import './gomoku-registration.js';
 import { listBotRatingSnapshots, promoteBotRatingSnapshots } from './bot-rating-snapshots.js';
-import { getPublicBotProfile, listPublicBots, recordGameEnd } from './persistence.js';
+import {
+  getGameSummary,
+  getPublicBotProfile,
+  listPublicBots,
+  recordGameEnd,
+} from './persistence.js';
 import { SEAT_WIN_RESULT } from './persistence-counted-games.js';
 import type { GameParticipantColor } from './persistence-games.js';
 import {
@@ -27,7 +32,7 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('bot profiles', () => {
-  test('lists unnumbered Rapfi for Gomoku on /api/bots only while public and enabled', async (t) => {
+  test('unlists retired Rapfi from /api/bots while preserving finished strongest games', async (t) => {
     const previousFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
     const spec = gameSpecForId('gomoku');
     const previousSurface = spec.publicSurface;
@@ -36,39 +41,115 @@ definePersistenceTests('bot profiles', () => {
       else process.env.MISTBOARD_GOMOKU_ENABLED = previousFlag;
       spec.publicSurface = previousSurface;
     });
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+    spec.publicSurface = 'casual';
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await client.connect();
     try {
-      await client.query(
-        readFileSync(new URL('../migrations/205_rapfi_strongest_bot.sql', import.meta.url), 'utf8'),
+      for (const file of ['191_rapfi_bot_profiles.sql', '205_rapfi_strongest_bot.sql']) {
+        await client.query(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
+      }
+      await recordGameEnd('gmk_retired_rapfi', {
+        variant: 'gomoku',
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        startedAt: new Date('2026-11-17T00:00:00Z'),
+        endedAt: new Date('2026-11-17T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: 'rapfi-strongest',
+        whiteName: 'Guest',
+        blackName: 'Rapfi',
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Rapfi',
+            subjectType: 'bot',
+            subjectId: 'rapfi',
+            engineId: 'rapfi-strongest',
+            visibility: 'public',
+          },
+        ],
+      });
+      const historical = await getGameSummary('gmk_retired_rapfi');
+      assert.equal(
+        historical?.participants.find((seat) => seat.color === 'black')?.displayName,
+        'Rapfi',
+      );
+      const ladderBefore = (
+        await client.query("SELECT * FROM bot_profiles WHERE id <> 'rapfi' ORDER BY id")
+      ).rows;
+      const profileBefore = (
+        await client.query(
+          "SELECT display_name, active_engine_id FROM bot_profiles WHERE id = 'rapfi'",
+        )
+      ).rows;
+      assert.ok(
+        JSON.parse((await routeGet('/api/bots')).body).bots.some(
+          (bot: { id: string }) => bot.id === 'rapfi',
+        ),
+      );
+      const migration = readFileSync(
+        new URL('../migrations/206_unlist_rapfi_bot.sql', import.meta.url),
+        'utf8',
+      );
+      await client.query(migration);
+      assert.equal(
+        (await client.query(migration)).rowCount,
+        0,
+        'rerunning the migration changes nothing',
+      );
+      assert.deepEqual(
+        (await client.query("SELECT * FROM bot_profiles WHERE id <> 'rapfi' ORDER BY id")).rows,
+        ladderBefore,
+      );
+      assert.deepEqual(
+        (
+          await client.query(
+            "SELECT display_name, active_engine_id FROM bot_profiles WHERE id = 'rapfi'",
+          )
+        ).rows,
+        profileBefore,
+      );
+      assert.equal(
+        (await client.query("SELECT visibility FROM bot_profiles WHERE id = 'rapfi'")).rows[0]
+          ?.visibility,
+        'unlisted',
+      );
+      const response = await routeGet('/api/bots');
+      assert.equal(response.status, 200);
+      const bots = JSON.parse(response.body).bots;
+      assert.ok(!bots.some((bot: { id: string }) => bot.id === 'rapfi'));
+      assert.deepEqual(
+        bots.map((bot: { id: string }) => bot.id).sort(),
+        Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+      );
+      assert.equal((await routeGet('/api/bots/rapfi')).status, 404);
+      assert.equal(await getPublicBotProfile('rapfi'), null);
+      assert.deepEqual(await getGameSummary('gmk_retired_rapfi'), historical);
+      const player = historical?.participants.find((seat) => seat.color === 'black');
+      assert.equal(player?.subjectId, 'rapfi');
+      // Summaries never expose engine ids; the stored seat keeps its provenance.
+      assert.equal(
+        (
+          await client.query(
+            "SELECT engine_id FROM game_participants WHERE game_id = 'gmk_retired_rapfi' AND color = 'black'",
+          )
+        ).rows[0]?.engine_id,
+        'rapfi-strongest',
       );
     } finally {
       await client.end();
-    }
-    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
-    spec.publicSurface = 'casual';
-    const response = await routeGet('/api/bots');
-    assert.equal(response.status, 200);
-    const bot = JSON.parse(response.body).bots.find(
-      (entry: { id: string }) => entry.id === 'rapfi',
-    );
-    assert.ok(bot, 'the real directory route must list the migrated Rapfi profile');
-    assert.equal(bot.displayName, 'Rapfi');
-    assert.equal(bot.activeEngineId, 'rapfi-strongest');
-    assert.deepEqual(bot.supportedGameSpecIds, ['gomoku']);
-    assert.equal(bot.rating, null);
-    assert.equal(bot.playOptions.length, 1);
-    assert.equal(bot.playOptions[0].gameSpecId, 'gomoku');
-    assert.equal(bot.playOptions[0].engineId, 'rapfi-strongest');
-    assert.equal(bot.playOptions[0].playable, true);
-    assert.ok(bot.playOptions[0].version);
-    for (const state of ['disabled', 'hidden']) {
-      process.env.MISTBOARD_GOMOKU_ENABLED = state === 'disabled' ? 'false' : 'true';
-      spec.publicSurface = state === 'hidden' ? 'hidden' : 'casual';
-      const gated = await routeGet('/api/bots');
-      assert.equal(gated.status, 200);
-      assert.ok(!JSON.parse(gated.body).bots.some((entry: { id: string }) => entry.id === 'rapfi'));
-      assert.equal((await routeGet('/api/bots/rapfi')).status, 404);
     }
   });
 

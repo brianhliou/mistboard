@@ -73,6 +73,7 @@ function registryVersion(engineId: string): string | null {
 export function botEngineVersion(engineId: string): string | null {
   const ffqVersion = ffqBanqiEngineVersion(engineId);
   if (ffqVersion) return ffqVersion;
+  if (engineId === 'rapfi-level-8') return `${RAPFI_ENGINE_REF} · strongest-20261117`;
   if (isRapfiEngineId(engineId)) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;

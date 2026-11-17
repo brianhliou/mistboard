@@ -249,7 +249,7 @@ describe('bot pages', () => {
   });
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
-    'combines Full strength and Levels 8 to 1 in one Rapfi card in %s',
+    'shows only Levels 8 to 1 in the Rapfi card in %s, even with a stale retired profile',
     async (locale) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       await ensureLocaleCatalog(locale);
@@ -268,10 +268,7 @@ describe('bot pages', () => {
           rating: null,
           ratings: [],
           playOptions: [{ gameSpecId: 'gomoku', engineId, playable: true }],
-          record:
-            level === null
-              ? { games: 37, wins: 30, losses: 5, draws: 2 }
-              : { games: level, wins: level, losses: 0, draws: 0 },
+          record: { games: level ?? 37, wins: level ?? 30, losses: 0, draws: 0 },
         });
       });
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
@@ -286,67 +283,39 @@ describe('bot pages', () => {
       const initial = cardFor(root, 'rapfi')!;
       const picker = initial.querySelector<HTMLSelectElement>('.bot-level-select')!;
       expect(picker.value).toBe('rapfi-level-1');
-      expect([...picker.options].map((option) => option.textContent)).toEqual([
-        t('bots.fullStrength'),
-        ...[8, 7, 6, 5, 4, 3, 2, 1].map((level) => t('bots.levelName', { level })),
-      ]);
-      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
-      const initialFooter = initial.querySelector('.profile-summary-card-footer')?.textContent;
-      const top = pickLevel(root, 'rapfi', 'rapfi');
-      expect(top.dataset.botId).toBe('rapfi');
+      expect([...picker.options].map((option) => option.textContent)).toEqual(
+        [8, 7, 6, 5, 4, 3, 2, 1].map((level) => t('bots.levelName', { level })),
+      );
+      const top = pickLevel(root, 'rapfi', 'rapfi-level-8');
+      expect(top.dataset.botId).toBe('rapfi-level-8');
       expect(top.querySelector('.profile-summary-card-name')?.getAttribute('href')).toBe(
-        '/bot/rapfi',
+        '/bot/rapfi-level-8',
       );
-      expect(top.querySelector('.profile-summary-card-subtitle')?.textContent).toContain(
-        t('bots.hosted'),
-      );
+      expect(top.querySelector('.profile-summary-card-footer')?.textContent).toContain('8');
       expect(top.querySelector('.profile-summary-card-badge-callout')).toBeNull();
-      const bio = top.querySelector('.profile-summary-card-bio')?.textContent ?? '';
-      expect(bio).toContain('dhbloo');
-      expect(bio).toContain('4');
-      expect(bio).toContain('5');
-      expect(bio).not.toContain('—');
       expect(top.querySelector('.bot-card-credits a')?.getAttribute('href')).toBe(
         'https://github.com/dhbloo/rapfi',
       );
-      expect(top.querySelector<HTMLSelectElement>('.bot-level-select')?.value).toBe('rapfi');
-      expect(bio).toBe(t('thanks.rapfiBotBio'));
-      const footer = top.querySelector('.profile-summary-card-footer')?.textContent ?? '';
-      expect(footer).toContain('37');
-      expect(footer).toContain('30');
-      expect(footer).not.toBe(initialFooter);
-      expect(root.textContent).not.toContain(t('bots.levelName', { level: 0 }));
-      expect(top.lastElementChild?.classList.contains('bot-card-foot')).toBe(true);
-      expect(top.querySelector('.bot-card-foot .profile-summary-card-footer')).not.toBeNull();
-      expect(top.querySelector('.bot-card-foot .profile-summary-card-action')?.textContent).toBe(
-        t('bots.playVariant', { variant: locale === 'en' ? 'Gomoku' : '五子棋' }),
-      );
-      vi.mocked(fetch).mockResolvedValue(jsonResponse({ url: '/room/gmk_full_strength' }));
+      vi.mocked(fetch).mockResolvedValue(jsonResponse({ url: '/room/gmk_level_8' }));
       top.querySelector<HTMLButtonElement>('.profile-summary-card-action')!.click();
       await flushPromises();
       const post = vi.mocked(fetch).mock.calls.find(([input]) => String(input) === '/api/rooms');
       expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
-        botId: 'rapfi',
+        botId: 'rapfi-level-8',
         gameSpecId: 'gomoku',
         mode: 'pve',
       });
-      expect(bots.find((bot) => bot.id === 'rapfi')?.activeEngineId).toBe('rapfi-strongest');
-      expect(window.location.pathname).toBe('/room/gmk_full_strength');
-      const restored = pickLevel(root, 'rapfi', 'rapfi-level-8');
-      expect(restored.dataset.botId).toBe('rapfi-level-8');
-      expect(restored.querySelector('.profile-summary-card-footer')?.textContent).toContain('8');
-      expect(restored.querySelector('.profile-summary-card-badge-callout')).toBeNull();
-      vi.mocked(fetch).mockResolvedValue(jsonResponse({ bot: bots[8] }));
-      await mountBotProfile(root, 'rapfi');
+      expect(window.location.pathname).toBe('/room/gmk_level_8');
+      vi.mocked(fetch).mockResolvedValue(jsonResponse({ bot: bots[7] }));
+      await mountBotProfile(root, 'rapfi-level-8');
       expect(root.querySelector('.bot-profile-credits a')?.getAttribute('href')).toBe(
         'https://github.com/dhbloo/rapfi',
       );
-      expect(root.textContent).toContain('dhbloo');
     },
   );
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
-    'labels Rapfi Full strength in %s setup without changing the default, and posts its engine',
+    'offers only eight Rapfi levels in %s setup and posts Level 8',
     async (locale) => {
       await ensureLocaleCatalog(locale);
       vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
@@ -360,6 +329,13 @@ describe('bot pages', () => {
         removeItem: (key: string) => store.delete(key),
         clear: () => store.clear(),
       });
+      const remembered =
+        locale === 'en' ? null : locale === 'zh-Hans' ? 'rapfi' : 'rapfi-strongest';
+      if (remembered)
+        store.set(
+          'mistboard:setup:pve',
+          JSON.stringify({ engineIdByGameSpec: { gomoku: remembered } }),
+        );
       const navigate = vi.fn();
       setRoomNavigator(navigate);
       const fetchSpy = vi.fn(
@@ -372,12 +348,11 @@ describe('bot pages', () => {
       const select = document.querySelector<HTMLSelectElement>('.landing-engine-select')!;
       expect([...select.options].map((o) => o.value)).toEqual([
         ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
-        'rapfi-strongest',
       ]);
-      expect(select.value).toBe('rapfi-level-1');
-      expect(select.options[8]?.textContent).toBe(`Rapfi ${t('bots.fullStrength')}`);
+      expect(select.value).toBe(remembered ? 'rapfi-level-8' : 'rapfi-level-1');
+      expect(select.options[7]?.textContent).toContain('8');
       expect(select.textContent).not.toContain(t('bots.levelName', { level: 0 }));
-      select.value = 'rapfi-strongest';
+      select.value = 'rapfi-level-8';
       select.dispatchEvent(new Event('change'));
       document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
       await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/room/gmk_rapfi'));
@@ -389,12 +364,12 @@ describe('bot pages', () => {
       expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
         gameSpecId: 'gomoku',
         mode: 'pve',
-        engineId: 'rapfi-strongest',
+        engineId: 'rapfi-level-8',
       });
     },
   );
 
-  it('the homepage top rung waits for the roster and plays Rapfi strongest above Level 8', async () => {
+  it('the homepage stops at Level 8 even with a stale retired Rapfi roster', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
     const store = new Map<string, string>();
     vi.stubGlobal('localStorage', {
@@ -420,7 +395,7 @@ describe('bot pages', () => {
     await flushPromises();
     for (let i = 0; i < 8; i++)
       row().querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]!.click();
-    expect(row().querySelector('.pp-step-level .pp-step-value')?.textContent).toBe('Rapfi');
+    expect(row().querySelector('.pp-step-level .pp-step-value')?.textContent).toContain('Level 8');
     expect(
       row().querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]!.disabled,
     ).toBe(true);
@@ -428,8 +403,7 @@ describe('bot pages', () => {
     await flushPromises();
     const call = fetchMock.mock.calls.find(([url]) => url === '/api/rooms');
     expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
-      botId: 'rapfi',
-      engineId: 'rapfi-strongest',
+      botId: 'rapfi-level-8',
       gameSpecId: 'gomoku',
       timeControl: { initialMs: 600000, incrementMs: 5000 },
     });
@@ -437,16 +411,16 @@ describe('bot pages', () => {
   });
 
   it.each(['directory', 'profile'] as const)(
-    'the Rapfi %s Play action targets the canonical strongest bot',
+    'the Rapfi Level 8 %s Play action targets its numbered bot',
     async (surface) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       const bot = misty({
-        id: 'rapfi',
-        displayName: 'Rapfi',
-        activeEngineId: 'rapfi-strongest',
+        id: 'rapfi-level-8',
+        displayName: 'Rapfi Level 8',
+        activeEngineId: 'rapfi-level-8',
         defaultGameSpecId: 'gomoku',
         supportedGameSpecIds: ['gomoku'],
-        playOptions: [{ gameSpecId: 'gomoku', engineId: 'rapfi-strongest', playable: true }],
+        playOptions: [{ gameSpecId: 'gomoku', engineId: 'rapfi-level-8', playable: true }],
       });
       const fetchMock = vi
         .spyOn(globalThis, 'fetch')
@@ -459,7 +433,7 @@ describe('bot pages', () => {
       const root = document.createElement('div');
       window.history.replaceState(null, '', '/bots?game=gomoku');
       if (surface === 'directory') await mountBots(root);
-      else await mountBotProfile(root, 'rapfi');
+      else await mountBotProfile(root, 'rapfi-level-8');
       root
         .querySelector<HTMLButtonElement>(
           surface === 'directory' ? '.profile-summary-card-action' : '.bot-profile-actions button',
@@ -469,7 +443,7 @@ describe('bot pages', () => {
       const call = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({
         mode: 'pve',
-        botId: 'rapfi',
+        botId: 'rapfi-level-8',
         gameSpecId: 'gomoku',
         preferredColor: 'random',
         rated: false,

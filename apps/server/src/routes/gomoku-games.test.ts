@@ -311,6 +311,41 @@ test('Gomoku finished endpoint is registered in HTTP dispatch', async () => {
   }
 });
 
+test('a finished historical rapfi-strongest game still loads with its name and provenance', async () => {
+  const { gomokuPostgameForApi } = await api();
+  const live = room();
+  for (const event of live.events) {
+    if (event.type === 'seat-assigned' && event.seat === 'black')
+      event.clientId = 'rapfi-strongest';
+  }
+  finish(live);
+  const payload = await gomokuPostgameForApi(
+    ROOM_ID,
+    deps(
+      live.events,
+      gameRecord({
+        mode: 'pve',
+        blackName: 'Rapfi',
+        participants: [
+          {
+            color: 'black',
+            displayName: 'Rapfi',
+            subjectType: 'bot',
+            subjectId: 'rapfi',
+            engineId: 'rapfi-strongest',
+            visibility: 'public',
+          },
+        ],
+      }),
+    ),
+  );
+  assert.ok(payload);
+  assert.equal(payload.game.pveEngineId, 'rapfi-strongest');
+  assert.equal(payload.game.players.find((player) => player.color === 'black')?.name, 'Rapfi');
+  assert.equal(payload.game.players.find((player) => player.color === 'black')?.botId, 'rapfi');
+  assert.equal(payload.view.status.type, 'finished');
+});
+
 test('Gomoku finished games link to their tenant review instead of the live room', () => {
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
   assert.equal(registration.reviewRouteBase, '/gomoku/game');

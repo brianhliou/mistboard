@@ -102,7 +102,7 @@ test('standard Xiangqi FSF ladder preserves the PlayStrategy weakening parameter
   assert.equal(level8.configHash, level8.playSignature);
 });
 
-test('native Rapfi catalogue preserves all eight identities and separates time-only strongest', () => {
+test('native Rapfi catalogue preserves eight numbered identities with Level 8 sharing strongest', () => {
   const ids = [...RAPFI_LEVELS.map(({ level }) => `rapfi-level-${level}`), 'rapfi-strongest'];
   const source = '1387d11312190ec66665d361ff07a7c70221b78a';
   const net = '6bc0d1b0ff8e1d857f7f412923cd458f38f1a435087c91ae71fec3676c23ef62';
@@ -155,7 +155,11 @@ test('native Rapfi catalogue preserves all eight identities and separates time-o
         assert.equal(Object.hasOwn(engine.config, key), false, `${id}: unexpected ${key}`);
     }
   }
-  assert.equal(signatures.size, 9);
+  assert.equal(signatures.size, 8);
+  assert.equal(
+    loadEngine('rapfi-level-8').playSignature,
+    loadEngine('rapfi-strongest').playSignature,
+  );
   for (const id of ['rapfi-level-0', 'rapfi-level-9', 'rapfi-level-01', 'rapfi-strongest-other']) {
     assert.equal(isKnownEngineClientId(id), false);
     assert.throws(() => loadEngine(id), /not loadable/);
