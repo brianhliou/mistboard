@@ -6,32 +6,55 @@ import {
   localBaseUrl,
   runLocalSmokes,
 } from './local-prod-smoke.mjs';
+import { createSmokeDatabase, LOCAL_SMOKE_POSTGRES_URL } from './local-smoke-database.mjs';
+import { startSmokeEngine } from './local-smoke-engine.mjs';
 import { PRODUCT_SERVER_FLAGS } from './product-profile.mjs';
 
 const DEFAULT_PORT = 3099;
-const DEFAULT_DATABASE_URL = 'postgres://mistboard:mistboard@localhost:5435/mistboard';
 const DEFAULT_BASE_URL = `http://127.0.0.1:${DEFAULT_PORT}`;
 
 const options = parseArgs(process.argv.slice(2));
 const port = options.port ?? DEFAULT_PORT;
 const baseUrl = localBaseUrl(options.baseUrl ?? `http://127.0.0.1:${port}`);
 if (new URL(baseUrl).port !== String(port)) {
-  throw new Error('--base must use --port; use smoke:local -- --base for an existing pair');
+  throw new Error('--base must use --port; the managed gate always starts its own server');
 }
-const databaseUrl = options.databaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 const revision = options.revision ?? (await gitRevision()) ?? 'local';
 const buildAt = new Date().toISOString();
 
 let server = null;
 let stoppingServer = false;
+let database = null;
+let engine = null;
 const engineBootCheck = createEngineBootCheckReader();
+const cancellation = new AbortController();
+const onInterrupt = () => cancellation.abort(new Error('local smoke interrupted'));
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, onInterrupt);
 
 try {
-  if (!options.skipBuild) await run('npm', ['run', 'build']);
-  await run('npm', ['run', 'db:up']);
+  if (!options.skipBuild) {
+    await run('npm', ['run', 'build'], {
+      env: {
+        ...Object.fromEntries(
+          PRODUCT_SERVER_FLAGS.map((flag) => [flag.replace(/^MISTBOARD_/, 'VITE_'), 'true']),
+        ),
+        // A local smoke build verifies maps without publishing them.
+        POSTHOG_CLI_API_KEY: 'mistboard-offline-sourcemap-build',
+      },
+    });
+  }
+  await run('npm', ['run', 'db:up'], { env: { DATABASE_URL: LOCAL_SMOKE_POSTGRES_URL } });
+  database = await createSmokeDatabase();
+  console.log(`local smoke database: ${database.name} (disposable)`);
+  const databaseUrl = database.databaseUrl;
   await run('npm', ['run', 'migrate', '--workspace', '@mistboard/server'], {
     env: { DATABASE_URL: databaseUrl },
   });
+  // Invoke the workspace seed directly: the root alias pins the shared dev DB.
+  await run('npm', ['run', 'seed:variant-fixtures', '--workspace', '@mistboard/server'], {
+    env: { DATABASE_URL: databaseUrl },
+  });
+  engine = await startSmokeEngine();
 
   // Own the actual server process so cleanup cannot leave an npm grandchild listening.
   server = spawn(process.execPath, ['apps/server/dist/main.js'], {
@@ -43,9 +66,14 @@ try {
       LOG_LEVEL: 'info',
       PORT: String(port),
       DATABASE_URL: databaseUrl,
+      MISTBOARD_REQUIRE_DATABASE: 'true',
+      MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE: 'false',
       MISTBOARD_REVISION: revision,
       MISTBOARD_BUILD_AT: buildAt,
       MISTBOARD_HOST: baseUrl,
+      MISTBOARD_BIND_HOST: '127.0.0.1',
+      MISTBOARD_EXTRA_PLAYABLE_ENGINES: 'builtin-random-legal',
+      ...engine.env,
       ...Object.fromEntries(PRODUCT_SERVER_FLAGS.map((flag) => [flag, 'true'])),
     },
   });
@@ -69,7 +97,11 @@ try {
   console.log(
     `local engine boot check: ${missing.length}/${checked} binaries missing${missing.length ? `: ${missing.map(({ binary }) => binary).join(', ')}` : ''}`,
   );
-  await runLocalSmokes(baseUrl, { revision, missingEngines: missing });
+  await runLocalSmokes(baseUrl, {
+    revision,
+    missingEngines: [...missing, ...engine.missing],
+    signal: cancellation.signal,
+  });
 
   console.log(
     JSON.stringify({
@@ -80,17 +112,30 @@ try {
         options.skipBuild ? 'existing-build' : 'build',
         'db:up',
         'db:migrate',
+        'seed:variant-fixtures',
         'local-smokes',
       ],
     }),
   );
 } finally {
-  if (server && server.exitCode === null && server.signalCode === null) {
-    stoppingServer = true;
-    server.kill('SIGTERM');
-    const timeout = setTimeout(() => server.kill('SIGKILL'), 5_000);
-    await once(server, 'exit').catch(() => undefined);
-    clearTimeout(timeout);
+  try {
+    if (server && server.exitCode === null && server.signalCode === null) {
+      stoppingServer = true;
+      server.kill('SIGTERM');
+      const timeout = setTimeout(() => server.kill('SIGKILL'), 5_000);
+      await once(server, 'exit').catch(() => undefined);
+      clearTimeout(timeout);
+    }
+  } finally {
+    try {
+      await engine?.dispose();
+    } finally {
+      try {
+        await database?.dispose();
+      } finally {
+        for (const signal of ['SIGINT', 'SIGTERM']) process.removeListener(signal, onInterrupt);
+      }
+    }
   }
 }
 
@@ -98,6 +143,7 @@ async function run(command, args, options = {}) {
   console.log(`$ ${[command, ...args].join(' ')}`);
   const child = spawn(command, args, {
     stdio: 'inherit',
+    signal: cancellation.signal,
     env: { ...process.env, ...(options.env ?? {}) },
   });
   const [code, signal] = await once(child, 'exit');
@@ -109,6 +155,7 @@ async function waitForHealth(baseUrl, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
   while (Date.now() < deadline) {
+    cancellation.signal.throwIfAborted();
     if (server.exitCode !== null || server.signalCode !== null) {
       throw new Error('local server exited before becoming healthy (is the port occupied?)');
     }
@@ -156,7 +203,6 @@ function gitRevision() {
 function parseArgs(args) {
   const result = {
     baseUrl: null,
-    databaseUrl: null,
     port: null,
     revision: null,
     skipBuild: false,
@@ -166,8 +212,6 @@ function parseArgs(args) {
     const arg = args[index];
     if (arg === '--base') {
       result.baseUrl = requiredValue(args, ++index, '--base');
-    } else if (arg === '--database-url') {
-      result.databaseUrl = requiredValue(args, ++index, '--database-url');
     } else if (arg === '--port') {
       result.port = parsePositiveInteger(requiredValue(args, ++index, '--port'), '--port');
     } else if (arg === '--revision') {
@@ -204,14 +248,14 @@ function printHelp() {
 Options:
   --port <port>             Local server port, default ${DEFAULT_PORT}
   --base <url>              Base URL to smoke, default ${DEFAULT_BASE_URL}
-  --database-url <url>      Postgres URL, default ${DEFAULT_DATABASE_URL}
   --revision <sha>          Revision exposed through /api/server-status
-  --skip-build              Reuse the build just checked by the release gate
+  --skip-build              Reuse a build with the product's browser flags enabled
 
-Runs local production smokes, including every ceval backend, before stopping
-its server. Requires Postgres and browser assets. The server's engine boot check
+Runs local production smokes, including every ceval backend, on a freshly seeded
+disposable database on localhost:5435, then stops its server and drops that DB.
+Ignores inherited DATABASE_URL. Requires Postgres and browser assets. The engine boot check
 skips only probes needing a missing native binary, naming its path env var.
 Available-engine probes and unrelated checks still gate the release.
-For an already-running production-shaped pair, use npm run smoke:local -- --base <url>.
+To print the probe plan: node scripts/local-prod-smoke.mjs --base <url> --plan.
 `);
 }

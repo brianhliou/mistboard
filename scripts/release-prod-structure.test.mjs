@@ -263,6 +263,11 @@ test('release-prod runs the local smoke gate before any push or drain', () => {
   assert.ok(localGate > 0 && smoke > localGate, 'local smokes must follow the build/test gate');
   assert.ok(smoke < drain && smoke < push, 'a smoke failure must prevent draining and pushing');
   assert.match(source.slice(localGate, smoke), /if \(release\.deployRequired\)/);
+  const smokeCommand = source.slice(smoke, source.indexOf(']);', smoke));
+  assert.ok(
+    !smokeCommand.includes('--skip-build'),
+    'local smoke builds with product browser flags',
+  );
 });
 
 test('release-prod rebuilds and smokes the merged revision when main moves during the gate', () => {
