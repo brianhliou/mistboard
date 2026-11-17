@@ -1290,9 +1290,9 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
 const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   JUNGLE_RUST_TIER_LIST.map((tier) => {
     // The names server-jungle-engine.ts shows: the offered tier is Misty herself.
-    const level = tier.id.replace('misty-jungle-level-', '');
-    const name = tier.id === 'misty-jungle-level-2' ? 'Misty' : `Misty Jungle level ${level}`;
-    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}`;
+    const level = tier.level ?? tier.id.replace('misty-jungle-level-', '');
+    const name = tier.level ? `Misty Level ${level}` : `Misty Jungle level ${level} (retired)`;
+    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.depth}`}`;
     return [
       tier.id,
       {
@@ -1304,7 +1304,12 @@ const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
         gameSpecId: 'jungle',
         configHash: signature,
         playSignature: signature,
-        config: { kind: 'jungle-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+        config: {
+          kind: 'jungle-uci',
+          nodes: tier.nodes,
+          movetime_ms: tier.movetimeCapMs,
+          ...(tier.depth === undefined ? {} : { depth: tier.depth, noise: tier.noise }),
+        },
         notes: `MistyJungle ${JUNGLE_RUST_ENGINE_VERSION} Rust UCI engine, ${tier.nodes} nodes under a ${tier.movetimeCapMs} ms cap.`,
       } satisfies EngineDefinition,
     ];

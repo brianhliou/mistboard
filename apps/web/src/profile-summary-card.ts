@@ -120,6 +120,8 @@ export function buildUserCard(
 // passes nothing and renders the record as it is.
 export type BotCardOptions = {
   name?: string;
+  /** Preserve the host page's selected variant and strength on the profile. */
+  profileHref?: string;
   subtitle?: string;
   badge?: string;
   /** Replaces the stored bio; null drops it. The stored bio is English-only. */
@@ -358,7 +360,7 @@ function buildBotHeader(
   identity.className = 'profile-summary-card-identity';
   const name = document.createElement('a');
   name.className = 'profile-summary-card-name';
-  name.href = `/bot/${encodeURIComponent(profile.id)}`;
+  name.href = options.profileHref ?? `/bot/${encodeURIComponent(profile.id)}`;
   name.textContent = options.name ?? profile.displayName;
   const owner = document.createElement('span');
   owner.className = 'profile-summary-card-subtitle';

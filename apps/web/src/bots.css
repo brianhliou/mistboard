@@ -229,6 +229,12 @@
   font-weight: 600;
 }
 
+@media (max-width: 640px) {
+  .bots-directory .bot-card-foot .bot-level-select[data-game-spec-id="jungle"] {
+    font-size: 16px;
+  }
+}
+
 .bots-directory .bot-card-foot .profile-summary-card-action {
   display: inline-flex;
   align-items: center;
@@ -391,4 +397,20 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.bot-profile-actions .bot-level-select {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.bot-profile-record-scope {
+  display: block;
+  flex-basis: 100%;
+  color: var(--site-muted);
+  font-size: 0.85rem;
+}
+
+.bot-profile-games > .bot-profile-record-scope {
+  margin: 12px 16px 0;
 }

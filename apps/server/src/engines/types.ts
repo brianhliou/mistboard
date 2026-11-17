@@ -90,6 +90,7 @@ export type EngineId =
   | 'random-legal-jungle-flip'
   // MistyJungle Rust tiers (Jungle): level 2 is the one offered bot, 1 and 3 retired
   | `misty-jungle-level-${1 | 2 | 3}`
+  | `misty-jungle-classical-level-${1 | 2 | 3 | 4 | 5 | 6}`
   // KataGo-AnimalChess (Jungle): the top seat above Misty (jungle-katago-engine.ts)
   | 'katago-jungle'
   | RapfiEngineId
@@ -258,6 +259,8 @@ export type JungleUciEngineConfig = {
   kind: 'jungle-uci';
   nodes: number;
   movetime_ms: number;
+  depth?: number;
+  noise?: number;
 };
 
 /** KataGo-AnimalChess over GTP (jungle-katago-engine.ts KATAGO_JUNGLE_TIER_LIST):

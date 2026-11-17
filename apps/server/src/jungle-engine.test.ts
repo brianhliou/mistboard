@@ -5,6 +5,7 @@ import {
   isJungleEngineClientId,
   isJunglePlayableEngineClientId,
   JUNGLE_PLAYABLE_ENGINE_ID,
+  JUNGLE_PLAYABLE_ENGINE_IDS,
   JUNGLE_RETIRED_ENGINE_IDS,
 } from './server-jungle-engine.js';
 
@@ -52,7 +53,7 @@ test('retired Jungle engine ids stay recognisable but are not creatable', () => 
   // Every defined tier is accounted for as either the bot or a retirement. A tier that
   // is neither is an id the runtime honours but nothing describes — the state this
   // whole split exists to keep out of the codebase.
-  const accounted = new Set([JUNGLE_PLAYABLE_ENGINE_ID, ...JUNGLE_RETIRED_ENGINE_IDS]);
+  const accounted = new Set([...JUNGLE_PLAYABLE_ENGINE_IDS, ...JUNGLE_RETIRED_ENGINE_IDS]);
   for (const tier of JUNGLE_RUST_TIER_LIST) {
     assert.ok(accounted.has(tier.id), `${tier.id} is neither the playable bot nor retired`);
   }
