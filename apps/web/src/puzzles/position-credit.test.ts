@@ -39,6 +39,10 @@ it('the unsolved prompt states the mate bound without relying on the title', () 
 it('position-only source credit has players and archive link, with no hosted-game link', () => {
   const host = document.createElement('div');
   host.append(...sourceGameLines(puzzle));
+  expect(host.firstElementChild?.textContent).toBe('From game');
+  expect(host.children[1]?.className).toBe('puzzle-source-event');
+  expect(host.children[1]?.textContent).toBe(credit.event);
+  expect(host.querySelector<HTMLElement>('.puzzle-source-event')?.title).toBe(credit.event);
   expect(host.textContent).toContain('World Championship');
   expect(host.textContent).toContain('Red Player');
   expect(host.textContent).toContain('Black Player');
