@@ -46,6 +46,7 @@ import {
   enabledLandingVariantGameSpecs,
   fetchCorrespondenceSeeks,
   fetchOpenLobbyRequests,
+  isSeekPromptGameSpec,
   joinLobbyFromPlay,
   LANDING_TIME_PRESETS,
   type LandingGameSpecId,
@@ -804,8 +805,30 @@ export function buildPlayPanel(
       );
     }
     const waiting = visibleRequests()[0];
-    if (waiting) rows.push(waitingFeature(waiting));
+    if (waiting) {
+      rows.push(waitingFeature(waiting));
+      noteSeekPromptShown(waiting);
+    }
     featureSlot.replaceChildren(...rows);
+  };
+
+  // The "A player is waiting" row is the play panel's seek prompt (#1194): for
+  // a casual jieqi or xiangqi seek it reports shown and accepted like the bot
+  // setup line does, so the two surfaces read as one funnel. The public lobby
+  // list carries no seek id, so a row counts once per variant and clock.
+  const shownSeekPrompts = new Set<string>();
+  const seekPromptProps = (request: OpenLobbyRequest): Record<string, unknown> | null => {
+    const gameSpecId = request.gameSpecId ?? DARK_CHESS_SPEC_ID;
+    if (request.rated !== false || !isSeekPromptGameSpec(gameSpecId)) return null;
+    return { surface: 'play-panel', gameSpecId, ...request.timeControl };
+  };
+  const noteSeekPromptShown = (request: OpenLobbyRequest): void => {
+    const props = seekPromptProps(request);
+    if (!props) return;
+    const key = `${props.gameSpecId}:${request.timeControl.initialMs}+${request.timeControl.incrementMs}`;
+    if (shownSeekPrompts.has(key)) return;
+    shownSeekPrompts.add(key);
+    track('lobby_seek_prompt_shown', props);
   };
 
   const joinRequest = (
@@ -827,6 +850,10 @@ export function buildPlayPanel(
       undefined,
       {
         startSource: source,
+        onMatched: () => {
+          const props = seekPromptProps(request);
+          if (source === 'panel-waiting' && props) track('lobby_seek_prompt_accepted', props);
+        },
         onNoInstantMatch: () => {
           join.textContent = t('play.offerTaken', {}, locale);
           window.setTimeout(() => {

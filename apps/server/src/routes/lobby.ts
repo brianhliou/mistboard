@@ -3,7 +3,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   gameSpecForLegacyLiveRoom,
   isRetiredGameSpec,
+  JIEQI_SPEC_ID,
   type RoomTimeControl,
+  XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { captureServerEvent } from '../analytics-server.js';
@@ -38,6 +40,28 @@ const lobbyPollAfterMs = 1_000;
 // never entered (prod, 2026-10-02). Ten polls of slack covers a slow network or
 // a throttled background timer; a seeker that misses all ten is gone.
 export const LOBBY_TICKET_STALE_MS = 10_000;
+// The variants whose bot setup shows an open casual seek (#1194; xiangqi added
+// with jieqi, decided 2026-11-16). `GET /api/lobby?prompt=<id>` answers only
+// for these, so the gate is one list on the server.
+export const SEEK_PROMPT_GAME_SPECS: ReadonlySet<string> = new Set([
+  JIEQI_SPEC_ID,
+  XIANGQI_SPEC_ID,
+]);
+// Why a seek ended. `left` is a closed or backgrounded page; `bot_accepted` is
+// the seeker taking the 15 s bot offer; `offer_taken` is a join that found the
+// listed seek already gone and withdrew the ticket it had just made.
+export type LobbySeekEndReason =
+  | 'matched'
+  | 'cancelled'
+  | 'left'
+  | 'expired'
+  | 'bot_accepted'
+  | 'offer_taken';
+const CLIENT_SEEK_END_REASONS: ReadonlySet<string> = new Set([
+  'left',
+  'bot_accepted',
+  'offer_taken',
+]);
 const seekTimers = new WeakMap<LobbyTicket, ReturnType<typeof setTimeout>>();
 
 function scheduleSeekExpiry(ctx: HttpApiContext, ticket: LobbyTicket): void {
@@ -76,9 +100,13 @@ export async function tryHandle(
   if (pathname === '/api/lobby') {
     if (method === 'GET') {
       pruneLobbyTickets(ctx, lobbyNow(ctx));
-      const prompt =
-        new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get('prompt') ===
-        'jieqi';
+      const prompt = new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get(
+        'prompt',
+      );
+      if (prompt !== null && !SEEK_PROMPT_GAME_SPECS.has(prompt)) {
+        writeJson(response, 200, { requests: [] });
+        return true;
+      }
       writeJson(response, 200, { requests: await lobbyOpenRequests(ctx, request, prompt) });
       return true;
     }
@@ -243,9 +271,14 @@ export async function tryHandle(
       return true;
     }
     if (method === 'DELETE') {
-      const left =
-        new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get('how') === 'left';
-      cancelLobbyTicket(ctx, ticketId, left ? 'left' : 'cancelled');
+      const how = new URL(request.url ?? '/api/lobby', 'http://localhost').searchParams.get('how');
+      cancelLobbyTicket(
+        ctx,
+        ticketId,
+        how !== null && CLIENT_SEEK_END_REASONS.has(how)
+          ? (how as LobbySeekEndReason)
+          : 'cancelled',
+      );
       writeJson(response, 200, { ok: true });
       return true;
     }
@@ -321,7 +354,8 @@ async function joinLobby(
   ticket.roomId = room.id;
   ticket.region = room.region;
   endLobbySeek(ctx, matchedTicket, 'matched', matchedAt);
-  endLobbySeek(ctx, ticket, 'matched', matchedAt);
+  // The joining ticket never waited: mark it, so a match counts once.
+  endLobbySeek(ctx, ticket, 'matched', matchedAt, true);
   return ticket;
 }
 
@@ -334,25 +368,37 @@ export function sameLobbyPlayer(a: LobbyTicket['owner'], b: LobbyTicket['owner']
 function endLobbySeek(
   ctx: HttpApiContext,
   ticket: LobbyTicket,
-  how: 'matched' | 'cancelled' | 'left' | 'expired',
+  reason: LobbySeekEndReason,
   now: number,
+  joined = false,
 ): void {
   if (ticket.seekEnded) return;
   ticket.seekEnded = true;
   clearTimeout(seekTimers.get(ticket));
   seekTimers.delete(ticket);
+  const initialMs = ticket.timeControl?.initialMs ?? ctx.liveClockInitialMs;
+  const incrementMs = ticket.timeControl?.incrementMs ?? ctx.liveClockIncrementMs;
+  const waitMs = Math.max(0, now - ticket.createdAt);
+  // One line per seek end, so the queue can be read from the deploy logs when
+  // analytics is off or blocked. No account or browser id: the line is not
+  // attribution.
+  (ctx.logLobbySeekEnd ?? console.log)(
+    `[lobby] seek ended reason=${reason} gameSpecId=${ticket.gameSpecId} rated=${ticket.rated} clock=${initialMs}+${incrementMs} waitMs=${waitMs} joined=${joined} seekId=${ticket.seekId ?? 'none'}`,
+  );
   void captureServerEvent({
     event: 'lobby_seek_ended',
     distinctId: ticket.owner?.userId ?? ticket.owner?.deviceId ?? ticket.id,
+    // Never ticket.id: it is the private token that polls and withdraws the
+    // seek, and a matched ticket still answers with its room.
     properties: {
-      ticketId: ticket.id,
       seekId: ticket.seekId,
       gameSpecId: ticket.gameSpecId,
       rated: ticket.rated,
-      initialMs: ticket.timeControl?.initialMs ?? ctx.liveClockInitialMs,
-      incrementMs: ticket.timeControl?.incrementMs ?? ctx.liveClockIncrementMs,
-      how,
-      ms_open: Math.max(0, now - ticket.createdAt),
+      initialMs,
+      incrementMs,
+      reason,
+      waitMs,
+      joined,
     },
   });
 }
@@ -385,7 +431,7 @@ async function createLobbyRoom(
   return { id: room.id, region: room.region ?? 'global' };
 }
 
-function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string, how: 'cancelled' | 'left'): void {
+function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string, how: LobbySeekEndReason): void {
   const ticket = ctx.lobbyTickets.get(ticketId);
   if (!ticket || ticket.roomId !== null) return;
   endLobbySeek(ctx, ticket, how, lobbyNow(ctx));
@@ -445,7 +491,7 @@ function lobbyTicketResponse(ticket: LobbyTicket): Record<string, unknown> {
 async function lobbyOpenRequests(
   ctx: HttpApiContext,
   request: IncomingMessage,
-  prompt = false,
+  prompt: string | null = null,
 ): Promise<Array<Record<string, unknown>>> {
   const now = lobbyNow(ctx);
   const viewer = prompt
@@ -457,7 +503,7 @@ async function lobbyOpenRequests(
       isLiveSeek(ticket, now) &&
       (!prompt ||
         (identifiedViewer &&
-          ticket.gameSpecId === 'jieqi' &&
+          ticket.gameSpecId === prompt &&
           !ticket.rated &&
           Boolean(ticket.owner?.userId || ticket.owner?.deviceId) &&
           !sameLobbyPlayer(ticket.owner, viewer))),

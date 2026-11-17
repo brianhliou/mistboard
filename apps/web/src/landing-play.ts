@@ -1618,6 +1618,22 @@ function formatTimeControl(timeControl: OpenLobbyRequest['timeControl']): string
   return `${minuteLabel} + ${increment}`;
 }
 
+// The variants whose bot setup shows an open casual seek (#1194). The server
+// holds the same list (SEEK_PROMPT_GAME_SPECS) and answers nothing outside it.
+export const SEEK_PROMPT_GAME_SPEC_IDS = [JIEQI_SPEC_ID, XIANGQI_SPEC_ID] as const;
+export type SeekPromptGameSpecId = (typeof SEEK_PROMPT_GAME_SPEC_IDS)[number];
+export function isSeekPromptGameSpec(gameSpecId: string): gameSpecId is SeekPromptGameSpecId {
+  return (SEEK_PROMPT_GAME_SPEC_IDS as readonly string[]).includes(gameSpecId);
+}
+// Most seeks end inside a minute, so the prompt has to appear within a couple
+// of seconds to be of use.
+const SEEK_PROMPT_POLL_MS = 2_000;
+
+/** "10+5": the clock as the pace chips write it. */
+export function compactTimeControl(timeControl: OpenLobbyRequest['timeControl']): string {
+  return formatTimeControl(timeControl).replace(/\s+/g, '');
+}
+
 function formatWaitAge(waitingMs: number): string {
   const seconds = Math.max(0, Math.floor(waitingMs / 1000));
   if (seconds < 60) return `${seconds}s`;
@@ -2374,32 +2390,50 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   seekPrompt.className = 'landing-seek-prompt';
   seekPrompt.hidden = true;
   let offeredSeek: OpenLobbyRequest | undefined;
+  let offeredSpecId: SeekPromptGameSpecId = JIEQI_SPEC_ID;
   let promptTimer: number | undefined;
   let promptGeneration = 0;
   let promptStopped = false;
   let acceptingSeek = false;
   const shownSeeks = new Set<string>();
-  const promptProps = (seek: OpenLobbyRequest) => ({
+  const promptProps = (seek: OpenLobbyRequest, specId: SeekPromptGameSpecId) => ({
     seekId: seek.seekId,
-    gameSpecId: JIEQI_SPEC_ID,
-    ...gameSpecAnalyticsPropsForId(JIEQI_SPEC_ID),
+    surface: 'bot-setup',
+    gameSpecId: specId,
+    ...gameSpecAnalyticsPropsForId(specId),
     ...seek.timeControl,
   });
-  const refreshSeekPrompt = async (generation: number): Promise<void> => {
+  const refreshSeekPrompt = async (
+    generation: number,
+    specId: SeekPromptGameSpecId,
+  ): Promise<void> => {
     try {
-      const response = await postWithBrowserIdentity('/api/lobby?prompt=jieqi', { method: 'GET' });
+      const response = await postWithBrowserIdentity(
+        `/api/lobby?prompt=${encodeURIComponent(specId)}`,
+        { method: 'GET' },
+      );
       if (!response.ok) throw new Error('seek prompt unavailable');
       const data = (await response.json()) as { requests?: OpenLobbyRequest[] };
       if (generation !== promptGeneration || promptStopped || acceptingSeek) return;
+      // Re-checked here although the server filters: a rated or other-variant
+      // seek must never reach this line, whatever answers the request.
       offeredSeek = data.requests?.find(
-        (seek) => seek.gameSpecId === JIEQI_SPEC_ID && seek.rated === false && Boolean(seek.seekId),
+        (seek) => seek.gameSpecId === specId && seek.rated === false && Boolean(seek.seekId),
       );
       seekPrompt.hidden = !offeredSeek;
       if (offeredSeek) {
-        seekPrompt.textContent = `${t('setup.waitingPlayer', {}, locale)} (${formatTimeControl(offeredSeek.timeControl)})`;
+        offeredSpecId = specId;
+        seekPrompt.textContent = t(
+          'setup.waitingPlayer',
+          {
+            variant: variantLabelForGameSpec(specId, locale),
+            clock: compactTimeControl(offeredSeek.timeControl),
+          },
+          locale,
+        );
         if (!shownSeeks.has(offeredSeek.seekId!)) {
           shownSeeks.add(offeredSeek.seekId!);
-          track('lobby_seek_prompt_shown', promptProps(offeredSeek));
+          track('lobby_seek_prompt_shown', promptProps(offeredSeek, specId));
         }
       }
     } catch {
@@ -2409,7 +2443,10 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       }
     } finally {
       if (generation === promptGeneration && !promptStopped) {
-        promptTimer = window.setTimeout(() => void refreshSeekPrompt(generation), 1000);
+        promptTimer = window.setTimeout(
+          () => void refreshSeekPrompt(generation, specId),
+          SEEK_PROMPT_POLL_MS,
+        );
       }
     }
   };
@@ -2420,11 +2457,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     seekPrompt.hidden = true;
     if (
       choice.mode === 'pve' &&
-      selectedGameSpecId === JIEQI_SPEC_ID &&
+      isSeekPromptGameSpec(selectedGameSpecId) &&
       overlay.isConnected &&
       !promptStopped
     ) {
-      void refreshSeekPrompt(promptGeneration);
+      void refreshSeekPrompt(promptGeneration, selectedGameSpecId);
     }
   };
   stopSeekPrompt = () => {
@@ -2435,20 +2472,26 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   seekPrompt.addEventListener('click', () => {
     if (!offeredSeek || acceptingSeek) return;
     const seek = offeredSeek;
+    const specId = offeredSpecId;
     acceptingSeek = true;
     seekPrompt.disabled = true;
     startButton.disabled = true;
-    const restoreBotSetup = () => {
+    // The seek went between the last refresh and the tap (or the join failed):
+    // put the bot setup back as it was and say why, instead of leaving the
+    // "Waiting for an opponent" line under a Play button that starts a bot.
+    const restoreBotSetup = (statusText: string) => {
       acceptingSeek = false;
       offeredSeek = undefined;
       seekPrompt.hidden = true;
       seekPrompt.disabled = false;
+      seekPrompt.removeAttribute('aria-busy');
       startButton.disabled = false;
+      status.textContent = statusText;
     };
     cancelLobbyWait = joinLobbyFromPlay(
       seekPrompt,
       {
-        gameSpecId: JIEQI_SPEC_ID,
+        gameSpecId: specId,
         rated: false,
         timeControl: seek.timeControl,
         preferredColor: 'random',
@@ -2458,11 +2501,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       undefined,
       {
         startSource: 'lobby-seek',
-        onNoInstantMatch: restoreBotSetup,
-        onError: restoreBotSetup,
+        onNoInstantMatch: () => restoreBotSetup(t('play.offerTaken', {}, locale)),
+        onError: () => restoreBotSetup(t('setup.couldNotJoinLobby', {}, locale)),
         onMatched: () => {
           stopSeekPrompt();
-          track('lobby_seek_prompt_accepted', promptProps(seek));
+          track('lobby_seek_prompt_accepted', promptProps(seek, specId));
         },
       },
     );
@@ -4274,8 +4317,9 @@ export function joinLobbyFromPlay(
 
   // keepalive: the DELETE usually races a navigation (a bot game, a closed
   // tab), and an ordinary fetch is dropped when the page goes away.
-  const deleteTicket = (id: string, left = false): Promise<void> =>
-    fetch(`/api/lobby/${encodeURIComponent(id)}${left ? '?how=left' : ''}`, {
+  // `how` tells lobby_seek_ended why the seek ended; none is a plain cancel.
+  const deleteTicket = (id: string, how?: 'left' | 'bot_accepted' | 'offer_taken'): Promise<void> =>
+    fetch(`/api/lobby/${encodeURIComponent(id)}${how ? `?how=${how}` : ''}`, {
       method: 'DELETE',
       keepalive: true,
     }).then(
@@ -4286,7 +4330,7 @@ export function joinLobbyFromPlay(
   // Leaving the page while waiting (a link, the back button, closing the tab)
   // withdraws the seek; sendBeacon cannot DELETE, a keepalive fetch can.
   const onPageHide = () => {
-    if (active && ticketId) void deleteTicket(ticketId, true);
+    if (active && ticketId) void deleteTicket(ticketId, 'left');
   };
   let unregister: (() => void) | null = null;
   const release = () => {
@@ -4297,7 +4341,7 @@ export function joinLobbyFromPlay(
 
   let starting: Promise<void> = Promise.resolve();
   let cancelled: Promise<void> | null = null;
-  const cancel = (): Promise<void> => {
+  const cancel = (how?: 'bot_accepted' | 'offer_taken'): Promise<void> => {
     if (cancelled) return cancelled;
     active = false;
     release();
@@ -4306,7 +4350,7 @@ export function joinLobbyFromPlay(
     clearOfferTimer();
     // Withdrawn while the POST was in flight: start() deletes the ticket the
     // server made anyway once the response lands, so wait for that.
-    cancelled = ticketId ? deleteTicket(ticketId) : starting;
+    cancelled = ticketId ? deleteTicket(ticketId, how) : starting;
     return cancelled;
   };
 
@@ -4333,7 +4377,7 @@ export function joinLobbyFromPlay(
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {
     if (!hasFallback) return;
     track('lobby_engine_offer_accepted', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
-    const withdrawn = cancel();
+    const withdrawn = cancel('bot_accepted');
     rememberGameStartSource('engine-offer');
     if (engineId) {
       void withdrawn.then(() =>
@@ -4488,7 +4532,7 @@ export function joinLobbyFromPlay(
       // invisible queue: drop the ticket and let the caller revert the row.
       track('lobby_offer_already_taken', bucketProps);
       ticketId = ticket.ticketId ?? null;
-      cancel();
+      cancel('offer_taken');
       opts.onNoInstantMatch();
       return;
     }
@@ -4509,7 +4553,7 @@ export function joinLobbyFromPlay(
     return cancel();
   });
   starting = start().catch(handleLobbyError);
-  return cancel;
+  return () => cancel();
 }
 
 function setButtonLabel(button: HTMLButtonElement, text: string): void {

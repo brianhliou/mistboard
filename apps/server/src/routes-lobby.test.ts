@@ -708,6 +708,8 @@ for (const how of ['matched', 'cancelled', 'left', 'expired'] as const) {
       const { ctx, advance } = clockedContext();
       const seek = await post(ctx, { timeControl: tc }, 'seeker-browser');
       const ticketId = responseJson(seek).ticketId as string;
+      const seekId = ctx.lobbyTickets.get(ticketId)?.seekId;
+      assert.ok(seekId);
       advance(2000);
       if (how === 'matched') {
         await post(ctx, { timeControl: tc }, 'joiner-browser');
@@ -737,17 +739,25 @@ for (const how of ['matched', 'cancelled', 'left', 'expired'] as const) {
       advance(300000);
       await openRequests(ctx);
       const ended = events.filter(
-        (event) => event.event === 'lobby_seek_ended' && event.properties.ticketId === ticketId,
+        (event) => event.event === 'lobby_seek_ended' && event.properties.seekId === seekId,
       );
       assert.equal(ended.length, 1);
-      assert.equal(ended[0]!.properties.how, how);
+      assert.equal(ended[0]!.properties.joined, false);
+      // The ticket id polls and withdraws the seek; it never leaves the server.
+      assert.equal(JSON.stringify(events).includes(ticketId), false);
+      assert.equal(ended[0]!.properties.reason, how);
       assert.equal(
-        ended[0]!.properties.ms_open,
+        ended[0]!.properties.waitMs,
         how === 'expired' ? 300000 : how === 'left' ? 10000 : 2000,
       );
       assert.equal(ended[0]!.properties.gameSpecId, 'dark-chess');
       assert.equal(ended[0]!.properties.initialMs, tc.initialMs);
-      if (how === 'matched') assert.equal(events.length, 2, 'one event for each matched ticket');
+      if (how === 'matched') {
+        assert.equal(events.length, 2, 'one event for each matched ticket');
+        const joiner = events.find((event) => event.properties.seekId !== seekId);
+        assert.equal(joiner?.properties.joined, true, 'the joining ticket is marked');
+        assert.equal(joiner?.properties.waitMs, 0);
+      }
     } finally {
       setServerCaptureTransport(previous);
       delete process.env.MISTBOARD_POSTHOG_KEY;
@@ -771,7 +781,7 @@ test('#1194: pagehide DELETE records left rather than cancelled', async () => {
     await tryHandle(ctx, req, captureResponse(), path);
     await tryHandle(ctx, req, captureResponse(), path);
     assert.equal(events.length, 1);
-    assert.equal(events[0]!.properties.how, 'left');
+    assert.equal(events[0]!.properties.reason, 'left');
   } finally {
     setServerCaptureTransport(previous);
     delete process.env.MISTBOARD_POSTHOG_KEY;
@@ -853,8 +863,8 @@ test('#1194: a disconnected seek ends without another lobby request', async (t) 
     advance(LOBBY_TICKET_STALE_MS);
     t.mock.timers.tick(LOBBY_TICKET_STALE_MS);
     assert.equal(events.length, 1);
-    assert.equal(events[0]!.properties.how, 'left');
-    assert.equal(events[0]!.properties.ms_open, LOBBY_TICKET_STALE_MS);
+    assert.equal(events[0]!.properties.reason, 'left');
+    assert.equal(events[0]!.properties.waitMs, LOBBY_TICKET_STALE_MS);
     assert.equal(ctx.lobbyQueue.length, 0);
     t.mock.timers.tick(300000);
     await openRequests(ctx);
@@ -864,4 +874,105 @@ test('#1194: a disconnected seek ends without another lobby request', async (t) 
     delete process.env.MISTBOARD_POSTHOG_KEY;
     delete process.env.MISTBOARD_POSTHOG_HOST;
   }
+});
+
+test('#1194: the bot prompt answers for xiangqi and jieqi only, each with its own casual seeks', async () => {
+  const { ctx } = clockedContext();
+  const seed = (id: string, gameSpecId: string, rated: boolean): void => {
+    const ticket = {
+      id,
+      seekId: `public-${id}`,
+      owner: { deviceId: `${id}-browser` },
+      createdAt: 1_000_000,
+      lastPolledAt: 1_000_000,
+      gameSpecId,
+      rated,
+      region: null,
+      matchedAt: null,
+      roomId: null,
+      timeControl: { initialMs: 600000, incrementMs: 5000 },
+    } as LobbyTicket;
+    ctx.lobbyQueue.push(ticket);
+    ctx.lobbyTickets.set(ticket.id, ticket);
+  };
+  seed('xq-casual', 'xiangqi', false);
+  seed('xq-rated', 'xiangqi', true);
+  seed('jq-casual', JIEQI_SPEC_ID, false);
+  seed('banqi-casual', 'banqi', false);
+  const prompt = async (spec: string): Promise<Array<Record<string, unknown>>> => {
+    const response = captureResponse();
+    const request = {
+      method: 'GET',
+      url: `/api/lobby?prompt=${spec}`,
+      headers: { 'x-mistboard-device-id': 'viewer-browser' },
+    } as unknown as IncomingMessage;
+    await tryHandle(ctx, request, response, '/api/lobby');
+    return responseJson(response).requests as Array<Record<string, unknown>>;
+  };
+  assert.deepEqual(
+    (await prompt('xiangqi')).map((seek) => seek.seekId),
+    ['public-xq-casual'],
+    'the rated xiangqi seek and the jieqi seek stay out of the xiangqi prompt',
+  );
+  assert.deepEqual(
+    (await prompt('jieqi')).map((seek) => seek.seekId),
+    ['public-jq-casual'],
+  );
+  // The gate is the server list: a variant outside it gets no prompt even with
+  // a casual seek open.
+  assert.deepEqual(await prompt('banqi'), []);
+  assert.deepEqual(await prompt('true'), []);
+});
+
+for (const reason of ['bot_accepted', 'offer_taken'] as const) {
+  test(`#1194: a DELETE naming ${reason} ends the seek with that reason and logs one line`, async () => {
+    const events: Array<{ properties: Record<string, unknown> }> = [];
+    const lines: string[] = [];
+    process.env.MISTBOARD_POSTHOG_KEY = 'test-public-key';
+    process.env.MISTBOARD_POSTHOG_HOST = 'https://analytics.invalid';
+    const previous = setServerCaptureTransport(async (_url, body) => {
+      events.push(JSON.parse(body));
+    });
+    try {
+      const { ctx, advance } = clockedContext();
+      ctx.logLobbySeekEnd = (line) => lines.push(line);
+      const seek = await post(ctx, { timeControl: tc }, 'seeker-browser');
+      advance(4000);
+      const path = `/api/lobby/${responseJson(seek).ticketId}`;
+      const req = {
+        method: 'DELETE',
+        url: `${path}?how=${reason}`,
+        headers: {},
+      } as IncomingMessage;
+      await tryHandle(ctx, req, captureResponse(), path);
+      await tryHandle(ctx, req, captureResponse(), path);
+      assert.equal(events.length, 1);
+      assert.equal(events[0]!.properties.reason, reason);
+      assert.equal(events[0]!.properties.waitMs, 4000);
+      assert.equal(lines.length, 1);
+      assert.match(
+        lines[0]!,
+        new RegExp(
+          `^\\[lobby\\] seek ended reason=${reason} gameSpecId=dark-chess rated=false clock=180000\\+2000 waitMs=4000 joined=false seekId=`,
+        ),
+      );
+      assert.equal(lines[0]!.includes('seeker-browser'), false, 'the log line names no browser');
+    } finally {
+      setServerCaptureTransport(previous);
+      delete process.env.MISTBOARD_POSTHOG_KEY;
+      delete process.env.MISTBOARD_POSTHOG_HOST;
+    }
+  });
+}
+
+test('#1194: an unknown DELETE reason is recorded as cancelled', async () => {
+  const lines: string[] = [];
+  const { ctx } = clockedContext();
+  ctx.logLobbySeekEnd = (line) => lines.push(line);
+  const seek = await post(ctx, { timeControl: tc });
+  const path = `/api/lobby/${responseJson(seek).ticketId}`;
+  const req = { method: 'DELETE', url: `${path}?how=matched`, headers: {} } as IncomingMessage;
+  await tryHandle(ctx, req, captureResponse(), path);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0]!, /reason=cancelled/);
 });

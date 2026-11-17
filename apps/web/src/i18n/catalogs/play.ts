@@ -1,7 +1,7 @@
 // Play translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_PLAY = {
-  'setup.waitingPlayer': 'A player is waiting. Play them.',
+  'setup.waitingPlayer': 'A player is waiting for {variant}, {clock}. Play them',
   'live.jieqiRepwarn.labelCheck': 'Loses: perpetual check',
   'live.jieqiRepwarn.labelChase': 'Loses: perpetual chase',
   'live.jieqiRepwarn.checkTitle': 'Lose by perpetual check?',

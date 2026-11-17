@@ -52,6 +52,9 @@ export interface HttpApiContext {
   lobbyQueue: LobbyTicket[];
   // Clock for lobby ticket TTL and liveness; tests inject one. Defaults to Date.now.
   now?(): number;
+  // Where the one line per ended lobby seek goes; tests inject a recorder.
+  // Defaults to console.log.
+  logLobbySeekEnd?(line: string): void;
   databaseRequired: boolean;
   pveBuiltinEngineClientId: string;
   annotationsFile: string;
