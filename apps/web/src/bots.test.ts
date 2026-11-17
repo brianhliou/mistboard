@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import * as localeModule from './i18n/locale.js';
 
@@ -1626,8 +1626,18 @@ describe('bot pages', () => {
 });
 
 describe('/bots covers every launched bot variant', () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+    });
+  });
   afterEach(() => {
     document.body.replaceChildren();
+    window.localStorage.removeItem('mistboard:setup:pve');
+    window.localStorage.removeItem('mistboard:last-bot-game');
     window.history.replaceState(null, '', '/');
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
@@ -1978,6 +1988,124 @@ describe('/bots covers every launched bot variant', () => {
       expect(values).toEqual([7, 6, 5, 4, 3, 2, 1].map((level) => engineIdAt(base, level)));
     });
   }
+
+  const jungleIdAt = (level: number): string =>
+    level === 7 ? 'misty-jungle-level-2' : `misty-jungle-classical-level-${level}`;
+
+  function profileFetch(jungleEngines: unknown[] | undefined) {
+    const bot = mistyFor('jungle', jungleIdAt(7));
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/bots/misty') return jsonResponse({ bot });
+      if (String(input) === '/api/engines/playable') return jsonResponse({ jungleEngines });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/jungle_profile' });
+      return jsonResponse({}, { status: 404 });
+    });
+  }
+
+  it('opens the Jungle profile at the linked level, preserves it across variants, and plays that exact tier', async () => {
+    const fetchMock = profileFetch(
+      [1, 2, 3, 4, 5, 6, 7].map((level) => ({ id: jungleIdAt(level) })),
+    );
+    const { rememberPveEngine } = await import('./pve-memory.js');
+    rememberPveEngine('jungle', jungleIdAt(6));
+    window.history.replaceState(null, '', '/bot/misty?game=jungle&level=2');
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+    await mountBotProfile(root, 'misty');
+    const picker = () => root.querySelector<HTMLSelectElement>('.bot-profile-actions select')!;
+    expect(picker().value).toBe(jungleIdAt(2));
+    expect([...picker().options].map((option) => option.textContent)).toEqual(
+      [7, 6, 5, 4, 3, 2, 1].map((level) => `Level ${level}`),
+    );
+    expect(root.querySelector('.profile-counts .bot-profile-record-scope')?.textContent).toBe(
+      'All levels',
+    );
+    expect(root.querySelector('.bot-profile-games .bot-profile-record-scope')?.textContent).toBe(
+      'All levels',
+    );
+    picker().value = jungleIdAt(5);
+    picker().dispatchEvent(new Event('change'));
+    expect(window.location.search).toBe('?game=jungle&level=5');
+    root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="dark-chess"]')!.click();
+    expect(root.querySelector('.bot-profile-actions select')).toBeNull();
+    expect(window.location.search).toBe('?game=dark-chess');
+    root.querySelector<HTMLButtonElement>('.bot-profile-actions button')!.click();
+    await flushPromises();
+    const fogCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String(fogCall?.[1]?.body))).toMatchObject({
+      gameSpecId: 'dark-chess',
+      botId: 'misty',
+    });
+    expect(JSON.parse(String(fogCall?.[1]?.body))).not.toHaveProperty('engineId');
+    fetchMock.mockClear();
+    root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="jungle"]')!.click();
+    expect(picker().value).toBe(jungleIdAt(5));
+    root.querySelector<HTMLButtonElement>('.bot-profile-actions button')!.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String(roomCall?.[1]?.body))).toEqual({
+      mode: 'pve',
+      botId: 'misty',
+      gameSpecId: 'jungle',
+      engineId: jungleIdAt(5),
+      preferredColor: 'random',
+      rated: false,
+    });
+    const { rememberedPveEngine, lastBotGame } = await import('./pve-memory.js');
+    expect(rememberedPveEngine('jungle')).toBe(jungleIdAt(5));
+    expect(lastBotGame()?.botId).toBe(jungleIdAt(5));
+  });
+
+  it.each([
+    { roster: [7, 4, 1], requested: '8', remembered: 1, expected: 1 },
+    { roster: [7, 4, 1], requested: '8', remembered: 6, expected: 4 },
+    { roster: [7], requested: '1', remembered: 1, expected: 7 },
+    { roster: undefined, requested: '1', remembered: 1, expected: 7 },
+    { roster: [], requested: '2', remembered: 2, expected: null },
+  ])(
+    'offers only supported profile tiers ($roster) and safely resolves stale choices',
+    async ({ roster, requested, remembered, expected }) => {
+      profileFetch(roster?.map((level) => ({ id: jungleIdAt(level) })));
+      const { rememberPveEngine } = await import('./pve-memory.js');
+      rememberPveEngine('jungle', jungleIdAt(remembered));
+      window.history.replaceState(null, '', `/bot/misty?game=jungle&level=${requested}`);
+      const root = document.createElement('div');
+      const { mountBotProfile } = await import('./bots.js');
+      await mountBotProfile(root, 'misty');
+      const picker = root.querySelector<HTMLSelectElement>('.bot-profile-actions select');
+      if (expected === null) {
+        expect(picker).toBeNull();
+        expect(root.querySelector<HTMLButtonElement>('.bot-profile-actions button')?.disabled).toBe(
+          true,
+        );
+      } else {
+        expect(picker?.value).toBe(jungleIdAt(expected));
+        expect(window.location.search).toBe(`?game=jungle&level=${expected}`);
+      }
+    },
+  );
+
+  it('the directory remembers a supported Jungle tier and carries its variant and selected level to the profile', async () => {
+    const { rememberPveEngine } = await import('./pve-memory.js');
+    rememberPveEngine('jungle', jungleIdAt(3));
+    stubFetch([mistyFor('jungle', jungleIdAt(7))], [], {
+      jungleEngines: [1, 2, 3, 4, 5, 6, 7].map((level) => ({ id: jungleIdAt(level) })),
+    });
+    window.history.replaceState(null, '', '/bots?game=jungle');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(cardFor(root, 'misty')?.querySelector<HTMLSelectElement>('select')?.value).toBe(
+      jungleIdAt(3),
+    );
+    const link = () =>
+      cardFor(root, 'misty')
+        ?.querySelector<HTMLAnchorElement>('.profile-summary-card-name')
+        ?.getAttribute('href');
+    expect(link()).toBe('/bot/misty?game=jungle&level=3');
+    pickLevel(root, 'misty', jungleIdAt(6));
+    expect(link()).toBe('/bot/misty?game=jungle&level=6');
+  });
 
   it('offers one seven-level Jungle Misty card and seats the selected historical-safe engine id', async () => {
     const idAt = (level: number) =>

@@ -286,6 +286,10 @@ test('engine seat matching is version-agnostic for versioned engine ids', () => 
   const jungle = VARIANT_SMOKE_CONFIGS.jungle.engineSeat;
   assert.equal(matchesEngineSeat(jungle, 'misty-jungle-level-2'), true);
   assert.equal(matchesEngineSeat(jungle, 'misty-jungle-level-9'), true);
+  for (const level of [1, 2, 3, 4, 5, 6]) {
+    assert.equal(matchesEngineSeat(jungle, `misty-jungle-classical-level-${level}`), true);
+  }
+  assert.equal(matchesEngineSeat(jungle, 'misty-jungle-flip-level-4'), false);
   assert.equal(matchesEngineSeat(jungle, 'misty-jungle-flip'), false);
 
   // Xiangqi is served by two engine families; either is a healthy default.
