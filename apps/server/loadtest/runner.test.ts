@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { runBenchmark, summarizeRun } from './benchmark.js';
+import { rampMs, runBenchmark, summarizeRun } from './benchmark.js';
 import { main, parseArgs } from './cli.js';
 import {
   finalSnapshotAckSeq,
@@ -221,6 +221,33 @@ test('loadtest: both movers use receipt timestamps, without awaiting an opponent
   );
   assert.equal(fake.disconnected(), 2);
   assert.equal(fake.fetchCalls[0]?.redirect, 'error');
+});
+
+test('loadtest: a ramp spreads room setup instead of opening every room at once', async () => {
+  const fake = transport('normal');
+  const pauses: number[] = [];
+  const io = {
+    ...fake.io,
+    sleep: async (ms: number) => {
+      pauses.push(ms);
+    },
+  };
+  const games = await runScenario({ ...options(), concurrency: 4, rampMs: 400 }, io);
+  assert.equal(games.length, 4);
+  // The fake serves one room, so only the stagger is asserted here.
+  // The first worker starts at once; the rest wait their share of the ramp.
+  assert.deepEqual(pauses, [100, 200, 300]);
+  assert.equal(rampMs(200, 10_000), 2000);
+  assert.equal(rampMs(200, 1000), 500);
+  await assert.rejects(runScenario({ ...options(), rampMs: -1 }, fake.io));
+  // Planted failure: with no ramp nothing is staggered.
+  const flat = transport('normal');
+  let calls = 0;
+  await runScenario(
+    { ...options(), concurrency: 4 },
+    { ...flat.io, sleep: async () => void calls++ },
+  );
+  assert.equal(calls, 0);
 });
 
 test('loadtest: think time delays submission and never enters a latency sample', async () => {

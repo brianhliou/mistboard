@@ -52,6 +52,12 @@ export interface RunnerOptions {
    * never part of a latency sample. Omit for a closed loop with no pause.
    */
   thinkMs?: number;
+  /**
+   * Spread the workers' first room setup evenly over this long. Opening every
+   * room in the same tick overflows the server's listen backlog (128 on
+   * macOS) and the refused connections read as setup failures.
+   */
+  rampMs?: number;
   seed?: number;
   onGameComplete?: (result: GameResult) => void;
   onActivity?: (point: Activity) => void;
@@ -178,6 +184,7 @@ export async function runScenario(opts: RunnerOptions, injected?: RunnerIO): Pro
     throw new Error('invalid warmup');
   if (!Number.isFinite(opts.thinkMs ?? 0) || (opts.thinkMs ?? 0) < 0)
     throw new Error('invalid think time');
+  if (!Number.isFinite(opts.rampMs ?? 0) || (opts.rampMs ?? 0) < 0) throw new Error('invalid ramp');
   const io: RunnerIO = injected ?? {
     connect: async (options) => (await import('../integration/harness.js')).connectClient(options),
     fetch: globalThis.fetch,
@@ -194,7 +201,11 @@ export async function runScenario(opts: RunnerOptions, injected?: RunnerIO): Pro
     opts.onActivity?.({ atMs: io.now() - origin, activeGames });
   };
   activity(0);
+  const pauseFor = (ms: number) =>
+    (io.sleep ?? ((wait: number) => new Promise<void>((r) => setTimeout(r, wait))))(ms);
   const worker = async (workerIdx: number) => {
+    const stagger = ((opts.rampMs ?? 0) * workerIdx) / opts.concurrency;
+    if (stagger > 0) await pauseFor(stagger);
     do {
       if (io.now() >= deadline) break;
       const gameIdx = nextGame++;

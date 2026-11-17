@@ -112,6 +112,12 @@ export function captureMetadata(options: BenchmarkOptions) {
   };
 }
 
+/** Setup stagger: 10 ms per game, never more than half the warmup. */
+export const RAMP_MS_PER_GAME = 10;
+export function rampMs(concurrency: number, warmupMs: number): number {
+  return Math.min(concurrency * RAMP_MS_PER_GAME, warmupMs / 2);
+}
+
 export async function runBenchmark(options: BenchmarkOptions, io?: RunnerIO) {
   const metadata = captureMetadata(options);
   const runs = [];
@@ -129,6 +135,7 @@ export async function runBenchmark(options: BenchmarkOptions, io?: RunnerIO) {
           warmupMs: options.warmupMs,
           durationMs: options.durationMs,
           thinkMs: options.thinkMs ?? 0,
+          rampMs: rampMs(concurrency, options.warmupMs),
           seed: options.seed,
           onActivity: (point) => activity.push(point),
         },
@@ -168,6 +175,7 @@ export async function runBenchmark(options: BenchmarkOptions, io?: RunnerIO) {
       warmupMs: options.warmupMs,
       measurementMs: options.durationMs,
       thinkMs: options.thinkMs ?? 0,
+      rampMsPerGame: RAMP_MS_PER_GAME,
       minimumSamplesPerRepetition: MIN_SAMPLES,
     },
     eligible,
