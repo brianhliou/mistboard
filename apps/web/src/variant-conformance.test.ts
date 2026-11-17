@@ -555,7 +555,7 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(true);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
-    expect(tenant?.landing?.engineOptions).toHaveLength(9);
+    expect(tenant?.landing?.engineOptions).toHaveLength(8);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
