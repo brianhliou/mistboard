@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { runBenchmark, summarizeRun } from './benchmark.js';
 import { main, parseArgs } from './cli.js';
 import {
+  finalSnapshotAckSeq,
   type GameResult,
   matchesAcknowledgment,
   runScenario,
@@ -14,10 +15,10 @@ import { scenarios } from './scenarios.js';
 import { summarize } from './stats.js';
 
 type Seat = 'white' | 'black';
-type Mode = 'normal' | 'stale' | 'timeout' | 'reject' | 'black-reject' | 'late';
+type Mode = 'normal' | 'stale' | 'timeout' | 'reject' | 'black-reject' | 'late' | 'final';
 const moves = { white: { from: 'a2', to: 'a3' }, black: { from: 'a7', to: 'a6' } } as const;
 
-function transport(mode: Mode = 'normal', delayedSearch = false) {
+function transport(mode: Mode = 'normal', delayedSearch = false, earlyTimerMs = 0) {
   let clock = 0;
   let connected = 0;
   let disconnected = 0;
@@ -49,6 +50,20 @@ function transport(mode: Mode = 'normal', delayedSearch = false) {
         return;
       }
       const seq = this.seat === 'white' ? 12 : 13;
+      if (mode === 'final') {
+        // The server ends a game with a full snapshot, never a delta.
+        clock += 4;
+        const events = Array.from({ length: seq }, () => null) as StateMessage['events'];
+        events!.push({ type: 'move-played', color: this.seat, move: moves[this.seat] });
+        for (const client of clients) {
+          client.emit({
+            type: 'snapshot',
+            events: client === this ? events : events!.map(() => null),
+            state: { status: { type: 'finished', winner: this.seat, reason: 'king-captured' } },
+          });
+        }
+        return;
+      }
       if (mode === 'stale') {
         clock++;
         this.emit({
@@ -89,7 +104,7 @@ function transport(mode: Mode = 'normal', delayedSearch = false) {
       await new Promise<void>((resolve) => setImmediate(resolve));
       const existing = this.messages.find(predicate);
       if (existing) return existing as T;
-      clock += opts.timeoutMs;
+      clock += opts.timeoutMs - earlyTimerMs;
       throw new Error('wait timeout');
     }
     async disconnect() {
@@ -236,6 +251,38 @@ test('loadtest: think time delays submission and never enters a latency sample',
   assert.equal(calls, 0);
 });
 
+test('loadtest: a game-ending move is acknowledged by the final snapshot that carries it', async () => {
+  const fake = transport('final');
+  const [game] = await runScenario(options(), fake.io);
+  assert.deepEqual(game!.failures, []);
+  assert.deepEqual(
+    game!.moveAttempts.map((a) => [a.color, a.outcome, a.latencyMs, a.seq]),
+    [['white', 'acknowledged', 4, 12]],
+  );
+  assert.equal(game!.finishedNaturally, true);
+  const snapshot = (events: StateMessage['events'], type = 'finished'): StateMessage => ({
+    type: 'snapshot',
+    events,
+    state: { status: { type } },
+  });
+  const mine = { type: 'move-played', color: 'white', move: moves.white } as const;
+  assert.equal(finalSnapshotAckSeq(snapshot([null, mine]), moves.white, 'white', 0), 1);
+  // Planted failures: an old copy of the move, another seat's move, a live
+  // snapshot and a finish that does not contain the move (opponent resigned).
+  assert.equal(finalSnapshotAckSeq(snapshot([null, mine]), moves.white, 'white', 1), -1);
+  assert.equal(finalSnapshotAckSeq(snapshot([null, mine]), moves.white, 'black', 0), -1);
+  assert.equal(finalSnapshotAckSeq(snapshot([null, mine], 'playing'), moves.white, 'white', 0), -1);
+  assert.equal(
+    finalSnapshotAckSeq(
+      snapshot([null, { type: 'resigned', color: 'black' }]),
+      moves.white,
+      'white',
+      0,
+    ),
+    -1,
+  );
+});
+
 test('loadtest: stale, duplicate and unrelated frames cannot acknowledge a move twice', async () => {
   const fake = transport('stale');
   const [game] = await runScenario(options(), fake.io);
@@ -272,6 +319,23 @@ test('loadtest: the measurement deadline censors late acknowledgments without in
   assert.deepEqual(game.failures, []);
   assert.equal(game.moveAttempts[0].outcome, 'window-ended');
   assert.equal(game.moveAttempts[0].latencyMs, undefined);
+});
+
+test('loadtest: a wait cut short by the window is censored even when its timer fires early', async () => {
+  // The move is never answered and the timer fires 0.5ms before the deadline.
+  const [game] = await runScenario(
+    { ...options(), durationMs: 100 },
+    transport('timeout', false, 0.5).io,
+  );
+  assert.deepEqual(game!.failures, []);
+  assert.deepEqual(
+    game!.moveAttempts.map((a) => [a.outcome, a.latencyMs]),
+    [['window-ended', undefined]],
+  );
+  // Planted failure: the same silence with the whole move timeout available is a timeout.
+  const [stuck] = await runScenario(options(), transport('timeout', false, 0.5).io);
+  assert.equal(stuck!.moveAttempts[0]!.outcome, 'timeout');
+  assert.ok(stuck!.failures.includes('white-ack-timeout'));
 });
 
 test('loadtest: failed room creation produces a sanitized failure for every worker', async () => {

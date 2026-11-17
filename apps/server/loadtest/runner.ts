@@ -83,6 +83,8 @@ export type StateMessage = {
   type: string;
   seq?: number;
   event?: { type: string; color?: Color; move?: Move };
+  /** Full snapshots carry the recipient-filtered event list, indexed by seq. */
+  events?: Array<{ type: string; color?: Color; move?: Move } | null>;
   state?: {
     status?: { type: string; turn?: Color; winner?: Color | null; reason?: string };
     moveNumber?: number;
@@ -135,6 +137,35 @@ export function matchesAcknowledgment(
     event.move.to === move.to &&
     event.move.promotion === move.promotion
   );
+}
+
+/**
+ * A move that ends the game is not sent as a delta: the server resyncs every
+ * seat with a full snapshot. That snapshot acknowledges the move only when its
+ * event list holds the submitted move at a sequence newer than `afterSeq`.
+ * Returns that sequence, or -1.
+ */
+export function finalSnapshotAckSeq(
+  message: StateMessage,
+  move: Move,
+  color: Color,
+  afterSeq: number,
+): number {
+  const status = message.state?.status?.type;
+  if (message.type !== 'snapshot' || (status !== 'finished' && status !== 'aborted')) return -1;
+  const events = message.events ?? [];
+  for (let seq = events.length - 1; seq > afterSeq; seq--) {
+    const event = events[seq];
+    if (
+      event?.type === 'move-played' &&
+      event.color === color &&
+      event.move?.from === move.from &&
+      event.move.to === move.to &&
+      event.move.promotion === move.promotion
+    )
+      return seq;
+  }
+  return -1;
 }
 
 export async function runScenario(opts: RunnerOptions, injected?: RunnerIO): Promise<GameResult[]> {
@@ -293,6 +324,9 @@ async function playLoop(
   let lastSent: number | undefined;
   for (let count = 0; count < scenario.maxMoves && io.now() < deadline; count++) {
     let snapshot: StateMessage;
+    // A wait cut short by the window is censored, never a timeout: the timer
+    // can fire a hair before the monotonic clock reads the deadline.
+    let cutByWindow = deadline - io.now() <= scenario.moveTimeoutMs;
     try {
       snapshot = await client.waitFor<StateMessage>(
         (m) => {
@@ -309,7 +343,7 @@ async function playLoop(
         { timeoutMs: Math.max(1, Math.min(scenario.moveTimeoutMs, deadline - io.now())) },
       );
     } catch {
-      if (io.now() < deadline) result.failures.push(`${color}-turn-timeout`);
+      if (!cutByWindow && io.now() < deadline) result.failures.push(`${color}-turn-timeout`);
       break;
     }
     if (lastSent !== undefined && color === 'white') {
@@ -351,6 +385,7 @@ async function playLoop(
     };
     result.moveAttempts.push(attempt);
     lastSent = submitted;
+    cutByWindow = deadline - submitted <= scenario.moveTimeoutMs;
     try {
       client.send({ type: 'move', ...move });
       const ack = await client.waitFor<StateMessage>(
@@ -361,7 +396,9 @@ async function playLoop(
             client.messages.indexOf(message) >= bufferStart &&
             receipt !== undefined &&
             receipt >= submitted &&
-            (message.type === 'error' || matchesAcknowledgment(message, move, color, afterSeq))
+            (message.type === 'error' ||
+              matchesAcknowledgment(message, move, color, afterSeq) ||
+              finalSnapshotAckSeq(message, move, color, afterSeq) >= 0)
           );
         },
         { timeoutMs: Math.max(1, Math.min(scenario.moveTimeoutMs, deadline - io.now())) },
@@ -373,7 +410,7 @@ async function playLoop(
         result.failures.push(`${color}-move-rejected`);
         break;
       }
-      attempt.seq = ack.seq;
+      attempt.seq = ack.seq ?? finalSnapshotAckSeq(ack, move, color, afterSeq);
       if (received > deadline) {
         attempt.outcome = 'window-ended';
         break;
@@ -382,7 +419,11 @@ async function playLoop(
       attempt.latencyMs = received - submitted;
     } catch {
       attempt.outcome =
-        io.now() >= deadline ? 'window-ended' : client.isClosed() ? 'disconnected' : 'timeout';
+        client.isClosed() && io.now() < deadline
+          ? 'disconnected'
+          : cutByWindow || io.now() >= deadline
+            ? 'window-ended'
+            : 'timeout';
       if (attempt.outcome !== 'window-ended')
         result.failures.push(`${color}-ack-${attempt.outcome}`);
       break;
