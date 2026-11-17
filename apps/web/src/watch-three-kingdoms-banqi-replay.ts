@@ -10,6 +10,8 @@ import {
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { threeKingdomsBanqiLastMoverInk } from './three-kingdoms-banqi-board.js';
 import {
+  animateThreeKingdomsBanqiBoardMove,
+  animateThreeKingdomsBanqiReveal,
   renderThreeKingdomsBanqiLiveBoardSvg,
   type TkBoardArrow,
   type TkBoardMarker,
@@ -22,6 +24,25 @@ import {
 
 function viewAtPly(postgame: ThreeKingdomsBanqiPostgameResponse, _key: 'truth', ply: number) {
   return postgame.history?.truth?.find((entry) => entry.ply === ply)?.view ?? postgame.view;
+}
+
+/** One-ply steps glide, as in the game room's own replay: forward animates the
+ *  new view's last move and turns a flipped tile over, a back step reverses the
+ *  move the previous ply carried, and a step back over a flip just shows the
+ *  covered tile again. Without it the TV repainted every step. */
+export function threeKingdomsBanqiWatchAnimateMove(
+  boardEl: HTMLElement,
+  view: ThreeKingdomsBanqiPlayerView,
+  prevView: ThreeKingdomsBanqiPlayerView | null,
+  direction: 'forward' | 'back',
+): void {
+  const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+  if (!move) return;
+  if (move.from === move.to) {
+    if (direction === 'forward') animateThreeKingdomsBanqiReveal(boardEl, move.to);
+    return;
+  }
+  animateThreeKingdomsBanqiBoardMove(boardEl, move, { reverse: direction === 'back' });
 }
 
 export function mountThreeKingdomsBanqiWatchReplay(
@@ -61,6 +82,7 @@ export function mountThreeKingdomsBanqiWatchReplay(
         arrows: overlay.arrows as readonly TkBoardArrow[],
         markers: overlay.glyphs as readonly TkBoardMarker[],
       }),
+    animateMove: threeKingdomsBanqiWatchAnimateMove,
     fillCaptures: () => {},
     resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => seatInkLabel(seat, postgame.view.firstColor),
