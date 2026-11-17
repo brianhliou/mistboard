@@ -108,7 +108,7 @@ export const fogFutureArticle: Article = {
         {
           kind: 'note',
           label: 'Prices as of November 7, 2026',
-          text: "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.",
+          text: "Each host's list prices, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.",
         } as ArticleBlock,
       ],
     },

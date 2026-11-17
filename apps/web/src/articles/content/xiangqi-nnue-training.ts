@@ -131,7 +131,7 @@ export const xiangqiNnueTrainingArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: `Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used ${count(N.firstRound.positions / 1_000_000)} million positions, each scored by Fairy-Stockfish with the CC0 net at ${count(N.firstRound.cc0Nodes)} nodes. All five nets it produced lost ${bestScreen} to ${worstScreen} Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:`,
+          text: `Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used ${count(N.firstRound.positions / 1_000_000)} million positions, each scored by Fairy-Stockfish with the CC0 net at ${count(N.firstRound.cc0Nodes)} nodes. All five nets we tested from it lost ${bestScreen} to ${worstScreen} Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:`,
         },
         {
           kind: 'list',
