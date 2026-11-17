@@ -71,7 +71,7 @@ export const fogFutureArticle: Article = {
           kind: 'list',
           items: [
             '**The list can explode.** Usually it holds a few dozen boards. But each move she can\'t see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.',
-            '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.',
+            '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, the bot\'s server peaked at 7.3 GB. The 346-million game would have needed more than 150 GB.',
             '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.',
             '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.',
           ],
@@ -108,7 +108,7 @@ export const fogFutureArticle: Article = {
         {
           kind: 'note',
           label: 'Prices as of November 7, 2026',
-          text: "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.",
+          text: "Each host's list prices, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.",
         } as ArticleBlock,
       ],
     },

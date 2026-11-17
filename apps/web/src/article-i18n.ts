@@ -534,8 +534,8 @@ const ZH_HANS: Record<string, string> = {
   'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
     '在采信任何结果前，我们先让 CC0 网络自我对弈了 1,000 对对局，得到 0.0 Elo。另一个被我们刻意削弱的副本，在 2,000 盘中输了 1,974 盘。',
   'Fine-tuning needs gentler settings than training from scratch': '微调需要比从零训练更温和的设置',
-  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
-    '微调从 CC0 网络出发，用更深搜索评过分的局面来训练。第一轮用了 20 百万个局面，每个局面都由 Fairy-Stockfish 搭配 CC0 网络搜索 20,000 节点来评分。训练出的五个网络，相比起点网络都下降了 171 至 278 Elo。训练器的默认设置原本面向从随机权重开始的网络：',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets we tested from it lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微调从 CC0 网络出发，用更深搜索评过分的局面来训练。第一轮用了 2,000 万个局面，每个局面都由 Fairy-Stockfish 搭配 CC0 网络搜索 20,000 节点来评分。我们测试的五个网络，相比起点网络都下降了 171 至 278 Elo。训练器的默认设置原本面向从随机权重开始的网络：',
   'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
     '学习率 1.5e-3 和 5e-4 是按随机权重设定的。',
   "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
@@ -569,7 +569,7 @@ const ZH_HANS: Record<string, string> = {
   "Px0's scores made a stronger net at 100,000 nodes":
     '用 Px0 评分训练的网络，在 100,000 节点下更强',
   "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
-    '我们把同样的 2 百万个局面评了两次分，一次用 Px0 的单节点评估，一次用 CC0 网络的搜索，再用温和的设置，从 CC0 微调出四个网络。每个用 Px0 评分的网络，都有一个仅评分来源不同的对应网络。',
+    '我们把同样的 200 万个局面评了两次分，一次用 Px0 的单节点评估，一次用 CC0 网络的搜索，再用温和的设置，从 CC0 微调出四个网络。每个用 Px0 评分的网络，都有一个仅评分来源不同的对应网络。',
   Net: '网络',
   'Px0 scores, first layer frozen': 'Px0 评分，冻结第一层',
   CC0: 'CC0',
@@ -583,7 +583,7 @@ const ZH_HANS: Record<string, string> = {
   'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
     '最后一场测试让这个网络以每步一秒对阵 CC0，并遵循事先定好的规则：一旦对局证实或排除了 10 Elo 的提升，就停止测试。比赛在 894 盘后停止，其中 853 盘和棋，排除了这一提升。区间从 −2.2 到 +7.6。',
   "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
-    'Px0 的评分比 CC0 网络的评分包含更多信息，但 2 百万个这样的评分，并没有在实际每步限时下转化为棋力。网站的皮卡鱼继续使用 CC0 网络和拟合后的缩放系数。',
+    'Px0 的评分比 CC0 网络的评分包含更多信息，但 200 万个这样的评分，并没有在实际每步限时下转化为棋力。网站的皮卡鱼继续使用 CC0 网络和拟合后的缩放系数。',
   'Play the xiangqi bot': '与象棋电脑对弈',
   NNUE: 'NNUE',
   'TRAINING A NET FOR PIKAFISH': '为皮卡鱼训练网络',
@@ -7326,8 +7326,8 @@ const ZH_HANS: Record<string, string> = {
     '普通的棋类引擎只研究一个棋盘，就是眼前这一个。Misty 做不到，因为它只能看到你看得到的东西。它改为保存一份清单，列出迷雾背后每一个可能的局面，再选出在所有局面下都行得通的着法。',
   "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
     '**清单可能会暴涨。** 通常它只有几十个棋盘。但它每看不到一步，清单就成倍增长；在复杂的对局里，几步之内就可能从几千个跳到几百万个。一盘与真人的对局达到了 8,200 万个局面；一盘自我对弈达到了 3.46 亿个。',
-  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
-    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，一盘棋仍用掉了 7.7 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
+  "**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, the bot's server peaked at 7.3 GB. The 346-million game would have needed more than 150 GB.":
+    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，机器人的服务器峰值仍达到 7.3 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
   '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
     '**清单越长越慢。** 清单短时，Misty 大约五秒走一步；接近上限时，一步可能要将近一分钟。从 6 月至今，有 17 盘棋因为它超时或掉线而结束。',
   '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
@@ -7344,7 +7344,7 @@ const ZH_HANS: Record<string, string> = {
   '**about €3** on a Hetzner dedicated server': 'Hetzner 独立服务器：**约 3 欧元**',
   "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
     '按 Railway 的价格，Misty 闲置时占用的内存每月约 12.60 美元；为一盘有上限的对局预留内存约 80 美元；为一盘不设上限的深局预留则约 1,500 美元。即使在 Hetzner 上，不设上限的对局每月也要超过 400 欧元。',
-  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+  "Each host's list prices, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
     '均为各服务商官方标价，换算成 1 GB 内存使用一个月的价格。Railway 单独按内存计费；AWS 和 Hetzner 的内存随服务器一起出售，所以它们的数字是用服务器价格除以内存容量得出的。',
   'The Fog legacy badges': '迷雾留名徽章',
   'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':
@@ -7647,8 +7647,8 @@ const ZH_HANT: Record<string, string> = {
   'Before trusting any result, we played the CC0 net against itself over 1,000 pairs of games and got 0.0 Elo. A copy we weakened on purpose lost 1,974 of 2,000 games.':
     '在採信任何結果前，我們先讓 CC0 網路自我對弈了 1,000 對對局，得到 0.0 Elo。另一個被我們刻意削弱的副本，在 2,000 盤中輸了 1,974 盤。',
   'Fine-tuning needs gentler settings than training from scratch': '微調需要比從零訓練更溫和的設定',
-  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets it produced lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
-    '微調從 CC0 網路出發，用更深搜尋評過分的局面來訓練。第一輪用了 20 百萬個局面，每個局面都由 Fairy-Stockfish 搭配 CC0 網路搜尋 20,000 節點來評分。訓練出的五個網路，相比起點網路都下降了 171 至 278 Elo。訓練器的預設值原本面向從隨機權重開始的網路：',
+  "Fine-tuning starts from the CC0 net and trains it on positions scored by a deeper search. The first round used 20 million positions, each scored by Fairy-Stockfish with the CC0 net at 20,000 nodes. All five nets we tested from it lost 171 to 278 Elo against the net they started from. The trainer's defaults were set for a net that starts from random weights:":
+    '微調從 CC0 網路出發，用更深搜尋評過分的局面來訓練。第一輪用了 2,000 萬個局面，每個局面都由 Fairy-Stockfish 搭配 CC0 網路搜尋 20,000 節點來評分。我們測試的五個網路，相比起點網路都下降了 171 至 278 Elo。訓練器的預設值原本面向從隨機權重開始的網路：',
   'The learning rate, 1.5e-3 and 5e-4, was sized for random weights.':
     '學習率 1.5e-3 和 5e-4 是按隨機權重設定的。',
   "The trainer assumed an output scale of 361. The CC0 net's own scores measure about 490, so training shrank every score it learned.":
@@ -7682,7 +7682,7 @@ const ZH_HANT: Record<string, string> = {
   "Px0's scores made a stronger net at 100,000 nodes":
     '用 Px0 評分訓練的網路，在 100,000 節點下更強',
   "We scored the same 2 million positions twice, once with Px0 at one node and once with the CC0 net's search, and fine-tuned four nets from CC0 with the gentler settings. Each Px0 net has a twin that differs only in its scores.":
-    '我們把同樣的 2 百萬個局面評了兩次分，一次用 Px0 的單節點評估，一次用 CC0 網路的搜尋，再用溫和的設定，從 CC0 微調出四個網路。每個用 Px0 評分的網路，都有一個僅評分來源不同的對應網路。',
+    '我們把同樣的 200 萬個局面評了兩次分，一次用 Px0 的單節點評估，一次用 CC0 網路的搜尋，再用溫和的設定，從 CC0 微調出四個網路。每個用 Px0 評分的網路，都有一個僅評分來源不同的對應網路。',
   Net: '網路',
   'Px0 scores, first layer frozen': 'Px0 評分，凍結第一層',
   CC0: 'CC0',
@@ -7696,7 +7696,7 @@ const ZH_HANT: Record<string, string> = {
   'The last test played that net against CC0 at one second a move, under a rule set before it began: stop once the games show a gain of 10 Elo or rule it out. It stopped after 894 games, 853 of them drawn, and ruled it out. The interval runs from −2.2 to +7.6.':
     '最後一場測試讓這個網路以每步一秒對陣 CC0，並遵循事先定好的規則：一旦對局證實或排除了 10 Elo 的提升，就停止測試。比賽在 894 盤後停止，其中 853 盤和棋，排除了這一提升。區間從 −2.2 到 +7.6。',
   "Px0's scores carry more than the CC0 net's, but 2 million of them did not turn that into strength at a real time per move. The site's Pikafish keeps the CC0 net at the fitted scale.":
-    'Px0 的評分比 CC0 網路的評分包含更多資訊，但 2 百萬個這樣的評分，並沒有在實際每步限時下轉化為棋力。網站的皮卡魚繼續使用 CC0 網路和擬合後的縮放係數。',
+    'Px0 的評分比 CC0 網路的評分包含更多資訊，但 200 萬個這樣的評分，並沒有在實際每步限時下轉化為棋力。網站的皮卡魚繼續使用 CC0 網路和擬合後的縮放係數。',
   'Play the xiangqi bot': '與象棋電腦對弈',
   NNUE: 'NNUE',
   'TRAINING A NET FOR PIKAFISH': '為皮卡魚訓練網路',
@@ -14320,8 +14320,8 @@ const ZH_HANT: Record<string, string> = {
     '普通的棋類引擎只研究一個棋盤，就是眼前這一個。Misty 做不到，因為它只能看到你看得到的東西。它改為保存一份清單，列出迷霧背後每一個可能的局面，再選出在所有局面下都行得通的走法。',
   "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
     '**清單可能會暴漲。** 通常它只有幾十個棋盤。但它每看不到一步，清單就成倍增長；在複雜的對局裡，幾步之內就可能從幾千個跳到幾百萬個。一盤與真人的對局達到了 8,200 萬個局面；一盤自我對弈達到了 3.46 億個。',
-  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
-    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，一盤棋仍用掉了 7.7 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
+  "**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, the bot's server peaked at 7.3 GB. The 346-million game would have needed more than 150 GB.":
+    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，機器人的伺服器峰值仍達到 7.3 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
   '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
     '**清單越長越慢。** 清單短時，Misty 大約五秒走一步；接近上限時，一步可能要將近一分鐘。從 6 月至今，有 17 盤棋因為它超時或斷線而結束。',
   '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
@@ -14338,7 +14338,7 @@ const ZH_HANT: Record<string, string> = {
   '**about €3** on a Hetzner dedicated server': 'Hetzner 獨立伺服器：**約 3 歐元**',
   "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
     '按 Railway 的價格，Misty 閒置時佔用的記憶體每月約 12.60 美元；為一盤有上限的對局預留記憶體約 80 美元；為一盤不設上限的深局預留則約 1,500 美元。即使在 Hetzner 上，不設上限的對局每月也要超過 400 歐元。',
-  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+  "Each host's list prices, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
     '均為各服務商官方標價，換算成 1 GB 記憶體使用一個月的價格。Railway 單獨按記憶體計費；AWS 和 Hetzner 的記憶體隨伺服器一起出售，所以它們的數字是用伺服器價格除以記憶體容量得出的。',
   'The Fog legacy badges': '迷霧留名徽章',
   'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':

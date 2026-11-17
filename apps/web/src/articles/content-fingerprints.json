@@ -92,7 +92,7 @@
     "updatedAt": "2026-11-15"
   },
   "fog-future": {
-    "hash": "d5d6d6ad339aabbc",
+    "hash": "30361d5d29d3c874",
     "updatedAt": null
   },
   "fog-xiangqi": {
@@ -288,7 +288,7 @@
     "updatedAt": null
   },
   "xiangqi-nnue-training": {
-    "hash": "3e28c8de3400564d",
+    "hash": "58a892cf36f40b5c",
     "updatedAt": null
   },
   "xiangqi-world-championship": {
