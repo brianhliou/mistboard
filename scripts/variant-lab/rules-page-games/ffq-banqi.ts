@@ -211,7 +211,7 @@ export function makeFFQStudy(
   const red = (d: BanqiDecision, value: number) =>
     d.mover === 'red' ? value / 100 : 1 - value / 100;
   const intro =
-    "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.";
+    "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.";
   const tree = annotateFromEngine({
     rootFen: '',
     moves: tokens,

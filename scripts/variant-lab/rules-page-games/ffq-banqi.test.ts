@@ -198,7 +198,7 @@ test('missing engine or source pin fails closed; notes match observed outcomes a
   assert.deepEqual(comments, {
     '3': "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon.",
     '13': "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total.",
-    '17': "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot on g2.",
+    '17': "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot.",
     '33': "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48.",
     '47': 'Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use.',
     '81': "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one.",

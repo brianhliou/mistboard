@@ -485,7 +485,7 @@
                                                                               "annotations": {
                                                                                 "comments": [
                                                                                   {
-                                                                                    "text": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot on g2."
+                                                                                    "text": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot."
                                                                                   }
                                                                                 ]
                                                                               }
@@ -540,7 +540,7 @@
           "annotations": {
             "comments": [
               {
-                "text": "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky."
+                "text": "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky."
               }
             ]
           }

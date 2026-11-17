@@ -174,7 +174,7 @@ describe('rules page sample games', () => {
     expect(section.heading).toBe('An engine game');
     const [intro, embed] = section.blocks.map((block) => renderBlock(block));
     expect(intro?.textContent).toBe(
-      "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+      "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
     );
     expect(embed?.querySelector('iframe')?.getAttribute('src') ?? embed?.outerHTML).toContain(
       '/embed/study/HLQzHlhK/O92BsOOd',

@@ -1,9 +1,9 @@
 {
-  "intro": "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+  "intro": "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
   "comments": {
     "3": "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon.",
     "13": "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total.",
-    "17": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot on g2.",
+    "17": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot.",
     "33": "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48.",
     "47": "Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use.",
     "81": "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one.",

@@ -26,7 +26,7 @@ export function fanfanqiEngineGameSection(path: string) {
     blocks: [
       {
         kind: 'paragraph' as const,
-        text: "Misty Level 8 (red) beats Level 7 (black) on points. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip shows whether it was lucky.",
+        text: "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
       },
       {
         kind: 'embed' as const,
