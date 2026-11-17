@@ -12,7 +12,33 @@ import {
 } from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-// Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
+// Decided 2026-11-15: preview a local study; production id wiring follows review.
+// Off under vitest too, so the article tests (zh coverage lock, fingerprints)
+// see the production article; rules-page-games.test.ts checks the section.
+const localStudyPath =
+  import.meta.env.DEV && import.meta.env.MODE !== 'test'
+    ? (import.meta.env.VITE_FFQ_BANQI_RULES_STUDY_PATH ?? '/embed/study/HLQzHlhK/O92BsOOd')
+    : undefined;
+
+export function fanfanqiEngineGameSection(path: string) {
+  return {
+    heading: 'An engine game',
+    blocks: [
+      {
+        kind: 'paragraph' as const,
+        text: "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
+      },
+      {
+        kind: 'embed' as const,
+        path,
+        title: 'Fanfanqi: Level 7 versus Level 8, annotated',
+        aspect: [702, 480] as [number, number],
+      },
+    ],
+  };
+}
+
+// Match FFQ_BANQI_RULES in variants-ffq-banqi.ts.
 // English launch rules; pieces still covered remain masked after the game.
 export const fanfanqiArticle: Article = {
   slug: 'fanfanqi',
@@ -272,6 +298,9 @@ export const fanfanqiArticle: Article = {
         },
       ],
     },
+    // The section ships only with its study: dev previews the local copy; the
+    // production study id, updatedAt and updateNote land together after review.
+    ...(localStudyPath ? [fanfanqiEngineGameSection(localStudyPath)] : []),
     {
       heading: 'Play on Mistboard',
       blocks: [

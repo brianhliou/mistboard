@@ -693,8 +693,8 @@ describe('the default minimum length', () => {
     expect(dataPageHref({ ...base, variant: 'three-kingdoms-banqi' })).toBe(
       '/data?variant=three-kingdoms-banqi',
     );
-    // A variant with no export has no downloads to link to.
-    expect(dataPageHref({ ...base, variant: 'ffq-banqi' })).toBeNull();
+    // Fanfanqi's public observed replay export is available to downloads.
+    expect(dataPageHref({ ...base, variant: 'ffq-banqi' })).toBe('/data?variant=ffq-banqi');
     // Filters /data does not have.
     expect(dataPageHref({ ...base, player: 'someone' })).toBeNull();
     expect(dataPageHref({ ...base, result: '1-0' })).toBeNull();

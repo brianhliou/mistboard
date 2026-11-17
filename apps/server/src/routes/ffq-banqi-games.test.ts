@@ -174,7 +174,7 @@ test('finished FFQ API is masked at every ply with exact HP and capture damage',
 });
 
 for (const surface of ['hidden', 'casual'] as const) {
-  test(`FFQ exports remain unavailable for both hidden deals: surface=${surface}`, (t) => {
+  test(`FFQ exports mask both hidden deals: surface=${surface}`, (t) => {
     const spec = gameSpecForId('ffq-banqi');
     const priorSurface = spec.publicSurface;
     spec.publicSurface = surface;
@@ -195,13 +195,10 @@ for (const surface of ['hidden', 'casual'] as const) {
       };
       const a = resolveGameExport({ ...args, summary, events: events() });
       const b = resolveGameExport({ ...args, summary, events: events(swapped) });
-      assert.equal(a.status, 501);
+      assert.equal(a.status, 200);
       assert.equal(JSON.stringify(a), JSON.stringify(b));
       assert.ok(!JSON.stringify(a).includes('deal_fen'));
-      assert.deepEqual(a, {
-        status: 501,
-        body: { error: 'export_not_supported_for_variant', variant: FFQ_BANQI_SPEC_ID },
-      });
+      assert.ok(!JSON.stringify(a).includes('DealFEN'));
     }
   });
 
@@ -212,7 +209,7 @@ for (const surface of ['hidden', 'casual'] as const) {
     t.after(() => {
       spec.publicSurface = priorSurface;
     });
-    assert.equal(variantTenantForRoomId(ROOM)?.export, null);
+    assert.equal(variantTenantForRoomId(ROOM)?.export?.gameRouteBase, '/ffq-banqi/game');
     assert.equal(variantTenantForRoomId(ROOM)?.card, null);
     for (const log of [events(), events(swapped)]) {
       assert.equal(await tenantGameCard(ROOM, store(log)), null);

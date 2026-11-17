@@ -4,6 +4,7 @@ import { Readable } from 'node:stream';
 import { type TestContext, test } from 'node:test';
 import {
   BANQI_SPEC_ID,
+  FFQ_BANQI_PUBLIC_REPLAY,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
@@ -25,6 +26,17 @@ import {
 // production by adding a chapter, not by any test.
 const EMPTY = { version: 1, root: { children: [] } };
 const PUBLIC_REPLAY = { ...EMPTY, replay: THREE_KINGDOMS_BANQI_PUBLIC_REPLAY };
+const FFQ_REPLAY = {
+  ...EMPTY,
+  replay: FFQ_BANQI_PUBLIC_REPLAY,
+  initialRevealed: [
+    { color: 'red', role: 'cannon' },
+    { color: 'black', role: 'horse' },
+    { color: 'red', role: 'soldier' },
+    { color: 'black', role: 'advisor' },
+  ],
+  root: { children: [{ uci: 'c1a1x:G', children: [{ uci: '@a0:c', children: [] }] }] },
+};
 const REPLAY_VARIANTS = [
   BANQI_SPEC_ID,
   JIEQI_SPEC_ID,
@@ -262,4 +274,75 @@ test('a deterministic variant is left exactly as it was', () => {
   // pin every chapter to one position for no reason.
   const out = ensureDealtRoot(XIANGQI_SPEC_ID, EMPTY);
   assert.deepEqual(out, EMPTY);
+});
+
+test('Fanfanqi creates, imports and updates only observed public replay chapters', async (t) => {
+  const routes = studyRoutes(t);
+  const created = await routes.request('POST', '/api/studies', {
+    name: 'Fanfanqi replay',
+    chapter: { variant: 'ffq-banqi', root: FFQ_REPLAY },
+  });
+  assert.equal(created.status, 201);
+  const chapter = created.body.chapters[0];
+  const payload = JSON.stringify(created.body);
+  assert.deepEqual(chapter.root, FFQ_REPLAY);
+  assert.doesNotMatch(payload, /rootFen|deal|seed|board|hiddenRole/);
+  assert.equal(ensureDealtRoot('ffq-banqi', FFQ_REPLAY), FFQ_REPLAY);
+  const added = await routes.request('POST', `/api/studies/${created.body.study.id}/chapters`, {
+    root: FFQ_REPLAY,
+  });
+  assert.equal(added.status, 201);
+  assert.deepEqual(added.body.chapter.root, FFQ_REPLAY);
+  const updated = await routes.request(
+    'PATCH',
+    `/api/studies/${created.body.study.id}/chapters/${chapter.id}`,
+    { root: FFQ_REPLAY, baseVersion: 1 },
+  );
+  assert.equal(updated.status, 200);
+  assert.deepEqual(updated.body.chapter.root, FFQ_REPLAY);
+  for (const bad of [
+    PUBLIC_REPLAY,
+    { ...FFQ_REPLAY, rootFen: 'secret-deal' },
+    { ...FFQ_REPLAY, initialRevealed: FFQ_REPLAY.initialRevealed.slice(1) },
+    {
+      ...FFQ_REPLAY,
+      initialRevealed: [
+        { ...FFQ_REPLAY.initialRevealed[0], hiddenRole: 'general' },
+        ...FFQ_REPLAY.initialRevealed.slice(1),
+      ],
+    },
+    { ...FFQ_REPLAY, board: [{ faceDown: true, role: 'general' }] },
+    { ...FFQ_REPLAY, root: { children: [{ uci: '@a0:G', role: 'general', children: [] }] } },
+    { ...FFQ_REPLAY, root: { children: [{ uci: 'c1a1', children: [] }] } },
+    { ...FFQ_REPLAY, root: { children: [{ uci: '@c1:G', children: [] }] } },
+  ]) {
+    const before = routes.writes();
+    const response = await routes.request('POST', '/api/studies', {
+      name: 'Invalid replay',
+      chapter: { variant: 'ffq-banqi', root: bad },
+    });
+    assert.equal(response.status, 400);
+    assert.equal(response.body.error, 'invalid_tree');
+    assert.equal(routes.writes(), before);
+  }
+  assert.equal(isSerializedTree(FFQ_REPLAY, 'banqi'), false);
+});
+
+test('a new empty Fanfanqi chapter stores only its four public opening observations', async (t) => {
+  const routes = studyRoutes(t);
+  const response = await routes.request('POST', '/api/studies', {
+    name: 'New Fanfanqi study',
+    chapter: { variant: 'ffq-banqi', root: EMPTY },
+  });
+  assert.equal(response.status, 201);
+  const root = response.body.chapters[0].root;
+  assert.equal(root.replay, FFQ_BANQI_PUBLIC_REPLAY);
+  assert.equal(root.initialRevealed.length, 4);
+  assert.equal(isSerializedTree(root, 'ffq-banqi'), true);
+  assert.doesNotMatch(JSON.stringify(response.body), /rootFen|board|seed|deal/);
+  const added = await routes.request('POST', `/api/studies/${response.body.study.id}/chapters`, {
+    root: EMPTY,
+  });
+  assert.equal(added.status, 201);
+  assert.equal(isSerializedTree(added.body.chapter.root, 'ffq-banqi'), true);
 });

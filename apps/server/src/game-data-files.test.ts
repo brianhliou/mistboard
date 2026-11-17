@@ -84,7 +84,7 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
     assert.equal(parsed && !parsed.ok && parsed.status, 404, path);
   }
   // The hidden-piece variants are offered since #484, in JSONL and PGN.
-  for (const variant of ['jieqi', 'banqi', 'jungle-flip']) {
+  for (const variant of ['jieqi', 'banqi', 'jungle-flip', 'ffq-banqi']) {
     for (const format of ['jsonl', 'pgn'] as const) {
       assert.deepEqual(parseDataFilePath(`/api/data/monthly/2026-09/${variant}.${format}.gz`), {
         ok: true,
@@ -225,9 +225,12 @@ test('every public variant is offered on /data or named as unavailable, never bo
     if (!isPublicGameSpec(id) || id === 'chess') continue;
     assert.ok(offered.has(id) !== unavailable.has(id), id);
   }
-  // Fanfanqi launches without public exports; TK keeps its masked record.
+  // Fanfanqi and TK offer masked public records.
   assert.ok(offered.has('three-kingdoms-banqi'));
-  assert.deepEqual(DATA_UNAVAILABLE_VARIANTS, [{ variant: 'ffq-banqi', reason: 'no-export' }]);
+  assert.ok(offered.has('ffq-banqi'));
+  assert.deepEqual(DATA_UNAVAILABLE_VARIANTS, []);
+  assert.equal(parseDataFilePath('/api/data/monthly/2026-09/ffq-banqi.jsonl.gz')?.ok, true);
+  assert.equal(parseDataFilePath('/api/data/monthly/2026-09/ffq-banqi.pgn.gz')?.ok, true);
   assert.equal(
     parseDataFilePath('/api/data/monthly/2026-09/three-kingdoms-banqi.jsonl.gz')?.ok,
     true,
@@ -241,11 +244,12 @@ test('every public variant is offered on /data or named as unavailable, never bo
 
 test('a listing never names a variant that is not public, filtered or not', () => {
   const hidden = GAME_SPEC_IDS.filter((id) => !isPublicGameSpec(id));
-  assert.ok(!DATA_VARIANTS.includes('ffq-banqi'));
+  assert.ok(DATA_VARIANTS.includes('ffq-banqi'));
   const counts = [
     ...hidden.map((variant) => ({ month: '2026-09', variant, games: 9 })),
     ...hidden.map((variant) => ({ month: '2026-10', variant, games: 9 })),
     { month: '2026-09', variant: 'three-kingdoms-banqi', games: 9 },
+    { month: '2026-09', variant: 'ffq-banqi', games: 9 },
     { month: '2026-09', variant: 'xiangqi', games: 2 },
   ];
   for (const scope of [{}, { opponentId: 'pikafish' }]) {
@@ -261,7 +265,7 @@ test('a listing never names a variant that is not public, filtered or not', () =
     for (const id of hidden) assert.ok(!wire.includes(`"${id}"`), `${id} in ${wire}`);
     assert.deepEqual(
       listing.variants,
-      DATA_VARIANTS.filter((id) => id === 'xiangqi' || id === 'three-kingdoms-banqi'),
+      DATA_VARIANTS.filter((id) => ['xiangqi', 'three-kingdoms-banqi', 'ffq-banqi'].includes(id)),
     );
   }
 });

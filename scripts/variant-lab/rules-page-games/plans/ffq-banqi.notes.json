@@ -1,0 +1,614 @@
+{
+  "intro": "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
+  "comments": {
+    "3": "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon.",
+    "13": "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total.",
+    "17": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot.",
+    "33": "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48.",
+    "47": "Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use.",
+    "81": "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one.",
+    "83": "The red soldier takes it and Black runs out of HP. Red wins with 24 HP left. The three pieces still face down stay hidden."
+  },
+  "evidence": {
+    "recipe": "scripts/fetch-release-asset.sh (railpack.json)",
+    "repository": "brianhliou/misty-ffq-banqi",
+    "tag": "v0.1.0",
+    "sourcePin": "466057c1b2a1ca0757e9db4da6372dcd55f8bbf0",
+    "releaseSha256": "62e74d73d6caca517a73036e01e884027316c8f7a7a6c6394e0ac016b4e427ca",
+    "binarySha256": "6e6672ad9ec9b3da24af5971637aed36d56b2bdff9256ce3e1ae88fbeafe4ba3",
+    "platform": "darwin-arm64",
+    "engineId": "misty-ffq-banqi-analysis@0.1.0+misty-ffq-banqi-level-7-n25000-classical-ms3000-masked2-winfit20261113",
+    "nodes": 25000,
+    "movetimeCapMs": 3000,
+    "analysis": [
+      {
+        "ply": 0,
+        "cp": 4,
+        "mate": null,
+        "best": "b3b3",
+        "pv": []
+      },
+      {
+        "ply": 1,
+        "cp": 3,
+        "mate": null,
+        "best": "a0a0",
+        "pv": []
+      },
+      {
+        "ply": 2,
+        "cp": 3,
+        "mate": null,
+        "best": "b2b2",
+        "pv": []
+      },
+      {
+        "ply": 3,
+        "cp": 42,
+        "mate": null,
+        "best": "c3c3",
+        "pv": []
+      },
+      {
+        "ply": 4,
+        "cp": 44,
+        "mate": null,
+        "best": "b2b3",
+        "pv": []
+      },
+      {
+        "ply": 5,
+        "cp": 44,
+        "mate": null,
+        "best": "d3c3",
+        "pv": []
+      },
+      {
+        "ply": 6,
+        "cp": 44,
+        "mate": null,
+        "best": "b3b2",
+        "pv": []
+      },
+      {
+        "ply": 7,
+        "cp": 44,
+        "mate": null,
+        "best": "c3d3",
+        "pv": []
+      },
+      {
+        "ply": 8,
+        "cp": 47,
+        "mate": null,
+        "best": "c5c5",
+        "pv": []
+      },
+      {
+        "ply": 9,
+        "cp": 40,
+        "mate": null,
+        "best": "d3c3",
+        "pv": []
+      },
+      {
+        "ply": 10,
+        "cp": 43,
+        "mate": null,
+        "best": "d4d4",
+        "pv": []
+      },
+      {
+        "ply": 11,
+        "cp": 46,
+        "mate": null,
+        "best": "d0d0",
+        "pv": []
+      },
+      {
+        "ply": 12,
+        "cp": 61,
+        "mate": null,
+        "best": "d0d2",
+        "pv": []
+      },
+      {
+        "ply": 13,
+        "cp": 116,
+        "mate": null,
+        "best": "a7a7",
+        "pv": []
+      },
+      {
+        "ply": 14,
+        "cp": 113,
+        "mate": null,
+        "best": "c7c7",
+        "pv": []
+      },
+      {
+        "ply": 15,
+        "cp": 115,
+        "mate": null,
+        "best": "c3b3",
+        "pv": []
+      },
+      {
+        "ply": 16,
+        "cp": 110,
+        "mate": null,
+        "best": "d6d6",
+        "pv": []
+      },
+      {
+        "ply": 17,
+        "cp": 40,
+        "mate": null,
+        "best": "d6b6",
+        "pv": []
+      },
+      {
+        "ply": 18,
+        "cp": 29,
+        "mate": null,
+        "best": "d7d7",
+        "pv": []
+      },
+      {
+        "ply": 19,
+        "cp": 44,
+        "mate": null,
+        "best": "b3c3",
+        "pv": []
+      },
+      {
+        "ply": 20,
+        "cp": 45,
+        "mate": null,
+        "best": "a2a2",
+        "pv": []
+      },
+      {
+        "ply": 21,
+        "cp": 45,
+        "mate": null,
+        "best": "c3d3",
+        "pv": []
+      },
+      {
+        "ply": 22,
+        "cp": 23,
+        "mate": null,
+        "best": "d2d4",
+        "pv": []
+      },
+      {
+        "ply": 23,
+        "cp": 23,
+        "mate": null,
+        "best": "d3d4",
+        "pv": []
+      },
+      {
+        "ply": 24,
+        "cp": 23,
+        "mate": null,
+        "best": "b2a2",
+        "pv": []
+      },
+      {
+        "ply": 25,
+        "cp": 22,
+        "mate": null,
+        "best": "d4d3",
+        "pv": []
+      },
+      {
+        "ply": 26,
+        "cp": 23,
+        "mate": null,
+        "best": "a2b2",
+        "pv": []
+      },
+      {
+        "ply": 27,
+        "cp": 79,
+        "mate": null,
+        "best": "a6a6",
+        "pv": []
+      },
+      {
+        "ply": 28,
+        "cp": 101,
+        "mate": null,
+        "best": "b7a7",
+        "pv": []
+      },
+      {
+        "ply": 29,
+        "cp": 149,
+        "mate": null,
+        "best": "b5b5",
+        "pv": []
+      },
+      {
+        "ply": 30,
+        "cp": 165,
+        "mate": null,
+        "best": "a6b6",
+        "pv": []
+      },
+      {
+        "ply": 31,
+        "cp": 253,
+        "mate": null,
+        "best": "b4b4",
+        "pv": []
+      },
+      {
+        "ply": 32,
+        "cp": 229,
+        "mate": null,
+        "best": "b6b5",
+        "pv": []
+      },
+      {
+        "ply": 33,
+        "cp": 229,
+        "mate": null,
+        "best": "b4a4",
+        "pv": []
+      },
+      {
+        "ply": 34,
+        "cp": 1094,
+        "mate": null,
+        "best": "b0b0",
+        "pv": []
+      },
+      {
+        "ply": 35,
+        "cp": 229,
+        "mate": null,
+        "best": "d3d2",
+        "pv": []
+      },
+      {
+        "ply": 36,
+        "cp": 233,
+        "mate": null,
+        "best": "b5b4",
+        "pv": []
+      },
+      {
+        "ply": 37,
+        "cp": 295,
+        "mate": null,
+        "best": "d2d3",
+        "pv": []
+      },
+      {
+        "ply": 38,
+        "cp": 294,
+        "mate": null,
+        "best": "b4a4",
+        "pv": []
+      },
+      {
+        "ply": 39,
+        "cp": 295,
+        "mate": null,
+        "best": "d3c3",
+        "pv": []
+      },
+      {
+        "ply": 40,
+        "cp": 296,
+        "mate": null,
+        "best": "a4b4",
+        "pv": []
+      },
+      {
+        "ply": 41,
+        "cp": 300,
+        "mate": null,
+        "best": "c3d3",
+        "pv": []
+      },
+      {
+        "ply": 42,
+        "cp": 342,
+        "mate": null,
+        "best": "b4b5",
+        "pv": []
+      },
+      {
+        "ply": 43,
+        "cp": 364,
+        "mate": null,
+        "best": "d3d2",
+        "pv": []
+      },
+      {
+        "ply": 44,
+        "cp": 365,
+        "mate": null,
+        "best": "b5c5",
+        "pv": []
+      },
+      {
+        "ply": 45,
+        "cp": 370,
+        "mate": null,
+        "best": "d2d3",
+        "pv": []
+      },
+      {
+        "ply": 46,
+        "cp": 369,
+        "mate": null,
+        "best": "a5a5",
+        "pv": []
+      },
+      {
+        "ply": 47,
+        "cp": 368,
+        "mate": null,
+        "best": "d3d2",
+        "pv": []
+      },
+      {
+        "ply": 48,
+        "cp": 369,
+        "mate": null,
+        "best": "d7d6",
+        "pv": []
+      },
+      {
+        "ply": 49,
+        "cp": 369,
+        "mate": null,
+        "best": "d2d3",
+        "pv": []
+      },
+      {
+        "ply": 50,
+        "cp": 368,
+        "mate": null,
+        "best": "a2b2",
+        "pv": []
+      },
+      {
+        "ply": 51,
+        "cp": 375,
+        "mate": null,
+        "best": "d3d2",
+        "pv": []
+      },
+      {
+        "ply": 52,
+        "cp": 375,
+        "mate": null,
+        "best": "a3a3",
+        "pv": []
+      },
+      {
+        "ply": 53,
+        "cp": 372,
+        "mate": null,
+        "best": "a3a4",
+        "pv": []
+      },
+      {
+        "ply": 54,
+        "cp": 373,
+        "mate": null,
+        "best": "c5b5",
+        "pv": []
+      },
+      {
+        "ply": 55,
+        "cp": 377,
+        "mate": null,
+        "best": "d2d3",
+        "pv": []
+      },
+      {
+        "ply": 56,
+        "cp": 376,
+        "mate": null,
+        "best": "c4c4",
+        "pv": []
+      },
+      {
+        "ply": 57,
+        "cp": 378,
+        "mate": null,
+        "best": "d3d2",
+        "pv": []
+      },
+      {
+        "ply": 58,
+        "cp": 381,
+        "mate": null,
+        "best": "d5d5",
+        "pv": []
+      },
+      {
+        "ply": 59,
+        "cp": 392,
+        "mate": null,
+        "best": "c2c2",
+        "pv": []
+      },
+      {
+        "ply": 60,
+        "cp": 386,
+        "mate": null,
+        "best": "c2c3",
+        "pv": []
+      },
+      {
+        "ply": 61,
+        "cp": 343,
+        "mate": null,
+        "best": "d2c2",
+        "pv": []
+      },
+      {
+        "ply": 62,
+        "cp": 343,
+        "mate": null,
+        "best": "a5a6",
+        "pv": []
+      },
+      {
+        "ply": 63,
+        "cp": 342,
+        "mate": null,
+        "best": "c2b2",
+        "pv": []
+      },
+      {
+        "ply": 64,
+        "cp": 315,
+        "mate": null,
+        "best": "c3b3",
+        "pv": []
+      },
+      {
+        "ply": 65,
+        "cp": 313,
+        "mate": null,
+        "best": "b2b3",
+        "pv": []
+      },
+      {
+        "ply": 66,
+        "cp": 313,
+        "mate": null,
+        "best": "c4c3",
+        "pv": []
+      },
+      {
+        "ply": 67,
+        "cp": 313,
+        "mate": null,
+        "best": "b3b2",
+        "pv": []
+      },
+      {
+        "ply": 68,
+        "cp": 314,
+        "mate": null,
+        "best": "d5d4",
+        "pv": []
+      },
+      {
+        "ply": 69,
+        "cp": 315,
+        "mate": null,
+        "best": "b2a2",
+        "pv": []
+      },
+      {
+        "ply": 70,
+        "cp": 316,
+        "mate": null,
+        "best": "c3c2",
+        "pv": []
+      },
+      {
+        "ply": 71,
+        "cp": 326,
+        "mate": null,
+        "best": "a4a3",
+        "pv": []
+      },
+      {
+        "ply": 72,
+        "cp": 336,
+        "mate": null,
+        "best": "b3b2",
+        "pv": []
+      },
+      {
+        "ply": 73,
+        "cp": 371,
+        "mate": null,
+        "best": "a3b3",
+        "pv": []
+      },
+      {
+        "ply": 74,
+        "cp": 372,
+        "mate": null,
+        "best": "b2a2",
+        "pv": []
+      },
+      {
+        "ply": 75,
+        "cp": 370,
+        "mate": null,
+        "best": "b3c3",
+        "pv": []
+      },
+      {
+        "ply": 76,
+        "cp": 1310,
+        "mate": null,
+        "best": "d1d1",
+        "pv": []
+      },
+      {
+        "ply": 77,
+        "cp": 381,
+        "mate": null,
+        "best": "c3d3",
+        "pv": []
+      },
+      {
+        "ply": 78,
+        "cp": 2736,
+        "mate": null,
+        "best": "c1d1",
+        "pv": []
+      },
+      {
+        "ply": 79,
+        "cp": 2724,
+        "mate": null,
+        "best": "d3d4",
+        "pv": []
+      },
+      {
+        "ply": 80,
+        "cp": 4329,
+        "mate": null,
+        "best": "c0c0",
+        "pv": []
+      },
+      {
+        "ply": 81,
+        "cp": 10000,
+        "mate": null,
+        "best": "c0b0",
+        "pv": []
+      },
+      {
+        "ply": 82,
+        "cp": 10000,
+        "mate": null,
+        "best": "a0b0",
+        "pv": []
+      },
+      {
+        "ply": 83,
+        "cp": 30000,
+        "mate": null,
+        "best": null,
+        "pv": []
+      }
+    ]
+  }
+}

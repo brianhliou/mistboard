@@ -117,8 +117,8 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
   )!;
   assert.equal(registration.lobby, null);
   assert.equal(registration.watch?.channelId, FFQ_BANQI_SPEC_ID);
-  for (const capability of ['export', 'card'] as const)
-    assert.equal(registration[capability], null, capability);
+  assert.ok(registration.export, 'finished public records have a tenant export hook');
+  assert.equal(registration.card, null);
   t.after(() => rooms.clear());
   assert.equal(canServeLiveBoard(FFQ_BANQI_SPEC_ID), true, 'the public mask remains valid');
   assert.equal(listedOnSurface(FFQ_BANQI_SPEC_ID), false);

@@ -15,6 +15,19 @@ afterEach(() => {
 });
 
 function flippedRoot(variant: string, ink: 'red' | 'black'): SerializedTree {
+  if (variant === 'ffq-banqi') {
+    return {
+      version: 1,
+      replay: 'ffq-banqi-public-v1',
+      initialRevealed: [
+        { color: 'red', role: 'cannon' },
+        { color: 'black', role: 'horse' },
+        { color: 'red', role: 'soldier' },
+        { color: 'black', role: 'advisor' },
+      ],
+      root: { children: [{ uci: `@a0:${ink === 'red' ? 'A' : 'a'}`, children: [] }] },
+    };
+  }
   if (variant === 'three-kingdoms-banqi') {
     return {
       version: 1,
@@ -36,7 +49,7 @@ function flippedRoot(variant: string, ink: 'red' | 'black'): SerializedTree {
 }
 
 describe('study score chart played ink', () => {
-  for (const variant of ['banqi', 'three-kingdoms-banqi', 'jungle-flip', 'xiangqi']) {
+  for (const variant of ['banqi', 'three-kingdoms-banqi', 'jungle-flip', 'xiangqi', 'ffq-banqi']) {
     for (const ink of ['red', 'black'] as const) {
       for (const side of ['red', 'black'] as const) {
         it(`${variant}: names the ${side} seat's ink after a ${ink} opening flip`, async () => {
@@ -77,7 +90,11 @@ describe('study score chart played ink', () => {
           document.body.append(root);
           await mountStudy(root, 'score', 'chapter');
           const expected =
-            variant === 'xiangqi' || ink === 'red' ? side : side === 'red' ? 'black' : 'red';
+            variant === 'xiangqi' || variant === 'ffq-banqi' || ink === 'red'
+              ? side
+              : side === 'red'
+                ? 'black'
+                : 'red';
           // Flip Jungle's second ink is drawn blue, and the legend says so.
           const word = expected === 'red' ? 'Red' : variant === 'jungle-flip' ? 'Blue' : 'Black';
           expect(root.querySelector('.embed-score-chart__legend')?.textContent).toContain(

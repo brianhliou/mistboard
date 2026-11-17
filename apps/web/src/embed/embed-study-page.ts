@@ -36,6 +36,7 @@ import {
   replayDarkXiangqiStudy,
 } from '../dark-xiangqi-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
+import { ffqBanqiStudyLine, mountFFQBanqiStudyReplay } from '../ffq-banqi-study-replay.js';
 import { isFlipSeatVariant, seatInkForVariant } from '../flip-seat-ink.js';
 import {
   mountFortressXiangqiReplayBoard,
@@ -217,6 +218,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'dark-chess',
   'gomoku',
   'three-kingdoms-banqi',
+  'ffq-banqi',
 ]);
 
 /**
@@ -241,6 +243,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'dark-xiangqi') {
     await mountDarkXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'ffq-banqi') {
+    await mountFFQBanqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'three-kingdoms-banqi') {
@@ -358,6 +364,47 @@ export async function mountChapterEmbed(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+async function mountFFQBanqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  let line: ReturnType<typeof ffqBanqiStudyLine>;
+  try {
+    line = ffqBanqiStudyLine(chapter);
+  } catch {
+    note(root, 'This chapter has no valid position to show.');
+    return;
+  }
+  const final = line.views.at(-1)!;
+  const tags = chapter.tags ?? {};
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountStudyEmbedCard(root, chapter, options, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? banqiResultLabel(token, 'red') : '',
+    credit,
+    // Two HP bands scale with the board width, 36px each at 568px.
+    aspect: 568 / (312 + 72),
+    railWidthPx: embedRailWidthPx('ffq-banqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountFFQBanqiStudyReplay(
+        host,
+        line,
+        options.hideSolution ? null : options.decisions,
+        hooks,
+        chapter.orientation === 'black' ? 'black' : 'red',
+      ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

@@ -312,6 +312,7 @@ export type TenantGamePublication = {
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
   initial_fen?: string;
+  initial_revealed?: HiddenPieceIdentity[];
   // Gomoku: played plies start AFTER these recorded stones.
   opening?: GomokuOpening;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):
@@ -417,6 +418,9 @@ export function buildTenantGamePublicationJson(
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
     ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
     ...(game.initialFen ? { initial_fen: game.initialFen } : {}),
+    ...(game.initialRevealed
+      ? { initial_revealed: game.initialRevealed.map((piece) => ({ ...piece })) }
+      : {}),
     ...(game.opening
       ? {
           opening: {

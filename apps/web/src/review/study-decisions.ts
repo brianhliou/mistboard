@@ -10,6 +10,7 @@ import {
   banqiDecisionOverlay,
   summarizeDecisions as summarizeBanqi,
 } from './banqi-decisions.js';
+import { ffqBanqiDecisionOverlay } from './ffq-banqi-decisions.js';
 import { type JieqiDecision, jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
 import {
   jungleFlipDecisionOverlay,
@@ -72,6 +73,8 @@ function isFlipRow(raw: unknown, movePattern: RegExp): boolean {
     ) && raw.candidates[0].win === raw.bestWin
   );
 }
+const ffqStudyDecisionOverlay = (rows: unknown[]) =>
+  ffqBanqiDecisionOverlay({ engineId: 'study', depth: 0, decisions: rows as BanqiDecision[] });
 
 /** Variant id -> row validator + the same overlay used by that variant's review. */
 export const STUDY_DECISION_VARIANTS: Readonly<
@@ -83,6 +86,10 @@ export const STUDY_DECISION_VARIANTS: Readonly<
     }
   >
 > = {
+  'ffq-banqi': {
+    validate: (raw) => isFlipRow(raw, /^[a-d][0-7][a-d][0-7]$/),
+    overlay: ffqStudyDecisionOverlay,
+  },
   'three-kingdoms-banqi': {
     validate: (raw) => isFlipRow(raw, /^[a-i][1-5][a-i][1-5]$/),
     overlay: (rows) => threeKingdomsBanqiDecisionOverlay(rows as BanqiDecision[]),
@@ -137,6 +144,13 @@ export async function fetchStudyChapterDecisions(
   mountedTree: unknown = savedTree,
 ): Promise<DecisionOverlay | null> {
   if (!hasOwnKey(STUDY_DECISION_VARIANTS, variant)) return null;
+  if (variant === 'ffq-banqi') {
+    const opening = (tree: unknown) => {
+      const root = tree as { replay?: unknown; initialRevealed?: unknown } | null;
+      return JSON.stringify({ replay: root?.replay, initialRevealed: root?.initialRevealed });
+    };
+    if (opening(savedTree) !== opening(mountedTree)) return null;
+  }
   const support = STUDY_DECISION_VARIANTS[variant]!;
   try {
     const response = await fetch(

@@ -1,6 +1,20 @@
-// A recorded, masked line. No sampled deal, hidden-identity overlay or local
-// rules replay: a branch could only guess the identities under the backs.
-import { type BanqiMove, banqiMoveLabelOnBoard, type FFQBanqiPlayerView } from '@mistboard/game';
+// Recorded masked lines use server snapshots. Study branches replay only their
+// explicit public outcomes, with no sampled deal or hidden-identity overlay.
+import {
+  applyFFQBanqiReplayMove,
+  type BanqiMove,
+  banqiMoveLabelOnBoard,
+  createInitialFFQBanqiReplayState,
+  FFQ_BANQI_DAMAGE,
+  type FFQBanqiPlayerView,
+  type FFQBanqiReplayIdentity,
+  type FFQBanqiReplayMove,
+  type FFQBanqiReplayState,
+  ffqBanqiReplayMoveToUci,
+  ffqBanqiStateToFen,
+  getFFQBanqiPlayerView,
+  parseFFQBanqiReplayMove,
+} from '@mistboard/game';
 import { ffqBanqiBoardView, ffqBanqiIndex, ffqBanqiSquare } from '../ffq-banqi-board.js';
 import type { VariantTreeAdapter } from './game-tree.js';
 
@@ -63,6 +77,60 @@ export function makeFFQBanqiTreeAdapter(
       const move = { from: square(uci.slice(0, 2)), to: square(uci.slice(2)) };
       // Decode only recorded continuations; analysis never opens a hidden branch.
       return next(parent, move) ? move : null;
+    },
+  };
+}
+
+/** Study branches replay only the outcomes explicitly recorded on that branch.
+ * Every snapshot contains anonymous backs, with no sampled or recovered deal. */
+export function makeFFQBanqiStudyTreeAdapter(
+  opening: readonly FFQBanqiReplayIdentity[],
+): VariantTreeAdapter<BanqiMove, FFQBanqiReviewSnapshot, FFQBanqiPlayerView> {
+  const states = new WeakMap<FFQBanqiReviewSnapshot, FFQBanqiReplayState>();
+  const observations = new WeakMap<BanqiMove, FFQBanqiReplayMove>();
+  const frame = (state: FFQBanqiReplayState, before = state): FFQBanqiReviewSnapshot => {
+    const capture = state.captures[before.captures.length];
+    const damage = { red: 0, black: 0 };
+    if (capture) damage[capture.owner] = FFQ_BANQI_DAMAGE[capture.role];
+    const snapshot = {
+      ply: state.ply,
+      view: getFFQBanqiPlayerView(state, 'observer'),
+      fen: ffqBanqiStateToFen(state),
+      damage,
+    };
+    states.set(snapshot, state);
+    return snapshot;
+  };
+  const start = frame(createInitialFFQBanqiReplayState('study', opening));
+  const next = (parent: FFQBanqiReviewSnapshot, move: BanqiMove) => {
+    const state = states.get(parent),
+      observation = observations.get(move);
+    if (!state || !observation) throw new Error('Move outside observed study replay');
+    return frame(applyFFQBanqiReplayMove(state, observation), state);
+  };
+  const token = (move: BanqiMove) => ffqBanqiReplayMoveToUci(observations.get(move)!);
+  return {
+    mode: 'perfect-info',
+    initialTruth: () => start,
+    isLegal: (parent, move) => {
+      try {
+        next(parent, move);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    applyMove: next,
+    project: (snapshot) => [{ key: 'truth', label: 'Board', tier: 'primary', view: snapshot.view }],
+    moveLabel: (move, parent) => ffqBanqiReviewMoveLabel(move, next(parent, move)),
+    moveKey: token,
+    toEngineUci: token,
+    fromUci: (uci) => {
+      const observed = parseFFQBanqiReplayMove(uci);
+      if (!observed) return null;
+      const move = { from: ffqBanqiSquare(observed.from), to: ffqBanqiSquare(observed.to) };
+      observations.set(move, observed);
+      return move;
     },
   };
 }

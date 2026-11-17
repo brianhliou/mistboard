@@ -12,6 +12,14 @@
 // cross-variant blob degrades to its legal prefix rather than crashing on load.
 
 import {
+  createInitialFFQBanqiReplayState,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  FFQ_BANQI_PUBLIC_REPLAY,
+  type FFQBanqiReplayIdentity,
+  type PublicReplayFormat,
+  THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
+} from '@mistboard/game';
+import {
   createGameTree,
   type GameTree,
   type GameTreeNode,
@@ -39,9 +47,31 @@ export interface SerializedTree {
   version: 1;
   root: SerializedNode;
   rootFen?: string;
-  /** Identity-free opening; @a1:R records an observed red-chariot flip, a1b1
-   * records a board move. No rootFen, per-square identities or sampled deal. */
-  replay?: 'three-kingdoms-banqi-public-v1';
+  /** Observed-outcome replay. Covered tiles have no identity. Three Kingdoms
+   * starts fully covered; Fanfanqi has four public opening pieces below.
+   * No rootFen, covered-square identities or sampled deal. */
+  replay?: PublicReplayFormat;
+  /** Fanfanqi's four public opening identities in setup-square order.
+   * Covered opening tiles have no identity in this format. */
+  initialRevealed?: readonly FFQBanqiReplayIdentity[];
+}
+
+function publicOpening(meta: Pick<SerializedTree, 'replay' | 'rootFen' | 'initialRevealed'>) {
+  if (meta.replay !== undefined) {
+    if (![THREE_KINGDOMS_BANQI_PUBLIC_REPLAY, FFQ_BANQI_PUBLIC_REPLAY].includes(meta.replay))
+      throw new Error('Unknown public replay format.');
+    if (meta.rootFen !== undefined) throw new Error('A public replay cannot carry a dealt root.');
+  }
+  if (meta.replay === FFQ_BANQI_PUBLIC_REPLAY) {
+    const state = createInitialFFQBanqiReplayState('study', meta.initialRevealed!);
+    return FFQ_BANQI_FACE_UP_SQUARES.map((square) => {
+      const piece = state.board[square]!;
+      if (piece.faceDown) throw new Error('Missing public opening piece.');
+      return { color: piece.color, role: piece.role };
+    });
+  }
+  if (meta.initialRevealed !== undefined) throw new Error('Unexpected public opening pieces.');
+  return undefined;
 }
 
 /** True when at least one annotation field carries real content. Empty arrays and
@@ -83,13 +113,15 @@ export function serializeTree<M, T, V>(
     skip?: (node: GameTreeNode<M, T>) => boolean;
     rootFen?: string;
     replay?: SerializedTree['replay'];
+    initialRevealed?: SerializedTree['initialRevealed'];
   },
 ): SerializedTree {
+  const opening = publicOpening(opts ?? {});
   const out: SerializedTree = { version: 1, root: serializeNode(tree.root, adapter, opts?.skip) };
   if (opts?.replay) {
-    if (opts.rootFen) throw new Error('A public replay cannot carry a dealt root.');
     out.replay = opts.replay;
   }
+  if (opening) out.initialRevealed = opening;
   if (opts?.rootFen) out.rootFen = opts.rootFen;
   return out;
 }
@@ -102,6 +134,7 @@ export function deserializeTree<M, T, V>(
   serialized: SerializedTree,
   rootTruth?: T,
 ): GameTree<M, T, V> {
+  publicOpening(serialized);
   const tree = createGameTree<M, T, V>(adapter, [], rootTruth);
   if (serialized.root.annotations) tree.annotateAt(ROOT_PATH, serialized.root.annotations);
 

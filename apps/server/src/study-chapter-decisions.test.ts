@@ -250,6 +250,128 @@ test('Three Kingdoms validates every observed flip in the complete 78-ply public
   assert.doesNotMatch(JSON.stringify(checked), /role|color|captured|deal|seed|board/);
 });
 
+const ffqTree = {
+  version: 1,
+  replay: 'ffq-banqi-public-v1',
+  initialRevealed: [
+    { color: 'red', role: 'cannon' },
+    { color: 'black', role: 'horse' },
+    { color: 'red', role: 'soldier' },
+    { color: 'black', role: 'advisor' },
+  ],
+  root: { children: [{ uci: 'c1a1x:G', children: [{ uci: '@a0:c', children: [] }] }] },
+};
+const ffqRow = {
+  ply: 1,
+  mover: 'red',
+  bestWin: 70,
+  playedWin: 50,
+  realizedWin: 62,
+  playedRank: 2,
+  candidates: [
+    { move: 'b0b0', win: 70 },
+    { move: 'c1a1', win: 50, played: true },
+  ],
+};
+const ffqInput = { engineId: 'offline-ffq', source: 'public-replay', decisions: [ffqRow] };
+
+test('Fanfanqi imports pool-mean decisions for covered captures and flips without board identities', () => {
+  const input = {
+    ...ffqInput,
+    decisions: [
+      ffqRow,
+      {
+        ...ffqRow,
+        ply: 2,
+        mover: 'black',
+        candidates: [
+          { move: 'b0b0', win: 70 },
+          { move: 'a0a0', win: 50, played: true },
+        ],
+      },
+    ],
+  };
+  const checked = validateStudyDecisions('ffq-banqi', ffqTree, input);
+  assert.deepEqual(checked, input);
+  const chapter = JSON.parse(
+    JSON.stringify({ variant: 'ffq-banqi', root: ffqTree, decisions: checked }),
+  );
+  assert.deepEqual(chapter, { variant: 'ffq-banqi', root: ffqTree, decisions: input });
+  assert.doesNotMatch(JSON.stringify(chapter), /rootFen|deal|seed|board|hiddenRole/);
+  assert.doesNotMatch(JSON.stringify(checked), /role|color|captured|revealed/);
+  // A general is only identified by the observed off-board capture, never at a covered tile.
+  assert.equal(JSON.stringify(chapter).match(/general/g), null);
+});
+
+test('Fanfanqi rejects illegal, mismatched and identity-bearing decision imports', () => {
+  assert.deepEqual(validateStudyDecisions('ffq-banqi', ffqTree, ffqInput), ffqInput);
+  for (const bad of [
+    { ply: 0 },
+    { ply: 1.5 },
+    { ply: 3 },
+    { mover: 'black' },
+    { playedWin: NaN },
+    { realizedWin: 101 },
+    { bestWin: 49 },
+    { playedRank: 0 },
+    { playedRank: undefined },
+    { playedRank: 1 },
+    { hiddenRole: { square: 'b0', role: 'general', color: 'black' } },
+    { candidates: [] },
+    { candidates: [{ move: '@a0:G', win: 70 }] },
+    { candidates: [{ move: 'c1a1x:G', win: 70 }] },
+    { candidates: [{ move: 'c1c1', win: 70 }] },
+    { candidates: [{ move: 'c1b1', win: 70 }] },
+    { candidates: [{ move: 'a0a0 ', win: 70 }] },
+    { candidates: [{ move: 'a0a0', win: 70, hiddenRole: 'general' }] },
+    { candidates: [{ move: 'a0a0', win: 70, played: 'yes' }] },
+    {
+      candidates: [
+        { move: 'a0a0', win: 70 },
+        { move: 'a0a0', win: 50 },
+      ],
+    },
+    { candidates: [{ move: 'a0a0', win: 70, played: true }] },
+  ])
+    assert.throws(
+      () =>
+        validateStudyDecisions('ffq-banqi', ffqTree, {
+          ...ffqInput,
+          decisions: [{ ...ffqRow, ...bad }],
+        }),
+      JSON.stringify(bad),
+    );
+  assert.throws(() =>
+    validateStudyDecisions('ffq-banqi', ffqTree, { ...ffqInput, decisions: [ffqRow, ffqRow] }),
+  );
+  assert.throws(() =>
+    validateStudyDecisions('ffq-banqi', ffqTree, { ...ffqInput, hiddenRole: 'general' }),
+  );
+  const quiet = {
+    ...ffqTree,
+    root: {
+      children: [
+        {
+          uci: 'c1a1x:G',
+          children: [
+            {
+              uci: '@d1:h',
+              children: [{ uci: '@a0:S', children: [{ uci: 'd1c1', children: [] }] }],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  assert.deepEqual(validateStudyDecisions('ffq-banqi', quiet, ffqInput), ffqInput);
+  assert.throws(() =>
+    validateStudyDecisions('ffq-banqi', quiet, {
+      ...ffqInput,
+      decisions: [{ ...ffqRow, ply: 4, mover: 'black' }],
+    }),
+  );
+});
+
 const flipPlan = JSON.parse(
   readFileSync(
     new URL(
