@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Jieqi and Xiangqi bot setup now shows when a player is waiting for a casual game, with one tap to play them ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Jungle Chess has seven Misty difficulty levels to pick from ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Gomoku has a full-strength Rapfi above Level 8 on its bot card ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
 - Misty plays Xiangqi Mahjong with a stronger search bot ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
@@ -154,6 +155,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Rules pages drop the study button from their play row ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
+- Search engines now read the xiangqi analysis board and board editor's starting position and setup text in English and Chinese ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
+- Each browser analysis engine now ships its license and source directions beside the engine files ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - New accounts get a random username to keep or change instead of one made from the email address, accounts with an email-based username are offered a new one once, and sign-in codes paste in with spaces ([d1ff79d5](https://github.com/brianhliou/mistboard/commit/d1ff79d5))
 - Broadcast partners create and revoke their own push tokens in settings ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
 - Bot pages show the month each engine-ladder rating was measured ([5a59d840](https://github.com/brianhliou/mistboard/commit/5a59d840))
@@ -208,6 +212,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The Fanfanqi rules page offers the computer and a friend when opened directly ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
+- Finished Xiangqi Mahjong games in the games list show the winning seat, East or West, instead of the player name ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
+- Moving between About pages no longer reloads the header and left rail ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - The players page shows the correspondence ladders on every load ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Automatic release checks no longer leave test games in Watch and recent games ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Three Kingdoms Banqi games in studies and on the rules page now animate moves and flips ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
