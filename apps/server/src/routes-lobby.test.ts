@@ -776,12 +776,16 @@ test('#1194: pagehide DELETE records left rather than cancelled', async () => {
   try {
     const { ctx } = clockedContext();
     const seek = await post(ctx, { timeControl: tc });
-    const path = `/api/lobby/${responseJson(seek).ticketId}`;
+    const ticketId = responseJson(seek).ticketId as string;
+    const path = `/api/lobby/${ticketId}`;
     const req = { method: 'DELETE', url: `${path}?how=left`, headers: {} } as IncomingMessage;
     await tryHandle(ctx, req, captureResponse(), path);
     await tryHandle(ctx, req, captureResponse(), path);
     assert.equal(events.length, 1);
     assert.equal(events[0]!.properties.reason, 'left');
+    // A seek with no browser id must not fall back to the withdrawal token as
+    // the analytics identity.
+    assert.equal(JSON.stringify(events).includes(ticketId), false);
   } finally {
     setServerCaptureTransport(previous);
     delete process.env.MISTBOARD_POSTHOG_KEY;

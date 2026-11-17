@@ -387,9 +387,11 @@ function endLobbySeek(
   );
   void captureServerEvent({
     event: 'lobby_seek_ended',
-    distinctId: ticket.owner?.userId ?? ticket.owner?.deviceId ?? ticket.id,
-    // Never ticket.id: it is the private token that polls and withdraws the
-    // seek, and a matched ticket still answers with its room.
+    // Never ticket.id, not even as the fallback identity: it is the private
+    // token that polls and withdraws the seek, and a matched ticket still
+    // answers with its room. The public seekId stands in for a browserless seek.
+    distinctId:
+      ticket.owner?.userId ?? ticket.owner?.deviceId ?? ticket.seekId ?? 'lobby-anonymous',
     properties: {
       seekId: ticket.seekId,
       gameSpecId: ticket.gameSpecId,
