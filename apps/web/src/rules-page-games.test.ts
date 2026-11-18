@@ -131,6 +131,7 @@ const xqMove = (t: string) => {
 describe('rules page sample games', () => {
   const banqiGame = '/embed/study/49WEgbqa/WDgABhew';
   const kingdomsGame = '/embed/study/fcx7JEzH/7lZCHESh';
+  const fanfanqiGame = '/embed/study/CCtKBPpJ/efHe1AI6';
 
   it('banqi: embeds the annotated Level 7 vs Level 8 game and keeps the companion links', () => {
     expect(embedPaths('banqi')).toContain(banqiGame);
@@ -158,18 +159,21 @@ describe('rules page sample games', () => {
     expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
   });
 
-  it('fanfanqi: the engine game section stays out of the tested (production) article', () => {
-    // Decided 2026-11-15: dev previews the local study; the production id,
-    // updatedAt and updateNote land together after review.
-    expect(embedPaths('fanfanqi')).toEqual([]);
+  it('fanfanqi: embeds the annotated engine game in its own section before Play', () => {
+    expect(embedPaths('fanfanqi')).toEqual([fanfanqiGame]);
     const page = buildArticlePage('fanfanqi');
-    expect(page.querySelector('iframe')).toBeNull();
-    expect([...page.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain(
-      'An engine game',
-    );
+    expect(page.querySelector('iframe')?.getAttribute('src')).toContain(fanfanqiGame);
+    expect(page.textContent).toContain('seven moments have a note');
+    const headings = [...page.querySelectorAll('h2')].map((heading) => heading.textContent);
+    expect(headings.indexOf('An engine game')).toBe(headings.indexOf('Play on Mistboard') - 1);
+    for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
+      expect(
+        buildArticlePage('fanfanqi', lang).querySelector('iframe')?.getAttribute('src'),
+      ).toContain(fanfanqiGame);
+    }
   });
 
-  it('fanfanqi: the dev preview section embeds the local study under its intro', () => {
+  it('fanfanqi: the section embeds the study it is given under its intro', () => {
     const section = fanfanqiEngineGameSection('/embed/study/HLQzHlhK/O92BsOOd');
     expect(section.heading).toBe('An engine game');
     const [intro, embed] = section.blocks.map((block) => renderBlock(block));
