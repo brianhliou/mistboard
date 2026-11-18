@@ -219,6 +219,7 @@ test('variant configs: every entry is complete and self-consistent', () => {
     duck: 'duck-xiangqi',
     dxq: 'dark-xiangqi',
     banqi: 'banqi',
+    'three-kingdoms-banqi': 'three-kingdoms-banqi',
     'ffq-banqi': 'ffq-banqi',
     jieqi: 'jieqi',
     jungle: 'jungle',
@@ -363,6 +364,58 @@ test('evaluateSmokeMessage: non-matching engine seat never aborts', () => {
     state: playingState(),
   });
   assert.deepEqual(effects, []);
+});
+
+test('Three Kingdoms Banqi smoke waits for the engine opening and confirms pregame abort', () => {
+  const config = VARIANT_SMOKE_CONFIGS['three-kingdoms-banqi'];
+  assert.ok(config, 'Three Kingdoms Banqi needs a production PvE smoke');
+  // Three piece factions, but two player seats: black waits for red's first flip.
+  const lastMove = { from: 'a1', to: 'a1' };
+  const state = playingState({ ply: 1, lastMove });
+  const engines = [
+    'misty-three-kingdoms-banqi',
+    ...Array.from({ length: 8 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`),
+  ];
+  for (const engineId of engines) {
+    const seats = { red: engineId, black: 'smoke-client' };
+    assert.deepEqual(
+      evaluateSmokeMessage(config, CONTEXT(), {
+        type: 'hello',
+        seat: 'black',
+        seats,
+        state: playingState({ status: { type: 'playing', turn: 'red' }, ply: 0, lastMove: null }),
+      }),
+      [],
+    );
+    assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { seats, state }), [
+      { kind: 'abort', engineReplyState: { moveNumber: 1, turn: 'black', lastMove } },
+    ]);
+    assert.deepEqual(
+      evaluateSmokeMessage(config, { ...CONTEXT(), sentAbort: true }, { seats, state }),
+      [],
+    );
+  }
+  for (const seats of [{ red: 'misty-banqi' }, { black: engines[0] }, {}]) {
+    assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { seats, state }), []);
+  }
+  const finalStatus = { type: 'aborted', reason: 'user-abort' };
+  assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { state: { status: finalStatus } }), []);
+  assert.deepEqual(
+    evaluateSmokeMessage(
+      config,
+      { ...CONTEXT(), sentAbort: true },
+      { state: { status: finalStatus } },
+    ),
+    [{ kind: 'success', finalStatus }],
+  );
+  const failed = evaluateSmokeMessage(config, CONTEXT(), {
+    state: { status: { type: 'finished', winner: 'black', reason: 'resignation' } },
+  });
+  assert.equal(failed[0].kind, 'failure');
+  assert.match(
+    failed[0].message,
+    /Three Kingdoms Banqi game room-1 finished before smoke completed/,
+  );
 });
 
 test('Fanfanqi smoke waits for its engine opening, then confirms pregame abort', () => {
