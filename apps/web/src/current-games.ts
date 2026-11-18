@@ -87,8 +87,8 @@ import { seatDiscClass, seatDiscEl } from './seat-disc.js';
 import {
   accepterColorLabel,
   accepterSide,
+  buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
-  withCorrespondenceDeadlineNotice,
 } from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
@@ -182,6 +182,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   emptyHost.hidden = true;
   const playing = buildSection('playing', t('games.playingNow'));
   playing.root.hidden = true;
+  // Open seeks sit at the end of the grid; the deadline is said once below them.
+  const seekDeadline = buildCorrespondenceListDeadlineNotice();
+  seekDeadline.hidden = true;
+  playing.root.append(seekDeadline);
   const finished = buildSection('finished', t('games.justFinished'));
   finished.root.hidden = true;
   finished.grid.className = 'current-games-finished-grid';
@@ -317,6 +321,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       playing.grid.replaceChildren(...order);
     }
     playing.root.hidden = order.length === 0;
+    seekDeadline.hidden = !(seeks ?? []).some((seek) => !seek.isMine);
     // Board mounts happen after the cards are on screen so a slow renderer
     // import never blocks the cards' text from appearing.
     for (const game of games) {
@@ -973,7 +978,7 @@ export function buildGamesSeekCard(
   // the bottom. Random keeps the first side with the poster below.
   const seat = accepterSide(seek.preferredColor);
   return buildSeekCard(seek, {
-    action: withCorrespondenceDeadlineNotice(action, seek.daysPerMove),
+    action,
     details: side ? [side] : [],
     href: null,
     side: seat ?? undefined,

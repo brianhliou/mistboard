@@ -534,6 +534,7 @@ export const ZH_HANT_PLAY = {
   'result.drawByReason': '和棋 • {reason}',
   'correspondence.moveDeadlineDay': '你每步有 {days} 天時間。超時未走就會判負。',
   'correspondence.moveDeadlineDays': '你每步有 {days} 天時間。超時未走就會判負。',
+  'correspondence.moveDeadlineList': '每步都有期限。超時未走就會判負。',
   'correspondence.confirmMove': '確認',
   'correspondence.cancelMove': '取消',
   'correspondence.pendingMove': '著法預覽。確認後傳送。',

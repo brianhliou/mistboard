@@ -13,7 +13,12 @@ import {
 } from './correspondence.js';
 import { buildGamesSeekCard } from './current-games.js';
 import { corrSeekRow, openLandingSetupDialog } from './landing-play.js';
-import { buildSeekAcceptAction, seekAcceptErrorText, seekSignInHref } from './seek-accept.js';
+import {
+  buildCorrespondenceListDeadlineNotice,
+  buildSeekAcceptAction,
+  seekAcceptErrorText,
+  seekSignInHref,
+} from './seek-accept.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
 // Open correspondence seeks are accepted in place wherever they are listed, and
@@ -338,7 +343,7 @@ describe('correspondence move deadline at commitment', () => {
 
   for (const [locale, path, copy] of locales) {
     it.each([1, 3, 7])(
-      `renders the room's deadline beside each accept control (${locale}, %s days)`,
+      `renders the room's deadline beside each single accept control (${locale}, %s days)`,
       (daysPerMove) => {
         window.history.replaceState(null, '', path);
         const offer = { ...seek, daysPerMove, isMine: false };
@@ -354,9 +359,6 @@ describe('correspondence move deadline at commitment', () => {
         };
         const incoming = { ...challenge, createdAt: new Date().toISOString() };
         const surfaces = [
-          buildGamesSeekCard(offer, { signedIn: true }),
-          buildGamesSeekCard(offer, { signedIn: false }),
-          corrSeekRow(offer, locale, { signedIn: true }),
           buildIncomingChallengeCard(incoming, () => {}),
           buildIncomingChallengeCard(incoming, () => {}, { compact: true }),
           buildChallengeCard(challenge),
@@ -382,31 +384,70 @@ describe('correspondence move deadline at commitment', () => {
     );
   }
 
-  it.each([1, 7])(
-    'renders a public seek deadline on /correspondence (%s days)',
-    async (daysPerMove) => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(
-          async (url: string) =>
-            new Response(
-              JSON.stringify(
-                url === '/api/correspondence/seeks'
-                  ? { seeks: [{ ...seek, daysPerMove, isMine: false, preferredColor: 'random' }] }
-                  : { games: [], challenges: [], seeks: [], enabled: false },
-              ),
-              { status: 200 },
+  const listCopy: Record<string, string> = {
+    en: 'Every move has a deadline. Miss one and you lose the game.',
+    'zh-Hans': '每步都有期限。超时未走就会判负。',
+    'zh-Hant': '每步都有期限。超時未走就會判負。',
+  };
+
+  for (const [locale] of locales) {
+    it(`a list of open seeks says the deadline once, not on every card (${locale})`, () => {
+      const offers = [1, 7].map((daysPerMove, i) => ({
+        ...seek,
+        id: `seek_${i}`,
+        daysPerMove,
+        isMine: false,
+      }));
+      for (const offer of offers) {
+        // Each card already shows its days per move; no sentence repeats it.
+        expect(
+          buildGamesSeekCard(offer, { signedIn: true }).querySelector(
+            '.correspondence-deadline-notice',
+          ),
+        ).toBeNull();
+        expect(
+          corrSeekRow(offer, locale, { signedIn: true }).querySelector(
+            '.correspondence-deadline-notice',
+          ),
+        ).toBeNull();
+      }
+      expect(buildCorrespondenceListDeadlineNotice(locale).textContent).toBe(listCopy[locale]);
+    });
+  }
+
+  it('/correspondence open seeks carry one deadline line under the grid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async (url: string) =>
+          new Response(
+            JSON.stringify(
+              url === '/api/correspondence/seeks'
+                ? {
+                    seeks: [1, 7].map((daysPerMove, i) => ({
+                      ...seek,
+                      id: `seek_${i}`,
+                      daysPerMove,
+                      isMine: false,
+                      preferredColor: 'random',
+                    })),
+                  }
+                : { games: [], challenges: [], seeks: [], enabled: false },
             ),
-        ),
-      );
-      const root = document.createElement('div');
-      await mountCorrespondence(root);
-      expect(
-        root.querySelector('.correspondence-seek-grid .correspondence-deadline-notice')
-          ?.textContent,
-      ).toBe(locales[0][2](daysPerMove));
-    },
-  );
+            { status: 200 },
+          ),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountCorrespondence(root);
+    const grid = root.querySelector('.correspondence-seek-grid');
+    expect(grid?.querySelectorAll('.seek-card, article').length).toBeGreaterThan(0);
+    expect(grid?.querySelector('.correspondence-deadline-notice')).toBeNull();
+    const lines = root.querySelectorAll('.correspondence-deadline-list');
+    expect(lines).toHaveLength(1);
+    expect(grid?.nextElementSibling).toBe(lines[0]);
+    expect(lines[0]?.textContent).toBe(listCopy.en);
+  });
 
   it('updates the setup deadline when days change and hides it for live play', () => {
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');

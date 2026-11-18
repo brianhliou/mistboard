@@ -69,7 +69,7 @@ import {
   onRatedModeChange,
 } from './rated-flag.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import { buildSeekAcceptAction } from './seek-accept.js';
+import { buildCorrespondenceListDeadlineNotice, buildSeekAcceptAction } from './seek-accept.js';
 import {
   isLikelySignedIn,
   isLikelyStatsExcluded,
@@ -1131,6 +1131,9 @@ export function buildPlayPanel(
   const OFFER_CAP = 4;
   const renderOffers = (): void => {
     const chips: HTMLElement[] = [];
+    // Chips whose Join starts a correspondence game: the deadline line shows
+    // only when one of them is on screen.
+    const corrJoins = new Set<HTMLElement>();
     for (const request of othersRequests()) {
       if (mode === 'rated' ? request.rated === false : request.rated !== false) continue;
       const gameSpecId = request.gameSpecId ?? 'dark-chess';
@@ -1164,16 +1167,16 @@ export function buildPlayPanel(
           surface: 'home-panel',
         });
       }
-      chips.push(
-        offerChip(
-          seek.gameSpecId,
-          seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
-          t('lobby.panelDaysShort', { days: seek.daysPerMove }, locale),
-          action,
-          true,
-          profileTargetFor({ handle: seek.creatorHandle }),
-        ),
+      const chip = offerChip(
+        seek.gameSpecId,
+        seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
+        t('lobby.panelDaysShort', { days: seek.daysPerMove }, locale),
+        action,
+        true,
+        profileTargetFor({ handle: seek.creatorHandle }),
       );
+      if (!seek.isMine) corrJoins.add(chip);
+      chips.push(chip);
     }
     if (chips.length === 0) {
       offersSlot.replaceChildren();
@@ -1194,7 +1197,10 @@ export function buildPlayPanel(
       more.textContent = t('lobby.panelMoreGames', { count: chips.length - shown }, locale);
       grid.append(more);
     }
-    offersSlot.replaceChildren(head, grid);
+    const deadline = chips.slice(0, shown).some((chip) => corrJoins.has(chip))
+      ? [buildCorrespondenceListDeadlineNotice(locale, 'pp-offers-deadline')]
+      : [];
+    offersSlot.replaceChildren(head, grid, ...deadline);
   };
 
   const offerChip = (

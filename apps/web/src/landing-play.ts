@@ -69,6 +69,7 @@ import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
 import {
   buildCorrespondenceDeadlineNotice,
+  buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
   correspondenceDeadlineText,
 } from './seek-accept.js';
@@ -1234,6 +1235,9 @@ export function buildLobbyPanel(
     }
     corrHead.hidden = false;
     for (const seek of feed.seeks) corrRows.append(corrSeekRow(seek, locale));
+    if (feed.seeks.some((seek) => !seek.isMine)) {
+      corrRows.append(buildCorrespondenceListDeadlineNotice(locale));
+    }
     corrRows.append(correspondenceListFooter(locale));
   };
 
@@ -1554,7 +1558,7 @@ export function corrSeekRow(
       signedIn: options.signedIn,
       surface: 'home-lobby',
     });
-    row.append(who, game, time, join, buildCorrespondenceDeadlineNotice(seek.daysPerMove, locale));
+    row.append(who, game, time, join);
   }
   return row;
 }

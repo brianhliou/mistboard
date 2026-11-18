@@ -34,6 +34,19 @@ export function buildCorrespondenceDeadlineNotice(
   return notice;
 }
 
+// A list of open seeks says it once, under the list: each card already shows
+// its own days per move, so the per-card sentence only repeated it.
+export function buildCorrespondenceListDeadlineNotice(
+  locale: Locale = currentLocale(),
+  className = '',
+): HTMLElement {
+  const notice = document.createElement('p');
+  notice.className =
+    `correspondence-deadline-notice correspondence-deadline-list ${className}`.trim();
+  notice.textContent = t('correspondence.moveDeadlineList', {}, locale);
+  return notice;
+}
+
 // Keep the warning and its existing controls together in a card's action row.
 export function withCorrespondenceDeadlineNotice(action: HTMLElement, days: number): HTMLElement {
   const control = document.createElement('div');

@@ -20,9 +20,17 @@
   width: 100%;
 }
 
-.landing-lobby-trow-corr > .correspondence-deadline-notice {
-  grid-column: 1 / -1;
-  text-align: left;
+.correspondence-deadline-list {
+  color: var(--site-muted);
+}
+
+.correspondence-seek-grid + .correspondence-deadline-list,
+.current-games-grid + .correspondence-deadline-list {
+  margin-top: 10px;
+}
+
+.landing-lobby-tbody-corr > .correspondence-deadline-list {
+  padding: 6px 12px 0;
 }
 
 .landing-setup-actions > .correspondence-deadline-notice {

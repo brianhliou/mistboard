@@ -114,6 +114,7 @@ import {
   accepterColorLabel,
   accepterSide,
   buildCorrespondenceDeadlineNotice,
+  buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
   withCorrespondenceDeadlineNotice,
 } from './seek-accept.js';
@@ -1450,7 +1451,7 @@ function renderOpenSeeks(ctx: PageContext, host: HTMLElement, feed: OpenSeeksFee
   // same frame as the games in progress, rather than a text row.
   const grid = buildGrid('correspondence-seek-grid');
   for (const seek of seeks) grid.append(buildOpenSeekCard(ctx, host, seek));
-  host.append(grid);
+  host.append(grid, buildCorrespondenceListDeadlineNotice());
 }
 
 function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek): HTMLElement {
@@ -1477,7 +1478,7 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
   // empty seat at the bottom. Random keeps the first side and the poster below.
   const seat = accepterSide(seek.preferredColor);
   return buildSeekCard(seek, {
-    action: withCorrespondenceDeadlineNotice(accept, seek.daysPerMove),
+    action: accept,
     details: side ? [side] : [],
     href: `/challenge/${encodeURIComponent(seek.id)}`,
     side: seat ?? undefined,

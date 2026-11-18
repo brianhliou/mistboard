@@ -708,6 +708,13 @@
   }
 }
 
+.pp-offers-deadline.correspondence-deadline-notice {
+  padding: 6px var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .pp-offers-more {
   align-self: center;
   color: var(--site-accent-strong);
