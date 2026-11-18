@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Gomoku deals only openings that both Rapfi and KataGomo read as close to even ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- The separate Rapfi Gomoku bot is retired and Level 8 is the strongest choice ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- Three Kingdoms Banqi and Fanfanqi bot games count on Misty's record ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Jieqi and Xiangqi bot setup now shows when a player is waiting for a casual game, with one tap to play them ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Jungle Chess has seven Misty difficulty levels to pick from ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Gomoku has a full-strength Rapfi above Level 8 on its bot card ([768a39b0](https://github.com/brianhliou/mistboard/commit/768a39b0))
@@ -75,6 +78,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The address names the first puzzle you open ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- DPXQ puzzles show the opponent's setup move ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- The source event gets its own row ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- /study shows ten classical collections plus an All N button ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The Flip Jungle rules-page game shows flip luck ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Study embeds on phones show each move's full note under a full-width board ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - The Banqi, Three Kingdoms Banqi and Gomoku rules pages show an annotated Level 7 vs Level 8 game with a chart, move grades and flip luck ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
@@ -108,6 +115,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- DPXQ games get English names for team sides, repeated sections and new event terms ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Finished Fanfanqi games draw their boards on /games and TV, covered pieces still face-down ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Study charts can draw one line per engine, each in its seat colour ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
 - Bot names on /watch fit their card and link to the bot's page ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
@@ -155,6 +163,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The API docs fold long value lists and list every watch channel, correspondence ratings and the rated pools ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Rules pages drop the study button from their play row ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Search engines now read the xiangqi analysis board and board editor's starting position and setup text in English and Chinese ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Each browser analysis engine now ships its license and source directions beside the engine files ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
@@ -212,6 +221,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Jungle and Flip Jungle mark a capturable piece by tinting its square, and rules diagram arrows no longer cover the pieces ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- Fanfanqi review draws each flip's luck die on the board, not only in the move list ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- The game card names Misty by level so the name fits, with the full name on hover ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
+- Three Kingdoms Banqi and Fanfanqi replays on Watch glide moves and turn flips over when stepping ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The Fanfanqi rules page offers the computer and a friend when opened directly ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Finished Xiangqi Mahjong games in the games list show the winning seat, East or West, instead of the player name ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Moving between About pages no longer reloads the header and left rail ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
