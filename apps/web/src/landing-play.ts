@@ -60,6 +60,7 @@ import {
 } from './landing-bot-policy.js';
 import { buildLandingChallengePlayer } from './landing-challenge-player.js';
 import { createLandingLiveChallenge } from './landing-live-challenge.js';
+import { lastPlayedVariant, withLastPlayedFirst } from './last-played-variant.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
@@ -795,8 +796,7 @@ function fillSeedRatings(seedsBlock: HTMLElement, bots: LandingBotRosterEntry[])
 // random color, standard start).
 const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // How many variants get a promoted pool row. Order is the canonical product
-// order (xiangqi first since the 2026-07 pivot), so this promotes the top of the
-// catalog rather than a second hand-maintained ranking. Sized to the full
+// order, with the player's last played game lifted to the first row. Sized to the full
 // product catalog (config/product-profile.json), so in prod every playable
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
@@ -862,10 +862,11 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
   head.append(headCell(t('play.opponentEngine', {}, locale)));
   wrap.append(head);
 
-  for (const { gameSpecId, label } of enabledLandingVariantGameSpecs('pvp', locale).slice(
-    0,
-    QUICK_PAIR_ROW_COUNT,
-  )) {
+  const specs = withLastPlayedFirst(
+    enabledLandingVariantGameSpecs('pvp', locale),
+    lastPlayedVariant(),
+  ).slice(0, QUICK_PAIR_ROW_COUNT);
+  for (const { gameSpecId, label } of specs) {
     const row = document.createElement('div');
     row.className = 'landing-quickpair-row';
     row.dataset.gameSpec = gameSpecId;

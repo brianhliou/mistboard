@@ -85,6 +85,62 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_started')[0][1]).toMatchObject(base);
   });
 
+  it.each(['blitz', 'correspondence'])(
+    'remembers a seated %s start once, excluding spectators and repeated renders',
+    (timeClass) => {
+      const setItem = vi.spyOn(window.localStorage, 'setItem');
+      try {
+        const key = 'mistboard:last-played-variant';
+        const writes = () => setItem.mock.calls.filter(([name]) => name === key);
+        const playing = {
+          statusType: 'playing',
+          baseProps: { gameId: 'flip_1', game_spec: 'jungle-flip', time_class: timeClass },
+        } as const;
+        const tracker = createGameLifecycleTracker();
+        tracker.update({ ...playing, seat: 'spectator' });
+        tracker.update({ ...playing, seat: null });
+        expect(writes()).toEqual([]);
+        tracker.update({ ...playing, seat: 'red' });
+        expect(writes()).toEqual([[key, 'jungle-flip']]);
+        tracker.update({ ...playing, seat: 'red' });
+        tracker.reset();
+        tracker.update({ ...playing, seat: 'red' });
+        createGameLifecycleTracker().update({ ...playing, seat: 'red' });
+        expect(writes()).toEqual([[key, 'jungle-flip']]);
+
+        createGameLifecycleTracker().update({
+          ...playing,
+          seat: 'black',
+          baseProps: { ...playing.baseProps, gameId: 'jq_2', game_spec: 'jieqi' },
+        });
+        // Reopening an older game must not replace the newer game's preference.
+        createGameLifecycleTracker().update({ ...playing, seat: 'red' });
+        expect(window.localStorage.getItem(key)).toBe('jieqi');
+        expect(writes()).toHaveLength(2);
+      } finally {
+        setItem.mockRestore();
+      }
+    },
+  );
+
+  it.each(['unavailable', 'disabled'])(
+    'remembers the game even when analytics is %s',
+    async (analyticsState) => {
+      vi.resetModules();
+      const analytics = await import('./analytics.js');
+      if (analyticsState === 'disabled') {
+        // DNT and opt-out make SDK capture a no-op.
+        analytics.setPostHogInstance({ capture: () => {}, identify: () => {}, reset: () => {} });
+      }
+      analytics.createGameLifecycleTracker().update({
+        statusType: 'playing',
+        seat: 'black',
+        baseProps: { gameId: 'unmeasured_1', game_spec: 'jungle-flip' },
+      });
+      expect(window.localStorage.getItem('mistboard:last-played-variant')).toBe('jungle-flip');
+    },
+  );
+
   it('emits game_finished with outcome fields and a numeric durationMs', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });

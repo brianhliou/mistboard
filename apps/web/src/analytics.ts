@@ -22,6 +22,7 @@ import {
   takeGameStartSource,
 } from './game-start-source.js';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
+import { rememberLastPlayedVariant } from './last-played-variant.js';
 import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 export type GameSpecAnalyticsProps = {
@@ -596,18 +597,20 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
 // Returns the entry source it sent, or null when the start was already counted.
 function trackGameStarted(baseProps: Record<string, unknown>): string | null {
   const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   if (baseProps.time_class !== 'correspondence') {
     if (gameId && hasTrackedLiveGameStart(gameId)) return null;
     if (gameId) markLiveGameStartTracked(gameId);
     const source = takeGameStartSource();
+    if (gameSpec) rememberLastPlayedVariant(gameSpec);
     track('game_started', { ...baseProps, entry_source: source });
     return source;
   }
   if (gameId && hasTrackedCorrespondenceStart(gameId)) return null;
   const liveSource = takeGameStartSource();
-  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
   if (gameId) markCorrespondenceStartTracked(gameId);
+  if (gameSpec) rememberLastPlayedVariant(gameSpec);
   track('game_started', { ...baseProps, entry_source: entrySource });
   return entrySource;
 }
