@@ -105,6 +105,7 @@ type DocumentedOperation = {
 
 const publicReads = [
   ['/api/studies/staff', 'Studies', ['200', '503']],
+  ['/api/studies/classical', 'Studies', ['200', '503']],
   ['/api/xiangqi/broadcasts/calendar', 'Xiangqi', ['200', '503']],
   ['/api/xiangqi/players', 'Xiangqi', ['200', '503']],
   ['/api/xiangqi/players/{slug}', 'Xiangqi', ['200', '404', '503']],
@@ -133,6 +134,7 @@ test('public study lists document pagination with their own page-size defaults',
   for (const [path, defaultLimit] of [
     ['/api/studies/public', 5],
     ['/api/studies/staff', 30],
+    ['/api/studies/classical', 30],
   ] as const) {
     const parameters = doc.paths[path]?.get.parameters ?? [];
     assert.deepEqual(parameters.map((p) => p.name).sort(), ['limit', 'offset', 'q']);

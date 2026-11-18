@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { createGomokuRoomState, gomokuFen, parseGomokuFen } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountStudyIndex } from './study-index.js';
@@ -9,169 +8,150 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-describe('study index classical collections', () => {
-  const classicalStudies = [
-    {
-      id: 'uXnuObfx',
-      name: 'Seven Stars',
-      chapterCount: 1,
-      i18n: { 'zh-Hant': { name: '七星聚會' } },
-    },
-    { id: 'elegant1', name: 'Elegant Pastime Manual, Vol. 1', chapterCount: 90 },
-    { id: '9IIMlPp1', name: 'Secret in the Tangerine', chapterCount: 137 },
-  ];
-
-  it('shows ten collections initially and toggles the remaining links in place', async () => {
-    window.history.replaceState({}, '', '/study');
-    const collections = Array.from({ length: 12 }, (_, i) => ({
-      id: `classic${i}`,
-      name: `Collection ${i + 1}`,
-      chapterCount: 1,
-    }));
-    const fetcher = vi.fn(async () => jsonResponse({ studies: [], classicalStudies: collections }));
-    vi.stubGlobal('fetch', fetcher);
-    const root = document.createElement('div');
-    const style = document.createElement('style');
-    style.textContent = readFileSync('src/study-index.css', 'utf8');
-    document.body.append(style, root);
-    mountStudyIndex(root);
-
-    await vi.waitFor(() =>
-      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(12),
-    );
-    const shelf = root.querySelector('.study-index__classical')!;
-    const list = shelf.querySelector('ul')!;
-    const links = [...list.querySelectorAll('a')];
-    const hiddenItems = () =>
-      [...list.children].filter((item) => getComputedStyle(item).display === 'none');
-    const button = shelf.querySelector('button')!;
-    expect(hiddenItems()).toEqual([...list.children].slice(10));
-    expect(button.type).toBe('button');
-    expect(button.textContent).toBe('All 12 collections');
-    expect(button.getAttribute('aria-expanded')).toBe('false');
-    expect(button.getAttribute('aria-controls')).toBe(list.id);
-    expect(list.id).not.toBe('');
-
-    button.click();
-    expect(hiddenItems()).toHaveLength(0);
-    expect(button.getAttribute('aria-expanded')).toBe('true');
-    expect(button.textContent).toBe('Show fewer');
-    expect([...list.querySelectorAll('a')]).toEqual(links);
-
-    button.click();
-    expect(hiddenItems()).toHaveLength(2);
-    expect(button.getAttribute('aria-expanded')).toBe('false');
-    expect(button.textContent).toBe('All 12 collections');
-    expect([...list.querySelectorAll('a')]).toEqual(links);
-    expect(fetcher).toHaveBeenCalledTimes(1);
+describe('study index Classical collections tab', () => {
+  const card = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name,
+    description: '',
+    visibility: 'public',
+    chapterCount: 90,
+    chapterPreview: [{ name: 'Chapter 1' }],
+    updatedAt: '2026-11-17T12:00:00.000Z',
+    createdAt: '2026-11-17T12:00:00.000Z',
+    owner: { handle: 'mistboard', displayName: 'mistboard' },
+    likeCount: 0,
+    ...extra,
   });
+  const seven = card('uXnuObfx', 'Seven Stars', {
+    i18n: { 'zh-Hant': { name: '七星聚會' } },
+    owner: { handle: 'teacher', displayName: 'Teacher' },
+  });
+  const elegant = card('elegant1', 'Elegant Pastime Manual, Vol. 1: 90 classical compositions');
 
-  it('omits the toggle for ten collections', async () => {
+  it('lists five tabs in the rail, Classical collections after Staff picks', async () => {
     window.history.replaceState({}, '', '/study');
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        jsonResponse({
-          studies: [],
-          classicalStudies: Array.from({ length: 10 }, (_, i) => ({
-            id: `classic${i}`,
-            name: `Collection ${i + 1}`,
-            chapterCount: 1,
-          })),
-        }),
-      ),
+      vi.fn(async () => jsonResponse({ studies: [] })),
     );
     const root = document.createElement('div');
     document.body.append(root);
     mountStudyIndex(root);
-    await vi.waitFor(() =>
-      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(10),
+    await vi.waitFor(() => expect(root.querySelector('.study-index__rail')).not.toBeNull());
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.study-index__rail-tab')].map((tab) => [
+        tab.getAttribute('aria-label') ?? tab.textContent,
+        tab.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['All studies', '/study'],
+      ['My studies', '/study?tab=mine'],
+      ['Favorites', '/study?tab=favorites'],
+      ['Staff picks', '/study?tab=staff'],
+      ['Classical collections', '/study?tab=classical'],
+    ]);
+    // A phone shows the short label (CSS picks one); both are in the tab.
+    const classical = root.querySelector('a.study-index__rail-tab[href="/study?tab=classical"]');
+    expect(classical?.querySelector('.study-index__rail-label')?.textContent).toBe(
+      'Classical collections',
     );
-    expect(root.querySelector('.study-index__classical button')).toBeNull();
+    expect(classical?.querySelector('.study-index__rail-label-short')?.textContent).toBe(
+      'Classical',
+    );
   });
 
-  it('shows the pinned shelf above the unchanged newest list and keeps its paging offset', async () => {
-    window.history.replaceState({}, '', '/study');
-    const study = (id: string) => ({
-      id,
-      name: id,
-      visibility: 'public',
-      chapterCount: 600,
-      updatedAt: '2026-11-17T12:00:00Z',
+  it('fetches the classical list and renders it as the same study cards, paged', async () => {
+    window.history.replaceState({}, '', '/study?tab=classical');
+    const calls: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      calls.push(url);
+      return url.includes('offset=2')
+        ? jsonResponse({ studies: [card('9IIMlPp1', 'Secret in the Tangerine')], hasMore: false })
+        : jsonResponse({ studies: [seven, elegant], hasMore: true });
     });
-    const fetcher = vi.fn(async (input: RequestInfo | URL) =>
-      jsonResponse(
-        input.toString().includes('offset=30')
-          ? { studies: [study('next-engine')], hasMore: false }
-          : {
-              studies: Array.from({ length: 30 }, (_, i) => study(`engine${i}`)),
-              hasMore: true,
-              classicalStudies,
-            },
-      ),
-    );
     vi.stubGlobal('fetch', fetcher);
     const root = document.createElement('div');
     document.body.append(root);
     mountStudyIndex(root);
 
     await vi.waitFor(() =>
-      expect(root.querySelectorAll('.study-index__classical a')).toHaveLength(3),
+      expect(root.querySelectorAll('.study-index__grid > li .study-index__card')).toHaveLength(2),
     );
-    const shelf = root.querySelector('.study-index__classical')!;
-    expect(shelf.querySelector('h2')?.textContent).toBe('Classical collections');
-    expect([...shelf.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
-      '/study/uXnuObfx',
-      '/study/elegant1',
-      '/study/9IIMlPp1',
-    ]);
-    const content = root.querySelector('.study-index__content')!;
-    expect([...content.children].indexOf(shelf)).toBeLessThan(
-      [...content.children].indexOf(content.querySelector('.study-index__grid')!),
+    expect(calls[0]).toBe('/api/studies/classical?limit=30');
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('Classical collections');
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.study-index__card')].map((a) =>
+        a.getAttribute('href'),
+      ),
+    ).toEqual(['/study/uXnuObfx', '/study/elegant1']);
+    expect(root.querySelector('.study-index__name')?.textContent).toBe('Seven Stars');
+    expect(root.querySelector('.study-index__thumbnail')).not.toBeNull();
+    expect(root.querySelector('.study-index__staff-intro')).toBeNull();
+    expect(root.querySelector('.study-index__search input')?.getAttribute('placeholder')).toContain(
+      'Classical collections',
     );
-    expect(fetcher.mock.calls[0]?.[0]).toBe('/api/studies/public?limit=30&classical=1');
+
     root.querySelector<HTMLButtonElement>('.study-index__more-button')!.click();
-    await vi.waitFor(() =>
-      expect(root.querySelectorAll('.study-index__grid > li')).toHaveLength(31),
-    );
-    expect(fetcher.mock.calls[1]?.[0]).toBe('/api/studies/public?limit=30&offset=30');
-    expect(shelf.querySelectorAll('a')).toHaveLength(3);
+    await vi.waitFor(() => expect(root.querySelectorAll('.study-index__card')).toHaveLength(3));
+    expect(calls[1]).toBe('/api/studies/classical?limit=30&offset=2');
     expect(root.querySelector('.study-index__more-button')).toBeNull();
   });
 
-  it('localizes the pinned heading, study names and links', async () => {
-    window.history.replaceState({}, '', '/zh-hant/study');
+  it('localizes the tab, card names and links', async () => {
+    window.history.replaceState({}, '', '/zh-hant/study?tab=classical');
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => jsonResponse({ studies: [], classicalStudies })),
+      vi.fn(async () => jsonResponse({ studies: [seven] })),
     );
     const root = document.createElement('div');
     document.body.append(root);
     mountStudyIndex(root);
     await vi.waitFor(() =>
-      expect(root.querySelector('.study-index__classical h2')?.textContent).toBe('古典棋譜集'),
+      expect(root.querySelector('.study-index__name')?.textContent).toBe('七星聚會'),
     );
-    const link = root.querySelector<HTMLAnchorElement>('.study-index__classical a');
-    expect(link?.getAttribute('href')).toBe('/zh-hant/study/uXnuObfx');
-    expect(link?.textContent).toContain('七星聚會');
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('古典棋譜集');
+    expect(root.querySelector('.study-index__card')?.getAttribute('href')).toBe(
+      '/zh-hant/study/uXnuObfx',
+    );
   });
 
-  it.each(['/study?q=engine', '/study?tab=staff', '/study?tab=mine', '/study?tab=favorites'])(
-    'keeps the shelf out of a filtered browse (%s)',
-    async (path) => {
-      window.history.replaceState({}, '', path);
-      const fetcher = vi.fn(async (_input: RequestInfo | URL) =>
-        jsonResponse({ studies: [], classicalStudies }),
-      );
-      vi.stubGlobal('fetch', fetcher);
-      const root = document.createElement('div');
-      document.body.append(root);
-      mountStudyIndex(root);
-      await vi.waitFor(() => expect(root.querySelector('.study-index__content')).not.toBeNull());
-      expect(root.querySelector('.study-index__classical')).toBeNull();
-      expect(String(fetcher.mock.calls[0]?.[0])).not.toContain('classical=1');
-    },
-  );
+  it('searches within the tab', async () => {
+    window.history.replaceState({}, '', '/study?tab=classical&q=tangerine');
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) => jsonResponse({ studies: [] }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() => expect(root.querySelector('.study-index__empty')).not.toBeNull());
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe('/api/studies/classical?limit=30&q=tangerine');
+  });
+
+  it('All studies opens directly on its list, with no classical shelf', async () => {
+    window.history.replaceState({}, '', '/study');
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) =>
+      // A server from before the tab still sends the shelf; the page ignores it.
+      jsonResponse({ studies: [card('engine0', 'AB-JChess vs jqe')], classicalStudies: [seven] }),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() => expect(root.querySelector('.study-index__grid')).not.toBeNull());
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe('/api/studies/public?limit=30');
+    expect(root.querySelector('.study-index__classical')).toBeNull();
+    expect(root.querySelector('.study-index__content h2')).toBeNull();
+    expect(
+      [...root.querySelector('.study-index__content')!.children].map((child) => child.className),
+    ).toEqual(['study-index__toolbar', 'study-index__grid']);
+    expect([...root.querySelectorAll('.study-index__name')].map((n) => n.textContent)).toEqual([
+      'AB-JChess vs jqe',
+    ]);
+  });
 });
 
 describe('study index Staff picks', () => {
@@ -355,7 +335,7 @@ describe('study index paging', () => {
     await vi.waitFor(() =>
       expect(root.querySelector('.study-index__name')?.textContent).toBe('First page'),
     );
-    expect(calls[0]).toBe('/api/studies/public?limit=30&classical=1');
+    expect(calls[0]).toBe('/api/studies/public?limit=30');
 
     const more = root.querySelector<HTMLButtonElement>('.study-index__more-button');
     expect(more?.textContent).toBe('More studies');

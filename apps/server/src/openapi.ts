@@ -1235,6 +1235,39 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
     },
+    '/api/studies/classical': {
+      get: {
+        tags: ['Studies'],
+        summary: 'Classical collections, in a fixed reading order',
+        parameters: [
+          query(
+            'limit',
+            { type: 'integer', minimum: 1, maximum: 50, default: 30 },
+            'Rows; capped at 50, fractions truncated, invalid or non-positive values use 30.',
+          ),
+          query(
+            'offset',
+            { type: 'integer', minimum: 0, default: 0 },
+            'Rows to skip; invalid or negative values become 0, fractions are truncated.',
+          ),
+          query(
+            'q',
+            { type: 'string' },
+            'Case-insensitive name substring; surrounding whitespace is trimmed, blank is ignored.',
+          ),
+        ],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              studies: { type: 'array', items: ref('StudySummary') },
+              hasMore: { type: 'boolean' },
+            },
+          }),
+          '503': PERSISTENCE,
+        },
+      },
+    },
     '/api/studies/{id}': {
       get: {
         tags: ['Studies'],

@@ -6,6 +6,7 @@
 //   POST   /api/studies                       create (auth) — study + first chapter
 //   GET    /api/studies/mine                  list the signed-in owner's studies
 //   GET    /api/studies/staff                 list staff-curated public studies
+//   GET    /api/studies/classical             list the classical collections, in reading order
 //   GET    /api/studies/:id                   read (public/unlisted: anyone; private: owner)
 //   PATCH  /api/studies/:id                   update name/description/visibility (owner)
 //   DELETE /api/studies/:id                   delete (owner)
@@ -81,7 +82,7 @@ export function setAdminOnlyStudyGateForTests(gate: AdminOnlyStudyGate | null): 
 // Every route that names one study (read, edit, delete, like, clone, chapters,
 // analysis) carries its id in the first path segment after /api/studies/.
 const STUDY_ITEM_PATH = new RegExp(`^/api/studies/(${ID})(?:/|$)`);
-const STUDY_COLLECTION_SEGMENTS = new Set(['public', 'staff', 'favorites', 'mine']);
+const STUDY_COLLECTION_SEGMENTS = new Set(['public', 'staff', 'classical', 'favorites', 'mine']);
 
 /** True when the study must read as missing to this requester: it has a
  *  chapter in an admin-only variant and the requester is not admitted. Owner
@@ -379,7 +380,6 @@ export async function tryHandle(
     if (!requirePersistence(response)) return true;
     // ?limit lets the /study "All studies" browse ask for more than the homepage
     // widget's default 5. ?q filters by study name. listTopPublicStudies clamps.
-    // ?classical=1 adds the independent classical shelf on an unfiltered first page.
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
     const access = await listAccessFor(request);
     const page = await pageOf(
@@ -390,9 +390,6 @@ export async function tryHandle(
     writeJson(response, 200, {
       studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
       hasMore: page.hasMore,
-      ...(params.get('classical') === '1' && !params.get('q')?.trim() && parseOffset(params) === 0
-        ? { classicalStudies: await listClassicalStudies() }
-        : {}),
     });
     return true;
   }
@@ -405,6 +402,24 @@ export async function tryHandle(
     const access = await listAccessFor(request);
     const page = await pageOf(
       (limit, q, offset) => persistence.listFeaturedStudies(limit, q, offset, access),
+      params,
+      30,
+    );
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
+    return true;
+  }
+
+  // ── Classical collections: the archival and seeded manuals, in reading order ──
+  if (pathname === '/api/studies/classical') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const params = new URL(request.url ?? '', 'http://localhost').searchParams;
+    const access = await listAccessFor(request);
+    const page = await pageOf(
+      (limit, q, offset) => listClassicalStudies(limit, q, offset, access),
       params,
       30,
     );
