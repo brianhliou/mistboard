@@ -1,0 +1,31 @@
+.correspondence-deadline-notice {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.correspondence-deadline-notice[hidden] {
+  display: none;
+}
+
+.correspondence-accept-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.landing-lobby-trow-corr > .correspondence-deadline-notice {
+  grid-column: 1 / -1;
+  text-align: left;
+}
+
+.landing-setup-actions > .correspondence-deadline-notice {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+}

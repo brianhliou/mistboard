@@ -110,7 +110,13 @@ import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-li
 import { buildProfileGameRow } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
-import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
+import {
+  accepterColorLabel,
+  accepterSide,
+  buildCorrespondenceDeadlineNotice,
+  buildSeekAcceptAction,
+  withCorrespondenceDeadlineNotice,
+} from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
 import {
   buildSetupRowSection,
@@ -1378,7 +1384,13 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
       });
   });
 
-  form.append(variant.root, side.root, submit, status);
+  form.append(
+    variant.root,
+    side.root,
+    buildCorrespondenceDeadlineNotice(info.daysPerMove),
+    submit,
+    status,
+  );
   panel.append(form);
   return panel;
 }
@@ -1465,7 +1477,7 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
   // empty seat at the bottom. Random keeps the first side and the poster below.
   const seat = accepterSide(seek.preferredColor);
   return buildSeekCard(seek, {
-    action: accept,
+    action: withCorrespondenceDeadlineNotice(accept, seek.daysPerMove),
     details: side ? [side] : [],
     href: `/challenge/${encodeURIComponent(seek.id)}`,
     side: seat ?? undefined,
@@ -1789,7 +1801,12 @@ export function buildIncomingChallengeCard(
       challenge.rated ? t('games.rated') : t('games.casual'),
       ...details,
     ].join(' · ');
-    card.append(who, terms, actions, error);
+    card.append(
+      who,
+      terms,
+      withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
+      error,
+    );
     return card;
   }
   card = buildSeekCard(
@@ -1802,7 +1819,7 @@ export function buildIncomingChallengeCard(
       rated: challenge.rated === true,
     },
     {
-      action: actions,
+      action: withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
       ariaLabel: t('correspondence.challengeFrom', {
         name: challenger,
         variant: variantDisplayLabel(challenge.gameSpecId),

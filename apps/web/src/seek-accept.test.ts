@@ -3,11 +3,18 @@ import {
   buildChallengeCard,
   buildClosedNotice,
   buildGoneNotice,
+  buildSignedOutChallengeCard,
   type ChallengeView,
 } from './challenge-accept.js';
+import {
+  buildHostCard,
+  buildIncomingChallengeCard,
+  mountCorrespondence,
+} from './correspondence.js';
 import { buildGamesSeekCard } from './current-games.js';
-import { corrSeekRow } from './landing-play.js';
+import { corrSeekRow, openLandingSetupDialog } from './landing-play.js';
 import { buildSeekAcceptAction, seekAcceptErrorText, seekSignInHref } from './seek-accept.js';
+import { setResolvedSignedIn } from './signed-in-state.js';
 
 // Open correspondence seeks are accepted in place wherever they are listed, and
 // the /challenge page reads as an open seek or a challenge from `visibility`.
@@ -304,5 +311,146 @@ describe('/challenge page copy', () => {
     expect(
       buildGoneNotice({ reason: 'taken', accepterName: 'Bo' }).querySelector('h1')?.textContent,
     ).toBe('This game offer is no longer open');
+  });
+});
+
+// #1220: these assertions inspect the rendered accept surfaces, with each
+// offer's own pace. Checking only a translation helper would miss a forgotten
+// Join or a directed challenge rendered through the compact homepage card.
+describe('correspondence move deadline at commitment', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    window.history.replaceState(null, '', '/');
+    setResolvedSignedIn(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  const locales = [
+    [
+      'en',
+      '/',
+      (days: number) =>
+        `You'll have ${days} ${days === 1 ? 'day' : 'days'} for each move. Miss one and you lose the game.`,
+    ],
+    ['zh-Hans', '/zh-hans/', (days: number) => `你每步有 ${days} 天时间。超时未走就会判负。`],
+    ['zh-Hant', '/zh-hant/', (days: number) => `你每步有 ${days} 天時間。超時未走就會判負。`],
+  ] as const;
+
+  for (const [locale, path, copy] of locales) {
+    it.each([1, 3, 7])(
+      `renders the room's deadline beside each accept control (${locale}, %s days)`,
+      (daysPerMove) => {
+        window.history.replaceState(null, '', path);
+        const offer = { ...seek, daysPerMove, isMine: false };
+        const challenge: ChallengeView = {
+          ...offer,
+          preferredColor: 'random',
+          visibility: 'private',
+          challengerName: 'Erin',
+          isMine: false,
+          canAccept: true,
+          canDecline: true,
+          expired: false,
+        };
+        const incoming = { ...challenge, createdAt: new Date().toISOString() };
+        const surfaces = [
+          buildGamesSeekCard(offer, { signedIn: true }),
+          buildGamesSeekCard(offer, { signedIn: false }),
+          corrSeekRow(offer, locale, { signedIn: true }),
+          buildIncomingChallengeCard(incoming, () => {}),
+          buildIncomingChallengeCard(incoming, () => {}, { compact: true }),
+          buildChallengeCard(challenge),
+          buildChallengeCard({ ...challenge, visibility: 'public' }),
+          buildSignedOutChallengeCard(challenge, challenge.id),
+          buildHostCard({
+            signedIn: true,
+            isHost: false,
+            canPlay: true,
+            daysPerMove,
+            gameSpecIds: ['xiangqi'],
+            host: { handle: 'host', displayName: 'Host' },
+            limits: { perPlayer: 3, total: 100 },
+          }),
+        ];
+        for (const surface of surfaces) {
+          const notice = surface.querySelector('.correspondence-deadline-notice');
+          expect(notice?.textContent, surface.className).toBe(copy(daysPerMove));
+          expect(notice?.closest('button, a, dialog')).toBeNull();
+          expect(surface.querySelectorAll('.correspondence-deadline-notice')).toHaveLength(1);
+        }
+      },
+    );
+  }
+
+  it.each([1, 7])(
+    'renders a public seek deadline on /correspondence (%s days)',
+    async (daysPerMove) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async (url: string) =>
+            new Response(
+              JSON.stringify(
+                url === '/api/correspondence/seeks'
+                  ? { seeks: [{ ...seek, daysPerMove, isMine: false, preferredColor: 'random' }] }
+                  : { games: [], challenges: [], seeks: [], enabled: false },
+              ),
+              { status: 200 },
+            ),
+        ),
+      );
+      const root = document.createElement('div');
+      await mountCorrespondence(root);
+      expect(
+        root.querySelector('.correspondence-seek-grid .correspondence-deadline-notice')
+          ?.textContent,
+      ).toBe(locales[0][2](daysPerMove));
+    },
+  );
+
+  it('updates the setup deadline when days change and hides it for live play', () => {
+    vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setResolvedSignedIn(true);
+    openLandingSetupDialog({
+      mode: 'lobby',
+      initialGameSpecId: 'jieqi',
+      initialTimeMode: 'correspondence',
+      initialCorrespondenceDays: 1,
+      locale: 'en',
+    });
+    const notice = document.querySelector<HTMLElement>(
+      '.landing-setup-actions .correspondence-deadline-notice',
+    );
+    expect(notice?.hidden).toBe(false);
+    expect(notice?.textContent).toBe(locales[0][2](1));
+    const seven = [
+      ...document.querySelectorAll<HTMLButtonElement>('.landing-correspondence-presets button'),
+    ].find((button) => button.textContent?.includes('7'));
+    seven?.click();
+    expect(notice?.textContent).toBe(locales[0][2](7));
+    const live = document.querySelector<HTMLButtonElement>('.landing-time-mode button');
+    expect(live).not.toBeNull();
+    live?.click();
+    expect(notice?.hidden).toBe(true);
+  });
+
+  it('does not warn on your own seek or an expired challenge without an accept control', () => {
+    expect(
+      buildGamesSeekCard({ ...seek, isMine: true }).querySelector(
+        '.correspondence-deadline-notice',
+      ),
+    ).toBeNull();
+    expect(
+      buildChallengeCard({
+        ...seek,
+        preferredColor: 'random',
+        visibility: 'private',
+        challengerName: 'Erin',
+        isMine: false,
+        canAccept: false,
+        canDecline: false,
+        expired: true,
+      }).querySelector('.correspondence-deadline-notice'),
+    ).toBeNull();
   });
 });

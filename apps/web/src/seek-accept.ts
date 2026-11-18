@@ -5,6 +5,7 @@
 // signed out, it is a sign-in link that comes back to the seek's /challenge
 // page. The /challenge page shares the error copy and the sign-in href.
 
+import './seek-accept.css';
 import { trackCorrespondenceSeekAccepted } from './analytics.js';
 import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import { firstMoverColorName, secondMoverColorName } from './game-display.js';
@@ -12,6 +13,34 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import type { SeatSide } from './seat-start-view.js';
 import { isLikelySignedIn } from './signed-in-state.js';
+
+// Whole-sentence singular/plural keys follow the correspondence catalog's
+// existing Day/Days pattern, so translations can reorder the complete warning.
+export function correspondenceDeadlineText(days: number, locale: Locale = currentLocale()): string {
+  return t(
+    days === 1 ? 'correspondence.moveDeadlineDay' : 'correspondence.moveDeadlineDays',
+    { days },
+    locale,
+  );
+}
+
+export function buildCorrespondenceDeadlineNotice(
+  days: number,
+  locale: Locale = currentLocale(),
+): HTMLElement {
+  const notice = document.createElement('p');
+  notice.className = 'correspondence-deadline-notice';
+  notice.textContent = correspondenceDeadlineText(days, locale);
+  return notice;
+}
+
+// Keep the warning and its existing controls together in a card's action row.
+export function withCorrespondenceDeadlineNotice(action: HTMLElement, days: number): HTMLElement {
+  const control = document.createElement('div');
+  control.className = 'correspondence-accept-control';
+  control.append(buildCorrespondenceDeadlineNotice(days), action);
+  return control;
+}
 
 export type SeekAcceptSurface =
   | 'correspondence'

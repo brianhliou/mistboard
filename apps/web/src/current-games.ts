@@ -84,7 +84,12 @@ import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
 import { seatDiscClass, seatDiscEl } from './seat-disc.js';
-import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
+import {
+  accepterColorLabel,
+  accepterSide,
+  buildSeekAcceptAction,
+  withCorrespondenceDeadlineNotice,
+} from './seek-accept.js';
 import { buildKindBadge, buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -968,7 +973,7 @@ export function buildGamesSeekCard(
   // the bottom. Random keeps the first side with the poster below.
   const seat = accepterSide(seek.preferredColor);
   return buildSeekCard(seek, {
-    action,
+    action: withCorrespondenceDeadlineNotice(action, seek.daysPerMove),
     details: side ? [side] : [],
     href: null,
     side: seat ?? undefined,

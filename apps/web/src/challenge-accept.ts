@@ -8,6 +8,7 @@ import {
   buildSeekAcceptAction,
   posterColorLabel,
   seekSignInHref,
+  withCorrespondenceDeadlineNotice,
 } from './seek-accept.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderStartPositionSvg } from './start-position-board.js';
@@ -176,7 +177,7 @@ export function buildSignedOutChallengeCard(
   const actions = document.createElement('div');
   actions.className = 'challenge-actions';
   actions.append(buildSignInButton(challengeId, t('challenge.signInToPlay')));
-  body.append(actions);
+  body.append(withCorrespondenceDeadlineNotice(actions, view.daysPerMove));
   return card;
 }
 
@@ -496,6 +497,9 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     actions.append(decline);
   }
 
-  body.append(actions, status);
+  body.append(
+    view.canAccept ? withCorrespondenceDeadlineNotice(actions, view.daysPerMove) : actions,
+    status,
+  );
   return card;
 }
