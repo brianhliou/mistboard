@@ -54,6 +54,10 @@ test('the sweeper routes due rows to their registration and survives failures', 
       { roomId: 'orphan_room', gameSpecId: 'gone-tenant' },
       { roomId: 'sweeptest_b', gameSpecId: 'sweeper-test-tenant' },
     ],
+    listExpiredInvites: async () => [
+      { roomId: 'sweeptest_invite', gameSpecId: 'sweeper-test-tenant' },
+      { roomId: 'sweeptest_a', gameSpecId: 'sweeper-test-tenant' },
+    ],
     registrationFor: (roomId) => (roomId.startsWith('sweeptest_') ? registration : null),
   });
   try {
@@ -64,7 +68,7 @@ test('the sweeper routes due rows to their registration and survives failures', 
 
   // The failing room and the orphan row are logged and skipped; every other
   // due row is still swept in order.
-  assert.deepEqual(swept, ['sweeptest_a', 'sweeptest_b']);
+  assert.deepEqual(swept, ['sweeptest_a', 'sweeptest_b', 'sweeptest_invite']);
 });
 
 test('the sweeper sends inbox notices on the same tick after turn digests', async () => {
@@ -73,6 +77,7 @@ test('the sweeper sends inbox notices on the same tick after turn digests', asyn
     intervalMs: 3_600_000,
     isPersistenceInitialized: () => true,
     listDue: async () => [],
+    listExpiredInvites: async () => [],
     registrationFor: () => null,
     warnDeadlines: async () => {
       calls.push('warn');
@@ -107,6 +112,7 @@ test('inbox failures do not delay reclaim or future ticks, and digest failures d
     intervalMs: 3_600_000,
     isPersistenceInitialized: () => true,
     listDue: async () => [],
+    listExpiredInvites: async () => [],
     warnDeadlines: async () => {},
     digestTurns: async () => {
       throw new Error('digest unavailable');
@@ -136,6 +142,7 @@ test('a failing expired-seek sweep is swallowed, not propagated', async () => {
     intervalMs: 3_600_000,
     isPersistenceInitialized: () => true,
     listDue: async () => [],
+    listExpiredInvites: async () => [],
     registrationFor: () => null,
     warnDeadlines: async () => {
       warned = true;
