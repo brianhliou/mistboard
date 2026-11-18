@@ -30,6 +30,7 @@
 
 import { type GameSpecId, XIANGQI_SPEC_ID } from './game-specs.js';
 import { FIXTURE_XIANGQI_PUZZLES } from './puzzles-xiangqi-fixtures.js';
+import type { XiangqiPuzzleSetupMove } from './puzzles-xiangqi-setup.js';
 import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import type {
   XiangqiColor,
@@ -83,9 +84,12 @@ export type XiangqiPuzzle = {
   solution: XiangqiMove[];
   goal: XiangqiPuzzleGoal;
   themes: XiangqiPuzzleTheme[];
-  /** Position-only source credit. These puzzles carry no sourceGame or
-   * preceding game history; the archive link is the credit, not a hosted game. */
+  /** Position-only source credit. Only the setup move may precede the puzzle;
+   * the archive link is the credit, not a hosted source game. */
   credit?: XiangqiPuzzleCredit;
+  /** The opponent's single setup move, including its captured piece. Credit
+   * puzzles store it locally because their source games are not hosted. */
+  setupMove?: XiangqiPuzzleSetupMove;
   /** Explicit provenance, persisted with the puzzle. Training tags are derived
    *  separately; player identity is never inferred from source display names. */
   tags?: `player:${string}`[];

@@ -1,5 +1,19 @@
 # Native Rapfi strongest policy (#1175)
 
+## Level 8 promotion (2026-11-17, #1203)
+
+Level 8 now uses `RAPFI_STRONGEST`: a 5,000 ms search ceiling reduced by the
+existing live clock allocator, no `INFO max_node`, and Rapfi's final legal move
+without candidate sampling or other weak selection. Levels 1–7 retain their
+node, time and choice settings. Only Level 8's bot-engine provenance gains
+`strongest-20261117`; the source pin, network and separate `rapfi-strongest`
+identity are unchanged. The measurements below compare strongest with the
+historical Level 8 (80,000 nodes / 3,500 ms), not the promoted policy. The ladder
+defaults retain Level 8's absent node limit and still accept the explicit native
+`8-rapfi-strongest` pairing; existing runs and explicit WASM budget overrides
+retain their recorded policies. The following sections describe the earlier
+implementation and calibration as measured on 2026-11-16.
+
 `rapfi-strongest` is a separate native serving policy. Its fixed search ceiling
 is **5,000 ms**, reduced by the existing live clock allocator. It sends
 `INFO timeout_turn <allocated-ms>` and **no `INFO max_node` command**. It uses

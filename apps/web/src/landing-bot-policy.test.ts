@@ -359,19 +359,21 @@ describe('landing bot ladder (homepage play panel)', () => {
     }
   });
 
-  it('offers Rapfi above unchanged Gomoku Levels 1-8 and keeps both remembered identities', () => {
+  it('offers only Gomoku Levels 1-8 and restores both retired Rapfi picks to Level 8', () => {
     expect(landingBotLadder('gomoku')).toHaveLength(8);
     const ladder = landingBotLadder('gomoku', new Set(['rapfi']));
-    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, null]);
+    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(ladder.map((rung) => rung.botId)).toEqual([
       ...Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
-      'rapfi',
     ]);
     expect(landingBotOffer('gomoku')?.botId).toBe('rapfi-level-1');
     expect(landingBotLadderIndex(ladder, 'rapfi-level-5')).toBe(4);
-    expect(landingBotLadderIndex(ladder, 'rapfi')).toBe(8);
-    expect(landingBotLadderIndex(ladder, 'rapfi-strongest')).toBe(8);
-    expect(pveEngineIdForRememberedPick('gomoku', 'rapfi')).toBe('rapfi-strongest');
+    for (const remembered of ['rapfi', 'rapfi-strongest', 'rapfi-level-8']) {
+      expect(landingBotLadderIndex(ladder, remembered)).toBe(7);
+      expect(pveEngineIdForRememberedPick('gomoku', remembered)).toBe('rapfi-level-8');
+    }
+    expect(landingBotLadderIndex(landingBotLadder('xiangqi'), 'rapfi')).toBe(-1);
+    expect(pveEngineIdForRememberedPick('xiangqi', 'rapfi')).toBe('rapfi');
   });
 
   it('offers TK engine-only Misty Levels 1-8 exactly as the runtime roster permits', () => {

@@ -13,11 +13,10 @@
 
 import {
   GAMES_SEARCH_DEFAULT_MIN_PLIES,
-  isPublicGameSpec,
   XIANGQI_MOTIFS,
   XIANGQI_TRAINING_TAGS,
 } from '@mistboard/game';
-import { gomokuEnabled } from './feature-flags.js';
+import { listWatchChannels } from './watch-channels.js';
 
 type Schema = Record<string, unknown>;
 
@@ -52,24 +51,11 @@ const pathParam = (name: string, description: string): Schema => ({
 const NOT_FOUND = ERROR_RESPONSE('Not found (`not_found`).');
 const PERSISTENCE = ERROR_RESPONSE('The database is unavailable (`persistence_disabled`).');
 
-export const WATCH_CHANNEL_IDS = [
-  'top',
-  'xiangqi',
-  'banqi',
-  'jieqi',
-  'fortress-xiangqi',
-  'dark-xiangqi',
-  'duck-xiangqi',
-  'atomic-xiangqi',
-  'crazyhouse-xiangqi',
-  'dark-chess',
-  'jungle',
-  'jungle-flip',
-  'gomoku',
-  'engines',
-] as const;
-
-const TIME_CLASS = { type: 'string', enum: ['bullet', 'blitz', 'rapid'], default: 'blitz' };
+const TIME_CLASS = {
+  type: 'string',
+  enum: ['bullet', 'blitz', 'rapid', 'correspondence'],
+  default: 'blitz',
+};
 
 const GAME_ID_NOTE =
   'A room id: the last segment of a game’s review URL. This route matches the raw ' +
@@ -90,10 +76,9 @@ const CHAMPIONS: Schema = {
 };
 
 export function buildOpenApiDocument(origin: string): Record<string, unknown> {
-  // Keep hidden playtest channels out of the public API reference.
-  const watchChannelIds = WATCH_CHANNEL_IDS.filter(
-    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
-  );
+  // The rail /watch serves, so retired channels drop out and launched ones
+  // appear without an edit here; hidden playtest channels never list.
+  const watchChannelIds = listWatchChannels().map((channel) => channel.id);
   const gameRecord: Schema = {
     type: 'object',
     description: 'A finished game as the site lists it.',
@@ -771,7 +756,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           query(
             'variant',
             { type: 'string', default: 'fog' },
-            'A rating pool: `xiangqi`, `jieqi`, `banqi`, `fog` (fog chess), `dark_xiangqi`, `jungle`, `jungle_flip`, `fortress_xiangqi`, … (underscores). A game spec id is accepted too.',
+            'A rating pool, in underscores: `xiangqi`, `jieqi`, `duck_xiangqi`, `banqi`, `three_kingdoms_banqi`, `jungle`, `jungle_flip`, `dark_xiangqi` (Fog Xiangqi), `fog` (fog chess). A game spec id is accepted too.',
           ),
           query('timeClass', TIME_CLASS, 'Which clock class.'),
           query('limit', { type: 'integer', minimum: 1, maximum: 500, default: 100 }, 'Rows.'),

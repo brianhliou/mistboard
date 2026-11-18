@@ -321,8 +321,8 @@ try {
         'run',
         'release:local-smoke',
         '--',
-        // Targeted gates may build only one app; the smoke needs both artifacts.
-        ...(gate.kind === 'full' || gate.kind === 'broad' ? ['--skip-build'] : []),
+        // Build the launched browser surfaces as well as the server: a normal
+        // local build can omit their VITE flags, even after a broad gate.
         '--revision',
         release.headRevision,
       ]);
@@ -1746,6 +1746,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       label: 'prod Banqi smoke',
       tag: 'banqi',
       command: npmCommand('prod:smoke:banqi', baseArgs()),
+    },
+    {
+      label: 'prod Fanfanqi smoke',
+      tag: 'ffq-banqi',
+      command: npmCommand('prod:smoke:ffq-banqi', baseArgs()),
     },
     {
       label: 'prod Jungle smoke',

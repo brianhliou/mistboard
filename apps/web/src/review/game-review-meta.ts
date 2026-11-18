@@ -22,6 +22,7 @@
 
 import type { GameSpecId } from '@mistboard/game';
 import { reviewCorrespondenceAgainSlot } from '../correspondence-again.js';
+import { cardMistyName } from '../current-games-model.js';
 import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import {
   brandedEngineName,
@@ -30,6 +31,7 @@ import {
   outcomeLabel,
   seatNameForGame,
   terminationLabel,
+  variantDisplayLabel,
 } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
@@ -216,31 +218,40 @@ export function reviewMetaPlayers(
     result,
     rows.map((player) => player.color),
   );
-  return rows.map((player, index) => ({
-    color:
-      player.color === 'red' || player.color === 'black'
-        ? reviewColorForSeat(player.color, seatColors)
-        : player.color,
+  return rows.map((player, index) => {
+    // `kind` merges bots into 'account', so a bot seat needs its own tell here or
+    // the BOT tag goes missing on every review page that faces one.
+    const isEngine = player.kind === 'engine' || player.botId != null;
     // The persisted seat name is the engine BUILD ("Misty DXQ 1.1"); the card
     // shows the brand, same as every list surface (see brandedEngineName), and
     // Misty takes the game's name (seatNameForGame). A nameless guest seat
     // arrives as the server's English placeholder 'Guest'.
-    name:
+    const fullName =
       player.kind === 'guest' && player.name === 'Guest'
         ? t('watch.guest')
         : gameSpecId === undefined
           ? (brandedEngineName(player.name) ?? player.name)
-          : seatNameForGame(player.name, gameSpecId, {
-              botId: player.botId ?? null,
-              isEngine: player.kind === 'engine' || player.botId != null,
-            }),
-    rating: player.rating ?? null,
-    // `kind` merges bots into 'account', so a bot seat needs its own tell here or
-    // the BOT tag goes missing on every review page that faces one.
-    isEngine: player.kind === 'engine' || player.botId != null,
-    score: scores[index] ?? null,
-    profile: profileTargetFor(player),
-  }));
+          : seatNameForGame(player.name, gameSpecId, { botId: player.botId ?? null, isEngine });
+    // The card's head already names the game, so Misty drops it here ("Misty
+    // Level 4"), as on /watch; "Misty Three Kingdoms Banqi Level 4" was cut to
+    // an ellipsis. The tooltip keeps the full name.
+    const name =
+      isEngine && gameSpecId !== undefined
+        ? cardMistyName(fullName, variantDisplayLabel(gameSpecId))
+        : fullName;
+    return {
+      color:
+        player.color === 'red' || player.color === 'black'
+          ? reviewColorForSeat(player.color, seatColors)
+          : player.color,
+      name,
+      ...(name === fullName ? {} : { fullName }),
+      rating: player.rating ?? null,
+      isEngine,
+      score: scores[index] ?? null,
+      profile: profileTargetFor(player),
+    };
+  });
 }
 
 /** "5+0" / "Untimed" from the envelope's millisecond time control. Reads the

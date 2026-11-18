@@ -848,12 +848,15 @@ a.puzzle-streak-chip:focus-visible {
   background: var(--site-border-soft);
 }
 
-/* The source game's header keeps to one line (lichess's "From game 3+2 •
-   Blitz"); a long event name ends in an ellipsis, the tooltip holds it all. */
+/* The event gets its own row below "From game", with room for two lines.
+   The tooltip keeps the complete event when it is longer still. */
 .puzzle-source-event {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Beside the board the info card runs at lichess's density (#717): 14px
@@ -2284,16 +2287,14 @@ a.puzzle-tag--link:hover {
     text-overflow: ellipsis;
   }
 
-  /* One line, never wrapped, so the header's height is fixed and the sheet
-     fits 320x568: a long game source ellipsizes. */
+  /* Label and event span the sheet; the players share the row below them. */
   .puzzles-shell .puzzle-pm-head__source {
-    display: flex;
-    flex-wrap: nowrap;
-    column-gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2px 12px;
   }
 
   .puzzles-shell .puzzle-pm-head__source > * {
-    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -2306,15 +2307,15 @@ a.puzzle-tag--link:hover {
     gap: 4px;
   }
 
-  .puzzles-shell .puzzle-pm-head__source--position-only {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 2px 12px;
+  .puzzles-shell .puzzle-pm-head__source > .puzzle-source-header,
+  .puzzles-shell .puzzle-pm-head__source > .puzzle-source-credit,
+  .puzzles-shell .puzzle-pm-head__source > :only-child {
+    grid-column: 1 / -1;
   }
 
-  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-event,
-  .puzzles-shell .puzzle-pm-head__source--position-only > .puzzle-source-credit {
+  .puzzles-shell .puzzle-pm-head__source > .puzzle-source-event {
     grid-column: 1 / -1;
+    white-space: normal;
   }
 
   .puzzles-shell .puzzle-phone-menu .puzzle-pm-row {

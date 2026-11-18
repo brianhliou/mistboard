@@ -503,7 +503,7 @@ describe('Gomoku hidden registration', () => {
   });
 
   it.each(['false', 'true'])(
-    'registers matching casual tenants, eight stable levels, unnumbered Rapfi and a gated review with flag %s',
+    'registers matching casual tenants, only eight offered levels, historical Rapfi and a gated review with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
@@ -529,17 +529,18 @@ describe('Gomoku hidden registration', () => {
       });
       expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual([
         ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
-        'rapfi-strongest',
       ]);
       for (const option of web?.landing?.engineOptions ?? []) {
-        expect(option.kind).toBe(option.id === 'rapfi-strongest' ? 'container' : 'browser');
+        expect(option.kind).toBe('browser');
         expect(server?.isEngineClientId?.(option.id)).toBe(true);
       }
       expect(web?.landing?.engineOptions?.at(-1)).toMatchObject({
-        id: 'rapfi-strongest',
-        name: 'Rapfi Full strength',
-        levelLabelKey: 'bots.fullStrength',
+        id: 'rapfi-level-8',
+        name: 'Rapfi Level 8',
       });
+      // Historical games still recognize the retired engine and its name.
+      expect(server?.isEngineClientId?.('rapfi-strongest')).toBe(true);
+      expect(server?.engineDisplayName?.('rapfi-strongest')).toBe('Rapfi');
       // Browser choices and server recognition agree on all eight stable ids.
       for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
         expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);

@@ -214,7 +214,10 @@ test('Rapfi measurement stamps distinguish build, native network and every servi
   const ids = ['rapfi-level-1', 'rapfi-level-8', 'rapfi-strongest', 'random-legal-gomoku'];
   const current = loadBotRatingPins(ids);
   const sourceRef = stampBotRatingSourceRef('rapfi-calibration', current);
-  assert.equal(new Set(Object.values(current.policies!)).size, ids.length);
+  // Level 8 is the strongest policy (#1204), so those two share one stamp;
+  // every other id has its own.
+  assert.equal(current.policies!['rapfi-level-8'], current.policies!['rapfi-strongest']);
+  assert.equal(new Set(Object.values(current.policies!)).size, ids.length - 1);
   for (const id of ids) {
     const netSha256 =
       id === 'random-legal-gomoku'

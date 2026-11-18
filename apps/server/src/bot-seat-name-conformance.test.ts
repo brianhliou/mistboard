@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
 import { FIRST_PARTY_BOT_PROFILES, persistedSeatDisplayName } from './first-party-bots.js';
+import { THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS } from './three-kingdoms-banqi-engine.js';
 import { tenantParticipant } from './variant-tenant/events.js';
 import { tenantSeatDisplayNames } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom, VariantTenant } from './variant-tenant/tenant.js';
@@ -51,6 +53,26 @@ function seatPairs(): { botId: string; engineId: string; pveBotIds: (string | nu
   }
   return pairs;
 }
+
+test('Three Kingdoms and FFQ seats persist as Misty even without an explicit bot id', () => {
+  for (const tier of [...THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS, ...FFQ_BANQI_PLAYABLE_ENGINES]) {
+    for (const pveBotId of [null, 'misty']) {
+      const stored = tenantParticipant(
+        fakeTenant(tier.id),
+        'black',
+        fakeRoom(tier.id, pveBotId),
+        'public',
+      );
+      assert.equal(stored.subjectType, 'bot', tier.id);
+      assert.equal(stored.subjectId, 'misty', tier.id);
+      assert.equal(stored.engineId, tier.id);
+      assert.equal(
+        stored.displayName,
+        tier.level === undefined ? 'Misty' : `Misty Level ${tier.level}`,
+      );
+    }
+  }
+});
 
 test('every bot seat keeps one name live, in the stored participant and on finished-game reads', () => {
   for (const { botId, engineId, pveBotIds } of seatPairs()) {

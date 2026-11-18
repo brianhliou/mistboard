@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import {
+  assertProbeOutput,
   createEngineBootCheckReader,
   isLocalBuild,
   localBaseUrl,
   localSmokePlan,
+  runCommand,
   runLocalSmokes,
 } from './local-prod-smoke.mjs';
+import { createSmokeDatabase } from './local-smoke-database.mjs';
+import { missingWorkerBinary } from './local-smoke-engine.mjs';
 
 function bootCheck(missing, checked = 11) {
   const reader = createEngineBootCheckReader();
@@ -86,7 +91,12 @@ test('the local plan covers seven main variants, site checks, and every ceval ba
   }
   assert.deepEqual(plan[2].command.slice(4), ['--expect-revision', 'abc123']);
   assert.deepEqual(plan[3].command.slice(4), ['--engine', 'builtin-random-legal']);
-  assert.deepEqual(plan.at(-1).command.slice(4), ['--backend', 'all']);
+  assert.deepEqual(plan.at(-1).command.slice(4), [
+    '--backend',
+    'all',
+    '--banqi-room',
+    'bq_sample_0007',
+  ]);
 });
 
 test('every local probe completes sequentially, including ceval after an engine failure', async () => {
@@ -240,10 +250,159 @@ test('the CLI plan overrides inherited prod URLs without making network requests
 
 test('the managed local server invokes the same suite and owns its process cleanup', () => {
   const source = readFileSync(new URL('./release-local-smoke.mjs', import.meta.url), 'utf8');
-  assert.match(source, /await runLocalSmokes\(baseUrl, \{ revision, missingEngines: missing \}\)/);
+  assert.match(
+    source,
+    /await runLocalSmokes\(baseUrl, \{\s*revision,\s*missingEngines: \[\.\.\.missing, \.\.\.engine.missing\],\s*signal: cancellation.signal,/,
+  );
   assert.match(source, /server.stdout.on\('data',[\s\S]*engineBootCheck.write\(chunk\)/);
   assert.match(source, /if \(engineBootCheck.result\(\)\) return/);
   assert.match(source, /spawn\(process\.execPath, \['apps\/server\/dist\/main.js'\]/);
   assert.match(source, /finally \{[\s\S]*server.kill\('SIGTERM'\)/);
   assert.match(source, /isLocalBuild\(state, revision, buildAt\)/);
+  assert.match(source, /await database\?\.dispose\(\)/);
+  assert.match(source, /MISTBOARD_EXTRA_PLAYABLE_ENGINES: 'builtin-random-legal'/);
+  assert.match(
+    source,
+    /\['run', 'db:up'\], \{ env: \{ DATABASE_URL: LOCAL_SMOKE_POSTGRES_URL \} \}/,
+  );
+  assert.match(source, /flag.replace\(\/\^MISTBOARD_\/, 'VITE_'\)/);
+});
+
+test('an interrupted stage stops before launching another probe', async () => {
+  const cancellation = new AbortController();
+  let ran = 0;
+  await assert.rejects(
+    runLocalSmokes('http://localhost:3099', {
+      signal: cancellation.signal,
+      log() {},
+      async run() {
+        ran++;
+        cancellation.abort(new Error('interrupted'));
+      },
+    }),
+    /interrupted/,
+  );
+  assert.equal(ran, 1);
+});
+
+test('a real missing app element fails the probe and the stage, after a passing control', async () => {
+  let omitApp = false;
+  const server = createServer((req, res) => {
+    const json =
+      req.url === '/health'
+        ? { ok: true }
+        : req.url === '/api/server-status'
+          ? { restartAt: null, activeGames: 0 }
+          : req.url === '/api/engines/playable'
+            ? { engines: [{ id: 'fixture' }] }
+            : null;
+    if (json) {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify(json));
+    } else {
+      res.end(`Mistboard 象棋规则 ${omitApp ? '' : '<div id="app"></div>'}`);
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const probe = localSmokePlan(base)[0].command;
+    await runCommand(probe);
+    omitApp = true;
+    const logs = [];
+    await assert.rejects(
+      runLocalSmokes(base, {
+        log: (line) => logs.push(line),
+        async run(command) {
+          if (command[1] === 'scripts/prod-lite-smoke.mjs') await runCommand(command);
+        },
+      }),
+      /1\/12 local smokes failed: prod-lite-smoke.mjs/,
+    );
+    assert.match(logs.join('\n'), /local smoke FAILED: prod-lite-smoke.mjs/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('exit zero cannot hide a disabled variant, assets-only ceval, or missing result', async () => {
+  for (const output of [
+    '',
+    'nothing checked',
+    '{"ok":false}',
+    '{"ok":true,"skipped":true,"reason":"variant_disabled"}',
+    '{"ok":true,"surfaces":{"banqiGame":{"mode":"assets-only"}}}',
+  ])
+    assert.throws(() => assertProbeOutput(output), /failure|skip|without a successful result/);
+  assert.doesNotThrow(() => assertProbeOutput('{"ok":true,"eval":"0.2"}\n{"ok":true}'));
+  await assert.rejects(
+    runCommand([process.execPath, '-e', 'console.log(JSON.stringify({ok:true,skipped:true}))']),
+    /unapproved skip/,
+  );
+});
+
+test('DXQ skips only a proven absent executable, never an unavailable service or bad model', () => {
+  const missing = missingWorkerBinary(
+    new Error("No such file or directory: '/missing/pikafish'"),
+    () => false,
+  );
+  assert.deepEqual(missing, { variant: 'dark-xiangqi', binary: '/missing/pikafish' });
+  const plan = localSmokePlan('http://localhost:3099', { missingEngines: [missing] });
+  assert.deepEqual(
+    plan.filter((p) => p.missingBinary).map((p) => p.script),
+    ['prod-dxq-smoke.mjs'],
+  );
+  for (const message of [
+    'engine_unavailable',
+    'worker init failed',
+    'worker ready timeout',
+    "No such file or directory: '/missing/model.nnue'",
+  ])
+    assert.equal(
+      missingWorkerBinary(new Error(message), () => false),
+      null,
+    );
+  assert.equal(
+    missingWorkerBinary(new Error("No such file or directory: '/exists/pikafish'"), () => true),
+    null,
+  );
+});
+
+test('each managed run creates and drops only its own disposable database on shared Postgres', async () => {
+  const statements = [];
+  const connections = [];
+  class Client {
+    constructor(options) {
+      connections.push(new URL(options.connectionString));
+    }
+    async connect() {}
+    async query(sql) {
+      statements.push(sql);
+    }
+    async end() {}
+  }
+  const a = await createSmokeDatabase({ Client });
+  const b = await createSmokeDatabase({ Client });
+  assert.notEqual(a.name, b.name);
+  for (const db of [a, b]) {
+    assert.match(db.name, /^mistboard_smoke_[a-f0-9]{32}$/);
+    const url = new URL(db.databaseUrl);
+    assert.equal(url.pathname, `/${db.name}`);
+    assert.equal(url.port, '5435');
+  }
+  await a.dispose();
+  await a.dispose();
+  await b.dispose();
+  assert.deepEqual(statements, [
+    `CREATE DATABASE "${a.name}"`,
+    `CREATE DATABASE "${b.name}"`,
+    `DROP DATABASE "${a.name}" WITH (FORCE)`,
+    `DROP DATABASE "${b.name}" WITH (FORCE)`,
+  ]);
+  assert.ok(
+    connections.every((url) => url.hostname === 'localhost' && url.pathname === '/postgres'),
+  );
 });

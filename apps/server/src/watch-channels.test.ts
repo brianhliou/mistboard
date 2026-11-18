@@ -10,7 +10,7 @@ import './variant-tenant/register-tenants.js';
 import './routes/gomoku-games.js';
 import { collectCurrentGames } from './current-games.js';
 import { gomokuRooms } from './gomoku-registration.js';
-import { buildOpenApiDocument, WATCH_CHANNEL_IDS } from './openapi.js';
+import { buildOpenApiDocument } from './openapi.js';
 import { channelTopPlayer } from './routes/games.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { variantTenantForSpecId } from './variant-tenant/registry.js';
@@ -102,7 +102,6 @@ test('hidden Gomoku stays out of channels, Featured, Engines, current games and 
 });
 
 test('Gomoku watch enums are supported but documented only when public and enabled', () => {
-  assert.ok((WATCH_CHANNEL_IDS as readonly string[]).includes('gomoku'));
   const spec = maybeGameSpecForId('gomoku')!;
   const original = spec.publicSurface;
   const originalFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
@@ -403,5 +402,29 @@ test('hidden Three Kingdoms Banqi stays out of channels, Featured, Engines, curr
     threeKingdomsBanqiRooms.delete(roomId);
     if (originalFlag === undefined) delete process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED;
     else process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED = originalFlag;
+  }
+});
+
+test('the API reference documents exactly the channels /watch serves, and every clock class', () => {
+  const doc = buildOpenApiDocument('https://mistboard.com') as {
+    paths: Record<
+      string,
+      { get: { parameters: Array<{ name: string; schema: { enum?: string[] } }> } }
+    >;
+  };
+  const served = listWatchChannels().map((channel) => channel.id);
+  for (const path of ['/api/watch', '/api/watch/live']) {
+    const documented = doc.paths[path]!.get.parameters.find((p) => p.name === 'channel')!.schema
+      .enum!;
+    assert.deepEqual(documented, served, path);
+  }
+  for (const path of [
+    '/api/leaderboard',
+    '/api/leaderboard/summary',
+    '/api/users/{handle}/rating-history',
+  ]) {
+    const classes = doc.paths[path]!.get.parameters.find((p) => p.name === 'timeClass')!.schema
+      .enum!;
+    assert.ok(classes.includes('correspondence'), path);
   }
 });

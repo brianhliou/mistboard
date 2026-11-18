@@ -16,6 +16,7 @@
 // fields from the <title>. Everything downstream (binit gate, per-move replay,
 // fail-closed rejection) stays with the existing converter.
 
+import { isXiangqiPlayerPair } from './xiangqi-broadcast-translate.js';
 import { STANDARD_DHTMLXQ_BINIT } from './xiangqi-broadcast-wxf-dhtmlxq.js';
 
 export type DpxqNormalizeResult = { ok: true; html: string } | { ok: false; reason: string };
@@ -76,6 +77,7 @@ type TitleParts = {
 function splitTeamAndPlayer(raw: string | undefined): { team?: string; player?: string } {
   const value = raw?.trim();
   if (!value) return {};
+  if (isXiangqiPlayerPair(value)) return { player: value };
   const tokens = value.split(/\s+/);
   const player = tokens.pop();
   const team = tokens.join(' ').trim();
