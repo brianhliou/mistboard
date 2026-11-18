@@ -60,6 +60,7 @@ import {
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import { setJungleEngineOptions } from './variant-tenant/registry.js';
 import './landing-play-panel.css';
+import { lastPlayedVariant, withLastPlayedFirst } from './last-played-variant.js';
 import { fetchLiveStats } from './live-stats-client.js';
 import { type LastBotGame, lastBotGame, rememberedPveEngine } from './pve-memory.js';
 import {
@@ -433,6 +434,14 @@ export function buildPlayPanel(
   };
   const ordered = (): LandingGameSpecId[] =>
     orderPanelSpecs(variants.map((v) => v.gameSpecId)) as LandingGameSpecId[];
+  // A returning player's last game leads the Play a person list (#1215); the
+  // computer list and every pace lookup keep the canonical order.
+  const lastPlayed = lastPlayedVariant();
+  const orderedPeople = (): LandingGameSpecId[] =>
+    withLastPlayedFirst(
+      ordered().map((gameSpecId) => ({ gameSpecId })),
+      lastPlayed,
+    ).map(({ gameSpecId }) => gameSpecId);
 
   const board = document.createElement('section');
   board.className = 'landing-lobby-board pp-board';
@@ -1292,7 +1301,7 @@ export function buildPlayPanel(
 
   const renderPersonRows = (): void => {
     personRows.replaceChildren();
-    for (const gameSpecId of ordered()) {
+    for (const gameSpecId of orderedPeople()) {
       const start = tilePace(gameSpecId);
       if (!start) continue;
       const { pace, note: paceNote } = start;
