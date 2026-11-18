@@ -143,3 +143,36 @@ test('invalid, missing, too-short and ambiguous sources fail without writing an 
   assert.match(ambiguous.stderr, /[Aa]mbiguous/);
   assert.equal(existsSync(out), false);
 });
+
+test('a local-games jsonl exports only the requested dpxq record', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dpxq-setup-jsonl-'));
+  const jsonl = join(dir, 'local-games.jsonl');
+  const record = (fields) =>
+    JSON.stringify({ scope: 'local-only', moveFormat: 'dhtmlxq', ...fields });
+  writeFileSync(
+    jsonl,
+    [
+      record({ source: 'dpxq', id: 7, moves: '77708070171003041030', standardStart: true }),
+      record({ source: 'dpxq', id: 8, moves: '77477062', standardStart: true }),
+      record({ source: 'other', id: 7, moves: '77477062', standardStart: true }),
+      record({ source: 'dpxq', id: 9, moves: '77708070', standardStart: false }),
+      '',
+    ].join('\n'),
+  );
+  const out = join(dir, 'local.json');
+  const result = run(['--jsonl', jsonl, '--puzzle', 'xq-mined-dpxq-7-2', '--out', out]);
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(readFileSync(out, 'utf8'));
+  assert.deepEqual(payload, { games: [{ id: 'dpxq-7', moves: moves.slice(0, 2) }] });
+  assert.deepEqual(readXiangqiSetupGames(payload), payload.games);
+
+  const rejected = join(dir, 'rejected.json');
+  for (const args of [
+    ['--jsonl', jsonl, '--puzzle', 'xq-mined-dpxq-10-2'],
+    ['--jsonl', jsonl, '--puzzle', 'xq-mined-dpxq-9-1'],
+    ['--jsonl', jsonl, '--dir', dir, '--puzzle', 'xq-mined-dpxq-7-2'],
+  ]) {
+    assert.notEqual(run([...args, '--out', rejected]).status, 0, args.join(' '));
+    assert.equal(existsSync(rejected), false);
+  }
+});
