@@ -6422,6 +6422,11 @@ const ZH_HANS: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一颗兵，或吃将。',
   'An engine game': '一盘引擎对局',
+  "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.":
+    '用方向键逐步浏览这盘棋：Misty 第 8 级执红，把执黑的第 7 级的血打到零，其中七个时刻附有注解。图表显示红方的胜率；翻子或吃暗子旁的骰子表示那一步运气好不好。',
+  'Fanfanqi: Level 7 versus Level 8, annotated': '翻翻棋：第 7 级对第 8 级，附注解',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.':
+    '新增一盘引擎对局：Misty 第 8 级对第 7 级，附注解、着法评分、每次翻子的运气和一张红方胜率图。',
   // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
   '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
     '[MistyBanqi](/blog/mistybanqi) 第 7 级对第 8 级。第 7 级执黑，第 8 级执红；第 7 级无子可走时，第 8 级获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 7 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。',
@@ -13613,6 +13618,11 @@ const ZH_HANT: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一顆兵，或吃將。',
   'An engine game': '一盤引擎對局',
+  "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.":
+    '用方向鍵逐步瀏覽這盤棋：Misty 第 8 級執紅，把執黑的第 7 級的血打到零，其中七個時刻附有註解。圖表顯示紅方的勝率；翻子或吃暗子旁的骰子表示那一步運氣好不好。',
+  'Fanfanqi: Level 7 versus Level 8, annotated': '翻翻棋：第 7 級對第 8 級，附註解',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.':
+    '新增一盤引擎對局：Misty 第 8 級對第 7 級，附註解、著法評分、每次翻子的運氣和一張紅方勝率圖。',
   // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
   '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
     '[MistyBanqi](/blog/mistybanqi) 第 7 級對第 8 級。第 7 級執黑，第 8 級執紅；第 7 級無子可走時，第 8 級獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 7 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。',

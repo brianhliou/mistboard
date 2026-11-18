@@ -12,13 +12,13 @@ import {
 } from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-// Decided 2026-11-15: preview a local study; production id wiring follows review.
-// Off under vitest too, so the article tests (zh coverage lock, fingerprints)
-// see the production article; rules-page-games.test.ts checks the section.
-const localStudyPath =
-  import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? (import.meta.env.VITE_FFQ_BANQI_RULES_STUDY_PATH ?? '/embed/study/HLQzHlhK/O92BsOOd')
-    : undefined;
+// The engine game's study on prod (created 2026-11-18 from
+// scripts/variant-lab/rules-page-games/plans/ffq-banqi.plan.json). A dev pair
+// reads its own database, so VITE_FFQ_BANQI_RULES_STUDY_PATH can point a local
+// preview at a local copy of the study.
+const ENGINE_GAME_PATH =
+  (import.meta.env.DEV && import.meta.env.VITE_FFQ_BANQI_RULES_STUDY_PATH) ||
+  '/embed/study/CCtKBPpJ/efHe1AI6';
 
 export function fanfanqiEngineGameSection(path: string) {
   return {
@@ -52,6 +52,9 @@ export const fanfanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-15',
+  updatedAt: '2026-11-18',
+  updateNote:
+    'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
@@ -298,9 +301,7 @@ export const fanfanqiArticle: Article = {
         },
       ],
     },
-    // The section ships only with its study: dev previews the local copy; the
-    // production study id, updatedAt and updateNote land together after review.
-    ...(localStudyPath ? [fanfanqiEngineGameSection(localStudyPath)] : []),
+    fanfanqiEngineGameSection(ENGINE_GAME_PATH),
     {
       heading: 'Play on Mistboard',
       blocks: [
