@@ -8,6 +8,7 @@ import {
   deleteStudy,
   getStudyById,
   getStudyLikeState,
+  listClassicalStudies,
   listFavoriteStudies,
   listFeaturedStudies,
   listStudiesForOwner,
@@ -308,6 +309,64 @@ definePersistenceTests('studies', () => {
     assert.deepEqual(
       (await listFeaturedStudies(30, 'featured cannon')).map((entry) => entry.id),
       [],
+    );
+  });
+
+  test('lists the classical collections as full public cards in reading order, paged', async () => {
+    const mistboard = await createUser({
+      id: 'user_study_classical_mistboard',
+      email: 'study-classical-mistboard@example.com',
+      emailVerifiedAt: now,
+      handle: 'mistboard',
+      displayName: 'Mistboard',
+      now,
+    });
+    const player = await makeUser('classical-player');
+    const publish = async (ownerId: string, name: string) => {
+      const study = await makeStudy(ownerId, name);
+      assert.ok(study);
+      await updateStudyMeta(study.id, ownerId, { visibility: 'public' });
+      return study;
+    };
+    // Created in the reverse of reading order, so recency cannot pass for rank.
+    const bamboo = await publish(
+      mistboard.id,
+      'Bamboo Fragrance Studio Manual: 208 classical compositions',
+    );
+    const plum = await publish(mistboard.id, 'Plum Blossom Spring: 50 classical games');
+    // Not eligible: a private manual, a seeded non-classical study, a solver
+    // audit, and a player's own study with a classical-sounding name.
+    await makeStudy(mistboard.id, 'Hidden Manual: 12 classical compositions');
+    await publish(mistboard.id, 'AB-JChess vs jqe, all 600 games');
+    await publish(mistboard.id, 'What the solver found: 47 classical compositions');
+    await publish(player.id, 'My classical compositions');
+    await setStudyLike(plum.id, player.id, true);
+
+    const all = await listClassicalStudies();
+    assert.deepEqual(
+      all.map((study) => study.id),
+      [plum.id, bamboo.id],
+    );
+    const first = all[0]!;
+    assert.equal(first.ownerHandle, 'mistboard');
+    assert.equal(first.ownerDisplayName, 'Mistboard');
+    assert.equal(first.likeCount, 1);
+    assert.equal(first.chapterCount, 1);
+    assert.deepEqual(first.chapterNames, ['Chapter 1']);
+    assert.equal(first.visibility, 'public');
+
+    assert.deepEqual(
+      (await listClassicalStudies(1)).map((study) => study.id),
+      [plum.id],
+    );
+    assert.deepEqual(
+      (await listClassicalStudies(1, undefined, 1)).map((study) => study.id),
+      [bamboo.id],
+    );
+    assert.deepEqual(await listClassicalStudies(30, undefined, 2), []);
+    assert.deepEqual(
+      (await listClassicalStudies(30, 'bamboo')).map((study) => study.id),
+      [bamboo.id],
     );
   });
 

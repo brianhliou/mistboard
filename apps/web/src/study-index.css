@@ -174,63 +174,6 @@ a.study-index__rail-tab.is-active:hover {
   font-size: 0.86rem;
 }
 
-.study-index__section-title {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  background: var(--site-panel-soft);
-  border-bottom: 1px solid var(--site-border-soft);
-  font-size: 1rem;
-  color: var(--site-heading);
-}
-
-.study-index__classical-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.study-index__classical-list li {
-  min-width: 0;
-  border-bottom: 1px solid var(--site-border-soft);
-}
-
-.study-index__classical-list--collapsed li:nth-child(n + 11) {
-  display: none;
-}
-
-.study-index__classical-toggle {
-  margin: 0.75rem 1rem;
-}
-
-.study-index__classical-list a {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 44px;
-  height: 100%;
-  box-sizing: border-box;
-  padding: 0.6rem 1rem;
-  color: var(--site-link);
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
-  text-decoration: none;
-}
-
-.study-index__classical-list a:hover {
-  background: var(--site-accent-soft);
-}
-
-.study-index__classical-list a:hover > span:first-child {
-  text-decoration: underline;
-}
-
-.study-index__classical-count {
-  color: var(--site-muted);
-  font-size: 0.78rem;
-}
-
 /* Gridline card table. Each card carries a right + bottom hairline; the grid's
    negative right/bottom margin pushes the trailing edges under the panel's
    overflow:hidden so no doubled border shows. Cells stretch to equal row height
@@ -468,15 +411,11 @@ a.study-index__rail-tab.is-active:hover {
 
 /* Narrow screens: rail above, single-column grid */
 @media (max-width: 720px) {
-  .study-index__classical-toggle {
-    width: calc(100% - 2rem);
-    min-height: 44px;
-  }
   .study-index {
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
-  /* The four tabs share one row: equal shares, tighter type, no wrap. */
+  /* The five tabs share one row: equal shares, tighter type, no wrap. */
   .study-index__rail-list {
     flex-direction: row;
     flex-wrap: nowrap;

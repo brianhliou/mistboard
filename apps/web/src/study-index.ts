@@ -1,8 +1,10 @@
-// Study browse page (/study). Four focused lists:
-//   • All studies (default) — pinned classics, then the newest public studies
+// Study browse page (/study). Five focused lists:
+//   • All studies (default) — the newest public studies
 //   • My studies (?tab=mine) — the signed-in owner's studies (/api/studies/mine)
 //   • Favorites (?tab=favorites) — public studies liked by the signed-in viewer
 //   • Staff picks (?tab=staff) — Mistboard-curated public studies
+//   • Classical collections (?tab=classical) — the classical manuals and game
+//     collections in a fixed reading order (/api/studies/classical)
 // New studies are created through a metadata dialog (name + visibility) that then
 // opens the fresh study.
 
@@ -55,9 +57,7 @@ type StudySummary = {
   likeCount?: number;
 };
 
-type ClassicalStudy = Pick<StudySummary, 'id' | 'name' | 'i18n' | 'chapterCount'>;
-
-type StudyTab = 'all' | 'mine' | 'favorites' | 'staff';
+type StudyTab = 'all' | 'mine' | 'favorites' | 'staff' | 'classical';
 
 // The left rail mirrors lichess /study. Every tab is backed by a real query.
 const RAIL_TABS: { labelKey: I18nKey; tab: StudyTab }[] = [
@@ -65,6 +65,7 @@ const RAIL_TABS: { labelKey: I18nKey; tab: StudyTab }[] = [
   { labelKey: 'study.indexMine', tab: 'mine' },
   { labelKey: 'study.indexFavorites', tab: 'favorites' },
   { labelKey: 'study.indexStaff', tab: 'staff' },
+  { labelKey: 'study.indexClassical', tab: 'classical' },
 ];
 
 const TAB_NEEDS_AUTH: Record<StudyTab, boolean> = {
@@ -72,11 +73,14 @@ const TAB_NEEDS_AUTH: Record<StudyTab, boolean> = {
   mine: true,
   favorites: true,
   staff: false,
+  classical: false,
 };
 
 function activeTab(): StudyTab {
   const tab = new URLSearchParams(window.location.search).get('tab');
-  return tab === 'mine' || tab === 'favorites' || tab === 'staff' ? tab : 'all';
+  return tab === 'mine' || tab === 'favorites' || tab === 'staff' || tab === 'classical'
+    ? tab
+    : 'all';
 }
 
 function searchQuery(): string {
@@ -94,7 +98,6 @@ function endpointFor(tab: StudyTab, q: string, offset = 0): string {
   if (tab !== 'mine') params.set('limit', String(PAGE_SIZE));
   if (q) params.set('q', q);
   if (offset > 0) params.set('offset', String(offset));
-  if (tab === 'all' && !q && offset === 0) params.set('classical', '1');
   const base =
     tab === 'mine'
       ? '/api/studies/mine'
@@ -102,7 +105,9 @@ function endpointFor(tab: StudyTab, q: string, offset = 0): string {
         ? '/api/studies/favorites'
         : tab === 'staff'
           ? '/api/studies/staff'
-          : '/api/studies/public';
+          : tab === 'classical'
+            ? '/api/studies/classical'
+            : '/api/studies/public';
   const suffix = params.toString();
   return suffix ? `${base}?${suffix}` : base;
 }
@@ -126,12 +131,8 @@ export function mountStudyIndex(root: HTMLElement): void {
         renderMessage(root, t('study.unavailable'), t('study.unavailableBody'));
         return;
       }
-      const body = (await response.json()) as {
-        studies: StudySummary[];
-        hasMore?: boolean;
-        classicalStudies?: ClassicalStudy[];
-      };
-      renderList(root, tab, q, body.studies, body.hasMore === true, body.classicalStudies ?? []);
+      const body = (await response.json()) as { studies: StudySummary[]; hasMore?: boolean };
+      renderList(root, tab, q, body.studies, body.hasMore === true);
     })
     .catch(() => renderMessage(root, t('study.unavailable'), t('study.unavailableBody')));
 }
@@ -141,6 +142,7 @@ const TAB_TITLE_KEYS: Record<StudyTab, I18nKey> = {
   mine: 'study.indexMine',
   favorites: 'study.indexFavorites',
   staff: 'study.indexStaff',
+  classical: 'study.indexClassical',
 };
 
 function renderList(
@@ -149,12 +151,11 @@ function renderList(
   q: string,
   studies: StudySummary[],
   hasMore: boolean,
-  classicalStudies: ClassicalStudy[],
 ): void {
   const main = document.createElement('main');
   main.className = 'study-index';
 
-  main.append(buildRail(tab), buildContent(tab, q, studies, hasMore, classicalStudies));
+  main.append(buildRail(tab), buildContent(tab, q, studies, hasMore));
   root.replaceChildren(buildNav(), main);
 }
 
@@ -192,7 +193,6 @@ function buildContent(
   q: string,
   studies: StudySummary[],
   hasMore: boolean,
-  classicalStudies: ClassicalStudy[],
 ): HTMLElement {
   const content = document.createElement('section');
   content.className = 'study-index__content';
@@ -204,9 +204,6 @@ function buildContent(
   toolbar.append(searchForm(tab, q), newStudyButton());
   content.append(toolbar);
   if (tab === 'staff') content.append(staffPicksIntro());
-  if (tab === 'all' && !q && classicalStudies.length > 0) {
-    content.append(classicalCollections(classicalStudies), listHeading(t('study.indexNewest')));
-  }
 
   if (studies.length === 0) {
     const empty = document.createElement('p');
@@ -222,59 +219,6 @@ function buildContent(
   }
 
   return content;
-}
-
-function listHeading(label: string): HTMLElement {
-  const heading = document.createElement('h2');
-  heading.className = 'study-index__section-title';
-  heading.textContent = label;
-  return heading;
-}
-
-function classicalCollections(studies: ClassicalStudy[]): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'study-index__classical';
-  const heading = listHeading(t('study.indexClassical'));
-  heading.id = 'study-classical-title';
-  section.setAttribute('aria-labelledby', heading.id);
-  const list = document.createElement('ul');
-  list.className = 'study-index__classical-list';
-  list.id = 'study-classical-list';
-  for (const study of studies) {
-    const item = document.createElement('li');
-    const link = document.createElement('a');
-    link.href = localizedHref(`/study/${study.id}`);
-    const title = document.createElement('span');
-    title.textContent = localizedStudyName(study.name, study.i18n);
-    const chapters = document.createElement('span');
-    chapters.className = 'study-index__classical-count';
-    chapters.textContent =
-      study.chapterCount === 1
-        ? t('study.chapterCountOne')
-        : t('study.chapterCount', { count: study.chapterCount });
-    link.append(title, chapters);
-    item.append(link);
-    list.append(item);
-  }
-  section.append(heading, list);
-  if (studies.length > 10) {
-    list.classList.add('study-index__classical-list--collapsed');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'study-index__more-button study-index__classical-toggle';
-    button.textContent = t('study.indexClassicalAll', { count: studies.length });
-    button.setAttribute('aria-expanded', 'false');
-    button.setAttribute('aria-controls', list.id);
-    button.addEventListener('click', () => {
-      const collapsed = list.classList.toggle('study-index__classical-list--collapsed');
-      button.setAttribute('aria-expanded', String(!collapsed));
-      button.textContent = collapsed
-        ? t('study.indexClassicalAll', { count: studies.length })
-        : t('study.indexClassicalFewer');
-    });
-    section.append(button);
-  }
-  return section;
 }
 
 // Appends the next page to the grid in place rather than paging the URL: the
