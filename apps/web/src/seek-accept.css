@@ -1,0 +1,39 @@
+.correspondence-deadline-notice {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.correspondence-deadline-notice[hidden] {
+  display: none;
+}
+
+.correspondence-accept-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.correspondence-deadline-list {
+  color: var(--site-muted);
+}
+
+.correspondence-seek-grid + .correspondence-deadline-list,
+.current-games-grid + .correspondence-deadline-list {
+  margin-top: 10px;
+}
+
+.landing-lobby-tbody-corr > .correspondence-deadline-list {
+  padding: 6px 12px 0;
+}
+
+.landing-setup-actions > .correspondence-deadline-notice {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+}

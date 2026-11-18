@@ -67,7 +67,12 @@ import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import { buildSeekAcceptAction } from './seek-accept.js';
+import {
+  buildCorrespondenceDeadlineNotice,
+  buildCorrespondenceListDeadlineNotice,
+  buildSeekAcceptAction,
+  correspondenceDeadlineText,
+} from './seek-accept.js';
 import {
   buildSetupRowSection,
   colorOptionButton,
@@ -1230,6 +1235,9 @@ export function buildLobbyPanel(
     }
     corrHead.hidden = false;
     for (const seek of feed.seeks) corrRows.append(corrSeekRow(seek, locale));
+    if (feed.seeks.some((seek) => !seek.isMine)) {
+      corrRows.append(buildCorrespondenceListDeadlineNotice(locale));
+    }
     corrRows.append(correspondenceListFooter(locale));
   };
 
@@ -2313,6 +2321,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
   // one chip group for the active segment; keeps the allowed real-time presets in
   // sync (rated keeps only rated-eligible paces, and a pick that is no longer offered falls back to 3+2).
+  const deadlineNotice = buildCorrespondenceDeadlineNotice(selectedCorrespondenceDays ?? 1, locale);
   const syncTimeControls = () => {
     const corrAvailable = correspondenceAvailable();
     if (!corrAvailable) {
@@ -2320,6 +2329,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       selectedCorrespondenceDays = null;
     }
     const corrActive = selectedTimeMode === 'correspondence';
+    deadlineNotice.hidden = !corrActive;
+    deadlineNotice.textContent = correspondenceDeadlineText(
+      selectedCorrespondenceDays ?? 1,
+      locale,
+    );
 
     timeModeToggle.hidden = !corrAvailable;
     realtimeModeButton.classList.toggle('selected', !corrActive);
@@ -2995,7 +3009,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const accordion = document.createElement('div');
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
-  actions.append(seekPrompt, startButton, correspondenceAccountNotice, signInButton);
+  actions.append(
+    seekPrompt,
+    deadlineNotice,
+    startButton,
+    correspondenceAccountNotice,
+    signInButton,
+  );
   const notice = choice.notice ? document.createElement('p') : null;
   if (notice) {
     notice.className = 'landing-setup-notice';

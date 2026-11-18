@@ -603,6 +603,48 @@ describe('homepage play panel', () => {
     },
   );
 
+  it('#1220: says the correspondence deadline once under open games, only when one can be joined', async () => {
+    vi.useFakeTimers();
+    const mountWith = async (seeks: Array<Record<string, unknown>>) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: string) => {
+          if (input === '/api/correspondence/seeks') return Response.json({ seeks });
+          if (input === '/api/lobby') return Response.json({ requests: [] });
+          return Response.json({ bots: [], engines: [], playing: 0, online: 0 });
+        }),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      await flush();
+      return board;
+    };
+    const other = {
+      id: 'corr-1',
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      rated: false,
+      creatorName: 'Erin',
+      isMine: false,
+    };
+    const joinable = await mountWith([other, { ...other, id: 'corr-2', daysPerMove: 1 }]);
+    expect(joinable.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(2);
+    const lines = joinable.querySelectorAll('.pp-offers-deadline');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.textContent).toBe(
+      'Every move has a deadline. Miss one and you lose the game.',
+    );
+    expect(joinable.querySelector('.pp-offers .correspondence-deadline-notice')).toBeNull();
+    joinable.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const ownOnly = await mountWith([{ ...other, isMine: true }]);
+    expect(ownOnly.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(1);
+    expect(ownOnly.querySelector('.pp-offers-deadline')).toBeNull();
+    ownOnly.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
   it.each(['dark-xiangqi', 'dark-chess'])(
     'keeps %s off remembered and waiting-player hero rows',
     async (spec) => {
