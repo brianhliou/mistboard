@@ -50,6 +50,20 @@ test('transactional email never propagates an ID from a rejected send', async ()
   );
 });
 
+test('transactional email passes notification tags to Resend', async () => {
+  const tags = [{ name: 'kind', value: 'deadline-warning' }];
+  const result = await sendTransactionalEmail(
+    { ...message, tags },
+    {
+      fetchImpl: async (_url, init) => {
+        assert.deepEqual(JSON.parse(String(init?.body)).tags, tags);
+        return Response.json({ id: 'resend-warning-1' });
+      },
+    },
+  );
+  assert.deepEqual(result, { ok: true, providerEmailId: 'resend-warning-1' });
+});
+
 test('transactional email passes both RFC 8058 headers to the provider payload', async () => {
   const { headers } = dmEmailUnsubscribe('user_123', {
     MISTBOARD_ENGINE_SECRET: 'test-only-provider-signing-key',

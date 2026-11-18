@@ -8,11 +8,12 @@
  */
 
 import { DAY_MS } from '@mistboard/game';
+import { sendCorrespondenceNotificationEmail } from './correspondence-notification-email.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { DeadlineWarningCandidate } from './persistence-room-deadlines.js';
 import { correspondenceDeadlineEmail, emailLocale } from './player-email.js';
-import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
+import { transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
 
@@ -97,13 +98,20 @@ async function sendDeadlineWarningEmail(
     },
     emailLocale(candidate.recipientLocale),
   );
-  const result = await sendTransactionalEmail({
-    from: fromAddress,
-    to: [candidate.recipientEmail],
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-  });
+  const result = await sendCorrespondenceNotificationEmail(
+    {
+      from: fromAddress,
+      to: [candidate.recipientEmail],
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    },
+    {
+      kind: 'deadline-warning',
+      userId: candidate.recipientUserId,
+      roomIds: [candidate.roomId],
+    },
+  );
   if (!result.ok) {
     logger.error(
       {

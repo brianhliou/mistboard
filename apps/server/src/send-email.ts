@@ -20,6 +20,7 @@ export type TransactionalEmail = {
   html?: string;
   replyTo?: string;
   headers?: Record<string, string>;
+  tags?: { name: string; value: string }[];
 };
 
 export type SendTransactionalEmailResult =
@@ -47,6 +48,7 @@ export async function sendTransactionalEmail(
         ...(message.html ? { html: message.html } : {}),
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),
         ...(message.headers ? { headers: message.headers } : {}),
+        ...(message.tags ? { tags: message.tags } : {}),
       }),
     });
     if (response.ok) {
