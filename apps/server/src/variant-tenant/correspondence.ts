@@ -17,8 +17,13 @@
  * (fog), and the web inbox draws it only for specs it has a seat renderer for.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
-import { sweepTenantRoomDeadline, type TenantLifecycleContext } from './lifecycle.js';
+import { clockPolicyKindFor, type RoomTimeControl } from '@mistboard/game';
+import { appendTenantSeatAssigned } from './events.js';
+import {
+  sweepTenantRoomDeadline,
+  type TenantLifecycleContext,
+  tenantDurableDeadlineFor,
+} from './lifecycle.js';
 import type { TenantManagedRoom, VariantTenantRegistration } from './registry.js';
 import {
   createTenantCorrespondenceGameForSeek,
@@ -26,11 +31,16 @@ import {
   type TenantLiveRoomFactoryContext,
 } from './room-factory.js';
 import { tenantSeatStateView } from './runtime.js';
+import { mintTenantSeatToken } from './seat-session.js';
 import type { TenantGameStateLike, TenantRuntimeRoom, VariantTenant } from './tenant.js';
 import { tenantTurnOrder } from './tenant.js';
 import type { TenantLiveRoom } from './ws.js';
 
 export type TenantCorrespondenceBinding = {
+  issueCorrespondenceSeatToken: NonNullable<
+    VariantTenantRegistration['issueCorrespondenceSeatToken']
+  >;
+  correspondenceDeadline: NonNullable<VariantTenantRegistration['correspondenceDeadline']>;
   sweepDueDeadline: NonNullable<VariantTenantRegistration['sweepDueDeadline']>;
   createCorrespondenceGameForSeek: NonNullable<
     VariantTenantRegistration['createCorrespondenceGameForSeek']
@@ -70,6 +80,32 @@ export function tenantCorrespondenceBinding<
   },
 ): TenantCorrespondenceBinding {
   const binding: TenantCorrespondenceBinding = {
+    correspondenceDeadline: (room) =>
+      tenantDurableDeadlineFor(
+        tenant,
+        room as unknown as TenantRuntimeRoom<Kind, C, M, State, Spec>,
+      ),
+    issueCorrespondenceSeatToken: async (managed, seat, identity) => {
+      const room = managed as unknown as TenantRuntimeRoom<Kind, C, M, State, Spec>;
+      if (
+        !tenant.rules.isColor(seat) ||
+        room.gameSpecId !== tenant.gameSpecId ||
+        clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move'
+      )
+        throw new Error('invalid correspondence rematch seat');
+      const minted = mintTenantSeatToken(room, seat, identity);
+      await appendTenantSeatAssigned(tenant, room, {
+        event: {
+          type: 'seat-assigned',
+          at: minted.state.issuedAt.getTime(),
+          roomId: room.id,
+          clientId: minted.state.clientId,
+          seat,
+        },
+        tokenState: minted.state,
+      });
+      return minted;
+    },
     createCorrespondenceGameForSeek: async (args: {
       timeControl: RoomTimeControl;
       first: { userId: string };

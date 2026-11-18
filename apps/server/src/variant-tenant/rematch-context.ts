@@ -12,7 +12,7 @@ import { isUserIdFairPlayMarked } from '../fair-play.js';
  * opponent and no Rematch.
  */
 
-import { isRatedTimeControl, type RoomTimeControl } from '@mistboard/game';
+import { clockPolicyKindFor, isRatedTimeControl, type RoomTimeControl } from '@mistboard/game';
 import { ratedEnabled } from '../feature-flags.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
@@ -20,7 +20,7 @@ import { persistenceRecordForTenantSeatToken } from './events.js';
 import { variantTenantForRoomId } from './registry.js';
 import type { TenantRematchClient, TenantRematchContext } from './rematch.js';
 import { mintTenantSeatToken } from './seat-session.js';
-import type { TenantGameStateLike, TenantRuntimeRoom } from './tenant.js';
+import type { TenantGameStateLike, TenantRuntimeRoom, TenantSeatTokenState } from './tenant.js';
 
 /**
  * Whether a rated game may rematch rated: the room was rated and both seats are
@@ -87,6 +87,14 @@ export function registeredTenantRematchContext<
       (!(await persistence.isUserIdStatsExcluded(userId)) &&
         !(await isUserIdFairPlayMarked(userId))),
     issueSeatToken: async (room, seat, identity) => {
+      if (clockPolicyKindFor(room.projection.timeControl) === 'days-per-move') {
+        if (!registration.issueCorrespondenceSeatToken)
+          throw new Error('correspondence rematch seating unavailable');
+        return registration.issueCorrespondenceSeatToken(room as never, seat, identity) as Promise<{
+          rawToken: string;
+          state: TenantSeatTokenState<C>;
+        }>;
+      }
       const minted = mintTenantSeatToken(room, seat, identity);
       if (persistence.isInitialized()) {
         await persistence.upsertRoomSeatToken(

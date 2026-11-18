@@ -1,4 +1,4 @@
-import type { TenantGameOrigin } from './tenant.js';
+import type { TenantGameOrigin, TenantSeatTokenState } from './tenant.js';
 /**
  * VariantTenant registry — the extension point that makes "a new variant is
  * one registry entry" true at the dispatch layer.
@@ -381,6 +381,16 @@ export type VariantTenantRegistration = {
   // append the timeout/abort event through the tenant's writer with
   // broadcast (sweepTenantRoomDeadline over the ws runtime's lifecycleCtx).
   sweepDueDeadline: ((roomId: string) => Promise<void>) | null;
+  // Correspondence rematches reserve seats before redirecting. Record the seat
+  // through the tenant writer too, so its first-move deadline survives a restart
+  // even if neither player follows the redirect.
+  issueCorrespondenceSeatToken?: (
+    room: TenantManagedRoom,
+    seat: string,
+    identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
+  ) => Promise<{ rawToken: string; state: TenantSeatTokenState<string> }>;
+  // Operator repair reads the same event-log derivation as the writer/sweeper.
+  correspondenceDeadline?: (room: TenantManagedRoom) => { seat: string; dueAt: number } | null;
   // Seek-accept capability: create a correspondence room seating BOTH accounts, for a
   // seek the accepter just won. null = this tenant cannot back a correspondence seek.
   //
