@@ -11,7 +11,11 @@
 // deliberately absent; documenting them would promise a contract they do not
 // have. Version 0: shapes may change, and the description says so.
 
-import { XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
+import {
+  GAMES_SEARCH_DEFAULT_MIN_PLIES,
+  XIANGQI_MOTIFS,
+  XIANGQI_TRAINING_TAGS,
+} from '@mistboard/game';
 import { listWatchChannels } from './watch-channels.js';
 
 type Schema = Record<string, unknown>;
@@ -439,6 +443,123 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Games'],
         summary: 'Recent engine-versus-engine games',
         responses: { '200': OK(games(ref('GameRecord'))), '503': PERSISTENCE },
+      },
+    },
+    '/api/historical-xiangqi/games': {
+      get: {
+        tags: ['Games'],
+        summary: 'Search public games across the site, archive and broadcasts',
+        description: `Despite the path name, this searches all launched watch variants. Without a source filter, engine matches join only for a player or event search, and scheduled engine games only for a player search. Archive games and broadcasts are xiangqi only. Games played here default to at least ${GAMES_SEARCH_DEFAULT_MIN_PLIES} plies unless \`plyMin\` is supplied. Pagination reaches only the first 5000 results, even when \`total\` is larger.`,
+        parameters: [
+          query(
+            'variant',
+            { type: 'string' },
+            'A launched spec id from the response’s `variants`; omit or leave blank for all.',
+          ),
+          query(
+            'source',
+            { type: 'string' },
+            'Source slug, or `mistboard`, `mistboard-pvp`, `mistboard-pve`, `broadcast`, `archive`, `engine-match`, `engine-game`. Omit or leave blank to combine sources.',
+          ),
+          query(
+            'player',
+            { type: 'string' },
+            'Player name filter; surrounding whitespace is trimmed.',
+          ),
+          query(
+            'event',
+            { type: 'string' },
+            'Event name filter; surrounding whitespace is trimmed.',
+          ),
+          query(
+            'result',
+            { type: 'string', enum: ['1-0', '0-1', '1/2-1/2', '*'] },
+            'First seat wins, second seat wins, draw, or unknown result.',
+          ),
+          query(
+            'from',
+            { type: 'string', format: 'date' },
+            'Inclusive UTC start date, YYYY-MM-DD.',
+          ),
+          query('to', { type: 'string', format: 'date' }, 'Inclusive UTC end date, YYYY-MM-DD.'),
+          query(
+            'plyMin',
+            { type: 'integer', minimum: 0, maximum: 1000 },
+            'Minimum half-moves; 0 includes short games played here.',
+          ),
+          query('plyMax', { type: 'integer', minimum: 0, maximum: 1000 }, 'Maximum half-moves.'),
+          query(
+            'sort',
+            {
+              type: 'string',
+              enum: ['recent', 'oldest', 'longest', 'shortest'],
+              default: 'recent',
+            },
+            'Result order.',
+          ),
+          query(
+            'offset',
+            { type: 'integer', minimum: 0, maximum: 1_000_000, default: 0 },
+            'Rows to skip; offsets of 5000 or more return no games.',
+          ),
+          query(
+            'limit',
+            { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+            'Rows per page.',
+          ),
+        ],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              games: { type: 'array', items: { type: 'object' } },
+              total: { type: 'integer' },
+              offset: { type: 'integer' },
+              limit: { type: 'integer' },
+              variants: { type: 'array', items: { type: 'string' } },
+              playedPlyFloor: { type: ['integer', 'null'] },
+            },
+          }),
+          '400': ERROR_RESPONSE(
+            '`invalid_variant`, `invalid_result`, `invalid_from`, `invalid_to`, `invalid_ply_min`, `invalid_ply_max`, `invalid_sort`, `invalid_offset`, `invalid_limit`',
+          ),
+          '503': PERSISTENCE,
+        },
+      },
+    },
+    '/api/correspondence/seeks': {
+      get: {
+        tags: ['Games'],
+        summary: 'Open correspondence seeks',
+        description:
+          'Up to 100 newest open public seeks, filtered to variants the reader may see. Private and directed challenges are excluded. No query parameters; `isMine` is false for anonymous readers.',
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              seeks: {
+                type: 'array',
+                maxItems: 100,
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    gameSpecId: { type: 'string' },
+                    daysPerMove: { type: 'number' },
+                    preferredColor: { type: 'string', enum: ['first', 'second', 'random'] },
+                    rated: { type: 'boolean' },
+                    creatorName: { type: ['string', 'null'] },
+                    creatorHandle: { type: ['string', 'null'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    isMine: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          }),
+          '404': ERROR_RESPONSE('Correspondence is disabled (`correspondence_disabled`).'),
+          '503': PERSISTENCE,
+        },
       },
     },
     '/api/games/{roomId}': {
@@ -982,6 +1103,28 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
     },
+    '/api/puzzles/ramp': {
+      get: {
+        tags: ['Puzzles'],
+        summary: 'Puzzles ordered from easier to harder',
+        description:
+          'Selects puzzle summaries nearest rating rungs starting at 800, increasing by 50, without decreasing rating or repeating a puzzle. No solutions or pagination.',
+        parameters: [
+          query(
+            'variant',
+            { type: 'string', enum: ['xiangqi', 'jungle'], default: 'xiangqi' },
+            'One variant; omit or leave empty for xiangqi.',
+          ),
+        ],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: { puzzles: { type: 'array', items: ref('PuzzleSummary') } },
+          }),
+          '400': ERROR_RESPONSE('`invalid_variant`'),
+        },
+      },
+    },
     '/api/puzzles/daily': {
       get: {
         tags: ['Puzzles'],
@@ -1031,13 +1174,62 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Studies'],
         summary: 'Public studies',
         parameters: [
-          query('limit', { type: 'integer', minimum: 1, maximum: 50, default: 5 }, 'Rows.'),
-          query('q', { type: 'string', minLength: 2 }, 'Filter by name.'),
+          query(
+            'limit',
+            { type: 'integer', minimum: 1, maximum: 50, default: 5 },
+            'Rows; capped at 50, fractions truncated, invalid or non-positive values use 5.',
+          ),
+          query(
+            'offset',
+            { type: 'integer', minimum: 0, default: 0 },
+            'Rows to skip; invalid or negative values become 0, fractions are truncated.',
+          ),
+          query(
+            'q',
+            { type: 'string' },
+            'Case-insensitive name substring; surrounding whitespace is trimmed, blank is ignored.',
+          ),
         ],
         responses: {
           '200': OK({
             type: 'object',
-            properties: { studies: { type: 'array', items: ref('StudySummary') } },
+            properties: {
+              studies: { type: 'array', items: ref('StudySummary') },
+              hasMore: { type: 'boolean' },
+            },
+          }),
+          '503': PERSISTENCE,
+        },
+      },
+    },
+    '/api/studies/staff': {
+      get: {
+        tags: ['Studies'],
+        summary: 'Staff-curated public studies',
+        parameters: [
+          query(
+            'limit',
+            { type: 'integer', minimum: 1, maximum: 50, default: 30 },
+            'Rows; capped at 50, fractions truncated, invalid or non-positive values use 30.',
+          ),
+          query(
+            'offset',
+            { type: 'integer', minimum: 0, default: 0 },
+            'Rows to skip; invalid or negative values become 0, fractions are truncated.',
+          ),
+          query(
+            'q',
+            { type: 'string' },
+            'Case-insensitive name substring; surrounding whitespace is trimmed, blank is ignored.',
+          ),
+        ],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              studies: { type: 'array', items: ref('StudySummary') },
+              hasMore: { type: 'boolean' },
+            },
           }),
           '503': PERSISTENCE,
         },
@@ -1089,6 +1281,96 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             },
           }),
           '400': ERROR_RESPONSE('`invalid_position`'),
+          '503': PERSISTENCE,
+        },
+      },
+    },
+    '/api/xiangqi/tablebase': {
+      get: {
+        tags: ['Xiangqi'],
+        summary: 'Exact xiangqi endgame results',
+        description:
+          'Returns `status: exact` only when every legal move has an exact result. Positions with more than five attacking pieces return `status: none`, as do unavailable upstream data and requests above 90 per minute per IP (no 429). Exact results cache for one day, none for 60 seconds; rate-limited answers are not cached.',
+        parameters: [
+          query(
+            'fen',
+            { type: 'string', maxLength: 120 },
+            'A standard xiangqi FEN; surrounding whitespace is trimmed.',
+            true,
+          ),
+        ],
+        responses: {
+          '200': OK({
+            oneOf: [
+              { type: 'object', properties: { status: { const: 'none' } }, required: ['status'] },
+              {
+                type: 'object',
+                properties: {
+                  status: { const: 'exact' },
+                  result: {
+                    type: 'string',
+                    enum: ['win', 'draw', 'loss'],
+                    description: 'Outcome for the side to move under best play.',
+                  },
+                  dtm: {
+                    type: ['integer', 'null'],
+                    description: 'Half-moves to mate; null for a draw or unavailable distance.',
+                  },
+                  moves: { type: 'array', items: { type: 'object' } },
+                },
+                required: ['status', 'result', 'dtm', 'moves'],
+              },
+            ],
+          }),
+          '400': ERROR_RESPONSE('Missing, unreadable or overlong FEN (`invalid_position`).'),
+        },
+      },
+    },
+    '/api/xiangqi/players': {
+      get: {
+        tags: ['Xiangqi'],
+        summary: 'Professional players in the broadcast archive',
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: { players: { type: 'array', items: { type: 'object' } } },
+          }),
+          '503': PERSISTENCE,
+        },
+      },
+    },
+    '/api/xiangqi/players/{slug}': {
+      get: {
+        tags: ['Xiangqi'],
+        summary: 'One professional player and their games',
+        parameters: [pathParam('slug', 'Player slug from `/api/xiangqi/players`.')],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              player: { type: 'object', properties: { puzzleCount: { type: 'integer' } } },
+              boards: { type: 'array', items: { type: 'object' } },
+            },
+          }),
+          '404': NOT_FOUND,
+          '503': PERSISTENCE,
+        },
+      },
+    },
+    '/api/xiangqi/broadcasts/calendar': {
+      get: {
+        tags: ['Xiangqi'],
+        summary: 'Broadcast event calendar',
+        description:
+          'Merges the source index (cached for six hours, with stale data on fetch failure) and relayed events. `sourceReadable` is false only when no source index is available; relayed events still answer.',
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              sourceReadable: { type: 'boolean' },
+              events: { type: 'array', items: { type: 'object' } },
+            },
+          }),
           '503': PERSISTENCE,
         },
       },
@@ -1341,7 +1623,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       { name: 'Site', description: 'Liveness and site-wide counts.' },
       {
         name: 'Games',
-        description: 'Finished games. A game is public once it ends and never before.',
+        description: 'Finished-game reads and search, plus open correspondence seeks.',
       },
       { name: 'Watch', description: 'The feeds Mistboard TV and /watch read.' },
       { name: 'Ratings', description: 'The rating ladders.' },
@@ -1349,7 +1631,10 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       { name: 'Bots', description: 'Engines a player can be offered.' },
       { name: 'Puzzles', description: 'The puzzle trainer.' },
       { name: 'Studies', description: 'Public studies and their chapters.' },
-      { name: 'Xiangqi', description: 'The opening explorer and tournament broadcasts.' },
+      {
+        name: 'Xiangqi',
+        description: 'Opening explorer, endgame tablebase, tournament broadcasts and pro players.',
+      },
       { name: 'Forum', description: 'Forum reads.' },
       { name: 'Coaches', description: 'The coach directory.' },
       { name: 'Embeds', description: 'oEmbed and this document.' },

@@ -12,6 +12,7 @@ import { installReviewKeyboard } from './review/review-layout.js';
 import {
   buildWatchScrubber,
   createWatchSwitchGuard,
+  followWatchLiveRail,
   formatWatchScope,
   loadWatchMainBeforePreviews,
   renderWatchChannelList,
@@ -611,6 +612,23 @@ describe('buildWatchScrubber', () => {
 
     expect(scrubber.el).toBe(table.refs.replayControlsRoot);
     expect(jumps).toEqual([3, 12]);
+  });
+});
+
+describe('followWatchLiveRail', () => {
+  it.each([
+    { previousPly: 4, latest: 5, jumps: [4, 5], scenario: 'a one-move advance' },
+    { previousPly: 4, latest: 7, jumps: [7], scenario: 'a three-move catch-up' },
+    { previousPly: undefined, latest: 5, jumps: [5], scenario: 'a new live game' },
+    { previousPly: undefined, latest: 1, jumps: [1], scenario: 'a one-ply seed' },
+    { previousPly: 0, latest: 1, jumps: [0, 1], scenario: 'the first live move' },
+    { previousPly: 4, latest: 4, jumps: [4], scenario: 'an unchanged position' },
+  ])('paints the expected plies for $scenario', ({ previousPly, latest, jumps: expected }) => {
+    const jumps: number[] = [];
+    const handle = { plyCount: () => latest, jumpToPly: (ply: number) => jumps.push(ply) };
+
+    expect(followWatchLiveRail(handle, previousPly)).toBe(latest);
+    expect(jumps).toEqual(expected);
   });
 });
 

@@ -30,10 +30,6 @@ const EXEMPT: Readonly<Record<string, string>> = {
   // server suite plays two bots through a whole match
   // (xiangqi-mahjong-tenant.test.ts).
   'xiangqi-mahjong': 'in-process bot, covered by the server suite',
-  // Its seats became first-party bots in #1157. The engine is an executable the
-  // server runs (MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH;
-  // three-kingdoms-banqi-engine.ts). A prod smoke row follows in its own change.
-  'three-kingdoms-banqi': 'bot seats added in #1157; prod smoke to follow',
 };
 
 function pveGameSpecIds(): string[] {
@@ -47,6 +43,11 @@ function pveGameSpecIds(): string[] {
 function smokedGameSpecIds(): Set<string> {
   return new Set(Object.values(VARIANT_SMOKE_CONFIGS).map((config) => config.gameSpecId));
 }
+
+test('Three Kingdoms Banqi executable engine has a prod smoke without an exemption', () => {
+  assert.ok(smokedGameSpecIds().has('three-kingdoms-banqi'));
+  assert.ok(!('three-kingdoms-banqi' in EXEMPT));
+});
 
 test('the bot roster is readable and non-trivial', () => {
   // Guards the assertion below: an import that silently yielded nothing would

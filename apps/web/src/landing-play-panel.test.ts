@@ -151,6 +151,24 @@ describe('homepage play panel', () => {
     expect(new Set(specs).size).toBe(specs.length);
   });
 
+  it('leads Play a person with the game this browser last played, and leaves the computer list alone', () => {
+    const specsOf = (board: HTMLElement, selector: string) =>
+      [...board.querySelectorAll<HTMLElement>(selector)].map((el) => el.dataset.gameSpec);
+    const fresh = buildPlayPanel('en', { hydrate: false });
+    const people = specsOf(fresh, '.pp-person-rows .pp-tile');
+    const bots = specsOf(fresh, '.pp-row-bot');
+    const last = people.at(-1);
+    expect(people.length).toBeGreaterThan(2);
+    window.localStorage.setItem('mistboard:last-played-variant', String(last));
+
+    const returning = buildPlayPanel('en', { hydrate: false });
+    expect(specsOf(returning, '.pp-person-rows .pp-tile')).toEqual([
+      last,
+      ...people.filter((id) => id !== last),
+    ]);
+    expect(specsOf(returning, '.pp-row-bot')).toEqual(bots);
+  });
+
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
     'links every game name on both tabs to its public rules in %s',
     (locale) => {
