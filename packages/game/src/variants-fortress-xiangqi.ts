@@ -71,7 +71,9 @@ export type FortressXiangqiGameEndReason =
   | 'resignation'
   | 'abandonment'
   // Both players agreed a draw (an accepted draw offer).
-  | 'agreement';
+  | 'agreement'
+  // A server-authored tournament limit, not a rules adjudication.
+  | 'tournament-cap';
 
 export type FortressXiangqiGameStatus =
   | { type: 'playing'; turn: FortressXiangqiColor }

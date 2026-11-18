@@ -162,7 +162,9 @@ export type DuckXiangqiGameEndReason =
   | 'resignation'
   | 'abandonment'
   // Both players agreed a draw (an accepted draw offer).
-  | 'agreement';
+  | 'agreement'
+  // A server-authored tournament limit, not a rules adjudication.
+  | 'tournament-cap';
 
 export type DuckXiangqiGameStatus =
   | { type: 'playing'; turn: DuckXiangqiColor }

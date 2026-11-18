@@ -31,6 +31,21 @@ afterEach(() => {
 });
 
 describe('puzzle phone stack', () => {
+  it('wraps source events to two lines on desktop and across the phone sheet', () => {
+    const eventRule = desktop.match(/\.puzzle-source-event \{([^}]*)\}/)?.[1];
+    expect(eventRule).toContain('display: -webkit-box;');
+    expect(eventRule).toContain('-webkit-box-orient: vertical;');
+    expect(eventRule).toContain('-webkit-line-clamp: 2;');
+    expect(eventRule).toContain('overflow: hidden;');
+    expect(eventRule).toContain('white-space: normal;');
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-pm-head__source \{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/,
+    );
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-pm-head__source > \.puzzle-source-event[^{}]*\{[^}]*grid-column: 1 \/ -1;[^}]*white-space: normal;/,
+    );
+  });
+
   it('swaps in the shared move-nav bar right under the board on the phone', () => {
     expect(phoneBlock).toContain(
       '.puzzles-shell .puzzle-side-panel > .puzzle-actions { display: none; }',
@@ -523,7 +538,8 @@ describe('puzzle phone menu rows', () => {
     } as PuzzleSummary;
     const head = puzzlePhoneMenuHead(props({ queue: [fromGame] }));
     const source = head?.querySelector('.puzzle-pm-head__source');
-    expect(source?.firstElementChild?.textContent).toContain('2026 National Xiangqi');
+    expect(source?.firstElementChild?.textContent).toBe('From game');
+    expect(source?.children[1]?.textContent).toBe('2026 National Xiangqi Team Championship');
     const names = [...(source?.querySelectorAll<HTMLElement>('.puzzle-source-player-name') ?? [])];
     expect(names.map((name) => name.textContent)).toEqual(['Xu Wei', 'Xu Tengfei']);
     expect(names[0]?.title).toBe('Xu Wei (Xinjiang Production Team)');

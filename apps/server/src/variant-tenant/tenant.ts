@@ -196,6 +196,10 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       winner: C | null;
       reason: TenantAdjudicationReason;
     }
+  // A server-authored tournament limit, distinct from a rules draw or an
+  // outside referee's verdict. Only tenants with finishTournamentCap accept
+  // it. No client command produces it; runners must opt in separately.
+  | { type: 'game-tournament-capped'; at: number; roomId: string }
   // Server bookkeeping, never sent to a client (tenantEventsForClient and the
   // live broadcast drop them): the server stopped with this game live, so its
   // clock froze at `at` instead of charging the outage to the side to move.
@@ -506,6 +510,9 @@ export type VariantTenant<
     // no winner and reason 'agreement'. A tenant without it rejects every draw
     // event, so a table that cannot be drawn this way is never offered one.
     finishDraw?(state: State): State;
+    // Optional: draw at a server-imposed tournament limit, with reason
+    // 'tournament-cap'. A tenant without it rejects game-tournament-capped.
+    finishTournamentCap?(state: State): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;

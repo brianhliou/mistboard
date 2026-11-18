@@ -124,7 +124,8 @@ const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 // 'pikafish-xiangqi-level-8'; unmapped, a homepage Level 5 player reopened the
 // dialog on the newcomer default.
 export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
-  if (gameSpecId === GOMOKU_SPEC_ID) return id === 'rapfi' ? 'rapfi-strongest' : id;
+  if (gameSpecId === GOMOKU_SPEC_ID)
+    return id === 'rapfi' || id === 'rapfi-strongest' ? 'rapfi-level-8' : id;
   if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
   if (gameSpecId === XIANGQI_SPEC_ID) {
     if (id === 'pikafish') return 'pikafish-xiangqi-level-8';
@@ -413,28 +414,16 @@ export function landingBotLadder(
     ).filter((rung) => playableEngines.has(rung.engineId!));
   }
   if (gameSpecId === GOMOKU_SPEC_ID) {
-    const rungs: LandingBotRung[] = [
-      ...Array.from(
-        { length: 8 },
-        (_, i): LandingBotRung => ({
-          botId: `rapfi-level-${i + 1}`,
-          level: i + 1,
-          name: `Rapfi Level ${i + 1}`,
-          engine: 'Rapfi',
-          net: null,
-        }),
-      ),
-      {
-        botId: 'rapfi',
-        gated: true,
-        engineId: 'rapfi-strongest',
-        level: null,
-        name: 'Rapfi',
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        botId: `rapfi-level-${i + 1}`,
+        level: i + 1,
+        name: `Rapfi Level ${i + 1}`,
         engine: 'Rapfi',
         net: null,
-      },
-    ];
-    return rungs.filter((rung) => !rung.gated || playable.has(rung.botId!));
+      }),
+    );
   }
   if (gameSpecId === BANQI_SPEC_ID || gameSpecId === JUNGLE_FLIP_SPEC_ID) {
     const base = gameSpecId === BANQI_SPEC_ID ? 'misty-banqi' : 'misty-jungle-flip';
@@ -573,6 +562,10 @@ export function landingBotLadderIndex(
   remembered: string | null | undefined,
 ): number {
   if (!remembered) return -1;
+  // The retired separate Rapfi choice now has the same policy as Level 8.
+  if (remembered === 'rapfi' || remembered === 'rapfi-strongest') {
+    return ladder.findIndex((rung) => rung.botId === 'rapfi-level-8');
+  }
   const tier = ladder.findIndex((rung) => rung.engineId === remembered);
   if (tier >= 0) return tier;
   // Old one-click Misty picks meant the legacy engine, now Level 7.

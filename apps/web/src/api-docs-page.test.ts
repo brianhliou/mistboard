@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   anchorFor,
+  ENUM_INLINE_LIMIT,
   inlineCode,
   mountApiDocs,
   type OpenApiDocument,
@@ -97,6 +98,7 @@ describe('renderOpenApi', () => {
     const root = renderOpenApi(DOC);
     const game = root.querySelector(`#${anchorFor('get', '/api/games/{roomId}')}`);
     expect(game?.querySelector('.api-docs-params')).not.toBeNull();
+    expect(game?.querySelector('.api-docs-params-scroll > .api-docs-params')).not.toBeNull();
     expect(game?.querySelectorAll('.api-docs-responses dt')).toHaveLength(2);
     // The ladder needs a `variant` the examples do not carry for this doc, so
     // the ping is the one with a link and the ladder without.
@@ -105,6 +107,33 @@ describe('renderOpenApi', () => {
       `#${anchorFor('get', '/api/leaderboard')} .api-docs-required`,
     );
     expect(required?.textContent).toBe('required');
+  });
+
+  it('folds a long enum behind a disclosure and keeps a short one inline', () => {
+    const many = Array.from({ length: ENUM_INLINE_LIMIT + 4 }, (_, i) => `v${i}`);
+    const root = renderOpenApi({
+      ...DOC,
+      paths: {
+        '/api/puzzles': {
+          get: {
+            tags: ['Games'],
+            summary: 'Puzzles',
+            parameters: [
+              { name: 'theme', in: 'query', schema: { type: 'string', enum: many, default: 'v0' } },
+              { name: 'variant', in: 'query', schema: { type: 'string', enum: ['a', 'b'] } },
+            ],
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    });
+    const cells = [...root.querySelectorAll('.api-docs-type')];
+    const fold = cells[0]?.querySelector('details.api-docs-enum');
+    expect(fold?.querySelector('summary')?.textContent).toBe(`one of ${many.length} values`);
+    expect(fold?.querySelector('.api-docs-enum__values')?.textContent).toBe(many.join(', '));
+    expect(cells[0]?.querySelector('.api-docs-enum__default')?.textContent).toBe('default v0');
+    expect(cells[1]?.querySelector('details')).toBeNull();
+    expect(cells[1]?.textContent).toBe('one of a, b');
   });
 });
 

@@ -125,7 +125,9 @@ test('Rapfi worker hashes the actual native mix9svq file and records policy for 
       netSha256: null,
       policy: loadEngine(anchor).playSignature,
     });
-    const level = await captureEngineGameStamps(loadEngine('rapfi-level-8'), loadEngine(id));
+    // Level 8 shares the strongest policy (#1204); a lower level still stamps
+    // its own, so each seat's policy is recorded separately.
+    const level = await captureEngineGameStamps(loadEngine('rapfi-level-1'), loadEngine(id));
     assert.notEqual(level.white.policy, level.black.policy);
     let payload: unknown;
     await recordEngineGameStamps(
@@ -156,7 +158,7 @@ test('Rapfi worker hashes the actual native mix9svq file and records policy for 
     // Isolate policy eligibility from the deliberate worker net override.
     const workerPins = { ...pins, nets: { ...pins.nets, [id]: stamps.white.netSha256 } };
     assert.equal(currentStampedCalibrationGames([row], workerPins, anchor).length, 1);
-    for (const policy of [undefined, loadEngine('rapfi-level-8').playSignature]) {
+    for (const policy of [undefined, loadEngine('rapfi-level-1').playSignature]) {
       assert.equal(
         currentStampedCalibrationGames(
           [{ ...row, stamps: { ...stamps, white: { ...stamps.white, policy } } }],

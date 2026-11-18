@@ -13,6 +13,10 @@ import {
   PIKAFISH_XIANGQI_VERSION,
 } from './bot-engine-versions.js';
 import { FIRST_PARTY_BOT_PROFILES } from './first-party-bots.js';
+import {
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  threeKingdomsBanqiEngineVersion,
+} from './three-kingdoms-banqi-engine.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8');
@@ -41,7 +45,6 @@ test('Pikafish identifies its upstream pin, applied patch and CC0 network', () =
 test('pinned source builds show the short sha of their .ref', () => {
   const cases: [engineId: string, refFile: string][] = [
     ['rapfi-level-1', 'rapfi.ref'],
-    ['rapfi-level-8', 'rapfi.ref'],
     ['rapfi-strongest', 'rapfi.ref'],
     ['pikafish-jieqi-level-3', 'pikafish-jieqi.ref'],
     ['pikafish-jieqi-strongest', 'pikafish-jieqi.ref'],
@@ -53,6 +56,14 @@ test('pinned source builds show the short sha of their .ref', () => {
   for (const [engineId, refFile] of cases) {
     assert.equal(botEngineVersion(engineId), pinnedSha(refFile).slice(0, 8), engineId);
   }
+});
+
+test('only Rapfi Level 8 bumps its provenance for the strongest policy promotion', () => {
+  const ref = pinnedSha('rapfi.ref').slice(0, 8);
+  assert.equal(botEngineVersion('rapfi-level-8'), `${ref} · strongest-20261117`);
+  for (let level = 1; level <= 7; level++)
+    assert.equal(botEngineVersion(`rapfi-level-${level}`), ref);
+  assert.equal(botEngineVersion('rapfi-strongest'), ref);
 });
 
 test('the stock Fairy-Stockfish rungs show the release the build downloads', () => {
@@ -104,11 +115,22 @@ test('an engine with no recorded version shows nothing rather than a guess', () 
     'rapfi-level-1\n',
     'rapfi-strongest\n',
     'rapfi-strongest-extra',
+    'misty-three-kingdoms-banqi-level-0',
+    'misty-three-kingdoms-banqi-level-9',
+    'misty-three-kingdoms-banqi-level-01',
   ])
     assert.equal(botEngineVersion(id), null, id);
   assert.equal(botEngineVersion('misty-xiangqi-mahjong'), null);
   assert.equal(botEngineVersion('python-no-such-build'), null);
   assert.equal(botEngineVersion('made-up-engine'), null);
+});
+
+test('Three Kingdoms bot versions preserve each current and historical engine build', () => {
+  for (const tier of THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
+    const version = threeKingdomsBanqiEngineVersion(tier.id);
+    assert.ok(version, tier.id);
+    assert.equal(botEngineVersion(tier.id), version, tier.id);
+  }
 });
 
 test('every first-party engine except the named exceptions has a version', () => {

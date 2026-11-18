@@ -220,6 +220,7 @@ test('variant configs: every entry is complete and self-consistent', () => {
     dxq: 'dark-xiangqi',
     banqi: 'banqi',
     'three-kingdoms-banqi': 'three-kingdoms-banqi',
+    'ffq-banqi': 'ffq-banqi',
     jieqi: 'jieqi',
     jungle: 'jungle',
     'jungle-flip': 'jungle-flip',
@@ -415,6 +416,43 @@ test('Three Kingdoms Banqi smoke waits for the engine opening and confirms prega
     failed[0].message,
     /Three Kingdoms Banqi game room-1 finished before smoke completed/,
   );
+});
+
+test('Fanfanqi smoke waits for its engine opening, then confirms pregame abort', () => {
+  const config = VARIANT_SMOKE_CONFIGS['ffq-banqi'];
+  assert.ok(config, 'Fanfanqi needs a production PvE smoke');
+  const lastMove = { from: 0, to: 0 };
+  const state = playingState({ ply: 1, lastMove });
+  for (let level = 1; level <= 8; level++) {
+    const seats = { red: `misty-ffq-banqi-level-${level}` };
+    assert.deepEqual(
+      evaluateSmokeMessage(config, CONTEXT(), {
+        seats,
+        state: playingState({ status: { type: 'playing', turn: 'red' }, ply: 0, lastMove: null }),
+      }),
+      [],
+    );
+    assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { seats, state }), [
+      { kind: 'abort', engineReplyState: { moveNumber: 1, turn: 'black', lastMove } },
+    ]);
+  }
+  for (const seats of [{ red: 'misty-banqi' }, { black: 'misty-ffq-banqi-level-4' }, {}]) {
+    assert.deepEqual(evaluateSmokeMessage(config, CONTEXT(), { seats, state }), []);
+  }
+  const finalStatus = { type: 'aborted', reason: 'user-abort' };
+  assert.deepEqual(
+    evaluateSmokeMessage(
+      config,
+      { ...CONTEXT(), sentAbort: true },
+      { state: { status: finalStatus } },
+    ),
+    [{ kind: 'success', finalStatus }],
+  );
+  const failed = evaluateSmokeMessage(config, CONTEXT(), {
+    state: { status: { type: 'finished', winner: 'black', reason: 'resignation' } },
+  });
+  assert.equal(failed[0].kind, 'failure');
+  assert.match(failed[0].message, /Fanfanqi game room-1 finished before smoke completed/);
 });
 
 test('Gomoku smoke requires a Rapfi reply beyond the dealt opening, on the white seat', () => {

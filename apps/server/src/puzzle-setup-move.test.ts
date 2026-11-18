@@ -4,6 +4,7 @@ import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   type XiangqiMove,
+  type XiangqiPuzzle,
 } from '@mistboard/game';
 import { positionPuzzleFixture } from './fixtures/xiangqi-position-packet.js';
 import {
@@ -25,6 +26,44 @@ test('position-only credit never loads a source game or reconstructs history', a
   const text = JSON.stringify(fields);
   for (const key of ['sourceGame', 'setupMove', 'history', 'PRIVATE_SOURCE'])
     assert.ok(!text.includes(key));
+});
+
+test('credit detail carries only its validated capturing setup move, without loading the game', async () => {
+  const initial = applyStandardXiangqiMove(createInitialXiangqiState('credit'), {
+    from: 'h3',
+    to: 'h10',
+  });
+  const stored = {
+    ...positionPuzzleFixture(),
+    initial,
+    setupMove: { from: 'h3', to: 'h10', captured: { color: 'black', role: 'horse' } },
+  } as XiangqiPuzzle & { setupMove: unknown };
+  let calls = 0;
+  const fields = await puzzleDetailSourceFields(stored, async () => {
+    calls++;
+    throw new Error('PRIVATE_SOURCE_MUST_NOT_BE_LOADED');
+  });
+  assert.equal(calls, 0);
+  assert.deepEqual(fields.setupMove, stored.setupMove);
+  assert.equal(fields.history, undefined);
+  assert.equal(fields.sourceGame, undefined);
+  assert.deepEqual(Object.keys(fields).sort(), ['credit', 'setupMove']);
+  assert.doesNotMatch(JSON.stringify(fields), /history|sourceGame|PRIVATE_SOURCE/);
+});
+
+test('a credit setup that cannot replay to initial is omitted', async () => {
+  const stored = {
+    ...positionPuzzleFixture(),
+    initial: applyStandardXiangqiMove(createInitialXiangqiState('credit-invalid'), {
+      from: 'h3',
+      to: 'h10',
+    }),
+    setupMove: { from: 'h3', to: 'h10', captured: null },
+  } as XiangqiPuzzle;
+  const fields = await puzzleDetailSourceFields(stored, null);
+  assert.equal(fields.setupMove, undefined);
+  assert.equal(fields.history, undefined);
+  assert.ok(fields.credit);
 });
 
 // A short legal game. A puzzle starting at ply N has GAME[N-1] as its setup
@@ -208,6 +247,30 @@ test('Chinese event and names get English forms beside the originals', async () 
 test('an English name needs no English form', () => {
   assert.equal(englishSourcePlayerName('HTown David Nguyen'), undefined);
   assert.equal(englishSourcePlayerName('越南 阮成保'), 'Nguyễn Thành Bảo (Vietnam)');
+});
+
+test('DPXQ puzzle credits retain pairs, Japanese names and translated event words', async () => {
+  assert.equal(englishSourcePlayerName('卢玄斌 谢汶谕'), 'Lu Xuanbin / Xie Wenyu');
+  assert.equal(englishSourcePlayerName('日本 池田彩歌'), 'Ikeda Ayaka (Japan)');
+  assert.equal(englishSourcePlayerName('池田彩歌'), 'Ikeda Ayaka');
+  assert.equal(englishSourcePlayerName('山家爱美'), 'Japanese player');
+  assert.equal(
+    englishSourcePlayerName('上海棋类二队 唐丹'),
+    'Tang Dan (Shanghai Board Games Second Team)',
+  );
+  const stored = puzzle('xq_dpxq_pairs', 4, {
+    redName: '卢玄斌 谢汶谕',
+    blackName: '日本 池田彩歌',
+  });
+  stored.sourceGame.event = '2025年第八届“一带一路”锦江杯成都全球象棋双人赛 双人赛';
+  const fields = await puzzleDetailSourceFields(stored, null);
+  assert.equal(fields.sourceGame?.redNameEn, 'Lu Xuanbin / Xie Wenyu');
+  assert.equal(fields.sourceGame?.blackNameEn, 'Ikeda Ayaka (Japan)');
+  assert.equal(
+    fields.sourceGame?.eventEn,
+    '2025 8th Belt and Road Jinjiang Cup Chengdu Global Xiangqi Pairs',
+  );
+  assert.equal(fields.sourceGame?.redName, '卢玄斌 谢汶谕');
 });
 
 test('only the online platform event marks a game as an online platform game', () => {

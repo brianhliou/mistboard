@@ -1,162 +1,202 @@
 #!/usr/bin/env node
-// Load harness CLI.
-//
-// Usage:
-//   npm run loadtest --workspace @mistboard/server -- \
-//     --mode pve-blitz --concurrency 10 [--duration 60s] [--server ws://127.0.0.1:3001] \
-//     [--seed 42] [--out results.jsonl]
-//
-// Reports p50/p95/p99 of per-move latency across all completed games, plus
-// completion rate. With --out, also writes one JSONL record per game so you
-// can post-hoc analyze.
-
+// Loopback-only load harness. --benchmark runs the reproducible PvP protocol.
 import { writeFileSync } from 'node:fs';
-import { type GameResult, runScenario } from './runner.js';
+import { pathToFileURL } from 'node:url';
+import { type BenchmarkOptions, runBenchmark } from './benchmark.js';
+import { runScenario, validateTarget } from './runner.js';
 import { scenarios } from './scenarios.js';
 import { formatSummary, summarize } from './stats.js';
 
-interface Args {
-  mode: string;
-  concurrency: number;
-  durationMs?: number;
-  serverUrl: string;
-  seed?: number;
-  outFile?: string;
-  quiet: boolean;
-  engine?: string;
-}
-
-function parseArgs(argv: string[]): Args {
-  const args: Partial<Args> = { quiet: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const a = argv[i]!;
-    const next = () => argv[++i];
-    if (a === '--mode') args.mode = next();
-    else if (a === '--concurrency') args.concurrency = Number(next());
-    else if (a === '--duration') args.durationMs = parseDuration(next() ?? '');
-    else if (a === '--server') args.serverUrl = next();
-    else if (a === '--seed') args.seed = Number(next());
-    else if (a === '--out') args.outFile = next();
-    else if (a === '--engine') args.engine = next();
-    else if (a === '--quiet') args.quiet = true;
-    else if (a === '--help' || a === '-h') {
-      printHelp();
-      process.exit(0);
-    } else {
-      throw new Error(`unknown arg: ${a}`);
-    }
+export function parseArgs(argv: string[]) {
+  const values = new Map<string, string>();
+  const flags = new Set<string>();
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    if (['--benchmark', '--quiet', '--json', '--help', '-h'].includes(arg)) flags.add(arg);
+    else if (
+      [
+        '--mode',
+        '--concurrency',
+        '--duration',
+        '--warmup',
+        '--think',
+        '--repetitions',
+        '--server',
+        '--seed',
+        '--out',
+        '--engine',
+        '--persistence',
+        '--placement',
+      ].includes(arg)
+    ) {
+      const value = argv[++i];
+      if (!value || value.startsWith('--')) throw new Error(`missing value for ${arg}`);
+      if (values.has(arg)) throw new Error(`duplicate argument ${arg}`);
+      values.set(arg, value);
+    } else throw new Error(`unknown argument ${arg}`);
   }
-  if (!args.mode) throw new Error('missing --mode');
-  if (!args.concurrency || Number.isNaN(args.concurrency)) throw new Error('missing --concurrency');
+  const benchmark = flags.has('--benchmark');
+  const integer = (key: string, fallback: number, minimum = 1) => {
+    const raw = values.get(key);
+    const n = raw === undefined ? fallback : Number(raw);
+    if (!Number.isSafeInteger(n) || n < minimum) throw new Error(`invalid ${key}`);
+    return n;
+  };
+  const duration = (key: string, fallback: number) => {
+    const raw = values.get(key);
+    if (raw === undefined) return fallback;
+    const match = /^(\d+)(ms|s|m)?$/.exec(raw);
+    if (!match) throw new Error(`invalid ${key}`);
+    const ms = Number(match[1]) * (match[2] === 'ms' ? 1 : match[2] === 'm' ? 60_000 : 1000);
+    if (!Number.isSafeInteger(ms) || (key === '--duration' && ms <= 0))
+      throw new Error(`invalid ${key}`);
+    return ms;
+  };
+  const concurrencies = (values.get('--concurrency') ?? (benchmark ? '1,50' : ''))
+    .split(',')
+    .map(Number);
+  if (
+    concurrencies.some((n) => !Number.isSafeInteger(n) || n < 1) ||
+    new Set(concurrencies).size !== concurrencies.length ||
+    (!benchmark && concurrencies.length !== 1)
+  )
+    throw new Error('invalid --concurrency');
+  const scenario = scenarios[values.get('--mode') ?? (benchmark ? 'pvp-blitz' : '')];
+  if (!scenario) throw new Error('unknown or missing --mode');
+  if (benchmark && (scenario.mode !== 'pvp' || values.has('--engine')))
+    throw new Error('benchmark requires PvP without engines');
+  const persistence = values.get('--persistence') ?? 'unknown';
+  const placement = values.get('--placement') ?? 'unknown';
+  if (!['memory', 'disposable-postgres', 'unknown'].includes(persistence))
+    throw new Error('invalid --persistence');
+  if (!['same-host-separate-process', 'unknown'].includes(placement))
+    throw new Error('invalid --placement');
+  const durationMs = duration('--duration', benchmark ? 60_000 : 0);
+  const warmupMs = duration('--warmup', benchmark ? 10_000 : 0);
+  if (!benchmark && warmupMs && !durationMs) throw new Error('--warmup requires --duration');
   return {
-    mode: args.mode,
-    concurrency: args.concurrency,
-    durationMs: args.durationMs,
-    serverUrl: args.serverUrl ?? 'ws://127.0.0.1:3001',
-    seed: args.seed,
-    outFile: args.outFile,
-    quiet: args.quiet ?? false,
-    engine: args.engine,
+    benchmark,
+    quiet: flags.has('--quiet'),
+    json: flags.has('--json') || benchmark,
+    outFile: values.get('--out'),
+    engine: values.get('--engine'),
+    options: {
+      serverUrl: validateTarget(values.get('--server') ?? 'ws://127.0.0.1:3001'),
+      scenario,
+      concurrencies,
+      repetitions: integer('--repetitions', benchmark ? 3 : 1),
+      durationMs,
+      warmupMs,
+      thinkMs: duration('--think', 0),
+      seed: integer('--seed', 42, 0),
+      persistence: persistence as BenchmarkOptions['persistence'],
+      placement: placement as BenchmarkOptions['placement'],
+    },
   };
 }
 
-function parseDuration(s: string): number {
-  const match = /^(\d+)(ms|s|m)?$/.exec(s);
-  if (!match) throw new Error(`bad duration: ${s}`);
-  const n = Number(match[1]);
-  const unit = match[2] ?? 's';
-  return unit === 'ms' ? n : unit === 's' ? n * 1_000 : n * 60_000;
-}
-
-// Collapse long diagnostic notes into short bucket labels for summary tallies.
-function bucketTag(raw: string): string {
-  if (raw === 'FIN' || raw === 'ERR' || raw === 'OK') return raw;
-  if (raw.startsWith('move-wait-timeout')) return 'TIMEOUT';
-  if (raw.startsWith('reply-wait-timeout')) return 'TIMEOUT';
-  if (raw === 'maxMoves-cap') return 'CAP-MOVES';
-  if (raw === 'maxGameMs-exceeded') return 'CAP-MS';
-  if (raw === 'no-legal-moves') return 'NO-LEGAL';
-  return raw.slice(0, 30);
-}
-
-function printHelp(): void {
-  const modes = Object.keys(scenarios).join(', ');
-  console.log(`Mistboard load harness
-
-  --mode <scenario>      Required. One of: ${modes}
-  --concurrency <N>      Required. Concurrent games.
-  --duration <Ns|Nms|Nm> Optional. Repeat games until this wall-clock elapses.
-                         If omitted, each worker runs exactly one game.
-  --server <ws://...>    Optional. Default: ws://127.0.0.1:3001
-  --seed <int>           Optional. Base PRNG seed for move selection.
-  --out <file>           Optional. Write JSONL per-game records.
-  --engine <id>          Optional. PvE-only override (e.g. python-random-legal,
-                         python-tier1-v0.9.1). Default: server's builtin.
-  --quiet                Suppress per-game progress lines.
+export async function main(argv = process.argv.slice(2)): Promise<number> {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    console.log(`Mistboard LOCAL load harness
+  --benchmark              PvP protocol: concurrency 1,50, seed 42, 3 repetitions
+  --mode <scenario>        ${Object.keys(scenarios).join(', ')}
+  --concurrency <N[,N]>     Comma-separated values only with --benchmark
+  --warmup <10s>            Warmup before measurement
+  --duration <60s>          Measurement window; omit outside benchmark for one game
+  --think <0ms>             Mean pause before each move (0.5x-1.5x jitter); not in the sample
+  --repetitions <3>         Retain all runs
+  --server <ws://127.0.0.1:3001>  Numeric loopback only, no redirects/tunnels to prod
+  --persistence <memory|disposable-postgres>  Operator-declared isolated server mode
+  --placement <same-host-separate-process>  Operator-declared server placement
+  --seed <42> --out <file.json> --json --quiet
+  --engine <id>            Legacy PvE only
+Benchmark output is JSON. Unknown persistence/placement or failures suppress claims.
+Exit 0: eligible benchmark/successful legacy run; 1: failed/ineligible run; 2: invalid arguments.
 `);
-}
-
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
-  const baseScenario = scenarios[args.mode];
-  if (!baseScenario) throw new Error(`unknown scenario: ${args.mode}`);
-  const scenario = args.engine ? { ...baseScenario, engineId: args.engine } : baseScenario;
-
-  const out: GameResult[] = [];
-  const completedByNote = new Map<string, number>();
-  const startedAt = Date.now();
-
-  if (!args.quiet) {
-    console.log(
-      `[loadtest] scenario=${scenario.name} concurrency=${args.concurrency}${args.durationMs ? ` duration=${args.durationMs}ms` : ' (single-pass)'} server=${args.serverUrl}`,
-    );
+    return 0;
   }
-
-  await runScenario({
-    serverUrl: args.serverUrl,
-    scenario,
-    concurrency: args.concurrency,
-    durationMs: args.durationMs,
-    seed: args.seed,
-    onGameComplete: (r) => {
-      out.push(r);
-      const rawTag = r.error ? 'ERR' : r.finishedNaturally ? 'FIN' : (r.note ?? 'OK');
-      const tag = bucketTag(rawTag);
-      completedByNote.set(tag, (completedByNote.get(tag) ?? 0) + 1);
-      if (!args.quiet) {
-        const lat =
-          r.moveLatencies.length > 0
-            ? `last=${r.moveLatencies[r.moveLatencies.length - 1]!}ms`
-            : 'no-moves';
+  const args = parseArgs(argv);
+  if (args.benchmark) {
+    const record = await runBenchmark(args.options);
+    // The file keeps every raw attempt, so it is written compact; stdout stays readable.
+    if (args.outFile) writeFileSync(args.outFile, `${JSON.stringify(record)}\n`);
+    process.stdout.write(`${JSON.stringify(record, null, 2)}\n`);
+    return record.eligible ? 0 : 1;
+  }
+  const startedAt = performance.now();
+  const games = await runScenario({
+    ...args.options,
+    scenario: args.engine
+      ? { ...args.options.scenario, engineId: args.engine }
+      : args.options.scenario,
+    concurrency: args.options.concurrencies[0]!,
+    durationMs: args.options.durationMs || undefined,
+    onGameComplete: (game) => {
+      if (!args.quiet && !args.json)
         console.log(
-          `  game ${String(r.gameIdx).padStart(4)} ${tag.padEnd(20)} moves=${r.moveLatencies.length} ${lat}${r.error ? ` err=${r.error}` : ''}`,
+          `  game ${game.gameIdx} attempts=${game.moveAttempts.length} failures=${game.failures.length}`,
         );
-      }
     },
   });
-
-  const wallMs = Date.now() - startedAt;
-  const allLatencies = out.flatMap((r) => r.moveLatencies);
-  const gameSummary = summarize(out.map((r) => r.durationMs));
-  const moveSummary = summarize(allLatencies);
-
-  console.log('\n[loadtest] summary');
-  console.log(`  scenario=${scenario.name} concurrency=${args.concurrency}`);
-  console.log(`  wall=${wallMs}ms  games=${out.length}  total_moves=${allLatencies.length}`);
-  console.log(
-    `  outcomes: ${[...completedByNote.entries()].map(([k, v]) => `${k}=${v}`).join('  ')}`,
-  );
-  console.log(`  ${formatSummary('move-rtt', moveSummary)}`);
-  console.log(`  ${formatSummary('game-duration', gameSummary)}`);
-
-  if (args.outFile) {
-    const lines = out.map((r) => JSON.stringify(r)).join('\n');
-    writeFileSync(args.outFile, `${lines}\n`);
-    console.log(`  wrote ${out.length} records to ${args.outFile}`);
+  const failed =
+    games.some((game) => game.failures.length) || !games.some((game) => game.moveAttempts.length);
+  const record = { games, failed };
+  const wallMs = performance.now() - startedAt;
+  if (args.outFile)
+    writeFileSync(
+      args.outFile,
+      args.json
+        ? `${JSON.stringify(record, null, 2)}\n`
+        : `${games.map((game) => JSON.stringify(game)).join('\n')}\n`,
+    );
+  if (args.json) process.stdout.write(`${JSON.stringify(record, null, 2)}\n`);
+  else {
+    const outcomes = new Map<string, number>();
+    for (const game of games) {
+      const tag = game.failures.length
+        ? 'ERR'
+        : game.finishedNaturally
+          ? 'FIN'
+          : (game.note ?? 'OK');
+      outcomes.set(tag, (outcomes.get(tag) ?? 0) + 1);
+    }
+    console.log('[loadtest] summary');
+    console.log(
+      `  wall=${wallMs}ms  games=${games.length}  total_moves=${games.reduce((n, game) => n + game.moveLatencies.length, 0)}`,
+    );
+    console.log(`  outcomes: ${[...outcomes].map(([tag, count]) => `${tag}=${count}`).join('  ')}`);
+    const acknowledgments = games.flatMap((game) =>
+      game.moveAttempts
+        .filter((a) => a.phase === 'measurement' && a.outcome === 'acknowledged')
+        .map((a) => a.latencyMs!),
+    );
+    console.log(
+      formatSummary(
+        'move-rtt (includes reply)',
+        summarize(games.flatMap((game) => game.moveLatencies)),
+      ),
+    );
+    console.log(
+      formatSummary(
+        'move-ack (both seats)',
+        failed || acknowledgments.length < 100 ? null : summarize(acknowledgments),
+      ),
+    );
+    console.log(formatSummary('game-duration', summarize(games.map((game) => game.durationMs))));
   }
+  return failed ? 1 : 0;
 }
 
-main().catch((err) => {
-  console.error('[loadtest] fatal:', err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch(() => {
+      // Error messages can originate in transport libraries: don't print secrets.
+      console.error(
+        '[loadtest] invalid arguments or fatal local harness error; no claim generated',
+      );
+      process.exitCode = 2;
+    });
+}

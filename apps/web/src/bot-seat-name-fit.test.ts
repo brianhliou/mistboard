@@ -226,7 +226,9 @@ describe('bot seat names fit game cards', () => {
         players: reviewMetaPlayers(postgamePlayers(participants), undefined, null, variant),
       });
       const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
-      expect(metaName?.textContent).toBe(expected);
+      // The game page's card names the game in its head, so Misty drops it
+      // there too; "Misty Three Kingdoms Banqi Level 4" ran into an ellipsis.
+      expect(metaName?.textContent).toBe(short);
       expect(metaName?.title).toBe(expected);
       expect(stored.displayName).toBe(displayName);
       expect(participants[1]?.subjectId).toBe(subjectId);

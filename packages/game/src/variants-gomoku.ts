@@ -49,11 +49,21 @@ export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening &
     readonly depth: number;
     readonly forcedWin: boolean;
   };
+  /** KataGomo's second-screen read: Black's expected score at `visits`. */
+  readonly kataGomo?: { readonly black: number; readonly visits: number };
 })[];
-// New games use only mined 2B+3W positions. Keep the full pool above and
-// opening validation unchanged so recorded classic openings still replay.
+const SECOND_SCREEN = openingPool.screening.sources['mined-2B3W-7x7'].secondScreen;
+/** KataGomo's band for Black's expected score; Rapfi alone let lopsided openings through. */
+export const GOMOKU_SECOND_SCREEN = SECOND_SCREEN;
+// New games use only mined 2B+3W positions that both engines read as close to
+// even. Keep the full pool above and opening validation unchanged so recorded
+// openings, classic or dropped, still replay.
 export const GOMOKU_DEALT_OPENINGS: typeof GOMOKU_OPENINGS = GOMOKU_OPENINGS.filter(
-  (opening) => opening.source === 'mined-2B3W-7x7',
+  (opening) =>
+    opening.source === 'mined-2B3W-7x7' &&
+    opening.kataGomo !== undefined &&
+    opening.kataGomo.black >= SECOND_SCREEN.minBlack &&
+    opening.kataGomo.black <= SECOND_SCREEN.maxBlack,
 );
 export type GomokuStatus =
   | { readonly type: 'playing'; readonly turn: GomokuColor }

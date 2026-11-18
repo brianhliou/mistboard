@@ -87,6 +87,10 @@ export type GridBoardLayers = {
   // `selected`, but a list; drawn under the pieces. Omit / null for none.
   highlights?: readonly GridCellRef[] | null;
   targets?: readonly GridTargetRef[];
+  // false: an occupied target gets no ring here, because the variant draws its
+  // own capture mark with its pieces (a tinted cell over Jungle's square
+  // tiles, which cut a round ring off at the corners). Defaults to true.
+  captureRing?: boolean;
   // Annotation arrows drawn over the board (analysis / didactic). Omit for none.
   arrows?: readonly GridArrowRef[] | null;
   // Squares to fog (hidden). Omit / null to draw no fog overlay.
@@ -228,6 +232,7 @@ export function renderGridBoardSvg(
           .map((ref) => {
             const { x, y } = geom.center(ref.file, ref.rank);
             if (ref.occupied) {
+              if (layers.captureRing === false) return '';
               return `<circle class="mb-grid-target-ring" cx="${x}" cy="${y}" r="${cell * 0.43}" fill="none" stroke="${palette.targetRing}" stroke-width="3.5" pointer-events="none"/>`;
             }
             return `<circle class="mb-grid-target-dot" cx="${x}" cy="${y}" r="${cell * 0.15}" fill="${palette.targetDot}" pointer-events="none"/>`;
@@ -268,7 +273,9 @@ export function renderGridBoardSvg(
         const center = geom.center(file, rank);
         const targetMarker = target
           ? target.occupied
-            ? `<circle class="mb-grid-target-ring" cx="${center.x}" cy="${center.y}" r="${cell * 0.43}" fill="none" stroke="${palette.targetRing}" stroke-width="3.5" pointer-events="none"/>`
+            ? layers.captureRing === false
+              ? ''
+              : `<circle class="mb-grid-target-ring" cx="${center.x}" cy="${center.y}" r="${cell * 0.43}" fill="none" stroke="${palette.targetRing}" stroke-width="3.5" pointer-events="none"/>`
             : `<circle class="mb-grid-target-dot" cx="${center.x}" cy="${center.y}" r="${cell * 0.15}" fill="${palette.targetDot}" pointer-events="none"/>`
           : '';
         const hover = target

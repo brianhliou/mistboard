@@ -149,6 +149,10 @@ export const xiangqiTenant: XiangqiTenant = {
       ...state,
       status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
+    finishTournamentCap: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'tournament-cap' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -189,7 +193,11 @@ export const xiangqiTenant: XiangqiTenant = {
   persistence: {
     resultForWinner: xiangqiResult,
     termination: (reason: string) =>
-      reason === 'agreement' ? 'draw' : (reason as persistence.GameTermination),
+      reason === 'tournament-cap'
+        ? 'truncated'
+        : reason === 'agreement'
+          ? 'draw'
+          : (reason as persistence.GameTermination),
     logKindPrefix: 'xiangqi',
     logLabel: 'Xiangqi',
   },

@@ -1,331 +1,450 @@
-// Concurrent game runner for the load harness.
-//
-// Drives one or more games per scenario, captures per-move latency, returns a
-// flat result the CLI can aggregate. Talks to a server over HTTP (room
-// creation) + WebSocket (gameplay) — designed to point at either a local dev
-// server or a deployed Railway service.
-
-import type { Color, Move, RoomTimeControl } from '@mistboard/game';
-import { connectClient, type TestClient } from '../integration/harness.js';
+// Local-only concurrent gameplay driver. Receipt timestamps come from the WS
+// handler, so buffered-message searches and opponent think time cannot inflate
+// the separate authoritative acknowledgment metric.
+import type { Color, Move } from '@mistboard/game';
+import type { ConnectOptions } from '../integration/harness.js';
 import { makeRng, pickRandomMove, type Scenario } from './scenarios.js';
+
+export interface MoveAttempt {
+  color: Color;
+  move: Move;
+  /** Monotonic offsets from the run's origin (not wall-clock timestamps). */
+  submittedMs: number;
+  receivedMs?: number;
+  seq?: number;
+  latencyMs?: number;
+  phase: 'warmup' | 'measurement';
+  outcome: 'acknowledged' | 'rejected' | 'timeout' | 'window-ended' | 'disconnected';
+}
 
 export interface GameResult {
   scenario: string;
   gameIdx: number;
-  /** Per-move user-perceived latency in ms (send_move → next observable my-turn snapshot or finish). */
+  seed: number;
+  /** Legacy white send -> next own-turn receipt; includes the opponent's reply. */
   moveLatencies: number[];
-  /** Wall time start→end of the game in ms. */
+  /** Both seats, including warmup and unsuccessful submissions. */
+  moveAttempts: MoveAttempt[];
   durationMs: number;
-  /** True if the server reported a finished status before we hit a cap. */
   finishedNaturally: boolean;
-  /** Game outcome if finished naturally. */
-  result?: { winner: 'white' | 'black' | null; reason: string };
-  /** Non-fatal note (e.g. "hit maxMoves cap", "move-timeout") attached to the result. */
+  result?: { winner: Color | null; reason: string };
   note?: string;
-  /** If the game errored out mid-stream, the error message. */
+  /** Sanitized failure categories; never HTTP bodies, socket URLs or tokens. */
+  failures: string[];
   error?: string;
+}
+
+export interface Activity {
+  atMs: number;
+  activeGames: number;
 }
 
 export interface RunnerOptions {
   serverUrl: string;
   scenario: Scenario;
   concurrency: number;
-  /** If set, override what's in the scenario (used by the CLI's --duration). */
+  /** Measurement duration; warmup is additional. Omit for one game per worker. */
   durationMs?: number;
-  /** Base seed for deterministic move selection across runs. */
+  warmupMs?: number;
+  /**
+   * Mean pause before each submission, drawn uniformly from 0.5x to 1.5x so
+   * games do not move in lockstep. It precedes the submit timestamp, so it is
+   * never part of a latency sample. Omit for a closed loop with no pause.
+   */
+  thinkMs?: number;
+  /**
+   * Spread the workers' first room setup evenly over this long. Opening every
+   * room in the same tick overflows the server's listen backlog (128 on
+   * macOS) and the refused connections read as setup failures.
+   */
+  rampMs?: number;
   seed?: number;
-  /** Called after each game completes — used for progress reporting. */
   onGameComplete?: (result: GameResult) => void;
+  onActivity?: (point: Activity) => void;
 }
 
-const HTTP_TIMEOUT_MS = 10_000;
+/** Injectable transport and monotonic clock for deterministic offline tests. */
+export interface RunnerIO {
+  connect: (opts: ConnectOptions) => Promise<LoadClient>;
+  fetch: typeof fetch;
+  now: () => number;
+  /** Think-time pause; defaults to a real timer. */
+  sleep?: (ms: number) => Promise<void>;
+}
 
-type SnapshotMessage = {
-  type: 'snapshot' | 'event-appended';
-  seat?: 'white' | 'black' | 'spectator';
+export interface LoadClient {
+  seat: Color | 'red' | 'spectator' | null;
+  messages: unknown[];
+  receivedAt(message: object): number | undefined;
+  send(payload: object): void;
+  waitFor<T = StateMessage>(
+    predicate: (message: StateMessage) => boolean,
+    opts: { timeoutMs: number },
+  ): Promise<T>;
+  disconnect(): Promise<void>;
+  isClosed(): boolean;
+}
+
+export type StateMessage = {
+  type: string;
+  seq?: number;
+  event?: { type: string; color?: Color; move?: Move };
+  /** Full snapshots carry the recipient-filtered event list, indexed by seq. */
+  events?: Array<{ type: string; color?: Color; move?: Move } | null>;
   state?: {
-    status?: {
-      type: 'pregame' | 'playing' | 'finished';
-      turn?: Color;
-      winner?: Color | null;
-      reason?: string;
-    };
+    status?: { type: string; turn?: Color; winner?: Color | null; reason?: string };
     moveNumber?: number;
     legalMoves?: Move[];
   };
 };
 
-export async function runScenario(opts: RunnerOptions): Promise<GameResult[]> {
+/** Numeric loopback literals only: no DNS, credentials, redirect or proxy targets. */
+export function validateTarget(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('target must be a loopback WebSocket URL');
+  }
+  const ipv4 = url.hostname.split('.').map(Number);
+  const loopback =
+    url.hostname === '[::1]' ||
+    (ipv4.length === 4 &&
+      ipv4[0] === 127 &&
+      ipv4.every((n) => Number.isInteger(n) && n >= 0 && n <= 255));
+  if (
+    !['ws:', 'wss:'].includes(url.protocol) ||
+    !loopback ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== '/'
+  ) {
+    throw new Error('target must be a bare numeric loopback WebSocket URL');
+  }
+  return url.origin;
+}
+
+export function matchesAcknowledgment(
+  message: StateMessage,
+  move: Move,
+  color: Color,
+  afterSeq: number,
+): boolean {
+  const event = message.event;
+  return (
+    message.type === 'event-appended' &&
+    Number.isSafeInteger(message.seq) &&
+    message.seq! > afterSeq &&
+    event?.type === 'move-played' &&
+    event.color === color &&
+    event.move?.from === move.from &&
+    event.move.to === move.to &&
+    event.move.promotion === move.promotion
+  );
+}
+
+/**
+ * A move that ends the game is not sent as a delta: the server resyncs every
+ * seat with a full snapshot. That snapshot acknowledges the move only when its
+ * event list holds the submitted move at a sequence newer than `afterSeq`.
+ * Returns that sequence, or -1.
+ */
+export function finalSnapshotAckSeq(
+  message: StateMessage,
+  move: Move,
+  color: Color,
+  afterSeq: number,
+): number {
+  const status = message.state?.status?.type;
+  if (message.type !== 'snapshot' || (status !== 'finished' && status !== 'aborted')) return -1;
+  const events = message.events ?? [];
+  for (let seq = events.length - 1; seq > afterSeq; seq--) {
+    const event = events[seq];
+    if (
+      event?.type === 'move-played' &&
+      event.color === color &&
+      event.move?.from === move.from &&
+      event.move.to === move.to &&
+      event.move.promotion === move.promotion
+    )
+      return seq;
+  }
+  return -1;
+}
+
+export async function runScenario(opts: RunnerOptions, injected?: RunnerIO): Promise<GameResult[]> {
+  const serverUrl = validateTarget(opts.serverUrl);
+  if (!Number.isSafeInteger(opts.concurrency) || opts.concurrency < 1)
+    throw new Error('invalid concurrency');
+  if (opts.durationMs !== undefined && (!Number.isFinite(opts.durationMs) || opts.durationMs <= 0))
+    throw new Error('invalid duration');
+  if (!Number.isFinite(opts.warmupMs ?? 0) || (opts.warmupMs ?? 0) < 0)
+    throw new Error('invalid warmup');
+  if (!Number.isFinite(opts.thinkMs ?? 0) || (opts.thinkMs ?? 0) < 0)
+    throw new Error('invalid think time');
+  if (!Number.isFinite(opts.rampMs ?? 0) || (opts.rampMs ?? 0) < 0) throw new Error('invalid ramp');
+  const io: RunnerIO = injected ?? {
+    connect: async (options) => (await import('../integration/harness.js')).connectClient(options),
+    fetch: globalThis.fetch,
+    now: () => performance.now(),
+  };
+  const origin = io.now();
+  const warmupMs = opts.warmupMs ?? 0;
+  const deadline = opts.durationMs === undefined ? Infinity : origin + warmupMs + opts.durationMs;
   const results: GameResult[] = [];
-  const startedAt = Date.now();
-  const wantsDuration = opts.durationMs !== undefined;
-  const wallDeadline = wantsDuration ? startedAt + opts.durationMs! : Infinity;
-  const baseSeed = opts.seed ?? 0x9e3779b9;
-
-  // Concurrent workers — each one runs games back-to-back until duration elapses (if set)
-  // or until each worker has run one game (if duration not set).
-  const workerCount = Math.max(1, opts.concurrency);
-  let gameCounter = 0;
-
-  const worker = async (workerIdx: number): Promise<void> => {
-    while (true) {
-      const gameIdx = gameCounter++;
-      // If duration-mode and deadline passed, stop. If single-pass mode, stop after one game per worker.
-      if (wantsDuration && Date.now() >= wallDeadline) break;
-      if (!wantsDuration && gameIdx >= workerCount) break;
-
-      const seed = baseSeed ^ ((workerIdx + 1) * 0x9e3779b1) ^ (gameIdx * 0xcafe);
-      const result = await runOneGame(opts.serverUrl, opts.scenario, gameIdx, seed);
+  let nextGame = 0;
+  let activeGames = 0;
+  const activity = (change: number) => {
+    activeGames += change;
+    opts.onActivity?.({ atMs: io.now() - origin, activeGames });
+  };
+  activity(0);
+  const pauseFor = (ms: number) =>
+    (io.sleep ?? ((wait: number) => new Promise<void>((r) => setTimeout(r, wait))))(ms);
+  const worker = async (workerIdx: number) => {
+    const stagger = ((opts.rampMs ?? 0) * workerIdx) / opts.concurrency;
+    if (stagger > 0) await pauseFor(stagger);
+    do {
+      if (io.now() >= deadline) break;
+      const gameIdx = nextGame++;
+      const seed = ((opts.seed ?? 42) ^ ((workerIdx + 1) * 0x9e3779b1) ^ (gameIdx * 0xcafe)) >>> 0;
+      const start = io.now();
+      const result: GameResult = {
+        scenario: opts.scenario.name,
+        gameIdx,
+        seed,
+        moveLatencies: [],
+        moveAttempts: [],
+        durationMs: 0,
+        finishedNaturally: false,
+        failures: [],
+      };
+      const clients: LoadClient[] = [];
+      let active = false;
+      try {
+        const roomId = await createRoom(serverUrl, opts.scenario, io);
+        clients.push(
+          await io.connect({
+            url: serverUrl,
+            room: roomId,
+            variant: opts.scenario.variant,
+            helloTimeoutMs: opts.scenario.moveTimeoutMs,
+          }),
+        );
+        if (opts.scenario.mode === 'pvp') {
+          clients.push(
+            await io.connect({
+              url: serverUrl,
+              room: roomId,
+              variant: opts.scenario.variant,
+              helloTimeoutMs: opts.scenario.moveTimeoutMs,
+            }),
+          );
+          if (!clients.some((c) => c.seat === 'white') || !clients.some((c) => c.seat === 'black'))
+            throw new Error('pairing-failed');
+        }
+        // Count only rooms with all required seats and authoritative playing state.
+        await clients[0]!.waitFor((m) => (m as StateMessage).state?.status?.type === 'playing', {
+          timeoutMs: Math.max(1, Math.min(opts.scenario.moveTimeoutMs, deadline - io.now())),
+        });
+        active = true;
+        activity(1);
+        await Promise.all(
+          clients.map((client) =>
+            playLoop(
+              client,
+              opts.scenario,
+              result,
+              seed ^ (client.seat === 'white' ? 1 : 2),
+              start,
+              origin,
+              warmupMs,
+              opts.thinkMs ?? 0,
+              Math.min(deadline, start + opts.scenario.maxGameMs),
+              io,
+            ),
+          ),
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '';
+        result.error = /^(room-create-\d+|room-create-invalid|pairing-failed)$/.test(message)
+          ? message
+          : 'transport-or-setup-failed';
+        result.failures.push(result.error);
+      } finally {
+        if (active) activity(-1);
+        await Promise.all(
+          clients.map((client) =>
+            client.disconnect().catch(() => {
+              result.failures.push('disconnect-failed');
+            }),
+          ),
+        );
+      }
+      result.durationMs = io.now() - start;
       results.push(result);
       opts.onGameComplete?.(result);
-
-      if (wantsDuration && Date.now() >= wallDeadline) break;
-      if (!wantsDuration) break;
-    }
+      // Avoid retry storms when room creation or either seat fails.
+      if (result.failures.length) break;
+    } while (opts.durationMs !== undefined && io.now() < deadline);
   };
-
-  await Promise.all(Array.from({ length: workerCount }, (_, i) => worker(i)));
-  return results;
+  await Promise.all(Array.from({ length: opts.concurrency }, (_, i) => worker(i)));
+  activity(0);
+  return results.sort((a, b) => a.gameIdx - b.gameIdx);
 }
 
-async function runOneGame(
-  serverUrl: string,
-  scenario: Scenario,
-  gameIdx: number,
-  seed: number,
-): Promise<GameResult> {
-  const gameStart = Date.now();
-  try {
-    const roomId = await createRoom(serverUrl, scenario);
-    if (scenario.mode === 'pve') {
-      return await runPveGame(serverUrl, roomId, scenario, gameIdx, gameStart, seed);
-    }
-    return await runPvpGame(serverUrl, roomId, scenario, gameIdx, gameStart, seed);
-  } catch (err) {
-    return {
-      scenario: scenario.name,
-      gameIdx,
-      moveLatencies: [],
-      durationMs: Date.now() - gameStart,
-      finishedNaturally: false,
-      error: (err as Error).message,
-    };
-  }
-}
-
-async function createRoom(serverUrl: string, scenario: Scenario): Promise<string> {
-  const httpUrl = wsToHttpUrl(serverUrl);
-  const body = {
-    mode: scenario.mode,
-    variant: scenario.variant,
-    timeControl: scenario.timeControl,
-    ...(scenario.mode === 'pve' && scenario.engineId ? { engineId: scenario.engineId } : {}),
-  };
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${httpUrl}/api/rooms`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`POST /api/rooms failed: ${res.status} ${text}`);
-    }
-    const json = (await res.json()) as { roomId: string };
-    return json.roomId;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function wsToHttpUrl(wsUrl: string): string {
-  return wsUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:');
-}
-
-async function runPveGame(
-  serverUrl: string,
-  roomId: string,
-  scenario: Scenario,
-  gameIdx: number,
-  gameStart: number,
-  seed: number,
-): Promise<GameResult> {
-  const client = await connectClient({ url: serverUrl, room: roomId, variant: scenario.variant });
-  try {
-    return await playLoop(client, scenario, gameIdx, gameStart, seed, /* mySeat */ 'white');
-  } finally {
-    await client.disconnect().catch(() => undefined);
-  }
-}
-
-async function runPvpGame(
-  serverUrl: string,
-  roomId: string,
-  scenario: Scenario,
-  gameIdx: number,
-  gameStart: number,
-  seed: number,
-): Promise<GameResult> {
-  const a = await connectClient({ url: serverUrl, room: roomId, variant: scenario.variant });
-  const b = await connectClient({ url: serverUrl, room: roomId, variant: scenario.variant });
-  try {
-    // Both clients play in lockstep; whichever is to move sends the next move.
-    // We measure latency on the white client only (any side works; pick one to
-    // avoid double-counting). Black still drives the game forward.
-    const whiteClient = a.seat === 'white' ? a : b;
-    const blackClient = a.seat === 'black' ? a : b;
-    if (whiteClient.seat !== 'white' || blackClient.seat !== 'black') {
-      throw new Error(`PvP pairing failed: seats ${a.seat}/${b.seat}`);
-    }
-    // Run both sides concurrently. White records latency.
-    const whitePromise = playLoop(whiteClient, scenario, gameIdx, gameStart, seed ^ 0x1, 'white');
-    const blackPromise = playLoop(
-      blackClient,
-      scenario,
-      gameIdx,
-      gameStart,
-      seed ^ 0x2,
-      'black',
-      /* recordLatency */ false,
-    );
-    const [whiteResult] = await Promise.all([whitePromise, blackPromise]);
-    return whiteResult;
-  } finally {
-    await Promise.all([
-      a.disconnect().catch(() => undefined),
-      b.disconnect().catch(() => undefined),
-    ]);
-  }
+async function createRoom(serverUrl: string, scenario: Scenario, io: RunnerIO): Promise<string> {
+  const response = await io.fetch(`${serverUrl.replace(/^ws/, 'http')}/api/rooms`, {
+    method: 'POST',
+    redirect: 'error',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      mode: scenario.mode,
+      variant: scenario.variant,
+      timeControl: scenario.timeControl,
+      ...(scenario.mode === 'pve'
+        ? { preferredColor: 'white', ...(scenario.engineId ? { engineId: scenario.engineId } : {}) }
+        : {}),
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`room-create-${response.status}`);
+  const body = (await response.json()) as { roomId?: unknown };
+  if (typeof body.roomId !== 'string' || !body.roomId) throw new Error('room-create-invalid');
+  return body.roomId;
 }
 
 async function playLoop(
-  client: TestClient,
+  client: LoadClient,
   scenario: Scenario,
-  gameIdx: number,
-  gameStart: number,
+  result: GameResult,
   seed: number,
-  mySeat: 'white' | 'black',
-  recordLatency = true,
-): Promise<GameResult> {
+  gameStart: number,
+  origin: number,
+  warmupMs: number,
+  thinkMs: number,
+  deadline: number,
+  io: RunnerIO,
+): Promise<void> {
+  const color = client.seat;
+  if (color !== 'white' && color !== 'black') throw new Error('pairing-failed');
   const rng = makeRng(seed);
-  const moveLatencies: number[] = [];
-  // Track the moveNumber of the snapshot we last *acted* on so the next wait
-  // looks past it. White is to-move at moveNumber=1 (chess fullmoves); black is
-  // to-move at the same moveNumber that white just played at. So we always
-  // need a strictly newer snapshot than the one we just consumed.
   let actedOnMove = -1;
-  let movesPlayed = 0;
-  let finishedNaturally = false;
-  let result: { winner: 'white' | 'black' | null; reason: string } | undefined;
-  let note: string | undefined;
-  let lastMoveSentAt: number | null = null;
-
-  while (true) {
-    const elapsed = Date.now() - gameStart;
-    if (elapsed > scenario.maxGameMs) {
-      note = 'maxGameMs-exceeded';
-      break;
-    }
-    if (movesPlayed >= scenario.maxMoves) {
-      note = 'maxMoves-cap';
-      break;
-    }
-
-    const remainingMs = Math.max(500, scenario.maxGameMs - elapsed);
-    const waitMs = Math.min(scenario.moveTimeoutMs, remainingMs);
-    let snapshot: SnapshotMessage;
+  let lastSent: number | undefined;
+  for (let count = 0; count < scenario.maxMoves && io.now() < deadline; count++) {
+    let snapshot: StateMessage;
+    // A wait cut short by the window is censored, never a timeout: the timer
+    // can fire a hair before the monotonic clock reads the deadline.
+    let cutByWindow = deadline - io.now() <= scenario.moveTimeoutMs;
     try {
-      snapshot = await client.waitFor<SnapshotMessage>(
-        (m) => isActionableSnapshot(m as SnapshotMessage, mySeat, actedOnMove),
-        { timeoutMs: waitMs },
+      snapshot = await client.waitFor<StateMessage>(
+        (m) => {
+          const message = m as StateMessage;
+          if (message.type !== 'snapshot' && message.type !== 'event-appended') return false;
+          const status = message.state?.status;
+          return (
+            status?.type === 'finished' ||
+            (status?.type === 'playing' &&
+              status.turn === color &&
+              (message.state?.moveNumber ?? -1) > actedOnMove)
+          );
+        },
+        { timeoutMs: Math.max(1, Math.min(scenario.moveTimeoutMs, deadline - io.now())) },
       );
-    } catch (err) {
-      note = `move-wait-timeout: ${(err as Error).message}`;
-      // Diagnostic: dump status/turn/moveNumber of the LAST snapshot received,
-      // so we can see why the predicate stopped matching.
-      if (process.env.LOADTEST_DEBUG === '1') {
-        const lastSnap = [...client.messages]
-          .reverse()
-          .find((m) => (m as { type: string }).type === 'snapshot') as SnapshotMessage | undefined;
-        const tail = client.messages.slice(-3).map((m) => {
-          const s = (m as SnapshotMessage).state;
-          return `t=${(m as { type: string }).type} status=${s?.status?.type ?? '?'} turn=${s?.status?.turn ?? '?'} mn=${s?.moveNumber ?? '?'} legal=${s?.legalMoves?.length ?? '?'}`;
-        });
-        console.error(
-          `[debug] game=${gameIdx} actedOnMove=${actedOnMove} movesPlayed=${movesPlayed} lastSnapshot=${JSON.stringify(lastSnap?.state?.status)} tail=${JSON.stringify(tail)}`,
-        );
+    } catch {
+      if (!cutByWindow && io.now() < deadline) result.failures.push(`${color}-turn-timeout`);
+      break;
+    }
+    if (lastSent !== undefined && color === 'white') {
+      const receipt = client.receivedAt(snapshot);
+      if (receipt !== undefined) result.moveLatencies.push(receipt - lastSent);
+    }
+    if (snapshot.state?.status?.type === 'finished') {
+      result.finishedNaturally = true;
+      result.result = {
+        winner: snapshot.state.status.winner ?? null,
+        reason: snapshot.state.status.reason ?? '',
+      };
+      break;
+    }
+    if (thinkMs > 0) {
+      const pause = Math.min(thinkMs * (0.5 + rng()), deadline - io.now());
+      if (pause > 0) {
+        await (io.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms))))(pause);
       }
+    }
+    if (io.now() >= deadline || result.failures.length) break;
+    const move = pickRandomMove(snapshot.state?.legalMoves ?? [], rng);
+    if (!move) {
+      result.failures.push(`${color}-no-legal-moves`);
       break;
     }
-
-    // Latency = time from last move-send to this actionable snapshot arriving.
-    if (lastMoveSentAt !== null && recordLatency) {
-      moveLatencies.push(Date.now() - lastMoveSentAt);
-      lastMoveSentAt = null;
-    }
-
-    const status = snapshot.state?.status;
-    if (status?.type === 'finished') {
-      finishedNaturally = true;
-      result = { winner: status.winner ?? null, reason: status.reason ?? '' };
+    const afterSeq = client.messages.reduce<number>(
+      (seq, m) => Math.max(seq, (m as StateMessage).seq ?? -1),
+      -1,
+    );
+    const bufferStart = client.messages.length;
+    const submitted = io.now();
+    const attempt: MoveAttempt = {
+      color,
+      move,
+      submittedMs: submitted - origin,
+      phase: submitted - origin < warmupMs ? 'warmup' : 'measurement',
+      outcome: 'disconnected',
+    };
+    result.moveAttempts.push(attempt);
+    lastSent = submitted;
+    cutByWindow = deadline - submitted <= scenario.moveTimeoutMs;
+    try {
+      client.send({ type: 'move', ...move });
+      const ack = await client.waitFor<StateMessage>(
+        (m) => {
+          const message = m as StateMessage;
+          const receipt = client.receivedAt(message);
+          return (
+            client.messages.indexOf(message) >= bufferStart &&
+            receipt !== undefined &&
+            receipt >= submitted &&
+            (message.type === 'error' ||
+              matchesAcknowledgment(message, move, color, afterSeq) ||
+              finalSnapshotAckSeq(message, move, color, afterSeq) >= 0)
+          );
+        },
+        { timeoutMs: Math.max(1, Math.min(scenario.moveTimeoutMs, deadline - io.now())) },
+      );
+      const received = client.receivedAt(ack)!;
+      attempt.receivedMs = received - origin;
+      if (ack.type === 'error') {
+        attempt.outcome = 'rejected';
+        result.failures.push(`${color}-move-rejected`);
+        break;
+      }
+      attempt.seq = ack.seq ?? finalSnapshotAckSeq(ack, move, color, afterSeq);
+      if (received > deadline) {
+        attempt.outcome = 'window-ended';
+        break;
+      }
+      attempt.outcome = 'acknowledged';
+      attempt.latencyMs = received - submitted;
+    } catch {
+      attempt.outcome =
+        client.isClosed() && io.now() < deadline
+          ? 'disconnected'
+          : cutByWindow || io.now() >= deadline
+            ? 'window-ended'
+            : 'timeout';
+      if (attempt.outcome !== 'window-ended')
+        result.failures.push(`${color}-ack-${attempt.outcome}`);
       break;
     }
-    // Defensive: should always be playing+myTurn here per predicate, but loop if not.
-    if (status?.type !== 'playing' || status.turn !== mySeat) continue;
-
-    const legal = snapshot.state?.legalMoves ?? [];
-    const choice = pickRandomMove(legal, rng);
-    if (!choice) {
-      note = 'no-legal-moves';
-      break;
-    }
-
-    lastMoveSentAt = Date.now();
-    client.send({
-      type: 'move',
-      from: choice.from,
-      to: choice.to,
-      ...(choice.promotion ? { promotion: choice.promotion } : {}),
-    });
     actedOnMove = snapshot.state?.moveNumber ?? actedOnMove;
-    movesPlayed += 1;
   }
-
-  return {
-    scenario: scenario.name,
-    gameIdx,
-    moveLatencies,
-    durationMs: Date.now() - gameStart,
-    finishedNaturally,
-    result,
-    note,
-  };
+  result.note ??=
+    io.now() >= deadline
+      ? io.now() - gameStart >= scenario.maxGameMs
+        ? 'maxGameMs-exceeded'
+        : 'window-ended'
+      : 'maxMoves-cap';
 }
-
-function isActionableSnapshot(
-  msg: SnapshotMessage,
-  mySeat: 'white' | 'black',
-  actedOnMove: number,
-): boolean {
-  // Accepts both legacy `snapshot` and the Phase 3 default `event-appended`.
-  // Both carry the same `state` shape via apps/server/src/payloads.ts.
-  if (msg.type !== 'snapshot' && msg.type !== 'event-appended') return false;
-  const status = msg.state?.status;
-  if (!status) return false;
-  // Finished snapshot also counts — we want to break out of the loop on it.
-  if (status.type === 'finished') return true;
-  if (status.type !== 'playing') return false;
-  if (status.turn !== mySeat) return false;
-  // moveNumber is the chess fullmove counter (increments after black moves).
-  // For white-to-move snapshots after a full round this strictly grows; for
-  // black-to-move after a round it also grows by 1. Use > so we don't loop
-  // forever on the same snapshot.
-  const mn = msg.state?.moveNumber ?? -1;
-  return mn > actedOnMove;
-}
-
-// Unused export marker so the time-control type isn't dropped by lint.
-export type _TC = RoomTimeControl;

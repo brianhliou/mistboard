@@ -610,6 +610,88 @@ export function publicStudyFilter(access?: StudyListAccess): string {
         AND u.profile_visibility IN ('public', 'unlisted')${adminOnlyStudyFilter(access)}`;
 }
 
+export type ClassicalStudySummary = Pick<StudySummary, 'id' | 'name' | 'i18n' | 'chapterCount'>;
+
+// The original archival transcriptions do not all have the seeded manuals'
+// "classical compositions" / "classical games" suffix. Keep their identities
+// explicitly; new player or engine studies never compete for this shelf.
+const CLASSICAL_ARCHIVE_IDS = [
+  'uXnuObfx',
+  '9IIMlPp1',
+  'vQveCryp',
+  'SsKhaRTs',
+  'Dfi3NpRE',
+  'XBQuhA9n',
+  'rhrGqFnM',
+] as const;
+
+/** Independent of recency and pagination. Only publicly listable studies are
+ * eligible, including when a previously public archive is made private. */
+export async function listClassicalStudies(): Promise<ClassicalStudySummary[]> {
+  if (!isInitialized()) return [];
+  const { rows } = await getPool().query<{
+    id: string;
+    name: string;
+    i18n: Record<string, unknown> | null;
+    owner_handle: string;
+    chapter_count: string;
+  }>(
+    `SELECT s.id, s.name, s.i18n, u.handle AS owner_handle, count(c.id) AS chapter_count
+       FROM studies s
+       JOIN users u ON u.id = s.owner_id
+       LEFT JOIN study_chapters c ON c.study_id = s.id
+      WHERE ${publicStudyFilter()}
+        AND (u.handle = 'mistboard' OR s.id = ANY($1::text[]))
+      GROUP BY s.id, u.handle`,
+    [[...CLASSICAL_ARCHIVE_IDS]],
+  );
+  const ranked = rows.flatMap((row) => {
+    const en = row.i18n?.en as { name?: unknown } | undefined;
+    const name = typeof en?.name === 'string' ? en.name : row.name;
+    if (
+      /^(?:what the solver found|nine records whose printed line does not hold|[渊淵]深海[阔闊].*第\s*217\s*局)/i.test(
+        name,
+      ) ||
+      /[渊淵]深海[阔闊].*第\s*217\s*局/.test(row.name)
+    )
+      return [];
+    const archival = CLASSICAL_ARCHIVE_IDS.some((id) => id === row.id);
+    if (
+      !archival &&
+      (row.owner_handle !== 'mistboard' || !/\bclassical (?:compositions|games)\b/i.test(name))
+    )
+      return [];
+    const elegant = name.match(/^Elegant Pastime Manual, Vol\. ([1-6])\b/);
+    const rank =
+      row.id === 'uXnuObfx'
+        ? 0
+        : elegant
+          ? Number(elegant[1])
+          : row.id === '9IIMlPp1'
+            ? 7
+            : row.id === 'vQveCryp'
+              ? 8
+              : row.id === 'SsKhaRTs'
+                ? 9
+                : /^Plum Blossom Spring\b/.test(name)
+                  ? 10
+                  : /\bclassical compositions\b/i.test(name)
+                    ? 11
+                    : 12;
+    return [{ row, name, rank }];
+  });
+  ranked.sort(
+    (a, b) =>
+      a.rank - b.rank || a.name.localeCompare(b.name, 'en') || a.row.id.localeCompare(b.row.id),
+  );
+  return ranked.map(({ row }) => ({
+    id: row.id,
+    name: row.name,
+    i18n: row.i18n ?? {},
+    chapterCount: Number(row.chapter_count),
+  }));
+}
+
 /** Public studies, most recently updated first. Likes used to lead the order,
  *  but with a handful of likes on the whole site that key pinned the first
  *  studies ever liked above everything published since; recency is the honest

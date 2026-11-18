@@ -27,9 +27,11 @@ import {
   type XiangqiMove,
   type XiangqiPuzzle,
   type XiangqiPuzzleSetupMove,
+  xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import type { HistoricalXiangqiVisibility } from './persistence-historical-xiangqi.js';
 import {
+  isXiangqiPlayerPair,
   romanizeXiangqiPlayerName,
   translateXiangqiEventName,
   translateXiangqiTeamName,
@@ -126,11 +128,24 @@ function copyMove(move: XiangqiMove): XiangqiMove {
  * out as it is, unlinked.
  */
 export async function puzzleDetailSourceFields(
-  puzzle: Pick<XiangqiPuzzle, 'id' | 'initial' | 'sourceGame' | 'credit'>,
+  puzzle: Pick<XiangqiPuzzle, 'id' | 'initial' | 'sourceGame' | 'credit' | 'setupMove'>,
   load: SourceGameLoader | null,
 ): Promise<PuzzleDetailSourceFields> {
   if (puzzle.credit) {
     const { name, event, red, black, url } = puzzle.credit;
+    // Credit puzzles publish one stored move, never a source-game lookup or
+    // earlier history. Replaying it must reproduce the puzzle position.
+    const setup = puzzle.setupMove;
+    const setupMove =
+      setup && xiangqiPuzzlePreSetupState(puzzle.initial, setup)
+        ? {
+            from: setup.from,
+            to: setup.to,
+            captured: setup.captured
+              ? { color: setup.captured.color, role: setup.captured.role }
+              : null,
+          }
+        : undefined;
     return {
       credit: {
         name,
@@ -142,6 +157,7 @@ export async function puzzleDetailSourceFields(
         redEn: englishSourcePlayerName(red),
         blackEn: englishSourcePlayerName(black),
       },
+      ...(setupMove ? { setupMove } : {}),
     };
   }
   const stored = puzzle.sourceGame;
@@ -217,6 +233,7 @@ function englishOnly(text: string | undefined): string | undefined {
 export function englishSourcePlayerName(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!CJK.test(trimmed)) return undefined;
+  if (isXiangqiPlayerPair(trimmed)) return englishOnly(romanizeXiangqiPlayerName(trimmed));
   const tokens = trimmed.split(/\s+/u);
   // The player is the last token, or every trailing Latin token when the
   // player is written in Latin letters ("金州 Son X Nguyen").
