@@ -151,14 +151,16 @@ describe('homepage play panel', () => {
     expect(new Set(specs).size).toBe(specs.length);
   });
 
-  it('leads Play a person with the game this browser last played, and leaves the computer list alone', () => {
+  it('leads both lists with the game this browser last played', () => {
     const specsOf = (board: HTMLElement, selector: string) =>
       [...board.querySelectorAll<HTMLElement>(selector)].map((el) => el.dataset.gameSpec);
     const fresh = buildPlayPanel('en', { hydrate: false });
     const people = specsOf(fresh, '.pp-person-rows .pp-tile');
     const bots = specsOf(fresh, '.pp-row-bot');
-    const last = people.at(-1);
-    expect(people.length).toBeGreaterThan(2);
+    // The last bot game is on both lists, so one stored game moves both.
+    const last = bots.at(-1);
+    expect(bots.length).toBeGreaterThan(2);
+    expect(people).toContain(last);
     window.localStorage.setItem('mistboard:last-played-variant', String(last));
 
     const returning = buildPlayPanel('en', { hydrate: false });
@@ -166,7 +168,18 @@ describe('homepage play panel', () => {
       last,
       ...people.filter((id) => id !== last),
     ]);
-    expect(specsOf(returning, '.pp-row-bot')).toEqual(bots);
+    expect(specsOf(returning, '.pp-row-bot')).toEqual([last, ...bots.filter((id) => id !== last)]);
+  });
+
+  it('keeps the computer list in order when the last game has no bot', () => {
+    const specsOf = (board: HTMLElement, selector: string) =>
+      [...board.querySelectorAll<HTMLElement>(selector)].map((el) => el.dataset.gameSpec);
+    const fresh = buildPlayPanel('en', { hydrate: false });
+    const bots = specsOf(fresh, '.pp-row-bot');
+    const noBot = specsOf(fresh, '.pp-person-rows .pp-tile').find((id) => !bots.includes(id));
+    if (!noBot) return;
+    window.localStorage.setItem('mistboard:last-played-variant', String(noBot));
+    expect(specsOf(buildPlayPanel('en', { hydrate: false }), '.pp-row-bot')).toEqual(bots);
   });
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(

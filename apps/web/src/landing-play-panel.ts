@@ -434,10 +434,10 @@ export function buildPlayPanel(
   };
   const ordered = (): LandingGameSpecId[] =>
     orderPanelSpecs(variants.map((v) => v.gameSpecId)) as LandingGameSpecId[];
-  // A returning player's last game leads the Play a person list (#1215); the
-  // computer list and every pace lookup keep the canonical order.
+  // A returning player's last game leads both lists (#1215; the computer list
+  // from 2026-11-17); every pace lookup keeps the canonical order.
   const lastPlayed = lastPlayedVariant();
-  const orderedPeople = (): LandingGameSpecId[] =>
+  const orderedLastFirst = (): LandingGameSpecId[] =>
     withLastPlayedFirst(
       ordered().map((gameSpecId) => ({ gameSpecId })),
       lastPlayed,
@@ -613,7 +613,7 @@ export function buildPlayPanel(
   const renderBotRows = (): void => {
     botRows.replaceChildren();
     playingEls.clear();
-    for (const gameSpecId of ordered()) {
+    for (const gameSpecId of orderedLastFirst()) {
       if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
         continue;
       const ladder = ladderFor(gameSpecId);
@@ -1311,7 +1311,7 @@ export function buildPlayPanel(
 
   const renderPersonRows = (): void => {
     personRows.replaceChildren();
-    for (const gameSpecId of orderedPeople()) {
+    for (const gameSpecId of orderedLastFirst()) {
       const start = tilePace(gameSpecId);
       if (!start) continue;
       const { pace, note: paceNote } = start;
