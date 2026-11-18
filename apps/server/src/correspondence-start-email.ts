@@ -17,10 +17,11 @@
  * mail no matter how the game goes.
  */
 
+import { sendCorrespondenceNotificationEmail } from './correspondence-notification-email.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import { correspondenceStartEmail, type EmailLocale, emailLocale } from './player-email.js';
-import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
+import { transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
 
@@ -101,13 +102,20 @@ async function sendEmail(
     },
     locale,
   );
-  const result = await sendTransactionalEmail({
-    from: fromAddress,
-    to: [to],
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-  });
+  const result = await sendCorrespondenceNotificationEmail(
+    {
+      from: fromAddress,
+      to: [to],
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    },
+    {
+      kind: 'start',
+      userId: notice.creatorUserId,
+      roomIds: [notice.roomId],
+    },
+  );
   if (!result.ok) {
     logger.error(
       {

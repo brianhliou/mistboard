@@ -16,11 +16,12 @@
  * every minute; the day key is what makes it daily.
  */
 
+import { sendCorrespondenceNotificationEmail } from './correspondence-notification-email.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { CorrespondenceDigestCandidate } from './persistence-correspondence-digest.js';
 import { correspondenceDigestEmail, emailLocale, type PlayerEmail } from './player-email.js';
-import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
+import { transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
 
@@ -105,13 +106,20 @@ async function sendCorrespondenceDigestEmail(
 ): Promise<boolean> {
   if (!fromAddress) return false;
   const email = digestEmail(candidate, new Date());
-  const result = await sendTransactionalEmail({
-    from: fromAddress,
-    to: [candidate.email],
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-  });
+  const result = await sendCorrespondenceNotificationEmail(
+    {
+      from: fromAddress,
+      to: [candidate.email],
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    },
+    {
+      kind: 'digest',
+      userId: candidate.userId,
+      roomIds: candidate.games.map((game) => game.roomId),
+    },
+  );
   if (!result.ok) {
     logger.error(
       {
