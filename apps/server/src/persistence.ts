@@ -531,6 +531,7 @@ export {
   listCorrespondenceGamesForUser,
   listDeadlineWarningCandidates,
   listDueRoomDeadlines,
+  listExpiredCorrespondenceInvites,
   markRoomDeadlineWarned,
   upsertRoomDeadline,
 } from './persistence-room-deadlines.js';

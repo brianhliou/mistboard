@@ -8,7 +8,10 @@
  */
 
 import type { FlairKey } from './flair.js';
-import { linkableIdentitySql } from './persistence-correspondence-seeks.js';
+import {
+  CORRESPONDENCE_SEEK_TTL_MS,
+  linkableIdentitySql,
+} from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
@@ -232,6 +235,34 @@ export async function listDueRoomDeadlines(now: Date, limit = 50): Promise<DueRo
     seat: row.seat as string,
     dueAt: row.due_at as Date,
   }));
+}
+
+// Some tenants write games only at game end, and an invite has no deadline
+// row. Start at the creation event and exclude moves/results before hydrating.
+// Counting distinct assigned seats also excludes an already-accepted invite
+// whose player subsequently vacated a seat. Hydration rechecks current state.
+export async function listExpiredCorrespondenceInvites(
+  now: Date,
+  limit = 50,
+): Promise<Array<{ roomId: string; gameSpecId: string }>> {
+  const { rows } = await getPool().query<{ room_id: string; game_spec_id: string }>(
+    `SELECT created.room_id, created.payload->>'gameSpecId' AS game_spec_id
+     FROM events created
+     WHERE created.seq = 0 AND created.type = 'room-created'
+       AND (created.payload->'timeControl'->>'daysPerMove')::double precision > 0
+       AND (created.payload->>'at')::double precision <= $1
+       AND NOT EXISTS (
+         SELECT 1 FROM events e WHERE e.room_id = created.room_id
+           AND e.type IN ('move-played', 'game-aborted', 'seat-resigned', 'seat-forfeited',
+                          'clock-expired', 'game-adjudicated', 'game-tournament-capped', 'draw-agreed')
+       )
+       AND (SELECT count(DISTINCT e.payload->>'seat') FROM events e
+            WHERE e.room_id = created.room_id AND e.type = 'seat-assigned') < 2
+     ORDER BY (created.payload->>'at')::double precision, created.room_id
+     LIMIT $2`,
+    [now.getTime() - CORRESPONDENCE_SEEK_TTL_MS, limit],
+  );
+  return rows.map((row) => ({ roomId: row.room_id, gameSpecId: row.game_spec_id }));
 }
 
 // A correspondence game approaching its move deadline, with everything the
