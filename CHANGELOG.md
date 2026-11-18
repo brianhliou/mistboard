@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Both homepage lists put the game you last played first ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - Gomoku deals only openings that both Rapfi and KataGomo read as close to even ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The separate Rapfi Gomoku bot is retired and Level 8 is the strongest choice ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Three Kingdoms Banqi and Fanfanqi bot games count on Misty's record ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
@@ -115,6 +116,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Live games on Watch glide each new move ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
+- Duck Xiangqi replays glide moves when stepping ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - DPXQ games get English names for team sides, repeated sections and new event terms ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Finished Fanfanqi games draw their boards on /games and TV, covered pieces still face-down ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Study charts can draw one line per engine, each in its seat colour ([f2840f38](https://github.com/brianhliou/mistboard/commit/f2840f38))
@@ -163,6 +166,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The Play a person controls sit in one row with a single sign-in button ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
+- The API docs list the public reads they left out ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - The API docs fold long value lists and list every watch channel, correspondence ratings and the rated pools ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Rules pages drop the study button from their play row ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
 - Search engines now read the xiangqi analysis board and board editor's starting position and setup text in English and Chinese ([43bcb061](https://github.com/brianhliou/mistboard/commit/43bcb061))
