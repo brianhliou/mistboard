@@ -481,13 +481,13 @@ export function dhtmlxqMeta(
 // var (often preceded by an EMPTY [DhtmlXQ_movelist][/...] template tag that
 // would win a naive first-match). Prefer the longest digit run; fall back to
 // the raw text (plain movelist files import as-is via the codec sniffer).
-function extractGameText(raw: string): string {
+export function extractGameText(raw: string): string {
   const runs = [...raw.matchAll(/\[DhtmlXQ_movelist\](\d+)/gi)].map((match) => match[1] as string);
   if (runs.length === 0) return raw;
   return runs.reduce((longest, run) => (run.length > longest.length ? run : longest), '');
 }
 
-function gameIdForFile(name: string): string {
+export function gameIdForFile(name: string): string {
   return basename(name)
     .replace(/\.[^.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '-');
