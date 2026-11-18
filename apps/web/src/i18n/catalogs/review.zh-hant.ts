@@ -216,6 +216,7 @@ export const ZH_HANT_REVIEW = {
   'study.errataAction': '回報勘誤',
   'study.indexAll': '全部研習',
   'study.indexClassical': '古典棋譜集',
+  'study.indexClassicalShort': '古譜',
   'study.indexMine': '我的研習',
   'study.indexFavorites': '收藏',
   'study.indexStaff': '編輯精選',

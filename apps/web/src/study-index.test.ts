@@ -40,7 +40,7 @@ describe('study index Classical collections tab', () => {
     await vi.waitFor(() => expect(root.querySelector('.study-index__rail')).not.toBeNull());
     expect(
       [...root.querySelectorAll<HTMLAnchorElement>('.study-index__rail-tab')].map((tab) => [
-        tab.textContent,
+        tab.getAttribute('aria-label') ?? tab.textContent,
         tab.getAttribute('href'),
       ]),
     ).toEqual([
@@ -50,6 +50,14 @@ describe('study index Classical collections tab', () => {
       ['Staff picks', '/study?tab=staff'],
       ['Classical collections', '/study?tab=classical'],
     ]);
+    // A phone shows the short label (CSS picks one); both are in the tab.
+    const classical = root.querySelector('a.study-index__rail-tab[href="/study?tab=classical"]');
+    expect(classical?.querySelector('.study-index__rail-label')?.textContent).toBe(
+      'Classical collections',
+    );
+    expect(classical?.querySelector('.study-index__rail-label-short')?.textContent).toBe(
+      'Classical',
+    );
   });
 
   it('fetches the classical list and renders it as the same study cards, paged', async () => {
@@ -71,9 +79,9 @@ describe('study index Classical collections tab', () => {
       expect(root.querySelectorAll('.study-index__grid > li .study-index__card')).toHaveLength(2),
     );
     expect(calls[0]).toBe('/api/studies/classical?limit=30');
-    expect(root.querySelector('.study-index__rail [aria-current="page"]')?.textContent).toBe(
-      'Classical collections',
-    );
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('Classical collections');
     expect(
       [...root.querySelectorAll<HTMLAnchorElement>('.study-index__card')].map((a) =>
         a.getAttribute('href'),
@@ -104,9 +112,9 @@ describe('study index Classical collections tab', () => {
     await vi.waitFor(() =>
       expect(root.querySelector('.study-index__name')?.textContent).toBe('七星聚會'),
     );
-    expect(root.querySelector('.study-index__rail [aria-current="page"]')?.textContent).toBe(
-      '古典棋譜集',
-    );
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('古典棋譜集');
     expect(root.querySelector('.study-index__card')?.getAttribute('href')).toBe(
       '/zh-hant/study/uXnuObfx',
     );
