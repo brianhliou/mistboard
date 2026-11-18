@@ -226,6 +226,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Correspondence rematches start their first-move deadline before players reconnect ([1765dba8](https://github.com/brianhliou/mistboard/commit/1765dba8))
+- Correspondence invites nobody accepted close after 14 days ([1765dba8](https://github.com/brianhliou/mistboard/commit/1765dba8))
 - Jungle and Flip Jungle mark a capturable piece by tinting its square, and rules diagram arrows no longer cover the pieces ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - Fanfanqi review draws each flip's luck die on the board, not only in the move list ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The game card names Misty by level so the name fits, with the full name on hover ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
