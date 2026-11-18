@@ -86,6 +86,26 @@ describe('schemaLabel', () => {
 });
 
 describe('renderOpenApi', () => {
+  it('offers a public player example for the player slug path parameter', () => {
+    const root = renderOpenApi({
+      ...DOC,
+      tags: [{ name: 'Xiangqi' }],
+      paths: {
+        '/api/xiangqi/players/{slug}': {
+          get: {
+            tags: ['Xiangqi'],
+            summary: 'One professional player and their games',
+            parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    });
+    expect(root.querySelector('.api-docs-try')?.getAttribute('href')).toBe(
+      '/api/xiangqi/players/yin-sheng',
+    );
+  });
+
   it('groups operations by tag in the document’s tag order', () => {
     const root = renderOpenApi(DOC);
     const sections = [...root.querySelectorAll('.api-docs-tag h2')].map((h) => h.textContent);
