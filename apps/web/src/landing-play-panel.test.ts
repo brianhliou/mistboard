@@ -790,12 +790,12 @@ describe('homepage play panel', () => {
   });
 
   // The stepper clips with an ellipsis: at 118px "3 days/move" read "3 days/…".
-  // Its text needs 81px at 13.5px and the two 22px arrows with their 3px gaps
-  // take 50, so the shared pace stepper is at least 131px wide.
+  // Its text needs 81px at 13.5px, the two 26px arrows with their 3px gaps
+  // take 58 and the inner padding and rim 6, so the stepper is at least 145px.
   it('gives the shared pace stepper room for the whole days label', () => {
     const css = readFileSync('src/landing-play-panel.css', 'utf8');
     const width = Number(css.match(/\.pp-pace \.pp-step-clock \{\s*flex: 0 0 (\d+)px;/)?.[1]);
-    expect(width).toBeGreaterThanOrEqual(131);
+    expect(width).toBeGreaterThanOrEqual(145);
   });
 
   // Play a person never scrolls (2026-10-27): the tiles share the height left
@@ -1265,11 +1265,18 @@ describe('homepage play panel', () => {
     // Rated off on the server: no switch, no note.
     expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
     setRatedModeEnabled(true);
-    // A guest is told to sign in.
-    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('Sign in to play rated games.');
+    // A guest gets one sign-in button for rated and days, and no note.
+    const guest = buildPlayPanel('en', { hydrate: false });
+    expect(note(guest)).toBe('');
+    expect(guest.querySelector<HTMLAnchorElement>('.pp-signin')?.textContent).toBe(
+      'Sign in for rated games and days per move',
+    );
+    expect(guest.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(false);
     // A signed-in counted account in Casual sees nothing.
     setResolvedSignedIn(true);
-    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    const member = buildPlayPanel('en', { hydrate: false });
+    expect(note(member)).toBe('');
+    expect(member.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(true);
     // A stats-excluded account plays casual only.
     setResolvedStatsExcluded(true);
     const excluded = buildPlayPanel('en', { hydrate: false });
@@ -1287,6 +1294,22 @@ describe('homepage play panel', () => {
     setRatedModeEnabled(true);
     const labels = [...board.querySelectorAll('.pp-mode-btn')].map((el) => el.textContent);
     expect(labels).toEqual(['Casual', 'Rated']);
+  });
+
+  // One control row (2026-11-17): Casual/Rated sits in the pace bar beside
+  // Live/Days per move and the clock, not in a second bar above it.
+  it('puts Casual/Rated, the pace toggle and the clock in one row', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const bar = paceBar(board);
+    expect(bar.querySelectorAll('.pp-mode-btn')).toHaveLength(2);
+    expect(bar.querySelectorAll('.pp-pace-btn')).toHaveLength(2);
+    expect(bar.querySelectorAll('.pp-step-clock')).toHaveLength(1);
+    expect(board.querySelector('.pp-view-person .pp-control')).toBeNull();
+    // Picking a pace re-renders the bar and keeps the switch in it.
+    bar.querySelector<HTMLButtonElement>('[data-family="live"]')!.click();
+    expect(paceBar(board).querySelectorAll('.pp-mode-btn')).toHaveLength(2);
   });
 
   it('opens signed in on 3 days per move for every tile, with no bot-offer note', () => {
@@ -1335,7 +1358,7 @@ describe('homepage play panel', () => {
     const days = bar.querySelector<HTMLButtonElement>('[data-family="days"]')!;
     expect(days.disabled).toBe(true);
     expect(days.title).toBe('Sign in for days per move');
-    const hint = bar.querySelector<HTMLAnchorElement>('.pp-pace-hint');
+    const hint = board.querySelector<HTMLAnchorElement>('.pp-signin');
     expect(hint?.textContent).toBe('Sign in for days per move');
     expect(hint?.getAttribute('href')).toContain('/account?tab=login');
     expect(tiles(board).length).toBeGreaterThan(1);

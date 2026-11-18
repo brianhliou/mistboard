@@ -884,8 +884,10 @@ export function buildPlayPanel(
   };
 
   // ── Play a person ──
-  const control = document.createElement('div');
-  control.className = 'pp-control';
+  // One control row (2026-11-17): Casual/Rated, Live/Days per move and the
+  // clock, each at one button height; what the row cannot say (sign in, which
+  // clocks rate) rides the Start one heading below it, so the bar costs one
+  // line instead of two.
   const modeSwitch = document.createElement('span');
   modeSwitch.className = 'pp-mode';
   const casualBtn = button('pp-mode-btn', t('play.casual', {}, locale));
@@ -894,7 +896,10 @@ export function buildPlayPanel(
   const note = document.createElement('span');
   note.className = 'pp-note';
   const modeSlot = document.createElement('span');
-  control.append(modeSlot, note);
+  modeSlot.className = 'pp-mode-slot';
+  const signIn = document.createElement('a');
+  signIn.className = 'pp-signin';
+  signIn.hidden = true;
   const renderModeSlot = (): void => {
     modeSlot.replaceChildren(...(ratedAvailable ? [modeSwitch] : []));
   };
@@ -909,8 +914,11 @@ export function buildPlayPanel(
   paceSlot.className = 'pp-pace';
   const offersSlot = document.createElement('div');
   const startHead = document.createElement('div');
-  startHead.className = 'pp-section';
-  startHead.textContent = t('lobby.panelStartOne', {}, locale);
+  startHead.className = 'pp-section pp-section-start';
+  const startLabel = document.createElement('span');
+  startLabel.className = 'pp-section-label';
+  startLabel.textContent = t('lobby.panelStartOne', {}, locale);
+  startHead.append(startLabel, note, signIn);
   const personRows = document.createElement('div');
   personRows.className = 'pp-person-rows';
   personScroll.append(paceSlot, offersSlot, startHead, personRows);
@@ -922,7 +930,7 @@ export function buildPlayPanel(
   searchStatus.className = 'pp-search-status';
   const searchCancel = button('pp-search-cancel', t('setup.cancel', {}, locale));
   searchBar.append(searchStatus, searchCancel);
-  personView.append(control, personScroll, searchBar);
+  personView.append(personScroll, searchBar);
 
   const endSearch = (): void => {
     searching = null;
@@ -962,9 +970,9 @@ export function buildPlayPanel(
     casualBtn.classList.toggle('is-active', mode === 'casual');
     ratedBtn.classList.toggle('is-active', mode === 'rated');
     ratedBtn.disabled = ratedBlocked;
-    // Why Rated is out of reach, in plain words (Brian, 2026-10-27: "what does
-    // that mean, need a counted account?"): a guest is told to sign in; a
-    // stats-excluded account (the owner's and QA's) is told it plays casual only.
+    // Why Rated is out of reach, in plain words: a guest gets the sign-in link
+    // under the bar (and the reason on Rated's title); a stats-excluded account
+    // (the owner's and QA's) is told it plays casual only.
     const ratedBlockedNote = t('lobby.ratedCasualOnlyAccount', {}, locale);
     const ratedSignInNote = t('lobby.panelRatedSignIn', {}, locale);
     if (ratedBlocked) ratedBtn.title = ratedBlockedNote;
@@ -975,7 +983,7 @@ export function buildPlayPanel(
       : ratedBlocked
         ? ratedBlockedNote
         : !signedIn
-          ? ratedSignInNote
+          ? ''
           : mode === 'rated'
             ? [
                 t(
@@ -1084,15 +1092,17 @@ export function buildPlayPanel(
       prevLabel: t('lobby.panelFaster', {}, locale),
       nextLabel: t('lobby.panelSlower', {}, locale),
     });
-    const parts: HTMLElement[] = [toggle, step];
+    paceSlot.replaceChildren(modeSlot, toggle, step);
+    // A guest gets one way in for both: rated games and days per move.
+    signIn.hidden = signedIn;
     if (!signedIn) {
-      const hint = document.createElement('a');
-      hint.className = 'pp-pace-hint';
-      hint.href = loginHrefForCurrentPage(locale, 'correspondence');
-      hint.textContent = t('lobby.panelDaysSignIn', {}, locale);
-      parts.push(hint);
+      signIn.href = loginHrefForCurrentPage(locale, 'correspondence');
+      signIn.textContent = t(
+        ratedAvailable ? 'lobby.panelSignInRatedDays' : 'lobby.panelDaysSignIn',
+        {},
+        locale,
+      );
     }
-    paceSlot.replaceChildren(...parts);
   };
 
   // A new pace withdraws a live search or clears a failed post, so every tile

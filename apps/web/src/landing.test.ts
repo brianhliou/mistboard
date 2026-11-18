@@ -507,9 +507,9 @@ describe('homepage band layout (CSS)', () => {
     expect(panel).toMatch(
       /\.pp-person-rows \{\s*flex: 1 1 auto;\s*min-height: 0;\s*grid-auto-rows: minmax\(min-content, 46px\);/,
     );
-    // The Casual/Rated bar: 2px padding and a note that never wraps.
-    expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
-    expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
+    // One control row (2026-11-17) and a note that never wraps.
+    expect(panel).not.toMatch(/\.pp-control\b/);
+    expect(panel).toMatch(/\.pp-note \{[^}]*white-space: nowrap;/);
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {

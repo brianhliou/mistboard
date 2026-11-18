@@ -999,6 +999,7 @@ export const EN_PLAY = {
   'lobby.panelDaysShort': '{days}d',
   'lobby.panelMoreGames': '+{count} more',
   'lobby.panelDaysSignIn': 'Sign in for days per move',
+  'lobby.panelSignInRatedDays': 'Sign in for rated games and days per move',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;

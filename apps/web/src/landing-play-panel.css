@@ -445,38 +445,45 @@
 }
 
 /* ── Play a person ── */
-.pp-control {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px var(--pp-pad);
-  border-bottom: 1px solid var(--site-border-soft);
-  color: var(--site-muted);
-  font-size: 12px;
-}
-
+/* One control row (2026-11-17): Casual/Rated, Live/Days per move and the
+   clock stepper, each a 32px group with the same rim and radius, so the row
+   reads as one set of controls instead of two squeezed bars. */
 .pp-mode {
   display: inline-flex;
-  overflow: hidden;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--site-border-soft);
-  border-radius: 6px;
+  border-radius: 8px;
+  background: var(--site-panel-soft);
 }
 
 .pp-mode-btn,
 .pp-pace-btn {
-  padding: 4px 14px;
+  height: 26px;
+  padding: 0 12px;
   border: 0;
+  border-radius: 6px;
   background: none;
   color: var(--site-muted);
   font: inherit;
   font-size: 13px;
+  line-height: 26px;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.pp-mode-btn:hover:not(:disabled, .is-active),
+.pp-pace-btn:hover:not(:disabled, .is-active) {
+  color: var(--site-text);
 }
 
 .pp-mode-btn.is-active,
 .pp-pace-btn.is-active {
-  background: var(--site-panel-soft);
+  background: var(--site-panel);
+  box-shadow:
+    0 0 0 1px var(--site-border-soft),
+    0 1px 2px rgb(0 0 0 / 0.08);
   color: var(--site-text);
 }
 
@@ -484,10 +491,6 @@
 .pp-pace-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.pp-note {
-  text-align: right;
 }
 
 .pp-section {
@@ -500,33 +503,95 @@
   text-transform: uppercase;
 }
 
-/* The shared pace bar: Live or Days per move, one stepper for every tile.
-   The stepper holds the longest days label whole between its arrows: "3
-   days/move" is 81px at 13.5px, the arrows and gaps take 50, so 134px. */
-.pp-pace {
+/* The Start one heading carries what the control row has no room for: the
+   rated note, or a guest's one sign-in button, on its right. */
+.pp-section-start {
   display: flex;
   align-items: center;
-  gap: 8px 12px;
-  padding: 6px var(--pp-pad);
-  border-bottom: 1px solid var(--site-border-soft);
+  gap: 12px;
 }
 
-.pp-pace-btn {
-  white-space: nowrap;
+.pp-section-label {
+  flex: none;
 }
 
-.pp-pace .pp-step-clock {
-  flex: 0 0 134px;
-}
-
-.pp-pace-hint {
+.pp-note {
   min-width: 0;
   margin-left: auto;
   overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+/* An empty note keeps no box, or its auto margin would split the free space
+   with the sign-in button's and pull the button to the middle. */
+.pp-note:empty {
+  display: none;
+}
+
+.pp-signin {
+  display: inline-block;
+  flex: none;
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--site-accent);
+  border-radius: 999px;
+  background: var(--site-accent-soft);
   color: var(--site-accent-strong);
   font-size: 12px;
-  text-overflow: ellipsis;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-transform: none;
   white-space: nowrap;
+}
+
+.pp-signin:hover {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.pp-signin[hidden] {
+  display: none;
+}
+
+/* The shared control row: Casual/Rated, Live or Days per move, and one clock
+   stepper for every tile. The stepper holds the longest days label whole
+   between its arrows: "3 days/move" is 81px at 13.5px, the two 26px arrows
+   and their 3px gaps take 58, the inner padding and rim 6, so 146px. */
+.pp-pace {
+  display: flex;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 7px var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.pp-mode-slot {
+  display: contents;
+}
+
+.pp-pace .pp-step-clock {
+  flex: 0 0 146px;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+/* Inside the stepper's rim the arrows are glyphs until hovered. */
+.pp-pace .pp-step-btn {
+  width: 26px;
+  height: 26px;
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
 }
 
 /* Open games, Start one and Your move share a two-column grid of chips and
@@ -769,26 +834,6 @@
     --pp-icon: 26px;
   }
 
-  /* The Casual/Rated bar is one line at any note length (Brian, 2026-10-27:
-     "account for that spacing"): 2px padding, a slimmer switch, and a note
-     that ellipsizes instead of wrapping the bar to two lines. */
-  .pp-view-person .pp-control {
-    padding-block: 2px;
-  }
-
-  .pp-view-person .pp-mode-btn,
-  .pp-view-person .pp-pace-btn {
-    padding: 2px 12px;
-    line-height: 1.35;
-  }
-
-  .pp-view-person .pp-note {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .pp-view-person .pp-scroll {
     display: flex;
     flex-direction: column;
@@ -809,10 +854,6 @@
 
   .pp-view-person .pp-section {
     padding-block: 4px 3px;
-  }
-
-  .pp-view-person .pp-pace {
-    padding-block: 4px;
   }
 }
 
@@ -856,11 +897,6 @@
 
   .pp-pace {
     flex-wrap: wrap;
-  }
-
-  .pp-pace-hint {
-    flex-basis: 100%;
-    margin-left: 0;
   }
 
   .pp-step-btn {
