@@ -823,7 +823,29 @@ function runPlanModeAndExit() {
         ? `bypass (--extra-ship: ${options.extraShip})`
         : 'refuse (pass --extra-ship "<reason>" for a production bug)';
   console.log(`ship_window: ${would}`);
-  process.exit(0);
+
+  // What --push would decide about batch CI. It refuses without a green
+  // batch:ci run for this tree, and a dry run that skipped this check passed
+  // a batch the release then refused at the ship time (2026-11-18 12:30).
+  console.log('');
+  console.log('# batch CI (dry run)');
+  if (changedOverride !== null) {
+    console.log('batch_ci: not checked (synthetic diff)');
+    process.exit(0);
+  }
+  const batchRun = findReusableBatchRun();
+  if (batchRun) {
+    console.log(`batch_ci: reuse ${batchRun.headSha ?? ''} ${batchRun.url ?? ''}`.trimEnd());
+    process.exit(0);
+  }
+  if (options.extraShip) {
+    console.log(`batch_ci: bypass (--extra-ship: ${options.extraShip})`);
+    process.exit(0);
+  }
+  console.log(
+    'batch_ci: refuse (no green batch:ci run for this tree; run npm run batch:ci -- <worktree> before --push)',
+  );
+  process.exit(1);
 }
 
 // The changed-file list a --plan run should classify, or null to use the real
