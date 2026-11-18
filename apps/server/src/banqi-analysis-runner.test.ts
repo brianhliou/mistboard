@@ -11,7 +11,7 @@ import {
 } from './banqi-analysis-runner.js';
 import { UciEnginePool } from './uci-engine-harness.js';
 
-const turn = () => new Promise<void>((r) => setImmediate(r));
+const pause = () => new Promise<void>((r) => setTimeout(r, 5));
 test('cold analysis cache coalesces exact queries, guards assets and drains cancelled work', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'banqi-runner-'));
   const binary = join(dir, 'engine'),
@@ -78,10 +78,16 @@ test('cold analysis cache coalesces exact queries, guards assets and drains canc
     });
     const release = await blockPool.acquire();
     const queued = runBanqiAnalysisQuery({ ...args, nodes: 201, pool: blockPool });
-    for (let i = 0; i < 200 && blockPool.stats().queueDepth === 0; i++) await turn();
+    // Observe the rejection now: if the queue check fails, the cleanup abort would
+    // otherwise surface as an unhandled rejection that hides the real assertion.
+    const queuedRejects = assert.rejects(queued, /closed|failed/);
+    // A loaded CI runner can take longer than a fixed number of turns to stat the
+    // assets and reach the pool queue, so wait on time, not turns.
+    const queueBy = Date.now() + 5000;
+    while (blockPool.stats().queueDepth === 0 && Date.now() < queueBy) await pause();
     assert.equal(blockPool.stats().queueDepth, 1);
     closeBanqiAnalysisQueries();
-    await assert.rejects(queued, /closed|failed/);
+    await queuedRejects;
     release();
     await assert.rejects(runBanqiAnalysisQuery(args), /closed/);
     openBanqiAnalysisQueries();
