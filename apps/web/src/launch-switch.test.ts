@@ -124,17 +124,14 @@ it.each(['hidden', 'casual'] as const)(
   },
 );
 
-it.each(['hidden', 'casual'] as const)(
-  'Gomoku open title follows publicSurface %s',
-  async (surface) => {
-    await mockGomokuSurface(surface);
-    const page = await import('./champions-page.js');
-    expect(page.OPEN_TITLES.some((title) => title.gameId === 'gomoku')).toBe(surface === 'casual');
-    expect(page.buildChampions('en').querySelector('[data-game="gomoku"]') !== null).toBe(
-      surface === 'casual',
-    );
-  },
-);
+it.each(['hidden', 'casual'] as const)('Gomoku title follows publicSurface %s', async (surface) => {
+  await mockGomokuSurface(surface);
+  const page = await import('./champions-page.js');
+  expect(page.TITLES.some((title) => title.gameId === 'gomoku')).toBe(surface === 'casual');
+  expect(page.buildChampions('en').querySelector('[data-game="gomoku"]') !== null).toBe(
+    surface === 'casual',
+  );
+});
 
 it.each(['hidden', 'casual'] as const)(
   'Gomoku flair picker follows publicSurface %s without invalidating existing wearers',

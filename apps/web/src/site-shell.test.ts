@@ -725,10 +725,14 @@ describe('site shell phone menu', () => {
               link.textContent,
             ]),
           ).toEqual(
-            // The rail's trailing arrow (a page without the rail) is rail-only.
+            // The rail's leading icon and trailing arrow (a page without the
+            // rail) are rail-only, so compare the label text alone.
             [...rail.querySelectorAll('.static-page-rail-link')].map((link) => [
               link.getAttribute('href'),
-              link.firstChild?.textContent,
+              [...link.childNodes]
+                .filter((node) => node.nodeType === Node.TEXT_NODE)
+                .map((node) => node.textContent)
+                .join(''),
             ]),
           );
           expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);

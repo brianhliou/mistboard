@@ -1,6 +1,7 @@
 import { CANONICAL_VARIANT_ORDER } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import GOMOKU_MATCH from './articles/content/gomoku-title-match.json' with { type: 'json' };
+import { rapfiVsKatagomoArticle } from './articles/content/rapfi-vs-katagomo.js';
 import { articleIsLive } from './articles/publish-time.js';
 import {
   AB_JCHESS_2026_WRITE_UP,
@@ -550,9 +551,13 @@ describe('Gomoku title', () => {
       }
     };
     const play = 'Play the champion /?play=computer&gameSpecId=gomoku&engineId=rapfi-level-8';
-    expect(GOMOKU_TITLE_WRITE_UP).toEqual({ status: 'published', publishedAt: '2026-11-13' });
-    expect(await links('2026-11-12T17:00:00Z')).toEqual({ card: [play], history: [] });
-    expect(await links('2026-11-13T17:00:00Z')).toEqual({
+    // The card links the write-up only once the article itself is live.
+    expect(GOMOKU_TITLE_WRITE_UP).toEqual({
+      status: rapfiVsKatagomoArticle.status,
+      publishedAt: rapfiVsKatagomoArticle.publishedAt,
+    });
+    expect(await links('2026-11-26T17:00:00Z')).toEqual({ card: [play], history: [] });
+    expect(await links('2026-11-27T17:00:00Z')).toEqual({
       card: ['Read the match /blog/rapfi-vs-katagomo', play],
       history: ['write-up /blog/rapfi-vs-katagomo'],
     });

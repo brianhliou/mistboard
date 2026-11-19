@@ -199,7 +199,7 @@ const JIEQI_AB_JCHESS_20261031: Title = {
 // own date; the test pins this date to the article's publishedAt and status. No
 // study of the games exists yet, so the card has no games link. Credits stay the
 // engine and its browser build, without publishing the locally bundled network URL.
-export const GOMOKU_TITLE_WRITE_UP = { status: 'published', publishedAt: '2026-11-13' } as const;
+export const GOMOKU_TITLE_WRITE_UP = { status: 'published', publishedAt: '2026-11-27' } as const;
 const GOMOKU_TITLE_MATCH: TitleMatch = articleIsLive(GOMOKU_TITLE_WRITE_UP)
   ? { writeUpHref: '/blog/rapfi-vs-katagomo' }
   : {};
