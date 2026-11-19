@@ -47,6 +47,29 @@ export function formatDayClock(ms: number): string {
   return formatClock(bounded);
 }
 
+/**
+ * The live first-move abort countdown. Seconds inside the last minute; M:SS
+ * above it, since a bot game's window is five minutes (#668) and "aborting in
+ * 300s" reads as noise.
+ */
+export function firstMoveAbortCountdownText(
+  remainingMs: number,
+  isSideToMove: boolean,
+  locale?: Locale,
+): string {
+  const bounded = Math.max(0, remainingMs);
+  if (bounded > 60_000) {
+    const time = formatClock(bounded);
+    return isSideToMove
+      ? t('live.makeFirstMoveAbortingInTime', { time }, locale)
+      : t('live.waitingFirstMoveAbortingInTime', { time }, locale);
+  }
+  const seconds = Math.ceil(bounded / 1000);
+  return isSideToMove
+    ? t('live.makeFirstMoveAbortingIn', { seconds }, locale)
+    : t('live.waitingFirstMoveAbortingIn', { seconds }, locale);
+}
+
 /** One deadline label for correspondence cards and compact inbox rows. */
 export function correspondenceTimeLeftLabel(dueAt: string, now: number, locale?: Locale): string {
   const remaining = Date.parse(dueAt) - now;

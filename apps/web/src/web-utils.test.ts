@@ -2,12 +2,39 @@ import { describe, expect, it } from 'vitest';
 import {
   ENGINE_OFFER_AFTER_MS,
   escapeHtml,
+  firstMoveAbortCountdownText,
   formatClock,
   formatDayClock,
   isColor,
   oppositeColor,
   shouldOfferEngine,
 } from './web-utils.js';
+
+describe('firstMoveAbortCountdownText', () => {
+  it('shows m:ss above a minute, as in a five-minute bot window (#668)', () => {
+    expect(firstMoveAbortCountdownText(299_100, true, 'en')).toBe(
+      'Make your first move, aborting in 5:00',
+    );
+    expect(firstMoveAbortCountdownText(298_500, true, 'en')).toBe(
+      'Make your first move, aborting in 4:59',
+    );
+    expect(firstMoveAbortCountdownText(90_000, false, 'en')).toBe(
+      'Waiting for first move, aborting in 1:30',
+    );
+  });
+
+  it('keeps seconds at a minute and below, as in the 30 s window', () => {
+    expect(firstMoveAbortCountdownText(60_000, true, 'en')).toBe(
+      'Make your first move, aborting in 60s',
+    );
+    expect(firstMoveAbortCountdownText(29_500, false, 'en')).toBe(
+      'Waiting for first move, aborting in 30s',
+    );
+    expect(firstMoveAbortCountdownText(-1_000, true, 'en')).toBe(
+      'Make your first move, aborting in 0s',
+    );
+  });
+});
 
 describe('formatClock', () => {
   it('formats zero ms as 0:00', () => {

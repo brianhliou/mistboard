@@ -9,7 +9,7 @@ import {
   parseDarkChessFen,
   replayGameEvents,
 } from '@mistboard/game';
-import { LOBBY_NO_SHOW_ABORT_MS } from './lifecycle-windows.js';
+import { LOBBY_NO_SHOW_ABORT_MS, PVE_ABORT_WINDOW_MS } from './lifecycle-windows.js';
 import type { Seat } from './payloads.js';
 import { DEFAULT_ACCOUNT_PREFERENCES, type UserAccount } from './persistence.js';
 import {
@@ -22,6 +22,7 @@ import {
   clearAbortTimer,
   expireActiveClock,
   FORFEIT_WINDOW_MS,
+  firstMoveWindowMsFor,
   forfeitEngineOnFailure,
   PVP_DISCONNECT_FORFEIT_ENABLED,
   pauseRoomOnShutdown,
@@ -1609,6 +1610,85 @@ test('scheduleAbortTimeout: an invite room with its creator present keeps waitin
   assert.equal(room.abortPhase, null);
   assert.equal(room.abortDeadline, null);
   assert.equal(room.abortTimer, null);
+});
+
+// First-move window against a bot (#668): the 30 s window cancelled 43% of
+// xiangqi bot games. A human owing their first move against a bot gets
+// PVE_ABORT_WINDOW_MS; running out still aborts, never a loss. PvP and the
+// bot's own first move keep ABORT_WINDOW_MS.
+function pveRoom(id: string, engineSeat: 'white' | 'black', extra: GameEvent[] = []): Room {
+  const engineId = 'builtin-random-legal';
+  const room = makeRoom(id, 'dark-chess', [
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
+    {
+      type: 'seat-assigned',
+      at: 2,
+      roomId: id,
+      clientId: engineSeat === 'white' ? engineId : 'human',
+      seat: 'white',
+    },
+    {
+      type: 'seat-assigned',
+      at: 3,
+      roomId: id,
+      clientId: engineSeat === 'black' ? engineId : 'human',
+      seat: 'black',
+    },
+    { type: 'clock-started', at: 4, roomId: id, clock: createClock(4, 60_000, 0) },
+    ...extra,
+  ]);
+  room.mode = 'pve';
+  room.randomEngine = true;
+  room.pveEngineId = engineId;
+  return room;
+}
+
+async function flushAbort(): Promise<void> {
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+}
+
+test('scheduleAbortTimeout: a bot room is still open after 30 s and aborts at five minutes', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 10_000 });
+  // The human is white and owes move 1.
+  const room = pveRoom('pve-first-move', 'black');
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(PVE_ABORT_WINDOW_MS, 5 * 60_000);
+  assert.equal(room.abortPhase, 'white-1');
+  assert.equal(room.abortDeadline, 10_000 + PVE_ABORT_WINDOW_MS);
+  assert.equal(firstMoveWindowMsFor(room), PVE_ABORT_WINDOW_MS);
+  t.mock.timers.tick(ABORT_WINDOW_MS + 1_000);
+  await flushAbort();
+  assert.equal(room.projection.state.status.type, 'playing', 'the 30 s window no longer cancels');
+  t.mock.timers.tick(PVE_ABORT_WINDOW_MS - ABORT_WINDOW_MS - 2_000);
+  await flushAbort();
+  assert.equal(room.projection.state.status.type, 'playing', 'not before five minutes');
+  t.mock.timers.tick(1_100);
+  await flushAbort();
+  assert.deepEqual(room.projection.state.status, { type: 'aborted', reason: 'pregame-timeout' });
+  clearAbortTimer(room);
+});
+
+test('scheduleAbortTimeout: a PvP room still aborts at 30 s', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 10_000 });
+  const room = makeRoom('pvp-first-move', 'dark-chess', clockStartedEvents('pvp-first-move'));
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(room.abortDeadline, 10_000 + ABORT_WINDOW_MS);
+  t.mock.timers.tick(ABORT_WINDOW_MS + 100);
+  await flushAbort();
+  assert.deepEqual(room.projection.state.status, { type: 'aborted', reason: 'pregame-timeout' });
+  clearAbortTimer(room);
+});
+
+test("scheduleAbortTimeout: the bot's own first move keeps the 30 s window", () => {
+  const room = pveRoom('pve-bot-owes', 'white');
+  assert.equal(firstMoveWindowMsFor(room), ABORT_WINDOW_MS);
+  // After the bot's move the human owes black's move 1: the long window.
+  const id = 'pve-human-black';
+  const after = pveRoom(id, 'white', [
+    { type: 'move-played', at: 1000, roomId: id, color: 'white', move: { from: 'e2', to: 'e4' } },
+  ]);
+  assert.equal(after.projection.state.clock?.activeColor, null, 'clock still frozen');
+  assert.equal(firstMoveWindowMsFor(after), PVE_ABORT_WINDOW_MS);
 });
 
 // ── scheduleForfeitTimeout ────────────────────────────────────────────────────

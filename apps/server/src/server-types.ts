@@ -89,8 +89,9 @@ export type Room = {
   engineTimer: ReturnType<typeof setTimeout> | null;
   // Pre-move abort window. While a game is playing but both players haven't yet
   // completed their first move, the side to move must move within ABORT_WINDOW_MS
-  // or the game is aborted (no result). abortPhase tracks which side's window is
-  // live ('white-1' | 'black-1') so the deadline only resets when the phase
+  // (PVE_ABORT_WINDOW_MS for a human against a bot, #668; see
+  // firstMoveWindowMsFor) or the game is aborted (no result). abortPhase
+  // tracks which side's window is live ('white-1' | 'black-1') so the deadline only resets when the phase
   // changes, not on unrelated re-broadcasts. abortDeadline is the absolute ms
   // timestamp sent to clients for the countdown. All null once both first moves
   // are in (or the game isn't in a pre-move window).

@@ -56,7 +56,7 @@ import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { variantMiniIdForRawVariant } from '../variants.js';
-import { formatClock, formatDayClock } from '../web-utils.js';
+import { firstMoveAbortCountdownText, formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
 
 // Structural slice of a variant PlayerView the chrome reads (same status shape
@@ -1559,9 +1559,7 @@ export function createTenantRoomChrome<C extends string>(
         ? t('live.makeFirstMoveOrLoseIn', { seconds })
         : t('live.waitingFirstMoveWinIn', { seconds });
     }
-    return isSideToMove
-      ? t('live.makeFirstMoveAbortingIn', { seconds })
-      : t('live.waitingFirstMoveAbortingIn', { seconds });
+    return firstMoveAbortCountdownText(remaining, isSideToMove);
   }
 
   function forfeitCountdownText(): string {

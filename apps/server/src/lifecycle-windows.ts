@@ -9,6 +9,16 @@
 // auto-aborted. One window for white's move 1, then a fresh one for black's.
 export const ABORT_WINDOW_MS = 30_000;
 
+// The same first-move window in a game against a bot (PvE), while the HUMAN
+// owes the move. Nobody is waiting on the other side, so the short window only
+// cancelled games: stored games showed it cancelling 43% of xiangqi bot games,
+// and 59 of 74 new players' never-moved first xiangqi games (#668). Running
+// out still aborts (`pregame-timeout`), never a loss. The bot's own first move
+// keeps ABORT_WINDOW_MS, so a dead engine still ends the wait as fast as it
+// did. Applies only while the game clock is not running, so the window can
+// never outlast a clock and turn a cancel into a flag.
+export const PVE_ABORT_WINDOW_MS = 5 * 60_000;
+
 // How long a room whose seats are not all filled stays open before it is
 // auto-aborted. This is the "shared an invite link, nobody came" window, and it
 // is deliberately much longer than ABORT_WINDOW_MS: waiting for a friend to

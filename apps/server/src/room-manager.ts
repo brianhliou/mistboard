@@ -30,6 +30,7 @@ import {
   FORFEIT_WINDOW_MS,
   JOIN_WINDOW_MS,
   LOBBY_NO_SHOW_ABORT_MS,
+  PVE_ABORT_WINDOW_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from './lifecycle-windows.js';
 import {
@@ -678,6 +679,21 @@ export async function expireActiveClock(
   });
 }
 
+// The first-move window for the side that owes the move now. A human owing
+// their first move against a bot gets PVE_ABORT_WINDOW_MS (#668): nobody is
+// waiting on them. The bot's own move and every PvP room keep ABORT_WINDOW_MS,
+// so a dead engine still ends the wait as fast as before. Only while the clock
+// is frozen (it is, until both first moves are in), so the window never
+// outlasts a running clock.
+export function firstMoveWindowMsFor(room: Room): number {
+  const state = room.projection.state;
+  const engineSeat = engineSeatFor(room);
+  if (engineSeat === null || state.status.type !== 'playing') return ABORT_WINDOW_MS;
+  if (state.status.turn === engineSeat) return ABORT_WINDOW_MS;
+  if (state.clock && state.clock.activeColor !== null) return ABORT_WINDOW_MS;
+  return PVE_ABORT_WINDOW_MS;
+}
+
 // Which pre-move abort window (if any) is live for this room. Returns null once
 // both players have completed their first move (moveNumber >= 2), or when not
 // playing. The clock is frozen throughout this phase, so this timer is the only
@@ -748,7 +764,8 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
     room.abortDeadline = (room.events[0]?.at ?? Date.now()) + LOBBY_NO_SHOW_ABORT_MS;
   } else if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
-    room.abortDeadline = Date.now() + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
+    room.abortDeadline =
+      Date.now() + (phase === 'unjoined' ? JOIN_WINDOW_MS : firstMoveWindowMsFor(room));
   }
   const delay = Math.max(0, room.abortDeadline - Date.now());
   room.abortTimer = setTimeout(() => {

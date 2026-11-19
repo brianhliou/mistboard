@@ -5,7 +5,7 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { currentView } from './live-view.js';
-import { isColor } from './web-utils.js';
+import { firstMoveAbortCountdownText, isColor } from './web-utils.js';
 
 type GameControlRefs = Pick<LiveRefs, 'gameControlsSection' | 'gameControls'>;
 type SendSocket = (payload: unknown) => boolean;
@@ -95,11 +95,7 @@ function abortRemainingMs(): number | null {
 }
 
 function abortCountdownText(isSideToMove: boolean, locale: Locale): string {
-  const remaining = abortRemainingMs();
-  const seconds = remaining === null ? 0 : Math.ceil(remaining / 1000);
-  return isSideToMove
-    ? t('live.makeFirstMoveAbortingIn', { seconds }, locale)
-    : t('live.waitingFirstMoveAbortingIn', { seconds }, locale);
+  return firstMoveAbortCountdownText(abortRemainingMs() ?? 0, isSideToMove, locale);
 }
 
 function forfeitRemainingSeconds(): number {

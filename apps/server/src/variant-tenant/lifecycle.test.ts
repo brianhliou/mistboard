@@ -14,6 +14,7 @@ import {
   ABORT_WINDOW_MS,
   JOIN_WINDOW_MS,
   LOBBY_NO_SHOW_ABORT_MS,
+  PVE_ABORT_WINDOW_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
 import { hashSeatToken } from '../server-seat-session.js';
@@ -24,6 +25,7 @@ import {
   scheduleTenantLifecycleTimers,
   type TenantLifecycleClient,
   tenantAbortAnchorAt,
+  tenantFirstMoveWindowMs,
   tenantForfeitingSeat,
 } from './lifecycle.js';
 import {
@@ -353,6 +355,155 @@ test('a lobby room with both seats filled uses the ordinary first-move window', 
     assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
   } finally {
     clearTenantRuntimeTimers(room);
+  }
+});
+
+// ── First-move window against a bot (#668) ────────────────────────────────
+//
+// The 30 s window cancelled 43% of xiangqi bot games. A human owing their first
+// move against a bot now gets PVE_ABORT_WINDOW_MS; running out still aborts
+// (pregame-timeout), never a loss. PvP and the bot's own move keep 30 s.
+
+function abortRecorder(now: number) {
+  const appended: { type: string; reason?: string }[] = [];
+  return {
+    appended,
+    ctx: {
+      appendEvent: async (_room: unknown, event: { type: string; reason?: string }) => {
+        appended.push(event);
+        return 0;
+      },
+      broadcastEventAppended: () => {},
+      now: () => now,
+    },
+  };
+}
+
+const engineSeatedAs = (clientId: string) => ({
+  ...darkChessTenant,
+  engine: { isEngineClientId: (id: string | undefined) => id === clientId },
+});
+
+test('a bot room is still open 30 s after the human owes the first move, and aborts at five minutes', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // White is the human and owes move 1; black is the bot.
+  const tenant = engineSeatedAs('black-client');
+  const room = hydrate(roomEvents('dchx_pve_first_move', LIVE_TC));
+  const { appended, ctx } = abortRecorder(1_000_000);
+  try {
+    scheduleTenantLifecycleTimers(tenant, room, ctx);
+    assert.equal(PVE_ABORT_WINDOW_MS, 5 * 60_000);
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 1_000_000 + PVE_ABORT_WINDOW_MS);
+    t.mock.timers.tick(ABORT_WINDOW_MS + 1_000);
+    assert.equal(appended.length, 0, 'the 30 s window no longer cancels a bot game');
+    t.mock.timers.tick(PVE_ABORT_WINDOW_MS - ABORT_WINDOW_MS - 2_000);
+    assert.equal(appended.length, 0, 'not before five minutes');
+    t.mock.timers.tick(1_100);
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0]?.type, 'game-aborted');
+    assert.equal(appended[0]?.reason, 'pregame-timeout');
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a PvP room on the same log still aborts at 30 s', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const room = hydrate(roomEvents('dchx_pvp_first_move', LIVE_TC));
+  const { appended, ctx } = abortRecorder(1_000_000);
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
+    assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
+    t.mock.timers.tick(ABORT_WINDOW_MS + 100);
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0]?.type, 'game-aborted');
+    assert.equal(appended[0]?.reason, 'pregame-timeout');
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test("the bot's own first move keeps the 30 s window", () => {
+  // White is the bot and owes move 1.
+  const tenant = engineSeatedAs('white-client');
+  const room = hydrate(roomEvents('dchx_pve_bot_owes', LIVE_TC));
+  try {
+    scheduleTenantLifecycleTimers(tenant, room, lifecycleContext());
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
+    assert.equal(tenantFirstMoveWindowMs(tenant, room), ABORT_WINDOW_MS);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test("the human's second-phase window against a bot is long too while the clock is frozen", () => {
+  // Bot white has moved; human black owes move 1. Dark chess arms the clock
+  // only after both first moves, so it is still frozen here.
+  const roomId = 'dchx_pve_black_owes';
+  const tenant = engineSeatedAs('white-client');
+  const room = hydrate([...roomEvents(roomId, LIVE_TC), firstMoves(roomId)[0]!]);
+  try {
+    scheduleTenantLifecycleTimers(tenant, room, lifecycleContext());
+    assert.equal(room.abortPhase, 'black-1');
+    assert.equal(room.projection.clock?.activeColor, null);
+    assert.equal(room.abortDeadline, 1_000_000 + PVE_ABORT_WINDOW_MS);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('Xiangqi Mahjong: long window on the clock-free first action, 30 s once its clock runs', () => {
+  // XMJ arms its clock on the first action, so the second seat's pregame
+  // window runs beside a live clock; a long window there could outlast it.
+  const roomId = 'xmj_pve_first_move';
+  const tenant = {
+    ...xmjTenant,
+    engine: { ...xmjTenant.engine!, isEngineClientId: (id?: string) => id === 'west-client' },
+  };
+  const base = [
+    {
+      type: 'room-created',
+      at: 1_000,
+      roomId,
+      gameSpecId: 'xiangqi-mahjong',
+      setup: { walls: [xmjOrderedTiles(), xmjOrderedTiles()], firstDealer: 'east', taiTable: 3 },
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    },
+    {
+      type: 'clock-started',
+      at: 1_000,
+      roomId,
+      clock: createTenantClock(xmjTenant, 180_000, 2_000),
+    },
+    { type: 'seat-assigned', at: 2_000, roomId, clientId: 'east-client', seat: 'east' },
+    { type: 'seat-assigned', at: 3_000, roomId, clientId: 'west-client', seat: 'west' },
+  ] as XmjEvent[];
+  const first = createTenantRuntimeRoomFromEvents(xmjTenant, base);
+  assert.ok(first.ok);
+  const firstRoom = { ...first.room, clients: new Set<TenantLifecycleClient<string>>() };
+  try {
+    assert.equal(firstRoom.projection.state.status.type, 'playing');
+    assert.equal((firstRoom.projection.state.status as { turn?: string }).turn, 'east');
+    assert.equal(tenantFirstMoveWindowMs(tenant, firstRoom), PVE_ABORT_WINDOW_MS);
+    // The human swaps roles with the bot: with the bot owing, 30 s.
+    const botEast = {
+      ...xmjTenant,
+      engine: { ...xmjTenant.engine!, isEngineClientId: (id?: string) => id === 'east-client' },
+    };
+    assert.equal(tenantFirstMoveWindowMs(botEast, firstRoom), ABORT_WINDOW_MS);
+    // Once a running clock covers the phase, the human keeps 30 s.
+    const running = {
+      ...firstRoom,
+      projection: {
+        ...firstRoom.projection,
+        clock: { ...firstRoom.projection.clock!, activeColor: 'east', runningSince: 4_000 },
+      },
+    } as typeof firstRoom;
+    assert.equal(tenantFirstMoveWindowMs(tenant, running), ABORT_WINDOW_MS);
+  } finally {
+    clearTenantRuntimeTimers(firstRoom);
   }
 });
 

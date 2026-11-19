@@ -23,6 +23,7 @@ import {
   FORFEIT_WINDOW_MS,
   JOIN_WINDOW_MS,
   LOBBY_NO_SHOW_ABORT_MS,
+  PVE_ABORT_WINDOW_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
@@ -676,6 +677,33 @@ export function tenantConnectedSeats<C extends string>(
   return connected;
 }
 
+// The live first-move window for the seat that owes the move now. A human
+// owing their first move against a bot gets PVE_ABORT_WINDOW_MS (#668): nobody
+// is waiting on them. The bot's own move and every PvP room keep
+// ABORT_WINDOW_MS, so a dead engine still ends the wait as fast as before. A
+// tenant whose clock is already running in this phase (armsClockOnFirstMove:
+// the mahjong tenants' second action) keeps the short window too, so the
+// window never outlasts a clock and turns a cancel into a flag.
+export function tenantFirstMoveWindowMs<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(tenant: TenantLifecycleTenant<C, State>, room: TenantProjectedRoom<C, M, State, Spec>): number {
+  const engine = tenant.engine;
+  if (!engine) return ABORT_WINDOW_MS;
+  const { seats, state, clock } = room.projection;
+  if (!tenant.colors.some((color) => engine.isEngineClientId(seats[color]))) {
+    return ABORT_WINDOW_MS;
+  }
+  // The seat that owes the move, not the phase's name: a dealt game may open
+  // with either seat (same reading as tenantPregameTimeoutLoser).
+  const turn = state.status.type === 'playing' ? (state.status as { turn?: C }).turn : undefined;
+  if (turn === undefined || engine.isEngineClientId(seats[turn])) return ABORT_WINDOW_MS;
+  if (clock && clock.activeColor !== null) return ABORT_WINDOW_MS;
+  return PVE_ABORT_WINDOW_MS;
+}
+
 function scheduleTenantAbortTimeout<
   C extends string,
   M,
@@ -739,7 +767,8 @@ function scheduleTenantAbortTimeout<
     // The phase is part of the guard above, so a seat filling flips
     // 'unjoined' -> '<first>-1' and recomputes the deadline down to the short
     // pregame window instead of leaving the long join window running.
-    room.abortDeadline = now + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
+    room.abortDeadline =
+      now + (phase === 'unjoined' ? JOIN_WINDOW_MS : tenantFirstMoveWindowMs(tenant, room));
   }
   const delay = Math.max(0, room.abortDeadline - now);
   room.abortTimer = setTimeout(() => {
