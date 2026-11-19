@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- In games against a bot you now have five minutes to make your first move before the game is cancelled, up from 30 seconds ([8ba06e9c](https://github.com/brianhliou/mistboard/commit/8ba06e9c))
 - Correspondence games show the move deadline before you accept them ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - Both homepage lists put the game you last played first ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - Gomoku deals only openings that both Rapfi and KataGomo read as close to even ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
