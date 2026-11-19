@@ -34,6 +34,8 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // rapfi-vs-katagomo: Machine-drafted 2026-11-18, not native-reviewed, from the English signed off that day.
+  'rapfi-vs-katagomo',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'xiangqi-nnue-training',
   // Machine-drafted 2026-11-11, not native-reviewed, from the English signed
@@ -259,10 +261,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
-  // Added 2026-11-11 with the English draft; the slug moves to
-  // TRANSLATED_ARTICLE_SLUGS when its zh is drafted from the signed-off English.
-  'rapfi-vs-katagomo':
-    'An engineering post whose English is under review before its 2026-11-13 date; zh is drafted only from signed-off English.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
   // Vietnamese renders of a translated English article (derived-translation.ts);
   // a zh reader gets the source article's zh page.
@@ -496,6 +494,202 @@ const ZH_HANS: Record<string, string> = {
   'a black soldier was taken': '被吃的是黑卒',
   'Black HP: 60 → 58': '黑方血量：60 → 58',
   'WHAT EACH PLAYER SEES': '双方各自看到的信息',
+  // rapfi-vs-katagomo: Machine-drafted 2026-11-18, not native-reviewed, from the English signed off that day.
+  'Rapfi wins the Gomoku title against KataGomo': 'Rapfi 战胜 KataGomo，夺得五子棋头衔',
+  'Rapfi wins the Gomoku title': 'Rapfi 夺得五子棋头衔',
+  "Rapfi, the engine behind Mistboard's Gomoku bots, beat KataGomo over 199 games at 3 seconds a move and is the first Gomoku champion.":
+    'Rapfi 是 Mistboard 五子棋电脑背后的引擎。它在每步 3 秒的 199 盘比赛中战胜 KataGomo，成为首位五子棋冠军。',
+  'People who play Gomoku against the bots on Mistboard, and engine authors.':
+    '面向在 Mistboard 上和电脑下五子棋的棋友，以及引擎作者。',
+  "Rapfi is Mistboard's first Gomoku champion. Given 3 seconds a move each, it beat KataGomo over 199 games: 113 wins, 61 draws and 25 losses, a score of 72% (about +165 Elo).":
+    'Rapfi 是 Mistboard 的首位五子棋冠军。双方各用每步 3 秒，它在 199 盘中战胜 KataGomo：113 胜、61 和、25 负，得分率 72%（约 +165 Elo）。',
+  'Rapfi Level 8, the bot you play, searches 80,000 positions a move. In the title match Rapfi searched about 6 times that.':
+    '你对弈的 Rapfi 第 8 级每步搜索 80,000 个局面。在头衔赛中，Rapfi 的搜索量约是它的 6 倍。',
+  'The games that end in a five end early, a median 44.5 moves after the opening; every draw filled the board.':
+    '以连五结束的对局都结束得早，中位数是开局后 44.5 步；每盘和棋都下满了棋盘。',
+  '199 counted games from 100 dealt openings, each played twice with colours swapped, at 3 seconds a move for both engines; one game voided.':
+    '计入的 199 盘来自 100 个发放的开局，每个开局黑白互换各下一盘，两个引擎都是每步 3 秒；有一盘作废。',
+  'Elo ranges: 95% paired bootstrap over the opening pairs (100,000 resamples).':
+    'Elo 区间：以开局对为单位的 95% 配对 bootstrap（重抽样 100,000 次）。',
+  "Rapfi is the first [Gomoku](/rules/gomoku) champion on Mistboard. It is the open-source engine by dhbloo and the Rapfi contributors that plays every Gomoku bot here, Level 1 to Level 8. Its challenger was KataGomo, hzyhhzy's Gomoku build of the Go engine KataGo. By the rules on the [champions page](/champions), KataGomo needed 55% to take the title. With 3 seconds a move for both engines, it scored 28%. On the CPUs Mistboard serves from, Rapfi is the stronger engine.":
+    'Rapfi 是 Mistboard 上第一位[五子棋](/rules/gomoku)冠军。它是 dhbloo 和 Rapfi 贡献者开发的开源引擎，本站从第 1 级到第 8 级的每个五子棋电脑都由它来下。挑战者是 KataGomo，即 hzyhhzy 以围棋引擎 KataGo 改造的五子棋版本。按[引擎冠军页面](/champions)上的规则，KataGomo 需要拿到 55% 的得分率才能夺得头衔。两个引擎都用每步 3 秒，它只拿到 28%。在 Mistboard 用来提供服务的 CPU 上，Rapfi 是更强的引擎。',
+  'As of November 11, 2026': '截至 2026 年 11 月 11 日',
+  'Rapfi commit 1387d11 with Rapfi Networks 7eeb19b, and KataGomo commit df15211 with its b10 freestyle network, each on one CPU thread. KataGomo usually runs on a graphics card, where it searches far more in the same time, so it may score differently there, as may a later release of either engine.':
+    'Rapfi 提交 1387d11 搭配 Rapfi Networks 7eeb19b，KataGomo 提交 df15211 搭配它的 b10 无禁手网络，各用一个 CPU 线程。KataGomo 通常在显卡上运行，同样的时间里能搜索多得多，所以在显卡上它的得分可能不同；任一引擎的后续版本也可能如此。',
+  Rapfi: 'Rapfi',
+  'All games, 3 s each': '全部对局，每步 3 秒',
+  'With White': '执白',
+  'That is about **+165 Elo** for Rapfi (95% range +124 to +210). Both engines had the same clock on one CPU thread, and used it differently: Rapfi took 2.4 of its 3 seconds on average and searched a median **450,000 positions** a move, while KataGomo, on its Eigen (CPU) backend, searched a median 139 visits. A KataGomo visit runs a large neural network on one position; a Rapfi position costs far less.':
+    '这相当于 Rapfi 约 **+165 Elo**（95% 区间 +124 至 +210）。两个引擎在一个 CPU 线程上用同样的时钟，用法却不同：Rapfi 平均用掉 3 秒中的 2.4 秒，每步搜索局面数的中位数是 **450,000 个**；KataGomo 用它的 Eigen（CPU）后端，每步访问次数的中位数是 139 次。KataGomo 的一次访问要在一个局面上运行一个大型神经网络；Rapfi 看一个局面的开销要小得多。',
+  'The engine mattered far more than the colour: moving first was worth about 4 points of score, being Rapfi about 22.':
+    '引擎的影响远大于执哪一方：先走大约值 4 个百分点的得分率，作为 Rapfi 则大约值 22 个百分点。',
+  'The clock is what decides it. In an earlier match at matched search, Rapfi Level 8 at 80,000 positions a move against KataGomo at 250 visits, the two scored level: 65‑65‑70 over 200 games.':
+    '决定胜负的是时钟。在先前一场按搜索量对齐的比赛中，Rapfi 第 8 级每步 80,000 个局面，对 KataGomo 每步 250 次访问，两者打成平手：200 盘 65‑65‑70。',
+  'Game 1': '第 1 盘',
+  "Each game starts from one of the site's [dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all 197 in the pool at the time as close to even, though KataGomo put 34 of the 99 played outside 40-60% (more below). Each was played twice with colours swapped. In game 1 KataGomo had Black, and Rapfi won with its 15th move, b9, a diagonal five from b9 to f5. Under the board, both engines read every position of the game: the teal line is Rapfi's win chance for Black, the orange line KataGomo's.":
+    '每盘棋都从本站一个[发放的开局](/rules/gomoku#dealt-openings)开始，棋盘上已经摆好了棋子。当时开局池里的全部 197 个开局，Rapfi 都筛选为接近均势，不过在实际下过的 99 个开局中，KataGomo 把其中 34 个判在 40-60% 之外（详见下文）。每个开局黑白互换各下一盘。第 1 盘 KataGomo 执黑，Rapfi 用它的第 15 手 b9 获胜，从 b9 到 f5 斜向连成五子。棋盘下方是两个引擎对这盘棋每个局面的判断：青绿色的线是 Rapfi 给黑方的胜率，橙色的线是 KataGomo 给的。',
+  'KataGomo vs Rapfi, game 1': 'KataGomo 对 Rapfi，第 1 盘',
+  'Rapfi wins with Black': 'Rapfi 执黑获胜',
+  "In game 52, Rapfi had Black and completed a five at b11, 41 moves after the deal. Follow the rising lines for Black, then step through Rapfi's attack toward the left edge.":
+    '第 52 盘 Rapfi 执黑，在开局发放后第 41 步于 b11 连成五子。先看黑方的胜率线一路上升，再一步步看 Rapfi 向左边线发起的进攻。',
+  'Rapfi vs KataGomo, game 52': 'Rapfi 对 KataGomo，第 52 盘',
+  'Decisive games end in about 45 moves, and every draw fills the board':
+    '分出胜负的对局大约 45 步就结束，每盘和棋都下满棋盘',
+  '138 of the 199 games ended in a five, at a median of 44.5 moves after the opening. All 61 draws ran the full 220 moves: no game was drawn before the board filled.':
+    '199 盘中有 138 盘以连五结束，中位数是开局后 44.5 步。61 盘和棋全都下满 220 步：没有一盘在棋盘下满之前成和。',
+  'Games by moves played after the opening, in bins of 10. The grey bar is the 61 draws.':
+    '按开局后所下步数统计的对局数，每 10 步一组。灰色柱是 61 盘和棋。',
+  'Under these rules a full board is the only draw, and the engines have no way to agree one, so a drawn game is played out to the last point. In a typical draw the fight is over long before that. Rapfi last read either side as clearly ahead, above 62%, at a median move 66, and the other 154 or so moves fill the board without a five.':
+    '按这套规则，下满棋盘是唯一的和棋方式，引擎也无法协议和棋，所以和棋要一直下到最后一个交叉点。在典型的和棋里，争夺早在那之前就结束了。Rapfi 最后一次判断某一方明显领先（高于 62%）的时刻，中位数是第 66 步，其余约 154 步都是在没有连五的情况下填满棋盘。',
+  'Game 2 is one of them. Both engines read it as somewhat better for White until move 65, then dead even to the end.':
+    '第 2 盘就是其中之一。两个引擎都认为白方稍好，直到第 65 步，此后直到终局都完全均势。',
+  'Rapfi vs KataGomo, game 2': 'Rapfi 对 KataGomo，第 2 盘',
+  'The games start to turn within 3 moves': '对局在 3 步之内就开始分化',
+  'Rapfi logged its win chance in every position it moved in. Each line below averages that over the games that ended one way: Rapfi won, drew or lost. A result settled late would show as three lines sitting together near 50% and parting only at the end.':
+    'Rapfi 在它走的每个局面都记录了自己的胜率。下面每条线是同一种结果的对局（Rapfi 获胜、和棋或落败）的平均值。如果结果很晚才定下来，三条线会挤在 50% 附近，直到最后才分开。',
+  "Rapfi's mean win chance by stones on the board, in bins of 4, one line per result.":
+    '按盘面棋子数统计的 Rapfi 平均胜率，每 4 子一组，每种结果一条线。',
+  'The lines part at once. They read 65%, 49% and 42% 3 moves after the deal, and by stone 20 they read 83% in its eventual wins, 52% in the draws and 29% in its losses. In the games it won, Rapfi saw a forced five at a median stone 22.':
+    '三条线一开始就分开了。开局发放后 3 步，它们分别是 65%、49% 和 42%；到第 20 子时，在它最终赢下的对局里是 83%，和棋里是 52%，输掉的对局里是 29%。在它赢下的对局中，Rapfi 看出必成连五的时刻，中位数是第 22 子。',
+  'KataGomo read the openings better than Rapfi did': 'KataGomo 对开局的判断比 Rapfi 更准',
+  'Rapfi screened the openings, and it read them as even all match. KataGomo, reading each one at 400 visits, gave Black anywhere from 12% to 89%, and put 34 of the 99 outside 40-60%.':
+    '开局是由 Rapfi 筛选的，整场比赛它都认为这些开局均势。KataGomo 以每个开局 400 次访问来判断，给黑方的胜率从 12% 到 89% 不等，99 个开局中有 34 个落在 40-60% 之外。',
+  'The results sided with KataGomo: in the 22 openings it gave Black over 60%, Black scored 60%; in the 12 it gave Black under 40%, Black scored 40%.':
+    '结果站在 KataGomo 一边：在它给黑方 60% 以上的 22 个开局中，黑方得分率是 60%；在它给黑方 40% 以下的 12 个开局中，黑方得分率是 40%。',
+  'How the games were lost': '对局是怎么输掉的',
+  '**Rapfi lost from even games.** Its 25 losses were slides: in the 24 with logged readings, the best it ever gave itself was a median 53%, and only 2 went above 70%.':
+    '**Rapfi 的败局都从均势开始。** 它的 25 盘败局都是慢慢滑落的：在有判断记录的 24 盘中，它给自己的最高胜率中位数只有 53%，只有 2 盘超过 70%。',
+  "**KataGomo saw its losses coming.** In 30 of Rapfi's wins, it read the position one move before Rapfi saw a won game and gave itself a median 24%. With ten times its match search, 1,400 visits, it still gave itself 23%. By its own reading, no move saved those games by then.":
+    '**KataGomo 早就看到自己要输。** 在 Rapfi 的 30 盘胜局中，在 Rapfi 看出胜局已定的前一步，KataGomo 判断局面，给自己的胜率中位数是 24%。用十倍于比赛的搜索量，即 1,400 次访问，它给自己的仍是 23%。按它自己的判断，到那时已经没有哪一步能救回这些对局。',
+  "**Rapfi attacks more.** 16.6% of its moves made a four, against 11.4% of KataGomo's, and it made 113 moves with two threats at once to KataGomo's 41.":
+    '**Rapfi 进攻更多。** 它有 16.6% 的着法成四，KataGomo 是 11.4%；它有 113 步同时形成两个威胁，KataGomo 只有 41 步。',
+  "Rapfi's losing moves came late, in positions already behind":
+    'Rapfi 的败着来得晚，出现在已经落后的局面里',
+  "To find where each loss turned, a deeper Rapfi search read back through Rapfi's moves from the end of each lost game, at 10 million positions a move, about 22 times its match search. The losing move is the last one after which it gives Rapfi a win chance of 10% or less. It found one in 22 of the 25 losses; in the other 3, Rapfi was lost as far back as it looked. It read a random 20 of Rapfi's wins the same way, to compare KataGomo's losing moves.":
+    '为了找出每盘败局在哪里转折，一个更深的 Rapfi 搜索从每盘败局的终局往回检查 Rapfi 的着法，每步 1,000 万个局面，约是比赛搜索量的 22 倍。败着是指：在这一步之后，深度搜索给 Rapfi 的胜率为 10% 或以下的最后一步。25 盘败局中有 22 盘找到了败着；另外 3 盘，往回查到多远，Rapfi 都已经是败局。它又用同样的方法检查了随机抽取的 20 盘 Rapfi 胜局，用来对比 KataGomo 的败着。',
+  'The losing move': '败着',
+  'Rapfi lost': 'Rapfi 落败',
+  'KataGomo lost': 'KataGomo 落败',
+  Found: '找到败着',
+  '22 of 25': '25 盘中 22 盘',
+  '19 of 20': '20 盘中 19 盘',
+  'Median move': '所在步数（中位数）',
+  'In the first 15 moves': '在前 15 步内',
+  "Loser's win chance before it, median": '败方此前的胜率（中位数）',
+  'From 30% or more to lost': '从 30% 以上一步到败局',
+  'Moves left after it, median': '此后剩余步数（中位数）',
+  "Moves are counted after the opening. Win chances are the deeper search's.":
+    '步数从开局后算起。胜率取自深度搜索。',
+  "KataGomo's losses turned early, from near even, mostly in one move. Rapfi's finished a slide, and KataGomo won them slowly: after the losing move it played a median 12 moves that made no three or four before its five. In 9 of the 17 positions where the deeper search chose a different move from Rapfi, its move took a point where a KataGomo stone would have made a three or a four.":
+    'KataGomo 的败局转折得早，从接近均势开始，多半只因一步棋。Rapfi 的败局则是慢慢滑落的结果，而且 KataGomo 赢得很慢：败着之后，它在连五之前走了中位数 12 步既不成三也不成四的棋。在深度搜索与 Rapfi 选了不同着法的 17 个局面中，有 9 个局面深度搜索的着法占住了一个点，KataGomo 若在那里落子就会成三或成四。',
+  "In game 106, Rapfi had Black, and KataGomo completed a five with White after 92 moves from the deal. Watch Black's chances ebb while KataGomo builds its position, well before the final five.":
+    '第 106 盘 Rapfi 执黑，KataGomo 执白，在开局发放后第 92 步连成五子。看看在最后的连五之前很久，KataGomo 一边经营局面，黑方的胜率一边慢慢消退。',
+  'Rapfi vs KataGomo, game 106': 'Rapfi 对 KataGomo，第 106 盘',
+  "**More search finds most of them.** Given ten times its match search, 4.5 million positions, Rapfi plays the deeper search's move in 19 of the 22 positions, and in 16 the position after its move no longer reads as lost. Replayed at its match search, it plays the losing move again in 12. In 5 of the 22, the deeper search would have played Rapfi's move too.":
+    '**多搜一些，大多能找到。** 给 Rapfi 十倍于比赛的搜索量，即 450 万个局面，22 个局面中有 19 个它走出了深度搜索的着法，有 16 个它走完后的局面不再被判为败局。按比赛时的搜索量重下，它有 12 次又走出了同样的败着。22 个局面中有 5 个，深度搜索也会走 Rapfi 的那一步。',
+  'What the deeper search can miss': '深度搜索可能漏掉什么',
+  "The deeper search is Rapfi, so it shares Rapfi's blind spots. KataGomo, reading the same positions at 2,000 visits, also has Rapfi's chances falling at the losing move, from a median 18% to 6%, and its best move matched the deeper search's in 12 of the 22. With 22 positions, these are rough counts.":
+    '深度搜索用的也是 Rapfi，所以它和 Rapfi 有同样的盲点。KataGomo 以 2,000 次访问判断同样的局面，也看到 Rapfi 的胜率在败着处下跌，中位数从 18% 降到 6%；它的最佳着法在 22 个局面中有 12 个与深度搜索一致。只有 22 个局面，这些只是粗略的计数。',
+  'What it means for the bot you play': '这对你对弈的电脑意味着什么',
+  "Level 8 is the champion's engine with a smaller search: **80,000 positions** a move, with a 3.5-second ceiling so a slow phone can reach it. The Rapfi that won the title searched about 6 times as much, so it is stronger than the bot you play.":
+    '第 8 级就是冠军引擎，只是搜索量小一些：每步 **80,000 个局面**，并设有 3.5 秒的上限，让较慢的手机也能达到。赢得头衔的 Rapfi 搜索量约是它的 6 倍，所以比你对弈的电脑更强。',
+  'How the match was run': '比赛是怎么进行的',
+  'Freestyle Gomoku on a 15 by 15 board: five or more in a row wins, a full board is a draw.':
+    '15×15 棋盘上的无禁手五子棋：五子或更多连成一线获胜，棋盘下满为和棋。',
+  "Openings dealt from the site's 197 screened positions, each played twice with colours swapped.":
+    '开局从本站 197 个经过筛选的局面中发放，每个开局黑白互换各下一盘。',
+  'One search thread per engine and a fresh engine process for every move, on an Apple silicon Mac. The site serves an x86-64 build of the same Rapfi commit.':
+    '每个引擎一个搜索线程，每一步都重新启动引擎，在一台 Apple 芯片的 Mac 上运行。本站使用的是同一 Rapfi 提交的 x86-64 版本。',
+  'Rapfi with a 32 MB hash; KataGomo on its CPU backend.':
+    'Rapfi 使用 32 MB 置换表；KataGomo 使用 CPU 后端。',
+  "One game was voided when Rapfi took 3.3 seconds on one move, past the referee's limit. The other game of that opening counts in the totals and is left out of the Elo range, which pairs games by opening.":
+    '有一盘因 Rapfi 某一步用了 3.3 秒、超过裁判程序的时限而作废。同一开局的另一盘计入总数，但不计入 Elo 区间，因为 Elo 区间按开局把对局配对。',
+  'Rapfi is open source under the GPL-3.0 licence at [github.com/dhbloo/rapfi](https://github.com/dhbloo/rapfi), and its networks are public domain (CC0). KataGomo is open source under the MIT licence at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo); the network we ran is b10_freestyle15x from its [Gomocup 2025 release](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025). Thank you, dhbloo and the Rapfi contributors, and thank you, hzyhhzy.':
+    'Rapfi 以 GPL-3.0 许可证开源，地址是 [github.com/dhbloo/rapfi](https://github.com/dhbloo/rapfi)，它的网络属于公有领域（CC0）。KataGomo 以 MIT 许可证开源，地址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)；我们使用的网络是其 [Gomocup 2025 发布版](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025)中的 b10_freestyle15x。感谢 dhbloo 和 Rapfi 的贡献者，也感谢 hzyhhzy。',
+  'Play Rapfi': '与 Rapfi 对弈',
+  'See the champions': '查看引擎冠军',
+  'Draws: 61 games, 220 moves each': '和棋：61 盘，每盘 220 步',
+  draws: '和棋',
+  'median 44.5 moves': '中位数 44.5 步',
+  'moves after the opening': '开局后步数',
+  'Rapfi won': 'Rapfi 获胜',
+  'stones on the board, the five dealt included': '盘面棋子数（含发放的 5 子）',
+  '138 decisive games by length, from 10 to 159 moves, median 44.5; the 61 draws all run 220 moves':
+    '138 盘分出胜负的对局按长度分布，从 10 到 159 步，中位数 44.5；61 盘和棋都下满 220 步',
+  "Rapfi's win chance by stones on the board, one line for the games it won, drew and lost: the lines part early":
+    '按盘面棋子数统计的 Rapfi 胜率，它赢、和、输的对局各一条线：三条线很早就分开',
+  '10 to 19 moves: 1 games': '10 至 19 步：1 盘',
+  '20 to 29 moves: 24 games': '20 至 29 步：24 盘',
+  '30 to 39 moves: 31 games': '30 至 39 步：31 盘',
+  '40 to 49 moves: 21 games': '40 至 49 步：21 盘',
+  '50 to 59 moves: 18 games': '50 至 59 步：18 盘',
+  '60 to 69 moves: 14 games': '60 至 69 步：14 盘',
+  '70 to 79 moves: 8 games': '70 至 79 步：8 盘',
+  '80 to 89 moves: 5 games': '80 至 89 步：5 盘',
+  '90 to 99 moves: 4 games': '90 至 99 步：4 盘',
+  '100 to 109 moves: 3 games': '100 至 109 步：3 盘',
+  '110 to 119 moves: 5 games': '110 至 119 步：5 盘',
+  '120 to 129 moves: 2 games': '120 至 129 步：2 盘',
+  '130 to 139 moves: 1 games': '130 至 139 步：1 盘',
+  '140 to 149 moves: 0 games': '140 至 149 步：0 盘',
+  '150 to 159 moves: 1 games': '150 至 159 步：1 盘',
+  'Rapfi won, 8 to 11 stones: 65% over 113 games': 'Rapfi 获胜，8 至 11 子：113 盘平均 65%',
+  'Rapfi won, 12 to 15 stones: 72% over 113 games': 'Rapfi 获胜，12 至 15 子：113 盘平均 72%',
+  'Rapfi won, 16 to 19 stones: 78% over 113 games': 'Rapfi 获胜，16 至 19 子：113 盘平均 78%',
+  'Rapfi won, 20 to 23 stones: 83% over 113 games': 'Rapfi 获胜，20 至 23 子：113 盘平均 83%',
+  'Rapfi won, 24 to 27 stones: 87% over 108 games': 'Rapfi 获胜，24 至 27 子：108 盘平均 87%',
+  'Rapfi won, 28 to 31 stones: 88% over 99 games': 'Rapfi 获胜，28 至 31 子：99 盘平均 88%',
+  'Rapfi won, 32 to 35 stones: 88% over 88 games': 'Rapfi 获胜，32 至 35 子：88 盘平均 88%',
+  'Rapfi won, 36 to 39 stones: 89% over 74 games': 'Rapfi 获胜，36 至 39 子：74 盘平均 89%',
+  'Rapfi won, 40 to 43 stones: 89% over 62 games': 'Rapfi 获胜，40 至 43 子：62 盘平均 89%',
+  'Rapfi won, 44 to 47 stones: 89% over 55 games': 'Rapfi 获胜，44 至 47 子：55 盘平均 89%',
+  'Rapfi won, 48 to 51 stones: 89% over 46 games': 'Rapfi 获胜，48 至 51 子：46 盘平均 89%',
+  'Rapfi won, 52 to 55 stones: 89% over 40 games': 'Rapfi 获胜，52 至 55 子：40 盘平均 89%',
+  'Rapfi won, 56 to 59 stones: 90% over 34 games': 'Rapfi 获胜，56 至 59 子：34 盘平均 90%',
+  'Rapfi won, 60 to 63 stones: 90% over 31 games': 'Rapfi 获胜，60 至 63 子：31 盘平均 90%',
+  'Rapfi won, 64 to 67 stones: 89% over 23 games': 'Rapfi 获胜，64 至 67 子：23 盘平均 89%',
+  'Rapfi won, 68 to 71 stones: 88% over 19 games': 'Rapfi 获胜，68 至 71 子：19 盘平均 88%',
+  'Rapfi won, 72 to 75 stones: 83% over 14 games': 'Rapfi 获胜，72 至 75 子：14 盘平均 83%',
+  'Rapfi won, 76 to 79 stones: 80% over 11 games': 'Rapfi 获胜，76 至 79 子：11 盘平均 80%',
+  'Rapfi won, 80 to 83 stones: 78% over 10 games': 'Rapfi 获胜，80 至 83 子：10 盘平均 78%',
+  'drawn, 8 to 11 stones: 49% over 61 games': '和棋，8 至 11 子：61 盘平均 49%',
+  'drawn, 12 to 15 stones: 50% over 61 games': '和棋，12 至 15 子：61 盘平均 50%',
+  'drawn, 16 to 19 stones: 51% over 61 games': '和棋，16 至 19 子：61 盘平均 51%',
+  'drawn, 20 to 23 stones: 52% over 61 games': '和棋，20 至 23 子：61 盘平均 52%',
+  'drawn, 24 to 27 stones: 52% over 61 games': '和棋，24 至 27 子：61 盘平均 52%',
+  'drawn, 28 to 31 stones: 54% over 61 games': '和棋，28 至 31 子：61 盘平均 54%',
+  'drawn, 32 to 35 stones: 55% over 61 games': '和棋，32 至 35 子：61 盘平均 55%',
+  'drawn, 36 to 39 stones: 55% over 61 games': '和棋，36 至 39 子：61 盘平均 55%',
+  'drawn, 40 to 43 stones: 56% over 61 games': '和棋，40 至 43 子：61 盘平均 56%',
+  'drawn, 44 to 47 stones: 57% over 61 games': '和棋，44 至 47 子：61 盘平均 57%',
+  'drawn, 48 to 51 stones: 58% over 61 games': '和棋，48 至 51 子：61 盘平均 58%',
+  'drawn, 52 to 55 stones: 59% over 61 games': '和棋，52 至 55 子：61 盘平均 59%',
+  'drawn, 56 to 59 stones: 59% over 61 games': '和棋，56 至 59 子：61 盘平均 59%',
+  'drawn, 60 to 63 stones: 61% over 61 games': '和棋，60 至 63 子：61 盘平均 61%',
+  'drawn, 64 to 67 stones: 61% over 61 games': '和棋，64 至 67 子：61 盘平均 61%',
+  'drawn, 68 to 71 stones: 61% over 61 games': '和棋，68 至 71 子：61 盘平均 61%',
+  'drawn, 72 to 75 stones: 60% over 61 games': '和棋，72 至 75 子：61 盘平均 60%',
+  'drawn, 76 to 79 stones: 59% over 61 games': '和棋，76 至 79 子：61 盘平均 59%',
+  'drawn, 80 to 83 stones: 57% over 61 games': '和棋，80 至 83 子：61 盘平均 57%',
+  'Rapfi lost, 8 to 11 stones: 42% over 25 games': 'Rapfi 落败，8 至 11 子：25 盘平均 42%',
+  'Rapfi lost, 12 to 15 stones: 37% over 25 games': 'Rapfi 落败，12 至 15 子：25 盘平均 37%',
+  'Rapfi lost, 16 to 19 stones: 34% over 25 games': 'Rapfi 落败，16 至 19 子：25 盘平均 34%',
+  'Rapfi lost, 20 to 23 stones: 29% over 25 games': 'Rapfi 落败，20 至 23 子：25 盘平均 29%',
+  'Rapfi lost, 24 to 27 stones: 26% over 25 games': 'Rapfi 落败，24 至 27 子：25 盘平均 26%',
+  'Rapfi lost, 28 to 31 stones: 25% over 25 games': 'Rapfi 落败，28 至 31 子：25 盘平均 25%',
+  'Rapfi lost, 32 to 35 stones: 23% over 25 games': 'Rapfi 落败，32 至 35 子：25 盘平均 23%',
+  'Rapfi lost, 36 to 39 stones: 22% over 25 games': 'Rapfi 落败，36 至 39 子：25 盘平均 22%',
+  'Rapfi lost, 40 to 43 stones: 22% over 24 games': 'Rapfi 落败，40 至 43 子：24 盘平均 22%',
+  'Rapfi lost, 44 to 47 stones: 19% over 23 games': 'Rapfi 落败，44 至 47 子：23 盘平均 19%',
+  'Rapfi lost, 48 to 51 stones: 18% over 22 games': 'Rapfi 落败，48 至 51 子：22 盘平均 18%',
+  'Rapfi lost, 52 to 55 stones: 18% over 21 games': 'Rapfi 落败，52 至 55 子：21 盘平均 18%',
+  'Rapfi lost, 56 to 59 stones: 18% over 19 games': 'Rapfi 落败，56 至 59 子：19 盘平均 18%',
+  'Rapfi lost, 60 to 63 stones: 15% over 18 games': 'Rapfi 落败，60 至 63 子：18 盘平均 15%',
+  'Rapfi lost, 64 to 67 stones: 14% over 17 games': 'Rapfi 落败，64 至 67 子：17 盘平均 14%',
+  'Rapfi lost, 68 to 71 stones: 13% over 16 games': 'Rapfi 落败，68 至 71 子：16 盘平均 13%',
+  'Rapfi lost, 72 to 75 stones: 12% over 15 games': 'Rapfi 落败，72 至 75 子：15 盘平均 12%',
+  'Rapfi lost, 76 to 79 stones: 10% over 15 games': 'Rapfi 落败，76 至 79 子：15 盘平均 10%',
+  'Rapfi lost, 80 to 83 stones: 8% over 15 games': 'Rapfi 落败，80 至 83 子：15 盘平均 8%',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '为皮卡鱼训练我们自己的象棋网络',
   'Training our own xiangqi net': '训练我们自己的象棋网络',
@@ -7660,6 +7854,202 @@ const ZH_HANT: Record<string, string> = {
   'a black soldier was taken': '被吃的是黑卒',
   'Black HP: 60 → 58': '黑方血量：60 → 58',
   'WHAT EACH PLAYER SEES': '雙方各自看到的資訊',
+  // rapfi-vs-katagomo: Machine-drafted 2026-11-18, not native-reviewed, from the English signed off that day.
+  'Rapfi wins the Gomoku title against KataGomo': 'Rapfi 戰勝 KataGomo，奪得五子棋頭銜',
+  'Rapfi wins the Gomoku title': 'Rapfi 奪得五子棋頭銜',
+  "Rapfi, the engine behind Mistboard's Gomoku bots, beat KataGomo over 199 games at 3 seconds a move and is the first Gomoku champion.":
+    'Rapfi 是 Mistboard 五子棋電腦背後的引擎。它在每步 3 秒的 199 盤比賽中戰勝 KataGomo，成為首位五子棋冠軍。',
+  'People who play Gomoku against the bots on Mistboard, and engine authors.':
+    '面向在 Mistboard 上和電腦下五子棋的棋友，以及引擎作者。',
+  "Rapfi is Mistboard's first Gomoku champion. Given 3 seconds a move each, it beat KataGomo over 199 games: 113 wins, 61 draws and 25 losses, a score of 72% (about +165 Elo).":
+    'Rapfi 是 Mistboard 的首位五子棋冠軍。雙方各用每步 3 秒，它在 199 盤中戰勝 KataGomo：113 勝、61 和、25 負，得分率 72%（約 +165 Elo）。',
+  'Rapfi Level 8, the bot you play, searches 80,000 positions a move. In the title match Rapfi searched about 6 times that.':
+    '你對弈的 Rapfi 第 8 級每步搜尋 80,000 個局面。在頭銜賽中，Rapfi 的搜尋量約是它的 6 倍。',
+  'The games that end in a five end early, a median 44.5 moves after the opening; every draw filled the board.':
+    '以連五結束的對局都結束得早，中位數是開局後 44.5 步；每盤和棋都下滿了棋盤。',
+  '199 counted games from 100 dealt openings, each played twice with colours swapped, at 3 seconds a move for both engines; one game voided.':
+    '計入的 199 盤來自 100 個發放的開局，每個開局黑白互換各下一盤，兩個引擎都是每步 3 秒；有一盤作廢。',
+  'Elo ranges: 95% paired bootstrap over the opening pairs (100,000 resamples).':
+    'Elo 區間：以開局對為單位的 95% 配對 bootstrap（重抽樣 100,000 次）。',
+  "Rapfi is the first [Gomoku](/rules/gomoku) champion on Mistboard. It is the open-source engine by dhbloo and the Rapfi contributors that plays every Gomoku bot here, Level 1 to Level 8. Its challenger was KataGomo, hzyhhzy's Gomoku build of the Go engine KataGo. By the rules on the [champions page](/champions), KataGomo needed 55% to take the title. With 3 seconds a move for both engines, it scored 28%. On the CPUs Mistboard serves from, Rapfi is the stronger engine.":
+    'Rapfi 是 Mistboard 上第一位[五子棋](/rules/gomoku)冠軍。它是 dhbloo 和 Rapfi 貢獻者開發的開源引擎，本站從第 1 級到第 8 級的每個五子棋電腦都由它來下。挑戰者是 KataGomo，即 hzyhhzy 以圍棋引擎 KataGo 改造的五子棋版本。按[引擎冠軍頁面](/champions)上的規則，KataGomo 需要拿到 55% 的得分率才能奪得頭銜。兩個引擎都用每步 3 秒，它只拿到 28%。在 Mistboard 用來提供服務的 CPU 上，Rapfi 是更強的引擎。',
+  'As of November 11, 2026': '截至 2026 年 11 月 11 日',
+  'Rapfi commit 1387d11 with Rapfi Networks 7eeb19b, and KataGomo commit df15211 with its b10 freestyle network, each on one CPU thread. KataGomo usually runs on a graphics card, where it searches far more in the same time, so it may score differently there, as may a later release of either engine.':
+    'Rapfi 提交 1387d11 搭配 Rapfi Networks 7eeb19b，KataGomo 提交 df15211 搭配它的 b10 無禁手網路，各用一個 CPU 執行緒。KataGomo 通常在顯示卡上執行，同樣的時間裡能搜尋多得多，所以在顯示卡上它的得分可能不同；任一引擎的後續版本也可能如此。',
+  Rapfi: 'Rapfi',
+  'All games, 3 s each': '全部對局，每步 3 秒',
+  'With White': '執白',
+  'That is about **+165 Elo** for Rapfi (95% range +124 to +210). Both engines had the same clock on one CPU thread, and used it differently: Rapfi took 2.4 of its 3 seconds on average and searched a median **450,000 positions** a move, while KataGomo, on its Eigen (CPU) backend, searched a median 139 visits. A KataGomo visit runs a large neural network on one position; a Rapfi position costs far less.':
+    '這相當於 Rapfi 約 **+165 Elo**（95% 區間 +124 至 +210）。兩個引擎在一個 CPU 執行緒上用同樣的時鐘，用法卻不同：Rapfi 平均用掉 3 秒中的 2.4 秒，每步搜尋局面數的中位數是 **450,000 個**；KataGomo 用它的 Eigen（CPU）後端，每步訪問次數的中位數是 139 次。KataGomo 的一次訪問要在一個局面上執行一個大型神經網路；Rapfi 看一個局面的開銷要小得多。',
+  'The engine mattered far more than the colour: moving first was worth about 4 points of score, being Rapfi about 22.':
+    '引擎的影響遠大於執哪一方：先走大約值 4 個百分點的得分率，作為 Rapfi 則大約值 22 個百分點。',
+  'The clock is what decides it. In an earlier match at matched search, Rapfi Level 8 at 80,000 positions a move against KataGomo at 250 visits, the two scored level: 65‑65‑70 over 200 games.':
+    '決定勝負的是時鐘。在先前一場按搜尋量對齊的比賽中，Rapfi 第 8 級每步 80,000 個局面，對 KataGomo 每步 250 次訪問，兩者打成平手：200 盤 65‑65‑70。',
+  'Game 1': '第 1 盤',
+  "Each game starts from one of the site's [dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all 197 in the pool at the time as close to even, though KataGomo put 34 of the 99 played outside 40-60% (more below). Each was played twice with colours swapped. In game 1 KataGomo had Black, and Rapfi won with its 15th move, b9, a diagonal five from b9 to f5. Under the board, both engines read every position of the game: the teal line is Rapfi's win chance for Black, the orange line KataGomo's.":
+    '每盤棋都從本站一個[發放的開局](/rules/gomoku#dealt-openings)開始，棋盤上已經擺好了棋子。當時開局池裡的全部 197 個開局，Rapfi 都篩選為接近均勢，不過在實際下過的 99 個開局中，KataGomo 把其中 34 個判在 40-60% 之外（詳見下文）。每個開局黑白互換各下一盤。第 1 盤 KataGomo 執黑，Rapfi 用它的第 15 手 b9 獲勝，從 b9 到 f5 斜向連成五子。棋盤下方是兩個引擎對這盤棋每個局面的判斷：青綠色的線是 Rapfi 給黑方的勝率，橙色的線是 KataGomo 給的。',
+  'KataGomo vs Rapfi, game 1': 'KataGomo 對 Rapfi，第 1 盤',
+  'Rapfi wins with Black': 'Rapfi 執黑獲勝',
+  "In game 52, Rapfi had Black and completed a five at b11, 41 moves after the deal. Follow the rising lines for Black, then step through Rapfi's attack toward the left edge.":
+    '第 52 盤 Rapfi 執黑，在開局發放後第 41 步於 b11 連成五子。先看黑方的勝率線一路上升，再一步步看 Rapfi 向左邊線發起的進攻。',
+  'Rapfi vs KataGomo, game 52': 'Rapfi 對 KataGomo，第 52 盤',
+  'Decisive games end in about 45 moves, and every draw fills the board':
+    '分出勝負的對局大約 45 步就結束，每盤和棋都下滿棋盤',
+  '138 of the 199 games ended in a five, at a median of 44.5 moves after the opening. All 61 draws ran the full 220 moves: no game was drawn before the board filled.':
+    '199 盤中有 138 盤以連五結束，中位數是開局後 44.5 步。61 盤和棋全都下滿 220 步：沒有一盤在棋盤下滿之前成和。',
+  'Games by moves played after the opening, in bins of 10. The grey bar is the 61 draws.':
+    '按開局後所下步數統計的對局數，每 10 步一組。灰色柱是 61 盤和棋。',
+  'Under these rules a full board is the only draw, and the engines have no way to agree one, so a drawn game is played out to the last point. In a typical draw the fight is over long before that. Rapfi last read either side as clearly ahead, above 62%, at a median move 66, and the other 154 or so moves fill the board without a five.':
+    '按這套規則，下滿棋盤是唯一的和棋方式，引擎也無法協議和棋，所以和棋要一直下到最後一個交叉點。在典型的和棋裡，爭奪早在那之前就結束了。Rapfi 最後一次判斷某一方明顯領先（高於 62%）的時刻，中位數是第 66 步，其餘約 154 步都是在沒有連五的情況下填滿棋盤。',
+  'Game 2 is one of them. Both engines read it as somewhat better for White until move 65, then dead even to the end.':
+    '第 2 盤就是其中之一。兩個引擎都認為白方稍好，直到第 65 步，此後直到終局都完全均勢。',
+  'Rapfi vs KataGomo, game 2': 'Rapfi 對 KataGomo，第 2 盤',
+  'The games start to turn within 3 moves': '對局在 3 步之內就開始分化',
+  'Rapfi logged its win chance in every position it moved in. Each line below averages that over the games that ended one way: Rapfi won, drew or lost. A result settled late would show as three lines sitting together near 50% and parting only at the end.':
+    'Rapfi 在它走的每個局面都記錄了自己的勝率。下面每條線是同一種結果的對局（Rapfi 獲勝、和棋或落敗）的平均值。如果結果很晚才定下來，三條線會擠在 50% 附近，直到最後才分開。',
+  "Rapfi's mean win chance by stones on the board, in bins of 4, one line per result.":
+    '按盤面棋子數統計的 Rapfi 平均勝率，每 4 子一組，每種結果一條線。',
+  'The lines part at once. They read 65%, 49% and 42% 3 moves after the deal, and by stone 20 they read 83% in its eventual wins, 52% in the draws and 29% in its losses. In the games it won, Rapfi saw a forced five at a median stone 22.':
+    '三條線一開始就分開了。開局發放後 3 步，它們分別是 65%、49% 和 42%；到第 20 子時，在它最終贏下的對局裡是 83%，和棋裡是 52%，輸掉的對局裡是 29%。在它贏下的對局中，Rapfi 看出必成連五的時刻，中位數是第 22 子。',
+  'KataGomo read the openings better than Rapfi did': 'KataGomo 對開局的判斷比 Rapfi 更準',
+  'Rapfi screened the openings, and it read them as even all match. KataGomo, reading each one at 400 visits, gave Black anywhere from 12% to 89%, and put 34 of the 99 outside 40-60%.':
+    '開局是由 Rapfi 篩選的，整場比賽它都認為這些開局均勢。KataGomo 以每個開局 400 次訪問來判斷，給黑方的勝率從 12% 到 89% 不等，99 個開局中有 34 個落在 40-60% 之外。',
+  'The results sided with KataGomo: in the 22 openings it gave Black over 60%, Black scored 60%; in the 12 it gave Black under 40%, Black scored 40%.':
+    '結果站在 KataGomo 一邊：在它給黑方 60% 以上的 22 個開局中，黑方得分率是 60%；在它給黑方 40% 以下的 12 個開局中，黑方得分率是 40%。',
+  'How the games were lost': '對局是怎麼輸掉的',
+  '**Rapfi lost from even games.** Its 25 losses were slides: in the 24 with logged readings, the best it ever gave itself was a median 53%, and only 2 went above 70%.':
+    '**Rapfi 的敗局都從均勢開始。** 它的 25 盤敗局都是慢慢滑落的：在有判斷記錄的 24 盤中，它給自己的最高勝率中位數只有 53%，只有 2 盤超過 70%。',
+  "**KataGomo saw its losses coming.** In 30 of Rapfi's wins, it read the position one move before Rapfi saw a won game and gave itself a median 24%. With ten times its match search, 1,400 visits, it still gave itself 23%. By its own reading, no move saved those games by then.":
+    '**KataGomo 早就看到自己要輸。** 在 Rapfi 的 30 盤勝局中，在 Rapfi 看出勝局已定的前一步，KataGomo 判斷局面，給自己的勝率中位數是 24%。用十倍於比賽的搜尋量，即 1,400 次訪問，它給自己的仍是 23%。按它自己的判斷，到那時已經沒有哪一步能救回這些對局。',
+  "**Rapfi attacks more.** 16.6% of its moves made a four, against 11.4% of KataGomo's, and it made 113 moves with two threats at once to KataGomo's 41.":
+    '**Rapfi 進攻更多。** 它有 16.6% 的著法成四，KataGomo 是 11.4%；它有 113 步同時形成兩個威脅，KataGomo 只有 41 步。',
+  "Rapfi's losing moves came late, in positions already behind":
+    'Rapfi 的敗著來得晚，出現在已經落後的局面裡',
+  "To find where each loss turned, a deeper Rapfi search read back through Rapfi's moves from the end of each lost game, at 10 million positions a move, about 22 times its match search. The losing move is the last one after which it gives Rapfi a win chance of 10% or less. It found one in 22 of the 25 losses; in the other 3, Rapfi was lost as far back as it looked. It read a random 20 of Rapfi's wins the same way, to compare KataGomo's losing moves.":
+    '為了找出每盤敗局在哪裡轉折，一個更深的 Rapfi 搜尋從每盤敗局的終局往回檢查 Rapfi 的著法，每步 1,000 萬個局面，約是比賽搜尋量的 22 倍。敗著是指：在這一步之後，深度搜尋給 Rapfi 的勝率為 10% 或以下的最後一步。25 盤敗局中有 22 盤找到了敗著；另外 3 盤，往回查到多遠，Rapfi 都已經是敗局。它又用同樣的方法檢查了隨機抽取的 20 盤 Rapfi 勝局，用來對比 KataGomo 的敗著。',
+  'The losing move': '敗著',
+  'Rapfi lost': 'Rapfi 落敗',
+  'KataGomo lost': 'KataGomo 落敗',
+  Found: '找到敗著',
+  '22 of 25': '25 盤中 22 盤',
+  '19 of 20': '20 盤中 19 盤',
+  'Median move': '所在步數（中位數）',
+  'In the first 15 moves': '在前 15 步內',
+  "Loser's win chance before it, median": '敗方此前的勝率（中位數）',
+  'From 30% or more to lost': '從 30% 以上一步到敗局',
+  'Moves left after it, median': '此後剩餘步數（中位數）',
+  "Moves are counted after the opening. Win chances are the deeper search's.":
+    '步數從開局後算起。勝率取自深度搜尋。',
+  "KataGomo's losses turned early, from near even, mostly in one move. Rapfi's finished a slide, and KataGomo won them slowly: after the losing move it played a median 12 moves that made no three or four before its five. In 9 of the 17 positions where the deeper search chose a different move from Rapfi, its move took a point where a KataGomo stone would have made a three or a four.":
+    'KataGomo 的敗局轉折得早，從接近均勢開始，多半只因一步棋。Rapfi 的敗局則是慢慢滑落的結果，而且 KataGomo 贏得很慢：敗著之後，它在連五之前走了中位數 12 步既不成三也不成四的棋。在深度搜尋與 Rapfi 選了不同著法的 17 個局面中，有 9 個局面深度搜尋的著法佔住了一個點，KataGomo 若在那裡落子就會成三或成四。',
+  "In game 106, Rapfi had Black, and KataGomo completed a five with White after 92 moves from the deal. Watch Black's chances ebb while KataGomo builds its position, well before the final five.":
+    '第 106 盤 Rapfi 執黑，KataGomo 執白，在開局發放後第 92 步連成五子。看看在最後的連五之前很久，KataGomo 一邊經營局面，黑方的勝率一邊慢慢消退。',
+  'Rapfi vs KataGomo, game 106': 'Rapfi 對 KataGomo，第 106 盤',
+  "**More search finds most of them.** Given ten times its match search, 4.5 million positions, Rapfi plays the deeper search's move in 19 of the 22 positions, and in 16 the position after its move no longer reads as lost. Replayed at its match search, it plays the losing move again in 12. In 5 of the 22, the deeper search would have played Rapfi's move too.":
+    '**多搜一些，大多能找到。** 給 Rapfi 十倍於比賽的搜尋量，即 450 萬個局面，22 個局面中有 19 個它走出了深度搜尋的著法，有 16 個它走完後的局面不再被判為敗局。按比賽時的搜尋量重下，它有 12 次又走出了同樣的敗著。22 個局面中有 5 個，深度搜尋也會走 Rapfi 的那一步。',
+  'What the deeper search can miss': '深度搜尋可能漏掉什麼',
+  "The deeper search is Rapfi, so it shares Rapfi's blind spots. KataGomo, reading the same positions at 2,000 visits, also has Rapfi's chances falling at the losing move, from a median 18% to 6%, and its best move matched the deeper search's in 12 of the 22. With 22 positions, these are rough counts.":
+    '深度搜尋用的也是 Rapfi，所以它和 Rapfi 有同樣的盲點。KataGomo 以 2,000 次訪問判斷同樣的局面，也看到 Rapfi 的勝率在敗著處下跌，中位數從 18% 降到 6%；它的最佳著法在 22 個局面中有 12 個與深度搜尋一致。只有 22 個局面，這些只是粗略的計數。',
+  'What it means for the bot you play': '這對你對弈的電腦意味著什麼',
+  "Level 8 is the champion's engine with a smaller search: **80,000 positions** a move, with a 3.5-second ceiling so a slow phone can reach it. The Rapfi that won the title searched about 6 times as much, so it is stronger than the bot you play.":
+    '第 8 級就是冠軍引擎，只是搜尋量小一些：每步 **80,000 個局面**，並設有 3.5 秒的上限，讓較慢的手機也能達到。贏得頭銜的 Rapfi 搜尋量約是它的 6 倍，所以比你對弈的電腦更強。',
+  'How the match was run': '比賽是怎麼進行的',
+  'Freestyle Gomoku on a 15 by 15 board: five or more in a row wins, a full board is a draw.':
+    '15×15 棋盤上的無禁手五子棋：五子或更多連成一線獲勝，棋盤下滿為和棋。',
+  "Openings dealt from the site's 197 screened positions, each played twice with colours swapped.":
+    '開局從本站 197 個經過篩選的局面中發放，每個開局黑白互換各下一盤。',
+  'One search thread per engine and a fresh engine process for every move, on an Apple silicon Mac. The site serves an x86-64 build of the same Rapfi commit.':
+    '每個引擎一個搜尋執行緒，每一步都重新啟動引擎，在一台 Apple 晶片的 Mac 上執行。本站使用的是同一 Rapfi 提交的 x86-64 版本。',
+  'Rapfi with a 32 MB hash; KataGomo on its CPU backend.':
+    'Rapfi 使用 32 MB 置換表；KataGomo 使用 CPU 後端。',
+  "One game was voided when Rapfi took 3.3 seconds on one move, past the referee's limit. The other game of that opening counts in the totals and is left out of the Elo range, which pairs games by opening.":
+    '有一盤因 Rapfi 某一步用了 3.3 秒、超過裁判程式的時限而作廢。同一開局的另一盤計入總數，但不計入 Elo 區間，因為 Elo 區間按開局把對局配對。',
+  'Rapfi is open source under the GPL-3.0 licence at [github.com/dhbloo/rapfi](https://github.com/dhbloo/rapfi), and its networks are public domain (CC0). KataGomo is open source under the MIT licence at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo); the network we ran is b10_freestyle15x from its [Gomocup 2025 release](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025). Thank you, dhbloo and the Rapfi contributors, and thank you, hzyhhzy.':
+    'Rapfi 以 GPL-3.0 授權開源，網址是 [github.com/dhbloo/rapfi](https://github.com/dhbloo/rapfi)，它的網路屬於公有領域（CC0）。KataGomo 以 MIT 授權開源，網址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)；我們使用的網路是其 [Gomocup 2025 發行版](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025)中的 b10_freestyle15x。感謝 dhbloo 和 Rapfi 的貢獻者，也感謝 hzyhhzy。',
+  'Play Rapfi': '與 Rapfi 對弈',
+  'See the champions': '查看引擎冠軍',
+  'Draws: 61 games, 220 moves each': '和棋：61 盤，每盤 220 步',
+  draws: '和棋',
+  'median 44.5 moves': '中位數 44.5 步',
+  'moves after the opening': '開局後步數',
+  'Rapfi won': 'Rapfi 獲勝',
+  'stones on the board, the five dealt included': '盤面棋子數（含發放的 5 子）',
+  '138 decisive games by length, from 10 to 159 moves, median 44.5; the 61 draws all run 220 moves':
+    '138 盤分出勝負的對局按長度分佈，從 10 到 159 步，中位數 44.5；61 盤和棋都下滿 220 步',
+  "Rapfi's win chance by stones on the board, one line for the games it won, drew and lost: the lines part early":
+    '按盤面棋子數統計的 Rapfi 勝率，它贏、和、輸的對局各一條線：三條線很早就分開',
+  '10 to 19 moves: 1 games': '10 至 19 步：1 盤',
+  '20 to 29 moves: 24 games': '20 至 29 步：24 盤',
+  '30 to 39 moves: 31 games': '30 至 39 步：31 盤',
+  '40 to 49 moves: 21 games': '40 至 49 步：21 盤',
+  '50 to 59 moves: 18 games': '50 至 59 步：18 盤',
+  '60 to 69 moves: 14 games': '60 至 69 步：14 盤',
+  '70 to 79 moves: 8 games': '70 至 79 步：8 盤',
+  '80 to 89 moves: 5 games': '80 至 89 步：5 盤',
+  '90 to 99 moves: 4 games': '90 至 99 步：4 盤',
+  '100 to 109 moves: 3 games': '100 至 109 步：3 盤',
+  '110 to 119 moves: 5 games': '110 至 119 步：5 盤',
+  '120 to 129 moves: 2 games': '120 至 129 步：2 盤',
+  '130 to 139 moves: 1 games': '130 至 139 步：1 盤',
+  '140 to 149 moves: 0 games': '140 至 149 步：0 盤',
+  '150 to 159 moves: 1 games': '150 至 159 步：1 盤',
+  'Rapfi won, 8 to 11 stones: 65% over 113 games': 'Rapfi 獲勝，8 至 11 子：113 盤平均 65%',
+  'Rapfi won, 12 to 15 stones: 72% over 113 games': 'Rapfi 獲勝，12 至 15 子：113 盤平均 72%',
+  'Rapfi won, 16 to 19 stones: 78% over 113 games': 'Rapfi 獲勝，16 至 19 子：113 盤平均 78%',
+  'Rapfi won, 20 to 23 stones: 83% over 113 games': 'Rapfi 獲勝，20 至 23 子：113 盤平均 83%',
+  'Rapfi won, 24 to 27 stones: 87% over 108 games': 'Rapfi 獲勝，24 至 27 子：108 盤平均 87%',
+  'Rapfi won, 28 to 31 stones: 88% over 99 games': 'Rapfi 獲勝，28 至 31 子：99 盤平均 88%',
+  'Rapfi won, 32 to 35 stones: 88% over 88 games': 'Rapfi 獲勝，32 至 35 子：88 盤平均 88%',
+  'Rapfi won, 36 to 39 stones: 89% over 74 games': 'Rapfi 獲勝，36 至 39 子：74 盤平均 89%',
+  'Rapfi won, 40 to 43 stones: 89% over 62 games': 'Rapfi 獲勝，40 至 43 子：62 盤平均 89%',
+  'Rapfi won, 44 to 47 stones: 89% over 55 games': 'Rapfi 獲勝，44 至 47 子：55 盤平均 89%',
+  'Rapfi won, 48 to 51 stones: 89% over 46 games': 'Rapfi 獲勝，48 至 51 子：46 盤平均 89%',
+  'Rapfi won, 52 to 55 stones: 89% over 40 games': 'Rapfi 獲勝，52 至 55 子：40 盤平均 89%',
+  'Rapfi won, 56 to 59 stones: 90% over 34 games': 'Rapfi 獲勝，56 至 59 子：34 盤平均 90%',
+  'Rapfi won, 60 to 63 stones: 90% over 31 games': 'Rapfi 獲勝，60 至 63 子：31 盤平均 90%',
+  'Rapfi won, 64 to 67 stones: 89% over 23 games': 'Rapfi 獲勝，64 至 67 子：23 盤平均 89%',
+  'Rapfi won, 68 to 71 stones: 88% over 19 games': 'Rapfi 獲勝，68 至 71 子：19 盤平均 88%',
+  'Rapfi won, 72 to 75 stones: 83% over 14 games': 'Rapfi 獲勝，72 至 75 子：14 盤平均 83%',
+  'Rapfi won, 76 to 79 stones: 80% over 11 games': 'Rapfi 獲勝，76 至 79 子：11 盤平均 80%',
+  'Rapfi won, 80 to 83 stones: 78% over 10 games': 'Rapfi 獲勝，80 至 83 子：10 盤平均 78%',
+  'drawn, 8 to 11 stones: 49% over 61 games': '和棋，8 至 11 子：61 盤平均 49%',
+  'drawn, 12 to 15 stones: 50% over 61 games': '和棋，12 至 15 子：61 盤平均 50%',
+  'drawn, 16 to 19 stones: 51% over 61 games': '和棋，16 至 19 子：61 盤平均 51%',
+  'drawn, 20 to 23 stones: 52% over 61 games': '和棋，20 至 23 子：61 盤平均 52%',
+  'drawn, 24 to 27 stones: 52% over 61 games': '和棋，24 至 27 子：61 盤平均 52%',
+  'drawn, 28 to 31 stones: 54% over 61 games': '和棋，28 至 31 子：61 盤平均 54%',
+  'drawn, 32 to 35 stones: 55% over 61 games': '和棋，32 至 35 子：61 盤平均 55%',
+  'drawn, 36 to 39 stones: 55% over 61 games': '和棋，36 至 39 子：61 盤平均 55%',
+  'drawn, 40 to 43 stones: 56% over 61 games': '和棋，40 至 43 子：61 盤平均 56%',
+  'drawn, 44 to 47 stones: 57% over 61 games': '和棋，44 至 47 子：61 盤平均 57%',
+  'drawn, 48 to 51 stones: 58% over 61 games': '和棋，48 至 51 子：61 盤平均 58%',
+  'drawn, 52 to 55 stones: 59% over 61 games': '和棋，52 至 55 子：61 盤平均 59%',
+  'drawn, 56 to 59 stones: 59% over 61 games': '和棋，56 至 59 子：61 盤平均 59%',
+  'drawn, 60 to 63 stones: 61% over 61 games': '和棋，60 至 63 子：61 盤平均 61%',
+  'drawn, 64 to 67 stones: 61% over 61 games': '和棋，64 至 67 子：61 盤平均 61%',
+  'drawn, 68 to 71 stones: 61% over 61 games': '和棋，68 至 71 子：61 盤平均 61%',
+  'drawn, 72 to 75 stones: 60% over 61 games': '和棋，72 至 75 子：61 盤平均 60%',
+  'drawn, 76 to 79 stones: 59% over 61 games': '和棋，76 至 79 子：61 盤平均 59%',
+  'drawn, 80 to 83 stones: 57% over 61 games': '和棋，80 至 83 子：61 盤平均 57%',
+  'Rapfi lost, 8 to 11 stones: 42% over 25 games': 'Rapfi 落敗，8 至 11 子：25 盤平均 42%',
+  'Rapfi lost, 12 to 15 stones: 37% over 25 games': 'Rapfi 落敗，12 至 15 子：25 盤平均 37%',
+  'Rapfi lost, 16 to 19 stones: 34% over 25 games': 'Rapfi 落敗，16 至 19 子：25 盤平均 34%',
+  'Rapfi lost, 20 to 23 stones: 29% over 25 games': 'Rapfi 落敗，20 至 23 子：25 盤平均 29%',
+  'Rapfi lost, 24 to 27 stones: 26% over 25 games': 'Rapfi 落敗，24 至 27 子：25 盤平均 26%',
+  'Rapfi lost, 28 to 31 stones: 25% over 25 games': 'Rapfi 落敗，28 至 31 子：25 盤平均 25%',
+  'Rapfi lost, 32 to 35 stones: 23% over 25 games': 'Rapfi 落敗，32 至 35 子：25 盤平均 23%',
+  'Rapfi lost, 36 to 39 stones: 22% over 25 games': 'Rapfi 落敗，36 至 39 子：25 盤平均 22%',
+  'Rapfi lost, 40 to 43 stones: 22% over 24 games': 'Rapfi 落敗，40 至 43 子：24 盤平均 22%',
+  'Rapfi lost, 44 to 47 stones: 19% over 23 games': 'Rapfi 落敗，44 至 47 子：23 盤平均 19%',
+  'Rapfi lost, 48 to 51 stones: 18% over 22 games': 'Rapfi 落敗，48 至 51 子：22 盤平均 18%',
+  'Rapfi lost, 52 to 55 stones: 18% over 21 games': 'Rapfi 落敗，52 至 55 子：21 盤平均 18%',
+  'Rapfi lost, 56 to 59 stones: 18% over 19 games': 'Rapfi 落敗，56 至 59 子：19 盤平均 18%',
+  'Rapfi lost, 60 to 63 stones: 15% over 18 games': 'Rapfi 落敗，60 至 63 子：18 盤平均 15%',
+  'Rapfi lost, 64 to 67 stones: 14% over 17 games': 'Rapfi 落敗，64 至 67 子：17 盤平均 14%',
+  'Rapfi lost, 68 to 71 stones: 13% over 16 games': 'Rapfi 落敗，68 至 71 子：16 盤平均 13%',
+  'Rapfi lost, 72 to 75 stones: 12% over 15 games': 'Rapfi 落敗，72 至 75 子：15 盤平均 12%',
+  'Rapfi lost, 76 to 79 stones: 10% over 15 games': 'Rapfi 落敗，76 至 79 子：15 盤平均 10%',
+  'Rapfi lost, 80 to 83 stones: 8% over 15 games': 'Rapfi 落敗，80 至 83 子：15 盤平均 8%',
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'Training our own xiangqi net for Pikafish': '為皮卡魚訓練我們自己的象棋網路',
   'Training our own xiangqi net': '訓練我們自己的象棋網路',
