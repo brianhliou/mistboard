@@ -7450,8 +7450,8 @@ const ZH_HANS: Record<string, string> = {
   'The result': '比赛结果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。[全部 600 盘棋](/study/fb5Wqzbs)都收在一个研究中，每组布局的两盘棋并排放在一起。',
-  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
-    '注明按 Mistboard 规则计算的成绩采用的是比赛进行时的重复局面规则。',
+  "Corrected: most deals where one colour won both games are what Red's edge predicts, not the deal.":
+    '更正：同一颜色两盘都赢的布局，大多是红方优势本来就会带来的结果，而不是由布局决定。',
   'Scored under the old rule': '按旧规则计分',
   "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
     '按 Mistboard 规则计算的数字采用比赛进行时的规则，当时重复局面只有长将判负。2026 年 11 月，Mistboard 改用 jqe 的规则，只有一方长捉时，长捉方也判负。',
@@ -7518,9 +7518,9 @@ const ZH_HANS: Record<string, string> = {
   "It costs jqe nothing we can measure. In close positions, its winning chance one move after a face-down capture fell 1.7 points on average and AB-JChess's 0.7, a gap smaller than the noise in the sample.":
     '我们没有测出这给 jqe 带来什么损失。在接近均衡的局面中，暗吃后再走一步，jqe 的胜率平均下降 1.7 个百分点，AB-JChess 下降 0.7 个百分点，这一差距小于样本中的随机波动。',
   'What the match tells us': '这场比赛说明了什么',
-  'Half the deals decided themselves': '一半暗子布局本身就决定了胜负',
-  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54, so whichever engine had that side, the deal decided it. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
-    '每组暗子布局都红黑互换下了两盘。在 300 组布局中，有 147 组是同一颜色两盘都赢，其中红方 93 组，黑方 54 组，也就是说，无论哪个引擎执这一方，胜负都由布局决定。AB-JChess 的优势来自其余布局：同一组布局的两盘都赢，它做到了 56 次，jqe 做到了 34 次。',
+  'Half the deals went to one colour': '一半暗子布局被同一颜色包揽',
+  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54. Red's edge and the gap between the engines predict about 118 of those by chance, so the deal itself tipped about one in ten. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
+    '每组暗子布局都红黑互换下了两盘。在 300 组布局中，有 147 组是同一颜色两盘都赢，其中红方 93 组，黑方 54 组。按红方的优势和两个引擎之间的差距，单凭概率就能预计其中约 118 组，所以布局本身左右的大约只有十分之一。AB-JChess 的优势来自其余布局：同一组布局的两盘都赢，它做到了 56 次，jqe 做到了 34 次。',
   "AB-JChess's edge is judgement, not depth": 'AB-JChess 的优势在于判断，而非搜索深度',
   "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
     '在 AB-JChess 的胜局中，jqe 判断出结果较晚；而在 jqe 的胜局中，两个引擎没有谁明显更晚。第 1 盘里，把搜索量增至 16 倍后，jqe 仍把必输残局判断为必和；它认为自己略占优势时，最终得分也低于 AB-JChess 给出相同评分时的得分。两者都说明：jqe 的问题在于如何评估平静局面和兑子，而非搜索得不够远。两个引擎都不会搜索翻子之后的着法，所以对双方而言，翻子都仍需猜测，第 4 盘就是如此。',
@@ -14626,8 +14626,8 @@ const ZH_HANT: Record<string, string> = {
   'The result': '比賽結果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。[全部 600 盤棋](/study/fb5Wqzbs)都收在一個研究中，每組佈局的兩盤棋並排放在一起。',
-  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
-    '註明按 Mistboard 規則計算的成績採用的是比賽進行時的重複局面規則。',
+  "Corrected: most deals where one colour won both games are what Red's edge predicts, not the deal.":
+    '更正：同一顏色兩盤都贏的佈局，大多是紅方優勢本來就會帶來的結果，而不是由佈局決定。',
   'Scored under the old rule': '按舊規則計分',
   "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
     '按 Mistboard 規則計算的數字採用比賽進行時的規則，當時重複局面只有長將判負。2026 年 11 月，Mistboard 改用 jqe 的規則，只有一方長捉時，長捉方也判負。',
@@ -14694,9 +14694,9 @@ const ZH_HANT: Record<string, string> = {
   "It costs jqe nothing we can measure. In close positions, its winning chance one move after a face-down capture fell 1.7 points on average and AB-JChess's 0.7, a gap smaller than the noise in the sample.":
     '我們沒有測出這給 jqe 帶來什麼損失。在接近均衡的局面中，暗吃後再走一步，jqe 的勝率平均下降 1.7 個百分點，AB-JChess 下降 0.7 個百分點，這一差距小於樣本中的隨機波動。',
   'What the match tells us': '這場比賽說明了什麼',
-  'Half the deals decided themselves': '一半暗子佈局本身就決定了勝負',
-  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54, so whichever engine had that side, the deal decided it. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
-    '每組暗子佈局都紅黑互換下了兩盤。在 300 組佈局中，有 147 組是同一顏色兩盤都贏，其中紅方 93 組，黑方 54 組，也就是說，無論哪個引擎執這一方，勝負都由佈局決定。AB-JChess 的優勢來自其餘佈局：同一組佈局的兩盤都贏，它做到了 56 次，jqe 做到了 34 次。',
+  'Half the deals went to one colour': '一半暗子佈局被同一顏色包攬',
+  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54. Red's edge and the gap between the engines predict about 118 of those by chance, so the deal itself tipped about one in ten. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
+    '每組暗子佈局都紅黑互換下了兩盤。在 300 組佈局中，有 147 組是同一顏色兩盤都贏，其中紅方 93 組，黑方 54 組。按紅方的優勢和兩個引擎之間的差距，單憑機率就能預計其中約 118 組，所以佈局本身左右的大約只有十分之一。AB-JChess 的優勢來自其餘佈局：同一組佈局的兩盤都贏，它做到了 56 次，jqe 做到了 34 次。',
   "AB-JChess's edge is judgement, not depth": 'AB-JChess 的優勢在於判斷，而非搜尋深度',
   "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
     '在 AB-JChess 的勝局中，jqe 判斷出結果較晚；而在 jqe 的勝局中，兩個引擎沒有誰明顯更晚。第 1 盤裡，把搜尋量增至 16 倍後，jqe 仍把必輸殘局判斷為必和；它認為自己略佔優勢時，最終得分也低於 AB-JChess 給出相同評分時的得分。兩者都說明：jqe 的問題在於如何評估平靜局面和兌子，而非搜尋得不夠遠。兩個引擎都不會搜尋翻子之後的著法，所以對雙方而言，翻子都仍需猜測，第 4 盤就是如此。',

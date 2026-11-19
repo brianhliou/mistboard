@@ -23,6 +23,7 @@ import {
   AB_JQE_STUDY,
   abJchessVsJqeArticle,
   darkPerGame,
+  EXPECTED_SAME_COLOUR_SWEEPS,
   disagreementArrows,
   openPlyOf,
 } from './ab-jchess-vs-jqe.js';
@@ -84,6 +85,21 @@ describe('AB-JChess vs jqe match record', () => {
     expect(Math.abs(M.asBlack.wins - M.asBlack.losses)).toBeLessThanOrEqual(sum(M.asBlack) / 100);
     // "Most of its edge came with Red."
     expect(M.asRed.wins - M.asRed.losses).toBeGreaterThan(10 * (M.asBlack.wins - M.asBlack.losses));
+  });
+
+  it('backs the corrected deal reading: about 118 sweeps by chance, the deal about one in ten', () => {
+    // Red sweeps: AB-JChess wins with Red and jqe wins with Red; Black sweeps the reverse.
+    const red = (M.asRed.wins / sum(M.asRed)) * (M.asBlack.losses / sum(M.asBlack));
+    const black = (M.asRed.losses / sum(M.asRed)) * (M.asBlack.wins / sum(M.asBlack));
+    expect(EXPECTED_SAME_COLOUR_SWEEPS).toBeCloseTo(M.total.pairs * (red + black), 9);
+    expect(Math.round(EXPECTED_SAME_COLOUR_SWEEPS)).toBe(118);
+    // "so the deal itself tipped about one in ten": the excess over chance, per deal.
+    const excess = (M.dealSides.sameColourWonBoth - EXPECTED_SAME_COLOUR_SWEEPS) / M.total.pairs;
+    expect(excess).toBeGreaterThan(0.075);
+    expect(excess).toBeLessThan(0.125);
+    const prose = JSON.stringify(abJchessVsJqeArticle);
+    expect(prose).not.toContain('the deal decided it');
+    expect(prose).toContain('predict about 118 of those by chance');
   });
 });
 

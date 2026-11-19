@@ -154,6 +154,7 @@ type DisagreeSide = {
   bothKeptGamesLost: number;
 };
 type Wdl = { wins: number; draws: number; losses: number };
+const sumWdl = (r: Wdl): number => r.wins + r.draws + r.losses;
 type RunStats = Wdl & { games: number; pairs: number; pentaElo: number; pentaLow: number; pentaHigh: number };
 
 export const AB_JQE_MATCH = matchJson as unknown as {
@@ -380,6 +381,12 @@ const DARK = M.darkCaptures;
 const LATE = M.seenLate;
 const TWICE = M.doubleTime;
 const SIDES = M.dealSides;
+/** Same-colour sweeps that chance predicts from each engine's own results with each colour: a Red
+ *  sweep needs AB-JChess to win with Red and jqe to win with Red, a Black sweep the reverse. */
+export const EXPECTED_SAME_COLOUR_SWEEPS =
+  T.pairs *
+  ((M.asRed.wins / sumWdl(M.asRed)) * (M.asBlack.losses / sumWdl(M.asBlack)) +
+    (M.asRed.losses / sumWdl(M.asRed)) * (M.asBlack.wins / sumWdl(M.asBlack)));
 const RULES = M.mistboardRules;
 const millions = (n: number): number => Math.round(n / 1e6);
 /** Face-down captures a game, to one decimal, in the games that ended this way for the capturer. */
@@ -407,8 +414,8 @@ export const abJchessVsJqeArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-04',
-  updatedAt: '2026-11-07',
-  updateNote: 'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.',
+  updatedAt: '2026-11-19',
+  updateNote: "Corrected: most deals where one colour won both games are what Red's edge predicts, not the deal.",
   thumbnail: {
     kind: 'svg',
     svg: (locale: Locale): string =>
@@ -569,10 +576,10 @@ export const abJchessVsJqeArticle: Article = {
     {
       heading: 'What the match tells us',
       blocks: [
-        { kind: 'sub-heading', text: 'Half the deals decided themselves' },
+        { kind: 'sub-heading', text: 'Half the deals went to one colour' },
         {
           kind: 'paragraph',
-          text: `Each deal was played twice with the colours swapped. In ${SIDES.sameColourWonBoth} of the ${T.pairs} deals the same colour won both games, Red in ${SIDES.red} and Black in ${SIDES.black}, so whichever engine had that side, the deal decided it. AB-JChess's edge comes from the rest: it won both games of a deal ${T.pairPoints['2']} times, and jqe did ${T.pairPoints['0']} times.`,
+          text: `Each deal was played twice with the colours swapped. In ${SIDES.sameColourWonBoth} of the ${T.pairs} deals the same colour won both games, Red in ${SIDES.red} and Black in ${SIDES.black}. Red's edge and the gap between the engines predict about ${Math.round(EXPECTED_SAME_COLOUR_SWEEPS)} of those by chance, so the deal itself tipped about one in ten. AB-JChess's edge comes from the rest: it won both games of a deal ${T.pairPoints['2']} times, and jqe did ${T.pairPoints['0']} times.`,
         },
         { kind: 'sub-heading', text: "AB-JChess's edge is judgement, not depth" },
         {
