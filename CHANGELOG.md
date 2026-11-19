@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Correspondence games show the move deadline before you accept them ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - Both homepage lists put the game you last played first ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - Gomoku deals only openings that both Rapfi and KataGomo read as close to even ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The separate Rapfi Gomoku bot is retired and Level 8 is the strongest choice ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
@@ -79,6 +80,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The classical collections have their own tab on the studies page, shown as study cards ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
+- The Fanfanqi rules page has an annotated engine game ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The address names the first puzzle you open ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - DPXQ puzzles show the opponent's setup move ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
 - The source event gets its own row ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
@@ -166,6 +169,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The champions page lists Fanfanqi and Three Kingdoms Banqi ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The Play a person controls sit in one row with a single sign-in button ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - The API docs list the public reads they left out ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - The API docs fold long value lists and list every watch channel, correspondence ratings and the rated pools ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
