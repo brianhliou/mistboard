@@ -1577,19 +1577,40 @@ function federationEnChange(
   return { [key]: { before: before.federationEn ?? null, after: after.federationEn ?? null } };
 }
 
+// A board's team match carries a third cached translation. The board update
+// writes the whole recomputed payload, so a matchEn change rides along with any
+// name fix; it has to be compared too, or the dry run hides part of the write
+// and a board whose only stale field is matchEn is never repaired.
+function matchEnChange(
+  before: { details?: { matchEn?: string } },
+  after: { details?: { matchEn?: string } },
+): Record<string, { before: string | null; after: string | null }> {
+  const was = before.details?.matchEn ?? null;
+  const now = after.details?.matchEn ?? null;
+  if (was === now) return {};
+  return { 'details.matchEn': { before: was, after: now } };
+}
+
 // Recompute the cached English names for every stored tour, round, and board
 // without re-importing from the source. Existing rows predating translation
 // (or predating a glossary improvement) get their nameEn fields refreshed;
-// rows whose recomputed translation matches are left untouched.
+// rows whose recomputed translation matches are left untouched. `tourSlug`
+// limits the pass to one event's tour, rounds and boards.
 export async function backfillXiangqiBroadcastTranslations(
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; tourSlug?: string } = {},
 ): Promise<XiangqiBroadcastTranslationBackfillResult> {
   const dryRun = options.dryRun ?? false;
+  const scope = options.tourSlug ?? null;
   return await withTransaction(async (client) => {
+    // A dry run cannot write even by mistake: Postgres refuses any write in it.
+    if (dryRun) await client.query('SET TRANSACTION READ ONLY');
     const changes: XiangqiBroadcastTranslationBackfillChange[] = [];
 
     const tours = await client.query<{ slug: string; payload: XiangqiBroadcastTour }>(
-      `SELECT slug, payload FROM xiangqi_broadcast_tours ORDER BY slug`,
+      `SELECT slug, payload FROM xiangqi_broadcast_tours
+        WHERE $1::text IS NULL OR slug = $1
+        ORDER BY slug`,
+      [scope],
     );
     for (const row of tours.rows) {
       const translated = translatedXiangqiBroadcastTour(row.payload);
@@ -1600,7 +1621,10 @@ export async function backfillXiangqiBroadcastTranslations(
     }
 
     const rounds = await client.query<{ id: string; payload: XiangqiBroadcastRound }>(
-      `SELECT id, payload FROM xiangqi_broadcast_rounds ORDER BY id`,
+      `SELECT id, payload FROM xiangqi_broadcast_rounds
+        WHERE $1::text IS NULL OR tour_slug = $1
+        ORDER BY id`,
+      [scope],
     );
     for (const row of rounds.rows) {
       const translated = translatedXiangqiBroadcastRound(row.payload);
@@ -1611,7 +1635,10 @@ export async function backfillXiangqiBroadcastTranslations(
     }
 
     const boards = await client.query<{ id: string; payload: XiangqiBroadcastBoard }>(
-      `SELECT id, payload FROM xiangqi_broadcast_boards ORDER BY id`,
+      `SELECT id, payload FROM xiangqi_broadcast_boards
+        WHERE $1::text IS NULL OR tour_slug = $1
+        ORDER BY id`,
+      [scope],
     );
     for (const row of boards.rows) {
       const translated = translatedXiangqiBroadcastBoard(row.payload);
@@ -1620,6 +1647,7 @@ export async function backfillXiangqiBroadcastTranslations(
         ...nameEnChange(row.payload.black, translated.black, 'black.nameEn'),
         ...federationEnChange(row.payload.red, translated.red, 'red.federationEn'),
         ...federationEnChange(row.payload.black, translated.black, 'black.federationEn'),
+        ...matchEnChange(row.payload, translated),
       };
       if (Object.keys(fields).length === 0) continue;
       changes.push({ kind: 'board', id: row.id, fields });

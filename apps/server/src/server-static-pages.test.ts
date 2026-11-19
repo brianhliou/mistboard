@@ -18,6 +18,9 @@ import type {
   StudyWithChapters,
   UserProfile,
 } from './persistence.js';
+import type { XiangqiPlayerRecord } from './persistence-xiangqi-players.js';
+import { playerPageFor } from './player-pages.js';
+import { EMPTY_PLAYER_REFERENCE } from './player-reference.js';
 import { recordPuzzleReport, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { isClientRoute } from './server-policy.js';
 import {
@@ -2866,6 +2869,68 @@ test('a player page gets its meta, canonical link and body; an unknown one is no
   assert.match(unknown.body, /<meta name="robots" content="noindex, follow">/);
   assert.match(unknown.body, /<title>Mistboard<\/title>/);
   assert.doesNotMatch(unknown.body, /rel="canonical"/);
+});
+
+// A corrected romanisation moves a player's slug (RENAMED_PLAYER_SLUGS). The
+// old URL answers 301 to the new one once the stored names say the new name,
+// and keeps serving its page until then.
+test('a renamed player slug 301s to the corrected one, and only once the data moved', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const fan = (slug: string, nameEn: string): XiangqiPlayerRecord => ({
+    slug,
+    name: '范志',
+    nameEn,
+    federation: '洛杉矶',
+    federationEn: 'Los Angeles',
+    games: 9,
+    wins: 3,
+    draws: 3,
+    losses: 3,
+    events: [],
+    firstPlayedOn: '2026-07-01',
+    lastPlayedOn: '2026-07-03',
+  });
+  const serve = async (players: XiangqiPlayerRecord[], pathname: string, search = '') => {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search,
+      publicHost: 'https://mistboard.com',
+      playerPage: (path, locale) =>
+        playerPageFor(
+          path,
+          {
+            listPlayers: async () => players,
+            listBoards: async () => [],
+            reference: async () => EMPTY_PLAYER_REFERENCE,
+          },
+          locale,
+        ),
+    });
+    return response;
+  };
+
+  const corrected = [fan('fan-chi', 'Fan Chi')];
+  const hop = await serve(corrected, '/players/fan-zhi', '?lang=zh-hans');
+  assert.equal(hop.status, 301);
+  assert.equal(hop.headers.location, '/players/fan-chi?lang=zh-hans');
+  const landed = await serve(corrected, '/players/fan-chi');
+  assert.equal(landed.status, 200);
+  assert.match(
+    landed.body,
+    /<link rel="canonical" href="https:\/\/mistboard\.com\/players\/fan-chi">/,
+  );
+
+  // Before the stored names are corrected the old slug is still the page.
+  const before = await serve([fan('fan-zhi', 'Fan Zhi')], '/players/fan-zhi');
+  assert.equal(before.status, 200);
+  assert.match(
+    before.body,
+    /<link rel="canonical" href="https:\/\/mistboard\.com\/players\/fan-zhi">/,
+  );
 });
 
 test('the sitemap index lists the players and broadcasts sections', () => {
