@@ -80,6 +80,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The Fanfanqi study embed animates each move and flip ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The classical collections have their own tab on the studies page, shown as study cards ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The Fanfanqi rules page has an annotated engine game ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The address names the first puzzle you open ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
@@ -169,6 +170,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Rapfi is the first Gomoku champion on the champions page, and engine champions carry the crown in the About menu ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The champions page lists Fanfanqi and Three Kingdoms Banqi ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The Play a person controls sit in one row with a single sign-in button ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - The API docs list the public reads they left out ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
@@ -230,6 +232,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The 2026 North American Championship broadcast spells Fan Chi and Lien The Quoc correctly ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
+- The AB-JChess vs jqe article corrects how often the deal decided a pair of games ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - Correspondence rematches start their first-move deadline before players reconnect ([1765dba8](https://github.com/brianhliou/mistboard/commit/1765dba8))
 - Correspondence invites nobody accepted close after 14 days ([1765dba8](https://github.com/brianhliou/mistboard/commit/1765dba8))
 - Jungle and Flip Jungle mark a capturable piece by tinting its square, and rules diagram arrows no longer cover the pieces ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
