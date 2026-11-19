@@ -10,11 +10,13 @@ import {
 } from '@mistboard/game';
 import { chunkReloadPending } from './chunk-load-recovery.js';
 import {
+  hasSeenGameAwaitingFirstMove,
   hasTrackedCorrespondenceStart,
   hasTrackedGameFinish,
   hasTrackedGameFirstMove,
   hasTrackedLiveGameStart,
   markCorrespondenceStartTracked,
+  markGameAwaitingFirstMove,
   markGameFinishTracked,
   markGameFirstMoveTracked,
   markLiveGameStartTracked,
@@ -460,9 +462,10 @@ export type GameLifecycleTracker = {
   // `ownMoveCount` drives `game_first_move`: how many moves this client's seated
   // player has had accepted, counted from the state the server sent (its event
   // log), never from a click that may yet be rejected. The event fires when the
-  // count goes from 0 to 1 or more inside one tracker's sight, so a room opened
-  // and left never fires it, and neither does a reload or a finished game that
-  // was first seen with the move already made. Omitted: no first-move event.
+  // count goes from 0 to 1 or more in this browser's sight (across reloads: a
+  // page may reload before it renders the echo of the first move), so a room
+  // opened and left never fires it, and neither does a game no page here saw
+  // before the seat moved. Omitted: no first-move event.
   update: (
     input: {
       statusType: GameLifecycleStatusType;
@@ -503,10 +506,18 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     )
       return;
     if (ownMoveCount <= 0) {
-      if (statusType !== 'finished' && statusType !== 'aborted') sawNoOwnMove.add(gameId);
+      if (statusType !== 'finished' && statusType !== 'aborted' && !sawNoOwnMove.has(gameId)) {
+        sawNoOwnMove.add(gameId);
+        markGameAwaitingFirstMove(gameId);
+      }
       return;
     }
-    if (!sawNoOwnMove.has(gameId)) return;
+    // The empty seat may have been seen by an earlier page in this browser: the
+    // move was accepted, but that page reloaded or was discarded before it
+    // rendered the echo, so this page's first seated render already has it
+    // (#1227). A room no page here saw empty (a finished game opened later,
+    // another device's game) stays silent.
+    if (!sawNoOwnMove.has(gameId) && !hasSeenGameAwaitingFirstMove(gameId)) return;
     if (statusType !== 'playing' && statusType !== 'finished') return;
     sawNoOwnMove.delete(gameId);
     if (hasTrackedGameFirstMove(gameId)) return;

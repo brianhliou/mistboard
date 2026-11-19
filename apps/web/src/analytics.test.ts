@@ -451,6 +451,44 @@ describe('game_first_move', () => {
     expect(named('game_first_move')).toHaveLength(1);
   });
 
+  it('fires on a reload whose first render already has the move, when an earlier page saw the seat empty', () => {
+    // #1227: the move was accepted, but the page reloaded (or the tab was
+    // discarded) before it rendered the echo. The next page's first seated
+    // render has the move, so it never sees the empty board in this page.
+    createGameLifecycleTracker().update(playing(0, 0));
+    expect(named('game_first_move')).toHaveLength(0);
+    const reload = createGameLifecycleTracker();
+    reload.update(playing(1, 1));
+    expect(named('game_first_move')).toHaveLength(1);
+    expect(named('game_first_move')[0][1]).toEqual({ ...base, entry_source: null, moveNumber: 1 });
+    // Another reload, or the game ending, cannot count it again.
+    createGameLifecycleTracker().update(playing(2, 4));
+    createGameLifecycleTracker().update({ ...playing(2, 4), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
+  it('fires on a reload that first sees the game already over, when an earlier page saw the seat empty', () => {
+    // The move was the last thing this page sent: the game ended (bot mate,
+    // flag) before the reloaded page rendered it.
+    createGameLifecycleTracker().update(playing(0, 0));
+    createGameLifecycleTracker().update({ ...playing(1, 3), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(1);
+    // An aborted game is not one the seat played.
+    capture.mockReset();
+    const other = { ...base, gameId: 'g2' };
+    createGameLifecycleTracker().update({
+      statusType: 'playing',
+      baseProps: other,
+      ownMoveCount: 0,
+    });
+    createGameLifecycleTracker().update({
+      statusType: 'aborted',
+      baseProps: other,
+      ownMoveCount: 1,
+    });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
   it('carries a null entry source when the start fired on an earlier page load', () => {
     createGameLifecycleTracker().update(playing(0, 0));
     const reload = createGameLifecycleTracker();

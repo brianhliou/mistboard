@@ -119,6 +119,12 @@ const LIVE_STARTED_CAP = 100;
 // reason as the starts above: the tracker is per page, the game is not.
 const FIRST_MOVE_KEY = 'mistboard.gameFirstMove';
 const FIRST_MOVE_CAP = 100;
+// Games whose seat this browser saw with no move of its own yet (#1227). A
+// page that reloads, or a tab the browser discards, after the first move was
+// sent but before its echo rendered comes back to a board that already has the
+// move; this marker is what lets that page count it.
+const AWAITING_FIRST_MOVE_KEY = 'mistboard.gameAwaitingFirstMove';
+const AWAITING_FIRST_MOVE_CAP = 100;
 // A finished correspondence room can be revisited months later. Keep its
 // marker per room rather than evicting it from a recent-games list, which would
 // let an old finish count again. Like starts, this is scoped to this browser.
@@ -174,6 +180,14 @@ export function hasTrackedGameFirstMove(gameId: string): boolean {
 
 export function markGameFirstMoveTracked(gameId: string): void {
   markStarted(FIRST_MOVE_KEY, FIRST_MOVE_CAP, gameId);
+}
+
+export function hasSeenGameAwaitingFirstMove(gameId: string): boolean {
+  return hasStarted(AWAITING_FIRST_MOVE_KEY, gameId);
+}
+
+export function markGameAwaitingFirstMove(gameId: string): void {
+  markStarted(AWAITING_FIRST_MOVE_KEY, AWAITING_FIRST_MOVE_CAP, gameId);
 }
 
 export function hasTrackedGameFinish(gameId: string): boolean {
