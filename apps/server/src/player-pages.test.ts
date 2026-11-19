@@ -16,6 +16,8 @@ import {
   playerDescription,
   playerPageFor,
   playerSitemapEntries,
+  RENAMED_PLAYER_SLUGS,
+  renamedPlayerSlug,
   renderPlayerBody,
   teamsOf,
 } from './player-pages.js';
@@ -297,6 +299,45 @@ test('an unknown player or team keeps the generic meta and is noindex', async ()
   assert.deepEqual(await playerPageFor('/players/nobody', sources()), { noindex: true });
   assert.deepEqual(await playerPageFor('/players/teams/nowhere', sources()), { noindex: true });
   assert.equal(await playerPageFor('/bots', sources()), null);
+});
+
+test('a renamed player slug redirects to its corrected slug once the archive carries it', async () => {
+  assert.deepEqual(RENAMED_PLAYER_SLUGS, { 'fan-zhi': 'fan-chi', 'lien-quoc': 'lien-the-quoc' });
+  const fanChi = player({ slug: 'fan-chi', name: '范志', nameEn: 'Fan Chi' });
+  const lien = player({ slug: 'lien-the-quoc', name: '廖建国', nameEn: 'Lien The Quoc' });
+  const corrected: PlayerPageSources = {
+    listPlayers: async () => [MENG, fanChi, lien],
+    listBoards: async () => [],
+    reference: async () => REFERENCE,
+  };
+  assert.deepEqual(await playerPageFor('/players/fan-zhi', corrected), {
+    redirect: '/players/fan-chi',
+  });
+  assert.deepEqual(await playerPageFor('/players/lien-quoc/', corrected), {
+    redirect: '/players/lien-the-quoc',
+  });
+  assert.equal(
+    (await playerPageFor('/players/fan-chi', corrected))?.meta?.urlPath,
+    '/players/fan-chi',
+  );
+  // The sitemap names only the slugs the archive now builds.
+  const paths = playerSitemapEntries([MENG, fanChi, lien]).map((entry) => entry.path);
+  assert.ok(paths.includes('/players/fan-chi') && paths.includes('/players/lien-the-quoc'));
+  assert.ok(!paths.includes('/players/fan-zhi') && !paths.includes('/players/lien-quoc'));
+
+  // Before the stored names change, the old slug is still the page, and the
+  // new slug, naming nobody yet, is an ordinary unknown.
+  const fanZhi = player({ slug: 'fan-zhi', name: '范志', nameEn: 'Fan Zhi' });
+  assert.equal(renamedPlayerSlug('fan-zhi', [fanZhi]), null);
+  assert.equal(renamedPlayerSlug('fan-zhi', [MENG]), null);
+  assert.equal(renamedPlayerSlug('meng-fanrui', [MENG]), null);
+  assert.equal(renamedPlayerSlug('constructor', [MENG]), null);
+  const before: PlayerPageSources = { ...corrected, listPlayers: async () => [MENG, fanZhi] };
+  assert.equal(
+    (await playerPageFor('/players/fan-zhi', before))?.meta?.urlPath,
+    '/players/fan-zhi',
+  );
+  assert.deepEqual(await playerPageFor('/players/fan-chi', before), { noindex: true });
 });
 
 test('the index, the teams index and a team page each carry their own meta and links', async () => {

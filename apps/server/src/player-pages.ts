@@ -72,6 +72,29 @@ export function parsePlayerRoute(pathname: string): PlayerRoute | null {
 export const playerHref = (slug: string): string => `/players/${encodeURIComponent(slug)}`;
 export const teamHref = (key: string): string => `/players/teams/${encodeURIComponent(key)}`;
 
+/** A player's slug is built from the stored English name, so a corrected
+ *  romanisation moves the page. Each old slug keeps one permanent hop to the
+ *  new one. The hop fires only once the old slug names nobody and the new one
+ *  names a player, so it can ship before the stored names are corrected and
+ *  neither URL is ever a dead end. */
+export const RENAMED_PLAYER_SLUGS: Readonly<Record<string, string>> = {
+  // 范志 and 廖建国, North American players, 2026-11-18.
+  'fan-zhi': 'fan-chi',
+  'lien-quoc': 'lien-the-quoc',
+};
+
+/** Where a renamed player's old slug now lives, or null when it still names
+ *  a player, was never renamed, or its new slug is not live yet. */
+export function renamedPlayerSlug(
+  slug: string,
+  players: readonly Pick<XiangqiPlayerRecord, 'slug'>[],
+): string | null {
+  const renamed = Object.hasOwn(RENAMED_PLAYER_SLUGS, slug) ? RENAMED_PLAYER_SLUGS[slug] : null;
+  if (!renamed) return null;
+  if (players.some((entry) => entry.slug === slug)) return null;
+  return players.some((entry) => entry.slug === renamed) ? renamed : null;
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────────
 // Mirrors teamOf/teamsOf in apps/web/src/xiangqi-players.ts (the server cannot
 // import web code): a team is the players' latest federation, keyed by its
@@ -219,6 +242,8 @@ export type PlayerPage = {
   meta?: PlayerPageMeta;
   body?: string;
   noindex?: boolean;
+  /** A renamed player's old path: answer with a 301 to this path instead. */
+  redirect?: string;
 };
 
 export function playerDescription(player: XiangqiPlayerRecord, reference: PlayerReference): string {
@@ -550,7 +575,10 @@ export async function playerPageFor(
     }
     case 'player': {
       const player = players.find((entry) => entry.slug === route.slug);
-      if (!player) return { noindex: true };
+      if (!player) {
+        const renamed = renamedPlayerSlug(route.slug, players);
+        return renamed ? { redirect: playerHref(renamed) } : { noindex: true };
+      }
       const boards = await sources.listBoards(player, players);
       return {
         meta: {

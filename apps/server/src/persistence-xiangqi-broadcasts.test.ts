@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard, XiangqiBroadcastTour } from '@mistboard/game';
+import {
+  backfillOptions,
+  backfillReportLines,
+  parseBackfillCliArgs,
+} from './backfill-xiangqi-broadcast-translations.js';
 import { seedBroadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { getPool } from './persistence-db.js';
@@ -1293,6 +1298,70 @@ definePersistenceTests('xiangqi broadcasts', () => {
 
     // Re-running is a no-op once the caches match.
     const repeat = await backfillXiangqiBroadcastTranslations();
+    assert.equal(repeat.changes.length, 0);
+  });
+
+  test('translate-backfill CLI previews by default, scopes to --tour, and writes only with --apply', async () => {
+    const polled = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/view.asp?owner=u&id=1',
+      sourcePolicy: FIXTURE_SOURCE_POLICY,
+      fetchImpl: sourceFetch(dpxqLiveBoardPage({ plies: 30, result: '和' })),
+    });
+    assert.equal(polled.ok, true);
+    const tourSlug = polled.ok ? polled.tourSlug : '';
+    const [round] = await listXiangqiBroadcastRounds(tourSlug);
+    const redName = async () => (await listXiangqiBroadcastBoards(round!.id))[0]?.red.nameEn;
+
+    // Plant the state a corrected romanisation leaves behind: a stored board
+    // still carrying the old English spelling of a player.
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL ?? '' });
+    await client.connect();
+    try {
+      await client.query(
+        `UPDATE xiangqi_broadcast_boards
+            SET red = jsonb_set(red, '{nameEn}', '"Wang Tian Yi"'),
+                payload = jsonb_set(payload, '{red,nameEn}', '"Wang Tian Yi"')
+          WHERE tour_slug = $1`,
+        [tourSlug],
+      );
+    } finally {
+      await client.end();
+    }
+    assert.equal(await redName(), 'Wang Tian Yi');
+
+    // No flag is a dry run: it names the old and new value and writes nothing.
+    const previewOptions = backfillOptions(parseBackfillCliArgs(['--tour', tourSlug]));
+    assert.deepEqual(previewOptions, { dryRun: true, tourSlug });
+    const preview = await backfillXiangqiBroadcastTranslations(previewOptions);
+    assert.equal(preview.dryRun, true);
+    assert.deepEqual(
+      preview.changes.map((change) => change.fields),
+      [{ 'red.nameEn': { before: 'Wang Tian Yi', after: 'Wang Tianyi' } }],
+    );
+    const lines = backfillReportLines(preview);
+    assert.ok(lines.some((line) => line.endsWith('red.nameEn: Wang Tian Yi -> Wang Tianyi')));
+    assert.ok(lines.some((line) => line.includes('re-run with --apply')));
+    assert.equal(await redName(), 'Wang Tian Yi');
+
+    // --tour scopes the pass: another event's slug reads none of this one.
+    const elsewhere = await backfillXiangqiBroadcastTranslations(
+      backfillOptions(parseBackfillCliArgs(['--tour', 'another-event', '--apply'])),
+    );
+    assert.equal(elsewhere.toursSeen, 0);
+    assert.equal(elsewhere.boardsSeen, 0);
+    assert.equal(elsewhere.changes.length, 0);
+    assert.equal(await redName(), 'Wang Tian Yi');
+
+    // --apply writes the fix, and a second pass finds nothing left.
+    const applied = await backfillXiangqiBroadcastTranslations(
+      backfillOptions(parseBackfillCliArgs(['--tour', tourSlug, '--apply'])),
+    );
+    assert.equal(applied.dryRun, false);
+    assert.equal(applied.changes.length, 1);
+    assert.equal(await redName(), 'Wang Tianyi');
+    const repeat = await backfillXiangqiBroadcastTranslations(
+      backfillOptions(parseBackfillCliArgs(['--tour', tourSlug])),
+    );
     assert.equal(repeat.changes.length, 0);
   });
 

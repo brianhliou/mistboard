@@ -1140,6 +1140,13 @@ export async function serveSpaShellWithRoutePreloads(params: {
     ((pathname: string, pageLocale?: BoardLocale) =>
       livePlayerPage(pathname, params.staticDir, pageLocale))
   )(params.pathname, locale).catch(() => null);
+  // A renamed player's old slug (RENAMED_PLAYER_SLUGS): one permanent hop to
+  // the page under the corrected name, query kept.
+  if (playerPage?.redirect) {
+    params.response.writeHead(301, { location: `${playerPage.redirect}${params.search ?? ''}` });
+    params.response.end();
+    return true;
+  }
   // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
   // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
   // #app with no canonical, and Google folded them as duplicates.
