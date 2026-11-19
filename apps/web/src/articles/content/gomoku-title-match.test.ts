@@ -328,7 +328,7 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
 
   it('reminds readers the openings are dealt and screened, with the rules page linked', () => {
     expect(prose).toContain(
-      `[dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} of them as close to even`,
+      `[dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} in the pool at the time as close to even`,
     );
   });
 });
