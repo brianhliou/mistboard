@@ -2586,6 +2586,50 @@ describe('Fanfanqi study embed', () => {
     expect(root.querySelector('.embed-board')!.innerHTML).toBe(initial);
     expect(calls).toEqual(['/api/studies/s', '/api/studies/s/chapters/ffq/decisions']);
   });
+  it('animates a forward step and a flip, never a step back or a jump', async () => {
+    stubFetch(200, { study: { id: 's' }, chapters: [{ ...chapter, hasDecisions: false }] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ffq' });
+    const [capture, flip] = ffqBanqiStudyLine(chapter).played;
+    expect(capture!.from).not.toBe(capture!.to);
+    expect(flip!.from).toBe(flip!.to);
+    // The squares whose pieces a click set animating on the board.
+    const animated = (click: () => void): string[] => {
+      const proto = Element.prototype as unknown as { animate: (...args: unknown[]) => unknown };
+      const original = proto.animate;
+      expect(typeof original).toBe('function');
+      const squares: string[] = [];
+      proto.animate = function (this: Element, ...args: unknown[]) {
+        if (this.closest('.ffq-banqi-study-board')) {
+          squares.push(
+            this.closest('[data-piece-square]')?.getAttribute('data-piece-square') ?? '',
+          );
+        }
+        return original.apply(this, args);
+      };
+      try {
+        click();
+      } finally {
+        proto.animate = original;
+      }
+      return squares;
+    };
+    const button = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
+    const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
+      (item) => item.textContent === 'Jump to the end',
+    )!;
+    // The capture glides onto its square; the flip turns over in place.
+    expect(animated(() => button('Next move').click())).toContain(capture!.to);
+    expect(animated(() => button('Next move').click())).toContain(flip!.to);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 2');
+    expect(animated(() => button('Previous move').click())).toEqual([]);
+    expect(animated(() => button('Previous move').click())).toEqual([]);
+    expect(animated(() => toEnd.click())).toEqual([]);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('2 / 2');
+    root.remove();
+  });
   it('keeps hidden solutions free of decisions, grades and score charts', async () => {
     const fetcher = vi.fn(async () => ({
       ok: true,
