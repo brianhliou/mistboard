@@ -1908,15 +1908,47 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
   const roundPath = '/broadcast/xiangqi/t/round/r';
   const cases = [
     // A game page carries og:url and no canonical link; a round carries both.
-    { pathname: '/game/room-1', campaign: 'game', ogUrl: '/game/room-1', canonical: null },
-    { pathname: '/game/room-1', campaign: 'review', ogUrl: '/game/room-1', canonical: null },
-    { pathname: '/room/room-2', campaign: 'invite', ogUrl: null, canonical: null },
-    { pathname: '/challenge/seek_abc', campaign: 'challenge', ogUrl: null, canonical: null },
-    { pathname: roundPath, campaign: 'broadcast', ogUrl: roundPath, canonical: roundPath },
+    // A room link gets no rewritten shell at all: the caller serves the static
+    // index.html byte for byte, so nothing can echo a tag.
+    {
+      pathname: '/game/room-1',
+      campaign: 'game',
+      ogUrl: '/game/room-1',
+      canonical: null,
+      rewritten: true,
+    },
+    {
+      pathname: '/game/room-1',
+      campaign: 'review',
+      ogUrl: '/game/room-1',
+      canonical: null,
+      rewritten: true,
+    },
+    {
+      pathname: '/room/room-2',
+      campaign: 'invite',
+      ogUrl: null,
+      canonical: null,
+      rewritten: false,
+    },
+    {
+      pathname: '/challenge/seek_abc',
+      campaign: 'challenge',
+      ogUrl: null,
+      canonical: null,
+      rewritten: true,
+    },
+    {
+      pathname: roundPath,
+      campaign: 'broadcast',
+      ogUrl: roundPath,
+      canonical: roundPath,
+      rewritten: true,
+    },
   ];
-  for (const { pathname, campaign, ogUrl, canonical } of cases) {
+  for (const { pathname, campaign, ogUrl, canonical, rewritten } of cases) {
     const response = captureResponse();
-    await serveSpaShellWithRoutePreloads({
+    const served = await serveSpaShellWithRoutePreloads({
       response,
       staticDir,
       pathname,
@@ -1941,6 +1973,14 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
           : null,
     });
     const label = `${pathname} (${campaign})`;
+    assert.equal(served, rewritten, label);
+    if (!rewritten) {
+      assert.equal(response.body, '', label);
+      continue;
+    }
+    // An empty or failed response would pass the utm check below for free.
+    assert.equal(response.status, 200, label);
+    assert.match(response.body, /<title>[^<]+<\/title>/, label);
     assert.doesNotMatch(response.body, /utm_/, label);
     const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
     assert.deepEqual(
