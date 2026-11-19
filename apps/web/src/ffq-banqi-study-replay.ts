@@ -14,6 +14,8 @@ import type { EmbedBoardHandle } from './embed/embed-card.js';
 import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
 import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
 import {
+  animateBanqiBoardMove,
+  animateBanqiReveal,
   type BanqiBoardMarker,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
@@ -142,6 +144,7 @@ export function mountFFQBanqiStudyReplay(
     (role, color) => flipLuckPieceSvg('banqi', role, color),
   );
   let ply = 0;
+  let inLine = false;
   const render = (view = line.views[ply]!, hp = line.hp[ply]!, mainline = true) => {
     const glyph = mainline ? (line.annotations.glyphs[ply] ?? marks.get(ply)?.suffix) : undefined;
     const lastMove = view.lastMove;
@@ -173,8 +176,23 @@ export function mountFFQBanqiStudyReplay(
     },
     jumpToPly: (next) => {
       if (!Number.isFinite(next)) return;
-      ply = Math.max(0, Math.min(line.played.length, Math.trunc(next)));
+      const nextPly = Math.max(0, Math.min(line.played.length, Math.trunc(next)));
+      const move = !inLine && nextPly === ply + 1 ? line.played[ply] : undefined;
+      const before = line.views[ply];
+      ply = nextPly;
+      inLine = false;
       render();
+      // Only a forward step along the mainline animates, as the review page
+      // does it: a step or capture glides, a flip turns over the face this
+      // frame's public view already shows. Back steps and jumps repaint.
+      if (move) {
+        if (move.from !== move.to) animateBanqiBoardMove(frame, move);
+        else {
+          const drawn = line.views[ply]?.board[move.to];
+          if (before?.board[move.to]?.faceDown && drawn && !drawn.faceDown)
+            animateBanqiReveal(frame, move.to);
+        }
+      }
       hooks.onPlyChange(ply, line.played.length);
     },
     jumpToLine: (atPly, cursor) => {
@@ -182,7 +200,10 @@ export function mountFFQBanqiStudyReplay(
       if (!branch || !Number.isFinite(cursor)) return;
       const index = Math.max(0, Math.min(branch.played.length, Math.trunc(cursor)));
       const view = branch.views[index];
-      if (view) render(view, branch.hp[index]!, false);
+      if (view) {
+        inLine = true;
+        render(view, branch.hp[index]!, false);
+      }
     },
     plyCount: () => line.played.length,
     playedMoves: () => line.played.map((move, i) => ({ ...move, ply: i + 1 })),
