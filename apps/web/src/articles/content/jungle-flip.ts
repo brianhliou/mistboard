@@ -174,7 +174,6 @@ export const jungleFlipArticle: Article = {
       playHref: '/?play=computer&gameSpecId=jungle-flip',
       secondary: [
         { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jungle-flip', emphasis: 'secondary' },
-        { label: 'Twenty engine games', href: '/study/uKxJ60mN', emphasis: 'secondary' },
       ],
     }),
   ],

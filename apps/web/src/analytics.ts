@@ -22,6 +22,7 @@ import {
   takeGameStartSource,
 } from './game-start-source.js';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
+import { rememberLastPlayedVariant } from './last-played-variant.js';
 import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 export type GameSpecAnalyticsProps = {
@@ -466,6 +467,9 @@ export type GameLifecycleTracker = {
     input: {
       statusType: GameLifecycleStatusType;
       baseProps: Record<string, unknown>;
+      // The server-confirmed seat. Spectators receive finish metadata without
+      // contributing starts or first moves to the player funnel.
+      seat?: string | null;
       outcome?: GameFinishedOutcome | null;
       ownMoveCount?: number | null;
       moveNumber?: number | null;
@@ -481,6 +485,7 @@ export type GameLifecycleTracker = {
 export function createGameLifecycleTracker(): GameLifecycleTracker {
   let lastStatusType: GameLifecycleStatusType | null = null;
   let playingSinceMs: number | null = null;
+  let wasSpectator = false;
   // Keyed by game id, so reset() keeps them: a reconnect that resets the tracker
   // between the empty board and the accepted move must still see the move land,
   // and a rematch is a new id.
@@ -490,7 +495,13 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     if (!input) return;
     const { statusType, baseProps, ownMoveCount } = input;
     const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
-    if (!gameId || typeof ownMoveCount !== 'number') return;
+    if (
+      !gameId ||
+      typeof ownMoveCount !== 'number' ||
+      input.seat === 'spectator' ||
+      input.seat === null
+    )
+      return;
     if (ownMoveCount <= 0) {
       if (statusType !== 'finished' && statusType !== 'aborted') sawNoOwnMove.add(gameId);
       return;
@@ -512,36 +523,64 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     reset() {
       lastStatusType = null;
       playingSinceMs = null;
+      wasSpectator = false;
     },
     update(input) {
       if (!input) return;
       const { statusType, baseProps } = input;
-      if (statusType === 'playing' && statusType !== lastStatusType) {
+      const spectator = input.seat === 'spectator' || input.seat === null;
+      if (
+        statusType === 'playing' &&
+        (statusType !== lastStatusType || (wasSpectator && !spectator))
+      ) {
         playingSinceMs = Date.now();
-        const source = trackGameStarted(baseProps);
+        const source = spectator ? null : trackGameStarted(baseProps);
         if (source !== null && typeof baseProps.gameId === 'string') {
           startSources.set(baseProps.gameId, source);
         }
       }
       trackFirstMove(input);
-      if (statusType === 'finished' && input.outcome) {
+      if ((statusType === 'finished' && input.outcome) || statusType === 'aborted') {
+        const outcome = input.outcome ?? {
+          winner: null,
+          reason: 'aborted',
+          moveNumber: input.moveNumber ?? 0,
+        };
+        const seat = input.seat ?? 'spectator';
         const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
         // Status transitions alone re-fire after a reconnect or a fresh page.
         // Mark before capture (which may queue until analytics initializes).
         // Without an id, retain the legacy per-transition behavior.
-        if (gameId ? !hasTrackedGameFinish(gameId) : statusType !== lastStatusType) {
+        // A watcher reports a finish only when this tracker saw the game being
+        // played: opening an already finished room is not a game finishing.
+        const sawItEnd = !spectator || lastStatusType === 'playing';
+        if (sawItEnd && (gameId ? !hasTrackedGameFinish(gameId) : statusType !== lastStatusType)) {
           if (gameId) markGameFinishTracked(gameId);
           track('game_finished', {
             ...baseProps,
-            winner: input.outcome.winner,
-            reason: input.outcome.reason,
-            moveNumber: input.outcome.moveNumber,
+            winner: outcome.winner,
+            reason: outcome.reason,
+            moveNumber: outcome.moveNumber,
+            seat,
+            // A watcher has no win/loss perspective. Keep decisive results null
+            // rather than counting every watcher as a losing player.
+            result:
+              statusType === 'aborted'
+                ? 'aborted'
+                : outcome.winner === null
+                  ? 'draw'
+                  : seat === 'spectator'
+                    ? null
+                    : outcome.winner === seat
+                      ? 'win'
+                      : 'loss',
             durationMs: playingSinceMs !== null ? Date.now() - playingSinceMs : null,
           });
         }
         playingSinceMs = null;
       }
       lastStatusType = statusType;
+      wasSpectator = spectator;
     },
   };
 }
@@ -558,18 +597,20 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
 // Returns the entry source it sent, or null when the start was already counted.
 function trackGameStarted(baseProps: Record<string, unknown>): string | null {
   const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   if (baseProps.time_class !== 'correspondence') {
     if (gameId && hasTrackedLiveGameStart(gameId)) return null;
     if (gameId) markLiveGameStartTracked(gameId);
     const source = takeGameStartSource();
+    if (gameSpec) rememberLastPlayedVariant(gameSpec);
     track('game_started', { ...baseProps, entry_source: source });
     return source;
   }
   if (gameId && hasTrackedCorrespondenceStart(gameId)) return null;
   const liveSource = takeGameStartSource();
-  const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
   if (gameId) markCorrespondenceStartTracked(gameId);
+  if (gameSpec) rememberLastPlayedVariant(gameSpec);
   track('game_started', { ...baseProps, entry_source: entrySource });
   return entrySource;
 }

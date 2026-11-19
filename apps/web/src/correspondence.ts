@@ -110,7 +110,14 @@ import { appendWithNameNode, playerNameEl, profileTargetFor } from './profile-li
 import { buildProfileGameRow } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import type { ReplayHandle } from './replay.js';
-import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
+import {
+  accepterColorLabel,
+  accepterSide,
+  buildCorrespondenceDeadlineNotice,
+  buildCorrespondenceListDeadlineNotice,
+  buildSeekAcceptAction,
+  withCorrespondenceDeadlineNotice,
+} from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
 import {
   buildSetupRowSection,
@@ -1378,7 +1385,13 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
       });
   });
 
-  form.append(variant.root, side.root, submit, status);
+  form.append(
+    variant.root,
+    side.root,
+    buildCorrespondenceDeadlineNotice(info.daysPerMove),
+    submit,
+    status,
+  );
   panel.append(form);
   return panel;
 }
@@ -1438,7 +1451,7 @@ function renderOpenSeeks(ctx: PageContext, host: HTMLElement, feed: OpenSeeksFee
   // same frame as the games in progress, rather than a text row.
   const grid = buildGrid('correspondence-seek-grid');
   for (const seek of seeks) grid.append(buildOpenSeekCard(ctx, host, seek));
-  host.append(grid);
+  host.append(grid, buildCorrespondenceListDeadlineNotice());
 }
 
 function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek): HTMLElement {
@@ -1789,7 +1802,12 @@ export function buildIncomingChallengeCard(
       challenge.rated ? t('games.rated') : t('games.casual'),
       ...details,
     ].join(' · ');
-    card.append(who, terms, actions, error);
+    card.append(
+      who,
+      terms,
+      withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
+      error,
+    );
     return card;
   }
   card = buildSeekCard(
@@ -1802,7 +1820,7 @@ export function buildIncomingChallengeCard(
       rated: challenge.rated === true,
     },
     {
-      action: actions,
+      action: withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
       ariaLabel: t('correspondence.challengeFrom', {
         name: challenger,
         variant: variantDisplayLabel(challenge.gameSpecId),

@@ -1658,6 +1658,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       skip: (node) => compKeys.has(pathKey(tree.pathTo(node))),
       rootFen: config.root?.fen,
       replay: config.initialTree?.replay,
+      initialRevealed: config.initialTree?.initialRevealed,
     });
   }
 

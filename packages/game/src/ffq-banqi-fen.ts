@@ -12,18 +12,18 @@
 // Computed only from the masked observer view. Permuting identities underneath
 // on-board backs cannot change any field, even after game end.
 //
-// No parser/dealt field: importing a public snapshot cannot reconstruct the
-// secret deal. Replay must use the server-secret initial deal and actions,
-// as in the Three Kingdoms boundary.
+// No dealt field: a public snapshot cannot reconstruct the secret deal.
+// Observed-outcome replay uses only the four public opening identities and
+// the identities disclosed by each later flip/covered capture.
 import { banqiPieceLetter } from './banqi-fen.js';
 import {
   FFQ_BANQI_ROLE_ORDER,
-  type FFQBanqiState,
+  type FFQBanqiReplayState,
   ffqBanqiSeatToMove,
   getFFQBanqiPlayerView,
 } from './variants-ffq-banqi.js';
 
-export function ffqBanqiStateToFen(state: FFQBanqiState): string {
+export function ffqBanqiStateToFen(state: FFQBanqiReplayState): string {
   const view = getFFQBanqiPlayerView(state, 'observer');
   const rows: string[] = [];
   for (let y = 7; y >= 0; y -= 1) {

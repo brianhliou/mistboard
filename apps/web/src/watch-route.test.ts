@@ -12,6 +12,7 @@ import { installReviewKeyboard } from './review/review-layout.js';
 import {
   buildWatchScrubber,
   createWatchSwitchGuard,
+  followWatchLiveRail,
   formatWatchScope,
   loadWatchMainBeforePreviews,
   renderWatchChannelList,
@@ -188,9 +189,7 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
   });
 
-  // Xiangqi mahjong's east/west are bookkeeping: the label read "Draw" for every
-  // decided match (no branch matched 'east-wins'). It names the winning player.
-  it('names the winning player of a xiangqi mahjong match, never the seat', () => {
+  it('names the winning seat of a xiangqi mahjong match, including unnamed players', () => {
     const base: FeaturedGame = {
       blackName: null,
       corpusId: null,
@@ -218,10 +217,12 @@ describe('watch route copy helpers', () => {
         },
       ],
     };
-    expect(watchQueueResultLabel(base)).toBe('Misty Xiangqi Mahjong wins');
-    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
+    expect(watchQueueResultLabel(base)).toBe('West wins');
+    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('East wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
-    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
+    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('West wins');
+    // East/West result words belong only to this spec, never an unknown variant.
+    expect(watchQueueResultLabel({ ...base, variant: 'unknown-variant' })).toBe('Draw');
   });
 
   // The meta line read "Guest wins by On points": "On points" is a phrase, not a reason noun.
@@ -238,9 +239,9 @@ describe('watch route copy helpers', () => {
       whiteName: null,
       participants: [],
     };
-    expect(watchGameStatusLine(game)).toBe('Guest wins on points');
+    expect(watchGameStatusLine(game)).toBe('East wins on points');
     expect(watchGameStatusLine({ ...game, termination: 'resignation' })).toBe(
-      'Guest wins by resignation',
+      'East wins by resignation',
     );
   });
 
@@ -611,6 +612,23 @@ describe('buildWatchScrubber', () => {
 
     expect(scrubber.el).toBe(table.refs.replayControlsRoot);
     expect(jumps).toEqual([3, 12]);
+  });
+});
+
+describe('followWatchLiveRail', () => {
+  it.each([
+    { previousPly: 4, latest: 5, jumps: [4, 5], scenario: 'a one-move advance' },
+    { previousPly: 4, latest: 7, jumps: [7], scenario: 'a three-move catch-up' },
+    { previousPly: undefined, latest: 5, jumps: [5], scenario: 'a new live game' },
+    { previousPly: undefined, latest: 1, jumps: [1], scenario: 'a one-ply seed' },
+    { previousPly: 0, latest: 1, jumps: [0, 1], scenario: 'the first live move' },
+    { previousPly: 4, latest: 4, jumps: [4], scenario: 'an unchanged position' },
+  ])('paints the expected plies for $scenario', ({ previousPly, latest, jumps: expected }) => {
+    const jumps: number[] = [];
+    const handle = { plyCount: () => latest, jumpToPly: (ply: number) => jumps.push(ply) };
+
+    expect(followWatchLiveRail(handle, previousPly)).toBe(latest);
+    expect(jumps).toEqual(expected);
   });
 });
 

@@ -1,14 +1,27 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { positionPacketFixture } from './fixtures/xiangqi-position-packet.js';
+import {
+  applyStandardXiangqiMove,
+  createInitialXiangqiState,
+  type XiangqiMove,
+} from '@mistboard/game';
+import {
+  positionPacketFixture,
+  positionReceiptFixture,
+} from './fixtures/xiangqi-position-packet.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
+import { xiangqiPositionPuzzleHash } from './xiangqi-puzzle-position-packet.js';
 import {
   planXiangqiPositionPublication,
   publishXiangqiPositionPacket,
 } from './xiangqi-puzzle-position-publication.js';
+import {
+  applyXiangqiPuzzleSetupBackfill,
+  planXiangqiPuzzleSetupBackfill,
+} from './xiangqi-puzzle-setup-backfill.js';
 
 async function detail(id: string) {
   let body = '',
@@ -34,6 +47,122 @@ async function detail(id: string) {
 }
 
 definePersistenceTests('position-only puzzle publication', () => {
+  test('new packets persist a validated setup pair and SQL rejects nested setup history', async (t) => {
+    resetPuzzleStoreForTests();
+    t.after(resetPuzzleStoreForTests);
+    await getPuzzleStore();
+    const packet = positionPacketFixture(true);
+    const item = packet.items[0]!;
+    const p = item.puzzle;
+    p.initial.lastMove = { from: 'g6', to: 'g5' };
+    p.setupMove = { from: 'g6', to: 'g5', captured: null };
+    item.verify = positionReceiptFixture(p);
+    item.audit = positionReceiptFixture(p);
+    item.review.puzzleHash = xiangqiPositionPuzzleHash(p);
+    const plan = await planXiangqiPositionPublication(getPool(), packet);
+    assert.equal(
+      (
+        await publishXiangqiPositionPacket({
+          packet,
+          expectedTotal: 1,
+          expectedPacketSha256: plan.packetSha256,
+          operatorNote: 'Fixture review',
+        })
+      ).publishedNow,
+      1,
+    );
+    for (const setupMove of [
+      { ...p.setupMove, history: ['PRIVATE_HISTORY'] },
+      { ...p.setupMove, captured: { color: 'red', role: 'horse', history: ['PRIVATE_HISTORY'] } },
+      { ...p.setupMove, captured: { color: 'black', role: 'horse' } },
+    ]) {
+      await assert.rejects(
+        getPool().query(
+          `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, position_only)
+         SELECT 'invalid-setup', variant, title, seq+1, goal_type, themes, solution_plies, $2::json, source_kind, true
+         FROM puzzles WHERE id=$1`,
+          [p.id, JSON.stringify({ ...p, setupMove })],
+        ),
+        /puzzles_position_only_payload/,
+      );
+    }
+  });
+
+  test('legacy DPXQ setup backfill preserves approved content and receipts, then stays immutable', async (t) => {
+    resetPuzzleStoreForTests();
+    t.after(resetPuzzleStoreForTests);
+    await getPuzzleStore();
+    const packet = positionPacketFixture(true);
+    const p = packet.items[0]!.puzzle;
+    p.id = 'xq-mined-dpxq-persistence-2';
+    const moves: XiangqiMove[] = [
+      { from: 'h3', to: 'h10' },
+      { from: 'i10', to: 'h10' },
+      { from: 'b3', to: 'b10' },
+      { from: 'a7', to: 'a6' },
+      { from: 'b10', to: 'd10' },
+    ];
+    let state = createInitialXiangqiState(p.id);
+    for (const move of moves.slice(0, 2)) state = applyStandardXiangqiMove(state, move);
+    const initial = {
+      id: p.id,
+      board: state.board,
+      status: state.status,
+      moveNumber: 1,
+      progressClock: 0,
+      positionCounts: {},
+      progressClockLimit: 60,
+    };
+    p.initial = initial;
+    p.solution = moves.slice(2);
+    const item = packet.items[0]!;
+    item.verify = positionReceiptFixture(p);
+    item.audit = positionReceiptFixture(p);
+    item.review.puzzleHash = xiangqiPositionPuzzleHash(p);
+    const db = getPool();
+    const publication = await planXiangqiPositionPublication(db, packet);
+    await publishXiangqiPositionPacket({
+      packet,
+      expectedTotal: 1,
+      expectedPacketSha256: publication.packetSha256,
+      operatorNote: 'Fixture review',
+    });
+    const before = await db.query('SELECT seq, hidden_reason FROM puzzles WHERE id=$1', [p.id]);
+    const receipt = await db.query(
+      'SELECT * FROM xiangqi_position_publications WHERE puzzle_id=$1',
+      [p.id],
+    );
+    const games = [{ id: 'dpxq-persistence', moves }];
+    const plan = planXiangqiPuzzleSetupBackfill([p], games, 1);
+    const input = { games, expectedTotal: 1, expectedSha256: plan.sha256 };
+    assert.equal((await applyXiangqiPuzzleSetupBackfill(input)).updated, 1);
+    assert.equal((await applyXiangqiPuzzleSetupBackfill(input)).updated, 0);
+    assert.deepEqual(
+      (await db.query('SELECT seq, hidden_reason FROM puzzles WHERE id=$1', [p.id])).rows,
+      before.rows,
+    );
+    assert.deepEqual(
+      (await db.query('SELECT * FROM xiangqi_position_publications WHERE puzzle_id=$1', [p.id]))
+        .rows,
+      receipt.rows,
+    );
+    assert.equal((await db.query('SELECT 1 FROM historical_xiangqi_games')).rowCount, 0);
+    resetPuzzleStoreForTests();
+    const response = await detail(p.id);
+    assert.equal(response.status, 200);
+    assert.deepEqual(JSON.parse(response.body).puzzle.setupMove, plan.entries[0]!.after.setupMove);
+    assert.doesNotMatch(response.body, /"(?:sourceGame|history|moveLog|solution)":/);
+    assert.equal(response.body.includes(JSON.stringify(moves[0])), false);
+    for (const changed of [
+      p,
+      { ...plan.entries[0]!.after, credit: { ...p.credit, event: 'changed' } },
+    ])
+      await assert.rejects(
+        db.query('UPDATE puzzles SET data=$2::json WHERE id=$1', [p.id, JSON.stringify(changed)]),
+        /immutable/,
+      );
+  });
+
   test('dry-run, atomic append, receipt and idempotence with no source-game rows', async (t) => {
     resetPuzzleStoreForTests();
     t.after(resetPuzzleStoreForTests);

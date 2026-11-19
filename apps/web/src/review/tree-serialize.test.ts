@@ -6,14 +6,24 @@
 // xiangqi kernel so they are guaranteed legal (same pattern as game-tree.test.ts).
 
 import {
+  applyFFQBanqiReplayMove,
   applyStandardXiangqiMove,
+  createInitialFFQBanqiReplayState,
   createInitialXiangqiState,
+  FFQ_BANQI_PUBLIC_REPLAY,
+  type FFQBanqiPlayerView,
+  type FFQBanqiReplayIdentity,
+  type FFQBanqiReplayMove,
+  type FFQBanqiReplayState,
+  ffqBanqiReplayMoveToUci,
+  getFFQBanqiPlayerView,
   getStandardXiangqiLegalMoves,
+  parseFFQBanqiReplayMove,
   parseStandardXiangqiFen,
   type XiangqiMove,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { createGameTree, ROOT_PATH } from './game-tree.js';
+import { createGameTree, ROOT_PATH, type VariantTreeAdapter } from './game-tree.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
@@ -108,6 +118,94 @@ describe('tree-serialize', () => {
     const tree = deserializeTree(xiangqiTreeAdapter, corrupt);
     expect(tree.root.children).toHaveLength(1);
     expect(tree.root.children[0]?.id).toBe(legalUci);
+  });
+});
+
+describe('Fanfanqi public replay metadata', () => {
+  const opening: FFQBanqiReplayIdentity[] = [
+    { color: 'red', role: 'cannon' },
+    { color: 'black', role: 'horse' },
+    { color: 'red', role: 'soldier' },
+    { color: 'black', role: 'advisor' },
+  ];
+  // Exercise the persistence seam without adding study dispatch in this slice.
+  const adapter: VariantTreeAdapter<FFQBanqiReplayMove, FFQBanqiReplayState, FFQBanqiPlayerView> = {
+    mode: 'perfect-info',
+    initialTruth: () => createInitialFFQBanqiReplayState('study', opening),
+    isLegal: (state, move) => {
+      try {
+        applyFFQBanqiReplayMove(state, move);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    applyMove: applyFFQBanqiReplayMove,
+    project: (state) => [
+      {
+        key: 'truth',
+        label: 'Board',
+        tier: 'primary',
+        view: getFFQBanqiPlayerView(state, 'observer'),
+      },
+    ],
+    moveLabel: ffqBanqiReplayMoveToUci,
+    moveKey: ffqBanqiReplayMoveToUci,
+    toEngineUci: ffqBanqiReplayMoveToUci,
+    fromUci: parseFFQBanqiReplayMove,
+  };
+  const meta = { replay: FFQ_BANQI_PUBLIC_REPLAY, initialRevealed: opening } as const;
+
+  it('round-trips complete observed outcomes, branches, annotations and public opening only', () => {
+    const tree = createGameTree(adapter);
+    const first = tree.addMove([], {
+      from: 6,
+      to: 4,
+      capturedHidden: { color: 'red', role: 'general' },
+    })!;
+    tree.addMove(first, { from: 0, to: 0, revealed: { color: 'black', role: 'cannon' } });
+    tree.addMove([], { from: 1, to: 1, revealed: { color: 'red', role: 'advisor' } });
+    tree.annotateAt(first, { comments: [{ by: 'u1', text: 'Public covered capture.' }] });
+    const blob = serializeTree(tree, adapter, meta);
+    const rebuilt = deserializeTree(adapter, JSON.parse(JSON.stringify(blob)));
+    expect(JSON.parse(JSON.stringify(serializeTree(rebuilt, adapter, meta)))).toEqual({
+      version: 1,
+      ...meta,
+      root: {
+        children: [
+          {
+            uci: 'c1a1x:G',
+            annotations: { comments: [{ by: 'u1', text: 'Public covered capture.' }] },
+            children: [{ uci: '@a0:c', children: [] }],
+          },
+          { uci: '@b0:A', children: [] },
+        ],
+      },
+    });
+    expect(JSON.stringify(blob)).not.toMatch(/rootFen|board|deal|seed/);
+    expect(rebuilt.nodeAt(first)?.truth.hp).toEqual({ red: 30, black: 60 });
+    expect(tree.addMove([], { from: 2, to: 2 })).toBeNull();
+  });
+
+  it('rejects dealt roots, missing or impossible opening identities, and misplaced opening metadata', () => {
+    const tree = createGameTree(adapter);
+    for (const rootFen of ['secret', '']) {
+      expect(() => serializeTree(tree, adapter, { ...meta, rootFen })).toThrow(/dealt root/);
+      expect(() =>
+        deserializeTree(adapter, { version: 1, root: { children: [] }, ...meta, rootFen }),
+      ).toThrow(/dealt root/);
+    }
+    expect(() => serializeTree(tree, adapter, { replay: FFQ_BANQI_PUBLIC_REPLAY })).toThrow();
+    expect(() =>
+      serializeTree(tree, adapter, {
+        ...meta,
+        initialRevealed: Array(4).fill({ color: 'red', role: 'general' }),
+      }),
+    ).toThrow();
+    expect(() => serializeTree(tree, adapter, { initialRevealed: opening })).toThrow();
+    const blob = serializeTree(tree, adapter, meta);
+    blob.root.children = [{ uci: '@a0:G', children: [{ uci: '@b0:G', children: [] }] }];
+    expect(deserializeTree(adapter, blob).mainlinePath()).toHaveLength(1);
   });
 });
 

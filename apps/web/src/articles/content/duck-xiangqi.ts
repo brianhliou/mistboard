@@ -207,7 +207,13 @@ export const duckXiangqiArticle: Article = {
       lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',
-      secondary: [{ label: 'Six engine games', href: '/study/uMbk76wd', emphasis: 'secondary' }],
+      secondary: [
+        {
+          label: 'Challenge a friend',
+          href: '/?play=friend&gameSpecId=duck-xiangqi',
+          emphasis: 'secondary',
+        },
+      ],
     }),
   ],
 };

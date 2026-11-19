@@ -8,6 +8,144 @@ import { parseChapterTags, setAdminOnlyStudyGateForTests, tryHandle } from './ro
 
 type ResponseCapture = { body: string; headers: Record<string, string>; status: number | null };
 
+test('the classical tab serves the collections as full cards in reading order, paged', async (t) => {
+  init('postgres://mistboard@127.0.0.1:9/never');
+  t.after(close);
+  setAdminOnlyStudyGateForTests(async () => false);
+  t.after(() => setAdminOnlyStudyGateForTests(null));
+  const now = new Date('2026-11-17T12:00:00Z');
+  const row = (id: string, name: string, owner = 'mistboard') => ({
+    id,
+    owner_id: `user_${owner}`,
+    slug: null,
+    name,
+    description: '',
+    i18n: {},
+    owner_handle: owner,
+    owner_display_name: owner === 'mistboard' ? 'Mistboard' : owner,
+    chapter_count: '10',
+    chapter_preview: [{ name: 'Chapter 1', i18n: {} }],
+    preview_board: null,
+    like_count: '2',
+    visibility: 'public',
+    featured_at: null,
+    created_at: now,
+    updated_at: now,
+  });
+  const newest = Array.from({ length: 31 }, (_, i) =>
+    row(`engine${i}`, 'AB-JChess vs jqe, all 600 games'),
+  );
+  const elegant = Array.from({ length: 6 }, (_, i) => {
+    const name = `Elegant Pastime Manual, Vol. ${i + 1}: 90 classical compositions`;
+    return i === 1
+      ? { ...row(`elegant${i + 1}`, '适情雅趣 卷二'), i18n: { en: { name } } }
+      : row(`elegant${i + 1}`, name);
+  });
+  // The reading order the All studies shelf showed before it became a tab.
+  const classics = [
+    row('uXnuObfx', 'Seven Stars', 'teacher'),
+    ...elegant,
+    row('9IIMlPp1', 'Secret in the Tangerine: 137 classical compositions'),
+    row('vQveCryp', 'Deep Abyss, Wide Sea: 315 classical compositions'),
+    row('SsKhaRTs', 'Dream of Divine Strategy: 152 classical compositions'),
+    row('plum', 'Plum Blossom Spring: 50 classical games'),
+    row('bamboo', 'Bamboo Fragrance Studio Manual: 208 classical compositions'),
+    row('rhrGqFnM', 'Eighteen Variations of the Golden Roc'),
+    row('forest', 'Forest of Affairs: 2 classical games'),
+    row('Dfi3NpRE', 'Secret in the Tangerine, Vol. 1'),
+    row('XBQuhA9n', 'Secret in the Tangerine, Vol. 2'),
+  ];
+  const audits = [
+    row('audit1', 'What the solver found: 47 classical compositions'),
+    row('audit2', 'Nine records whose printed line does not hold: classical compositions'),
+    row('audit3', '渊深海阔 第217局: classical compositions'),
+  ];
+  const candidates = [
+    ...newest,
+    ...audits,
+    ...[...classics].reverse(),
+    row('player', 'My classical compositions', 'player'),
+  ];
+  let classicalQueries = 0;
+  t.mock.method(getPool(), 'query', async (sql: string, params: unknown[] = []) => {
+    // Privacy is the SQL's job: only publicly listable studies are candidates.
+    assert.match(sql, /s\.visibility = 'public'/);
+    assert.match(sql, /u\.profile_visibility IN \('public', 'unlisted'\)/);
+    if (!sql.includes('ANY($1::text[])')) return { rows: newest.slice(0, 31) };
+    classicalQueries++;
+    assert.doesNotMatch(sql, /OFFSET/, 'the whole set is ranked before the page is cut');
+    const pattern = typeof params[1] === 'string' ? params[1] : undefined;
+    if (pattern) assert.match(sql, /s\.name ILIKE \$2/);
+    const needle = pattern?.replaceAll('%', '').toLowerCase();
+    return {
+      rows: needle
+        ? candidates.filter((study) => study.name.toLowerCase().includes(needle))
+        : candidates,
+    };
+  });
+  const read = async (path: string, query: string) => {
+    const response = captureResponse();
+    assert.equal(
+      await tryHandle(
+        {},
+        { method: 'GET', url: `${path}?${query}`, headers: {} } as IncomingMessage,
+        response,
+        path,
+      ),
+      true,
+    );
+    assert.equal(response.status, 200);
+    return JSON.parse(response.body) as {
+      studies: Array<Record<string, unknown> & { id: string }>;
+      hasMore: boolean;
+      classicalStudies?: unknown;
+    };
+  };
+  const ids = (body: { studies: Array<{ id: string }> }) => body.studies.map((study) => study.id);
+
+  const body = await read('/api/studies/classical', 'limit=30');
+  assert.deepEqual(
+    ids(body),
+    classics.map((study) => study.id),
+  );
+  assert.equal(body.hasMore, false);
+  // A full card, the same shape the All studies and Staff picks grids render.
+  const seven = body.studies[0]!;
+  assert.deepEqual(seven.owner, { handle: 'teacher', displayName: 'teacher' });
+  assert.equal(seven.likeCount, 2);
+  assert.equal(seven.chapterCount, 10);
+  assert.deepEqual(seven.chapterPreview, [{ name: 'Chapter 1', i18n: {} }]);
+  assert.deepEqual(seven.chapterNames, ['Chapter 1']);
+  assert.equal(seven.visibility, 'public');
+  assert.equal(seven.previewBoard, null);
+  assert.deepEqual(body.studies[2]!.i18n, elegant[1]!.i18n);
+
+  const firstPage = await read('/api/studies/classical', 'limit=10');
+  assert.deepEqual(
+    ids(firstPage),
+    classics.slice(0, 10).map((study) => study.id),
+  );
+  assert.equal(firstPage.hasMore, true);
+  const secondPage = await read('/api/studies/classical', 'limit=10&offset=10');
+  assert.deepEqual(
+    ids(secondPage),
+    classics.slice(10).map((study) => study.id),
+  );
+  assert.equal(secondPage.hasMore, false);
+  const search = await read('/api/studies/classical', 'q=tangerine');
+  assert.deepEqual(ids(search), ['9IIMlPp1', 'Dfi3NpRE', 'XBQuhA9n']);
+
+  // All studies opens straight on its list: no classical shelf, even when asked.
+  const classicalBefore = classicalQueries;
+  const index = await read('/api/studies/public', 'limit=30&classical=1');
+  assert.equal(index.classicalStudies, undefined);
+  assert.deepEqual(
+    ids(index),
+    newest.slice(0, 30).map((study) => study.id),
+  );
+  assert.equal(classicalQueries, classicalBefore);
+});
+
 test('study decision reads omit disabled luck and preserve the stored row for re-enabling', async (t) => {
   const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
   t.after(() => {

@@ -8,6 +8,152 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
+describe('study index Classical collections tab', () => {
+  const card = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name,
+    description: '',
+    visibility: 'public',
+    chapterCount: 90,
+    chapterPreview: [{ name: 'Chapter 1' }],
+    updatedAt: '2026-11-17T12:00:00.000Z',
+    createdAt: '2026-11-17T12:00:00.000Z',
+    owner: { handle: 'mistboard', displayName: 'mistboard' },
+    likeCount: 0,
+    ...extra,
+  });
+  const seven = card('uXnuObfx', 'Seven Stars', {
+    i18n: { 'zh-Hant': { name: '七星聚會' } },
+    owner: { handle: 'teacher', displayName: 'Teacher' },
+  });
+  const elegant = card('elegant1', 'Elegant Pastime Manual, Vol. 1: 90 classical compositions');
+
+  it('lists five tabs in the rail, Classical collections after Staff picks', async () => {
+    window.history.replaceState({}, '', '/study');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ studies: [] })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() => expect(root.querySelector('.study-index__rail')).not.toBeNull());
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.study-index__rail-tab')].map((tab) => [
+        tab.getAttribute('aria-label') ?? tab.textContent,
+        tab.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['All studies', '/study'],
+      ['My studies', '/study?tab=mine'],
+      ['Favorites', '/study?tab=favorites'],
+      ['Staff picks', '/study?tab=staff'],
+      ['Classical collections', '/study?tab=classical'],
+    ]);
+    // A phone shows the short label (CSS picks one); both are in the tab.
+    const classical = root.querySelector('a.study-index__rail-tab[href="/study?tab=classical"]');
+    expect(classical?.querySelector('.study-index__rail-label')?.textContent).toBe(
+      'Classical collections',
+    );
+    expect(classical?.querySelector('.study-index__rail-label-short')?.textContent).toBe(
+      'Classical',
+    );
+  });
+
+  it('fetches the classical list and renders it as the same study cards, paged', async () => {
+    window.history.replaceState({}, '', '/study?tab=classical');
+    const calls: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      calls.push(url);
+      return url.includes('offset=2')
+        ? jsonResponse({ studies: [card('9IIMlPp1', 'Secret in the Tangerine')], hasMore: false })
+        : jsonResponse({ studies: [seven, elegant], hasMore: true });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.study-index__grid > li .study-index__card')).toHaveLength(2),
+    );
+    expect(calls[0]).toBe('/api/studies/classical?limit=30');
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('Classical collections');
+    expect(
+      [...root.querySelectorAll<HTMLAnchorElement>('.study-index__card')].map((a) =>
+        a.getAttribute('href'),
+      ),
+    ).toEqual(['/study/uXnuObfx', '/study/elegant1']);
+    expect(root.querySelector('.study-index__name')?.textContent).toBe('Seven Stars');
+    expect(root.querySelector('.study-index__thumbnail')).not.toBeNull();
+    expect(root.querySelector('.study-index__staff-intro')).toBeNull();
+    expect(root.querySelector('.study-index__search input')?.getAttribute('placeholder')).toContain(
+      'Classical collections',
+    );
+
+    root.querySelector<HTMLButtonElement>('.study-index__more-button')!.click();
+    await vi.waitFor(() => expect(root.querySelectorAll('.study-index__card')).toHaveLength(3));
+    expect(calls[1]).toBe('/api/studies/classical?limit=30&offset=2');
+    expect(root.querySelector('.study-index__more-button')).toBeNull();
+  });
+
+  it('localizes the tab, card names and links', async () => {
+    window.history.replaceState({}, '', '/zh-hant/study?tab=classical');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ studies: [seven] })),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() =>
+      expect(root.querySelector('.study-index__name')?.textContent).toBe('七星聚會'),
+    );
+    expect(
+      root.querySelector('.study-index__rail [aria-current="page"]')?.getAttribute('aria-label'),
+    ).toBe('古典棋譜集');
+    expect(root.querySelector('.study-index__card')?.getAttribute('href')).toBe(
+      '/zh-hant/study/uXnuObfx',
+    );
+  });
+
+  it('searches within the tab', async () => {
+    window.history.replaceState({}, '', '/study?tab=classical&q=tangerine');
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) => jsonResponse({ studies: [] }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() => expect(root.querySelector('.study-index__empty')).not.toBeNull());
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe('/api/studies/classical?limit=30&q=tangerine');
+  });
+
+  it('All studies opens directly on its list, with no classical shelf', async () => {
+    window.history.replaceState({}, '', '/study');
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) =>
+      // A server from before the tab still sends the shelf; the page ignores it.
+      jsonResponse({ studies: [card('engine0', 'AB-JChess vs jqe')], classicalStudies: [seven] }),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountStudyIndex(root);
+    await vi.waitFor(() => expect(root.querySelector('.study-index__grid')).not.toBeNull());
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe('/api/studies/public?limit=30');
+    expect(root.querySelector('.study-index__classical')).toBeNull();
+    expect(root.querySelector('.study-index__content h2')).toBeNull();
+    expect(
+      [...root.querySelector('.study-index__content')!.children].map((child) => child.className),
+    ).toEqual(['study-index__toolbar', 'study-index__grid']);
+    expect([...root.querySelectorAll('.study-index__name')].map((n) => n.textContent)).toEqual([
+      'AB-JChess vs jqe',
+    ]);
+  });
+});
+
 describe('study index Staff picks', () => {
   it('loads the public curated collection without repeating badges on its cards', async () => {
     window.history.replaceState({}, '', '/study?tab=staff');

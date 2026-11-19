@@ -36,6 +36,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 export const TRANSLATED_ARTICLE_SLUGS = [
   // xiangqi-nnue-training: machine-drafted 2026-11-12, not native-reviewed, from the English signed off that day.
   'xiangqi-nnue-training',
+  // Machine-drafted 2026-11-11, not native-reviewed, from the English signed
+  // off that day. Terms follow the zh shell catalog (通信棋, 研究) and the
+  // ab-jchess-vs-jqe article (期望得分, 百分点).
+  'one-opponent-four-variants',
   // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
   // off that day. Badge names follow the legacy badge catalog.
   'fog-future',
@@ -607,6 +611,56 @@ const ZH_HANS: Record<string, string> = {
   'Chess where you see only the squares your pieces can reach.': '只能看见己方棋子能走到的格子。',
   'Ranked animals race to enter the enemy den.': '动物按大小吃子，抢进对方兽穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻将，每手五张牌。',
+  // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
+  'Won the fog game, lost the other three': '赢了迷雾象棋，输了另外三盘',
+  'Won the fog game, lost three': '赢了迷雾象棋，输了另外三盘',
+  'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
+    '迷雾象棋、暗棋、揭棋和鸭子象棋：与同一位对手的四盘棋',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '与同一位棋手同时下的四盘通信棋，分别是迷雾象棋、暗棋、揭棋和鸭子象棋。每一步都由引擎评分，每次翻子都拆成选择和运气两部分。',
+  '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
+    '我和 @rebirthfox333 同时下了四盘通信棋，迷雾象棋、暗棋、揭棋和鸭子象棋各一盘。',
+  "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
+    '下面每个棋盘都能逐步回放对局，附有引擎的标记和得分走势图；暗棋和揭棋还会把每次翻子拆成选择和运气两部分。',
+  "On October 8, @rebirthfox333 and I started four correspondence games at once, one day a move, each in a different variant. I won the first and lost the other three. Each board is a study you can step through, with the engine's marks (?!, ? and ??), its lines and its score chart. A few notes follow each one.":
+    '10 月 8 日，我和 @rebirthfox333 同时开了四盘通信棋，每步限时一天，每盘一种变体。第一盘我赢了，另外三盘都输了。每个棋盘都是一个可以逐步回放的研究，带有引擎的标记（?!、? 和 ??）、它给出的变着和得分走势图。每盘后面附几句说明。',
+  'Fog Xiangqi: the chariot the fog hid': '迷雾象棋：迷雾藏住的车',
+  'In [Fog Xiangqi](/rules/fog-xiangqi) each side sees only the points its own pieces can reach, and the game ends when a general is taken. I was Black.':
+    '在[迷雾象棋](/rules/fog-xiangqi)中，每方只能看见己方棋子能走到的点，吃掉将或帅，对局就结束。我执黑。',
+  'Fog Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '迷雾象棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  "Red's sixth move decided it: the chariot went to a point my horse guarded from under the fog, and the horse took it. The engine sees the whole board, so its marks show what a move cost, not what either of us could see. Not all of mine have that excuse: on my first two moves my cannon could have taken a horse in plain view.":
+    '红方第 6 步决定了胜负：车走到了我的马在迷雾下护着的点，被马吃掉。引擎看得见整个棋盘，所以它的标记反映的是一步棋的代价，而不是我们当时各自看得到什么。我的失误并不都能这样开脱：头两步我的炮本可以吃掉一个就在眼前的马。',
+  'Banqi: the flips that dealt the game': '暗棋：翻子定了这盘棋',
+  'In [banqi](/rules/banqi) all 32 pieces start face down on half a board. A turn is a flip or a move, and the first flip decides the colours. Mine turned up a black elephant.':
+    '在[暗棋](/rules/banqi)中，32 个棋子全部背面朝上摆在半个棋盘上。每回合要么翻一个子，要么走一步，第一次翻子决定双方颜色。我翻出的是一个黑象。',
+  'Banqi, @brianhliou-dev vs @rebirthfox333, annotated':
+    '暗棋，@brianhliou-dev 对 @rebirthfox333，附注解',
+  "The board grades each flip twice: once for the choice to flip, once for what came up ([how that works](/blog/skill-vs-luck)). One flip went badly for me, a red cannon that took my cannon on the next move. But over the game my choices cost me more than the luck did, and I flipped 19 times to rebirthfox's 10.":
+    '棋盘给每次翻子打两次分：一次评翻子这个选择，一次评翻出了什么（[原理见此](/blog/skill-vs-luck)）。有一次翻子对我很不利，翻出一个红炮，下一步就吃掉了我的炮。但整盘算下来，我的选择让我损失的比运气更多，而且我翻了 19 次，rebirthfox 只翻了 10 次。',
+  'Jieqi: the chariot move and the face-down recapture': '揭棋：一步车和一次暗子回吃',
+  'In [jieqi](/rules/jieqi) every piece but the generals starts face down, moves as the piece whose home point it stands on, and turns face up once it moves.':
+    '在[揭棋](/rules/jieqi)中，除将帅外的棋子都背面朝上开局，按所在原位的棋子走法行棋，走动后翻开。',
+  'Jieqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '揭棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  'It was level until move 22, when my chariot went to f3 and the engine had me losing; f2 would have held. Red took back with a face-down piece, which turned out to be an elephant, and went on to mate me.':
+    '第 22 回合之前局面一直均势，那一步我的车走到 f3，引擎随即判我要输；走 f2 本可以守住。红方用一个暗子吃回，翻开是一枚相，之后把我将死。',
+  'Duck Xiangqi: the endgame lost by waiting': '鸭子象棋：残局里一味等着，输了',
+  'In [Duck Xiangqi](/rules/duck-xiangqi) every turn is a move and then a duck placement on an empty point, which blocks it for both sides. The game is won by taking the general.':
+    '在[鸭子象棋](/rules/duck-xiangqi)中，每回合先走一步棋，再把鸭子放到一个空点上，这个点双方都不能用。吃掉对方的将帅即获胜。',
+  'Duck Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '鸭子象棋，@rebirthfox333 对 @brianhliou-dev，附注解',
+  "I was ahead until move 20, when I left my horse where Red's chariot could take it. In the endgame I shuffled my general back and forth while Red's soldiers crossed the river, and Red went on to win.":
+    '第 20 回合之前我一直领先，那一步我把马留在了红车吃得到的地方。残局里我把将来回挪动，红方的兵趁机过河，最后红方赢了。',
+  'Why the chart is smoothed': '走势图为何经过平滑',
+  "The duck engine scores a position about 10 points better for whichever side is to move, so its raw numbers zigzag every turn. The chart averages each position with the one before, and each move is graded against the same player's next turn.":
+    '鸭子象棋引擎会给轮到走棋的一方多算大约 10 个百分点，所以原始数值每回合都来回跳动。走势图把每个局面与前一个局面取平均，每步棋都与同一棋手的下一回合对比评分。',
+  'Congratulations to @rebirthfox333 on winning the match 3-1, and thanks for the games.':
+    '恭喜 @rebirthfox333 以 3 比 1 赢下这场比赛，也谢谢这几盘棋。',
+  CORRESPONDENCE: '通信棋',
+  'ONE OPPONENT': '同一位对手',
+  'FOUR VARIANTS': '四种变体',
+  'A card reading one opponent, four variants': '一张写着“同一位对手，四种变体”的卡片',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
@@ -6372,6 +6426,11 @@ const ZH_HANS: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一颗兵，或吃将。',
   'An engine game': '一盘引擎对局',
+  "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.":
+    '用方向键逐步浏览这盘棋：Misty 第 8 级执红，把执黑的第 7 级的血打到零，其中七个时刻附有注解。图表显示红方的胜率；翻子或吃暗子旁的骰子表示那一步运气好不好。',
+  'Fanfanqi: Level 7 versus Level 8, annotated': '翻翻棋：第 7 级对第 8 级，附注解',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.':
+    '新增一盘引擎对局：Misty 第 8 级对第 7 级，附注解、着法评分、每次翻子的运气和一张红方胜率图。',
   // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
   '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
     '[MistyBanqi](/blog/mistybanqi) 第 7 级对第 8 级。第 7 级执黑，第 8 级执红；第 7 级无子可走时，第 8 级获胜。用箭头一步步看注解。两条线是两个级别各自估计的第 7 级胜率；着法评分评的是翻子前的选择，骰子显示翻出的子运气好坏。',
@@ -6407,14 +6466,12 @@ const ZH_HANS: Record<string, string> = {
     '迷雾国际象棋：Misty 自我对弈，白方第 28 回合吃王',
   'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
     '[配套研究](/study/MbaW80XR)收录了十一盘这样的对局，并逐步显示双方各自在迷雾中看到的局面。',
-  'Eleven engine games': '十一盘引擎对局',
   'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
     '这盘引擎对局出自 KataGo-AnimalChess（红方）与 Mistboard 自家引擎（蓝方）的 200 盘对抗赛，几乎用到了本页的所有规则。第 11 回合蓝方的老虎横跳过左边的河，第 13 回合它的狮子跳过右边的河。第 38 回合红方的狮子纵跳过河，第 40 回合红方站在陆地上的老鼠吃掉了蓝方的大象。三回合后，一只狼吃掉了站在红方陷阱里、已失去全部等级的老虎；第 47 回合红方走进蓝方兽穴。',
   'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
     '斗兽棋：一盘有跳河、鼠吃象和入穴的引擎对局',
   'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
     '全部 200 盘都收录在[配套研究](/study/0t8xpyv6)里，老虎横跳、最短和最长的胜局排在最前面。',
-  'The 200 engine games': '200 盘引擎对局',
   'Duck Xiangqi: an engine game, Black captures the general on move 60':
     '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
@@ -6423,7 +6480,6 @@ const ZH_HANS: Record<string, string> = {
   'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
     '堡垒象棋：一盘引擎对局，黑方第 43 回合将死',
-  'Twenty engine games': '二十盘引擎对局',
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站电脑三倍的强度自我对弈。第一次翻出的是红子，所以先手执红。第 10 回合双方的猫相遇并同归于尽，第 24 回合红方的老鼠吃掉了蓝方的大象，第 28 回合双方的狮子也同归于尽，蓝方随即无子可走。红方获胜。',
@@ -6529,7 +6585,6 @@ const ZH_HANS: Record<string, string> = {
     '疯狂屋象棋：一盘翻盘局，打入一兵将死',
   'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
     '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
-  'The six engine games': '六盘引擎对局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
     '被吃掉的棋子归入吃子一方的持子、士和象开局就在持子里的象棋：持子可以打入任何一个空点，士和象只能打入己方半盘，打入的子可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
@@ -7720,6 +7775,56 @@ const ZH_HANT: Record<string, string> = {
   'Chess where you see only the squares your pieces can reach.': '只能看見己方棋子能走到的格子。',
   'Ranked animals race to enter the enemy den.': '動物按大小吃子，搶進對方獸穴。',
   'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻將，每手五張牌。',
+  // one-opponent-four-variants: Machine-drafted 2026-11-11, not native-reviewed, from the English signed off that day.
+  'Won the fog game, lost the other three': '贏了迷霧象棋，輸了另外三盤',
+  'Won the fog game, lost three': '贏了迷霧象棋，輸了另外三盤',
+  'Fog Xiangqi, banqi, jieqi and Duck Xiangqi: four games against one opponent':
+    '迷霧象棋、暗棋、揭棋和鴨子象棋：與同一位對手的四盤棋',
+  'Four correspondence games against one player, in Fog Xiangqi, banqi, jieqi and Duck Xiangqi, with every move scored by an engine and every flip split into choice and luck.':
+    '與同一位棋手同時下的四盤通信棋，分別是迷霧象棋、暗棋、揭棋和鴨子象棋。每一步都由引擎評分，每次翻子都拆成選擇和運氣兩部分。',
+  '@rebirthfox333 and I played four correspondence games at once, one in each of Fog Xiangqi, banqi, jieqi and Duck Xiangqi.':
+    '我和 @rebirthfox333 同時下了四盤通信棋，迷霧象棋、暗棋、揭棋和鴨子象棋各一盤。',
+  "Every board below steps through the game with the engine's marks and score chart, and in banqi and jieqi it splits each flip into choice and luck.":
+    '下面每個棋盤都能逐步回放對局，附有引擎的標記和得分走勢圖；暗棋和揭棋還會把每次翻子拆成選擇和運氣兩部分。',
+  "On October 8, @rebirthfox333 and I started four correspondence games at once, one day a move, each in a different variant. I won the first and lost the other three. Each board is a study you can step through, with the engine's marks (?!, ? and ??), its lines and its score chart. A few notes follow each one.":
+    '10 月 8 日，我和 @rebirthfox333 同時開了四盤通信棋，每步限時一天，每盤一種變體。第一盤我贏了，另外三盤都輸了。每個棋盤都是一個可以逐步回放的研究，帶有引擎的標記（?!、? 和 ??）、它給出的變化和得分走勢圖。每盤後面附幾句說明。',
+  'Fog Xiangqi: the chariot the fog hid': '迷霧象棋：迷霧藏住的車',
+  'In [Fog Xiangqi](/rules/fog-xiangqi) each side sees only the points its own pieces can reach, and the game ends when a general is taken. I was Black.':
+    '在[迷霧象棋](/rules/fog-xiangqi)中，每方只能看見己方棋子能走到的點，吃掉將或帥，對局就結束。我執黑。',
+  'Fog Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '迷霧象棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  "Red's sixth move decided it: the chariot went to a point my horse guarded from under the fog, and the horse took it. The engine sees the whole board, so its marks show what a move cost, not what either of us could see. Not all of mine have that excuse: on my first two moves my cannon could have taken a horse in plain view.":
+    '紅方第 6 步決定了勝負：車走到了我的馬在迷霧下護著的點，被馬吃掉。引擎看得見整個棋盤，所以它的標記反映的是一步棋的代價，而不是我們當時各自看得到什麼。我的失誤並不都能這樣開脫：頭兩步我的炮本可以吃掉一隻就在眼前的馬。',
+  'Banqi: the flips that dealt the game': '暗棋：翻子定了這盤棋',
+  'In [banqi](/rules/banqi) all 32 pieces start face down on half a board. A turn is a flip or a move, and the first flip decides the colours. Mine turned up a black elephant.':
+    '在[暗棋](/rules/banqi)中，32 顆棋子全部背面朝上擺在半個棋盤上。每回合要麼翻一顆子，要麼走一步，第一次翻子決定雙方顏色。我翻出的是一顆黑象。',
+  'Banqi, @brianhliou-dev vs @rebirthfox333, annotated':
+    '暗棋，@brianhliou-dev 對 @rebirthfox333，附註解',
+  "The board grades each flip twice: once for the choice to flip, once for what came up ([how that works](/blog/skill-vs-luck)). One flip went badly for me, a red cannon that took my cannon on the next move. But over the game my choices cost me more than the luck did, and I flipped 19 times to rebirthfox's 10.":
+    '棋盤給每次翻子打兩次分：一次評翻子這個選擇，一次評翻出了什麼（[原理見此](/blog/skill-vs-luck)）。有一次翻子對我很不利，翻出一顆紅炮，下一步就吃掉了我的砲。但整盤算下來，我的選擇讓我損失的比運氣更多，而且我翻了 19 次，rebirthfox 只翻了 10 次。',
+  'Jieqi: the chariot move and the face-down recapture': '揭棋：一步車和一次暗子回吃',
+  'In [jieqi](/rules/jieqi) every piece but the generals starts face down, moves as the piece whose home point it stands on, and turns face up once it moves.':
+    '在[揭棋](/rules/jieqi)中，除將帥外的棋子都背面朝上開局，按所在原位的棋子走法行棋，走動後翻開。',
+  'Jieqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '揭棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  'It was level until move 22, when my chariot went to f3 and the engine had me losing; f2 would have held. Red took back with a face-down piece, which turned out to be an elephant, and went on to mate me.':
+    '第 22 回合之前局面一直均勢，那一步我的車走到 f3，引擎隨即判我要輸；走 f2 本可以守住。紅方用一顆暗子吃回，翻開是一顆相，之後把我將死。',
+  'Duck Xiangqi: the endgame lost by waiting': '鴨子象棋：殘局裡一味等著，輸了',
+  'In [Duck Xiangqi](/rules/duck-xiangqi) every turn is a move and then a duck placement on an empty point, which blocks it for both sides. The game is won by taking the general.':
+    '在[鴨子象棋](/rules/duck-xiangqi)中，每回合先走一步棋，再把鴨子放到一個空點上，這個點雙方都不能用。吃掉對方的將帥即獲勝。',
+  'Duck Xiangqi, @rebirthfox333 vs @brianhliou-dev, annotated':
+    '鴨子象棋，@rebirthfox333 對 @brianhliou-dev，附註解',
+  "I was ahead until move 20, when I left my horse where Red's chariot could take it. In the endgame I shuffled my general back and forth while Red's soldiers crossed the river, and Red went on to win.":
+    '第 20 回合之前我一直領先，那一步我把馬留在了紅車吃得到的地方。殘局裡我把將來回挪動，紅方的兵趁機過河，最後紅方贏了。',
+  'Why the chart is smoothed': '走勢圖為何經過平滑',
+  "The duck engine scores a position about 10 points better for whichever side is to move, so its raw numbers zigzag every turn. The chart averages each position with the one before, and each move is graded against the same player's next turn.":
+    '鴨子象棋引擎會給輪到走棋的一方多算大約 10 個百分點，所以原始數值每回合都來回跳動。走勢圖把每個局面與前一個局面取平均，每步棋都與同一棋手的下一回合對比評分。',
+  'Congratulations to @rebirthfox333 on winning the match 3-1, and thanks for the games.':
+    '恭喜 @rebirthfox333 以 3 比 1 贏下這場比賽，也謝謝這幾盤棋。',
+  CORRESPONDENCE: '通信棋',
+  'ONE OPPONENT': '同一位對手',
+  'FOUR VARIANTS': '四種變體',
+  'A card reading one opponent, four variants': '一張寫著「同一位對手，四種變體」的卡片',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
@@ -13517,6 +13622,11 @@ const ZH_HANT: Record<string, string> = {
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '兵不能吃炮。它可以吃另一顆兵，或吃將。',
   'An engine game': '一盤引擎對局',
+  "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.":
+    '用方向鍵逐步瀏覽這盤棋：Misty 第 8 級執紅，把執黑的第 7 級的血打到零，其中七個時刻附有註解。圖表顯示紅方的勝率；翻子或吃暗子旁的骰子表示那一步運氣好不好。',
+  'Fanfanqi: Level 7 versus Level 8, annotated': '翻翻棋：第 7 級對第 8 級，附註解',
+  'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.':
+    '新增一盤引擎對局：Misty 第 8 級對第 7 級，附註解、著法評分、每次翻子的運氣和一張紅方勝率圖。',
   // Rules-page engine games, Level 7 against Level 8 (2026-11-15).
   '[MistyBanqi](/blog/mistybanqi), Level 7 against Level 8. Level 7 plays black and Level 8 plays red; Level 8 wins when Level 7 has no legal move left. Step through the notes with the arrows. The two lines are each level’s own estimate of Level 7’s winning chances; move grades judge the choice before a flip, and the die shows the luck of the draw.':
     '[MistyBanqi](/blog/mistybanqi) 第 7 級對第 8 級。第 7 級執黑，第 8 級執紅；第 7 級無子可走時，第 8 級獲勝。用箭頭一步步看註解。兩條線是兩個級別各自估計的第 7 級勝率；著法評分評的是翻子前的選擇，骰子顯示翻出的子運氣好壞。',
@@ -13552,14 +13662,12 @@ const ZH_HANT: Record<string, string> = {
     '迷霧西洋棋：Misty 自我對弈，白方第 28 回合吃王',
   'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
     '[配套研究](/study/MbaW80XR)收錄了十一盤這樣的對局，並逐步顯示雙方各自在迷霧中看到的局面。',
-  'Eleven engine games': '十一盤引擎對局',
   'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
     '這盤引擎對局出自 KataGo-AnimalChess（紅方）與 Mistboard 自家引擎（藍方）的 200 盤對抗賽，幾乎用到了本頁的所有規則。第 11 回合藍方的老虎橫跳過左邊的河，第 13 回合它的獅子跳過右邊的河。第 38 回合紅方的獅子縱跳過河，第 40 回合紅方站在陸地上的老鼠吃掉了藍方的大象。三回合後，一隻狼吃掉了站在紅方陷阱裡、已失去全部等級的老虎；第 47 回合紅方走進藍方獸穴。',
   'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
     '鬥獸棋：一盤有跳河、鼠吃象和入穴的引擎對局',
   'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
     '全部 200 盤都收錄在[配套研究](/study/0t8xpyv6)裡，老虎橫跳、最短和最長的勝局排在最前面。',
-  'The 200 engine games': '200 盤引擎對局',
   'Duck Xiangqi: an engine game, Black captures the general on move 60':
     '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
@@ -13568,7 +13676,6 @@ const ZH_HANT: Record<string, string> = {
   'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
     '堡壘象棋：一盤引擎對局，黑方第 43 回合將死',
-  'Twenty engine games': '二十盤引擎對局',
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站電腦三倍的強度自我對弈。第一次翻出的是紅子，所以先手執紅。第 10 回合雙方的貓相遇並同歸於盡，第 24 回合紅方的老鼠吃掉了藍方的大象，第 28 回合雙方的獅子也同歸於盡，藍方隨即無子可走。紅方獲勝。',
@@ -13674,7 +13781,6 @@ const ZH_HANT: Record<string, string> = {
     '瘋狂屋象棋：一盤翻盤局，打入一兵將死',
   'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
     '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
-  'The six engine games': '六盤引擎對局',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
     '被吃掉的棋子歸入吃子一方的持子、士和象開局就在持子裡的象棋：持子可以打入任何一個空點，士和象只能打入己方半盤，打入的子可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':

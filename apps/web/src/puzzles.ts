@@ -127,6 +127,17 @@ const MATE_SLASH_DELAY_MS = 250;
 // Add a spec id here to unhide it.
 const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID];
 
+// Campaign tags on a landing URL (utm_*) survive the first-puzzle rewrite, so
+// analytics that loads after the trainer still credits the link's source.
+export function withCampaignParams(url: string, search: string): string {
+  const tags = [...new URLSearchParams(search)].filter(([key]) => key.startsWith('utm_'));
+  if (tags.length === 0) return url;
+  const [path, query = ''] = url.split('?');
+  const params = new URLSearchParams(query);
+  for (const [key, value] of tags) params.append(key, value);
+  return `${path}?${params.toString()}`;
+}
+
 export async function mountPuzzles(
   root: HTMLElement,
   initialPuzzleId: string | null = null,
@@ -546,12 +557,10 @@ export async function mountPuzzles(
   // back first. A reload past a finished puzzle starts at the head of the
   // fresh queue instead. A link opened from anywhere else is not a reload and
   // still opens the puzzle it names, finished or not.
-  let reloadedPastFinished = false;
   if (selectedId && isFirstMountReload()) {
     const fullId = resolveToFullPuzzleId(selectedId, summaries);
     if (solvedIds.has(fullId) || puzzleList.attemptedIds.includes(fullId)) {
       selectedId = null;
-      reloadedPastFinished = true;
     }
   }
   await Promise.all(
@@ -568,7 +577,6 @@ export async function mountPuzzles(
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
-  const outOfScopeLink = playerFilter && selectedId && !directSummary;
   // A normal visit defaults to the surfaced variant (Xiangqi); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
   if (directSummary) variantFilter = directSummary.variant;
@@ -588,9 +596,11 @@ export async function mountPuzzles(
       ? selectedId
       : (queue[0]?.id ?? null);
   if (firstId) {
-    if (reloadedPastFinished || outOfScopeLink) {
-      // Replace, not push: Back should not return to the finished puzzle.
-      window.history.replaceState(null, '', puzzleUrl(firstId));
+    const firstUrl = withCampaignParams(puzzleUrl(firstId), window.location.search);
+    if (`${window.location.pathname}${window.location.search}` !== firstUrl) {
+      // Name the first puzzle without adding a history entry, so Back leaves
+      // the page rather than returning to the bare URL or a finished puzzle.
+      window.history.replaceState(null, '', firstUrl);
     }
     await selectPuzzle(firstId, false);
   } else {

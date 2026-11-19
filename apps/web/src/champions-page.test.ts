@@ -1,3 +1,4 @@
+import { CANONICAL_VARIANT_ORDER } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import GOMOKU_MATCH from './articles/content/gomoku-title-match.json' with { type: 'json' };
 import { articleIsLive } from './articles/publish-time.js';
@@ -16,7 +17,7 @@ import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { EN_CONTENT } from './i18n/catalogs/content.js';
 import type { Locale } from './i18n/locale.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
-import { VARIANTS } from './variants.js';
+import { variantMiniIdForGameSpec } from './variants.js';
 
 const LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant'];
 const CHAMPION_KEYS = Object.keys(EN_CONTENT).filter((key) =>
@@ -88,6 +89,8 @@ describe('/champions', () => {
     const open = [...page.querySelectorAll<HTMLElement>('.champions-open')];
     expect(open.map((card) => card.dataset.game)).toEqual([
       'banqi',
+      'ffq-banqi',
+      'three-kingdoms-banqi',
       'duck-xiangqi',
       'crazyhouse-xiangqi',
       'dark-xiangqi',
@@ -99,7 +102,15 @@ describe('/champions', () => {
       page.querySelector<HTMLAnchorElement>(
         `.champions-open[data-game="${game}"] .champions-open-holder a`,
       );
-    for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip', 'xiangqi-mahjong']) {
+    for (const game of [
+      'banqi',
+      'ffq-banqi',
+      'three-kingdoms-banqi',
+      'dark-xiangqi',
+      'dark-chess',
+      'jungle-flip',
+      'xiangqi-mahjong',
+    ]) {
       expect(holder(game)?.textContent, game).toBe('Misty');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/misty');
     }
@@ -120,11 +131,14 @@ describe('/champions', () => {
     expect(TITLES).toHaveLength(CHAMPIONS.length + OPEN_TITLES.length);
   });
 
-  it('keeps the titles in the canonical variant order', () => {
-    const canonical = VARIANTS.map((variant) => variant.miniId);
-    const order = TITLES.map((title) => canonical.indexOf(title.gameId));
-    expect(order.every((index) => index >= 0)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
+  // Every launched game has a bot on prod, so the shelf is the title list: a
+  // newly launched game fails here until it gets a card (Fanfanqi and Three
+  // Kingdoms Banqi went live without one). Casual-only games such as Fanfanqi
+  // have no rating pool, so VARIANTS would miss them.
+  it('has one title per launched game, in the canonical variant order', () => {
+    expect(TITLES.map((title) => title.gameId)).toEqual(
+      CANONICAL_VARIANT_ORDER.map((id) => variantMiniIdForGameSpec(id)),
+    );
   });
 
   it('gives each champion its match score, how it took the title, and its buttons', () => {
@@ -244,6 +258,12 @@ describe('/champions', () => {
     // flip-jungle-skill-ceiling). No network row: Misty loads no separate net.
     expect(credits(open('banqi'))).toEqual([
       'Code: misty-banqi https://github.com/brianhliou/misty-banqi',
+    ]);
+    expect(credits(open('ffq-banqi'))).toEqual([
+      'Code: misty-ffq-banqi https://github.com/brianhliou/misty-ffq-banqi',
+    ]);
+    expect(credits(open('three-kingdoms-banqi'))).toEqual([
+      'Code: misty-three-kingdoms-banqi https://github.com/brianhliou/misty-three-kingdoms-banqi',
     ]);
     expect(credits(open('dark-chess'))).toEqual([
       'Code: misty https://github.com/brianhliou/misty',

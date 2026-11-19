@@ -975,10 +975,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // Scrubbing a replay is not playing, and re-entering a finished room must
     // not re-emit its finish.
     if (!view || !replay.isLive()) return;
-    // game_started is the number (human games started per week): a spectator
-    // opening a live room is not a game starting, and a stranger opening a
-    // finished one is not a game finishing. Seated viewers only.
-    if (!tenant.isColor(state.seat)) return;
+    // Wait until the server has identified the viewer. Spectator finishes are
+    // labelled explicitly; the shared tracker still excludes spectator starts.
+    if (state.seat === null) return;
     const timeControl = state.timeControl ?? state.clock;
     const baseProps = {
       gameId: view.id,
@@ -1009,10 +1008,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lifecycleTracker.update({
       statusType: lifecycleStatusType(status.type),
       baseProps,
+      seat: tenant.isColor(state.seat) ? state.seat : 'spectator',
       outcome:
         status.type === 'finished'
           ? { winner: status.winner, reason: status.reason, moveNumber: view.moveNumber }
-          : null,
+          : status.type === 'aborted'
+            ? { winner: null, reason: status.reason, moveNumber: view.moveNumber }
+            : null,
       ownMoveCount,
       moveNumber: view.moveNumber,
     });

@@ -22,12 +22,14 @@ import {
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
 import { finishedGameCorrespondenceOffer } from '../correspondence-again.js';
+import { cardMistyName } from '../current-games-model.js';
 import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import {
   GAME_ACTION_ICON_CHECK,
   GAME_ACTION_ICON_CROSS,
   GAME_ACTION_ICON_FLAG,
 } from '../game-action-icons.js';
+import { variantDisplayLabel } from '../game-display.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
@@ -745,6 +747,15 @@ export function createTenantRoomChrome<C extends string>(
       subline,
       players: tenant.colors.map((color, index) => {
         const serverName = ctx.seatDisplayNames()[color];
+        // The card's head names the game, so Misty drops it ("Misty Level 4");
+        // the tooltip keeps the full name. A member seat (a handle) is a person
+        // and keeps any name, as in brandSeatDisplayNames.
+        const cardName =
+          serverName === undefined ||
+          ctx.gameSpecId === undefined ||
+          ctx.seatProfiles()[color]?.handle
+            ? serverName
+            : cardMistyName(serverName, variantDisplayLabel(ctx.gameSpecId));
         return {
           score: scores[index] ?? null,
           // The disc wants the INK, not the seat. When a server display name exists it
@@ -755,8 +766,9 @@ export function createTenantRoomChrome<C extends string>(
           noDisc: !variantSeatsHaveInk(ctx.gameSpecId),
           // Same rule as the clock rows: only a server-supplied name links.
           profile: serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
+          ...(cardName !== serverName && serverName ? { fullName: serverName } : {}),
           name:
-            serverName ??
+            cardName ??
             (tenant.seatPlayerName
               ? tenant.seatPlayerName(color)
               : color === seat

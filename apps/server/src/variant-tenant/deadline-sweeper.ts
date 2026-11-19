@@ -28,6 +28,7 @@ export type TenantDeadlineSweeperOptions = {
   intervalMs?: number;
   isPersistenceInitialized?: () => boolean;
   listDue?: (now: Date) => Promise<Array<{ roomId: string; gameSpecId: string }>>;
+  listExpiredInvites?: (now: Date) => Promise<Array<{ roomId: string; gameSpecId: string }>>;
   now?: () => number;
   registrationFor?: typeof variantTenantForRoomId;
   // Deadline-warning pass, run after the due pass each tick. Injectable so
@@ -62,6 +63,8 @@ export function startTenantDeadlineSweeper(
   const intervalMs = options.intervalMs ?? DEADLINE_SWEEP_INTERVAL_MS;
   const isInitialized = options.isPersistenceInitialized ?? persistence.isInitialized;
   const listDue = options.listDue ?? ((now: Date) => persistence.listDueRoomDeadlines(now));
+  const listExpiredInvites =
+    options.listExpiredInvites ?? ((at: Date) => persistence.listExpiredCorrespondenceInvites(at));
   const now = options.now ?? Date.now;
   const registrationFor = options.registrationFor ?? variantTenantForRoomId;
   const warnDeadlines = options.warnDeadlines ?? ((at: Date) => sweepDeadlineWarnings(at));
@@ -75,7 +78,7 @@ export function startTenantDeadlineSweeper(
 
   async function runTick(): Promise<void> {
     if (!isInitialized()) return;
-    let due: Array<{ roomId: string; gameSpecId: string }>;
+    let due: Array<{ roomId: string; gameSpecId: string }> = [];
     try {
       due = await listDue(new Date(now()));
     } catch (err) {
@@ -83,10 +86,18 @@ export function startTenantDeadlineSweeper(
         { kind: 'deadline_sweep_list_failure', error: (err as Error).message, at: now() },
         'deadline sweep list failure',
       );
-      return;
+    }
+    try {
+      due.push(...(await listExpiredInvites(new Date(now()))));
+    } catch (err) {
+      logger.error(
+        { kind: 'expired_invite_sweep_list_failure', error: (err as Error).message, at: now() },
+        'expired invite sweep list failure',
+      );
     }
     const swept = new Set<string>();
     for (const row of due) {
+      if (swept.has(row.roomId)) continue;
       swept.add(row.roomId);
       const registration = registrationFor(row.roomId);
       if (!registration?.sweepDueDeadline) {

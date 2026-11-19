@@ -409,13 +409,17 @@ a.study-index__rail-tab.is-active:hover {
   cursor: default;
 }
 
+.study-index__rail-label-short {
+  display: none;
+}
+
 /* Narrow screens: rail above, single-column grid */
 @media (max-width: 720px) {
   .study-index {
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
-  /* The four tabs share one row: equal shares, tighter type, no wrap. */
+  /* The five tabs share one row: equal shares, tighter type, no wrap. */
   .study-index__rail-list {
     flex-direction: row;
     flex-wrap: nowrap;
@@ -435,6 +439,13 @@ a.study-index__rail-tab.is-active:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* A label too long for a fifth of the row swaps to its short form. */
+  .study-index__rail-label {
+    display: none;
+  }
+  .study-index__rail-label-short {
+    display: inline;
   }
   .study-index__toolbar {
     flex-direction: column;

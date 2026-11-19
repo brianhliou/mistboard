@@ -606,17 +606,17 @@ async function main() {
     throw new Error('--games must be even, between 2 and twice the pool size');
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
     throw new Error('--seed must be an unsigned 32-bit integer');
-  const nodes = option('--budgets', RAPFI_LEVELS.map((tier) => tier.nodes).join(','))
-    .split(',')
-    .map(Number);
+  const budgets = option('--budgets');
+  const nodes = budgets?.split(',').map(Number);
   if (
-    nodes.length !== RAPFI_LEVELS.length ||
-    nodes.some((n, i) => !Number.isSafeInteger(n) || n < 1 || (i > 0 && n <= nodes[i - 1]))
+    nodes &&
+    (nodes.length !== RAPFI_LEVELS.length ||
+      nodes.some((n, i) => !Number.isSafeInteger(n) || n < 1 || (i > 0 && n <= nodes[i - 1])))
   )
     throw new Error(`--budgets needs ${RAPFI_LEVELS.length} increasing positive integers`);
   const tierFile = option('--tiers');
   const levels = applyTierOverrides(
-    RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] })),
+    nodes ? RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] })) : RAPFI_LEVELS,
     tierFile ? JSON.parse(readFileSync(tierFile, 'utf8')) : [],
   );
   if (engine === 'native' && !isDeepStrictEqual(levels, RAPFI_LEVELS))

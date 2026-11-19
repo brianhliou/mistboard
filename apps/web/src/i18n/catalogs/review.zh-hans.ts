@@ -215,6 +215,8 @@ export const ZH_HANS_REVIEW = {
     '部分棋谱抄录自历史文献，着法、名称或注释都可能有误。若发现问题，请告诉我们，我们会对照原本核查。',
   'study.errataAction': '报告勘误',
   'study.indexAll': '全部研习',
+  'study.indexClassical': '古典棋谱集',
+  'study.indexClassicalShort': '古谱',
   'study.indexMine': '我的研习',
   'study.indexFavorites': '收藏',
   'study.indexStaff': '编辑精选',

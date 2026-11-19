@@ -202,6 +202,48 @@ test('romanizeXiangqiPlayerName keeps team qualifiers as separate words', () => 
   assert.equal(romanizeXiangqiPlayerName('河北 高飞'), 'Hebei Gao Fei');
 });
 
+test('DPXQ pairs retain both players in broadcast and player-page names', () => {
+  for (const name of ['卢玄斌 谢汶谕', '卢玄斌　谢汶谕']) {
+    assert.equal(romanizeXiangqiPlayerName(name), 'Lu Xuanbin / Xie Wenyu');
+    const tag = translatedXiangqiBroadcastPlayerTag({ name, nameEn: 'Stale pair name' });
+    assert.equal(tag.name, name);
+    assert.equal(tag.nameEn, 'Lu Xuanbin / Xie Wenyu');
+  }
+  assert.equal(romanizeXiangqiPlayerName('洪智 唐丹'), 'Hong Zhi / Tang Dan');
+  assert.doesNotMatch(romanizeXiangqiPlayerName('中国香港 林嘉欣')!, /\//);
+});
+
+test('DPXQ Japanese players never receive a Mandarin reading', () => {
+  for (const federation of [undefined, '日本']) {
+    assert.equal(romanizeXiangqiPlayerName('池田彩歌', federation), 'Ikeda Ayaka');
+    // No verified Japanese reading is available for this source spelling.
+    assert.equal(romanizeXiangqiPlayerName('山家爱美', federation), 'Japanese player');
+    assert.equal(romanizeXiangqiPlayerName('山家愛美', federation), 'Japanese player');
+  }
+  assert.equal(
+    translatedXiangqiBroadcastPlayerTag({ name: '池田彩歌', nameEn: 'Chi Tiancaige' }).nameEn,
+    'Ikeda Ayaka',
+  );
+});
+
+test('DPXQ event and round vocabulary translates words instead of romanizing them', () => {
+  assert.equal(
+    translateXiangqiEventName('2025年第八届“一带一路”锦江杯成都全球象棋双人赛 双人赛'),
+    '2025 8th Belt and Road Jinjiang Cup Chengdu Global Xiangqi Pairs',
+  );
+  assert.equal(
+    translateXiangqiEventName('全国象棋冠军比赛 个人乙组'),
+    'National Xiangqi Champion Competition Individual Division B',
+  );
+  assert.equal(translateXiangqiRoundLabel('预赛A组'), 'Preliminary Group A');
+  assert.equal(translateXiangqiRoundLabel('乙组'), 'Division B');
+  assert.equal(translateXiangqiTeamName('上海棋类二队'), 'Shanghai Board Games Second Team');
+  assert.equal(
+    translateXiangqiEventName('象棋双人赛 预赛A组'),
+    'Xiangqi Pairs Preliminary Group A',
+  );
+});
+
 test('romanizeXiangqiPlayerName returns undefined for ASCII input', () => {
   assert.equal(romanizeXiangqiPlayerName('A Player'), undefined);
   assert.equal(romanizeXiangqiPlayerName('Mistboard Engine'), undefined);

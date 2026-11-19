@@ -87,6 +87,7 @@ const EXAMPLES: Record<string, string> = {
   variant: 'xiangqi',
   handle: 'brianhliou',
   id: 'ytSzepET',
+  slug: 'yin-sheng',
   fen: 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w',
   url: 'https://mistboard.com/study/ytSzepET/Ue0EgpS7',
   q: 'opening',
@@ -160,13 +161,41 @@ function parametersTable(parameters: Parameter[]): HTMLElement {
     row.append(
       name,
       el('td', undefined, param.in),
-      el('td', 'api-docs-type', schemaLabel(param.schema)),
+      typeCell(param.schema),
       describe(el('td'), param.description ?? ''),
     );
     body.append(row);
   }
   table.append(head, body);
-  return table;
+  // On a phone the four columns can still outgrow the card; scroll the table,
+  // never the page.
+  const scroll = el('div', 'api-docs-params-scroll');
+  scroll.append(table);
+  return scroll;
+}
+
+/** Enums past this many values fold behind a disclosure: a 36-value list
+ *  inline makes one row taller than the rest of the card. */
+export const ENUM_INLINE_LIMIT = 8;
+
+function typeCell(schema: Schema | undefined): HTMLElement {
+  const cell = el('td', 'api-docs-type');
+  const values = schema?.enum?.filter((v) => v !== null) ?? [];
+  if (values.length <= ENUM_INLINE_LIMIT) {
+    cell.textContent = schemaLabel(schema);
+    return cell;
+  }
+  const fold = el('details', 'api-docs-enum');
+  // The summary stays one short line; the default goes under it so a narrow
+  // column does not wrap the toggle into a tall sliver.
+  fold.append(
+    el('summary', undefined, `one of ${values.length} values`),
+    el('div', 'api-docs-enum__values', values.join(', ')),
+  );
+  cell.append(fold);
+  if (schema?.default !== undefined)
+    cell.append(el('div', 'api-docs-enum__default', `default ${String(schema.default)}`));
+  return cell;
 }
 
 function operationCard(path: string, method: string, operation: Operation): HTMLElement {

@@ -12,7 +12,33 @@ import {
 } from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-// Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
+// The engine game's study on prod (created 2026-11-18 from
+// scripts/variant-lab/rules-page-games/plans/ffq-banqi.plan.json). A dev pair
+// reads its own database, so VITE_FFQ_BANQI_RULES_STUDY_PATH can point a local
+// preview at a local copy of the study.
+const ENGINE_GAME_PATH =
+  (import.meta.env.DEV && import.meta.env.VITE_FFQ_BANQI_RULES_STUDY_PATH) ||
+  '/embed/study/CCtKBPpJ/efHe1AI6';
+
+export function fanfanqiEngineGameSection(path: string) {
+  return {
+    heading: 'An engine game',
+    blocks: [
+      {
+        kind: 'paragraph' as const,
+        text: "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky.",
+      },
+      {
+        kind: 'embed' as const,
+        path,
+        title: 'Fanfanqi: Level 7 versus Level 8, annotated',
+        aspect: [702, 480] as [number, number],
+      },
+    ],
+  };
+}
+
+// Match FFQ_BANQI_RULES in variants-ffq-banqi.ts.
 // English launch rules; pieces still covered remain masked after the game.
 export const fanfanqiArticle: Article = {
   slug: 'fanfanqi',
@@ -26,6 +52,9 @@ export const fanfanqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-15',
+  updatedAt: '2026-11-18',
+  updateNote:
+    'Added an annotated engine game: Misty Level 8 against Level 7, with notes, move grades, the luck of each flip and a graph of Red’s winning chances.',
   audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
@@ -272,6 +301,7 @@ export const fanfanqiArticle: Article = {
         },
       ],
     },
+    fanfanqiEngineGameSection(ENGINE_GAME_PATH),
     {
       heading: 'Play on Mistboard',
       blocks: [

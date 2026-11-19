@@ -27,6 +27,8 @@ export interface TestClient {
   readonly room: string;
   /** Messages observed so far, in order. */
   readonly messages: unknown[];
+  /** Monotonic receipt time captured before parsing, including buffered messages. */
+  receivedAt(message: object): number | undefined;
   /** Seat assignment captured from the most recent `hello`. */
   seat: 'white' | 'black' | 'red' | 'spectator' | null;
   /** Server-issued seat token captured from `hello` if any. */
@@ -96,7 +98,7 @@ export interface ConnectOptions {
   cookie?: string;
   /** Wait for the initial `hello` message before resolving. Default: true. */
   awaitHello?: boolean;
-  /** Timeout for the hello message. */
+  /** Timeout for the WebSocket handshake and then the hello message. */
   helloTimeoutMs?: number;
 }
 
@@ -116,10 +118,12 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   const origin = `${originScheme}//${parsedUrl.host}`;
   const socket = new WebSocket(target, protocols, {
     origin,
+    handshakeTimeout: opts.helloTimeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS,
     headers: opts.cookie ? { Cookie: opts.cookie } : undefined,
   });
 
   const messages: unknown[] = [];
+  const receiptTimes = new WeakMap<object, number>();
   const waiters: Array<{
     predicate: (msg: MessageOf) => boolean;
     resolve: (msg: MessageOf) => void;
@@ -133,6 +137,7 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   let closeReason = '';
 
   socket.on('message', (raw) => {
+    const receivedAt = performance.now();
     let parsed: MessageOf;
     try {
       parsed = JSON.parse(raw.toString()) as MessageOf;
@@ -140,6 +145,7 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
       return;
     }
     messages.push(parsed);
+    receiptTimes.set(parsed, receivedAt);
     // Fan out to any pending waiters whose predicate now matches.
     for (let i = waiters.length - 1; i >= 0; i -= 1) {
       const waiter = waiters[i]!;
@@ -163,6 +169,7 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => {
       socket.off('open', onOpen);
+      socket.terminate();
       reject(err);
     };
     const onOpen = () => {
@@ -176,6 +183,7 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   const client: TestClient = {
     room: opts.room,
     messages,
+    receivedAt: (message) => receiptTimes.get(message),
     seat: null,
     seatToken: null,
     clientId: null,
@@ -223,9 +231,14 @@ export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   };
 
   if (opts.awaitHello !== false) {
-    const hello = await client.expectMessage('hello', {
-      timeoutMs: opts.helloTimeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS,
-    });
+    const hello = await client
+      .expectMessage('hello', {
+        timeoutMs: opts.helloTimeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS,
+      })
+      .catch((err) => {
+        socket.terminate();
+        throw err;
+      });
     const h = hello as unknown as {
       seat: 'white' | 'black' | 'red' | 'spectator';
       seatToken?: string;

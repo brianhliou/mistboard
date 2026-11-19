@@ -20,9 +20,11 @@ import {
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { banqiStateToDealtFen, banqiStateToEngineFen } from './banqi-fen.js';
+import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
 import {
   banqiPlyReveal,
   banqiSquareToIcga,
+  ffqBanqiPlyReveal,
   type HiddenPieceRecord,
   type HiddenPieceRecordPly,
   type HiddenPieceVariant,
@@ -51,6 +53,13 @@ import {
   createInitialBanqiState,
   getBanqiLegalMoves,
 } from './variants-banqi.js';
+import {
+  applyFFQBanqiMove,
+  createInitialFFQBanqiState,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  type FFQBanqiState,
+  getFFQBanqiLegalMoves,
+} from './variants-ffq-banqi.js';
 import {
   applyJieqiMove,
   createInitialJieqiState,
@@ -184,12 +193,182 @@ function playThreeKingdomsBanqi(seed: number, maxPlies: number): Played {
   };
 }
 
-const PLAYERS: Record<HiddenPieceVariant, (seed: number, maxPlies: number) => Played> = {
+const PLAYERS: Record<
+  Exclude<HiddenPieceVariant, 'ffq-banqi'>,
+  (seed: number, maxPlies: number) => Played
+> = {
   jieqi: playJieqi,
   banqi: playBanqi,
   'three-kingdoms-banqi': playThreeKingdomsBanqi,
   'jungle-flip': playJungleFlip,
 };
+
+test('Fanfanqi public records replay observed flips without a dealt root', () => {
+  assert.deepEqual(parseHiddenPiecePgnToken('ffq-banqi' as HiddenPieceVariant, '@a0=C'), {
+    uci: '@a0',
+    revealed: { color: 'red', role: 'cannon' },
+  });
+  const record: HiddenPieceRecord = {
+    variant: 'ffq-banqi',
+    initial_revealed: [
+      { color: 'red', role: 'cannon' },
+      { color: 'black', role: 'soldier' },
+      { color: 'red', role: 'horse' },
+      { color: 'black', role: 'advisor' },
+    ],
+    plies: [{ uci: '@a0', revealed: { color: 'black', role: 'general' } }],
+  };
+  const replayed = replayHiddenPieceRecord(record);
+  assert.ok(replayed.ok, JSON.stringify(replayed));
+  assert.equal(replayed.finalDealtFen, null);
+  assert.deepEqual(replayed.status, { type: 'playing', turn: 'black' });
+});
+
+function recordFFQ(start: FFQBanqiState, limit: number) {
+  const initial_revealed = FFQ_BANQI_FACE_UP_SQUARES.map((square) => {
+    const piece = start.board[square]!;
+    return { color: piece.color, role: piece.role };
+  });
+  let state = start;
+  let random = 1161;
+  const plies: HiddenPieceRecordPly[] = [];
+  const observed: number[] = [];
+  while (state.status.type === 'playing' && plies.length < limit) {
+    const moves = getFFQBanqiLegalMoves(state);
+    random = (Math.imul(random, 1664525) + 1013904223) >>> 0;
+    const move = moves[random % moves.length]!;
+    const square = (n: number) => `${String.fromCharCode(97 + (n % 4))}${Math.floor(n / 4)}`;
+    const reveal = ffqBanqiPlyReveal(state, move);
+    plies.push(
+      ply(
+        move.from === move.to ? `@${square(move.from)}` : square(move.from) + square(move.to),
+        reveal,
+      ),
+    );
+    if (reveal.revealed || reveal.capturedHidden) observed.push(move.to);
+    state = applyFFQBanqiMove(state, move);
+  }
+  return { record: { variant: 'ffq-banqi', initial_revealed, plies }, state, observed };
+}
+
+test('Fanfanqi JSON and PGN preserve every observed outcome, HP, pools, counters and terminal result', () => {
+  let covered = 0;
+  let ended = 0;
+  for (let seed = 1; seed <= 12; seed += 1) {
+    const { record, state } = recordFFQ(createInitialFFQBanqiState('record', seed), 300);
+    covered += record.plies.filter((p) => p.captured_hidden).length;
+    if (state.status.type === 'finished') ended += 1;
+    const json = JSON.parse(JSON.stringify(record));
+    const expected = {
+      ok: true,
+      variant: 'ffq-banqi',
+      plies: record.plies.length,
+      finalFen: ffqBanqiStateToFen(state),
+      finalDealtFen: null,
+      status: state.status,
+    };
+    assert.deepEqual(JSON.parse(JSON.stringify(replayHiddenPieceRecord(json))), expected);
+    const result =
+      state.status.type === 'finished'
+        ? state.status.winner === 'red'
+          ? '1-0'
+          : state.status.winner === 'black'
+            ? '0-1'
+            : '1/2-1/2'
+        : '*';
+    const pgn = writeHiddenPiecePgn({
+      variant: 'ffq-banqi',
+      tags: { Variant: 'Fanfanqi' },
+      result,
+      dealFen: null,
+      initialRevealed: record.initial_revealed,
+      plies: record.plies,
+    });
+    assert.ok(!pgn.includes('DealFEN'));
+    assert.ok(pgn.includes(`[FEN "${hiddenPieceStartFen('ffq-banqi', record.initial_revealed)}"]`));
+    const parsed = parseHiddenPiecePgn(pgn);
+    assert.ok(parsed.ok, JSON.stringify(parsed));
+    assert.deepEqual(parsed.record, json);
+    assert.equal(parsed.tags.Result, result);
+    assert.deepEqual(replayHiddenPieceRecord(parsed.record), expected);
+    const tokens = strictPgnTokens(pgn.split('\n\n')[1]!).filter(
+      (t) => !/^\d+\.+$/.test(t) && !['1-0', '0-1', '1/2-1/2', '*'].includes(t),
+    );
+    assert.deepEqual(
+      tokens,
+      record.plies.map((p) => hiddenPiecePgnToken('ffq-banqi', p)),
+    );
+  }
+  assert.ok(covered > 0);
+  assert.ok(ended > 0);
+});
+
+test('complete Fanfanqi records, PGN and replay results are invariant to the undisclosed deal', () => {
+  const start = createInitialFFQBanqiState('record', 1161);
+  const original = recordFFQ(start, 3);
+  const hidden = start.board.flatMap((p, i) =>
+    p?.faceDown && !original.observed.includes(i) ? [i] : [],
+  );
+  const swapped = { ...start, board: [...start.board] };
+  hidden.forEach((square, i) => {
+    swapped.board[square] = start.board[hidden[hidden.length - i - 1]!]!;
+  });
+  const changed = recordFFQ(swapped, 3);
+  const output = (record: typeof original.record) => ({
+    record,
+    replay: replayHiddenPieceRecord(record),
+    pgn: writeHiddenPiecePgn({
+      variant: 'ffq-banqi',
+      tags: { Variant: 'Fanfanqi' },
+      result: '*',
+      dealFen: null,
+      initialRevealed: record.initial_revealed,
+      plies: record.plies,
+    }),
+  });
+  assert.equal(JSON.stringify(output(original.record)), JSON.stringify(output(changed.record)));
+  assert.doesNotMatch(JSON.stringify(original.record), /"(?:deal|board|seed|deal_fen)"/);
+});
+
+test('Fanfanqi codecs reject dealt roots, invalid openings and missing or impossible outcomes', () => {
+  const { record } = recordFFQ(createInitialFFQBanqiState('record', 1161), 0);
+  const game = {
+    variant: 'ffq-banqi' as const,
+    tags: { Variant: 'ffq-banqi' },
+    result: '*',
+    dealFen: null,
+    initialRevealed: record.initial_revealed,
+    plies: record.plies,
+  };
+  const pgn = writeHiddenPiecePgn(game);
+  for (const deal_fen of ['secret-deal', '']) {
+    assert.equal(replayHiddenPieceRecord({ ...record, deal_fen }).ok, false);
+    assert.throws(() => writeHiddenPiecePgn({ ...game, dealFen: deal_fen }));
+    assert.equal(parseHiddenPiecePgn(`[DealFEN "${deal_fen}"]\n${pgn}`).ok, false);
+  }
+  assert.equal(replayHiddenPieceRecord({ variant: 'ffq-banqi', plies: [] }).ok, false);
+  assert.equal(parseHiddenPiecePgn(pgn.replace(/\[FEN[^\n]+\n/, '')).ok, false);
+  assert.equal(parseHiddenPiecePgn(pgn.replace('X', 'G')).ok, false);
+  for (const bad of [
+    { uci: '@a0' },
+    { uci: 'a0a0', revealed: { color: 'red', role: 'cannon' } },
+    { uci: '@a0', revealed: { color: 'red', role: 'toString' } },
+    {
+      uci: '@a0',
+      revealed: { color: 'red', role: 'cannon' },
+      captured_hidden: { color: 'black', role: 'horse' },
+    },
+  ] as HiddenPieceRecordPly[]) {
+    const replayed = replayHiddenPieceRecord({ ...record, plies: [bad] });
+    assert.equal(replayed.ok, false);
+    if (!replayed.ok) assert.equal(replayed.ply, 1);
+    assert.throws(() => writeHiddenPiecePgn({ ...game, plies: [bad] }));
+  }
+  assert.deepEqual(parseHiddenPiecePgnToken('ffq-banqi', 'c1a1x=n'), {
+    uci: 'c1a1',
+    captured_hidden: { color: 'black', role: 'horse' },
+  });
+});
 
 for (const [variant, play] of Object.entries(PLAYERS)) {
   test(`${variant}: a random game replays from its moves alone and from its deal, to the kernel's final position`, () => {

@@ -2,12 +2,13 @@ import {
   type BanqiColor,
   type BanqiMove,
   type BanqiSeat,
+  FFQ_BANQI_PUBLIC_REPLAY,
   FFQ_BANQI_SPEC_ID,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
-import { ffqBanqiBoardView } from '../ffq-banqi-board.js';
+import { ffqBanqiBoardView, ffqBanqiIndex } from '../ffq-banqi-board.js';
 import { createFFQBanqiHpMeter } from '../ffq-banqi-hp.js';
 import { variantDisplayLabel } from '../game-display.js';
 import {
@@ -18,8 +19,25 @@ import {
   banqiPieceGhostSvg,
 } from '../live-banqi-render.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
-import { type FFQBanqiReviewSnapshot, makeFFQBanqiTreeAdapter } from './ffq-banqi-tree-adapter.js';
+import {
+  type FFQBanqiReviewSnapshot,
+  makeFFQBanqiStudyTreeAdapter,
+  makeFFQBanqiTreeAdapter,
+} from './ffq-banqi-tree-adapter.js';
 import { mountTreeReview, type TreePresentation, type TreeReviewConfig } from './tree-review.js';
+
+/** A flip or a capture of a covered piece draws from the hidden pool, so its
+ *  luck die sits on the square it landed on, as banqi's does. It reads only the
+ *  masked view before the move, so a stale score never marks a move that drew
+ *  nothing. No odds card yet: FFQ has no hidden-pool helper to count from. */
+export function ffqBanqiLuckMarker(
+  move: BanqiMove,
+  info: { luck: number; before: FFQBanqiReviewSnapshot },
+): BanqiBoardMarker | null {
+  return info.before.view.board[ffqBanqiIndex(move.to)]?.faceDown
+    ? { square: move.to, kind: 'luck', luck: { luck: info.luck } }
+    : null;
+}
 
 export function mountFFQBanqiReview(
   root: HTMLElement,
@@ -34,7 +52,10 @@ export function mountFFQBanqiReview(
     BanqiBoardArrow,
     BanqiBoardMarker
   > = {
-    adapter: makeFFQBanqiTreeAdapter(snapshots, config.moves),
+    adapter:
+      config.initialTree?.replay === FFQ_BANQI_PUBLIC_REPLAY
+        ? makeFFQBanqiStudyTreeAdapter(config.initialTree.initialRevealed!)
+        : makeFFQBanqiTreeAdapter(snapshots, config.moves),
     engine: null,
     fen: (frame) => frame.fen,
     boardHostClassName: 'banqi-postgame-board',
@@ -79,6 +100,7 @@ export function mountFFQBanqiReview(
       kind: 'circle',
       className: `xq-shape--${shape.brush}`,
     }),
+    moveLuckMarker: ffqBanqiLuckMarker,
     moveGlyphMarker: (move, glyph) => ({
       square: move.to,
       kind: 'glyph',

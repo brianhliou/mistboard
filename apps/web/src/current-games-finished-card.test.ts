@@ -2,11 +2,13 @@
 // hands (never the misty tile), the board box takes its board's own ratio so
 // it runs edge to edge, the winner's name
 // reads first, and the finish time sits after the result in the bottom row.
-import type { XmjTile } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { XIANGQI_MAHJONG_SPEC_ID, XMJ_SEATS, type XmjTile } from '@mistboard/game';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildFinishedTile } from './current-games.js';
 import { type XmjFinalView, xmjFinalHandsSvg } from './current-games-xmj-card.js';
 import type { FeaturedGame, GameParticipant } from './game-display.js';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
+import * as localeModule from './i18n/locale.js';
 
 function participant(color: GameParticipant['color'], displayName: string): GameParticipant {
   return { color, displayName, subjectType: 'user', subjectId: null, visibility: 'public' };
@@ -29,7 +31,7 @@ function finishedGame(overrides: Partial<FeaturedGame>): FeaturedGame {
 
 const XMJ_GAME = finishedGame({
   roomId: 'xmj_942676f6',
-  variant: 'xiangqi-mahjong',
+  variant: XIANGQI_MAHJONG_SPEC_ID,
   result: 'east-wins',
   termination: 'timeout',
   participants: [participant('east', 'Misty'), participant('west', 'rebirthfox333')],
@@ -81,7 +83,7 @@ describe('buildFinishedTile', () => {
     expect(line.className).toBe('current-game-finished-line');
     const [result, when] = [...line.children] as HTMLElement[];
     expect(result?.className).toBe('current-game-result');
-    expect(result?.textContent).toBe('Misty wins');
+    expect(result?.textContent).toBe('East wins');
     expect(when?.tagName).toBe('TIME');
     expect(when?.className).toBe('current-game-finished-when');
     expect(when?.getAttribute('datetime')).toBe('2026-10-09T12:00:00.000Z');
@@ -100,6 +102,32 @@ describe('buildFinishedTile', () => {
       black: 'won',
     });
     expect(outcomes(finishedGame({ result: 'draw' }))).toEqual({ red: null, black: null });
+  });
+});
+
+describe.each([
+  { locale: 'en', east: 'East wins', west: 'West wins', draw: 'Draw' },
+  { locale: 'zh-Hans', east: '东家获胜', west: '西家获胜', draw: '和棋' },
+  { locale: 'zh-Hant', east: '東家獲勝', west: '西家獲勝', draw: '和棋' },
+] as const)('finished Xiangqi Mahjong results in $locale', (copy) => {
+  beforeEach(async () => {
+    await ensureLocaleCatalog(copy.locale);
+    vi.spyOn(localeModule, 'currentLocale').mockReturnValue(copy.locale);
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each(XMJ_SEATS)('names the winning %s seat instead of its player', (seat) => {
+    const tile = buildFinishedTile({ ...XMJ_GAME, result: `${seat}-wins` });
+    const result = tile.querySelector('.current-game-result');
+    expect(result?.textContent).toBe(copy[seat]);
+    expect(result?.textContent).not.toContain('Misty');
+    expect(result?.textContent).not.toContain('rebirthfox333');
+  });
+
+  it('shows a draw without naming a seat or player', () => {
+    const tile = buildFinishedTile({ ...XMJ_GAME, result: 'draw' });
+    expect(tile.querySelector('.current-game-result')?.textContent).toBe(copy.draw);
   });
 });
 

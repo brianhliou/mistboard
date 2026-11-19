@@ -35,6 +35,8 @@ const CHAMPIONS_TITLE_SPECS = new Set<GameSpecId>([
   'jungle-flip',
   'xiangqi-mahjong',
   'gomoku',
+  'ffq-banqi',
+  'three-kingdoms-banqi',
 ]);
 const KNOWN_FLAIR_GAPS = new Set<GameSpecId>([
   'ffq-banqi', // Casual launch without variant flair, matching the server.
@@ -145,7 +147,7 @@ describe('variant parity', () => {
           : {
               ...spec,
               ...(surface === 'champions title presence'
-                ? { championsTitle: true }
+                ? { championsTitle: false }
                 : { rated: false }),
             },
       );

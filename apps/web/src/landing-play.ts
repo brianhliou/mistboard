@@ -60,13 +60,19 @@ import {
 } from './landing-bot-policy.js';
 import { buildLandingChallengePlayer } from './landing-challenge-player.js';
 import { createLandingLiveChallenge } from './landing-live-challenge.js';
+import { lastPlayedVariant, withLastPlayedFirst } from './last-played-variant.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import { buildSeekAcceptAction } from './seek-accept.js';
+import {
+  buildCorrespondenceDeadlineNotice,
+  buildCorrespondenceListDeadlineNotice,
+  buildSeekAcceptAction,
+  correspondenceDeadlineText,
+} from './seek-accept.js';
 import {
   buildSetupRowSection,
   colorOptionButton,
@@ -195,6 +201,7 @@ type LobbyTicketResponse = {
   url?: string;
 };
 export type OpenLobbyRequest = {
+  seekId?: string;
   gameSpecId?: string;
   rated?: boolean;
   timeControl: {
@@ -388,9 +395,16 @@ export function setRoomNavigator(nav: RoomNavigator | null): void {
 // transition must dismiss the dialog (it lives on document.body, outside #app,
 // so the DOM swap would otherwise strand it and its document-level keydown
 // listener).
-let activeDialogClose: (() => void) | null = null;
-export function closeActiveLandingDialog(): void {
-  activeDialogClose?.();
+type SetupDialogCloseHow = 'started' | 'dismissed' | 'navigated';
+let activeDialogClose: ((how: SetupDialogCloseHow) => void) | null = null;
+export function closeActiveLandingDialog(how: SetupDialogCloseHow = 'navigated'): void {
+  activeDialogClose?.(how);
+}
+
+function navigateFromSetup(url: string): void {
+  // Mark and close before either a full reload or the SPA teardown can run.
+  closeActiveLandingDialog('started');
+  roomNavigator(url);
 }
 
 // What had focus when the setup dialog first opened, so closing it hands focus
@@ -787,8 +801,7 @@ function fillSeedRatings(seedsBlock: HTMLElement, bots: LandingBotRosterEntry[])
 // random color, standard start).
 const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // How many variants get a promoted pool row. Order is the canonical product
-// order (xiangqi first since the 2026-07 pivot), so this promotes the top of the
-// catalog rather than a second hand-maintained ranking. Sized to the full
+// order, with the player's last played game lifted to the first row. Sized to the full
 // product catalog (config/product-profile.json), so in prod every playable
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
@@ -854,10 +867,11 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
   head.append(headCell(t('play.opponentEngine', {}, locale)));
   wrap.append(head);
 
-  for (const { gameSpecId, label } of enabledLandingVariantGameSpecs('pvp', locale).slice(
-    0,
-    QUICK_PAIR_ROW_COUNT,
-  )) {
+  const specs = withLastPlayedFirst(
+    enabledLandingVariantGameSpecs('pvp', locale),
+    lastPlayedVariant(),
+  ).slice(0, QUICK_PAIR_ROW_COUNT);
+  for (const { gameSpecId, label } of specs) {
     const row = document.createElement('div');
     row.className = 'landing-quickpair-row';
     row.dataset.gameSpec = gameSpecId;
@@ -1221,6 +1235,9 @@ export function buildLobbyPanel(
     }
     corrHead.hidden = false;
     for (const seek of feed.seeks) corrRows.append(corrSeekRow(seek, locale));
+    if (feed.seeks.some((seek) => !seek.isMine)) {
+      corrRows.append(buildCorrespondenceListDeadlineNotice(locale));
+    }
     corrRows.append(correspondenceListFooter(locale));
   };
 
@@ -1617,6 +1634,22 @@ function formatTimeControl(timeControl: OpenLobbyRequest['timeControl']): string
   return `${minuteLabel} + ${increment}`;
 }
 
+// The variants whose bot setup shows an open casual seek (#1194). The server
+// holds the same list (SEEK_PROMPT_GAME_SPECS) and answers nothing outside it.
+export const SEEK_PROMPT_GAME_SPEC_IDS = [JIEQI_SPEC_ID, XIANGQI_SPEC_ID] as const;
+export type SeekPromptGameSpecId = (typeof SEEK_PROMPT_GAME_SPEC_IDS)[number];
+export function isSeekPromptGameSpec(gameSpecId: string): gameSpecId is SeekPromptGameSpecId {
+  return (SEEK_PROMPT_GAME_SPEC_IDS as readonly string[]).includes(gameSpecId);
+}
+// Most seeks end inside a minute, so the prompt has to appear within a couple
+// of seconds to be of use.
+const SEEK_PROMPT_POLL_MS = 2_000;
+
+/** "10+5": the clock as the pace chips write it. */
+export function compactTimeControl(timeControl: OpenLobbyRequest['timeControl']): string {
+  return formatTimeControl(timeControl).replace(/\s+/g, '');
+}
+
 function formatWaitAge(waitingMs: number): string {
   const seconds = Math.max(0, Math.floor(waitingMs / 1000));
   if (seconds < 60) return `${seconds}s`;
@@ -1764,6 +1797,7 @@ function defaultLandingGameSpecId(
 }
 
 export function openLandingSetupDialog(choice: LandingPlayChoice): void {
+  closeActiveLandingDialog('dismissed');
   const locale = choice.locale ?? currentLocale();
   rememberLastSetupMode(choice.mode);
   if (!setupDialogReopening) {
@@ -1834,6 +1868,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // dialog opened on. game_started is the bottom; the gap between them is the
   // dialog's own drop-off. Mode switches inside the dialog are a reopen and
   // carry their own source so they do not read as new arrivals.
+  const openedAt = Date.now();
   track('setup_dialog_opened', {
     source: choice.source ?? 'reopen',
     ...(choice.source === 'hero' ? { mode_from: choice.modeFrom ?? 'default' } : {}),
@@ -1891,6 +1926,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
   let syncGameSpecificSections = () => {};
+  let syncSeekPrompt = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
   let syncSetupAccordion = () => {};
@@ -2285,6 +2321,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
   // one chip group for the active segment; keeps the allowed real-time presets in
   // sync (rated keeps only rated-eligible paces, and a pick that is no longer offered falls back to 3+2).
+  const deadlineNotice = buildCorrespondenceDeadlineNotice(selectedCorrespondenceDays ?? 1, locale);
   const syncTimeControls = () => {
     const corrAvailable = correspondenceAvailable();
     if (!corrAvailable) {
@@ -2292,6 +2329,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       selectedCorrespondenceDays = null;
     }
     const corrActive = selectedTimeMode === 'correspondence';
+    deadlineNotice.hidden = !corrActive;
+    deadlineNotice.textContent = correspondenceDeadlineText(
+      selectedCorrespondenceDays ?? 1,
+      locale,
+    );
 
     timeModeToggle.hidden = !corrAvailable;
     realtimeModeButton.classList.toggle('selected', !corrActive);
@@ -2356,6 +2398,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   status.setAttribute('aria-live', 'polite');
 
   let cancelLobbyWait: (() => void) | null = null;
+  let stopSeekPrompt = () => {};
   const startButton = document.createElement('button');
   startButton.type = 'button';
   startButton.className = 'landing-setup-start';
@@ -2366,6 +2409,131 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? t('setup.createRoom', {}, locale)
         : t('setup.startGame', {}, locale);
   const playLabel = startButton.textContent;
+  const seekPrompt = document.createElement('button');
+  seekPrompt.type = 'button';
+  seekPrompt.className = 'landing-seek-prompt';
+  seekPrompt.hidden = true;
+  let offeredSeek: OpenLobbyRequest | undefined;
+  let offeredSpecId: SeekPromptGameSpecId = JIEQI_SPEC_ID;
+  let promptTimer: number | undefined;
+  let promptGeneration = 0;
+  let promptStopped = false;
+  let acceptingSeek = false;
+  const shownSeeks = new Set<string>();
+  const promptProps = (seek: OpenLobbyRequest, specId: SeekPromptGameSpecId) => ({
+    seekId: seek.seekId,
+    surface: 'bot-setup',
+    gameSpecId: specId,
+    ...gameSpecAnalyticsPropsForId(specId),
+    ...seek.timeControl,
+  });
+  const refreshSeekPrompt = async (
+    generation: number,
+    specId: SeekPromptGameSpecId,
+  ): Promise<void> => {
+    try {
+      const response = await postWithBrowserIdentity(
+        `/api/lobby?prompt=${encodeURIComponent(specId)}`,
+        { method: 'GET' },
+      );
+      if (!response.ok) throw new Error('seek prompt unavailable');
+      const data = (await response.json()) as { requests?: OpenLobbyRequest[] };
+      if (generation !== promptGeneration || promptStopped || acceptingSeek) return;
+      // Re-checked here although the server filters: a rated or other-variant
+      // seek must never reach this line, whatever answers the request.
+      offeredSeek = data.requests?.find(
+        (seek) => seek.gameSpecId === specId && seek.rated === false && Boolean(seek.seekId),
+      );
+      seekPrompt.hidden = !offeredSeek;
+      if (offeredSeek) {
+        offeredSpecId = specId;
+        seekPrompt.textContent = t(
+          'setup.waitingPlayer',
+          {
+            variant: variantLabelForGameSpec(specId, locale),
+            clock: compactTimeControl(offeredSeek.timeControl),
+          },
+          locale,
+        );
+        if (!shownSeeks.has(offeredSeek.seekId!)) {
+          shownSeeks.add(offeredSeek.seekId!);
+          track('lobby_seek_prompt_shown', promptProps(offeredSeek, specId));
+        }
+      }
+    } catch {
+      if (generation === promptGeneration && !acceptingSeek) {
+        offeredSeek = undefined;
+        seekPrompt.hidden = true;
+      }
+    } finally {
+      if (generation === promptGeneration && !promptStopped) {
+        promptTimer = window.setTimeout(
+          () => void refreshSeekPrompt(generation, specId),
+          SEEK_PROMPT_POLL_MS,
+        );
+      }
+    }
+  };
+  syncSeekPrompt = () => {
+    promptGeneration += 1;
+    window.clearTimeout(promptTimer);
+    offeredSeek = undefined;
+    seekPrompt.hidden = true;
+    if (
+      choice.mode === 'pve' &&
+      isSeekPromptGameSpec(selectedGameSpecId) &&
+      overlay.isConnected &&
+      !promptStopped
+    ) {
+      void refreshSeekPrompt(promptGeneration, selectedGameSpecId);
+    }
+  };
+  stopSeekPrompt = () => {
+    promptStopped = true;
+    promptGeneration += 1;
+    window.clearTimeout(promptTimer);
+  };
+  seekPrompt.addEventListener('click', () => {
+    if (!offeredSeek || acceptingSeek) return;
+    const seek = offeredSeek;
+    const specId = offeredSpecId;
+    acceptingSeek = true;
+    seekPrompt.disabled = true;
+    startButton.disabled = true;
+    // The seek went between the last refresh and the tap (or the join failed):
+    // put the bot setup back as it was and say why, instead of leaving the
+    // "Waiting for an opponent" line under a Play button that starts a bot.
+    const restoreBotSetup = (statusText: string) => {
+      acceptingSeek = false;
+      offeredSeek = undefined;
+      seekPrompt.hidden = true;
+      seekPrompt.disabled = false;
+      seekPrompt.removeAttribute('aria-busy');
+      startButton.disabled = false;
+      status.textContent = statusText;
+    };
+    cancelLobbyWait = joinLobbyFromPlay(
+      seekPrompt,
+      {
+        gameSpecId: specId,
+        rated: false,
+        timeControl: seek.timeControl,
+        preferredColor: 'random',
+      },
+      status,
+      locale,
+      undefined,
+      {
+        startSource: 'lobby-seek',
+        onNoInstantMatch: () => restoreBotSetup(t('play.offerTaken', {}, locale)),
+        onError: () => restoreBotSetup(t('setup.couldNotJoinLobby', {}, locale)),
+        onMatched: () => {
+          stopSeekPrompt();
+          track('lobby_seek_prompt_accepted', promptProps(seek, specId));
+        },
+      },
+    );
+  });
   const signInButton = document.createElement('a');
   signInButton.className = 'landing-setup-start';
   signInButton.textContent = t('correspondence.hostSignIn', {}, locale);
@@ -2390,12 +2558,17 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       actions.hidden = true;
       inviteWaiting.hidden = false;
     },
+    onStarted: () => close('started'),
     onAccountRequired: requireAccount,
     onUnavailable: () => challengePlayer.markUnavailable(),
     onSettled: () => syncAccountRequirement(),
   });
   startButton.addEventListener('click', () => {
     if (needsAccount() || (challengePlayer.choosingPlayer() && !challengePlayer.canSend())) return;
+    if (choice.mode === 'pve') {
+      stopSeekPrompt();
+      seekPrompt.hidden = true;
+    }
     rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend posts a link challenge (the invite link the friend
@@ -2465,12 +2638,28 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     }
     syncGameSpecificSections();
   });
-  const close = () => {
+  let closed = false;
+  const close = (how: SetupDialogCloseHow = 'dismissed') => {
+    if (closed) return;
+    closed = true;
+    track('setup_dialog_closed', {
+      how,
+      // A mode switch closes this dialog and opens the next one: not a drop-off.
+      mode_switch: setupDialogReopening,
+      ms_open: Math.max(0, Date.now() - openedAt),
+      mode: choice.mode,
+      time_mode: selectedCorrespondenceDays === null ? 'realtime' : 'correspondence',
+      gameSpecId: selectedGameSpecId,
+      ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
+    });
     stopRosterWatch();
+    stopSeekPrompt();
     challengePlayer.dispose();
     liveChallenge.dispose();
     cancelLobbyWait?.();
     document.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('pagehide', onPageHide);
+    window.removeEventListener('popstate', onPageHide);
     overlay.remove();
     if (activeDialogClose === close) activeDialogClose = null;
     if (setupDialogReopening) return;
@@ -2479,6 +2668,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     setupDialogOpener = null;
     if (opener?.isConnected) opener.focus({ preventScroll: true });
   };
+  const onPageHide = () => close('navigated');
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       if (playerPickerOpen) setPlayerPickerOpen(false);
@@ -2510,6 +2700,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (event.target === overlay) close();
   });
   document.addEventListener('keydown', onKeyDown);
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('popstate', onPageHide);
 
   // Keep game type visible in the bot flow too. Bot games are always casual,
   // but Rated stays clickable there: it switches the player to Find opponent
@@ -2666,6 +2858,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     syncVariantControls();
     syncColorPreferenceControls();
     syncSetupAccordion();
+    syncSeekPrompt();
   };
   syncGameSpecificSections();
 
@@ -2816,7 +3009,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const accordion = document.createElement('div');
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
-  actions.append(startButton, correspondenceAccountNotice, signInButton);
+  actions.append(
+    seekPrompt,
+    deadlineNotice,
+    startButton,
+    correspondenceAccountNotice,
+    signInButton,
+  );
   const notice = choice.notice ? document.createElement('p') : null;
   if (notice) {
     notice.className = 'landing-setup-notice';
@@ -2882,6 +3081,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   overlay.append(dialog);
   document.body.append(overlay);
   activeDialogClose = close;
+  syncSeekPrompt();
   if (openLayout) {
     // Focus the panel itself: focusing Start drew a focus ring around it the
     // moment the panel opened, which read as a stray border.
@@ -2953,7 +3153,7 @@ function reopenSetupDialogInMode(
   const locale = choice.locale ?? currentLocale();
   setupDialogReopening = true;
   try {
-    closeActiveLandingDialog();
+    closeActiveLandingDialog('dismissed');
     openLandingSetupDialog({
       engineId: choice.engineId,
       engines: choice.engines,
@@ -3092,7 +3292,7 @@ async function createCorrespondenceFromPlay(
         });
       }
       if (!status.isConnected) return;
-      roomNavigator(data.challengeUrl);
+      navigateFromSetup(data.challengeUrl);
       return;
     }
     const failure = await readRoomCreationFailure(response);
@@ -3158,7 +3358,7 @@ async function createGuestCorrespondenceRoom(
     const data = (await response.json()) as { url?: string };
     if (!data.url) throw new Error('room creation did not return a URL');
     if (!status.isConnected) return;
-    roomNavigator(data.url);
+    navigateFromSetup(data.url);
     return;
   }
   const failure = await readRoomCreationFailure(response);
@@ -3285,7 +3485,7 @@ export async function postCorrespondenceSeekFromPlay(
         });
       }
       if (!status.isConnected) return;
-      roomNavigator('/correspondence');
+      navigateFromSetup('/correspondence');
       return;
     }
     const failure = await readRoomCreationFailure(response);
@@ -3813,7 +4013,7 @@ async function createRoomFromPlay(
         if (!data.url) throw new Error('room creation did not return a URL');
         rememberBotRoomRequest(requestBody);
         if (status && !status.isConnected) return;
-        roomNavigator(data.url);
+        navigateFromSetup(data.url);
         return;
       }
       const failure = await readRoomCreationFailure(response);
@@ -4121,6 +4321,8 @@ export function joinLobbyFromPlay(
      *  instantly (the offer was taken in the refresh window), delete the
      *  freshly-created ticket and hand control back to the caller. */
     onNoInstantMatch?: () => void;
+    onMatched?: () => void;
+    onError?: () => void;
     /** Labels the game this wait ends in (game_started.entry_source). */
     startSource?: GameStartSource;
     /** The bot the 15 s "nobody came" offer starts when no engine id is given:
@@ -4164,8 +4366,12 @@ export function joinLobbyFromPlay(
 
   // keepalive: the DELETE usually races a navigation (a bot game, a closed
   // tab), and an ordinary fetch is dropped when the page goes away.
-  const deleteTicket = (id: string): Promise<void> =>
-    fetch(`/api/lobby/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive: true }).then(
+  // `how` tells lobby_seek_ended why the seek ended; none is a plain cancel.
+  const deleteTicket = (id: string, how?: 'left' | 'bot_accepted' | 'offer_taken'): Promise<void> =>
+    fetch(`/api/lobby/${encodeURIComponent(id)}${how ? `?how=${how}` : ''}`, {
+      method: 'DELETE',
+      keepalive: true,
+    }).then(
       () => undefined,
       () => undefined,
     );
@@ -4173,7 +4379,7 @@ export function joinLobbyFromPlay(
   // Leaving the page while waiting (a link, the back button, closing the tab)
   // withdraws the seek; sendBeacon cannot DELETE, a keepalive fetch can.
   const onPageHide = () => {
-    if (active && ticketId) void deleteTicket(ticketId);
+    if (active && ticketId) void deleteTicket(ticketId, 'left');
   };
   let unregister: (() => void) | null = null;
   const release = () => {
@@ -4184,7 +4390,7 @@ export function joinLobbyFromPlay(
 
   let starting: Promise<void> = Promise.resolve();
   let cancelled: Promise<void> | null = null;
-  const cancel = (): Promise<void> => {
+  const cancel = (how?: 'bot_accepted' | 'offer_taken'): Promise<void> => {
     if (cancelled) return cancelled;
     active = false;
     release();
@@ -4193,7 +4399,7 @@ export function joinLobbyFromPlay(
     clearOfferTimer();
     // Withdrawn while the POST was in flight: start() deletes the ticket the
     // server made anyway once the response lands, so wait for that.
-    cancelled = ticketId ? deleteTicket(ticketId) : starting;
+    cancelled = ticketId ? deleteTicket(ticketId, how) : starting;
     return cancelled;
   };
 
@@ -4220,7 +4426,7 @@ export function joinLobbyFromPlay(
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {
     if (!hasFallback) return;
     track('lobby_engine_offer_accepted', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
-    const withdrawn = cancel();
+    const withdrawn = cancel('bot_accepted');
     rememberGameStartSource('engine-offer');
     if (engineId) {
       void withdrawn.then(() =>
@@ -4234,6 +4440,7 @@ export function joinLobbyFromPlay(
       .then(() => createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }))
       .then(
         (url) => {
+          closeActiveLandingDialog('started');
           window.location.href = url;
         },
         () => {
@@ -4309,7 +4516,9 @@ export function joinLobbyFromPlay(
     release();
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
     if (opts?.startSource) rememberGameStartSource(opts.startSource);
-    window.location.href = ticket.url;
+    closeActiveLandingDialog('started');
+    opts?.onMatched?.();
+    roomNavigator(ticket.url);
     return true;
   };
 
@@ -4322,6 +4531,7 @@ export function joinLobbyFromPlay(
     button.removeAttribute('aria-busy');
     setButtonLabel(button, t('setup.tryAgain', {}, locale));
     status.textContent = t('setup.couldNotJoinLobby', {}, locale);
+    opts?.onError?.();
     window.setTimeout(() => {
       if (button.disabled) return;
       setButtonLabel(button, originalText);
@@ -4373,7 +4583,7 @@ export function joinLobbyFromPlay(
       // invisible queue: drop the ticket and let the caller revert the row.
       track('lobby_offer_already_taken', bucketProps);
       ticketId = ticket.ticketId ?? null;
-      cancel();
+      cancel('offer_taken');
       opts.onNoInstantMatch();
       return;
     }
@@ -4394,7 +4604,7 @@ export function joinLobbyFromPlay(
     return cancel();
   });
   starting = start().catch(handleLobbyError);
-  return cancel;
+  return () => cancel();
 }
 
 function setButtonLabel(button: HTMLButtonElement, text: string): void {

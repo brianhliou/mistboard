@@ -25,7 +25,7 @@ import {
   releaseLiveEngineReservation,
   releaseLiveEngineReservations,
 } from '../server-live-engine-reservations.js';
-import { tenantDurableDeadlineFor } from './lifecycle.js';
+import { tenantCorrespondenceInviteExpired, tenantDurableDeadlineFor } from './lifecycle.js';
 import {
   appendTenantRuntimeEvent,
   applyTenantEvent,
@@ -150,7 +150,15 @@ export async function appendTenantEvent<
 ): Promise<number> {
   const writer = contextWithDefaults(tenant, ctx);
   const expectedClock = room.projection.clock;
+  const inviteExpiry =
+    requestedEvent.type === 'game-aborted' &&
+    requestedEvent.reason === 'pregame-timeout' &&
+    tenantCorrespondenceInviteExpired(tenant, room, requestedEvent.at);
   const write = room.pendingWrites.then(async () => {
+    // A second seat or move queued before this sweep can accept the invite.
+    // Cross-process races meet the normal seq-conflict resync below.
+    if (inviteExpiry && !tenantCorrespondenceInviteExpired(tenant, room, requestedEvent.at))
+      return -1;
     // A move or pause queued ahead of this timer owns the new clock. Never let
     // the old request act on it, even if the same seat is still on move.
     if (requestedEvent.type === 'clock-expired' && room.projection.clock !== expectedClock)

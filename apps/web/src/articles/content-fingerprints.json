@@ -56,7 +56,7 @@
     "updatedAt": "2026-10-15"
   },
   "crazyhouse-xiangqi": {
-    "hash": "4e9ee8c2537cbb96",
+    "hash": "36c7775e51b61ce5",
     "updatedAt": "2026-11-15"
   },
   "dou-shou-qi-engine": {
@@ -64,7 +64,7 @@
     "updatedAt": null
   },
   "duck-xiangqi": {
-    "hash": "007e61d56ddc537a",
+    "hash": "9ae834b5d9841be0",
     "updatedAt": "2026-11-15"
   },
   "duck-xiangqi-game-tree": {
@@ -80,15 +80,15 @@
     "updatedAt": "2026-10-15"
   },
   "fanfanqi": {
-    "hash": "1e631a444f30c317",
-    "updatedAt": null
+    "hash": "35f96147eea89afe",
+    "updatedAt": "2026-11-18"
   },
   "flip-jungle-skill-ceiling": {
     "hash": "081e5cc9952dcb31",
     "updatedAt": null
   },
   "fog-chess": {
-    "hash": "5179ab8dc7b32733",
+    "hash": "8f6c89dabd8824f7",
     "updatedAt": "2026-11-15"
   },
   "fog-future": {
@@ -104,7 +104,7 @@
     "updatedAt": null
   },
   "fortress-xiangqi": {
-    "hash": "bdef85f0eb5188f6",
+    "hash": "87fb4d894cff862c",
     "updatedAt": "2026-11-15"
   },
   "general-blunder-challenge": {
@@ -152,7 +152,7 @@
     "updatedAt": null
   },
   "jungle": {
-    "hash": "0fac97a3a55afbcf",
+    "hash": "de36fb5aa57bb9e3",
     "updatedAt": "2026-11-15"
   },
   "jungle-den-term": {
@@ -160,7 +160,7 @@
     "updatedAt": "2026-10-16"
   },
   "jungle-flip": {
-    "hash": "252f8e21b4000de8",
+    "hash": "07f6b79278c5f195",
     "updatedAt": "2026-11-15"
   },
   "katago-jungle": {
@@ -198,6 +198,10 @@
   "most-played-move": {
     "hash": "68a77e509d351193",
     "updatedAt": "2026-10-15"
+  },
+  "one-opponent-four-variants": {
+    "hash": "cfb30649a5fba520",
+    "updatedAt": null
   },
   "one-thousand-games": {
     "hash": "b8823e208194c652",

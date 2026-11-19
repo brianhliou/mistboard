@@ -85,6 +85,62 @@ describe('createGameLifecycleTracker', () => {
     expect(named('game_started')[0][1]).toMatchObject(base);
   });
 
+  it.each(['blitz', 'correspondence'])(
+    'remembers a seated %s start once, excluding spectators and repeated renders',
+    (timeClass) => {
+      const setItem = vi.spyOn(window.localStorage, 'setItem');
+      try {
+        const key = 'mistboard:last-played-variant';
+        const writes = () => setItem.mock.calls.filter(([name]) => name === key);
+        const playing = {
+          statusType: 'playing',
+          baseProps: { gameId: 'flip_1', game_spec: 'jungle-flip', time_class: timeClass },
+        } as const;
+        const tracker = createGameLifecycleTracker();
+        tracker.update({ ...playing, seat: 'spectator' });
+        tracker.update({ ...playing, seat: null });
+        expect(writes()).toEqual([]);
+        tracker.update({ ...playing, seat: 'red' });
+        expect(writes()).toEqual([[key, 'jungle-flip']]);
+        tracker.update({ ...playing, seat: 'red' });
+        tracker.reset();
+        tracker.update({ ...playing, seat: 'red' });
+        createGameLifecycleTracker().update({ ...playing, seat: 'red' });
+        expect(writes()).toEqual([[key, 'jungle-flip']]);
+
+        createGameLifecycleTracker().update({
+          ...playing,
+          seat: 'black',
+          baseProps: { ...playing.baseProps, gameId: 'jq_2', game_spec: 'jieqi' },
+        });
+        // Reopening an older game must not replace the newer game's preference.
+        createGameLifecycleTracker().update({ ...playing, seat: 'red' });
+        expect(window.localStorage.getItem(key)).toBe('jieqi');
+        expect(writes()).toHaveLength(2);
+      } finally {
+        setItem.mockRestore();
+      }
+    },
+  );
+
+  it.each(['unavailable', 'disabled'])(
+    'remembers the game even when analytics is %s',
+    async (analyticsState) => {
+      vi.resetModules();
+      const analytics = await import('./analytics.js');
+      if (analyticsState === 'disabled') {
+        // DNT and opt-out make SDK capture a no-op.
+        analytics.setPostHogInstance({ capture: () => {}, identify: () => {}, reset: () => {} });
+      }
+      analytics.createGameLifecycleTracker().update({
+        statusType: 'playing',
+        seat: 'black',
+        baseProps: { gameId: 'unmeasured_1', game_spec: 'jungle-flip' },
+      });
+      expect(window.localStorage.getItem('mistboard:last-played-variant')).toBe('jungle-flip');
+    },
+  );
+
   it('emits game_finished with outcome fields and a numeric durationMs', () => {
     const t = createGameLifecycleTracker();
     t.update({ statusType: 'playing', baseProps: base });
@@ -100,6 +156,75 @@ describe('createGameLifecycleTracker', () => {
       moveNumber: 12,
     });
     expect(typeof named('game_finished')[0][1].durationMs).toBe('number');
+  });
+
+  it.each([
+    ['red', 'red', 'win'],
+    ['black', 'red', 'loss'],
+    ['white', null, 'draw'],
+    ['east', 'east', 'win'],
+    ['spectator', 'red', null],
+    ['spectator', null, 'draw'],
+  ] as const)('records the %s viewer outcome against winner %s', (seat, winner, result) => {
+    const tracker = createGameLifecycleTracker();
+    tracker.update({ statusType: 'playing', baseProps: base, seat });
+    tracker.update({
+      statusType: 'finished',
+      baseProps: base,
+      seat,
+      outcome: { winner, reason: winner ? 'resign' : 'draw', moveNumber: 12 },
+    });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({ seat, result, winner, moveNumber: 12 });
+    expect(named('game_started')).toHaveLength(seat === 'spectator' ? 0 : 1);
+  });
+
+  it('emits no finish for a watcher who opens an already finished room', () => {
+    const tracker = createGameLifecycleTracker();
+    const finished = {
+      statusType: 'finished',
+      baseProps: base,
+      outcome: { winner: 'red', reason: 'resign', moveNumber: 12 },
+    } as const;
+    tracker.update({ ...finished, seat: 'spectator' });
+    tracker.update({ ...finished, seat: 'spectator' });
+    expect(named('game_finished')).toHaveLength(0);
+    // The seated player's own finish on this browser is still counted.
+    tracker.update({ ...finished, seat: 'red' });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({ seat: 'red', result: 'win' });
+  });
+
+  it('records an abort once across repeats and reconnects, without calling it a draw', () => {
+    const tracker = createGameLifecycleTracker();
+    const aborted = {
+      statusType: 'aborted',
+      baseProps: base,
+      seat: 'black',
+      moveNumber: 0,
+    } as const;
+    tracker.update(aborted);
+    tracker.update(aborted);
+    tracker.reset();
+    tracker.update(aborted);
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({
+      seat: 'black',
+      result: 'aborted',
+      winner: null,
+      reason: 'aborted',
+      moveNumber: 0,
+    });
+  });
+
+  it('counts the player start after a spectator takes a seat in a playing room', () => {
+    const tracker = createGameLifecycleTracker();
+    tracker.update({ statusType: 'playing', baseProps: base, seat: 'spectator', ownMoveCount: 0 });
+    expect(named('game_started')).toHaveLength(0);
+    tracker.update({ statusType: 'playing', baseProps: base, seat: 'red', ownMoveCount: 0 });
+    tracker.update({ statusType: 'playing', baseProps: base, seat: 'red', ownMoveCount: 1 });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_first_move')).toHaveLength(1);
   });
 
   it('treats null updates as no-ops', () => {

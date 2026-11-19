@@ -41,6 +41,19 @@ export function buildStaticPageLayout(
   panel.className = 'static-page-panel';
   panel.append(content);
   layout.append(buildStaticPageRail(activeKey, locale), panel);
+  layout.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as Element | null)?.closest?.('a[data-static-page-link]');
+    if (!(link instanceof HTMLAnchorElement) || !layout.contains(link)) return;
+    if ((link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    event.preventDefault();
+    void import('./static-page-navigation.js')
+      .then(({ navigateStaticPage }) => navigateStaticPage(layout, url))
+      .catch(() => window.location.assign(url.href));
+  });
   return layout;
 }
 
@@ -70,6 +83,7 @@ function buildStaticPageRail(
         link.classList.add('static-page-rail-link-with-icon');
         link.prepend(buildUiIcon(item.icon, 'static-page-rail-icon'));
       }
+      if (!('leavesRail' in item)) link.dataset.staticPageLink = '';
       if ('leavesRail' in item && item.leavesRail) {
         const out = document.createElement('span');
         out.className = 'static-page-rail-out';

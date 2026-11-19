@@ -3,7 +3,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { gameSpecForId } from '@mistboard/game';
 import './gomoku-registration.js';
 import { listBotRatingSnapshots, promoteBotRatingSnapshots } from './bot-rating-snapshots.js';
-import { getPublicBotProfile, listPublicBots, recordGameEnd } from './persistence.js';
+import {
+  getGameSummary,
+  getPublicBotProfile,
+  listPublicBots,
+  recordGameEnd,
+} from './persistence.js';
 import { SEAT_WIN_RESULT } from './persistence-counted-games.js';
 import type { GameParticipantColor } from './persistence-games.js';
 import {
@@ -27,7 +32,141 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('bot profiles', () => {
-  test('lists unnumbered Rapfi for Gomoku on /api/bots only while public and enabled', async (t) => {
+  test('reattributes historical Three Kingdoms and FFQ seats to Misty in bot API records', async (t) => {
+    const variants = ['three-kingdoms-banqi', 'ffq-banqi'] as const;
+    for (const variant of variants) {
+      const spec = gameSpecForId(variant);
+      const previous = spec.publicSurface;
+      spec.publicSurface = 'casual';
+      t.after(() => {
+        spec.publicSurface = previous;
+      });
+    }
+    await insertBotProfile('misty', 'Misty', 'public', {
+      supportedGameSpecIds: ['dark-chess', 'ffq-banqi'],
+    });
+    const seed = async (
+      id: string,
+      variant: string,
+      engineId: string,
+      subjectType: 'engine-version' | 'bot' | 'guest' = 'engine-version',
+      visibility: 'public' | 'private' = 'public',
+    ) =>
+      recordGameEnd(id, {
+        variant,
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        startedAt: new Date('2026-11-16T00:00:00Z'),
+        endedAt: new Date('2026-11-16T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: engineId,
+        whiteName: 'Guest',
+        blackName: 'Old engine',
+        corpusId: null,
+        rated: false,
+        visibility,
+        participants: [
+          { color: 'red', displayName: 'Guest', subjectType: 'guest', subjectId: null, visibility },
+          {
+            color: 'black',
+            displayName: 'Old engine',
+            subjectType,
+            subjectId: subjectType === 'bot' ? 'misty' : engineId,
+            engineId: subjectType === 'bot' ? engineId : null,
+            engineVersion: '0.2.0',
+            visibility,
+          },
+        ],
+      });
+    for (const variant of variants) {
+      for (let level = 1; level <= 8; level += 1) {
+        await seed(`${variant}-${level}`, variant, `misty-${variant}-level-${level}`);
+      }
+    }
+    await seed('tk-unnumbered', variants[0], 'misty-three-kingdoms-banqi');
+    await seed('ffq-already-bot', variants[1], 'misty-ffq-banqi-level-4', 'bot');
+    await seed(
+      'private-tk',
+      variants[0],
+      'misty-three-kingdoms-banqi-level-1',
+      'engine-version',
+      'private',
+    );
+    await seed('human-id', variants[0], 'misty-three-kingdoms-banqi-level-1', 'guest');
+    await seed('wrong-variant', variants[0], 'misty-ffq-banqi-level-1');
+    await seed('unknown-tier', variants[1], 'misty-ffq-banqi-level-9');
+
+    const migration = readFileSync(
+      new URL('../migrations/207_misty_three_kingdoms_ffq_attribution.sql', import.meta.url),
+      'utf8',
+    );
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      // Model a correctly attributed FFQ row written before level snapshots.
+      await client.query(
+        "UPDATE game_participants SET bot_level = NULL WHERE game_id = 'ffq-already-bot'",
+      );
+      await client.query(migration);
+      const snapshot = async () =>
+        (await client.query('SELECT * FROM game_participants ORDER BY game_id, color')).rows;
+      const once = await snapshot();
+      await client.query(migration);
+      assert.deepEqual(await snapshot(), once, 'the backfill is idempotent');
+      for (const variant of variants) {
+        for (let level = 1; level <= 8; level += 1) {
+          const row = once.find(
+            (row) => row.game_id === `${variant}-${level}` && row.color === 'black',
+          );
+          assert.ok(row);
+          assert.equal(row.subject_type, 'bot');
+          assert.equal(row.subject_id, 'misty');
+          assert.equal(row.engine_id, `misty-${variant}-level-${level}`);
+          assert.equal(row.engine_version, '0.2.0');
+          assert.equal(row.display_name, `Misty Level ${level}`);
+          assert.equal(row.bot_level, level);
+          assert.equal(row.visibility, 'public');
+        }
+      }
+      const historic = once.find((row) => row.game_id === 'tk-unnumbered' && row.color === 'black');
+      assert.equal(historic?.subject_id, 'misty');
+      assert.equal(historic?.engine_id, 'misty-three-kingdoms-banqi');
+      assert.equal(historic?.bot_level, null);
+      assert.equal(
+        once.find((row) => row.game_id === 'ffq-already-bot' && row.color === 'black')?.bot_level,
+        4,
+      );
+      const privateSeat = once.find((row) => row.game_id === 'private-tk' && row.color === 'black');
+      assert.equal(privateSeat?.subject_id, 'misty');
+      assert.equal(privateSeat?.visibility, 'private');
+      for (const id of ['human-id', 'wrong-variant', 'unknown-tier']) {
+        const row = once.find((row) => row.game_id === id && row.color === 'black');
+        assert.equal(row?.subject_type, id === 'human-id' ? 'guest' : 'engine-version');
+        assert.equal(row?.display_name, 'Old engine');
+      }
+    } finally {
+      await client.end();
+    }
+    const expected = { games: 9, wins: 9, losses: 0, draws: 0 };
+    const profile = await getPublicBotProfile('misty');
+    const listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    for (const variant of variants) {
+      assert.deepEqual(profile?.recordsByGameSpecId[variant], expected);
+      assert.deepEqual(listed?.recordsByGameSpecId[variant], expected);
+      assert.equal(profile?.gamesByGameSpecId[variant]?.length, 9);
+    }
+    const response = await routeGet('/api/bots/misty');
+    assert.equal(response.status, 200);
+    const bot = JSON.parse(response.body).bot;
+    for (const variant of variants) {
+      assert.deepEqual(bot.recordsByGameSpecId[variant], expected);
+      assert.equal(bot.gamesByGameSpecId[variant].length, 9);
+    }
+  });
+
+  test('unlists retired Rapfi from /api/bots while preserving finished strongest games', async (t) => {
     const previousFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
     const spec = gameSpecForId('gomoku');
     const previousSurface = spec.publicSurface;
@@ -36,39 +175,115 @@ definePersistenceTests('bot profiles', () => {
       else process.env.MISTBOARD_GOMOKU_ENABLED = previousFlag;
       spec.publicSurface = previousSurface;
     });
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+    spec.publicSurface = 'casual';
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await client.connect();
     try {
-      await client.query(
-        readFileSync(new URL('../migrations/205_rapfi_strongest_bot.sql', import.meta.url), 'utf8'),
+      for (const file of ['191_rapfi_bot_profiles.sql', '205_rapfi_strongest_bot.sql']) {
+        await client.query(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
+      }
+      await recordGameEnd('gmk_retired_rapfi', {
+        variant: 'gomoku',
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        startedAt: new Date('2026-11-17T00:00:00Z'),
+        endedAt: new Date('2026-11-17T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: 'rapfi-strongest',
+        whiteName: 'Guest',
+        blackName: 'Rapfi',
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Rapfi',
+            subjectType: 'bot',
+            subjectId: 'rapfi',
+            engineId: 'rapfi-strongest',
+            visibility: 'public',
+          },
+        ],
+      });
+      const historical = await getGameSummary('gmk_retired_rapfi');
+      assert.equal(
+        historical?.participants.find((seat) => seat.color === 'black')?.displayName,
+        'Rapfi',
+      );
+      const ladderBefore = (
+        await client.query("SELECT * FROM bot_profiles WHERE id <> 'rapfi' ORDER BY id")
+      ).rows;
+      const profileBefore = (
+        await client.query(
+          "SELECT display_name, active_engine_id FROM bot_profiles WHERE id = 'rapfi'",
+        )
+      ).rows;
+      assert.ok(
+        JSON.parse((await routeGet('/api/bots')).body).bots.some(
+          (bot: { id: string }) => bot.id === 'rapfi',
+        ),
+      );
+      const migration = readFileSync(
+        new URL('../migrations/206_unlist_rapfi_bot.sql', import.meta.url),
+        'utf8',
+      );
+      await client.query(migration);
+      assert.equal(
+        (await client.query(migration)).rowCount,
+        0,
+        'rerunning the migration changes nothing',
+      );
+      assert.deepEqual(
+        (await client.query("SELECT * FROM bot_profiles WHERE id <> 'rapfi' ORDER BY id")).rows,
+        ladderBefore,
+      );
+      assert.deepEqual(
+        (
+          await client.query(
+            "SELECT display_name, active_engine_id FROM bot_profiles WHERE id = 'rapfi'",
+          )
+        ).rows,
+        profileBefore,
+      );
+      assert.equal(
+        (await client.query("SELECT visibility FROM bot_profiles WHERE id = 'rapfi'")).rows[0]
+          ?.visibility,
+        'unlisted',
+      );
+      const response = await routeGet('/api/bots');
+      assert.equal(response.status, 200);
+      const bots = JSON.parse(response.body).bots;
+      assert.ok(!bots.some((bot: { id: string }) => bot.id === 'rapfi'));
+      assert.deepEqual(
+        bots.map((bot: { id: string }) => bot.id).sort(),
+        Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+      );
+      assert.equal((await routeGet('/api/bots/rapfi')).status, 404);
+      assert.equal(await getPublicBotProfile('rapfi'), null);
+      assert.deepEqual(await getGameSummary('gmk_retired_rapfi'), historical);
+      const player = historical?.participants.find((seat) => seat.color === 'black');
+      assert.equal(player?.subjectId, 'rapfi');
+      // Summaries never expose engine ids; the stored seat keeps its provenance.
+      assert.equal(
+        (
+          await client.query(
+            "SELECT engine_id FROM game_participants WHERE game_id = 'gmk_retired_rapfi' AND color = 'black'",
+          )
+        ).rows[0]?.engine_id,
+        'rapfi-strongest',
       );
     } finally {
       await client.end();
-    }
-    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
-    spec.publicSurface = 'casual';
-    const response = await routeGet('/api/bots');
-    assert.equal(response.status, 200);
-    const bot = JSON.parse(response.body).bots.find(
-      (entry: { id: string }) => entry.id === 'rapfi',
-    );
-    assert.ok(bot, 'the real directory route must list the migrated Rapfi profile');
-    assert.equal(bot.displayName, 'Rapfi');
-    assert.equal(bot.activeEngineId, 'rapfi-strongest');
-    assert.deepEqual(bot.supportedGameSpecIds, ['gomoku']);
-    assert.equal(bot.rating, null);
-    assert.equal(bot.playOptions.length, 1);
-    assert.equal(bot.playOptions[0].gameSpecId, 'gomoku');
-    assert.equal(bot.playOptions[0].engineId, 'rapfi-strongest');
-    assert.equal(bot.playOptions[0].playable, true);
-    assert.ok(bot.playOptions[0].version);
-    for (const state of ['disabled', 'hidden']) {
-      process.env.MISTBOARD_GOMOKU_ENABLED = state === 'disabled' ? 'false' : 'true';
-      spec.publicSurface = state === 'hidden' ? 'hidden' : 'casual';
-      const gated = await routeGet('/api/bots');
-      assert.equal(gated.status, 200);
-      assert.ok(!JSON.parse(gated.body).bots.some((entry: { id: string }) => entry.id === 'rapfi'));
-      assert.equal((await routeGet('/api/bots/rapfi')).status, 404);
     }
   });
 

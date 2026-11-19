@@ -345,13 +345,13 @@ export function isRapfiEngineId(id: unknown): id is RapfiEngineId {
   );
 }
 
-// Time-only native top policy, separate from the calibrated eight-level ladder.
+// Time-only top policy shared by Level 8 and the separate strongest identity.
 // Fresh-process Apple M3 Max measurements and ceiling rationale: docs/rapfi-strongest.md.
 export const RAPFI_STRONGEST = Object.freeze({ timeMs: 5_000 });
 
 export const RAPFI_LEVELS: readonly {
   readonly level: RapfiLevel;
-  readonly nodes: number;
+  readonly nodes?: number;
   readonly timeMs: number;
   readonly candidateCount?: number;
   readonly evalMargin?: number;
@@ -367,10 +367,11 @@ export const RAPFI_LEVELS: readonly {
   { level: 4, nodes: 8_000, timeMs: 1_500, candidateCount: 8, evalMargin: 20_000, bestRate: 0.9 },
   { level: 5, nodes: 10_000, timeMs: 2_000, candidateCount: 3, evalMargin: 20_000, bestRate: 0.97 },
   { level: 6, nodes: 12_000, timeMs: 1_500 },
-  // The ladder ran L7-8 at 1.5s; the longer ceilings let a slow phone reach the
+  // The ladder ran L7 at 1.5s; the longer ceiling lets a slow phone reach the
   // node budget instead of stopping short of it.
   { level: 7, nodes: 25_000, timeMs: 2_500 },
-  { level: 8, nodes: 80_000, timeMs: 3_500 },
+  // Promoted 2026-11-17 after the paired native calibration (#1177).
+  { level: 8, ...RAPFI_STRONGEST },
 ]);
 
 /** Shared with the offline ladder so calibration exercises browser commands. */

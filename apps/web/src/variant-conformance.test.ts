@@ -23,11 +23,7 @@ import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
 import { mountDevelopers } from './developers-page.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
-import {
-  EMBED_ANALYSIS_VARIANTS,
-  embedAnalysisVariant,
-  loadEmbedAnalysis,
-} from './embed/embed-analysis.js';
+import { EMBED_ANALYSIS_VARIANTS, embedAnalysisVariant } from './embed/embed-analysis.js';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import {
   firstMoverColorName,
@@ -466,12 +462,12 @@ describe('FFQ banqi canonical web metadata', () => {
 
   // Launched 2026-11-15: finished games are listed on /games and TV, which draw
   // them through the tenant's watch replay (the masked public postgame read).
-  it('links FFQ finished games to their review and registers the watch replay', () => {
+  it('links FFQ finished games to review, registers the watch replay and lists record downloads', () => {
     const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
     expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.reviewRouteBase).toBe('/ffq-banqi/game');
     expect(tenant?.watch?.family).toBe('xiangqi');
-    expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual([]);
+    expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual(['pgn', 'json']);
     expect(finishedGameHref('ffq_finished', FFQ_BANQI_SPEC_ID)).toBe(
       '/ffq-banqi/game/ffq_finished',
     );
@@ -496,19 +492,15 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(seatInkForVariant('ffq-banqi', 'black', 'black')).toBe('black');
   });
 
-  it('explicitly has no embed analysis and never loads replay inputs for it', async () => {
-    expect(EMBED_ANALYSIS_VARIANTS).toHaveProperty('ffq-banqi', null);
-    expect(embedAnalysisVariant('ffq-banqi')).toBeNull();
-    const playedMoves = vi.fn();
-    const events = vi.fn();
-    expect(
-      await loadEmbedAnalysis('ffq-banqi', 'reserved-room', { playedMoves, events }),
-    ).toBeNull();
-    expect(playedMoves).not.toHaveBeenCalled();
-    expect(events).not.toHaveBeenCalled();
+  // TV and /games use the watch replay registered above; only the
+  // finished-game embed card stays closed.
+  it('maps cached public FFQ analysis while finished-game embed cards stay closed', () => {
+    expect(EMBED_ANALYSIS_VARIANTS['ffq-banqi']).toMatchObject({ route: 'ffq-banqi' });
+    expect(embedAnalysisVariant('ffq-banqi')).not.toBeNull();
+    expect(embedRendererKindForVariant('ffq-banqi')).toBeNull();
   });
 
-  it('launches casual play and rules without ratings, correspondence, analysis, editor, study or embed', () => {
+  it('supports casual play, rules and observed study embeds without ratings, correspondence, standalone analysis, editor or game embeds', () => {
     const id = 'ffq-banqi';
     // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
     expect(variantMiniIdForGameSpec(id)).toBe(id);
@@ -523,7 +515,7 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(id);
     expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
-    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(id);
     expect(rulesHrefForGameSpec(id)).toBe(isPublicGameSpec(id) ? '/rules/fanfanqi' : null);
     expect(rulesSlugForGameSpec(id)).toBe('fanfanqi');
     expect(articles.find((article) => article.slug === 'fanfanqi')).toMatchObject({
@@ -555,7 +547,7 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(true);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
-    expect(tenant?.landing?.engineOptions).toHaveLength(9);
+    expect(tenant?.landing?.engineOptions).toHaveLength(8);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);

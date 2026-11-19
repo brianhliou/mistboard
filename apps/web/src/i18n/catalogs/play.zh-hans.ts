@@ -7,6 +7,7 @@
 import type { PlayI18nKey } from './play.js';
 
 export const ZH_HANS_PLAY = {
+  'setup.waitingPlayer': '有玩家在等待{variant}对局，{clock}。和对方下棋',
   'live.gomokuBotThinking': 'Rapfi 正在思考…',
   'live.gomokuBotFailed': 'Rapfi 无法加载或找到落子位置，请重试以继续。',
   'live.gomokuBotPaused': 'Rapfi 已暂停。',
@@ -531,6 +532,9 @@ export const ZH_HANS_PLAY = {
   'result.reasonOnly': '{reason}。',
   'result.colorVictorious': '{reason} • {color}获胜',
   'result.drawByReason': '和棋 • {reason}',
+  'correspondence.moveDeadlineDay': '你每步有 {days} 天时间。超时未走就会判负。',
+  'correspondence.moveDeadlineDays': '你每步有 {days} 天时间。超时未走就会判负。',
+  'correspondence.moveDeadlineList': '每步都有期限。超时未走就会判负。',
   'correspondence.confirmMove': '确认',
   'correspondence.cancelMove': '取消',
   'correspondence.pendingMove': '着法预览。确认后发送。',
@@ -923,6 +927,7 @@ export const ZH_HANS_PLAY = {
   'lobby.panelDaysShort': '{days} 天',
   'lobby.panelMoreGames': '还有 {count} 局',
   'lobby.panelDaysSignIn': '登录后可按天/步对局',
+  'lobby.panelSignInRatedDays': '登录后可下等级分对局和按天/步对局',
   'variant.ffqBanqi.name': '翻翻棋',
   'live.ffq.hp': '{hp}/{max} 生命值',
   'live.ffq.adminOnly': '此试玩需要管理员账号，并启用 FFQ 暗棋功能开关。',

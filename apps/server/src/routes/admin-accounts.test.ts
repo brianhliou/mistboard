@@ -6,10 +6,12 @@ import {
   type AdminAccountRow,
   type AdminAccountsQuery,
 } from '../persistence-admin-accounts.js';
+import { close, getPool, init } from '../persistence-db.js';
 import {
   ADMIN_ACCOUNTS_DEFAULT_LIMIT,
   type AdminAccountsApiPersistence,
   adminAccountsForApi,
+  fairPlaySummaryForApi,
   parseAdminAccountsQuery,
   tryHandle,
 } from './admin-accounts.js';
@@ -203,6 +205,123 @@ test('other paths fall through to the next route module', async () => {
     new URL('http://test.local/api/admin/accounts/alice'),
   );
   assert.equal(handled, false);
+});
+
+test('fair-play account summary is handled and requires an admin in production', async () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    const response = captureResponse();
+    const pathname = '/api/admin/fair-play/accounts/user_alice/summary';
+    const handled = await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      pathname,
+      new URL(pathname, 'http://test.local'),
+    );
+    assert.equal(handled, true);
+    assert.equal(response.statusCode, 403);
+    assert.deepEqual(JSON.parse(response.body), { error: 'admin_required' });
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  }
+});
+
+test('fair-play summary distinguishes an empty account from an unknown account', async () => {
+  let requested = '';
+  const empty = await fairPlaySummaryForApi('user_empty', async (id) => {
+    requested = id;
+    return [];
+  });
+  assert.equal(requested, 'user_empty');
+  assert.equal(empty.status, 200);
+  assert.equal(empty.payload.accountId, 'user_empty');
+  assert.equal(empty.payload.gamesConsidered, 0);
+  assert.deepEqual(await fairPlaySummaryForApi('unknown', async () => null), {
+    status: 404,
+    payload: { error: 'not_found' },
+  });
+});
+
+test('fair-play summary is GET-only and requires persistence', async () => {
+  const path = '/api/admin/fair-play/accounts/user/summary';
+  const methodResponse = captureResponse();
+  assert.equal(
+    await tryHandle(
+      {},
+      { method: 'POST', headers: {} } as IncomingMessage,
+      methodResponse,
+      path,
+      new URL(path, 'http://test.local'),
+    ),
+    true,
+  );
+  assert.equal(methodResponse.statusCode, 405);
+  const response = captureResponse();
+  assert.equal(
+    await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      path,
+      new URL(path, 'http://test.local'),
+    ),
+    true,
+  );
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(JSON.parse(response.body), { error: 'persistence_disabled' });
+});
+
+test('fair-play summary HTTP success decodes the account id and serializes empty evidence', async (t) => {
+  init('postgres://unused/route-test');
+  t.after(close);
+  const queries: unknown[][] = [];
+  t.mock.method(getPool(), 'query', async (sql: string, values: unknown[]) => {
+    queries.push(values);
+    if (sql.startsWith('SELECT id FROM users')) return { rows: [{ id: 'user sample' }] };
+    return { rows: [] };
+  });
+  const path = '/api/admin/fair-play/accounts/user%20sample/summary';
+  const response = captureResponse();
+  assert.equal(
+    await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      path,
+      new URL(path, 'http://test.local'),
+    ),
+    true,
+  );
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.accountId, 'user sample');
+  assert.equal(payload.gamesConsidered, 0);
+  assert.deepEqual(payload.account.topMoveMatch, { matches: 0, samples: 0, rate: null });
+  assert.deepEqual(queries, [['user sample'], ['user sample', 40]]);
+});
+
+test('fair-play summary rejects a malformed account id before any query', async (t) => {
+  init('postgres://unused/route-test');
+  t.after(close);
+  const query = t.mock.method(getPool(), 'query', async () => ({ rows: [] }));
+  const path = '/api/admin/fair-play/accounts/%E0%A4%A/summary';
+  const response = captureResponse();
+  assert.equal(
+    await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      path,
+      new URL('/api/admin/fair-play/accounts/x/summary', 'http://test.local'),
+    ),
+    true,
+  );
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(JSON.parse(response.body), { error: 'invalid_account_id' });
+  assert.equal(query.mock.callCount(), 0);
 });
 
 type ResponseCapture = {

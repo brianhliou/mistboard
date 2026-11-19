@@ -6,6 +6,7 @@
 //   POST   /api/studies                       create (auth) — study + first chapter
 //   GET    /api/studies/mine                  list the signed-in owner's studies
 //   GET    /api/studies/staff                 list staff-curated public studies
+//   GET    /api/studies/classical             list the classical collections, in reading order
 //   GET    /api/studies/:id                   read (public/unlisted: anyone; private: owner)
 //   PATCH  /api/studies/:id                   update name/description/visibility (owner)
 //   DELETE /api/studies/:id                   delete (owner)
@@ -19,6 +20,9 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  createInitialFFQBanqiState,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  FFQ_BANQI_PUBLIC_REPLAY,
   initialStartFen,
   isAdminOnlyStudySpecId,
   isStudyEligibleSpecId,
@@ -26,11 +30,16 @@ import {
   startIsDealt,
   THREE_KINGDOMS_BANQI_PUBLIC_REPLAY,
   THREE_KINGDOMS_BANQI_SPEC_ID,
+  validateFFQBanqiReplayTree,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
 import * as persistence from './../persistence.js';
-import { STUDY_PAGE_MAX, type StudyListAccess } from './../persistence-studies.js';
+import {
+  listClassicalStudies,
+  STUDY_PAGE_MAX,
+  type StudyListAccess,
+} from './../persistence-studies.js';
 import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
 import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
@@ -73,7 +82,7 @@ export function setAdminOnlyStudyGateForTests(gate: AdminOnlyStudyGate | null): 
 // Every route that names one study (read, edit, delete, like, clone, chapters,
 // analysis) carries its id in the first path segment after /api/studies/.
 const STUDY_ITEM_PATH = new RegExp(`^/api/studies/(${ID})(?:/|$)`);
-const STUDY_COLLECTION_SEGMENTS = new Set(['public', 'staff', 'favorites', 'mine']);
+const STUDY_COLLECTION_SEGMENTS = new Set(['public', 'staff', 'classical', 'favorites', 'mine']);
 
 /** True when the study must read as missing to this requester: it has a
  *  chapter in an admin-only variant and the requester is not admitted. Owner
@@ -94,6 +103,14 @@ async function listAccessFor(request: IncomingMessage): Promise<StudyListAccess>
 }
 
 export function isSerializedTree(value: unknown, variant: string): boolean {
+  if (variant === 'ffq-banqi') {
+    try {
+      validateFFQBanqiReplayTree(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
   if (!value || typeof value !== 'object') return false;
   const tree = value as { version?: unknown; root?: unknown; replay?: unknown; rootFen?: unknown };
   if (
@@ -195,6 +212,35 @@ async function pageOf(
 // path to remember. The create-study flow already mints one; the add-chapter
 // flow did not, which shipped a study whose second chapter would not load.
 export function ensureDealtRoot(variant: string, root: unknown): unknown {
+  if (variant === 'ffq-banqi') {
+    const tree = root as {
+      version?: unknown;
+      replay?: unknown;
+      rootFen?: unknown;
+      root?: { children?: unknown[] };
+    } | null;
+    // The existing create/add-chapter dialogs submit an empty tree. Persist
+    // only the four public setup observations, never the rest of that deal.
+    if (
+      tree?.version === 1 &&
+      tree.replay === undefined &&
+      tree.rootFen === undefined &&
+      !('initialRevealed' in tree) &&
+      Array.isArray(tree.root?.children) &&
+      tree.root.children.length === 0
+    ) {
+      const state = createInitialFFQBanqiState('study', Math.random);
+      return {
+        ...tree,
+        replay: FFQ_BANQI_PUBLIC_REPLAY,
+        initialRevealed: FFQ_BANQI_FACE_UP_SQUARES.map((square) => {
+          const piece = state.board[square]!;
+          return { color: piece.color, role: piece.role };
+        }),
+      };
+    }
+    return root;
+  }
   if (
     variant === 'three-kingdoms-banqi' &&
     root &&
@@ -356,6 +402,24 @@ export async function tryHandle(
     const access = await listAccessFor(request);
     const page = await pageOf(
       (limit, q, offset) => persistence.listFeaturedStudies(limit, q, offset, access),
+      params,
+      30,
+    );
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
+    return true;
+  }
+
+  // ── Classical collections: the archival and seeded manuals, in reading order ──
+  if (pathname === '/api/studies/classical') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const params = new URL(request.url ?? '', 'http://localhost').searchParams;
+    const access = await listAccessFor(request);
+    const page = await pageOf(
+      (limit, q, offset) => listClassicalStudies(limit, q, offset, access),
       params,
       30,
     );
@@ -599,7 +663,9 @@ async function createStudy(
     writeJson(response, 400, { error: 'unsupported_variant' });
     return true;
   }
-  if (!isSerializedTree(chapter.root, variant)) {
+  const chapterRoot =
+    variant === 'ffq-banqi' ? ensureDealtRoot(variant, chapter.root) : chapter.root;
+  if (!isSerializedTree(chapterRoot, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -622,7 +688,7 @@ async function createStudy(
       i18n: parseI18nField(chapter.i18n),
       variant,
       orientation,
-      root: ensureDealtRoot(variant, chapter.root),
+      root: ensureDealtRoot(variant, chapterRoot),
       denorm: chapter.denorm ?? {},
       tags: parseChapterTags(chapter.tags),
     },
@@ -753,7 +819,8 @@ async function addChapter(
     writeJson(response, 400, { error: 'variant_mismatch' });
     return true;
   }
-  if (!isSerializedTree(body.root, variant)) {
+  const chapterRoot = variant === 'ffq-banqi' ? ensureDealtRoot(variant, body.root) : body.root;
+  if (!isSerializedTree(chapterRoot, variant)) {
     writeJson(response, 400, { error: 'invalid_tree' });
     return true;
   }
@@ -764,7 +831,7 @@ async function addChapter(
     i18n: parseI18nField(body.i18n),
     variant,
     orientation,
-    root: ensureDealtRoot(variant, body.root),
+    root: ensureDealtRoot(variant, chapterRoot),
     denorm: body.denorm ?? {},
     tags: parseChapterTags(body.tags),
   });

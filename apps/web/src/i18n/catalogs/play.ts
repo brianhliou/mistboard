@@ -1,6 +1,7 @@
 // Play translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_PLAY = {
+  'setup.waitingPlayer': 'A player is waiting for {variant}, {clock}. Play them',
   'live.jieqiRepwarn.labelCheck': 'Loses: perpetual check',
   'live.jieqiRepwarn.labelChase': 'Loses: perpetual chase',
   'live.jieqiRepwarn.checkTitle': 'Lose by perpetual check?',
@@ -301,6 +302,11 @@ export const EN_PLAY = {
   'result.colorVictorious': '{reason} • {color} is victorious',
   'result.drawByReason': 'Draw • {reason}',
   // /correspondence (correspondence.ts): the inbox, Start a game, open seeks, your challenges.
+  'correspondence.moveDeadlineDay':
+    "You'll have {days} day for each move. Miss one and you lose the game.",
+  'correspondence.moveDeadlineDays':
+    "You'll have {days} days for each move. Miss one and you lose the game.",
+  'correspondence.moveDeadlineList': 'Every move has a deadline. Miss one and you lose the game.',
   'correspondence.confirmMove': 'Confirm',
   'correspondence.cancelMove': 'Cancel',
   'correspondence.pendingMove': 'Move preview. Confirm to send.',
@@ -998,11 +1004,15 @@ export const EN_PLAY = {
   'lobby.panelDaysShort': '{days}d',
   'lobby.panelMoreGames': '+{count} more',
   'lobby.panelDaysSignIn': 'Sign in for days per move',
+  'lobby.panelSignInRatedDays': 'Sign in for rated games and days per move',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;
 
 export const CRITICAL_PLAY_I18N_KEYS = [
+  'correspondence.moveDeadlineDay',
+  'correspondence.moveDeadlineDays',
+  'correspondence.moveDeadlineList',
   'play.startPlaying',
   'play.playGame',
   'play.opponentLabel',

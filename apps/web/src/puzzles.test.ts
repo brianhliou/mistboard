@@ -36,6 +36,7 @@ import {
   renderPuzzlesShellForPrerender,
   resetPuzzleReloadCheckForTest,
   sourceGameLines,
+  withCampaignParams,
 } from './puzzles.js';
 import {
   setBoardCoordinatesPreference,
@@ -2349,6 +2350,98 @@ describe('standard xiangqi puzzles', () => {
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
   });
 
+  it('keeps only campaign tags when it rewrites the landing URL', () => {
+    expect(withCampaignParams('/puzzles/a', '?utm_source=reddit&ref=x&utm_campaign=c')).toBe(
+      '/puzzles/a?utm_source=reddit&utm_campaign=c',
+    );
+    expect(withCampaignParams('/puzzles/a?theme=t', '?theme=t&utm_medium=social')).toBe(
+      '/puzzles/a?theme=t&utm_medium=social',
+    );
+    expect(withCampaignParams('/puzzles/a', '?ref=x')).toBe('/puzzles/a');
+  });
+
+  it.each([
+    '',
+    '?theme=matein2',
+    '?player=fixture-player',
+    '?player=fixture-player&theme=matein2',
+    '?utm_source=reddit&utm_medium=social&utm_campaign=rxiangqi-2026-11',
+    '?theme=matein2&utm_source=reddit',
+  ])('replaces the bare puzzle URL with the served id, keeping filters "%s"', async (query) => {
+    stubWindowLocalStorage(memoryStorage());
+    const puzzle = XIANGQI_PUZZLES[0]!;
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/puzzles' || url.startsWith('/api/puzzles?')) {
+        return json({
+          puzzles: [{ ...publicSummary(puzzle), tags: ['matein2', 'player:fixture-player'] }],
+        });
+      }
+      if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+      return json({ error: 'not_found' }, 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    window.history.replaceState(null, '', `/puzzles${query}`);
+    const historyLength = window.history.length;
+    const replace = vi.spyOn(window.history, 'replaceState');
+    const push = vi.spyOn(window.history, 'pushState');
+    const root = document.createElement('div');
+
+    await mountPuzzles(root);
+
+    const servedId = root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id');
+    expect(servedId).toBe(puzzle.id);
+    expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${servedId}`);
+    expect(window.location.pathname + window.location.search).toBe(`/puzzles/${servedId}${query}`);
+    expect(replace).toHaveBeenCalledExactlyOnceWith(null, '', `/puzzles/${servedId}${query}`);
+    expect(push).not.toHaveBeenCalled();
+    expect(window.history.length).toBe(historyLength);
+  });
+
+  it('keeps an unfinished puzzle URL on reload without rewriting history', async () => {
+    const [unfinished, other] = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    stubWindowLocalStorage(memoryStorage());
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+      { type: 'reload' } as PerformanceNavigationTiming,
+    ]);
+    resetPuzzleReloadCheckForTest();
+    window.history.replaceState(null, '', `/puzzles/${unfinished.id}`);
+    const replace = vi.spyOn(window.history, 'replaceState');
+    const push = vi.spyOn(window.history, 'pushState');
+    const fetchSpy = xiangqiFetchMock([unfinished, other]);
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+
+    await mountPuzzles(root, unfinished.id);
+
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(unfinished.id);
+    expect(fetchSpy).toHaveBeenCalledWith(`/api/puzzles/${unfinished.id}`);
+    expect(fetchSpy).not.toHaveBeenCalledWith(`/api/puzzles/${other.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${unfinished.id}`);
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('varies the first puzzle on fresh bare visits and names each served puzzle', async () => {
+    const puzzles = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    vi.stubGlobal('fetch', xiangqiFetchMock(puzzles));
+    const random = vi.spyOn(Math, 'random');
+    const servedIds = [];
+    for (const draw of [0, 0.99]) {
+      stubWindowLocalStorage(memoryStorage());
+      window.history.replaceState(null, '', '/puzzles');
+      random.mockReturnValue(draw);
+      const root = document.createElement('div');
+
+      await mountPuzzles(root);
+
+      const servedId = root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id');
+      servedIds.push(servedId);
+      expect(window.location.pathname).toBe(`/puzzles/${servedId}`);
+    }
+    expect(new Set(servedIds).size).toBe(2);
+  });
+
   it('a reload past a finished puzzle opens the next unseen one; a link still opens it', async () => {
     // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
     // opened. Solving it and reloading used to serve the solved puzzle again.
@@ -3121,9 +3214,8 @@ describe('standard xiangqi puzzles', () => {
       const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
       expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
       expect(link?.textContent).toContain('From game');
-      // The event is clipped to one line in the sidebar, so the full text rides
-      // on the hover title.
-      expect(link?.closest('.puzzle-source-event')).not.toBeNull();
+      // The label links to the game and keeps the open-game tooltip.
+      expect(link?.closest('.puzzle-source-header')).not.toBeNull();
       expect(link?.title.split('\n')[0]).toBe(link?.textContent);
     });
 
@@ -3229,6 +3321,25 @@ describe('puzzleMoveRowNumber', () => {
 });
 
 describe('sourceGameLines', () => {
+  it.each([false, true])('puts a long event below From game (hosted: %s)', (hosted) => {
+    const event = '2025 8th Yidaiyilu Jinjiangbei World Xiangqi Championship';
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { gameId: 'view_m_138334', ply: 53, event, hosted },
+    });
+    expect(lines[0]?.textContent).toBe('From game');
+    expect(lines[1]?.className).toBe('puzzle-source-event');
+    expect(lines[1]?.textContent).toBe(event);
+    expect(lines[1]?.title).toContain(event);
+    if (hosted) {
+      for (const line of lines) {
+        expect(line.querySelector('a')?.getAttribute('href')).toBe(
+          '/historical-xiangqi/game/view_m_138334?ply=53',
+        );
+      }
+    }
+  });
+
   it('renders a "From game" header with both players when a xiangqi puzzle carries attribution', () => {
     const lines = sourceGameLines({
       variant: XIANGQI_SPEC_ID,
@@ -3242,14 +3353,15 @@ describe('sourceGameLines', () => {
         blackName: 'Black Player',
       },
     });
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
     // The event already names its year, so the year is not added again.
-    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship');
-    expect(lines[1]?.textContent).toContain('Red Player');
-    expect(lines[2]?.textContent).toContain('Black Player');
+    expect(lines[0]?.textContent).toBe('From game');
+    expect(lines[1]?.textContent).toBe('2026 Team Championship');
+    expect(lines[2]?.textContent).toContain('Red Player');
+    expect(lines[3]?.textContent).toContain('Black Player');
     // Draw shows ½ on both players.
-    expect(lines[1]?.textContent).toContain('½');
     expect(lines[2]?.textContent).toContain('½');
+    expect(lines[3]?.textContent).toContain('½');
   });
 
   it('marks only the winner on a decisive result', () => {
@@ -3266,16 +3378,20 @@ describe('sourceGameLines', () => {
       sourceGameLines({
         variant: XIANGQI_SPEC_ID,
         sourceGame: { gameId: 'g', ply: 1, event, playedOn: '2025-11-08', redName: 'R' },
-      })[0]?.textContent;
-    expect(header('Guangdong Ten Tigers Match')).toBe(
-      'From game · Guangdong Ten Tigers Match (2025)',
-    );
-    expect(header('2025 Guangdong Ten Tigers Match')).toBe(
-      'From game · 2025 Guangdong Ten Tigers Match',
-    );
+      })
+        .filter((line) => line.matches('.puzzle-source-header, .puzzle-source-event'))
+        .map((line) => line.textContent);
+    expect(header('Guangdong Ten Tigers Match')).toEqual([
+      'From game',
+      'Guangdong Ten Tigers Match (2025)',
+    ]);
+    expect(header('2025 Guangdong Ten Tigers Match')).toEqual([
+      'From game',
+      '2025 Guangdong Ten Tigers Match',
+    ]);
     // No event an English reader can read: a plain description.
-    expect(header(undefined)).toBe('From a 2025 game');
-    expect(header('某某杯')).toBe('From a 2025 game');
+    expect(header(undefined)).toEqual(['From a 2025 game']);
+    expect(header('某某杯')).toEqual(['From a 2025 game']);
   });
 
   it('shows the player without the team, the full string in the tooltip', () => {
@@ -3395,10 +3511,11 @@ describe('sourceGameLines locale', () => {
     window.history.replaceState(null, '', '/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
     const text = lines.map((line) => line.textContent ?? '');
-    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship');
-    expect(text[1]).toContain('Huang Leilei');
-    expect(text[1]).not.toContain('Shandong');
-    expect(text[2]).toContain('Shi Fenglan');
+    expect(text[0]).toBe('From game');
+    expect(text[1]).toBe('2026 National Xiangqi Team Championship');
+    expect(text[2]).toContain('Huang Leilei');
+    expect(text[2]).not.toContain('Shandong');
+    expect(text[3]).toContain('Shi Fenglan');
     for (const line of text) expect(line).not.toMatch(CJK);
   });
 
@@ -3414,10 +3531,10 @@ describe('sourceGameLines locale', () => {
   it('keeps the original Chinese on a Chinese page', () => {
     window.history.replaceState(null, '', '/zh-hans/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
-    expect(lines[0]?.textContent).toContain('2026年全国象棋团体赛');
+    expect(lines[1]?.textContent).toContain('2026年全国象棋团体赛');
     // The Chinese original puts the team first; the name shows, the team is
     // in the tooltip.
-    const red = lines[1]?.querySelector<HTMLElement>('.puzzle-source-player-name');
+    const red = lines[2]?.querySelector<HTMLElement>('.puzzle-source-player-name');
     expect(red?.textContent).toBe('黄蕾蕾');
     expect(red?.title).toBe('山东省棋牌运动管理中心 黄蕾蕾');
   });

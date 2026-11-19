@@ -12,6 +12,11 @@ import {
   xiangqiPositionPuzzleHash,
 } from '../../apps/server/src/xiangqi-puzzle-position-packet.ts';
 import {
+  readXiangqiSetupGames,
+  withXiangqiPositionSetup,
+  type XiangqiSetupGame,
+} from '../../apps/server/src/xiangqi-puzzle-setup-backfill.ts';
+import {
   readXiangqiPositionOnlyPuzzle,
   XIANGQI_PUZZLE_ADMISSION_PROFILE,
   XIANGQI_PUZZLE_VERIFICATION_PROFILE,
@@ -21,6 +26,7 @@ import { PikafishEngine } from './xiangqi-pikafish-uci.ts';
 
 export async function buildXiangqiPositionPacket(input: {
   puzzles: unknown[];
+  games: readonly XiangqiSetupGame[];
   reviewNote: string;
   engine: Pick<PikafishEngine, 'newGame' | 'analyzeFen'> &
     Partial<Pick<PikafishEngine, 'hashMb' | 'lastSearch'>>;
@@ -38,7 +44,7 @@ export async function buildXiangqiPositionPacket(input: {
       (policyVersion !== undefined && typeof policyVersion !== 'string')
     )
       throw new Error('Invalid review envelope');
-    const puzzle = readXiangqiPositionOnlyPuzzle(core);
+    const puzzle = withXiangqiPositionSetup(readXiangqiPositionOnlyPuzzle(core), input.games);
     // Both independent checks bind the final position-only shape, not a prior
     // source-game record. Native solver searches clear their hash per turn.
     const verify = sealXiangqiPositionAudit(
@@ -70,6 +76,7 @@ async function main() {
   const { values } = parseArgs({
     options: {
       input: { type: 'string' },
+      games: { type: 'string' },
       out: { type: 'string' },
       binary: { type: 'string' },
       net: { type: 'string' },
@@ -79,12 +86,19 @@ async function main() {
   });
   if (values.help) {
     process.stdout.write(
-      '--input REVIEW.json --out PACKET.json --binary ENGINE --net NET --review-note NOTE\n',
+      '--input REVIEW.json --games LOCAL.json --out PACKET.json --binary ENGINE --net NET --review-note NOTE\n',
     );
     return;
   }
-  if (!values.input || !values.out || !values.binary || !values.net || !values['review-note'])
-    throw new Error('Input, output, pinned engine/net and review note are required');
+  if (
+    !values.input ||
+    !values.games ||
+    !values.out ||
+    !values.binary ||
+    !values.net ||
+    !values['review-note']
+  )
+    throw new Error('Input, local games, output, pinned engine/net and review note are required');
   if (statSync(values.input).size > 16 * 1024 * 1024) throw new Error('Review file exceeds 16 MiB');
   const sha = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
   if (
@@ -99,6 +113,7 @@ async function main() {
     await engine.init();
     const packet = await buildXiangqiPositionPacket({
       puzzles: review.packets,
+      games: readXiangqiSetupGames(JSON.parse(readFileSync(values.games, 'utf8'))),
       reviewNote: values['review-note'],
       engine,
     });

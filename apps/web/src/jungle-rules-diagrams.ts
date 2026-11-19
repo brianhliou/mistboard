@@ -13,7 +13,7 @@
 //     about to play (it did: the swimming-rat diagram was missing a legal move).
 //     It also means a "cannot" diagram is honest by construction — the square is
 //     unmarked because the kernel refuses it, not because the author left it out.
-//  2. ONE VISUAL GRAMMAR: a dot (or ring, when occupied) is a square this piece
+//  2. ONE VISUAL GRAMMAR: a dot (or a tinted square, when occupied) is a square this piece
 //     can reach; an arrow is a river leap. Steps and leaps look different because
 //     they ARE different, and the leap is the rule readers get wrong.
 //
@@ -91,7 +91,7 @@ function isStep(from: JungleSquare, to: JungleSquare): boolean {
 /**
  * One position, one piece to move, every legal destination marked: dots for
  * steps, arrows for river leaps. A leap onto an occupied square also keeps its
- * capture ring, so "the leap can take the piece it lands on" is visible in a
+ * capture tint, so "the leap can take the piece it lands on" is visible in a
  * single board rather than asserted in prose.
  */
 function jungleMoveDiagram(opts: {
@@ -127,7 +127,14 @@ function jungleMoveDiagram(opts: {
       perspective: 'red',
       selected: from,
       targets: [...steps, ...leaps.filter((to) => board[to] !== undefined)],
-      arrows: arrows.map((to) => ({ from, to, ...LEAP_ARROW })),
+      // Edge to edge, so the arrow never covers the mover or the piece it takes.
+      arrows: arrows.map((to) => ({
+        from,
+        to,
+        ...LEAP_ARROW,
+        clearFrom: true,
+        clearTo: board[to] !== undefined,
+      })),
     }),
     opts.maxWidth ?? PAIR_WIDTH,
   );

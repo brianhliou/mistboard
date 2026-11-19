@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
+import * as analytics from './analytics.js';
 import { findArticle } from './articles-data.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
 import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
@@ -32,6 +33,7 @@ import {
   setResolvedStatsExcluded,
 } from './signed-in-state.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
+import { ENGINE_OFFER_AFTER_MS } from './web-utils.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -147,6 +149,37 @@ describe('homepage play panel', () => {
     );
     expect(specs).toEqual(expect.arrayContaining(['xiangqi', 'jieqi', 'banqi']));
     expect(new Set(specs).size).toBe(specs.length);
+  });
+
+  it('leads both lists with the game this browser last played', () => {
+    const specsOf = (board: HTMLElement, selector: string) =>
+      [...board.querySelectorAll<HTMLElement>(selector)].map((el) => el.dataset.gameSpec);
+    const fresh = buildPlayPanel('en', { hydrate: false });
+    const people = specsOf(fresh, '.pp-person-rows .pp-tile');
+    const bots = specsOf(fresh, '.pp-row-bot');
+    // The last bot game is on both lists, so one stored game moves both.
+    const last = bots.at(-1);
+    expect(bots.length).toBeGreaterThan(2);
+    expect(people).toContain(last);
+    window.localStorage.setItem('mistboard:last-played-variant', String(last));
+
+    const returning = buildPlayPanel('en', { hydrate: false });
+    expect(specsOf(returning, '.pp-person-rows .pp-tile')).toEqual([
+      last,
+      ...people.filter((id) => id !== last),
+    ]);
+    expect(specsOf(returning, '.pp-row-bot')).toEqual([last, ...bots.filter((id) => id !== last)]);
+  });
+
+  it('keeps the computer list in order when the last game has no bot', () => {
+    const specsOf = (board: HTMLElement, selector: string) =>
+      [...board.querySelectorAll<HTMLElement>(selector)].map((el) => el.dataset.gameSpec);
+    const fresh = buildPlayPanel('en', { hydrate: false });
+    const bots = specsOf(fresh, '.pp-row-bot');
+    const noBot = specsOf(fresh, '.pp-person-rows .pp-tile').find((id) => !bots.includes(id));
+    if (!noBot) return;
+    window.localStorage.setItem('mistboard:last-played-variant', String(noBot));
+    expect(specsOf(buildPlayPanel('en', { hydrate: false }), '.pp-row-bot')).toEqual(bots);
   });
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
@@ -570,6 +603,48 @@ describe('homepage play panel', () => {
     },
   );
 
+  it('#1220: says the correspondence deadline once under open games, only when one can be joined', async () => {
+    vi.useFakeTimers();
+    const mountWith = async (seeks: Array<Record<string, unknown>>) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: string) => {
+          if (input === '/api/correspondence/seeks') return Response.json({ seeks });
+          if (input === '/api/lobby') return Response.json({ requests: [] });
+          return Response.json({ bots: [], engines: [], playing: 0, online: 0 });
+        }),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      await flush();
+      return board;
+    };
+    const other = {
+      id: 'corr-1',
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      rated: false,
+      creatorName: 'Erin',
+      isMine: false,
+    };
+    const joinable = await mountWith([other, { ...other, id: 'corr-2', daysPerMove: 1 }]);
+    expect(joinable.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(2);
+    const lines = joinable.querySelectorAll('.pp-offers-deadline');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.textContent).toBe(
+      'Every move has a deadline. Miss one and you lose the game.',
+    );
+    expect(joinable.querySelector('.pp-offers .correspondence-deadline-notice')).toBeNull();
+    joinable.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const ownOnly = await mountWith([{ ...other, isMine: true }]);
+    expect(ownOnly.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(1);
+    expect(ownOnly.querySelector('.pp-offers-deadline')).toBeNull();
+    ownOnly.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
   it.each(['dark-xiangqi', 'dark-chess'])(
     'keeps %s off remembered and waiting-player hero rows',
     async (spec) => {
@@ -788,12 +863,12 @@ describe('homepage play panel', () => {
   });
 
   // The stepper clips with an ellipsis: at 118px "3 days/move" read "3 days/…".
-  // Its text needs 81px at 13.5px and the two 22px arrows with their 3px gaps
-  // take 50, so the shared pace stepper is at least 131px wide.
+  // Its text needs 81px at 13.5px, the two 26px arrows with their 3px gaps
+  // take 58 and the inner padding and rim 6, so the stepper is at least 145px.
   it('gives the shared pace stepper room for the whole days label', () => {
     const css = readFileSync('src/landing-play-panel.css', 'utf8');
     const width = Number(css.match(/\.pp-pace \.pp-step-clock \{\s*flex: 0 0 (\d+)px;/)?.[1]);
-    expect(width).toBeGreaterThanOrEqual(131);
+    expect(width).toBeGreaterThanOrEqual(145);
   });
 
   // Play a person never scrolls (2026-10-27): the tiles share the height left
@@ -1150,6 +1225,65 @@ describe('homepage play panel', () => {
     await vi.advanceTimersByTimeAsync(3_000);
   });
 
+  it('#1194: the waiting row reports shown and accepted for casual jieqi and xiangqi only', async () => {
+    vi.useFakeTimers();
+    rememberLivePace();
+    const tracked = vi.spyOn(analytics, 'track');
+    const tc = { initialMs: 600_000, incrementMs: 5_000 };
+    let requests: Array<Record<string, unknown>> = [
+      { gameSpecId: 'banqi', rated: false, timeControl: tc, waitingMs: 1_000 },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string, init?: RequestInit) => {
+        if (input === '/api/lobby' && init?.method === 'POST') {
+          return Response.json(
+            { status: 'matched', ticketId: 'j1', url: '/room/jq_paired' },
+            { status: 201 },
+          );
+        }
+        if (input === '/api/lobby') return Response.json({ requests });
+        return Response.json({});
+      }),
+    );
+    const navigate = vi.fn();
+    setRoomNavigator(navigate);
+    const shown = () => tracked.mock.calls.filter(([name]) => name === 'lobby_seek_prompt_shown');
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+    // A casual banqi seek gets the row, not the prompt events.
+    expect(board.querySelector('.pp-feature-waiting')?.textContent).toContain('Banqi');
+    expect(shown()).toHaveLength(0);
+
+    requests = [{ gameSpecId: 'jieqi', rated: true, timeControl: tc, waitingMs: 1_000 }];
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(shown()).toHaveLength(0);
+
+    requests = [{ gameSpecId: 'jieqi', rated: false, timeControl: tc, waitingMs: 1_000 }];
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(board.querySelector('.pp-feature-waiting')?.textContent).toContain('10+5');
+    // Once per variant and clock, however often the list refreshes.
+    expect(shown()).toHaveLength(1);
+    expect(shown()[0]?.[1]).toMatchObject({ surface: 'play-panel', gameSpecId: 'jieqi', ...tc });
+
+    board.querySelector<HTMLButtonElement>('.pp-feature-waiting .pp-act')!.click();
+    await flush();
+    expect(navigate).toHaveBeenCalledWith('/room/jq_paired');
+    expect(tracked).toHaveBeenCalledWith(
+      'lobby_seek_prompt_accepted',
+      expect.objectContaining({ surface: 'play-panel', gameSpecId: 'jieqi' }),
+    );
+    setRoomNavigator(null);
+    board.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
   it('does not offer you your own seek while you wait', async () => {
     vi.useFakeTimers();
     rememberLivePace();
@@ -1204,11 +1338,18 @@ describe('homepage play panel', () => {
     // Rated off on the server: no switch, no note.
     expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
     setRatedModeEnabled(true);
-    // A guest is told to sign in.
-    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('Sign in to play rated games.');
+    // A guest gets one sign-in button for rated and days, and no note.
+    const guest = buildPlayPanel('en', { hydrate: false });
+    expect(note(guest)).toBe('');
+    expect(guest.querySelector<HTMLAnchorElement>('.pp-signin')?.textContent).toBe(
+      'Sign in for rated games and days per move',
+    );
+    expect(guest.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(false);
     // A signed-in counted account in Casual sees nothing.
     setResolvedSignedIn(true);
-    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    const member = buildPlayPanel('en', { hydrate: false });
+    expect(note(member)).toBe('');
+    expect(member.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(true);
     // A stats-excluded account plays casual only.
     setResolvedStatsExcluded(true);
     const excluded = buildPlayPanel('en', { hydrate: false });
@@ -1226,6 +1367,22 @@ describe('homepage play panel', () => {
     setRatedModeEnabled(true);
     const labels = [...board.querySelectorAll('.pp-mode-btn')].map((el) => el.textContent);
     expect(labels).toEqual(['Casual', 'Rated']);
+  });
+
+  // One control row (2026-11-17): Casual/Rated sits in the pace bar beside
+  // Live/Days per move and the clock, not in a second bar above it.
+  it('puts Casual/Rated, the pace toggle and the clock in one row', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const bar = paceBar(board);
+    expect(bar.querySelectorAll('.pp-mode-btn')).toHaveLength(2);
+    expect(bar.querySelectorAll('.pp-pace-btn')).toHaveLength(2);
+    expect(bar.querySelectorAll('.pp-step-clock')).toHaveLength(1);
+    expect(board.querySelector('.pp-view-person .pp-control')).toBeNull();
+    // Picking a pace re-renders the bar and keeps the switch in it.
+    bar.querySelector<HTMLButtonElement>('[data-family="live"]')!.click();
+    expect(paceBar(board).querySelectorAll('.pp-mode-btn')).toHaveLength(2);
   });
 
   it('opens signed in on 3 days per move for every tile, with no bot-offer note', () => {
@@ -1274,7 +1431,7 @@ describe('homepage play panel', () => {
     const days = bar.querySelector<HTMLButtonElement>('[data-family="days"]')!;
     expect(days.disabled).toBe(true);
     expect(days.title).toBe('Sign in for days per move');
-    const hint = bar.querySelector<HTMLAnchorElement>('.pp-pace-hint');
+    const hint = board.querySelector<HTMLAnchorElement>('.pp-signin');
     expect(hint?.textContent).toBe('Sign in for days per move');
     expect(hint?.getAttribute('href')).toContain('/account?tab=login');
     expect(tiles(board).length).toBeGreaterThan(1);
@@ -1643,6 +1800,27 @@ describe('homepage play panel', () => {
       expect(del).toBeLessThan(net.index('/api/rooms', 'POST'));
     });
 
+    it('#1194: taking the bot offer ends the seek as bot_accepted before the bot game starts', async () => {
+      const net = lobbyFetch();
+      const board = buildPlayPanel('en', { hydrate: false });
+      document.body.append(board);
+      await seek(board);
+      await settle(ENGINE_OFFER_AFTER_MS);
+      const play = board.querySelector<HTMLButtonElement>(
+        '.landing-engine-offer .landing-setup-start',
+      );
+      expect(play).not.toBeNull();
+      play!.click();
+      await settle();
+
+      expect(net.deletes()).toEqual([
+        { url: '/api/lobby/t1?how=bot_accepted', method: 'DELETE', keepalive: true },
+      ]);
+      expect(net.index('/api/lobby/t1?how=bot_accepted', 'DELETE')).toBeLessThan(
+        net.index('/api/rooms', 'POST'),
+      );
+    });
+
     it('withdraws the seek with a keepalive DELETE when the page goes away', async () => {
       const net = lobbyFetch();
       const board = buildPlayPanel('en', { hydrate: false });
@@ -1652,7 +1830,9 @@ describe('homepage play panel', () => {
       window.dispatchEvent(new Event('pagehide'));
       await settle();
 
-      expect(net.deletes()).toEqual([{ url: '/api/lobby/t1', method: 'DELETE', keepalive: true }]);
+      expect(net.deletes()).toEqual([
+        { url: '/api/lobby/t1?how=left', method: 'DELETE', keepalive: true },
+      ]);
     });
 
     it('stops listening for pagehide once the seek is cancelled or matched', async () => {

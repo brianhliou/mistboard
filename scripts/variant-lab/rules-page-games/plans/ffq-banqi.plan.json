@@ -1,0 +1,602 @@
+{
+  "create": {
+    "owner": "mistboard",
+    "name": "Fanfanqi: Level 7 versus Level 8, annotated",
+    "visibility": "public",
+    "description": "A recorded Fanfanqi engine game. Level 7 review analysis, move grades and public-pool luck. Pieces still face down remain unknown. From mistboard.com/rules/fanfanqi.",
+    "chapter": {
+      "name": "Misty Level 8 vs Misty Level 7",
+      "variant": "ffq-banqi",
+      "orientation": "red",
+      "tree": {
+        "version": 1,
+        "replay": "ffq-banqi-public-v1",
+        "initialRevealed": [
+          {
+            "color": "red",
+            "role": "horse"
+          },
+          {
+            "color": "black",
+            "role": "chariot"
+          },
+          {
+            "color": "red",
+            "role": "advisor"
+          },
+          {
+            "color": "red",
+            "role": "chariot"
+          }
+        ],
+        "root": {
+          "children": [
+            {
+              "uci": "@b3:c",
+              "children": [
+                {
+                  "uci": "@a0:S",
+                  "children": [
+                    {
+                      "uci": "@b2:H",
+                      "children": [
+                        {
+                          "uci": "@c3:S",
+                          "children": [
+                            {
+                              "uci": "b2b3",
+                              "children": [
+                                {
+                                  "uci": "d3c3",
+                                  "children": [
+                                    {
+                                      "uci": "b3b2",
+                                      "children": [
+                                        {
+                                          "uci": "c3d3",
+                                          "children": [
+                                            {
+                                              "uci": "@c5:e",
+                                              "children": [
+                                                {
+                                                  "uci": "d3c3",
+                                                  "children": [
+                                                    {
+                                                      "uci": "@d4:s",
+                                                      "children": [
+                                                        {
+                                                          "uci": "@d0:C",
+                                                          "children": [
+                                                            {
+                                                              "uci": "d0d2x:h",
+                                                              "children": [
+                                                                {
+                                                                  "uci": "@a7:r",
+                                                                  "children": [
+                                                                    {
+                                                                      "uci": "@c7:S",
+                                                                      "children": [
+                                                                        {
+                                                                          "uci": "c3b3",
+                                                                          "children": [
+                                                                            {
+                                                                              "uci": "@d6:c",
+                                                                              "children": [
+                                                                                {
+                                                                                  "uci": "d6b6",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "uci": "@d7:R",
+                                                                                      "children": [
+                                                                                        {
+                                                                                          "uci": "b3c3",
+                                                                                          "children": [
+                                                                                            {
+                                                                                              "uci": "@a2:s",
+                                                                                              "children": [
+                                                                                                {
+                                                                                                  "uci": "c3d3",
+                                                                                                  "children": [
+                                                                                                    {
+                                                                                                      "uci": "d2d4",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "uci": "d3d4",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "uci": "b2a2",
+                                                                                                              "children": [
+                                                                                                                {
+                                                                                                                  "uci": "d4d3",
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "uci": "@b7:E",
+                                                                                                                      "children": [
+                                                                                                                        {
+                                                                                                                          "uci": "@a6:G",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "uci": "b7a7",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "uci": "@b5:a",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "uci": "a6b6",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "uci": "@b4:a",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "uci": "b6b5",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "uci": "b4a4",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "uci": "@b0:S",
+                                                                                                                                                      "children": [
+                                                                                                                                                        {
+                                                                                                                                                          "uci": "d3d2",
+                                                                                                                                                          "children": [
+                                                                                                                                                            {
+                                                                                                                                                              "uci": "b5b4",
+                                                                                                                                                              "children": [
+                                                                                                                                                                {
+                                                                                                                                                                  "uci": "d2d3",
+                                                                                                                                                                  "children": [
+                                                                                                                                                                    {
+                                                                                                                                                                      "uci": "b4a4",
+                                                                                                                                                                      "children": [
+                                                                                                                                                                        {
+                                                                                                                                                                          "uci": "d3c3",
+                                                                                                                                                                          "children": [
+                                                                                                                                                                            {
+                                                                                                                                                                              "uci": "a4b4",
+                                                                                                                                                                              "children": [
+                                                                                                                                                                                {
+                                                                                                                                                                                  "uci": "c3d3",
+                                                                                                                                                                                  "children": [
+                                                                                                                                                                                    {
+                                                                                                                                                                                      "uci": "b4b5",
+                                                                                                                                                                                      "children": [
+                                                                                                                                                                                        {
+                                                                                                                                                                                          "uci": "d3d2",
+                                                                                                                                                                                          "children": [
+                                                                                                                                                                                            {
+                                                                                                                                                                                              "uci": "b5c5",
+                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                {
+                                                                                                                                                                                                  "uci": "d2d3",
+                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                    {
+                                                                                                                                                                                                      "uci": "@a5:A",
+                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                        {
+                                                                                                                                                                                                          "uci": "d3d2",
+                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                            {
+                                                                                                                                                                                                              "uci": "d7d6",
+                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                {
+                                                                                                                                                                                                                  "uci": "d2d3",
+                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                      "uci": "a2b2",
+                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                          "uci": "d3d2",
+                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                              "uci": "@a3:g",
+                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                  "uci": "a3a4",
+                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                      "uci": "c5b5",
+                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                          "uci": "d2d3",
+                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                              "uci": "@c4:E",
+                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                  "uci": "d3d2",
+                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                      "uci": "@d5:s",
+                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                          "uci": "@c2:S",
+                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                              "uci": "c2c3",
+                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                  "uci": "d2c2",
+                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                      "uci": "d6d5",
+                                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                          "uci": "c2b2",
+                                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                                              "uci": "c3b3",
+                                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                                  "uci": "b2b3",
+                                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                      "uci": "c4c3",
+                                                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                                          "uci": "b3b2",
+                                                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                                                              "uci": "d5d4",
+                                                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                                                  "uci": "b2a2",
+                                                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                                      "uci": "c3b3",
+                                                                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                                                          "uci": "a4a3",
+                                                                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                                                                              "uci": "b3b2",
+                                                                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                                                                  "uci": "a3b3",
+                                                                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                                                      "uci": "b2a2",
+                                                                                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                                                                          "uci": "b3c3",
+                                                                                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                                                                                              "uci": "@d1:s",
+                                                                                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                                                                                  "uci": "c3d3",
+                                                                                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                                                                      "uci": "c1d1",
+                                                                                                                                                                                                                                                                                                                                      "children": [
+                                                                                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                                                                                          "uci": "d3d4",
+                                                                                                                                                                                                                                                                                                                                          "children": [
+                                                                                                                                                                                                                                                                                                                                            {
+                                                                                                                                                                                                                                                                                                                                              "uci": "@c0:s",
+                                                                                                                                                                                                                                                                                                                                              "children": [
+                                                                                                                                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                                                                                                                                  "uci": "c0b0",
+                                                                                                                                                                                                                                                                                                                                                  "children": [
+                                                                                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                                                                                      "uci": "a0b0",
+                                                                                                                                                                                                                                                                                                                                                      "children": [],
+                                                                                                                                                                                                                                                                                                                                                      "annotations": {
+                                                                                                                                                                                                                                                                                                                                                        "comments": [
+                                                                                                                                                                                                                                                                                                                                                          {
+                                                                                                                                                                                                                                                                                                                                                            "text": "The red soldier takes it and Black runs out of HP. Red wins with 24 HP left. The three pieces still face down stay hidden."
+                                                                                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                                                                                        ]
+                                                                                                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                              ],
+                                                                                                                                                                                                                                                                                                                                              "annotations": {
+                                                                                                                                                                                                                                                                                                                                                "comments": [
+                                                                                                                                                                                                                                                                                                                                                  {
+                                                                                                                                                                                                                                                                                                                                                    "text": "Black is down to 2 HP, and Red's flip turns up a black soldier right next to a red one."
+                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                ]
+                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                                                      "uci": "c3c2",
+                                                                                                                                                                                                                                                                                                      "children": []
+                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                  ],
+                                                                                                                                                                                                                                                                                                  "annotations": {
+                                                                                                                                                                                                                                                                                                    "shapes": [
+                                                                                                                                                                                                                                                                                                      {
+                                                                                                                                                                                                                                                                                                        "kind": "arrow",
+                                                                                                                                                                                                                                                                                                        "brush": "green",
+                                                                                                                                                                                                                                                                                                        "orig": "c3",
+                                                                                                                                                                                                                                                                                                        "dest": "c2"
+                                                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                                                    ]
+                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                                      "uci": "a5a6",
+                                                                                                                                                                                                                                                                      "children": []
+                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                  ],
+                                                                                                                                                                                                                                                                  "annotations": {
+                                                                                                                                                                                                                                                                    "shapes": [
+                                                                                                                                                                                                                                                                      {
+                                                                                                                                                                                                                                                                        "kind": "arrow",
+                                                                                                                                                                                                                                                                        "brush": "green",
+                                                                                                                                                                                                                                                                        "orig": "a5",
+                                                                                                                                                                                                                                                                        "dest": "a6"
+                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                    ]
+                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                              ]
+                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                          ]
+                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                      ]
+                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                  ]
+                                                                                                                                                                                                                }
+                                                                                                                                                                                                              ]
+                                                                                                                                                                                                            }
+                                                                                                                                                                                                          ]
+                                                                                                                                                                                                        }
+                                                                                                                                                                                                      ],
+                                                                                                                                                                                                      "annotations": {
+                                                                                                                                                                                                        "comments": [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                            "text": "Red uncovers its own advisor. A flip costs no HP, but every red piece revealed is one more piece Red can use."
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                        ]
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                    }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                                }
+                                                                                                                                                                                              ]
+                                                                                                                                                                                            }
+                                                                                                                                                                                          ]
+                                                                                                                                                                                        }
+                                                                                                                                                                                      ]
+                                                                                                                                                                                    }
+                                                                                                                                                                                  ]
+                                                                                                                                                                                }
+                                                                                                                                                                              ]
+                                                                                                                                                                            }
+                                                                                                                                                                          ]
+                                                                                                                                                                        }
+                                                                                                                                                                      ]
+                                                                                                                                                                    }
+                                                                                                                                                                  ]
+                                                                                                                                                                }
+                                                                                                                                                              ]
+                                                                                                                                                            }
+                                                                                                                                                          ]
+                                                                                                                                                        }
+                                                                                                                                                      ]
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ],
+                                                                                                                                              "annotations": {
+                                                                                                                                                "comments": [
+                                                                                                                                                  {
+                                                                                                                                                    "text": "Red's general captures an advisor, worth twice a chariot. Black drops to 26 HP against Red's 48."
+                                                                                                                                                  }
+                                                                                                                                                ]
+                                                                                                                                              }
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ]
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                      "uci": "a2b2",
+                                                                                                                      "children": []
+                                                                                                                    }
+                                                                                                                  ],
+                                                                                                                  "annotations": {
+                                                                                                                    "shapes": [
+                                                                                                                      {
+                                                                                                                        "kind": "arrow",
+                                                                                                                        "brush": "green",
+                                                                                                                        "orig": "a2",
+                                                                                                                        "dest": "b2"
+                                                                                                                      }
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            }
+                                                                                          ]
+                                                                                        }
+                                                                                      ]
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ],
+                                                                              "annotations": {
+                                                                                "comments": [
+                                                                                  {
+                                                                                    "text": "An unlucky flip. Red turns up a black cannon, which now aims at Red's chariot."
+                                                                                  }
+                                                                                ]
+                                                                              }
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ],
+                                                              "annotations": {
+                                                                "comments": [
+                                                                  {
+                                                                    "text": "Red's cannon jumps a screen and captures a face-down piece. It turns out to be a black horse, 5 HP off Black's total."
+                                                                  }
+                                                                ]
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "annotations": {
+                        "comments": [
+                          {
+                            "text": "A good flip for Red: a red horse, right beside Black's cannon. Next turn it can take the cannon."
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "annotations": {
+            "comments": [
+              {
+                "text": "Misty Level 8 (red) brings Level 7 (black) to zero HP. Step through with the arrows; seven moments have a note. The graph shows Red's winning chances, and the die beside a flip or a capture of a face-down piece shows whether it was lucky."
+              }
+            ]
+          }
+        }
+      },
+      "tags": {
+        "red": "Misty Level 8",
+        "black": "Misty Level 7",
+        "result": "1-0",
+        "date": "2026-11-16",
+        "event": "Mistboard bot settings"
+      },
+      "scoreSeries": {
+        "side": "red",
+        "series": [
+          {
+            "name": "Level 7 review",
+            "color": "a",
+            "values": [
+              0.505179904675854, 0.5038849893149074, 0.5038849893149074, 0.5541774106115591,
+              0.5567355877411085, 0.5567355877411085, 0.5567355877411085, 0.5567355877411085,
+              0.5605671768774517, 0.5516163601480961, 0.5554568666212798, 0.5592907593176957,
+              0.5783455749550632, 0.6458599984328961, 0.6422975490159866, 0.6446742898364163,
+              0.6387193094089345, 0.5516163601480961, 0.537485185507289, 0.5567355877411085,
+              0.5580135574628102, 0.5580135574628102, 0.5297503340712717, 0.5297503340712717,
+              0.5297503340712717, 0.5284597003648464, 0.5297503340712717, 0.6009025398539322,
+              0.6278931793299217, 0.6839173636261512, 0.7015552536289249, 0.7876073124250341,
+              0.7660680261981696, 0.7660680261981696, 0.994403991620072, 0.7660680261981696,
+              0.769760786045384, 0.8217320407429967, 0.8209719520955201, 0.8217320407429967,
+              0.8224896000825871, 0.8254945949399325, 0.8546553885536277, 0.8682476270123325,
+              0.8688390670696328, 0.871762532306678, 0.8711823204225752, 0.8705998730312505,
+              0.8711823204225752, 0.8711823204225752, 0.8705998730312505, 0.8746302385312481,
+              0.8746302385312481, 0.872916269997022, 0.8734898060759099, 0.8757618527146517,
+              0.8751971452976818, 0.8763243660236859, 0.8779987939863357, 0.8839721470133678,
+              0.880746119375214, 0.8552976756183329, 0.8552976756183329, 0.8546553885536277,
+              0.8364062678532973, 0.8349837307535304, 0.8349837307535304, 0.8349837307535304,
+              0.8356962361516443, 0.8364062678532973, 0.8371138292418542, 0.8440543501121347,
+              0.8507518638344201, 0.8723405137893999, 0.872916269997022, 0.871762532306678,
+              0.994403991620072, 0.8779987939863357, 0.994403991620072, 0.994403991620072,
+              0.994403991620072, 0.994403991620072, 0.994403991620072, 1
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "ops": [],
+  "evidence": {
+    "decidedAt": "2026-11-15",
+    "gameId": "ffq_eve_task_32fb5f81-5ae0-4c28-b813-56c7d38ce96e",
+    "recipe": "scripts/fetch-release-asset.sh (railpack.json)",
+    "repository": "brianhliou/misty-ffq-banqi",
+    "tag": "v0.1.0",
+    "sourcePin": "466057c1b2a1ca0757e9db4da6372dcd55f8bbf0",
+    "releaseSha256": "62e74d73d6caca517a73036e01e884027316c8f7a7a6c6394e0ac016b4e427ca",
+    "binarySha256": "6e6672ad9ec9b3da24af5971637aed36d56b2bdff9256ce3e1ae88fbeafe4ba3",
+    "platform": "darwin-arm64"
+  }
+}

@@ -46,6 +46,7 @@ import {
   enabledLandingVariantGameSpecs,
   fetchCorrespondenceSeeks,
   fetchOpenLobbyRequests,
+  isSeekPromptGameSpec,
   joinLobbyFromPlay,
   LANDING_TIME_PRESETS,
   type LandingGameSpecId,
@@ -59,6 +60,7 @@ import {
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import { setJungleEngineOptions } from './variant-tenant/registry.js';
 import './landing-play-panel.css';
+import { lastPlayedVariant, withLastPlayedFirst } from './last-played-variant.js';
 import { fetchLiveStats } from './live-stats-client.js';
 import { type LastBotGame, lastBotGame, rememberedPveEngine } from './pve-memory.js';
 import {
@@ -67,7 +69,7 @@ import {
   onRatedModeChange,
 } from './rated-flag.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import { buildSeekAcceptAction } from './seek-accept.js';
+import { buildCorrespondenceListDeadlineNotice, buildSeekAcceptAction } from './seek-accept.js';
 import {
   isLikelySignedIn,
   isLikelyStatsExcluded,
@@ -432,6 +434,14 @@ export function buildPlayPanel(
   };
   const ordered = (): LandingGameSpecId[] =>
     orderPanelSpecs(variants.map((v) => v.gameSpecId)) as LandingGameSpecId[];
+  // A returning player's last game leads both lists (#1215; the computer list
+  // from 2026-11-17); every pace lookup keeps the canonical order.
+  const lastPlayed = lastPlayedVariant();
+  const orderedLastFirst = (): LandingGameSpecId[] =>
+    withLastPlayedFirst(
+      ordered().map((gameSpecId) => ({ gameSpecId })),
+      lastPlayed,
+    ).map(({ gameSpecId }) => gameSpecId);
 
   const board = document.createElement('section');
   board.className = 'landing-lobby-board pp-board';
@@ -603,7 +613,7 @@ export function buildPlayPanel(
   const renderBotRows = (): void => {
     botRows.replaceChildren();
     playingEls.clear();
-    for (const gameSpecId of ordered()) {
+    for (const gameSpecId of orderedLastFirst()) {
       if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
         continue;
       const ladder = ladderFor(gameSpecId);
@@ -805,8 +815,30 @@ export function buildPlayPanel(
       );
     }
     const waiting = visibleRequests()[0];
-    if (waiting) rows.push(waitingFeature(waiting));
+    if (waiting) {
+      rows.push(waitingFeature(waiting));
+      noteSeekPromptShown(waiting);
+    }
     featureSlot.replaceChildren(...rows);
+  };
+
+  // The "A player is waiting" row is the play panel's seek prompt (#1194): for
+  // a casual jieqi or xiangqi seek it reports shown and accepted like the bot
+  // setup line does, so the two surfaces read as one funnel. The public lobby
+  // list carries no seek id, so a row counts once per variant and clock.
+  const shownSeekPrompts = new Set<string>();
+  const seekPromptProps = (request: OpenLobbyRequest): Record<string, unknown> | null => {
+    const gameSpecId = request.gameSpecId ?? DARK_CHESS_SPEC_ID;
+    if (request.rated !== false || !isSeekPromptGameSpec(gameSpecId)) return null;
+    return { surface: 'play-panel', gameSpecId, ...request.timeControl };
+  };
+  const noteSeekPromptShown = (request: OpenLobbyRequest): void => {
+    const props = seekPromptProps(request);
+    if (!props) return;
+    const key = `${props.gameSpecId}:${request.timeControl.initialMs}+${request.timeControl.incrementMs}`;
+    if (shownSeekPrompts.has(key)) return;
+    shownSeekPrompts.add(key);
+    track('lobby_seek_prompt_shown', props);
   };
 
   const joinRequest = (
@@ -828,6 +860,10 @@ export function buildPlayPanel(
       undefined,
       {
         startSource: source,
+        onMatched: () => {
+          const props = seekPromptProps(request);
+          if (source === 'panel-waiting' && props) track('lobby_seek_prompt_accepted', props);
+        },
         onNoInstantMatch: () => {
           join.textContent = t('play.offerTaken', {}, locale);
           window.setTimeout(() => {
@@ -857,8 +893,10 @@ export function buildPlayPanel(
   };
 
   // ── Play a person ──
-  const control = document.createElement('div');
-  control.className = 'pp-control';
+  // One control row (2026-11-17): Casual/Rated, Live/Days per move and the
+  // clock, each at one button height; what the row cannot say (sign in, which
+  // clocks rate) rides the Start one heading below it, so the bar costs one
+  // line instead of two.
   const modeSwitch = document.createElement('span');
   modeSwitch.className = 'pp-mode';
   const casualBtn = button('pp-mode-btn', t('play.casual', {}, locale));
@@ -867,7 +905,10 @@ export function buildPlayPanel(
   const note = document.createElement('span');
   note.className = 'pp-note';
   const modeSlot = document.createElement('span');
-  control.append(modeSlot, note);
+  modeSlot.className = 'pp-mode-slot';
+  const signIn = document.createElement('a');
+  signIn.className = 'pp-signin';
+  signIn.hidden = true;
   const renderModeSlot = (): void => {
     modeSlot.replaceChildren(...(ratedAvailable ? [modeSwitch] : []));
   };
@@ -882,8 +923,11 @@ export function buildPlayPanel(
   paceSlot.className = 'pp-pace';
   const offersSlot = document.createElement('div');
   const startHead = document.createElement('div');
-  startHead.className = 'pp-section';
-  startHead.textContent = t('lobby.panelStartOne', {}, locale);
+  startHead.className = 'pp-section pp-section-start';
+  const startLabel = document.createElement('span');
+  startLabel.className = 'pp-section-label';
+  startLabel.textContent = t('lobby.panelStartOne', {}, locale);
+  startHead.append(startLabel, note, signIn);
   const personRows = document.createElement('div');
   personRows.className = 'pp-person-rows';
   personScroll.append(paceSlot, offersSlot, startHead, personRows);
@@ -895,7 +939,7 @@ export function buildPlayPanel(
   searchStatus.className = 'pp-search-status';
   const searchCancel = button('pp-search-cancel', t('setup.cancel', {}, locale));
   searchBar.append(searchStatus, searchCancel);
-  personView.append(control, personScroll, searchBar);
+  personView.append(personScroll, searchBar);
 
   const endSearch = (): void => {
     searching = null;
@@ -935,9 +979,9 @@ export function buildPlayPanel(
     casualBtn.classList.toggle('is-active', mode === 'casual');
     ratedBtn.classList.toggle('is-active', mode === 'rated');
     ratedBtn.disabled = ratedBlocked;
-    // Why Rated is out of reach, in plain words (Brian, 2026-10-27: "what does
-    // that mean, need a counted account?"): a guest is told to sign in; a
-    // stats-excluded account (the owner's and QA's) is told it plays casual only.
+    // Why Rated is out of reach, in plain words: a guest gets the sign-in link
+    // under the bar (and the reason on Rated's title); a stats-excluded account
+    // (the owner's and QA's) is told it plays casual only.
     const ratedBlockedNote = t('lobby.ratedCasualOnlyAccount', {}, locale);
     const ratedSignInNote = t('lobby.panelRatedSignIn', {}, locale);
     if (ratedBlocked) ratedBtn.title = ratedBlockedNote;
@@ -948,7 +992,7 @@ export function buildPlayPanel(
       : ratedBlocked
         ? ratedBlockedNote
         : !signedIn
-          ? ratedSignInNote
+          ? ''
           : mode === 'rated'
             ? [
                 t(
@@ -1057,15 +1101,17 @@ export function buildPlayPanel(
       prevLabel: t('lobby.panelFaster', {}, locale),
       nextLabel: t('lobby.panelSlower', {}, locale),
     });
-    const parts: HTMLElement[] = [toggle, step];
+    paceSlot.replaceChildren(modeSlot, toggle, step);
+    // A guest gets one way in for both: rated games and days per move.
+    signIn.hidden = signedIn;
     if (!signedIn) {
-      const hint = document.createElement('a');
-      hint.className = 'pp-pace-hint';
-      hint.href = loginHrefForCurrentPage(locale, 'correspondence');
-      hint.textContent = t('lobby.panelDaysSignIn', {}, locale);
-      parts.push(hint);
+      signIn.href = loginHrefForCurrentPage(locale, 'correspondence');
+      signIn.textContent = t(
+        ratedAvailable ? 'lobby.panelSignInRatedDays' : 'lobby.panelDaysSignIn',
+        {},
+        locale,
+      );
     }
-    paceSlot.replaceChildren(...parts);
   };
 
   // A new pace withdraws a live search or clears a failed post, so every tile
@@ -1085,6 +1131,9 @@ export function buildPlayPanel(
   const OFFER_CAP = 4;
   const renderOffers = (): void => {
     const chips: HTMLElement[] = [];
+    // Chips whose Join starts a correspondence game: the deadline line shows
+    // only when one of them is on screen.
+    const corrJoins = new Set<HTMLElement>();
     for (const request of othersRequests()) {
       if (mode === 'rated' ? request.rated === false : request.rated !== false) continue;
       const gameSpecId = request.gameSpecId ?? 'dark-chess';
@@ -1118,16 +1167,16 @@ export function buildPlayPanel(
           surface: 'home-panel',
         });
       }
-      chips.push(
-        offerChip(
-          seek.gameSpecId,
-          seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
-          t('lobby.panelDaysShort', { days: seek.daysPerMove }, locale),
-          action,
-          true,
-          profileTargetFor({ handle: seek.creatorHandle }),
-        ),
+      const chip = offerChip(
+        seek.gameSpecId,
+        seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
+        t('lobby.panelDaysShort', { days: seek.daysPerMove }, locale),
+        action,
+        true,
+        profileTargetFor({ handle: seek.creatorHandle }),
       );
+      if (!seek.isMine) corrJoins.add(chip);
+      chips.push(chip);
     }
     if (chips.length === 0) {
       offersSlot.replaceChildren();
@@ -1148,7 +1197,10 @@ export function buildPlayPanel(
       more.textContent = t('lobby.panelMoreGames', { count: chips.length - shown }, locale);
       grid.append(more);
     }
-    offersSlot.replaceChildren(head, grid);
+    const deadline = chips.slice(0, shown).some((chip) => corrJoins.has(chip))
+      ? [buildCorrespondenceListDeadlineNotice(locale, 'pp-offers-deadline')]
+      : [];
+    offersSlot.replaceChildren(head, grid, ...deadline);
   };
 
   const offerChip = (
@@ -1265,7 +1317,7 @@ export function buildPlayPanel(
 
   const renderPersonRows = (): void => {
     personRows.replaceChildren();
-    for (const gameSpecId of ordered()) {
+    for (const gameSpecId of orderedLastFirst()) {
       const start = tilePace(gameSpecId);
       if (!start) continue;
       const { pace, note: paceNote } = start;

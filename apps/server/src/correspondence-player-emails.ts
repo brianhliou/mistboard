@@ -17,6 +17,10 @@
 // provider outage never fails the post, the accept or the move that ended it.
 
 import { DAY_MS } from '@mistboard/game';
+import {
+  type CorrespondenceEmailNotification,
+  sendCorrespondenceNotificationEmail,
+} from './correspondence-notification-email.js';
 import { crosstableReviewUrl } from './crosstable-review-url.js';
 import { logger } from './obs.js';
 import type { GameResult } from './persistence.js';
@@ -32,7 +36,7 @@ import {
   type GameOverOutcome,
   type PlayerEmail,
 } from './player-email.js';
-import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
+import { transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
 const playerEmailsEnabled = transactionalEmailConfigured && !!fromAddress;
@@ -51,7 +55,13 @@ export type CorrespondencePlayerEmailDeps = {
   loadRecipient: (userId: string) => Promise<PlayerEmailRecipient | null>;
   loadName: (userId: string) => Promise<PlayerEmailName | null>;
   reviewPath: (roomId: string, gameSpecId: string) => string | null;
-  send: (to: string, email: PlayerEmail, kind: string, ref: string) => Promise<boolean>;
+  send: (
+    to: string,
+    email: PlayerEmail,
+    kind: string,
+    ref: string,
+    notification: CorrespondenceEmailNotification,
+  ) => Promise<boolean>;
 };
 
 function resolveDeps(deps: Partial<CorrespondencePlayerEmailDeps>): CorrespondencePlayerEmailDeps {
@@ -116,7 +126,12 @@ export async function sendCorrespondenceChallengeEmail(
     },
     emailLocale(recipient.locale),
   );
-  return d.send(recipient.email, email, 'correspondence_challenge_email', notice.seekId);
+  return d.send(recipient.email, email, 'correspondence_challenge_email', notice.seekId, {
+    kind: 'challenge',
+    userId: notice.targetUserId,
+    roomIds: [],
+    seekId: notice.seekId,
+  });
 }
 
 /**
@@ -176,7 +191,11 @@ export async function sendCorrespondenceJoinedStartEmail(
     },
     emailLocale(recipient.locale),
   );
-  return d.send(recipient.email, email, 'correspondence_joined_email', notice.roomId);
+  return d.send(recipient.email, email, 'correspondence_joined_email', notice.roomId, {
+    kind: 'start',
+    userId: notice.accepter.id,
+    roomIds: [notice.roomId],
+  });
 }
 
 export function notifyCorrespondenceHostStart(
@@ -222,6 +241,7 @@ export async function sendCorrespondenceHostStartEmails(
             ),
             'correspondence_host_start_email',
             notice.roomId,
+            { kind: 'host-start', userId: notice.creatorUserId, roomIds: [notice.roomId] },
           )
           .catch(logSendError('correspondence_host_start_email', notice.roomId))
       : false,
@@ -242,6 +262,7 @@ export async function sendCorrespondenceHostStartEmails(
             ),
             'correspondence_host_receipt_email',
             notice.roomId,
+            { kind: 'host-receipt', userId: notice.accepter.id, roomIds: [notice.roomId] },
           )
           .catch(logSendError('correspondence_host_receipt_email', notice.roomId))
       : false,
@@ -341,7 +362,11 @@ export async function sendCorrespondenceGameOverEmails(
         emailLocale(recipient.locale),
       );
       return d
-        .send(recipient.email, email, 'correspondence_game_over_email', notice.roomId)
+        .send(recipient.email, email, 'correspondence_game_over_email', notice.roomId, {
+          kind: 'game-over',
+          userId: letter.userId,
+          roomIds: [notice.roomId],
+        })
         .catch(logSendError('correspondence_game_over_email', notice.roomId));
     }),
   );
@@ -355,15 +380,19 @@ async function sendEmail(
   email: PlayerEmail,
   kind: string,
   ref: string,
+  notification: CorrespondenceEmailNotification,
 ): Promise<boolean> {
   if (!fromAddress) return false;
-  const result = await sendTransactionalEmail({
-    from: fromAddress,
-    to: [to],
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-  });
+  const result = await sendCorrespondenceNotificationEmail(
+    {
+      from: fromAddress,
+      to: [to],
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    },
+    notification,
+  );
   if (!result.ok) {
     logger.error(
       { kind: `${kind}_rejected`, ref, status_code: result.statusCode, error: result.error },

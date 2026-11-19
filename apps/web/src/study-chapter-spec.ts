@@ -12,7 +12,12 @@
 // already drifted -- both dropped the chapter's rootFen, and fixing it here in
 // 2026-08 meant fixing it there too. Change one, check the other.
 
-import { createInitialXiangqiState, standardXiangqiFen } from '@mistboard/game';
+import {
+  createInitialXiangqiState,
+  type FFQBanqiReplayIdentity,
+  type PublicReplayFormat,
+  standardXiangqiFen,
+} from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import { type ChapterSideline, chapterSideline } from './study-chapter-annotations.js';
 import type {
@@ -46,7 +51,12 @@ export type StudyChapterPayload = {
   variant?: string;
   orientation?: 'red' | 'black' | string;
   tags?: Record<string, string | undefined>;
-  root?: { root?: StudyTreeNode; rootFen?: string; replay?: 'three-kingdoms-banqi-public-v1' };
+  root?: {
+    root?: StudyTreeNode;
+    rootFen?: string;
+    replay?: PublicReplayFormat;
+    initialRevealed?: readonly FFQBanqiReplayIdentity[];
+  };
   /** Named win-chance series for the embed's graph (server study-score-series.ts);
    *  present only on a chapter that has one. Validated where it is drawn. */
   scoreSeries?: unknown;

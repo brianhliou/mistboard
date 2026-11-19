@@ -373,7 +373,10 @@ export function isAtomicXiangqiGeneralInCheck(
  */
 export function atomicXiangqiCheckedGeneral(
   board: AtomicXiangqiBoard,
-  status: AtomicXiangqiGameStatus,
+  status:
+    | { type: 'playing'; turn: AtomicXiangqiColor }
+    | { type: 'finished'; winner: AtomicXiangqiColor | null }
+    | { type: 'aborted' },
 ): AtomicXiangqiSquare | null {
   const color = checkSubjectColor(status);
   if (!color) return null;

@@ -26,6 +26,7 @@ import {
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
+import { CORRESPONDENCE_SEEK_TTL_MS } from '../persistence-correspondence-seeks.js';
 import { recordRoomLifecycleAuditSafe } from '../room-lifecycle-audit.js';
 import { serverConfig } from '../server-config.js';
 import {
@@ -482,9 +483,21 @@ export async function sweepTenantRoomDeadline<
     now?(): number;
   },
 ): Promise<'aborted' | 'expired' | 'not-due' | 'no-deadline'> {
+  const now = ctx.now?.() ?? Date.now();
+  if (tenantCorrespondenceInviteExpired(tenant, room, now)) {
+    const seq = await ctx.appendEvent(room, {
+      type: 'game-aborted',
+      at: now,
+      roomId: room.id,
+      reason: 'pregame-timeout',
+    });
+    if (seq < 0) return 'not-due';
+    const event = room.events[seq];
+    if (event) ctx.broadcastEventAppended(room, event, seq);
+    return 'aborted';
+  }
   const deadline = tenantDurableDeadlineFor(tenant, room);
   if (!deadline) return 'no-deadline';
-  const now = ctx.now?.() ?? Date.now();
   if (deadline.dueAt > now) return 'not-due';
   if (tenantAbortPhaseFor(tenant, room) !== null) {
     const seq = await ctx.appendEvent(room, {
@@ -513,6 +526,32 @@ export async function sweepTenantRoomDeadline<
   const event = room.events[seq];
   if (event) ctx.broadcastEventAppended(room, event, seq);
   return 'expired';
+}
+
+// Invites owe no player a move. Their separate lifetime starts at creation,
+// never a reconnect, and closes without a result or a forfeiting player.
+export function tenantCorrespondenceInviteExpired<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(
+  tenant: TenantLifecycleTenant<C, State>,
+  room: TenantProjectedRoom<C, M, State, Spec>,
+  now: number,
+): boolean {
+  const created = room.events[0];
+  return (
+    created?.type === 'room-created' &&
+    created.at + CORRESPONDENCE_SEEK_TTL_MS <= now &&
+    clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' &&
+    room.projection.state.status.type === 'playing' &&
+    tenant.colors.filter((color) => room.projection.seats[color]).length < 2 &&
+    new Set(
+      room.events.filter((event) => event.type === 'seat-assigned').map((event) => event.seat),
+    ).size < 2 &&
+    !room.events.some((event) => event.type === 'move-played')
+  );
 }
 
 // Event-log anchor for a correspondence pregame abort window. The first

@@ -610,6 +610,97 @@ export function publicStudyFilter(access?: StudyListAccess): string {
         AND u.profile_visibility IN ('public', 'unlisted')${adminOnlyStudyFilter(access)}`;
 }
 
+// The original archival transcriptions do not all have the seeded manuals'
+// "classical compositions" / "classical games" suffix. Keep their identities
+// explicitly; new player or engine studies never compete for this shelf.
+const CLASSICAL_ARCHIVE_IDS = [
+  'uXnuObfx',
+  '9IIMlPp1',
+  'vQveCryp',
+  'SsKhaRTs',
+  'Dfi3NpRE',
+  'XBQuhA9n',
+  'rhrGqFnM',
+] as const;
+
+/** The Classical collections tab on /study, as full public cards. The order is
+ * a fixed reading order, independent of recency: the whole eligible set is
+ * ranked before the page is cut, so Show more walks one stable sequence. Only
+ * publicly listable studies are eligible, including when a previously public
+ * archive is made private. `q` filters by study name, as on the other tabs. */
+export async function listClassicalStudies(
+  limit = 30,
+  q?: string,
+  offset = 0,
+  access?: StudyListAccess,
+): Promise<PublicStudySummary[]> {
+  if (!isInitialized()) return [];
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
+  const start = Math.max(0, Math.trunc(offset));
+  const filter = nameFilter(q, 2);
+  const params: unknown[] = [[...CLASSICAL_ARCHIVE_IDS]];
+  if (filter.value !== undefined) params.push(filter.value);
+  const { rows } = await getPool().query<PublicStudyRow>(
+    `SELECT ${STUDY_COLS.split(', ')
+      .map((column) => `s.${column}`)
+      .join(', ')},
+            u.handle AS owner_handle,
+            u.display_name AS owner_display_name,
+            count(DISTINCT c.id) AS chapter_count,
+            count(DISTINCT l.user_id) AS like_count,
+            ${CHAPTER_PREVIEW},
+            ${PREVIEW_BOARD}
+       FROM studies s
+       JOIN users u ON u.id = s.owner_id
+       LEFT JOIN study_chapters c ON c.study_id = s.id
+       LEFT JOIN study_likes l ON l.study_id = s.id
+      WHERE ${publicStudyFilter(access)}
+        AND (u.handle = 'mistboard' OR s.id = ANY($1::text[]))${filter.clause}
+      GROUP BY s.id, u.handle, u.display_name`,
+    params,
+  );
+  const ranked = rows.flatMap((row) => {
+    const en = row.i18n?.en as { name?: unknown } | undefined;
+    const name = typeof en?.name === 'string' ? en.name : row.name;
+    if (
+      /^(?:what the solver found|nine records whose printed line does not hold|[渊淵]深海[阔闊].*第\s*217\s*局)/i.test(
+        name,
+      ) ||
+      /[渊淵]深海[阔闊].*第\s*217\s*局/.test(row.name)
+    )
+      return [];
+    const archival = CLASSICAL_ARCHIVE_IDS.some((id) => id === row.id);
+    if (
+      !archival &&
+      (row.owner_handle !== 'mistboard' || !/\bclassical (?:compositions|games)\b/i.test(name))
+    )
+      return [];
+    const elegant = name.match(/^Elegant Pastime Manual, Vol\. ([1-6])\b/);
+    const rank =
+      row.id === 'uXnuObfx'
+        ? 0
+        : elegant
+          ? Number(elegant[1])
+          : row.id === '9IIMlPp1'
+            ? 7
+            : row.id === 'vQveCryp'
+              ? 8
+              : row.id === 'SsKhaRTs'
+                ? 9
+                : /^Plum Blossom Spring\b/.test(name)
+                  ? 10
+                  : /\bclassical compositions\b/i.test(name)
+                    ? 11
+                    : 12;
+    return [{ row, name, rank }];
+  });
+  ranked.sort(
+    (a, b) =>
+      a.rank - b.rank || a.name.localeCompare(b.name, 'en') || a.row.id.localeCompare(b.row.id),
+  );
+  return ranked.slice(start, start + bounded).map(({ row }) => mapPublicStudy(row));
+}
+
 /** Public studies, most recently updated first. Likes used to lead the order,
  *  but with a handful of likes on the whole site that key pinned the first
  *  studies ever liked above everything published since; recency is the honest

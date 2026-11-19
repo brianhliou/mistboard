@@ -3,11 +3,14 @@ import type { Board, GameEvent, PlayerView, Square } from '@mistboard/game';
 import { configure } from 'chessground/config';
 import type { DrawShape } from 'chessground/draw';
 import { defaults } from 'chessground/state';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from './analytics.js';
 import { boardHighlightClasses, boardResultClass, legalDests } from './live-board.js';
 import { shouldAutoScrollMoveList, shouldMaskMoveList } from './live-move-list.js';
 import {
   drawShapeGameOf,
+  initRender,
+  render,
   seatOwnMoveCount,
   shouldEnablePremoves,
   shouldShowPostGameRoomActions,
@@ -68,6 +71,39 @@ const initialBoard: Board = {
 afterEach(() => {
   liveState.seat = 'spectator';
   liveState.state = null;
+});
+
+describe('chess viewer outcome analytics', () => {
+  it.each([
+    ['white', 'white', 'win'],
+    ['black', 'white', 'loss'],
+    ['white', null, 'draw'],
+    ['spectator', 'white', null],
+  ] as const)('carries %s and its result through the live renderer', (seat, winner, result) => {
+    const capture = vi.fn();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+    const root = document.createElement('div');
+    document.body.append(root);
+    liveState.gameSpecId = 'dark-chess';
+    liveState.seat = seat;
+    liveState.events = [];
+    liveState.state = makeView({ id: `outcome-${seat}-${winner}` });
+    initRender(root, { sendSocket: () => true, reconnectNow: () => {} });
+    render();
+    liveState.state = {
+      ...liveState.state,
+      status: { type: 'finished', winner, reason: winner ? 'resignation' : 'draw' },
+    };
+    render();
+    render();
+    const finished = capture.mock.calls.filter(([name]) => name === 'game_finished');
+    expect(finished).toHaveLength(1);
+    expect(finished[0][1]).toMatchObject({ seat, result, winner });
+    expect(capture.mock.calls.filter(([name]) => name === 'game_started')).toHaveLength(
+      seat === 'spectator' ? 0 : 1,
+    );
+    root.remove();
+  });
 });
 
 // ── boardFen ──────────────────────────────────────────────────────────────────

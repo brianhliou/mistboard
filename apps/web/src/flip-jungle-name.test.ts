@@ -76,6 +76,9 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
     { sentence: '对照表现在加入了翻翻棋。', count: 1 },
     { sentence: '對照表現在加入了翻翻棋。', count: 1 },
     { sentence: "Fanfanqi: '翻翻棋',", count: 2 },
+    // The Fanfanqi rules page's annotated engine game (study chapter title).
+    { sentence: '翻翻棋：第 7 级对第 8 级，附注解', count: 1 },
+    { sentence: '翻翻棋：第 7 級對第 8 級，附註解', count: 1 },
     { sentence: NOTATION_CITATION, count: 2 },
     {
       sentence:

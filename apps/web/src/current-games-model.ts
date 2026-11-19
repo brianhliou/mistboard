@@ -75,12 +75,18 @@ export type CurrentGamesResponse = {
 // Level 2"), which cut her level on these cards; here she is "Misty Level 2"
 // (decided 2026-11-14), since the board already shows which game it is.
 export function cardSeatName(name: string, variantLabel?: string): string {
+  return cardMistyName(name, variantLabel).replace(/^Fairy-Stockfish(?= Level \d+$)/, 'FSF');
+}
+
+/** Misty without the game's name ("Misty Level 2"), for a card that already
+ *  names the game. Any other name comes back unchanged. */
+export function cardMistyName(name: string, variantLabel?: string): string {
   const misty = variantLabel ? `Misty ${variantLabel}` : null;
   if (misty && name.startsWith(misty)) {
     const rest = name.slice(misty.length);
     if (rest === '' || /^ Level \d+$/.test(rest)) return `Misty${rest}`;
   }
-  return name.replace(/^Fairy-Stockfish(?= Level \d+$)/, 'FSF');
+  return name;
 }
 
 // ---- Sections ---------------------------------------------------------------

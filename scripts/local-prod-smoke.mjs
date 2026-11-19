@@ -2,12 +2,13 @@
 // Reuse production probes against an already-running, production-shaped local pair.
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Match the binary, not the variant: missing AB-JChess must not hide a
-// PikaJieQi failure. Fog/DXQ use the separate worker, and ceval uses browser
-// WASM, so none of those probes depend on the web server's native binaries.
+// PikaJieQi failure. DXQ uses the owned worker's explicit missing-binary report;
+// ceval uses browser WASM and never skips for a missing native binary.
 const NATIVE_ENGINE_DEPENDENCIES = {
   'prod-duck-smoke.mjs': ['fairy-stockfish-duck-xiangqi', 'MISTBOARD_FSF_DUCK_XIANGQI_PATH'],
   'prod-xiangqi-smoke.mjs': ['fairy-stockfish', 'MISTBOARD_FSF_PATH'],
@@ -100,22 +101,41 @@ export function localSmokePlan(base, { revision, missingEngines = [] } = {}) {
     ['prod-jungle-smoke.mjs'],
     ['prod-jungle-flip-smoke.mjs'],
     // Override an inherited backend filter: a gate always searches every backend.
-    ['prod-ceval-smoke.mjs', '--backend', 'all'],
+    [
+      'prod-ceval-smoke.mjs',
+      '--backend',
+      'all',
+      '--banqi-room',
+      JSON.parse(
+        readFileSync(
+          new URL('../apps/server/fixtures/variant-postgame/banqi.jsonl', import.meta.url),
+          'utf8',
+        ).split('\n')[0],
+      ).roomId,
+    ],
   ];
   return probes.map(([script, ...args]) => {
     const dependency = NATIVE_ENGINE_DEPENDENCIES[script];
+    const workerMissing =
+      script === 'prod-dxq-smoke.mjs' &&
+      missingEngines.find(
+        ({ variant, binary }) => variant === 'dark-xiangqi' && binary.startsWith('/'),
+      );
     const skip = dependency && missingEngines.some(({ binary }) => binary === dependency[0]);
     return {
       script,
       command: [process.execPath, `scripts/${script}`, '--base', baseUrl, ...args],
       ...(skip ? { missingBinary: dependency[0], supplyEnv: dependency[1] } : {}),
+      ...(workerMissing
+        ? { missingBinary: workerMissing.binary, supplyEnv: 'the DXQ worker executable path' }
+        : {}),
     };
   });
 }
 
 export async function runLocalSmokes(
   base,
-  { revision, missingEngines = [], run = runCommand, log = console.log } = {},
+  { revision, missingEngines = [], run = runCommand, log = console.log, signal } = {},
 ) {
   const plan = localSmokePlan(base, { revision, missingEngines });
   const failures = [];
@@ -123,6 +143,7 @@ export async function runLocalSmokes(
   // Sequential: ceval and engine probes share the host with other worktrees.
   // Still run every available probe after a failure so no failure hides ceval.
   for (const { script, command, missingBinary, supplyEnv } of plan) {
+    signal?.throwIfAborted();
     if (missingBinary) {
       skipped++;
       log(`local smoke SKIPPED: ${script}: missing ${missingBinary} (set ${supplyEnv})`);
@@ -130,8 +151,9 @@ export async function runLocalSmokes(
     }
     log(`$ ${command.join(' ')}`);
     try {
-      await run(command);
+      await run(command, { signal });
     } catch (error) {
+      signal?.throwIfAborted();
       failures.push(script);
       log(`local smoke FAILED: ${script}: ${error.message}`);
     }
@@ -150,10 +172,39 @@ export function isLocalBuild(status, revision, builtAt) {
   return status?.build?.revision === revision && status?.build?.builtAt === builtAt;
 }
 
-async function runCommand([command, ...args]) {
-  const child = spawn(command, args, { stdio: 'inherit' });
-  const [code, signal] = await once(child, 'exit');
+export async function runCommand([command, ...args], { signal: cancellation } = {}) {
+  let output = '';
+  const child = spawn(command, args, {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    signal: cancellation,
+  });
+  child.stdout.on('data', (chunk) => {
+    output += chunk.toString();
+    process.stdout.write(chunk);
+  });
+  const [code, signal] = await once(child, 'close');
   if (signal || code !== 0) throw new Error(`exited with ${signal ?? code}`);
+  assertProbeOutput(output);
+}
+
+export function assertProbeOutput(output) {
+  const records = output.split('\n').flatMap((line) => {
+    try {
+      return [JSON.parse(line)];
+    } catch {
+      return [];
+    }
+  });
+  const degraded = (value) =>
+    value &&
+    typeof value === 'object' &&
+    (value.skipped === true || value.mode === 'assets-only' || Object.values(value).some(degraded));
+  if (records.some((record) => record.ok === false || degraded(record))) {
+    throw new Error('probe reported failure or unapproved skip');
+  }
+  if (!records.some((record) => record.ok === true)) {
+    throw new Error('probe exited without a successful result');
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

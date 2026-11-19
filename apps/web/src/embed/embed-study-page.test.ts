@@ -2,8 +2,18 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  applyFFQBanqiMove,
+  type BanqiSquare,
   banqiPieceLetter,
+  createFFQBanqiDeal,
+  createFFQBanqiStateFromSetup,
   createInitialJungleFlipState,
+  FFQ_BANQI_FACE_UP_SQUARES,
+  type FFQBanqiMove,
+  type FFQBanqiReplayIdentity,
+  ffqBanqiPlyReveal,
+  ffqBanqiReplayMoveToUci,
+  getFFQBanqiLegalMoves,
   type JieqiSquare,
   jungleFlipPieceLetter,
   jungleFlipStateToDealtFen,
@@ -11,6 +21,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ENDGAME_LINE, ENDGAME_ROOT_FEN } from '../articles/banqi-endgame-diagrams.js';
 import { duckXiangqiGhostSvg } from '../duck-xiangqi-board.js';
+import { ffqBanqiStudyLine, mountFFQBanqiStudyReplay } from '../ffq-banqi-study-replay.js';
 import { JUNGLE_ART } from '../jungle-art.js';
 import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
@@ -2498,6 +2509,241 @@ describe('Three Kingdoms study embed', () => {
     await mountEmbedStudy(root, { studyId: 's', chapterId: 'tk' });
     expect(root.textContent).toBe('This study is not available.');
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Fanfanqi study embed', () => {
+  const chapter: StudyChapterPayload = {
+    id: 'ffq',
+    name: 'Public cannon capture',
+    variant: 'ffq-banqi',
+    hasDecisions: true,
+    tags: { red: 'Alice', black: 'Bob', result: '1-0' },
+    root: {
+      replay: 'ffq-banqi-public-v1',
+      initialRevealed: [
+        { color: 'red', role: 'cannon' },
+        { color: 'black', role: 'horse' },
+        { color: 'red', role: 'soldier' },
+        { color: 'black', role: 'advisor' },
+      ],
+      root: {
+        children: [
+          {
+            uci: 'c1a1x:g',
+            annotations: { comments: [{ text: 'The captured general is public.' }] },
+            children: [{ uci: '@a0:S', children: [] }],
+          },
+        ],
+      },
+    },
+    scoreSeries: {
+      side: 'red',
+      series: [{ name: 'Stored', color: 'a', values: [0.5, 0.62, 0.6] }],
+    },
+  };
+  const row = {
+    ply: 1,
+    mover: 'red',
+    bestWin: 70,
+    playedWin: 50,
+    realizedWin: 62,
+    playedRank: 2,
+    candidates: [
+      { move: 'b0b0', win: 70 },
+      { move: 'c1a1', win: 50, played: true },
+    ],
+  };
+  it('steps HP, grades, notes, pool-mean luck and the chart using only study GETs', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      calls.push(url);
+      expect(init?.method ?? 'GET').toBe('GET');
+      return {
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.endsWith('/decisions')
+            ? { decisions: [row] }
+            : { study: { id: 's' }, chapters: [chapter] },
+      };
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ffq' });
+    expect(root.querySelector('.ffq-banqi-study-board svg')).not.toBeNull();
+    expect(root.querySelector('.embed-note')).toBeNull();
+    expect(root.textContent).toContain('Blunder. a2 flip was best.');
+    expect(root.textContent).toContain('The captured general is public.');
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toBe('🎲 +12%');
+    expect(root.querySelector('.embed-score-chart')?.getAttribute('data-ply')).toBe('0');
+    expect([...root.querySelectorAll('progress')].map((p) => p.value)).toEqual([60, 60]);
+    const initial = root.querySelector('.embed-board')!.innerHTML;
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+    expect(root.querySelector('.embed-score-chart')?.getAttribute('data-ply')).toBe('1');
+    expect([...root.querySelectorAll('progress')].map((p) => p.value)).toEqual([30, 60]);
+    expect(root.querySelector('.embed-board .xq-marker--blunder')).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+    expect(root.querySelector('.embed-board')!.innerHTML).toBe(initial);
+    expect(calls).toEqual(['/api/studies/s', '/api/studies/s/chapters/ffq/decisions']);
+  });
+  it('keeps hidden solutions free of decisions, grades and score charts', async () => {
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ chapters: [chapter] }),
+    }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'ffq' }, { hideSolution: true });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('.embed-score-chart')).toBeNull();
+    expect(root.querySelector('.review-move-list__luck')).toBeNull();
+    expect(root.querySelector('.xq-marker--blunder')).toBeNull();
+  });
+  it('stops sidelines before flips and covered captures, retaining only the public deterministic prefix', () => {
+    const root = structuredClone(chapter.root!);
+    root.root!.children!.push({ uci: '@b0:H', children: [] });
+    const first = root.root!.children![0]!;
+    first.children![0]!.uci = '@d1:h';
+    // From ply three the red cannon can capture the covered a3 across a2.
+    first.children![0]!.children = [
+      {
+        uci: '@a0:S',
+        children: [
+          { uci: '@b0:H', children: [] },
+          {
+            uci: 'd1c1',
+            children: [{ uci: '@b0:H', annotations: { glyphs: [14] }, children: [] }],
+          },
+        ],
+      },
+      { uci: 'a1a3x:s', children: [] },
+    ];
+    const line = ffqBanqiStudyLine({ ...chapter, root });
+    expect([...line.lines.keys()]).toEqual([4]);
+    expect(line.lines.get(4)?.played).toEqual([{ from: 'b4', to: 'b3' }]);
+    expect(line.annotations.lines[4]?.moves).toEqual(['d1c1']);
+    expect(line.annotations.lines[4]?.verdict).toBeUndefined();
+    expect(line.annotations.lines[1]).toBeUndefined();
+    expect(line.annotations.lines[3]).toBeUndefined();
+    const host = document.createElement('div');
+    const hooks = { onPlyChange: vi.fn() };
+    const board = mountFFQBanqiStudyReplay(host, line, null, hooks, 'black');
+    board.jumpToLine!(4, 100);
+    expect(
+      host.querySelectorAll('progress')[0]?.closest('[data-side]')?.getAttribute('data-side'),
+    ).toBe('red');
+    expect(board.bottomSeat?.()).toBe('second');
+    expect(board.moveEntries?.()[3]?.line?.moves).toEqual(line.lines.get(4)?.labels);
+    board.destroy();
+    expect(host.innerHTML).toBe('');
+  });
+  it('serializes complete chapter and embed payloads identically when remaining covered deal pieces swap; planted leaks fail', () => {
+    const deal = createFFQBanqiDeal(800);
+    let truth = createFFQBanqiStateFromSetup('test', { deal });
+    const moves: FFQBanqiMove[] = [];
+    while (truth.status.type === 'playing' && moves.length < 100) {
+      const legal = getFFQBanqiLegalMoves(truth);
+      const move =
+        legal.find((m) => m.from !== m.to && truth.board[m.to]) ??
+        legal.find((m) => m.from === m.to) ??
+        legal[0]!;
+      moves.push(move);
+      truth = applyFFQBanqiMove(truth, move);
+    }
+    expect(truth.status).toEqual({ type: 'finished', winner: 'red', reason: 'hp' });
+    expect(truth.captures.some((c) => c.wasFaceDown)).toBe(true);
+    const i = truth.board.findIndex((p) => p?.faceDown);
+    const j = truth.board.findIndex(
+      (p, n) => p?.faceDown && n !== i && JSON.stringify(deal[n]) !== JSON.stringify(deal[i]),
+    );
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(j).toBeGreaterThanOrEqual(0);
+    const other = [...deal];
+    [other[i], other[j]] = [other[j]!, other[i]!];
+    expect(other).not.toEqual(deal);
+    const payload = (setup: typeof deal) => {
+      let state = createFFQBanqiStateFromSetup('test', { deal: setup });
+      const initialRevealed = FFQ_BANQI_FACE_UP_SQUARES.map((i) => {
+        const p = state.board[i]!;
+        return { color: p.color, role: p.role };
+      });
+      const tokens = moves.map((move) => {
+        const reveal = ffqBanqiPlyReveal(state, move);
+        const token = ffqBanqiReplayMoveToUci({
+          ...move,
+          ...(reveal.revealed ? { revealed: reveal.revealed as FFQBanqiReplayIdentity } : {}),
+          ...(reveal.capturedHidden
+            ? { capturedHidden: reveal.capturedHidden as FFQBanqiReplayIdentity }
+            : {}),
+        });
+        state = applyFFQBanqiMove(state, move);
+        return token;
+      });
+      const publicChapter = {
+        ...chapter,
+        root: {
+          replay: 'ffq-banqi-public-v1' as const,
+          initialRevealed,
+          root: chainTree(tokens) as StudyTreeNode,
+        },
+      };
+      const line = ffqBanqiStudyLine(publicChapter);
+      const host = document.createElement('div');
+      const board = mountFFQBanqiStudyReplay(host, line, null, { onPlyChange: () => {} }, 'red');
+      const frames = line.views.map((_, ply) => {
+        board.jumpToPly!(ply);
+        return host.innerHTML;
+      });
+      const entries = board.moveEntries?.();
+      board.destroy();
+      return {
+        chapter: publicChapter,
+        decisions: [row],
+        embed: { ...line, lines: [...line.lines], entries, frames },
+      };
+    };
+    const check = (a: unknown, b: unknown) => {
+      const serialized = JSON.stringify(a);
+      expect(serialized).toBe(JSON.stringify(b));
+      expect(serialized).not.toMatch(/rootFen|deal|seed|capturedHidden/);
+      JSON.parse(serialized, (_key, value) => {
+        if (value?.faceDown) expect(value).toEqual({ faceDown: true });
+        return value;
+      });
+    };
+    const a = payload(deal),
+      b = payload(other);
+    check(a, b);
+    expect(a.embed.views.at(-1)?.captured).toContainEqual({ owner: 'black', role: 'general' });
+    expect(a.embed.views.at(-1)?.status.type).toBe('finished');
+    expect(a.embed.hp.at(-1)?.black).toBeLessThanOrEqual(0);
+    const leak = (value: typeof a, setup: typeof deal) => ({ ...value, hiddenPiece: setup[i] });
+    expect(() => check(leak(a, deal), leak(b, other))).toThrow();
+    const covered = Object.keys(a.embed.views[0]!.board).find(
+      (s) => a.embed.views[0]!.board[s as BanqiSquare]?.faceDown,
+    )!;
+    const planted = structuredClone(a);
+    Object.assign(planted.embed.views[0]!.board[covered as BanqiSquare]!, { role: 'general' });
+    expect(() => check(planted, planted)).toThrow();
+  });
+  it('refuses unknown, unresolved, dealt or structurally leaking roots', async () => {
+    for (const root of [
+      {},
+      { ...chapter.root, replay: 'unknown' },
+      { ...chapter.root, rootFen: 'secret' },
+      { ...chapter.root, hiddenRole: 'general' },
+      { ...chapter.root, root: { children: [{ uci: 'c1a1', children: [] }] } },
+      { ...chapter.root, root: { children: [{ uci: '@c1:R', children: [] }] } },
+    ]) {
+      expect(() =>
+        ffqBanqiStudyLine({ ...chapter, root: root as StudyChapterPayload['root'] }),
+      ).toThrow();
+    }
+    stubFetch(200, { chapters: [{ ...chapter, root: {} }] });
+    const host = document.createElement('div');
+    await mountEmbedStudy(host, { studyId: 's', chapterId: 'ffq' });
+    expect(host.textContent).toBe('This chapter has no valid position to show.');
   });
 });
 

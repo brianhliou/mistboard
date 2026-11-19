@@ -12,8 +12,10 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   DAY_MS,
+  isRetiredGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
+import { repairCorrespondenceDeadlines } from './correspondence-deadline-repair.js';
 import {
   CORRESPONDENCE_TEST_TENANTS,
   enableCorrespondenceVariantFlags,
@@ -34,6 +36,8 @@ import './variant-tenant/register-tenants.js';
 import { startTenantDeadlineSweeper } from './variant-tenant/deadline-sweeper.js';
 import { appendTenantEvent } from './variant-tenant/events.js';
 import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
+import { finalizeTenantRematchIfReady } from './variant-tenant/rematch.js';
+import { registeredTenantRematchContext } from './variant-tenant/rematch-context.js';
 import type { TenantGameStateLike, TenantRuntimeRoom } from './variant-tenant/tenant.js';
 
 // Long enough that seating and two moves always fit inside one allowance;
@@ -50,6 +54,105 @@ const COMPRESSED_TC: RoomTimeControl = {
 type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 
 definePersistenceTests('correspondence variants e2e', () => {
+  for (const action of ['backfill', 'abort'] as const) {
+    test(`missing-deadline maintenance ${action} uses real SQL and preserves replay`, async () => {
+      enableCorrespondenceVariantFlags();
+      const registration = correspondenceTenantForSpecId('banqi')!;
+      const created = await registration.createCorrespondenceGameForSeek!({
+        timeControl: { initialMs: DAY_MS, incrementMs: 0, daysPerMove: 1 },
+        first: { userId: await makeUser('repairfirst') },
+        second: { userId: await makeUser('repairsecond') },
+      });
+      assert.ok(created.ok);
+      const before = await deadlineRow(created.room.id);
+      assert.ok(before);
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        await client.query('DELETE FROM room_deadlines WHERE room_id = $1', [created.room.id]);
+        const reports: Record<string, unknown>[] = [];
+        await repairCorrespondenceDeadlines(client, {
+          action,
+          roomIds: [created.room.id],
+          print: (report) => reports.push(report),
+          inspectRoom: async (roomId) => {
+            const room = await registration.getOrLoadRoom(roomId);
+            assert.ok(room?.events);
+            return {
+              eventCount: room.events.length,
+              deadline: registration.correspondenceDeadline!(room),
+            };
+          },
+        });
+        assert.equal(reports.length, 1);
+        if (action === 'backfill') {
+          assert.deepEqual(await deadlineRow(created.room.id), before);
+        } else {
+          assert.equal(await deadlineRow(created.room.id), null);
+          assert.equal((await loadRoom(created.room.id))?.at(-1)?.type, 'game-aborted');
+          registration.clearRooms();
+          assert.equal(
+            (await registration.getOrLoadRoom(created.room.id))?.projection?.state.status.type,
+            'aborted',
+          );
+          // Banqi writes its games row only at game end, so there is none to update;
+          // the scan found the room from its event log alone.
+          const result = await client.query('SELECT status FROM games WHERE room_id = $1', [
+            created.room.id,
+          ]);
+          assert.deepEqual(result.rows, []);
+        }
+      } finally {
+        registration.clearRooms();
+        await client.end();
+      }
+    });
+  }
+
+  test('correspondence rematches persist the first-move row without a reconnect', async () => {
+    enableCorrespondenceVariantFlags();
+    for (const [specId, { tenant }] of Object.entries(CORRESPONDENCE_TEST_TENANTS)) {
+      if (tenant.rematch || isRetiredGameSpec(tenant.gameSpecId)) continue;
+      const registration = correspondenceTenantForSpecId(specId)!;
+      const created = await registration.createCorrespondenceGameForSeek!({
+        timeControl: { initialMs: DAY_MS, incrementMs: 0, daysPerMove: 1 },
+        first: { userId: await makeUser(`${specId}-rma`) },
+        second: { userId: await makeUser(`${specId}-rmb`) },
+      });
+      assert.ok(created.ok);
+      try {
+        const previous = registration.rooms.get(created.room.id) as unknown as AnyRoom;
+        previous.projection.state = tenant.rules.finish(
+          previous.projection.state,
+          tenant.colors[0]!,
+          'resignation',
+        );
+        for (const seat of tenant.colors) {
+          const token = previous.seatTokens[seat]!;
+          previous.rematch.offers[seat] = {
+            tokenHash: token.tokenHash,
+            userId: token.userId,
+            at: Date.now(),
+          };
+        }
+        const ctx = registeredTenantRematchContext(previous.id, () => {});
+        assert.ok(ctx);
+        const next = await finalizeTenantRematchIfReady(tenant, ctx, previous);
+        assert.ok(next);
+        assert.equal(next.clients.size, 0);
+        const row = await deadlineRow(next.id);
+        assert.ok(row, `${specId}: the rematch has a real room_deadlines row`);
+        assert.equal(row.seat_user_id, next.seatTokens[row.seat]?.userId);
+        registration.clearRooms();
+        const cold = await registration.getOrLoadRoom(next.id);
+        assert.ok(cold, `${specId}: rematch replays cold`);
+        assert.equal(cold.events?.filter((event) => event.type === 'seat-assigned').length, 2);
+      } finally {
+        registration.clearRooms();
+      }
+    }
+  });
+
   test('accepted correspondence seats show both account names before either player connects', async () => {
     enableCorrespondenceVariantFlags();
     for (const specId of [

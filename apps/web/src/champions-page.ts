@@ -260,6 +260,18 @@ export const TITLES: readonly Title[] = [
   },
   JIEQI_AB_JCHESS_20261031,
   { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY, credits: mistyRepo('misty-banqi') },
+  {
+    gameId: 'ffq-banqi',
+    nameKey: 'variant.ffqBanqi.name',
+    ...MISTY,
+    credits: mistyRepo('misty-ffq-banqi'),
+  },
+  {
+    gameId: 'three-kingdoms-banqi',
+    nameKey: 'variant.threeKingdomsBanqi.name',
+    ...MISTY,
+    credits: mistyRepo('misty-three-kingdoms-banqi'),
+  },
   { gameId: 'duck-xiangqi', nameKey: 'variant.duckXiangqi.name', ...FAIRY_STOCKFISH_L8 },
   {
     gameId: 'crazyhouse-xiangqi',

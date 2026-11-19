@@ -6,8 +6,11 @@ import {
   DAY_MS,
   type Move,
   type RoomTimeControl,
+  STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
+import { jieqiTenant } from '../jieqi-tenant.js';
+import { CORRESPONDENCE_SEEK_TTL_MS } from '../persistence-correspondence-seeks.js';
 import { hashSeatToken } from '../server-seat-session.js';
 import {
   appendTenantEvent,
@@ -15,7 +18,11 @@ import {
   type TenantEventWriterPersistence,
 } from './events.js';
 import { sweepTenantRoomDeadline, tenantDurableDeadlineFor } from './lifecycle.js';
-import { createTenantRuntimeRoomFromEvents } from './runtime.js';
+import {
+  createTenantRuntimeRoomFromEvents,
+  tenantLiveHistoryExtras,
+  tenantSnapshotPayload,
+} from './runtime.js';
 import type { TenantSeatTokenState } from './tenant.js';
 
 // The durable-deadline pipeline for days-per-move rooms, pinned through the
@@ -101,6 +108,197 @@ function seatTokenState(seat: Color, userId: string | null): TenantSeatTokenStat
     revokedAt: null,
   };
 }
+
+test('unaccepted correspondence invites expire at the seek TTL and replay as aborted', async () => {
+  for (const seatCount of [0, 1]) {
+    const room = hydrate(roomEvents(`dchx_invite_${seatCount}`).slice(0, 2 + seatCount));
+    const persistence = recordingPersistence();
+    let broadcasts = 0;
+    const sweep = (at: number) =>
+      sweepTenantRoomDeadline(darkChessTenant, room, {
+        now: () => at,
+        appendEvent: (target, event) =>
+          appendTenantEvent(darkChessTenant, target, event, { persistence }),
+        broadcastEventAppended: () => {
+          broadcasts++;
+        },
+      });
+    assert.equal(await sweep(1_000 + 13 * DAY_MS), 'no-deadline');
+    assert.equal(room.projection.state.status.type, 'playing');
+    assert.equal(await sweep(1_000 + CORRESPONDENCE_SEEK_TTL_MS), 'aborted');
+    assert.deepEqual(room.projection.state.status, { type: 'aborted', reason: 'pregame-timeout' });
+    assert.equal(hydrate(room.events).projection.state.status.type, 'aborted');
+    assert.equal(await sweep(1_000 + 15 * DAY_MS), 'no-deadline');
+    assert.equal(room.events.filter((event) => event.type === 'game-aborted').length, 1);
+    assert.equal(broadcasts, 1);
+  }
+});
+
+test('an invite expiry queued behind the second seat cannot abort the accepted room', async () => {
+  const room = hydrate(roomEvents('dchx_invite_race').slice(0, 3));
+  const persistence = recordingPersistence();
+  let release!: () => void;
+  room.pendingWrites = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const at = 1_000 + CORRESPONDENCE_SEEK_TTL_MS;
+  const seated = appendTenantSeatAssigned(
+    darkChessTenant,
+    room,
+    {
+      event: {
+        type: 'seat-assigned',
+        at,
+        roomId: room.id,
+        clientId: 'black-client',
+        seat: 'black',
+      },
+      tokenState: seatTokenState('black', null),
+    },
+    { persistence },
+  );
+  let broadcasts = 0;
+  const swept = sweepTenantRoomDeadline(darkChessTenant, room, {
+    now: () => at,
+    appendEvent: (target, event) =>
+      appendTenantEvent(darkChessTenant, target, event, { persistence }),
+    broadcastEventAppended: () => {
+      broadcasts++;
+    },
+  });
+  release();
+  await seated;
+  await swept;
+  assert.equal(room.projection.state.status.type, 'playing');
+  assert.equal(room.events.filter((event) => event.type === 'game-aborted').length, 0);
+  assert.equal(broadcasts, 0);
+});
+
+test('overlapping processes and repeated invite sweeps persist one abort and resync the loser', async () => {
+  const stored = roomEvents('dchx_invite_processes').slice(0, 3);
+  const rooms = [hydrate(stored), hydrate(stored)];
+  const persistence = recordingPersistence();
+  let abortRecords = 0;
+  let resyncs = 0;
+  persistence.abortRunningGame = async () => {
+    abortRecords++;
+    return true;
+  };
+  persistence.appendRoomEvent = async (_id, seq, event) => {
+    if (seq < stored.length)
+      throw Object.assign(new Error('taken seq'), { code: '23505', constraint: 'events_pkey' });
+    assert.equal(seq, stored.length);
+    stored.push(event);
+  };
+  persistence.loadRoomEvents = async () => stored;
+  persistence.loadRoomSeatTokens = async () => ({});
+  const sweep = (room: (typeof rooms)[number]) =>
+    sweepTenantRoomDeadline(darkChessTenant, room, {
+      now: () => 1_000 + 15 * DAY_MS,
+      appendEvent: (target, event) =>
+        appendTenantEvent(darkChessTenant, target, event, {
+          persistence,
+          onRoomResynced: () => {
+            resyncs++;
+          },
+        }),
+      broadcastEventAppended: () => {},
+    });
+  await Promise.all(rooms.map(sweep));
+  await Promise.all(rooms.map(sweep));
+  assert.equal(stored.filter((event) => event.type === 'game-aborted').length, 1);
+  assert.equal(abortRecords, 1);
+  assert.equal(resyncs, 1);
+  for (const room of rooms) assert.equal(room.projection.state.status.type, 'aborted');
+  assert.equal(hydrate(stored).projection.state.status.type, 'aborted');
+});
+
+test('invite expiry leaves live, moved, terminal and previously accepted rooms alone', async () => {
+  const at = 1_000 + 15 * DAY_MS;
+  const recentlyFilled = roomEvents('dchx_accepted').map((event) =>
+    event.type === 'seat-assigned' ? { ...event, at } : event,
+  );
+  const fixtures = [
+    roomEvents('dchx_live_invite', { initialMs: 60_000, incrementMs: 0 }).slice(0, 3),
+    recentlyFilled,
+    [
+      ...roomEvents('dchx_moved').slice(0, 3),
+      move('dchx_moved', 6_000, 'white', { from: 'e2', to: 'e4' }),
+    ],
+    [
+      ...roomEvents('dchx_terminal').slice(0, 3),
+      { type: 'game-aborted', at: 6_000, roomId: 'dchx_terminal', reason: 'user-abort' } as const,
+    ],
+    [
+      ...recentlyFilled,
+      {
+        type: 'seat-vacated',
+        at,
+        roomId: 'dchx_accepted',
+        clientId: 'black-client',
+        seat: 'black',
+      } as const,
+    ],
+  ];
+  for (const events of fixtures) {
+    const room = hydrate(events);
+    const count = room.events.length;
+    await sweepTenantRoomDeadline(darkChessTenant, room, {
+      now: () => at,
+      appendEvent: async () => {
+        assert.fail('unaccepted invite pass must not abort this room');
+      },
+      broadcastEventAppended: () => {
+        assert.fail('no broadcast without an expiry');
+      },
+    });
+    assert.equal(room.events.length, count);
+  }
+});
+
+test('expired hidden-info invites keep whole reconnect payloads masked for both seats and spectators', async () => {
+  const created = createTenantRuntimeRoomFromEvents(jieqiTenant, [
+    {
+      type: 'room-created',
+      at: 1_000,
+      roomId: 'jq_invite_private',
+      gameSpecId: 'jieqi',
+      timeControl: CORRESPONDENCE_TC,
+      setup: { ...STANDARD_JIEQI_DEAL, secretMarker: 'invite-deal-must-stay-private' },
+    },
+  ]);
+  assert.ok(created.ok);
+  const room = created.room;
+  await sweepTenantRoomDeadline(jieqiTenant, room, {
+    now: () => 1_000 + CORRESPONDENCE_SEEK_TTL_MS,
+    appendEvent: (target, event) => appendTenantEvent(jieqiTenant, target, event),
+    broadcastEventAppended: () => {},
+  });
+  assert.equal(room.projection.state.status.type, 'aborted');
+  const replay = createTenantRuntimeRoomFromEvents(jieqiTenant, room.events);
+  assert.ok(replay.ok);
+  for (const seat of ['red', 'black', 'spectator'] as const) {
+    const client = { id: `client-${seat}`, seat, solo: false };
+    const payload = (target: typeof room) =>
+      JSON.stringify({
+        ...tenantSnapshotPayload(jieqiTenant, target, client),
+        ...tenantLiveHistoryExtras(jieqiTenant, target, client),
+        serverAt: 0,
+      });
+    const serialized = payload(room);
+    assert.equal(serialized, payload(replay.room));
+    assert.doesNotMatch(serialized, /"setup"|invite-deal-must-stay-private/);
+    const wire = JSON.parse(serialized);
+    let hidden = 0;
+    for (const piece of Object.values(wire.state.board) as Array<Record<string, unknown>>) {
+      if (piece.faceDown) {
+        hidden++;
+        assert.equal('role' in piece, false);
+      }
+    }
+    assert.ok(hidden > 0, 'the test must include hidden pieces');
+  }
+});
 
 test('durable deadline derivation walks the room states', () => {
   const roomId = 'dchx_derive';

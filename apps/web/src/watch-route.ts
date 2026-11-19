@@ -1012,10 +1012,11 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (featured.payload) livePayload = { roomId: featured.roomId, payload: featured.payload };
     const handle = liveHandle;
     if (featured.ply > liveShownPly && featured.payload && handle) {
+      const previousPly = liveShownPly;
       await handle.loadGame(featured.roomId);
       if (handle !== liveHandle) return; // dropped or replaced while loading
       liveShownPly = featured.ply;
-      followLiveRail(handle);
+      followLiveRail(handle, previousPly);
       renderLiveMeta(featured);
       // Live forward progress: each new ply sounds as its mover heard it when the
       // frame carries one or two; a bigger jump (a tab catching up) re-seeds
@@ -1027,13 +1028,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     }
   };
 
-  // Snap the live board to its latest ply and rebuild the rail from it: the
+  // Follow the live board's latest ply and rebuild the rail from it: the
   // move list (read-only in spirit; a click reviews an earlier ply and the next
   // frame snaps back, as the room does) and the clocks, which the handle
   // projects from the server's clock to now so they tick between polls.
-  const followLiveRail = (handle: ReplayHandle): void => {
-    const latest = handle.plyCount?.() ?? 0;
-    handle.jumpToPly?.(latest);
+  const followLiveRail = (handle: ReplayHandle, previousPly?: number): void => {
+    const latest = followWatchLiveRail(handle, previousPly);
     rebuildMoveList(handle, latest);
   };
 
@@ -1559,6 +1559,21 @@ export function seedWatchRail(
   const startPly = autoplay ? 0 : (handle.plyCount?.() ?? 0);
   if (!autoplay) handle.jumpToPly?.(startPly);
   bind(startPly);
+}
+
+// Reloading resets the replay's cursor. Paint the previous position before a
+// one-move advance so the replay's normal step animation runs, as on homepage TV.
+// Seeds and larger catch-up jumps go straight to the latest position.
+export function followWatchLiveRail(
+  handle: Pick<ReplayHandle, 'jumpToPly' | 'plyCount'>,
+  previousPly?: number,
+): number {
+  const latest = handle.plyCount?.() ?? 0;
+  if (previousPly !== undefined && latest - previousPly === 1 && latest > 0) {
+    handle.jumpToPly?.(latest - 1);
+  }
+  handle.jumpToPly?.(latest);
+  return latest;
 }
 
 function requiredWatchControl(root: HTMLElement, action: string): HTMLButtonElement {

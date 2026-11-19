@@ -16,6 +16,7 @@ import { articleProse } from './article-prose.js';
 import { buildArticlePage, buildRulesIndex } from './articles.js';
 import { findArticle } from './articles-data.js';
 import { FANFANQI_CHASE_RUN_STEPS } from './fanfanqi-rules-diagrams.js';
+import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import {
   gameSpecIdFromRulesSlug,
   rulesHrefForGameSpec,
@@ -93,6 +94,37 @@ describe('Fanfanqi rules registration', () => {
         ]
       : [['Play Fanfanqi', '/?play=friend&gameSpecId=ffq-banqi']];
     for (const row of rows) expect(buttons(row)).toEqual(expected);
+  });
+
+  it('fetches the bot roster on a rules page opened directly and adds the bot and friend buttons', async () => {
+    vi.stubEnv('DEV', true);
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    setFFQBanqiEngineOptions([]);
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        engines: [],
+        ffqBanqiEngines: [{ id: 'misty-ffq-banqi-level-4', label: 'Misty L4' }],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const page = buildArticlePage('fanfanqi');
+    document.body.append(page);
+    try {
+      await vi.waitFor(() => {
+        const rows = [...page.querySelectorAll('.article-cta-row')];
+        expect(rows).toHaveLength(2);
+        for (const row of rows) {
+          expect(
+            [...row.querySelectorAll('a.article-cta')].map((a) => a.getAttribute('href')),
+          ).toEqual(['/?play=computer&gameSpecId=ffq-banqi', '/?play=friend&gameSpecId=ffq-banqi']);
+        }
+      });
+      expect(fetchMock).toHaveBeenCalledWith('/api/engines/playable');
+    } finally {
+      page.remove();
+      setFFQBanqiEngineOptions([]);
+      vi.unstubAllGlobals();
+    }
   });
 });
 

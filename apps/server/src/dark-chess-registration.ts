@@ -164,6 +164,8 @@ registerVariantTenant({
   },
   lobby: null,
   sweepDueDeadline: darkChessCorrespondence.sweepDueDeadline,
+  // No rematch here, so no issueCorrespondenceSeatToken; the repair scan reads deadlines.
+  correspondenceDeadline: darkChessCorrespondence.correspondenceDeadline,
   createCorrespondenceGameForSeek: darkChessCorrespondence.createCorrespondenceGameForSeek,
   createCorrespondenceRoom: darkChessCorrespondence.createCorrespondenceRoom,
 });

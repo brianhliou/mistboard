@@ -263,6 +263,11 @@ test('release-prod runs the local smoke gate before any push or drain', () => {
   assert.ok(localGate > 0 && smoke > localGate, 'local smokes must follow the build/test gate');
   assert.ok(smoke < drain && smoke < push, 'a smoke failure must prevent draining and pushing');
   assert.match(source.slice(localGate, smoke), /if \(release\.deployRequired\)/);
+  const smokeCommand = source.slice(smoke, source.indexOf(']);', smoke));
+  assert.ok(
+    !smokeCommand.includes('--skip-build'),
+    'local smoke builds with product browser flags',
+  );
 });
 
 test('release-prod rebuilds and smokes the merged revision when main moves during the gate', () => {
@@ -277,4 +282,46 @@ test('release-prod rebuilds and smokes the merged revision when main moves durin
     /'release:local-smoke',[\s\S]*'--revision',\s*release.headRevision/,
   );
   assert.ok(!catchUp.slice(smoke).includes('--skip-build'), 'the merge needs a fresh full build');
+});
+
+test('a dry run reports the batch CI verdict a --push would reach, and exits 1 on a refusal', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const plan = releaseFunction(source, 'runPlanModeAndExit');
+  const start = plan.indexOf('  // What --push would decide about batch CI.');
+  assert.ok(start > 0, 'runPlanModeAndExit checks batch CI');
+  const body = plan.slice(start, plan.lastIndexOf('\n}'));
+  const run = ({ changedOverride = null, batchRun = null, extraShip = null }) => {
+    const lines = [];
+    let code = null;
+    const context = vm.createContext({
+      changedOverride,
+      options: { extraShip },
+      findReusableBatchRun: () => batchRun,
+      console: { log: (line) => lines.push(line) },
+      process: {
+        exit: (value) => {
+          code = value;
+          throw new Error('exit');
+        },
+      },
+    });
+    try {
+      vm.runInContext(`(() => {\n${body}\n})()`, context);
+    } catch (error) {
+      if (error.message !== 'exit') throw error;
+    }
+    return { code, verdict: lines.find((line) => line.startsWith('batch_ci:')) };
+  };
+  // The 2026-11-18 12:30 batch: no batch:ci run yet, and the dry run passed it.
+  const missing = run({});
+  assert.equal(missing.code, 1);
+  assert.match(missing.verdict, /^batch_ci: refuse/);
+  const green = run({ batchRun: { headSha: 'abc123', url: 'https://example.test/run/1' } });
+  assert.equal(green.code, 0);
+  assert.equal(green.verdict, 'batch_ci: reuse abc123 https://example.test/run/1');
+  assert.equal(run({ extraShip: 'prod bug' }).code, 0);
+  assert.equal(
+    run({ changedOverride: ['CHANGELOG.md'] }).verdict,
+    'batch_ci: not checked (synthetic diff)',
+  );
 });

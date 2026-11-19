@@ -35,6 +35,10 @@ test('adapter resolves exactly the live tiers and validates placements through k
       id: `rapfi-level-${tier.level}`,
       movetimeMs: tier.timeMs,
     });
+  assert.deepEqual(gomokuEveAdapter.tierFor('rapfi-level-8'), {
+    id: 'rapfi-level-8',
+    movetimeMs: 5000,
+  });
   assert.deepEqual(gomokuEveAdapter.tierFor('rapfi-strongest'), {
     id: 'rapfi-strongest',
     movetimeMs: 5000,
