@@ -39,7 +39,9 @@ describe('challenge link copy', () => {
     const button = copyButton(card);
     button.click();
     await vi.waitFor(() => expect(button.textContent).toBe('Copied'));
-    expect(writeText).toHaveBeenCalledWith(`${location.origin}/challenge/seek_abc`);
+    expect(writeText).toHaveBeenCalledWith(
+      `${location.origin}/challenge/seek_abc?utm_source=share&utm_medium=referral&utm_campaign=challenge`,
+    );
   });
 
   it('selects the link for a manual copy when the browser refuses the write', async () => {

@@ -1,6 +1,7 @@
 import { type GameEvent, type GameSpecId, officialCorrespondenceDays } from '@mistboard/game';
 import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { tagShareUrl } from './share-link-tags.js';
 import { escapeHtml, formatClock } from './web-utils.js';
 
 export type GameMeta = {
@@ -82,7 +83,7 @@ export function createShareButton(): HTMLButtonElement {
   const labelEl = btn.querySelector<HTMLSpanElement>('.replay-game-header-action-label')!;
   let resetTimer: number | null = null;
   btn.addEventListener('click', async () => {
-    const url = window.location.href;
+    const url = tagShareUrl(window.location.href, 'game');
     try {
       await navigator.clipboard.writeText(url);
       labelEl.textContent = t('replay.copied');

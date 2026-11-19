@@ -90,6 +90,15 @@ describe('correspondence: your open seeks', () => {
     );
     expect(labels).toEqual(['Copy link', 'Cancel']);
     expect(card?.querySelectorAll('a a')).toHaveLength(0);
+    // The copied link carries the share campaign tags (#1223).
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    card?.querySelector<HTMLButtonElement>('.current-game-seek-action button')?.click();
+    await vi.waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        `${location.origin}/challenge/seek-1?utm_source=share&utm_medium=referral&utm_campaign=challenge`,
+      ),
+    );
   });
 
   it('hides itself when nothing is out', async () => {

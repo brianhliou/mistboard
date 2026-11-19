@@ -1511,7 +1511,9 @@ describe('event page (tabs, default round, standings)', () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     copyLink?.click();
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/broadcast/xiangqi/t/round/r`);
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/broadcast/xiangqi/t/round/r?utm_source=share&utm_medium=referral&utm_campaign=broadcast`,
+    );
 
     (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
     // The other rounds are fetched once the tab opens; then the table paints.

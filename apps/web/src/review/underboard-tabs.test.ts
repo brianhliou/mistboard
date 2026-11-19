@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { downloadRow, shareRow, underboardPanel } from './underboard-tabs.js';
 
+// The Share row hands out the review link with the share campaign tags (#1223).
+const reviewTagged = (url: string): string =>
+  `${url}${url.includes('?') ? '&' : '?'}utm_source=share&utm_medium=referral&utm_campaign=review`;
+
 function shareInputs(): { fen: HTMLInputElement; moves: HTMLTextAreaElement } {
   return {
     fen: document.createElement('input'),
@@ -47,7 +51,7 @@ describe('underboard native URL sharing', () => {
     expect(button.textContent).toBe('Share');
     button.click();
     // Native share needs the user activation from this click, before any await.
-    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: reviewTagged(field.value) });
     await vi.advanceTimersByTimeAsync(0);
     expect(writeText).not.toHaveBeenCalled();
     expect(button.textContent).toBe('Share');
@@ -59,7 +63,7 @@ describe('underboard native URL sharing', () => {
     expect(button.textContent).toBe('Copy');
     button.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(reviewTagged(field.value));
     expect(button.textContent).toBe('Copied');
     await vi.advanceTimersByTimeAsync(1200);
     expect(button.textContent).toBe('Copy');
@@ -71,8 +75,8 @@ describe('underboard native URL sharing', () => {
     const { field, button } = urlRow();
     button.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
-    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: reviewTagged(field.value) });
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(reviewTagged(field.value));
     expect(button.textContent).toBe('Copied');
     await vi.advanceTimersByTimeAsync(1200);
     expect(button.textContent).toBe('Share');
@@ -85,9 +89,9 @@ describe('underboard native URL sharing', () => {
     Object.assign(navigator, { share });
     const { field, button } = urlRow();
     button.click();
-    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: reviewTagged(field.value) });
     await vi.advanceTimersByTimeAsync(0);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(reviewTagged(field.value));
     expect(button.textContent).toBe('Copied');
   });
 
@@ -104,11 +108,11 @@ describe('underboard native URL sharing', () => {
     const requestedUrl = 'https://mistboard.com/review/r1?ply=8';
     field.value = requestedUrl;
     button.click();
-    expect(share).toHaveBeenCalledExactlyOnceWith({ url: requestedUrl });
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: reviewTagged(requestedUrl) });
     field.value = 'https://mistboard.com/review/r1?ply=12';
     rejectShare(new Error('Share failed'));
     await vi.advanceTimersByTimeAsync(0);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith(requestedUrl);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(reviewTagged(requestedUrl));
     expect(button.textContent).toBe('Copied');
   });
 
@@ -118,7 +122,7 @@ describe('underboard native URL sharing', () => {
     const { field, button } = urlRow();
     button.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: reviewTagged(field.value) });
     expect(writeText).not.toHaveBeenCalled();
     expect(button.textContent).toBe('Share');
     expect(document.activeElement).not.toBe(field);

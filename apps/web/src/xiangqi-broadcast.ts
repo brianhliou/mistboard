@@ -34,6 +34,7 @@ import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { bindScrollFade } from './scroll-fade.js';
 import { seatDiscEl } from './seat-disc.js';
+import { tagShareUrl } from './share-link-tags.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
@@ -3191,7 +3192,8 @@ function pgnLink(input: BroadcastPgnInput): HTMLElement {
 
 // One small button in place of a share box: the phone's share sheet where
 // there is one (a touch screen), else the page's link on the clipboard.
-function copyLinkButton(url: string, title: string): HTMLElement {
+function copyLinkButton(pageUrl: string, title: string): HTMLElement {
+  const url = tagShareUrl(pageUrl, 'broadcast');
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'xqb-export-link xqb-copy-link';

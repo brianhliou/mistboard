@@ -9,6 +9,7 @@
 // xiangqi tree surface and the generalized tree controller share it unchanged.
 
 import { t } from '../i18n/catalog.js';
+import { tagShareUrl } from '../share-link-tags.js';
 import { createMoveTimesChart, type MoveTimesChart } from './move-times-chart.js';
 import type { ReviewSeatColors } from './review-seat-colors.js';
 
@@ -278,8 +279,9 @@ export function shareRow(
   const actionLabel = nativeShare ? 'Share' : 'Copy';
   copy.textContent = actionLabel;
   copy.addEventListener('click', async () => {
-    // Keep fallback copying tied to the position requested by this click.
-    const value = field.value;
+    // Keep fallback copying tied to the position requested by this click. A
+    // URL row hands out the campaign-tagged link (#1223); text rows copy as is.
+    const value = options.shareUrl ? tagShareUrl(field.value, 'review') : field.value;
     if (nativeShare) {
       try {
         // Call directly from the click to preserve transient user activation,
@@ -297,6 +299,7 @@ export function shareRow(
     } catch {
       // Clipboard access can be absent or denied, including after a share sheet
       // closes. Leave the field ready for a manual copy without claiming success.
+      if (options.shareUrl) field.value = value;
       field.focus();
       field.select();
     }

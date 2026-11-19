@@ -51,6 +51,7 @@ import {
   roomInvitePreview,
 } from '../room-invite-preview.js';
 import { seatDiscEl } from '../seat-disc.js';
+import { tagShareUrl } from '../share-link-tags.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
@@ -957,7 +958,7 @@ export function createTenantRoomChrome<C extends string>(
     copy.textContent = t('live.copyInvite');
     copy.addEventListener('click', () => {
       navigator.clipboard
-        ?.writeText(window.location.href)
+        ?.writeText(tagShareUrl(window.location.href, 'invite'))
         .then(() => {
           copy.textContent = t('live.linkCopied');
           setTimeout(() => {

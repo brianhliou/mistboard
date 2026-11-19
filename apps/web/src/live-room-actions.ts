@@ -9,6 +9,7 @@ import { clearPostGameSheet, renderPostGameActions } from './postgame-panel.js';
 import { rememberBotRoomRequest } from './pve-memory.js';
 import { rematchControls } from './rematch-controls.js';
 import { postThroughRestart } from './room-create-retry.js';
+import { tagShareUrl } from './share-link-tags.js';
 import { isColor, oppositeColor } from './web-utils.js';
 
 type RoomActionRefs = Pick<LiveRefs, 'roomActions'>;
@@ -75,14 +76,15 @@ export function shouldShowPostGameRoomActions(view: PlayerView | null): boolean 
   return view?.status.type === 'finished' || liveState.state?.status.type === 'finished';
 }
 
-function copyLinkButton(): HTMLButtonElement {
+// Exported for the share-link tag test (#1223).
+export function copyLinkButton(): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'primary';
   btn.textContent = t('live.copyInviteLink');
   btn.addEventListener('click', () => {
     navigator.clipboard
-      .writeText(window.location.href)
+      .writeText(tagShareUrl(window.location.href, 'invite'))
       .then(() => {
         btn.textContent = t('live.linkCopied');
         setTimeout(() => {

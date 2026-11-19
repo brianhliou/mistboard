@@ -129,6 +129,7 @@ import {
   updateStartOptionButtonLabel,
   variantCardButton,
 } from './setup-panel-parts.js';
+import { tagShareUrl } from './share-link-tags.js';
 import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -1886,7 +1887,7 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     copy.textContent = t('correspondence.copyLink');
     copy.addEventListener('click', () => {
       void navigator.clipboard
-        ?.writeText(`${window.location.origin}${url}`)
+        ?.writeText(tagShareUrl(`${window.location.origin}${url}`, 'challenge'))
         .then(() => {
           copy.textContent = t('correspondence.linkCopied');
           window.setTimeout(() => {

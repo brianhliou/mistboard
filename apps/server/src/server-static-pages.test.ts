@@ -1898,6 +1898,66 @@ test('an unknown puzzle deep link keeps the generic shell with noindex', async (
   }
 });
 
+// The site's share and copy controls tag the links they hand out with
+// utm_source=share (#1223). The tags are for analytics only: the page a tagged
+// link opens names the untagged URL as canonical and og:url, and the served
+// HTML never echoes them.
+test('a share-tagged game, invite, challenge or broadcast link serves utm-free HTML', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const roundPath = '/broadcast/xiangqi/t/round/r';
+  const cases = [
+    // A game page carries og:url and no canonical link; a round carries both.
+    { pathname: '/game/room-1', campaign: 'game', ogUrl: '/game/room-1', canonical: null },
+    { pathname: '/game/room-1', campaign: 'review', ogUrl: '/game/room-1', canonical: null },
+    { pathname: '/room/room-2', campaign: 'invite', ogUrl: null, canonical: null },
+    { pathname: '/challenge/seek_abc', campaign: 'challenge', ogUrl: null, canonical: null },
+    { pathname: roundPath, campaign: 'broadcast', ogUrl: roundPath, canonical: roundPath },
+  ];
+  for (const { pathname, campaign, ogUrl, canonical } of cases) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: `?utm_source=share&utm_medium=referral&utm_campaign=${campaign}`,
+      publicHost: 'https://mistboard.com',
+      playerPage: async () => null,
+      gameMeta: async (path) =>
+        path === '/game/room-1'
+          ? {
+              title: 'A game | Mistboard',
+              description: 'A finished game.',
+              urlPath: '/game/room-1',
+              imagePath: '/og/game/room-1.png?v=1',
+            }
+          : null,
+      broadcastPage: async (path) =>
+        path === roundPath
+          ? {
+              meta: { title: 'Round | Mistboard', description: 'A round.', urlPath: roundPath },
+              body: '<main><h1>Round</h1></main>',
+            }
+          : null,
+    });
+    const label = `${pathname} (${campaign})`;
+    assert.doesNotMatch(response.body, /utm_/, label);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      canonical ? [`<link rel="canonical" href="https://mistboard.com${canonical}">`] : [],
+      label,
+    );
+    if (ogUrl) {
+      assert.match(
+        response.body,
+        new RegExp(`<meta property="og:url" content="https://mistboard.com${ogUrl}">`),
+        label,
+      );
+    }
+  }
+});
+
 // A puzzle answers at /puzzles/<id> and /puzzles/<short code>; until
 // 2026-10-17 each named itself, so Google saw two self-canonical pages per
 // puzzle. Both now name the full-id URL the client links to, through the same

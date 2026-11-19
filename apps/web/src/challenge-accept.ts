@@ -10,6 +10,7 @@ import {
   seekSignInHref,
   withCorrespondenceDeadlineNotice,
 } from './seek-accept.js';
+import { tagShareUrl } from './share-link-tags.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
@@ -414,7 +415,9 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     share.className = 'challenge-share-link';
     share.setAttribute('aria-label', t('challenge.copyLink'));
     share.readOnly = true;
-    share.value = `${location.origin}/challenge/${view.id}`;
+    // Tagged here so every way out of the card (Copy, Share, a manual copy
+    // from the field) hands out the same campaign link (#1223).
+    share.value = tagShareUrl(`${location.origin}/challenge/${view.id}`, 'challenge');
     share.addEventListener('focus', () => share.select());
     const target = buildTargetStatus(view);
     if (target) body.append(target);

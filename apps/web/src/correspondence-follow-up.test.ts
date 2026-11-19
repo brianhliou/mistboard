@@ -245,6 +245,8 @@ it('puts correspondence play-again before the live rematch on a finished corresp
 });
 
 describe('phone invite sharing', () => {
+  // The invite link carries the share campaign tags and nothing else (#1223).
+  const SENT_LINK = `${location.origin}/challenge/sent-1?utm_source=share&utm_medium=referral&utm_campaign=challenge`;
   it('shows only Copy when native sharing is unavailable', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
@@ -252,9 +254,7 @@ describe('phone invite sharing', () => {
     const card = buildChallengeCard(sent);
     expect(button(card, 'Share')).toBeUndefined();
     button(card, 'Copy link')?.click();
-    await vi.waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(`${location.origin}/challenge/sent-1`),
-    );
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith(SENT_LINK));
     expect(button(card, 'Copied')).toBeDefined();
   });
   it('uses native Share, falls back to Copy, and handles dismissal without copying', async () => {
@@ -271,14 +271,12 @@ describe('phone invite sharing', () => {
     expect(action).toBeDefined();
     action?.click();
     await vi.waitFor(() => expect(share).toHaveBeenCalledTimes(1));
-    expect(share).toHaveBeenCalledWith({ url: `${location.origin}/challenge/sent-1` });
+    expect(share).toHaveBeenCalledWith({ url: SENT_LINK });
     action?.click();
     await vi.waitFor(() => expect(share).toHaveBeenCalledTimes(2));
     expect(writeText).not.toHaveBeenCalled();
     action?.click();
-    await vi.waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(`${location.origin}/challenge/sent-1`),
-    );
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith(SENT_LINK));
   });
 
   it('keeps the invite input large enough for phones', () => {
