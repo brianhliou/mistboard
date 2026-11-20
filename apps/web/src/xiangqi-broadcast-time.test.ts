@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   formatEventDateRange,
   formatEventDateTime,
@@ -8,6 +8,10 @@ import {
 } from './xiangqi-broadcast-time.js';
 
 describe('broadcast times read in the event clock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('keeps a Shanghai afternoon an afternoon wherever the viewer sits', () => {
     // From California the Intl default made this "Sep 12, 11:30 PM".
     expect(formatEventDateTime('2026-09-13T14:30:00+08:00', 'en-US')).toBe('Sep 13, 2026, 2:30 PM');
@@ -22,10 +26,18 @@ describe('broadcast times read in the event clock', () => {
   });
 
   it('ranges over days, never moments', () => {
+    // A day in the viewer's current year drops the year, so the clock is
+    // pinned: read from the wall clock, this failed on the first day of 2027.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-19T12:00:00Z'));
     expect(
       formatEventDateRange('2026-09-09T00:00:00+08:00', '2026-09-13T23:59:59+08:00', 'en-US'),
     ).toBe('Sep 9 to Sep 13');
     expect(formatEventDay('2025-09-22T00:00:00+08:00', 'en-US')).toBe('Sep 22, 2025');
+    vi.setSystemTime(new Date('2027-01-09T12:00:00Z'));
+    expect(
+      formatEventDateRange('2026-09-09T00:00:00+08:00', '2026-09-13T23:59:59+08:00', 'en-US'),
+    ).toBe('Sep 9, 2026 to Sep 13, 2026');
   });
 
   it('names the clock', () => {
