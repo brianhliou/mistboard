@@ -34,6 +34,18 @@ describe('feed thumbnails', () => {
     }
   });
 
+  // A post dated ahead is not in `live` until its day, so its card art is
+  // checked here before then: the Gomoku board first failed this only with the
+  // clock moved past its article's date.
+  it('covers the card art of every published post, dated ahead or not', () => {
+    const published = articles.filter((a) => a.status === 'published' && a.kind === 'article');
+    expect(published.length).toBeGreaterThanOrEqual(live.length);
+    for (const { slug, svg } of feedThumbnails(published).values()) {
+      expect(unstyledFeedThumbClasses(svg), slug).toEqual([]);
+      expect(svg.includes('var('), slug).toBe(false);
+    }
+  });
+
   it('catches a planted class that a stylesheet paints', () => {
     const planted = feedThumbnailSvg({
       kind: 'svg',

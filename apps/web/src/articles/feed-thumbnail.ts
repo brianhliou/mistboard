@@ -53,9 +53,10 @@ const TOKENS: Readonly<Record<string, string>> = {
 const t = (name: string): string => TOKENS[name]!;
 
 // The card rules a resvg render needs, mirrored from articles.css (the
-// `.xq-article-svg` diagram block), atomic-xiangqi.css (`.xq-marker--blast`)
-// and xiangqi-board-surface.css (`.xq-surface`), with the selectors kept so a
-// class paints only where the site paints it.
+// `.xq-article-svg` diagram block), atomic-xiangqi.css (`.xq-marker--blast`),
+// xiangqi-board-surface.css (`.xq-surface`) and gomoku-board.css (the Gomoku
+// board), with the selectors kept so a class paints only where the site
+// paints it.
 const FEED_THUMB_RULES: ReadonlyArray<readonly [selector: string, declarations: string]> = [
   ['.xq-article-svg .xq-diagram-bg', `fill:${t('--xq-diagram-bg')}`],
   ['.xq-article-svg .xq-diagram-palace-band', `fill:${t('--xq-diagram-palace-band')}`],
@@ -96,6 +97,14 @@ const FEED_THUMB_RULES: ReadonlyArray<readonly [selector: string, declarations: 
   ],
   ['.xq-surface .xq-live-river-label', 'display:none'],
   ['.xq-surface .xq-live-river-brand', 'display:none'],
+  ['.gomoku-wood', `fill:${t('--xq-live-board-bg')}`],
+  ['.gomoku-grid', `stroke:${t('--xq-live-ink')};stroke-width:1;fill:none`],
+  ['.gomoku-star', `fill:${t('--xq-live-ink')}`],
+  ['.gomoku-stone', 'stroke-width:1.2'],
+  ['.gomoku-stone--black', 'fill:#222;stroke:#080808'],
+  ['.gomoku-stone--white', 'fill:#faf7ee;stroke:#8a806d'],
+  ['.gomoku-last', 'fill:#d65330'],
+  ['.gomoku-winning', 'fill:none;stroke:#168344;stroke-width:4'],
 ];
 
 /** Classes the feed style block paints (the last class of each selector). */
@@ -114,6 +123,7 @@ export const FEED_THUMB_UNPAINTED_CLASSES: ReadonlySet<string> = new Set([
   'banqi-diagram-piece-slot',
   'xq-half-thumb',
   'xq-diagram-hand-piece',
+  'gomoku-svg',
 ]);
 
 /** Every class in `svg` that the feed render would leave unstyled. */
