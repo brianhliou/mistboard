@@ -24,7 +24,7 @@ it('describes the searched rules in the zh-Hant banqi search snippet', () => {
     title: `${localized.seoTitle ?? localized.title} | Mistboard`,
     description: localized.summary,
   }).toEqual({
-    title: '暗棋規則圖解：大小順序、炮怎麼吃、能不能連吃 | Mistboard',
+    title: '暗棋規則：圖解大小順序、炮怎麼吃、能不能連吃 | Mistboard',
     description:
       '暗棋規則一次看懂：大小順序是將、士、象、車、馬、炮、兵，只能吃同級或更小的子；兵能吃將，將卻不能吃兵；炮隔一子可吃任何翻開的敵子。標準暗棋不能連吃，台灣常見的連吃玩法另有說明。免註冊，直接和電腦對弈。',
   });
