@@ -328,6 +328,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- links from the share and copy buttons carry a tag naming the button that made them ([ac1365f5](https://github.com/brianhliou/mistboard/commit/ac1365f5))
+- count a player's first move when the page reloads before showing it ([ac1365f5](https://github.com/brianhliou/mistboard/commit/ac1365f5))
 - Event-loop stall alerts name the requests and jobs that were running, and a restart's warm-up no longer alerts ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
 - Bot ratings record the engine build and net they were measured on ([f2bb29b7](https://github.com/brianhliou/mistboard/commit/f2bb29b7))
 - The site counts where sign-ins start and how many guests who play a person go on to sign in ([ba6dd426](https://github.com/brianhliou/mistboard/commit/ba6dd426))
