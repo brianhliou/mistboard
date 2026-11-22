@@ -54,13 +54,13 @@ export const pikafishArticle: Article = {
   cardTitle: 'Play Pikafish online',
   seoTitle: 'Play Pikafish Online: Free Xiangqi Engine, No Download',
   summary:
-    'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
+    'Play Pikafish free in your browser, with no account and nothing to install. Set up a position or import a game, and Pikafish shows its evaluation and best line. Eight easier levels sit below it, and the official project is linked for the download.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-22',
-  updatedAt: '2026-11-10',
+  updatedAt: '2026-11-22',
   updateNote:
-    "Corrected the analysis board's net and download size.",
+    'Added links to the easier levels and the analysis board at the top, and a section on downloading Pikafish and its licence.',
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
@@ -80,6 +80,20 @@ export const pikafishArticle: Article = {
           emphasis: 'secondary',
         },
       ],
+    },
+    {
+      // #757: the level choice and the analysis entry points sit on the first
+      // screen. The ids are the xiangqi tenant's engineOptions
+      // (variant-tenant/registry.ts); landing-play.ts honours engineId only for
+      // a bot the linked variant offers, so a stale id falls back to the menu.
+      kind: 'paragraph',
+      text:
+        'For an easier game, start lower on the Fairy-Stockfish ladder: [level 1](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1), [level 4](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4) or [level 8](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8), or any level from the [play menu](/?play=computer&gameSpecId=xiangqi).',
+    },
+    {
+      kind: 'paragraph',
+      text:
+        "On the [analysis board](/analysis/xiangqi), paste a FEN or a game record, or set up a position in the [board editor](/editor/xiangqi), then switch on the engine to see Pikafish's evaluation and best lines.",
     },
     {
       kind: 'paragraph',
@@ -164,6 +178,23 @@ export const pikafishArticle: Article = {
       ],
     },
     {
+      // #757: the download route and the licence, below the explainer. The
+      // credit matches /source (Pikafish GPL-3.0, the CC0 Fairy-Stockfish net).
+      heading: 'Download and source',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'To run Pikafish on your own computer, download a release from the [official Pikafish project](https://github.com/official-pikafish/Pikafish), which also has the source code and setup instructions. Its home page is [pikafish.com](https://pikafish.com/).',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Pikafish is free software under GPL-3.0. Mistboard runs it with the CC0 xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), and the [source page](/source) credits each engine the site runs, with its licence and source code.',
+        },
+      ],
+    },
+    {
       heading: 'Questions',
       blocks: [
         {
@@ -199,6 +230,13 @@ export const pikafishArticle: Article = {
               answer:
                 'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.',
             },
+          ],
+        },
+        {
+          kind: 'cta',
+          buttons: [
+            { label: 'Play Pikafish', href: '/bot/pikafish', emphasis: 'primary' },
+            { label: 'Analyze with Pikafish', href: '/analysis/xiangqi', emphasis: 'secondary' },
           ],
         },
       ],

@@ -208,6 +208,19 @@ describe('update note and method box', () => {
     expect(note?.textContent).toContain('Corrected the second table.');
   });
 
+  it('keeps the update note out of search snippets, on the spans Google reads too', () => {
+    const page = buildArticlePage('site-piece');
+    const note = page.querySelector('.article-update-note');
+    expect(note?.hasAttribute('data-nosnippet')).toBe(true);
+    const spans = [...(note?.querySelectorAll('span') ?? [])];
+    expect(spans.length).toBeGreaterThan(0);
+    for (const span of spans) expect(span.hasAttribute('data-nosnippet')).toBe(true);
+    // The lede is what a snippet should be drawn from, so it stays readable.
+    const lede = page.querySelector('.article-lede');
+    expect(lede?.textContent).toBe(SITE.summary);
+    expect(lede?.closest('[data-nosnippet]')).toBeNull();
+  });
+
   it('shows no update note when the updated date is the publish date', () => {
     expect(buildArticlePage('site-same-day').querySelector('.article-update-note')).toBeNull();
   });

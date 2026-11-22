@@ -1251,6 +1251,10 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     text.className = 'article-update-note-text';
     if (articleLang) text.lang = article.updateNote === base.updateNote ? 'en' : articleLang;
     text.textContent = article.updateNote;
+    // Kept out of search snippets: Bing led the Pikafish result with this line
+    // instead of what the page is (2026-11-22). Bing reads the attribute on any
+    // element; Google only on span, div and section, hence the spans too.
+    for (const el of [updateNote, label, text]) el.setAttribute('data-nosnippet', '');
     updateNote.append(label, ' ', text);
     header.append(updateNote);
   }

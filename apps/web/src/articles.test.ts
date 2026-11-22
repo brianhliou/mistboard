@@ -127,12 +127,36 @@ describe('Pikafish search intent', () => {
       expect(source).toBeDefined();
       if (!source) return;
       const article = translateArticle(source, lang);
+      // #757: the title promises what the page does (play and analyse online);
+      // the download route is a link out, so only the description names it.
       for (const text of [article.seoTitle, article.summary]) {
         expect(text).toContain(`${name}象棋`);
         expect(text).toContain(online);
         expect(text).toContain('分析');
-        expect(text).toContain(download);
       }
+      expect(article.seoTitle).not.toContain(download);
+      expect(article.summary).toContain(download);
+    });
+
+    it(`${lang}: puts the easier levels, the analysis board and the editor in the intro, and ends on play buttons`, () => {
+      const page = buildArticlePage('pikafish', lang);
+      const intro = page.querySelector('.article-intro');
+      const hrefs = [...(intro?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) =>
+        a.getAttribute('href'),
+      );
+      for (const level of [1, 4, 8]) {
+        expect(hrefs).toContain(
+          `/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-${level}`,
+        );
+      }
+      expect(hrefs).toContain('/?play=computer&gameSpecId=xiangqi');
+      expect(hrefs).toContain('/editor/xiangqi');
+      expect(hrefs.filter((href) => href === '/analysis/xiangqi').length).toBeGreaterThanOrEqual(2);
+      const ctas = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')];
+      expect(ctas.slice(-2).map((a) => a.getAttribute('href'))).toEqual([
+        '/bot/pikafish',
+        '/analysis/xiangqi',
+      ]);
     });
 
     it(`${lang}: renders play, analysis and official engine links before the first section`, () => {
