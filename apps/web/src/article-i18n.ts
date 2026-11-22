@@ -11693,7 +11693,7 @@ const ZH_HANT: Record<string, string> = {
   'Orthodox xiangqi forbids facing generals. Fog Xiangqi allows the position; if one general sees the other on a clear file, it can capture across that file.':
     '正統象棋禁止將帥照面。迷霧象棋允許這個局面；如果一方將帥在同一條縱線上看見對方且中間無子阻擋，就可以沿這條線直接擒獲。',
   'Banqi Rules': '暗棋規則',
-  'Banqi Rules (Chinese Dark Chess)': '暗棋規則圖解：大小順序、炮怎麼吃、能不能連吃',
+  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：圖解大小順序、炮怎麼吃、能不能連吃',
   'All thirty-two xiangqi pieces start face-down on half a xiangqi board. On your turn you flip one tile or move one revealed piece one square.':
     '三十二顆象棋棋子全部蓋著，鋪在半張象棋盤上。輪到你時，翻開一顆暗子，或把一顆已翻開的己方棋子走一格。',
   'A piece captures an enemy of equal or lower rank, general down to soldier, except that the soldier takes the general and the general cannot take a soldier.':
