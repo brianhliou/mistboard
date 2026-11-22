@@ -24,7 +24,9 @@ import {
   legalMoveFor,
 } from './correspondence-test-support.js';
 import { collectCurrentGames, currentGameBoardPayload } from './current-games.js';
+import { createWithPairing } from './room-pairing.js';
 import { correspondenceSeatBoard } from './routes/correspondence-games.js';
+import { correspondenceSeekPairing } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { liveObservePolicy } from './server-policy.js';
 // Side-effect import: every tenant registers, as the server boots.
@@ -38,6 +40,7 @@ import {
 import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
+  tenantRoomPairing,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 import {
@@ -324,3 +327,40 @@ test('the public current-games card of a Fog Xiangqi correspondence game is seal
     registration.clearRooms();
   }
 });
+
+// How an accepted seek paired its two people (#1229): every seek shape names
+// its own value, and the room the accept creates carries it.
+test('correspondence seek pairing: each seek shape names its own value', () => {
+  const open = { visibility: 'public' as const, targetUserId: null };
+  const link = { visibility: 'private' as const, targetUserId: null };
+  const challenge = { visibility: 'private' as const, targetUserId: 'u-target' };
+  assert.equal(correspondenceSeekPairing(open, {}), 'correspondence-board');
+  assert.equal(correspondenceSeekPairing(open, { quickPair: true }), 'correspondence-quick-pair');
+  assert.equal(correspondenceSeekPairing(link, {}), 'correspondence-link');
+  assert.equal(correspondenceSeekPairing(challenge, {}), 'correspondence-challenge');
+  assert.equal(correspondenceSeekPairing(link, { hostGame: true }), 'correspondence-host');
+  assert.throws(() =>
+    correspondenceSeekPairing({ visibility: 'unlisted' as never, targetUserId: null }, {}),
+  );
+});
+
+for (const specId of VARIANT_SPEC_IDS) {
+  test(`${specId}: an accepted seek's room carries the pairing it was created under (#1229)`, async () => {
+    const registration = registrationFor(specId);
+    const create = registration.createCorrespondenceGameForSeek;
+    assert.ok(create);
+    const args = {
+      timeControl: correspondenceTimeControl(3),
+      first: { userId: `paired-first-${specId}` },
+      second: { userId: `paired-second-${specId}` },
+    };
+    const paired = await createWithPairing('correspondence-board', () => create(args));
+    assert.ok(paired.ok);
+    const room = roomMap(registration).get(paired.room.id) as unknown as AnyRoom;
+    assert.equal(tenantRoomPairing(room as never), 'correspondence-board');
+    const unscoped = await create(args);
+    assert.ok(unscoped.ok);
+    const bare = roomMap(registration).get(unscoped.room.id) as unknown as AnyRoom;
+    assert.equal(tenantRoomPairing(bare as never), undefined);
+  });
+}

@@ -1267,6 +1267,34 @@ describe('tenant game lifecycle analytics', () => {
     expect(named('game_started')[0][1]).toMatchObject({ rated: true, time_class: 'blitz' });
   });
 
+  // How the two people were paired (#1229): the room's value from the server,
+  // or unknown when the frame carries none or one this build does not know.
+  it('carries the room pairing on game_started, and unknown when none arrives', () => {
+    const paired = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    paired.feedHello({
+      state: view({ status: { type: 'playing', turn: 'red' } }),
+      pairing: 'lobby',
+    } as never);
+    expect(named('game_started')[0][1]).toMatchObject({ pairing: 'lobby' });
+
+    capture.mockReset();
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
+    const bare = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    bare.feedHello({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    expect(named('game_started')[0][1]).toMatchObject({ pairing: 'unknown' });
+
+    capture.mockReset();
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
+    const stale = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    stale.feedHello({
+      state: view({ status: { type: 'playing', turn: 'red' } }),
+      pairing: 'carrier-pigeon',
+    } as never);
+    expect(named('game_started')[0][1]).toMatchObject({ pairing: 'unknown' });
+  });
+
   it('emits game_finished once, with the winner and reason', () => {
     const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
     h.feedHello({ state: view({ status: { type: 'playing', turn: 'red' } }) });

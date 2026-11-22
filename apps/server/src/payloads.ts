@@ -5,6 +5,7 @@ import {
   type GameSpecId,
   maybeGameSpecForId,
   type PlayerView,
+  type RoomPairing,
   type Square,
   variantForId,
 } from '@mistboard/game';
@@ -30,6 +31,9 @@ export type SnapshotRoom = {
   projection: GameProjection;
   pveEngineId?: string | null;
   rated?: boolean;
+  // How the two people were paired (#1229). A room fact with no identity in it,
+  // the same for every recipient; sent only when the room has one.
+  pairing?: RoomPairing;
   region?: string;
   rematch?: { offers: Partial<Record<Color, unknown>>; finalizedRoomId?: string };
   seatDisplayNames?: Partial<Record<Color, string>>;
@@ -141,6 +145,7 @@ function basePayloadFields(room: SnapshotRoom, client: SnapshotClient) {
     devViews: devViewsForClient(room, client),
     state: getClientView(room, client),
     rated: room.rated ?? false,
+    ...(room.pairing ? { pairing: room.pairing } : {}),
     paused: room.projection.paused,
     pauseReason: room.projection.pauseReason,
     abortDeadline: room.abortDeadline ?? null,

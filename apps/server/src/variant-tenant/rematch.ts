@@ -11,6 +11,7 @@
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
+import { createWithPairing } from '../room-pairing.js';
 import type {
   TenantGameStateLike,
   TenantRuntimeRoom,
@@ -281,7 +282,10 @@ async function createRematchRoom<
       if (token.userId !== null && !(await ctx.accountMayRate(token.userId))) rated = false;
     }
   }
-  const created = await ctx.createRoom(room.projection.timeControl, rated);
+  // The new room's pairing is a rematch (#1229), whatever paired the first game.
+  const created = await createWithPairing('rematch', () =>
+    ctx.createRoom(room.projection.timeControl, rated),
+  );
   if (!created.ok) return null;
   const newRoom = created.room;
 

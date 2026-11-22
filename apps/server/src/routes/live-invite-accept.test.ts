@@ -328,6 +328,8 @@ test('acceptance durably seats both accounts, preserves terms, replays idempoten
   assert.ok(room);
   assert.deepEqual(room.projection.timeControl, clock);
   assert.equal(room.rated, true);
+  // An accepted challenge is the room's pairing (#1229), stamped by the server.
+  assert.equal(room.pairing, 'live-challenge');
   assert.equal(room.seatTokens.white?.userId, 'target');
   assert.equal(room.seatTokens.black?.userId, 'sender');
   assert.equal(h.db.seats.get(room.id)?.size, 2);
@@ -358,6 +360,8 @@ test('acceptance durably seats both accounts, preserves terms, replays idempoten
   clearRoomRuntimeTimers(room);
   const loaded = await h.lifecycle.getOrCreateRoom(room.id, 'dark-chess');
   assert.equal(loaded.rated, true);
+  // Durable in the room-created event, so a restart keeps it.
+  assert.equal(loaded.pairing, 'live-challenge');
   assert.equal(
     (await assignSeat(h.roomMgrCtx, loaded, 'after-restart', undefined, h.users.get('sender')!))
       .seat,
@@ -565,8 +569,10 @@ test('every enabled live tenant uses its own durable two-seat factory with uncha
       const created = h.db.events.get(roomId)![0] as unknown as {
         timeControl: unknown;
         rated?: boolean;
+        pairing?: string;
       };
       assert.deepEqual(created.timeControl, timeControl);
+      assert.equal(created.pairing, 'live-challenge', 'the accepted challenge pairing (#1229)');
       assert.equal(created.rated === true, tenant.lobby!.supportsRated);
       const owned = Object.values(room.seatTokens!).filter((token) => token?.userId);
       assert.equal(owned.length, 2);
@@ -620,6 +626,12 @@ test('accepted hidden-information rooms hydrate, reclaim seats and serialize onl
           });
           for (const key of ['"setup"', '"deal"', 'tokenHash', '"userId"'])
             assert.equal(raw.includes(key), false, key);
+          // The pairing tag (#1229) rides the same payload, survives hydration, and
+          // is the same for every seat, so the equality below covers it too.
+          assert.equal(
+            tenantSnapshotPayload(banqiTenant, loaded, viewer).pairing,
+            'live-challenge',
+          );
           assert.equal(
             JSON.stringify({
               acceptance: accepted.body,
@@ -669,6 +681,12 @@ test('accepted hidden-information rooms hydrate, reclaim seats and serialize onl
           });
           for (const key of ['"setup"', '"deal"', 'tokenHash', '"userId"'])
             assert.equal(raw.includes(key), false, key);
+          // The pairing tag (#1229) rides the same payload, survives hydration, and
+          // is the same for every seat, so the equality below covers it too.
+          assert.equal(
+            tenantSnapshotPayload(jieqiTenant, loaded, viewer).pairing,
+            'live-challenge',
+          );
           assert.equal(
             JSON.stringify({
               acceptance: accepted.body,

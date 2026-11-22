@@ -6,6 +6,7 @@ import {
   isCorrespondenceRatedSpec,
   isOfficialCorrespondenceTimeControl,
   isRetiredGameSpec,
+  type RoomPairing,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
@@ -33,6 +34,7 @@ import type {
   UserAccount,
 } from './../persistence.js';
 import * as persistence from './../persistence.js';
+import { createWithPairing } from './../room-pairing.js';
 import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
 import {
   correspondenceTenantForSpecId,
@@ -510,7 +512,32 @@ export type AcceptSeekOptions = {
   // Play the host: the host and the player get the host template and the
   // player's receipt instead of the generic start emails (#1057).
   hostGame?: boolean;
+  // Accepted by the homepage quick-pair (#1229 pairing tag), not off the board.
+  quickPair?: boolean;
 };
+
+/**
+ * How an accepted seek paired its two people (#1229). Every seek shape names
+ * its own value; the switch is exhaustive over SeekVisibility, so a new
+ * visibility fails the typecheck here instead of borrowing another's value.
+ */
+export function correspondenceSeekPairing(
+  seek: { visibility: SeekVisibility; targetUserId: string | null },
+  options: AcceptSeekOptions,
+): RoomPairing {
+  if (options.hostGame) return 'correspondence-host';
+  if (seek.targetUserId !== null) return 'correspondence-challenge';
+  switch (seek.visibility) {
+    case 'public':
+      return options.quickPair ? 'correspondence-quick-pair' : 'correspondence-board';
+    case 'private':
+      return 'correspondence-link';
+    default: {
+      const unhandled: never = seek.visibility;
+      throw new Error(`unhandled seek visibility ${String(unhandled)}`);
+    }
+  }
+}
 
 export async function createSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
@@ -858,12 +885,14 @@ export async function acceptSeekResult(
         : 'second'
       : seek.preferredColor;
   const accepterSide = creatorSide === 'first' ? 'second' : 'first';
-  const created = await createGame({
-    timeControl,
-    first: { userId: creatorSide === 'first' ? seek.creatorUserId : user.id },
-    second: { userId: creatorSide === 'second' ? seek.creatorUserId : user.id },
-    rated: seek.rated === true,
-  });
+  const created = await createWithPairing(correspondenceSeekPairing(seek, options), () =>
+    createGame({
+      timeControl,
+      first: { userId: creatorSide === 'first' ? seek.creatorUserId : user.id },
+      second: { userId: creatorSide === 'second' ? seek.creatorUserId : user.id },
+      rated: seek.rated === true,
+    }),
+  );
   if (!created.ok) {
     // The seek row is already deleted, so a failure here is a rare persistence
     // error rather than a lost race — surface it; the creator can re-post.
@@ -978,7 +1007,7 @@ function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
       correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
     listOwnSeeks: (userId) => persistence.listOutgoingSeeksForUser(userId),
     listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
-    accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),
+    accept: (user, seekId) => acceptSeekResult(ctx, user, seekId, { quickPair: true }),
     post: (user, body) => createSeekResult(ctx, user, body, 'quick-pair'),
     firstMoveOwed: firstMoveOwedResult,
   };

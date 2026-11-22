@@ -19,11 +19,13 @@
  * room-chrome (clocks/status/actions), replay-controller (scrub state).
  */
 
+import { isRoomPairing, type RoomPairing } from '@mistboard/game';
 import {
   analyticsTimeClass,
   createGameLifecycleTracker,
   type GameLifecycleStatusType,
   maybeGameSpecAnalyticsProps,
+  pairingAnalyticsProps,
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { holdBoardSettle } from '../board-anim.js';
@@ -134,6 +136,9 @@ export type TenantLiveState<C extends string, V> = {
   // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
   // Casual, rated lobby games and rated correspondence alike.
   rated: boolean;
+  // How the room paired its two people (snapshot `pairing`, #1229), sent only
+  // when the server stamped one. Analytics only; null reads as `unknown`.
+  pairing: RoomPairing | null;
   // The seat with a draw offer pending (snapshot `drawOffer`, sent only while
   // one is), and how many of this seat's own moves remain before it may offer
   // again after a decline (`drawOfferCooldown`, sent only to that seat).
@@ -425,6 +430,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     forfeitDeadline: null,
     lobbyMatch: false,
     rated: false,
+    pairing: null,
     drawOffer: null,
     drawOfferCooldown: 0,
     drawOfferPlies: new Set(),
@@ -604,6 +610,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // a room never stops being a lobby room.
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (typeof frame.rated === 'boolean') state.rated = frame.rated;
+    // A room fact, set once at creation; sticky like lobbyMatch.
+    if (isRoomPairing(frame.pairing)) state.pairing = frame.pairing;
     // Every frame carries the whole room state, so an absent field means no
     // offer is pending (a move lapsed it, or it was answered).
     const drawOffer = frame.drawOffer as { from?: unknown } | undefined;
@@ -715,6 +723,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.abortDeadline = null;
     state.lobbyMatch = false;
     state.rated = false;
+    state.pairing = null;
     state.drawOffer = null;
     state.drawOfferCooldown = 0;
     state.drawOfferPlies = new Set();
@@ -988,6 +997,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       // 2026-10-14, from before the tenant client kept the flag.
       rated: state.rated,
       ...roomModeAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', opponentSeatName()),
+      ...pairingAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', state.pairing),
       initialMs: timeControl?.initialMs ?? null,
       incrementMs: timeControl?.incrementMs ?? null,
       // A correspondence room's time control carries daysPerMove (the server

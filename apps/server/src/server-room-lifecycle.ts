@@ -3,6 +3,7 @@ import {
   type GameEvent,
   type GameProjection,
   gameSpecForLegacyLiveRoom,
+  isRoomPairing,
   type RoomTimeControl,
   replayGameEvents,
   type VariantId,
@@ -24,6 +25,7 @@ import {
   scheduleRandomEngineMove,
   seatTokenStatesFromPersistence,
 } from './room-manager.js';
+import { currentRoomPairing } from './room-pairing.js';
 import { normalizeRoomRegion } from './server-config.js';
 import { clearRoomRuntimeTimers } from './server-lifecycle.js';
 import {
@@ -256,6 +258,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       | undefined;
     const region = normalizeRoomRegion(roomCreatedEvent?.region ?? config.defaultRoomRegion);
     const roomCreatedPveBotId = pveBotIdForRoomCreatedEvent(roomCreatedEvent);
+    const roomCreatedPairing: unknown = roomCreatedEvent?.pairing;
     if (createdNewPersistentRoom) {
       await persistGameStart(
         roomId,
@@ -289,6 +292,10 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       // Rated request is persisted on the room-created event, so hydration
       // after a restart preserves it. Defaults casual if absent.
       rated: roomCreatedEvent?.rated ?? false,
+      // Durable on room-created too (#1229); an unknown stored value is dropped.
+      ...(mode === 'pvp' && isRoomPairing(roomCreatedPairing)
+        ? { pairing: roomCreatedPairing }
+        : {}),
       randomEngine: hydratedPveEngine !== null,
       engineReservationId: null,
       randomSeating: false,
@@ -354,6 +361,8 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       const at = Date.now();
       const gameSpecId = gameSpecForLegacyLiveRoom({ variant }).id;
       const region = normalizeRoomRegion(options.region ?? config.defaultRoomRegion);
+      // How the route that made this room paired its people (#1229); PvP only.
+      const pairing = mode === 'pvp' ? currentRoomPairing() : undefined;
       const roomCreated: Extract<GameEvent, { type: 'room-created' }> = {
         type: 'room-created',
         at,
@@ -364,6 +373,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         ...(mode === 'pve' && options.botId ? { pveBotId: options.botId } : {}),
         ...(timeControl ? { timeControl } : {}),
         ...(rated ? { rated: true } : {}),
+        ...(pairing ? { pairing } : {}),
       };
       const events: GameEvent[] = [roomCreated];
       const seatTokens: Room['seatTokens'] = {};
@@ -439,6 +449,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         engineReservationId: mode === 'pve' ? (options.engineReservationId ?? null) : null,
         randomSeating: options.randomSeating === true && mode === 'pvp',
         ...(options.lobbyMatch === true && mode === 'pvp' ? { lobbyMatch: true } : {}),
+        ...(pairing ? { pairing } : {}),
         creatorPreference:
           mode === 'pvp' && options.creatorPreference ? options.creatorPreference : null,
         pveEngineId: mode === 'pve' ? engineId : null,

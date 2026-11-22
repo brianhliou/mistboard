@@ -23,7 +23,7 @@
  * docs-private/variant-generalization-track.md.
  */
 
-import type { AbortReason, RoomTimeControl } from '@mistboard/game';
+import type { AbortReason, RoomPairing, RoomTimeControl } from '@mistboard/game';
 import type * as persistence from '../persistence.js';
 
 export type TenantSeat<C extends string> = C | 'spectator';
@@ -162,6 +162,9 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       // Created by a lobby match (routes/lobby.ts), not an invite link. Public.
       // Durable so a hydrated room keeps its no-show window and its client copy.
       lobbyMatch?: boolean;
+      // How the two people were paired (#1229, room-pairing.ts), PvP only.
+      // Public: no ids or identity. Read through tenantRoomPairing.
+      pairing?: RoomPairing;
     }
   | { type: 'seat-assigned'; at: number; roomId: string; clientId: string; seat: C }
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated

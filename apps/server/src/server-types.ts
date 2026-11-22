@@ -3,6 +3,7 @@ import type {
   GameEvent,
   GameProjection,
   GameSpecId,
+  RoomPairing,
   RoomTimeControl,
   VariantId,
 } from '@mistboard/game';
@@ -119,6 +120,9 @@ export type Room = {
   // no-show window, not the invite join window. In-memory only on this stack, so
   // a room hydrated after a restart falls back to the invite window.
   lobbyMatch?: boolean;
+  // How the two people were paired (#1229, room-pairing.ts), PvP only. Durable
+  // in the room-created event, so hydration keeps it; sent in the snapshot.
+  pairing?: RoomPairing;
   // Honored on the first PvP arrival when set: assigns that color to the creator.
   // Random preference uses randomSeating instead, so this is null in that path.
   creatorPreference: 'white' | 'black' | null;

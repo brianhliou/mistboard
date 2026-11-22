@@ -20,6 +20,7 @@ import { JUNGLE_PLAYABLE_MISTY_TIERS } from '../jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { createWithPairing } from './../room-pairing.js';
 import { isJunglePlayableEngineClientId } from '../server-jungle-engine.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
 import { handleCorrespondenceCreate, requestsCorrespondence } from './correspondence-rooms.js';
@@ -56,7 +57,10 @@ export async function tryHandle(
         return true;
       }
       if (registration) {
-        await registration.http.handleCreate(ctx, request, response, rawBody, account);
+        // A PvP room made here is a friend link (#1229); a bot room drops it.
+        await createWithPairing('friend-link', () =>
+          registration.http.handleCreate(ctx, request, response, rawBody, account),
+        );
         return true;
       }
     }
@@ -69,10 +73,12 @@ export async function tryHandle(
       const registration = registeredVariantTenants().find(
         (entry) => entry.gameSpecId === body.gameSpecId,
       );
-      await handleCorrespondenceCreate(
-        { ...ctx, createCorrespondenceRoom: registration?.createCorrespondenceRoom },
-        response,
-        body,
+      await createWithPairing('correspondence-friend-link', () =>
+        handleCorrespondenceCreate(
+          { ...ctx, createCorrespondenceRoom: registration?.createCorrespondenceRoom },
+          response,
+          body,
+        ),
       );
       return true;
     }
@@ -84,7 +90,9 @@ export async function tryHandle(
     for (const registration of registeredVariantTenants()) {
       if (registration.http.matchesCreateRequest(body)) {
         const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-        await registration.http.handleCreate(ctx, request, response, body, accountUser);
+        await createWithPairing('friend-link', () =>
+          registration.http.handleCreate(ctx, request, response, body, accountUser),
+        );
         return true;
       }
     }
@@ -254,19 +262,15 @@ export async function tryHandle(
       if (mode === 'pve') {
         engineReservationId = await ctx.reserveLiveEngineSeat(selectedEngineId, engineColor);
       }
-      const room = await ctx.createRoom(
-        mode,
-        variant,
-        selectedEngineId,
-        effectiveTimeControl ?? undefined,
-        rated,
-        {
+      // A PvP room made here is a friend link (#1229); createRoom drops it on PvE.
+      const room = await createWithPairing('friend-link', () =>
+        ctx.createRoom(mode, variant, selectedEngineId, effectiveTimeControl ?? undefined, rated, {
           engineColor,
           ...(engineReservationId ? { engineReservationId } : {}),
           ...(selectedBotId ? { botId: selectedBotId } : {}),
           ...(pvpRandomSeating ? { randomSeating: true } : {}),
           ...(pvpCreatorPreference ? { creatorPreference: pvpCreatorPreference } : {}),
-        },
+        }),
       );
       response.writeHead(201, { 'content-type': 'application/json' });
       response.end(

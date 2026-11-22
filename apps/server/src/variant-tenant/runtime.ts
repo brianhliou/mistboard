@@ -14,11 +14,12 @@ import { internalEngineTestFor, isInternalEngineTest } from '../internal-engine-
  * dark-xiangqi-golden-wire.test.ts).
  */
 
-import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
+import type { ClockPolicyKind, RoomPairing, RoomTimeControl } from '@mistboard/game';
 import {
   clockPolicyKindFor,
   isAbortReason,
   isRetiredGameSpec,
+  isRoomPairing,
   maybeGameSpecForId,
 } from '@mistboard/game';
 import { countDeployGatingRooms, resumablePveRoomPredicate } from '../deploy-gate.js';
@@ -325,6 +326,8 @@ export function createTenantRuntimeRoom<
     rated?: boolean;
     timeControl?: RoomTimeControl;
     lobbyMatch?: boolean;
+    // How the two people were paired (#1229); the factory passes it for PvP only.
+    pairing?: RoomPairing;
     // The creator named a seat (not Random); handed to rules.createSetup.
     sideChosen?: boolean;
   } = {},
@@ -361,6 +364,7 @@ export function createTenantRuntimeRoom<
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
       ...(setup !== undefined ? { setup } : {}),
       ...(options.lobbyMatch ? { lobbyMatch: true } : {}),
+      ...(options.pairing ? { pairing: options.pairing } : {}),
     },
   ];
   if (options.timeControl) {
@@ -1079,6 +1083,10 @@ export function tenantSnapshotPayload<
     // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
     // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
     ...(room.rated ? { rated: true } : {}),
+    // How the two people were paired (#1229): a room fact with no identity in
+    // it, the same for every recipient. Only on rooms that have one, so bot and
+    // older rooms' wire (and golden fixtures) are unchanged.
+    ...(tenantRoomPairing(room) ? { pairing: tenantRoomPairing(room) } : {}),
     // PvP rematch offers (rematch.ts), for every tenant that rematches, only
     // once the game is over: a reload shows a pending offer, and a live room's
     // wire is unchanged. The flags say which seat offered, nothing else.
@@ -1232,6 +1240,19 @@ export function tenantPerPlyViews<
 export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
   const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
   return first?.type === 'room-created' && first.lobbyMatch === true;
+}
+
+/**
+ * How this room paired its two people (#1229), off the durable room-created
+ * event. A value that is not a known pairing reads as none (the web reports
+ * `unknown`); nothing is inferred from other fields.
+ */
+export function tenantRoomPairing(room: {
+  events: readonly { type: string }[];
+}): RoomPairing | undefined {
+  const first = room.events[0] as { type: string; pairing?: unknown } | undefined;
+  if (first?.type !== 'room-created') return undefined;
+  return isRoomPairing(first.pairing) ? first.pairing : undefined;
 }
 
 /**
@@ -1495,7 +1516,10 @@ export function isTenantEvent<
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
       (event.origin === undefined || isTenantGameOrigin(event.origin)) &&
-      (event.lobbyMatch === undefined || typeof event.lobbyMatch === 'boolean')
+      (event.lobbyMatch === undefined || typeof event.lobbyMatch === 'boolean') &&
+      // Any string loads: a value this build does not know (one retired later)
+      // must not strand a game, and tenantRoomPairing reads it as none.
+      (event.pairing === undefined || typeof event.pairing === 'string')
     );
   }
   if (event.type === 'seat-assigned') {

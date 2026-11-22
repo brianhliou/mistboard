@@ -22,6 +22,7 @@ import {
   leaveLiveInvites,
   liveInviteReachable,
 } from '../presence.js';
+import { createWithPairing } from '../room-pairing.js';
 import { registeredVariantTenants, variantTenantForSpecId } from '../variant-tenant/registry.js';
 import {
   type HttpApiContext,
@@ -484,17 +485,19 @@ export function createLiveInviteHandler(
           const created = await createWithAccountSeats(
             identity(senderFirst ? accounts.sender : accounts.target),
             identity(senderFirst ? accounts.target : accounts.sender),
-            () => {
-              if (tenant?.lobby) return tenant.lobby.createRoom(terms.timeControl, terms.rated);
-              if (terms.gameSpecId !== 'dark-chess') throw new Error('unsupported invite spec');
-              return ctx.createRoom(
-                'pvp',
-                'dark-chess',
-                ctx.pveBuiltinEngineClientId,
-                terms.timeControl,
-                terms.rated,
-              );
-            },
+            // An accepted live challenge (#1229 pairing tag).
+            () =>
+              createWithPairing('live-challenge', async () => {
+                if (tenant?.lobby) return tenant.lobby.createRoom(terms.timeControl, terms.rated);
+                if (terms.gameSpecId !== 'dark-chess') throw new Error('unsupported invite spec');
+                return ctx.createRoom(
+                  'pvp',
+                  'dark-chess',
+                  ctx.pveBuiltinEngineClientId,
+                  terms.timeControl,
+                  terms.rated,
+                );
+              }),
           );
           store.accept(
             id,
