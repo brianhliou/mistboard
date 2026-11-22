@@ -6457,12 +6457,21 @@ const ZH_HANS: Record<string, string> = {
   'Rule variants': '规则版本',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
-  "Corrected the analysis board's net and download size.":
-    '更正了分析棋盘所用的神经网络和下载大小。',
+  'Added links to the easier levels and the analysis board at the top, and a section on downloading Pikafish and its licence.':
+    '在页首加入较容易级别和分析棋盘的链接，并新增皮卡鱼下载与许可证一节。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡鱼象棋在线：免费对弈、分析与引擎下载指引',
-  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '皮卡鱼象棋在线免费对弈，免注册、免安装；在浏览器里用皮卡鱼分析局面、导入棋谱。想下载引擎？这里也有皮卡鱼官方项目入口与安装说明指引。',
+    '皮卡鱼象棋在线：免费人机对弈与局面分析',
+  'Play Pikafish free in your browser, with no account and nothing to install. Set up a position or import a game, and Pikafish shows its evaluation and best line. Eight easier levels sit below it, and the official project is linked for the download.':
+    '皮卡鱼象棋在线免费对弈，不用注册、不用安装。摆好局面或导入棋谱，皮卡鱼就在浏览器里分析，给出评分和最佳着法；另有八个较容易的电脑级别。想下载引擎，页面附皮卡鱼官方项目链接。',
+  'For an easier game, start lower on the Fairy-Stockfish ladder: [level 1](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1), [level 4](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4) or [level 8](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8), or any level from the [play menu](/?play=computer&gameSpecId=xiangqi).':
+    '想下得轻松一点，就从 Fairy-Stockfish 阶梯的低级别开始：[一级](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1)、[四级](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4)或[八级](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8)，也可以在[对弈菜单](/?play=computer&gameSpecId=xiangqi)里选任意级别。',
+  "On the [analysis board](/analysis/xiangqi), paste a FEN or a game record, or set up a position in the [board editor](/editor/xiangqi), then switch on the engine to see Pikafish's evaluation and best lines.":
+    '在[分析棋盘](/analysis/xiangqi)里粘贴 FEN 或棋谱，或在[棋盘编辑器](/editor/xiangqi)里摆好局面，再开启引擎，就能看到皮卡鱼的评分和最佳着法。',
+  'Download and source': '下载与源代码',
+  'To run Pikafish on your own computer, download a release from the [official Pikafish project](https://github.com/official-pikafish/Pikafish), which also has the source code and setup instructions. Its home page is [pikafish.com](https://pikafish.com/).':
+    '想在自己的电脑上运行皮卡鱼，请从[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)下载发布版本，那里也有源代码和安装说明。项目主页是 [pikafish.com](https://pikafish.com/)。',
+  'Pikafish is free software under GPL-3.0. Mistboard runs it with the CC0 xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), and the [source page](/source) credits each engine the site runs, with its licence and source code.':
+    '皮卡鱼是以 GPL-3.0 授权的自由软件。Mistboard 运行的皮卡鱼使用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的 CC0 象棋神经网络；[源码页面](/source)列出网站运行的每个引擎，并附上许可证和源代码。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
@@ -11684,7 +11693,7 @@ const ZH_HANT: Record<string, string> = {
   'Orthodox xiangqi forbids facing generals. Fog Xiangqi allows the position; if one general sees the other on a clear file, it can capture across that file.':
     '正統象棋禁止將帥照面。迷霧象棋允許這個局面；如果一方將帥在同一條縱線上看見對方且中間無子阻擋，就可以沿這條線直接擒獲。',
   'Banqi Rules': '暗棋規則',
-  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：怎麼玩、大小順序與連吃',
+  'Banqi Rules (Chinese Dark Chess)': '暗棋規則圖解：大小順序、炮怎麼吃、能不能連吃',
   'All thirty-two xiangqi pieces start face-down on half a xiangqi board. On your turn you flip one tile or move one revealed piece one square.':
     '三十二顆象棋棋子全部蓋著，鋪在半張象棋盤上。輪到你時，翻開一顆暗子，或把一顆已翻開的己方棋子走一格。',
   'A piece captures an enemy of equal or lower rank, general down to soldier, except that the soldier takes the general and the general cannot take a soldier.':
@@ -13748,7 +13757,7 @@ const ZH_HANT: Record<string, string> = {
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
     '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身分行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋怎麼玩？三十二顆象棋棋子蓋著鋪滿半張棋盤，輪到你就翻一顆或走一格。大小順序是將、士、象、車、馬、兵，兵能吃將，炮隔一子吃子不看大小。可以連吃嗎？看圖解答。採用台灣標準暗棋，免註冊直接線上對弈。',
+    '暗棋規則一次看懂：大小順序是將、士、象、車、馬、炮、兵，只能吃同級或更小的子；兵能吃將，將卻不能吃兵；炮隔一子可吃任何翻開的敵子。標準暗棋不能連吃，台灣常見的連吃玩法另有說明。免註冊，直接和電腦對弈。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
     'MistyBanqi 是你在 Mistboard 上對弈[暗棋](/rules/banqi)時面對的電腦。它是一個經典引擎：向前搜尋，用手寫評估為局面打分，沒有神經網路，而且開源。它能贏過大多數人，但也有幾個需要坦白說明的盲點，其中最值得了解的是：它會把已經完全贏定的棋下成和棋。',
   'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
@@ -13849,12 +13858,21 @@ const ZH_HANT: Record<string, string> = {
   'Rule variants': '規則版本',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
-  "Corrected the analysis board's net and download size.":
-    '更正了分析棋盤所用的神經網路和下載大小。',
+  'Added links to the easier levels and the analysis board at the top, and a section on downloading Pikafish and its licence.':
+    '在頁首加入較容易等級和分析棋盤的連結，並新增皮卡魚下載與授權條款一節。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡魚象棋線上：免費對弈、分析與引擎下載指引',
-  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '皮卡魚象棋線上免費對弈，免註冊、免安裝；在瀏覽器裡用皮卡魚分析局面、匯入棋譜。想下載引擎？這裡也有皮卡魚官方專案入口與安裝說明指引。',
+    '皮卡魚象棋線上：免費人機對弈與局面分析',
+  'Play Pikafish free in your browser, with no account and nothing to install. Set up a position or import a game, and Pikafish shows its evaluation and best line. Eight easier levels sit below it, and the official project is linked for the download.':
+    '皮卡魚象棋線上免費對弈，不用註冊、不用安裝。擺好局面或匯入棋譜，皮卡魚就在瀏覽器裡分析，給出評分和最佳著法；另有八個較容易的電腦等級。想下載引擎，頁面附皮卡魚官方專案連結。',
+  'For an easier game, start lower on the Fairy-Stockfish ladder: [level 1](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1), [level 4](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4) or [level 8](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8), or any level from the [play menu](/?play=computer&gameSpecId=xiangqi).':
+    '想下得輕鬆一點，就從 Fairy-Stockfish 階梯的低等級開始：[一級](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1)、[四級](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4)或[八級](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8)，也可以在[對弈選單](/?play=computer&gameSpecId=xiangqi)裡選任意等級。',
+  "On the [analysis board](/analysis/xiangqi), paste a FEN or a game record, or set up a position in the [board editor](/editor/xiangqi), then switch on the engine to see Pikafish's evaluation and best lines.":
+    '在[分析棋盤](/analysis/xiangqi)裡貼上 FEN 或棋譜，或在[棋盤編輯器](/editor/xiangqi)裡擺好局面，再開啟引擎，就能看到皮卡魚的評分和最佳著法。',
+  'Download and source': '下載與原始碼',
+  'To run Pikafish on your own computer, download a release from the [official Pikafish project](https://github.com/official-pikafish/Pikafish), which also has the source code and setup instructions. Its home page is [pikafish.com](https://pikafish.com/).':
+    '想在自己的電腦上運行皮卡魚，請從[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)下載發布版本，那裡也有原始碼和安裝說明。專案首頁是 [pikafish.com](https://pikafish.com/)。',
+  'Pikafish is free software under GPL-3.0. Mistboard runs it with the CC0 xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), and the [source page](/source) credits each engine the site runs, with its licence and source code.':
+    '皮卡魚是以 GPL-3.0 授權的自由軟體。Mistboard 運行的皮卡魚使用 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE) 的 CC0 象棋神經網路；[原始碼頁面](/source)列出網站運行的每個引擎，並附上授權條款和原始碼。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':

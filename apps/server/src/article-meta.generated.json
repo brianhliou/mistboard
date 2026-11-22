@@ -68,7 +68,7 @@
     "liveAt": 1781539200000,
     "zhTitles": {
       "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "暗棋規則：怎麼玩、大小順序與連吃"
+      "zh-hant": "暗棋規則圖解：大小順序、炮怎麼吃、能不能連吃"
     }
   },
   "banqi-chariot-endgame": {
@@ -170,7 +170,7 @@
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
     "kind": "article",
-    "description": "Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở phát triển từ Stockfish. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.",
+    "description": "Chơi cờ tướng với máy miễn phí ngay trên trình duyệt, đối thủ là Pikafish, không cần tài khoản, không cần cài đặt. Bày thế cờ hoặc nhập ván đấu, Pikafish sẽ cho điểm đánh giá và nước đi tốt nhất. Bên dưới có tám cấp dễ hơn, và trang có liên kết tới dự án chính thức để tải engine.",
     "status": "published",
     "publishedAt": "2026-09-22",
     "liveAt": 1790092800000
@@ -676,7 +676,7 @@
   "pikafish": {
     "title": "Pikafish on Mistboard",
     "kind": "article",
-    "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
+    "description": "Play Pikafish free in your browser, with no account and nothing to install. Set up a position or import a game, and Pikafish shows its evaluation and best line. Eight easier levels sit below it, and the official project is linked for the download.",
     "status": "published",
     "publishedAt": "2026-09-22",
     "liveAt": 1790092800000,

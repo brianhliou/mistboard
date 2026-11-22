@@ -26,12 +26,21 @@ import { pikafishArticle } from './pikafish.js';
 
 export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Pikafish on Mistboard': 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
-  "Corrected the analysis board's net and download size.":
-    'Đã sửa thông tin về mạng nơ-ron và dung lượng tải của bàn phân tích.',
+  'Added links to the easier levels and the analysis board at the top, and a section on downloading Pikafish and its licence.':
+    'Thêm liên kết tới các cấp dễ hơn và bàn phân tích ở đầu trang, cùng một mục về cách tải Pikafish và giấy phép của nó.',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     'Chơi cờ tướng với máy online miễn phí: Pikafish, không cần tải về',
-  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    'Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở phát triển từ Stockfish. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.',
+  'Play Pikafish free in your browser, with no account and nothing to install. Set up a position or import a game, and Pikafish shows its evaluation and best line. Eight easier levels sit below it, and the official project is linked for the download.':
+    'Chơi cờ tướng với máy miễn phí ngay trên trình duyệt, đối thủ là Pikafish, không cần tài khoản, không cần cài đặt. Bày thế cờ hoặc nhập ván đấu, Pikafish sẽ cho điểm đánh giá và nước đi tốt nhất. Bên dưới có tám cấp dễ hơn, và trang có liên kết tới dự án chính thức để tải engine.',
+  'For an easier game, start lower on the Fairy-Stockfish ladder: [level 1](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1), [level 4](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4) or [level 8](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8), or any level from the [play menu](/?play=computer&gameSpecId=xiangqi).':
+    'Muốn ván dễ hơn, hãy bắt đầu ở cấp thấp của thang Fairy-Stockfish: [cấp 1](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-1), [cấp 4](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-4) hoặc [cấp 8](/?play=computer&gameSpecId=xiangqi&engineId=fairy-stockfish-xiangqi-level-8), hoặc chọn bất kỳ cấp nào trong [menu chơi](/?play=computer&gameSpecId=xiangqi).',
+  "On the [analysis board](/analysis/xiangqi), paste a FEN or a game record, or set up a position in the [board editor](/editor/xiangqi), then switch on the engine to see Pikafish's evaluation and best lines.":
+    'Trên [bàn phân tích](/analysis/xiangqi), dán FEN hoặc biên bản ván cờ, hoặc bày thế cờ trong [trình chỉnh bàn cờ](/editor/xiangqi), rồi bật engine để xem điểm đánh giá và các nước đi tốt nhất của Pikafish.',
+  'Download and source': 'Tải về và mã nguồn',
+  'To run Pikafish on your own computer, download a release from the [official Pikafish project](https://github.com/official-pikafish/Pikafish), which also has the source code and setup instructions. Its home page is [pikafish.com](https://pikafish.com/).':
+    'Muốn chạy Pikafish trên máy của bạn, hãy tải bản phát hành từ [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish), nơi cũng có mã nguồn và hướng dẫn cài đặt. Trang chủ của dự án là [pikafish.com](https://pikafish.com/).',
+  'Pikafish is free software under GPL-3.0. Mistboard runs it with the CC0 xiangqi net from [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), and the [source page](/source) credits each engine the site runs, with its licence and source code.':
+    'Pikafish là phần mềm tự do theo giấy phép GPL-3.0. Mistboard chạy Pikafish với mạng cờ tướng CC0 của [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), và [trang mã nguồn](/source) ghi nhận từng engine mà trang web sử dụng, kèm giấy phép và mã nguồn.',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     'Người chơi cờ tướng muốn chơi với máy hoặc phân tích ván cờ bằng Pikafish.',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
