@@ -11,6 +11,7 @@ import {
   gameSpecForLegacyLiveRoom,
   maybeGameSpecForId,
 } from './game-specs.js';
+import type { RoomPairing } from './room-pairing.js';
 import type {
   AbortReason,
   ClockState,
@@ -53,6 +54,9 @@ export type GameEvent =
       // Server-owned PvE bot attribution. The engine seat still records the
       // executable engine id; this preserves which bot profile requested it.
       pveBotId?: string;
+      // How the two people were paired (#1229), PvP rooms only. A room fact for
+      // analytics, sent to both seats; absent on bot rooms and older events.
+      pairing?: RoomPairing;
     }
   | {
       type: 'seat-assigned';

@@ -5,6 +5,7 @@ import type {
   Move,
   PieceRole,
   PlayerView,
+  RoomPairing,
   Square,
   XiangqiColor,
 } from '@mistboard/game';
@@ -180,6 +181,9 @@ export const liveState = {
   roomRegion: 'global' as string,
   roomMode: 'pvp' as RoomMode,
   rated: true,
+  // How the room paired its two people (#1229), as the server sent it; null when
+  // the room carries none. Analytics only.
+  pairing: null as RoomPairing | null,
   paused: false,
   pauseReason: null as PauseReason | null,
   // Absolute ms deadline of the live pre-move abort window, or null. Drives the

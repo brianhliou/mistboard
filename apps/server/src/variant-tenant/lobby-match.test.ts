@@ -13,6 +13,7 @@ import { createAsLobbyMatch } from './room-factory.js';
 import {
   createTenantRuntimeRoom,
   tenantRoomIsLobbyMatch,
+  tenantRoomPairing,
   tenantSnapshotPayload,
 } from './runtime.js';
 
@@ -130,6 +131,8 @@ test('every tenant lobby match creates a room marked as a lobby match', async ()
         | undefined;
       assert.ok(room, `${registration.kind}: matched room must be live`);
       assert.equal(tenantRoomIsLobbyMatch(room), true, `${registration.kind}: room not marked`);
+      // The route also stamps the pairing (#1229) on the real tenant room.
+      assert.equal(tenantRoomPairing(room), 'lobby', `${registration.kind}: no lobby pairing`);
     }
   });
 });
@@ -145,6 +148,8 @@ test('a room a tenant creates outside the lobby route is not marked', async () =
         | undefined;
       assert.ok(room, registration.kind);
       assert.equal(tenantRoomIsLobbyMatch(room), false, `${registration.kind}: leaked mark`);
+      // No route scope, no pairing: the client reports `unknown`, never a guess.
+      assert.equal(tenantRoomPairing(room), undefined, `${registration.kind}: leaked pairing`);
     }
   });
 });
@@ -163,4 +168,25 @@ test('the snapshot tells the client a lobby room apart and leaves invite rooms u
     false,
     'an invite room carries no new key, so golden wires stay byte-identical',
   );
+});
+
+test('the snapshot carries a room pairing only when the room has one (#1229)', () => {
+  const client = { id: 'white-client', seat: 'white' as Color, solo: false };
+  const paired = createTenantRuntimeRoom(darkChessTenant, 'dchx_paired_wire', {
+    pairing: 'lobby',
+    timeControl: tc,
+  });
+  const unpaired = createTenantRuntimeRoom(darkChessTenant, 'dchx_unpaired_wire', {
+    timeControl: tc,
+  });
+  assert.ok(paired.ok && unpaired.ok);
+  assert.equal(tenantSnapshotPayload(darkChessTenant, paired.room, client).pairing, 'lobby');
+  assert.equal(
+    'pairing' in tenantSnapshotPayload(darkChessTenant, unpaired.room, client),
+    false,
+    'a room with no pairing carries no new key, so golden wires stay byte-identical',
+  );
+  // A stored value this build does not know reads as none, never as a known route.
+  const stale = { events: [{ type: 'room-created', pairing: 'carrier-pigeon' }] };
+  assert.equal(tenantRoomPairing(stale), undefined);
 });

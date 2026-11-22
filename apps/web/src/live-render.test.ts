@@ -71,6 +71,7 @@ const initialBoard: Board = {
 afterEach(() => {
   liveState.seat = 'spectator';
   liveState.state = null;
+  liveState.pairing = null;
 });
 
 describe('chess viewer outcome analytics', () => {
@@ -102,6 +103,33 @@ describe('chess viewer outcome analytics', () => {
     expect(capture.mock.calls.filter(([name]) => name === 'game_started')).toHaveLength(
       seat === 'spectator' ? 0 : 1,
     );
+    root.remove();
+  });
+
+  // How the two people were paired (#1229): the room's value rides game_started
+  // and game_finished alike, so both seats report the same one.
+  it('carries the room pairing on game_started and game_finished', () => {
+    const capture = vi.fn();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+    const root = document.createElement('div');
+    document.body.append(root);
+    liveState.gameSpecId = 'dark-chess';
+    liveState.seat = 'white';
+    liveState.events = [];
+    liveState.pairing = 'friend-link';
+    liveState.state = makeView({ id: 'paired-room-game' });
+    initRender(root, { sendSocket: () => true, reconnectNow: () => {} });
+    render();
+    liveState.state = {
+      ...liveState.state,
+      status: { type: 'finished', winner: 'white', reason: 'resignation' },
+    };
+    render();
+    for (const name of ['game_started', 'game_finished']) {
+      const calls = capture.mock.calls.filter(([event]) => event === name);
+      expect(calls, name).toHaveLength(1);
+      expect(calls[0][1], name).toMatchObject({ pairing: 'friend-link' });
+    }
     root.remove();
   });
 });

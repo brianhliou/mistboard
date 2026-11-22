@@ -10,6 +10,7 @@ import {
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
+  pairingAnalyticsProps,
   roomModeAnalyticsProps,
 } from './analytics.js';
 import { chessgroundAnimation } from './board-anim.js';
@@ -213,6 +214,7 @@ function trackGameLifecycle(view: PlayerView | null): void {
     ...gameSpecAnalyticsProps({ variant: view.variant }),
     rated: liveState.rated,
     ...roomModeAnalyticsProps(liveState.roomMode),
+    ...pairingAnalyticsProps(liveState.roomMode, liveState.pairing),
     initialMs: view.clock?.initialMs ?? null,
     incrementMs: view.clock?.incrementMs ?? null,
     time_class: analyticsTimeClass(view.clock, {

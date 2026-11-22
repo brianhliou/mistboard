@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
 import { accountRoomCreated, accountRoomSeats } from '../account-room.js';
 import * as persistence from '../persistence.js';
+import { currentRoomPairing } from '../room-pairing.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
 import { appendTenantSeatAssigned, persistenceRecordForTenantSeatToken } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
@@ -112,6 +113,7 @@ export async function createTenantLiveRoom<
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
   const accounts = accountRoomSeats();
   const lobbyMatch = options.lobbyMatch ?? lobbyMatchScope.getStore() === true;
+  const pairing = currentRoomPairing();
   // Passing reservations transfers their ownership to this creation attempt.
   // Until the room is published, every failure must return all admitted seats.
   const admitted = [...(engines ?? []), ...(engine ? [engine] : [])];
@@ -160,6 +162,9 @@ export async function createTenantLiveRoom<
         rated: rated && mode === 'pvp',
         timeControl,
         lobbyMatch: lobbyMatch && engineSeats.length === 0,
+        // How the route that made this room paired its people (#1229). PvP only:
+        // a bot room carries none.
+        ...(pairing && mode === 'pvp' ? { pairing } : {}),
         ...(options.sideChosen ? { sideChosen: true } : {}),
       });
       if (!created.ok) return created;

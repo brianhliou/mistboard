@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
-import type { RoomTimeControl, VariantId } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  type RoomTimeControl,
+  type VariantId,
+} from '@mistboard/game';
 import {
   assert,
   definePersistenceTests,
@@ -15,6 +19,7 @@ import type { HttpApiContext } from './routes/lib.js';
 // without this every tenant-variant bot create rejects as unplayable.
 import './variant-tenant/register-tenants.js';
 import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
+import { currentRoomPairing } from './room-pairing.js';
 import { resolveBotRoomRequest, tryHandle } from './routes/rooms.js';
 // The multi-variant resolve tests exercise Misty's banqi entry, which needs
 // the banqi tenant registered (isBotSpecPlayable reads the launch flag through
@@ -25,6 +30,7 @@ process.env.MISTBOARD_BANQI_ENABLED = 'true';
 
 import type { Room } from './server-types.js';
 import { roomFixture } from './test-builders.js';
+import { registeredVariantTenants } from './variant-tenant/registry.js';
 
 type ResponseCapture = {
   body: string;
@@ -550,5 +556,77 @@ test('the engine floor admits 5+5 and 10+5 and leaves human games alone', async 
     { initialMs: 300_000, incrementMs: 5_000 },
     { initialMs: 600_000, incrementMs: 5_000 },
     { initialMs: 180_000, incrementMs: 2_000 },
+  ]);
+});
+
+// How the two people were paired (#1229): every PvP create on this route is a
+// friend link (a correspondence invite is its own value), and the scope ends
+// with the request.
+test('a PvP chess room is created inside the friend-link pairing scope (#1229)', async () => {
+  const pairings: (string | undefined)[] = [];
+  const base = createContext({
+    createRoom: async (mode, variant) => {
+      pairings.push(currentRoomPairing());
+      return roomFixture({ id: 'paired-room', mode, variant });
+    },
+  });
+  const ctx: HttpApiContext = { ...base, databaseRequired: false };
+  const response = captureResponse();
+  await tryHandle(ctx, jsonPost({ mode: 'pvp', variant: 'dark-chess' }), response, '/api/rooms');
+  assert.equal(response.status, 201);
+  assert.deepEqual(pairings, ['friend-link']);
+  assert.equal(currentRoomPairing(), undefined);
+});
+
+test('a tenant room and a correspondence invite each create inside their own pairing scope (#1229)', async () => {
+  const specId = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.find((id) =>
+    registeredVariantTenants().some(
+      (entry) => entry.gameSpecId === id && entry.createCorrespondenceRoom,
+    ),
+  );
+  assert.ok(specId, 'a tenant spec with a correspondence invite factory');
+  const registration = registeredVariantTenants().find((entry) => entry.gameSpecId === specId)!;
+  const seen: { route: string; pairing: string | undefined }[] = [];
+  const http = registration.http as { handleCreate: typeof registration.http.handleCreate };
+  const originalHandleCreate = http.handleCreate;
+  const originalCorrespondence = registration.createCorrespondenceRoom;
+  const flagBefore = process.env.MISTBOARD_CORRESPONDENCE_ENABLED;
+  http.handleCreate = async (_ctx, _request, response) => {
+    seen.push({ route: 'tenant', pairing: currentRoomPairing() });
+    response.writeHead(201, { 'content-type': 'application/json' });
+    response.end('{}');
+  };
+  (registration as { createCorrespondenceRoom?: unknown }).createCorrespondenceRoom = async () => {
+    seen.push({ route: 'correspondence', pairing: currentRoomPairing() });
+    return { ok: true, room: { id: 'invite-room', gameSpecId: specId } };
+  };
+  process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'true';
+  try {
+    const ctx = {
+      ...createContext(),
+      databaseRequired: false,
+      isPersistenceInitialized: () => true,
+    } as HttpApiContext;
+    const live = captureResponse();
+    await tryHandle(ctx, jsonPost({ mode: 'pvp', gameSpecId: specId }), live, '/api/rooms');
+    assert.equal(live.status, 201, live.body);
+    const invite = captureResponse();
+    await tryHandle(
+      ctx,
+      jsonPost({ mode: 'correspondence', gameSpecId: specId, daysPerMove: 3 }),
+      invite,
+      '/api/rooms',
+    );
+    assert.equal(invite.status, 201, invite.body);
+  } finally {
+    http.handleCreate = originalHandleCreate;
+    (registration as { createCorrespondenceRoom?: unknown }).createCorrespondenceRoom =
+      originalCorrespondence;
+    if (flagBefore === undefined) delete process.env.MISTBOARD_CORRESPONDENCE_ENABLED;
+    else process.env.MISTBOARD_CORRESPONDENCE_ENABLED = flagBefore;
+  }
+  assert.deepEqual(seen, [
+    { route: 'tenant', pairing: 'friend-link' },
+    { route: 'correspondence', pairing: 'correspondence-friend-link' },
   ]);
 });

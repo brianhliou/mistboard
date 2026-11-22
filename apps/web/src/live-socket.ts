@@ -8,7 +8,13 @@
  * declined-vs-cancelled cue, and the per-variant sound dispatch.
  */
 
-import type { Color, GameEvent, GameSpecId, PlayerView } from '@mistboard/game';
+import {
+  type Color,
+  type GameEvent,
+  type GameSpecId,
+  isRoomPairing,
+  type PlayerView,
+} from '@mistboard/game';
 import { seatNameForGame } from './game-display.js';
 import { seedFogViewHistory } from './live-replay.js';
 import type {
@@ -52,6 +58,7 @@ type StateFrame = {
   event?: GameEvent;
   state: PlayerView;
   rated?: boolean;
+  pairing?: unknown;
   paused?: boolean;
   pauseReason?: PauseReason | null;
   abortDeadline?: number | null;
@@ -169,6 +176,7 @@ function applyFullFrame(message: StateFrame): void {
   liveState.solo = message.solo;
   liveState.devViews = message.devViews ?? null;
   liveState.rated = message.rated ?? true;
+  liveState.pairing = isRoomPairing(message.pairing) ? message.pairing : null;
   liveState.paused = message.paused ?? false;
   liveState.pauseReason = message.pauseReason ?? null;
   liveState.abortDeadline = message.abortDeadline ?? null;

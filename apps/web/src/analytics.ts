@@ -1,4 +1,6 @@
 import {
+  type AnalyticsRoomPairing,
+  analyticsRoomPairing,
   type GameSpec,
   type GameSpecId,
   gameSpecForId,
@@ -120,6 +122,18 @@ export function roomModeAnalyticsProps(
 ): RoomModeAnalyticsProps {
   const pve = roomMode === 'pve';
   return { roomMode: pve ? 'pve' : 'pvp', pve, bot_name: pve ? (botName ?? null) : null };
+}
+
+// How the two people in a game were paired (#1229): the server stamps the room
+// when it makes it and sends the same value to both seats, so the two players'
+// events agree. A bot game has no pairing (null). A game between people whose
+// room carried none, or a value this build does not know, reports `unknown`,
+// never a guessed route.
+export function pairingAnalyticsProps(
+  roomMode: string | null | undefined,
+  pairing: unknown,
+): { pairing: AnalyticsRoomPairing | null } {
+  return { pairing: roomMode === 'pve' ? null : analyticsRoomPairing(pairing) };
 }
 
 // A path segment that carries a digit or an underscore is an id (room ids,

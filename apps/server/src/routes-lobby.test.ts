@@ -9,6 +9,7 @@ import {
 } from '@mistboard/game';
 import { setServerCaptureTransport } from './analytics-server.js';
 import { jieqiEnabled, jungleEnabled, xiangqiMahjongEnabled } from './feature-flags.js';
+import { currentRoomPairing } from './room-pairing.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
 import { LOBBY_TICKET_STALE_MS, sameLobbyPlayer, tryHandle } from './routes/lobby.js';
 import type { LobbyTicket, Room } from './server-types.js';
@@ -219,6 +220,21 @@ test('lobby: two matching chess requests create one dark-chess room with the exa
     false,
     { randomSeating: true, lobbyMatch: true },
   ]);
+});
+
+test('lobby: the matched chess room is created inside the lobby pairing scope (#1229)', async () => {
+  const pairings: unknown[] = [];
+  const { ctx } = testContext({
+    createRoom: async () => {
+      pairings.push(currentRoomPairing());
+      return { id: 'room_chess_paired', region: 'global' } as unknown as Room;
+    },
+  });
+  assert.equal((await post(ctx, { timeControl: tc })).status, 202);
+  assert.equal((await post(ctx, { timeControl: tc })).status, 201);
+  assert.deepEqual(pairings, ['lobby']);
+  // The scope ends with the create: nothing after it inherits the tag.
+  assert.equal(currentRoomPairing(), undefined);
 });
 
 test('lobby: chess requests with different time controls do not match', async () => {

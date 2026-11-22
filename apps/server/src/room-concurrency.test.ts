@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 import type { GameEvent, Move } from '@mistboard/game';
 import { type DarkChessTenantEvent, darkChessTenant } from './dark-chess-tenant.js';
+import { snapshotPayload } from './payloads.js';
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { hydrateRoomOnce } from './room-hydration.js';
 import { appendEvent, pauseRoomOnShutdown, resumeRoom } from './room-manager.js';
+import { createWithPairing } from './room-pairing.js';
 import { createRoomLifecycle, type RoomLifecycleConfig } from './server-room-lifecycle.js';
 import type { Room } from './server-types.js';
 import { roomFixture } from './test-builders.js';
@@ -292,4 +294,32 @@ test('room hydration isolates registries and lets different room ids load indepe
     held.release();
   }
   assert.equal(await first, 'first');
+});
+
+// How the two people were paired (#1229): a PvP room takes the scope's value
+// into its room-created event and its snapshot; a bot room and a room made
+// outside any scope carry none, so their wire is unchanged.
+test('a legacy PvP room records its pairing, a bot room and an unscoped room carry none', async () => {
+  const rooms = new Map<string, Room>();
+  const { api } = lifecycle(rooms);
+  const client = { devViews: false, id: 'viewer', seat: 'white' as const, solo: false };
+
+  const paired = await createWithPairing('friend-link', () =>
+    api.createRoom('pvp', 'dark-chess', 'builtin-random-legal'),
+  );
+  assert.equal(paired.pairing, 'friend-link');
+  const created = paired.events[0] as Extract<GameEvent, { type: 'room-created' }>;
+  assert.equal(created.pairing, 'friend-link');
+  assert.equal(snapshotPayload(paired, client).pairing, 'friend-link');
+
+  const bot = await createWithPairing('friend-link', () =>
+    api.createRoom('pve', 'dark-chess', 'builtin-random-legal'),
+  );
+  assert.equal(bot.pairing, undefined);
+  assert.equal('pairing' in bot.events[0]!, false);
+
+  const unscoped = await api.createRoom('pvp', 'dark-chess', 'builtin-random-legal');
+  assert.equal(unscoped.pairing, undefined);
+  assert.equal('pairing' in unscoped.events[0]!, false);
+  assert.equal('pairing' in snapshotPayload(unscoped, client), false);
 });

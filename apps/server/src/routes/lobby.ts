@@ -15,6 +15,7 @@ import { ffqBanqiAdmits, isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { liveGameIdentityForRequest } from '../live-game-admission.js';
 import * as persistence from './../persistence.js';
+import { createWithPairing } from './../room-pairing.js';
 import type { LobbyTicket, Room } from './../server-types.js';
 import {
   type VariantTenantRegistration,
@@ -418,19 +419,22 @@ async function createLobbyRoom(
   // Both paths mark the room as a lobby match: it gets the short no-show window
   // instead of an invite room's long join window, and its client shows no
   // invite prompt (lifecycle-windows.ts LOBBY_NO_SHOW_ABORT_MS).
-  const lobby = registration?.lobby;
-  if (lobby) {
-    return createAsLobbyMatch(() => lobby.createRoom(timeControl, rated));
-  }
-  const room: Room = await ctx.createRoom(
-    'pvp',
-    'dark-chess',
-    ctx.pveBuiltinEngineClientId,
-    timeControl,
-    rated,
-    { randomSeating: true, lobbyMatch: true },
-  );
-  return { id: room.id, region: room.region ?? 'global' };
+  // Both also carry the 'lobby' pairing for game_started (#1229).
+  return createWithPairing('lobby', async () => {
+    const lobby = registration?.lobby;
+    if (lobby) {
+      return createAsLobbyMatch(() => lobby.createRoom(timeControl, rated));
+    }
+    const room: Room = await ctx.createRoom(
+      'pvp',
+      'dark-chess',
+      ctx.pveBuiltinEngineClientId,
+      timeControl,
+      rated,
+      { randomSeating: true, lobbyMatch: true },
+    );
+    return { id: room.id, region: room.region ?? 'global' };
+  });
 }
 
 function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string, how: LobbySeekEndReason): void {

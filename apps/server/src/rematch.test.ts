@@ -12,6 +12,7 @@ import {
   type RematchOrchestrator,
 } from './rematch.js';
 import type { RoomManagerContext } from './room-manager.js';
+import { currentRoomPairing } from './room-pairing.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
 
 function makeFinishedRoom(id: string): Room {
@@ -98,6 +99,8 @@ type Spy = {
   sent: Array<{ client: Client; payload: unknown }>;
   createCalls: number;
   createRated?: boolean;
+  // The pairing scope the new room was created in (#1229).
+  createPairing?: string;
   issueCalls: number;
 };
 
@@ -122,6 +125,7 @@ function makeOrch(): { orch: RematchOrchestrator; spy: Spy; newRoom: Room } {
     createRoom: async (input) => {
       spy.createCalls += 1;
       spy.createRated = input.rated;
+      spy.createPairing = currentRoomPairing();
       return newRoom;
     },
     issueSeatToken: async (room, seat, identity) => {
@@ -197,6 +201,9 @@ test('mutual offer finalizes: new room created, colors swapped, per-client redir
   assert.equal((whiteRedirect!.payload as { seatToken: string }).seatToken, 'new-black-token');
   assert.equal((blackRedirect!.payload as { seatToken: string }).seatToken, 'new-white-token');
   assert.equal(room.rematch.finalizedRoomId, newRoom.id);
+  // The new room is created inside the rematch pairing scope (#1229), which ends with it.
+  assert.equal(spy.createPairing, 'rematch');
+  assert.equal(currentRoomPairing(), undefined);
 });
 
 test('a rated rematch with a stats-excluded seat is created casual', async () => {

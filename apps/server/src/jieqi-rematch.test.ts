@@ -21,13 +21,14 @@ import type { WebSocket } from 'ws';
 import { createJieqiRoom, jieqiRooms } from './jieqi-registration.js';
 import type { JieqiEvent, JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
+import { currentRoomPairing } from './room-pairing.js';
 import { handleJieqiWebSocketConnection, type JieqiLiveRoom } from './server-ws-jieqi.js';
 import {
   finalizeTenantRematchIfReady,
   type TenantRematchContext,
 } from './variant-tenant/rematch.js';
 import { registeredTenantRematchContext } from './variant-tenant/rematch-context.js';
-import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
+import { createTenantRuntimeRoomFromEvents, tenantRoomPairing } from './variant-tenant/runtime.js';
 import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
@@ -288,6 +289,26 @@ test('jieqi rematch: a rated game rematches rated only between two accounts', as
   const c = stubContext();
   await finalizeTenantRematchIfReady(jieqiTenant, c.ctx, casual);
   assert.deepEqual(c.calls, [{ rated: false }]);
+});
+
+test('jieqi rematch: the new room is created in the rematch pairing scope and carries it (#1229)', async () => {
+  const room = finishedHydratedRoom(false, { red: 'u-red', black: 'u-black' });
+  const pairings: (string | undefined)[] = [];
+  const created: JieqiRuntimeRoom[] = [];
+  const { ctx } = stubContext({
+    createRoom: async (timeControl, rated) => {
+      pairings.push(currentRoomPairing());
+      const made = await createJieqiRoom(timeControl, 'random', undefined, rated);
+      assert.ok(made.ok);
+      created.push(made.room as unknown as JieqiRuntimeRoom);
+      return { ok: true, room: made.room as unknown as JieqiRuntimeRoom };
+    },
+  });
+  await finalizeTenantRematchIfReady(jieqiTenant, ctx, room);
+  assert.deepEqual(pairings, ['rematch']);
+  assert.equal(currentRoomPairing(), undefined);
+  assert.equal(created.length, 1);
+  assert.equal(tenantRoomPairing(created[0] as never), 'rematch');
 });
 
 test('jieqi rematch context: rated carries over only while the rated switch and pace allow it', async () => {

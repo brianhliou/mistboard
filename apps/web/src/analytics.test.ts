@@ -8,6 +8,7 @@ import {
   gameSpecAnalyticsProps,
   isInternalBrowser,
   markInternalBrowser,
+  pairingAnalyticsProps,
   puzzleAttemptedProps,
   resetIdentity,
   reviewOpenedProps,
@@ -756,3 +757,22 @@ function memoryStorage(): Storage {
     },
   };
 }
+
+// How the two people were paired (#1229): bot games carry none, a PvP game
+// with no pairing from the server reports unknown, a known value passes.
+describe('pairingAnalyticsProps', () => {
+  it('is null for a bot game, whatever the frame said', () => {
+    expect(pairingAnalyticsProps('pve', 'lobby')).toEqual({ pairing: null });
+  });
+  it('reports unknown when a PvP room carries no pairing or an unknown one', () => {
+    expect(pairingAnalyticsProps('pvp', null)).toEqual({ pairing: 'unknown' });
+    expect(pairingAnalyticsProps('pvp', undefined)).toEqual({ pairing: 'unknown' });
+    expect(pairingAnalyticsProps(null, 'carrier-pigeon')).toEqual({ pairing: 'unknown' });
+  });
+  it('passes a known pairing through', () => {
+    expect(pairingAnalyticsProps('pvp', 'rematch')).toEqual({ pairing: 'rematch' });
+    expect(pairingAnalyticsProps(undefined, 'correspondence-board')).toEqual({
+      pairing: 'correspondence-board',
+    });
+  });
+});

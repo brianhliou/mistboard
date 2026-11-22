@@ -11,6 +11,7 @@
 
 import type { Color } from '@mistboard/game';
 import type { RoomManagerContext } from './room-manager.js';
+import { createWithPairing } from './room-pairing.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
 
 export type RematchCreateRoom = (spec: {
@@ -155,7 +156,7 @@ export async function finalizeRematchIfReady(
       if (token.userId !== null && !(await orch.accountMayRate(token.userId))) rated = false;
     }
   }
-  const newRoom = await orch.createRoom({
+  const spec = {
     variant: room.variant,
     gameSpecId: room.gameSpecId,
     timeControl: room.timeControl,
@@ -163,7 +164,9 @@ export async function finalizeRematchIfReady(
     region: room.region,
     mode: room.mode,
     pveEngineId: room.pveEngineId,
-  });
+  };
+  // The new room's pairing is a rematch (#1229); createRoom drops it on PvE.
+  const newRoom = await createWithPairing('rematch', () => orch.createRoom(spec));
 
   // Mint seat tokens with colors SWAPPED relative to the previous game.
   const newWhiteToken = await orch.issueSeatToken(newRoom, 'white', {
