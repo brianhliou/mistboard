@@ -1266,6 +1266,30 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* A variation stays on the one row and scrolls with the strip (wrapping, it
+   * stood several lines tall inside the 44px strip). */
+  .review-shell--study .review-rail-main .review-move-list__rows > li.move-tree__variation {
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: none;
+    margin: 0 0 0 4px;
+    overflow: visible;
+  }
+  .review-shell--study .review-rail-main .review-move-list__rows .move-tree__subvar {
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .review-shell--study .review-rail-main .review-move-list__rows > li.move-tree__result {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    padding: 0 8px;
+  }
+  .review-shell--study .review-rail-main .review-move-list__rows .move-tree__result-label {
+    margin: 0;
+  }
   .review-shell--study .review-rail-main .review-move-list__number {
     flex: none;
     padding: 0 0 0 6px;

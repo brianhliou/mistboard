@@ -264,6 +264,28 @@ describe('analysis phone bar CSS', () => {
     );
   });
 
+  it('keeps a variation on the one row of the move strip, on review and study', () => {
+    // A wrapping variation stood 168-201px tall inside the 44px strip and showed
+    // as two cut-off rows (2026-11-23, an analysed game on a phone).
+    const rule =
+      '> li.move-tree__variation { flex-wrap: nowrap; align-items: center; max-width: none;';
+    expect(css).toContain(`.review-rail-main .review-move-list__rows ${rule}`);
+    const studyCss = readFileSync('src/study.css', 'utf8').replace(/\s+/g, ' ');
+    expect(studyCss).toContain(
+      `.review-shell--study .review-rail-main .review-move-list__rows ${rule}`,
+    );
+  });
+
+  it('lays the result out side by side in the move strip, on review and study', () => {
+    // Score stacked over its label was 60px tall in the same 44px strip.
+    const rule = '> li.move-tree__result { display: flex; align-items: baseline;';
+    expect(css).toContain(`.review-rail-main .review-move-list__rows ${rule}`);
+    const studyCss = readFileSync('src/study.css', 'utf8').replace(/\s+/g, ' ');
+    expect(studyCss).toContain(
+      `.review-shell--study .review-rail-main .review-move-list__rows ${rule}`,
+    );
+  });
+
   it('keeps the hidden attribute winning over its own display rules', () => {
     for (const selector of [
       '.analysis-tools-sheet[hidden]',

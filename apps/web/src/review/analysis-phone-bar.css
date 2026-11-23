@@ -185,6 +185,44 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* A variation (an engine line under a mistake, a sideline) stays on the one
+   * row at full length and scrolls with the strip. Wrapping, it stood several
+   * lines tall inside a 44px strip and showed as two cut-off rows. */
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__rows
+    > li.move-tree__variation {
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: none;
+    margin: 0 0 0 4px;
+    overflow: visible;
+  }
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__rows
+    .move-tree__subvar {
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  /* The result (score over its label) goes side by side for the same reason. */
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__rows
+    > li.move-tree__result {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    padding: 0 8px;
+  }
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__rows
+    .move-tree__result-label {
+    margin: 0;
+  }
   :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
     .review-rail-main
     .review-move-list__number {
