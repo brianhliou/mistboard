@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { writeAccountPreference } from '../account-preferences.js';
+import { FLAIR_KEYS } from '../flair.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import { lastBotGame } from '../pve-memory.js';
@@ -1219,6 +1220,25 @@ describe('tenant room chrome meta card names', () => {
     const links = [...refs.gameInfo.querySelectorAll('a.player-name-link')];
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/@/scene-1174']);
     expect(links[0]?.textContent).toBe('scene-1174');
+  });
+
+  it('shows a spectator the seat title badge before the name and the flair after it', () => {
+    const { chrome, refs } = chromeHarness({
+      seat: 'spectator',
+      seatDisplayNames: { red: 'Ann', white: 'Bob' },
+      seatProfiles: { red: { handle: 'ann', title: 'xgm', flair: FLAIR_KEYS[0]! }, white: {} },
+    });
+    chrome.renderMeta();
+    const link = refs.gameInfo.querySelector<HTMLElement>('a.player-name-link');
+    expect(link?.getAttribute('href')).toBe('/@/ann');
+    expect([...(link?.children ?? [])].map((child) => child.className.split(' ')[0])).toEqual([
+      'title-badge',
+      'player-name-text',
+      'flair',
+    ]);
+    expect(link?.querySelector('.player-name-text')?.textContent).toBe('Ann');
+    // The seat with no profile stays plain text with no badge.
+    expect(refs.gameInfo.querySelectorAll('.title-badge')).toHaveLength(1);
   });
 });
 

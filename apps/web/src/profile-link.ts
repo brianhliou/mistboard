@@ -22,11 +22,21 @@
  */
 
 import { buildChampionCrowns, type Championship } from './champion-crowns.js';
+import { buildFlairIconIfSet, type FlairKey } from './flair.js';
 import type { GameParticipant } from './game-display.js';
+import { buildTitleBadge, type PlayerTitle } from './player-titles.js';
 
 /** A player-name destination: a member profile, or a bot profile. */
 export type ProfileTarget =
-  | { readonly kind: 'user'; readonly handle: string; readonly champions?: readonly Championship[] }
+  | {
+      readonly kind: 'user';
+      readonly handle: string;
+      readonly champions?: readonly Championship[];
+      // The account's verified title and chosen flair (#1083). The server sends
+      // both only beside a linkable handle, so they never reach a bot or guest.
+      readonly title?: PlayerTitle;
+      readonly flair?: FlairKey;
+    }
   | { readonly kind: 'bot'; readonly botId: string }
   /** A professional's page built from the broadcast archive (/players/<slug>). */
   | { readonly kind: 'player'; readonly slug: string };
@@ -38,6 +48,8 @@ export type ProfileIdentity = {
   champions?: readonly Championship[];
   handle?: string | null;
   botId?: string | null;
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
 };
 
 // The two profile routes, as main.ts parses them: /@/<handle> for a member and
@@ -61,6 +73,8 @@ export function profileTargetFor(
       kind: 'user',
       handle: identity.handle,
       ...(identity.champions != null ? { champions: identity.champions } : {}),
+      ...(identity.title ? { title: identity.title } : {}),
+      ...(identity.flair ? { flair: identity.flair } : {}),
     };
   if (identity.botId) return { kind: 'bot', botId: identity.botId };
   return null;
@@ -79,7 +93,12 @@ export function participantProfileTarget(
   }
   if (participant.subjectType === 'user') {
     return participant.handle
-      ? profileTargetFor({ handle: participant.handle, champions: participant.champions })
+      ? profileTargetFor({
+          handle: participant.handle,
+          champions: participant.champions,
+          title: participant.title,
+          flair: participant.flair,
+        })
       : null;
   }
   // Misty's own engines with no bot row (Three Kingdoms Banqi, FFQ banqi) are
@@ -128,6 +147,12 @@ export function reviewSeatProfiles(
  * typography and grid placement survive untouched; the link affordance rides on
  * the extra `player-name-link` class (see app-base.css), which inherits colour
  * and only underlines on hover/focus.
+ *
+ * A member's title badge goes before the name and their flair after it, inside
+ * the link, with the name in its own span so a surface that cuts the name with
+ * an ellipsis still shows both whole. Flair honours the viewer's playerFlairs
+ * setting; the title always shows. A name with none of these keeps the plain
+ * link it always had.
  */
 export function playerNameEl(
   name: string,
@@ -146,14 +171,19 @@ export function playerNameEl(
   link.href = profileHref(target);
   link.textContent = name;
   link.title = name;
-  const crowns = buildChampionCrowns(target.kind === 'user' ? target.champions : undefined);
-  if (crowns) {
-    link.classList.add('player-name--champion');
-    const text = document.createElement('span');
-    text.className = 'player-name-text';
-    text.textContent = name;
-    link.replaceChildren(text, crowns);
-  }
+  const user = target.kind === 'user' ? target : null;
+  const crowns = buildChampionCrowns(user?.champions);
+  const badge = user ? buildTitleBadge(user.title) : null;
+  const flair = user ? buildFlairIconIfSet(user.flair) : null;
+  if (!crowns && !badge && !flair) return link;
+  if (crowns) link.classList.add('player-name--champion');
+  if (badge || flair) link.classList.add('player-name--decorated');
+  const text = document.createElement('span');
+  text.className = 'player-name-text';
+  text.textContent = name;
+  link.replaceChildren(
+    ...[badge, text, flair, crowns].filter((node): node is HTMLElement => node !== null),
+  );
   return link;
 }
 

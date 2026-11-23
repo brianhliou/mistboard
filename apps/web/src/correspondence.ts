@@ -447,7 +447,11 @@ export function buildInboxCard(
   const opponentSeat = buildInboxSeat(
     playerNameEl(
       opponentName,
-      profileTargetFor({ handle: game.opponentHandle }),
+      profileTargetFor({
+        handle: game.opponentHandle,
+        title: game.opponentTitle,
+        flair: game.opponentFlair,
+      }),
       'current-game-seat-name',
     ),
   );

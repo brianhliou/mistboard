@@ -1,8 +1,10 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import type { Championship } from './champion-crowns.js';
+import type { FlairKey } from './flair.js';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
+import type { PlayerTitle } from './player-titles.js';
 import type { ProfileBoardThumb } from './profile-game-board.js';
 import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
@@ -32,6 +34,9 @@ export type GameParticipant = {
   // an internal user id that /@/:handle cannot address, so this is the ONLY
   // field that may build a member profile href — see profile-link.ts.
   handle?: string | null;
+  // The account's title and flair, sent under the same gate as `handle`.
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
   ratingBefore?: number | null;
   ratingAfter?: number | null;
 };
@@ -52,6 +57,9 @@ export type PostgamePlayerRow = {
   // surfaces hand-build partial rows; absent means "no page", same as null.
   handle?: string | null;
   botId?: string | null;
+  // Title and flair, only beside a linkable handle (#1083).
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
 };
 
 // 'old-rules': played under rules the variant has since changed, so the stored
