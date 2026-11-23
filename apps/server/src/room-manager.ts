@@ -474,7 +474,12 @@ export function seatProfilesForRoom(
         : clientId
       : null;
     const token = room.seatTokens[color];
-    const profile = liveSeatProfileIdentity(engineId, token?.userId ? token.userHandle : null);
+    const profile = liveSeatProfileIdentity(
+      engineId,
+      token?.userId ? token.userHandle : null,
+      null,
+      token,
+    );
     if (profile.handle && token?.userId) {
       profile.champions = cachedSeatChampions(token.userId, profile.handle);
     }

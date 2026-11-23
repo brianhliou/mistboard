@@ -41,8 +41,10 @@ import { isInternalEngineTestLog } from './internal-engine-test.js';
 import { clockPolicyKindFor, maybeGameSpecForId, timeClassForPace } from '@mistboard/game';
 import { isGameInPlay } from './deploy-gate.js';
 import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
+import type { FlairKey } from './flair.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
+import type { PlayerTitle } from './persistence-titles.js';
 import { isReleaseSmokeRoom } from './release-smoke.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient, liveObservePolicy } from './server-policy.js';
@@ -75,6 +77,10 @@ export type CurrentGamePlayer = {
   // `handle` as the seat's linkable identity; at most one is ever set.
   botId: string | null;
   isEngine: boolean;
+  // Verified title and flair beside a linkable handle (#1083); omitted when
+  // unset and for every seat without a handle (liveSeatProfileIdentity).
+  title?: PlayerTitle;
+  flair?: FlairKey;
 };
 
 export type CurrentGameClock = {
@@ -262,6 +268,7 @@ function gameFromChessRoom(
         isEngine ? clientId : null,
         token?.userHandle ?? null,
         room.pveBotId,
+        token,
       ),
     });
   }
@@ -325,6 +332,7 @@ function gameFromTenantRoom(
         engineSeat ? clientId : null,
         token?.userHandle ?? null,
         room.pveBotId,
+        token,
       ),
     });
   }

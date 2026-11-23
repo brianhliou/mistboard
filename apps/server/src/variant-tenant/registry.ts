@@ -41,7 +41,7 @@ import {
   resumablePveRoomPredicate,
 } from '../deploy-gate.js';
 import type { UserAccount } from '../persistence.js';
-import type { SeatIdentity } from '../seat-decorations.js';
+import type { SeatDecorations, SeatIdentity } from '../seat-decorations.js';
 
 // The structural slice of a live tenant room the dispatch layer touches.
 // Registration closures cast back to their concrete room type internally.
@@ -80,11 +80,11 @@ export type TenantManagedRoom = {
   seatTokens?: Partial<
     Record<
       string,
-      | {
+      | ({
           userId?: string | null;
           userHandle?: string | null;
           userDisplayName?: string | null;
-        }
+        } & SeatDecorations)
       | undefined
     >
   >;

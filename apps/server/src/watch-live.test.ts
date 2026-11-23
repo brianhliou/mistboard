@@ -900,3 +900,46 @@ test('internal engine test rooms never enter public live discovery, even with ma
     false,
   );
 });
+
+// Title and flair beside a live handle (#1083). The seat token already carries
+// them gated (seat-decorations.ts), so a private or closed account's seat has
+// none; an engine seat never carries them, even with a planted decoration.
+test('GET /api/watch/live carries a decorated seat title and flair, and nothing on gated or engine seats', async () => {
+  const room = tenantRoom({
+    id: 'fko_flair',
+    seats: { black: `${FAKE_ENGINE_PREFIX}l4`, red: 'client-a' },
+  });
+  room.seatTokens = {
+    red: {
+      userDisplayName: 'Ada',
+      userHandle: 'ada',
+      userId: 'user-a',
+      userTitle: 'xgm',
+      userFlair: 'variant-xiangqi',
+    },
+    black: { userTitle: 'xim', userFlair: 'variant-jieqi' },
+  };
+  openRooms.set(room.id, room);
+  const { payload } = await getLive('?channel=xiangqi');
+  const featured = payload.featured as { players: Array<Record<string, unknown>> };
+  const human = featured.players.find((player) => !player.isEngine);
+  assert.equal(human?.title, 'xgm');
+  assert.equal(human?.flair, 'variant-xiangqi');
+  const engine = featured.players.find((player) => player.isEngine);
+  assert.equal(JSON.stringify(engine).match(/"(title|flair)"/), null);
+  assert.equal(JSON.stringify(payload).match(/"user(Title|Flair)"/), null);
+
+  // The same seat from a private or closed account: the token has no
+  // decorations, and the whole serialized moment carries neither field.
+  resetLiveTvFeaturedForTest();
+  const gated = tenantRoom({ id: 'fko_gated' });
+  gated.seatTokens = {
+    red: { userDisplayName: 'Private', userHandle: 'private-ada', userId: 'user-p' },
+  };
+  openRooms.clear();
+  openRooms.set(gated.id, gated);
+  const gatedLive = await getLive('?channel=xiangqi');
+  assert.equal((gatedLive.payload.featured as { roomId: string }).roomId, 'fko_gated');
+  const serialized = JSON.stringify(gatedLive.payload);
+  assert.equal(serialized.match(/"(title|flair|userTitle|userFlair)"/), null, serialized);
+});
