@@ -8,6 +8,7 @@ import {
   broadcastPageForPath,
   broadcastRecordsCredit,
   formatBroadcastFreshness,
+  matchBoardHeight,
   mountXiangqiBroadcastBoard,
   mountXiangqiBroadcastIndex,
   mountXiangqiBroadcastRound,
@@ -2425,4 +2426,95 @@ describe('broadcast locale fixtures', () => {
       );
     },
   );
+});
+
+describe('matchBoardHeight (the left column beside an open board)', () => {
+  // happy-dom lays nothing out, so the observer and the boxes are stubbed.
+  type Callback = () => void;
+  let observers: { callback: Callback; targets: Set<Element> }[] = [];
+
+  beforeEach(() => {
+    observers = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        private readonly entry: { callback: Callback; targets: Set<Element> };
+        constructor(callback: Callback) {
+          this.entry = { callback, targets: new Set() };
+          observers.push(this.entry);
+        }
+        observe(target: Element): void {
+          this.entry.targets.add(target);
+        }
+        unobserve(target: Element): void {
+          this.entry.targets.delete(target);
+        }
+        disconnect(): void {
+          this.entry.targets.clear();
+        }
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  function box(el: Element, top: number, height: number): void {
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      top,
+      bottom: top + height,
+      height,
+      left: 0,
+      right: 500,
+      width: 500,
+      x: 0,
+      y: top,
+      toJSON: () => ({}),
+    } as DOMRect);
+  }
+
+  function fire(target: Element): void {
+    for (const entry of observers) if (entry.targets.has(target)) entry.callback();
+  }
+
+  it('starts the column at the board top, below the player strip, and ends it at the board bottom', () => {
+    const side = document.createElement('div');
+    const content = document.createElement('section');
+    const board = document.createElement('section');
+    board.className = 'review-board-host';
+    content.append(board);
+    document.body.append(side, content);
+    // The prod board page at 1288x800: the content column at 101, the top
+    // player strip in the cluster's 28px seat reserve, the board 129-698.
+    box(content, 101, 915);
+    box(board, 129, 569);
+
+    matchBoardHeight(side, content);
+    fire(content);
+
+    expect(side.style.getPropertyValue('--xqb-board-dy')).toBe('28px');
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('569px');
+  });
+
+  it('follows the board when it settles after the content column stopped changing', () => {
+    const side = document.createElement('div');
+    const content = document.createElement('section');
+    const board = document.createElement('section');
+    board.className = 'review-board-host';
+    content.append(board);
+    document.body.append(side, content);
+    box(content, 101, 1012);
+    box(board, 129, 666);
+    matchBoardHeight(side, content);
+    fire(content);
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('666px');
+
+    // A window resize passes through an intermediate board size; the last
+    // change can reach the board alone, so the board itself is observed.
+    box(board, 129, 569);
+    fire(board);
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('569px');
+  });
 });

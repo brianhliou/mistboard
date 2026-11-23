@@ -1796,21 +1796,22 @@
 }
 
 /* An open board: the review page's alignment. The board, the moves and the
-   left column start on one line, the player strip above the board in the
-   layout's top padding rather than inside the board's column, and the left
-   column scrolls with the board and ends where it ends (matchBoardHeight).
-   One column keeps the embedded shell's own strip space. */
+   left column share one band: the player strips sit above and below it in the
+   review cluster's own seat reserve (seat-labels.css), as on the review page,
+   and the left column starts at the board's top and ends at its bottom
+   (matchBoardHeight reads both off the board). It scrolls with the board.
+   The layout adds no top padding of its own: the cluster's reserve already
+   holds the strip, and a second one stacked on it put the left column level
+   with the strip instead of the board. One column keeps the embedded shell's
+   own strip space. */
 @media (min-width: 901px) {
-  .xqb-event-board-open .xqb-event-layout-with-rail {
-    padding-top: 26px;
-  }
-
   .xqb-event-board-open .xqb-event-layout-with-rail .review-shell--embedded {
     padding-top: 0;
   }
 
   .xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side {
     position: static;
+    margin-top: var(--xqb-board-dy, 0px);
     height: var(--xqb-board-h, calc(100vh - 160px));
   }
 }

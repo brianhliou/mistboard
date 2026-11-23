@@ -104,6 +104,35 @@ describe('broadcast event page left column', () => {
     expect(subtracted).toBe(shellBottom + 1);
   });
 
+  // Beside an open board the column is the review page's left rail: it starts
+  // at the board's top, read off the board (matchBoardHeight), and the player
+  // strip above the board sits in the review cluster's own seat reserve. A
+  // second top padding on the layout stacked on that reserve and put the
+  // column level with the strip, 28px above the board.
+  function boardOpenSideStartsAtTheBoard(source: string): boolean {
+    const side = ruleBody(
+      source,
+      '.xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side',
+    );
+    const offsetByBoard = /margin-top:\s*var\(--xqb-board-dy,\s*0px\)/.test(side);
+    const layoutPadded =
+      /\.xqb-event-board-open \.xqb-event-layout-with-rail\s*\{[^}]*padding-top/.test(source);
+    return offsetByBoard && !layoutPadded;
+  }
+
+  it('beside an open board starts at the board, under the player strip', () => {
+    expect(boardOpenSideStartsAtTheBoard(css)).toBe(true);
+  });
+
+  it('catches the layout padding that put the column level with the strip', () => {
+    const planted = css.replace(
+      /@media \(min-width: 901px\) \{\s*\.xqb-event-board-open/,
+      '@media (min-width: 901px) {\n  .xqb-event-board-open .xqb-event-layout-with-rail {\n    padding-top: 26px;\n  }\n\n  .xqb-event-board-open',
+    );
+    expect(planted).not.toBe(css);
+    expect(boardOpenSideStartsAtTheBoard(planted)).toBe(false);
+  });
+
   it('keeps the phone order: boards, then the list and chat, then the note', () => {
     expect(css).toMatch(
       /@media \(max-width: 900px\) \{\s*\.xqb-event-layout-with-rail \{[^}]*grid-template-areas:\s*"content" "rail" "foot"/,

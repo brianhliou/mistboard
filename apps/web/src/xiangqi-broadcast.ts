@@ -1258,20 +1258,36 @@ function pinEventSide(side: HTMLElement): void {
   else pin();
 }
 
-// The open board's height, onto the left column beside it, so the two end on
-// one line like the review page's. The board is sized to the screen and by
-// its resize grip, both after this runs, so it follows the board rather than
-// measuring once.
-function matchBoardHeight(side: HTMLElement, content: HTMLElement): void {
+// The open board's band, onto the left column beside it, so the three columns
+// start and end on one line like the review page's: the column starts at the
+// board's top (below the player strip, which the review cluster's own top
+// padding holds) and is the board's height. Both are read off the board rather
+// than restated here, so the seat row's reserve (seat-labels.css) stays the one
+// number. The board is sized to the screen and by its resize grip, both after
+// this runs, and settles through an intermediate size on a window resize, so
+// the board itself is observed: watching only the content column kept that
+// intermediate height.
+export function matchBoardHeight(side: HTMLElement, content: HTMLElement): void {
   if (typeof ResizeObserver !== 'function') return;
+  let observedBoard: HTMLElement | null = null;
   const observer = new ResizeObserver(() => {
     if (!side.isConnected) {
       observer.disconnect();
       return;
     }
     const board = content.querySelector<HTMLElement>('.review-board-host');
-    const height = board ? Math.round(board.getBoundingClientRect().height) : 0;
-    if (height > 0) side.style.setProperty('--xqb-board-h', `${height}px`);
+    if (board && board !== observedBoard) {
+      if (observedBoard) observer.unobserve(observedBoard);
+      observer.observe(board);
+      observedBoard = board;
+    }
+    if (!board) return;
+    const rect = board.getBoundingClientRect();
+    const height = Math.round(rect.height);
+    if (height <= 0) return;
+    const offset = Math.max(0, Math.round(rect.top - content.getBoundingClientRect().top));
+    side.style.setProperty('--xqb-board-h', `${height}px`);
+    side.style.setProperty('--xqb-board-dy', `${offset}px`);
   });
   observer.observe(content);
 }
