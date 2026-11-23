@@ -3,9 +3,11 @@ import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-pre
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { cardSeatName } from './current-games-model.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
+import type { FlairKey } from './flair.js';
 import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
 import { centeredScrollOffsets, createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
+import type { PlayerTitle } from './player-titles.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -152,6 +154,8 @@ type LiveFeatured = {
     isEngine: boolean;
     handle?: string | null;
     botId?: string | null;
+    title?: PlayerTitle | null;
+    flair?: FlairKey | null;
   }>;
   payload?: Record<string, unknown>;
 };

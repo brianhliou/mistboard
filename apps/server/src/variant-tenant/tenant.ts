@@ -25,6 +25,7 @@
 
 import type { AbortReason, RoomPairing, RoomTimeControl } from '@mistboard/game';
 import type * as persistence from '../persistence.js';
+import type { SeatDecorations } from '../seat-decorations.js';
 
 export type TenantSeat<C extends string> = C | 'spectator';
 
@@ -298,7 +299,7 @@ export type TenantSeatTokenState<C extends string> = {
   issuedAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
-};
+} & SeatDecorations;
 
 export type TenantRematchOffer = {
   tokenHash: string;

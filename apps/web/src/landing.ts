@@ -15,7 +15,10 @@ import {
   type FeaturedGame,
   matchupLabel,
   matchupSeats,
+  participantForColor,
+  type SeatNames,
   variantDisplayLabel,
+  withSeatDecorations,
 } from './game-display.js';
 import { gameMetaForGame } from './game-meta.js';
 import { updateHomeDescription } from './home-meta.js';
@@ -61,6 +64,7 @@ import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { homepageTvAdmits, type LandingTvMode, mountLandingTv } from './landing-tv.js';
 import { fetchLiveStats } from './live-stats-client.js';
+import { participantNameDecoration } from './profile-link.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
@@ -138,8 +142,8 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   const povByRoomId: Record<string, 'white' | 'black'> = {};
   // First/second-mover participant names for the tenant compact seats, resolved
   // through the shared seat model (red/black for xiangqi and jungle,
-  // white/black otherwise).
-  const namesByRoomId: Record<string, { first: string; second: string }> = {};
+  // white/black otherwise), each with the seat's title and flair when it has them.
+  const namesByRoomId: Record<string, SeatNames> = {};
   // When each game finished, for the honest "recent · 2h ago" caption. Undefined
   // for the bundled cold-start demos (no real finish time) -> caption reads "demo".
   const endedAtByRoomId: Record<string, string | undefined> = {};
@@ -150,10 +154,14 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     const pov = povByRoomId[game.roomId] ?? pickHeroPovForGame(game);
     povByRoomId[game.roomId] = pov;
     const [firstSeat, secondSeat] = matchupSeats(game);
-    namesByRoomId[game.roomId] ??= {
-      first: displayParticipantName(game, firstSeat),
-      second: displayParticipantName(game, secondSeat),
-    };
+    namesByRoomId[game.roomId] ??= withSeatDecorations(
+      {
+        first: displayParticipantName(game, firstSeat),
+        second: displayParticipantName(game, secondSeat),
+      },
+      participantNameDecoration(participantForColor(game, firstSeat)),
+      participantNameDecoration(participantForColor(game, secondSeat)),
+    );
     endedAtByRoomId[game.roomId] = game.endedAt;
     variantByRoomId[game.roomId] = game.variant;
     return {

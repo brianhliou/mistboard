@@ -26,9 +26,12 @@ import {
   banqiEngineTierFor,
 } from './banqi-engine.js';
 import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
+import type { FlairKey } from './flair.js';
 import { JUNGLE_PLAYABLE_MISTY_TIERS } from './jungle-engine.js';
 import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
 import type { Champion } from './persistence-leaderboards.js';
+import type { PlayerTitle } from './persistence-titles.js';
+import type { SeatDecorations } from './seat-decorations.js';
 import {
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
   THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
@@ -430,12 +433,21 @@ export function botEngineAttributions(): BotEngineAttribution[] {
  *  misty-three-kingdoms-banqi-level-1, misty-ffq-banqi-level-4, ...). */
 const MISTY_OWN_ENGINE_ID = /^misty-/;
 
-export type LiveSeatProfile = { handle?: string; botId?: string; champions?: Champion[] };
+export type LiveSeatProfile = {
+  handle?: string;
+  botId?: string;
+  champions?: Champion[];
+  // The account's verified title and flair (#1083), present only beside a
+  // handle and already gated like it on the seat token (seat-decorations.ts).
+  title?: PlayerTitle;
+  flair?: FlairKey;
+};
 
 export function liveSeatProfileIdentity(
   engineClientId: string | null,
   userHandle: string | null,
   pveBotId?: string | null,
+  decorations?: SeatDecorations | null,
 ): LiveSeatProfile {
   if (engineClientId) {
     // Same order as liveSeatEngineName: the name and the page it links to come
@@ -446,7 +458,12 @@ export function liveSeatProfileIdentity(
     // profile; this display fallback does not assign a persisted bot identity.
     return MISTY_OWN_ENGINE_ID.test(engineClientId) ? { botId: 'misty' } : {};
   }
-  return userHandle ? { handle: userHandle } : {};
+  if (!userHandle) return {};
+  return {
+    handle: userHandle,
+    ...(decorations?.userTitle ? { title: decorations.userTitle } : {}),
+    ...(decorations?.userFlair ? { flair: decorations.userFlair } : {}),
+  };
 }
 
 /** The engine a first-party bot currently fronts for a variant, or null when it

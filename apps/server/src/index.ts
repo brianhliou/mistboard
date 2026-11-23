@@ -27,6 +27,7 @@ import {
   persistSeatToken,
   type RoomManagerContext,
 } from './room-manager.js';
+import { seatDecorationsOf } from './seat-decorations.js';
 import { loadServerRuntimeConfig, serverConfig } from './server-config.js';
 import { createDrainController } from './server-drain.js';
 import { type CrawlerPageSources, createHttpRequestHandler } from './server-http.js';
@@ -189,6 +190,7 @@ const rematchOrch: RematchOrchestrator = {
       userId: identity.userId,
       userHandle: identity.userHandle,
       userDisplayName: identity.userDisplayName,
+      ...seatDecorationsOf(identity),
       issuedAt: now,
       lastSeenAt: now,
       revokedAt: null,

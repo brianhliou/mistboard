@@ -47,6 +47,7 @@ import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle
 import { cachedSeatChampions } from './persistence-leaderboards.js';
 import { isReleaseSmokeRoom } from './release-smoke.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
+import { seatDecorationsOf } from './seat-decorations.js';
 import { isServerEngineClient, modeForProjection } from './server-policy.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
 
@@ -146,6 +147,7 @@ function persistenceRecordForSeatToken(token: SeatTokenState): persistence.RoomS
     userId: token.userId,
     userHandle: token.userHandle,
     userDisplayName: token.userDisplayName,
+    ...seatDecorationsOf(token),
     issuedAt: token.issuedAt,
     lastSeenAt: token.lastSeenAt,
     revokedAt: token.revokedAt,
@@ -179,6 +181,7 @@ export function seatTokenStatesFromPersistence(
       userId: token.userId,
       userHandle: token.userHandle,
       userDisplayName: token.userDisplayName,
+      ...seatDecorationsOf(token),
       issuedAt: token.issuedAt,
       lastSeenAt: token.lastSeenAt,
       revokedAt: token.revokedAt,
@@ -471,7 +474,12 @@ export function seatProfilesForRoom(
         : clientId
       : null;
     const token = room.seatTokens[color];
-    const profile = liveSeatProfileIdentity(engineId, token?.userId ? token.userHandle : null);
+    const profile = liveSeatProfileIdentity(
+      engineId,
+      token?.userId ? token.userHandle : null,
+      null,
+      token,
+    );
     if (profile.handle && token?.userId) {
       profile.champions = cachedSeatChampions(token.userId, profile.handle);
     }

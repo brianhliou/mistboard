@@ -10,6 +10,7 @@ import type {
 import type { WebSocket } from 'ws';
 import type { Seat } from './payloads.js';
 import type { GameMode } from './persistence.js';
+import type { SeatDecorations } from './seat-decorations.js';
 
 export type RematchOffer = {
   tokenHash: string;
@@ -62,7 +63,7 @@ export type SeatTokenState = {
   issuedAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
-};
+} & SeatDecorations;
 
 export type SeatAssignment = {
   seat: Seat;

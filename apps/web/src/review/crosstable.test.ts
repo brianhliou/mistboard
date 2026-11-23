@@ -50,6 +50,26 @@ function record(): Extract<CrosstableResponse, { available: true }> {
 }
 
 describe('crosstable rendering', () => {
+  it('shows an account title before its name and leaves the engine row plain', () => {
+    const base = record();
+    const el = renderCrosstable(
+      {
+        ...base,
+        players: [
+          { name: 'brian', kind: 'account', handle: 'brian', title: 'xnm' },
+          base.players[1],
+        ],
+      },
+      'r4',
+    );
+    const rows = [...el.querySelectorAll('tr')];
+    const link = rows[0]?.querySelector('a.player-name-link');
+    expect(link?.getAttribute('href')).toBe('/@/brian');
+    expect(link?.firstElementChild?.textContent).toBe('XNM');
+    expect(link?.querySelector('.player-name-text')?.textContent).toBe('brian');
+    expect(rows[1]?.querySelector('.title-badge')).toBeNull();
+  });
+
   it('tallies points lichess-style, half a point per draw', () => {
     expect(formatPoints(2, 1)).toBe('2½');
     expect(formatPoints(1, 1)).toBe('1½');

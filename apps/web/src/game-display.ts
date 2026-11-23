@@ -1,9 +1,12 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import type { Championship } from './champion-crowns.js';
+import type { FlairKey } from './flair.js';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
+import type { PlayerTitle } from './player-titles.js';
 import type { ProfileBoardThumb } from './profile-game-board.js';
+import type { ProfileTarget } from './profile-link.js';
 import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
@@ -32,6 +35,9 @@ export type GameParticipant = {
   // an internal user id that /@/:handle cannot address, so this is the ONLY
   // field that may build a member profile href — see profile-link.ts.
   handle?: string | null;
+  // The account's title and flair, sent under the same gate as `handle`.
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
   ratingBefore?: number | null;
   ratingAfter?: number | null;
 };
@@ -52,7 +58,34 @@ export type PostgamePlayerRow = {
   // surfaces hand-build partial rows; absent means "no page", same as null.
   handle?: string | null;
   botId?: string | null;
+  // Title and flair, only beside a linkable handle (#1083).
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
 };
+
+// The first/second-mover names a compact showcase board frames itself with
+// (namesByRoomId). The optional profiles carry a seat's title and flair for the
+// board to draw beside the name; absent means a bare name, as before (#1083).
+export type SeatNames = {
+  first: string;
+  second: string;
+  firstProfile?: ProfileTarget | null;
+  secondProfile?: ProfileTarget | null;
+};
+
+/** The names with each seat's decoration attached, leaving out an absent one so
+ *  an undecorated pair keeps the plain { first, second } shape. */
+export function withSeatDecorations(
+  names: { first: string; second: string },
+  firstProfile: ProfileTarget | null,
+  secondProfile: ProfileTarget | null,
+): SeatNames {
+  return {
+    ...names,
+    ...(firstProfile ? { firstProfile } : {}),
+    ...(secondProfile ? { secondProfile } : {}),
+  };
+}
 
 // 'old-rules': played under rules the variant has since changed, so the stored
 // game no longer replays. 'unsupported-variant': no page mounts the variant.
@@ -323,6 +356,17 @@ export function liveFirstMover<T extends { color: string }>(
   return players.find((player) => FIRST_MOVER_COLORS.has(player.color)) ?? players[0];
 }
 
+/** The first and second mover of a live featured game, or null without two seats. */
+export function liveMatchupPlayers<T extends { color: string }>(
+  players: readonly T[],
+  gameSpecId: string,
+): [T, T] | null {
+  if (players.length < 2) return null;
+  const first = liveFirstMover(players, gameSpecId)!;
+  const second = players.find((player) => player !== first) ?? players[1]!;
+  return [first, second];
+}
+
 /** First/second-mover names for a live featured game, or null without two
  *  seats. A null name is a guest seat. */
 export function liveMatchupNames(
@@ -330,9 +374,9 @@ export function liveMatchupNames(
   guest: string,
   gameSpecId: string,
 ): { first: string; second: string } | null {
-  if (players.length < 2) return null;
-  const first = liveFirstMover(players, gameSpecId)!;
-  const second = players.find((player) => player !== first) ?? players[1]!;
+  const pair = liveMatchupPlayers(players, gameSpecId);
+  if (!pair) return null;
+  const [first, second] = pair;
   return {
     first: displayLiveName(first.name, guest, { ...first, gameSpecId }),
     second: displayLiveName(second.name, guest, { ...second, gameSpecId }),

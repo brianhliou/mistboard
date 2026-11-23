@@ -5,7 +5,9 @@
 // room's own seats and refuses to build a record for guest or private seats, so
 // this module never resolves identities or outcomes itself.
 
+import type { FlairKey } from '../flair.js';
 import { t } from '../i18n/catalog.js';
+import type { PlayerTitle } from '../player-titles.js';
 import { playerNameEl, profileTargetFor } from '../profile-link.js';
 
 export type CrosstablePlayer = {
@@ -14,6 +16,8 @@ export type CrosstablePlayer = {
   // Linkable profile identity, at most one set; both null for a seat with no page.
   handle?: string | null;
   botId?: string | null;
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
 };
 
 export type CrosstableGame = {

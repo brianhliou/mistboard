@@ -8,6 +8,7 @@ import { GOMOKU_MOVE_NUMBER_MIN_PX, gomokuBoardSvg, numberGomokuStones } from '.
 import './gomoku-board.css';
 import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
+import { seatNameEl } from './profile-link.js';
 import { anchorForPly, offsetsFromTimestamps, positionAt } from './recorded-playback.js';
 import type { ReplayClockReadout, ReplayHandle } from './replay.js';
 import { createPane } from './replay-board.js';
@@ -120,12 +121,13 @@ export async function mountGomokuWatchReplay(
   layout.className = 'replay-layout replay-layout-solo gomoku-watch-layout';
   const progress = document.createElement('div');
   progress.className = 'replay-ply-line';
+  const seatNameClass = compact ? 'showcase-seat-name' : 'replay-clock-side';
   const rows = COLORS.map((color) => {
     const row = document.createElement('div');
     row.className = compact ? 'showcase-seat' : 'replay-clock-row';
     row.dataset.seat = sideFor(color);
-    const name = document.createElement('span');
-    name.className = compact ? 'showcase-seat-name' : 'replay-clock-side';
+    const name: HTMLElement = document.createElement('span');
+    name.className = seatNameClass;
     const clock = document.createElement('span');
     clock.className = compact ? 'showcase-seat-clock' : 'replay-clock-time';
     if (options.seatDiscs) row.append(seatDiscEl(color));
@@ -308,14 +310,29 @@ export async function mountGomokuWatchReplay(
 
   const build = (): void => {
     if (!payload) return;
-    for (const { color, name } of rows) {
+    for (const seat of rows) {
+      const { color } = seat;
       const supplied = options.namesByRoomId?.[roomId];
       const meta = options.metadataByRoomId?.[roomId];
-      name.textContent =
+      const text =
         (color === 'black' ? supplied?.first : supplied?.second) ??
         payload.game.players?.find((player) => player.color === color)?.name ??
         (color === 'black' ? meta?.blackName : meta?.whiteName) ??
         t(color === 'black' ? 'setup.black' : 'setup.white', {}, locale);
+      // A compact seat whose supplied name carries a title or flair (#1083)
+      // draws them; every other seat keeps its plain text.
+      const decoration = compact
+        ? color === 'black'
+          ? supplied?.firstProfile
+          : supplied?.secondProfile
+        : null;
+      if (decoration || seat.name.childElementCount > 0) {
+        const next = seatNameEl(text, decoration, seatNameClass);
+        seat.name.replaceWith(next);
+        seat.name = next;
+      } else {
+        seat.name.textContent = text;
+      }
     }
     controls = null;
     if (compact) {

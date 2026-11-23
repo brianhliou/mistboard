@@ -1,10 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
+import type { SeatDecorations } from './seat-decorations.js';
+
 export type AccountRoomIdentity = {
   userId: string;
   userHandle: string;
   userDisplayName: string;
-};
+} & SeatDecorations;
 
 type AccountRoomScope = {
   first: AccountRoomIdentity;

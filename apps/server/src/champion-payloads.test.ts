@@ -344,6 +344,90 @@ test('champion-enriched hidden room snapshots keep the whole wire payload masked
   }
 });
 
+// Title and flair (#1083) ride the same seat profile as the crown. The token
+// already carries them gated (seat-decorations.ts): a private or closed
+// account's token has none, and engine seats never carry them.
+test('live room seats carry a decorated account title and flair, and every seat keeps the masked wire', async (t) => {
+  database(t);
+  t.mock.method(getPool(), 'query', async () => ({ rows: championRows }));
+  await getChampions();
+  const legacy = legacyRoom();
+  Object.assign(legacy.seatTokens.white!, { userTitle: 'xgm', userFlair: 'variant-dark-chess' });
+  legacy.projection.state.board = {
+    e1: { color: 'white', role: 'king' },
+    e8: { color: 'black', role: 'king' },
+    h8: { color: 'black', role: 'queen' },
+  };
+  assert.deepEqual(seatProfilesForRoom(legacy, ctx), {
+    white: { handle: 'winner', title: 'xgm', flair: 'variant-dark-chess', champions: crowns },
+  });
+  for (const seat of ['white', 'black', 'spectator'] as const) {
+    const client = snapshotClientFixture({ seat });
+    const baseline = snapshotPayload(legacy, client);
+    const enriched = snapshotPayload(
+      { ...legacy, seatProfiles: seatProfilesForRoom(legacy, ctx) },
+      client,
+    );
+    assert.deepEqual(enriched.state, baseline.state);
+    assert.deepEqual(enriched.events, baseline.events);
+    const wire = JSON.stringify(enriched);
+    assert.match(wire, /"title":"xgm"/);
+    assert.match(wire, /"flair":"variant-dark-chess"/);
+    assert.doesNotMatch(wire, /userTitle|userFlair|winner-internal-id|tokenHash|"userId"/);
+    if (seat !== 'black') assert.doesNotMatch(wire, /"h8"|queen/);
+  }
+  // An engine seat with a planted decoration stays a bare bot (or nothing).
+  legacy.projection.seats.white = 'builtin-random-legal';
+  assert.doesNotMatch(JSON.stringify(seatProfilesForRoom(legacy, ctx)), /title|flair|winner/);
+
+  const variant = variantRoom();
+  Object.assign(variant.seatTokens.red!, { userTitle: 'xim', userFlair: 'variant-jieqi' });
+  assert.deepEqual(tenantSeatProfiles(jieqiTenant, variant), {
+    red: { handle: 'winner', title: 'xim', flair: 'variant-jieqi', champions: crowns },
+  });
+  for (const seat of ['red', 'black', 'spectator'] as const) {
+    const payload = tenantSnapshotPayload(jieqiTenant, variant, {
+      id: 'viewer',
+      seat,
+      solo: false,
+    });
+    const wire = JSON.stringify(payload);
+    assert.match(wire, /"title":"xim"/);
+    assert.match(wire, /"flair":"variant-jieqi"/);
+    assert.doesNotMatch(wire, /userTitle|userFlair|winner-internal-id|tokenHash|"setup"|"userId"/);
+    for (const piece of Object.values(payload.state.board)) {
+      if (piece?.faceDown) assert.equal('role' in piece, false);
+    }
+  }
+  variant.projection.seats.red = 'pikafish-jieqi-strongest';
+  assert.doesNotMatch(JSON.stringify(tenantSeatProfiles(jieqiTenant, variant)), /title|flair/);
+});
+
+test('a private or closed account seat carries no title or flair on any live room payload', async (t) => {
+  database(t);
+  t.mock.method(getPool(), 'query', async () => ({ rows: championRows }));
+  await getChampions();
+  // The gate ran at mint or load: the token of a private or closed account has
+  // no decorations, whatever the account row holds.
+  const legacy = legacyRoom();
+  for (const seat of ['white', 'black', 'spectator'] as const) {
+    const wire = JSON.stringify(
+      snapshotPayload(
+        { ...legacy, seatProfiles: seatProfilesForRoom(legacy, ctx) },
+        snapshotClientFixture({ seat }),
+      ),
+    );
+    assert.doesNotMatch(wire, /"title"|"flair"|userTitle|userFlair/);
+  }
+  const variant = variantRoom();
+  for (const seat of ['red', 'black', 'spectator'] as const) {
+    const wire = JSON.stringify(
+      tenantSnapshotPayload(jieqiTenant, variant, { id: 'viewer', seat, solo: false }),
+    );
+    assert.doesNotMatch(wire, /"title"|"flair"|userTitle|userFlair/);
+  }
+});
+
 test('cached finished Jieqi replay refreshes player crowns without replaying hidden data', async (t) => {
   database(t);
   clearJieqiWatchPostgameCache();

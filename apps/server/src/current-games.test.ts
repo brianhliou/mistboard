@@ -655,3 +655,49 @@ test('internal engine test rooms never enter public live discovery, even with ma
     false,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Title and flair beside a live handle (#1083). The seat token already carries
+// them gated (seat-decorations.ts): a private or closed account's token has
+// none, so its card has none; an engine seat never carries them.
+// ---------------------------------------------------------------------------
+
+test('a decorated account seat carries its title and flair; engine and undecorated seats carry none', async () => {
+  const decorated = tenantRoom({
+    id: 'fko_flair',
+    seats: { black: `${FAKE_ENGINE_PREFIX}l4`, red: 'client-a' },
+  });
+  decorated.seatTokens = {
+    red: {
+      userDisplayName: 'Ada',
+      userHandle: 'ada',
+      userId: 'user-a',
+      userTitle: 'xgm',
+      userFlair: 'variant-xiangqi',
+    },
+    // A planted decoration on an engine seat must never reach the feed.
+    black: { userTitle: 'xim', userFlair: 'variant-jieqi' },
+  };
+  openRooms.set(decorated.id, decorated);
+  // A private or closed account reaches the room with no decorations on its token.
+  const gated = tenantRoom({ id: 'fko_gated' });
+  gated.seatTokens = {
+    red: { userDisplayName: 'Private', userHandle: 'private-ada', userId: 'user-p' },
+  };
+  fogRooms.set(gated.id, gated);
+
+  const { payload } = await getCurrent();
+  const flair = payload.games.find((game) => game.roomId === 'fko_flair');
+  const human = flair?.players.find((player) => !player.isEngine);
+  assert.equal(human?.title, 'xgm');
+  assert.equal(human?.flair, 'variant-xiangqi');
+  const engine = flair?.players.find((player) => player.isEngine);
+  assert.equal(JSON.stringify(engine).match(/"(title|flair)"/), null);
+
+  const gatedGame = payload.games.find((game) => game.roomId === 'fko_gated');
+  assert.ok(gatedGame);
+  const serialized = JSON.stringify(gatedGame);
+  assert.equal(serialized.match(/"(title|flair|userTitle|userFlair)"/), null, serialized);
+  // Token-internal field names never leave the server on any card.
+  assert.equal(JSON.stringify(payload).match(/"user(Title|Flair)"/), null);
+});

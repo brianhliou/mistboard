@@ -223,7 +223,13 @@ describe('bot seat names fit game cards', () => {
       expect(profileName?.title).toBe(expected);
       const meta = createGameMetaCard({
         headline: [],
-        players: reviewMetaPlayers(postgamePlayers(participants), undefined, null, variant),
+        // The web mirror types flair as a plain string; the server's is the key union.
+        players: reviewMetaPlayers(
+          postgamePlayers(participants as Parameters<typeof postgamePlayers>[0]),
+          undefined,
+          null,
+          variant,
+        ),
       });
       const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
       // The game page's card names the game in its head, so Misty drops it

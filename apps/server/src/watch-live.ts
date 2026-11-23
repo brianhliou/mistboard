@@ -30,6 +30,8 @@ import { isInternalEngineTestLog } from './internal-engine-test.js';
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
+import type { FlairKey } from './flair.js';
+import type { PlayerTitle } from './persistence-titles.js';
 import { isReleaseSmokeRoom } from './release-smoke.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient } from './server-policy.js';
@@ -182,6 +184,10 @@ export type LiveTvPlayer = {
   // with no bot identity in front of it — neither has a public page.
   handle?: string | null;
   botId?: string | null;
+  // Verified title and flair beside a linkable handle (#1083); omitted when
+  // unset and for every seat without a handle (liveSeatProfileIdentity).
+  title?: PlayerTitle;
+  flair?: FlairKey;
 };
 
 export type LiveTvCandidate = {
@@ -259,6 +265,7 @@ function candidateFromChessRoom(
         isEngine ? clientId : null,
         token?.userHandle ?? null,
         room.pveBotId,
+        token,
       ),
     });
   }
@@ -308,6 +315,7 @@ function candidateFromTenantRoom(
         engineSeat ? clientId : null,
         token?.userHandle ?? null,
         room.pveBotId,
+        token,
       ),
     });
   }

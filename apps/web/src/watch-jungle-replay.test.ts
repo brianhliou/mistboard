@@ -1,5 +1,6 @@
 import type { JungleBoard, JungleMove, JunglePlayerView } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FLAIR_KEYS } from './flair.js';
 import { JUNGLE_LAST_MOVE } from './jungle-art.js';
 import type { JunglePostgameResponse } from './live-jungle-postgame.js';
 import { mountJungleWatchReplay } from './watch-jungle-replay.js';
@@ -156,6 +157,41 @@ describe('Jungle watch replay', () => {
     // Still one board, still the truth view: pov on a perfect-info game is a turn, not a mask.
     expect(flipped.querySelectorAll('.showcase-board, .replay-board').length).toBeGreaterThan(0);
     flippedHandle.destroy();
+  });
+
+  it('a compact seat draws a member title and flair beside the name, unlinked; a bare seat is unchanged', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgameFixture('jgl_flair'))),
+    );
+    const root = document.createElement('div');
+    const handle = await mountJungleWatchReplay(root, 'jgl_flair', {
+      autoplay: false,
+      compact: true,
+      namesByRoomId: {
+        jgl_flair: {
+          first: 'RedSeat',
+          second: 'BlackSeat',
+          firstProfile: { kind: 'user', handle: 'red', title: 'xgm', flair: FLAIR_KEYS[0] },
+          secondProfile: null,
+        },
+      },
+    });
+    const [top, bottom] = [...root.querySelectorAll<HTMLElement>('.showcase-seat-name')];
+    // Red sits at the bottom; Black (no profile) on top keeps the bare span it always had.
+    expect(top!.outerHTML).toBe('<span class="showcase-seat-name">BlackSeat</span>');
+    expect(bottom!.tagName).toBe('SPAN');
+    expect(bottom!.classList.contains('player-name--decorated')).toBe(true);
+    expect([...bottom!.children].map((child) => child.className.split(' ')[0])).toEqual([
+      'title-badge',
+      'player-name-text',
+      'flair',
+    ]);
+    expect(bottom!.querySelector('.player-name-text')?.textContent).toBe('RedSeat');
+    expect(bottom!.querySelector('.title-badge')?.textContent).toBe('XGM');
+    // The homepage board sits inside a link to /watch: no anchor inside it.
+    expect(root.querySelector('.showcase-seat a')).toBeNull();
+    handle.destroy();
   });
 
   it('a finished game never projects a stored clock, even one left running', async () => {

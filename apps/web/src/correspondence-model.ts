@@ -14,6 +14,8 @@ import {
   maybeGameSpecForId,
 } from '@mistboard/game';
 import type { CurrentGame } from './current-games-model.js';
+import type { FlairKey } from './flair.js';
+import type { PlayerTitle } from './player-titles.js';
 
 // One in-flight correspondence game, as served by GET /api/correspondence/games.
 export type CorrespondenceGame = {
@@ -26,6 +28,9 @@ export type CorrespondenceGame = {
   // Profile handle, sent only for an open, non-private account; absent/null
   // means the name renders as plain text (profile-link.ts, fail-closed).
   opponentHandle?: string | null;
+  // Same gate as the handle; absent when unset or withheld.
+  opponentTitle?: PlayerTitle | null;
+  opponentFlair?: FlairKey | null;
   dueAt: string;
   // Canonical full-move number, without a position, for compact homepage rows.
   moveNumber?: number;

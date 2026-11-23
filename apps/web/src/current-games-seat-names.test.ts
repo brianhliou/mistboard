@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { buildFinishedTile, buildSeatRow } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
 import { cardSeatName } from './current-games-model.js';
+import { FLAIR_KEYS } from './flair.js';
 import type { FeaturedGame, GameParticipant } from './game-display.js';
 
 function player(name: string, isEngine: boolean): CurrentGamePlayer {
@@ -69,6 +70,20 @@ describe('/games seat names', () => {
     const label = row.querySelector('.current-game-seat-label');
     expect(label?.lastElementChild?.classList.contains('current-game-bot')).toBe(true);
     expect(label?.contains(row.querySelector('.current-game-seat-clock'))).toBe(false);
+  });
+
+  it('a titled, flaired person shows the badge before and the flair after the name', () => {
+    const row = buildSeatRow(
+      { ...player('Ann', false), handle: 'ann', title: 'xgm', flair: FLAIR_KEYS[0]! },
+      {},
+      'black',
+    );
+    const name = row.querySelector<HTMLElement>('a.current-game-seat-name');
+    expect(name?.getAttribute('href')).toBe('/@/ann');
+    expect(name?.title).toBe('Ann');
+    expect(name?.firstElementChild?.classList.contains('title-badge')).toBe(true);
+    expect(name?.querySelector('.player-name-text')?.textContent).toBe('Ann');
+    expect(name?.lastElementChild?.classList.contains('flair')).toBe(true);
   });
 
   it('a person is never renamed, whatever the name', () => {

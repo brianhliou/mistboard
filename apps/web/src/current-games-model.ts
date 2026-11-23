@@ -9,6 +9,8 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { clockEmergencyMs } from './clock-emphasis.js';
+import type { FlairKey } from './flair.js';
+import type { PlayerTitle } from './player-titles.js';
 
 export type CurrentGamePlayer = {
   color: string;
@@ -18,6 +20,9 @@ export type CurrentGamePlayer = {
   // versions, neither of which has a public page.
   handle: string | null;
   botId?: string | null;
+  // The account's title and flair, present only beside `handle` (#1083).
+  title?: PlayerTitle | null;
+  flair?: FlairKey | null;
   isEngine: boolean;
 };
 

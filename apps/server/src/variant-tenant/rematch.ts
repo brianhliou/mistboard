@@ -12,6 +12,7 @@
 
 import type { RoomTimeControl } from '@mistboard/game';
 import { createWithPairing } from '../room-pairing.js';
+import { type SeatIdentity, seatDecorationsOf } from '../seat-decorations.js';
 import type {
   TenantGameStateLike,
   TenantRuntimeRoom,
@@ -59,7 +60,7 @@ export type TenantRematchContext<
   issueSeatToken: (
     room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
     seat: C,
-    identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
+    identity: SeatIdentity,
   ) => Promise<{ rawToken: string; state: TenantSeatTokenState<C> }>;
   buildRoomUrl: (roomId: string) => string;
   // The per-account play lock (126) normally runs on the new-seat path, which
@@ -295,11 +296,13 @@ async function createRematchRoom<
     userId: secondToken.userId,
     userHandle: secondToken.userHandle,
     userDisplayName: secondToken.userDisplayName,
+    ...seatDecorationsOf(secondToken),
   });
   const newSecondSeatToken = await ctx.issueSeatToken(newRoom, second, {
     userId: firstToken.userId,
     userHandle: firstToken.userHandle,
     userDisplayName: firstToken.userDisplayName,
+    ...seatDecorationsOf(firstToken),
   });
 
   room.rematch.finalizedRoomId = newRoom.id;

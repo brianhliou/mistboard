@@ -28,6 +28,7 @@ import {
   firstPartyBotForId,
   type LiveSeatProfile,
   liveSeatEngineName,
+  liveSeatProfileIdentity,
 } from '../first-party-bots.js';
 import { cachedSeatChampions } from '../persistence-leaderboards.js';
 import { roomViewPolicy } from '../server-policy.js';
@@ -971,7 +972,10 @@ export function tenantSeatProfiles<
     const token = room.seatTokens[color];
     const handle = token?.userHandle;
     if (clientId && handle && token.userId) {
-      profiles[color] = { handle, champions: cachedSeatChampions(token.userId, handle) };
+      profiles[color] = {
+        ...liveSeatProfileIdentity(null, handle, null, token),
+        champions: cachedSeatChampions(token.userId, handle),
+      };
     }
   }
   return profiles;

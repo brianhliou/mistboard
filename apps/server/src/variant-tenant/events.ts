@@ -21,6 +21,7 @@ import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { RELEASE_SMOKE_CORPUS_ID } from '../persistence-counted-games.js';
 import { isReleaseSmokeRoom } from '../release-smoke.js';
+import { seatDecorationsOf } from '../seat-decorations.js';
 import {
   releaseLiveEngineReservation,
   releaseLiveEngineReservations,
@@ -810,6 +811,7 @@ export function persistenceRecordForTenantSeatToken<C extends string>(
     userId: token.userId,
     userHandle: token.userHandle,
     userDisplayName: token.userDisplayName,
+    ...seatDecorationsOf(token),
     issuedAt: token.issuedAt,
     lastSeenAt: token.lastSeenAt,
     revokedAt: token.revokedAt,

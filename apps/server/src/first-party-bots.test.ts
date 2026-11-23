@@ -422,3 +422,21 @@ test('Misty engines with no bot row still link her page on live seats', () => {
   }
   assert.deepEqual(liveSeatProfileIdentity('some-unknown-engine', null), {});
 });
+
+test('liveSeatProfileIdentity carries title and flair only beside a handle (#1083)', () => {
+  const decorations = { userTitle: 'xgm', userFlair: 'variant-xiangqi' } as const;
+  assert.deepEqual(liveSeatProfileIdentity(null, 'ada', null, decorations), {
+    handle: 'ada',
+    title: 'xgm',
+    flair: 'variant-xiangqi',
+  });
+  // Undecorated seats keep the exact shape they had.
+  assert.deepEqual(liveSeatProfileIdentity(null, 'ada', null, {}), { handle: 'ada' });
+  assert.deepEqual(liveSeatProfileIdentity(null, 'ada'), { handle: 'ada' });
+  // A guest (no handle) and every engine seat carry neither, even when planted.
+  assert.deepEqual(liveSeatProfileIdentity(null, null, null, decorations), {});
+  assert.deepEqual(liveSeatProfileIdentity('misty-banqi-level-3', 'ada', null, decorations), {
+    botId: 'misty',
+  });
+  assert.deepEqual(liveSeatProfileIdentity('raw-engine-build', 'ada', null, decorations), {});
+});

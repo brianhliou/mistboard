@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildChallengeCard, type ChallengeView } from './challenge-accept.js';
 import { buildInboxCard, type PageContext, renderChallenges } from './correspondence.js';
 import type { CorrespondenceGame } from './correspondence-model.js';
+import { FLAIR_KEYS } from './flair.js';
 import { corrSeekRow } from './landing-play.js';
 import { buildSeekCard } from './seek-card.js';
 
@@ -36,6 +37,21 @@ describe('correspondence game card: the opponent seat', () => {
     expect(link?.getAttribute('href')).toBe('/@/bob_h');
     expect(link?.textContent).toBe('Bob');
     expect(card.querySelector('a.current-game-open')?.getAttribute('href')).toBe('/room/xq_1');
+    expect(nestedAnchors(card)).toBe(0);
+  });
+
+  it('puts the opponent title before the name and the flair after it', () => {
+    const card = buildInboxCard(
+      pageCtx(),
+      { ...game, opponentTitle: 'xim', opponentFlair: FLAIR_KEYS[0]! },
+      undefined,
+      true,
+    );
+    const link = card.querySelector('a.player-name-link');
+    expect(link?.getAttribute('href')).toBe('/@/bob_h');
+    expect(link?.querySelector('.title-badge')?.textContent).toBe('XIM');
+    expect(link?.querySelector('.player-name-text')?.textContent).toBe('Bob');
+    expect(link?.lastElementChild?.classList.contains('flair')).toBe(true);
     expect(nestedAnchors(card)).toBe(0);
   });
 
