@@ -891,6 +891,13 @@ a.site-nav-link[hidden],
     height: 28px;
   }
 
+  /* Set by index.html's first-paint script while the reader's own set could
+     differ from the baked one; syncNavQuickPieces() drops it at boot. Hidden,
+     not removed, so the bar keeps its layout (piece-set-first-paint.ts). */
+  html[data-piece-set-pending] .site-nav-quick-piece {
+    visibility: hidden;
+  }
+
   .site-nav-quick-piece svg {
     display: block;
     width: 100%;

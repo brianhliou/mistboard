@@ -72,6 +72,42 @@
           ?.setAttribute("content", resolved === "dark" ? "#121615" : "#ebefee");
       })();
     </script>
+    <!-- Hides the phone bar's baked piece-set icon while the reader's own set
+         could differ from it, until main.ts redraws it. Source and reasons:
+         src/piece-set-first-paint.ts; its test fails if this copy drifts. -->
+    <script>
+      (() => {
+        const root = document.documentElement;
+        let mayDiffer = false;
+        try {
+          const storage = window.localStorage;
+          mayDiffer = ["mistboard.xiangqiPieceSet", "mistboard.firstLocale", "mistboard.locale"].some(
+            (key) => storage.getItem(key) !== null,
+          );
+        } catch {
+          mayDiffer = true;
+        }
+        try {
+          const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+          if (languages.some((tag) => /^(zh|yue)/i.test(tag ?? ""))) mayDiffer = true;
+          if (/(^|;)\s*mb_cc=/.test(document.cookie)) mayDiffer = true;
+          if (/[?&]xqPieces=/.test(window.location.search)) mayDiffer = true;
+        } catch {
+          mayDiffer = true;
+        }
+        if (!mayDiffer) return;
+        root.setAttribute("data-piece-set-pending", "");
+        window.addEventListener(
+          "error",
+          (event) => {
+            if (event.target === window || event.target instanceof HTMLScriptElement) {
+              root.removeAttribute("data-piece-set-pending");
+            }
+          },
+          true,
+        );
+      })();
+    </script>
     <script>
       // The homepage's games-played line starts its read here, beside the
       // download of the page's own script, and writes the total into the

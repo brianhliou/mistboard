@@ -17,6 +17,7 @@ import { Window } from 'happy-dom';
 import { createServer } from 'vite';
 import { crawlerCopyProblems } from './prerender-copy-check.mjs';
 import { prerenderedCssMisses } from './prerender-css-coverage.mjs';
+import { createPageRenderer } from './prerender-page.mjs';
 import {
   expandPrerenderRoutes,
   prerenderAlternateLinks,
@@ -79,39 +80,9 @@ function installWindowGlobals(current) {
 }
 installWindowGlobals(win);
 
-function copyStorage(from, to) {
-  for (const key of ['localStorage', 'sessionStorage']) {
-    to[key].clear();
-    for (let i = 0; i < from[key].length; i++) {
-      const name = from[key].key(i);
-      to[key].setItem(name, from[key].getItem(name));
-    }
-  }
-}
-
-// happy-dom 21 retains per-page DOM state on its Window. Only return serialized
-// markup, close the page even on failure, and restore the bootstrap globals used
-// while loading SSR modules. Constructors must follow the current document too.
-async function renderPage(url, render) {
-  const page = new Window({ url });
-  // Preserve the shared pass's string preferences (e.g. the piece set chosen by
-  // the first article) without carrying its DOM into subsequent pages.
-  copyStorage(win, page);
-  installWindowGlobals(page);
-  try {
-    return await render();
-  } finally {
-    try {
-      copyStorage(page, win);
-    } finally {
-      try {
-        await page.happyDOM.close();
-      } finally {
-        installWindowGlobals(win);
-      }
-    }
-  }
-}
+// Each page gets its own window and starts with empty storage, like a first
+// visit (prerender-page.mjs says why a page must not inherit the last one's).
+const renderPage = createPageRenderer({ Window, bootstrap: win, install: installWindowGlobals });
 
 function escapeHtml(str) {
   return str
@@ -614,7 +585,10 @@ try {
     const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
-      const appInner = await renderPage(host, () =>
+      // Rendered at its locale's root, so a zh article's board defaults (the
+      // nav's piece set) follow the zh locale; the full article address would
+      // also change which nav link the bake marks current.
+      const appInner = await renderPage(`${host}${v.urlPrefix}`, () =>
         renderArticlePageShellForPrerender(article.slug, v.lang),
       );
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;

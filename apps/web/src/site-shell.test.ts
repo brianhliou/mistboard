@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PIECE_SET_PENDING_ATTRIBUTE } from './piece-set-first-paint.js';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
@@ -15,6 +16,7 @@ import {
   openSiteMenu,
   placeNavAccount,
   syncAdminNavMenus,
+  syncNavQuickPieces,
 } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
 import {
@@ -918,6 +920,32 @@ describe('site shell phone menu', () => {
     setXiangqiPieceSetPreference('traditional');
     expect(slot?.dataset.pieceSet).toBe('traditional');
     expect(slot?.innerHTML).toBe(tileMark('traditional'));
+  });
+
+  it("redraws a baked pieces button from the reader's stored set at boot, before any page mounts", () => {
+    // The build baked the international set into the page; this reader's
+    // storage holds traditional. main.ts calls the sync right after the theme
+    // settings, long before the landing chunk rebuilds the nav.
+    stubMemoryStorage();
+    setXiangqiPieceSetPreference('international');
+    const { nav } = phoneNav();
+    const slot = nav.querySelector<HTMLElement>('.site-nav-quick-piece');
+    expect(slot?.dataset.pieceSet).toBe('international');
+    stubMemoryStorage();
+    window.localStorage.setItem('mistboard.xiangqiPieceSet', 'traditional');
+    window.localStorage.setItem('mistboard.xiangqiPieceSetVersion', '4');
+    document.documentElement.setAttribute(PIECE_SET_PENDING_ATTRIBUTE, '');
+
+    syncNavQuickPieces();
+
+    const tile = document.createElement('span');
+    tile.innerHTML = xiangqiPieceTilePreview('traditional').markup;
+    expect(slot?.dataset.pieceSet).toBe('traditional');
+    expect(slot?.innerHTML).toBe(tile.innerHTML);
+    expect(document.documentElement.hasAttribute(PIECE_SET_PENDING_ATTRIBUTE)).toBe(false);
+    // The later full rebuild reads the same set, so it draws no second swap.
+    const rebuilt = buildNav().querySelector<HTMLElement>('.site-nav-quick-piece');
+    expect(rebuilt?.dataset.pieceSet).toBe('traditional');
   });
 
   it('toggles dark mode from the moon and shows the state', () => {
