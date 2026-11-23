@@ -911,7 +911,7 @@ describe('tenant room chrome bot rematch', () => {
       expect(sheet?.open).toBe(true);
       expect(
         [...sheet!.querySelectorAll('.postgame-actions > *')].map((el) => el.textContent),
-      ).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+      ).toEqual(['Rematch', 'Review game', 'New game', 'Challenge a friend']);
       sheet?.querySelector<HTMLButtonElement>('.postgame-sheet__close')?.click();
       chrome.renderRoomActions();
       expect(console.querySelector('dialog')).toBe(sheet);

@@ -12,8 +12,9 @@ function labels(box: HTMLElement): string[] {
 }
 
 describe('postGameActions', () => {
-  // #606: the correspondence offer rides right after the rematch, seated only.
-  it('places "Play again by correspondence" after the rematch for a seated player', () => {
+  // #606: the correspondence offer rides after the rematch and Review game
+  // (#1235), seated only.
+  it('places "Play again by correspondence" after the rematch and review for a seated player', () => {
     const correspondenceAgain = {
       offer: {
         gameSpecId: 'xiangqi',
@@ -33,8 +34,9 @@ describe('postGameActions', () => {
       reviewHref: '/game/room-1',
       correspondenceAgain,
     });
-    expect(labels(seated).slice(0, 3)).toEqual([
+    expect(labels(seated).slice(0, 4)).toEqual([
       'Rematch',
+      'Review game',
       'Play again by correspondence',
       'New opponent',
     ]);
@@ -96,7 +98,8 @@ describe('postGameActions', () => {
     expect(offerOnly.classList.contains('postgame-actions--solo')).toBe(false);
   });
 
-  it('orders a seated bot game rematch, new game, review, then the friend invite', () => {
+  // #1235: Review game is second, the accent outline under the filled rematch.
+  it('orders a seated bot game rematch, review, new game, then the friend invite', () => {
     const rematch = document.createElement('button');
     rematch.textContent = 'Rematch';
     const box = postGameActions({
@@ -108,10 +111,16 @@ describe('postGameActions', () => {
     });
     // A bot game's second action is "New game" (the dialog reopens on the same
     // bot), not "New opponent" (lichess's post-AI-game label).
-    expect(labels(box)).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+    expect(labels(box)).toEqual(['Rematch', 'Review game', 'New game', 'Challenge a friend']);
     expect(rematch.classList.contains('postgame-actions__rematch')).toBe(true);
-    const newOpponent = box.children[1] as HTMLAnchorElement;
-    expect(newOpponent.getAttribute('href')).toContain('play=computer');
+    const review = box.children[1] as HTMLAnchorElement;
+    expect(review.classList.contains('postgame-actions__review')).toBe(true);
+    expect(review.getAttribute('href')).toBe('/game/x');
+    // Only the review link carries the outline class.
+    expect(box.querySelectorAll('.postgame-actions__review')).toHaveLength(1);
+    const newGame = box.children[2] as HTMLAnchorElement;
+    expect(newGame.getAttribute('href')).toContain('play=computer');
+    expect(newGame.classList.contains('postgame-actions__review')).toBe(false);
   });
 
   it('sends a PvP player to Find opponent, then offers the friend invite', () => {
@@ -122,8 +131,24 @@ describe('postGameActions', () => {
       rematch: null,
       reviewHref: '/game/x',
     });
-    expect(labels(box)).toEqual(['New opponent', 'Review game', 'Challenge a friend']);
-    expect((box.children[0] as HTMLAnchorElement).getAttribute('href')).toContain('play=lobby');
+    // No rematch: Review game leads.
+    expect(labels(box)).toEqual(['Review game', 'New opponent', 'Challenge a friend']);
+    expect(box.children[0]?.classList.contains('postgame-actions__review')).toBe(true);
+    expect((box.children[1] as HTMLAnchorElement).getAttribute('href')).toContain('play=lobby');
+  });
+
+  it('keeps the rest in order when there is no review link', () => {
+    const rematch = document.createElement('button');
+    rematch.textContent = 'Rematch';
+    const box = postGameActions({
+      variant: 'xiangqi',
+      mode: 'pvp',
+      seated: true,
+      rematch,
+      reviewHref: null,
+    });
+    expect(labels(box)).toEqual(['Rematch', 'New opponent', 'Challenge a friend']);
+    expect(box.querySelector('.postgame-actions__review')).toBeNull();
   });
 
   it('drops New opponent for a variant the play dialog would not open', () => {

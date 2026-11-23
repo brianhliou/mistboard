@@ -1397,6 +1397,23 @@ a.clock-name.player-name-link {
   color: var(--clock-emerg-text);
   box-shadow: inset 0 0 0 1px var(--clock-emerg-border);
 }
+
+/* Review game: second, under the rematch and as tall, an outline in the brand
+   colour with no fill, so the rematch stays the one filled button (#1235).
+   One class more than the link rules above, so it wins wherever they land. */
+.round-table__box .room-actions .postgame-actions > a.postgame-actions__review {
+  min-height: 52px;
+  margin-bottom: 4px;
+  color: var(--site-accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1.5px var(--site-accent);
+}
+
+.round-table__box .room-actions .postgame-actions > a.postgame-actions__review:hover,
+.round-table__box .room-actions .postgame-actions > a.postgame-actions__review:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 10%, transparent);
+  color: var(--site-accent-strong);
+}
 .correspondence-room {
   display: flex;
   flex-direction: column;
