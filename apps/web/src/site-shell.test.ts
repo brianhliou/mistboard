@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PIECE_SET_PENDING_ATTRIBUTE } from './piece-set-first-paint.js';
+import {
+  PIECE_SET_FIRST_PAINT_STYLE_ID,
+  PIECE_SET_PENDING_ATTRIBUTE,
+} from './piece-set-first-paint.js';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
@@ -934,7 +937,10 @@ describe('site shell phone menu', () => {
     stubMemoryStorage();
     window.localStorage.setItem('mistboard.xiangqiPieceSet', 'traditional');
     window.localStorage.setItem('mistboard.xiangqiPieceSetVersion', '4');
-    document.documentElement.setAttribute(PIECE_SET_PENDING_ATTRIBUTE, '');
+    document.documentElement.setAttribute(PIECE_SET_PENDING_ATTRIBUTE, 'traditional');
+    const hide = document.createElement('style');
+    hide.id = PIECE_SET_FIRST_PAINT_STYLE_ID;
+    document.head.append(hide);
 
     syncNavQuickPieces();
 
@@ -943,6 +949,7 @@ describe('site shell phone menu', () => {
     expect(slot?.dataset.pieceSet).toBe('traditional');
     expect(slot?.innerHTML).toBe(tile.innerHTML);
     expect(document.documentElement.hasAttribute(PIECE_SET_PENDING_ATTRIBUTE)).toBe(false);
+    expect(document.getElementById(PIECE_SET_FIRST_PAINT_STYLE_ID)).toBeNull();
     // The later full rebuild reads the same set, so it draws no second swap.
     const rebuilt = buildNav().querySelector<HTMLElement>('.site-nav-quick-piece');
     expect(rebuilt?.dataset.pieceSet).toBe('traditional');

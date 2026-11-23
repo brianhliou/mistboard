@@ -72,31 +72,115 @@
           ?.setAttribute("content", resolved === "dark" ? "#121615" : "#ebefee");
       })();
     </script>
-    <!-- Hides the phone bar's baked piece-set icon while the reader's own set
-         could differ from it, until main.ts redraws it. Source and reasons:
+    <!-- Hides the phone bar's baked piece-set icon when it is not the set
+         this reader will get, until main.ts redraws it. Source and reasons:
          src/piece-set-first-paint.ts; its test fails if this copy drifts. -->
     <script>
       (() => {
         const root = document.documentElement;
-        let mayDiffer = false;
+        let id = "";
         try {
-          const storage = window.localStorage;
-          mayDiffer = ["mistboard.xiangqiPieceSet", "mistboard.firstLocale", "mistboard.locale"].some(
-            (key) => storage.getItem(key) !== null,
-          );
+          const SETS = ["international","traditional","simplified","lacquer","wood","book","brush","clerical","animal-dobutsu"];
+          const RETIRED = ["western","symbols","international-flat","animal-flat"];
+          const LEGACY = {"animal":"animal-dobutsu","animal-seal":"animal-dobutsu","animal-origami":"animal-dobutsu"};
+          const HANZI_COUNTRIES = ["CN","TW","HK","MO","SG","MY","VN"];
+          const LOCALES = ["en","zh-Hans","zh-Hant"];
+          const LOCALE_PATHS = [["/zh-hans","zh-Hans"],["/zh-hant","zh-Hant"]];
+          const SCRIPT_BY_LANGUAGE = {"yue":"zh-Hant","zh":"zh-Hans"};
+          const HANT_SCRIPTS = ["hant","cht"];
+          const HANS_SCRIPTS = ["hans","chs"];
+          const HANT_REGIONS = ["tw","hk","mo"];
+          const HANS_REGIONS = ["cn","sg","my"];
+          const localeFromTag = (language) => {
+            if (!language) return null;
+            const subtags = language.toLowerCase().split("-");
+            const primary = subtags[0];
+            if (primary === "en") return "en";
+            const fallback = primary ? SCRIPT_BY_LANGUAGE[primary] : undefined;
+            if (!fallback) return null;
+            if (subtags.some((subtag) => HANT_SCRIPTS.includes(subtag))) return "zh-Hant";
+            if (subtags.some((subtag) => HANS_SCRIPTS.includes(subtag))) return "zh-Hans";
+            if (subtags.some((subtag) => HANT_REGIONS.includes(subtag))) return "zh-Hant";
+            if (subtags.some((subtag) => HANS_REGIONS.includes(subtag))) return "zh-Hans";
+            return fallback;
+          };
+          const currentLocale = () => {
+            const languages = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+            const path = window.location.pathname.toLowerCase();
+            for (const [prefix, locale] of LOCALE_PATHS) {
+              if (path === prefix || path.startsWith(prefix + "/")) return locale;
+            }
+            try {
+              const stored = window.localStorage.getItem("mistboard.locale");
+              if (LOCALES.includes(stored)) return stored;
+            } catch {
+              /* Unreadable storage holds no chosen locale. */
+            }
+            for (const tag of languages) {
+              const locale = localeFromTag(tag);
+              if (locale) return locale;
+            }
+            return "en";
+          };
+          const firstLocale = () => {
+            try {
+              const stored = window.localStorage.getItem("mistboard.firstLocale");
+              if (LOCALES.includes(stored)) return stored;
+            } catch {
+              /* The app reads the current locale then; it writes it, this does not. */
+            }
+            return currentLocale();
+          };
+          const inferred = () => {
+            const locale = firstLocale();
+            let country = null;
+            for (const part of document.cookie.split(";")) {
+              const [name, value] = part.trim().split("=");
+              if (name === "mb_cc" && value && /^[A-Z]{2}$/.test(value)) {
+                country = value;
+                break;
+              }
+            }
+            const listed = navigator.languages ?? [];
+            const languages = listed.length > 0 ? listed : navigator.language ? [navigator.language] : [];
+            const hanzi = "traditional";
+            if (locale === "zh-Hans" || locale === "zh-Hant") return hanzi;
+            for (const tag of languages) {
+              const listedLocale = localeFromTag(tag);
+              if (listedLocale === "zh-Hans" || listedLocale === "zh-Hant") return hanzi;
+            }
+            if (country && HANZI_COUNTRIES.includes(country)) return hanzi;
+            return "international";
+          };
+          const read = () => {
+            const preview = new URLSearchParams(window.location.search).get("xqPieces");
+            if (SETS.includes(preview)) return preview;
+            const storage = window.localStorage;
+            const version = storage.getItem("mistboard.xiangqiPieceSetVersion");
+            let raw = storage.getItem("mistboard.xiangqiPieceSet");
+            if (version !== "4" && raw === "international") raw = null;
+            if (raw !== null && RETIRED.includes(raw)) return inferred();
+            if (raw !== null && Object.prototype.hasOwnProperty.call(LEGACY, raw)) return LEGACY[raw];
+            return SETS.includes(raw) ? raw : inferred();
+          };
+          let set;
+          try {
+            set = read();
+          } catch {
+            set = inferred();
+          }
+          if (SETS.includes(set)) {
+            const style = document.createElement("style");
+            style.id = "piece-set-first-paint";
+            style.textContent =
+              'html[data-piece-set-pending="' + set + '"] .site-nav-quick-piece:not([data-piece-set="' + set + '"]) { visibility: hidden; }';
+            document.head.append(style);
+            id = set;
+          }
         } catch {
-          mayDiffer = true;
+          id = "";
         }
-        try {
-          const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
-          if (languages.some((tag) => /^(zh|yue)/i.test(tag ?? ""))) mayDiffer = true;
-          if (/(^|;)\s*mb_cc=/.test(document.cookie)) mayDiffer = true;
-          if (/[?&]xqPieces=/.test(window.location.search)) mayDiffer = true;
-        } catch {
-          mayDiffer = true;
-        }
-        if (!mayDiffer) return;
-        root.setAttribute("data-piece-set-pending", "");
+        root.setAttribute("data-piece-set-pending", id);
         window.addEventListener(
           "error",
           (event) => {

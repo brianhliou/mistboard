@@ -42,19 +42,32 @@ const xiangqiBoardStorageKey = 'mistboard.xiangqiBoardTheme';
 const xiangqiBoardStorageVersionKey = 'mistboard.xiangqiBoardThemeVersion';
 const xiangqiBoardLayoutStorageKey = 'mistboard.xiangqiBoardLayout';
 const xiangqiBoardLayoutStorageVersionKey = 'mistboard.xiangqiBoardLayoutVersion';
-const xiangqiPieceSetStorageKey = 'mistboard.xiangqiPieceSet';
-const xiangqiPieceSetStorageVersionKey = 'mistboard.xiangqiPieceSetVersion';
+// The piece-set constants are exported for piece-set-first-paint.ts, whose
+// inline head script mirrors readStoredXiangqiPieceSet from these same values.
+export const XIANGQI_PIECE_SET_STORAGE_KEY = 'mistboard.xiangqiPieceSet';
+export const XIANGQI_PIECE_SET_STORAGE_VERSION_KEY = 'mistboard.xiangqiPieceSetVersion';
+const xiangqiPieceSetStorageKey = XIANGQI_PIECE_SET_STORAGE_KEY;
+const xiangqiPieceSetStorageVersionKey = XIANGQI_PIECE_SET_STORAGE_VERSION_KEY;
 const defaultXiangqiBoardTheme: XiangqiBoardTheme = 'international';
 const defaultXiangqiBoardLayout: XiangqiBoardLayout = 'intersection';
 const xiangqiBoardStorageVersion = '4';
 const xiangqiBoardLayoutStorageVersion = '1';
-const xiangqiPieceSetStorageVersion = '4';
+export const XIANGQI_PIECE_SET_STORAGE_VERSION = '4';
+const xiangqiPieceSetStorageVersion = XIANGQI_PIECE_SET_STORAGE_VERSION;
 const defaultXiangqiPieceSet: XiangqiPieceSet = DEFAULT_XIANGQI_PIECE_SET;
+// The set the inference gives a Chinese reader.
+export const HANZI_INFERRED_XIANGQI_PIECE_SET: XiangqiPieceSet = 'traditional';
+// Stored ids of the animal sets before they merged into Dobutsu.
+export const LEGACY_XIANGQI_PIECE_SET_IDS: ReadonlyMap<string, XiangqiPieceSet> = new Map([
+  ['animal', 'animal-dobutsu'],
+  ['animal-seal', 'animal-dobutsu'],
+  ['animal-origami', 'animal-dobutsu'],
+]);
 // Countries where a player expects hanzi on the pieces even when the browser
 // reports English. Physical sets sold in mainland China print the traditional
 // forms (車 馬 將 帥) too, so every Chinese-reading region gets the same set;
 // 'simplified' stays an opt-in. Vietnam plays with the same pieces (cờ tướng).
-const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
+export const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
   'CN',
   'TW',
   'HK',
@@ -131,9 +144,9 @@ export function inferredXiangqiPieceSet(
   country: string | null = viewerCountry(),
   languages: readonly string[] | null | undefined = browserLanguageList(),
 ): XiangqiPieceSet {
-  if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
-  if (listsChineseLanguage(languages)) return 'traditional';
-  if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return HANZI_INFERRED_XIANGQI_PIECE_SET;
+  if (listsChineseLanguage(languages)) return HANZI_INFERRED_XIANGQI_PIECE_SET;
+  if (country && HANZI_PIECE_COUNTRIES.has(country)) return HANZI_INFERRED_XIANGQI_PIECE_SET;
   return defaultXiangqiPieceSet;
 }
 
@@ -242,9 +255,8 @@ export function normalizeXiangqiBoardLayout(value: string | null): XiangqiBoardL
 // A stored value that names a set (after the legacy animal ids), or null when
 // nothing usable is stored.
 function storedXiangqiPieceSet(value: string | null): XiangqiPieceSet | null {
-  if (value === 'animal' || value === 'animal-seal' || value === 'animal-origami') {
-    return 'animal-dobutsu';
-  }
+  const legacy = value === null ? undefined : LEGACY_XIANGQI_PIECE_SET_IDS.get(value);
+  if (legacy) return legacy;
   return XIANGQI_PIECE_SETS.some((set) => set.id === value) ? (value as XiangqiPieceSet) : null;
 }
 

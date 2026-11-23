@@ -24,7 +24,10 @@ import {
   toolsNavItems,
   watchNavItems,
 } from './nav-items.js';
-import { PIECE_SET_PENDING_ATTRIBUTE } from './piece-set-first-paint.js';
+import {
+  PIECE_SET_FIRST_PAINT_STYLE_ID,
+  PIECE_SET_PENDING_ATTRIBUTE,
+} from './piece-set-first-paint.js';
 import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
 import {
   buildAppearanceMenuAt,
@@ -540,6 +543,7 @@ export function syncNavQuickPieces(): void {
   for (const slot of document.querySelectorAll<HTMLElement>('.site-nav-quick-piece'))
     renderQuickPiece(slot);
   document.documentElement.removeAttribute(PIECE_SET_PENDING_ATTRIBUTE);
+  document.getElementById(PIECE_SET_FIRST_PAINT_STYLE_ID)?.remove();
 }
 
 function renderQuickPiece(slot: HTMLElement): void {
