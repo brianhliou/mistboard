@@ -41,6 +41,7 @@ import {
   resumablePveRoomPredicate,
 } from '../deploy-gate.js';
 import type { UserAccount } from '../persistence.js';
+import type { SeatIdentity } from '../seat-decorations.js';
 
 // The structural slice of a live tenant room the dispatch layer touches.
 // Registration closures cast back to their concrete room type internally.
@@ -387,7 +388,7 @@ export type VariantTenantRegistration = {
   issueCorrespondenceSeatToken?: (
     room: TenantManagedRoom,
     seat: string,
-    identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
+    identity: SeatIdentity,
   ) => Promise<{ rawToken: string; state: TenantSeatTokenState<string> }>;
   // Operator repair reads the same event-log derivation as the writer/sweeper.
   correspondenceDeadline?: (room: TenantManagedRoom) => { seat: string; dueAt: number } | null;

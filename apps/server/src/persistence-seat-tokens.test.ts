@@ -305,6 +305,70 @@ definePersistenceTests('seat tokens', () => {
     });
   });
 
+  test('room seat tokens load title and flair under the linkable-handle gate', async () => {
+    const now = new Date('2026-11-13T10:00:00.000Z');
+    const seatsFor = [
+      ['user_public', 'public', null],
+      ['user_unlisted', 'unlisted', null],
+      ['user_private', 'private', null],
+      ['user_closed', 'public', now],
+    ] as const;
+    for (const [id, visibility, closedAt] of seatsFor) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id.replace('_', '-'),
+        displayName: id,
+        now,
+      });
+      await getPool().query(
+        `UPDATE users SET title = 'xgm', flair = 'variant-xiangqi', profile_visibility = $2,
+                          closed_at = $3
+         WHERE id = $1`,
+        [id, visibility, closedAt],
+      );
+    }
+    const roomFor = (id: string) => `decorated-${id}`;
+    for (const [id] of seatsFor) {
+      await upsertRoomSeatToken(roomFor(id), {
+        seat: 'white',
+        clientId: 'white-client',
+        deviceId: null,
+        tokenHash: `hash-${id}`,
+        userId: id,
+        userHandle: null,
+        userDisplayName: null,
+        issuedAt: now,
+        lastSeenAt: now,
+        revokedAt: null,
+      });
+    }
+    await upsertRoomSeatToken(roomFor('guest'), {
+      seat: 'white',
+      clientId: 'guest-client',
+      deviceId: 'device-guest',
+      tokenHash: 'hash-guest',
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+      issuedAt: now,
+      lastSeenAt: now,
+      revokedAt: null,
+    });
+
+    for (const id of ['user_public', 'user_unlisted']) {
+      const white = (await loadRoomSeatTokens(roomFor(id))).white;
+      assert.equal(white?.userTitle, 'xgm');
+      assert.equal(white?.userFlair, 'variant-xiangqi');
+    }
+    // A private or closed account and a guest seat yield neither, in the whole record.
+    for (const id of ['user_private', 'user_closed', 'guest']) {
+      const wire = JSON.stringify(await loadRoomSeatTokens(roomFor(id)));
+      assert.doesNotMatch(wire, /userTitle|userFlair|xgm|variant-xiangqi/, id);
+    }
+  });
+
   test('room seat token last seen and replacement are durable', async () => {
     const issuedAt = new Date('2026-05-08T10:00:00.000Z');
     await upsertRoomSeatToken('replace-token-room', {

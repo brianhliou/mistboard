@@ -206,6 +206,42 @@ test('mutual offer finalizes: new room created, colors swapped, per-client redir
   assert.equal(currentRoomPairing(), undefined);
 });
 
+test('rematch carries each player title and flair into the swapped seat', async () => {
+  const room = makeFinishedRoom('r-decorated');
+  room.seatTokens.white = {
+    ...seatToken({ seat: 'white', hash: 'wh', userId: 'user-w' }),
+    userHandle: 'white-player',
+    userTitle: 'xgm',
+    userFlair: 'variant-xiangqi',
+  };
+  room.seatTokens.black = seatToken({ seat: 'black', hash: 'bh', userId: 'user-b' });
+  const whiteClient = client('white', 'wh');
+  const blackClient = client('black', 'bh');
+  room.clients.add(whiteClient);
+  room.clients.add(blackClient);
+
+  const { orch } = makeOrch();
+  const identities: Record<string, unknown> = {};
+  const issue = orch.issueSeatToken;
+  orch.issueSeatToken = async (next, seat, identity) => {
+    identities[seat] = identity;
+    return issue(next, seat, identity);
+  };
+  offerRematch(orch, room, whiteClient);
+  offerRematch(orch, room, blackClient);
+  await finalizeRematchIfReady(orch, room);
+
+  // Old white plays black next and keeps its decorations; old black has none.
+  assert.deepEqual(identities.black, {
+    userId: 'user-w',
+    userHandle: 'white-player',
+    userDisplayName: null,
+    userTitle: 'xgm',
+    userFlair: 'variant-xiangqi',
+  });
+  assert.deepEqual(identities.white, { userId: 'user-b', userHandle: null, userDisplayName: null });
+});
+
 test('a rated rematch with a stats-excluded seat is created casual', async () => {
   const room = makeFinishedRoom('r-excluded');
   room.rated = true;

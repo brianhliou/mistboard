@@ -11,6 +11,7 @@ import type { RoomTimeControl } from '@mistboard/game';
 import { accountRoomCreated, accountRoomSeats } from '../account-room.js';
 import * as persistence from '../persistence.js';
 import { currentRoomPairing } from '../room-pairing.js';
+import { seatDecorationsOf } from '../seat-decorations.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
 import { appendTenantSeatAssigned, persistenceRecordForTenantSeatToken } from './events.js';
 import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js';
@@ -340,6 +341,8 @@ export async function createTenantCorrespondenceGameForSeek<
       if (!state || state.userId !== token.userId) continue;
       state.userHandle = token.userHandle;
       state.userDisplayName = token.userDisplayName;
+      // Title and flair come back from the same gated load (seat-decorations.ts).
+      Object.assign(state, seatDecorationsOf(token));
     }
   }
   return { ok: true, room };

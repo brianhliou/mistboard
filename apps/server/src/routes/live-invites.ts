@@ -23,6 +23,7 @@ import {
   liveInviteReachable,
 } from '../presence.js';
 import { createWithPairing } from '../room-pairing.js';
+import { seatDecorationsForAccount } from '../seat-decorations.js';
 import { registeredVariantTenants, variantTenantForSpecId } from '../variant-tenant/registry.js';
 import {
   type HttpApiContext,
@@ -479,6 +480,7 @@ export function createLiveInviteHandler(
             userId: account.id,
             userHandle: account.handle,
             userDisplayName: account.displayName,
+            ...seatDecorationsForAccount(account),
           });
           const tenant = variantTenantForSpecId(invite.gameSpecId);
           const terms = invite;

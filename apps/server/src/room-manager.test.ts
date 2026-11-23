@@ -35,6 +35,7 @@ import {
   scheduleForfeitTimeout,
   scheduleRandomEngineMove,
   seatDisplayNamesForRoom,
+  seatTokenStatesFromPersistence,
 } from './room-manager.js';
 import { assignSeat } from './server-seat-session.js';
 import type { Client, Room } from './server-types.js';
@@ -469,6 +470,53 @@ test('assignSeat: rated room seats a signed-in account', async () => {
   assert.equal(assignment.seat, 'white', 'a signed-in account takes the open seat');
   assert.equal(assignment.deniedReason, undefined);
   assert.equal(room.projection.seats.white, 'acct-client');
+});
+
+// Title and flair (#1085) ride with the legacy seat under the linkable-handle
+// gate, and survive the round trip through the stored token.
+test('assignSeat: a public account seat carries title and flair; private and closed do not', async () => {
+  const cases = [
+    [makeAccount({ title: 'gm', flair: 'variant-dark-chess' }), true],
+    [
+      makeAccount({ title: 'gm', flair: 'variant-dark-chess', profileVisibility: 'private' }),
+      false,
+    ],
+    [makeAccount({ title: 'gm', flair: 'variant-dark-chess', closedAt: new Date(0) }), false],
+  ] as const;
+  for (const [account, decorated] of cases) {
+    const room = makeRoom(`decorated-${account.profileVisibility}-${account.closedAt !== null}`);
+    await assignSeat(makeCtx(), room, 'acct-client', undefined, account);
+    const token = room.seatTokens.white;
+    assert.ok(token);
+    if (decorated) {
+      assert.equal(token.userTitle, 'gm');
+      assert.equal(token.userFlair, 'variant-dark-chess');
+    } else {
+      assert.doesNotMatch(JSON.stringify(token), /userTitle|userFlair|variant-dark-chess/);
+    }
+  }
+});
+
+test('seatTokenStatesFromPersistence keeps title and flair and adds none to a plain seat', () => {
+  const now = new Date(0);
+  const base = {
+    clientId: 'c',
+    deviceId: null,
+    tokenHash: 'h',
+    userId: 'acct-1',
+    userHandle: 'player',
+    userDisplayName: 'Player',
+    issuedAt: now,
+    lastSeenAt: now,
+    revokedAt: null,
+  };
+  const states = seatTokenStatesFromPersistence({
+    white: { ...base, seat: 'white', userTitle: 'im', userFlair: 'variant-dark-chess' },
+    black: { ...base, seat: 'black' },
+  });
+  assert.equal(states.white?.userTitle, 'im');
+  assert.equal(states.white?.userFlair, 'variant-dark-chess');
+  assert.equal('userTitle' in (states.black ?? {}) || 'userFlair' in (states.black ?? {}), false);
 });
 
 test('assignSeat: casual room still seats a guest (gate is rated-only)', async () => {

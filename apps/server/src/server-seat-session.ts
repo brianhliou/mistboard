@@ -10,6 +10,7 @@ import {
   touchSeatToken,
 } from './room-manager.js';
 import { authorizeExistingSeat, seatsShareAuthority } from './seat-auth.js';
+import { seatDecorationsForAccount } from './seat-decorations.js';
 import { isServerEngineClient } from './server-policy.js';
 import type { Client, Room, SeatAssignment, SeatTokenState } from './server-types.js';
 
@@ -192,6 +193,7 @@ async function newSeatAssignment(
     userId: accountUser?.id ?? null,
     userHandle: accountUser?.handle ?? null,
     userDisplayName: accountUser?.displayName ?? null,
+    ...seatDecorationsForAccount(accountUser),
     issuedAt: now,
     lastSeenAt: now,
     revokedAt: null,

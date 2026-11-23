@@ -306,6 +306,16 @@ for (const registration of registeredVariantTenants()) {
     assert.deepEqual(new Set([a.seat, b.seat]), new Set([first, second]));
     const firstSeat = a.seat === first ? a : b;
     const secondSeat = a.seat === first ? b : a;
+    // Title and flair travel with each player into the swapped seat (#1085).
+    // Only the second player is decorated, so a swap that dropped or crossed
+    // them would show.
+    const seatTokensOf = (live: LiveRoom) =>
+      (live as unknown as { seatTokens: Record<string, Record<string, unknown> | undefined> })
+        .seatTokens;
+    Object.assign(seatTokensOf(room)[second] ?? {}, {
+      userTitle: 'xim',
+      userFlair: 'variant-jieqi',
+    });
 
     // A live room offers nothing: the snapshot carries no rematch block and an
     // offer is ignored.
@@ -351,6 +361,10 @@ for (const registration of registeredVariantTenants()) {
       | undefined;
     assert.ok(next, 'the new room is live');
     assert.notEqual(next.id, room.id);
+    assert.equal(seatTokensOf(next)[first]?.userTitle, 'xim', 'title follows the player');
+    assert.equal(seatTokensOf(next)[first]?.userFlair, 'variant-jieqi', 'flair follows the player');
+    assert.equal('userTitle' in (seatTokensOf(next)[second] ?? {}), false);
+    assert.equal('userFlair' in (seatTokensOf(next)[second] ?? {}), false);
     assert.deepEqual(next.projection.timeControl, TEN_PLUS_FIVE, 'same clock');
     assert.equal(next.rated, false, 'a casual game rematches casual');
     if (DEALT_KINDS.has(tenant.kind) || tenant.kind === 'xiangqi-mahjong') {

@@ -17,6 +17,12 @@ import {
   type RoomSeatTokenSeat,
   type UserAccount,
 } from '../persistence.js';
+import {
+  type SeatIdentity,
+  seatDecorationsForAccount,
+  seatDecorationsOf,
+  withSeatDecorations,
+} from '../seat-decorations.js';
 import { hashSeatToken } from '../server-seat-session.js';
 import type { TenantSeat, TenantSeatTokenState } from './tenant.js';
 
@@ -104,6 +110,7 @@ export function assignTenantSeat<
                 userId: accountUser.id,
                 userHandle: accountUser.handle ?? null,
                 userDisplayName: accountUser.displayName ?? null,
+                ...seatDecorationsForAccount(accountUser),
               }
             : {}),
         };
@@ -123,7 +130,7 @@ export function assignTenantSeat<
     for (const color of tenant.colors) {
       const state = room.seatTokens[color];
       if (state && state.revokedAt === null && state.userId === accountUser.id) {
-        const tokenState = {
+        const named = {
           ...state,
           clientId,
           deviceId: state.deviceId ?? deviceId,
@@ -134,6 +141,10 @@ export function assignTenantSeat<
           userDisplayName: state.userDisplayName ?? accountUser.displayName ?? null,
           lastSeenAt: new Date(),
         };
+        // The account reclaiming its own seat is the current source for its
+        // title and flair, gated like the handle: a seat minted by user id
+        // alone learns them here, and an account gone private loses them.
+        const tokenState = withSeatDecorations(named, seatDecorationsForAccount(accountUser));
         room.seatTokens[color] = tokenState;
         return {
           ok: true,
@@ -197,6 +208,7 @@ export function assignTenantSeat<
     userId: accountUser?.id ?? null,
     userHandle: accountUser?.handle ?? null,
     userDisplayName: accountUser?.displayName ?? null,
+    ...seatDecorationsForAccount(accountUser),
     issuedAt: now,
     lastSeenAt: now,
     revokedAt: null,
@@ -238,7 +250,7 @@ function bindsGuestSeat<C extends string>(
 export function mintTenantSeatToken<C extends string>(
   room: Pick<TenantSeatRoom<C>, 'seatTokens'>,
   seat: C,
-  identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
+  identity: SeatIdentity,
 ): { rawToken: string; state: TenantSeatTokenState<C> } {
   const rawToken = randomBytes(32).toString('base64url');
   const now = new Date();
@@ -251,6 +263,7 @@ export function mintTenantSeatToken<C extends string>(
     userId: identity.userId,
     userHandle: identity.userHandle,
     userDisplayName: identity.userDisplayName,
+    ...seatDecorationsOf(identity),
     issuedAt: now,
     lastSeenAt: now,
     revokedAt: null,
@@ -333,6 +346,7 @@ export function tenantSeatTokenStatesFromPersistence<C extends RoomSeatTokenSeat
       userId: token.userId,
       userHandle: token.userHandle,
       userDisplayName: token.userDisplayName,
+      ...seatDecorationsOf(token),
       issuedAt: token.issuedAt,
       lastSeenAt: token.lastSeenAt,
       revokedAt: token.revokedAt,

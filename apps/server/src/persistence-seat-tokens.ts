@@ -7,7 +7,11 @@ import {
   type XiangqiColor,
 } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
+import type { FlairKey } from './flair.js';
+import { linkableIdentitySql } from './persistence-correspondence-seeks.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
+import { type SeatDecorations, seatDecorationsOf } from './seat-decorations.js';
 
 // Kept in lockstep with room_seat_tokens_seat_check (007, widened by 029 and
 // again by 138). A seat outside the constraint means the token insert fails and
@@ -25,7 +29,9 @@ export type RoomSeatTokenRecord<TSeat extends RoomSeatTokenSeat = Color> = {
   issuedAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
-};
+  // Title and flair are never stored on the token row: they are read from the
+  // account on load, behind the linkable-handle gate (seat-decorations.ts).
+} & SeatDecorations;
 
 /**
  * Durable seat ownership for admission, including tenants that only insert a
@@ -95,6 +101,8 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
     user_id: string | null;
     user_handle: string | null;
     user_display_name: string | null;
+    user_title: PlayerTitle | null;
+    user_flair: FlairKey | null;
     issued_at: Date;
     last_seen_at: Date;
     revoked_at: Date | null;
@@ -102,6 +110,8 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
     `SELECT room_seat_tokens.seat, room_seat_tokens.client_id, room_seat_tokens.device_id,
             room_seat_tokens.token_hash,
             room_seat_tokens.user_id, users.handle AS user_handle, users.display_name AS user_display_name,
+            ${linkableIdentitySql('users', 'title')} AS user_title,
+            ${linkableIdentitySql('users', 'flair')} AS user_flair,
             room_seat_tokens.issued_at, room_seat_tokens.last_seen_at, room_seat_tokens.revoked_at
      FROM room_seat_tokens
      LEFT JOIN users ON users.id = room_seat_tokens.user_id
@@ -119,6 +129,7 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
       userId: row.user_id,
       userHandle: row.user_handle,
       userDisplayName: row.user_display_name,
+      ...seatDecorationsOf({ userTitle: row.user_title, userFlair: row.user_flair }),
       issuedAt: row.issued_at,
       lastSeenAt: row.last_seen_at,
       revokedAt: row.revoked_at,

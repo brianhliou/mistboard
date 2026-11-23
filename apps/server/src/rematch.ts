@@ -12,6 +12,7 @@
 import type { Color } from '@mistboard/game';
 import type { RoomManagerContext } from './room-manager.js';
 import { createWithPairing } from './room-pairing.js';
+import { type SeatIdentity, seatDecorationsOf } from './seat-decorations.js';
 import type { Client, Room, SeatTokenState } from './server-types.js';
 
 export type RematchCreateRoom = (spec: {
@@ -27,7 +28,7 @@ export type RematchCreateRoom = (spec: {
 export type RematchIssueToken = (
   room: Room,
   seat: Color,
-  identity: { userId: string | null; userHandle: string | null; userDisplayName: string | null },
+  identity: SeatIdentity,
 ) => Promise<{ rawToken: string; state: SeatTokenState }>;
 
 export type RematchSend = (client: Client, payload: unknown) => void;
@@ -173,11 +174,13 @@ export async function finalizeRematchIfReady(
     userId: blackToken.userId,
     userHandle: blackToken.userHandle,
     userDisplayName: blackToken.userDisplayName,
+    ...seatDecorationsOf(blackToken),
   });
   const newBlackToken = await orch.issueSeatToken(newRoom, 'black', {
     userId: whiteToken.userId,
     userHandle: whiteToken.userHandle,
     userDisplayName: whiteToken.userDisplayName,
+    ...seatDecorationsOf(whiteToken),
   });
 
   room.rematch.finalizedRoomId = newRoom.id;
