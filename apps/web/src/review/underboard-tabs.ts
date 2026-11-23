@@ -133,12 +133,18 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
    * to load and would size the panel to its tallest content forever. Growing to
    * the tallest tab the reader has actually opened settles after a click or two
    * and never shrinks under them mid-session.
+   *
+   * The floor is a custom property the stylesheet reads (review-shell.css),
+   * not an inline min-height, so a layout with nothing beside the panel to
+   * keep aligned can drop it: the broadcast board on a phone stacks the panel
+   * over the game list, and a floor from the tall Share & export tab left a
+   * blank band under the chart (#1234).
    */
   let heightFloor = 0;
   const raiseFloor = (height: number): void => {
     if (height <= heightFloor) return;
     heightFloor = height;
-    bodies.style.minHeight = `${Math.round(heightFloor)}px`;
+    bodies.style.setProperty('--review-underboard-floor', `${Math.round(heightFloor)}px`);
   };
 
   /**

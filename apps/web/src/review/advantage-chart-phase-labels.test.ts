@@ -82,11 +82,41 @@ describe('advantage chart phase labels', () => {
       label.getBoundingClientRect = () => ({ width: 22 }) as DOMRect;
     }
     FakeResizeObserver.last!.fire();
-    expect(labelsOf(chart.el).map((l) => l.style.visibility)).toEqual(['', '', 'hidden']);
+    expect(labelsOf(chart.el).map((l) => l.style.display)).toEqual(['', '', 'none']);
 
     // Wider plot: the endgame span is 40px now, and the label comes back.
     plot.getBoundingClientRect = () => ({ width: 400 }) as DOMRect;
     FakeResizeObserver.last!.fire();
-    expect(labelsOf(chart.el).map((l) => l.style.visibility)).toEqual(['', '', '']);
+    expect(labelsOf(chart.el).map((l) => l.style.display)).toEqual(['', '', '']);
+  });
+
+  // #1233: a 390px phone, an endgame from ply 98 of 101. The rotated
+  // "Endgame" column started 8px before the plot's edge and ran 7px past it,
+  // which widened the whole page. It is display: none, not visibility: hidden,
+  // because a hidden box still counts toward the page's scroll width.
+  it('hides a rotated label that would run past the plot instead of widening the page', () => {
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    const late = { middle: 20, end: 98 };
+    const chart = createAdvantageChart(evals, { onJump: () => {}, phases: late });
+    const plot = chart.el.querySelector<HTMLElement>('.advantage-chart__plot')!;
+    plot.getBoundingClientRect = () => ({ width: 370 }) as DOMRect;
+    for (const label of labelsOf(chart.el)) {
+      label.getBoundingClientRect = () => ({ width: 15 }) as DOMRect;
+    }
+    expect(FakeResizeObserver.last).not.toBeNull();
+    FakeResizeObserver.last!.fire();
+    // Opening and middlegame stay: a rotated column may cross the next
+    // divider; only the plot's right edge bounds it.
+    expect(labelsOf(chart.el).map((l) => l.style.display)).toEqual(['', '', 'none']);
+
+    // Endgame from ply 90: 37px to the edge, and the label fits again.
+    const roomy = createAdvantageChart(evals, { onJump: () => {}, phases });
+    const roomyPlot = roomy.el.querySelector<HTMLElement>('.advantage-chart__plot')!;
+    roomyPlot.getBoundingClientRect = () => ({ width: 370 }) as DOMRect;
+    for (const label of labelsOf(roomy.el)) {
+      label.getBoundingClientRect = () => ({ width: 15 }) as DOMRect;
+    }
+    FakeResizeObserver.last!.fire();
+    expect(labelsOf(roomy.el).map((l) => l.style.display)).toEqual(['', '', '']);
   });
 });

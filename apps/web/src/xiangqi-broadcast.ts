@@ -1186,8 +1186,10 @@ function renderEventShell(
   content.className = 'xqb-section xqb-event-content';
   body.classList.add('xqb-event-body');
   // An open board takes the whole column, header and tabs included, so it
-  // fills the height of the screen; the game list's back arrow returns.
-  if (boardOpen) content.append(body);
+  // fills the height of the screen; the game list's back arrow returns. On a
+  // phone the game list is under the board, so a slim line over the board
+  // names the event and the round instead (CSS shows it at 600px and under).
+  if (boardOpen) content.append(boardEventLine(data, currentBoardId), body);
   // Before the first game Boards and Players would only say "no games yet",
   // so the tabs wait for one and the Overview stands alone.
   else if (eventHasNoGames(data)) content.append(eventHeader(data), body);
@@ -1223,6 +1225,39 @@ function renderEventShell(
     main.append(layout, rightsContactNote());
   }
   return main;
+}
+
+/**
+ * The phone's line over an open board (#1234): the event, linking to its
+ * round's page, the round, and whether the game is live or finished. Above
+ * 600px the game list's heading says the same beside the board, so the line
+ * is display: none there (xiangqi-broadcast.css).
+ */
+export function boardEventLine(data: BroadcastRoundResponse, boardId: string): HTMLElement {
+  const line = document.createElement('p');
+  line.className = 'xqb-board-event-line';
+  const event = document.createElement('a');
+  event.className = 'xqb-board-event-line__event';
+  event.href =
+    data.round.id !== ''
+      ? roundHref(data.tour.slug, data.round.id)
+      : localizedHref(`/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`);
+  event.textContent = primaryName(data.tour);
+  line.append(event);
+  if (data.round.id !== '') {
+    const round = document.createElement('span');
+    round.className = 'xqb-board-event-line__round';
+    round.textContent = broadcastRoundName(data.round);
+    line.append(round);
+  }
+  const status = data.boards.find((board) => board.id === boardId)?.status;
+  if (status === 'live' || status === 'complete') {
+    const state = document.createElement('span');
+    state.className = `xqb-board-event-line__state xqb-board-event-line__state--${status}`;
+    state.textContent = t(status === 'live' ? 'broadcast.live' : 'broadcast.finished');
+    line.append(state);
+  }
+  return line;
 }
 
 // One chat panel per event, reused across repaints and in-place moves between
@@ -1267,12 +1302,26 @@ function pinEventSide(side: HTMLElement): void {
 // this runs, and settles through an intermediate size on a window resize, so
 // the board itself is observed: watching only the content column kept that
 // intermediate height.
+// Only beside the board, above 900px (xiangqi-broadcast.css): at 900px and
+// under the column stacks under the board and has no band to match, so the
+// matcher stands down and clears what it set.
+const SIDE_BY_SIDE_QUERY = '(min-width: 901px)';
+
 export function matchBoardHeight(side: HTMLElement, content: HTMLElement): void {
   if (typeof ResizeObserver !== 'function') return;
+  const media =
+    typeof window.matchMedia === 'function' ? window.matchMedia(SIDE_BY_SIDE_QUERY) : null;
   let observedBoard: HTMLElement | null = null;
-  const observer = new ResizeObserver(() => {
+  const observer = new ResizeObserver(() => sync());
+  const sync = (): void => {
     if (!side.isConnected) {
       observer.disconnect();
+      media?.removeEventListener?.('change', sync);
+      return;
+    }
+    if (media && !media.matches) {
+      side.style.removeProperty('--xqb-board-h');
+      side.style.removeProperty('--xqb-board-dy');
       return;
     }
     const board = content.querySelector<HTMLElement>('.review-board-host');
@@ -1288,8 +1337,10 @@ export function matchBoardHeight(side: HTMLElement, content: HTMLElement): void 
     const offset = Math.max(0, Math.round(rect.top - content.getBoundingClientRect().top));
     side.style.setProperty('--xqb-board-h', `${height}px`);
     side.style.setProperty('--xqb-board-dy', `${offset}px`);
-  });
+  };
   observer.observe(content);
+  // A rotate or a window dragged across 900px re-syncs on the change itself.
+  media?.addEventListener?.('change', sync);
 }
 
 // The event's header, at the top of the content column beside the game list

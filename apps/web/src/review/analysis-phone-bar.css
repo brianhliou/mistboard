@@ -148,8 +148,13 @@
   }
   /* The move strip: one row that scrolls sideways, the current move kept in
      view (analysis-phone-bar.ts revealCurrentMove). The phone game review
-     (review-info-sheet.ts, #619) uses the same strip. */
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+     (review-info-sheet.ts, #619) and an open broadcast board (#1234) use the
+     same strip. */
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-shell__cluster--col1-stack
     .review-rail-main
     .review-move-list
@@ -165,17 +170,29 @@
     scrollbar-width: none;
     overscroll-behavior-x: contain;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list {
     padding: 0 8px;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list__row {
     display: contents;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list__rows
     > li:not(.review-move-list__row) {
@@ -185,13 +202,21 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list__number {
     flex: none;
     padding: 0 0 0 6px;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list__move {
     flex: none;
@@ -200,7 +225,11 @@
     padding: 0 8px;
     border-radius: 6px;
   }
-  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+  :is(
+      .review-shell.review-shell--analysis,
+      .has-review-info-sheet .review-shell,
+      .xqb-event-board-open .review-shell
+    )
     .review-rail-main
     .review-move-list__move--empty {
     display: none;

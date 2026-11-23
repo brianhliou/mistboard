@@ -2396,8 +2396,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       });
       phoneBar.revealCurrentMove(moveTree.el);
     }
-    // The phone game review's move strip (#619) keeps the current move in view.
-    if (phoneReview) revealCurrentMove(moveTree.el);
+    // The phone game review's move strip (#619), and an embedded review's on a
+    // phone (the broadcast board, #1234), keep the current move in view. A
+    // no-op wherever the rows do not scroll sideways.
+    if (phoneReview || config.embedded) revealCurrentMove(moveTree.el);
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.

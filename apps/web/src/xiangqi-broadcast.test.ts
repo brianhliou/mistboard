@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { XIANGQI_BROADCAST_SCHEMA, type XiangqiColor, type XiangqiMove } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { track } from './analytics.js';
@@ -5,6 +7,7 @@ import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
+  boardEventLine,
   broadcastPageForPath,
   broadcastRecordsCredit,
   formatBroadcastFreshness,
@@ -1667,10 +1670,14 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     await mountXiangqiBroadcastBoard(root, 't-r-b1');
 
     // The board takes the event page's content column beside the round's
-    // game list (lichess's relay), as the page's only content.
+    // game list (lichess's relay), as the page's only content, under the
+    // event line a phone shows in place of the game list's heading (#1234).
     const body = root.querySelector('.xqb-event-board-open .xqb-event-content > .xqb-event-body');
     expect(body?.querySelector('.review-shell--embedded')).not.toBeNull();
-    expect(root.querySelector('.xqb-event-content')?.children.length).toBe(1);
+    const column = [...(root.querySelector('.xqb-event-content')?.children ?? [])];
+    expect(column.length).toBe(2);
+    expect(column[0]?.className).toBe('xqb-board-event-line');
+    expect(column[1]?.classList.contains('xqb-event-body')).toBe(true);
     // Embedded: no info card or second rail inside the review.
     expect(root.querySelector('.game-meta-card')).toBeNull();
     expect(root.querySelector('.review-shell__left')).toBeNull();
@@ -2516,5 +2523,105 @@ describe('matchBoardHeight (the left column beside an open board)', () => {
     box(board, 129, 569);
     fire(board);
     expect(side.style.getPropertyValue('--xqb-board-h')).toBe('569px');
+  });
+
+  // #1234: at 900px and under the game list and chat stack under the board,
+  // so there is no band to match; the matcher stands down and clears its
+  // values when the window narrows across the line.
+  it('does not size the column at phone width, and clears it on crossing to one', () => {
+    const listeners: (() => void)[] = [];
+    const media = {
+      matches: false,
+      addEventListener: (_type: string, fn: () => void) => listeners.push(fn),
+      removeEventListener: () => {},
+    };
+    const matchMedia = vi.fn((query: string) => {
+      expect(query).toBe('(min-width: 901px)');
+      return media;
+    });
+    vi.stubGlobal('matchMedia', matchMedia);
+    const side = document.createElement('div');
+    const content = document.createElement('section');
+    const board = document.createElement('section');
+    board.className = 'review-board-host';
+    content.append(board);
+    document.body.append(side, content);
+    box(content, 60, 1400);
+    box(board, 120, 390);
+
+    matchBoardHeight(side, content);
+    fire(content);
+    expect(matchMedia).toHaveBeenCalled();
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('');
+    expect(side.style.getPropertyValue('--xqb-board-dy')).toBe('');
+
+    // Widened past 900px: the band is matched again.
+    media.matches = true;
+    for (const fn of listeners) fn();
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('390px');
+
+    // Narrowed again: cleared.
+    media.matches = false;
+    for (const fn of listeners) fn();
+    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('');
+  });
+});
+
+// #1234: on a phone the game list sits under the board, so a slim line over
+// the board names the event (a link to its round), the round and the state.
+describe('boardEventLine', () => {
+  type RoundData = Parameters<typeof boardEventLine>[0];
+  const data = (status: 'scheduled' | 'live' | 'complete'): RoundData =>
+    ({
+      ...ROUND,
+      boards: ROUND.boards.map((board, i) => (i === 0 ? { ...board, status } : board)),
+    }) as unknown as RoundData;
+  const parts = (line: HTMLElement): string[] =>
+    [...line.children].map((child) => child.textContent ?? '');
+
+  it('links the event to its round and names the round and a live game', () => {
+    const line = boardEventLine(data('live'), 't-r-b1');
+    expect(line.className).toBe('xqb-board-event-line');
+    expect(parts(line)).toEqual(['Test Cup', 'Round 1', 'Live']);
+    expect(line.querySelector('a')?.getAttribute('href')).toBe('/broadcast/xiangqi/t/round/r');
+    expect(line.querySelector('.xqb-board-event-line__state--live')).not.toBeNull();
+  });
+
+  it('says Finished for a finished game and nothing for one not started', () => {
+    expect(parts(boardEventLine(data('complete'), 't-r-b1'))).toEqual([
+      'Test Cup',
+      'Round 1',
+      'Finished',
+    ]);
+    expect(parts(boardEventLine(data('scheduled'), 't-r-b1'))).toEqual(['Test Cup', 'Round 1']);
+  });
+
+  it('shows only on a phone', () => {
+    const css = readFileSync(resolve(__dirname, 'xiangqi-broadcast.css'), 'utf8');
+    expect(css).toMatch(/\n\.xqb-board-event-line \{\s*display: none;/);
+    const phone = css.slice(css.indexOf('@media (max-width: 600px) {\n  .xqb-event-board-open'));
+    expect(phone).toMatch(
+      /^@media \(max-width: 600px\) \{\s*\.xqb-event-board-open \.xqb-board-event-line \{\s*display: flex;/,
+    );
+  });
+
+  it('lets the stacked live board shrink below its nowrap engine lines', () => {
+    // A bare 1fr track floors at min-content, and the engine lines' nowrap PV
+    // text pushed the live board 6px past a 390px phone.
+    const css = readFileSync(resolve(__dirname, 'xiangqi-broadcast.css'), 'utf8');
+    for (const layout of ['.xqb-board-layout', '.xqb-board-layout-with-rail']) {
+      const at = css.indexOf(`  ${layout} {\n    grid-template-columns: minmax(0, 1fr);`);
+      expect(at, layout).toBeGreaterThan(-1);
+      expect(css.lastIndexOf('@media (max-width: 900px) {', at)).toBeGreaterThan(-1);
+    }
+    expect(css).not.toMatch(/\.xqb-board-layout(-with-rail)? \{\s*grid-template-columns: 1fr;/);
+  });
+
+  it("puts the moves in the review page's one-row strip, not a copy of it", () => {
+    const strip = readFileSync(resolve(__dirname, 'review/analysis-phone-bar.css'), 'utf8');
+    const rows = strip.indexOf('flex-direction: row;\n    flex-wrap: nowrap;');
+    const selector = strip.slice(strip.lastIndexOf(':is(', rows), rows);
+    expect(selector).toContain('.has-review-info-sheet .review-shell');
+    expect(selector).toContain('.xqb-event-board-open .review-shell');
   });
 });
