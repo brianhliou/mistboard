@@ -43,6 +43,7 @@ import {
 import { setRatedModeEnabled } from './rated-flag.js';
 import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
 import { captureServerRender } from './server-render-fallback.js';
+import { syncNavQuickPieces } from './site-shell.js';
 import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
   legacyGameRouteForRoomId,
@@ -70,6 +71,10 @@ trackLocaleResolved(bootLocaleResolution);
 // in installGlobalChunkLoadRecovery above.
 const localeReady = ensureLocaleCatalog(bootLocale).catch(() => undefined);
 initializeThemeSettings();
+// The phone bar's pieces button in a prerendered page shows the set the build
+// baked; redraw it from the reader's own now, not when the route chunk mounts
+// (piece-set-first-paint.ts holds the first-paint hide this ends).
+syncNavQuickPieces();
 // Register notification sources before the nav mounts — account-nav mounts the
 // bell once signed in, and a bell with no sources is a no-op. Correspondence
 // rides its build flag; the inbox source is unconditional (its fetch 401s to a

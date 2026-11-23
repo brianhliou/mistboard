@@ -114,22 +114,25 @@ export function browserLocale(): Locale | null {
 
 // Regions that pin a script regardless of the language subtag. Neither list is
 // exhaustive; an unlisted region falls through to the per-language default.
-const ZH_HANT_REGIONS = new Set(['tw', 'hk', 'mo']);
-const ZH_HANS_REGIONS = new Set(['cn', 'sg', 'my']);
+// Exported, with the script sets and per-language defaults below, for the
+// piece-set first-paint script (piece-set-first-paint.ts), which mirrors
+// localeFromLanguageTag before the app loads.
+export const ZH_HANT_REGIONS: ReadonlySet<string> = new Set(['tw', 'hk', 'mo']);
+export const ZH_HANS_REGIONS: ReadonlySet<string> = new Set(['cn', 'sg', 'my']);
 
 // Matched against any subtag, not just the script position: `zh-Hant-HK` is the
 // canonical BCP-47 tag for Hong Kong Traditional, and the legacy `zh-cht` /
 // `zh-chs` forms put the script where a region would normally sit. An earlier
 // exact-match allowlist missed both and fell through to Simplified, so a Hong
 // Kong reader was served the wrong script.
-const ZH_HANT_SCRIPTS = new Set(['hant', 'cht']);
-const ZH_HANS_SCRIPTS = new Set(['hans', 'chs']);
+export const ZH_HANT_SCRIPTS: ReadonlySet<string> = new Set(['hant', 'cht']);
+export const ZH_HANS_SCRIPTS: ReadonlySet<string> = new Set(['hans', 'chs']);
 
 // Cantonese resolves to a Chinese locale rather than the English fallback: its
 // readers are concentrated in Hong Kong and Macau, and written Cantonese there
 // is Traditional. Only the default differs from `zh` — an explicit script or a
 // mainland region still decides, so `yue-CN` is Simplified.
-const DEFAULT_SCRIPT_BY_LANGUAGE: Record<string, Locale> = {
+export const DEFAULT_SCRIPT_BY_LANGUAGE: Readonly<Record<string, Locale>> = {
   yue: 'zh-Hant',
   zh: 'zh-Hans',
 };

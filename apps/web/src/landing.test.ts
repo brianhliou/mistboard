@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPageRenderer } from '../scripts/prerender-page.mjs';
 import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
@@ -269,6 +270,75 @@ describe('landing shell', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
+
+  it("bakes each home's own locale default into the nav's pieces button, whatever rendered first", async () => {
+    // The build renders English articles before the homes. Each page gets its
+    // own window (prerender-page.mjs); this stand-in window carries only what
+    // the renderers read, a URL and storage, so a leak between pages shows.
+    const realStorage = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    const memory = (): Storage => {
+      const values = new Map<string, string>();
+      return {
+        get length() {
+          return values.size;
+        },
+        clear: () => values.clear(),
+        getItem: (key: string) => values.get(key) ?? null,
+        key: (index: number) => [...values.keys()][index] ?? null,
+        removeItem: (key: string) => values.delete(key),
+        setItem: (key: string, value: string) => values.set(key, value),
+      };
+    };
+    class PageWindow {
+      readonly localStorage = memory();
+      readonly sessionStorage = memory();
+      readonly happyDOM = { close: () => {} };
+      constructor(readonly options: { url: string }) {}
+    }
+    const install = (page: PageWindow) => {
+      window.history.replaceState(null, '', new URL(page.options.url).pathname);
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: page.localStorage,
+      });
+    };
+    const bakedPieceSet = () => {
+      const holder = document.createElement('div');
+      holder.innerHTML = renderLandingShellForPrerender();
+      return holder.querySelector<HTMLElement>('.site-nav-quick-piece')?.dataset.pieceSet;
+    };
+    const host = 'https://mistboard.com';
+    try {
+      await ensureLocaleCatalog('zh-Hans');
+      await ensureLocaleCatalog('zh-Hant');
+      const renderPage = createPageRenderer({
+        Window: PageWindow,
+        bootstrap: new PageWindow({ url: host }),
+        install,
+      });
+      expect(await renderPage(`${host}/`, bakedPieceSet)).toBe('international');
+      expect(await renderPage(`${host}/zh-hans`, bakedPieceSet)).toBe('traditional');
+      expect(await renderPage(`${host}/zh-hant`, bakedPieceSet)).toBe('traditional');
+      expect(await renderPage(`${host}/`, bakedPieceSet)).toBe('international');
+
+      // The old carry-over, one storage for every page: the English page's
+      // remembered first locale made the zh home bake the English default.
+      const shared = new PageWindow({ url: host });
+      const sharedRender = createPageRenderer({
+        Window: class extends PageWindow {
+          override readonly localStorage = shared.localStorage;
+        },
+        bootstrap: shared,
+        install,
+      });
+      await sharedRender(`${host}/`, bakedPieceSet);
+      expect(await sharedRender(`${host}/zh-hans`, bakedPieceSet)).toBe('international');
+    } finally {
+      if (realStorage) Object.defineProperty(window, 'localStorage', realStorage);
+      else Reflect.deleteProperty(window, 'localStorage');
+      window.history.replaceState(null, '', '/');
+    }
+  });
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
     // The prerender is what crawlers index; a hidden admin menu still put

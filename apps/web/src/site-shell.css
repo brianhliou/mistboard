@@ -891,6 +891,15 @@ a.site-nav-link[hidden],
     height: 28px;
   }
 
+  /* index.html's first-paint script sets the mark to the reader's set and adds
+     its own rule hiding a slot baked with a different one. An empty mark means
+     it could not work the set out, so every slot hides until
+     syncNavQuickPieces() drops the mark at boot. Hidden, not removed, so the
+     bar keeps its layout (piece-set-first-paint.ts). */
+  html[data-piece-set-pending=""] .site-nav-quick-piece {
+    visibility: hidden;
+  }
+
   .site-nav-quick-piece svg {
     display: block;
     width: 100%;

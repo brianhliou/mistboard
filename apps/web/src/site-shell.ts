@@ -24,6 +24,10 @@ import {
   toolsNavItems,
   watchNavItems,
 } from './nav-items.js';
+import {
+  PIECE_SET_FIRST_PAINT_STYLE_ID,
+  PIECE_SET_PENDING_ATTRIBUTE,
+} from './piece-set-first-paint.js';
 import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
 import {
   buildAppearanceMenuAt,
@@ -531,6 +535,17 @@ export function closeQuickPicker({ restoreFocus = true }: { restoreFocus?: boole
   if (restoreFocus) state.button.focus();
 }
 
+/** Redraws every pieces button from the reader's stored set and ends the
+ *  first-paint hide (piece-set-first-paint.ts). main.ts calls it at boot, so a
+ *  prerendered page's baked icon is replaced before any route chunk loads; a
+ *  nav built later reads the stored set itself and needs nothing more. */
+export function syncNavQuickPieces(): void {
+  for (const slot of document.querySelectorAll<HTMLElement>('.site-nav-quick-piece'))
+    renderQuickPiece(slot);
+  document.documentElement.removeAttribute(PIECE_SET_PENDING_ATTRIBUTE);
+  document.getElementById(PIECE_SET_FIRST_PAINT_STYLE_ID)?.remove();
+}
+
 function renderQuickPiece(slot: HTMLElement): void {
   const set: XiangqiPieceSet = readStoredXiangqiPieceSet();
   if (slot.dataset.pieceSet === set) return;
@@ -551,10 +566,7 @@ let navQuickSyncBound = false;
 function ensureNavQuickSync(): void {
   if (navQuickSyncBound || typeof window === 'undefined') return;
   navQuickSyncBound = true;
-  window.addEventListener(xiangqiAppearanceChangedEvent, () => {
-    for (const slot of document.querySelectorAll<HTMLElement>('.site-nav-quick-piece'))
-      renderQuickPiece(slot);
-  });
+  window.addEventListener(xiangqiAppearanceChangedEvent, syncNavQuickPieces);
   window.addEventListener(siteThemeChangedEvent, () => {
     for (const button of document.querySelectorAll<HTMLElement>('[data-site-nav-quick="dark"]'))
       syncQuickDark(button);
