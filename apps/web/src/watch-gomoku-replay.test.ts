@@ -239,6 +239,31 @@ describe('Gomoku watch replay', () => {
     expect(handle.clockAtPly?.()?.toMove).toBe('first');
   });
 
+  it('a compact seat draws a member title beside the name; the other seat keeps its plain text', async () => {
+    const { root } = await mount(fixture(OPENING), {
+      compact: true,
+      namesByRoomId: {
+        gmk_watch: {
+          first: 'Black player',
+          second: 'White player',
+          secondProfile: { kind: 'user', handle: 'white', title: 'gm' },
+        },
+      },
+    });
+    const byText = (text: string) =>
+      [...root.querySelectorAll<HTMLElement>('.showcase-seat-name')].find((el) =>
+        el.textContent?.includes(text),
+      )!;
+    expect(byText('Black player').outerHTML).toBe(
+      '<span class="showcase-seat-name">Black player</span>',
+    );
+    const white = byText('White player');
+    expect(white.classList.contains('player-name--decorated')).toBe(true);
+    expect(white.querySelector('.title-badge')?.textContent).toBe('GM');
+    expect(white.querySelector('.player-name-text')?.textContent).toBe('White player');
+    expect(root.querySelector('.showcase-seat a')).toBeNull();
+  });
+
   it('keeps a1 bottom left for both colour POVs while arranging the seat rows', async () => {
     const { root, handle } = await mount(fixture(OPENING), {
       compact: true,

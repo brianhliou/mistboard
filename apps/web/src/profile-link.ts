@@ -109,6 +109,27 @@ export function participantProfileTarget(
   return null;
 }
 
+/** Only the title and flair of a member seat, for a name drawn without its link
+ *  (the homepage TV board). Crowns are left off: that board never showed them.
+ *  Null for a bot, a guest, or a member with neither, so the name stays bare. */
+export function nameDecorationTarget(
+  identity: Pick<ProfileIdentity, 'handle' | 'title' | 'flair'> | null | undefined,
+): ProfileTarget | null {
+  if (!identity?.handle || !(identity.title || identity.flair)) return null;
+  return profileTargetFor({
+    handle: identity.handle,
+    title: identity.title,
+    flair: identity.flair,
+  });
+}
+
+/** nameDecorationTarget for a persisted participant: member seats only. */
+export function participantNameDecoration(
+  participant: GameParticipant | null | undefined,
+): ProfileTarget | null {
+  return participant?.subjectType === 'user' ? nameDecorationTarget(participant) : null;
+}
+
 /** The target for one seat of a postgame roster, by the seat's own colour. Takes
  *  the colour rather than an index because rosters are seat-keyed, not ordered,
  *  and the surfaces that call this (the board seat strips) name their slots by
@@ -171,20 +192,43 @@ export function playerNameEl(
   link.href = profileHref(target);
   link.textContent = name;
   link.title = name;
+  return decoratePlayerName(link, name, target);
+}
+
+/**
+ * A compact board's seat name (the homepage TV and the boards it shares code
+ * with). The plain span these seats always had, carrying the same badge and
+ * flair as playerNameEl when the seat has them, but never a link: the homepage
+ * board sits inside a link to /watch, and an anchor may not hold another.
+ */
+export function seatNameEl(
+  name: string,
+  decoration: ProfileTarget | null | undefined,
+  className: string,
+): HTMLElement {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = name;
+  return decoration ? decoratePlayerName(span, name, decoration) : span;
+}
+
+// The badge, the name in its own span, the flair and the crowns, in that order;
+// an element with none of them is returned untouched.
+function decoratePlayerName(host: HTMLElement, name: string, target: ProfileTarget): HTMLElement {
   const user = target.kind === 'user' ? target : null;
   const crowns = buildChampionCrowns(user?.champions);
   const badge = user ? buildTitleBadge(user.title) : null;
   const flair = user ? buildFlairIconIfSet(user.flair) : null;
-  if (!crowns && !badge && !flair) return link;
-  if (crowns) link.classList.add('player-name--champion');
-  if (badge || flair) link.classList.add('player-name--decorated');
+  if (!crowns && !badge && !flair) return host;
+  if (crowns) host.classList.add('player-name--champion');
+  if (badge || flair) host.classList.add('player-name--decorated');
   const text = document.createElement('span');
   text.className = 'player-name-text';
   text.textContent = name;
-  link.replaceChildren(
+  host.replaceChildren(
     ...[badge, text, flair, crowns].filter((node): node is HTMLElement => node !== null),
   );
-  return link;
+  return host;
 }
 
 // A sentinel no display name can contain, used to find where a translated

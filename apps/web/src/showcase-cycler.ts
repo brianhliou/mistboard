@@ -8,6 +8,7 @@
 
 import type { GameEvent } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
+import type { SeatNames } from './game-display.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplayFailure, renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { mountShowcaseBoard } from './showcase-board.js';
@@ -45,7 +46,7 @@ export function showcaseAirFields(game: {
 export type ShowcaseCyclerOptions = {
   metadataByRoomId: Record<string, GameMeta>;
   // Player names for tenant compact seats (first = red, second = black), by room id.
-  namesByRoomId: Record<string, { first: string; second: string }>;
+  namesByRoomId: Record<string, SeatNames>;
   loaderForId: (roomId: string) => Promise<GameEvent[]>;
   // Fired when the viewer commits to showing a game (before its moves load), so the
   // caller can update out-of-board chrome (e.g. the "recent · 2h ago" caption).

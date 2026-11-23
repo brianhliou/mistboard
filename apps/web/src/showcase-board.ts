@@ -4,6 +4,7 @@
 // the resolver without the chessground weight.
 
 import type { GameEvent } from '@mistboard/game';
+import type { SeatNames } from './game-display.js';
 import { type GameMeta, mountReplay, type ReplayHandle } from './replay.js';
 import { showcaseRendererKindForSpec } from './showcase-dispatch.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
@@ -17,7 +18,7 @@ export type ShowcaseBoardOptions = {
   metadataByRoomId: Record<string, GameMeta>;
   // Player names for the tenant compact seats (first = red, second = black),
   // keyed by room id; the chess path reads names from metadataByRoomId instead.
-  namesByRoomId: Record<string, { first: string; second: string }>;
+  namesByRoomId: Record<string, SeatNames>;
   // Fired once when the mounted game reaches its final ply; the cycler advances.
   // Omitted by static callers (e.g. the dev variant sheet) that don't cycle.
   onGameEnd?: () => void;

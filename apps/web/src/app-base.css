@@ -526,8 +526,10 @@ a.player-name-link:focus-visible {
 /* A name with a title badge or a flair (#1083): badge, name, flair in one row,
    and only the name gives way when the row is narrow, so the badge and the icon
    stay whole. white-space is left to the surface (it inherits), so a seat that
-   wraps its name still wraps and one that truncates still truncates. */
-a.player-name-link.player-name--decorated {
+   wraps its name still wraps and one that truncates still truncates. The span
+   form is the unlinked name a compact board draws inside its own link (the
+   homepage TV). */
+:is(a.player-name-link, span).player-name--decorated {
   display: inline-flex;
   align-items: center;
   min-width: 0;

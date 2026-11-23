@@ -12,12 +12,14 @@
 
 import type { GameSpecId } from '@mistboard/game';
 import {
+  type SeatNames,
   terminationLabel as sharedTerminationLabel,
   terminationReason as sharedTerminationReason,
 } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import type { SoundKind } from './live-state.js';
+import { type ProfileTarget, seatNameEl } from './profile-link.js';
 import {
   anchorForPly,
   offsetsFromDurations,
@@ -238,7 +240,7 @@ export type TenantWatchReplayOptions = {
    * (they come from the feed's participants), so the caller supplies them here;
    * absent names fall back to the color labels.
    */
-  namesByRoomId?: Record<string, { first: string; second: string }>;
+  namesByRoomId?: Record<string, SeatNames>;
   /**
    * Called on every ply change (autoplay tick, manual jump, or loop reset) with
    * the current ply and the game's max ply. The /watch right rail uses it to keep
@@ -613,6 +615,7 @@ export async function mountTenantWatchReplay<
 
   const compactSeatRow = (
     name: string,
+    decoration: ProfileTarget | null | undefined,
     side: 'first' | 'second',
     disc: { ink: string | null } | null,
   ): { row: HTMLElement; clockEl: HTMLElement } => {
@@ -623,9 +626,7 @@ export async function mountTenantWatchReplay<
     // host asked for seatDiscs.
     row.dataset.seat = side;
     if (disc) row.append(seatDiscEl(disc.ink));
-    const nameEl = document.createElement('span');
-    nameEl.className = 'showcase-seat-name';
-    nameEl.textContent = name;
+    const nameEl = seatNameEl(name, decoration, 'showcase-seat-name');
     const clockEl = document.createElement('span');
     clockEl.className = 'showcase-seat-clock';
     row.append(nameEl, clockEl);
@@ -1014,13 +1015,25 @@ export async function mountTenantWatchReplay<
           : side === 'first'
             ? t('replay.red', {}, locale)
             : t('replay.black', {}, locale);
+      const decorationFor = (side: 'first' | 'second'): ProfileTarget | null | undefined =>
+        side === 'first' ? names?.firstProfile : names?.secondProfile;
       const discFor = (side: 'first' | 'second'): { ink: string | null } | null => {
         if (options.seatDiscs !== true) return null;
         const seat = side === 'first' ? 'red' : 'black';
         return { ink: adapter.seatInk ? adapter.seatInk(seat, postgame) : seat };
       };
-      const topSeat = compactSeatRow(nameFor(topSide), topSide, discFor(topSide));
-      const bottomSeat = compactSeatRow(nameFor(bottomSide), bottomSide, discFor(bottomSide));
+      const topSeat = compactSeatRow(
+        nameFor(topSide),
+        decorationFor(topSide),
+        topSide,
+        discFor(topSide),
+      );
+      const bottomSeat = compactSeatRow(
+        nameFor(bottomSide),
+        decorationFor(bottomSide),
+        bottomSide,
+        discFor(bottomSide),
+      );
       compactSeats = {
         top: { row: topSeat.row, clockEl: topSeat.clockEl, side: topSide },
         bottom: { row: bottomSeat.row, clockEl: bottomSeat.clockEl, side: bottomSide },

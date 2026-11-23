@@ -43,6 +43,7 @@ vi.mock('./showcase-board.js', () => ({
   ),
 }));
 
+import type { SeatNames } from './game-display.js';
 import {
   airWindowFor,
   homepageTvAdmits,
@@ -308,6 +309,63 @@ test('a guest seat (null name on the live frame) is labelled Guest, matching the
   };
   await tick();
   expect(namesByRoomId.liveG).toEqual({ first: 'Misty Jungle Chess', second: 'Guest' });
+  tv.destroy();
+});
+
+test('a member seat carries its title and flair to the board; bot and guest seats carry none', async () => {
+  const namesByRoomId: Record<string, SeatNames> = {};
+  const tv = await mountLandingTv(root, [entryA], {
+    isConnected: () => true,
+    loaderForId: async () => [],
+    metadataByRoomId: {},
+    namesByRoomId,
+  });
+  await flush();
+  featuredResponse = {
+    featured: {
+      roomId: 'liveT',
+      gameSpecId: 'jungle',
+      ply: 3,
+      players: [
+        { color: 'black', isEngine: false, name: 'Ann', handle: 'ann', title: 'xgm', flair: 'x' },
+        { color: 'red', isEngine: true, name: 'Misty', botId: 'misty' },
+      ],
+      payload: { marker: 'liveT@3' },
+    },
+  };
+  await tick();
+  // Red moves first: the bot is `first` and has no decorations.
+  expect(namesByRoomId.liveT).toEqual({
+    first: 'Misty Jungle Chess',
+    second: 'Ann',
+    secondProfile: { kind: 'user', handle: 'ann', title: 'xgm', flair: 'x' },
+  });
+  tv.destroy();
+});
+
+test('a member seat with neither a title nor a flair stays a bare name', async () => {
+  const namesByRoomId: Record<string, SeatNames> = {};
+  const tv = await mountLandingTv(root, [entryA], {
+    isConnected: () => true,
+    loaderForId: async () => [],
+    metadataByRoomId: {},
+    namesByRoomId,
+  });
+  await flush();
+  featuredResponse = {
+    featured: {
+      roomId: 'liveP',
+      gameSpecId: 'jungle',
+      ply: 3,
+      players: [
+        { color: 'red', isEngine: false, name: 'Ann', handle: 'ann' },
+        { color: 'black', isEngine: false, name: null },
+      ],
+      payload: { marker: 'liveP@3' },
+    },
+  };
+  await tick();
+  expect(namesByRoomId.liveP).toStrictEqual({ first: 'Ann', second: 'Guest' });
   tv.destroy();
 });
 

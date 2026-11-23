@@ -28,8 +28,16 @@
 
 import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
-import { liveMatchupNames } from './game-display.js';
+import type { FlairKey } from './flair.js';
+import {
+  liveMatchupNames,
+  liveMatchupPlayers,
+  type SeatNames,
+  withSeatDecorations,
+} from './game-display.js';
 import { t } from './i18n/catalog.js';
+import type { PlayerTitle } from './player-titles.js';
+import { nameDecorationTarget } from './profile-link.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplayFailure } from './replay-skeleton.js';
 import { mountShowcaseBoard } from './showcase-board.js';
@@ -87,13 +95,22 @@ type LiveFeatured = {
   roomId: string;
   gameSpecId: string;
   ply: number;
-  players?: Array<{ color: string; name: string | null; isEngine: boolean }>;
+  // handle/title/flair: a member seat's linkable identity and its decorations,
+  // all three sent only under the server's linkable-handle gate (#1083).
+  players?: Array<{
+    color: string;
+    name: string | null;
+    isEngine: boolean;
+    handle?: string | null;
+    title?: PlayerTitle | null;
+    flair?: FlairKey | null;
+  }>;
   payload?: Record<string, unknown>;
 };
 
 export type LandingTvOptions = {
   metadataByRoomId: Record<string, GameMeta>;
-  namesByRoomId: Record<string, { first: string; second: string }>;
+  namesByRoomId: Record<string, SeatNames>;
   loaderForId: (roomId: string) => Promise<GameEvent[]>;
   // Fired when the board commits to a game/mode, so the caller can update the
   // out-of-board caption ("Xiangqi · live" / "recent · 2h ago").
@@ -283,11 +300,20 @@ export async function mountLandingTv(
   // First/second seat names from the featured players (first mover by seat
   // colour, else seat order: liveMatchupNames). A null name is
   // a guest seat (live frames carry no privacy redaction), so it reads "Guest",
-  // matching what the finished record will say.
+  // matching what the finished record will say. A member seat's title and flair
+  // ride beside its name, in the same first/second order.
   const registerLiveNames = (featured: LiveFeatured): void => {
     if (options.namesByRoomId[featured.roomId]) return;
-    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'), featured.gameSpecId);
-    if (names) options.namesByRoomId[featured.roomId] = names;
+    const players = featured.players ?? [];
+    const names = liveMatchupNames(players, t('watch.guest'), featured.gameSpecId);
+    const pair = liveMatchupPlayers(players, featured.gameSpecId);
+    if (names && pair) {
+      options.namesByRoomId[featured.roomId] = withSeatDecorations(
+        names,
+        nameDecorationTarget(pair[0]),
+        nameDecorationTarget(pair[1]),
+      );
+    }
   };
 
   const showLive = async (featured: LiveFeatured): Promise<void> => {

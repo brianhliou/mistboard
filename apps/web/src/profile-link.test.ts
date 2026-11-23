@@ -3,10 +3,13 @@ import { writeDisplayPreference } from './display-preferences.js';
 import { FLAIR_KEYS } from './flair.js';
 import type { GameParticipant } from './game-display.js';
 import {
+  nameDecorationTarget,
+  participantNameDecoration,
   participantProfileTarget,
   playerNameEl,
   profileTargetFor,
   reviewSeatProfiles,
+  seatNameEl,
 } from './profile-link.js';
 
 // #1083: the shared name helper puts a member's title badge before the name and
@@ -187,5 +190,60 @@ describe('profile targets: bots and guests carry no decorations', () => {
     ).toBeNull();
     // A user seat whose handle the server withheld (private or closed) has no page.
     expect(participantProfileTarget(participant({ handle: null, title: 'gm' }))).toBeNull();
+  });
+});
+
+describe('seatNameEl: the homepage board seat, decorated but never a link', () => {
+  it('a seat with no decoration is the bare span it always was, no tooltip', () => {
+    expect(seatNameEl('Bob', null, 'showcase-seat-name').outerHTML).toBe(
+      '<span class="showcase-seat-name">Bob</span>',
+    );
+  });
+
+  it('a titled and flaired member reads badge, name, flair, inside a span with no href', () => {
+    const el = seatNameEl(
+      'Ann',
+      nameDecorationTarget({ handle: 'ann', title: 'xgm', flair: FLAIR }),
+      'showcase-seat-name',
+    );
+    expect(el.tagName).toBe('SPAN');
+    expect(el.hasAttribute('href')).toBe(false);
+    expect(el.querySelector('a')).toBeNull();
+    expect(el.className).toBe('showcase-seat-name player-name--decorated');
+    expect(parts(el)).toEqual(['badge:XGM', 'name:Ann', 'flair']);
+  });
+
+  it('with the viewer playerFlairs setting off, a flair-only seat stays the bare span', () => {
+    writeDisplayPreference('playerFlairs', false);
+    const el = seatNameEl('Bob', nameDecorationTarget({ handle: 'bob', flair: FLAIR }), 'x');
+    expect(el.outerHTML).toBe('<span class="x">Bob</span>');
+  });
+
+  it('the board drops crowns and needs a handle and a title or flair to decorate', () => {
+    expect(nameDecorationTarget({ handle: 'ann', title: 'gm', champions: [] } as never)).toEqual({
+      kind: 'user',
+      handle: 'ann',
+      title: 'gm',
+    });
+    expect(nameDecorationTarget({ handle: 'ann' })).toBeNull();
+    // A private or closed account reaches the client with no handle (the server's
+    // linkable gate), so a stray title or flair beside it is ignored.
+    expect(nameDecorationTarget({ handle: null, title: 'gm', flair: FLAIR })).toBeNull();
+  });
+
+  it('a finished-game participant decorates only a member seat with a handle', () => {
+    expect(participantNameDecoration(participant({ title: 'gm', flair: FLAIR }))).toEqual({
+      kind: 'user',
+      handle: 'ann',
+      title: 'gm',
+      flair: FLAIR,
+    });
+    expect(participantNameDecoration(participant({ handle: null, title: 'gm' }))).toBeNull();
+    expect(
+      participantNameDecoration(
+        participant({ subjectType: 'bot', subjectId: 'misty', handle: 'misty', title: 'gm' }),
+      ),
+    ).toBeNull();
+    expect(participantNameDecoration(participant())).toBeNull();
   });
 });
