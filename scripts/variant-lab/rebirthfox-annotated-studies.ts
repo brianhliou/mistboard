@@ -12,8 +12,16 @@
 //   npm run study:edit -- --plan <dir>/<variant>.json --apply    # create it
 //   … --update fog:<studyId>/<chapterId>,jieqi:…,banqi:…,duck:…  # rewrite them
 //
-// A rewritten tree drops the chapter's stored luck: re-run
-// scripts/study-chapter-decisions.mjs for banqi and jieqi after every --update.
+// Each chapter's advantage chart (`scoreSeries`) and, for banqi and jieqi, its
+// luck split (per-move decisions) come from rebirthfox-chart-data.json (--charts
+// to override). A created chapter carries its series inline; an --update sets
+// it with a `series` op after the `tree` op, since a new tree strands the old
+// series. Decisions are not a study:edit op: each run writes
+// <out>/<variant>-decisions.json for banqi and jieqi and prints the
+// scripts/study-chapter-decisions.mjs command that stores them. A rewritten tree
+// drops the stored luck, so run that command after every --update.
+// npm run articles:study-charts reads the live studies and fails on a chapter
+// missing either.
 //
 // Engines and budgets are in the data's `_engines`. Fog scores are full
 // information: the engine sees the whole board, neither player did. Jieqi
@@ -51,6 +59,7 @@ const arg = (k: string, d: string): string => {
 };
 const DATA = resolve(arg('--data', resolve(HERE, 'rebirthfox-games.json')));
 const OUT = resolve(arg('--out', 'rebirthfox-study-plans'));
+const CHARTS = resolve(arg('--charts', resolve(HERE, 'rebirthfox-chart-data.json')));
 const POST_SLUG = 'one-opponent-four-variants';
 // --update fog:<studyId>/<chapterId>,jieqi:…: rewrite existing studies in place
 // (name, description, chapter name and tree) instead of creating new ones.
@@ -86,6 +95,18 @@ type Game = {
 };
 type Data = Record<'fog' | 'jieqi' | 'banqi' | 'duck', Game> & { _engines: Record<string, string> };
 const data = JSON.parse(readFileSync(DATA, 'utf8')) as Data;
+type ScoreSeries = {
+  side: 'red' | 'black';
+  series: { name: string; color: string; values: number[] }[];
+};
+type ChartData = Record<
+  'fog' | 'jieqi' | 'banqi' | 'duck',
+  {
+    scoreSeries: ScoreSeries;
+    decisions?: { engineId: string; source: string; decisions: unknown[] };
+  }
+>;
+const charts = JSON.parse(readFileSync(CHARTS, 'utf8')) as ChartData;
 
 const SQ = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))(?:@([a-i](?:10|[1-9])))?$/;
 function parse(token: string): { from: string; to: string; duck: string | null } {
@@ -333,6 +354,14 @@ function plan(key: keyof Omit<Data, '_engines'>) {
   const name = `${TITLE[key]} (${r.red} vs ${r.black})`;
   const description = `A correspondence game from ${r.started.slice(0, 10)}, every position scored by the engine the site uses for this variant, with the moves it marks, its lines and the turning point. From the post at mistboard.com/blog/${POST_SLUG}.`;
   const tree = annotateFromEngine(input);
+  // One value per mainline position, start included; study:edit refuses any other length.
+  const { scoreSeries } = charts[key];
+  for (const line of scoreSeries.series) {
+    if (line.values.length !== game.moves.length + 1)
+      throw new Error(
+        `${key} chart: ${line.values.length} values for ${game.moves.length + 1} positions`,
+      );
+  }
   const target = UPDATE.get(key);
   if (target) {
     return {
@@ -341,6 +370,7 @@ function plan(key: keyof Omit<Data, '_engines'>) {
         { op: 'study', name, description },
         { op: 'rename', chapter: target.chapter, name: TITLE[key] },
         { op: 'tree', chapter: target.chapter, tree },
+        { op: 'series', chapter: target.chapter, scoreSeries },
       ],
     };
   }
@@ -363,6 +393,7 @@ function plan(key: keyof Omit<Data, '_engines'>) {
           date: r.started.slice(0, 10),
           site: 'mistboard.com',
         },
+        scoreSeries,
       },
     },
     ops: [],
@@ -375,4 +406,14 @@ for (const key of ['fog', 'jieqi', 'banqi', 'duck'] as const) {
   const file = resolve(OUT, `${data[key].room.variant}.json`);
   writeFileSync(file, `${JSON.stringify(p, null, 1)}\n`);
   console.log(`wrote ${file}`);
+  const luck = charts[key].decisions;
+  if (key === 'banqi' || key === 'jieqi') {
+    if (!luck) throw new Error(`${key} chart data has no decisions`);
+    const luckFile = resolve(OUT, `${data[key].room.variant}-decisions.json`);
+    writeFileSync(luckFile, `${JSON.stringify(luck, null, 1)}\n`);
+    const ids = UPDATE.get(key);
+    console.log(
+      `wrote ${luckFile}; once the chapter exists: npm run prod:db -- node scripts/study-chapter-decisions.mjs --study ${ids?.study ?? '<studyId>'} --chapter ${ids?.chapter ?? '<chapterId>'} --file ${luckFile}`,
+    );
+  }
 }
