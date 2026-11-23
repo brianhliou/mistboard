@@ -488,6 +488,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   details?: HTMLElement;
   /** Lichess-style game meta card; replaces the plain title/summary card. */
   metaCard?: HTMLElement;
+  /** A panel at the top of the moves box (review-layout.ts `railTop`): a live
+   *  broadcast's relay engine lines. */
+  railTop?: HTMLElement;
   /** Canonical moves in order. Any illegal-from-here move truncates the mainline to
    *  the legal prefix (a notice is surfaced). Empty = a fresh board at the start.
    *  Ignored when `initialTree` is set. */
@@ -2075,6 +2078,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     underboardOverflows: true,
     phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar) || Boolean(studyNote),
     enginePanel: enginePanel?.el,
+    railTop: config.railTop,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
     railBelow: explorerBelowRail ? config.explorer?.el : undefined,
@@ -2396,10 +2400,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       });
       phoneBar.revealCurrentMove(moveTree.el);
     }
-    // The phone game review's move strip (#619), and an embedded review's on a
-    // phone (the broadcast board, #1234), keep the current move in view. A
-    // no-op wherever the rows do not scroll sideways.
-    if (phoneReview || config.embedded) revealCurrentMove(moveTree.el);
+    // The phone game review's move strip (#619) keeps the current move in view.
+    if (phoneReview) revealCurrentMove(moveTree.el);
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.

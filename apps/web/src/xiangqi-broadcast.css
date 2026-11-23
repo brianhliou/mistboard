@@ -673,10 +673,8 @@
     text-align: left;
   }
 
-  /* minmax(0, ...): a bare 1fr track floors at its content's min-content,
-     and the engine lines' nowrap PV text is wider than a phone. */
   .xqb-board-layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .xqb-pairing {
@@ -975,7 +973,7 @@
 
 @media (max-width: 900px) {
   .xqb-board-layout-with-rail {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
     grid-template-areas: "board" "moves" "rail";
   }
 
@@ -1230,6 +1228,85 @@
   border: 0;
   padding: 0;
   background: transparent;
+}
+
+/* An open board, live or finished (#1234), is the game review page's shell:
+   the game card over the round's game list in the left rail (the review's
+   actions slot, .xqb-board-side), the event's chat under them, the board, and
+   the moves with the relay's engine lines on the right. On a phone the list
+   is in the Game info sheet and the chat in the Chat sheet, as on a review.
+   Each rule carries the page class over the review rule it overrides
+   (review-shell.css), so it wins in either bundle order. */
+.xqb-board-page .review-rail-group > .review-actions--rail:has(> .xqb-board-side) {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+
+.xqb-board-page .xqb-board-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The list keeps the card it wears beside the boards, under the game card. */
+.xqb-board-page .xqb-board-side .xqb-side-rail {
+  border: 1px solid var(--site-border-soft);
+  padding: 12px 0 12px 12px;
+  background: var(--site-panel);
+}
+
+.xqb-board-page .xqb-board-side > .xqb-rights-note {
+  flex: none;
+  margin: 0;
+}
+
+/* Beside the board the left rail ends on the board's bottom line (the
+   review's col3 lock): the list takes what the game card and the chat leave
+   and scrolls inside it, and the chat keeps a share of the column, so neither
+   takes size from the board. Under 1260px the review stacks the rail under
+   the board (col2) and the list keeps its own cap. */
+@media (min-width: 1260px) {
+  .xqb-board-page .review-shell .review-shell__left > .review-rail-group:first-child {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .xqb-board-page .review-shell .review-shell__left > .review-rail-group--deferred:last-child {
+    flex: 0 0 32%;
+    min-height: 180px;
+  }
+
+  .xqb-board-page .review-rail-group > .review-actions--rail:has(> .xqb-board-side),
+  .xqb-board-page .xqb-board-side,
+  .xqb-board-page .xqb-board-side .xqb-side-rail {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .xqb-board-page .xqb-board-side .xqb-rail-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .xqb-board-page .review-rail-group--deferred > .xqb-event-chat {
+    flex: 1 1 auto;
+  }
+}
+
+/* A phone keeps the relay's headline eval over the move strip; its lines
+   would push the board off the screen. */
+@media (max-width: 799px) {
+  .xqb-board-page .review-shell .review-rail-main > .xqb-engine .xqb-engine-lines {
+    display: none;
+  }
+
+  .xqb-board-page .review-shell .review-rail-main > .xqb-engine .xqb-engine-head {
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1797,27 +1874,6 @@
   min-height: 0;
 }
 
-/* An open board: the review page's alignment. The board, the moves and the
-   left column share one band: the player strips sit above and below it in the
-   review cluster's own seat reserve (seat-labels.css), as on the review page,
-   and the left column starts at the board's top and ends at its bottom
-   (matchBoardHeight reads both off the board). It scrolls with the board.
-   The layout adds no top padding of its own: the cluster's reserve already
-   holds the strip, and a second one stacked on it put the left column level
-   with the strip instead of the board. One column keeps the embedded shell's
-   own strip space. */
-@media (min-width: 901px) {
-  .xqb-event-board-open .xqb-event-layout-with-rail .review-shell--embedded {
-    padding-top: 0;
-  }
-
-  .xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side {
-    position: static;
-    margin-top: var(--xqb-board-dy, 0px);
-    height: var(--xqb-board-h, calc(100vh - 160px));
-  }
-}
-
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail .xqb-event-side {
     position: static;
@@ -1828,79 +1884,6 @@
   .xqb-event-chat {
     flex: none;
     height: 320px;
-  }
-}
-
-/* The phone's line over an open board (boardEventLine): the event, the round
-   and the game's state. Wider screens show the game list's heading beside the
-   board instead. */
-.xqb-board-event-line {
-  display: none;
-}
-
-/* An open board on a phone (#1234), on the review page's phone layout
-   (review-info-sheet.css): the event line, the players and the board, the
-   arrows and a one-row move strip (analysis-phone-bar.css), the under-board
-   tabs and their content, then the game list and the chat (the side column,
-   stacked under the board at 900px and under). Each rule carries the page's
-   class over the review rule it overrides, so it wins in either bundle
-   order. */
-@media (max-width: 600px) {
-  .xqb-event-board-open .xqb-board-event-line {
-    display: flex;
-    /* One row: a long event name gives way (ellipsis) to the round and the
-       state, which never wrap. */
-    align-items: baseline;
-    gap: 8px;
-    margin: 0 0 6px;
-    font-size: 13px;
-    color: var(--site-muted);
-  }
-
-  .xqb-event-board-open .xqb-board-event-line__event {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 700;
-    color: var(--site-text);
-    text-decoration: none;
-  }
-
-  .xqb-event-board-open .xqb-board-event-line__round,
-  .xqb-event-board-open .xqb-board-event-line__state {
-    flex: none;
-    white-space: nowrap;
-  }
-
-  .xqb-event-board-open .xqb-board-event-line__state--live {
-    color: var(--site-accent-strong);
-    font-weight: 700;
-  }
-
-  .xqb-event-board-open .review-shell .move-nav-bar.review-controls > .move-nav-bar__button {
-    height: 40px;
-  }
-
-  .xqb-event-board-open
-    .review-shell
-    .review-shell__cluster.review-shell__cluster--col1-stack
-    .review-rail-main
-    .review-move-list
-    .review-move-list__rows {
-    height: 38px;
-  }
-
-  /* Tap targets (#1234), and no floor under the tab bodies: the floor is the
-     tallest tab opened so far (underboard-tabs.ts), which left a blank band
-     under the chart above the summary. A tab switch moves the summary and the
-     game list instead, which on a phone is below the fold anyway. */
-  .xqb-event-board-open .review-shell .review-underboard-tab {
-    min-height: 40px;
-  }
-
-  .xqb-event-board-open .review-shell .review-underboard-bodies {
-    min-height: 0;
   }
 }
 
@@ -2221,21 +2204,21 @@
   padding-right: 0;
 }
 
-.xqb-event-side .xqb-rail-list {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list {
   padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--site-text) 28%, transparent) transparent;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar {
   width: 6px;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar-track {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar-thumb {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: color-mix(in srgb, var(--site-text) 28%, transparent);
 }

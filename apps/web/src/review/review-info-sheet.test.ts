@@ -79,9 +79,8 @@ describe('review info sheet css', () => {
   it('turns the move list into the analysis board strip on the phone review', () => {
     // One space per gap, so the check survives Biome wrapping a long selector.
     const phone = block('(max-width: 600px)', analysisCss).replace(/\s+/g, ' ');
-    // The broadcast board on a phone shares the strip too (#1234).
     const shared =
-      ':is( .review-shell.review-shell--analysis, .has-review-info-sheet .review-shell, .xqb-event-board-open .review-shell )';
+      ':is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)';
     const rowsAt = phone.indexOf(`${shared} .review-shell__cluster--col1-stack`);
     expect(rowsAt).toBeGreaterThanOrEqual(0);
     const rows = phone.slice(phone.indexOf('{', rowsAt) + 1);

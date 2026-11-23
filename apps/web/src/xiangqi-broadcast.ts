@@ -13,9 +13,7 @@ import type {
 import {
   broadcastRecordsCredit,
   broadcastSourcePageHref,
-  formatXiangqiMoves,
   xiangqiBroadcastRoundStart,
-  xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './seat-disc-ink.css';
@@ -25,9 +23,6 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, localizedHref } from './i18n/locale.js';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import { playerTitleFor } from './players/player-title.js';
-import type { CevalLine } from './review/engine/ceval-types.js';
-import { engineArrowsFromLines } from './review/engine/engine-arrows.js';
-import { createEvalBar } from './review/engine/eval-bar.js';
 import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { buildBroadcastChat } from './review/spectator-chat.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
@@ -37,8 +32,6 @@ import { seatDiscEl } from './seat-disc.js';
 import { tagShareUrl } from './share-link-tags.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
-import { animateXiangqiBoardMove } from './xiangqi-board.js';
-import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
 import {
   formatPoints,
   groupRoundByMatch,
@@ -72,12 +65,6 @@ import {
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
 import {
-  type BroadcastPgnInput,
-  broadcastGamePgn,
-  broadcastPgnFileName,
-  pgnDataHref,
-} from './xiangqi-broadcast-pgn.js';
-import {
   heldRecordNote,
   mountBroadcastBoardReview,
   mountBroadcastHeldBoard,
@@ -89,7 +76,7 @@ import {
   formatEventDay,
   formatEventOffset,
 } from './xiangqi-broadcast-time.js';
-import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
+import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type BroadcastMoveTimelineEntry = {
   type: 'move-played';
@@ -478,18 +465,26 @@ export async function mountXiangqiBroadcastBoard(
   root: HTMLElement,
   boardId: string,
 ): Promise<void> {
-  // Opened from its own round's page, the board takes over the content column
-  // while the header and the game list stay where they are.
-  // The cached round is used only when its page is the one on screen: a
-  // board opened any other way fetches its round fresh.
-  const shownKey = root.querySelector<HTMLElement>('.xqb-event')?.dataset.roundKey;
+  // Every board, live or finished, is the game review page's shell (#1234):
+  // the board, the moves and the engine where the review has them, the game
+  // card over the round's game list in the left rail, and the event's chat
+  // below it. A game that ends keeps the page's shape.
+  // The cached round is used only when its page (or one of its boards) is the
+  // one on screen: a board opened any other way fetches its round fresh.
+  const shownKey = root.querySelector<HTMLElement>('[data-round-key]')?.dataset.roundKey;
   const known =
     lastRound &&
     roundKey(lastRound) === shownKey &&
     lastRound.boards.some((board) => board.id === boardId)
       ? lastRound
       : null;
-  const signal = beginEventPage(root, known ? roundKey(known) : null, t('broadcast.loadingBoard'));
+  // From another board of the round the old board stays up until this one
+  // paints, as a review page does between games; the event page shows its
+  // loading state in its content column.
+  const fromBoard = root.classList.contains(BOARD_PAGE_CLASS);
+  const signal = fromBoard
+    ? beginBoardPageInPlace(root)
+    : beginEventPage(root, known ? roundKey(known) : null, t('broadcast.loadingBoard'));
   try {
     let data = await fetchJson<BroadcastBoardResponse>(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
@@ -506,72 +501,144 @@ export async function mountXiangqiBroadcastBoard(
       round_id: data.board.roundId,
       board_status: data.board.status,
     });
-    // A finished game is a game to study, so it gets the same review surface as
-    // an archive game (engine, chart, notation, share); a live one keeps the
-    // streaming replay, which follows the head as moves arrive.
-    // A finished board's review owns an engine worker and page-wide
-    // listeners. Every repaint (a stream push, a notation or piece-set change)
-    // used to mount a new review over the old one and leave the old one's
-    // worker running; the previous one is destroyed first now, and the last
-    // one goes when the page does.
+    // A withheld record has no board to show: the event page's shell holds
+    // the note about it beside the game list.
+    if (data.board.recordWithheld) {
+      mountHeldBoardPage(root, data, context);
+      return;
+    }
+    // The review owns an engine worker and page-wide listeners: each remount
+    // destroys the one before, and the last one goes when the page does.
     let review: { destroy(): void } | null = null;
     signal.addEventListener('abort', () => review?.destroy(), { once: true });
-    const body = document.createElement('div');
-    body.className = 'xqb-board-view';
-    const state: EventPageState = {
-      tab: 'boards',
-      setTab: (tab) => navigateBroadcast(roundHref(data.board.tourSlug, data.board.roundId, tab)),
-    };
-    const paintShell = (): void => {
+    // Taken once for the board's life: a remount detaches the shell for a
+    // moment, and a fresh panel would drop the lines and a half-typed message.
+    const chat = context ? eventChat(context.tour.slug) : null;
+    // The game list sits in a wrapper the review lends to its phone sheet; a
+    // round push swaps the list inside it, wherever the wrapper is.
+    const side = document.createElement('div');
+    side.className = 'xqb-board-side';
+    const paintSide = (): void => {
       if (!context) {
-        root.replaceChildren(buildNav(), body, rightsContactNote());
+        side.replaceChildren();
+        delete side.dataset.roundKey;
         return;
       }
-      const shellContext = context;
+      side.dataset.roundKey = roundKey(context);
+      const rail = sideRail(context, data.board.id);
+      // The small print rides with the list: under it beside the board, and
+      // in the Game info sheet on a phone, so it adds no row to the screen.
       keepRailScroll(root, () =>
-        root.replaceChildren(
-          buildNav(),
-          renderEventShell(shellContext, state, body, data.board.id),
-        ),
+        side.replaceChildren(...(rail ? [rail] : []), rightsContactNote()),
       );
     };
-    const paintBoard = (animateHeadAdvance = false): void => {
+    paintSide();
+    const paintBoard = (): void => {
       review?.destroy();
       review = null;
-      const embedded = context !== null;
-      if (data.board.recordWithheld) {
-        mountBroadcastHeldBoard(body, data, { context, embedded });
-        return;
-      }
-      if (data.board.status === 'complete') {
-        review = mountBroadcastBoardReview(body, data, { context, embedded });
-        return;
-      }
-      const replay = renderBoardReplay(data, context, { animateHeadAdvance, embedded });
-      if (embedded) body.replaceChildren(replay);
-      else body.replaceChildren(buildNav(), replay);
+      // The review sets its own route classes; the board page adds its own
+      // after it, so the layout rules below the review's apply.
+      const live = data.board.status !== 'complete';
+      const liveEval = live ? currentLiveEval(data) : null;
+      const enginePanel = liveEval ? renderLiveEnginePanel(liveEval) : null;
+      const maxPly = data.timeline.length;
+      keepRailScroll(root, () => {
+        review = mountBroadcastBoardReview(root, data, {
+          context,
+          rail: chat,
+          side: context ? side : null,
+          live: live
+            ? {
+                railTop: enginePanel?.el ?? null,
+                onPlyChange: (ply) => enginePanel?.setAtHead(ply === maxPly),
+              }
+            : null,
+        });
+        root.classList.add(BOARD_PAGE_CLASS);
+        // With no round to list, the small print is the page's foot.
+        if (!context) root.append(rightsContactNote());
+      });
     };
-    paintShell();
-    paintBoard();
-    installBroadcastAppearanceRefresh(() => {
-      paintShell();
+    // A push while a phone sheet is open waits for it to close: the remount
+    // would take back the blocks the sheet has lent and shut it under the
+    // reader's finger.
+    let pending = false;
+    const sheetOpen = (): boolean => document.body.classList.contains('review-info-open');
+    const repaint = (): void => {
+      if (sheetOpen()) {
+        pending = true;
+        return;
+      }
+      pending = false;
       paintBoard();
-    });
-    connectBoardStream(boardId, boardVersion(data), data.timeline.length, (next, animate) => {
+    };
+    if (typeof MutationObserver === 'function') {
+      const observer = new MutationObserver(() => {
+        if (pending && !sheetOpen()) repaint();
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+    }
+    paintBoard();
+    installBroadcastAppearanceRefresh(repaint);
+    connectBoardStream(boardId, boardVersion(data), data.timeline.length, (next) => {
       data = next;
-      paintBoard(animate);
+      repaint();
     });
-    // The game list and the header follow the round while a board is open.
+    // The game list follows the round while a board is open.
     if (context) {
       connectRoundStream(data.board.tourSlug, data.board.roundId, roundVersion(context), (next) => {
         context = next;
         rememberRound(next);
-        paintShell();
+        paintSide();
       });
     }
   } catch (err) {
     renderError(root, err);
   }
+}
+
+const BOARD_PAGE_CLASS = 'xqb-board-page';
+
+// The server eval is for the head position only. A stale one (the payload
+// gained a ply the engine has not searched yet) says nothing about the board
+// on screen, so it is dropped until the next push carries a fresh one.
+function currentLiveEval(data: BroadcastBoardResponse): BroadcastLiveEval | null {
+  return data.liveEval && data.liveEval.ply === data.timeline.length ? data.liveEval : null;
+}
+
+/** Board to board: abort the old board's work and keep its page up, route
+ *  classes included, until the new board paints over it. */
+function beginBoardPageInPlace(root: HTMLElement): AbortSignal {
+  const classes = [...root.classList];
+  const signal = beginBroadcastPage(root);
+  root.classList.add(...classes);
+  return signal;
+}
+
+/** A withheld record's page: the event page's shell, the note in its content
+ *  column beside the round's game list. */
+function mountHeldBoardPage(
+  root: HTMLElement,
+  data: BroadcastBoardResponse,
+  context: BroadcastRoundResponse | null,
+): void {
+  root.classList.remove(BOARD_PAGE_CLASS);
+  const body = document.createElement('div');
+  body.className = 'xqb-board-view';
+  if (!context) {
+    mountBroadcastHeldBoard(body, data, { context: null, embedded: true });
+    root.replaceChildren(buildNav(), body, rightsContactNote());
+    return;
+  }
+  const state: EventPageState = {
+    tab: 'boards',
+    setTab: (tab) => navigateBroadcast(roundHref(data.board.tourSlug, data.board.roundId, tab)),
+  };
+  mountBroadcastHeldBoard(body, data, { context, embedded: true });
+  keepRailScroll(root, () =>
+    root.replaceChildren(buildNav(), renderEventShell(context, state, body, data.board.id)),
+  );
 }
 
 // Sibling boards + rounds feed the side rail and the round switcher on the
@@ -626,11 +693,15 @@ function rememberRound(data: BroadcastRoundResponse): void {
  */
 function keepRailScroll(root: HTMLElement, repaint: () => void): void {
   const before = root.querySelector<HTMLElement>('.xqb-rail-list');
-  const beforeKey = before?.closest<HTMLElement>('.xqb-event')?.dataset.roundKey;
+  const beforeKey = before?.closest<HTMLElement>('[data-round-key]')?.dataset.roundKey;
   const top = before?.scrollTop ?? 0;
   repaint();
   const list = root.querySelector<HTMLElement>('.xqb-rail-list');
-  if (!before || !list || list.closest<HTMLElement>('.xqb-event')?.dataset.roundKey !== beforeKey) {
+  if (
+    !before ||
+    !list ||
+    list.closest<HTMLElement>('[data-round-key]')?.dataset.roundKey !== beforeKey
+  ) {
     return;
   }
   const restore = (): void => {
@@ -662,7 +733,7 @@ function beginBroadcastPage(root: HTMLElement): AbortSignal {
   pageAbort = new AbortController();
   // A board review adds its own route classes; the next page must not keep
   // them.
-  root.classList.remove('xiangqi-postgame-route', 'xqb-review-route');
+  root.classList.remove('xiangqi-postgame-route', 'xqb-review-route', 'xqb-board-page');
   return pageAbort.signal;
 }
 
@@ -1185,11 +1256,10 @@ function renderEventShell(
   const content = document.createElement('section');
   content.className = 'xqb-section xqb-event-content';
   body.classList.add('xqb-event-body');
-  // An open board takes the whole column, header and tabs included, so it
-  // fills the height of the screen; the game list's back arrow returns. On a
-  // phone the game list is under the board, so a slim line over the board
-  // names the event and the round instead (CSS shows it at 600px and under).
-  if (boardOpen) content.append(boardEventLine(data, currentBoardId), body);
+  // An open board's page (only a withheld record's note is shown in this
+  // shell; a board is the review page's) takes the whole column, header and
+  // tabs included; the game list's back arrow returns.
+  if (boardOpen) content.append(body);
   // Before the first game Boards and Players would only say "no games yet",
   // so the tabs wait for one and the Overview stands alone.
   else if (eventHasNoGames(data)) content.append(eventHeader(data), body);
@@ -1206,14 +1276,12 @@ function renderEventShell(
     // The list and the event's chat room, lichess's left column. Beside the
     // boards it never moves while the page scrolls: pinned where it first
     // sits, it fills the height below that, the list taking what the chat
-    // leaves. Beside an open board it is the review page's left column: it
-    // scrolls with the board and ends where the board ends.
+    // leaves.
     const side = document.createElement('div');
     side.className = 'xqb-event-side';
     side.append(rail, eventChat(data.tour.slug));
     layout.append(side);
-    if (boardOpen) matchBoardHeight(side, content);
-    else pinEventSide(side);
+    pinEventSide(side);
     // The small print is the layout's last row, under the content column
     // (one column: under the list and the chat, as before). Below the layout
     // it ended the column's containing block above the page's foot, so at the
@@ -1225,39 +1293,6 @@ function renderEventShell(
     main.append(layout, rightsContactNote());
   }
   return main;
-}
-
-/**
- * The phone's line over an open board (#1234): the event, linking to its
- * round's page, the round, and whether the game is live or finished. Above
- * 600px the game list's heading says the same beside the board, so the line
- * is display: none there (xiangqi-broadcast.css).
- */
-export function boardEventLine(data: BroadcastRoundResponse, boardId: string): HTMLElement {
-  const line = document.createElement('p');
-  line.className = 'xqb-board-event-line';
-  const event = document.createElement('a');
-  event.className = 'xqb-board-event-line__event';
-  event.href =
-    data.round.id !== ''
-      ? roundHref(data.tour.slug, data.round.id)
-      : localizedHref(`/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`);
-  event.textContent = primaryName(data.tour);
-  line.append(event);
-  if (data.round.id !== '') {
-    const round = document.createElement('span');
-    round.className = 'xqb-board-event-line__round';
-    round.textContent = broadcastRoundName(data.round);
-    line.append(round);
-  }
-  const status = data.boards.find((board) => board.id === boardId)?.status;
-  if (status === 'live' || status === 'complete') {
-    const state = document.createElement('span');
-    state.className = `xqb-board-event-line__state xqb-board-event-line__state--${status}`;
-    state.textContent = t(status === 'live' ? 'broadcast.live' : 'broadcast.finished');
-    line.append(state);
-  }
-  return line;
 }
 
 // One chat panel per event, reused across repaints and in-place moves between
@@ -1291,56 +1326,6 @@ function pinEventSide(side: HTMLElement): void {
   };
   if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(pin);
   else pin();
-}
-
-// The open board's band, onto the left column beside it, so the three columns
-// start and end on one line like the review page's: the column starts at the
-// board's top (below the player strip, which the review cluster's own top
-// padding holds) and is the board's height. Both are read off the board rather
-// than restated here, so the seat row's reserve (seat-labels.css) stays the one
-// number. The board is sized to the screen and by its resize grip, both after
-// this runs, and settles through an intermediate size on a window resize, so
-// the board itself is observed: watching only the content column kept that
-// intermediate height.
-// Only beside the board, above 900px (xiangqi-broadcast.css): at 900px and
-// under the column stacks under the board and has no band to match, so the
-// matcher stands down and clears what it set.
-const SIDE_BY_SIDE_QUERY = '(min-width: 901px)';
-
-export function matchBoardHeight(side: HTMLElement, content: HTMLElement): void {
-  if (typeof ResizeObserver !== 'function') return;
-  const media =
-    typeof window.matchMedia === 'function' ? window.matchMedia(SIDE_BY_SIDE_QUERY) : null;
-  let observedBoard: HTMLElement | null = null;
-  const observer = new ResizeObserver(() => sync());
-  const sync = (): void => {
-    if (!side.isConnected) {
-      observer.disconnect();
-      media?.removeEventListener?.('change', sync);
-      return;
-    }
-    if (media && !media.matches) {
-      side.style.removeProperty('--xqb-board-h');
-      side.style.removeProperty('--xqb-board-dy');
-      return;
-    }
-    const board = content.querySelector<HTMLElement>('.review-board-host');
-    if (board && board !== observedBoard) {
-      if (observedBoard) observer.unobserve(observedBoard);
-      observer.observe(board);
-      observedBoard = board;
-    }
-    if (!board) return;
-    const rect = board.getBoundingClientRect();
-    const height = Math.round(rect.height);
-    if (height <= 0) return;
-    const offset = Math.max(0, Math.round(rect.top - content.getBoundingClientRect().top));
-    side.style.setProperty('--xqb-board-h', `${height}px`);
-    side.style.setProperty('--xqb-board-dy', `${offset}px`);
-  };
-  observer.observe(content);
-  // A rotate or a window dragged across 900px re-syncs on the change itself.
-  media?.addEventListener?.('change', sync);
 }
 
 // The event's header, at the top of the content column beside the game list
@@ -2383,209 +2368,6 @@ function creditLineFrom(
   return line;
 }
 
-function renderBoardReplay(
-  data: BroadcastBoardResponse,
-  context: BroadcastRoundResponse | null = null,
-  opts: { animateHeadAdvance?: boolean; embedded?: boolean } = {},
-): HTMLElement {
-  const main = broadcastShell();
-  const frames = data.history.truth.length > 0 ? data.history.truth : [{ ply: 0, view: data.view }];
-  const maxPly = frames.length - 1;
-  const moveByPly = new Map(data.timeline.map((entry) => [entry.ply, entry.move]));
-  let cursor = clamp(initialPlyFromUrl(), 0, maxPly);
-  // The server eval is for the HEAD position only. A stale one (the payload
-  // gained a ply the engine has not searched yet) says nothing about the
-  // board on screen, so it is dropped until the next push carries a fresh one.
-  const liveEval =
-    data.board.status !== 'complete' && data.liveEval && data.liveEval.ply === maxPly
-      ? data.liveEval
-      : null;
-  const liveArrows = liveEval ? engineArrowsFromLines(cevalLinesFromLiveEval(liveEval)) : [];
-
-  document.title = `${playerName(data.board.red)} vs ${playerName(data.board.black)} · Mistboard`;
-  const hero = heroSection({
-    eyebrow: t('broadcast.boardNumber', { n: data.board.boardNumber }),
-    title: `${playerName(data.board.red)} vs ${playerName(data.board.black)}`,
-    subtitle: null,
-    href: data.board.sourceUrl,
-    meta: [
-      resultLabel(data.board),
-      t('watch.plyCount', { count: data.timeline.length }),
-      statusLabel(data.state.status),
-    ],
-    backHref: `/broadcast/xiangqi/${encodeURIComponent(
-      data.board.tourSlug,
-    )}/round/${encodeURIComponent(data.board.roundId)}`,
-    backLabel: t('broadcast.backToRound'),
-    switcher: context
-      ? roundSwitcher(data.board.tourSlug, context.rounds ?? [], data.board.roundId)
-      : null,
-  });
-
-  const layout = document.createElement('section');
-  layout.className = 'xqb-board-layout';
-
-  const boardPanel = document.createElement('div');
-  boardPanel.className = 'xqb-board-panel';
-  const boardFrame = document.createElement('div');
-  boardFrame.className = 'xqb-board-frame xiangqi-live-board';
-  boardFrame.setAttribute('aria-label', t('broadcast.boardAriaLabel'));
-  // The board sits in a stage so the eval gauge can take a column beside it
-  // (the review's gauge mode: a flow child, not an overlay to align).
-  const boardStage = document.createElement('div');
-  boardStage.className = 'xqb-board-stage';
-  if (liveEval) {
-    const gauge = document.createElement('div');
-    gauge.className = 'xqb-eval-gauge';
-    const bar = createEvalBar();
-    bar.setEval(liveEval.cp, liveEval.mate);
-    gauge.append(bar.el);
-    boardStage.classList.add('xqb-board-stage-with-gauge');
-    boardStage.append(gauge);
-  }
-  boardStage.append(boardFrame);
-
-  const controls = document.createElement('div');
-  controls.className = 'xqb-controls';
-  const first = controlButton(t('broadcast.first'), () => setCursor(0));
-  const prev = controlButton(t('broadcast.prev'), () => setCursor(cursor - 1));
-  const next = controlButton(t('broadcast.next'), () => setCursor(cursor + 1));
-  const last = controlButton(t('broadcast.live'), () => setCursor(maxPly));
-  const plyLabel = document.createElement('span');
-  plyLabel.className = 'xqb-ply-label';
-  controls.append(first, prev, plyLabel, next, last);
-
-  const boardMeta = document.createElement('div');
-  boardMeta.className = 'xqb-board-meta';
-  boardMeta.append(playerPanel(t('setup.red'), data.board.red, data.board.result === '1-0'));
-  boardMeta.append(playerPanel(t('setup.black'), data.board.black, data.board.result === '0-1'));
-  boardPanel.append(boardStage, controls, boardMeta);
-
-  const movesPanel = document.createElement('aside');
-  movesPanel.className = 'xqb-moves-panel';
-  // Engine lines above the moves, where lichess keeps its ceval: every viewer
-  // reads the same server numbers, and a viewer scrolled back is told they
-  // belong to the live position rather than the one on screen.
-  const enginePanel = liveEval ? renderLiveEnginePanel(liveEval) : null;
-  if (enginePanel) movesPanel.append(enginePanel.el);
-  const moveHeading = document.createElement('h2');
-  moveHeading.textContent = t('broadcast.moves');
-  const moveList = document.createElement('div');
-  moveList.className = 'xqb-move-grid';
-  const actions = document.createElement('div');
-  actions.className = 'xqb-board-actions';
-  const analysisHref = analysisDeeplink(data.timeline);
-  if (analysisHref) actions.append(analyseLink(analysisHref));
-  actions.append(
-    pgnLink({
-      boardId: data.board.id,
-      red: data.board.red,
-      black: data.board.black,
-      result: data.board.result,
-      moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
-      tour: context?.tour ?? null,
-      round: context?.round ?? null,
-      ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
-      origin: window.location.origin,
-    }),
-    exportLink(data.board.id),
-    embedCodeButton(
-      data.board.id,
-      `${localPersonName(data.board.red)}${t('broadcast.vs')}${localPersonName(data.board.black)} · Mistboard`,
-    ),
-  );
-  movesPanel.append(moveHeading, moveList, actions);
-
-  layout.append(boardPanel, movesPanel);
-  // Embedded in the event page, whose header and game list are already there.
-  const rail = context && !opts.embedded ? sideRail(context, data.board.id) : null;
-  if (rail) {
-    // Grid areas place the rail in the left column on wide viewports while it
-    // stays last in DOM order, so narrow layouts stack it below the moves.
-    layout.classList.add('xqb-board-layout-with-rail');
-    layout.append(rail);
-  }
-  main.append(hero, layout);
-  const view = opts.embedded ? layout : main;
-
-  const moveButtons = renderMoveButtons(moveList, data.timeline, setCursor);
-
-  function setCursor(nextPly: number): void {
-    const fromPly = cursor;
-    cursor = clamp(nextPly, 0, maxPly);
-    renderCursor();
-    animateCursorStep(fromPly, cursor);
-  }
-
-  // Adjacent scrub steps glide (pieceAnimation pref): forward animates the
-  // stepped-into ply's move, back reverse-animates the undone ply's move. The
-  // moves come from the broadcast timeline payload; jumps render discretely.
-  function animateCursorStep(fromPly: number, toPly: number): void {
-    if (toPly === fromPly + 1) {
-      const move = moveByPly.get(toPly);
-      if (move) animateXiangqiBoardMove(boardFrame, move, 'red');
-    } else if (toPly === fromPly - 1) {
-      const move = moveByPly.get(fromPly);
-      if (move) animateXiangqiBoardMove(boardFrame, move, 'red', { reverse: true });
-    }
-  }
-
-  function renderCursor(): void {
-    const frame = frames[cursor] ?? frames[frames.length - 1]!;
-    // Engine arrows belong to the head position; a viewer scrolled back sees
-    // the plain board, and the panel's live tag says the numbers are the head's.
-    const atHead = cursor === maxPly;
-    boardFrame.innerHTML = renderXiangqiBoardSvg(frame.view, 'red', {
-      arrows: atHead ? liveArrows : [],
-    });
-    enginePanel?.setAtHead(atHead);
-    plyLabel.textContent = `${cursor} / ${maxPly}`;
-    first.disabled = cursor === 0;
-    prev.disabled = cursor === 0;
-    next.disabled = cursor === maxPly;
-    last.disabled = cursor === maxPly;
-    for (const button of moveButtons) {
-      button.classList.toggle('active', Number(button.dataset.ply) === cursor);
-      if (Number(button.dataset.ply) === cursor) button.setAttribute('aria-current', 'step');
-      else button.removeAttribute('aria-current');
-    }
-    const url = new URL(window.location.href);
-    if (cursor === maxPly) url.searchParams.delete('ply');
-    else url.searchParams.set('ply', String(cursor));
-    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-  }
-
-  renderCursor();
-  // SSE head-advance: a new ply just arrived while the viewer sat at the head;
-  // glide the newest move so live boards read as motion, not teleports. Runs a
-  // frame later because the caller attaches `main` right after this returns
-  // (same deferral idiom as scheduleRailScroll).
-  if (opts.animateHeadAdvance && maxPly > 0 && cursor === maxPly) {
-    const move = moveByPly.get(maxPly);
-    if (move) {
-      const glide = () => animateXiangqiBoardMove(boardFrame, move, 'red');
-      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(glide);
-      else glide();
-    }
-  }
-  return view;
-}
-
-// The arrow builder ranks lines by how much each gives up against the best,
-// which only works in the mover's POV: in Red POV the best line for Black to
-// move is the LOWEST number and every alternate would be dropped as "better
-// than PV1". Red moves first, so Black is to move after an odd ply.
-function cevalLinesFromLiveEval(evaluation: BroadcastLiveEval): CevalLine[] {
-  const sign = evaluation.ply % 2 === 0 ? 1 : -1;
-  return evaluation.lines.map((line, index) => ({
-    multipv: index + 1,
-    depth: evaluation.depth,
-    scoreCp: line.cp == null ? null : line.cp * sign,
-    mate: line.mate == null ? null : line.mate * sign,
-    pvUci: line.pv,
-  }));
-}
-
 // Chip tone by who is ahead, Red POV, the engine panel's palette.
 function liveEvalTone(cp: number | null, mate: number | null): string {
   const value = mate != null ? (mate > 0 ? 1 : -1) : (cp ?? 0) / 100;
@@ -3148,115 +2930,6 @@ function scheduleRailScroll(list: HTMLElement, row: HTMLElement | null): void {
   else scroll();
 }
 
-function playerPanel(
-  labelText: string,
-  player: XiangqiBroadcastPlayerTag,
-  won: boolean,
-): HTMLElement {
-  const panel = document.createElement('div');
-  panel.className = won ? 'xqb-player xqb-player-winner' : 'xqb-player';
-  const label = document.createElement('span');
-  label.textContent = labelText;
-  const name = document.createElement('strong');
-  name.textContent = playerName(player);
-  name.title = otherName(player) ?? '';
-  panel.append(label, name);
-  return panel;
-}
-
-function renderMoveButtons(
-  container: HTMLElement,
-  timeline: BroadcastMoveTimelineEntry[],
-  onSelect: (ply: number) => void,
-): HTMLButtonElement[] {
-  const byPly = new Map(timeline.map((entry) => [entry.ply, entry]));
-  // The reader's notation preference (coordinate / WXF / Chinese), the same
-  // one the review and study boards honour; raw `c4-c5` was the only spelling
-  // this list knew. Formatted by replaying the line, so an entry whose move is
-  // illegal at its turn falls back to coordinates from there on.
-  const ordered = [...timeline].sort((a, b) => a.ply - b.ply);
-  const labels = new Map(
-    formatXiangqiMoves(
-      ordered.map((entry) => entry.move),
-      currentXiangqiNotationStyle(),
-    ).map((label, index) => [ordered[index]!.ply, label]),
-  );
-  const buttons: HTMLButtonElement[] = [];
-  const moveCount = Math.ceil(timeline.length / 2);
-  for (let moveNumber = 1; moveNumber <= moveCount; moveNumber++) {
-    const label = document.createElement('span');
-    label.className = 'xqb-move-number';
-    label.textContent = `${moveNumber}.`;
-    container.append(label);
-    for (const ply of [moveNumber * 2 - 1, moveNumber * 2]) {
-      const entry = byPly.get(ply);
-      if (!entry) {
-        const spacer = document.createElement('span');
-        spacer.className = 'xqb-move-empty';
-        container.append(spacer);
-        continue;
-      }
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `xqb-move xqb-move-${entry.color}`;
-      button.dataset.ply = String(entry.ply);
-      button.textContent = labels.get(entry.ply) ?? moveLabel(entry.move);
-      button.addEventListener('click', () => onSelect(entry.ply));
-      buttons.push(button);
-      container.append(button);
-    }
-  }
-  return buttons;
-}
-
-function controlButton(label: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'xqb-control';
-  button.textContent = label;
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-// Serialize a broadcast timeline to the canonical coordinate move list the
-// analysis board expects at `/analysis/xiangqi?moves=`. Each move is our square
-// notation concatenated (= Fairy-Stockfish xiangqi UCI, e.g. `h3e3`), which the
-// analysis importer round-trips back to the same moves. Exported for the
-// round-trip test that guards this seam against a format drift on either side.
-export function serializeBroadcastMovesForAnalysis(timeline: BroadcastMoveTimelineEntry[]): string {
-  return [...timeline]
-    .sort((a, b) => a.ply - b.ply)
-    .map((entry) => xiangqiMoveToFsfUci(entry.move))
-    .join(',');
-}
-
-function analysisDeeplink(timeline: BroadcastMoveTimelineEntry[]): string | null {
-  if (timeline.length === 0) return null;
-  return `/analysis/xiangqi?moves=${encodeURIComponent(serializeBroadcastMovesForAnalysis(timeline))}`;
-}
-
-// Opens in a new tab so a live broadcast keeps streaming behind the analysis board.
-function analyseLink(href: string): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'xqb-export-link xqb-link-primary';
-  link.href = localizedHref(href);
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = t('broadcast.analyseWithEngine');
-  return link;
-}
-
-// The game as a PGN file, for a creator's own tools (#454); the moves are
-// the ones on the page, so a live game downloads as far as it has gone.
-function pgnLink(input: BroadcastPgnInput): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'xqb-export-link';
-  link.href = pgnDataHref(broadcastGamePgn(input));
-  link.download = broadcastPgnFileName(input);
-  link.textContent = t('broadcast.downloadPgn');
-  return link;
-}
-
 // One small button in place of a share box: the phone's share sheet where
 // there is one (a touch screen), else the page's link on the clipboard.
 function copyLinkButton(pageUrl: string, title: string): HTMLElement {
@@ -3284,65 +2957,8 @@ function copyLinkButton(pageUrl: string, title: string): HTMLElement {
   return button;
 }
 
-// Copies the game's iframe code, for a creator's own page (#454).
-function embedCodeButton(boardId: string, title: string): HTMLElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'xqb-export-link';
-  button.textContent = t('broadcast.copyEmbed');
-  button.addEventListener('click', () => {
-    void navigator.clipboard
-      ?.writeText(broadcastEmbedCode(boardId, title, window.location.origin))
-      .then(
-        () => {
-          button.textContent = t('broadcast.copied');
-          setTimeout(() => (button.textContent = t('broadcast.copyEmbed')), 1500);
-        },
-        () => {},
-      );
-  });
-  return button;
-}
-
-function exportLink(boardId: string): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'xqb-export-link';
-  link.href = `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}/export`;
-  link.textContent = t('broadcast.exportJson');
-  return link;
-}
-
 // Names follow the locale, one language per page.
 const primaryFederation = localFederation;
-
-function playerName(player: XiangqiBroadcastPlayerTag): string {
-  const prefix = player.title ? `${localTitle(player.title)} ` : '';
-  const federation = primaryFederation(player);
-  const suffix = federation ? ` (${federation})` : '';
-  return `${prefix}${localPersonName(player)}${suffix}`;
-}
-
-function resultLabel(board: Pick<BroadcastBoardSummary, 'result' | 'status'>): string {
-  if (board.result === '1-0') return t('broadcast.redWins');
-  if (board.result === '0-1') return t('broadcast.blackWins');
-  if (board.result === '1/2-1/2') return t('broadcast.draw');
-  if (board.status === 'live') return t('broadcast.live');
-  if (board.status === 'scheduled') return t('broadcast.scheduled');
-  return t('broadcast.inProgress');
-}
-
-function statusLabel(status: XiangqiGameStatus): string {
-  if (status.type === 'playing') return `${capitalize(status.turn)} to move`;
-  if (status.type === 'finished') {
-    const result = status.winner
-      ? t('broadcast.colorWins', {
-          color: status.winner === 'red' ? t('setup.red') : t('setup.black'),
-        })
-      : t('broadcast.draw');
-    return `${result} by ${status.reason}`;
-  }
-  return `Aborted: ${status.reason}`;
-}
 
 // Lightweight relative-time labels for card freshness: 'just now', '3m ago',
 // '2h ago', then a short date ('Jul 8', with the year once it differs).
@@ -3401,23 +3017,4 @@ function timestamp(value: unknown): string | undefined {
 
 function streamVersion(values: Array<string | number | null | undefined>): string {
   return values.map((value) => value ?? '').join('|');
-}
-
-function moveLabel(move: XiangqiMove): string {
-  return `${move.from}-${move.to}`;
-}
-
-function initialPlyFromUrl(): number {
-  const raw = new URLSearchParams(window.location.search).get('ply');
-  if (!raw) return Number.POSITIVE_INFINITY;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-function capitalize(value: string): string {
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

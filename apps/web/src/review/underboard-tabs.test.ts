@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { downloadRow, shareRow, underboardPanel } from './underboard-tabs.js';
 
@@ -290,55 +288,5 @@ describe('underboard initialTabId', () => {
   it('falls back to the first tab when the id is absent or unknown', () => {
     expect(activeTab(panelWithTools())).toBe('Comment');
     expect(activeTab(panelWithTools('no-such-tab'))).toBe('Comment');
-  });
-});
-
-// #1234: the floor under the tab bodies (the tallest body, so a tab switch does
-// not move the page) is a custom property the stylesheet reads, not an inline
-// min-height, so the broadcast board on a phone can drop it in CSS. Inline, it
-// left a blank band the height of Share & export under the chart.
-describe('underboard height floor', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('sets the tallest body as a stylesheet variable, never an inline min-height', () => {
-    const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-      frames.push(cb);
-      return frames.length;
-    });
-    const tall = document.createElement('div');
-    tall.getBoundingClientRect = () => ({ height: 276 }) as DOMRect;
-    const short = document.createElement('div');
-    short.getBoundingClientRect = () => ({ height: 182 }) as DOMRect;
-    const panel = underboardPanel(document.createElement('div'), {
-      hasAnalysis: false,
-      shareMovesInput: document.createElement('textarea'),
-      gameUrl: 'https://mistboard.com/game/r1',
-      tools: [
-        { id: 'chart', label: 'Chart', body: short },
-        { id: 'share', label: 'Share', body: tall },
-      ],
-    });
-    for (const frame of frames.splice(0)) frame(0);
-    const bodies = panel.querySelector<HTMLElement>('.review-underboard-bodies')!;
-    expect(bodies.style.getPropertyValue('--review-underboard-floor')).toBe('276px');
-    expect(bodies.style.minHeight).toBe('');
-  });
-
-  it('is read by the stylesheet, and dropped by the broadcast board on a phone', () => {
-    const shell = readFileSync(resolve(__dirname, 'review-shell.css'), 'utf8');
-    expect(shell).toMatch(
-      /\.review-underboard-bodies \{\s*min-height: var\(--review-underboard-floor, 0px\);/,
-    );
-    const broadcast = readFileSync(resolve(__dirname, '../xiangqi-broadcast.css'), 'utf8');
-    const phone = broadcast.slice(
-      broadcast.indexOf('@media (max-width: 600px) {\n  .xqb-event-board-open'),
-    );
-    expect(phone).toMatch(
-      /\.xqb-event-board-open \.review-shell \.review-underboard-bodies \{\s*min-height: 0;/,
-    );
-    expect(phone).toMatch(
-      /\.xqb-event-board-open \.review-shell \.review-underboard-tab \{\s*min-height: 40px;/,
-    );
   });
 });

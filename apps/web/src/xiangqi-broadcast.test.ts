@@ -7,16 +7,13 @@ import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
-  boardEventLine,
   broadcastPageForPath,
   broadcastRecordsCredit,
   formatBroadcastFreshness,
-  matchBoardHeight,
   mountXiangqiBroadcastBoard,
   mountXiangqiBroadcastIndex,
   mountXiangqiBroadcastRound,
   mountXiangqiBroadcastTour,
-  serializeBroadcastMovesForAnalysis,
 } from './xiangqi-broadcast.js';
 import {
   broadcastRoundName,
@@ -71,7 +68,9 @@ function stubEventSource(): void {
 
 // The no-op stub above is enough for mount-only tests. This one keeps the
 // listener so a test can push a round update the way the server would.
-function stubPushableEventSource(): { push: (payload: unknown, version: string) => void } {
+function stubPushableEventSource(): {
+  push: (payload: unknown, version: string, type?: 'round' | 'board') => void;
+} {
   const listeners = new Map<string, (event: Event) => void>();
   vi.stubGlobal(
     'EventSource',
@@ -83,57 +82,23 @@ function stubPushableEventSource(): { push: (payload: unknown, version: string) 
     },
   );
   return {
-    push(payload, version) {
-      const fn = listeners.get('round');
-      if (!fn) throw new Error('nothing listening for round events');
-      fn(new MessageEvent('round', { data: JSON.stringify({ version, payload }) }));
+    push(payload, version, type = 'round') {
+      const fn = listeners.get(type);
+      if (!fn) throw new Error(`nothing listening for ${type} events`);
+      fn(new MessageEvent(type, { data: JSON.stringify({ version, payload }) }));
     },
   };
 }
 
-function stubFetchJson(payloadForUrl: (url: string) => unknown): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: unknown) => ({
-      ok: true,
-      status: 200,
-      json: async () => payloadForUrl(String(input)),
-    })),
-  );
+function stubFetchJson(payloadForUrl: (url: string) => unknown) {
+  const fetchMock = vi.fn(async (input: unknown) => ({
+    ok: true,
+    status: 200,
+    json: async () => payloadForUrl(String(input)),
+  }));
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
 }
-
-describe('serializeBroadcastMovesForAnalysis', () => {
-  // A legal, color-alternating opening (red on odd plies) that also exercises
-  // rank-10 tokens (b10, a10) — every move is legal, so the analysis importer
-  // keeps the whole line instead of truncating at an illegal ply.
-  const GAME: XiangqiMove[] = [
-    { from: 'b3', to: 'e3' }, // red cannon to center
-    { from: 'h8', to: 'e8' }, // black cannon to center
-    { from: 'b1', to: 'c3' }, // red horse
-    { from: 'b10', to: 'c8' }, // black horse
-    { from: 'a1', to: 'a2' }, // red rook up one
-    { from: 'a10', to: 'a9' }, // black rook up one
-  ];
-  const QUERY = 'b3e3,h8e8,b1c3,b10c8,a1a2,a10a9';
-
-  it('round-trips a broadcast timeline through the /analysis/xiangqi importer', () => {
-    const query = serializeBroadcastMovesForAnalysis(timelineFrom(GAME));
-    expect(query).toBe(QUERY);
-
-    const imported = importXiangqiGame(query);
-    expect(imported.error).toBeUndefined();
-    expect(imported.moves).toEqual(GAME);
-  });
-
-  it('orders by ply regardless of timeline entry order', () => {
-    const shuffled = [...timelineFrom(GAME)].reverse();
-    expect(serializeBroadcastMovesForAnalysis(shuffled)).toBe(QUERY);
-  });
-
-  it('yields an empty query for a board with no moves', () => {
-    expect(serializeBroadcastMovesForAnalysis([])).toBe('');
-  });
-});
 
 describe('formatBroadcastFreshness', () => {
   // Local-time (no Z) timestamps keep the expected labels timezone-independent.
@@ -1227,9 +1192,9 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     expect(current?.classList.contains('xqb-rail-row-live')).toBe(true);
     expect(current?.querySelector('.xqb-card-seat-black .xqb-to-move')).not.toBeNull();
 
-    // An open board takes the whole content column (lichess): no header or
+    // An open board is the review page's shell (#1234): no event header or
     // tabs above it; the list's heading is the way back to the round.
-    expect(root.querySelector('.xqb-event-board-open')).not.toBeNull();
+    expect(root.classList.contains('xqb-board-page')).toBe(true);
     expect(root.querySelector('.xqb-hero')).toBeNull();
     expect(root.querySelector('.xqb-tabs')).toBeNull();
     expect(root.querySelector('.xqb-side-rail h2 .xqb-rail-back')?.getAttribute('href')).toBe(
@@ -1256,8 +1221,8 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     ],
   };
 
-  it('renders the eval bar, the engine lines, and arrows at the head from the live eval', async () => {
-    stubFetchJson((url) =>
+  it('puts the live engine over the moves, on the review shell, with no result or stored analysis', async () => {
+    const fetchSpy = stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/')
         ? { ...BOARD_RESPONSE, liveEval: LIVE_EVAL }
         : ROUND,
@@ -1268,16 +1233,14 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastBoard(root, 't-r-b1');
 
-    // Gauge beside the board, filled from Red's win probability (Black ahead: under half).
-    const gauge = root.querySelector(
-      '.xqb-board-stage-with-gauge .xqb-eval-gauge .review-eval-bar',
-    );
-    expect(gauge).not.toBeNull();
-    const fill = gauge?.querySelector<HTMLElement>('.review-eval-bar__fill');
-    expect(Number.parseFloat(fill?.style.height ?? '')).toBeLessThan(50);
-
-    // Compact panel: headline, engine name and depth, three formatted lines.
-    const panel = root.querySelector('.xqb-engine');
+    // #1234: the live board is the finished board's shell, the review's.
+    expect(root.querySelector('.review-shell .review-board-host')).not.toBeNull();
+    expect(root.querySelector('.xqb-board-frame')).toBeNull();
+    expect(root.querySelector('.xqb-controls')).toBeNull();
+    // The relay's engine heads the review's right rail, above its moves.
+    const railMain = root.querySelector('.review-rail-main');
+    const panel = railMain?.firstElementChild;
+    expect(panel?.classList.contains('xqb-engine')).toBe(true);
     expect(panel?.querySelector('.xqb-engine-eval')?.textContent).toBe('-0.2');
     expect(panel?.querySelector('.xqb-engine-sub')?.textContent).toBe('Pikafish, depth 14');
     const lines = [...(panel?.querySelectorAll('.xqb-engine-line') ?? [])];
@@ -1287,12 +1250,14 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
       '+0.4',
     ]);
     expect(lines[0]?.querySelector('.xqb-engine-line-pv')?.textContent).toBe('h10-g8 b1-c3 h8-e8');
-    // At the head: no live tag, and the top lines draw as arrows.
+    // At the head: no live tag.
     expect(panel?.querySelector<HTMLElement>('.xqb-engine-live-tag')?.hidden).toBe(true);
-    const arrows = root.querySelectorAll('.xqb-board-frame .xq-live-arrows .xq-arrow');
-    expect(arrows.length).toBeGreaterThan(0);
-    expect(root.querySelector('.xq-arrow--pv1')).not.toBeNull();
-    // Arrows are drawn in our squares: PV1 runs h10 -> g8 (not Pikafish's h9g7).
+    // A game in progress says Live where a result goes and asks for no
+    // stored analysis (there is none until it ends).
+    expect(root.querySelector('.game-meta-card')?.textContent).toContain('Live');
+    expect(root.textContent).not.toContain('Computer analysis');
+    const urls = fetchSpy.mock.calls.map(([input]) => String(input));
+    expect(urls.some((url) => url.includes('/analysis'))).toBe(false);
     window.history.replaceState(null, '', '/');
   });
 
@@ -1314,7 +1279,7 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('hides the arrows and shows the live tag when the viewer scrolls back from the head', async () => {
+  it('shows the live tag when the viewer steps back from the head, and drops it at the head', async () => {
     stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/')
         ? { ...BOARD_RESPONSE, liveEval: LIVE_EVAL }
@@ -1325,24 +1290,22 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
 
     const root = document.createElement('div');
     await mountXiangqiBroadcastBoard(root, 't-r-b1');
-    const prev = [...root.querySelectorAll<HTMLButtonElement>('.xqb-control')].find(
-      (button) => button.textContent === 'Prev',
-    );
-    prev?.click();
+    const step = (action: string): void =>
+      root.querySelector<HTMLButtonElement>(`.review-controls [data-replay="${action}"]`)?.click();
+    step('prev');
 
-    expect(root.querySelector('.xqb-ply-label')?.textContent).toBe('0 / 1');
-    expect(root.querySelectorAll('.xqb-board-frame .xq-arrow').length).toBe(0);
-    // The gauge and the panel keep the HEAD eval, flagged as the live position.
-    expect(root.querySelector('.xqb-eval-gauge .review-eval-bar')).not.toBeNull();
+    // The panel keeps the HEAD eval, flagged as the live position's.
     expect(root.querySelector('.xqb-engine-eval')?.textContent).toBe('-0.2');
     expect(root.querySelector<HTMLElement>('.xqb-engine-live-tag')?.hidden).toBe(false);
     expect(root.querySelector('.xqb-engine')?.classList.contains('xqb-engine-behind-head')).toBe(
       true,
     );
+    step('next');
+    expect(root.querySelector<HTMLElement>('.xqb-engine-live-tag')?.hidden).toBe(true);
     window.history.replaceState(null, '', '/');
   });
 
-  it('ignores a live eval for a ply that is not the head, and renders no engine layer without one', async () => {
+  it('ignores a live eval for a ply that is not the head, and renders no engine panel without one', async () => {
     stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/')
         ? { ...BOARD_RESPONSE, liveEval: { ...LIVE_EVAL, ply: 0 } }
@@ -1352,8 +1315,6 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     const stale = document.createElement('div');
     await mountXiangqiBroadcastBoard(stale, 't-r-b1');
     expect(stale.querySelector('.xqb-engine')).toBeNull();
-    expect(stale.querySelector('.xqb-eval-gauge')).toBeNull();
-    expect(stale.querySelectorAll('.xq-arrow').length).toBe(0);
 
     stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/') ? BOARD_RESPONSE : ROUND,
@@ -1361,8 +1322,42 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     const plain = document.createElement('div');
     await mountXiangqiBroadcastBoard(plain, 't-r-b1');
     expect(plain.querySelector('.xqb-engine')).toBeNull();
-    expect(plain.querySelector('.xqb-board-stage-with-gauge')).toBeNull();
-    expect(plain.querySelector('.xqb-board-frame')).not.toBeNull();
+    expect(plain.querySelector('.review-board-host')).not.toBeNull();
+  });
+
+  // A stream push remounts the review, which takes back every block a phone
+  // sheet has lent; so a push while a sheet is open waits for it to close.
+  it('holds a stream push while a phone sheet is open and paints it on close', async () => {
+    const NEXT: XiangqiMove[] = [...MOVES, { from: 'h10', to: 'g8' }];
+    const nextReplay = buildXiangqiReplayFromMoves(NEXT);
+    const pushed = {
+      ...BOARD_RESPONSE,
+      board: { ...BOARD_RESPONSE.board, plyCount: NEXT.length, moves: NEXT },
+      timeline: timelineFrom(NEXT),
+      view: nextReplay.views[nextReplay.maxPly]!,
+      views: { truth: nextReplay.views[nextReplay.maxPly]! },
+      history: { truth: nextReplay.views.map((view, ply) => ({ ply, view })) },
+    };
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? BOARD_RESPONSE : ROUND,
+    );
+    const stream = stubPushableEventSource();
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      await mountXiangqiBroadcastBoard(root, 't-r-b1');
+      const shell = root.querySelector('.review-shell');
+      document.body.classList.add('review-info-open');
+      stream.push(pushed, 'v-next', 'board');
+      expect(root.querySelector('.review-shell')).toBe(shell);
+      document.body.classList.remove('review-info-open');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(root.querySelector('.review-shell')).not.toBe(shell);
+      expect(root.querySelector('.review-shell')).not.toBeNull();
+    } finally {
+      document.body.classList.remove('review-info-open');
+      root.remove();
+    }
   });
 
   it('renders the board without a rail when the round context fetch fails', async () => {
@@ -1383,9 +1378,10 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
 
     expect(root.querySelector('.xqb-side-rail')).toBeNull();
     expect(root.querySelector('.xqb-round-select')).toBeNull();
-    // The board page itself still renders.
-    expect(root.querySelector('.xqb-board-frame')).not.toBeNull();
-    expect(root.querySelector('.xqb-hero h1')?.textContent).toContain('Wang Tianyi');
+    // The board page itself still renders, with its small print at the foot.
+    expect(root.querySelector('.review-board-host')).not.toBeNull();
+    expect(root.querySelector('.review-shell')?.textContent).toContain('Wang Tianyi');
+    expect(root.querySelectorAll('.xqb-rights-note')).toHaveLength(1);
   });
 });
 
@@ -1669,23 +1665,27 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     const root = document.createElement('div');
     await mountXiangqiBroadcastBoard(root, 't-r-b1');
 
-    // The board takes the event page's content column beside the round's
-    // game list (lichess's relay), as the page's only content, under the
-    // event line a phone shows in place of the game list's heading (#1234).
-    const body = root.querySelector('.xqb-event-board-open .xqb-event-content > .xqb-event-body');
-    expect(body?.querySelector('.review-shell--embedded')).not.toBeNull();
-    const column = [...(root.querySelector('.xqb-event-content')?.children ?? [])];
-    expect(column.length).toBe(2);
-    expect(column[0]?.className).toBe('xqb-board-event-line');
-    expect(column[1]?.classList.contains('xqb-event-body')).toBe(true);
-    // Embedded: no info card or second rail inside the review.
-    expect(root.querySelector('.game-meta-card')).toBeNull();
-    expect(root.querySelector('.review-shell__left')).toBeNull();
+    // #1234: the board page is the game review page's shell, not a review
+    // embedded in the event column: the game card and the round's game list
+    // in the left rail, the chat under them, the moves on the right.
+    expect(root.classList.contains('xqb-board-page')).toBe(true);
+    expect(root.querySelector('.xqb-event-board-open')).toBeNull();
+    expect(root.querySelector('.review-shell--embedded')).toBeNull();
+    const left = root.querySelector('.review-shell__left');
+    expect(left?.querySelector('.review-rail-group > .game-meta-card')).not.toBeNull();
+    expect(
+      left?.querySelector('.review-actions--rail > .xqb-board-side > .xqb-side-rail'),
+    ).not.toBeNull();
+    expect(left?.querySelector('.review-rail-group--deferred .xqb-event-chat')).not.toBeNull();
     expect(root.querySelectorAll('.xqb-side-rail').length).toBe(1);
     expect(root.querySelector('.xiangqi-live-board')).not.toBeNull();
     expect(root.querySelector('.engine-panel')).not.toBeNull();
     expect(root.textContent).toContain('Computer analysis');
     expect(root.textContent).toContain('Cheng Yudong');
+    // The small print rides with the list, so the phone sheet carries it too.
+    const notes = root.querySelectorAll('.xqb-rights-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.parentElement?.classList.contains('xqb-board-side')).toBe(true);
     // Provenance: the dpxq page, by host.
     const provenance = root.querySelector('.review-provenance');
     expect(provenance?.querySelector('a')?.getAttribute('href')).toBe(
@@ -2424,204 +2424,78 @@ describe('broadcast locale fixtures', () => {
           : data,
       );
       await mountXiangqiBroadcastBoard(root, board.id);
-      expect(document.title).toContain(
-        english ? 'Chao Yi-fan (Taiwan)' : locale === 'zh-Hans' ? '赵奕帆 (台灣)' : '趙奕帆 (台灣)',
-      );
+      // A live board titles itself as a finished one does (#1234): the two
+      // names in the viewer's script and the event.
+      const red = english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆';
+      expect(document.title).toContain(red);
       expect(document.title).toContain('无名');
-      expect(root.querySelector('.xqb-player')?.parentElement?.textContent).toContain(
-        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
-      );
+      expect(root.querySelector('.review-shell')?.textContent).toContain(red);
     },
   );
 });
 
-describe('matchBoardHeight (the left column beside an open board)', () => {
-  // happy-dom lays nothing out, so the observer and the boxes are stubbed.
-  type Callback = () => void;
-  let observers: { callback: Callback; targets: Set<Element> }[] = [];
+// #1234: the board page's layout rules sit over the review shell's. Each one
+// must beat the review rule it overrides on specificity, since the two
+// stylesheets can land in either order in a bundle.
+describe('board page layout over the review shell', () => {
+  const broadcastCss = readFileSync(resolve(__dirname, 'xiangqi-broadcast.css'), 'utf8');
+  const reviewCss = readFileSync(resolve(__dirname, 'review/review-shell.css'), 'utf8');
 
-  beforeEach(() => {
-    observers = [];
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        private readonly entry: { callback: Callback; targets: Set<Element> };
-        constructor(callback: Callback) {
-          this.entry = { callback, targets: new Set() };
-          observers.push(this.entry);
+  /** The declarations of `selector` inside the first `@media query` block
+   *  that holds it, or null. */
+  function ruleIn(css: string, query: string, selector: string): string | null {
+    let from = 0;
+    for (;;) {
+      const at = css.indexOf(`@media ${query} {`, from);
+      if (at < 0) return null;
+      let depth = 0;
+      let end = at;
+      for (let i = css.indexOf('{', at); i < css.length; i++) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}' && --depth === 0) {
+          end = i;
+          break;
         }
-        observe(target: Element): void {
-          this.entry.targets.add(target);
-        }
-        unobserve(target: Element): void {
-          this.entry.targets.delete(target);
-        }
-        disconnect(): void {
-          this.entry.targets.clear();
-        }
-      },
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    document.body.replaceChildren();
-  });
-
-  function box(el: Element, top: number, height: number): void {
-    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
-      top,
-      bottom: top + height,
-      height,
-      left: 0,
-      right: 500,
-      width: 500,
-      x: 0,
-      y: top,
-      toJSON: () => ({}),
-    } as DOMRect);
-  }
-
-  function fire(target: Element): void {
-    for (const entry of observers) if (entry.targets.has(target)) entry.callback();
-  }
-
-  it('starts the column at the board top, below the player strip, and ends it at the board bottom', () => {
-    const side = document.createElement('div');
-    const content = document.createElement('section');
-    const board = document.createElement('section');
-    board.className = 'review-board-host';
-    content.append(board);
-    document.body.append(side, content);
-    // The prod board page at 1288x800: the content column at 101, the top
-    // player strip in the cluster's 28px seat reserve, the board 129-698.
-    box(content, 101, 915);
-    box(board, 129, 569);
-
-    matchBoardHeight(side, content);
-    fire(content);
-
-    expect(side.style.getPropertyValue('--xqb-board-dy')).toBe('28px');
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('569px');
-  });
-
-  it('follows the board when it settles after the content column stopped changing', () => {
-    const side = document.createElement('div');
-    const content = document.createElement('section');
-    const board = document.createElement('section');
-    board.className = 'review-board-host';
-    content.append(board);
-    document.body.append(side, content);
-    box(content, 101, 1012);
-    box(board, 129, 666);
-    matchBoardHeight(side, content);
-    fire(content);
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('666px');
-
-    // A window resize passes through an intermediate board size; the last
-    // change can reach the board alone, so the board itself is observed.
-    box(board, 129, 569);
-    fire(board);
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('569px');
-  });
-
-  // #1234: at 900px and under the game list and chat stack under the board,
-  // so there is no band to match; the matcher stands down and clears its
-  // values when the window narrows across the line.
-  it('does not size the column at phone width, and clears it on crossing to one', () => {
-    const listeners: (() => void)[] = [];
-    const media = {
-      matches: false,
-      addEventListener: (_type: string, fn: () => void) => listeners.push(fn),
-      removeEventListener: () => {},
-    };
-    const matchMedia = vi.fn((query: string) => {
-      expect(query).toBe('(min-width: 901px)');
-      return media;
-    });
-    vi.stubGlobal('matchMedia', matchMedia);
-    const side = document.createElement('div');
-    const content = document.createElement('section');
-    const board = document.createElement('section');
-    board.className = 'review-board-host';
-    content.append(board);
-    document.body.append(side, content);
-    box(content, 60, 1400);
-    box(board, 120, 390);
-
-    matchBoardHeight(side, content);
-    fire(content);
-    expect(matchMedia).toHaveBeenCalled();
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('');
-    expect(side.style.getPropertyValue('--xqb-board-dy')).toBe('');
-
-    // Widened past 900px: the band is matched again.
-    media.matches = true;
-    for (const fn of listeners) fn();
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('390px');
-
-    // Narrowed again: cleared.
-    media.matches = false;
-    for (const fn of listeners) fn();
-    expect(side.style.getPropertyValue('--xqb-board-h')).toBe('');
-  });
-});
-
-// #1234: on a phone the game list sits under the board, so a slim line over
-// the board names the event (a link to its round), the round and the state.
-describe('boardEventLine', () => {
-  type RoundData = Parameters<typeof boardEventLine>[0];
-  const data = (status: 'scheduled' | 'live' | 'complete'): RoundData =>
-    ({
-      ...ROUND,
-      boards: ROUND.boards.map((board, i) => (i === 0 ? { ...board, status } : board)),
-    }) as unknown as RoundData;
-  const parts = (line: HTMLElement): string[] =>
-    [...line.children].map((child) => child.textContent ?? '');
-
-  it('links the event to its round and names the round and a live game', () => {
-    const line = boardEventLine(data('live'), 't-r-b1');
-    expect(line.className).toBe('xqb-board-event-line');
-    expect(parts(line)).toEqual(['Test Cup', 'Round 1', 'Live']);
-    expect(line.querySelector('a')?.getAttribute('href')).toBe('/broadcast/xiangqi/t/round/r');
-    expect(line.querySelector('.xqb-board-event-line__state--live')).not.toBeNull();
-  });
-
-  it('says Finished for a finished game and nothing for one not started', () => {
-    expect(parts(boardEventLine(data('complete'), 't-r-b1'))).toEqual([
-      'Test Cup',
-      'Round 1',
-      'Finished',
-    ]);
-    expect(parts(boardEventLine(data('scheduled'), 't-r-b1'))).toEqual(['Test Cup', 'Round 1']);
-  });
-
-  it('shows only on a phone', () => {
-    const css = readFileSync(resolve(__dirname, 'xiangqi-broadcast.css'), 'utf8');
-    expect(css).toMatch(/\n\.xqb-board-event-line \{\s*display: none;/);
-    const phone = css.slice(css.indexOf('@media (max-width: 600px) {\n  .xqb-event-board-open'));
-    expect(phone).toMatch(
-      /^@media \(max-width: 600px\) \{\s*\.xqb-event-board-open \.xqb-board-event-line \{\s*display: flex;/,
-    );
-  });
-
-  it('lets the stacked live board shrink below its nowrap engine lines', () => {
-    // A bare 1fr track floors at min-content, and the engine lines' nowrap PV
-    // text pushed the live board 6px past a 390px phone.
-    const css = readFileSync(resolve(__dirname, 'xiangqi-broadcast.css'), 'utf8');
-    for (const layout of ['.xqb-board-layout', '.xqb-board-layout-with-rail']) {
-      const at = css.indexOf(`  ${layout} {\n    grid-template-columns: minmax(0, 1fr);`);
-      expect(at, layout).toBeGreaterThan(-1);
-      expect(css.lastIndexOf('@media (max-width: 900px) {', at)).toBeGreaterThan(-1);
+      }
+      const block = css.slice(at, end);
+      const ruleAt = block.indexOf(`${selector} {`);
+      if (ruleAt >= 0) return block.slice(ruleAt, block.indexOf('}', ruleAt));
+      from = end;
     }
-    expect(css).not.toMatch(/\.xqb-board-layout(-with-rail)? \{\s*grid-template-columns: 1fr;/);
+  }
+
+  /** Classes and pseudo-classes: the middle number of a selector's
+   *  specificity, for these selectors (no :is/:has/:not). */
+  const classWeight = (selector: string): number =>
+    (selector.match(/\.[\w-]+|:(?!:)[\w-]+/g) ?? []).length;
+
+  it('locks the left rail to the board beside it at the review breakpoint', () => {
+    const reviewGroup = '.review-shell .review-shell__left > .review-rail-group:last-child';
+    expect(ruleIn(reviewCss, '(min-width: 1260px)', reviewGroup)).toMatch(/flex: 1 1 auto;/);
+
+    const list =
+      '.xqb-board-page .review-shell .review-shell__left > .review-rail-group:first-child';
+    expect(ruleIn(broadcastCss, '(min-width: 1260px)', list)).toMatch(
+      /flex: 1 1 0;\s*min-height: 0;/,
+    );
+    const chat =
+      '.xqb-board-page .review-shell .review-shell__left > .review-rail-group--deferred:last-child';
+    expect(ruleIn(broadcastCss, '(min-width: 1260px)', chat)).toMatch(/flex: 0 0 \d+%;/);
+    for (const selector of [list, chat]) {
+      expect(classWeight(selector), selector).toBeGreaterThan(classWeight(reviewGroup));
+    }
+    // The list scrolls inside its share instead of its own viewport cap.
+    expect(
+      ruleIn(broadcastCss, '(min-width: 1260px)', '.xqb-board-page .xqb-board-side .xqb-rail-list'),
+    ).toMatch(/max-height: none;/);
   });
 
-  it("puts the moves in the review page's one-row strip, not a copy of it", () => {
-    const strip = readFileSync(resolve(__dirname, 'review/analysis-phone-bar.css'), 'utf8');
-    const rows = strip.indexOf('flex-direction: row;\n    flex-wrap: nowrap;');
-    const selector = strip.slice(strip.lastIndexOf(':is(', rows), rows);
-    expect(selector).toContain('.has-review-info-sheet .review-shell');
-    expect(selector).toContain('.xqb-event-board-open .review-shell');
+  it('keeps only the headline of the live engine on a phone', () => {
+    // The review's col1 (stacked) layout is everything under 800px.
+    expect(reviewCss).toContain('@media (min-width: 800px) {');
+    const lines = '.xqb-board-page .review-shell .review-rail-main > .xqb-engine .xqb-engine-lines';
+    expect(ruleIn(broadcastCss, '(max-width: 799px)', lines)).toMatch(/display: none;/);
+    // Over the panel's own rule, wherever it lands.
+    expect(classWeight(lines)).toBeGreaterThan(classWeight('.xqb-engine-lines'));
   });
 });

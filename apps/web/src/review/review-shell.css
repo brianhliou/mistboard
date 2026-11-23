@@ -341,11 +341,6 @@
   background: transparent;
   box-shadow: inset 0 -2px 0 var(--site-accent, #237960);
 }
-/* The tallest tab body opened so far (underboard-tabs.ts raiseFloor), so a
-   tab switch does not move the page. */
-.review-underboard-bodies {
-  min-height: var(--review-underboard-floor, 0px);
-}
 .review-underboard-panel__body {
   padding: 10px 2px;
 }
