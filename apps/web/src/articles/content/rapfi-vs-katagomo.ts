@@ -121,15 +121,15 @@ export const FEATURED_LAST = F.moves.at(-1) as string;
 const featuredBoard = (): string => gomokuRulesBoard(featuredGameState());
 
 /** The match study (scripts/variant-lab/gomoku-title-study.ts): a chapter per
- *  game, both engines' win chance graphed under the board. Local study until it
- *  is created on prod; then these ids are swapped for the prod ones. */
+ *  game, both engines' win chance graphed under the board. These are the prod
+ *  study's ids (created 2026-11-23 from the local study, chapter for chapter). */
 export const RAPFI_KATAGOMO_STUDY = {
-  id: 'gVo12Ybf',
+  id: 'h3ea9po1',
   chapters: {
-    featured: 'Yhg41QMH',
-    draw: 'pnDEEhxT',
-    blackWin: 'DXEtwnPn',
-    loss: 'zYUV16pA',
+    featured: 'wM5yRIL8',
+    draw: 'OuvVxTEX',
+    blackWin: 'zqtNEDGk',
+    loss: 'IitljCqP',
   } as Record<string, string>,
 } as const;
 
