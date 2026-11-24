@@ -110,9 +110,9 @@ const CENSUS: Record<string, { calls: number; tagged: number; why: string }> = {
   },
   'variant-tenant/room-chrome.ts': { calls: 1, tagged: 1, why: 'variant room invite link' },
   'xiangqi-broadcast.ts': {
-    calls: 3,
+    calls: 2,
     tagged: 1,
-    why: 'Copy link and Share tagged; Copy embed is iframe code',
+    why: 'Share (share sheet, else the clipboard) tagged; embed code is a row in the review Share tab',
   },
   'account-broadcast-push.ts': { calls: 1, tagged: 0, why: 'a push token, not a link' },
   'data-page.ts': { calls: 1, tagged: 0, why: 'hashes and dataset text' },
