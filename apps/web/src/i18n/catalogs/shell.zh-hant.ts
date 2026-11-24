@@ -132,7 +132,7 @@ export const ZH_HANT_SHELL = {
   'prefs.xqPieceSet.book': '棋書',
   'prefs.xqPieceSet.brush': '毛筆',
   'prefs.xqPieceSet.clerical': '隸書',
-  'prefs.xqPieceSet.2dhanzi': '扁平',
+  'prefs.xqPieceSet.2dhanzi': '黑體',
   'prefs.fogShadingStyle': '迷霧遮罩樣式',
   'prefs.soundSet': '音效',
   'prefs.silent': '靜音',

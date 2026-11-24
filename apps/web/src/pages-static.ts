@@ -721,7 +721,7 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
-    // The six third-party xiangqi piece sets (five from 2026-10-08, Flat from
+    // The six third-party xiangqi piece sets (five from 2026-10-08, Bold from
     // 2026-11-24); sources and licences sit beside the files in
     // public/piece-sets/xiangqi/<id>/README.md. Wood is CC BY 4.0, so its credit
     // names the author and links the licence; so does the Pine board, whose
@@ -732,7 +732,7 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
     linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
     linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
-    linkLine(t('source.pieceSetFlat', {}, locale), PIECE_SET_SOURCE_URLS['2dhanzi']),
+    linkLine(t('source.pieceSetBold', {}, locale), PIECE_SET_SOURCE_URLS['2dhanzi']),
     linkLine(t('source.boardGreen', {}, locale), BOARD_SOURCE_URLS.green),
     pineBoardCreditLine(locale),
     // Chess pieces, sounds and fonts were credited only in public/*/CREDITS.md,

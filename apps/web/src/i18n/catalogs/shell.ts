@@ -152,7 +152,7 @@ export const EN_SHELL = {
   'prefs.xqPieceSet.book': 'Book',
   'prefs.xqPieceSet.brush': 'Brush',
   'prefs.xqPieceSet.clerical': 'Clerical',
-  'prefs.xqPieceSet.2dhanzi': 'Flat',
+  'prefs.xqPieceSet.2dhanzi': 'Bold',
   'prefs.fogShadingStyle': 'Fog shading style',
   'prefs.soundSet': 'Sound set',
   'prefs.silent': 'Silent',

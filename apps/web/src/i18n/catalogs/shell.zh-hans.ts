@@ -132,7 +132,7 @@ export const ZH_HANS_SHELL = {
   'prefs.xqPieceSet.book': '棋书',
   'prefs.xqPieceSet.brush': '毛笔',
   'prefs.xqPieceSet.clerical': '隶书',
-  'prefs.xqPieceSet.2dhanzi': '扁平',
+  'prefs.xqPieceSet.2dhanzi': '黑体',
   'prefs.fogShadingStyle': '迷雾遮罩样式',
   'prefs.soundSet': '音效',
   'prefs.silent': '静音',

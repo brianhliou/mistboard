@@ -352,8 +352,8 @@ export const EN_CONTENT = {
     'Brush pieces: the hnzw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
   'source.pieceSetClerical':
     'Clerical pieces: the lishuw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
-  'source.pieceSetFlat':
-    'Flat pieces: the 2dhanzi set from pychess-variants, by pychess-variants contributors, AGPL-3.0.',
+  'source.pieceSetBold':
+    'Bold pieces: the 2dhanzi set from pychess-variants, by pychess-variants contributors, AGPL-3.0.',
   'source.boardGreen':
     'Green board: the colors of the xiangqic board from pychess-variants, by pychess-variants contributors, AGPL-3.0.',
   'source.boardPine':
@@ -966,7 +966,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.pieceSetBook',
   'source.pieceSetBrush',
   'source.pieceSetClerical',
-  'source.pieceSetFlat',
+  'source.pieceSetBold',
   'source.boardGreen',
   'source.boardPine',
   'source.pikafish',

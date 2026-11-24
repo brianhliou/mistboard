@@ -38,7 +38,7 @@ are also shown on the site's Source code page (`/source`).
 | `xiangqi/book` | Book (glyphs from BabelStone Xiangqi Colour) | Andrew West | SIL OFL 1.1 | [README](./xiangqi/book/README.md), `OFL.txt` |
 | `xiangqi/brush` | Brush (pychess-variants `hnzw`) | gbtami and contributors | AGPL-3.0, modified | [README](./xiangqi/brush/README.md) |
 | `xiangqi/clerical` | Clerical (pychess-variants `lishuw`) | gbtami and contributors | AGPL-3.0, modified | [README](./xiangqi/clerical/README.md) |
-| `xiangqi/2dhanzi` | Flat (pychess-variants `2dhanzi`) | pychess-variants contributors | AGPL-3.0-or-later, modified | [README](./xiangqi/2dhanzi/README.md) |
+| `xiangqi/2dhanzi` | Bold (pychess-variants `2dhanzi`) | pychess-variants contributors | AGPL-3.0-or-later, modified | [README](./xiangqi/2dhanzi/README.md) |
 | `international` | Shogi International (lishogi koma) | CouchTomato87 | CC BY 4.0 | From [lishogi](https://github.com/WandererXII/lishogi/tree/master/public/piece). Not served: dark shogi was retired 2026-09. |
 | `colored` | Shogi Colored (lishogi koma) | CouchTomato87 | CC BY 4.0 | From lishogi, as above. Not served. |
 | `chess` | Shogi Chess (lishogi koma) | peanatsu | CC BY-SA 3.0 | From lishogi, as above. Not served. |

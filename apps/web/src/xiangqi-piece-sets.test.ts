@@ -371,7 +371,7 @@ describe('asset piece sets', () => {
     expect(book).not.toMatch(/red-|black-/);
     expect(book).toContain('fill="#FFD438"');
     expect(book).not.toMatch(/#FF0000|#000000/i);
-    // Flat's faces differ by side, so its banqi back is a plain disc in
+    // Bold's faces differ by side, so its banqi back is a plain disc in
     // neither side's ink (#df4a4a red, #333333 black).
     const flat = xiangqiBanqiBackMarks('2dhanzi') ?? '';
     expect(flat).not.toMatch(/red-|black-|href=/);

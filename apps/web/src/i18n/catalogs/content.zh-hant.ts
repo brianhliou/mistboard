@@ -278,8 +278,8 @@ export const ZH_HANT_CONTENT = {
     '毛筆棋子：pychess-variants 的 hnzw 棋子，作者 gbtami 及貢獻者，AGPL-3.0。',
   'source.pieceSetClerical':
     '隸書棋子：pychess-variants 的 lishuw 棋子，作者 gbtami 及貢獻者，AGPL-3.0。',
-  'source.pieceSetFlat':
-    '扁平棋子：pychess-variants 的 2dhanzi 棋子，作者 pychess-variants 貢獻者，AGPL-3.0。',
+  'source.pieceSetBold':
+    '黑體棋子：pychess-variants 的 2dhanzi 棋子，作者 pychess-variants 貢獻者，AGPL-3.0。',
   'source.boardGreen':
     '淺綠棋盤：取自 pychess-variants 的 xiangqic 棋盤配色，作者 pychess-variants 貢獻者，AGPL-3.0。',
   'source.boardPine':

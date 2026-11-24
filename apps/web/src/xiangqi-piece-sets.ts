@@ -46,7 +46,7 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
   { id: 'book', label: 'Book', labelKey: 'prefs.xqPieceSet.book' },
   { id: 'brush', label: 'Brush', labelKey: 'prefs.xqPieceSet.brush' },
   { id: 'clerical', label: 'Clerical', labelKey: 'prefs.xqPieceSet.clerical' },
-  { id: '2dhanzi', label: 'Flat', labelKey: 'prefs.xqPieceSet.2dhanzi' },
+  { id: '2dhanzi', label: 'Bold', labelKey: 'prefs.xqPieceSet.2dhanzi' },
   { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
 ];
 
@@ -279,7 +279,7 @@ const ASSET_TILE_BACKING: Readonly<Record<AssetXiangqiPieceSet, XiangqiTileBacki
   book: ['#b8463a', '#96322a', '#6e231d'],
   brush: ['#a87556', '#87573c', '#623e2a'],
   clerical: ['#a87556', '#87573c', '#623e2a'],
-  // Flat: a pale disc on both sides, so a warm grey ground below it.
+  // Bold: a pale disc on both sides, so a warm grey ground below it.
   '2dhanzi': ['#a8998a', '#86786a', '#5f554b'],
 };
 

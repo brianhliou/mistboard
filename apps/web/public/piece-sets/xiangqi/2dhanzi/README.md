@@ -1,4 +1,4 @@
-# Flat (`2dhanzi`)
+# Bold (`2dhanzi`)
 
 - Source: https://github.com/gbtami/pychess-variants/tree/5ebec9241a4a344204d63feaaeeee2549bd949ac/static/images/pieces/xiangqi/2dhanzi
   (pychess.org piece set `2dhanzi`, also the default xiangqi set on PlayStrategy)
@@ -8,7 +8,7 @@
   https://github.com/gbtami/pychess-variants/blob/master/LICENSE. The original
   glyph artist is not named there. Mistboard is AGPL-3.0-or-later too; the full
   text is the repository's `LICENSE`.
-- Attribution: "Flat pieces: the 2dhanzi set from pychess-variants
+- Attribution: "Bold pieces: the 2dhanzi set from pychess-variants
   (pychess-variants contributors), AGPL-3.0-or-later."
 - Changes for Mistboard (2026-11-24), as AGPL section 5 asks: root `viewBox`
   set so the disc sits centred in the piece box; files renamed from
