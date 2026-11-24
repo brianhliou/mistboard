@@ -721,14 +721,20 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
-    // The five third-party xiangqi piece sets (2026-10-08); sources and licences
-    // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
-    // CC BY 4.0, so its credit names the author and links the licence.
+    // The six third-party xiangqi piece sets (five from 2026-10-08, Flat from
+    // 2026-11-24); sources and licences sit beside the files in
+    // public/piece-sets/xiangqi/<id>/README.md. Wood is CC BY 4.0, so its credit
+    // names the author and links the licence; so does the Pine board, whose
+    // grain comes from the same author. The Green board takes its colours from
+    // an AGPL pychess-variants board.
     linkLine(t('source.pieceSetLacquer', {}, locale), PIECE_SET_SOURCE_URLS.lacquer),
     woodPieceSetCreditLine(locale),
     linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
     linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
     linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
+    linkLine(t('source.pieceSetFlat', {}, locale), PIECE_SET_SOURCE_URLS['2dhanzi']),
+    linkLine(t('source.boardGreen', {}, locale), BOARD_SOURCE_URLS.green),
+    pineBoardCreditLine(locale),
     // Chess pieces, sounds and fonts were credited only in public/*/CREDITS.md,
     // which nothing links to (2026-10-17).
     linkLine(
@@ -1018,6 +1024,12 @@ export const PIECE_SET_SOURCE_URLS = {
   book: 'https://www.babelstone.co.uk/Fonts/Xiangqi.html',
   brush: `${PYCHESS_XIANGQI_PIECES_URL}/hnzw`,
   clerical: `${PYCHESS_XIANGQI_PIECES_URL}/lishuw`,
+  '2dhanzi': `${PYCHESS_XIANGQI_PIECES_URL}/2dhanzi`,
+} as const;
+
+export const BOARD_SOURCE_URLS = {
+  green: 'https://github.com/gbtami/pychess-variants/blob/master/static/images/board/xiangqic.svg',
+  pine: 'https://github.com/Kadagaden/chess-pieces/blob/master/boards/xiangqi_gmchess_wood.svg',
 } as const;
 
 const CC_BY_4_URL = 'https://creativecommons.org/licenses/by/4.0/';
@@ -1027,6 +1039,17 @@ function woodPieceSetCreditLine(locale: Locale): HTMLSpanElement {
   line.className = 'source-credit-wood';
   line.append(
     linkLine(t('source.pieceSetWood', {}, locale), PIECE_SET_SOURCE_URLS.wood),
+    ' · ',
+    linkLine(t('source.pieceSetWoodLicense', {}, locale), CC_BY_4_URL),
+  );
+  return line;
+}
+
+function pineBoardCreditLine(locale: Locale): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'source-credit-wood';
+  line.append(
+    linkLine(t('source.boardPine', {}, locale), BOARD_SOURCE_URLS.pine),
     ' · ',
     linkLine(t('source.pieceSetWoodLicense', {}, locale), CC_BY_4_URL),
   );

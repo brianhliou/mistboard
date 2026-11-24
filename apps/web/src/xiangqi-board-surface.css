@@ -130,6 +130,19 @@
   pointer-events: none;
 }
 
+/* The art boards (xiangqiSurfaceArt): Pine's frame in the board's own ink. A
+   board that has not re-rendered since the reader picked another colour still
+   hides its art, so the old board never shows through a new fill. */
+.xq-surface .xq-board-art-frame {
+  stroke: var(--xq-live-ink, #1f160a);
+}
+
+:root:not([data-xiangqi-board-color="green"]) .xq-board-art--green,
+:root:not([data-xiangqi-board-color="pine"]) .xq-board-art--pine,
+:root[data-xiangqi-board-theme="jungle"] .xq-board-art {
+  display: none;
+}
+
 /* River text (gear > Board > River text, xiangqiSurfaceRiver). Both captions are
    always drawn and the root data attribute picks which one shows (app-base.css:
    --xq-river-label-display / --xq-river-brand-display). These rules lived in

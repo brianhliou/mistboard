@@ -352,6 +352,12 @@ export const EN_CONTENT = {
     'Brush pieces: the hnzw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
   'source.pieceSetClerical':
     'Clerical pieces: the lishuw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
+  'source.pieceSetFlat':
+    'Flat pieces: the 2dhanzi set from pychess-variants, by pychess-variants contributors, AGPL-3.0.',
+  'source.boardGreen':
+    'Green board: the colors of the xiangqic board from pychess-variants, by pychess-variants contributors, AGPL-3.0.',
+  'source.boardPine':
+    'Pine board: the grain of "xiangqi_gmchess_wood" by Kadagaden, CC BY 4.0. Modified: the grain alone, with Mistboard\'s own lines and frame.',
   'source.pikafish':
     "Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Here it runs on the CC0 Fairy-Stockfish xiangqi net, not Pikafish's own weights.",
   'source.pikafishSite': 'pikafish.com',
@@ -960,6 +966,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.pieceSetBook',
   'source.pieceSetBrush',
   'source.pieceSetClerical',
+  'source.pieceSetFlat',
+  'source.boardGreen',
+  'source.boardPine',
   'source.pikafish',
   'source.pikafishSite',
   'source.pikafishNet',

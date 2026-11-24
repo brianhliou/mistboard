@@ -23,7 +23,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ASSET_TILE_GLYPH_SETS = ['lacquer', 'wood', 'book', 'brush', 'clerical'];
+export const ASSET_TILE_GLYPH_SETS = ['lacquer', 'wood', 'book', 'brush', 'clerical', '2dhanzi'];
 export const ASSET_TILE_GLYPH_COLORS = ['red', 'black'];
 export const ASSET_TILE_GLYPH_ROLES = [
   'general',
@@ -66,6 +66,8 @@ export const ASSET_TILE_RULES = {
   // own inset filter, or bare paths).
   brush: { glyph: (svg) => besideDisc(svg), faceHalf: 0.3 },
   clerical: { glyph: (svg) => besideDisc(svg), faceHalf: 0.3 },
+  // One group: the disc circle, then the character as one path.
+  '2dhanzi': { glyph: (svg) => [...svg.querySelectorAll('path')].slice(-1), faceHalf: 0.28 },
 };
 
 function besideDisc(svg) {

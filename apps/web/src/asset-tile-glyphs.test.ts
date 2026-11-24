@@ -1,4 +1,4 @@
-// The Xiangqi Mahjong tile layers of the five third-party piece sets are
+// The Xiangqi Mahjong tile layers of the six third-party piece sets are
 // derived files (scripts/asset-tile-glyphs.mjs): each set's character alone,
 // and its disc's surface for the tile face. Re-derive every one and compare,
 // so a hand edit or a changed source fails here; then check each layer holds
@@ -32,6 +32,7 @@ const INK: Record<string, Record<string, string>> = {
   book: { red: '#f00', black: '#000' },
   brush: { red: '#f00', black: '#050' },
   clerical: { red: '#ff0101', black: '#050' },
+  '2dhanzi': { red: '#df4a4a', black: '#333' },
 };
 
 const norm = (color: string) => {
@@ -71,7 +72,7 @@ describe('asset tile layers', () => {
       })
       .map(([set, name]) => `${set}/tile/${name}`);
     expect(stale).toEqual([]);
-    expect(tileLayerFiles()).toHaveLength(5 * 2 * 8);
+    expect(tileLayerFiles()).toHaveLength(6 * 2 * 8);
   });
 
   for (const set of ASSET_TILE_GLYPH_SETS) {

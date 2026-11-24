@@ -282,7 +282,7 @@ export function renderJieqiBoardSvg(
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
-      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="jieqi-grid">${xiangqiSurfaceGrid({ ...surface, cornerRadius: BOARD_CORNER_RX }, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       ${river}
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}

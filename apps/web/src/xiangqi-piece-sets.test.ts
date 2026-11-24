@@ -242,6 +242,7 @@ describe('asset piece sets', () => {
     'book',
     'brush',
     'clerical',
+    '2dhanzi',
   ];
   const ROLES = [
     'general',
@@ -261,6 +262,7 @@ describe('asset piece sets', () => {
     book: 1,
     brush: 2,
     clerical: 2,
+    '2dhanzi': 1,
   };
   const publicDir = ['public', 'apps/web/public']
     .map((candidate) => resolve(process.cwd(), candidate))
@@ -274,11 +276,11 @@ describe('asset piece sets', () => {
     return existsSync(`${publicDir}${href.split('?')[0]}`);
   }
 
-  it('offers exactly the five asset sets beside the four built-in ones, and none retired', () => {
+  it('offers exactly the six asset sets beside the four built-in ones, and none retired', () => {
     expect(
       XIANGQI_PIECE_SETS.filter((set) => isAssetPieceSet(set.id)).map((set) => set.id),
     ).toEqual(ASSET_SETS);
-    expect(XIANGQI_PIECE_SETS).toHaveLength(9);
+    expect(XIANGQI_PIECE_SETS).toHaveLength(10);
     for (const set of XIANGQI_PIECE_SETS) {
       expect(RETIRED_XIANGQI_PIECE_SETS.has(set.id)).toBe(false);
       expect(set.labelKey).toBe(`prefs.xqPieceSet.${set.id}`);
@@ -342,6 +344,7 @@ describe('asset piece sets', () => {
   it('gives banqi a back only where both sides share one look', () => {
     expect(xiangqiNeutralBackMarks('lacquer')).toBeNull();
     expect(xiangqiNeutralBackMarks('book')).toBeNull();
+    expect(xiangqiNeutralBackMarks('2dhanzi')).toBeNull();
     expect(xiangqiNeutralBackMarks('international')).toBeNull();
     expect(xiangqiNeutralBackMarks('traditional')).toBeNull();
     for (const set of ['wood', 'brush', 'clerical'] as const) {
@@ -368,6 +371,12 @@ describe('asset piece sets', () => {
     expect(book).not.toMatch(/red-|black-/);
     expect(book).toContain('fill="#FFD438"');
     expect(book).not.toMatch(/#FF0000|#000000/i);
+    // Flat's faces differ by side, so its banqi back is a plain disc in
+    // neither side's ink (#df4a4a red, #333333 black).
+    const flat = xiangqiBanqiBackMarks('2dhanzi') ?? '';
+    expect(flat).not.toMatch(/red-|black-|href=/);
+    expect(flat).toContain('<circle cx="50" cy="50"');
+    expect(flat).not.toMatch(/#df4a4a|#333333/i);
   });
 });
 

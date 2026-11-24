@@ -24,6 +24,14 @@
       "version": "unserved",
       "sha": "af6455e7cc5e3a47"
     },
+    "xiangqi/2dhanzi": {
+      "version": 1,
+      "sha": "9b01b8c904e3b96e"
+    },
+    "xiangqi/2dhanzi/tile": {
+      "version": 1,
+      "sha": "0a287fcd6537e755"
+    },
     "xiangqi/animal-dobutsu": {
       "version": 4,
       "sha": "9714f77f5f5a9315"
@@ -71,6 +79,10 @@
     "xiangqi/wood": {
       "version": 1,
       "sha": "c6cda2c5d4516b89"
+    },
+    "xiangqi/wood/board": {
+      "version": 1,
+      "sha": "2435e9221e360678"
     },
     "xiangqi/wood/tile": {
       "version": 1,

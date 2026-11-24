@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { XiangqiPiece } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { jungleBoardAssetHref, jungleDobutsuPieceHref } from './jungle-art.js';
+import { XIANGQI_WOOD_BOARD_GRAIN_HREF } from './xiangqi-board-surface.js';
 import {
   type AssetXiangqiPieceSet,
   animalTreasureHref,
@@ -84,12 +85,15 @@ const SERVED: Record<string, () => number> = {
   'xiangqi/book': () => assetSetVersion('book'),
   'xiangqi/brush': () => assetSetVersion('brush'),
   'xiangqi/clerical': () => assetSetVersion('clerical'),
+  'xiangqi/2dhanzi': () => assetSetVersion('2dhanzi'),
   // The mahjong tile layers ride their piece set's version (assetTileHref).
   'xiangqi/book/tile': () => assetSetVersion('book'),
   'xiangqi/brush/tile': () => assetSetVersion('brush'),
   'xiangqi/clerical/tile': () => assetSetVersion('clerical'),
+  'xiangqi/2dhanzi/tile': () => assetSetVersion('2dhanzi'),
   'xiangqi/lacquer/tile': () => assetSetVersion('lacquer'),
   'xiangqi/wood/tile': () => assetSetVersion('wood'),
+  'xiangqi/wood/board': () => versionOf(XIANGQI_WOOD_BOARD_GRAIN_HREF),
   'jungle/dobutsu': () => versionOf(jungleDobutsuPieceHref('red', 'elephant')),
   'jungle/dobutsu/board': () => versionOf(jungleBoardAssetHref('water')),
 };

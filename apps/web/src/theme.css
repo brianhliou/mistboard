@@ -1316,6 +1316,14 @@
   gap: 4px;
 }
 
+/* The boards drawn after a source board (Green, Pine; 2026-11-24) sit on a
+   second row, from the left, so the row above keeps its spacing. */
+.xq-board-color-row--art {
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+}
+
 .xq-board-color-swatch {
   position: relative;
   flex: none;
@@ -1344,6 +1352,26 @@
   box-shadow:
     0 0 0 2px var(--site-panel, #fff),
     0 0 0 4px var(--site-accent);
+}
+
+/* Each art board's swatch is a crop of the board: Green's halves split by its
+   blue river, inside its tan margin; Pine its own grain on its fill. */
+.xq-board-color-swatch[data-xq-board-color="green"] {
+  background: linear-gradient(to bottom, #c6e9af 0 38%, #afdde9 38% 62%, #c6e9af 62% 100%);
+  box-shadow: inset 0 0 0 3px #e9ddaf;
+}
+
+.xq-board-color-swatch[data-xq-board-color="green"].selected {
+  box-shadow:
+    inset 0 0 0 3px #e9ddaf,
+    0 0 0 2px var(--site-panel, #fff),
+    0 0 0 4px var(--site-accent);
+}
+
+.xq-board-color-swatch[data-xq-board-color="pine"] {
+  background:
+    url("/piece-sets/xiangqi/wood/board/grain.svg?v=1") center / 300% 300%,
+    #e1be86;
 }
 
 .xq-board-color-swatch[data-xq-board-color="grain"] {

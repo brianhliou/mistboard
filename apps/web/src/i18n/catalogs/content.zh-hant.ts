@@ -278,6 +278,12 @@ export const ZH_HANT_CONTENT = {
     '毛筆棋子：pychess-variants 的 hnzw 棋子，作者 gbtami 及貢獻者，AGPL-3.0。',
   'source.pieceSetClerical':
     '隸書棋子：pychess-variants 的 lishuw 棋子，作者 gbtami 及貢獻者，AGPL-3.0。',
+  'source.pieceSetFlat':
+    '扁平棋子：pychess-variants 的 2dhanzi 棋子，作者 pychess-variants 貢獻者，AGPL-3.0。',
+  'source.boardGreen':
+    '淺綠棋盤：取自 pychess-variants 的 xiangqic 棋盤配色，作者 pychess-variants 貢獻者，AGPL-3.0。',
+  'source.boardPine':
+    '松木棋盤：Kadagaden 的「xiangqi_gmchess_wood」木紋，CC BY 4.0。已修改：僅保留木紋，線條和邊框由 Mistboard 繪製。',
   'source.pikafish':
     '皮卡魚（Pikafish），作者皮卡魚開發團隊：本站象棋最高等級的皮卡魚機器人，也是象棋對局、研習和直播分析以及瀏覽器內分析棋盤所用的引擎，GPL-3.0。本站使用 CC0 授權的 Fairy-Stockfish 象棋神經網路，而非皮卡魚官方權重。',
   'source.pikafishSite': 'pikafish.com',
