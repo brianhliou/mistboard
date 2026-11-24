@@ -2074,7 +2074,7 @@ function renderWatchPlayerRows(
 }
 
 // Each seat's running score at the ply on the main board (Fanfanqi's HP, Three
-// Kingdoms banqi's points), just after the name in the rail row; the second mover
+// Kingdoms banqi's points), after the name, bot badge and rating in the rail row; the second mover
 // is on top, as in renderWatchPlayerRows. Each pass drops the last ply's score
 // first, so a scrub, a game switch or a variant with no score never keeps a stale
 // one. Only the main board's handle comes here; the queue previews never do.
@@ -2095,8 +2095,13 @@ export function syncWatchSeatScores(
     const slot = document.createElement('span');
     slot.className = 'watch-player-score';
     slot.append(score);
-    const name = row.querySelector(':scope > .clock-name');
-    if (name) name.after(slot);
+    // After the whole identity (name, bot badge, rating), so the badge stays
+    // beside the name it describes.
+    const anchor =
+      row.querySelector(':scope > .watch-player-rating') ??
+      row.querySelector(':scope > .watch-player-bot') ??
+      row.querySelector(':scope > .clock-name');
+    if (anchor) anchor.after(slot);
     else row.append(slot);
   }
 }
