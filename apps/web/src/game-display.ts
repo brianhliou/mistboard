@@ -328,6 +328,18 @@ export function seatNameForGame(
   return botId ? botNameForGame(botId, branded, gameSpecId) : branded;
 }
 
+/** A bot's name with its rung in the visitor's language: the engine's name
+ *  stays as it is and only "Level N" is translated, with the term the bot pages
+ *  publish (bots.levelName): "Pikafish Level 3" reads "Pikafish 第 3 級" under
+ *  Traditional Chinese. A name without a rung comes back unchanged. Call it only
+ *  on a seat already known to be a bot, so no account name is rewritten, and
+ *  after any English-keyed shortening (cardSeatName). */
+export function localizedBotName(name: string, locale?: Locale): string {
+  const match = /^(.*\S)\s+[Ll]evel\s+(\d+)$/.exec(name);
+  if (!match) return name;
+  return `${match[1]} ${t('bots.levelName', { level: Number(match[2]) }, locale)}`;
+}
+
 /** A live payload's seat name as a page should show it. The finished-game feeds
  *  reach the same result through displayParticipant; live frames carry a bare
  *  name, so they brand here instead. With the game, Misty takes its name. */

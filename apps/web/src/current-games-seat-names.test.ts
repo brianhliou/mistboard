@@ -2,12 +2,14 @@
 // card (2026-10-21): the seat line has about 130px beside the BOT tag and the
 // clock. Just finished cards call the engine FSF and keep the full name in the
 // tooltip; Playing now cards show the whole name, wrapping (2026-11-12).
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildFinishedTile, buildSeatRow } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
 import { cardSeatName } from './current-games-model.js';
 import { FLAIR_KEYS } from './flair.js';
-import type { FeaturedGame, GameParticipant } from './game-display.js';
+import { type FeaturedGame, type GameParticipant, localizedBotName } from './game-display.js';
+import { hasAppTranslation } from './i18n/catalog.js';
+import { SUPPORTED_LOCALES } from './i18n/locale.js';
 
 function player(name: string, isEngine: boolean): CurrentGamePlayer {
   return { color: 'black', name, handle: null, isEngine };
@@ -127,5 +129,102 @@ describe('/games seat names', () => {
     );
     expect(name?.textContent).toBe('Misty Level 7');
     expect(name?.title).toBe(fullName);
+  });
+});
+
+// A bot seat read "Pikafish Level 3" beside a translated BOT tag on a /games
+// card under Traditional Chinese. The engine's name stays in Latin letters;
+// "Level N" takes the term the bot pages publish (bots.levelName).
+describe('/games bot levels per locale', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function useLocale(locale: string): void {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'mistboard.locale' ? locale : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+  }
+
+  // Keyed by every served locale; a new locale without a row fails here
+  // instead of passing on the English fallback.
+  const EXPECTED: Record<string, { live: string; finished: string; fullFsf: string }> = {
+    en: { live: 'Pikafish Level 3', finished: 'FSF Level 3', fullFsf: 'Fairy-Stockfish Level 3' },
+    'zh-Hans': {
+      live: 'Pikafish 第 3 级',
+      finished: 'FSF 第 3 级',
+      fullFsf: 'Fairy-Stockfish 第 3 级',
+    },
+    'zh-Hant': {
+      live: 'Pikafish 第 3 級',
+      finished: 'FSF 第 3 級',
+      fullFsf: 'Fairy-Stockfish 第 3 級',
+    },
+  };
+  const ENGLISH_LEVEL = /\b[Ll]evel\b/;
+
+  it('has an expectation for every served locale', () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual([...SUPPORTED_LOCALES].sort());
+  });
+
+  it.each(SUPPORTED_LOCALES)('%s: a live bot seat names its level in the locale', (locale) => {
+    const row = EXPECTED[locale];
+    if (!row) throw new Error(`no expected bot name for locale ${locale}`);
+    useLocale(locale);
+    const seat = buildSeatRow(player('Pikafish Level 3', true), {}, 'black');
+    const name = seat.querySelector<HTMLElement>('.current-game-seat-name');
+    expect(name?.textContent).toBe(row.live);
+    expect(name?.title).toBe(row.live);
+    if (locale !== 'en') {
+      expect(name?.textContent).not.toMatch(ENGLISH_LEVEL);
+      expect(hasAppTranslation(locale, 'bots.levelName')).toBe(true);
+    }
+  });
+
+  it.each(SUPPORTED_LOCALES)('%s: a finished bot seat names its level in the locale', (locale) => {
+    const row = EXPECTED[locale];
+    if (!row) throw new Error(`no expected bot name for locale ${locale}`);
+    useLocale(locale);
+    const tile = buildFinishedTile(
+      finishedGame([
+        participant('red', 'Ann'),
+        { ...participant('black', 'Fairy-Stockfish Level 3'), subjectType: 'bot' },
+      ]),
+    );
+    const seat = tile.querySelector<HTMLElement>('.current-game-finished-seat[data-seat="second"]');
+    expect(seat?.querySelector('.current-game-finished-seat-name')?.textContent).toBe(row.finished);
+    expect(seat?.title).toBe(row.fullFsf);
+  });
+
+  it('never renames a person, under any locale', () => {
+    useLocale('zh-Hant');
+    const seat = buildSeatRow(player('Pikafish Level 3', false), {}, 'black');
+    expect(seat.querySelector('.current-game-seat-name')?.textContent).toBe('Pikafish Level 3');
+    const tile = buildFinishedTile(
+      finishedGame([participant('red', 'Ann'), participant('black', 'Ann Level 3')]),
+    );
+    expect(
+      tile.querySelector('.current-game-finished-seat[data-seat="second"]')?.textContent,
+    ).toContain('Ann Level 3');
+  });
+
+  it('the English-level check catches the name seen on /games (planted)', () => {
+    expect('Pikafish Level 3').toMatch(ENGLISH_LEVEL);
+    expect('Pikafish 第 3 級').not.toMatch(ENGLISH_LEVEL);
+  });
+});
+
+describe('localizedBotName', () => {
+  it('translates only the rung and keeps the engine name', () => {
+    expect(localizedBotName('Pikafish Level 3', 'zh-Hant')).toBe('Pikafish 第 3 級');
+    expect(localizedBotName('Misty Level 7', 'zh-Hans')).toBe('Misty 第 7 级');
+    expect(localizedBotName('Rapfi Level 12', 'zh-Hans')).toBe('Rapfi 第 12 级');
+    expect(localizedBotName('Misty Jungle level 3', 'en')).toBe('Misty Jungle Level 3');
+  });
+
+  it('leaves a name without a rung alone', () => {
+    for (const name of ['AB-JChess', 'Fairy-Stockfish', 'Misty', 'Level 3', 'jqe']) {
+      expect(localizedBotName(name, 'zh-Hant')).toBe(name);
+    }
   });
 });
