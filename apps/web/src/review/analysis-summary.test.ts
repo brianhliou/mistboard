@@ -1,6 +1,8 @@
 // The judgment counts are controls, not labels: hover lights the plies on the
 // chart, click jumps to the next one. Zero rows stay inert, and the Learn
 // button only renders when the surface offers retro mode.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createAnalysisSummary } from './analysis-summary.js';
 import type { GameAnalysis } from './game-analysis.js';
@@ -75,5 +77,40 @@ describe('analysis summary judgment rows', () => {
     expect(button.nextElementSibling?.className).toBe('analysis-summary__player');
     button.click();
     expect(onLearn).toHaveBeenCalledTimes(1);
+  });
+});
+
+// #1234: on a touch screen each count row is 40px tall (the #576 floor), and
+// the accuracy column beside it kept its 16px text rows, so Accuracy and the
+// three phases bunched at the top of a column twice their height and no row
+// sat level with its neighbour. Both columns take the same 40px rows now.
+describe('analysis summary rows on a touch screen', () => {
+  const css = readFileSync(resolve(__dirname, 'analysis-summary.css'), 'utf8');
+  const coarse = (() => {
+    const at = css.indexOf('@media (pointer: coarse)');
+    const end = css.indexOf('\n}', at);
+    return at < 0 ? '' : css.slice(at, end);
+  })();
+  const ruleIn = (block: string, selector: string): string => {
+    const at = block.indexOf(`${selector} {`);
+    return at < 0 ? '' : block.slice(at, block.indexOf('}', at));
+  };
+
+  it('pairs every count row with an accuracy row of the same height', () => {
+    const player = createAnalysisSummary(ANALYSIS).querySelector('.analysis-summary__player')!;
+    // Inaccuracies, Mistakes, Blunders and ACPL, each its own row box, beside
+    // the accuracy grid (Accuracy, then a row per phase the game reached).
+    const stats = player.querySelectorAll('.analysis-summary__stats > .analysis-summary__stat');
+    expect(stats.length).toBe(4);
+    expect(
+      player.querySelector('.analysis-summary__phases > .analysis-summary__phase'),
+    ).not.toBeNull();
+    // The phase rows are grid cells (display: contents), so the grid's own
+    // row height is the one that has to match the count rows' floor.
+    expect(ruleIn(coarse, '.analysis-summary__stat')).toMatch(/min-height:\s*40px/);
+    expect(ruleIn(coarse, '.analysis-summary__phases')).toMatch(
+      /grid-auto-rows:\s*minmax\(40px,\s*auto\)/,
+    );
+    expect(ruleIn(coarse, '.analysis-summary__phases')).toMatch(/align-items:\s*center/);
   });
 });

@@ -29,7 +29,8 @@ const EDGE_INSET = 0.6;
 
 /** Han, kana and hangul: scripts that stand upright in vertical writing. */
 const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
-/** A one-line phase label's 4px left margin plus 2px clear of the next divider. */
+/** A phase label's 4px left margin plus 2px clear of the next divider (a
+ *  one-line label) or the plot's right edge (a rotated one). */
 const PHASE_LABEL_INSET = 6;
 
 /** Unique clip-path ids per mounted chart (re-mounts must not collide). */
@@ -222,9 +223,12 @@ export function createAdvantageChart(
     // Chinese stands upright in vertical-rl and stacks one character per line
     // (開 over 局), so a CJK label is set horizontally on one line instead. A
     // horizontal label can be wider than its phase's span; it is hidden then
-    // (fitPhaseLabels), never wrapped. The rotated English labels are unchanged.
+    // (fitPhaseLabels), never wrapped. A rotated English label is a thin
+    // column, so it may cross the next divider, but never the plot's right
+    // edge: an endgame that starts a few plies from the end would put its
+    // label past the chart and widen the page (#1233), so it is hidden then.
     const oneLine = marks.some((mark) => CJK.test(mark.label));
-    const lineLabels: { label: HTMLElement; from: number; to: number }[] = [];
+    const fitted: { label: HTMLElement; from: number; to: number }[] = [];
     for (const [i, mark] of marks.entries()) {
       if (mark.ply > 0) {
         axis.append(
@@ -241,23 +245,26 @@ export function createAdvantageChart(
       label.className = 'advantage-chart__phase-label';
       label.style.left = `${((mark.ply / maxPly) * 100).toFixed(2)}%`;
       label.textContent = mark.label;
-      if (oneLine) {
-        label.classList.add('advantage-chart__phase-label--line');
-        lineLabels.push({
-          label,
-          from: mark.ply / maxPly,
-          to: (marks[i + 1]?.ply ?? maxPly) / maxPly,
-        });
-      }
+      if (oneLine) label.classList.add('advantage-chart__phase-label--line');
+      fitted.push({
+        label,
+        from: mark.ply / maxPly,
+        // A one-line label must fit its own phase; a rotated one only the plot.
+        to: oneLine ? (marks[i + 1]?.ply ?? maxPly) / maxPly : 1,
+      });
       plot.append(label);
     }
-    if (lineLabels.length > 0 && typeof ResizeObserver === 'function') {
+    if (typeof ResizeObserver === 'function') {
+      // display: none, not visibility: hidden: a hidden box past the edge
+      // still counts toward the page's scroll width.
       const fitPhaseLabels = (): void => {
         const width = plot.getBoundingClientRect().width;
         if (width === 0) return; // not laid out yet (offscreen, a test)
-        for (const { label, from, to } of lineLabels) {
-          const need = label.getBoundingClientRect().width + PHASE_LABEL_INSET;
-          label.style.visibility = need <= (to - from) * width ? '' : 'hidden';
+        for (const { label } of fitted) label.style.display = '';
+        const needs = fitted.map(({ label }) => label.getBoundingClientRect().width);
+        for (const [i, { label, from, to }] of fitted.entries()) {
+          const need = (needs[i] ?? 0) + PHASE_LABEL_INSET;
+          label.style.display = need <= (to - from) * width ? '' : 'none';
         }
       };
       new ResizeObserver(fitPhaseLabels).observe(plot);

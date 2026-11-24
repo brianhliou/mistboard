@@ -412,6 +412,16 @@
   margin: 0;
   color: var(--site-fg, inherit);
 }
+/* A link in a value (a broadcast's source page) wears the text colour, not
+ * the browser's default blue. */
+.review-provenance dd a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.review-provenance dd a:hover {
+  color: var(--site-heading);
+}
 
 /* Move times: per-ply bars, colored by side, mirrored about a centre line (the
    first seat's up, the second seat's down), as lichess draws them. */

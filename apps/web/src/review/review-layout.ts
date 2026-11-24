@@ -160,6 +160,10 @@ export type ReviewScaffoldConfig = SizingInput & {
   metaCard?: HTMLElement;
   underboard?: HTMLElement;
   enginePanel?: HTMLElement;
+  /** A caller's panel at the top of the moves box, above the engine panel: a
+   *  broadcast's relay engine lines (one search on the server, the same for
+   *  every viewer), where lichess keeps its ceval. */
+  railTop?: HTMLElement;
   moves: HTMLElement;
   moveComment?: HTMLElement;
   /** Study annotation controls (glyph picker + comment editor), below the move
@@ -311,9 +315,13 @@ export function createReviewScaffold(
   // pocket] (lichess crazyhouse), and the controls sit below that box.
   const hasPocketBox = Boolean(materialTop || materialBottom);
   railMain.append(
-    ...[config.enginePanel, config.moves, config.moveComment, config.annotations].filter(
-      (el): el is HTMLElement => el != null,
-    ),
+    ...[
+      config.railTop,
+      config.enginePanel,
+      config.moves,
+      config.moveComment,
+      config.annotations,
+    ].filter((el): el is HTMLElement => el != null),
   );
   // The rail panel (opening explorer) is the bottom section of the moves box: a
   // wrapper holds railMain and the panel, keeps the box's board-height footprint

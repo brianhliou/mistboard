@@ -75,10 +75,18 @@
 .analysis-summary__stat--live {
   cursor: pointer;
 }
-/* Touch floor (#576): each row jumps to the next such move. */
+/* Touch floor (#576): each row jumps to the next such move. The accuracy
+   column takes the same 40px rows, so its four rows (Accuracy, then the three
+   phases) sit level with the four counts beside them instead of bunching at
+   the top of a column twice their height (#1234). */
 @media (pointer: coarse) {
   .analysis-summary__stat {
     min-height: 40px;
+    align-items: center;
+  }
+
+  .analysis-summary__phases {
+    grid-auto-rows: minmax(40px, auto);
     align-items: center;
   }
 

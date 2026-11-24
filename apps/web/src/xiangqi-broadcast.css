@@ -1230,6 +1230,85 @@
   background: transparent;
 }
 
+/* An open board, live or finished (#1234), is the game review page's shell:
+   the game card over the round's game list in the left rail (the review's
+   actions slot, .xqb-board-side), the event's chat under them, the board, and
+   the moves with the relay's engine lines on the right. On a phone the list
+   is in the Game info sheet and the chat in the Chat sheet, as on a review.
+   Each rule carries the page class over the review rule it overrides
+   (review-shell.css), so it wins in either bundle order. */
+.xqb-board-page .review-rail-group > .review-actions--rail:has(> .xqb-board-side) {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+
+.xqb-board-page .xqb-board-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The list keeps the card it wears beside the boards, under the game card. */
+.xqb-board-page .xqb-board-side .xqb-side-rail {
+  border: 1px solid var(--site-border-soft);
+  padding: 12px 0 12px 12px;
+  background: var(--site-panel);
+}
+
+.xqb-board-page .xqb-board-side > .xqb-rights-note {
+  flex: none;
+  margin: 0;
+}
+
+/* Beside the board the left rail ends on the board's bottom line (the
+   review's col3 lock): the list takes what the game card and the chat leave
+   and scrolls inside it, and the chat keeps a share of the column, so neither
+   takes size from the board. Under 1260px the review stacks the rail under
+   the board (col2) and the list keeps its own cap. */
+@media (min-width: 1260px) {
+  .xqb-board-page .review-shell .review-shell__left > .review-rail-group:first-child {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .xqb-board-page .review-shell .review-shell__left > .review-rail-group--deferred:last-child {
+    flex: 0 0 32%;
+    min-height: 180px;
+  }
+
+  .xqb-board-page .review-rail-group > .review-actions--rail:has(> .xqb-board-side),
+  .xqb-board-page .xqb-board-side,
+  .xqb-board-page .xqb-board-side .xqb-side-rail {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .xqb-board-page .xqb-board-side .xqb-rail-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .xqb-board-page .review-rail-group--deferred > .xqb-event-chat {
+    flex: 1 1 auto;
+  }
+}
+
+/* A phone keeps the relay's headline eval over the move strip; its lines
+   would push the board off the screen. */
+@media (max-width: 799px) {
+  .xqb-board-page .review-shell .review-rail-main > .xqb-engine .xqb-engine-lines {
+    display: none;
+  }
+
+  .xqb-board-page .review-shell .review-rail-main > .xqb-engine .xqb-engine-head {
+    border-bottom: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail {
     grid-template-columns: 1fr;
@@ -1795,26 +1874,6 @@
   min-height: 0;
 }
 
-/* An open board: the review page's alignment. The board, the moves and the
-   left column start on one line, the player strip above the board in the
-   layout's top padding rather than inside the board's column, and the left
-   column scrolls with the board and ends where it ends (matchBoardHeight).
-   One column keeps the embedded shell's own strip space. */
-@media (min-width: 901px) {
-  .xqb-event-board-open .xqb-event-layout-with-rail {
-    padding-top: 26px;
-  }
-
-  .xqb-event-board-open .xqb-event-layout-with-rail .review-shell--embedded {
-    padding-top: 0;
-  }
-
-  .xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side {
-    position: static;
-    height: var(--xqb-board-h, calc(100vh - 160px));
-  }
-}
-
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail .xqb-event-side {
     position: static;
@@ -2145,21 +2204,21 @@
   padding-right: 0;
 }
 
-.xqb-event-side .xqb-rail-list {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list {
   padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--site-text) 28%, transparent) transparent;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar {
   width: 6px;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar-track {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.xqb-event-side .xqb-rail-list::-webkit-scrollbar-thumb {
+:is(.xqb-event-side, .xqb-board-side) .xqb-rail-list::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: color-mix(in srgb, var(--site-text) 28%, transparent);
 }

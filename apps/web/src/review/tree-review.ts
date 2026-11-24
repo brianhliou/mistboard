@@ -488,6 +488,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   details?: HTMLElement;
   /** Lichess-style game meta card; replaces the plain title/summary card. */
   metaCard?: HTMLElement;
+  /** A panel at the top of the moves box (review-layout.ts `railTop`): a live
+   *  broadcast's relay engine lines. */
+  railTop?: HTMLElement;
   /** Canonical moves in order. Any illegal-from-here move truncates the mainline to
    *  the legal prefix (a notice is surfaced). Empty = a fresh board at the start.
    *  Ignored when `initialTree` is set. */
@@ -2075,6 +2078,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     underboardOverflows: true,
     phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar) || Boolean(studyNote),
     enginePanel: enginePanel?.el,
+    railTop: config.railTop,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
     railBelow: explorerBelowRail ? config.explorer?.el : undefined,

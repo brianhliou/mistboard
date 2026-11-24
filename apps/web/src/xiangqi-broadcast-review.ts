@@ -1,9 +1,9 @@
 // A finished broadcast board on the site's review surface: the same shell an
 // archive game gets (engine, advantage chart, the reader's notation, share and
 // export, one-click study), with the round's pairings in the left rail so the
-// reader can move between boards without leaving. The live board keeps its
-// own streaming replay in xiangqi-broadcast.ts; this is what it becomes once
-// the result is in.
+// reader can move between boards without leaving. A live board is the same
+// shell (#1234), remounted as moves arrive, so the page keeps its shape when
+// the result comes in.
 
 import type {
   XiangqiBroadcastPlayerTag,
@@ -80,19 +80,29 @@ export function mountBroadcastBoardReview(
   root: HTMLElement,
   data: BroadcastReviewInput,
   opts: {
+    /** The left rail's second group (the review's chat slot): the event's
+     *  chat. On a phone it is the Chat sheet. */
     rail?: HTMLElement | null;
+    /** Under the game card in the left rail (the review's actions slot): the
+     *  round's game list. On a phone it is lent to the Game info sheet. */
+    side?: HTMLElement | null;
     context?: BroadcastReviewInput['context'];
-    /** Board and moves only, in the event page's content column: the event
-     *  header and game list around it already name the event and the result. */
+    /** Board and moves only, in another page's column: the page around it
+     *  already names the event and the result. */
     embedded?: boolean;
+    /** A game still being played (#1234): the same shell, with the state
+     *  "Live" where the result goes, no stored analysis to fetch, and the
+     *  relay's engine panel at the top of the moves box. */
+    live?: { railTop?: HTMLElement | null; onPlyChange?(ply: number): void } | null;
   } = {},
 ): { destroy(): void } {
   const context = opts.context ?? data.context ?? null;
+  const live = opts.live ?? null;
   const moves = [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move);
   const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
   const red = playerLabel(data.board.red);
   const black = playerLabel(data.board.black);
-  const result = resultOf(data.board.result);
+  const result = live ? { score: '*', label: t('broadcast.live') } : resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
   const roundName = context ? broadcastRoundName(context.round) : null;
   const playedOn = context ? formatEventDateTime(gameDate(data.board, context)) : null;
@@ -146,6 +156,9 @@ export function mountBroadcastBoardReview(
     boardAriaLabel: t('broadcast.boardAriaLabel'),
     ...(opts.embedded ? {} : { metaCard: metaCard.el }),
     ...(opts.rail && !opts.embedded ? { details: opts.rail } : {}),
+    ...(opts.side && !opts.embedded ? { actions: opts.side } : {}),
+    ...(live?.railTop ? { railTop: live.railTop } : {}),
+    ...(live?.onPlyChange ? { onPlyChange: live.onPlyChange } : {}),
     provenance: provenance(data, context),
     moves,
     record: true,
@@ -153,7 +166,8 @@ export function mountBroadcastBoardReview(
     seatLabels: true,
     playerProfiles: { red: profileFor(slugs?.red), black: profileFor(slugs?.black) },
     seatDetails: { red: teamOf(data.board.red), black: teamOf(data.board.black) },
-    result,
+    // A game in progress has no result for the strips to stamp.
+    ...(live ? {} : { result }),
     // A link can name a move (?ply=34), for a creator's video description.
     urlPly: true,
     shareExtra: [
@@ -178,9 +192,11 @@ export function mountBroadcastBoardReview(
     // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and
     // the move marks already there, as a site game's does. Until the sweep
     // reaches a game, the button runs the same sweep in the reader's browser.
-    analysis: broadcastAnalysisSource(data.board.id, replay),
+    // A live game is analysed once it ends; until then the relay's engine
+    // panel reads the position at the head.
+    analysis: live ? null : broadcastAnalysisSource(data.board.id, replay),
   });
-  if (moves.length === 0) markNoRecord(root);
+  if (moves.length === 0 && !live) markNoRecord(root);
   return review;
 }
 
