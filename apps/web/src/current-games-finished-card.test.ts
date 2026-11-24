@@ -2,6 +2,7 @@
 // hands (never the misty tile), the board box takes its board's own ratio so
 // it runs edge to edge, the winner's name
 // reads first, and the finish time sits after the result in the bottom row.
+import { readFileSync } from 'node:fs';
 import { XIANGQI_MAHJONG_SPEC_ID, XMJ_SEATS, type XmjTile } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildFinishedTile } from './current-games.js';
@@ -68,7 +69,31 @@ describe('buildFinishedTile', () => {
       );
     expect(aspect('xiangqi')).toBeCloseTo(552 / 612, 3);
     expect(aspect('banqi')).toBeCloseTo(552 / 612, 3);
+    // FFQ banqi's 4x8 board draws as the same strip; it was 0.5 before mount.
+    expect(aspect('ffq-banqi')).toBeCloseTo(552 / 612, 3);
     expect(aspect('chess')).toBe(1);
+  });
+
+  it('is a seat, the board, a seat and one result line, and nothing else', () => {
+    const tile = buildFinishedTile(finishedGame({}));
+    expect([...tile.children].map((el) => el.className)).toEqual([
+      'current-game-finished-seat',
+      'current-game-board is-loading',
+      'current-game-finished-seat',
+      'current-game-finished-line',
+    ]);
+  });
+
+  // A card stretched to a taller neighbour's height used to push its result
+  // line down and leave a blank band above it.
+  it('sizes each card to its own parts, never to its row', () => {
+    const css = readFileSync('src/current-games.css', 'utf8');
+    const rule = (selector: string) =>
+      css.match(new RegExp(`(?:^|\\n)${selector.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ??
+      '';
+    expect(rule('.current-games-finished-grid')).toMatch(/align-items:\s*start/);
+    expect(rule('.current-game-finished-line')).not.toMatch(/margin-top:\s*auto/);
+    expect(rule('.current-game-finished-line')).toMatch(/padding/);
   });
 
   it('keeps a banqi card one cell, the same size as the rest', () => {

@@ -54,8 +54,11 @@ describe('correspondence: your open seeks', () => {
     expect(card?.closest('.current-games-grid')).not.toBeNull();
     expect(card?.querySelector('.current-game-board')).not.toBeNull();
     // The section heading already says "Waiting for an opponent"; the card does
-    // not repeat it (#1058).
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe('Open seek');
+    // not repeat it (#1058). Cancel takes the empty seat, and the meta line
+    // says what kind of seek it is.
+    expect(card?.querySelector('.is-empty-seat')).toBeNull();
+    expect(card?.querySelector('.current-game-seek-slot button')?.textContent).toBe('Cancel');
+    expect(card?.querySelector('.current-game-line')?.textContent).toMatch(/^Open seek · Jieqi · /);
     expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
     // A public seek has no page of its own, so no card-wide link to cover Cancel.
     expect(card?.querySelector('a.current-game-open')).toBeNull();
@@ -79,8 +82,8 @@ describe('correspondence: your open seeks', () => {
     const host = document.createElement('section');
     await renderChallenges(host);
     const card = host.querySelector<HTMLElement>('[data-seek-id="seek-1"]');
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
-      'Link challenge',
+    expect(card?.querySelector('.current-game-line')?.textContent).toMatch(
+      /^Link challenge · Jieqi · /,
     );
     expect(card?.querySelector('a.current-game-open')?.getAttribute('href')).toBe(
       '/challenge/seek-1',

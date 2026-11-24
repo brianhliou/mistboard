@@ -209,6 +209,9 @@ const XIANGQI_BOARD_ASPECT = 552 / 612;
 const BOARD_ASPECT: Readonly<Record<string, number>> = {
   'xiangqi-9x10': XIANGQI_BOARD_ASPECT,
   'banqi-8x4': 568 / 312,
+  // FFQ banqi is a 4x8 board drawn as the same wide strip; its files-over-ranks
+  // guess (0.5) made a tall box that shrank by half once the board mounted.
+  'banqi-4x8': 568 / 312,
   'jungle-7x9': 336 / 432,
   'jungle-flip-4x4': 1,
   'chess-8x8': 1,

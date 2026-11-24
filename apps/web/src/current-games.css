@@ -414,29 +414,8 @@
   border-top: 3px solid var(--current-games-kind);
 }
 
-.current-game-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--current-games-kind, var(--site-muted)) 16%, transparent);
-  color: var(--current-games-kind, var(--site-muted));
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
-.current-game-card[data-kind="live"] .current-game-kind::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* An open seek: the empty seat is a dashed slot waiting for its player. */
+/* An open seek with no controls for you (your own, on /games): the empty seat
+   is a dashed slot waiting for its player. */
 .current-game-seat.is-empty-seat {
   justify-content: center;
   border: 1px dashed color-mix(in srgb, var(--current-games-kind-seek) 55%, var(--site-border));
@@ -456,20 +435,45 @@
   height: 100%;
 }
 
-/* A seek card's buttons get the bottom row to themselves, full width like an
-   in-progress card's Play, so the seat row above keeps the whole name. */
-.current-game-seek-actions {
-  display: flex;
-  min-width: 0;
+/* A seek card's controls take the seat still to be filled (seek-card.ts), full
+   width, so the card has no button row of its own and the poster's seat keeps
+   the whole name. The specificity outranks .correspondence-grid's phone seat
+   rule (wrap, no min-height) whatever order the stylesheets bundle in. */
+.current-game-card.is-seek > .current-game-seat.current-game-seek-slot {
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-height: 40px;
 }
 
-/* Two classes, so it beats .correspondence-ghost's flex: none whatever order
-   the stylesheets bundle in. */
-.current-game-seek-actions > .current-game-seek-action {
+/* Above the overlay link, and at least 40px tall: the tap-target floor
+   (scripts/lib/mobile-audit-rules.mjs). Three classes, so it beats
+   .correspondence-ghost's flex: none and 30-34px heights. */
+.current-game-card .current-game-seek-slot > .current-game-seek-action {
   position: relative;
   z-index: 2;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 40px;
+}
+
+/* A pair (Copy link and Cancel, Accept and Decline) splits the row. */
+.current-game-card .current-game-seek-slot .correspondence-ghost {
+  min-height: 40px;
+}
+
+/* One quiet line under the board, as on a game card (cardMetaText); it wraps
+   where the card has room for it to (/correspondence) and is one line with an
+   ellipsis in Playing now. */
+.current-game-card > .current-game-line {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--site-muted);
+}
+
+.current-game-card > .current-game-line a.player-name-link {
+  color: var(--site-heading);
+  font-weight: 600;
 }
 
 /* Accept on someone else's seek (seek-accept.ts): a button when signed in, a
@@ -478,7 +482,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--current-games-kind-seek);
   border-radius: 6px;
@@ -957,19 +961,19 @@
    one xiangqi-shaped box whatever the variant; a square, wide or tall board
    sits centred in it. Each card spans seven rows of the grid and puts its parts
    on them (subgrid): the seat above the board, the board, the seat below it,
-   a time bar (no /games card draws one now; the row stays empty), the meta, a
-   seek's Accept button and its status line. A row is as tall as that part's
-   tallest card. Spacing is margins rather than
-   gaps, so a part no card in the row has takes no room. The seat rows, bar,
-   meta and buttons keep a 10px inset. The correspondence inbox and the
-   homepage keep the inset card. */
+   a time bar (no /games card draws one now; the row stays empty), the meta and
+   a seek's status line. A seek's Accept takes its empty seat's row, so a seek
+   and a game are one height. A row is as tall as that part's tallest card.
+   Spacing is margins rather than gaps, so a part no card in the row has takes
+   no room. The seat rows, bar and meta keep a 10px inset. The correspondence
+   inbox and the homepage keep the inset card. */
 .current-games-section[data-section="playing"] .current-games-grid {
   row-gap: 0;
 }
 
 .current-games-section[data-section="playing"] .current-game-card {
   display: grid;
-  grid-row: span 7;
+  grid-row: span 6;
   grid-template-rows: subgrid;
   row-gap: 0;
   margin-bottom: 18px;
@@ -1007,24 +1011,30 @@
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-actions {
-  grid-row: 6;
-  margin-top: 6px;
-}
-
 .current-games-section[data-section="playing"] .current-game-card > .current-game-seek-status {
-  grid-row: 7;
+  grid-row: 6;
   margin-top: 6px;
 }
 
 /* A game card in Playing now (.is-slim, createCard in current-games.ts): the
    board, one line per player (disc, name, BOT tag, clock) and one quiet line
    under the board. The name gives way with an ellipsis; the tag and the clock
-   stay whole. Scoped to .is-slim so seek cards and the correspondence inbox,
-   which share the rules above, draw as before; the extra class also outranks
-   the base seat-label rules whatever order the stylesheets load in. */
-.current-games-section[data-section="playing"] .current-game-card.is-slim > .current-game-seat {
-  min-height: 28px;
+   stay whole. Scoped to .is-slim so the correspondence inbox, which shares the
+   rules above, draws as before; the extra class also outranks the base
+   seat-label rules whatever order the stylesheets load in. Seats are 34px in
+   game and seek cards alike: a seek's 40px Accept sits in its row and reaches
+   3px into the board's margin, so the two cards stay one height. */
+.current-games-section[data-section="playing"]
+  .current-game-card:is(.is-slim, .is-seek)
+  > .current-game-seat {
+  min-height: 34px;
+}
+
+.current-games-section[data-section="playing"]
+  .current-game-card.is-seek
+  > .current-game-seek-slot
+  > .current-game-seek-action {
+  margin-block: -3px;
 }
 
 .current-games-section[data-section="playing"] .current-game-card.is-slim .current-game-seat-label {
@@ -1053,14 +1063,16 @@
   flex: none;
 }
 
-/* A profile link is a 41px tap target on a 28px line: padding grows the box
+/* A profile link is a 41px tap target on a 34px line: padding grows the box
    into the board's margin and the negative margin keeps the line's height. */
 .current-games-section[data-section="playing"] .current-game-card.is-slim a.player-name-link {
   padding-block: 12px;
   margin-block: -12px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card.is-slim > .current-game-line {
+.current-games-section[data-section="playing"]
+  .current-game-card:is(.is-slim, .is-seek)
+  > .current-game-line {
   display: block;
   margin-bottom: 0;
   font-size: 0.78rem;
@@ -1075,12 +1087,14 @@
 .current-games-finished-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  align-items: start;
   gap: 14px;
 }
 
 /* The board runs edge to edge; the names and the result sit in padded rows
-   above and below it. Cards in a row stretch to one height and the result
-   line keeps to the bottom. */
+   above and below it, and the card ends under the result line. A card is as
+   tall as its own parts, never stretched to a taller neighbour's height, so
+   no card has a blank band; boards of one shape make cards of one height. */
 .current-game-finished {
   display: flex;
   flex-direction: column;
@@ -1169,7 +1183,6 @@
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
-  margin-top: auto;
   padding: 0 10px 9px;
 }
 

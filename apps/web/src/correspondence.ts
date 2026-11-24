@@ -1825,17 +1825,18 @@ export function buildIncomingChallengeCard(
       rated: challenge.rated === true,
     },
     {
-      action: withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
+      // Accept and Decline take your seat, at the bottom; the deadline warning
+      // goes under the terms.
+      action: actions,
       ariaLabel: t('correspondence.challengeFrom', {
         name: challenger,
         variant: variantDisplayLabel(challenge.gameSpecId),
       }),
-      badge: false,
       details,
       href: `/challenge/${encodeURIComponent(challenge.id)}`,
+      notice: buildCorrespondenceDeadlineNotice(challenge.daysPerMove),
       side: accepterSide(challenge.preferredColor) ?? undefined,
       status: error,
-      waiting: document.createTextNode(t('correspondence.waitingForYou')),
       waitingAtBottom: true,
     },
   );
@@ -1844,9 +1845,9 @@ export function buildIncomingChallengeCard(
 }
 
 // Your own seek as a seek card (seek-card.ts, the same card as Open seeks):
-// the empty seat says who it is waiting for (a directed challenge links its
-// recipient by handle, fail-closed); Copy link and Cancel sit in the card's
-// action row.
+// Copy link and Cancel take the empty seat, and the meta line leads with who it
+// is waiting for (a directed challenge links its recipient by handle,
+// fail-closed).
 export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTMLElement {
   const variant = variantDisplayLabel(seek.gameSpecId);
   let waiting: Node;
@@ -1930,7 +1931,6 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     {
       action: actions,
       ariaLabel,
-      badge: false,
       details,
       // A link or directed challenge opens its /challenge page (where the share
       // link lives); a public seek has no page of its own.

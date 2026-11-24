@@ -1,10 +1,11 @@
 // An open correspondence seek drawn as a game card (/games, /correspondence):
-// the same frame as an in-progress card (seat, board, seat, meta) so a seek
-// reads as a game waiting for its second player. The board is the variant's
-// starting position (start-position-board.ts); the empty seat says who is
-// missing. Its buttons get a row of their own under the meta, so the seat row
-// holds only the name and never truncates it. Styles live in current-games.css,
-// which both pages load.
+// the same frame as an in-progress card (seat, board, seat, one quiet line) so
+// a seek reads as a game waiting for its second player. The board is the
+// variant's starting position (start-position-board.ts). The seat still to be
+// filled holds the card's controls (Accept, or your own seek's Copy link and
+// Cancel, or a challenge's Accept and Decline); with no controls it is a dashed
+// slot that says who is missing. Styles live in current-games.css, which both
+// pages load.
 
 import { displayLiveName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -27,19 +28,21 @@ export type SeekCardOptions = {
   // Where the whole card leads; null when an action button is the only way in.
   href: string | null;
   // The card's controls (Accept or a sign-in link, from seek-accept.ts; your
-  // own seek's Copy link and Cancel; a challenge's Accept and Decline), in a
-  // full-width row at the bottom of the card.
+  // own seek's Copy link and Cancel; a challenge's Accept and Decline). They
+  // take the empty seat's row, so the card has no button row of its own.
   action?: HTMLElement | null;
   // A line under the meta (an accept error); hidden until it has text.
   status?: HTMLElement | null;
-  // Your own seek (/correspondence "Waiting for an opponent"): what the empty
-  // seat says (a directed challenge names its recipient), the overlay link's
-  // label, extra meta parts (side, expiry), and no "Open seek" tag, since a
-  // link or directed challenge is not on the open board.
+  // A sentence under the meta line (a challenge's move-deadline warning).
+  notice?: HTMLElement | null;
+  // Who the seek is waiting for (your own seek: "Open seek", "Link challenge",
+  // or a directed challenge's recipient). With controls it leads the meta
+  // line; without, the dashed empty seat says it ("Waiting for an opponent"
+  // by default).
   waiting?: Node | null;
   ariaLabel?: string;
+  // Extra meta parts after the terms (side, expiry).
   details?: readonly string[];
-  badge?: boolean;
   // The seat the start board is drawn for: your own seek, from the side you
   // asked for; someone else's seek or challenge, from the side you would take
   // when the poster picked theirs (a fog variant then draws that seat's own
@@ -51,6 +54,21 @@ export type SeekCardOptions = {
   // every in-progress card puts "You" at the bottom.
   waitingAtBottom?: boolean;
 };
+
+// The terms in a game card's order (cardMetaText in current-games.ts): the
+// variant, the days per move, and "Rated" only when it is; casual goes unsaid.
+export function seekMetaParts(
+  seek: Pick<SeekCardSeek, 'gameSpecId' | 'daysPerMove' | 'rated'>,
+): string[] {
+  const parts = [
+    variantDisplayLabel(seek.gameSpecId),
+    seek.daysPerMove === 1
+      ? t('games.oneDayPerMove')
+      : t('games.daysPerMove', { count: seek.daysPerMove }),
+  ];
+  if (seek.rated) parts.push(t('games.rated'));
+  return parts;
+}
 
 export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTMLElement {
   const article = document.createElement('article');
@@ -71,13 +89,21 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
     article.append(open);
   }
 
-  const waiting = document.createElement('div');
-  waiting.className = 'current-game-seat is-empty-seat';
-  const waitingText = document.createElement('span');
-  waitingText.className = 'current-game-seat-who current-game-seat-waiting';
-  if (options.waiting) waitingText.append(options.waiting);
-  else waitingText.textContent = t('games.seekWaiting');
-  waiting.append(waitingText);
+  // The seat still to be filled: the controls when the card has any (the
+  // place you would take is where you act), else a dashed slot naming it.
+  const empty = document.createElement('div');
+  if (options.action) {
+    empty.className = 'current-game-seat current-game-seek-slot';
+    options.action.classList.add('current-game-seek-action');
+    empty.append(options.action);
+  } else {
+    empty.className = 'current-game-seat is-empty-seat';
+    const waitingText = document.createElement('span');
+    waitingText.className = 'current-game-seat-who current-game-seat-waiting';
+    if (options.waiting) waitingText.append(options.waiting);
+    else waitingText.textContent = t('games.seekWaiting');
+    empty.append(waitingText);
+  }
 
   const board = document.createElement('div');
   board.className = 'current-game-board is-start';
@@ -118,50 +144,18 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   );
   seat.append(who);
 
-  const meta = document.createElement('div');
-  meta.className = 'current-game-meta';
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variant;
-  const text = document.createElement('span');
-  const cadence =
-    seek.daysPerMove === 1
-      ? t('games.oneDayPerMove')
-      : t('games.daysPerMove', { count: seek.daysPerMove });
-  text.textContent = [
-    cadence,
-    seek.rated ? t('games.rated') : t('games.casual'),
-    ...(options.details ?? []),
-  ].join(' · ');
-  if (options.badge !== false) meta.append(buildKindBadge('seek'));
-  meta.append(chip, text);
+  // One quiet line, as on a game card. Your own seek's "who it waits for"
+  // leads it once the controls have taken the empty seat.
+  const meta = document.createElement('p');
+  meta.className = 'current-game-meta current-game-line';
+  const terms = [...seekMetaParts(seek), ...(options.details ?? [])].join(' · ');
+  if (options.action && options.waiting) meta.append(options.waiting, ` · ${terms}`);
+  else meta.textContent = terms;
+  meta.title = meta.textContent ?? terms;
 
-  if (options.waitingAtBottom) article.append(seat, board, waiting, meta);
-  else article.append(waiting, board, seat, meta);
-  if (options.action) {
-    const actions = document.createElement('div');
-    actions.className = 'current-game-seek-actions';
-    options.action.classList.add('current-game-seek-action');
-    actions.append(options.action);
-    article.append(actions);
-  }
+  if (options.waitingAtBottom) article.append(seat, board, empty, meta);
+  else article.append(empty, board, seat, meta);
+  if (options.notice) article.append(options.notice);
   if (options.status) article.append(options.status);
   return article;
-}
-
-export type CardKind = 'live' | 'correspondence' | 'seek';
-
-const KIND_LABEL = {
-  correspondence: 'games.kindCorrespondence',
-  live: 'games.kindLive',
-  seek: 'games.kindSeek',
-} as const;
-
-// The small coloured tag that names what a card is; its colour is the card's
-// top edge (current-games.css [data-kind]).
-export function buildKindBadge(kind: CardKind): HTMLElement {
-  const badge = document.createElement('span');
-  badge.className = 'current-game-kind';
-  badge.textContent = t(KIND_LABEL[kind]);
-  return badge;
 }

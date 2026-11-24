@@ -197,7 +197,9 @@ describe('current-games.css slim card rules', () => {
 
   function rule(selectorTail: RegExp): string {
     const match = css.match(
-      new RegExp(`\\.current-game-card\\.is-slim${selectorTail.source}\\s*\\{([^}]*)\\}`),
+      new RegExp(
+        `\\.current-game-card(?:\\.is-slim|:is\\(\\.is-slim, \\.is-seek\\))${selectorTail.source}\\s*\\{([^}]*)\\}`,
+      ),
     );
     if (!match?.[1]) throw new Error(`no .is-slim rule for ${selectorTail}`);
     return match[1];
