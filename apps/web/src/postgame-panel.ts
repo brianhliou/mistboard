@@ -8,6 +8,8 @@
 //
 //   Rematch        seated players only: the same opponent again (a PvP rematch
 //                  offer, or a fresh game against the same bot, sides swapped)
+//   Review game    everyone; second, an accent outline under the filled
+//                  rematch (#1235)
 //   New opponent   seated players only: the play dialog, same variant, as
 //   / New game     Find opponent after a PvP game ("New opponent") or as the
 //                  bot picker after a bot game ("New game": the dialog offers
@@ -19,7 +21,6 @@
 //                  challenge to the same opponent, sides swapped (#606,
 //                  correspondence-again.ts). The caller decides eligibility;
 //                  the panel only places it
-//   Review game    everyone
 //   Challenge a friend
 //                  seated players after a bot or PvP game, a row like the two
 //                  above it: it is the one post-game action that brings a new
@@ -266,6 +267,15 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     box.append(input.rematch);
   }
 
+  // Review game rides second, right under the rematch, as an accent outline:
+  // the one other action most finished games lead to (#1235). With no rematch
+  // it is the first row.
+  if (input.reviewHref) {
+    const review = actionLink(t('live.reviewGame'), input.reviewHref, report('review'));
+    review.classList.add('postgame-actions__review');
+    box.append(review);
+  }
+
   if (input.seated && input.correspondenceAgain) {
     const again = correspondenceAgainButton(input.correspondenceAgain.offer, {
       surface: 'postgame',
@@ -281,10 +291,6 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
   if (opponentHref) {
     const label = input.mode === 'pve' ? t('live.newGame') : t('live.newOpponent');
     box.append(actionLink(label, opponentHref, report('new_opponent')));
-  }
-
-  if (input.reviewHref) {
-    box.append(actionLink(t('live.reviewGame'), input.reviewHref, report('review')));
   }
 
   if (input.seated && (input.mode === 'pve' || input.mode === 'pvp')) {

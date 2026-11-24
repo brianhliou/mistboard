@@ -56,7 +56,7 @@ describe('phone post-game sheet', () => {
     expect(sheet()?.textContent).toContain('1-0');
     expect(
       [...sheet()!.querySelectorAll('.postgame-actions > *')].map((el) => el.textContent),
-    ).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+    ).toEqual(['Rematch', 'Review game', 'New game', 'Challenge a friend']);
     expect(trigger()?.hidden).toBe(false);
     expect(trigger()?.getAttribute('aria-expanded')).toBe('true');
   });
@@ -111,8 +111,8 @@ describe('phone post-game sheet', () => {
     const actions = sheet()!.querySelectorAll<HTMLElement>('.postgame-actions > *');
     for (const [index, action] of [
       'rematch',
-      'new_opponent',
       'review',
+      'new_opponent',
       'challenge_friend',
     ].entries()) {
       actions[index].click();

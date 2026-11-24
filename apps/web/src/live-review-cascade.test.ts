@@ -256,14 +256,13 @@ function soloReview(width: number, solo: boolean) {
     .map((css) => `<style>${css}</style>`)
     .join('');
   const actions = solo
-    ? '<a class="postgame-actions__link" href="/game/x">Review game</a>'
-    : '<a class="postgame-actions__link" href="/">New opponent</a><a class="postgame-actions__link" href="/game/x">Review game</a>';
+    ? '<a class="postgame-actions__link postgame-actions__review" href="/game/x">Review game</a>'
+    : '<a class="postgame-actions__link postgame-actions__review" href="/game/x">Review game</a><a class="postgame-actions__link" href="/">New opponent</a>';
   const cls = solo ? 'postgame-actions postgame-actions--solo' : 'postgame-actions';
   win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><section class="panel-section game-console"><div class="round-table__box"><div class="round-table__row"><div data-room-actions class="room-actions"><div class="${cls}">${actions}</div></div></div><div class="replay-console"><div class="move-nav-bar"></div></div></div></section></div>`;
   const doc = win.document;
   const style = (sel: string) => win.getComputedStyle(need(doc.querySelector(sel), sel));
-  const review = need(doc.querySelectorAll('.postgame-actions > a'), 'links');
-  const link = win.getComputedStyle(need(review[review.length - 1], 'review link'));
+  const link = style('.postgame-actions__review');
   const read = {
     post: style('.live-review__cluster').getPropertyValue('--phone-room-post').trim(),
     row: style('.round-table__row').display,
@@ -273,6 +272,7 @@ function soloReview(width: number, solo: boolean) {
     minHeight: link.minHeight,
     radius: link.borderTopLeftRadius,
     transform: link.textTransform,
+    shadow: link.boxShadow,
     nav: style('.move-nav-bar').order,
   };
   void win.happyDOM.close();
@@ -291,12 +291,79 @@ describe('lone Review game in the phone bar (#618)', () => {
     expect(r.minHeight).toBe('48px');
     expect(r.radius).toBe('0px');
     expect(r.transform).toBe('none');
+    // A bar item, not the outlined button (#1235).
+    expect(r.shadow).toBe('none');
   });
 
   it('leaves the desktop room alone', () => {
     const r = soloReview(1280, true);
     expect(r.box).toBe('grid');
     expect(r.order).not.toBe('46');
+  });
+});
+
+// #1235: Review game is the row under the rematch, an outline in the accent
+// as tall as the rematch, with no fill; the rematch stays the one filled button.
+const ACCENT = 'rgb(1, 2, 3)';
+const ACCENT_TOKENS = `:root { --site-accent: ${ACCENT}; --site-accent-strong: rgb(4, 5, 6); }`;
+
+function reviewOutline(width: number, sheet: boolean) {
+  const win = new Window({ width, height: 800 });
+  try {
+    // Stand-in tokens: happy-dom drops a var() it cannot resolve.
+    win.document.head.innerHTML = [ACCENT_TOKENS, GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
+      .map((css) => `<style>${css}</style>`)
+      .join('');
+    const actions =
+      '<div class="postgame-actions"><button class="primary postgame-actions__rematch">Rematch</button><a class="postgame-actions__link postgame-actions__review" href="/game/x">Review game</a><a class="postgame-actions__link" href="/">New game</a></div>';
+    const inner = sheet
+      ? `<button class="postgame-sheet-toggle">Game over</button><dialog class="postgame-sheet" open>${actions}</dialog>`
+      : actions;
+    win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><section class="game-console"><div class="round-table__box"><div class="round-table__row"><div class="room-actions"${sheet ? ' data-postgame-sheet' : ''}>${inner}</div></div></div></section></div>`;
+    const doc = win.document;
+    const style = (sel: string) => win.getComputedStyle(need(doc.querySelector(sel), sel));
+    const review = style('.postgame-actions__review');
+    const rematch = style('.postgame-actions__rematch');
+    const other = style('.postgame-actions__review + a');
+    return {
+      reviewHeight: review.minHeight,
+      rematchHeight: rematch.minHeight,
+      color: review.color,
+      shadow: review.boxShadow,
+      border: `${review.borderTopWidth} ${review.borderTopStyle} ${review.borderTopColor}`,
+      background: review.backgroundColor,
+      otherShadow: other.boxShadow,
+    };
+  } finally {
+    void win.happyDOM.close();
+  }
+}
+
+describe('Review game outline (#1235)', () => {
+  it('is as tall as the compact rematch on desktop, outlined in the accent', () => {
+    const r = reviewOutline(1280, false);
+    expect(r.reviewHeight).toBe('40px');
+    expect(r.reviewHeight).toBe(r.rematchHeight);
+    expect(r.color).toBe(ACCENT);
+    expect(r.shadow).toContain('1.5px');
+    expect(r.shadow).toContain(ACCENT);
+    expect(r.background).toBe('transparent');
+    expect(r.otherShadow).not.toContain('1.5px');
+  });
+
+  it('matches the full-size rematch between the phone and the compact room', () => {
+    const r = reviewOutline(700, false);
+    expect(r.reviewHeight).toBe(r.rematchHeight);
+    expect(r.reviewHeight).toBe('52px');
+  });
+
+  it.each([360, 390])('trades the sheet row border for the accent outline at %ipx', (w) => {
+    const r = reviewOutline(w, true);
+    expect(r.reviewHeight).toBe('48px');
+    expect(r.reviewHeight).toBe(r.rematchHeight);
+    expect(r.border.startsWith('0px')).toBe(true);
+    expect(r.shadow).toContain('1.5px');
+    expect(r.shadow).toContain(ACCENT);
   });
 });
 

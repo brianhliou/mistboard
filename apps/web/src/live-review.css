@@ -296,6 +296,15 @@
     margin-bottom: 2px;
     font-size: 14px;
   }
+  /* Review game keeps the compact rematch's height under it (#1235). */
+  .live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions
+    > a.postgame-actions__review {
+    min-height: 40px;
+    margin-bottom: 4px;
+  }
   /* Board pins to the top of its column — aligned with the left meta card — and
      stays there on resize, instead of floating to the vertical centre
      (review-shell.css align-items: center) when a side rail is taller than the
@@ -1606,6 +1615,8 @@
     border-radius: 0;
     background: var(--site-mobile-bar-bg, var(--site-panel));
     color: var(--site-heading);
+    /* A lone Review game is a bar item here, not the outlined button. */
+    box-shadow: none;
     font-size: 13px;
     font-weight: 600;
     /* Sentence case like the rest of the bar, not the desktop link's caps. */
@@ -1709,6 +1720,17 @@
     text-transform: none;
     letter-spacing: normal;
     white-space: normal;
+  }
+
+  /* The sheet's rows carry a 1px border; Review game's inset outline takes its
+     place (a 1.5px border would snap to 1px on a phone screen). */
+  .live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-sheet
+    .postgame-actions
+    > a.postgame-actions__review {
+    border-width: 0;
   }
 
   .postgame-sheet .room-rematch-buttons {
