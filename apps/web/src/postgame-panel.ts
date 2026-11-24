@@ -311,6 +311,34 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
   return box;
 }
 
+/**
+ * The one action after a bot game aborted before its first move: New game, the
+ * same link the finished-game panel offers. Nothing to rematch or review, and
+ * no instant new room (a fresh room would start before anyone chose to play).
+ * Null when the variant's setup has no deep link or the game was not a bot game.
+ */
+export function abortedGameActions(
+  variant: string | undefined,
+  mode: string,
+): HTMLDivElement | null {
+  if (mode !== 'pve') return null;
+  const href = newOpponentHref(variant, mode);
+  if (!href) return null;
+  const box = document.createElement('div');
+  box.className = 'postgame-actions postgame-actions--solo';
+  box.append(
+    actionLink(t('live.newGame'), href, () =>
+      track('postgame_action', {
+        action: 'new_opponent',
+        variant: variant ?? null,
+        mode,
+        aborted: true,
+      }),
+    ),
+  );
+  return box;
+}
+
 function newOpponentHref(variant: string | undefined, mode: string): string | null {
   if (!variant || !landingPlayDeepLinkAccepts(variant)) return null;
   const play = mode === 'pve' ? 'computer' : mode === 'pvp' ? 'lobby' : null;
