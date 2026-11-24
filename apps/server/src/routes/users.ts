@@ -58,6 +58,10 @@ export async function tryHandle(
       return true;
     }
     const isViewer = viewer?.handle.toLowerCase() === profile.user.handle.toLowerCase();
+    // Who holds the admin role is not public. Only the account itself and
+    // other admins read it; everyone else is told 'player', so a visitor
+    // cannot list the staff accounts from this read and sees no Admin badge.
+    const roleVisible = isViewer || viewer?.accountRole === 'admin';
     // The viewer's own edge toward this profile (follow/block buttons). Only
     // for a signed-in non-self viewer; blockedBy stays server-side so the
     // payload can't reveal who blocked the viewer.
@@ -66,6 +70,7 @@ export async function tryHandle(
     writeJson(response, 200, {
       profile: {
         ...profile,
+        user: roleVisible ? profile.user : { ...profile.user, accountRole: 'player' as const },
         // The first page of the Games tab: same marking as the pager below.
         games: await profileGameRows(profile.games, parsedUrl, ffqBanqiInsider(viewer)),
         isViewer,

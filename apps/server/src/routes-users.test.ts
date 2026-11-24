@@ -26,7 +26,12 @@ function database(t: TestContext, visibility = 'public', attempts = [row(1500, 1
   return t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
     if (sql.includes('UPDATE account_sessions')) {
       assert.equal(values[1], hashSecret('test-token'));
-      return { rows: [{ id: String(values[0]), handle: String(values[0]) }] };
+      const account = String(values[0]);
+      return {
+        rows: [
+          { id: account, handle: account, account_role: account === 'player' ? 'player' : 'admin' },
+        ],
+      };
     }
     if (sql.includes('FROM users') && sql.includes('lower(handle) = lower($1)')) {
       const handle = String(values[0]);
@@ -61,6 +66,7 @@ function database(t: TestContext, visibility = 'public', attempts = [row(1500, 1
     if (
       sql.includes('FROM game_participants') ||
       sql.includes('FROM user_ratings') ||
+      sql.includes('FROM user_relations') ||
       sql.includes('FROM user_puzzle_ratings') ||
       sql.includes('FROM user_achievements') ||
       (sql.includes('FROM puzzle_attempts') && sql.includes('AND solved'))
@@ -174,15 +180,39 @@ test('public puzzle chart rejects invalid handles and methods', async (t) => {
 
 test('profile founder boolean depends only on the founder username', async (t) => {
   database(t);
-  for (const [handle, isFounder, accountRole] of [
-    ['brianhliou-dev', true, 'admin'],
-    ['BRIANHLIOU-DEV', true, 'admin'],
-    ['other-admin', false, 'admin'],
-    ['player', false, 'player'],
+  for (const [handle, isFounder] of [
+    ['brianhliou-dev', true],
+    ['BRIANHLIOU-DEV', true],
+    ['other-admin', false],
+    ['player', false],
   ] as const) {
     const response = await read(`/api/users/${handle}/profile`);
     assert.equal(response.status, 200);
     assert.equal(response.body.profile.user.isFounder, isFounder, handle);
-    assert.equal(response.body.profile.user.accountRole, accountRole, handle);
+  }
+});
+
+test('a profile tells only the account itself and other admins that it is an admin', async (t) => {
+  database(t);
+  // viewer (undefined is a signed-out visitor), profile, the role the read may carry
+  for (const [viewer, handle, accountRole] of [
+    [undefined, 'other-admin', 'player'],
+    [undefined, 'brianhliou-dev', 'player'],
+    ['player', 'other-admin', 'player'],
+    ['other-admin', 'other-admin', 'admin'],
+    ['brianhliou-dev', 'other-admin', 'admin'],
+    ['other-admin', 'player', 'player'],
+    [undefined, 'player', 'player'],
+  ] as const) {
+    const response = await read(`/api/users/${handle}/profile`, viewer);
+    const who = `${viewer ?? 'visitor'} reading ${handle}`;
+    assert.equal(response.status, 200, who);
+    assert.equal(response.body.profile.user.accountRole, accountRole, who);
+    // The whole payload, not only the one field: no other key may say it.
+    assert.equal(
+      /admin/i.test(response.serialized.replaceAll(handle, '')),
+      accountRole === 'admin',
+      who,
+    );
   }
 });
