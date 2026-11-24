@@ -208,6 +208,20 @@
   font-weight: 600;
 }
 
+/* The seat colour for screen readers: the disc beside the name shows it and is
+   aria-hidden. Absolutely positioned, so it takes no flex gap in the row. */
+.game-meta-card__seat-color {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .game-meta-card__rating {
   flex: 0 0 auto;
   color: var(--site-muted);

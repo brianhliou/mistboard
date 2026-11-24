@@ -603,8 +603,27 @@ describe('tenant room chrome player names', () => {
   it('names an anonymous opponent Guest on the meta card too', () => {
     const { chrome, refs } = chromeHarness({});
     chrome.renderMeta();
+    const names = [...refs.gameInfo.querySelectorAll('.game-meta-card__name')].map(
+      (el) => el.textContent,
+    );
+    // The disc beside each name shows the colour, so the name does not repeat
+    // it (2026-11-24: "Guest (Red)" beside a red disc); screen readers, which
+    // skip the aria-hidden disc, still get it from a visually hidden span.
+    expect(names.sort()).toEqual(['Guest', 'You']);
+    expect(refs.gameInfo.querySelectorAll('.game-meta-card__disc')).toHaveLength(2);
+    const spoken = [...refs.gameInfo.querySelectorAll('.game-meta-card__seat-color')].map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(spoken.sort()).toEqual(['(Red)', '(White)']);
+  });
+
+  it('keeps the colour in the visible name for seats with no disc', () => {
+    const { chrome, refs } = chromeHarness({ gameSpecId: 'mahjong' });
+    chrome.renderMeta();
+    expect(refs.gameInfo.querySelector('.game-meta-card__disc')).toBeNull();
     expect(refs.gameInfo.textContent).toContain('Guest (Red)');
     expect(refs.gameInfo.textContent).toContain('You (White)');
+    expect(refs.gameInfo.querySelector('.game-meta-card__seat-color')).toBeNull();
   });
 
   it('gives the pregame (unarmed) rows the same seat identity as the armed rows', () => {

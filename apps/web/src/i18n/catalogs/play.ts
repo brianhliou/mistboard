@@ -741,6 +741,8 @@ export const EN_PLAY = {
   'live.pageTitle': 'Live',
   'live.you': 'You',
   'live.guestAre': 'Guest ({color})',
+  // Screen-reader only, after a name whose seat disc shows the colour.
+  'live.seatColorAside': '({color})',
   'live.toMove': 'to move',
   'live.yourMovePill': 'your move',
   'live.oneDayPerMoveNote': '1 day per move',
@@ -1274,6 +1276,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.pageTitle',
   'live.you',
   'live.guestAre',
+  'live.seatColorAside',
   'live.toMove',
   'live.yourMovePill',
   'live.oneDayPerMoveNote',
