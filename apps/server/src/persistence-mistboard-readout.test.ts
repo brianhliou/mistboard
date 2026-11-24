@@ -603,11 +603,16 @@ definePersistenceTests('Mistboard readout', () => {
       endedAt: '2026-07-18T12:00:00Z',
       participants: [],
     });
-    // An operator account excluded from statistics: neither the account nor
-    // its game reaches any product figure.
+    // An operator account excluded from statistics, playing its own second
+    // browser: neither the account nor its game reaches any product figure.
+    // (Against a guest browser no excluded account has used, the game would
+    // count: persistence-counted-games-excluded.test.ts.)
     await getPool().query(
       `INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
        VALUES ('user-op', 'op@example.com', 'op', 'Op', '2026-07-14T09:00:00Z', now())`,
+    );
+    await getPool().query(
+      `INSERT INTO stats_excluded_devices (device_id, account_id) VALUES ('guest-4', 'user-op')`,
     );
     await insertGame({
       roomId: 'room-current-internal',

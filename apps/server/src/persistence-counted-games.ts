@@ -82,43 +82,73 @@ export function excludedSeatExists(gamesAlias: string): string {
   )`;
 }
 
-// The operator playing a real account: a pvp room where every seat is either
-// an excluded seat or a signed-in account that is not excluded, and at least
-// one seat is the latter. Any bot, engine, imported or guest seat that is not
-// the operator's own browser fails it. Games alias as above.
-export function excludedVersusAccountOnly(gamesAlias: string): string {
+// A guest seat from a browser no stats-excluded account is known to have
+// used: it has a device id (migration 137), the device is not in
+// stats_excluded_devices (an excluded account connected to a live room or a
+// puzzle from it, recorded since 2026-09-11), and no excluded account ever
+// signed in on it (account_sessions.device_id, recorded since 2026-11-12,
+// migration 196). Session rows are revoked, never deleted, so a sign-in stays
+// evidence for good. Blind spot, by construction: a browser the excluded
+// account never signed in on (a private window, a second browser profile, a
+// cleared localStorage) carries a fresh device id and passes. Participants
+// alias as above.
+export function unlinkedGuestSeat(participantsAlias: string): string {
+  const p = participantsAlias;
+  return `(${p}.subject_type = 'guest' AND ${p}.subject_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM stats_excluded_devices ud WHERE ud.device_id = ${p}.subject_id
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM account_sessions us JOIN users uu ON uu.id = us.user_id
+      WHERE us.device_id = ${p}.subject_id AND uu.stats_excluded_at IS NOT NULL
+    ))`;
+}
+
+// A seat that makes an excluded account's game count: a signed-in account
+// that is not excluded, or an unlinked guest browser.
+function personOpposite(participantsAlias: string): string {
+  return `(${countedAccountSeat(participantsAlias)} OR ${unlinkedGuestSeat(participantsAlias)})`;
+}
+
+// The operator playing real people: a pvp room where every seat is either an
+// excluded seat or a person opposite (personOpposite), and at least one seat
+// is the latter. Any bot, engine, imported seat, pre-137 guest seat, or guest
+// browser an excluded account signed in on fails it. Games alias as above.
+export function excludedVersusPeopleOnly(gamesAlias: string): string {
   return `(${gamesAlias}.mode = 'pvp'
     AND EXISTS (
       SELECT 1 FROM game_participants ap
-      WHERE ap.game_id = ${gamesAlias}.room_id AND ${countedAccountSeat('ap')}
+      WHERE ap.game_id = ${gamesAlias}.room_id AND ${personOpposite('ap')}
     )
     AND NOT EXISTS (
       SELECT 1 FROM game_participants op
       WHERE op.game_id = ${gamesAlias}.room_id
         AND NOT ${excludedSeat('op')}
-        AND NOT (${countedAccountSeat('op')})
+        AND NOT ${personOpposite('op')}
     ))`;
 }
 
 // The game is left out of the aggregates for its seats. An excluded seat drops
 // the game unless it was people against people and every other seat is a
-// signed-in account that is not excluded: the operator playing a real account
-// is that player's game, and it happened (set 2026-10-23, when the owner
-// became the guaranteed correspondence opponent). The operator against a bot,
-// a guest, another excluded account or his own browser stays out: a guest
-// carries no identity, so it could be the operator testing against himself
-// (Brian, 2026-10-23: "no me vs guest"). Every count below uses this one
-// clause, so the counted and not-counted rows still partition completed human
-// games.
+// signed-in account that is not excluded or an unlinked guest browser: the
+// operator playing a real person is that person's game, and it happened. Set
+// 2026-10-23 for accounts, when the owner became the guaranteed
+// correspondence opponent; widened to guests 2026-11-24, once guest browsers
+// could be tied to the accounts that signed in on them. The operator against
+// a bot, another excluded account, or a browser an excluded account has used
+// stays out, since that is the operator testing against himself. The excluded
+// seat itself is never a player (countedPlayerSeat); the person opposite is.
+// Every count below uses this one clause, so the counted and not-counted rows
+// still partition completed human games.
 //
 // A CASE, not an AND: Postgres does not promise to evaluate AND operands in
-// order, and adding excludedVersusAccountOnly took /api/stats/public on prod
+// order, and adding the people-opposite check took /api/stats/public on prod
 // from 1.4 s to 5 s (2026-10-23), consistent with its two nested seat scans
 // running for every game. CASE evaluates its WHEN first, so those scans run
 // only for the few games that have an excluded seat.
 export function excludedFromStats(gamesAlias: string): string {
   return `(CASE WHEN ${excludedSeatExists(gamesAlias)}
-    THEN NOT ${excludedVersusAccountOnly(gamesAlias)}
+    THEN NOT ${excludedVersusPeopleOnly(gamesAlias)}
     ELSE FALSE END)`;
 }
 
