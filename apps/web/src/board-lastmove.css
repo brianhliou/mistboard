@@ -30,21 +30,33 @@
   stroke-width: var(--board-lastmove-origin-stroke, 2);
 }
 
-/* Destination: a thin gold band hugging the OUTSIDE of the last-moved piece
-   (Brian, 2026-10-15, from the video prototype): its inner edge sits exactly on
-   the drawn disc's outer edge, so it frames the piece without crossing the
-   piece's dark outline the way the r-28 halo drawn over the pieces did
-   (2026-10-14 to 10-15). It draws UNDER the pieces, so a neighbour one point
-   away still paints its own outline over the band. Radius and stroke-width are
-   attributes from boardLastMoveBand, derived from the piece actually drawn, so
-   no width lives here (a CSS stroke-width would override the attribute). Gold
-   rides the shared board-highlight token (contrast/colorblind board themes
-   override it). On an animated move the band glides with the piece
-   (animateBoardLastMoveArrival). */
+/* Destination: a thin band hugging the OUTSIDE of the last-moved piece
+   (2026-10-15, from the video prototype): its inner edge sits exactly on the
+   drawn disc's outer edge, so it frames the piece without crossing the piece's
+   dark outline the way the r-28 halo drawn over the pieces did (2026-10-14 to
+   10-15). It draws UNDER the pieces, so a neighbour one point away still paints
+   its own outline over the band. Radius and stroke-width are attributes from
+   boardLastMoveBand, derived from the piece actually drawn, so no width lives
+   here (a CSS stroke-width would override the attribute). On an animated move
+   the band glides with the piece (animateBoardLastMoveArrival).
+
+   Colour (2026-11-24): the origin outline's amber at full opacity. The gold it
+   replaced (#d6af4e at 0.8) was 1.42:1 against the International fill and
+   1.11:1 against Traditional, so the band vanished on the light boards. Amber
+   holds at least 2:1 on every light board colour; on a dark board it would
+   drop below the gold, so a dark tone keeps the gold, at full opacity. The
+   colour is a token, not a second rule, so the flip-ink and 3D-edge rules that
+   override the stroke keep their specificity (board-lastmove-band.test.ts). */
+:root {
+  --board-lastmove-band: #b45309;
+}
+:root[data-xiangqi-board-tone="dark"] {
+  --board-lastmove-band: #d6af4e;
+}
 .xq-live-lastmove-ring {
   fill: none;
-  stroke: var(--board-highlight, #d6af4e);
-  stroke-opacity: 0.8;
+  stroke: var(--board-lastmove-band, #b45309);
+  stroke-opacity: 1;
   pointer-events: none;
 }
 
