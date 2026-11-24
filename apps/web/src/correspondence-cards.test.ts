@@ -51,7 +51,7 @@ describe('correspondence inbox card', () => {
     // Red moves first and the board draws it at the bottom: you sit there.
     expect(top?.textContent).toContain('Bob');
     expect(bottom?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
-    expect(visibleClock(bottom)).toMatch(/left$/);
+    expect(visibleClock(bottom)).toMatch(/^\d+[dh] \d+[hm]$/);
     expect(visibleClock(top)).toBeNull();
     const play = card.querySelector<HTMLAnchorElement>('a.correspondence-card-play');
     expect(play?.textContent).toBe('Play your move');
@@ -127,7 +127,7 @@ describe('correspondence inbox card', () => {
     // is the one running, on top.
     expect(bottom?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
     expect(top?.textContent).toContain('Bob');
-    expect(visibleClock(top)).toMatch(/left$/);
+    expect(visibleClock(top)).toMatch(/^\d+[dh] \d+[hm]$/);
     expect(visibleClock(bottom)).toBeNull();
     expect(card.querySelector('.correspondence-card-play')).toBeNull();
   });
@@ -245,7 +245,7 @@ describe('correspondence inbox card', () => {
 
             // The running clock is yours on a Your move card, the opponent's on a
             // Waiting one; the rows keep one order either way.
-            expect(visibleClock(yourMove ? bottom : top)).toMatch(/left$/);
+            expect(visibleClock(yourMove ? bottom : top)).toMatch(/^\d+[dh] \d+[hm]$/);
             expect(visibleClock(yourMove ? top : bottom)).toBeNull();
             expect(layout(card)).toEqual(['opponent', 'board', 'you']);
           });

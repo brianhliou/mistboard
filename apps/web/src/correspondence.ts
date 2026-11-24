@@ -144,7 +144,7 @@ import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
-import { correspondenceTimeLeftLabel, formatDayClock } from './web-utils.js';
+import { correspondenceSeatClockLabel, formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
 // The "Challenges for you" section's id; the bell's challenge row links to it
@@ -524,7 +524,7 @@ export function buildInboxCard(
 
   const tick = (now: number): void => {
     card.dataset.urgency = deadlineUrgency(game.dueAt, now);
-    onMove.clock.textContent = correspondenceTimeLeftLabel(game.dueAt, now);
+    onMove.clock.textContent = correspondenceSeatClockLabel(game.dueAt, now);
   };
   tick(Date.now());
   ctx.tickers.push(tick);

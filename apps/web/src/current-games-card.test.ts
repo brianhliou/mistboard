@@ -169,7 +169,7 @@ describe('/games game card', () => {
       '.current-game-seat[data-color="black"] .current-game-seat-clock',
     );
     expect(red?.classList.contains('is-deadline')).toBe(true);
-    expect(red?.textContent).toMatch(/^2d \d+h left$/);
+    expect(red?.textContent).toMatch(/^2d \d+h$/);
     expect(black?.hidden).toBe(true);
     root.remove();
     await Promise.resolve();

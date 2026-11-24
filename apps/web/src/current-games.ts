@@ -101,7 +101,7 @@ import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
-import { correspondenceTimeLeftLabel, formatClock } from './web-utils.js';
+import { correspondenceSeatClockLabel, formatClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
@@ -858,7 +858,7 @@ export function tickDeadlineClocks(
 ): void {
   for (const [color, el] of Object.entries(clockEls)) {
     const onMove = deadline?.seat === color;
-    el.textContent = onMove && deadline ? correspondenceTimeLeftLabel(deadline.dueAt, now) : '';
+    el.textContent = onMove && deadline ? correspondenceSeatClockLabel(deadline.dueAt, now) : '';
     el.classList.toggle('is-deadline', onMove);
     el.hidden = !onMove;
   }

@@ -78,6 +78,17 @@ export function correspondenceTimeLeftLabel(dueAt: string, now: number, locale?:
   return t('correspondence.timeLeft', { time: formatDayClock(remaining, locale) }, locale);
 }
 
+/**
+ * The deadline as a seat clock on a game card: the time alone ("2d 22h"), since
+ * the badge sits on the row of the seat to move and a narrow card has no room
+ * for a word beside the name.
+ */
+export function correspondenceSeatClockLabel(dueAt: string, now: number, locale?: Locale): string {
+  const remaining = Date.parse(dueAt) - now;
+  if (!Number.isFinite(remaining) || remaining <= 0) return t('correspondence.dueNow', {}, locale);
+  return formatDayClock(remaining, locale);
+}
+
 export function oppositeColor(color: Color): Color {
   return color === 'white' ? 'black' : 'white';
 }
