@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { postGameActions, renderGameResult, resultScore } from './postgame-panel.js';
+import {
+  abortedGameActions,
+  postGameActions,
+  renderGameResult,
+  resultScore,
+} from './postgame-panel.js';
 
 vi.mock('./analytics.js', () => ({
   track: vi.fn(),
@@ -135,6 +140,20 @@ describe('postGameActions', () => {
       reviewHref: '/game/x',
     });
     expect(labels(box)).toEqual(['Review game']);
+  });
+});
+
+describe('abortedGameActions', () => {
+  // A bot game that never started still leads back to the bot picker; a PvP
+  // abort and a variant with no setup deep link offer nothing.
+  it('offers only New game after an aborted bot game', () => {
+    const box = abortedGameActions('xiangqi', 'pve');
+    expect(box && labels(box)).toEqual(['New game']);
+    expect(box?.querySelector('a')?.getAttribute('href')).toBe('/?play=computer&variant=xiangqi');
+    expect(box?.classList.contains('postgame-actions--solo')).toBe(true);
+    expect(abortedGameActions('xiangqi', 'pvp')).toBeNull();
+    expect(abortedGameActions(undefined, 'pve')).toBeNull();
+    expect(abortedGameActions('not-a-variant', 'pve')).toBeNull();
   });
 });
 

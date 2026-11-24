@@ -880,6 +880,26 @@ describe('tenant room chrome meta and invite emphasis', () => {
     bot.chrome.renderRoomActions();
     expect(bot.refs.roomActions.textContent).not.toContain('Copy invite');
   });
+
+  it('offers New game, and nothing else, after a bot game aborted before its first move', () => {
+    const view = playingView({ status: { type: 'aborted', reason: 'no-first-move' } });
+    const bot = chromeHarness({
+      roomMode: 'pve',
+      view,
+      seats: { white: 'c-white', red: 'engine' },
+      playAgainRequestBody: { gameSpecId: 'xiangqi' },
+    });
+    bot.chrome.renderRoomActions();
+    const actions = [...bot.refs.roomActions.querySelectorAll('.postgame-actions > *')];
+    expect(actions.map((el) => el.textContent)).toEqual(['New game']);
+    expect(actions[0]?.getAttribute('href')).toContain('play=computer');
+
+    // Between two people an abort still offers nothing: an instant new room
+    // there is a solo room the mover could play in before anyone joins.
+    const people = chromeHarness({ view, playAgainRequestBody: { gameSpecId: 'xiangqi' } });
+    people.chrome.renderRoomActions();
+    expect(people.refs.roomActions.childElementCount).toBe(0);
+  });
 });
 
 describe('tenant room chrome bot rematch', () => {

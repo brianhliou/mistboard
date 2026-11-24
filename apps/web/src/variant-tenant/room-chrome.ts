@@ -34,6 +34,7 @@ import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import {
+  abortedGameActions,
   clearPostGameSheet,
   renderGameResult,
   renderPostGameActions,
@@ -876,8 +877,14 @@ export function createTenantRoomChrome<C extends string>(
     // Aborted games offer NO play-again: an instant new room after an abort
     // creates a fresh solo room where the mover can play before the opponent
     // joins. No Home button either (lichess parity): the site nav is the way
-    // out, and the empty host collapses its row.
-    if (view?.status.type === 'aborted') return;
+    // out, and the empty host collapses its row. A seated player in a bot game
+    // gets New game, the link to the setup dialog the finished panel offers.
+    if (view?.status.type === 'aborted') {
+      const again =
+        seatColor() !== null ? abortedGameActions(tenantSpecId(), ctx.roomMode()) : null;
+      if (again) refs.roomActions.append(again);
+      return;
+    }
     // A guest who opened a correspondence invite (#1059) is asked to sign in
     // once the friend has sat: the game now runs for days, and only an account
     // gets an email when it is their move. The sign-in returns here and the
