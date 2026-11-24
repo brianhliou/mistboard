@@ -337,6 +337,9 @@ export const EN_PLAY = {
   'correspondence.opponentFallback': 'Opponent',
   'correspondence.dueNow': 'due now',
   'correspondence.timeLeft': '{time} left',
+  // The day-scale clock (formatDayClock): two units, whole-phrase per locale.
+  'correspondence.clockDaysHours': '{days}d {hours}h',
+  'correspondence.clockHoursMinutes': '{hours}h {minutes}m',
   'correspondence.challengeTo': 'Challenge to {name}',
   'correspondence.copyLink': 'Copy link',
   'correspondence.linkCopied': 'Link copied!',
@@ -1010,6 +1013,8 @@ export const EN_PLAY = {
 export type PlayI18nKey = keyof typeof EN_PLAY;
 
 export const CRITICAL_PLAY_I18N_KEYS = [
+  'correspondence.clockDaysHours',
+  'correspondence.clockHoursMinutes',
   'correspondence.moveDeadlineDay',
   'correspondence.moveDeadlineDays',
   'correspondence.moveDeadlineList',
