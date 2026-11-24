@@ -25,6 +25,7 @@ import {
 import { createGameTree } from './review/game-tree.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 import { ffqBanqiWatchRecord, mountFFQBanqiWatchReplay } from './watch-ffq-banqi-replay.js';
+import { syncWatchSeatScores } from './watch-route.js';
 
 const ROOM = 'ffq_review_web';
 function fixture(): FFQBanqiPostgameResponse {
@@ -385,5 +386,75 @@ describe('FFQ masked review', () => {
       assertHpBars(host, ply);
     }
     expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
+  });
+
+  // /watch's rail rows and the homepage TV seats show each side's HP beside its
+  // name at the ply on the board. Red is the first mover; HP is keyed by ink.
+  it('puts each seat HP beside its name at the shown ply, on the watch rail and homepage seats', async () => {
+    const hit = record.history.truth.find((frame) => frame.damage.red + frame.damage.black > 0)!;
+    const hurt = hit.damage.red > 0 ? 'red' : 'black';
+    const hp = (ply: number, side: 'red' | 'black') =>
+      `${record.history.truth[ply]!.view.hp[side]}/${FFQ_BANQI_START_HP} HP`;
+
+    const host = root();
+    const handle = await mountFFQBanqiWatchReplay(host, ROOM, {
+      autoplay: false,
+      compact: true,
+      seatScores: true,
+    });
+    destroy.push(handle.destroy);
+    const seatText = (seat: 'first' | 'second') =>
+      host.querySelector(`.showcase-seat[data-seat="${seat}"] .showcase-seat-score`)?.textContent;
+    const top = document.createElement('div');
+    const bottom = document.createElement('div');
+    for (const [slot, name] of [
+      [top, 'Black player'],
+      [bottom, 'Red player'],
+    ] as const) {
+      slot.innerHTML = `<span class="clock-player-line watch-game-table__player"><span class="clock-name">${name}</span><span class="clock-to-move"></span></span>`;
+    }
+
+    handle.jumpToPly?.(0);
+    expect(seatText('first')).toBe('60/60 HP');
+    expect(seatText('second')).toBe('60/60 HP');
+    handle.jumpToPly?.(hit.ply);
+    expect(seatText('first')).toBe(hp(hit.ply, 'red'));
+    expect(seatText('second')).toBe(hp(hit.ply, 'black'));
+    expect(record.history.truth[hit.ply]!.view.hp[hurt]).toBe(
+      FFQ_BANQI_START_HP - hit.damage[hurt],
+    );
+    // The name, then the score, then the rest of the row.
+    const name = host.querySelector('.showcase-seat[data-seat="first"]')!.children;
+    expect([...name].map((el) => el.className)).toEqual([
+      expect.stringContaining('showcase-seat-name'),
+      'showcase-seat-score',
+      'showcase-seat-clock',
+    ]);
+
+    syncWatchSeatScores(top, bottom, handle);
+    const railText = (slot: HTMLElement) =>
+      slot.querySelector('.watch-player-score .ffq-banqi-hp-meter__value')?.textContent;
+    expect(railText(bottom)).toBe(hp(hit.ply, 'red'));
+    expect(railText(top)).toBe(hp(hit.ply, 'black'));
+    expect(
+      [...bottom.querySelector('.watch-game-table__player')!.children].map((el) => el.className),
+    ).toEqual(['clock-name', 'watch-player-score', 'clock-to-move']);
+    // A scrub replaces the score rather than adding another.
+    handle.jumpToPly?.(0);
+    syncWatchSeatScores(top, bottom, handle);
+    expect(bottom.querySelectorAll('.watch-player-score')).toHaveLength(1);
+    expect(railText(bottom)).toBe('60/60 HP');
+    // A board with no score leaves the row as it was.
+    syncWatchSeatScores(top, bottom, null);
+    expect(bottom.querySelectorAll('.watch-player-score')).toHaveLength(0);
+  });
+
+  it('keeps the compact seat rows unscored unless the host asks (queue previews, /games cards)', async () => {
+    const host = root();
+    const handle = await mountFFQBanqiWatchReplay(host, ROOM, { autoplay: false, compact: true });
+    destroy.push(handle.destroy);
+    expect(host.querySelectorAll('.showcase-seat')).toHaveLength(2);
+    expect(host.querySelector('.showcase-seat-score')).toBeNull();
+    expect(host.querySelector('.ffq-banqi-hp-meter')).toBeNull();
   });
 });

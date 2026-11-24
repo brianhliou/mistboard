@@ -565,6 +565,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       moveScrubber.status.textContent = maxPly > 0 ? `${ply} / ${maxPly}` : '';
     syncClocks();
     syncMaterial();
+    syncWatchSeatScores(watch.playerTop, watch.playerBottom, railHandle());
   };
 
   const clearMoveList = (): void => {
@@ -730,6 +731,11 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     activeRoomId = nextRoomId;
     selectedRoomByChannel.set(nextFeed.activeChannel, nextRoomId);
     renderWatchActiveGame(watch, nextFeed, activeRoomId);
+    // A refresh that keeps the same game rebuilds the seat rows without a ply
+    // change, so put the scores back from the board that stays.
+    if (nextRoomId === priorRoomId) {
+      syncWatchSeatScores(watch.playerTop, watch.playerBottom, railHandle());
+    }
 
     try {
       await loadWatchMainBeforePreviews(
@@ -2065,6 +2071,34 @@ function renderWatchPlayerRows(
   const [firstMover, secondMover] = players;
   if (secondMover) top.append(watchGameTablePlayer(secondMover));
   if (firstMover) bottom.append(watchGameTablePlayer(firstMover));
+}
+
+// Each seat's running score at the ply on the main board (Fanfanqi's HP, Three
+// Kingdoms banqi's points), just after the name in the rail row; the second mover
+// is on top, as in renderWatchPlayerRows. Each pass drops the last ply's score
+// first, so a scrub, a game switch or a variant with no score never keeps a stale
+// one. Only the main board's handle comes here; the queue previews never do.
+export function syncWatchSeatScores(
+  top: HTMLElement,
+  bottom: HTMLElement,
+  handle: Pick<ReplayHandle, 'seatScoreAt'> | null | undefined,
+): void {
+  for (const [host, side] of [
+    [top, 'second'],
+    [bottom, 'first'],
+  ] as const) {
+    const row = host.querySelector<HTMLElement>('.watch-game-table__player');
+    if (!row) continue;
+    row.querySelector(':scope > .watch-player-score')?.remove();
+    const score = handle?.seatScoreAt?.(side) ?? null;
+    if (!score) continue;
+    const slot = document.createElement('span');
+    slot.className = 'watch-player-score';
+    slot.append(score);
+    const name = row.querySelector(':scope > .clock-name');
+    if (name) name.after(slot);
+    else row.append(slot);
+  }
 }
 
 function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {

@@ -55,7 +55,7 @@ import {
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
 } from './three-kingdoms-banqi-diagrams.js';
-import { tkMovesLeftLine, tkPoints } from './three-kingdoms-banqi-score.js';
+import { tkMovesLeftLine, tkPointsTag } from './three-kingdoms-banqi-score.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -387,7 +387,7 @@ function seatBlock(
 ): HTMLElement {
   const block = seatPanelBlock({
     name: t(seatLabel(seat)),
-    score: pointsTag(points),
+    score: tkPointsTag(points),
     seat,
     ink: liveSeatInk(seat),
   });
@@ -401,20 +401,13 @@ function seatBlock(
 function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
   const block = seatPanelBlock({
     name: poolRow.querySelector('.hidden-pool__label')?.textContent ?? '',
-    score: pointsTag(0),
+    score: tkPointsTag(0),
     ink: poolRow.dataset.ink,
   });
   const captures = seatPanelPieces(document.createElement('div'));
   block.append(seatPanelLine('captured', t('live.tk.captured'), captures));
   block.append(faceDownLine(poolRow, faceDownKey));
   return block;
-}
-
-function pointsTag(points: number): HTMLElement {
-  const value = document.createElement('span');
-  value.className = 'tk-seat__points';
-  value.textContent = tkPoints(points);
-  return value;
 }
 
 // Every seat shows both lines in every state, an empty one saying "None", so

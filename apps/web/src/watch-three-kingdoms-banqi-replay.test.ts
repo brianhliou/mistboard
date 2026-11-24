@@ -5,6 +5,7 @@ import {
 } from '@mistboard/game';
 import { afterEach, expect, it, vi } from 'vitest';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { syncWatchSeatScores } from './watch-route.js';
 import { mountThreeKingdomsBanqiWatchReplay } from './watch-three-kingdoms-banqi-replay.js';
 
 function fixture() {
@@ -115,4 +116,50 @@ it('draws a finished TK card on its final public frame, covered pieces as covere
   expect(card.backs).toBe(card.covered);
   const swapped = await mountCard(true);
   expect(swapped.html).toBe(card.html);
+});
+
+// /watch's rail rows and the homepage TV seats show each seat's points beside its
+// name at the ply on the board. Scores are keyed by move-order seat, red first.
+it('puts each seat points beside its name at the shown ply, on the watch rail and homepage seats', async () => {
+  const postgame = fixture();
+  postgame.history.truth[1]!.view.scores = { red: 15, black: 40 };
+  const root = document.createElement('div');
+  const handle = await mountThreeKingdomsBanqiWatchReplay(root, 'tkb_watch', {
+    autoplay: false,
+    compact: true,
+    seatScores: true,
+    loadPostgameOverride: async () => ({ ok: true, postgame }),
+  });
+  const seatText = (seat: 'first' | 'second') =>
+    root.querySelector(`.showcase-seat[data-seat="${seat}"] .showcase-seat-score`)?.textContent;
+  handle.jumpToPly?.(0);
+  expect(seatText('first')).toBe('0 pts');
+  expect(seatText('second')).toBe('0 pts');
+  handle.jumpToPly?.(1);
+  expect(seatText('first')).toBe('15 pts');
+  expect(seatText('second')).toBe('40 pts');
+  expect(root.querySelector('.showcase-seat-score .tk-seat__points')).not.toBeNull();
+
+  const top = document.createElement('div');
+  const bottom = document.createElement('div');
+  for (const slot of [top, bottom]) {
+    slot.innerHTML =
+      '<span class="clock-player-line watch-game-table__player"><span class="clock-name">P</span><span class="clock-to-move"></span></span>';
+  }
+  syncWatchSeatScores(top, bottom, handle);
+  expect(bottom.querySelector('.watch-player-score')?.textContent).toBe('15 pts');
+  expect(top.querySelector('.watch-player-score')?.textContent).toBe('40 pts');
+  handle.destroy();
+});
+
+it('keeps the compact seat rows unscored unless the host asks (queue previews, /games cards)', async () => {
+  const root = document.createElement('div');
+  const handle = await mountThreeKingdomsBanqiWatchReplay(root, 'tkb_watch', {
+    autoplay: false,
+    compact: true,
+    loadPostgameOverride: async () => ({ ok: true, postgame: fixture() }),
+  });
+  expect(root.querySelectorAll('.showcase-seat')).toHaveLength(2);
+  expect(root.querySelector('.showcase-seat-score')).toBeNull();
+  handle.destroy();
 });

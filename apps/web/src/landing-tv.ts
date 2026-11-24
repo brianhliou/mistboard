@@ -252,6 +252,7 @@ export async function mountLandingTv(
         metadataByRoomId: options.metadataByRoomId,
         seatDiscs: true,
         reservesInSeats: true,
+        seatScores: true,
         namesByRoomId: options.namesByRoomId,
         loaderForId: options.loaderForId,
         pov: entry.pov,

@@ -1703,6 +1703,58 @@
   text-overflow: ellipsis;
 }
 
+/* A seat's running score (Fanfanqi HP, Three Kingdoms points) right after the
+   name; the auto margin keeps the clock at the far end. Outranks the room's own
+   meter and points rules, which load from other stylesheets. */
+.showcase-widget .replay-layout-solo .showcase-seat .showcase-seat-score {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-right: auto;
+  color: var(--site-text);
+  font-size: var(--showcase-seat-clock-size, 0.9rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.showcase-widget .replay-layout-solo .showcase-seat .showcase-seat-score:empty {
+  display: none;
+}
+
+/* seat-disc.css hands the name the row's slack; with a score beside it, the
+   score takes the slack instead so the two sit together. */
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  .showcase-seat-name:has(+ .showcase-seat-score:not(:empty)) {
+  margin-right: 0;
+}
+
+.showcase-widget .replay-layout-solo .showcase-seat .showcase-seat-score .ffq-banqi-hp-meter {
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  .showcase-seat-score
+  .ffq-banqi-hp-meter
+  progress {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 8px;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  .showcase-seat-score
+  :is(.ffq-banqi-hp-meter__value, .tk-seat__points) {
+  font-size: inherit;
+}
+
 .showcase-widget .replay-layout-solo .showcase-seat-clock {
   color: var(--site-muted);
   font-size: var(--showcase-seat-clock-size, 0.9rem);
