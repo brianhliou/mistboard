@@ -24,6 +24,7 @@ import {
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
+  hasVariantTerminationLabel,
   liveFirstMover,
   liveMatchupNames,
   matchupLabel,
@@ -2029,9 +2030,12 @@ function playersMatchupLabel(players: GameMetaPlayer[]): string {
 
 export function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
+  const variant = terminationVariant(game.variant);
   // "On points" is already a phrase; "wins by On points" is not a sentence.
-  if (game.termination === 'points') return t('watch.resultOnPoints', { result });
-  const reason = terminationReason(game.termination, terminationVariant(game.variant));
+  // Fanfanqi's `points` is its HP ending and reads "wins by HP depletion".
+  if (game.termination === 'points' && !hasVariantTerminationLabel(game.termination, variant))
+    return t('watch.resultOnPoints', { result });
+  const reason = terminationReason(game.termination, variant);
   return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 

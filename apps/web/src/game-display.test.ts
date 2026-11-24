@@ -15,6 +15,7 @@ import {
   firstMoverColorName,
   type GameParticipant,
   gameOutcome,
+  hasVariantTerminationLabel,
   liveMatchupNames,
   matchupLabel,
   matchupSeats,
@@ -286,6 +287,29 @@ describe('terminationLabel', () => {
 
   it('humanizes an unknown code instead of throwing', () => {
     expect(terminationLabel('some-future-code', null)).toBe('Some future code');
+  });
+
+  // The Fanfanqi review card read "On points • Red is victorious" for a game
+  // that ended at zero HP: the stored code is the shared `points`, and its room
+  // calls that ending HP depletion.
+  it('names a Fanfanqi points ending by HP, in every locale', async () => {
+    expect(terminationLabel('points', 'ffq-banqi', 'en')).toBe('HP depletion');
+    expect(terminationReason('points', 'ffq-banqi', 'en')).toBe('HP depletion');
+    expect(terminationLabel('points', terminationVariant('ffq-banqi'), 'en')).toBe('HP depletion');
+    await ensureLocaleCatalog('zh-Hans');
+    await ensureLocaleCatalog('zh-Hant');
+    expect(terminationLabel('points', 'ffq-banqi', 'zh-Hans')).toBe('生命值耗尽');
+    expect(terminationLabel('points', 'ffq-banqi', 'zh-Hant')).toBe('生命值耗盡');
+    // Three Kingdoms banqi and xiangqi mahjong still win on points.
+    expect(terminationLabel('points', 'three-kingdoms-banqi', 'en')).toBe('On points');
+    expect(terminationLabel('points', 'xiangqi-mahjong', 'en')).toBe('On points');
+    expect(terminationReason('points', 'three-kingdoms-banqi', 'en')).toBe('on points');
+    expect(terminationLabel('points', 'three-kingdoms-banqi', 'zh-Hans')).toBe('计分胜负');
+    expect(hasVariantTerminationLabel('points', 'ffq-banqi')).toBe(true);
+    expect(hasVariantTerminationLabel('points', 'three-kingdoms-banqi')).toBe(false);
+    expect(hasVariantTerminationLabel('resignation', 'ffq-banqi')).toBe(false);
+    // Fanfanqi's other endings keep the shared labels.
+    expect(terminationLabel('resignation', 'ffq-banqi', 'en')).toBe('Resignation');
   });
 });
 

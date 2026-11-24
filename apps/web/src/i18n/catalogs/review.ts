@@ -229,6 +229,8 @@ export const EN_REVIEW = {
   'replay.endPiecesCaptured': 'All pieces captured',
   'replay.endDeadPosition': 'Dead position',
   'replay.endPoints': 'On points',
+  // Fanfanqi's points ending: a side reached zero HP (the room's result.hp).
+  'replay.endHp': 'HP depletion',
   // Replay meta card + share button (replay-meta.ts).
   'replay.share': 'Share',
   'replay.copied': 'Copied',

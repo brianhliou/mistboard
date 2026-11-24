@@ -245,6 +245,27 @@ describe('watch route copy helpers', () => {
     );
   });
 
+  // A Fanfanqi game stores its zero-HP ending as the shared `points`; the line
+  // read "Red wins on points" though nothing in Fanfanqi is scored in points.
+  it('says a Fanfanqi game ended by HP depletion, and Three Kingdoms on points', () => {
+    const game: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pvp',
+      plyCount: 48,
+      result: 'red-wins',
+      roomId: 'ffq_hp',
+      termination: 'points',
+      variant: 'ffq-banqi',
+      whiteName: null,
+      participants: [],
+    };
+    expect(watchGameStatusLine(game)).toBe('Red wins by HP depletion');
+    expect(watchGameStatusLine({ ...game, variant: 'three-kingdoms-banqi' })).toContain(
+      'on points',
+    );
+  });
+
   // Gomoku's five in a row and Jungle's den entry share the stored code `race`;
   // the watch page read "White wins by den entered" for a finished Gomoku game.
   it('names a Gomoku race win five in a row, never den entered', () => {

@@ -12,6 +12,7 @@
 
 import type { GameSpecId } from '@mistboard/game';
 import {
+  hasVariantTerminationLabel,
   type SeatNames,
   terminationLabel as sharedTerminationLabel,
   terminationReason as sharedTerminationReason,
@@ -352,8 +353,10 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
 // "General Captured" and "No Legal Moves" through untranslated). `race` is not
 // its own wording in any variant (Jungle's den entry, Gomoku's five in a row),
 // so it always goes through the shared map with the variant, which is required.
+// Fanfanqi's `points` is its HP ending ("by HP depletion"), so it does too.
 function terminationLabel(reason: string, variant: GameSpecId, locale: Locale): string {
-  if (reason === 'race') return sharedTerminationReason(reason, variant, locale);
+  if (reason === 'race' || hasVariantTerminationLabel(reason, variant))
+    return sharedTerminationReason(reason, variant, locale);
   if (locale === 'en') return labelize(reason).toLowerCase();
   return sharedTerminationLabel(reason, variant, locale);
 }

@@ -552,30 +552,60 @@ export function terminationVariant(variant: string | null | undefined): GameSpec
   return variant ? (maybeGameSpecForId(variant)?.id ?? null) : null;
 }
 
+// The persisted `points` code is shared as well: Three Kingdoms banqi and
+// xiangqi mahjong win on points, but Fanfanqi stores its HP ending (a side at
+// zero HP) as `points`, and its room calls that ending "HP depletion"
+// (`result.hp`). Fanfanqi's label is the room's term, never "On points".
+const POINTS_TERMINATION_KEYS = new Map<GameSpecId, I18nKey>([['ffq-banqi', 'replay.endHp']]);
+
+// Labels that open with an initialism keep their case mid-sentence ("by HP
+// depletion", not "by hp depletion").
+const CASED_TERMINATION_KEYS = new Set<I18nKey>(['replay.endHp']);
+
+function terminationKey(termination: string, variant: GameSpecId | null): I18nKey | null {
+  if (termination === 'race') {
+    if (variant === null) return null;
+    const key = RACE_TERMINATION_KEYS.get(variant);
+    if (!key) throw new Error(`Unsupported race termination for ${variant}`);
+    return key;
+  }
+  if (termination === 'points' && variant !== null) {
+    const key = POINTS_TERMINATION_KEYS.get(variant);
+    if (key) return key;
+  }
+  return TERMINATION_KEYS[termination] ?? null;
+}
+
+/** True when the variant names this persisted code in its own words rather
+ *  than the shared label (Fanfanqi's `points` is its HP ending). */
+export function hasVariantTerminationLabel(
+  termination: string,
+  variant: GameSpecId | null,
+): boolean {
+  return termination === 'points' && variant !== null && POINTS_TERMINATION_KEYS.has(variant);
+}
+
 export function terminationLabel(
   termination: string,
   variant: GameSpecId | null,
   locale?: Locale,
 ): string {
   if (!termination) return '';
-  if (termination === 'race') {
-    if (variant === null) return humanizeToken(termination);
-    const key = RACE_TERMINATION_KEYS.get(variant);
-    if (!key) throw new Error(`Unsupported race termination for ${variant}`);
-    return t(key, {}, locale);
-  }
-  const key = TERMINATION_KEYS[termination];
+  const key = terminationKey(termination, variant);
   if (key) return t(key, {}, locale);
   return humanizeToken(termination);
 }
 
-/** The ending as it reads mid-sentence ("Red wins by timeout"): the label lowercased. */
+/** The ending as it reads mid-sentence ("Red wins by timeout"): the label
+ *  lowercased, except a label that opens with an initialism ("HP depletion"). */
 export function terminationReason(
   termination: string,
   variant: GameSpecId | null,
   locale?: Locale,
 ): string {
-  return terminationLabel(termination, variant, locale).toLowerCase();
+  const label = terminationLabel(termination, variant, locale);
+  const key = termination ? terminationKey(termination, variant) : null;
+  return key && CASED_TERMINATION_KEYS.has(key) ? label : label.toLowerCase();
 }
 
 // A watch/games rail channel's name in the page locale. The server's `label` is
