@@ -12,8 +12,9 @@
 // masked and sealed specs arrive as cards only and get the misty tile, so
 // nothing about a hidden position is ever on this page. Clocks tick
 // client-side from the server snapshot; correspondence cards count down to the
-// seat-on-move's deadline with a thin bar of the move's allowance left. Open
-// seeks draw the variant's starting position (seek-card.ts).
+// seat-on-move's deadline in that seat's clock. A game card is the board, one
+// line per player and one quiet line under the board (the game and its time
+// control). Open seeks draw the variant's starting position (seek-card.ts).
 //
 // Just finished: /api/watch's public replay pool across every variant, without
 // the Featured channel's 20-ply bar (curated=0), so a game that leaves the wall
@@ -41,7 +42,6 @@ import {
   type CurrentGamePlayer,
   type CurrentGamesResponse,
   cardSeatName,
-  deadlineFractionLeft,
   FINISHED_BOARD_BOTTOM_SEAT,
   FINISHED_BOARD_POV,
   FINISHED_POOL_URL,
@@ -93,7 +93,7 @@ import {
   buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
 } from './seek-accept.js';
-import { buildKindBadge, buildSeekCard } from './seek-card.js';
+import { buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -130,7 +130,6 @@ type CardState = {
   root: HTMLElement;
   boardRoot: HTMLElement;
   clockEls: Record<string, HTMLElement>;
-  bar: HTMLElement | null;
   meta: HTMLElement;
   // Client time the clock snapshot arrived; the tick drains from here.
   clockReceivedAt: number;
@@ -354,7 +353,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   function createCard(game: CurrentGame): CardState {
     const correspondence = game.timeClass === 'correspondence';
     const article = document.createElement('article');
-    article.className = 'current-game-card';
+    // is-slim scopes the one-line seats and the single meta line to these
+    // cards; seek cards and the correspondence inbox share the base styles.
+    article.className = 'current-game-card is-slim';
     article.dataset.roomId = game.roomId;
     article.dataset.observe = game.observe;
     article.dataset.kind = correspondence ? 'correspondence' : 'live';
@@ -381,23 +382,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     article.append(open, topRow, boardRoot, bottomRow);
     stampSeatInkFamily(article, game.gameSpecId);
 
-    let bar: HTMLElement | null = null;
-    if (correspondence) {
-      const track = document.createElement('div');
-      track.className = 'current-game-bar';
-      track.setAttribute('aria-hidden', 'true');
-      bar = document.createElement('span');
-      track.append(bar);
-      article.append(track);
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'current-game-meta';
+    const meta = document.createElement('p');
+    meta.className = 'current-game-meta current-game-line';
     renderMeta(meta, game);
     article.append(meta);
 
     const card: CardState = {
-      bar,
       boardRoot,
       clockEls,
       clockReceivedAt: Date.now(),
@@ -775,11 +765,16 @@ export function buildSeatRow(
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
   const fullName = liveSeatName(player, gameSpecId);
-  // The whole name, wrapping onto a second line rather than cut (decided
-  // 2026-11-12), with the BOT tag following its last word.
+  // One line per seat: the name gives way (ellipsis) and the BOT tag stays
+  // whole beside it. A bot goes by its short card name (FSF, Misty without the
+  // game, as Just finished does); the full name is the tooltip.
   const label = document.createElement('span');
   label.className = 'current-game-seat-label';
-  const nameEl = playerNameEl(fullName, profileTargetFor(player), 'current-game-seat-name');
+  const nameEl = playerNameEl(
+    liveSeatName(player, gameSpecId, true),
+    profileTargetFor(player),
+    'current-game-seat-name',
+  );
   nameEl.title = fullName;
   label.append(nameEl);
   if (player?.isEngine) {
@@ -840,10 +835,6 @@ function tickCard(card: CardState, now: number): void {
     el.classList.toggle('is-active', game.clock?.activeColor === color && !!game.clock?.running);
     el.classList.toggle('is-low', isLowClock(remaining, game.timeControl?.initialMs));
   }
-  if (card.bar) {
-    const fraction = deadlineFractionLeft(game, now);
-    card.bar.style.width = `${Math.round((fraction ?? 0) * 1000) / 10}%`;
-  }
 }
 
 function clockRemaining(
@@ -888,30 +879,28 @@ export function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): vo
   root.append(tile);
 }
 
-function renderMeta(root: HTMLElement, game: CurrentGame): void {
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variantDisplayLabel(game.gameSpecId);
-  const parts: string[] = [];
+// The one quiet line under the board: the game and its time control
+// ("Xiangqi · 10 + 5", "Xiangqi · 3 days per move"). Casual is the default and
+// goes unsaid; a rated game says so. The kind is the card's top edge.
+export function cardMetaText(game: CurrentGame): string {
+  const parts = [variantDisplayLabel(game.gameSpecId)];
   if (game.timeClass === 'correspondence') {
     const days = game.timeControl?.daysPerMove ?? 0;
-    const cadence = days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
-    // Marked exactly like a live game since correspondence can be rated (2026-10-02).
-    parts.push(cadence, game.rated ? t('games.rated') : t('games.casual'));
-  } else {
-    const label = game.timeControl ? timeControlLabelForGame(asFeaturedGame(game)) : null;
-    parts.push(
-      [label, game.rated ? t('games.rated') : t('games.casual')].filter(Boolean).join(' '),
-    );
+    if (days > 0) {
+      parts.push(days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days }));
+    }
+  } else if (game.timeControl) {
+    const label = timeControlLabelForGame(asFeaturedGame(game));
+    if (label) parts.push(label);
   }
-  parts.push(t('games.moveCount', { count: game.ply }));
-  const text = document.createElement('span');
-  text.textContent = parts.join(' · ');
-  root.replaceChildren(
-    buildKindBadge(game.timeClass === 'correspondence' ? 'correspondence' : 'live'),
-    chip,
-    text,
-  );
+  if (game.rated) parts.push(t('games.rated'));
+  return parts.join(' · ');
+}
+
+function renderMeta(root: HTMLElement, game: CurrentGame): void {
+  const text = cardMetaText(game);
+  root.textContent = text;
+  root.title = text;
 }
 
 function matchupLabel(game: CurrentGame): string {
@@ -930,15 +919,22 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
   };
 }
 
-// A live seat's name as the card shows it; a bot's "Level N" in the visitor's
-// language (localizedBotName).
-function liveSeatName(player: CurrentGamePlayer | null, gameSpecId?: string): string {
+// A live seat's name; a bot's "Level N" in the visitor's language
+// (localizedBotName). `short` is the card's one-line form of a bot's name
+// (cardSeatName, which matches the English "Level N", so it runs first).
+function liveSeatName(
+  player: CurrentGamePlayer | null,
+  gameSpecId?: string,
+  short = false,
+): string {
   const name = displayLiveName(
     player?.name,
     t('games.guest'),
     player ? { ...player, gameSpecId } : undefined,
   );
-  return player?.isEngine ? localizedBotName(name) : name;
+  if (!player?.isEngine) return name;
+  const variantLabel = gameSpecId ? variantDisplayLabel(gameSpecId) : undefined;
+  return localizedBotName(short ? cardSeatName(name, variantLabel) : name);
 }
 
 function asFeaturedGame(game: CurrentGame): FeaturedGame {

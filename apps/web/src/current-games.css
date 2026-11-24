@@ -957,9 +957,9 @@
    one xiangqi-shaped box whatever the variant; a square, wide or tall board
    sits centred in it. Each card spans seven rows of the grid and puts its parts
    on them (subgrid): the seat above the board, the board, the seat below it,
-   the correspondence time bar, the meta, a seek's Accept button and its status
-   line. A row is as tall as that part's tallest card, so a bot name that wraps
-   moves every board in its row down together. Spacing is margins rather than
+   a time bar (no /games card draws one now; the row stays empty), the meta, a
+   seek's Accept button and its status line. A row is as tall as that part's
+   tallest card. Spacing is margins rather than
    gaps, so a part no card in the row has takes no room. The seat rows, bar,
    meta and buttons keep a 10px inset. The correspondence inbox and the
    homepage keep the inset card. */
@@ -1015,6 +1015,59 @@
 .current-games-section[data-section="playing"] .current-game-card > .current-game-seek-status {
   grid-row: 7;
   margin-top: 6px;
+}
+
+/* A game card in Playing now (.is-slim, createCard in current-games.ts): the
+   board, one line per player (disc, name, BOT tag, clock) and one quiet line
+   under the board. The name gives way with an ellipsis; the tag and the clock
+   stay whole. Scoped to .is-slim so seek cards and the correspondence inbox,
+   which share the rules above, draw as before; the extra class also outranks
+   the base seat-label rules whatever order the stylesheets load in. */
+.current-games-section[data-section="playing"] .current-game-card.is-slim > .current-game-seat {
+  min-height: 28px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card.is-slim .current-game-seat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.current-games-section[data-section="playing"]
+  .current-game-card.is-slim
+  .current-game-seat-label
+  > .current-game-seat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-games-section[data-section="playing"]
+  .current-game-card.is-slim
+  .current-game-seat-label
+  > .current-game-bot {
+  flex: none;
+}
+
+/* A profile link is a 41px tap target on a 28px line: padding grows the box
+   into the board's margin and the negative margin keeps the line's height. */
+.current-games-section[data-section="playing"] .current-game-card.is-slim a.player-name-link {
+  padding-block: 12px;
+  margin-block: -12px;
+}
+
+.current-games-section[data-section="playing"] .current-game-card.is-slim > .current-game-line {
+  display: block;
+  margin-bottom: 0;
+  font-size: 0.78rem;
+  color: var(--site-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Just finished: a smaller grid of final positions, every card one cell (a
