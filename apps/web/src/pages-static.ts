@@ -1027,9 +1027,11 @@ export const PIECE_SET_SOURCE_URLS = {
   '2dhanzi': `${PYCHESS_XIANGQI_PIECES_URL}/2dhanzi`,
 } as const;
 
+// Pinned to the commits the boards were drawn from (piece-sets/CREDITS.md).
 export const BOARD_SOURCE_URLS = {
-  green: 'https://github.com/gbtami/pychess-variants/blob/master/static/images/board/xiangqic.svg',
-  pine: 'https://github.com/Kadagaden/chess-pieces/blob/master/boards/xiangqi_gmchess_wood.svg',
+  green:
+    'https://github.com/gbtami/pychess-variants/blob/5ebec9241a4a344204d63feaaeeee2549bd949ac/static/images/board/xiangqic.svg',
+  pine: 'https://github.com/Kadagaden/chess-pieces/blob/b035b0cc6a68e9fb99c872c8fe073c3ae3eba8a0/boards/xiangqi_gmchess_wood.svg',
 } as const;
 
 const CC_BY_4_URL = 'https://creativecommons.org/licenses/by/4.0/';

@@ -405,13 +405,9 @@ describe('appearance family gating', () => {
     ]);
     const group = submenu?.querySelector<HTMLElement>('.xq-board-color-group');
     expect(group?.getAttribute('role')).toBe('radiogroup');
-    expect(
-      [
-        ...(group?.querySelectorAll<HTMLElement>(
-          '.xq-board-color-row--art [data-xq-board-color]',
-        ) ?? []),
-      ].map((swatch) => swatch.dataset.xqBoardColor),
-    ).toEqual(['green', 'pine']);
+    // One grid holds every swatch, so the rows line up (no short second row).
+    expect(group?.querySelectorAll('.xq-board-color-row')).toHaveLength(1);
+    expect(group?.querySelectorAll('.xq-board-color-row > [data-xq-board-color]')).toHaveLength(10);
     submenu?.querySelector<HTMLButtonElement>('[data-xq-board-color="pine"]')?.click();
     expect(document.documentElement.dataset.xiangqiBoardColor).toBe('pine');
     expect(window.localStorage.getItem('mistboard.xiangqiBoardColor')).toBe('pine');

@@ -69,7 +69,6 @@ import {
   xiangqiNotationOptions,
 } from './xiangqi-appearance-storage.js';
 import {
-  isXiangqiBoardArt,
   JUNGLE_XIANGQI_BOARD_COLOR,
   XIANGQI_BOARD_ART_PRESETS,
   XIANGQI_BOARD_COLOR_PRESETS,
@@ -456,7 +455,7 @@ function createXiangqiBoardColorField(locale: Locale): HTMLDivElement {
   const label = document.createElement('span');
   label.textContent = t('prefs.boardColor', {}, locale);
 
-  // One radiogroup, two rows: the flat colours (and Jungle) first, then the
+  // One radiogroup, one grid: the flat colours (and Jungle) first, then the
   // boards drawn after a source board (2026-11-24), whose swatch is a crop of
   // the board's own colours and grain (theme.css).
   const group = document.createElement('div');
@@ -465,8 +464,6 @@ function createXiangqiBoardColorField(locale: Locale): HTMLDivElement {
   group.setAttribute('aria-label', t('prefs.boardColor', {}, locale));
   const row = document.createElement('div');
   row.className = 'xq-board-color-row';
-  const artRow = document.createElement('div');
-  artRow.className = 'xq-board-color-row xq-board-color-row--art';
 
   const active = readStoredXiangqiBoardColor();
   const ids: XiangqiBoardColor[] = [
@@ -490,10 +487,10 @@ function createXiangqiBoardColorField(locale: Locale): HTMLDivElement {
       swatch.style.setProperty('--xq-swatch', xiangqiBoardColorPreset(id).fill);
     }
     swatch.addEventListener('click', () => setXiangqiBoardColorPreference(id));
-    (isXiangqiBoardArt(id) ? artRow : row).append(swatch);
+    row.append(swatch);
   }
 
-  group.append(row, artRow);
+  group.append(row);
   field.append(label, group);
   return field;
 }
