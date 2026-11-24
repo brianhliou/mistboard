@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Verified titles and flair now show beside player names in game rooms, review, /games, /watch, the correspondence inbox and the homepage game board ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - In games against a bot you now have five minutes to make your first move before the game is cancelled, up from 30 seconds ([8ba06e9c](https://github.com/brianhliou/mistboard/commit/8ba06e9c))
 - Correspondence games show the move deadline before you accept them ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - Both homepage lists put the game you last played first ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
@@ -81,6 +82,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The Pikafish guide links the easier bot levels and the analysis board on its first screen and has a new section on downloading Pikafish and its licence ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The Fanfanqi study embed animates each move and flip ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The classical collections have their own tab on the studies page, shown as study cards ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The Fanfanqi rules page has an annotated engine game ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
@@ -233,6 +235,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- An article's What changed line is kept out of search result snippets ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
+- The phone top bar's pieces button shows your own piece set from the first paint, and Chinese pages bake the Chinese default ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The 2026 North American Championship broadcast spells Fan Chi and Lien The Quoc correctly ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The AB-JChess vs jqe article corrects how often the deal decided a pair of games ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - Correspondence rematches start their first-move deadline before players reconnect ([1765dba8](https://github.com/brianhliou/mistboard/commit/1765dba8))
@@ -328,6 +332,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Each game between two people records how the pair was made ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - links from the share and copy buttons carry a tag naming the button that made them ([ac1365f5](https://github.com/brianhliou/mistboard/commit/ac1365f5))
 - count a player's first move when the page reloads before showing it ([ac1365f5](https://github.com/brianhliou/mistboard/commit/ac1365f5))
 - Event-loop stall alerts name the requests and jobs that were running, and a restart's warm-up no longer alerts ([84cf0686](https://github.com/brianhliou/mistboard/commit/84cf0686))
