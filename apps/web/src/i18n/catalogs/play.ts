@@ -416,7 +416,6 @@ export const EN_PLAY = {
   'correspondence.factReminders': 'Reminders before a deadline',
   'correspondence.factVariantsMore': '{list} and {count} more',
   'correspondence.gamesInProgress': 'Games in progress',
-  'correspondence.toMoveLeft': '{name} to move, {time} left',
   'correspondence.howHeading': 'How it works',
   'correspondence.step1Title': 'Post or accept a game',
   'correspondence.step1Body':

@@ -12,7 +12,7 @@ const jieqiSeek = {
   id: 'seek-1',
   gameSpecId: 'jieqi',
   daysPerMove: 1,
-  preferredColor: 'any',
+  preferredColor: 'random',
   rated: false,
   visibility: 'public',
   targetName: null,
@@ -60,6 +60,12 @@ describe('correspondence: your open seeks', () => {
     expect(card?.querySelector('.current-game-seek-slot button')?.textContent).toBe('Cancel');
     expect(card?.querySelector('.current-game-line')?.textContent).toMatch(/^Open seek · Jieqi · /);
     expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
+    // You above the board, Cancel in the seat under it, as everyone else sees it.
+    expect(
+      card
+        ?.querySelector('.current-game-seek-slot')
+        ?.previousElementSibling?.classList.contains('current-game-board'),
+    ).toBe(true);
     // A public seek has no page of its own, so no card-wide link to cover Cancel.
     expect(card?.querySelector('a.current-game-open')).toBeNull();
     const cancel = card?.querySelector<HTMLButtonElement>('.current-game-seek-action button');

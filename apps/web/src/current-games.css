@@ -560,6 +560,26 @@
   --seat-disc-size: 12px;
 }
 
+/* A seek with random colours (seek-card.ts): neither seat has a side yet, so
+   each carries one disc split between the two inks, the second clipped to the
+   right half of the first. The inks stay seat-disc.css's. */
+.current-game-seek-random-disc {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  width: var(--seat-disc-size);
+  height: var(--seat-disc-size);
+}
+
+.current-game-seek-random-disc > .seat-disc {
+  position: absolute;
+  inset: 0;
+}
+
+.current-game-seek-random-disc > .seat-disc + .seat-disc {
+  clip-path: inset(0 0 0 50%);
+}
+
 .current-game-seat-name {
   font-weight: 600;
   color: var(--site-heading);
@@ -715,11 +735,15 @@
 }
 
 /* The Three Kingdoms board carries an inline height:auto (its renderer,
-   three-kingdoms-banqi-diagrams.ts, sizes it by width on every other page),
-   which beat the rule above and drew the board at the top of the card with a
-   blank band below. Filling the box lets the viewBox centre it, as banqi's. */
-.current-game-board .replay-layout-solo .replay-board svg.banqi-board {
-  height: 100% !important;
+   three-kingdoms-banqi-diagrams.ts, sizes it by width on every other page). No
+   selector outranks an inline style, so rather than fight it the board's
+   holder centres it: the board keeps its width-driven height and sits in the
+   middle of the card's box, as banqi's viewBox centres it, instead of at the
+   top with a blank band below. */
+.current-game-board .replay-layout-solo .replay-board:has(> svg.banqi-board) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Crazyhouse Xiangqi keeps its hands on a live card (liveCardShowsHands in
@@ -921,21 +945,6 @@
   line-height: 1.5;
 }
 
-/* Correspondence: share of the move's allowance left. */
-.current-game-bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--site-panel-soft);
-  overflow: hidden;
-}
-
-.current-game-bar span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--current-games-kind, var(--site-accent));
-}
-
 .current-game-meta {
   display: flex;
   flex-wrap: wrap;
@@ -946,98 +955,124 @@
   min-width: 0;
 }
 
-.current-game-chip,
-.current-game-result {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--site-panel-soft);
-  color: var(--site-text);
-  white-space: nowrap;
-}
-
-/* Playing now on /games: every card is one shape, so the seat rows, time bar,
-   meta and buttons sit at the same height in every card of a grid row (decided
-   2026-11-12). The board runs edge to edge, as on the Just finished cards, in
-   one xiangqi-shaped box whatever the variant; a square, wide or tall board
-   sits centred in it. Each card spans seven rows of the grid and puts its parts
-   on them (subgrid): the seat above the board, the board, the seat below it,
-   a time bar (no /games card draws one now; the row stays empty), the meta and
+/* Playing now on /games and every card grid on /correspondence: every card is
+   one shape, so the seat rows, meta and buttons sit at the same height in every
+   card of a grid row (decided 2026-11-12; /correspondence joined 2026-11-24).
+   The board runs edge to edge, as on the Just finished cards, in one
+   xiangqi-shaped box whatever the variant; a square, wide or tall board sits
+   centred in it. Each card spans six rows of the grid and puts its parts on them
+   (subgrid): the seat above the board, the board, the seat below it, the meta,
+   whatever follows the meta (a challenge's deadline notice, Play your move) and
    a seek's status line. A seek's Accept takes its empty seat's row, so a seek
    and a game are one height. A row is as tall as that part's tallest card.
    Spacing is margins rather than gaps, so a part no card in the row has takes
-   no room. The seat rows, bar and meta keep a 10px inset. The correspondence
-   inbox and the homepage keep the inset card. */
-.current-games-section[data-section="playing"] .current-games-grid {
+   no room. The seat rows and meta keep a 10px inset. The homepage keeps the
+   inset card. */
+:is(
+  .current-games-section[data-section="playing"] .current-games-grid,
+  .current-games-grid.correspondence-grid
+) {
   row-gap: 0;
 }
 
-.current-games-section[data-section="playing"] .current-game-card {
+:is(.current-games-section[data-section="playing"], .correspondence-grid) .current-game-card {
   display: grid;
   grid-row: span 6;
   grid-template-rows: subgrid;
+  /* One column no wider than the card: an auto column grows to a long name's
+     one-line width and pushed the board past a 174px phone card. */
+  grid-template-columns: minmax(0, 1fr);
   row-gap: 0;
   margin-bottom: 18px;
   padding: 8px 0 10px;
 }
 
-.current-games-section[data-section="playing"]
+/* A seek poster's name gives way with an ellipsis, as a game card's does. */
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-seek
+  .current-game-seat-who
+  > .current-game-seat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card
   > :not(.current-game-board, .current-game-open) {
   margin-inline: 10px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > :has(+ .current-game-board) {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > :has(+ .current-game-board) {
   grid-row: 1;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-board {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-board {
   grid-row: 2;
   aspect-ratio: 552 / 612;
   margin-block: 6px;
   border-radius: 0;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-board + * {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-board
+  + * {
   grid-row: 3;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-bar {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-meta {
   grid-row: 4;
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-meta {
-  grid-row: 5;
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-meta
+  ~ * {
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-status {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-seek-status {
   grid-row: 6;
   margin-top: 6px;
 }
 
-/* A game card in Playing now (.is-slim, createCard in current-games.ts): the
-   board, one line per player (disc, name, BOT tag, clock) and one quiet line
-   under the board. The name gives way with an ellipsis; the tag and the clock
-   stay whole. Scoped to .is-slim so the correspondence inbox, which shares the
-   rules above, draws as before; the extra class also outranks the base
-   seat-label rules whatever order the stylesheets load in. Seats are 34px in
+/* A game card in Playing now (.is-slim: createCard in current-games.ts, and
+   /correspondence's buildInboxCard and buildShowcaseCard): the board, one line
+   per player (disc, name, BOT tag, clock) and one quiet line under the board.
+   The name gives way with an ellipsis; the tag and the clock stay whole. The
+   extra class outranks the base seat-label rules whatever order the
+   stylesheets load in. Seats are 34px in
    game and seek cards alike: a seek's 40px Accept sits in its row and reaches
-   3px into the board's margin, so the two cards stay one height. */
-.current-games-section[data-section="playing"]
+   3px into the board's margin, so the two cards stay one height. One line even
+   where /correspondence's phone rule lets a seat wrap. */
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card:is(.is-slim, .is-seek)
   > .current-game-seat {
+  flex-wrap: nowrap;
   min-height: 34px;
 }
 
-.current-games-section[data-section="playing"]
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card.is-seek
   > .current-game-seek-slot
   > .current-game-seek-action {
   margin-block: -3px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card.is-slim .current-game-seat-label {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  .current-game-seat-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1046,7 +1081,7 @@
   white-space: nowrap;
 }
 
-.current-games-section[data-section="playing"]
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card.is-slim
   .current-game-seat-label
   > .current-game-seat-name {
@@ -1056,7 +1091,7 @@
   white-space: nowrap;
 }
 
-.current-games-section[data-section="playing"]
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card.is-slim
   .current-game-seat-label
   > .current-game-bot {
@@ -1065,12 +1100,14 @@
 
 /* A profile link is a 41px tap target on a 34px line: padding grows the box
    into the board's margin and the negative margin keeps the line's height. */
-.current-games-section[data-section="playing"] .current-game-card.is-slim a.player-name-link {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  a.player-name-link {
   padding-block: 12px;
   margin-block: -12px;
 }
 
-.current-games-section[data-section="playing"]
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card:is(.is-slim, .is-seek)
   > .current-game-line {
   display: block;
@@ -1083,18 +1120,19 @@
 }
 
 /* Just finished: a smaller grid of final positions, every card one cell (a
-   banqi board is a short strip in its card; Brian, 2026-10-30). */
+   banqi board is a short strip in its card; decided 2026-10-30). */
 .current-games-finished-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
-  align-items: start;
+  align-items: stretch;
   gap: 14px;
 }
 
-/* The board runs edge to edge; the names and the result sit in padded rows
-   above and below it, and the card ends under the result line. A card is as
-   tall as its own parts, never stretched to a taller neighbour's height, so
-   no card has a blank band; boards of one shape make cards of one height. */
+/* The board runs edge to edge between the two name rows. Every card in a grid
+   row is stretched to the row's height and the board box takes the extra: a
+   shorter board (Jungle, gomoku, a square chess board) sits centred on the soft
+   panel, as the banqi strip does, so the bottom name row ends every card of the
+   row on one line and no blank band opens between the text rows. */
 .current-game-finished {
   display: flex;
   flex-direction: column;
@@ -1115,11 +1153,9 @@
 }
 
 .current-game-finished .current-game-board {
+  flex: 1 0 auto;
   aspect-ratio: var(--finished-board-aspect, 1);
   border-radius: 0;
-}
-
-.current-game-finished .current-game-board.is-loading {
   background: var(--site-panel-soft);
 }
 
@@ -1151,8 +1187,9 @@
 }
 
 /* One row per player, above and below the board on the side their pieces
-   start from (placeFinishedSeats), each with the card's full width. The
-   winner's name reads first; the other steps back. */
+   start from (placeFinishedSeats), each with the card's full width and ending
+   in the player's score (1, 0, or ½ each for a draw). The winner's name reads
+   first; the other steps back. */
 .current-game-finished-seat {
   display: flex;
   align-items: center;
@@ -1176,33 +1213,11 @@
   text-overflow: ellipsis;
 }
 
-/* The result on the left, when it ended in the bottom-right corner. */
-.current-game-finished-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  min-width: 0;
-  padding: 0 10px 9px;
-}
-
-.current-game-finished .current-game-result {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.current-game-result {
-  border-radius: 5px;
-  font-weight: 600;
-  color: var(--site-heading);
-}
-
-.current-game-finished-when {
+.current-game-finished-score {
   flex: none;
   margin-left: auto;
-  color: var(--site-muted);
-  white-space: nowrap;
+  min-width: 1ch;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 

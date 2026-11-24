@@ -48,7 +48,7 @@ function rowOrder(tile: HTMLElement): string[] {
     const el = child as HTMLElement;
     if (el.classList.contains('current-game-board')) return 'board';
     if (el.classList.contains('current-game-finished-seat'))
-      return `${el.dataset.seat}:${el.textContent}`;
+      return `${el.dataset.seat}:${el.querySelector('.current-game-finished-seat-name')?.textContent}`;
     return el.className;
   });
 }
@@ -70,12 +70,7 @@ describe('finished card name rows', () => {
         participants: [participant('red', 'Fairy-Stockfish'), participant('black', 'Opponent')],
       }),
     );
-    expect(rowOrder(tile)).toEqual([
-      'second:Opponent',
-      'board',
-      'first:Fairy-Stockfish',
-      'current-game-finished-line',
-    ]);
+    expect(rowOrder(tile)).toEqual(['second:Opponent', 'board', 'first:Fairy-Stockfish']);
     // The full names stay on the rows for the hover title, ellipsis or not.
     expect(tile.querySelector<HTMLElement>('[data-seat="first"]')?.title).toBe('Fairy-Stockfish');
   });

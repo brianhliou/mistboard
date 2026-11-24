@@ -1,6 +1,7 @@
 // The seek card (/games, /correspondence) is a game card waiting for its second
-// player: its controls take the empty seat, so it has the game card's rows
-// (seat, board, seat, one quiet line) and the same height beside one.
+// player: the poster above the board, its controls in the empty seat below it,
+// so it has the game card's rows (seat, board, seat, one quiet line) and the
+// same height beside one. The seat discs say the colours.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildSeekCard, type SeekCardSeek } from './seek-card.js';
@@ -34,45 +35,118 @@ function rows(card: HTMLElement): string[] {
     );
 }
 
+const disc = (row: Element | null | undefined) =>
+  row?.querySelector<HTMLElement>('.current-game-seat-disc') ?? null;
+
 describe('buildSeekCard', () => {
-  it('puts Accept in the empty seat above the board, with no button row', () => {
+  it('puts the poster above the board and Accept in the empty seat below it', () => {
+    for (const color of [undefined, 'first', 'second', 'random']) {
+      const card = buildSeekCard(seek, { action: accept(), color, href: null });
+      expect(rows(card)).toEqual([
+        'poster',
+        'board',
+        'slot',
+        'current-game-meta current-game-line',
+      ]);
+    }
     const card = buildSeekCard(seek, { action: accept(), href: null });
-    expect(rows(card)).toEqual(['slot', 'board', 'poster', 'current-game-meta current-game-line']);
     const slot = card.querySelector('.current-game-seek-slot');
     expect(slot?.classList.contains('current-game-seat')).toBe(true);
     expect(slot?.querySelector('button.current-game-seek-action')?.textContent).toBe('Accept');
     expect(card.querySelector('.is-empty-seat, .current-game-seek-actions')).toBeNull();
   });
 
-  it('puts the slot under the board when it is your seat there', () => {
-    const card = buildSeekCard(seek, {
-      action: accept(),
-      href: null,
-      side: 'second',
-      waitingAtBottom: true,
-    });
-    expect(rows(card)).toEqual(['poster', 'board', 'slot', 'current-game-meta current-game-line']);
+  it('gives Accept the disc of the side you would play and turns the board to it', () => {
+    // The poster took Red: you play Black, at the bottom.
+    const red = buildSeekCard(seek, { action: accept(), color: 'first', href: null });
+    const slot = red.querySelector('.current-game-seek-slot');
+    expect(disc(slot)?.classList.contains('seat-disc--black')).toBe(true);
+    expect(disc(slot)?.getAttribute('aria-label')).toBe('Black');
+    expect(disc(slot)?.nextElementSibling?.textContent).toBe('Accept');
+    const poster = red.querySelector('.current-game-seat:not(.current-game-seek-slot)');
+    expect(disc(poster)?.classList.contains('seat-disc--red')).toBe(true);
+    expect(red.querySelector<HTMLElement>('.current-game-board')?.dataset.perspective).toBe(
+      'second',
+    );
+    // The poster took Black: you play Red, and the board keeps Red at the bottom.
+    const black = buildSeekCard(seek, { action: accept(), color: 'second', href: null });
+    expect(disc(black.querySelector('.current-game-seek-slot'))?.className).toContain(
+      'seat-disc--red',
+    );
+    expect(black.querySelector<HTMLElement>('.current-game-board')?.dataset.perspective).toBe(
+      'first',
+    );
+    // Chess seats play white and black.
+    const chess = buildSeekCard(
+      { ...seek, gameSpecId: 'chess' },
+      { action: accept(), color: 'second', href: null },
+    );
+    expect(disc(chess.querySelector('.current-game-seek-slot'))?.className).toContain(
+      'seat-disc--white',
+    );
   });
 
-  it('keeps the dashed waiting seat when the card has no controls', () => {
-    const card = buildSeekCard(seek, { href: '/correspondence' });
+  it('marks random colours with a split disc on both seats and keeps the default board', () => {
+    const card = buildSeekCard(seek, { action: accept(), color: 'random', href: null });
+    const splits = card.querySelectorAll<HTMLElement>('.current-game-seek-random-disc');
+    expect(splits).toHaveLength(2);
+    for (const split of splits) {
+      expect(split.title).toBe('Random colors');
+      expect(split.getAttribute('aria-label')).toBe('Random colors');
+      expect(split.getAttribute('role')).toBe('img');
+      expect([...split.children].map((half) => half.className)).toEqual([
+        'seat-disc seat-disc--red',
+        'seat-disc seat-disc--black',
+      ]);
+    }
+    expect(card.querySelector<HTMLElement>('.current-game-board')?.dataset.perspective).toBe(
+      undefined,
+    );
+    expect(card.querySelector('.current-game-line')?.textContent).toBe('Xiangqi · 3 days per move');
+  });
+
+  it('draws no disc without a known side, and says the side in words where seats have no colour', () => {
+    expect(buildSeekCard(seek, { action: accept(), href: null }).querySelector('.seat-disc')).toBe(
+      null,
+    );
+    const mahjong = buildSeekCard(
+      { ...seek, gameSpecId: 'xiangqi-mahjong' },
+      { action: accept(), color: 'random', colorLabel: 'random colors', href: null },
+    );
+    expect(mahjong.querySelector('.seat-disc')).toBeNull();
+    expect(mahjong.querySelector('.current-game-line')?.textContent).toMatch(/· random colors$/);
+    // Where the discs say it, the line does not.
+    const xiangqi = buildSeekCard(seek, {
+      action: accept(),
+      color: 'first',
+      colorLabel: 'You play Black',
+      href: null,
+    });
+    expect(xiangqi.querySelector('.current-game-line')?.textContent).toBe(
+      'Xiangqi · 3 days per move',
+    );
+  });
+
+  it('keeps the dashed waiting seat under the board when the card has no controls', () => {
+    const card = buildSeekCard(seek, { color: 'first', href: '/correspondence' });
     expect(rows(card)).toEqual([
-      'waiting',
-      'board',
       'poster',
+      'board',
+      'waiting',
       'current-game-meta current-game-line',
     ]);
     expect(card.querySelector('.is-empty-seat')?.textContent).toBe('Waiting for an opponent');
+    expect(disc(card.querySelector('.is-empty-seat'))?.className).toContain('seat-disc--black');
   });
 
-  it('says variant, days per move and side in one line, Rated only when rated', () => {
+  it('says variant and days per move in one line, Rated only when rated', () => {
     const line = (rated: boolean) =>
       buildSeekCard(
         { ...seek, rated },
-        { action: accept(), details: ['random colors'], href: null },
+        { action: accept(), color: 'random', details: ['expires in 2d'], href: null },
       ).querySelector('.current-game-line');
-    expect(line(false)?.textContent).toBe('Xiangqi · 3 days per move · random colors');
-    expect(line(true)?.textContent).toBe('Xiangqi · 3 days per move · Rated · random colors');
+    expect(line(false)?.textContent).toBe('Xiangqi · 3 days per move · expires in 2d');
+    expect(line(true)?.textContent).toBe('Xiangqi · 3 days per move · Rated · expires in 2d');
     expect(line(false)?.getAttribute('title')).toBe(line(false)?.textContent);
     expect(line(false)?.textContent).not.toMatch(/Casual|Open seek/);
     const card = buildSeekCard(seek, { action: accept(), href: null });
@@ -133,12 +207,12 @@ describe('seek card styles', () => {
     expect(px(body('.current-game-seek-accept'), 'min-height')).toBeGreaterThanOrEqual(40);
   });
 
-  it('gives game and seek cards in Playing now one seat height that holds Accept', () => {
+  it('gives game and seek cards in Playing now and /correspondence one seat height that holds Accept', () => {
     const seat = body(
-      '.current-games-section[data-section="playing"]\n  .current-game-card:is(.is-slim, .is-seek)\n  > .current-game-seat',
+      ':is(.current-games-section[data-section="playing"], .correspondence-grid)\n  .current-game-card:is(.is-slim, .is-seek)\n  > .current-game-seat',
     );
     const action = body(
-      '.current-games-section[data-section="playing"]\n  .current-game-card.is-seek\n  > .current-game-seek-slot\n  > .current-game-seek-action',
+      ':is(.current-games-section[data-section="playing"], .correspondence-grid)\n  .current-game-card.is-seek\n  > .current-game-seek-slot\n  > .current-game-seek-action',
     );
     // A 40px button in the seat row, overhanging into the board's 6px margin.
     expect(px(seat, 'min-height') - 2 * px(action, 'margin-block')).toBeGreaterThanOrEqual(40);

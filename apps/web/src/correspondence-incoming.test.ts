@@ -47,7 +47,13 @@ describe('correspondence: challenges for you', () => {
     // Accept and Decline take your empty seat; no dashed "Waiting for you".
     expect(card?.querySelector('.is-empty-seat')).toBeNull();
     const meta = card?.querySelector('.current-game-meta.current-game-line')?.textContent ?? '';
-    expect(meta).toMatch(/^Xiangqi · 3 days per move · Rated · you play Black · expires in /);
+    // The side is the disc on your seat, not words in the line.
+    expect(meta).toMatch(/^Xiangqi · 3 days per move · Rated · expires in /);
+    expect(
+      card
+        ?.querySelector('.current-game-seek-slot .current-game-seat-disc')
+        ?.getAttribute('aria-label'),
+    ).toBe('Black');
     expect(card?.querySelector('.current-game-chip')).toBeNull();
     // A directed challenge is not on the open board, so no "Open seek" tag.
     expect(card?.querySelector('.current-game-kind')).toBeNull();

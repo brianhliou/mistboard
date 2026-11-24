@@ -1,7 +1,7 @@
 // The /games "Just finished" card: a Xiangqi Mahjong card draws both final
 // hands (never the misty tile), the board box takes its board's own ratio so
-// it runs edge to edge, the winner's name
-// reads first, and the finish time sits after the result in the bottom row.
+// it runs edge to edge, each seat row ends in its score, and the result words
+// and finish time move to the card's title and accessible name.
 import { readFileSync } from 'node:fs';
 import { XIANGQI_MAHJONG_SPEC_ID, XMJ_SEATS, type XmjTile } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -74,26 +74,28 @@ describe('buildFinishedTile', () => {
     expect(aspect('chess')).toBe(1);
   });
 
-  it('is a seat, the board, a seat and one result line, and nothing else', () => {
+  it('is a seat, the board and a seat, and nothing else', () => {
     const tile = buildFinishedTile(finishedGame({}));
     expect([...tile.children].map((el) => el.className)).toEqual([
       'current-game-finished-seat',
       'current-game-board is-loading',
       'current-game-finished-seat',
-      'current-game-finished-line',
     ]);
   });
 
-  // A card stretched to a taller neighbour's height used to push its result
-  // line down and leave a blank band above it.
-  it('sizes each card to its own parts, never to its row', () => {
+  // Cards of one grid row end on one line whatever their board's shape: the
+  // row stretches every card and the board box takes the extra height, so the
+  // bottom name row is the card's last line and no band opens between rows.
+  it('stretches each card to its row and grows the board box, not a text row', () => {
     const css = readFileSync('src/current-games.css', 'utf8');
     const rule = (selector: string) =>
       css.match(new RegExp(`(?:^|\\n)${selector.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ??
       '';
-    expect(rule('.current-games-finished-grid')).toMatch(/align-items:\s*start/);
-    expect(rule('.current-game-finished-line')).not.toMatch(/margin-top:\s*auto/);
-    expect(rule('.current-game-finished-line')).toMatch(/padding/);
+    expect(rule('.current-games-finished-grid')).toMatch(/align-items:\s*stretch/);
+    const board = rule('.current-game-finished .current-game-board');
+    expect(board).toMatch(/flex:\s*1 0 auto/);
+    expect(board).toMatch(/background:\s*var\(--site-panel-soft\)/);
+    expect(rule('.current-game-finished-seat')).not.toMatch(/flex:\s*1/);
   });
 
   it('keeps a banqi card one cell, the same size as the rest', () => {
@@ -102,16 +104,50 @@ describe('buildFinishedTile', () => {
     ).toBe(false);
   });
 
-  it('ends with the result, then the finish time in the corner', () => {
+  it('keeps the result, how it ended and the finish time in the title and the label', () => {
     const tile = buildFinishedTile(XMJ_GAME);
-    const line = tile.lastElementChild as HTMLElement;
-    expect(line.className).toBe('current-game-finished-line');
-    const [result, when] = [...line.children] as HTMLElement[];
-    expect(result?.className).toBe('current-game-result');
-    expect(result?.textContent).toBe('East wins');
-    expect(when?.tagName).toBe('TIME');
-    expect(when?.className).toBe('current-game-finished-when');
-    expect(when?.getAttribute('datetime')).toBe('2026-10-09T12:00:00.000Z');
+    expect(tile.title).toMatch(/^Misty vs rebirthfox333 · East wins · .+ · .+$/);
+    const label = tile.getAttribute('aria-label') ?? '';
+    expect(label).toMatch(/^Open Misty vs rebirthfox333, East wins, /);
+    // Nothing on the card face says it any more.
+    expect(tile.querySelector('time, .current-game-finished-line')).toBeNull();
+    expect(tile.textContent).not.toContain('East wins');
+  });
+
+  it('ends each seat row in its score: 1 and 0, ½ each for a draw, none without a result', () => {
+    const scores = (game: FeaturedGame) =>
+      Object.fromEntries(
+        [
+          ...buildFinishedTile(game).querySelectorAll<HTMLElement>('.current-game-finished-seat'),
+        ].map((row) => [
+          row.dataset.color,
+          row.lastElementChild?.classList.contains('current-game-finished-score')
+            ? row.lastElementChild.textContent
+            : null,
+        ]),
+      );
+    expect(scores(finishedGame({ result: 'red-wins' }))).toEqual({ red: '1', black: '0' });
+    expect(scores(finishedGame({ result: 'black-wins' }))).toEqual({ red: '0', black: '1' });
+    expect(scores(finishedGame({ result: 'draw' }))).toEqual({ red: '½', black: '½' });
+    expect(scores(XMJ_GAME)).toEqual({ east: '1', west: '0' });
+    // No recorded result (an abandoned or failed game) and a winner that is
+    // neither seat score nothing, rather than a draw or a loss for both.
+    expect(scores(finishedGame({ result: '', termination: 'abandoned' }))).toEqual({
+      red: null,
+      black: null,
+    });
+    expect(scores(finishedGame({ variant: 'banqi', result: 'white-wins' }))).toEqual({
+      red: null,
+      black: null,
+    });
+    const score = buildFinishedTile(finishedGame({})).querySelector('.current-game-finished-score');
+    expect(score?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('never calls a game with no recorded result a draw', () => {
+    const tile = buildFinishedTile(finishedGame({ result: '', termination: 'abandoned' }));
+    expect(tile.title).not.toMatch(/Draw/);
+    expect(tile.getAttribute('aria-label')).not.toMatch(/Draw/);
   });
 
   it("marks the winner's and loser's names, and neither on a draw", () => {
@@ -127,6 +163,10 @@ describe('buildFinishedTile', () => {
       black: 'won',
     });
     expect(outcomes(finishedGame({ result: 'draw' }))).toEqual({ red: null, black: null });
+    expect(outcomes(finishedGame({ variant: 'banqi', result: 'white-wins' }))).toEqual({
+      red: null,
+      black: null,
+    });
   });
 });
 
@@ -144,15 +184,15 @@ describe.each([
 
   it.each(XMJ_SEATS)('names the winning %s seat instead of its player', (seat) => {
     const tile = buildFinishedTile({ ...XMJ_GAME, result: `${seat}-wins` });
-    const result = tile.querySelector('.current-game-result');
-    expect(result?.textContent).toBe(copy[seat]);
-    expect(result?.textContent).not.toContain('Misty');
-    expect(result?.textContent).not.toContain('rebirthfox333');
+    const result = tile.title.split(' · ')[1];
+    expect(result).toBe(copy[seat]);
+    expect(result).not.toContain('Misty');
+    expect(result).not.toContain('rebirthfox333');
   });
 
-  it('shows a draw without naming a seat or player', () => {
+  it('says a draw without naming a seat or player', () => {
     const tile = buildFinishedTile({ ...XMJ_GAME, result: 'draw' });
-    expect(tile.querySelector('.current-game-result')?.textContent).toBe(copy.draw);
+    expect(tile.title.split(' · ')[1]).toBe(copy.draw);
   });
 });
 

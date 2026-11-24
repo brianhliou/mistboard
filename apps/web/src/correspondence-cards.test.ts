@@ -13,7 +13,9 @@ const mountShowcaseBoard = vi.hoisted(() =>
 vi.mock('./showcase-board.js', () => ({ mountShowcaseBoard }));
 
 // The /correspondence lists are the site's game cards (current-games.css
-// .current-game-card), the same frame as /games and the homepage (2026-10-04).
+// .current-game-card), the same frame as /games and the homepage (2026-10-04),
+// and from 2026-11-24 the /games Playing now shape: seat, board edge to edge,
+// seat with the time-left badge, one line with the variant and cadence.
 
 function pageCtx(): PageContext {
   return { signedIn: true, isConnected: () => true, handles: [], tickers: [] };
@@ -54,8 +56,63 @@ describe('correspondence inbox card', () => {
     const play = card.querySelector<HTMLAnchorElement>('a.correspondence-card-play');
     expect(play?.textContent).toBe('Play your move');
     expect(play?.getAttribute('href')).toBe('/room/xq_9');
-    expect(card.querySelector('.current-game-chip')?.textContent).toBe('Xiangqi');
     expect(card.querySelectorAll('a a')).toHaveLength(0);
+  });
+
+  it('takes the Playing now shape: seat, board, seat, one line, then Play your move', () => {
+    const current: CurrentGame = {
+      roomId: 'xq_9',
+      gameSpecId: 'xiangqi',
+      channelId: 'xiangqi',
+      composition: 'pvp',
+      observe: 'open',
+      players: [
+        { color: 'red', name: 'Me', handle: null, isEngine: false },
+        { color: 'black', name: 'Bob', handle: null, isEngine: false },
+      ],
+      ply: 4,
+      rated: false,
+      startedAt: Date.now(),
+      lastActivityAt: Date.now(),
+      timeControl: { initialMs: 0, incrementMs: 0, daysPerMove: 3 },
+      timeClass: 'correspondence',
+      clock: null,
+      deadline: null,
+      url: '/room/xq_9',
+      payload: { game: { roomId: 'xq_9' } },
+    };
+    const card = buildInboxCard(pageCtx(), game, current, true);
+    expect(card.classList.contains('is-slim')).toBe(true);
+    expect(
+      [...card.children]
+        .filter((el) => !el.classList.contains('current-game-open'))
+        .map((el) =>
+          el.classList.contains('current-game-seat')
+            ? 'seat'
+            : el.classList.contains('current-game-board')
+              ? 'board'
+              : el.classList.contains('current-game-line')
+                ? 'line'
+                : el.classList.contains('correspondence-card-play')
+                  ? 'play'
+                  : el.className,
+        ),
+    ).toEqual(['seat', 'board', 'seat', 'line', 'play']);
+    expect(card.querySelector('.current-game-line')?.textContent).toBe('Xiangqi · 3 days per move');
+    expect(card.querySelector('.current-game-chip, .current-game-bar')).toBeNull();
+    // Each seat carries the disc of the colour it plays: you Red, Bob Black.
+    const [top, bottom] = seats(card);
+    expect(top?.querySelector('.seat-disc')?.className).toContain('seat-disc--black');
+    expect(bottom?.querySelector('.seat-disc')?.className).toContain('seat-disc--red');
+    // The badge is the time-left clock on the seat to move, styled as a deadline.
+    expect(
+      bottom?.querySelector('.current-game-seat-clock')?.classList.contains('is-deadline'),
+    ).toBe(true);
+    expect(
+      buildInboxCard(pageCtx(), { ...game, rated: true }, current, true).querySelector(
+        '.current-game-line',
+      )?.textContent,
+    ).toBe('Xiangqi · 3 days per move · Rated');
   });
 
   it('a Waiting card: time left on the opponent seat, no Play button', () => {
@@ -75,7 +132,7 @@ describe('correspondence inbox card', () => {
     expect(card.querySelector('.correspondence-card-play')).toBeNull();
   });
 
-  // The badge and its bar already say how long is left; a second line restating
+  // The badge already says how long is left; a second line restating
   // the deadline as a date (and an "Updated" time that is any event, not the
   // last move) read as three competing clocks. The exact due time is the
   // badge's tooltip instead.
@@ -156,7 +213,6 @@ describe('correspondence inbox card', () => {
           return [el.textContent?.includes('You') ? 'you' : 'opponent'];
         }
         if (el.classList.contains('current-game-board')) return ['board'];
-        if (el.classList.contains('current-game-bar')) return ['bar'];
         return [];
       });
     }
@@ -175,7 +231,7 @@ describe('correspondence inbox card', () => {
           const label = `${spec}, ${mySeat === 'red' ? 'first' : 'second'} mover, ${
             yourMove ? 'Your move' : 'Waiting'
           }`;
-          it(`${label}: You at the bottom, board from your side, bar by the running clock`, async () => {
+          it(`${label}: You at the bottom, board from your side, badge on the running clock`, async () => {
             const { corr, current } = inboxGame(spec, mySeat, yourMove);
             const card = buildInboxCard(pageCtx(), corr, current, yourMove);
             const [top, bottom] = seats(card);
@@ -188,12 +244,10 @@ describe('correspondence inbox card', () => {
             expect(await mountedPov(corr.roomId)).toBe(mySeat === 'red' ? 'white' : 'black');
 
             // The running clock is yours on a Your move card, the opponent's on a
-            // Waiting one, and the bar hangs under that seat's row.
+            // Waiting one; the rows keep one order either way.
             expect(visibleClock(yourMove ? bottom : top)).toMatch(/left$/);
             expect(visibleClock(yourMove ? top : bottom)).toBeNull();
-            expect(layout(card)).toEqual(
-              yourMove ? ['opponent', 'board', 'you', 'bar'] : ['opponent', 'bar', 'board', 'you'],
-            );
+            expect(layout(card)).toEqual(['opponent', 'board', 'you']);
           });
         }
       }

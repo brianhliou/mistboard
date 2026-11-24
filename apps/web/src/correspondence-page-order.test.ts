@@ -226,7 +226,21 @@ describe('signed-out header strip', () => {
     expect(hero?.querySelector('figure, svg, .current-game-board')).toBeNull();
     // The games grid follows the strip directly.
     expect(hero?.nextElementSibling?.classList.contains('correspondence-showcase')).toBe(true);
-    expect(root.querySelectorAll('.correspondence-showcase-card')).toHaveLength(1);
+    // Each game in progress is a /games Playing now card (2026-11-24).
+    const cards = root.querySelectorAll<HTMLElement>(
+      '.correspondence-showcase .current-game-card.is-slim',
+    );
+    expect(cards).toHaveLength(1);
+    expect(
+      [...(cards[0]?.children ?? [])]
+        .filter((el) => !el.classList.contains('current-game-open'))
+        .map((el) => el.className.split(' ')[0]),
+    ).toEqual([
+      'current-game-seat',
+      'current-game-board',
+      'current-game-seat',
+      'current-game-meta',
+    ]);
   });
 });
 

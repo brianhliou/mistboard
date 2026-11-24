@@ -1,17 +1,30 @@
 // An open correspondence seek drawn as a game card (/games, /correspondence):
 // the same frame as an in-progress card (seat, board, seat, one quiet line) so
-// a seek reads as a game waiting for its second player. The board is the
-// variant's starting position (start-position-board.ts). The seat still to be
-// filled holds the card's controls (Accept, or your own seek's Copy link and
-// Cancel, or a challenge's Accept and Decline); with no controls it is a dashed
-// slot that says who is missing. Styles live in current-games.css, which both
-// pages load.
+// a seek reads as a game waiting for its second player. The poster's seat is
+// above the board, which is the variant's starting position
+// (start-position-board.ts), and the seat still to be filled is below it: it
+// holds the card's controls (Accept, or your own seek's Copy link and Cancel,
+// or a challenge's Accept and Decline), or with no controls a dashed slot that
+// says who is missing. Each seat carries the disc of the colour it plays, so
+// the side is on the card rather than in the meta line; random colours put a
+// disc split between both inks on both seats. Styles live in
+// current-games.css, which both pages load.
 
-import { displayLiveName, variantDisplayLabel } from './game-display.js';
+import { seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
+import {
+  displayLiveName,
+  type FeaturedGame,
+  firstMoverColorName,
+  matchupSeats,
+  secondMoverColorName,
+  variantDisplayLabel,
+} from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
+import { seatDiscEl } from './seat-disc.js';
 import type { SeatSide } from './seat-start-view.js';
 import { renderStartPositionSvg } from './start-position-board.js';
+import { seatInkFamily } from './variant-seat-label.js';
 
 export type SeekCardSeek = {
   id: string;
@@ -41,19 +54,58 @@ export type SeekCardOptions = {
   // by default).
   waiting?: Node | null;
   ariaLabel?: string;
-  // Extra meta parts after the terms (side, expiry).
+  // Extra meta parts after the terms (an expiry).
   details?: readonly string[];
-  // The seat the start board is drawn for: your own seek, from the side you
-  // asked for; someone else's seek or challenge, from the side you would take
-  // when the poster picked theirs (a fog variant then draws that seat's own
-  // start view). Omitted when the side is random, so a fog variant keeps its
-  // tile (start-position-board.ts) and the board is drawn from the first side.
-  side?: SeatSide;
-  // The empty seat is the viewer's (a challenge to you, or a seek whose side
-  // you would take is known): it goes at the bottom with the poster on top, as
-  // every in-progress card puts "You" at the bottom.
-  waitingAtBottom?: boolean;
+  // The side the poster asked for ('first', 'second' or 'random'). A picked
+  // side turns the board so the seat still to be filled, the one under it, has
+  // its colour at the bottom (a fog variant then draws that seat's own start
+  // view); random keeps the default orientation and fog tile. Anything else
+  // (absent, unknown) draws no disc.
+  color?: string | null;
+  // The side in words ("You play Black", "random colors"), said in the meta
+  // line only for a variant whose seats have no colour to draw (Xiangqi
+  // Mahjong's winds), where the discs cannot say it.
+  colorLabel?: string | null;
 };
+
+type SeekColor = 'first' | 'second' | 'random';
+
+function seekColor(color: string | null | undefined): SeekColor | null {
+  return color === 'first' || color === 'second' || color === 'random' ? color : null;
+}
+
+function capitalized(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
+
+// The disc for one seat of a seek: the ink of the side it plays (a flip
+// variant's dashed ring, its ink still unbound), or for random colours a disc
+// split between both inks. Unlike a game card's disc it is not aria-hidden: the
+// meta line no longer says the side, so the disc's label does.
+function seekSeatDisc(gameSpecId: string, side: SeatSide | 'random'): HTMLElement {
+  const seats = matchupSeats({ variant: gameSpecId } as FeaturedGame);
+  if (side === 'random') {
+    const split = document.createElement('span');
+    split.className = 'current-game-seat-disc current-game-seek-random-disc';
+    // A flip variant's seats bind their inks at the flip; the split shows the
+    // two inks one of them will get.
+    split.append(seatDiscEl(seats[0]), seatDiscEl(seats[1]));
+    const label = capitalized(t('challenge.randomColors'));
+    split.title = label;
+    split.setAttribute('role', 'img');
+    split.setAttribute('aria-label', label);
+    return split;
+  }
+  const seat = side === 'first' ? seats[0] : seats[1];
+  const disc = seatDiscEl(seatInkForVariant(gameSpecId, seat, null), 'current-game-seat-disc');
+  const label =
+    side === 'first' ? firstMoverColorName(gameSpecId) : secondMoverColorName(gameSpecId);
+  disc.removeAttribute('aria-hidden');
+  disc.title = label;
+  disc.setAttribute('role', 'img');
+  disc.setAttribute('aria-label', label);
+  return disc;
+}
 
 // The terms in a game card's order (cardMetaText in current-games.ts): the
 // variant, the days per move, and "Rated" only when it is; casual goes unsaid.
@@ -77,6 +129,15 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   article.dataset.seekId = seek.id;
   const variant = variantDisplayLabel(seek.gameSpecId);
   const creator = displayLiveName(seek.creatorName, t('games.anonymous'));
+  const color = seekColor(options.color);
+  const discs = color !== null && variantSeatsHaveInk(seek.gameSpecId);
+  // The seat the accepter takes, and the side the board is drawn from.
+  const accepter: SeatSide | null =
+    color === 'first' ? 'second' : color === 'second' ? 'first' : null;
+  const poster: SeatSide | null =
+    accepter === null ? null : accepter === 'first' ? 'second' : 'first';
+  const family = seatInkFamily(seek.gameSpecId);
+  if (discs && family) article.dataset.seatInkFamily = family;
 
   if (options.href) {
     const open = document.createElement('a');
@@ -92,6 +153,7 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   // The seat still to be filled: the controls when the card has any (the
   // place you would take is where you act), else a dashed slot naming it.
   const empty = document.createElement('div');
+  if (discs) empty.append(seekSeatDisc(seek.gameSpecId, accepter ?? 'random'));
   if (options.action) {
     empty.className = 'current-game-seat current-game-seek-slot';
     options.action.classList.add('current-game-seek-action');
@@ -114,8 +176,8 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   label.textContent = variant;
   placeholder.append(label);
   board.append(placeholder);
-  if (options.side) board.dataset.perspective = options.side;
-  void renderStartPositionSvg(seek.gameSpecId, options.side)
+  if (accepter) board.dataset.perspective = accepter;
+  void renderStartPositionSvg(seek.gameSpecId, accepter ?? undefined)
     .then((svg) => {
       if (!svg || !board.isConnected) return;
       const frame = document.createElement('div');
@@ -132,6 +194,7 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   seat.className = 'current-game-seat';
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
+  if (discs) who.append(seekSeatDisc(seek.gameSpecId, poster ?? 'random'));
   // The creator's profile link sits above the card-wide .current-game-open
   // overlay (current-games.css), a sibling rather than a child of it, so the two
   // anchors never nest.
@@ -148,13 +211,13 @@ export function buildSeekCard(seek: SeekCardSeek, options: SeekCardOptions): HTM
   // leads it once the controls have taken the empty seat.
   const meta = document.createElement('p');
   meta.className = 'current-game-meta current-game-line';
-  const terms = [...seekMetaParts(seek), ...(options.details ?? [])].join(' · ');
+  const side = !discs && color !== null && options.colorLabel ? [options.colorLabel] : [];
+  const terms = [...seekMetaParts(seek), ...side, ...(options.details ?? [])].join(' · ');
   if (options.action && options.waiting) meta.append(options.waiting, ` · ${terms}`);
   else meta.textContent = terms;
   meta.title = meta.textContent ?? terms;
 
-  if (options.waitingAtBottom) article.append(seat, board, empty, meta);
-  else article.append(empty, board, seat, meta);
+  article.append(seat, board, empty, meta);
   if (options.notice) article.append(options.notice);
   if (options.status) article.append(options.status);
   return article;
