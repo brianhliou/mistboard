@@ -1,14 +1,15 @@
-// "Play again by correspondence" (#606, #531): after a finished game between two
-// signed-in accounts, one click sends the opponent a private correspondence
+// "Play again by correspondence" (#606, #531): after a finished live game between
+// two signed-in accounts, one click sends the opponent a private correspondence
 // challenge, same variant, sides swapped, casual, and lands the sender on the
 // challenge page the server returns. Shared by both room stacks' postgame
 // actions (postgame-panel.ts). The review pages carried it in their game card
-// until 2026-11-25; the room's post-game actions are now its only home.
+// until 2026-11-25; the room's post-game actions are now its only home. A
+// finished correspondence game offers it nowhere since 2026-11-25.
 //
 // The terms are fixed rather than asked: the game they just played says the
-// variant and the opponent, the swap says the side, and the pace is the finished
-// game's own days per move (one day after a live game). A player who wants other
-// terms still has "Challenge a friend" and the profile challenge dialog.
+// variant and the opponent, the swap says the side, and the pace is one day per
+// move. A player who wants other terms still has "Challenge a friend" and the
+// profile challenge dialog.
 //
 // Funnel (PostHog): correspondence_again_shown once per game per page, then
 // correspondence_seek_posted with surface 'postgame' ('review' until 2026-11-25), then the

@@ -206,17 +206,21 @@ describe('play again by correspondence', () => {
     );
   });
 
-  it("keeps a correspondence game's pace and gives a live game one day", () => {
+  // Decided 2026-11-25: a finished correspondence game offers no correspondence
+  // play-again; only a live game between two accounts does.
+  it('offers nothing after a finished correspondence game', () => {
     for (const days of DAYS_PER_MOVE_OPTIONS) {
-      expect(correspondenceAgainOffer({ ...finished, daysPerMove: days })?.daysPerMove).toBe(days);
+      expect(correspondenceAgainOffer({ ...finished, daysPerMove: days }), `${days}`).toBeNull();
     }
+    expect(correspondenceAgainOffer({ ...finished, mode: 'correspondence' })).toBeNull();
     // A correspondence room's mode is not 'correspondence' on the tenant stack;
     // its days per move is what makes it one.
-    expect(
-      correspondenceAgainOffer({ ...finished, mode: 'unknown', daysPerMove: 3 })?.daysPerMove,
-    ).toBe(3);
-    expect(correspondenceAgainOffer({ ...finished, daysPerMove: 4 })?.daysPerMove).toBe(1);
+    expect(correspondenceAgainOffer({ ...finished, mode: 'unknown', daysPerMove: 3 })).toBeNull();
+  });
+
+  it('gives the challenge after a live game one day per move', () => {
     expect(correspondenceAgainOffer({ ...finished, daysPerMove: undefined })?.daysPerMove).toBe(1);
+    expect(correspondenceAgainOffer({ ...finished, daysPerMove: null })?.daysPerMove).toBe(1);
   });
 
   it('posts a casual, directed seek with target, variant, swapped side and pace', () => {
@@ -225,14 +229,13 @@ describe('play again by correspondence', () => {
       gameSpecId: 'xiangqi',
       viewerMovedFirst: false,
       opponent: { handle: '@Bob' },
-      daysPerMove: 7,
     });
     expect(offer).not.toBeNull();
     const body = correspondenceAgainRequestBody(offer!);
     expect(JSON.parse(JSON.stringify(body))).toEqual({
       targetHandle: 'Bob',
       gameSpecId: 'xiangqi',
-      daysPerMove: 7,
+      daysPerMove: 1,
       preferredColor: 'first',
     });
     expect(body).not.toHaveProperty('rated');

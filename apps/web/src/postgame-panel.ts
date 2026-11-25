@@ -11,12 +11,12 @@
 //   Review game    everyone; second, an accent outline under the filled
 //                  rematch (#1235)
 //   Play again by correspondence
-//                  seated players after a game between two accounts, in a
-//                  variant with correspondence: a private correspondence
+//                  seated players after a live game between two accounts, in
+//                  a variant with correspondence: a private correspondence
 //                  challenge to the same opponent, sides swapped (#606,
-//                  correspondence-again.ts). The caller decides eligibility;
-//                  the panel only places it, in this same place after a live
-//                  or a correspondence game, styled like the rows around it
+//                  correspondence-again.ts). Never after a correspondence
+//                  game. The caller decides eligibility; the panel only places
+//                  it, styled like the rows around it
 //   New opponent   seated players only: the play dialog, same variant, as
 //   / New game     Find opponent after a PvP game ("New opponent") or as the
 //                  bot picker after a bot game ("New game": the dialog offers

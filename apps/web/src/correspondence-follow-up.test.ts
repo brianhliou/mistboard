@@ -7,7 +7,6 @@ import { mountCurrentGames } from './current-games.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { setStoredLocale } from './i18n/locale.js';
 import * as home from './landing-correspondence-moves.js';
-import { postGameActions } from './postgame-panel.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
 vi.mock('./analytics.js', async (importOriginal) => ({
@@ -216,35 +215,6 @@ describe('incoming challenges on the homepage and correspondence page', () => {
       method: 'POST',
     });
   });
-});
-
-it('places correspondence play-again after Review game, as after a live game', () => {
-  const rematch = document.createElement('button');
-  rematch.textContent = 'Rematch';
-  const box = postGameActions({
-    variant: 'xiangqi',
-    mode: 'pvp',
-    seated: true,
-    rematch,
-    reviewHref: '/game/old',
-    correspondenceAgain: {
-      roomId: 'old',
-      offer: {
-        gameSpecId: 'xiangqi',
-        opponentHandle: 'bob',
-        preferredColor: 'second',
-        daysPerMove: 3,
-      },
-    },
-  });
-  expect([...box.children].slice(0, 3).map((el) => el.textContent)).toEqual([
-    'Rematch',
-    'Review game',
-    'Play again by correspondence',
-  ]);
-  // Styled as one of the rows, not a second rematch slab.
-  const again = box.querySelector('[data-correspondence-again]');
-  expect(again?.classList.contains('postgame-actions__rematch')).toBe(false);
 });
 
 describe('phone invite sharing', () => {

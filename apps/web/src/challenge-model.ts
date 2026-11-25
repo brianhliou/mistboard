@@ -101,31 +101,28 @@ export type CorrespondenceAgainInput = PostGameChallengeInput & {
   daysPerMove: number | null | undefined;
 };
 
-/** The days per move the new challenge carries: the finished correspondence
- *  game's own, else one day (a live game has no slow pace to copy). */
-export function correspondenceAgainDays(daysPerMove: number | null | undefined): number {
-  return typeof daysPerMove === 'number' &&
-    (DAYS_PER_MOVE_OPTIONS as readonly number[]).includes(daysPerMove)
-    ? daysPerMove
-    : 1;
-}
+/** The days per move the new challenge carries: a live game has no slow pace
+ *  to copy, so one day. */
+const CORRESPONDENCE_AGAIN_DAYS = 1;
 
-/** The offer to show after a finished game, or null when there is none: the
- *  same eligibility as canOfferPostGameChallenge, plus a known side to swap. */
+/** The offer to show after a finished live game, or null when there is none:
+ *  the same eligibility as canOfferPostGameChallenge, plus a known side to swap.
+ *  A finished correspondence game offers nothing (decided 2026-11-25); its
+ *  days per move is what marks it, since a tenant correspondence room's mode
+ *  is not 'correspondence'. */
 export function correspondenceAgainOffer(
   input: CorrespondenceAgainInput,
   offered?: CorrespondenceSpecOffer,
 ): CorrespondenceAgainOffer | null {
   const days = input.daysPerMove;
-  const correspondence = typeof days === 'number' && days > 0;
-  const mode = correspondence ? 'correspondence' : input.mode;
-  if (!canOfferPostGameChallenge({ ...input, mode }, offered)) return null;
+  if (input.mode === 'correspondence' || (typeof days === 'number' && days > 0)) return null;
+  if (!canOfferPostGameChallenge(input, offered)) return null;
   if (input.viewerMovedFirst === null || !input.gameSpecId) return null;
   return {
     gameSpecId: input.gameSpecId,
     opponentHandle: normalizedHandle(input.opponent?.handle),
     preferredColor: input.viewerMovedFirst ? 'second' : 'first',
-    daysPerMove: correspondenceAgainDays(correspondence ? days : null),
+    daysPerMove: CORRESPONDENCE_AGAIN_DAYS,
   };
 }
 

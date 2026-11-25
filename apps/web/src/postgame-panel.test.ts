@@ -45,9 +45,12 @@ describe('postGameActions', () => {
       'Play again by correspondence',
       'New opponent',
     ]);
-    expect(
-      seated.querySelector('.postgame-actions__correspondence[data-correspondence-again]'),
-    ).not.toBeNull();
+    const again = seated.querySelector(
+      '.postgame-actions__correspondence[data-correspondence-again]',
+    );
+    expect(again).not.toBeNull();
+    // Styled as one of the rows, not a second rematch slab.
+    expect(again?.classList.contains('postgame-actions__rematch')).toBe(false);
 
     const spectator = postGameActions({
       variant: 'xiangqi',
