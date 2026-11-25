@@ -164,6 +164,26 @@ definePersistenceTests('bot profiles', () => {
       assert.deepEqual(bot.recordsByGameSpecId[variant], expected);
       assert.equal(bot.gamesByGameSpecId[variant].length, 9);
     }
+    // The moved seats keep their levels, so /bots splits these games by level
+    // as it does Banqi's: one win at each level, the second Level 4 win on the
+    // already-attributed FFQ seat, and the unnumbered TK engine apart.
+    const win = (level: number | null, games = 1) => ({
+      level,
+      games,
+      wins: games,
+      losses: 0,
+      draws: 0,
+    });
+    const levels = [1, 2, 3, 4, 5, 6, 7, 8];
+    const expectedLevels = {
+      'three-kingdoms-banqi': [...levels.map((level) => win(level)), win(null)],
+      'ffq-banqi': levels.map((level) => win(level, level === 4 ? 2 : 1)),
+    };
+    for (const variant of variants) {
+      assert.deepEqual(profile?.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+      assert.deepEqual(listed?.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+      assert.deepEqual(bot.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+    }
   });
 
   test('unlists retired Rapfi from /api/bots while preserving finished strongest games', async (t) => {
@@ -290,7 +310,7 @@ definePersistenceTests('bot profiles', () => {
   test('splits Misty records by stored level without attributing unlabelled games to a level', async () => {
     await insertBotProfile('misty', 'Misty', 'public', {
       gameSpecId: 'jungle-flip',
-      supportedGameSpecIds: ['jungle-flip', 'banqi'],
+      supportedGameSpecIds: ['jungle-flip', 'banqi', 'jungle'],
     });
     const seed = async (
       id: string,
@@ -355,6 +375,9 @@ definePersistenceTests('bot profiles', () => {
     }
     await seed('legacy-alias', 'jungle-flip', 'misty-jungle-flip', 'draw');
     await seed('current-alias', 'banqi', 'misty-banqi', 'black-wins');
+    // Classical Jungle records its level too; its full-strength id is Level 7.
+    await seed('jungle-level-3', 'jungle', 'misty-jungle-classical-level-3', 'white-wins');
+    await seed('jungle-level-7', 'jungle', 'misty-jungle-level-2', 'black-wins');
     await seed('too-short', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
       plyCount: 1,
     });
@@ -377,6 +400,10 @@ definePersistenceTests('bot profiles', () => {
       { level: null, games: 2, wins: 0, losses: 0, draws: 2 },
     ]);
     assert.deepEqual(records(listed)?.banqi, [
+      { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+    ]);
+    assert.deepEqual(records(listed)?.jungle, [
+      { level: 3, games: 1, wins: 0, losses: 1, draws: 0 },
       { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
     ]);
     for (const [variant, levels] of Object.entries(records(listed) ?? {})) {

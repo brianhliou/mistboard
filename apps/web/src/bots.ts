@@ -176,8 +176,8 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   root.append(buildNav(), shell);
 
   // The engine roster rides beside the bot list: it says which of Misty's
-  // levels this server can seat (Banqi and Flip Jungle Level 8 need a net), and
-  // TK's Misty plays by engine id with no bot profile, so /api/bots never names it.
+  // levels this server can seat (Banqi and Flip Jungle Level 8 need a net, and
+  // Three Kingdoms Banqi and Fanfanqi levels play by engine id).
   const botsLoad = fetchBots();
   const rostersLoad = fetchEngineRosters();
   let bots: BotProfile[];
@@ -404,10 +404,12 @@ const MISTY_LADDER_DEFAULT_LEVEL = 4;
  *    replace her plain card. A roster the server sent is the truth for which
  *    levels exist; without one, Levels 1-7 (Level 8 needs a net, so it waits
  *    for the roster to name it). Shown only where her profile offers the game.
- *  - Three Kingdoms Banqi plays by engine id and has no /api/bots profile,
- *    offered under the same door as its play (threeKingdomsBanqiOffered). An
- *    explicit live roster is the truth, even empty; without one, a public build
- *    seeds Levels 1-7 (no net), as the homepage does.
+ *  - Three Kingdoms Banqi plays by engine id, offered under the same door as
+ *    its play (threeKingdomsBanqiOffered). An explicit live roster is the
+ *    truth, even empty; without one, a public build seeds Levels 1-7 (no net),
+ *    as the homepage does. Where Misty's profile offers it (her seats moved
+ *    onto it in #1157), the ladder takes her key and replaces her plain card,
+ *    as Banqi's does; otherwise (an older API) it is a card of its own.
  *  Fanfanqi follows below, seated by engine id like Three Kingdoms Banqi. */
 export function engineLadderOpponents(
   bots: readonly BotProfile[],
@@ -438,23 +440,28 @@ export function engineLadderOpponents(
     );
     const rungs = landingBotLadder(THREE_KINGDOMS_BANQI_SPEC_ID, undefined, engineIds);
     const tkRecord = misty?.recordsByGameSpecId?.[THREE_KINGDOMS_BANQI_SPEC_ID];
-    const ladder = mistyLadder(
-      'misty-three-kingdoms-banqi',
-      rungs,
-      (engineId): BotProfile => ({
-        ...(misty ?? MISTY_FALLBACK),
-        activeEngineId: engineId,
-        defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
-        supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
-        playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
-        rating: null,
-        ratings: [],
-        record: tkRecord ?? EMPTY_RECORD,
-        gamesTotal: tkRecord?.games ?? 0,
-        recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
-      }),
-      { engineOnly: true },
-    );
+    const ladder =
+      misty && offersGame(misty, THREE_KINGDOMS_BANQI_SPEC_ID)
+        ? mistyLadder('misty', rungs, (engineId) =>
+            mistyAtLevel(misty, THREE_KINGDOMS_BANQI_SPEC_ID, engineId),
+          )
+        : mistyLadder(
+            'misty-three-kingdoms-banqi',
+            rungs,
+            (engineId): BotProfile => ({
+              ...(misty ?? MISTY_FALLBACK),
+              activeEngineId: engineId,
+              defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+              supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
+              playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
+              rating: null,
+              ratings: [],
+              record: tkRecord ?? EMPTY_RECORD,
+              gamesTotal: tkRecord?.games ?? 0,
+              recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
+            }),
+            { engineOnly: true },
+          );
     if (ladder) opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [ladder]);
   }
 
@@ -465,18 +472,23 @@ export function engineLadderOpponents(
   if (misty && ffqBanqiOffered() && offersGame(misty, FFQ_BANQI_SPEC_ID) && rosters.ffqBanqi) {
     const engineIds = new Set(rosters.ffqBanqi.map((engine) => engine.id));
     const rungs = landingBotLadder(FFQ_BANQI_SPEC_ID, undefined, engineIds);
-    const ladder = mistyLadder(
-      'misty',
-      rungs,
-      (engineId): BotProfile => ({
-        ...misty,
-        activeEngineId: engineId,
-        playOptions: [{ gameSpecId: FFQ_BANQI_SPEC_ID, engineId, playable: true }],
-      }),
+    const ladder = mistyLadder('misty', rungs, (engineId) =>
+      mistyAtLevel(misty, FFQ_BANQI_SPEC_ID, engineId),
     );
     if (ladder) opponents.set(FFQ_BANQI_SPEC_ID, [ladder]);
   }
   return opponents;
+}
+
+/** Misty's profile seated at one level of a game played by engine id: her
+ *  play option for that game, its version included, with the level's engine. */
+function mistyAtLevel(misty: BotProfile, gameSpecId: string, engineId: string): BotProfile {
+  const option = playOptionsFor(misty).find((candidate) => candidate.gameSpecId === gameSpecId);
+  return {
+    ...misty,
+    activeEngineId: engineId,
+    playOptions: [{ ...option, gameSpecId, engineId, playable: true }],
+  };
 }
 
 function mistyLadder(
@@ -673,8 +685,8 @@ function buildOpponentCard(
     // the picked level's games and record. A ladder of separate bots has them
     // on each member; a shared profile takes the level's row from its
     // per-level records, and its rating, which is not per level, stays on the
-    // bot page. With no per-level records (Three Kingdoms Banqi, Fanfanqi:
-    // games kept on engine ids) the foot is the total, labelled all levels.
+    // bot page. With no per-level records for the game (an older API) the
+    // foot is the total, labelled all levels.
     const levelRecord =
       sharedProfile && selected.level !== null
         ? levelRecordFor(bot, gameSpecId, selected.level)
@@ -816,8 +828,8 @@ function layoutDirectoryCard(
     actions = document.createElement('div');
     actions.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
   }
-  // TK games are kept on engine ids, not Misty's profile: with no TK record,
-  // say nothing rather than "0 games".
+  // An older API kept TK games on engine ids, not Misty's profile: with no TK
+  // record, say nothing rather than "0 games".
   if (engineOnly && !bot.recordsByGameSpecId?.[gameSpecId]) footer?.remove();
   else if (footer) foot.append(footer);
   if (rating) foot.prepend(rating);
