@@ -524,18 +524,18 @@ export const EN_CONTENT = {
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
   'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
   'thanks.abJchessBody':
-    "The top jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
+    "The jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
   'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
   'thanks.katagoAuthor': 'KataGo by lightvector',
   'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
   'thanks.katagoBody':
-    "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+    "The Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
   'thanks.rapfiAuthors': 'dhbloo and the Rapfi contributors',
   'thanks.rapfiBuildAuthor': 'Browser build by Brian H. Liou',
   'thanks.rapfiBotBio':
     'Our strongest Gomoku opponent, above Level 8. Rapfi by dhbloo and contributors, with neural networks from the Rapfi project. Thinks for about 4-5 seconds per move.',
   'thanks.rapfiBody':
-    'Plays the top Gomoku opponent and all eight bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
+    'Plays the Gomoku opponent and all eight bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
   'thanks.communityBotBy': 'A bot from a community developer.',
   'thanks.statGames': 'games on Mistboard',
   'thanks.statRating': '{variant} rating',
