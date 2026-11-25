@@ -1,6 +1,9 @@
 import { assertValidBanqiDeal, assertValidJieqiDeal } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { ARTICLE_GEOMETRY_KEYS, type ArticleLang, translateArticle } from './article-i18n.js';
+import { banqiLuckArticle } from './articles/content/banqi-luck.js';
+import { BANQI_LUCK_GAME } from './articles/content/banqi-luck-game.js';
+import type { Article, ArticleBlock } from './articles/types.js';
 import { articles } from './articles-data.js';
 
 // The zh render deep-translates every string in an article. On 2026-10-11 the
@@ -9,6 +12,26 @@ import { articles } from './articles-data.js';
 // turned into 士/将 roles: the deal check threw on /zh-hans/blog/jieqi-platform
 // and /zh-hans/blog/mistybanqi (PostHog error tracking, 2026-10-13).
 const LANGS: ArticleLang[] = ['zh-Hans', 'zh-Hant'];
+
+const DEALT_REPLAY_FIXTURE: Article = {
+  ...banqiLuckArticle,
+  sections: [
+    {
+      heading: 'Fixture',
+      blocks: [
+        {
+          kind: 'banqi-replay',
+          spec: {
+            red: 'Red',
+            black: 'Black',
+            deal: BANQI_LUCK_GAME.deal,
+            moves: BANQI_LUCK_GAME.moves,
+          },
+        } as ArticleBlock,
+      ],
+    },
+  ],
+};
 
 function geometry(value: unknown, key?: string, out: unknown[] = []): unknown[] {
   if (key && ARTICLE_GEOMETRY_KEYS.has(key)) {
@@ -45,7 +68,11 @@ describe('zh article translation leaves board geometry alone', () => {
     });
 
     it(`${lang}: every jieqi and banqi replay deal stays valid`, () => {
-      const blocks = articles.flatMap((article) => replayBlocks(translateArticle(article, lang)));
+      // The fixture keeps a dealt banqi replay in the check after the last live
+      // one moved to the game embed (skill-vs-luck, 2026-11-25).
+      const blocks = [...articles, DEALT_REPLAY_FIXTURE].flatMap((article) =>
+        replayBlocks(translateArticle(article, lang)),
+      );
       expect(blocks.length).toBeGreaterThan(0);
       for (const block of blocks) {
         if (block.kind === 'jieqi-replay') {
