@@ -1153,6 +1153,8 @@ describe('profile ratings rail', () => {
   function stubLeaderboardFetch(options?: {
     ladders?: { variant: string; leaderboard: unknown[] }[];
     byTimeClass?: Record<string, { variant: string; leaderboard: unknown[] }[]>;
+    // Paces whose summary request answers 500.
+    failTimeClasses?: string[];
     activePlayers?: unknown[];
     players?: {
       handle: string;
@@ -1165,6 +1167,13 @@ describe('profile ratings rail', () => {
   }) {
     return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      const failedPace = new URL(url, 'https://mistboard.test').searchParams.get('timeClass');
+      if (
+        url.includes('/api/leaderboard/summary') &&
+        options?.failTimeClasses?.includes(failedPace ?? '')
+      ) {
+        return new Response('{}', { headers: { 'content-type': 'application/json' }, status: 500 });
+      }
       const body = url.includes('/api/players/online')
         ? {
             players: (options?.players ?? []).map((p) => ({ rating: null, playing: false, ...p })),
@@ -1235,18 +1244,25 @@ describe('profile ratings rail', () => {
     expect(root.textContent).not.toContain('Atomic Xiangqi');
     expect(root.textContent).toContain('Crazyhouse Xiangqi');
     expect(root.textContent).toContain('Rated ladders across Mistboard variants.');
-    // One section per launched leaderboard variant, each with a panel per
-    // live pace (correspondence is off here); Drop Mini gets no section.
+    // One section per launched leaderboard variant; each with a player has a
+    // panel per live pace (correspondence is off here), the rest collapse to
+    // one line. Drop Mini gets no section.
     const sections = [...root.querySelectorAll<HTMLElement>('.leaderboard-variant-section')];
     expect(sections.map((section) => section.dataset.variant)).not.toContain('drop_mini');
-    for (const section of sections) {
+    const populated = sections.filter(
+      (section) => !section.classList.contains('leaderboard-variant-section-empty'),
+    );
+    expect(populated.map((section) => section.dataset.variant)).toEqual(
+      expect.arrayContaining(['fog', 'jungle', 'jungle_flip', 'duck_xiangqi']),
+    );
+    for (const section of populated) {
       expect(
         [...section.querySelectorAll<HTMLElement>('.leaderboard-panel')].map(
           (panel) => panel.dataset.timeClass,
         ),
       ).toEqual(['bullet', 'blitz', 'rapid']);
     }
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(sections.length * 3);
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(populated.length * 3);
     expect(root.textContent).not.toContain('Active players');
     // One summary per live pace; correspondence stays off while its rated
     // switch is off.
@@ -1440,6 +1456,83 @@ describe('profile ratings rail', () => {
     ).toEqual(['Bullet', 'Blitz', 'Rapid']);
     // No pace pills.
     expect(root.querySelector('.leaderboard-paces')).toBeNull();
+  });
+
+  const sectionFor = (root: HTMLElement, variant: string) =>
+    root.querySelector<HTMLElement>(`.leaderboard-variant-section[data-variant="${variant}"]`);
+
+  it('collapses a variant with no player in any pool to one line', async () => {
+    vi.stubEnv('DEV', false);
+    stubLeaderboardFetch({ byTimeClass: { bullet: ONE_POPULATED_LADDER } });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    const jungle = sectionFor(root, 'jungle');
+    expect(jungle?.classList.contains('leaderboard-variant-section-empty')).toBe(true);
+    expect(jungle?.querySelectorAll('.leaderboard-panel')).toHaveLength(0);
+    expect(jungle?.querySelector('.leaderboard-grid')).toBeNull();
+    expect(jungle?.querySelector('.leaderboard-variant-heading')?.textContent).toBe('Jungle Chess');
+    expect(jungle?.querySelector('.leaderboard-variant-thumb')).not.toBeNull();
+    expect(jungle?.querySelector('.leaderboard-variant-empty')?.textContent).toBe(
+      'No rated players yet.',
+    );
+    // Collapsed variants keep their canonical place among the full sections.
+    const order = [...root.querySelectorAll<HTMLElement>('.leaderboard-variant-section')].map(
+      (section) => section.dataset.variant,
+    );
+    const { groupLeaderboardByVariant } = await import('./profile.js');
+    expect(order).toEqual(
+      groupLeaderboardByVariant([], false)
+        .map((group) => group.variant)
+        .filter((variant) => order.includes(variant)),
+    );
+    expect(order.length).toBeGreaterThan(1);
+  });
+
+  it('keeps every panel for a variant with one populated pool', async () => {
+    vi.stubEnv('DEV', false);
+    stubLeaderboardFetch({ byTimeClass: { bullet: ONE_POPULATED_LADDER } });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    const fog = sectionFor(root, 'fog');
+    expect(fog?.classList.contains('leaderboard-variant-section-empty')).toBe(false);
+    expect(
+      [...(fog?.querySelectorAll<HTMLElement>('.leaderboard-panel') ?? [])].map(
+        (panel) => panel.dataset.timeClass,
+      ),
+    ).toEqual(['bullet', 'blitz', 'rapid']);
+    expect(fog?.querySelector('.leaderboard-variant-empty')).toBeNull();
+    expect(
+      fog?.querySelector('.leaderboard-panel[data-time-class="blitz"]')?.textContent,
+    ).toContain('No rated players yet.');
+  });
+
+  it('keeps the panels of a variant whose pool failed to load', async () => {
+    vi.stubEnv('DEV', false);
+    stubLeaderboardFetch({
+      byTimeClass: { bullet: ONE_POPULATED_LADDER },
+      failTimeClasses: ['rapid'],
+    });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    // Jungle has no player in the pools that loaded, but rapid is unknown.
+    const jungle = sectionFor(root, 'jungle');
+    expect(jungle?.classList.contains('leaderboard-variant-section-empty')).toBe(false);
+    expect(jungle?.querySelectorAll('.leaderboard-panel')).toHaveLength(3);
+    expect(
+      jungle?.querySelector('.leaderboard-panel[data-time-class="rapid"]')?.textContent,
+    ).toContain('Could not load ratings.');
+    expect(
+      jungle?.querySelector('.leaderboard-panel[data-time-class="bullet"]')?.textContent,
+    ).toContain('No rated players yet.');
   });
 
   it('localizes Traditional Chinese leaderboard chrome', async () => {

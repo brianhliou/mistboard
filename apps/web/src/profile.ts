@@ -486,10 +486,17 @@ export function groupLeaderboardByVariant(
   }));
 }
 
+// A variant whose every pool loaded and holds no player. A pool that failed to
+// load is unknown, not empty, so it keeps the variant's panels.
+export function isLeaderboardGroupEmpty(group: LeaderboardVariantGroup): boolean {
+  return group.pools.every((pool) => pool.entries !== null && pool.entries.length === 0);
+}
+
 // One section per launched variant, lichess /player style but grouped by
 // variant: a variant heading over a panel per rated pool, so bullet, blitz,
 // rapid and correspondence sit side by side. An empty pool says so instead of
-// disappearing. Only when no pool anywhere has a player does the wall collapse
+// disappearing; a variant with no player in any pool collapses to one line in
+// its place. Only when no pool anywhere has a player does the wall collapse
 // to the single "be the first" line.
 function renderVariantSections(
   container: HTMLElement,
@@ -532,6 +539,15 @@ function renderVariantSections(
     const name = document.createElement('span');
     name.textContent = variantLabel;
     heading.append(name);
+    if (isLeaderboardGroupEmpty(group)) {
+      section.classList.add('leaderboard-variant-section-empty');
+      const empty = document.createElement('p');
+      empty.className = 'leaderboard-variant-empty';
+      empty.textContent = t('profile.leaderboardNoPlayers', {}, locale);
+      section.append(heading, empty);
+      sections.push(section);
+      continue;
+    }
     const grid = document.createElement('div');
     grid.className = 'leaderboard-grid';
     for (const pool of group.pools) {

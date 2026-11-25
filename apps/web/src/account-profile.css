@@ -2728,6 +2728,30 @@ button.profile-puzzle-row[aria-pressed="true"] {
   font-weight: 400;
 }
 
+/* A variant with no player in any pool: one line, heading then the empty
+   note, wrapping under the name on a narrow screen. Consecutive empty lines
+   sit closer than full sections. */
+.leaderboard-variant-section-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+}
+
+.leaderboard-variant-section-empty .leaderboard-variant-heading {
+  margin: 0;
+}
+
+.leaderboard-variant-section-empty + .leaderboard-variant-section-empty {
+  margin-top: -12px;
+}
+
+.leaderboard-variant-empty {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
 .leaderboard-variant-thumb {
   flex: 0 0 22px;
   display: flex;
