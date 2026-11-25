@@ -2891,7 +2891,12 @@ function ctaKindForHref(href: string): 'play' | 'nav' {
  *  fails to provide. Variants with no bot get the friend link alone rather than
  *  a dead "play the computer".
  */
-function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLElement | null {
+function buildRulesPlayCta(
+  slug: string,
+  title: string,
+  locale: Locale,
+  rosterSettled = false,
+): HTMLElement | null {
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
   // The variant's switch, not the page's: an unlisted rules page for a public
@@ -2905,12 +2910,28 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   const row = document.createElement('div');
   row.className = 'article-cta-row article-play-cta';
 
+  // TK's and Fanfanqi's bots come from the server's playable roster, which
+  // only the landing page loads, so this page fetches it. Until it answers the
+  // row already has its two-button shape, the first button opening a friend
+  // game: the prerendered page and a slow connection then see the same row the
+  // roster produces, and only the first button's target changes when the bot
+  // is there. A roster with no bot collapses the row to the friend link alone.
+  const loadRoster = rosterSettled
+    ? null
+    : gameSpecId === 'three-kingdoms-banqi' && threeKingdomsBanqiOffered()
+      ? loadThreeKingdomsBanqiEngineOptions
+      : gameSpecId === 'ffq-banqi' && ffqBanqiOffered()
+        ? loadFFQBanqiEngineOptions
+        : null;
+  const hasBot = variantSupportsPve(gameSpecId);
+  const rosterPending = loadRoster !== null && !hasBot;
+
   const buttons: { label: string; href: string; emphasis: 'primary' | 'secondary' }[] = [];
   const spec = encodeURIComponent(gameSpecId);
-  if (variantSupportsPve(gameSpecId)) {
+  if (hasBot || rosterPending) {
     buttons.push({
       label: t('articles.playThisGame', { game }, locale),
-      href: `/?play=computer&gameSpecId=${spec}`,
+      href: hasBot ? `/?play=computer&gameSpecId=${spec}` : `/?play=friend&gameSpecId=${spec}`,
       emphasis: 'primary',
     });
     buttons.push({
@@ -2943,19 +2964,10 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
     });
     row.append(a);
   }
-  // TK's and Fanfanqi's bots come from the server's playable roster, which
-  // only the landing page loads; fetch it here and redraw the row once a bot
-  // is there.
-  const loadRoster =
-    gameSpecId === 'three-kingdoms-banqi' && threeKingdomsBanqiOffered()
-      ? loadThreeKingdomsBanqiEngineOptions
-      : gameSpecId === 'ffq-banqi' && ffqBanqiOffered()
-        ? loadFFQBanqiEngineOptions
-        : null;
-  if (loadRoster && !variantSupportsPve(gameSpecId)) {
+  if (rosterPending && loadRoster) {
     void loadRoster().then(() => {
-      if (!variantSupportsPve(gameSpecId) || !row.isConnected) return;
-      const fresh = buildRulesPlayCta(slug, title, locale);
+      if (!row.isConnected) return;
+      const fresh = buildRulesPlayCta(slug, title, locale, true);
       if (fresh) row.replaceWith(fresh);
     });
   }

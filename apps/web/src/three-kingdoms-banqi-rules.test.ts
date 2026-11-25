@@ -21,7 +21,24 @@ function playButtons(page: HTMLElement): (string | null)[][][] {
 }
 
 describe('Three Kingdoms Banqi rules page buttons', () => {
-  it('offers no bot in either row from build flags alone', () => {
+  // The row has its two-button shape before the roster answers, so a slow
+  // connection never sees "Play a friend" arrive and push the row; no button
+  // offers the computer until the server lists a tier.
+  it('renders both buttons before the roster answers, neither offering the bot', () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    setThreeKingdomsBanqiEngineOptions([]);
+    const pending = [
+      ['Play Three Kingdoms Banqi', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
+      ['Play a friend', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
+    ];
+    expect(playButtons(buildArticlePage('three-kingdoms-banqi'))).toEqual([pending, pending]);
+  });
+
+  it('offers no bot in either row when the roster lists none', async () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
@@ -31,7 +48,9 @@ describe('Three Kingdoms Banqi rules page buttons', () => {
     const friendOnly = [
       ['Play Three Kingdoms Banqi', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
     ];
-    expect(playButtons(buildArticlePage('three-kingdoms-banqi'))).toEqual([friendOnly, friendOnly]);
+    const page = buildArticlePage('three-kingdoms-banqi');
+    document.body.append(page);
+    await vi.waitFor(() => expect(playButtons(page)).toEqual([friendOnly, friendOnly]));
   });
 
   it('offers the bot in both rows once the server reports an available tier', () => {
@@ -67,9 +86,14 @@ describe('Three Kingdoms Banqi rules page buttons', () => {
     vi.stubGlobal('fetch', fetchMock);
     const page = buildArticlePage('three-kingdoms-banqi');
     document.body.append(page);
-    await vi.waitFor(() => expect(playButtons(page).map((row) => row.length)).toEqual([2, 2]));
+    await vi.waitFor(() =>
+      expect(playButtons(page).map((row) => row[0]?.[1])).toEqual([
+        '/?play=computer&gameSpecId=three-kingdoms-banqi',
+        '/?play=computer&gameSpecId=three-kingdoms-banqi',
+      ]),
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(playButtons(page)[0]?.[0]?.[1]).toBe('/?play=computer&gameSpecId=three-kingdoms-banqi');
+    expect(playButtons(page).map((row) => row.length)).toEqual([2, 2]);
   });
 });
 

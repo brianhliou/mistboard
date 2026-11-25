@@ -85,14 +85,18 @@ describe('Fanfanqi rules registration', () => {
         a.textContent,
         a.getAttribute('href'),
       ]);
-    // Both rows are the generated play row: friend play alone until the bot
-    // registers, then "Play Fanfanqi" (computer) beside "Play a friend".
-    const expected = variantSupportsPve(FFQ_BANQI_SPEC_ID)
-      ? [
-          ['Play Fanfanqi', '/?play=computer&gameSpecId=ffq-banqi'],
-          ['Play a friend', '/?play=friend&gameSpecId=ffq-banqi'],
-        ]
-      : [['Play Fanfanqi', '/?play=friend&gameSpecId=ffq-banqi']];
+    // Both rows are the generated play row, two buttons from the first render:
+    // "Play Fanfanqi" opens a friend game until the bot registers, then the
+    // computer, beside "Play a friend". Nothing is added later to push the row.
+    const expected = [
+      [
+        'Play Fanfanqi',
+        variantSupportsPve(FFQ_BANQI_SPEC_ID)
+          ? '/?play=computer&gameSpecId=ffq-banqi'
+          : '/?play=friend&gameSpecId=ffq-banqi',
+      ],
+      ['Play a friend', '/?play=friend&gameSpecId=ffq-banqi'],
+    ];
     for (const row of rows) expect(buttons(row)).toEqual(expected);
   });
 
