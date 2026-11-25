@@ -17,6 +17,15 @@ export function tkPoints(points: number): string {
   return t('live.tk.points', { count: points });
 }
 
+/** The seat tag itself, `span.tk-seat__points`, as the room's seat panel and the
+ *  watch page and homepage seat rows show it. */
+export function tkPointsTag(points: number): HTMLSpanElement {
+  const value = document.createElement('span');
+  value.className = 'tk-seat__points';
+  value.textContent = tkPoints(points);
+  return value;
+}
+
 /**
  * "N moves left before the game is decided on points", or null while the
  * no-progress counter is under TK_MOVES_LEFT_FROM (or already at the limit,

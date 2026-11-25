@@ -867,6 +867,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A seat's running score after its name, at the ply on the board: the room's
+   Fanfanqi HP meter or Three Kingdoms points tag, cut to the row's size. The
+   selectors outrank the room's own (live-ffq-banqi.css, banqi-seat-panel.css),
+   which may load in either order. */
+.watch-game-table__player .watch-player-score {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--site-heading);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.watch-game-table__player .watch-player-score .ffq-banqi-hp-meter {
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.watch-game-table__player .watch-player-score .ffq-banqi-hp-meter progress {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 8px;
+}
+
+.watch-game-table__player .watch-player-score .ffq-banqi-hp-meter__value,
+.watch-game-table__player .watch-player-score .tk-seat__points {
+  font-size: 12px;
+}
+
 /* The shared room table supplies the outer box and controls. The review move
    model keeps watch's cross-variant notation/click behavior but drops its own
    card chrome inside that box. */

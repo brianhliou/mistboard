@@ -102,6 +102,18 @@ describe('reviewOutcomeLine', () => {
     );
   });
 
+  // /ffq-banqi/game/<id> read "On points • Red is victorious" for a game that
+  // ended at zero HP; the room says HP depletion.
+  it('names a Fanfanqi points ending by HP, and Three Kingdoms on points', () => {
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'points', 'ffq-banqi')).toBe(
+      'HP depletion • Red is victorious',
+    );
+    expect(reviewOutcomeLine({ draw: true }, 'points', 'ffq-banqi')).toBe('Draw • HP depletion');
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'points', 'three-kingdoms-banqi')).toBe(
+      'On points • Black is victorious',
+    );
+  });
+
   it('degrades gracefully when the termination is missing', () => {
     expect(reviewOutcomeLine({ winner: 'Black' }, '', null)).toBe('Black is victorious');
   });

@@ -281,6 +281,11 @@ export type ReplayHandle = {
    *  the path cannot reconstruct a series, which callers must render as "no clock"
    *  rather than zero. */
   clockAtPly?: () => ReplayClockReadout | null;
+  /** A seat's running score AT THE CURRENT PLY, ready to sit beside its name
+   *  (Fanfanqi's HP meter, Three Kingdoms banqi's points), or null for a game with
+   *  no score. OPTIONAL — /watch's rail reads it per ply; only tenants whose adapter
+   *  has `seatScore` expose it. */
+  seatScoreAt?: (side: 'first' | 'second') => HTMLElement | null;
   /** Which move-order seat the board is drawn for (sits at the bottom). OPTIONAL;
    *  the embed card reads it to put its own seat rows the right way up. */
   bottomSeat?: () => 'first' | 'second';

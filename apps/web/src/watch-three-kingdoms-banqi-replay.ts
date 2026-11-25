@@ -16,6 +16,7 @@ import {
   type TkBoardArrow,
   type TkBoardMarker,
 } from './three-kingdoms-banqi-diagrams.js';
+import { tkPointsTag } from './three-kingdoms-banqi-score.js';
 import {
   mountTenantWatchReplay,
   type TenantWatchReplayOptions,
@@ -87,5 +88,7 @@ export function mountThreeKingdomsBanqiWatchReplay(
     resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => seatInkLabel(seat, postgame.view.firstColor),
     seatInk: (seat, postgame) => flipSeatInk(seat, postgame.view.firstColor ?? null),
+    // The room's points tag; the public frame carries both seats' scores.
+    seatScore: (view, seat) => tkPointsTag(view.scores[seat]),
   });
 }

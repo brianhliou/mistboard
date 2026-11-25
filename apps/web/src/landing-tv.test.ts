@@ -16,6 +16,7 @@ type MountRecord = {
       roomId: string,
     ) => Promise<{ ok: true; postgame: unknown } | { ok: false }>;
     onLoadError?: () => boolean;
+    seatScores?: boolean;
   };
   handle: {
     destroy: ReturnType<typeof vi.fn>;
@@ -168,6 +169,15 @@ test('boot FREEZES on the pool head (paused, jumped to end) and never auto-plays
   await flush();
   await tick();
   expect(mounts).toHaveLength(1);
+  tv.destroy();
+});
+
+// The homepage board shows each seat's score beside its name (FFQ HP, Three
+// Kingdoms points); variants without one draw nothing there.
+test('the homepage board asks for seat scores beside the names', async () => {
+  const tv = await mountController([entryA]);
+  await flush();
+  expect(mounts[0]!.options.seatScores).toBe(true);
   tv.destroy();
 });
 

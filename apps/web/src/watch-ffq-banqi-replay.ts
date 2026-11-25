@@ -2,7 +2,7 @@
 import type { BanqiMove, FFQBanqiPlayerView } from '@mistboard/game';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
-import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
+import { createFFQBanqiHpMeter, createFFQBanqiHpRow } from './ffq-banqi-hp.js';
 import {
   animateBanqiBoardMove,
   animateBanqiReveal,
@@ -86,5 +86,7 @@ export function mountFFQBanqiWatchReplay(
         return entry.move && frame ? [ffqBanqiReviewMoveLabel(entry.move, frame)] : [];
       }),
     seatInk: (seat) => (seat === 'black' ? 'black' : 'red'),
+    // The room's HP meter; Fanfanqi's seat is its ink, and the frame carries both HPs.
+    seatScore: (view, seat) => createFFQBanqiHpMeter(view, seat),
   });
 }

@@ -12,6 +12,7 @@
 
 import type { GameSpecId } from '@mistboard/game';
 import {
+  hasVariantTerminationLabel,
   type SeatNames,
   terminationLabel as sharedTerminationLabel,
   terminationReason as sharedTerminationReason,
@@ -159,6 +160,12 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // And once more for the compact seat disc: the ink the seat plays, or null while
   // a flip tenant's opening flip has not bound one. Tenants where seat == ink omit it.
   seatInk?(seat: 'red' | 'black', postgame: Postgame): 'red' | 'black' | null;
+  // OPTIONAL: a seat's running score beside its name (Fanfanqi's HP, Three
+  // Kingdoms banqi's points), drawn from the view the board shows at the current
+  // ply, so it can only say what that view already carries. `seat` is the
+  // move-order seat ('red' = first mover), as in seatLabel. Tenants without a
+  // score omit it, and their seat rows stay as they were.
+  seatScore?(view: View, seat: 'red' | 'black', postgame: Postgame): HTMLElement | null;
   // OPTIONAL piece-glide hook, called after each pane's innerHTML swap when the
   // ply moved by exactly ONE (autoplay tick or manual step). `view` is the pane's
   // freshly rendered view, `prevView` the same pane's view at the previous ply
@@ -228,6 +235,12 @@ export type TenantWatchReplayOptions = {
    * which colour. A seat whose ink is not bound yet gets the dashed ring.
    */
   seatDiscs?: boolean;
+  /**
+   * Compact only: put the seat's running score (adapter.seatScore) between its
+   * name and clock, following the shown ply. The homepage TV sets it; the /watch
+   * queue previews and the /games cards leave it off, so their rows are unchanged.
+   */
+  seatScores?: boolean;
   /**
    * Called once when the game reaches its final ply under autoplay (after the
    * loop hold), instead of restarting the same game. Lets an outer showcase
@@ -352,8 +365,10 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
 // "General Captured" and "No Legal Moves" through untranslated). `race` is not
 // its own wording in any variant (Jungle's den entry, Gomoku's five in a row),
 // so it always goes through the shared map with the variant, which is required.
+// Fanfanqi's `points` is its HP ending ("by HP depletion"), so it does too.
 function terminationLabel(reason: string, variant: GameSpecId, locale: Locale): string {
-  if (reason === 'race') return sharedTerminationReason(reason, variant, locale);
+  if (reason === 'race' || hasVariantTerminationLabel(reason, variant))
+    return sharedTerminationReason(reason, variant, locale);
   if (locale === 'en') return labelize(reason).toLowerCase();
   return sharedTerminationLabel(reason, variant, locale);
 }
@@ -522,10 +537,15 @@ export async function mountTenantWatchReplay<
   let revealBtn: HTMLButtonElement | null = null;
   // Compact showcase seats (player name + real reconstructed clock), rebuilt per
   // game; `side` maps each seat to the first(red)/second(black) clock slot.
-  let compactSeats: {
-    top: { row: HTMLElement; clockEl: HTMLElement; side: 'first' | 'second' };
-    bottom: { row: HTMLElement; clockEl: HTMLElement; side: 'first' | 'second' };
-  } | null = null;
+  // `scoreEl` holds the seat's running score when the host asked for seatScores
+  // and the tenant has one (adapter.seatScore); null otherwise.
+  type CompactSeat = {
+    row: HTMLElement;
+    clockEl: HTMLElement;
+    scoreEl: HTMLElement | null;
+    side: 'first' | 'second';
+  };
+  let compactSeats: { top: CompactSeat; bottom: CompactSeat } | null = null;
   // Vertical reserve strips flanking the board for drop/reserve variants
   // (adapter.sidedCaptures); null for board-only variants (captures ride the pane).
   let compactSideStrips: { left: HTMLElement; right: HTMLElement } | null = null;
@@ -618,7 +638,8 @@ export async function mountTenantWatchReplay<
     decoration: ProfileTarget | null | undefined,
     side: 'first' | 'second',
     disc: { ink: string | null } | null,
-  ): { row: HTMLElement; clockEl: HTMLElement } => {
+    score: boolean,
+  ): { row: HTMLElement; clockEl: HTMLElement; scoreEl: HTMLElement | null } => {
     const row = document.createElement('div');
     row.className = 'showcase-seat';
     // Which move-order seat this row names, for a host that wants to paint the
@@ -629,8 +650,34 @@ export async function mountTenantWatchReplay<
     const nameEl = seatNameEl(name, decoration, 'showcase-seat-name');
     const clockEl = document.createElement('span');
     clockEl.className = 'showcase-seat-clock';
-    row.append(nameEl, clockEl);
-    return { row, clockEl };
+    // The score sits right after the name, so a reserve strip inserted before the
+    // clock lands between the two.
+    const scoreEl = score ? document.createElement('span') : null;
+    if (scoreEl) scoreEl.className = 'showcase-seat-score';
+    row.append(nameEl, ...(scoreEl ? [scoreEl] : []), clockEl);
+    return { row, clockEl, scoreEl };
+  };
+
+  // The view the board draws at the current ply: the reveal toggle's choice, else
+  // the pane's own key, falling back to the pane's key as sync() does. Every seat
+  // readout (rail material, scores) reads this one, so none can carry more than
+  // the board's track.
+  const boardViewNow = (): View | null => {
+    const target = boardTargets[0];
+    if (!activePostgame || !target) return null;
+    const key = adapter.reveal
+      ? ((revealed ? adapter.reveal.truthKey : adapter.reveal.hiddenKey) as ViewKey)
+      : target.key;
+    return (
+      adapter.viewAtPly(activePostgame, key, currentPly) ??
+      adapter.viewAtPly(activePostgame, target.key, currentPly)
+    );
+  };
+
+  const seatScoreNow = (side: 'first' | 'second'): HTMLElement | null => {
+    const view = boardViewNow();
+    if (!adapter.seatScore || !activePostgame || !view) return null;
+    return adapter.seatScore(view, side === 'first' ? 'red' : 'black', activePostgame);
   };
 
   // Lichess convention: a player's captured material sits next to that player.
@@ -730,6 +777,10 @@ export async function mountTenantWatchReplay<
         }
         seat.clockEl.classList.toggle('showcase-seat-result', marks !== null);
         seat.row.classList.toggle('result-win', seat.side === winner);
+        if (seat.scoreEl) {
+          const score = seatScoreNow(seat.side);
+          seat.scoreEl.replaceChildren(...(score ? [score] : []));
+        }
       }
       compactSeats.top.row.classList.toggle('active', toMoveAtPly() === compactSeats.top.side);
       compactSeats.bottom.row.classList.toggle(
@@ -1022,21 +1073,24 @@ export async function mountTenantWatchReplay<
         const seat = side === 'first' ? 'red' : 'black';
         return { ink: adapter.seatInk ? adapter.seatInk(seat, postgame) : seat };
       };
+      const scored = options.seatScores === true && adapter.seatScore !== undefined;
       const topSeat = compactSeatRow(
         nameFor(topSide),
         decorationFor(topSide),
         topSide,
         discFor(topSide),
+        scored,
       );
       const bottomSeat = compactSeatRow(
         nameFor(bottomSide),
         decorationFor(bottomSide),
         bottomSide,
         discFor(bottomSide),
+        scored,
       );
       compactSeats = {
-        top: { row: topSeat.row, clockEl: topSeat.clockEl, side: topSide },
-        bottom: { row: bottomSeat.row, clockEl: bottomSeat.clockEl, side: bottomSide },
+        top: { ...topSeat, side: topSide },
+        bottom: { ...bottomSeat, side: bottomSide },
       };
 
       // Flank the board with vertical reserve strips for drop/reserve variants;
@@ -1376,19 +1430,14 @@ export async function mountTenantWatchReplay<
     ...(adapter.railMaterial
       ? {
           fillMaterial: (slots: ReplayMaterialSlots) => {
-            const target = boardTargets[0];
-            if (!activePostgame || !target) return;
-            const key = adapter.reveal
-              ? ((revealed ? adapter.reveal.truthKey : adapter.reveal.hiddenKey) as ViewKey)
-              : target.key;
-            const view =
-              adapter.viewAtPly(activePostgame, key, currentPly) ??
-              adapter.viewAtPly(activePostgame, target.key, currentPly);
-            if (!view) return;
+            const view = boardViewNow();
+            if (!activePostgame || !view) return;
             adapter.railMaterial?.(slots, view, activePostgame, currentPly);
           },
         }
       : {}),
+    // Each seat's score at the current ply, for the /watch rail rows.
+    ...(adapter.seatScore ? { seatScoreAt: seatScoreNow } : {}),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

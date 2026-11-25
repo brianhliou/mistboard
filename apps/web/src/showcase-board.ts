@@ -69,6 +69,10 @@ export type ShowcaseBoardOptions = {
   // Tenant path only: a drop variant's reserves ride the seat rows instead of
   // strips above and below the board (watch-tenant-replay.ts `reservesInSeats`).
   reservesInSeats?: boolean;
+  // Tenant path only: each seat's running score (Fanfanqi HP, Three Kingdoms banqi
+  // points) between its name and clock (watch-tenant-replay.ts `seatScores`). The
+  // homepage TV only; queue previews and /games cards leave it off.
+  seatScores?: boolean;
 };
 
 export async function mountShowcaseBoard(
@@ -96,6 +100,7 @@ export async function mountShowcaseBoard(
       ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
       ...(options.seatDiscs ? { seatDiscs: true } : {}),
       ...(options.reservesInSeats ? { reservesInSeats: true } : {}),
+      ...(options.seatScores ? { seatScores: true } : {}),
       ...(options.tenantPov ? { pov: options.tenantPov } : {}),
     });
   }
