@@ -3,12 +3,8 @@ import './landing-play.css';
 import './landing.css';
 import './hover-grammar.css';
 import './game-route.css';
-import {
-  buildHomeArticleCards,
-  HOME_ARTICLE_ROW_SIZE,
-  initLandingCarousel,
-  mountArticleThumbnails,
-} from './articles.js';
+import type * as ArticlesModule from './articles.js';
+import type * as ArticlesDataModule from './articles-data.js';
 import { setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import {
   displayParticipantName,
@@ -30,7 +26,7 @@ import {
 import { t } from './i18n/catalog.js';
 import { currentLocale, localizedHref } from './i18n/locale.js';
 import { buildLandingActivity } from './landing-activity.js';
-import { buildLandingAnnouncements } from './landing-announcements.js';
+import type * as LandingAnnouncementsModule from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
 import {
@@ -60,7 +56,12 @@ import {
   type PlayableEngine,
   setRoomNavigator,
 } from './landing-play.js';
-import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
+import {
+  buildPlayPanel,
+  playPanelEnabled,
+  setPlayPanelArticleLookup,
+  setPlayPanelRulesHint,
+} from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { homepageTvAdmits, type LandingTvMode, mountLandingTv } from './landing-tv.js';
 import { fetchLiveStats } from './live-stats-client.js';
@@ -111,6 +112,77 @@ function showcaseCaptionText(variant: string | undefined, endedAt: string | unde
   return `${name} · ${days}d ago`;
 }
 
+// The article rows and the News box come from the article table and the
+// announcement list, which with their translations are about four fifths of the
+// homepage's script (1.5 MB of 2 MB gzipped, 2026-11-25). Imported statically,
+// the page and its board waited for all of it on a slow connection; loaded here
+// after the shell, the board boots on the rest. The prerendered rows stay in
+// place until the fresh ones replace them, so nothing moves.
+type LandingContent = Pick<
+  typeof ArticlesModule,
+  | 'buildHomeArticleCards'
+  | 'HOME_ARTICLE_ROW_SIZE'
+  | 'initLandingCarousel'
+  | 'mountArticleThumbnails'
+> &
+  Pick<typeof LandingAnnouncementsModule, 'buildLandingAnnouncements'> &
+  Pick<typeof ArticlesDataModule, 'findArticle'>;
+
+const LANDING_CONTENT_MAX_WAIT_MS = 15_000;
+let landingContent: LandingContent | null = null;
+let landingContentLoad: Promise<LandingContent> | null = null;
+
+export function loadLandingContent(): Promise<LandingContent> {
+  landingContentLoad ??= Promise.all([
+    import('./articles.js'),
+    import('./articles-data.js'),
+    import('./landing-announcements.js'),
+  ]).then(([articles, data, news]) => {
+    landingContent = {
+      buildHomeArticleCards: articles.buildHomeArticleCards,
+      HOME_ARTICLE_ROW_SIZE: articles.HOME_ARTICLE_ROW_SIZE,
+      initLandingCarousel: articles.initLandingCarousel,
+      mountArticleThumbnails: articles.mountArticleThumbnails,
+      buildLandingAnnouncements: news.buildLandingAnnouncements,
+      findArticle: data.findArticle,
+    };
+    setPlayPanelArticleLookup(data.findArticle);
+    return landingContent;
+  });
+  // A failed chunk load leaves the prerendered rows; the next mount retries.
+  landingContentLoad.catch(() => {
+    landingContentLoad = null;
+  });
+  return landingContentLoad;
+}
+
+/** The prerendered article rows and News box, kept on screen until the client
+ *  builds its own. Only the desktop shell is prerendered. */
+type PrebuiltContent = { articles?: Element; dives?: Element; news?: Element };
+
+/** The rules pages the prerendered play panel linked, as `/rules/<slug>`. */
+function prerenderedRulesHrefs(root: HTMLElement): string[] {
+  const hrefs: string[] = [];
+  for (const link of root.querySelectorAll<HTMLAnchorElement>('a.pp-name[href]')) {
+    const path = link.getAttribute('href')?.match(/(\/rules\/[^/?#]+)$/)?.[1];
+    if (path) hrefs.push(path);
+  }
+  return hrefs;
+}
+
+function takePrebuiltContent(root: HTMLElement): PrebuiltContent {
+  const demo = root.querySelector('.landing-demo');
+  if (!demo) return {};
+  const found: PrebuiltContent = {};
+  const articles = demo.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
+  const dives = demo.querySelector(':scope > .landing-dives-row');
+  const news = demo.querySelector(':scope > .landing-news-column > *');
+  if (articles) found.articles = articles;
+  if (dives) found.dives = dives;
+  if (news) found.news = news;
+  return found;
+}
+
 export async function mountLanding(root: HTMLElement): Promise<void> {
   updateHomeDescription();
   // Kick the showcase fetch off before any DOM work. Measured on prod: waiting
@@ -119,6 +191,15 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   // and was visibly torn down ~1s later. Pre-settled to null on failure so the
   // race below and the first refresh tick can both await it safely.
   const firstShowcaseLoad: Promise<FeaturedGame[] | null> = fetchShowcaseGames().catch(() => null);
+  // The article and News chunks wait for the first board: on a slow link they
+  // would otherwise share the bandwidth the viewer and the bot roster need, and
+  // their prerendered rows are already on screen.
+  let releaseContent: () => void = () => undefined;
+  const contentAfter = new Promise<void>((release) => {
+    releaseContent = release;
+  });
+  const prebuilt = isPhoneHome() ? {} : takePrebuiltContent(root);
+  setPlayPanelRulesHint(prerenderedRulesHrefs(root));
 
   root.replaceChildren();
   root.classList.add('landing-page');
@@ -197,10 +278,13 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     initialPool.unshift(forced!);
   }
 
-  const stage = buildLandingStage(fallbackPlayableEngines());
+  const stage = buildLandingStage(fallbackPlayableEngines(), { prebuilt, contentAfter });
   root.replaceChildren(buildNav(), stage.el);
-  mountArticleThumbnails(stage.el);
-  initLandingCarousel(stage.el);
+  void stage.content.then((content) => {
+    if (!content || !stage.el.isConnected) return;
+    content.mountArticleThumbnails(stage.el);
+    content.initLandingCarousel(stage.el);
+  });
 
   // Give the real pool a short head start before falling back to the bundled
   // static demo: the shell is already painted (skeleton in the board slot), and
@@ -247,6 +331,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
           : showcaseCaptionText(variantByRoomId[roomId] ?? specId, endedAtByRoomId[roomId]);
     },
   });
+  // An empty showcase can leave the board on its skeleton for good; the content
+  // still loads, a while after the shell.
+  void tv.firstBoard.then(releaseContent);
+  window.setTimeout(releaseContent, LANDING_CONTENT_MAX_WAIT_MS);
 
   // Upgrade the play panel + deep-link handling once the real playable engines
   // load. The shell already rendered with the "Misty" placeholder, so this is an
@@ -674,7 +762,13 @@ export const PHONE_NEWS_ROWS = 3;
 
 export function buildLandingStage(
   engines: PlayableEngine[],
-  opts: { skipLiveWidgets?: boolean; phone?: boolean } = {},
+  opts: {
+    skipLiveWidgets?: boolean;
+    phone?: boolean;
+    prebuilt?: PrebuiltContent;
+    /** Hold the article and News chunks until this settles. */
+    contentAfter?: Promise<unknown>;
+  } = {},
 ): {
   el: HTMLElement;
   replayRoot: HTMLElement;
@@ -682,6 +776,9 @@ export function buildLandingStage(
   viewerLink: HTMLAnchorElement;
   tvStrip: LandingTvStrip;
   applyEngines: (engines: PlayableEngine[]) => void;
+  /** Settles once the article rows and News are the client's own (null if their
+   *  chunk failed to load and the prerendered ones, if any, stay). */
+  content: Promise<LandingContent | null>;
 } {
   const locale = currentLocale();
   const phone = opts.phone ?? isPhoneHome();
@@ -866,28 +963,45 @@ export function buildLandingStage(
   // first, articles only (announcements stay in the News box, Brian 2026-10-26). Every article with no homeRow lands here on publish. It took
   // the forum's slot 2026-10-25 (Brian: the articles are the work we are proud
   // of; the forum gets little use). ──
-  const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
-  articleCards?.classList.add('landing-articles-row');
-
+  //
   // ── Band 2 center, top row (grid-area: dives; on top since 2026-10-26): the
   // deep-dives row above it, the same carousel filled with articles tagged
   // homeRow: 'deep-dives' (player pages, game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
   // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
   // visitors. Phones build it too (Brian, 2026-10-17): the articles are bundled,
   // so it costs no fetch. ──
-  const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
-  deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
-
+  //
   // ── Band 2 right rail: the News feed (its full history stays at /feed),
   // beside the article rows. Band 3 right: the lobby chat at the forum's height. The
   // chat box is server-driven (the empty mount paints nothing until the chat
   // flag is confirmed). ──
+  //
+  // All three come from loadLandingContent: built now when it has loaded (the
+  // prerender, a return to the homepage), else the prerendered ones hold their
+  // places until it lands.
   const newsColumn = document.createElement('div');
   newsColumn.className = 'landing-news-column';
-  // The phone home shows the three newest entries; the rest stay at /feed.
-  newsColumn.append(
-    buildLandingAnnouncements(locale, phone ? { maxRows: PHONE_NEWS_ROWS, moreRow: false } : {}),
-  );
+  const buildContent = (
+    content: LandingContent,
+  ): { articleCards: HTMLElement | null; deepDives: HTMLElement | null; news: HTMLElement } => {
+    const articleCards = content.buildHomeArticleCards(content.HOME_ARTICLE_ROW_SIZE, locale);
+    articleCards?.classList.add('landing-articles-row');
+    const deepDives = content.buildHomeArticleCards(content.HOME_ARTICLE_ROW_SIZE, locale, {
+      row: 'deep-dives',
+    });
+    deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
+    // The phone home shows the three newest entries; the rest stay at /feed.
+    const news = content.buildLandingAnnouncements(
+      locale,
+      phone ? { maxRows: PHONE_NEWS_ROWS, moreRow: false } : {},
+    );
+    return { articleCards, deepDives, news };
+  };
+  const built = landingContent ? buildContent(landingContent) : null;
+  const articleCards = built ? built.articleCards : (opts.prebuilt?.articles ?? null);
+  const deepDives = built ? built.deepDives : (opts.prebuilt?.dives ?? null);
+  const news = built ? built.news : opts.prebuilt?.news;
+  if (news) newsColumn.append(news);
   const chatColumn = document.createElement('div');
   chatColumn.className = 'landing-chat-column';
   chatColumn.append(
@@ -950,7 +1064,35 @@ export function buildLandingStage(
   if (deepDives) section.append(deepDives);
   // Phone only (hidden above 600px, so it takes no grid cell there): the
   // shortcut tiles under the Play buttons, placed by `order` in landing.css.
-  section.append(buildLandingPhoneTiles(locale));
+  const phoneTiles = buildLandingPhoneTiles(locale);
+  section.append(phoneTiles);
+
+  // Each row takes the place of the one held for it, or its own place in the
+  // append order above (before the phone tiles) when none was.
+  const swapIn = (fresh: Element | null, held: Element | null, place: () => void): void => {
+    if (held && fresh) held.replaceWith(fresh);
+    else if (held) held.remove();
+    else if (fresh) place();
+  };
+  const content: Promise<LandingContent | null> = built
+    ? Promise.resolve(landingContent)
+    : (opts.contentAfter
+        ? opts.contentAfter.then(() => loadLandingContent())
+        : loadLandingContent()
+      ).then(
+        (loaded) => {
+          const fresh = buildContent(loaded);
+          newsColumn.replaceChildren(fresh.news);
+          swapIn(fresh.articleCards, articleCards, () =>
+            section.insertBefore(fresh.articleCards!, phoneTiles),
+          );
+          swapIn(fresh.deepDives, deepDives, () =>
+            section.insertBefore(fresh.deepDives!, phoneTiles),
+          );
+          return loaded;
+        },
+        () => null,
+      );
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against
@@ -978,7 +1120,7 @@ export function buildLandingStage(
   // The footer lives only on the homepage now (stripped from interior routes),
   // blended into the bottom of the stage rather than rendered as a separate bar.
   stage.append(section, buildHomeFooter(locale));
-  return { el: stage, replayRoot, caption, viewerLink, tvStrip, applyEngines };
+  return { el: stage, replayRoot, caption, viewerLink, tvStrip, applyEngines, content };
 }
 
 // Build-time static render of the homepage (nav + stage), baked by the prerender
@@ -986,7 +1128,12 @@ export function buildLandingStage(
 // panel, article links, footer) instead of the empty SPA shell. The board replay
 // and live game pool stay client-hydrated; the live lobby widget is skipped
 // because it fetches on construction. Returns the inner HTML for `#app`.
+// Await loadLandingContent() first: a baked homepage without its article rows
+// and News would be a silent loss for crawlers, so this refuses instead.
 export function renderLandingShellForPrerender(): string {
+  if (!landingContent) {
+    throw new Error('renderLandingShellForPrerender: await loadLandingContent() first');
+  }
   const nav = buildNav();
   const stage = buildLandingStage(fallbackPlayableEngines(), {
     skipLiveWidgets: true,

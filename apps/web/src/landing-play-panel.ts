@@ -15,7 +15,7 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import { articleIsLive } from './articles/publish-time.js';
-import { findArticle } from './articles-data.js';
+import type { Article } from './articles/types.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import {
@@ -361,6 +361,53 @@ export function personFamilyPaces(
   return [...seen.values()].sort((a, b) => order(a) - order(b));
 }
 
+// A variant name links to its rules page only once the article table says the
+// page is live. That table (articles-data with its translations) is most of the
+// homepage's script weight, so the homepage loads it after the board and hands
+// the lookup over here; until then a name is a plain span, upgraded in place to
+// the link when the lookup arrives. Same text and box, so nothing moves. The
+// prerendered page already says which names link, so until the lookup lands the
+// homepage passes those hrefs on as a hint and the links never drop out.
+type ArticleLookup = (slug: string) => Article | undefined;
+let articleLookup: ArticleLookup | null = null;
+let liveRulesHint: ReadonlySet<string> = new Set();
+const namesAwaitingArticles = new Map<HTMLElement, { gameSpecId: string; locale: Locale }>();
+
+function liveRulesHref(gameSpecId: string): string | null {
+  const href = rulesHrefForGameSpec(gameSpecId);
+  if (!href) return null;
+  if (!articleLookup) return liveRulesHint.has(href) ? href : null;
+  const article = articleLookup(href.slice('/rules/'.length));
+  // Playtest flags and local draft previews never publish a homepage link.
+  return article?.kind === 'rules' && articleIsLive(article) ? href : null;
+}
+
+function linkGameName(name: HTMLElement, href: string, locale: Locale): HTMLAnchorElement {
+  const link = document.createElement('a');
+  for (const attr of [...name.attributes]) link.setAttribute(attr.name, attr.value);
+  link.href = localizedHref(href, locale);
+  link.classList.add('pp-rules-link');
+  link.append(...name.childNodes);
+  name.replaceWith(link);
+  return link;
+}
+
+/** The rules hrefs (unlocalized, `/rules/<slug>`) the prerendered panel linked. */
+export function setPlayPanelRulesHint(hrefs: Iterable<string>): void {
+  liveRulesHint = new Set(hrefs);
+}
+
+/** Hands the panel the article lookup; names already drawn become rules links. */
+export function setPlayPanelArticleLookup(lookup: ArticleLookup): void {
+  articleLookup = lookup;
+  const waiting = [...namesAwaitingArticles];
+  namesAwaitingArticles.clear();
+  for (const [name, { gameSpecId, locale }] of waiting) {
+    const href = liveRulesHref(gameSpecId);
+    if (href) linkGameName(name, href, locale);
+  }
+}
+
 export function buildPlayPanel(
   locale: Locale = currentLocale(),
   options: {
@@ -419,13 +466,8 @@ export function buildPlayPanel(
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
   const gameName = (gameSpecId: string, label: string): HTMLElement => {
-    const href = rulesHrefForGameSpec(gameSpecId);
-    const article = href ? findArticle(href.slice('/rules/'.length)) : undefined;
-    // Playtest flags and local draft previews never publish a homepage link.
-    const name =
-      href && article?.kind === 'rules' && articleIsLive(article)
-        ? document.createElement('a')
-        : document.createElement('span');
+    const href = liveRulesHref(gameSpecId);
+    const name = href ? document.createElement('a') : document.createElement('span');
     name.className = 'pp-name';
     if (name instanceof HTMLAnchorElement && href) {
       name.href = localizedHref(href, locale);
@@ -435,6 +477,9 @@ export function buildPlayPanel(
     labelText.className = 'pp-name-label';
     labelText.textContent = label;
     name.append(labelText);
+    if (!href && !articleLookup && rulesHrefForGameSpec(gameSpecId)) {
+      namesAwaitingArticles.set(name, { gameSpecId, locale });
+    }
     return name;
   };
   const ordered = (): LandingGameSpecId[] =>

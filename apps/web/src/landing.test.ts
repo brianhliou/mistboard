@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPageRenderer } from '../scripts/prerender-page.mjs';
 import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
@@ -8,6 +8,7 @@ import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
   buildLandingStage,
   fetchPlayableEnginesOnce,
+  loadLandingContent,
   loadPlayableEnginesWithRetry,
   renderLandingPageForPrerender,
   renderLandingShellForPrerender,
@@ -27,6 +28,7 @@ const ROSTER = [
 ];
 
 // /api/live-stats reads are shared through a module cache; start each test cold.
+beforeAll(() => loadLandingContent());
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {

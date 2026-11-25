@@ -134,6 +134,8 @@ export type LandingTvController = {
   // fallback): whatever the fallback put on the board gives way. A live game is
   // never cut by pool updates.
   updateCompletedPool(entries: ShowcaseEntry[], opts?: { jumpNow?: boolean }): void;
+  /** Settles once a game is first on the board, or the first tune-in failed; never rejects. */
+  firstBoard: Promise<void>;
   destroy(): void;
 };
 
@@ -188,7 +190,15 @@ export async function mountLandingTv(
       });
   };
 
+  // Settles when the first game is on the board (every notify follows a mount)
+  // or the first tune-in failed.
+  let boardShown: () => void = () => undefined;
+  const firstBoard = new Promise<void>((settle) => {
+    boardShown = settle;
+  });
+
   const notify = (roomId: string, specId: string, nextMode: LandingTvMode): void => {
+    boardShown();
     mode = nextMode;
     currentRoomId = roomId;
     currentSpecId = specId;
@@ -589,12 +599,14 @@ export async function mountLandingTv(
       await syncChannel();
     } catch (err) {
       renderWatchReplayFailure(root);
+      boardShown();
       throw err;
     }
   });
   void pollLive();
 
   return {
+    firstBoard,
     updateCompletedPool: (entries, opts) => {
       if (destroyed) return;
       completedPool = entries.filter((entry) => admits(entry.specId));

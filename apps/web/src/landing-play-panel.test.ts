@@ -6,7 +6,7 @@ import {
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
 } from '@mistboard/game';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
@@ -23,6 +23,7 @@ import {
   panelBotPaces,
   panelPersonPaces,
   playPanelEnabled,
+  setPlayPanelArticleLookup,
 } from './landing-play-panel.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
@@ -83,6 +84,8 @@ function rememberLivePace(): void {
 }
 
 // /api/live-stats reads are shared through a module cache; start each test cold.
+// The homepage hands the panel its article lookup after first paint.
+beforeAll(() => setPlayPanelArticleLookup(findArticle));
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('homepage play panel', () => {

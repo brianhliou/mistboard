@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildLandingStage, PHONE_NEWS_ROWS } from './landing.js';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildLandingStage, loadLandingContent, PHONE_NEWS_ROWS } from './landing.js';
 import { buildLandingPhoneTiles, buildLandingTvStrip, isPhoneHome } from './landing-phone.js';
 import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
@@ -8,6 +8,8 @@ import { navPhoneMediaQuery } from './site-shell.js';
 // The phone home ends after the two article strips: live event banners and the chat
 // room, then the footer. Everything else is never built there, so it never
 // fetches (mobile pass #576).
+beforeAll(() => loadLandingContent());
+
 describe('phone home widget set', () => {
   // Endpoints owned by widgets the phone home leaves out.
   const DESKTOP_ONLY_FETCHES = [
