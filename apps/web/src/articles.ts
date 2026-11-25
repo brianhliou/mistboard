@@ -74,6 +74,7 @@ import {
   type TableBlock,
   type TableRowDiagram,
   type TimelineBlock,
+  withXiangqiBoardArt,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -127,6 +128,7 @@ import {
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
+import { xiangqiBoardArtFromRoot } from './xiangqi-board-surface.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import { mountXiangqiReplay, type XiangqiReplayController } from './xiangqi-replay.js';
 
@@ -2207,13 +2209,19 @@ function paintXqDiagram(holder: HTMLElement, set: XiangqiPieceSet): void {
       child.classList.contains('article-figure-caption'),
     ) ?? null;
   const layout = readStoredXiangqiBoardLayout();
+  // The reader's art board (Green, Pine) is drawn only here, in the reader's
+  // repaint: the build-time prerender runs on a fresh root and bakes the
+  // default board, and takeover repaints inside the same viewBox.
+  const art = xiangqiBoardArtFromRoot();
   let html: string;
   try {
-    html = withXiangqiBoardLayout(layout, () => withXiangqiPieceSet(set, thunk));
+    html = withXiangqiBoardArt(art, () =>
+      withXiangqiBoardLayout(layout, () => withXiangqiPieceSet(set, thunk)),
+    );
   } catch (err) {
     console.warn('xiangqi diagram render failed; falling back to default piece set', err);
-    html = withXiangqiBoardLayout(layout, () =>
-      withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk),
+    html = withXiangqiBoardArt(art, () =>
+      withXiangqiBoardLayout(layout, () => withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk)),
     );
   }
   const scratch = document.createElement('div');
@@ -2482,8 +2490,10 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
     if (!step) return '';
     return typeof step.svg === 'function'
       ? localizeSvgMarkup(
-          withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
-            withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+          withXiangqiBoardArt(xiangqiBoardArtFromRoot(), () =>
+            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+              withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+            ),
           ),
           lang,
         )

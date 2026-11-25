@@ -4,7 +4,11 @@
 // export surface so no other file needs to change.
 
 export * from './articles/types.js';
-export { withXiangqiBoardLayout, withXiangqiPieceSet } from './articles/diagrams.js';
+export {
+  withXiangqiBoardArt,
+  withXiangqiBoardLayout,
+  withXiangqiPieceSet,
+} from './articles/diagrams.js';
 
 import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';

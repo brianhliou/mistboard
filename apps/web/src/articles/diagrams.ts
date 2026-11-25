@@ -41,12 +41,14 @@ import {
 import { BANQI_PIECE_REACH, banqiPieceDrawSize } from '../live-banqi-render.js';
 import { pieceSlot } from '../board-piece-slot.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import type { XiangqiBoardArtId } from '../xiangqi-board-color.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
   xiangqiDisplayFile,
   xiangqiDisplayRow,
 } from '../xiangqi-board-geometry.js';
+import { type XiangqiSurfaceConfig, xiangqiBoardArtSvg } from '../xiangqi-board-surface.js';
 import { drawsCrossedSoldier, drawsVeteranSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
@@ -1230,6 +1232,42 @@ export function withXiangqiBoardLayout(layout: XiangqiBoardLayout, render: () =>
   }
 }
 
+// The art board a diagram render draws (Green's river and palaces, Pine's grain
+// and frame; xiangqi-board-surface.ts), null for every other board. Set only by
+// the reader's repaint (paintXqDiagram in articles.ts), which reads the root
+// attributes like the live board does. Everything else, the build-time
+// prerender included, renders with null, so the baked HTML stays the default
+// board and the client draws the art on takeover inside the same box.
+export let activeXiangqiBoardArt: XiangqiBoardArtId | null = null;
+
+export function withXiangqiBoardArt(art: XiangqiBoardArtId | null, render: () => string): string {
+  const previous = activeXiangqiBoardArt;
+  activeXiangqiBoardArt = art;
+  try {
+    return render();
+  } finally {
+    activeXiangqiBoardArt = previous;
+  }
+}
+
+// The diagram board as the shared surface sees it, so the art lands on the same
+// river and palaces the grid draws. The art is drawn in board coordinates from
+// (0, 0) and the caller translates it onto the diagram's own origin.
+const XQ_DIAGRAM_SURFACE: XiangqiSurfaceConfig = {
+  geo: XQ_INTERSECTION_GEO,
+  palaces: [
+    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
+    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
+  ],
+  riverAfterRank: 5,
+  cornerRadius: XQ_BOARD_RADIUS,
+};
+
+function xqBoardArt(x0: number, y0: number): string {
+  const art = xiangqiBoardArtSvg(XQ_DIAGRAM_SURFACE, 'intersection', activeXiangqiBoardArt);
+  return art ? `<g transform="translate(${x0} ${y0})">${art}</g>` : '';
+}
+
 // Piece disc size + fog half-cell for the active layout (the square grid uses a
 // slightly smaller cell than the intersection board).
 //
@@ -1415,6 +1453,8 @@ function xqIntersectionBoardGrid(x0: number, y0: number, perspective: XiangqiCol
   const parts: string[] = [
     `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
   ];
+  const art = xqBoardArt(x0, y0);
+  if (art) parts.push(art);
   const left = x0 + XQ_MARGIN;
   const right = left + 8 * XQ_CELL;
   const top = y0 + XQ_MARGIN;

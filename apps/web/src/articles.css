@@ -1658,6 +1658,14 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 .xq-article-svg .xq-diagram-ink {
   fill: var(--xq-diagram-ink, #4b3c2a);
 }
+/* Pine's frame (xiangqiBoardArtSvg, drawn into intersection diagrams only on
+   the reader's repaint) in the diagram's own ink, as the live board strokes it
+   in --xq-live-ink (xiangqi-board-surface.css). The :not() keeps it off the
+   live-surface diagrams (.xq-article-svg.xq-surface), whose frame that sheet
+   strokes: no element matches both rules, so bundle order never decides. */
+.xq-article-svg:not(.xq-surface) .xq-board-art-frame {
+  stroke: var(--xq-diagram-ink, #1f160a);
+}
 /* The square grid (xqCellBoardGrid): the live square grid's colours
    (xiangqi-board-surface.css), mixed from the diagram's own board and ink so a
    picked board colour carries along. */
