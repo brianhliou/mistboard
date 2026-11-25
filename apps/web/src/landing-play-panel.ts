@@ -5,6 +5,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   DEFAULT_DAYS_PER_MOVE,
   defaultEngineTimeControl,
+  FFQ_BANQI_SPEC_ID,
   type GameSpecId,
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
@@ -23,7 +24,11 @@ import {
   isCorrespondenceSpecFor,
 } from './correspondence-model.js';
 import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
-import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
+import {
+  ffqBanqiEngineOptions,
+  ffqBanqiOffered,
+  setFFQBanqiEngineOptions,
+} from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import {
@@ -583,16 +588,26 @@ export function buildPlayPanel(
         ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
         : []),
   );
+  // Fanfanqi's tiers come only from the runtime roster, which answers after the
+  // first paint (a minute late on a slow line). Until it does, its row paints
+  // at full size with Play disabled, so the panel never grows a row under the
+  // reader; the roster then enables Play, or drops the row when it lists no
+  // tier or fails. The prerender bakes the same pending row.
+  let ffqRosterPending = ffqBanqiOffered() && ffqBanqiEngineOptions() === undefined;
+  let ffqPendingPlay: HTMLButtonElement | null = null;
+  const ffqRowPending = (): boolean => ffqRosterPending && ffqBanqiEngineOptions() === undefined;
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
     landingBotLadder(
       gameSpecId,
       playableBots.get(gameSpecId),
       gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
         ? threeKingdomsBanqiEngineIds
-        : new Set([
-            ...playableEngines,
-            ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
-          ]),
+        : gameSpecId === FFQ_BANQI_SPEC_ID && ffqRowPending()
+          ? new Set(Array.from({ length: 8 }, (_, i) => `misty-ffq-banqi-level-${i + 1}`))
+          : new Set([
+              ...playableEngines,
+              ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
+            ]),
     );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
@@ -614,7 +629,12 @@ export function buildPlayPanel(
     botRows.replaceChildren();
     playingEls.clear();
     for (const gameSpecId of orderedLastFirst()) {
-      if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
+      const rosterPending = gameSpecId === FFQ_BANQI_SPEC_ID && ffqRowPending();
+      if (
+        !rosterPending &&
+        gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+        !landingVariantSupportsPve(gameSpecId)
+      )
         continue;
       const ladder = ladderFor(gameSpecId);
       if (ladder.length === 0) continue;
@@ -722,6 +742,10 @@ export function buildPlayPanel(
         errorLabel: t('lobby.botStartFailed', {}, locale),
         source: 'panel-bot',
       });
+      if (rosterPending) {
+        play.disabled = true;
+        ffqPendingPlay = play;
+      }
       // Only Play starts the game (Brian, 2026-10-02): a whole-row click turned
       // a near miss on a stepper into a game nobody asked for.
 
@@ -1442,11 +1466,22 @@ export function buildPlayPanel(
       renderBotRows();
       renderFeatures();
     };
+    // The Fanfanqi roster has answered (or failed): a ladder that changed
+    // re-renders (an empty one drops the row); an unchanged one keeps its row
+    // and only enables Play, so a Play pending on another row is left alone.
+    const settleFFQRoster = (): void => {
+      if (!ffqRosterPending) return;
+      ffqRosterPending = false;
+      refreshBotLadders();
+      if (ffqPendingPlay?.isConnected) ffqPendingPlay.disabled = false;
+      ffqPendingPlay = null;
+    };
     // Another page fetch (landing.ts, a rules page) may land a runtime roster
     // after this panel painted; re-read it rather than keep the stale rows.
     const stopRosterWatch = onRuntimeEngineRostersChanged(() => {
       const tkEngines = threeKingdomsBanqiEngineOptions();
       if (tkEngines) threeKingdomsBanqiEngineIds = new Set(tkEngines.map((engine) => engine.id));
+      if (ffqBanqiEngineOptions()) settleFFQRoster();
       refreshBotLadders();
     });
     // Misty's neural tiers share a bot id, so their availability must come
@@ -1464,7 +1499,10 @@ export function buildPlayPanel(
           : null,
       )
       .then((data) => {
-        if (!data) return;
+        if (!data) {
+          settleFFQRoster();
+          return;
+        }
         if (data.threeKingdomsBanqiEngines !== undefined) {
           threeKingdomsBanqiEngineIds = new Set(
             data.threeKingdomsBanqiEngines.map((engine) => engine.id),
@@ -1480,9 +1518,10 @@ export function buildPlayPanel(
             ...(data.jungleEngines ?? []),
           ].map((e) => e.id),
         );
+        settleFFQRoster();
         refreshBotLadders();
       })
-      .catch(() => {});
+      .catch(() => settleFFQRoster());
     // One-shot: which gated bots this server can seat (playOptions[].playable).
     // A failure leaves them off, which is the safe side.
     void fetch('/api/bots', { headers: { accept: 'application/json' } })
