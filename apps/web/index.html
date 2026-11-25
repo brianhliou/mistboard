@@ -181,6 +181,28 @@
           id = "";
         }
         root.setAttribute("data-piece-set-pending", id);
+        if (id === "international") {
+          try {
+            let path = window.location.pathname.toLowerCase();
+            while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+            for (const [prefix] of [["/zh-hans","zh-Hans"],["/zh-hant","zh-Hant"]]) {
+              if (path === prefix || path.startsWith(prefix + "/")) path = path.slice(prefix.length) || "/";
+            }
+            const PRELOADS = {"/":["/piece-sets/xiangqi/international/red-general.png?v=18","/piece-sets/xiangqi/international/red-advisor.png?v=18","/piece-sets/xiangqi/international/red-elephant.png?v=18","/piece-sets/xiangqi/international/red-horse.png?v=18","/piece-sets/xiangqi/international/red-chariot.png?v=18","/piece-sets/xiangqi/international/red-cannon.png?v=18","/piece-sets/xiangqi/international/red-soldier.png?v=18","/piece-sets/xiangqi/international/black-general.png?v=18","/piece-sets/xiangqi/international/black-advisor.png?v=18","/piece-sets/xiangqi/international/black-elephant.png?v=18","/piece-sets/xiangqi/international/black-horse.png?v=18","/piece-sets/xiangqi/international/black-chariot.png?v=18","/piece-sets/xiangqi/international/black-cannon.png?v=18","/piece-sets/xiangqi/international/black-soldier.png?v=18","/piece-sets/xiangqi/international/red-crossed-soldier.png?v=18","/piece-sets/xiangqi/international/black-crossed-soldier.png?v=18"],"/analysis/xiangqi":["/piece-sets/xiangqi/international/red-general.png?v=18","/piece-sets/xiangqi/international/red-advisor.png?v=18","/piece-sets/xiangqi/international/red-elephant.png?v=18","/piece-sets/xiangqi/international/red-horse.png?v=18","/piece-sets/xiangqi/international/red-chariot.png?v=18","/piece-sets/xiangqi/international/red-cannon.png?v=18","/piece-sets/xiangqi/international/red-soldier.png?v=18","/piece-sets/xiangqi/international/black-general.png?v=18","/piece-sets/xiangqi/international/black-advisor.png?v=18","/piece-sets/xiangqi/international/black-elephant.png?v=18","/piece-sets/xiangqi/international/black-horse.png?v=18","/piece-sets/xiangqi/international/black-chariot.png?v=18","/piece-sets/xiangqi/international/black-cannon.png?v=18","/piece-sets/xiangqi/international/black-soldier.png?v=18"]};
+            if (Object.prototype.hasOwnProperty.call(PRELOADS, path)) {
+              for (const href of PRELOADS[path]) {
+                const link = document.createElement("link");
+                link.rel = "preload";
+                link.as = "image";
+                link.href = href;
+                link.setAttribute("fetchpriority", "high");
+                document.head.append(link);
+              }
+            }
+          } catch {
+            /* The board asks for its pieces itself. */
+          }
+        }
         window.addEventListener(
           "error",
           (event) => {

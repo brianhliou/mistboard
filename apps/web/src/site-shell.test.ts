@@ -581,6 +581,22 @@ describe('site shell phone menu', () => {
 
   const menuPanel = () => document.querySelector<HTMLElement>('.site-menu');
 
+  it('draws the bar and menu logos from a small copy of the mark', () => {
+    // 2026-11-25: both read the 512px logo-mark.png (140 KB) for a 28 to 36px
+    // mark, which on a slow connection came in ahead of the board's pieces.
+    const { nav, toggle } = phoneNav();
+    toggle.click();
+    const logos = [
+      nav.querySelector<HTMLImageElement>('.site-nav-logo'),
+      menuPanel()?.querySelector<HTMLImageElement>('.site-menu-brand img'),
+    ];
+    for (const logo of logos) expect(logo?.getAttribute('src')).toBe('/logo-mark-96.png');
+    const bytes = readFileSync(resolve(__dirname, '..', 'public', 'logo-mark-96.png'));
+    // 96px covers the 36px desktop mark at 2x and the 28px phone mark at 3x.
+    expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([96, 96]);
+    expect(bytes[25]).toBe(6);
+  });
+
   it('opens and closes from the menu button, with aria-expanded, focus and scroll lock', () => {
     const { nav, toggle } = phoneNav();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');

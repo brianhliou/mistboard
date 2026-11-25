@@ -8,6 +8,8 @@ import {
   FINAL_VARIANT_MARKERS,
   isVariantMarkerId,
   renderVariantMarker,
+  SMALL_VARIANT_MARKER_MAX_SIZE,
+  variantMarkerPath,
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
 import { VARIANT_MINI_BY_GAME_SPEC, VARIANTS, variantMiniIdForGameSpec } from './variants.js';
@@ -21,6 +23,8 @@ const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 // Every shipped mask is this square; a different size is a different pipeline.
 const MARKER_PX = 1254;
+// The copy a marker drawn at 64px or less reads, 2x that size.
+const SMALL_MARKER_PX = 128;
 
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
@@ -33,7 +37,7 @@ describe('variant markers', () => {
     expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, id);
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(isVariantMarkerId(id)).toBe(true);
-    expect(renderVariantMarker(id)).toContain("url('/variant-markers/final/ffq-banqi.png')");
+    expect(renderVariantMarker(id)).toContain("url('/variant-markers/final/128/ffq-banqi.png')");
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
   });
 
@@ -42,7 +46,7 @@ describe('variant markers', () => {
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
     expect(renderVariantMarker(id as VariantMiniId)).toContain(
-      "url('/variant-markers/final/gomoku.png')",
+      "url('/variant-markers/final/128/gomoku.png')",
     );
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(id);
     expect(isPublicGameSpec(id)).toBe(true);
@@ -52,7 +56,7 @@ describe('variant markers', () => {
     const id = 'three-kingdoms-banqi';
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(renderVariantMarker(id as VariantMiniId)).toContain(
-      "url('/variant-markers/final/three-kingdoms-banqi.png')",
+      "url('/variant-markers/final/128/three-kingdoms-banqi.png')",
     );
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(id);
     expect(isPublicGameSpec(id)).toBe(true);
@@ -94,10 +98,38 @@ describe('variant markers', () => {
   });
 
   it('renders a mask, never a board', () => {
-    const html = renderVariantMarker('crazyhouse-xiangqi', { size: 32 });
+    const html = renderVariantMarker('crazyhouse-xiangqi', { size: 100 });
     expect(html).toMatch(/^<span class="variant-marker"/);
     expect(html).toContain("url('/variant-markers/final/crazyhouse-xiangqi.png')");
     expect(html).not.toContain('<svg');
+  });
+
+  // 2026-11-25: the homepage drew a dozen 1254px masks at 24 to 40px, 1.4 MB
+  // that downloaded ahead of the board's piece art on a slow connection.
+  it('draws a marker of 64px or less from a 128px copy of the same mask', () => {
+    expect(renderVariantMarker('crazyhouse-xiangqi', { size: 32 })).toContain(
+      "url('/variant-markers/final/128/crazyhouse-xiangqi.png')",
+    );
+    expect(renderVariantMarker('banqi')).toContain("url('/variant-markers/final/128/banqi.png')");
+    expect(renderVariantMarker('banqi', { size: 65 })).toContain(
+      "url('/variant-markers/final/banqi.png')",
+    );
+    for (const [id, marker] of Object.entries(FINAL_VARIANT_MARKERS)) {
+      const path = variantMarkerPath(marker.path, SMALL_VARIANT_MARKER_MAX_SIZE);
+      let bytes: Buffer;
+      try {
+        bytes = readFileSync(join(PUBLIC, path));
+      } catch {
+        throw new Error(`${id}: ${path} is not in apps/web/public`);
+      }
+      expect(bytes.subarray(0, 8).equals(PNG_SIGNATURE), `${id} copy is not a PNG`).toBe(true);
+      expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)], id).toEqual([
+        SMALL_MARKER_PX,
+        SMALL_MARKER_PX,
+      ]);
+      // Colour type 6: the copy keeps the alpha channel the mask paints with.
+      expect(bytes[25], id).toBe(6);
+    }
   });
 
   it('throws on an id with no marker instead of drawing a stand-in', () => {

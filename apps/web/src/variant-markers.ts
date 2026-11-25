@@ -93,7 +93,22 @@ export function renderVariantMarker(
   const dataClass = opts.className
     ? ` data-variant-marker-class="${escapeAttr(opts.className)}"`
     : '';
-  return `<span class="${escapeAttr(className)}" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-id="${id}" data-variant-marker-size="${size}"${dataClass} style="--variant-marker-mask: url('${escapeAttr(marker.path)}'); --variant-marker-size: ${size}px"></span>`;
+  const path = variantMarkerPath(marker.path, size);
+  return `<span class="${escapeAttr(className)}" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-id="${id}" data-variant-marker-size="${size}"${dataClass} style="--variant-marker-mask: url('${escapeAttr(path)}'); --variant-marker-size: ${size}px"></span>`;
+}
+
+// Every mask is 1254px, about 100 KB each and 1.4 MB for the set, and the
+// homepage shows a dozen of them at 24 to 40px. On a slow connection they
+// downloaded ahead of the board's piece art, so the pieces sat blank for
+// seconds (2026-11-25). A marker drawn at 64px or less reads a 128px copy
+// beside the original (made with `sips -Z 128`, 2x the largest such size); a
+// larger one keeps the full mask. A caller passes the size it is drawn at.
+export const SMALL_VARIANT_MARKER_MAX_SIZE = 64;
+export const SMALL_VARIANT_MARKER_DIR = '/variant-markers/final/128/';
+
+export function variantMarkerPath(path: string, size: number): string {
+  if (size > SMALL_VARIANT_MARKER_MAX_SIZE) return path;
+  return `${SMALL_VARIANT_MARKER_DIR}${path.slice(path.lastIndexOf('/') + 1)}`;
 }
 
 // A neutral question-mark marker for a rules page whose variant has no art yet.

@@ -215,8 +215,7 @@ function marker(gameSpecId: string, label: string): HTMLElement {
   thumb.className = 'landing-lobby-seed-thumb pp-thumb';
   thumb.setAttribute('aria-hidden', 'true');
   const miniId = variantMiniIdForGameSpec(gameSpecId as GameSpecId);
-  if (miniId)
-    thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+  if (miniId) thumb.innerHTML = renderVariantMarker(miniId, { size: 40, label: `${label} marker` });
   return thumb;
 }
 

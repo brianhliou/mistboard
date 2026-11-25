@@ -387,6 +387,20 @@ describe('landing shell', () => {
     ).not.toBeNull();
   });
 
+  it('draws every variant marker from its small copy, so they leave the bandwidth to the board', () => {
+    // 2026-11-25: the homepage asked for its 24 to 40px markers at size 100,
+    // which read the 1254px masks, and on a slow connection that 1.4 MB came in
+    // ahead of the board's piece art.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+    wrap.append(buildLandingStage(fallbackPlayableEngines(), { skipLiveWidgets: true }).el);
+    const masks = [...wrap.querySelectorAll<HTMLElement>('.variant-marker')].map((marker) =>
+      marker.style.getPropertyValue('--variant-marker-mask'),
+    );
+    expect(masks.length).toBeGreaterThan(0);
+    for (const mask of masks) expect(mask).toMatch(/^url\('\/variant-markers\/final\/128\//);
+  });
+
   it('bakes the phone mission beside the desktop counts, so a phone first paint has its box', () => {
     // 2026-11-25: the shell had no mission, so a phone painted the desktop
     // activity line and twelve News rows, then the mount swapped in the

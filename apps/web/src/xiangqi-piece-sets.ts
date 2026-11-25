@@ -745,6 +745,32 @@ function internationalPieceHref(
   return `/piece-sets/xiangqi/${dir}/${piece.color}-${role}.png?v=${INTERNATIONAL_ART_VERSION}`;
 }
 
+// The fourteen pieces a xiangqi board draws in the international set, at the
+// exact URLs the board asks for, so the head's preload of them
+// (piece-set-first-paint.ts) is the same request and the board reuses it.
+export function internationalStartingPieceHrefs(): string[] {
+  const roles = [
+    'general',
+    'advisor',
+    'elephant',
+    'horse',
+    'chariot',
+    'cannon',
+    'soldier',
+  ] as const;
+  return (['red', 'black'] as const).flatMap((color) =>
+    roles.map((role) => internationalPieceHref({ color, role })),
+  );
+}
+
+// A soldier past the river draws its own figure; a board in mid-game (the
+// homepage TV and puzzle) asks for these too.
+export function internationalCrossedSoldierHrefs(): string[] {
+  return (['red', 'black'] as const).map((color) =>
+    internationalPieceHref({ color, role: 'soldier' }, true),
+  );
+}
+
 export function internationalTreasureHref(color: XiangqiColor): string {
   return `/piece-sets/xiangqi/international/${color}-treasure.png?v=${INTERNATIONAL_ART_VERSION}`;
 }

@@ -86,7 +86,7 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   brand.href = '/';
   const brandLogo = document.createElement('img');
   brandLogo.className = 'site-nav-logo';
-  brandLogo.src = '/logo-mark.png';
+  brandLogo.src = '/logo-mark-96.png';
   brandLogo.alt = '';
   brandLogo.width = 28;
   brandLogo.height = 28;
@@ -894,7 +894,7 @@ function buildSiteMenu(locale: Locale): {
   brand.className = 'site-menu-brand';
   brand.href = '/';
   const logo = document.createElement('img');
-  logo.src = '/logo-mark.png';
+  logo.src = '/logo-mark-96.png';
   logo.alt = '';
   logo.width = 28;
   logo.height = 28;
