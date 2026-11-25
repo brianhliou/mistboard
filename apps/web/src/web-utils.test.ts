@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { hasAppTranslation, t } from './i18n/catalog.js';
+import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
+  correspondenceTimeLeftLabel,
   ENGINE_OFFER_AFTER_MS,
   escapeHtml,
   firstMoveAbortCountdownText,
@@ -165,5 +168,59 @@ describe('formatDayClock', () => {
 
   it('clamps negative values', () => {
     expect(formatDayClock(-5_000)).toBe('0:00');
+  });
+});
+
+// Every served locale writes the day-scale clock in its own units: the /games
+// card read "剩餘 23h 58m" under Traditional Chinese before the units moved
+// into the catalog.
+describe('formatDayClock and correspondenceTimeLeftLabel per locale', () => {
+  const H23M58 = 23 * 3_600_000 + 58 * 60_000;
+  const D2H4 = 2 * 24 * 3_600_000 + 4 * 3_600_000;
+  const NOW = Date.parse('2026-11-24T00:00:00.000Z');
+  const dueIn = (ms: number) => new Date(NOW + ms).toISOString();
+  // English unit letters glued to a number ("23h", "58m", "2d").
+  const ENGLISH_UNITS = /\d\s*[dhm]\b/;
+
+  // Keyed by every served locale: a locale added to SUPPORTED_LOCALES without
+  // a row here fails below instead of passing on the English fallback.
+  const EXPECTED: Record<string, { hm: string; dh: string; left: string }> = {
+    en: { hm: '23h 58m', dh: '2d 4h', left: '23h 58m left' },
+    'zh-Hans': { hm: '23小时58分钟', dh: '2天4小时', left: '剩余 23小时58分钟' },
+    'zh-Hant': { hm: '23小時58分鐘', dh: '2天4小時', left: '剩餘 23小時58分鐘' },
+  };
+
+  it('has an expectation for every served locale', () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual([...SUPPORTED_LOCALES].sort());
+  });
+
+  it.each(SUPPORTED_LOCALES)('%s renders its own units', (locale) => {
+    const row = EXPECTED[locale];
+    if (!row) throw new Error(`no expected day-clock text for locale ${locale}`);
+    expect(formatDayClock(H23M58, locale)).toBe(row.hm);
+    expect(formatDayClock(D2H4, locale)).toBe(row.dh);
+    expect(correspondenceTimeLeftLabel(dueIn(H23M58), NOW, locale)).toBe(row.left);
+    if (locale !== 'en') {
+      expect(formatDayClock(H23M58, locale)).not.toMatch(ENGLISH_UNITS);
+      expect(formatDayClock(D2H4, locale)).not.toMatch(ENGLISH_UNITS);
+      for (const key of [
+        'correspondence.clockDaysHours',
+        'correspondence.clockHoursMinutes',
+      ] as const) {
+        expect(hasAppTranslation(locale, key), `${locale} ${key}`).toBe(true);
+      }
+    }
+  });
+
+  it('the English-units check catches the string seen on /games (planted)', () => {
+    expect('剩餘 23h 58m').toMatch(ENGLISH_UNITS);
+    expect('2d 4h').toMatch(ENGLISH_UNITS);
+    expect('剩餘 23小時58分鐘').not.toMatch(ENGLISH_UNITS);
+  });
+
+  it('uses the current locale when none is passed', () => {
+    expect(formatDayClock(H23M58)).toBe(
+      t('correspondence.clockHoursMinutes', { hours: 23, minutes: 58 }),
+    );
   });
 });

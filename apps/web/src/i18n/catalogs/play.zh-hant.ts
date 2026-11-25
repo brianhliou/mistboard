@@ -564,6 +564,8 @@ export const ZH_HANT_PLAY = {
   'correspondence.opponentFallback': '對手',
   'correspondence.dueNow': '現在到期',
   'correspondence.timeLeft': '剩餘 {time}',
+  'correspondence.clockDaysHours': '{days}天{hours}小時',
+  'correspondence.clockHoursMinutes': '{hours}小時{minutes}分鐘',
   'correspondence.challengeTo': '邀請 {name}',
   'correspondence.copyLink': '複製連結',
   'correspondence.linkCopied': '連結已複製！',

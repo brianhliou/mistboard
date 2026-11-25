@@ -35,15 +35,16 @@ export function formatClock(ms: number, showTenths = false): string {
 
 // Day-scale clock for correspondence (days-per-move) rooms: two significant
 // units while days or hours remain, then the live M:SS format inside the final
-// hour so the endgame countdown stays readable.
-export function formatDayClock(ms: number): string {
+// hour so the endgame countdown stays readable. The units are catalog phrases
+// ("23h 58m", "23小時58分鐘"), never English letters under another locale.
+export function formatDayClock(ms: number, locale?: Locale): string {
   const bounded = Math.max(0, ms);
   const totalMinutes = Math.floor(bounded / 60_000);
   const days = Math.floor(totalMinutes / (24 * 60));
   const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
   const minutes = totalMinutes % 60;
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (days > 0) return t('correspondence.clockDaysHours', { days, hours }, locale);
+  if (hours > 0) return t('correspondence.clockHoursMinutes', { hours, minutes }, locale);
   return formatClock(bounded);
 }
 
@@ -74,7 +75,7 @@ export function firstMoveAbortCountdownText(
 export function correspondenceTimeLeftLabel(dueAt: string, now: number, locale?: Locale): string {
   const remaining = Date.parse(dueAt) - now;
   if (!Number.isFinite(remaining) || remaining <= 0) return t('correspondence.dueNow', {}, locale);
-  return t('correspondence.timeLeft', { time: formatDayClock(remaining) }, locale);
+  return t('correspondence.timeLeft', { time: formatDayClock(remaining, locale) }, locale);
 }
 
 export function oppositeColor(color: Color): Color {

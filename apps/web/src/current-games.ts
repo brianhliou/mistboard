@@ -70,9 +70,12 @@ import {
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
+  type GameParticipant,
   liveFirstMover,
+  localizedBotName,
   matchupSeats,
   namesMatchupLabel,
+  participantForColor,
   terminationLabel,
   terminationVariant,
   variantDisplayLabel,
@@ -583,8 +586,8 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           metadataByRoomId: { [game.roomId]: gameMetaForGame(game) },
           namesByRoomId: {
             [game.roomId]: {
-              first: displayParticipantName(game, first),
-              second: displayParticipantName(game, second),
+              first: finishedSeatName(game, first, displayParticipantName(game, first)),
+              second: finishedSeatName(game, second, displayParticipantName(game, second)),
             },
           },
           onLoadError: () => true,
@@ -771,11 +774,7 @@ export function buildSeatRow(
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  const fullName = displayLiveName(
-    player?.name,
-    t('games.guest'),
-    player ? { ...player, gameSpecId } : undefined,
-  );
+  const fullName = liveSeatName(player, gameSpecId);
   // The whole name, wrapping onto a second line rather than cut (decided
   // 2026-11-12), with the BOT tag following its last word.
   const label = document.createElement('span');
@@ -926,12 +925,20 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
 } {
   const [top, bottom] = seatOrder(game);
   return {
-    first: displayLiveName(bottom?.name, t('games.guest'), {
-      ...bottom,
-      gameSpecId: game.gameSpecId,
-    }),
-    second: displayLiveName(top?.name, t('games.guest'), { ...top, gameSpecId: game.gameSpecId }),
+    first: liveSeatName(bottom, game.gameSpecId),
+    second: liveSeatName(top, game.gameSpecId),
   };
+}
+
+// A live seat's name as the card shows it; a bot's "Level N" in the visitor's
+// language (localizedBotName).
+function liveSeatName(player: CurrentGamePlayer | null, gameSpecId?: string): string {
+  const name = displayLiveName(
+    player?.name,
+    t('games.guest'),
+    player ? { ...player, gameSpecId } : undefined,
+  );
+  return player?.isEngine ? localizedBotName(name) : name;
 }
 
 function asFeaturedGame(game: CurrentGame): FeaturedGame {
@@ -1017,7 +1024,10 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const [first, second] = matchupSeats(game);
   const firstName = displayParticipantName(game, first);
   const secondName = displayParticipantName(game, second);
-  const matchup = namesMatchupLabel(firstName, secondName);
+  const matchup = namesMatchupLabel(
+    finishedSeatName(game, first, firstName),
+    finishedSeatName(game, second, secondName),
+  );
   const kind = finishedTileKind(game.variant);
   const tile = document.createElement('a');
   tile.className = 'current-game-finished';
@@ -1104,11 +1114,17 @@ function finishedSeatRow(
   row.dataset.color = color;
   // The winner's name reads first; a draw leaves both as they are.
   if (winner) row.dataset.outcome = winner === color ? 'won' : 'lost';
-  row.title = name;
+  const fullName = finishedSeatName(game, color, name);
+  row.title = fullName;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
-  label.textContent = cardSeatName(name, variantDisplayLabel(game.variant));
-  label.title = name;
+  // cardSeatName shortens on the English "Level N", so it runs first.
+  label.textContent = finishedSeatName(
+    game,
+    color,
+    cardSeatName(name, variantDisplayLabel(game.variant)),
+  );
+  label.title = fullName;
   if (variantSeatsHaveInk(game.variant)) {
     row.append(
       seatDiscEl(
@@ -1119,6 +1135,18 @@ function finishedSeatRow(
   }
   row.append(label);
   return row;
+}
+
+// A finished seat's name with a bot's "Level N" in the visitor's language; an
+// account's name is never rewritten.
+function finishedSeatName(game: FeaturedGame, color: string, name: string): string {
+  const participant = participantForColor(game, color as GameParticipant['color']);
+  const bot = participant
+    ? participant.subjectType === 'bot' || participant.subjectType === 'engine-version'
+    : color === 'white'
+      ? !!game.whiteEngineId
+      : color === 'black' && !!game.blackEngineId;
+  return bot ? localizedBotName(name) : name;
 }
 
 // Puts the bottom seat's name under the board and the other one over it.

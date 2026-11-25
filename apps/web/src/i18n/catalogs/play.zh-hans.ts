@@ -564,6 +564,8 @@ export const ZH_HANS_PLAY = {
   'correspondence.opponentFallback': '对手',
   'correspondence.dueNow': '现在到期',
   'correspondence.timeLeft': '剩余 {time}',
+  'correspondence.clockDaysHours': '{days}天{hours}小时',
+  'correspondence.clockHoursMinutes': '{hours}小时{minutes}分钟',
   'correspondence.challengeTo': '邀请 {name}',
   'correspondence.copyLink': '复制链接',
   'correspondence.linkCopied': '链接已复制！',
