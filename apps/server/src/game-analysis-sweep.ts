@@ -24,7 +24,8 @@ export type SweepPlyEval = {
   /** Set when this ply's eval survived a consistency re-search still contradicting the ply
    *  after it — the number is the best the engine offered but it is not trustworthy enough to
    *  grade a move against, so the client leaves the adjacent moves unjudged. Written only by
-   *  the jieqi sweep today (see reconcileJieqiSeries); absent everywhere else. */
+   *  the jieqi and FFQ banqi sweeps today (reconcileJieqiSeries, reconcileFFQBanqiBounces);
+   *  absent everywhere else. */
   unstable?: boolean;
 };
 

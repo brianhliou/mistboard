@@ -20,7 +20,9 @@ import {
   winPercent,
 } from '@mistboard/game';
 import type { BanqiDecision } from '../../../apps/server/src/banqi-analysis.ts';
-import { FFQ_BANQI_ANALYSIS_ENGINE_ID } from '../../../apps/server/src/ffq-banqi-analysis.ts';
+// The committed study analysis is a plain 25k public-FEN sweep (below), without the
+// review's bounce re-search, so it carries the id that names exactly that sweep.
+import { FFQ_BANQI_ANALYSIS_BASE_ENGINE_ID as FFQ_BANQI_ANALYSIS_ENGINE_ID } from '../../../apps/server/src/ffq-banqi-analysis.ts';
 import {
   analyzeFFQBanqiDecisions,
   FFQ_BANQI_DECISIONS_ENGINE_ID,

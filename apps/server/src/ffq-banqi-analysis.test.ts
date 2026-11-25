@@ -5,16 +5,22 @@ import {
   createFFQBanqiDeal,
   createFFQBanqiStateFromSetup,
   FFQ_BANQI_SPEC_ID,
+  FFQ_BANQI_WIN_PCT_K,
   getFFQBanqiLegalMoves,
+  moveJudgment,
+  winPercent,
+  winPercentK,
 } from '@mistboard/game';
 import {
   analyzeFFQBanqiPostgame,
   evaluateFFQBanqiPosition,
   FFQ_BANQI_ANALYSIS_DEPTH,
   FFQ_BANQI_ANALYSIS_ENGINE_ID,
+  FFQ_BANQI_RESEARCH_NODES,
   type FFQBanqiAnalysisCache,
   resolveFFQBanqiAnalysis,
 } from './ffq-banqi-analysis.js';
+import { FFQ_BANQI_DECISIONS_ENGINE_ID } from './ffq-banqi-decisions.js';
 import {
   buildFFQBanqiEngineCommands,
   FFQ_BANQI_ENGINE_VERSION,
@@ -83,10 +89,14 @@ test('replays N+1 positions at classical L7 and normalizes scores to the red sea
     result.plies.map((_, ply) => (ply % 2 === 0 ? 42 : -42)),
   );
   assert.ok(state.captures.length > 0, 'the line includes captures');
+  // A constant side-to-move score swings each mover's win% by about 11 points, so the
+  // bounce rule re-searches some positions deeper; the sweep itself is one request a point.
+  const sweep = requests.filter((request) => request.nodes === 25_000);
+  assert.equal(sweep.length, events.length);
   for (const request of requests) {
     assert.equal(request.engineId, 'misty-ffq-banqi-level-7');
-    assert.equal(request.nodes, 25_000);
-    assert.equal(request.movetimeCapMs, 3_000);
+    assert.ok(request.nodes === 25_000 || request.nodes === FFQ_BANQI_RESEARCH_NODES);
+    assert.equal(request.movetimeCapMs, request.nodes === 25_000 ? 3_000 : 20_000);
     assert.equal(request.position.view.perspective, request.color === 'white' ? 'red' : 'black');
   }
 });
@@ -117,7 +127,7 @@ test('swapping two still-covered identities changes no engine input or analysis 
       }),
     );
   }
-  assert.equal(inputs[0]!.length, events.length);
+  assert.ok(inputs[0]!.length > events.length, 'the sweep plus its deeper re-searches');
   assert.deepEqual(inputs[0], inputs[1], 'every serialized request and stdin block');
   assert.equal(JSON.stringify(results[0]), JSON.stringify(results[1]), 'whole analysis payload');
 });
@@ -174,12 +184,12 @@ test('checkpoints resume without re-evaluating completed positions; missing deal
   const result = await analyzeFFQBanqiPostgame(
     events.slice(0, 4),
     async (request) => {
-      calls += 1;
+      if (request.nodes === 25_000) calls += 1;
       return score(request);
     },
     progress,
   );
-  assert.equal(calls, 2);
+  assert.equal(calls, 2, 'only the two unfinished sweep points');
   assert.equal(result.plies.length, 4);
   await assert.rejects(
     analyzeFFQBanqiPostgame([{ ...created, setup: undefined }], score),
@@ -236,6 +246,108 @@ test('an all-null engine sweep is rejected and never cached', async () => {
   assert.equal(saves, 0);
 });
 
+// Grades the way the review does: the mover's win% before and after, on the curve the stored
+// engine id names. Null entries are ungraded (unstable evals ungrade both moves they touch).
+function gradeSeries(plies: SweepPlyEval[]): (string | null)[] {
+  const win = (entry: SweepPlyEval) =>
+    winPercent(entry.cp, entry.mate, FFQ_BANQI_ANALYSIS_ENGINE_ID);
+  const ungraded = new Set<number>();
+  plies.forEach((entry, index) => {
+    if (!entry.unstable) return;
+    ungraded.add(index);
+    ungraded.add(index + 1);
+  });
+  return plies.map((entry, k) => {
+    if (k === 0 || ungraded.has(k)) return null;
+    const redMoved = k % 2 === 1;
+    const before = win(plies[k - 1]!);
+    const after = win(entry);
+    return moveJudgment(redMoved ? before : 100 - before, redMoved ? after : 100 - after);
+  });
+}
+
+test('a side-to-move bounce is re-searched deeper, while a sustained drop stays a blunder', async () => {
+  // Plies whose move neither flips nor captures a covered piece: the only ones a bounce rule may
+  // judge, since a reveal legitimately moves the value.
+  const deterministic = new Set<number>();
+  let replay = replayTenantEvents(ffqBanqiTenant, [created]).state;
+  events.slice(1).forEach((event, index) => {
+    if (event.type !== 'move-played') return;
+    if (!replay.board[event.move.to]?.faceDown) deterministic.add(index + 1);
+    replay = applyFFQBanqiMove(replay, event.move);
+  });
+  const bounce = [...deterministic].find(
+    (k) => k % 2 === 1 && k >= 3 && deterministic.has(k + 1) && k + 4 < events.length,
+  );
+  assert.notEqual(bounce, undefined, 'the line has two quiet moves in a row after a red move');
+  const drop = [...deterministic].find((k) => k % 2 === 1 && k > bounce! + 3);
+  assert.notEqual(drop, undefined, 'the line has a later quiet red move');
+  // Red-POV targets. Around the bounce the shallow search reads 1306 / 345 / 1306 (the shape seen
+  // in a real FFQ review); the deeper search agrees with both neighbours. The planted drop is a
+  // real one: red's move gives up 1000cp and no deeper search changes it.
+  const red = (ply: number, deep: boolean): number => {
+    if (ply === bounce) return deep ? 1300 : 345;
+    return ply >= drop! ? -1000 : 1306;
+  };
+  const researched: number[] = [];
+  const result = await analyzeFFQBanqiPostgame(finished, async (request) => {
+    const deep = request.nodes > 25_000;
+    if (deep) researched.push(request.ply);
+    const cp = red(request.ply, deep) * (request.color === 'white' ? 1 : -1);
+    return { ...(await score(request)), cp };
+  });
+  const grades = gradeSeries(result.plies);
+  assert.deepEqual(researched, [bounce], 'only the out-of-line position is re-searched');
+  assert.equal(result.plies[bounce!]!.cp, 1300, 'the deeper score replaces the shallow one');
+  assert.equal(grades[bounce!], null, 'the move into the bounce is not a mistake');
+  assert.equal(grades[bounce! + 1], null, 'nor the move out of it');
+  assert.equal(grades[drop!], 'blunder', 'a sustained drop is still a blunder');
+  assert.deepEqual(
+    grades.flatMap((grade, ply) => (grade ? [ply] : [])),
+    [drop],
+    'no other graded move anywhere',
+  );
+  assert.ok(result.plies.every((entry) => !entry.unstable));
+});
+
+test('a bounce the deeper search confirms stays graded; one it moves without settling is unstable', async () => {
+  const deterministic = new Set<number>();
+  let replay = replayTenantEvents(ffqBanqiTenant, [created]).state;
+  events.slice(1).forEach((event, index) => {
+    if (event.type !== 'move-played') return;
+    if (!replay.board[event.move.to]?.faceDown) deterministic.add(index + 1);
+    replay = applyFFQBanqiMove(replay, event.move);
+  });
+  const bounce = [...deterministic].find(
+    (k) => k % 2 === 1 && k >= 3 && deterministic.has(k + 1) && k + 4 < events.length,
+  )!;
+  const run = (shallowCp: number, deepCp: number) =>
+    analyzeFFQBanqiPostgame(finished, async (request) => {
+      const deep = request.nodes > 25_000;
+      const value = request.ply === bounce ? (deep ? deepCp : shallowCp) : 1306;
+      return { ...(await score(request)), cp: value * (request.color === 'white' ? 1 : -1) };
+    });
+  // Confirmed: red gave something up and black did not take it. Both are real mistakes.
+  const confirmed = await run(345, 345);
+  assert.equal(confirmed.plies[bounce]!.unstable, undefined);
+  assert.deepEqual(gradeSeries(confirmed.plies).slice(bounce, bounce + 2), ['mistake', 'mistake']);
+  // The deeper search moves the value by more than the threshold but not into line: neither
+  // budget can be trusted to grade the two moves it sits between.
+  const shifted = await run(-500, 345);
+  assert.equal(shifted.plies[bounce]!.cp, 345);
+  assert.equal(shifted.plies[bounce]!.unstable, true);
+  assert.deepEqual(gradeSeries(shifted.plies).slice(bounce, bounce + 2), [null, null]);
+});
+
+test('the reconciled analysis id keeps the fitted win curve and leaves the luck id unchanged', () => {
+  assert.ok(FFQ_BANQI_ANALYSIS_ENGINE_ID.endsWith('-winfit20261113-reconcile1'));
+  assert.equal(winPercentK(FFQ_BANQI_ANALYSIS_ENGINE_ID), FFQ_BANQI_WIN_PCT_K);
+  assert.equal(
+    FFQ_BANQI_DECISIONS_ENGINE_ID,
+    `misty-ffq-banqi-decisions@${FFQ_BANQI_ENGINE_VERSION}+misty-ffq-banqi-level-7-n25000-classical-ms3000-masked2-winfit20261113-d1-top-played`,
+  );
+});
+
 test('a board ending includes the terminal point without an engine request', async () => {
   let current = createFFQBanqiStateFromSetup(ROOM, { deal });
   const log: FFQBanqiEvent[] = [created];
@@ -257,7 +369,7 @@ test('a board ending includes the terminal point without an engine request', asy
   assert.equal(current.status.type, 'finished');
   let calls = 0;
   const result = await analyzeFFQBanqiPostgame(log, async (request) => {
-    calls++;
+    if (request.nodes === 25_000) calls++;
     return score(request);
   });
   assert.equal(calls, current.ply);

@@ -1,7 +1,10 @@
 // Decided 2026-11-13: only public FENs enter the luck computation.
 import { FFQ_BANQI_DAMAGE, type FFQBanqiMove, winPercent } from '@mistboard/game';
 import type { BanqiDecision, BanqiDecisionCandidate } from './banqi-analysis.js';
-import { FFQ_BANQI_ANALYSIS_DEPTH, FFQ_BANQI_ANALYSIS_ENGINE_ID } from './ffq-banqi-analysis.js';
+import {
+  FFQ_BANQI_ANALYSIS_BASE_ENGINE_ID,
+  FFQ_BANQI_ANALYSIS_DEPTH,
+} from './ffq-banqi-analysis.js';
 import { ffqBanqiMoveToUci, uciToFFQBanqiMove } from './ffq-banqi-engine.js';
 import { type FFQPublicSearch, searchFFQPublicFen } from './ffq-banqi-public-analysis.js';
 import { ffqBanqiPostgameHistory } from './ffq-banqi-replay.js';
@@ -17,7 +20,7 @@ import { VacuousAnalysisError } from './game-analysis-sweep.js';
 import * as persistence from './persistence.js';
 
 export const FFQ_BANQI_DECISION_NODES = 25_000;
-export const FFQ_BANQI_DECISIONS_ENGINE_ID = `${FFQ_BANQI_ANALYSIS_ENGINE_ID.replace('-analysis@', '-decisions@')}-d1-top-played`;
+export const FFQ_BANQI_DECISIONS_ENGINE_ID = `${FFQ_BANQI_ANALYSIS_BASE_ENGINE_ID.replace('-analysis@', '-decisions@')}-d1-top-played`;
 export type FFQBanqiDecisionsCache = GameAnalysisCacheOps<BanqiDecision[]>;
 const LETTERS = 'GAERHCSgaerhcs';
 const ROLES = ['general', 'advisor', 'elephant', 'chariot', 'horse', 'cannon', 'soldier'] as const;
