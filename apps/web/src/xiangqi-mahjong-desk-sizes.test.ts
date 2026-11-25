@@ -9,7 +9,8 @@
 //   a browser drew at three windows (DESKS). A CSS edit that changes the sizes
 //   fails only when those widths are re-measured.
 // - Badges, fonts, the wall counter and the centre's own contents are not
-//   modelled; the centre is only held to its floor.
+//   modelled; the centre is only held to its floor. The badge band is counted
+//   as height, but that a badge stays clear of the tiles is a browser read.
 // - The 521-799px band (two rows of XMJ_POND_COLUMNS) is not covered.
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -28,8 +29,12 @@ import { describe, expect, it } from 'vitest';
 import {
   XMJ_DESK,
   XMJ_MAX_DISCARDS,
+  xmjConcealedGap,
   xmjDeskSizes,
   xmjMostPondDiscards,
+  xmjSetGap,
+  xmjWidestHand,
+  xmjWidestHandTileW,
 } from './xiangqi-mahjong-table.js';
 
 describe('the most discards a seat can make', () => {
@@ -113,7 +118,8 @@ describe('the most discards a seat can make', () => {
 /**
  * Desk windows as the table sees them: the felt's width and the height-bound
  * unit (from the felt's measured height), with the hand and discard widths the
- * browser drew there on 2026-11-25, so the mirror is pinned to the CSS at
+ * browser drew there on 2026-11-25 (re-measured the same day once the hand's
+ * gaps grew and the racks kept a badge band), so the mirror is pinned to the CSS at
  * three real sizes. The last row is a narrower felt, not a measured window.
  */
 const DESKS = [
@@ -121,19 +127,19 @@ const DESKS = [
     name: '2576x1395',
     feltW: 1232,
     unitW: (560 * (1077 - 130)) / 513,
-    drawn: { tile: 188.6, pond: 83.4 },
+    drawn: { tile: 181.5, pond: 83.4 },
   },
   {
     name: '1440x900',
     feltW: 672,
     unitW: (560 * (646 - 130)) / 513,
-    drawn: { tile: 107, pond: 44.4 },
+    drawn: { tile: 99.9, pond: 44.4 },
   },
   {
     name: '1280x720',
     feltW: 456,
     unitW: (560 * (470 - 248)) / 395,
-    drawn: { tile: 58.5, pond: 29.4 },
+    drawn: { tile: 51.4, pond: 29.4 },
   },
   { name: 'a narrower felt', feltW: 400, unitW: 280, drawn: null },
 ];
@@ -158,8 +164,19 @@ describe('xmjDeskSizes', () => {
       });
 
       it('fits the widest hand, a claimed set and two concealed, inside the felt', () => {
-        const widest = 4 * s.tileW + s.tileH + 48;
+        // Spelled out: four upright tiles and one sideways, the gap to the
+        // set, the drawn tile's margin, the tray, the set's own gaps and the
+        // gap between the two concealed tiles.
+        const gaps = xmjSetGap(s.tileW) + 12 + 8 + 4 + xmjConcealedGap(s.tileW);
+        const widest = 4 * s.tileW + s.tileH + gaps;
+        expect(widest).toBeCloseTo(xmjWidestHand(s.tileW, s.tileH), 9);
         expect(widest).toBeLessThanOrEqual(inner + 0.01);
+      });
+
+      it('spaces the concealed tiles 7% of a tile, never under 4px, and the set clearly further', () => {
+        const tile = xmjConcealedGap(s.tileW);
+        expect(tile).toBeCloseTo(Math.max(4, 0.07 * s.tileW), 9);
+        expect(xmjSetGap(s.tileW)).toBeGreaterThanOrEqual(3 * tile - 0.01);
       });
 
       it('keeps the table its old height and the centre at least its floor', () => {
@@ -177,13 +194,37 @@ describe('xmjDeskSizes', () => {
 
       it('makes hand tiles as large as the felt allows: the widest hand or the centre floor binds', () => {
         const u = desk.unitW / 560;
-        const widthBound = (inner - 48) / (4 + 68 / 52);
+        const widthBound = xmjWidestHandTileW(inner);
         const centreAtFloor = Math.abs(s.centreH - Math.max(118, 118 * u)) < 0.01;
         expect(Math.abs(s.tileW - widthBound) < 0.01 || centreAtFloor).toBe(true);
         expect(s.tileW).toBeGreaterThan(s.pondW);
       });
     });
   }
+
+  it('counts the gaps in the fit: the largest tile fills the felt with its widest hand', () => {
+    for (const inner of [200, 366, 422, 638, 1198, 2400]) {
+      const tileW = xmjWidestHandTileW(inner);
+      expect(xmjWidestHand(tileW, (tileW * 68) / 52)).toBeCloseTo(inner, 6);
+      // A hair larger and the widest hand would wrap or spill.
+      const over = tileW + 0.05;
+      expect(xmjWidestHand(over, (over * 68) / 52)).toBeGreaterThan(inner);
+    }
+  });
+
+  it('would overflow with the gaps left out of the fit, as the 48px-only sum did', () => {
+    // The planted failure: the old fit held the gaps at their floors (48px in
+    // all), so on a felt wide enough for the gaps to pass their floors the
+    // widest hand it allowed runs past the felt with the gaps drawn now.
+    const inner = 1198;
+    const old = (inner - 48) / (4 + 68 / 52);
+    expect(xmjWidestHand(old, (old * 68) / 52)).toBeGreaterThan(inner + 30);
+    expect(xmjWidestHandTileW(inner)).toBeLessThan(old);
+  });
+
+  it('keeps a badge band on each rack, counted in the fixed height', () => {
+    expect(XMJ_DESK.fixedHeight).toBe(74 + 2 * XMJ_DESK.badgeBand);
+  });
 
   it('takes no tile count, so one window gives one size for the whole match', () => {
     // The signature is the guarantee: the inputs are the felt and the window.

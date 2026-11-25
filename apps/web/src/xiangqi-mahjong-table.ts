@@ -116,8 +116,14 @@ export const XMJ_DESK = {
    * and 12 gaps of 5/44 of a tile, rounded up.
    */
   pondSpan: 14.37,
-  /** The felt's top and bottom padding and edge (30), its two gaps (24), the middle's two (20). */
-  fixedHeight: 74,
+  /**
+   * The felt's top and bottom padding and edge (30), its two gaps (24), the
+   * middle's two (20), and the band each rack keeps on the felt's edge for its
+   * badges (10 each), so a badge never lies over a tile or its depth.
+   */
+  fixedHeight: 94,
+  /** The badge band each rack keeps between its tiles and the felt's edge. */
+  badgeBand: 10,
   /** A rack's height past its tile and depth: a claimed set's tray. */
   rackExtra: 8,
   /** A pond's height past its tile: 6px over the row, 4px under it for the depth. */
@@ -160,7 +166,7 @@ export function xmjDeskSizes({ feltW, unitW }: { feltW: number; unitW: number })
   const tableH = XMJ_DESK.baseHeight + XMJ_DESK.baseHeightPerU * u + centreFloor;
   const ponds = 2 * (pondH + XMJ_DESK.pondExtra);
   const tileW = Math.min(
-    (inner - XMJ_HAND_FIXED_MAX) / (4 + 68 / 52),
+    xmjWidestHandTileW(inner),
     (tableH - centreFloor - XMJ_DESK.fixedHeight - 2 * XMJ_DESK.rackExtra - ponds) /
       (2 * rackPerTileW),
   );
@@ -395,13 +401,60 @@ export function xmjTagOverflow(tags: ReadonlyArray<{ column: XmjSpan; badge: Xmj
 }
 
 /**
- * The hand's fixed width at its widest: a claimed set and two concealed tiles,
- * one of them just drawn. The 20px gap to the set, the drawn tile's 12px
- * margin, the 4px between the concealed tiles, the set's tray (3px padding and
- * a 1px edge each side) and the 2px between its tiles. The set holds two
- * upright tiles and one lying sideways; no hand holds more than one set.
+ * The gaps in a hand, as xiangqi-mahjong.css draws them at 521px and wider:
+ * between two concealed tiles 7% of a tile, never under 4px, and between the
+ * concealed tiles and a claimed set 21% of a tile, never under 20px, so the
+ * set always stands clearly apart. Inside a set the tiles stay 2px apart.
  */
-const XMJ_HAND_FIXED_MAX = 48;
+export const XMJ_HAND_GAPS = {
+  concealedMin: 4,
+  concealedPerTile: 0.07,
+  setMin: 20,
+  setPerTile: 0.21,
+} as const;
+
+/** The gap between two concealed tiles at a tile width. */
+export function xmjConcealedGap(tileW: number): number {
+  return Math.max(XMJ_HAND_GAPS.concealedMin, XMJ_HAND_GAPS.concealedPerTile * tileW);
+}
+
+/** The gap between the concealed tiles and a claimed set at a tile width. */
+export function xmjSetGap(tileW: number): number {
+  return Math.max(XMJ_HAND_GAPS.setMin, XMJ_HAND_GAPS.setPerTile * tileW);
+}
+
+/**
+ * The hand's fixed width at its widest, a claimed set and two concealed tiles,
+ * one of them just drawn: the gap to the set, the drawn tile's 12px margin,
+ * the gap between the concealed tiles, the set's tray (3px padding and a 1px
+ * edge each side) and the 2px between its tiles. The set holds two upright
+ * tiles and one lying sideways; no hand holds more than one set.
+ */
+export function xmjHandFixed(tileW: number): number {
+  return 12 + 8 + 4 + xmjConcealedGap(tileW) + xmjSetGap(tileW);
+}
+
+/** The widest hand's width at a tile width: four upright tiles, one sideways. */
+export function xmjWidestHand(tileW: number, tileH: number): number {
+  return 4 * tileW + tileH + xmjHandFixed(tileW);
+}
+
+/**
+ * The largest tile whose widest hand fits `inner`. Each gap is the larger of a
+ * floor and a share of the tile, so the hand is the largest of four straight
+ * lines in the tile width, and the tile is the smallest of their four roots:
+ * the same min() the desk CSS takes.
+ */
+export function xmjWidestHandTileW(inner: number): number {
+  const upright = 4 + 68 / 52;
+  const { concealedMin: c, concealedPerTile: cp, setMin: s, setPerTile: sp } = XMJ_HAND_GAPS;
+  return Math.min(
+    (inner - 24 - c - s) / upright,
+    (inner - 24 - s) / (upright + cp),
+    (inner - 24 - c) / (upright + sp),
+    (inner - 24) / (upright + cp + sp),
+  );
+}
 /** The rack's grid gap, either side of the hand. */
 const XMJ_RACK_GAP = 8;
 
@@ -426,8 +479,7 @@ export type XmjRackRoom = {
  * fit, so a seat's tiles changed size with its hand.
  */
 export function xmjRackTagsBeside({ room, tileW, tileH, tag }: XmjRackRoom): boolean {
-  const hand = 4 * tileW + tileH + XMJ_HAND_FIXED_MAX;
-  return hand + 2 * (tag + XMJ_RACK_GAP) <= room + 0.5;
+  return xmjWidestHand(tileW, tileH) + 2 * (tag + XMJ_RACK_GAP) <= room + 0.5;
 }
 
 /** The class that sets a seat's badges on the felt's edge. */

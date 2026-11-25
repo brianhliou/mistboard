@@ -8,7 +8,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   placeXmjRackTags,
   XMJ_TAGS_EDGE_CLASS,
+  xmjConcealedGap,
   xmjRackTagsBeside,
+  xmjWidestHand,
 } from './xiangqi-mahjong-table.js';
 
 /** The self seat at the narrowest desktop table before the felt widened. */
@@ -32,9 +34,9 @@ describe('xmjRackTagsBeside', () => {
     // is already no before any set is claimed.
     const tileW = 64.9;
     const tileH = 85.2;
-    const fiveConcealed = 5 * tileW + 4 * 4 + 12;
+    const fiveConcealed = 5 * tileW + 4 * xmjConcealedGap(tileW) + 12;
     const room = fiveConcealed + 2 * (BADGE_W + 8) + 1;
-    expect(room).toBeLessThan(4 * tileW + tileH + 48 + 2 * (BADGE_W + 8));
+    expect(room).toBeLessThan(xmjWidestHand(tileW, tileH) + 2 * (BADGE_W + 8));
     expect(xmjRackTagsBeside({ room, tileW, tileH, tag: BADGE_W })).toBe(false);
   });
 });

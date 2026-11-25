@@ -180,9 +180,15 @@
     --xmj-pond-w: calc((100cqw - 34px) / 14.37);
     --xmj-pond-h: calc(var(--xmj-pond-w) * 58 / 44);
     --xmj-pond-gap: calc(var(--xmj-pond-w) * 5 / 44);
+    /* The widest hand's gaps are each a floor or a share of the tile
+       (xmjHandFixed), so the width bound is the smallest of four roots; the
+       height bound has spent 20px on the two badge bands. */
     --xmj-tile-w: min(
       calc((100cqw - 34px - 48px) / 5.3077),
-      calc((395 * var(--xmj-u) + 20px - 2.6364 * var(--xmj-pond-w)) / 2.8077)
+      calc((100cqw - 34px - 44px) / 5.3777),
+      calc((100cqw - 34px - 28px) / 5.5177),
+      calc((100cqw - 34px - 24px) / 5.5877),
+      calc((395 * var(--xmj-u) - 2.6364 * var(--xmj-pond-w)) / 2.8077)
     );
     --xmj-tile-h: calc(var(--xmj-tile-w) * 68 / 52);
     --xmj-depth: calc(var(--xmj-tile-w) * 5 / 52);
@@ -491,9 +497,10 @@
 
 /* A seat whose widest hand (a claimed set and two tiles, one just drawn)
    leaves no room beside it for the badges sets them on the felt's edge at its
-   corners instead, half in the table's padding: the dealer on the left, the
-   seat to discard on the right. They take no height, so the table and the
-   rails beside it keep theirs, and the tiles keep their size: until
+   corners instead, in the seat's badge band and the table's padding: the
+   dealer on the left, the seat to discard on the right. The band is there at
+   every width, so the table and the rails beside it keep their height, and
+   the tiles keep their size: until
    2026-11-25 the tiles shrank to make room, so they changed size with the
    hand. placeXmjRackTags decides it from the seat's width, never its hand. */
 .xmj-seat--tags-edge {
@@ -1614,6 +1621,58 @@ ol.xmj-log {
 @media (min-width: 521px) {
   .live-route--xiangqi-mahjong .clock-seat-tag {
     display: none;
+  }
+
+  /* A claimed set stands clearly apart from the concealed tiles: 21% of a
+     tile, never under 20px (xmjSetGap), against 7% between two tiles. */
+  .live-route--xiangqi-mahjong .xmj-rack__hand {
+    gap: max(20px, calc(var(--xmj-tile-w) * 0.21));
+  }
+
+  /* Each rack keeps a 10px band on the felt's edge, so a badge set on the
+     edge (Dealer, To discard) lies in it and the felt's padding, clear of
+     every tile and its depth, whatever the hand and whichever seat deals. The
+     band is there all match, so the tiles never move. */
+  .live-route--xiangqi-mahjong .xmj-seat--opponent {
+    padding-top: 10px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-seat--self {
+    padding-bottom: 10px;
+  }
+}
+
+/* Two concealed tiles stand 7% of a tile apart, never under 4px
+   (xmjConcealedGap), on both seats and every width; the tiles inside a
+   claimed set stay 2px apart. */
+.live-route--xiangqi-mahjong .xmj-concealed {
+  gap: max(4px, calc(var(--xmj-tile-w) * 0.07));
+}
+
+/* The player rows on a phone: the name has the first line to itself and the
+   seat's tags (dealer, points) sit on a second line under it, so a long name
+   such as the bot's is never cut short. XMJ only: other variants keep one
+   line. */
+@media (max-width: 520px) {
+  .live-route--xiangqi-mahjong .clock-player-line {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .live-route--xiangqi-mahjong .clock-player-line::after {
+    content: "";
+    order: 1;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .live-route--xiangqi-mahjong .clock-player-line .clock-seat-tag {
+    order: 2;
+    margin-top: 2px;
+  }
+
+  .live-route--xiangqi-mahjong .clock-player-line .clock-name + .clock-seat-tag {
+    margin-left: 17px;
   }
 }
 
