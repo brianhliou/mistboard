@@ -25,7 +25,7 @@ import {
 } from './home-puzzle-widget.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, localizedHref } from './i18n/locale.js';
-import { buildLandingActivity } from './landing-activity.js';
+import { buildLandingActivity, landingActivityPlaceholder } from './landing-activity.js';
 import type * as LandingAnnouncementsModule from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
@@ -198,7 +198,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   const contentAfter = new Promise<void>((release) => {
     releaseContent = release;
   });
-  const prebuilt = isPhoneHome() ? {} : takePrebuiltContent(root);
+  // A phone mount keeps the prerendered rows too: landing.css shows the same
+  // three News entries the phone builds, so the rows hold their place until the
+  // content chunk swaps in its own instead of collapsing and growing back.
+  const prebuilt = takePrebuiltContent(root);
   setPlayPanelRulesHint(prerenderedRulesHrefs(root));
 
   root.replaceChildren();
@@ -757,7 +760,8 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
 // work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
 // are not built at all there, so none of them fetches, polls or opens
 // a socket on a phone. The tagline and the three newest News entries came back
-// to the phone home 2026-11-08. The prerender always bakes the full desktop shell.
+// to the phone home 2026-11-08. The prerender always bakes the full desktop shell,
+// plus the phone mission, and landing.css gives a phone the phone mount's boxes.
 export const PHONE_NEWS_ROWS = 3;
 
 export function buildLandingStage(
@@ -785,7 +789,12 @@ export function buildLandingStage(
   // Phone only: the mission sits under the shortcut tiles and above News and
   // holds every count (games played, games in play). Build it before activity,
   // which owns the one counters hydrate/poll and stays hidden on phones.
-  const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
+  // The prerendered shell carries it too (display:none above 600px), with a
+  // placeholder totals line, so a phone's first paint already has its box.
+  const missionBlock = phone || opts.skipLiveWidgets ? buildLandingPhoneMission(locale) : null;
+  const missionTotals =
+    missionBlock?.querySelector<HTMLElement>('.landing-phone-mission-totals') ?? undefined;
+  if (!phone) missionTotals?.append(landingActivityPlaceholder());
   const stage = document.createElement('main');
   stage.className = 'landing-stage';
   if (phone) stage.classList.add('landing-stage-phone');
@@ -876,8 +885,7 @@ export function buildLandingStage(
     }),
     buildLandingActivity({
       hydrate: !opts.skipLiveWidgets,
-      totalsTarget:
-        missionBlock?.querySelector<HTMLElement>('.landing-phone-mission-totals') ?? undefined,
+      totalsTarget: phone ? missionTotals : undefined,
     }),
   );
   // The page's single (small) h1: the about tagline at the top of the right rail.
@@ -1056,6 +1064,7 @@ export function buildLandingStage(
           puzzleColumn,
           forumColumn,
           chatColumn,
+          ...(missionBlock ? [missionBlock] : []),
           newsColumn,
           studiesColumn,
         ]),

@@ -2889,7 +2889,8 @@
    pieces (TV strip and tiles) are display:none above the breakpoint, so
    tablet and desktop paint what they did. */
 .landing-tv-strip,
-.landing-phone-tiles {
+.landing-phone-tiles,
+.landing-phone-mission {
   display: none;
 }
 
@@ -2987,6 +2988,18 @@
 
   .landing-demo .landing-chat-column {
     order: 8;
+  }
+
+  /* The prerendered shell is the desktop one plus the phone mission; these
+     give it the phone mount's boxes, so the mount moves nothing. The mission
+     holds the counts (a phone mount hides the activity box), and News shows
+     the three rows a phone builds (PHONE_NEWS_ROWS) with no closing row. */
+  .landing-demo:has(> .landing-phone-mission) .landing-activity {
+    display: none;
+  }
+
+  .landing-demo .landing-news-column .landing-news-update:nth-child(n + 4) {
+    display: none;
   }
 
   /* The phone home ends here: a phone mount never builds the widgets below
@@ -3174,6 +3187,7 @@
 
   /* The mission sits under the shortcut tiles and above News (order: 4). */
   .landing-phone-mission {
+    display: block;
     padding: 4px 2px;
   }
 
