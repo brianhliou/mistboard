@@ -70,7 +70,7 @@ test('a tour seeded after its event polls for the tail counted from its creation
   assert.equal(early.closesAt, '2026-10-15T23:59:59+08:00');
 });
 
-test('a tour with no boards past its window polls daily for 30 more days (#493)', () => {
+test('a tour with no boards past its window polls daily until 60 days after its end (#493)', () => {
   // The 2026 women's league: ended 09-27 with 0 records on dpxq; its 7-day
   // tail closed 10-04 and nothing would ever poll it again.
   const LEAGUE = {
@@ -80,24 +80,25 @@ test('a tour with no boards past its window polls daily for 30 more days (#493)'
     createdAt: '2026-09-20T00:00:00Z',
     pollMode: 'auto' as const,
   };
-  const state = (now: string, hasBoards?: boolean) =>
-    xiangqiBroadcastPollState({ ...LEAGUE, hasBoards, now: at(now) });
+  const NONE = { total: 0, recorded: 0 };
+  const state = (now: string, boards?: { total: number; recorded: number }) =>
+    xiangqiBroadcastPollState({ ...LEAGUE, boards, now: at(now) });
 
   // Inside the plain window nothing changes.
-  assert.equal(state('2026-10-02T00:00:00+08:00', false).reason, 'auto-open');
-  // Past it, an empty tour keeps a late tail; one with boards, or one whose
-  // board count the caller does not know, closes as before.
-  const late = state('2026-10-14T12:00:00+08:00', false);
+  assert.equal(state('2026-10-02T00:00:00+08:00', NONE).reason, 'auto-open');
+  // Past it, an empty tour keeps a late tail; one with recorded boards, or
+  // one whose boards the caller does not know, closes as before.
+  const late = state('2026-10-14T12:00:00+08:00', NONE);
   assert.equal(late.polling, true);
   assert.equal(late.reason, 'auto-late');
   assert.equal(late.afterEvent, true);
-  assert.equal(late.closesAt, '2026-11-03T23:59:59+08:00');
-  assert.equal(state('2026-10-14T12:00:00+08:00', true).reason, 'auto-closed');
+  assert.equal(late.closesAt, '2026-11-26T23:59:59+08:00');
+  assert.equal(state('2026-10-14T12:00:00+08:00', { total: 4, recorded: 4 }).reason, 'auto-closed');
   assert.equal(state('2026-10-14T12:00:00+08:00').reason, 'auto-closed');
   assert.equal(state('2026-10-14T12:00:00+08:00').closesAt, '2026-10-04T23:59:59+08:00');
-  // The late tail ends thirty days after the window.
-  assert.equal(state('2026-11-03T23:59:59+08:00', false).polling, true);
-  const over = state('2026-11-04T00:00:00+08:00', false);
+  // The late tail ends sixty days after the event.
+  assert.equal(state('2026-11-26T23:59:59+08:00', NONE).polling, true);
+  const over = state('2026-11-27T00:00:00+08:00', NONE);
   assert.equal(over.polling, false);
   assert.equal(over.reason, 'auto-closed');
   // Only `auto` earns it: off stays off.
@@ -105,11 +106,57 @@ test('a tour with no boards past its window polls daily for 30 more days (#493)'
     xiangqiBroadcastPollState({
       ...LEAGUE,
       pollMode: 'off',
-      hasBoards: false,
+      boards: NONE,
       now: at('2026-10-14T12:00:00+08:00'),
     }).polling,
     false,
   );
+});
+
+test('a finished tour whose boards hold results but no records keeps a daily check', () => {
+  // Shaped like the 2026 World Xiangqi Open: 231 boards came in with results
+  // and no moves, and dpxq posted the records after the 7-day tail closed.
+  const OPEN = {
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=1&tourSlug=results-only',
+    startsAt: '2026-11-10T00:00:00+08:00',
+    endsAt: '2026-11-15T23:59:59+08:00',
+    createdAt: '2026-11-01T00:00:00Z',
+  };
+  const state = (
+    now: string,
+    boards: { total: number; recorded: number } | undefined,
+    pollMode: 'auto' | 'on' | 'off' = 'auto',
+  ) => xiangqiBroadcastPollState({ ...OPEN, pollMode, boards, now: at(now) });
+  const RESULTS_ONLY = { total: 231, recorded: 0 };
+  const EIGHT_DAYS_ON = '2026-11-23T23:59:59+08:00';
+
+  // Inside the plain window it polls as any tour does.
+  assert.equal(state('2026-11-20T00:00:00+08:00', RESULTS_ONLY).reason, 'auto-open');
+  // Eight days past the end, with no records, it is checked daily.
+  const late = state(EIGHT_DAYS_ON, RESULTS_ONLY);
+  assert.equal(late.polling, true);
+  assert.equal(late.reason, 'auto-late');
+  assert.equal(late.closesAt, '2027-01-14T23:59:59+08:00', 'sixty days after the end');
+  // The cap ends it.
+  assert.equal(state('2027-01-14T23:59:59+08:00', RESULTS_ONLY).polling, true);
+  const capped = state('2027-01-15T00:00:00+08:00', RESULTS_ONLY);
+  assert.equal(capped.polling, false);
+  assert.equal(capped.reason, 'auto-closed');
+
+  // A tour with its records closes at the plain window, as before.
+  const recorded = state(EIGHT_DAYS_ON, { total: 231, recorded: 231 });
+  assert.equal(recorded.polling, false);
+  assert.equal(recorded.reason, 'auto-closed');
+  assert.equal(recorded.closesAt, '2026-11-22T23:59:59+08:00');
+  // A partial upload keeps the check while fewer than half the boards hold a
+  // record, and closes once half do.
+  assert.equal(state(EIGHT_DAYS_ON, { total: 231, recorded: 115 }).reason, 'auto-late');
+  assert.equal(state(EIGHT_DAYS_ON, { total: 231, recorded: 116 }).reason, 'auto-closed');
+
+  // The overrides behave as before: off never polls, on always does.
+  assert.equal(state(EIGHT_DAYS_ON, RESULTS_ONLY, 'off').polling, false);
+  assert.equal(state(EIGHT_DAYS_ON, RESULTS_ONLY, 'off').reason, 'off');
+  assert.equal(state('2027-06-01T00:00:00+08:00', RESULTS_ONLY, 'on').reason, 'on');
 });
 
 test('auto with no dates never polls; one missing date reads as a one-day event', () => {

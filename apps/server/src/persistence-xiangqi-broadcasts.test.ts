@@ -1443,12 +1443,39 @@ definePersistenceTests('xiangqi broadcasts', () => {
         startsAt: '2025-09-21T00:00:00.000Z',
         endsAt: '2025-09-27T00:00:00.000Z',
         createdAt,
-        hasBoards: false,
+        boards: { total: 0, recorded: 0 },
       },
     ]);
-    // Its first board is what ends the scheduler's late tail (#493).
+    // Boards with moves are what end the scheduler's late tail (#493); the
+    // listing counts them, and a results-only board counts as not recorded.
     await importXiangqiBroadcastPack(pack);
-    assert.equal((await listXiangqiBroadcastScheduledTours())[0]?.hasBoards, true);
+    // The fixture's two boards both carry moves.
+    assert.deepEqual((await listXiangqiBroadcastScheduledTours())[0]?.boards, {
+      total: 2,
+      recorded: 2,
+    });
+    const { rows: blanked } = await getPool().query<{ id: string; ply_count: number }>(
+      `UPDATE xiangqi_broadcast_boards AS board SET ply_count = 0
+         FROM (SELECT id, ply_count FROM xiangqi_broadcast_boards
+                WHERE tour_slug = $1 ORDER BY id LIMIT 1) AS old
+        WHERE board.id = old.id
+        RETURNING old.id, old.ply_count`,
+      ['2025-wxc-sample'],
+    );
+    assert.deepEqual((await listXiangqiBroadcastScheduledTours())[0]?.boards, {
+      total: 2,
+      recorded: 1,
+    });
+    // A tour whose tail began past the late cap is listed without counts, so
+    // its boards are not scanned on every tick.
+    assert.equal(
+      (await listXiangqiBroadcastScheduledTours(Date.now() + 400 * 24 * 60 * 60_000))[0]?.boards,
+      null,
+    );
+    await getPool().query(`UPDATE xiangqi_broadcast_boards SET ply_count = $2 WHERE id = $1`, [
+      blanked[0]?.id,
+      blanked[0]?.ply_count,
+    ]);
     // The 2025 fixture event is long past, but the tour was seeded just now:
     // a backfill polls for the tail counted from its creation.
     const fresh = await getXiangqiBroadcastTour('2025-wxc-sample');

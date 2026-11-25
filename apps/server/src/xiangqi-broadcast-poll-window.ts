@@ -15,13 +15,19 @@
 // counted from when it was created, so it imports itself instead of waiting
 // for an operator to press Poll.
 //
-// A tour that reaches the end of that tail with no boards at all (the source
-// had posted nothing: the 2026 women's league, dpxq tour 12776, ended with 0
-// entrants and 0 records) keeps a slow late tail: the scheduler polls it once
-// a day for thirty more days, so records posted after the window still land.
-// Its first board ends the late tail; anything after that is an operator's
-// Poll. Only the scheduler knows whether a tour has boards; a caller that
-// does not pass `hasBoards` gets the plain window.
+// A tour that reaches the end of that tail still waiting on its game records
+// keeps a slow late tail: the scheduler polls it once a day until sixty days
+// after the event (or after its creation, for a backfill), so records posted
+// after the window still land. "Waiting on its records" means fewer than half
+// its boards hold a move: no boards at all (the 2026 women's league, dpxq
+// tour 12776, ended with 0 entrants and 0 records) or boards with results and
+// no moves (the 2026 World Xiangqi Open: 231 results, and the records came
+// about a day and a half after the tail closed). Once half the boards hold
+// records the late tail ends; anything after that is an operator's Poll. The
+// sixty-day cap keeps a dead tour from polling forever. Decided 2026-11-25:
+// a finished tour with a source and no records keeps getting checked about
+// once a day. Only a caller that counted the boards passes `boards`; one that
+// did not gets the plain window.
 //
 // Everything here is derived from the dates at read time, never written back,
 // so when the dpxq index sweep moves an end date later (a league's next
@@ -34,8 +40,18 @@ export type XiangqiBroadcastPollMode = (typeof XIANGQI_BROADCAST_POLL_MODES)[num
 export const XIANGQI_BROADCAST_POLL_LEAD_MS = 12 * 60 * 60_000;
 /** How long after the event's end an `auto` tour keeps polling. */
 export const XIANGQI_BROADCAST_POLL_TAIL_MS = 7 * 24 * 60 * 60_000;
-/** How long after the tail an `auto` tour with no boards keeps a daily poll. */
-export const XIANGQI_BROADCAST_POLL_LATE_TAIL_MS = 30 * 24 * 60 * 60_000;
+/** How long after the event's end (or a backfill's creation) an `auto` tour
+ *  still waiting on its records keeps a daily poll: the late tail's hard cap. */
+export const XIANGQI_BROADCAST_POLL_LATE_CAP_MS = 60 * 24 * 60 * 60_000;
+
+/** A tour's boards, counted: all of them, and those holding at least one move. */
+export type XiangqiBroadcastBoardCounts = { total: number; recorded: number };
+
+/** Whether a tour is still waiting on its game records: fewer than half its
+ *  boards hold a move, which includes a tour with no boards at all. */
+export function xiangqiBroadcastAwaitsRecords(boards: XiangqiBroadcastBoardCounts): boolean {
+  return boards.total === 0 || boards.recorded * 2 < boards.total;
+}
 
 export type XiangqiBroadcastPollReason =
   /** Mode `on`: polls whatever the dates say. */
@@ -50,7 +66,8 @@ export type XiangqiBroadcastPollReason =
   | 'auto-before'
   /** Mode `auto`, inside the window. */
   | 'auto-open'
-  /** Mode `auto`, past the window with no boards yet: polled once a day. */
+  /** Mode `auto`, past the window with most records still missing: polled
+   *  once a day until the late cap. */
   | 'auto-late'
   /** Mode `auto`, after the window closed. */
   | 'auto-closed';
@@ -61,7 +78,8 @@ export type XiangqiBroadcastPollState = {
   polling: boolean;
   reason: XiangqiBroadcastPollReason;
   /** The `auto` window, ISO in the event's own offset; null when undated.
-   *  For a tour known to have no boards, `closesAt` is the late tail's end. */
+   *  For a tour known to be waiting on its records, `closesAt` is the late
+   *  tail's end. */
   opensAt: string | null;
   closesAt: string | null;
   /** True once the event's end has passed: the scheduler polls slowly then,
@@ -107,9 +125,10 @@ export function xiangqiBroadcastPollState(input: {
   /** When the tour was seeded; a tour seeded after its event polls for the
    *  tail counted from here. */
   createdAt?: string | Date | null;
-  /** Whether the tour holds any board. `false` earns the daily late tail
+  /** The tour's boards and how many hold a record. A tour still waiting on
+   *  its records (xiangqiBroadcastAwaitsRecords) earns the daily late tail
    *  past the window; unknown (omitted) gets the plain window. */
-  hasBoards?: boolean;
+  boards?: XiangqiBroadcastBoardCounts | null;
   now: number;
 }): XiangqiBroadcastPollState {
   const start = parsedMs(input.startsAt);
@@ -132,8 +151,8 @@ export function xiangqiBroadcastPollState(input: {
         );
   const tailEnd = tailFrom === null ? null : tailFrom + XIANGQI_BROADCAST_POLL_TAIL_MS;
   const lateTailEnd =
-    tailEnd !== null && input.hasBoards === false
-      ? tailEnd + XIANGQI_BROADCAST_POLL_LATE_TAIL_MS
+    tailFrom !== null && input.boards && xiangqiBroadcastAwaitsRecords(input.boards)
+      ? tailFrom + XIANGQI_BROADCAST_POLL_LATE_CAP_MS
       : null;
   const closesAt =
     tailEnd === null
