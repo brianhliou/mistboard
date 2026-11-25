@@ -316,9 +316,9 @@ export const EN_CONTENT = {
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
   'source.fairyStockfish':
-    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
+    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi and Crazyhouse Xiangqi bots, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi NNUE branch: the jieqi levels and browser analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed. AB-JChess grades reviews.",
+    "Pikafish's jieqi NNUE branch: jieqi Levels 1 to 8 (Level 8 is the Pikafish bot) and the in-browser jieqi analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':
@@ -326,9 +326,9 @@ export const EN_CONTENT = {
   'source.fonts':
     'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
-    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0; its neural network is used with the authors' permission.",
+    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0, played here as the AB-JChess bot and used to grade jieqi reviews; its neural network is used with the authors' permission.",
   'source.jqe':
-    "jqe by Devin O'Keefe: the top jieqi bot, with its own neural network, MIT; played here with the author's permission.",
+    "jqe by Devin O'Keefe: a jieqi engine with its own neural network, MIT, played here as the jqe bot with the author's permission. The current AB-JChess release is built on its code.",
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
