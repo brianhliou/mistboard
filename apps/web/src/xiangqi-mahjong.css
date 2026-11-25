@@ -154,30 +154,81 @@
     container-type: inline-size;
   }
 
-  /* One unit per design pixel of a 560px table: tiles, discards and their
-     depth scale with the column, less whatever the felt runs wider than the
-     tiles' unit width (above), so a wider felt never grows a tile; padding
-     stays put, and type grows only once that width passes 560px (below). */
+  /* One unit per design pixel of a 560px table (--xmj-u), from the tiles'
+     unit width less whatever the felt runs wider than it (above): the table's
+     height and the type follow it, so the table is exactly as tall as before
+     the felt widened and the rails beside it still line up.
+
+     The tiles spend that height (2026-11-25; xmjDeskSizes in
+     xiangqi-mahjong-table.ts is the same sum, and its test pins it):
+     - each seat's discards are one row of thirteen, the most a seat can make
+       in a hand (XMJ_MAX_DISCARDS), so the discard tile is whatever thirteen
+       of them across the felt allow, and no discard ever starts a row;
+     - both hands are one size, the opponent's backs and your own tiles alike,
+       as large as two things allow: the widest hand (a claimed set and two
+       tiles) across the felt, and the height left once the racks, the
+       discards and the centre's own minimum are counted;
+     - the centre band takes whatever height is left over (min-height below).
+     Every term is a window size, never the hand or the discards, so a tile
+     keeps its size all match; the grip moves the unit and the felt, so it
+     scales the lot. */
   .live-route--xiangqi-mahjong .xmj-table {
     --xmj-u: calc(
       (100cqw - var(--uni-board-width, 0px) + var(--xmj-unit-w, var(--uni-board-width, 0px))) /
       560
     );
-    --xmj-tile-w: calc(52 * var(--xmj-u));
-    --xmj-tile-h: calc(68 * var(--xmj-u));
-    --xmj-depth: calc(5 * var(--xmj-u));
-    --xmj-pond-w: calc(44 * var(--xmj-u));
-    --xmj-pond-h: calc(58 * var(--xmj-u));
-    --xmj-pond-gap: calc(5 * var(--xmj-u));
+    --xmj-pond-w: calc((100cqw - 34px) / 14.37);
+    --xmj-pond-h: calc(var(--xmj-pond-w) * 58 / 44);
+    --xmj-pond-gap: calc(var(--xmj-pond-w) * 5 / 44);
+    --xmj-tile-w: min(
+      calc((100cqw - 34px - 48px) / 5.3077),
+      calc((395 * var(--xmj-u) + 20px - 2.6364 * var(--xmj-pond-w)) / 2.8077)
+    );
+    --xmj-tile-h: calc(var(--xmj-tile-w) * 68 / 52);
+    --xmj-depth: calc(var(--xmj-tile-w) * 5 / 52);
+    min-height: calc(130px + 395 * var(--xmj-u) + max(118px, 118 * var(--xmj-u)));
     max-width: none;
   }
 
-  /* Your own hand reads largest: the opponent's backs and the discards keep
-     the base size, so the table's height barely moves. */
-  .live-route--xiangqi-mahjong .xmj-seat--self {
-    --xmj-tile-w: calc(64 * var(--xmj-u));
-    --xmj-tile-h: calc(84 * var(--xmj-u));
-    --xmj-depth: calc(6 * var(--xmj-u));
+  .live-route--xiangqi-mahjong .xmj-middle {
+    flex: 1 0 auto;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-centre {
+    flex: 1 0 auto;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond-wrap {
+    width: calc(var(--xmj-pond-w) * 13 + var(--xmj-pond-gap) * 12);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond {
+    grid-template-columns: repeat(13, var(--xmj-pond-w));
+    min-height: calc(var(--xmj-pond-h) + 4px + 6px);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-bubble::after {
+    left: calc(
+      mod(var(--xmj-i, 0), 13) *
+      (var(--xmj-pond-w) + var(--xmj-pond-gap)) +
+      var(--xmj-pond-w) /
+      2
+    );
+  }
+
+  /* A won hand's result lies over the whole felt, as on a phone: the hands
+     now spend the height the middle band had, and the card (the winning hand
+     at the hands' size, every scoring line, the next-hand button) is taller
+     than the band at every desk size. A hand nobody won stays a small card
+     over the centre. */
+  .live-route--xiangqi-mahjong .xmj-middle--result:not(.xmj-middle--brief) {
+    position: static;
+  }
+
+  /* The badge for the seat to discard, on the felt's edge, stands clear of
+     the resize grip in the felt's bottom-right corner (24px with its lines). */
+  .live-route--xiangqi-mahjong .xmj-seat--self.xmj-seat--tags-edge .xmj-rack__tag--end {
+    right: 10px;
   }
 
   /* The centre band and the wall grow with the table too, never below their
@@ -229,7 +280,7 @@
     bottom: calc(12 * var(--xmj-u));
   }
 
-  /* The result between hands lies over the same band and grows with it. */
+  /* The result between hands grows with the table too. */
   .live-route--xiangqi-mahjong .xmj-result,
   .live-route--xiangqi-mahjong .xmj-result__sub,
   .live-route--xiangqi-mahjong .xmj-result__foot {
@@ -1500,8 +1551,11 @@ ol.xmj-log {
    "ideally we should make the room page not vertically scroll on mobile").
    A xiangqi board gets 426px between the player rows at 390x664; the table
    was 539px with the points table under it. So, on a phone only:
-   - each pond is one row of twelve: over 400 bot matches no hand passed 12
-     discards (the median hand ends at 3), so the second row was empty felt;
+   - each pond is one row of thirteen, the most a seat can discard in a hand
+     (XMJ_MAX_DISCARDS; twelve until 2026-11-25, when a thirteenth would have
+     opened a second row and moved the table): over 400 bot matches no hand
+     passed 12 discards (the median hand ends at 3), so a second row was
+     empty felt;
    - the badges and the points table leave the felt for the player rows
      (`seatTags` in live-xiangqi-mahjong.ts): at six tiles a badge column
      beside the hand is 20px wide and clipped "To discard";
@@ -1515,7 +1569,7 @@ ol.xmj-log {
     padding: 8px;
     gap: 6px;
     --xmj-pond-gap: 2px;
-    --xmj-pond-w: min(28px, calc((100cqw - 22px) / 12));
+    --xmj-pond-w: min(28px, calc((100cqw - 24px) / 13));
     --xmj-pond-h: calc(var(--xmj-pond-w) * 1.32);
   }
 
@@ -1525,11 +1579,11 @@ ol.xmj-log {
   }
 
   .live-route--xiangqi-mahjong .xmj-pond-wrap {
-    width: calc(var(--xmj-pond-w) * 12 + var(--xmj-pond-gap) * 11);
+    width: calc(var(--xmj-pond-w) * 13 + var(--xmj-pond-gap) * 12);
   }
 
   .live-route--xiangqi-mahjong .xmj-pond {
-    grid-template-columns: repeat(12, var(--xmj-pond-w));
+    grid-template-columns: repeat(13, var(--xmj-pond-w));
     row-gap: 4px;
     min-height: calc(var(--xmj-pond-h) + 8px);
     padding-top: 4px;
@@ -1537,7 +1591,7 @@ ol.xmj-log {
 
   .live-route--xiangqi-mahjong .xmj-bubble::after {
     left: calc(
-      mod(var(--xmj-i, 0), 12) *
+      mod(var(--xmj-i, 0), 13) *
       (var(--xmj-pond-w) + var(--xmj-pond-gap)) +
       var(--xmj-pond-w) /
       2
@@ -1574,7 +1628,8 @@ ol.xmj-log {
     --xmj-pond-gap: 3px;
   }
 
-  .xiangqi-mahjong-live-board .xmj-seat--self {
+  /* Both hands one size: the other player's backs match your own tiles. */
+  .xiangqi-mahjong-live-board .xmj-seat {
     --xmj-tile-w: 52px;
     --xmj-tile-h: 68px;
     --xmj-depth: 5px;

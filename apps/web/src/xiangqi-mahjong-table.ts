@@ -73,8 +73,102 @@ export interface XmjTableOptions {
 
 /** The wall at the deal: 32 tiles less both hands. */
 const XMJ_WALL_AT_DEAL = 32 - XMJ_DEALER_TILES - XMJ_OTHER_TILES;
-/** Discards per pond row. Two rows hold any seat's discards in a hand. */
+/** Claimed sets a seat may hold: a seat with one set claims no more. */
+const XMJ_SETS_PER_SEAT = 1;
+
+/**
+ * The most discards one seat's pond can hold in a hand. Discards alternate
+ * seats from the dealer's opening one (the dealer is dealt a tile more and
+ * draws none first); every draw from the wall is followed by one discard, and
+ * so is every claim, which takes the claimed tile out of the other seat's
+ * pond. A seat claims at most one set. So a hand that runs the wall dry makes
+ * 1 + wall + claims discards, and the dealer, claiming once from a seat that
+ * never claims, keeps the most: 13 of 25 with the 23-tile wall.
+ */
+export function xmjMostPondDiscards(wallAtDeal: number, setsPerSeat: number): number {
+  let most = 0;
+  for (let dealerClaims = 0; dealerClaims <= setsPerSeat; dealerClaims += 1) {
+    for (let otherClaims = 0; otherClaims <= setsPerSeat; otherClaims += 1) {
+      const discards = 1 + wallAtDeal + dealerClaims + otherClaims;
+      const dealerPond = Math.ceil(discards / 2) - otherClaims;
+      const otherPond = Math.floor(discards / 2) - dealerClaims;
+      most = Math.max(most, dealerPond, otherPond);
+    }
+  }
+  return most;
+}
+
+/** The most discards a seat can make in a hand (13); the desk pond is one row of it. */
+export const XMJ_MAX_DISCARDS = xmjMostPondDiscards(XMJ_WALL_AT_DEAL, XMJ_SETS_PER_SEAT);
+/**
+ * Discards per pond row between a phone and a desk (521-799px wide), where two
+ * rows of eight hold any seat's discards. A desk and a phone draw one row of
+ * XMJ_MAX_DISCARDS instead (xiangqi-mahjong.css).
+ */
 export const XMJ_POND_COLUMNS = 8;
+
+/** The desk table's fixed pieces, as xiangqi-mahjong.css draws them. */
+export const XMJ_DESK = {
+  /** The felt's side padding and edge: 16px and 1px each side. */
+  sideChrome: 34,
+  /**
+   * A pond row's width in discard widths, as the CSS divides by it: 13 tiles
+   * and 12 gaps of 5/44 of a tile, rounded up.
+   */
+  pondSpan: 14.37,
+  /** The felt's top and bottom padding and edge (30), its two gaps (24), the middle's two (20). */
+  fixedHeight: 74,
+  /** A rack's height past its tile and depth: a claimed set's tray. */
+  rackExtra: 8,
+  /** A pond's height past its tile: 6px over the row, 4px under it for the depth. */
+  pondExtra: 10,
+  /** The table's height before the tiles spent it: 130px + 395u + the centre's floor. */
+  baseHeight: 130,
+  baseHeightPerU: 395,
+  centreFloor: 118,
+} as const;
+
+export type XmjDeskSizes = {
+  /** A hand tile, either seat's. */
+  tileW: number;
+  tileH: number;
+  /** A discard tile. */
+  pondW: number;
+  pondH: number;
+  pondGap: number;
+  /** The table's height, pinned to what it was before. */
+  tableH: number;
+  /** What the centre band gets of it. */
+  centreH: number;
+};
+
+/**
+ * The desk table's sizes (800px and wider), the sum xiangqi-mahjong.css does
+ * in custom properties. `feltW` is the table's width, `unitW` the width the
+ * page's height budget gives a board (--xmj-unit-w, as the felt sees it).
+ * Neither is a count of tiles: the sizes hold for the whole match.
+ */
+export function xmjDeskSizes({ feltW, unitW }: { feltW: number; unitW: number }): XmjDeskSizes {
+  const u = unitW / 560;
+  const inner = feltW - XMJ_DESK.sideChrome;
+  const pondW = inner / XMJ_DESK.pondSpan;
+  const pondH = (pondW * 58) / 44;
+  const pondGap = (pondW * 5) / 44;
+  // A rack is its tile, the tile's depth (5/68 of its height) and the tray.
+  const rackPerTileW = 73 / 52;
+  const centreFloor = Math.max(XMJ_DESK.centreFloor, XMJ_DESK.centreFloor * u);
+  const tableH = XMJ_DESK.baseHeight + XMJ_DESK.baseHeightPerU * u + centreFloor;
+  const ponds = 2 * (pondH + XMJ_DESK.pondExtra);
+  const tileW = Math.min(
+    (inner - XMJ_HAND_FIXED_MAX) / (4 + 68 / 52),
+    (tableH - centreFloor - XMJ_DESK.fixedHeight - 2 * XMJ_DESK.rackExtra - ponds) /
+      (2 * rackPerTileW),
+  );
+  const tileH = (tileW * 68) / 52;
+  const racks = 2 * (tileW * rackPerTileW + XMJ_DESK.rackExtra);
+  const centreH = tableH - XMJ_DESK.fixedHeight - racks - ponds;
+  return { tileW, tileH, pondW, pondH, pondGap, tableH, centreH };
+}
 /** The rules section that explains each scoring line. */
 export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#adding-it-up';
 
