@@ -98,9 +98,8 @@ export const chess960StartingPositionsArticle: Article = {
     'Every evaluation is in the [CSV](/article-data/chess960-starting-position-evals.csv).',
   ],
   publishedAt: '2026-05-07',
-  updatedAt: '2026-10-15',
-  updateNote:
-    "Corrected two histogram counts, SP-663's depth-36 score and the run cost against the published CSV.",
+  updatedAt: '2026-11-25',
+  updateNote: 'Added buttons at the end to play Fog Chess against Misty and read its rules.',
   thumbnail: {
     pieces: boardToPieces(SP_783),
     orientation: 'white',
@@ -498,6 +497,17 @@ export const chess960StartingPositionsArticle: Article = {
         p(
           `[Download the full CSV](${CSV_HREF}) (960 rows). Columns: \`scharnagl_id\`, \`back_rank\`, \`fen\`, \`position_key\`, \`cp\`, \`mate\`, \`best_move\`, \`pv\`, \`depth\`, \`nodes\`, \`source\`, \`fetched_at_iso\`.`,
         ),
+        {
+          kind: 'cta',
+          buttons: [
+            {
+              label: 'Play Fog Chess against Misty',
+              href: '/?play=computer&gameSpecId=dark-chess',
+              emphasis: 'primary',
+            },
+            { label: 'Read Fog Chess Rules', href: '/rules/fog-chess', emphasis: 'secondary' },
+          ],
+        },
       ],
     },
   ],
