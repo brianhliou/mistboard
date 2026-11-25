@@ -20,7 +20,11 @@ import './xiangqi-board-surface.css';
 import type { XiangqiColor } from '@mistboard/game';
 import { jungleBoardAssetHref } from './jungle-art.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { XIANGQI_BOARD_ART, xiangqiBoardColorPreset } from './xiangqi-board-color.js';
+import {
+  XIANGQI_BOARD_ART,
+  type XiangqiBoardArtId,
+  xiangqiBoardColorPreset,
+} from './xiangqi-board-color.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -142,11 +146,28 @@ export function xiangqiSurfaceGrain(cfg: XiangqiSurfaceConfig, layout: XiangqiBo
 // re-renders on an appearance change. Intersection layout only: the square
 // grid and the mini boards keep the preset's flat fill.
 export function xiangqiSurfaceArt(cfg: XiangqiSurfaceConfig, layout: XiangqiBoardLayout): string {
-  if (layout === 'cell' || typeof document === 'undefined') return '';
+  return xiangqiBoardArtSvg(cfg, layout, xiangqiBoardArtFromRoot());
+}
+
+/** The art board the reader has on, read from the root data attributes the
+ *  appearance settings write (theme.ts), or null for every other board. */
+export function xiangqiBoardArtFromRoot(): XiangqiBoardArtId | null {
+  if (typeof document === 'undefined') return null;
   const root = document.documentElement.dataset;
-  if (root.xiangqiBoardTheme === 'jungle') return '';
+  if (root.xiangqiBoardTheme === 'jungle') return null;
   const color = root.xiangqiBoardColor;
-  if (color !== 'green' && color !== 'pine') return '';
+  return color === 'green' || color === 'pine' ? color : null;
+}
+
+/** The art for one board, given which art board to draw. The article diagrams
+ *  (articles/diagrams.ts) pass it explicitly so a diagram rendered outside the
+ *  reader's repaint (the build-time prerender) never carries it. */
+export function xiangqiBoardArtSvg(
+  cfg: XiangqiSurfaceConfig,
+  layout: XiangqiBoardLayout,
+  color: XiangqiBoardArtId | null,
+): string {
+  if (layout === 'cell' || color === null) return '';
   const { cell, margin, fileCount, rankCount } = cfg.geo;
   const vb = xiangqiBoardViewBox(layout, cfg.geo);
   const left = margin;
