@@ -924,7 +924,9 @@
 /* On a phone the two buttons are tapped, so they get a full tap target. */
 @media (max-width: 60rem) {
   .study-gamebook-rail .study-actions__like,
-  .study-gamebook-rail .study-actions__clone {
+  .study-gamebook-rail .study-actions__clone,
+  .study-info-sheet .study-actions__like,
+  .study-info-sheet .study-actions__clone {
     display: inline-flex;
     align-items: center;
     min-height: 44px;

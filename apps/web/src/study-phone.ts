@@ -55,6 +55,9 @@ const INFO_BLOCKS = [
   '.review-underboard-panel',
   '.study-description',
   '.review-spectator-chat',
+  // The lesson player's rail is hidden on a phone (gamebook.css), so its like
+  // and copy buttons are reached here; the sheet's heading is the title.
+  '.study-gamebook-rail .study-actions',
 ] as const;
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select, [tabindex]:not([tabindex="-1"])';

@@ -419,19 +419,6 @@
 .gamebook:not(.practice) .gamebook__coach .gamebook__btn.gamebook__next {
   scroll-margin-bottom: 12px;
 }
-/* On a phone the study's bottom dock (study.css) covers the last 60px. */
-@media (max-width: 600px) {
-  /* The progress band is hidden here, so the solved band starts the panel. */
-  .gamebook:not(.practice) .gamebook__coach[data-state="end"] {
-    padding-top: 0;
-  }
-  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt-side--solved {
-    border-top: 0;
-  }
-  .gamebook:not(.practice) .gamebook__coach .gamebook__btn.gamebook__next {
-    scroll-margin-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  }
-}
 .gamebook:not(.practice) .gamebook__coach .gamebook__btn.gamebook__next:hover {
   background: var(--site-accent-strong);
   border-color: var(--site-accent-strong);
@@ -530,5 +517,124 @@
     max-height: 40svh;
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+}
+
+/* Phone: one screen, no page scroll, as the puzzle page and the study review
+   board. The board is flush to the screen edges when the height allows; the
+   chapter list waits in the dock's Chapters sheet; the panel is a strip under
+   the board with the prompt and its one button on a line and the lesson text
+   below, which scrolls inside the strip when it runs long. Every selector
+   keeps the guess-the-move scope so it outranks the rules above. */
+@media (max-width: 600px) {
+  .gamebook:not(.practice) {
+    /* The screen less the chrome above (measured, gamebook-fit.ts) and the
+       study dock below (study.css, 60px). */
+    --gamebook-phone-height: calc(
+      100dvh -
+      var(--gamebook-page-top, 78px) -
+      60px -
+      env(safe-area-inset-bottom, 0px)
+    );
+    /* A xiangqi board is 1.11x as tall as wide; the strip keeps 6.75rem. */
+    --gamebook-board-fit: min(100vw, calc((var(--gamebook-phone-height) - 6.75rem) * 0.9));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    height: var(--gamebook-phone-height);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  .gamebook:not(.practice).gamebook--seated {
+    margin-top: 26px;
+    --gamebook-phone-height: calc(
+      100dvh -
+      var(--gamebook-page-top, 104px) -
+      60px -
+      env(safe-area-inset-bottom, 0px)
+    );
+    --gamebook-board-fit: min(100vw, calc((var(--gamebook-phone-height) - 6.75rem - 26px) * 0.9));
+  }
+  .gamebook:not(.practice) .gamebook__aside,
+  .gamebook:not(.practice) .gamebook__moves,
+  .gamebook:not(.practice) .board-resize-grip {
+    display: none;
+  }
+  .gamebook:not(.practice) .gamebook__board-frame,
+  .gamebook:not(.practice) .gamebook__board {
+    flex: 0 0 auto;
+    width: var(--gamebook-board-fit);
+    margin-inline: auto;
+  }
+  .gamebook:not(.practice) .gamebook__coach {
+    flex: 1 1 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    padding: 0.5rem 1rem 0.6rem;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__controls,
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"] .gamebook__controls {
+    grid-area: 1 / 2;
+    flex-direction: row;
+    align-items: center;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__controls:not(:has(button:not([hidden]))) {
+    display: none;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__bubble,
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"] .gamebook__bubble {
+    grid-area: 2 / 1 / 3 / -1;
+    align-self: stretch;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt-side,
+  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt-side--solved {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 1.1rem;
+    line-height: 1.2;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt-side--solved .gamebook__prompt-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__prompt-task {
+    display: none;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__comment,
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"] .gamebook__comment {
+    line-height: 1.45;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__feedback,
+  .gamebook:not(.practice) .gamebook__coach .gamebook__hint {
+    margin-top: 0.2rem;
+  }
+  .gamebook:not(.practice) .gamebook__coach .gamebook__btn,
+  .gamebook:not(.practice) .gamebook__coach .gamebook__btn.gamebook__next {
+    width: auto;
+    min-height: 44px;
+    padding: 0 1.1rem;
+    font-size: 0.95rem;
   }
 }
