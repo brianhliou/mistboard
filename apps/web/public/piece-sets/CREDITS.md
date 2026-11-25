@@ -34,13 +34,19 @@ are also shown on the site's Source code page (`/source`).
 | Folder | Set | Author | Licence | Details |
 |---|---|---|---|---|
 | `xiangqi/lacquer` | Lacquer | Art by PlayOK, SVG by Sebastian Pipping, via pychess-variants | CC0 1.0 | [README](./xiangqi/lacquer/README.md), upstream `LICENSE.txt` |
-| `xiangqi/wood` | Wood ("gmchess style wood piece set") | Kadagaden | CC BY 4.0, modified | [README](./xiangqi/wood/README.md) |
+| `xiangqi/wood` | Wood ("gmchess style wood piece set"), and in `board/` the grain of the Pine board ("xiangqi_gmchess_wood") | Kadagaden | CC BY 4.0, modified | [README](./xiangqi/wood/README.md) |
 | `xiangqi/book` | Book (glyphs from BabelStone Xiangqi Colour) | Andrew West | SIL OFL 1.1 | [README](./xiangqi/book/README.md), `OFL.txt` |
 | `xiangqi/brush` | Brush (pychess-variants `hnzw`) | gbtami and contributors | AGPL-3.0, modified | [README](./xiangqi/brush/README.md) |
 | `xiangqi/clerical` | Clerical (pychess-variants `lishuw`) | gbtami and contributors | AGPL-3.0, modified | [README](./xiangqi/clerical/README.md) |
+| `xiangqi/2dhanzi` | Bold (pychess-variants `2dhanzi`) | pychess-variants contributors | AGPL-3.0-or-later, modified | [README](./xiangqi/2dhanzi/README.md) |
 | `international` | Shogi International (lishogi koma) | CouchTomato87 | CC BY 4.0 | From [lishogi](https://github.com/WandererXII/lishogi/tree/master/public/piece). Not served: dark shogi was retired 2026-09. |
 | `colored` | Shogi Colored (lishogi koma) | CouchTomato87 | CC BY 4.0 | From lishogi, as above. Not served. |
 | `chess` | Shogi Chess (lishogi koma) | peanatsu | CC BY-SA 3.0 | From lishogi, as above. Not served. |
+
+The Green board colour has no folder: the renderer draws it from the colours of
+the pychess-variants `xiangqic` board (green halves, grey palaces, a blue river
+and a tan margin), AGPL-3.0-or-later, source
+<https://github.com/gbtami/pychess-variants/blob/5ebec9241a4a344204d63feaaeeee2549bd949ac/static/images/board/xiangqic.svg>.
 
 The three shogi folders hold koma images named by their lishogi codes (`0FU`
 for sente's pawn, `1OU` for gote's king). Nothing on the site loads them.

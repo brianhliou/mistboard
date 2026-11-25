@@ -379,7 +379,9 @@ describe('appearance family gating', () => {
 
   // Board colour and river text are their own rows (2026-10-08): a fixed swatch
   // row with no free colour picker, and a three-way river caption switch.
-  it('offers board colour as seven swatches plus Jungle, and river text as its own switch', async () => {
+  // Green and Pine (2026-11-24) are drawn boards, so they sit on a row of their
+  // own under the flat colours, one radio group across both rows.
+  it('offers board colour as seven swatches plus Jungle, then Green and Pine, and river text as its own switch', async () => {
     await rebuildThemePanel();
     document.querySelector<HTMLButtonElement>('[data-appearance-target="board"]')?.click();
     const submenu = document.querySelector<HTMLElement>('.appearance-submenu[data-key="board"]');
@@ -389,7 +391,26 @@ describe('appearance family gating', () => {
       [...(submenu?.querySelectorAll<HTMLButtonElement>('[data-xq-board-color]') ?? [])].map(
         (swatch) => swatch.dataset.xqBoardColor,
       ),
-    ).toEqual(['international', 'traditional', 'paper', 'birch', 'oak', 'grey', 'slate', 'jungle']);
+    ).toEqual([
+      'international',
+      'traditional',
+      'paper',
+      'birch',
+      'oak',
+      'grey',
+      'slate',
+      'jungle',
+      'green',
+      'pine',
+    ]);
+    const group = submenu?.querySelector<HTMLElement>('.xq-board-color-group');
+    expect(group?.getAttribute('role')).toBe('radiogroup');
+    // One grid holds every swatch, so the rows line up (no short second row).
+    expect(group?.querySelectorAll('.xq-board-color-row')).toHaveLength(1);
+    expect(group?.querySelectorAll('.xq-board-color-row > [data-xq-board-color]')).toHaveLength(10);
+    submenu?.querySelector<HTMLButtonElement>('[data-xq-board-color="pine"]')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardColor).toBe('pine');
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardColor')).toBe('pine');
 
     submenu?.querySelector<HTMLButtonElement>('[data-xq-river-text="brand"]')?.click();
     expect(document.documentElement.dataset.xiangqiRiverText).toBe('brand');

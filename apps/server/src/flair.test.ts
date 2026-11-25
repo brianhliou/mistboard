@@ -16,8 +16,8 @@ test('every piece from every set is a flair, and the Traditional keys keep their
     jungle: FLAIR_KEYS.filter((key) => key.startsWith('jungle-')).length,
     chess: FLAIR_KEYS.filter((key) => key.startsWith('chess-')).length,
   };
-  // 9 xiangqi sets x 14, 8 animals x 2 sides, 6 chess roles x 2 sides.
-  assert.deepEqual(families, { variant: 12, xiangqi: 126, jungle: 16, chess: 12 });
+  // 10 xiangqi sets x 14, 8 animals x 2 sides, 6 chess roles x 2 sides.
+  assert.deepEqual(families, { variant: 12, xiangqi: 140, jungle: 16, chess: 12 });
   assert.equal(new Set(FLAIR_KEYS).size, FLAIR_KEYS.length);
   // Stored on existing accounts before the other sets joined; renaming them
   // would orphan every wearer.
@@ -28,6 +28,7 @@ test('every piece from every set is a flair, and the Traditional keys keep their
     'piece-lacquer-red-chariot',
     'piece-animal-dobutsu-black-elephant',
     'piece-international-red-horse',
+    'piece-2dhanzi-black-elephant',
     'jungle-black-rat',
     'chess-white-knight',
   ]) {

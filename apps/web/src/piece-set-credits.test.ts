@@ -51,7 +51,11 @@ describe('piece-sets CREDITS.md', () => {
   it('catches a dropped row', () => {
     const markdown = readFileSync(CREDITS, 'utf8');
     const noWood = markdown.replace(/^\| `xiangqi\/wood` \|.*\n/m, '');
-    expect(uncreditedIn(noWood)).toEqual(['xiangqi/wood', 'xiangqi/wood/tile']);
+    expect(uncreditedIn(noWood)).toEqual([
+      'xiangqi/wood',
+      'xiangqi/wood/board',
+      'xiangqi/wood/tile',
+    ]);
     const noGrid = markdown.replace(/^\| `xiangqi\/international-grid` \|.*\n/m, '');
     expect(uncreditedIn(noGrid)).toEqual(['xiangqi/international-grid']);
   });

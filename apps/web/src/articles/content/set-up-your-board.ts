@@ -52,7 +52,10 @@ const riverBoard = (river: 'classic' | 'off', label: string) => () => {
 };
 
 // Every piece set in one diagram, four pieces each, named. Each cell forces its
-// own set, so the reader's pick does not change it.
+// own set, so the reader's pick does not change it. The text counts nine sets,
+// so the diagram keeps those nine until the article is updated for a new one
+// (it says so at the top when a set is added).
+const ARTICLE_PIECE_SETS = XIANGQI_PIECE_SETS.filter(({ id }) => id !== '2dhanzi');
 const SET_CELL_W = 196;
 const SET_CELL_H = 88;
 const SET_PIECE = 40;
@@ -65,8 +68,8 @@ const SET_PIECES = [
 ] as const;
 const pieceSetsGrid = () => {
   const cols = 3;
-  const rows = Math.ceil(XIANGQI_PIECE_SETS.length / cols);
-  const cells = XIANGQI_PIECE_SETS.map(({ id, label }, index) => {
+  const rows = Math.ceil(ARTICLE_PIECE_SETS.length / cols);
+  const cells = ARTICLE_PIECE_SETS.map(({ id, label }, index) => {
     const x = (index % cols) * SET_CELL_W;
     const y = Math.floor(index / cols) * SET_CELL_H;
     const left = x + (SET_CELL_W - (SET_STEP * (SET_PIECES.length - 1) + SET_PIECE)) / 2;

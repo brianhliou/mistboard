@@ -343,7 +343,7 @@ function gridSvg(board: ReplayBoard): string {
   const vb = xiangqiBoardViewBox(layout, surface.geo);
   const parts: string[] = [
     `<rect x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" rx="${RADIUS}" class="xq-diagram-bg"/>`,
-    xiangqiSurfaceGrid(surface, layout),
+    xiangqiSurfaceGrid({ ...surface, cornerRadius: RADIUS }, layout),
     xiangqiSurfaceStartMarkers(surface, perspective, layout),
   ];
   if (layout === 'cell') {

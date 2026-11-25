@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   contrastRatio,
   DEFAULT_XIANGQI_BOARD_COLOR,
+  isXiangqiBoardArt,
   normalizeXiangqiBoardColor,
+  XIANGQI_BOARD_ART,
+  XIANGQI_BOARD_ART_PRESETS,
   XIANGQI_BOARD_COLOR_PRESETS,
   xiangqiBoardColorPalette,
   xiangqiBoardPalette,
@@ -85,5 +88,64 @@ describe('xiangqi board colour', () => {
     const slate = xiangqiBoardPalette('#454c54');
     const [r, , b] = [1, 3, 5].map((i) => Number.parseInt(slate.ink.slice(i, i + 2), 16));
     expect(b).toBeGreaterThan(r ?? 0);
+  });
+
+  // Green and Pine (2026-11-24) are drawn boards, outside the muted-swatch
+  // rules above: their own source colours, picked by id, never a default.
+  it('registers the two drawn boards apart from the flat presets', () => {
+    expect(XIANGQI_BOARD_ART_PRESETS.map((preset) => preset.id)).toEqual(['green', 'pine']);
+    expect(isXiangqiBoardArt('green')).toBe(true);
+    expect(isXiangqiBoardArt('pine')).toBe(true);
+    expect(isXiangqiBoardArt('oak')).toBe(false);
+    expect(normalizeXiangqiBoardColor('green')).toBe('green');
+    expect(normalizeXiangqiBoardColor('pine')).toBe('pine');
+    expect(normalizeXiangqiBoardColor('Pine')).toBe('international');
+    expect(xiangqiBoardColorPalette('green')).toMatchObject({ bg: '#c6e9af', dark: false });
+    expect(xiangqiBoardColorPalette('pine')).toMatchObject({ bg: '#e1be86', dark: false });
+    expect(DEFAULT_XIANGQI_BOARD_COLOR).toBe('international');
+  });
+
+  // The move marks keep one colour on every board, so a drawn board may not
+  // show them worse than a board that already ships. The floor is the
+  // Traditional board, the darkest light board; each mark is composited over
+  // every colour the art paints under the pieces and compared with it.
+  describe('marks on the drawn boards', () => {
+    const MARKS: Record<string, [hex: string, alpha: number]> = {
+      'move hint': ['#1f6f5b', 0.72 * 0.9],
+      selection: ['#1f6f5b', 0.32],
+      'last-move ring': ['#d6af4e', 0.8],
+      'last-move origin outline': ['#b45309', 0.55],
+      check: ['#e11d1d', 0.55],
+    };
+    const rgb = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+    const toHex = (c: number[]) =>
+      `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+    const over = (hex: string, alpha: number, bg: string) => {
+      const [f, b] = [rgb(hex), rgb(bg)];
+      return toHex(f.map((v, i) => v * alpha + b[i]! * (1 - alpha)));
+    };
+    const markContrast = (mark: [string, number], bg: string) =>
+      contrastRatio(over(mark[0], mark[1], bg), bg);
+    const floor = xiangqiBoardColorPalette('traditional').bg;
+    const shortfalls = (grounds: string[]) =>
+      Object.entries(MARKS).flatMap(([name, mark]) =>
+        grounds
+          .filter((bg) => markContrast(mark, bg) < markContrast(mark, floor) - 0.01)
+          .map((bg) => `${name} on ${bg}`),
+      );
+
+    it('shows every mark at least as well as on the Traditional board', () => {
+      const grounds = [
+        ...XIANGQI_BOARD_ART_PRESETS.map((preset) => preset.fill),
+        XIANGQI_BOARD_ART.green.margin,
+        XIANGQI_BOARD_ART.green.river,
+        xiangqiBoardColorPalette('green').band,
+      ];
+      expect(shortfalls(grounds)).toEqual([]);
+    });
+
+    it('fails a board painted in a mark colour (planted)', () => {
+      expect(shortfalls(['#1f6f5b', '#e11d1d'])).not.toEqual([]);
+    });
   });
 });

@@ -27,7 +27,12 @@ export type XiangqiBoardColorPresetId =
   | 'slate'
   // Only offered behind ?boardgrain=1, for a taste call. Without the flag a
   // stored 'grain' renders as its plain fill.
-  | 'grain';
+  | 'grain'
+  | XiangqiBoardArtId;
+
+/** Boards drawn after a third-party board (2026-11-24), not a fill alone: the
+ *  surface paints their art (xiangqiSurfaceArt) over the preset's fill. */
+export type XiangqiBoardArtId = 'green' | 'pine';
 
 /** The swatch that turns on the Jungle theme. Not a palette: see above. */
 export const JUNGLE_XIANGQI_BOARD_COLOR = 'jungle';
@@ -61,9 +66,32 @@ export const XIANGQI_BOARD_COLOR_PRESETS: readonly XiangqiBoardColorPreset[] = [
 
 const GRAIN_PRESET: XiangqiBoardColorPreset = { id: 'grain', fill: '#e2bf88' };
 
+// The art boards (2026-11-24), a second row in the panel. Each keeps its
+// source's own colours, so they sit outside the muted rule above; the fill is
+// what a surface without the art (a mini board, the square grid) still paints.
+// Green follows the pychess-variants `xiangqic` board: green halves, the
+// palaces grey (band), the margin tan and the river blue (XIANGQI_BOARD_ART).
+// Pine is the Kadagaden gmchess-style wood board: its fill and black lines,
+// with the grain image and a heavy frame drawn by the surface.
+export const XIANGQI_BOARD_ART_PRESETS: readonly XiangqiBoardColorPreset[] = [
+  { id: 'green', fill: '#c6e9af', ink: '#1c1c1c', band: '#ececec' },
+  { id: 'pine', fill: '#e1be86', ink: '#1f160a', band: 'rgba(31, 22, 10, 0.07)' },
+];
+
+/** The extra colours an art board paints, beyond its preset's fill and ink. */
+export const XIANGQI_BOARD_ART = {
+  green: { margin: '#e9ddaf', river: '#afdde9' },
+} as const;
+
+export function isXiangqiBoardArt(value: string | null | undefined): value is XiangqiBoardArtId {
+  return XIANGQI_BOARD_ART_PRESETS.some((preset) => preset.id === value);
+}
+
 export function normalizeXiangqiBoardColor(value: string | null | undefined): XiangqiBoardColor {
   if (value === 'grain' || value === JUNGLE_XIANGQI_BOARD_COLOR) return value;
-  const preset = XIANGQI_BOARD_COLOR_PRESETS.find((candidate) => candidate.id === value);
+  const preset = [...XIANGQI_BOARD_COLOR_PRESETS, ...XIANGQI_BOARD_ART_PRESETS].find(
+    (candidate) => candidate.id === value,
+  );
   return preset ? preset.id : DEFAULT_XIANGQI_BOARD_COLOR;
 }
 
@@ -73,6 +101,7 @@ export function xiangqiBoardColorPreset(color: XiangqiBoardColor): XiangqiBoardC
   if (color === 'grain') return GRAIN_PRESET;
   return (
     XIANGQI_BOARD_COLOR_PRESETS.find((preset) => preset.id === color) ??
+    XIANGQI_BOARD_ART_PRESETS.find((preset) => preset.id === color) ??
     (XIANGQI_BOARD_COLOR_PRESETS[0] as XiangqiBoardColorPreset)
   );
 }

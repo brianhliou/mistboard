@@ -20,3 +20,16 @@
   removed, its `viewBox` cropped to a square inside the rim
   (`tile/<color>-face.svg`, from the general). Derived, never edited by hand;
   `apps/web/src/asset-tile-glyphs.test.ts` re-derives them.
+- Pine board (2026-11-24), in `board/grain.svg`: the wood grain of Kadagaden's
+  gmchess-style wood xiangqi board, `boards/xiangqi_gmchess_wood.svg` at
+  https://github.com/Kadagaden/chess-pieces/blob/b035b0cc6a68e9fb99c872c8fe073c3ae3eba8a0/boards/xiangqi_gmchess_wood.svg,
+  under the same CC BY 4.0 licence. Attribution (on /source): "Pine board: the
+  grain of "xiangqi_gmchess_wood" by Kadagaden, CC BY 4.0. Modified." Changes:
+  only the three grain paths are kept, with a `viewBox` and
+  `preserveAspectRatio="none"` so they stretch over any board; the fill, the
+  grid lines and the frame are removed, and Mistboard draws its own grid, the
+  frame (in the source's proportions) and the fill (`#e1be86`, the source's)
+  instead (`xiangqiSurfaceArt` in `apps/web/src/xiangqi-board-surface.ts`). The
+  file carries a comment with its upstream path. The source repository notes
+  that the gmchess originals are GPL; the remake itself is published as CC BY
+  4.0.

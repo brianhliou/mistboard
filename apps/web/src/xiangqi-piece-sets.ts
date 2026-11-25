@@ -5,7 +5,7 @@
 // Dobutsu animal set; glyph sets cover traditional/simplified Hanzi. All four draw a
 // disc on the lined board and a rounded square on the square grid (image sets
 // 2026-10-14, glyph sets 2026-10-15). The asset sets
-// (lacquer, wood, book, brush, clerical; 2026-10-08) are third-party SVG discs,
+// (lacquer, wood, book, brush, clerical; 2026-10-08; flat 2026-11-24) are third-party SVG discs,
 // each with its own face-down back; sources and licences sit beside the files
 // in public/piece-sets/xiangqi/<id>/README.md.
 // Chinese characters render from baked Noto Sans CJK SC Bold outlines (see
@@ -28,7 +28,7 @@ export type XiangqiPieceSet =
   | AssetXiangqiPieceSet;
 
 // Third-party SVG sets drawn whole by their files (disc, ring and character).
-export type AssetXiangqiPieceSet = 'lacquer' | 'wood' | 'book' | 'brush' | 'clerical';
+export type AssetXiangqiPieceSet = 'lacquer' | 'wood' | 'book' | 'brush' | 'clerical' | '2dhanzi';
 export type XiangqiShroudedStyle = 'question' | 'back';
 
 // labelKey names the set in the shell catalog (en, zh-Hans, zh-Hant); label is
@@ -46,6 +46,7 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
   { id: 'book', label: 'Book', labelKey: 'prefs.xqPieceSet.book' },
   { id: 'brush', label: 'Brush', labelKey: 'prefs.xqPieceSet.brush' },
   { id: 'clerical', label: 'Clerical', labelKey: 'prefs.xqPieceSet.clerical' },
+  { id: '2dhanzi', label: 'Bold', labelKey: 'prefs.xqPieceSet.2dhanzi' },
   { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
 ];
 
@@ -278,6 +279,8 @@ const ASSET_TILE_BACKING: Readonly<Record<AssetXiangqiPieceSet, XiangqiTileBacki
   book: ['#b8463a', '#96322a', '#6e231d'],
   brush: ['#a87556', '#87573c', '#623e2a'],
   clerical: ['#a87556', '#87573c', '#623e2a'],
+  // Bold: a pale disc on both sides, so a warm grey ground below it.
+  '2dhanzi': ['#a8998a', '#86786a', '#5f554b'],
 };
 
 /** An asset set's tile body; null for the sets Mistboard draws, which sit on jade. */
@@ -647,6 +650,8 @@ const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
   book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
   brush: { version: 2, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
   clerical: { version: 2, ink: { red: '#ff0101', black: '#005500' }, neutralBack: 'red' },
+  // Its backs differ by side (the rim is the side's ink), so banqi draws its own.
+  '2dhanzi': { version: 1, ink: { red: '#df4a4a', black: '#333333' }, neutralBack: null },
 };
 
 function assetPieceHref(
@@ -688,7 +693,8 @@ export function xiangqiNeutralBackMarks(set: XiangqiPieceSet): string | null {
  * back darkened, so it never passes for a blank face; lacquer black lacquer
  * with a mother-of-pearl flower (its own file, so the inlay's gradient stays
  * out of the board's inline SVGs); the book its own yellow
- * back ringed in brown, neither side's colour.
+ * back ringed in brown, neither side's colour; flat a plain disc of its own
+ * in a grey neither side wears.
  * Null for the sets Mistboard draws, whose banqi disc is the Mahjong jade.
  */
 export function xiangqiBanqiBackMarks(set: XiangqiPieceSet): string | null {
@@ -696,6 +702,11 @@ export function xiangqiBanqiBackMarks(set: XiangqiPieceSet): string | null {
   if (set === 'wood') return xiangqiNeutralBackMarks(set);
   if (set === 'brush' || set === 'clerical') {
     return `${xiangqiNeutralBackMarks(set)}<circle cx="50" cy="50" r="45" fill="#5a3018" opacity="0.35"/>`;
+  }
+  if (set === '2dhanzi') {
+    // The set's own disc (rim 3.2 wide, outer edge 45) in a grey between its
+    // two faces, ringed in neither side's ink.
+    return `<circle cx="50" cy="50" r="43.4" fill="#efe9e2" stroke="#8a7a68" stroke-width="3.2"/>`;
   }
   if (set === 'lacquer') {
     return assetImageMark(
@@ -708,7 +719,7 @@ export function xiangqiBanqiBackMarks(set: XiangqiPieceSet): string | null {
 }
 
 /**
- * The Fortress Xiangqi Treasure on an asset set: none of the five sources draws
+ * The Fortress Xiangqi Treasure on an asset set: none of the sources draws
  * one, so it is the set's back with 寶 in the set's ink, the same character the
  * glyph sets use.
  */

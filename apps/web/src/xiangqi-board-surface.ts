@@ -20,6 +20,7 @@ import './xiangqi-board-surface.css';
 import type { XiangqiColor } from '@mistboard/game';
 import { jungleBoardAssetHref } from './jungle-art.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { XIANGQI_BOARD_ART, xiangqiBoardColorPreset } from './xiangqi-board-color.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -56,6 +57,10 @@ export interface XiangqiSurfaceConfig {
    *  starting points on a standard board). Omit for a board whose setup is not
    *  the standard one: Storm the Fortress starts its cannons on the back rank. */
   startPoints?: readonly XiangqiStartPoint[];
+  /** The corner radius of the board's own background rect, when it has one
+   *  (jieqi, the article diagrams), so board art painted over it keeps the
+   *  rounded corners. */
+  cornerRadius?: number;
 }
 
 /** A point in board coordinates: 0-indexed file, 1-indexed rank, the same
@@ -77,7 +82,7 @@ export function xiangqiSurfaceGrid(cfg: XiangqiSurfaceConfig, layout: XiangqiBoa
   const { geo } = cfg;
   if (layout === 'cell') return cellGrid(cfg);
   const { cell, margin, fileCount, rankCount } = geo;
-  const parts: string[] = [xiangqiSurfaceGrain(cfg, layout)];
+  const parts: string[] = [xiangqiSurfaceArt(cfg, layout), xiangqiSurfaceGrain(cfg, layout)];
   const left = margin;
   const right = margin + (fileCount - 1) * cell;
   const top = margin;
@@ -125,6 +130,77 @@ export function xiangqiSurfaceGrain(cfg: XiangqiSurfaceConfig, layout: XiangqiBo
   if (document.documentElement.dataset.xiangqiBoardGrain !== 'on') return '';
   const vb = xiangqiBoardViewBox(layout, cfg.geo);
   return `<image class="xq-live-grain" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" preserveAspectRatio="none" href="data:image/svg+xml,${GRAIN_SVG}"/>`;
+}
+
+// ART BOARDS (2026-11-24): the two board colours drawn after a third-party
+// board, Green (pychess-variants `xiangqic`) and Pine (Kadagaden's gmchess-style
+// wood board, its grain in public/piece-sets/xiangqi/wood/board/). The preset's
+// fill is the board background, as for any colour; this paints the rest under
+// the grid lines, so every mark drawn after the grid (palace lines, river text,
+// coordinates, last move, selection, hints) sits on top as on any other board.
+// Like the jungle theme it reads the root data attribute, and every board
+// re-renders on an appearance change. Intersection layout only: the square
+// grid and the mini boards keep the preset's flat fill.
+export function xiangqiSurfaceArt(cfg: XiangqiSurfaceConfig, layout: XiangqiBoardLayout): string {
+  if (layout === 'cell' || typeof document === 'undefined') return '';
+  const root = document.documentElement.dataset;
+  if (root.xiangqiBoardTheme === 'jungle') return '';
+  const color = root.xiangqiBoardColor;
+  if (color !== 'green' && color !== 'pine') return '';
+  const { cell, margin, fileCount, rankCount } = cfg.geo;
+  const vb = xiangqiBoardViewBox(layout, cfg.geo);
+  const left = margin;
+  const top = margin;
+  const width = (fileCount - 1) * cell;
+  const height = (rankCount - 1) * cell;
+  const r = cfg.cornerRadius ?? 0;
+  const clip = r > 0 ? ` style="clip-path: inset(0 round ${r}px)"` : '';
+  const parts: string[] = [];
+  if (color === 'green') {
+    // The margin outside the lines tan, as an evenodd ring so whatever a
+    // renderer paints inside the lines first (fortress's own river and palace
+    // bands) stays visible; the palaces grey and the river blue. Both palace
+    // sets here are symmetric under the board's 180 degree flip, so drawing
+    // them from red's side is right for either perspective.
+    const outer = `M${vb.minX} ${vb.minY}h${vb.width}v${vb.height}h${-vb.width}Z`;
+    const inner = `M${left} ${top}h${width}v${height}h${-width}Z`;
+    parts.push(
+      `<path class="xq-board-art-margin" fill="${XIANGQI_BOARD_ART.green.margin}" fill-rule="evenodd" d="${outer}${inner}"/>`,
+    );
+    for (const p of cfg.palaces) {
+      const a = point(cfg, p.fileMin, p.rankMin, 'red', layout);
+      const b = point(cfg, p.fileMax, p.rankMax, 'red', layout);
+      parts.push(
+        `<rect class="xq-board-art-palace" fill="${xiangqiBoardColorPreset('green').band}" x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}"/>`,
+      );
+    }
+    if (cfg.riverAfterRank !== null) {
+      const riverTop = margin + (rankCount - 1 - cfg.riverAfterRank) * cell;
+      parts.push(
+        `<rect class="xq-board-art-river" fill="${XIANGQI_BOARD_ART.green.river}" x="${left}" y="${riverTop}" width="${width}" height="${cell}"/>`,
+      );
+    }
+  } else {
+    // The grain stretched over the whole board, as the source draws it, and its
+    // heavy frame just outside the outer lines: 0.12 of a cell out, 0.1 thick,
+    // the source's proportions. Both sit inside the pieces' overhang, so the
+    // coordinates printed beyond them never touch either.
+    const out = cell * 0.122;
+    parts.push(
+      `<image class="xq-board-art-grain" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" preserveAspectRatio="none" href="${XIANGQI_WOOD_BOARD_GRAIN_HREF}"/>`,
+      `<rect class="xq-board-art-frame" fill="none" stroke-width="${round2(cell * 0.097)}" x="${round2(left - out)}" y="${round2(top - out)}" width="${round2(width + out * 2)}" height="${round2(height + out * 2)}"/>`,
+    );
+  }
+  return `<g class="xq-board-art xq-board-art--${color}" aria-hidden="true" pointer-events="none"${clip}>${parts.join('')}</g>`;
+}
+
+/** The wood board's grain (Kadagaden, CC BY 4.0; README beside it). Bump the
+ *  version whenever the file changes (piece-art-cache-version.test.ts). */
+export const XIANGQI_WOOD_BOARD_GRAIN_VERSION = 1;
+export const XIANGQI_WOOD_BOARD_GRAIN_HREF = `/piece-sets/xiangqi/wood/board/grain.svg?v=${XIANGQI_WOOD_BOARD_GRAIN_VERSION}`;
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function cellGrid(cfg: XiangqiSurfaceConfig): string {

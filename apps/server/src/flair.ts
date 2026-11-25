@@ -60,6 +60,7 @@ const XIANGQI_FLAIR_SETS = [
   'book',
   'brush',
   'clerical',
+  '2dhanzi',
   'animal-dobutsu',
 ] as const;
 

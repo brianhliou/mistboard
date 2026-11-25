@@ -1307,20 +1307,21 @@
 
 /* Xiangqi board colour (gear > Board, 2026-10-08): round swatches for the
    presets (xiangqi-board-color.ts sets each fill inline as --xq-swatch). */
-/* 24px swatches spread edge to edge keep all eight (seven presets and Jungle,
-   on the square grid) on one row in the 236px panel body; the selected ring
-   stays inside the gap. */
+/* One grid of five columns in the 236px panel body, so the rows line up
+   whatever the count: nine swatches on the point board (5 + 4), ten on the
+   square grid, where Jungle joins. 30px is a comfortable tap, and the selected
+   ring stays inside the gaps. */
 .xq-board-color-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, 30px);
   justify-content: space-between;
-  gap: 4px;
+  row-gap: 12px;
 }
 
 .xq-board-color-swatch {
   position: relative;
-  flex: none;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--site-text) 22%, transparent);
   border-radius: 999px;
@@ -1344,6 +1345,28 @@
   box-shadow:
     0 0 0 2px var(--site-panel, #fff),
     0 0 0 4px var(--site-accent);
+}
+
+/* Each art board's swatch is a crop of the board: Green's two halves either
+   side of its blue river; Pine its own grain on its fill. */
+.xq-board-color-swatch[data-xq-board-color="green"] {
+  background: linear-gradient(to bottom, #c6e9af 0 40%, #afdde9 40% 60%, #c6e9af 60% 100%);
+}
+
+.xq-board-color-swatch[data-xq-board-color="pine"] {
+  background:
+    url("/piece-sets/xiangqi/wood/board/grain.svg?v=1") center / 300% 300%,
+    #e1be86;
+}
+
+/* The square grid draws no river, palaces or grain, so there the two swatches
+   are the flat fill a player gets (and Green stops resembling Jungle beside it). */
+:root[data-xiangqi-board-layout="cell"] .xq-board-color-swatch[data-xq-board-color="green"] {
+  background: #c6e9af;
+}
+
+:root[data-xiangqi-board-layout="cell"] .xq-board-color-swatch[data-xq-board-color="pine"] {
+  background: #e1be86;
 }
 
 .xq-board-color-swatch[data-xq-board-color="grain"] {

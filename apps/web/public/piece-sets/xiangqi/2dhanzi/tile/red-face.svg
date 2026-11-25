@@ -1,0 +1,2 @@
+<!-- Mistboard tile layer: the 2dhanzi set's disc surface with the character removed, cropped inside the rim, derived by apps/web/scripts/asset-tile-glyphs.mjs from ../red-general.svg; the source file's comment and README hold its origin and licence. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="19.685 19.685 52.63 52.63" width="100" height="100"><g><circle cx="46" cy="45.999999" fill="#ffe6d5" r="40.79224" stroke="#df4a4a" stroke-linecap="round" stroke-miterlimit="10" stroke-width="3"/></g></svg>

@@ -6,10 +6,15 @@
 // The expected values are the pre-extraction output, captured by rendering the
 // live board at CELL 60 / MARGIN 36 and copying what it emitted.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   XIANGQI_START_POINTS,
+  XIANGQI_WOOD_BOARD_GRAIN_HREF,
+  XIANGQI_WOOD_BOARD_GRAIN_VERSION,
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceArt,
   xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
@@ -277,5 +282,79 @@ describe('square grid coordinate rim (2026-10-29)', () => {
         labels,
       ),
     ).not.toContain('xq-live-cell-rim');
+  });
+});
+
+// The drawn boards (2026-11-24): Green (pychess-variants xiangqic colours) and
+// Pine (Kadagaden's gmchess-style wood grain). Painted first inside the grid,
+// so every line, mark and piece is drawn over them.
+describe('art boards', () => {
+  const root = document.documentElement;
+  afterEach(() => {
+    root.removeAttribute('data-xiangqi-board-color');
+    root.removeAttribute('data-xiangqi-board-theme');
+  });
+
+  it('draws nothing for a flat colour, the square grid or the jungle theme', () => {
+    expect(xiangqiSurfaceArt(STANDARD, 'intersection')).toBe('');
+    root.dataset.xiangqiBoardColor = 'oak';
+    expect(xiangqiSurfaceArt(STANDARD, 'intersection')).toBe('');
+    expect(xiangqiSurfaceGrid(STANDARD, 'intersection')).not.toContain('xq-board-art');
+    root.dataset.xiangqiBoardColor = 'green';
+    expect(xiangqiSurfaceArt(STANDARD, 'cell')).toBe('');
+    root.dataset.xiangqiBoardTheme = 'jungle';
+    expect(xiangqiSurfaceArt(STANDARD, 'intersection')).toBe('');
+  });
+
+  it('paints Green under the lines: tan margin, grey palaces, a blue river one cell tall', () => {
+    root.dataset.xiangqiBoardColor = 'green';
+    const grid = xiangqiSurfaceGrid(STANDARD, 'intersection');
+    expect(grid.startsWith('<g class="xq-board-art xq-board-art--green"')).toBe(true);
+    expect(grid.indexOf('xq-board-art')).toBeLessThan(grid.indexOf('xq-live-line'));
+    // The margin is a ring: the viewBox minus the lines' rectangle.
+    expect(grid).toContain('d="M0 0h552v612h-552ZM36 36h480v540h-480Z"');
+    // Red's palace (files 3-5, ranks 1-3) at the bottom; black's at the top.
+    expect(grid).toContain('x="216" y="456" width="120" height="120"');
+    expect(grid).toContain('x="216" y="36" width="120" height="120"');
+    expect(grid).toContain(
+      '<rect class="xq-board-art-river" fill="#afdde9" x="36" y="276" width="480" height="60"/>',
+    );
+    expect(grid).not.toContain('<image');
+  });
+
+  it('frames Pine just outside the lines and inside the pieces overhang, so coordinates never touch it', () => {
+    root.dataset.xiangqiBoardColor = 'pine';
+    const art = xiangqiSurfaceArt(STANDARD, 'intersection');
+    expect(art).toContain(`href="${XIANGQI_WOOD_BOARD_GRAIN_HREF}"`);
+    expect(art).toContain('x="0" y="0" width="552" height="612" preserveAspectRatio="none"');
+    const frame =
+      /<rect class="xq-board-art-frame" fill="none" stroke-width="([\d.]+)" x="([\d.]+)"/.exec(art);
+    expect(frame).not.toBeNull();
+    const outerEdge = Number(frame![2]) - Number(frame![1]) / 2;
+    const innerEdge = Number(frame![2]) + Number(frame![1]) / 2;
+    const pieceEdge = STANDARD.geo.margin - 0.45 * STANDARD.geo.cell;
+    expect(innerEdge).toBeLessThan(STANDARD.geo.margin);
+    expect(outerEdge).toBeGreaterThan(pieceEdge);
+  });
+
+  it('grows with the coordinate gutter, so the labels sit on the board art', () => {
+    root.dataset.xiangqiBoardColor = 'green';
+    const gutter = { ...STANDARD, geo: { ...STANDARD.geo, coordGutter: 20 } };
+    expect(xiangqiSurfaceArt(gutter, 'intersection')).toContain('d="M-20 -20h592v652h-592Z');
+  });
+
+  it('clips to a rounded board when the renderer asks', () => {
+    root.dataset.xiangqiBoardColor = 'pine';
+    expect(xiangqiSurfaceArt(STANDARD, 'intersection')).not.toContain('clip-path');
+    expect(xiangqiSurfaceArt({ ...STANDARD, cornerRadius: 8 }, 'intersection')).toContain(
+      'style="clip-path: inset(0 round 8px)"',
+    );
+  });
+
+  it('keeps the settings swatch on the same grain version as the board', () => {
+    const css = readFileSync(resolve(__dirname, 'theme.css'), 'utf8');
+    expect(css).toContain(
+      `/piece-sets/xiangqi/wood/board/grain.svg?v=${XIANGQI_WOOD_BOARD_GRAIN_VERSION}`,
+    );
   });
 });
