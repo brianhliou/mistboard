@@ -272,8 +272,8 @@ test('the game-over email goes to both players and links to the review', async (
   assert.equal(await sendCorrespondenceGameOverEmails(gameOver(), deps), 2);
   const alice = sent.find((s) => s.to === 'u-alice@example.com')!;
   const bob = sent.find((s) => s.to === 'u-bob@example.com')!;
-  assert.equal(alice.email.subject, 'You won your xiangqi game against Bob');
-  assert.equal(bob.email.subject, 'You lost your xiangqi game against Alice');
+  assert.equal(alice.email.subject, 'You won your Xiangqi game against Bob');
+  assert.equal(bob.email.subject, 'You lost your Xiangqi game against Alice');
   for (const s of [alice, bob]) {
     assert.equal(s.kind, 'correspondence_game_over_email');
     assert.match(s.email.text, /ended by checkmate/);

@@ -122,7 +122,8 @@ type Copy = {
   someone: string;
   manage: string;
   playYourMove: string;
-  // `v` is the sentence-start name, `vp` the running-prose name.
+  // `v` is the title-case name (subjects, headlines, sentence starts), `vp` the
+  // running-prose name ("your xiangqi game" inside a paragraph).
   start: {
     subject: (v: string, vp: string, opp: string | null, onMove: boolean) => string;
     headline: (v: string, vp: string, opp: string | null) => string;
@@ -155,11 +156,11 @@ const COPY: Record<EmailLocale, Copy> = {
     manage: 'Manage email notifications',
     playYourMove: 'Play your move',
     start: {
-      subject: (v, vp, opp, onMove) =>
-        (opp ? `${v} with ${opp} has started` : `Your ${vp} game has started`) +
+      subject: (v, _vp, opp, onMove) =>
+        (opp ? `${v} with ${opp} has started` : `Your ${v} game has started`) +
         (onMove ? ': your move' : ''),
-      headline: (v, vp, opp) =>
-        opp ? `${v} with ${opp} has started` : `Your ${vp} game has started`,
+      headline: (v, _vp, opp) =>
+        opp ? `${v} with ${opp} has started` : `Your ${v} game has started`,
       onMove: (opp, pace) => [
         `${opp} accepted your correspondence seek, and you have the first move.`,
         `The pace is ${pace}. If your clock runs out before you play, the game is cancelled.`,
@@ -173,10 +174,10 @@ const COPY: Record<EmailLocale, Copy> = {
         'You got this email because someone accepted a correspondence seek you posted on Mistboard.',
     },
     deadline: {
-      subject: (_v, vp, opp) =>
+      subject: (v, _vp, opp) =>
         opp
-          ? `Your move against ${opp} in ${vp} is running out of time`
-          : `Your move in ${vp} is running out of time`,
+          ? `Your move against ${opp} in ${v} is running out of time`
+          : `Your move in ${v} is running out of time`,
       headline: (left) => `About ${left} left on your clock`,
       body: (vp, opp, pace, left) => [
         `It's your move in your ${vp} game against ${opp ?? 'your opponent'} (${pace}), and your clock runs out in about ${left}.`,
@@ -186,8 +187,8 @@ const COPY: Record<EmailLocale, Copy> = {
         'You got this email because your clock is running low in a correspondence game on Mistboard.',
     },
     digest: {
-      subject: (_v, vp, opp, others) =>
-        `Your move in ${vp}${opp ? ` against ${opp}` : ''}` +
+      subject: (v, _vp, opp, others) =>
+        `Your move in ${v}${opp ? ` against ${opp}` : ''}` +
         (others === 0 ? '' : others === 1 ? ' and 1 other game' : ` and ${others} other games`),
       headline: (count) =>
         count === 1
@@ -314,7 +315,7 @@ const INBOX_COPY: Record<
   en: {
     subject: (sender) => `Unread message from ${sender}`,
     openInbox: 'Open your inbox',
-    reason: 'You received this email because you have an unread message on Mistboard.',
+    reason: 'You got this email because you have an unread message on Mistboard.',
     unsubscribe: 'Unsubscribe from message emails',
   },
   'zh-Hans': {
@@ -511,7 +512,8 @@ type NoticeCopy = {
     reason: string;
   };
   over: {
-    subject: (vp: string, opp: string | null, outcome: GameOverOutcome) => string;
+    // `v` is the title-case name: the subject is also the headline.
+    subject: (v: string, opp: string | null, outcome: GameOverOutcome) => string;
     endedBy: Partial<Record<string, string>>;
     ended: (how: string) => string;
     cancelled: string;
@@ -573,12 +575,12 @@ const NOTICE_COPY: Record<EmailLocale, NoticeCopy> = {
       reason: 'You got this email because you started a correspondence game on Mistboard.',
     },
     over: {
-      subject: (vp, opp, outcome) => {
+      subject: (v, opp, outcome) => {
         const against = opp ? ` against ${opp}` : '';
-        if (outcome === 'won') return `You won your ${vp} game${against}`;
-        if (outcome === 'lost') return `You lost your ${vp} game${against}`;
-        if (outcome === 'draw') return `Your ${vp} game${against} was drawn`;
-        return `Your ${vp} game${against} was cancelled`;
+        if (outcome === 'won') return `You won your ${v} game${against}`;
+        if (outcome === 'lost') return `You lost your ${v} game${against}`;
+        if (outcome === 'draw') return `Your ${v} game${against} was drawn`;
+        return `Your ${v} game${against} was cancelled`;
       },
       endedBy: {
         checkmate: 'checkmate',
@@ -904,8 +906,11 @@ export function correspondenceGameOverEmail(
 ): PlayerEmail {
   const copy = COPY[locale];
   const notice = NOTICE_COPY[locale].over;
-  const vp = variantName(input.gameSpecId, locale, true);
-  const subject = notice.subject(vp, input.opponentName, input.outcome);
+  const subject = notice.subject(
+    variantName(input.gameSpecId, locale),
+    input.opponentName,
+    input.outcome,
+  );
   const cancelled = input.outcome === 'cancelled';
   const how = !cancelled && input.termination ? notice.endedBy[input.termination] : undefined;
   const playAgain = cancelled

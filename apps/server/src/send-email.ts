@@ -12,6 +12,17 @@ const resendApiKey = process.env.RESEND_API_KEY;
 
 export const transactionalEmailConfigured = !!resendApiKey;
 
+// The name an inbox shows for the sender. A From address configured bare
+// ("noreply@auth.mistboard.com") showed as that address in Gmail; a From that
+// already names its sender ("Mistboard <play@...>") is left as it is.
+export const SENDER_DISPLAY_NAME = 'Mistboard';
+
+export function senderWithDisplayName(from: string): string {
+  const address = from.trim();
+  if (address.includes('<') || !address.includes('@')) return address;
+  return `${SENDER_DISPLAY_NAME} <${address}>`;
+}
+
 export type TransactionalEmail = {
   from: string;
   to: string[];
@@ -41,7 +52,7 @@ export async function sendTransactionalEmail(
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        from: message.from,
+        from: senderWithDisplayName(message.from),
         to: message.to,
         subject: message.subject,
         text: message.text,
