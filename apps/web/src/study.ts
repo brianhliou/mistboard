@@ -936,6 +936,8 @@ function renderStudy(
         }
         aside.append(card);
       }
+      const gamebookIndex = chapters.findIndex((entry) => entry.id === chapter.id);
+      const gamebookNext = chapters[gamebookIndex + 1];
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -944,6 +946,9 @@ function renderStudy(
         nav: buildNav(),
         aside,
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
+        // The practice branch's progress and Next, for the same reasons.
+        progress: { index: gamebookIndex + 1, total: chapters.length },
+        ...(gamebookNext ? { onNext: () => void switchTo(gamebookNext.id) } : {}),
       });
       phone.attach(root);
       phone.bindMoveNav(root);
