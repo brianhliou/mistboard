@@ -1907,6 +1907,20 @@ ol.xmj-log {
   font-weight: 700;
 }
 
+/* ── Full watch board ──────────────────────────────────────────────────────── */
+
+/* The watch board at full size sets its badges on the felt's edge too
+   (placeXmjRackTags), so each rack keeps the live table's 10px badge band, at
+   every width: a badge there never lies on a tile or its depth. The compact
+   board keeps its badges beside the hand and needs no band. */
+.xmj-watch-board:not(.xmj-watch-board--compact) .xmj-seat--opponent {
+  padding-top: 10px;
+}
+
+.xmj-watch-board:not(.xmj-watch-board--compact) .xmj-seat--self {
+  padding-bottom: 10px;
+}
+
 /* ── Compact watch board ───────────────────────────────────────────────────── */
 
 /* The homepage viewer and feed cards: the table keeps to a xiangqi board's

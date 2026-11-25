@@ -4,9 +4,11 @@
 // claimed. Now the badges move to the felt's edge instead, decided from the
 // widest hand the seat can ever hold. happy-dom has no layout, so these tests
 // give the seat, its tiles and the badges fixed boxes.
+import { existsSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   placeXmjRackTags,
+  XMJ_DESK,
   XMJ_TAGS_EDGE_CLASS,
   xmjConcealedGap,
   xmjRackTagsBeside,
@@ -123,5 +125,55 @@ describe('placeXmjRackTags', () => {
     expect(wide.querySelector('.xmj-seat')?.classList.contains(XMJ_TAGS_EDGE_CLASS)).toBe(false);
     // The probe that measured the badges is gone.
     expect(document.querySelectorAll('.xmj-badge').length).toBe(2);
+  });
+});
+
+// An edge badge sits 12px outside its seat (top on the opponent's, bottom on
+// your own), so it is clear of the tiles only where the seat keeps a band on
+// that side. Every board that runs placeXmjRackTags needs the band: the live
+// table (and the review, which is the live table) and the full-size watch
+// board. The compact watch board never sets badges on the edge.
+// Blind spot: this reads the source, not a layout; that the band is enough is
+// a browser read (a badge 11px clear of the tiles at 1440x900).
+const LIVE_BOARD = '.live-route--xiangqi-mahjong';
+const FULL_WATCH_BOARD = '.xmj-watch-board:not(.xmj-watch-board--compact)';
+
+function xmjCss(): string {
+  const path = ['src/xiangqi-mahjong.css', 'apps/web/src/xiangqi-mahjong.css'].find((p) =>
+    existsSync(p),
+  );
+  return readFileSync(path as string, 'utf8');
+}
+
+/** The boards among `boards` whose racks keep a badge band of `band` px. */
+function boardsWithBadgeBand(css: string, boards: string[], band: number): string[] {
+  const rules = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+    (m) => ({
+      selectors: (m[1] as string).split(',').map((s) => s.trim().replace(/\s+/g, ' ')),
+      body: (m[2] as string).replace(/\s+/g, ''),
+    }),
+  );
+  const has = (selector: string, decl: string) =>
+    rules.some((r) => r.selectors.includes(selector) && r.body.includes(decl));
+  return boards.filter(
+    (board) =>
+      has(`${board} .xmj-seat--opponent`, `padding-top:${band}px`) &&
+      has(`${board} .xmj-seat--self`, `padding-bottom:${band}px`),
+  );
+}
+
+describe('the badge band', () => {
+  it('is kept by every board that sets badges on the edge', () => {
+    expect(
+      boardsWithBadgeBand(xmjCss(), [LIVE_BOARD, FULL_WATCH_BOARD], XMJ_DESK.badgeBand),
+    ).toEqual([LIVE_BOARD, FULL_WATCH_BOARD]);
+  });
+
+  it('is missed when a board drops it, as the full watch board did until 2026-11-25', () => {
+    // The planted failure: the stylesheet without the watch board's band.
+    const css = xmjCss().replaceAll(`${FULL_WATCH_BOARD} .xmj-seat--`, '.xmj-planted .xmj-seat--');
+    expect(boardsWithBadgeBand(css, [LIVE_BOARD, FULL_WATCH_BOARD], XMJ_DESK.badgeBand)).toEqual([
+      LIVE_BOARD,
+    ]);
   });
 });
