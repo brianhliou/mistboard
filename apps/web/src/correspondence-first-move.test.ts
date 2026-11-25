@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { buildHostCard, buildStartForm } from './correspondence.js';
-import { correspondenceAgainButton } from './correspondence-again.js';
 import { renderFirstMoveOwed } from './correspondence-first-move.js';
 import { postCorrespondenceSeekFromPlay } from './landing-play.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
@@ -40,7 +39,7 @@ describe('first move owed message', () => {
     expect(status.querySelector('a')?.getAttribute('href')).toBe('/room/xq%2Fa%3Fb');
   });
 
-  it.each(['start form', 'host', 'challenge dialog', 'homepage', 'seek row', 'play again'])(
+  it.each(['start form', 'host', 'challenge dialog', 'homepage', 'seek row'])(
     'shows the linked message on %s',
     async (surface) => {
       vi.stubGlobal(
@@ -73,7 +72,7 @@ describe('first move owed message', () => {
         root.append(button, status);
         document.body.append(root);
         await postCorrespondenceSeekFromPlay(button, status, 1, 'xiangqi', false, 'en');
-      } else if (surface === 'seek row') {
+      } else {
         root = document.createElement('div');
         const action = buildSeekAcceptAction({
           seek: { id: 'seek', gameSpecId: 'xiangqi', daysPerMove: 1 },
@@ -84,20 +83,6 @@ describe('first move owed message', () => {
         root.append(action);
         document.body.append(root);
         action.click();
-      } else {
-        root = document.createElement('div');
-        const button = correspondenceAgainButton(
-          {
-            gameSpecId: 'xiangqi',
-            opponentHandle: 'friend',
-            preferredColor: 'second',
-            daysPerMove: 1,
-          },
-          { surface: 'postgame', roomId: 'previous' },
-        );
-        root.append(button);
-        document.body.append(root);
-        button.click();
       }
       await flush();
       expect(root.textContent).toContain(message);

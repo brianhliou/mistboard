@@ -12,7 +12,6 @@ import { setResolvedSignedIn } from './signed-in-state.js';
 vi.mock('./analytics.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./analytics.js')>()),
   track: vi.fn(),
-  trackCorrespondenceAgainShown: vi.fn(),
   trackCorrespondenceSeekPosted: vi.fn(),
   trackCorrespondenceSeekAccepted: vi.fn(),
 }));

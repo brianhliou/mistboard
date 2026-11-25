@@ -10,13 +10,6 @@
 //                  offer, or a fresh game against the same bot, sides swapped)
 //   Review game    everyone; second, an accent outline under the filled
 //                  rematch (#1235)
-//   Play again by correspondence
-//                  seated players after a live game between two accounts, in
-//                  a variant with correspondence: a private correspondence
-//                  challenge to the same opponent, sides swapped (#606,
-//                  correspondence-again.ts). Never after a correspondence
-//                  game. The caller decides eligibility; the panel only places
-//                  it, styled like the rows around it
 //   New opponent   seated players only: the play dialog, same variant, as
 //   / New game     Find opponent after a PvP game ("New opponent") or as the
 //                  bot picker after a bot game ("New game": the dialog offers
@@ -30,10 +23,10 @@
 //                  likely to want a friend next as one who beat the bot
 //
 // Every action reports a `postgame_action` event, so which of these earns its
-// place is a PostHog read rather than a guess.
+// place is a PostHog read rather than a guess. "Play again by correspondence"
+// (#606) sat between Review game and New opponent until it was removed on
+// 2026-11-25.
 import { track } from './analytics.js';
-import type { CorrespondenceAgainOffer } from './challenge-model.js';
-import { correspondenceAgainButton } from './correspondence-again.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { landingPlayDeepLinkAccepts } from './landing-play.js';
@@ -101,9 +94,6 @@ export type PostGameActionsInput = {
   /** The caller's rematch control (PvP offer widget or PvE new-game button), seated only. */
   rematch: HTMLElement | null;
   reviewHref: string | null;
-  /** The "play again by correspondence" offer (finishedGameCorrespondenceOffer),
-   *  or null/absent when this game earns none. Seated players only. */
-  correspondenceAgain?: { offer: CorrespondenceAgainOffer; roomId: string } | null;
 };
 
 type PostGameSheet = {
@@ -273,16 +263,6 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     const review = actionLink(t('live.reviewGame'), input.reviewHref, report('review'));
     review.classList.add('postgame-actions__review');
     box.append(review);
-  }
-
-  if (input.seated && input.correspondenceAgain) {
-    const again = correspondenceAgainButton(input.correspondenceAgain.offer, {
-      surface: 'postgame',
-      roomId: input.correspondenceAgain.roomId,
-    });
-    again.classList.add('postgame-actions__correspondence');
-    again.addEventListener('click', report('correspondence_again'));
-    box.append(again);
   }
 
   const opponentHref = input.seated ? newOpponentHref(input.variant, input.mode) : null;

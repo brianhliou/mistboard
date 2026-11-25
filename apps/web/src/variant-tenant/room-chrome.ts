@@ -21,7 +21,6 @@ import {
 } from '../account-preferences.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
-import { finishedGameCorrespondenceOffer } from '../correspondence-again.js';
 import { cardMistyName } from '../current-games-model.js';
 import { variantSeatsHaveInk } from '../flip-seat-ink.js';
 import {
@@ -867,7 +866,6 @@ export function createTenantRoomChrome<C extends string>(
         seated,
         rematch,
         reviewHref: tenant.reviewUrl(ctx.room()),
-        correspondenceAgain: correspondenceAgain(),
       });
       return;
     }
@@ -907,28 +905,6 @@ export function createTenantRoomChrome<C extends string>(
   // the tenant already builds (tenants key it 'gameSpecId'; the chess-shell
   // shape uses 'variant'). Unknown shapes yield undefined, which fails closed
   // into no invite button.
-  // "Play again by correspondence" (#606) for a seated player. Move order is the
-  // tenant's colour order (Gomoku's follows its opening), the same order the
-  // server seats a challenge's 'first' and 'second' by (tenantTurnOrder).
-  function correspondenceAgain() {
-    const seat = seatColor();
-    if (seat === null) return null;
-    const colors: readonly C[] = tenant.colors;
-    if (colors.length !== 2) return null;
-    const order = colors.indexOf(seat);
-    const profiles = ctx.seatProfiles();
-    const offer = finishedGameCorrespondenceOffer({
-      seated: true,
-      mode: ctx.roomMode(),
-      gameSpecId: tenantSpecId(),
-      viewerHandle: profiles[seat]?.handle,
-      opponent: profiles[tenant.oppositeColor(seat)],
-      viewerMovedFirst: order === 0 ? true : order === 1 ? false : null,
-      daysPerMove: ctx.timeControl()?.daysPerMove,
-    });
-    return offer ? { offer, roomId: ctx.room() } : null;
-  }
-
   function tenantSpecId(): string | undefined {
     const body = ctx.playAgainRequestBody();
     if (typeof body.gameSpecId === 'string') return body.gameSpecId;
