@@ -210,29 +210,33 @@
   font-size: 11px;
 }
 
+/* The presets keep each label on one line. A row that cannot hold all five
+   (the desktop rail in English) wraps whole buttons onto a second row, and each
+   row's buttons grow to fill it. Dividers are each button's own left and top
+   border pulled over its neighbour, so the outer ones are clipped away. */
 .review-spectator-chat__quick {
   flex: 1 0 100%;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  overflow: hidden;
   border-top: 1px solid var(--review-chat-border);
 }
 
 .review-spectator-chat__quick-button {
-  min-width: 0;
-  padding: 7px 2px;
+  flex: 1 1 auto;
+  margin: -1px 0 0 -1px;
+  padding: 7px 6px;
   border: 0;
-  border-right: 1px solid var(--review-chat-border);
+  border-top: 1px solid var(--review-chat-border);
+  border-left: 1px solid var(--review-chat-border);
   border-radius: 0;
   background: var(--review-chat-bg);
   color: var(--review-chat-muted);
   font: inherit;
   font-size: 12px;
   line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
-}
-
-.review-spectator-chat__quick-button:last-child {
-  border-right: 0;
 }
 
 .review-spectator-chat__quick-button:hover,

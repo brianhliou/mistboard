@@ -53,7 +53,7 @@ describe('live room chat', () => {
       Array.from(panel.querySelectorAll<HTMLButtonElement>('.review-spectator-chat__quick-button'))
         .map((button) => button.textContent)
         .join(','),
-    ).toBe('GG,WP,TY,GTG,BYE');
+    ).toBe('Hi,Good luck,Good game,Well played,Thanks');
 
     panel.querySelector<HTMLButtonElement>('.review-spectator-chat__quick-button')?.click();
     await flushPromises();
@@ -64,10 +64,64 @@ describe('live room chat', () => {
     expect(fetchSpy).toHaveBeenLastCalledWith('/api/chat/player/room%20with%20spaces', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: 'GG' }),
+      body: JSON.stringify({ text: 'Hi' }),
     });
     expect(panel.textContent).toContain('misty');
-    expect(panel.textContent).toContain('GG');
+    expect(panel.textContent).toContain('Hi');
+  });
+
+  it('shows presets in the viewer language and sends the canonical English', async () => {
+    const previousPath = window.location.pathname;
+    window.history.replaceState(null, '', '/zh-hans/live/zh_room');
+    try {
+      const fetchSpy = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        if (!init?.method) {
+          return jsonResponse({
+            lines: [
+              line('chln_1', 'opponent', 'Good game'),
+              line('chln_2', 'opponent', 'Good game everyone'),
+              line('chln_3', 'opponent', 'GG'),
+              line('chln_4', 'opponent', 'thanks'),
+              line('chln_5', 'opponent', 'Well played'),
+            ],
+            canPost: true,
+            canReport: false,
+            viewerHandle: 'misty',
+          });
+        }
+        const body = JSON.parse(String(init.body)) as { text: string };
+        return jsonResponse({ line: line('chln_6', 'misty', body.text) }, 201);
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
+      announceLiveRoomSeat('zh_room', true);
+      const panel = buildLiveRoomChat('zh_room');
+      document.body.append(panel);
+      await flushPromises();
+
+      const buttons = Array.from(
+        panel.querySelectorAll<HTMLButtonElement>('.review-spectator-chat__quick-button'),
+      );
+      expect(buttons.map((button) => button.textContent)).toEqual([
+        '你好',
+        '请多指教',
+        '好棋',
+        '下得好',
+        '谢谢',
+      ]);
+      expect(lineTexts(panel)).toEqual(['好棋', 'Good game everyone', 'GG', 'thanks', '下得好']);
+
+      buttons[4]?.click();
+      await flushPromises();
+      expect(fetchSpy).toHaveBeenLastCalledWith('/api/chat/player/zh_room', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: 'Thanks' }),
+      });
+      expect(lineTexts(panel).at(-1)).toBe('谢谢');
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+    }
   });
 
   it('demotes a viewer the seat gate refuses to the spectator room', async () => {
@@ -169,6 +223,16 @@ describe('live room chat', () => {
     }
   });
 });
+
+function line(id: string, handle: string, text: string) {
+  return { id, handle, text, createdAt: '2026-07-14T12:00:00.000Z' };
+}
+
+function lineTexts(panel: HTMLElement): string[] {
+  return Array.from(panel.querySelectorAll('.review-spectator-chat__text')).map(
+    (node) => node.textContent ?? '',
+  );
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

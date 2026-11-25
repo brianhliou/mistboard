@@ -1,6 +1,7 @@
 import './spectator-chat.css';
 import { t } from '../i18n/catalog.js';
 import { isSignedIn, signedInResolvedEvent } from '../signed-in-state.js';
+import { CHAT_PRESETS, chatPresetLabel, displayChatText } from './chat-presets.js';
 import { attachChatResize } from './chat-resize.js';
 
 type ChatLine = { id: string; handle: string | null; text: string; createdAt: string };
@@ -16,7 +17,6 @@ const POLL_MS = 7000;
 const LIVE_POLL_MS = 2000;
 const VISIBLE_LINES = 80;
 const TOKEN_PATTERN = /(@[a-z0-9_-]+|(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)/gi;
-const QUICK_CHAT_MESSAGES = ['GG', 'WP', 'TY', 'GTG', 'BYE'] as const;
 /** Poll ticks a demoted panel keeps re-probing its gated room before settling. */
 const PROMOTE_ATTEMPTS = 5;
 /**
@@ -470,12 +470,13 @@ function buildQuickChat(sendMessage: (text: string) => Promise<boolean>): HTMLEl
   const quickChat = document.createElement('div');
   quickChat.className = 'review-spectator-chat__quick';
   quickChat.setAttribute('aria-label', 'Quick chat');
-  for (const message of QUICK_CHAT_MESSAGES) {
+  for (const preset of CHAT_PRESETS) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'review-spectator-chat__quick-button';
-    button.textContent = message;
-    button.addEventListener('click', () => void sendMessage(message));
+    button.textContent = chatPresetLabel(preset);
+    // The wire carries the canonical English; each viewer's client localizes it.
+    button.addEventListener('click', () => void sendMessage(preset.text));
     quickChat.append(button);
   }
   return quickChat;
@@ -509,7 +510,7 @@ function appendLines(
     who.textContent = line.handle ?? 'deleted';
     const text = document.createElement('span');
     text.className = 'review-spectator-chat__text';
-    appendChatText(text, line.text);
+    appendChatText(text, displayChatText(line.text));
     row.append(who, text);
     if (canReportLine(state, line)) row.append(buildReportControl(apiUrl, line));
     feed.append(row);
