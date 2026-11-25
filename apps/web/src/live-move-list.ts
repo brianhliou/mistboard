@@ -49,7 +49,9 @@ export function renderReplay(refs: MoveListRefs): void {
   const labelsByEventIndex = algebraicMoveLabels();
   const plyCount = moveListPlyCount(masked, entries);
   const visibleColor = moveListVisibleColor(masked);
-  const activePly = computeActivePly();
+  // On live the replay index is null and the board shows the latest ply, so
+  // that ply is the one marked (the last move of a finished game included).
+  const activePly = computeActivePly() ?? (plyCount > 0 ? plyCount : null);
   const rows: HTMLLIElement[] = [];
 
   for (let row = 0; row < Math.ceil(plyCount / 2); row += 1) {

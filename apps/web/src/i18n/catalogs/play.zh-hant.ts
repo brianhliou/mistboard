@@ -677,6 +677,7 @@ export const ZH_HANT_PLAY = {
   'live.pageTitle': '對局',
   'live.you': '你',
   'live.guestAre': '訪客（{color}）',
+  'live.seatColorAside': '（{color}）',
   'live.toMove': '走棋',
   'live.yourMovePill': '輪到你',
   'live.oneDayPerMoveNote': '每步 1 天',

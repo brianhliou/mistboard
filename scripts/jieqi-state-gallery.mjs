@@ -229,7 +229,7 @@ function readPage() {
       bottom: [...document.querySelectorAll('.reveal-odds-row--bottom .reveal-odds-chip')].map(
         (el) => el.getAttribute('aria-label'),
       ),
-      notes: [...document.querySelectorAll('.reveal-odds-row__note')].map(text),
+      notes: [...document.querySelectorAll('[data-reveal-odds] .reveal-odds-row__note')].map(text),
     },
   };
 }

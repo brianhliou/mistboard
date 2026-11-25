@@ -38,22 +38,40 @@
     margin-top: var(--jieqi-strip-top-space);
   }
 
+  /* One grid cell holding two lines: the real odds row and an invisible copy
+     of the fullest line a side can have (live-jieqi-capture-strips.ts
+     stripSizer). The strip is as tall as the taller one, so its height, and
+     the board's margins sized from it, depend on the strip's width only: an
+     emptied or never-filled pool leaves the board, the game card and the
+     right column exactly where they were. */
   .jieqi-capture-stage > .jieqi-capture-strip {
     container-type: inline-size;
+    display: grid;
+    grid-template: "line" auto / minmax(0, 1fr);
     min-height: 30px;
+    pointer-events: auto;
+  }
+
+  /* Each line's label and pieces share one flex line: the pieces are what
+     wrap, so a second row holds only pieces. */
+  .live-route--jieqi .jieqi-capture-strip > :is(.reveal-odds-row, .jieqi-capture-strip__sizer) {
+    --reveal-chip: 26px;
+    grid-area: line;
+    display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
     align-items: center;
     align-content: center;
     gap: 2px 0;
-    pointer-events: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
   }
 
-  /* The odds row's label and pieces join the strip's own line: the pieces
-     are what wrap, so a second row holds only pieces. */
-  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
-    --reveal-chip: 26px;
-    display: contents;
+  .live-route--jieqi .jieqi-capture-strip > .jieqi-capture-strip__sizer {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
@@ -120,7 +138,7 @@
      board (--uni-board-chrome-h), which is the trade: a slightly smaller board
      for odds you can read. */
   @container (min-width: 720px) {
-    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+    .live-route--jieqi .jieqi-capture-strip > :is(.reveal-odds-row, .jieqi-capture-strip__sizer) {
       --reveal-chip: 34px;
     }
 
@@ -165,7 +183,7 @@
      its piece and the line stays one row at the board's full size. A wrapped
      second row would take height from the board and narrow it further. */
   @container (max-width: 620px) {
-    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+    .live-route--jieqi .jieqi-capture-strip > :is(.reveal-odds-row, .jieqi-capture-strip__sizer) {
       --reveal-chip: 24px;
     }
 
@@ -199,7 +217,7 @@
 
   /* Narrow: everything one size down. */
   @container (max-width: 420px) {
-    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+    .live-route--jieqi .jieqi-capture-strip > :is(.reveal-odds-row, .jieqi-capture-strip__sizer) {
       --reveal-chip: 20px;
     }
 

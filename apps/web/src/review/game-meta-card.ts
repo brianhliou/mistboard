@@ -40,6 +40,11 @@ export type GameMetaPlayer = {
   /** A game whose seats play no colour (Xiangqi Mahjong): no disc at all. */
   noDisc?: boolean;
   name: string;
+  /** The seat's colour word, read out after the name by screen readers only.
+   *  The disc shows the colour and is aria-hidden, so a name that no longer
+   *  spells it ("Guest", once "Guest (Red)") passes it here. Ignored with
+   *  `noDisc`: a row with no disc keeps the colour in its visible name. */
+  colorLabel?: string;
   /** The full name for the hover text when `name` is a shortened card name. */
   fullName?: string;
   rating?: number | null;
@@ -204,6 +209,12 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
       const name = playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name');
       name.title = player.fullName ?? player.name;
       row.append(name);
+      if (player.colorLabel && !player.noDisc) {
+        const color = document.createElement('span');
+        color.className = 'game-meta-card__seat-color';
+        color.textContent = ` ${t('live.seatColorAside', { color: player.colorLabel })}`;
+        row.append(color);
+      }
       if (player.rating !== null && player.rating !== undefined) {
         const rating = document.createElement('span');
         rating.className = 'game-meta-card__rating';

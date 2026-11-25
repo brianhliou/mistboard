@@ -83,4 +83,33 @@ describe('game meta card players', () => {
     expect(mahjong.el.querySelectorAll('.game-meta-card__disc').length).toBe(0);
     expect(mahjong.el.querySelectorAll('.game-meta-card__name').length).toBe(2);
   });
+
+  it('reads the seat colour to screen readers only, beside a disc', () => {
+    // The disc is aria-hidden; the visible name ("Guest") no longer says the
+    // colour, so the colour word rides in a visually hidden span after it.
+    const card = createGameMetaCard({
+      headline: [],
+      variantName: 'Jieqi',
+      players: [{ color: 'red', name: 'Guest', colorLabel: 'Red' }],
+    });
+    expect(card.el.querySelector('.game-meta-card__name')?.textContent).toBe('Guest');
+    expect(card.el.querySelector('.game-meta-card__disc')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+    expect(card.el.querySelector('.game-meta-card__seat-color')?.textContent).toBe(' (Red)');
+    const noDisc = createGameMetaCard({
+      headline: [],
+      variantName: 'Mahjong',
+      players: [{ color: 'east', noDisc: true, name: 'Guest (East)', colorLabel: 'East' }],
+    });
+    expect(noDisc.el.querySelector('.game-meta-card__seat-color')).toBeNull();
+  });
+
+  it('keeps the screen-reader colour out of the layout', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/review/game-meta-card.css', 'utf8');
+    const rule = css.match(/\.game-meta-card__seat-color \{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toContain('position: absolute');
+    expect(rule).toContain('clip-path: inset(50%)');
+  });
 });

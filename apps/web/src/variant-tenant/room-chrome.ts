@@ -758,6 +758,23 @@ export function createTenantRoomChrome<C extends string>(
           ctx.seatProfiles()[color]?.handle
             ? serverName
             : cardMistyName(serverName, variantDisplayLabel(ctx.gameSpecId));
+        const noDisc = !variantSeatsHaveInk(ctx.gameSpecId);
+        // Beside a disc the colour is already drawn, so an anonymous seat reads
+        // "You" or "Guest", not "Guest (Red)" (2026-11-24); the colour word goes
+        // to screen readers through colorLabel, since the disc is aria-hidden.
+        // With no disc the colour stays in the visible name.
+        const anonymousName =
+          color === seat
+            ? noDisc
+              ? t('live.youAre', { color: seatName(color) })
+              : t('live.you')
+            : ctx.seats()[color]
+              ? noDisc
+                ? t('live.guestAre', { color: seatName(color) })
+                : t('watch.guest')
+              : seatName(color);
+        const name =
+          cardName ?? (tenant.seatPlayerName ? tenant.seatPlayerName(color) : anonymousName);
         return {
           score: scores[index] ?? null,
           // The disc wants the INK, not the seat. When a server display name exists it
@@ -765,19 +782,16 @@ export function createTenantRoomChrome<C extends string>(
           // left on the row — a raw seat here is silently wrong for half of all flip
           // games rather than merely inconsistent.
           color: tenant.seatInk ? tenant.seatInk(color) : color,
-          noDisc: !variantSeatsHaveInk(ctx.gameSpecId),
+          noDisc,
+          // A tenant that names its own seats (Xiangqi Mahjong) has no colour word,
+          // and an empty seat's name already is the colour.
+          ...(tenant.seatPlayerName || name === seatName(color)
+            ? {}
+            : { colorLabel: seatName(color) }),
           // Same rule as the clock rows: only a server-supplied name links.
           profile: serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
           ...(cardName !== serverName && serverName ? { fullName: serverName } : {}),
-          name:
-            cardName ??
-            (tenant.seatPlayerName
-              ? tenant.seatPlayerName(color)
-              : color === seat
-                ? t('live.youAre', { color: seatName(color) })
-                : ctx.seats()[color]
-                  ? t('live.guestAre', { color: seatName(color) })
-                  : seatName(color)),
+          name,
         };
       }),
       status: statusLine,

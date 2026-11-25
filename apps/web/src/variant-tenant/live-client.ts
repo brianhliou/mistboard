@@ -1092,7 +1092,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     }
     // Zero moves renders an empty list (lichess parity): no placeholder row.
     if (plyCount === 0) return;
-    const activePly = replay.activePly();
+    // The highlight marks the ply the board shows. On live (and at the end of
+    // a finished game) that is the latest ply: activePly() is null there, so
+    // reading it alone left the last move unmarked while every earlier ply
+    // was marked when scrubbed to.
+    const activePly = replay.activePly() ?? replay.latestPly();
     for (const row of visibleMoveRows(moves, plyCount)) {
       const item = document.createElement('li');
       item.className = moveList.rowClass;

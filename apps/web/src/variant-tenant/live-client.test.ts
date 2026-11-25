@@ -596,6 +596,37 @@ describe('tenant live-client core', () => {
     expect(h.refs().moveList.querySelector('.active')?.textContent).toBe('a1-a2');
   });
 
+  // 2026-11-24: a finished jieqi room marked every scrubbed ply but not the
+  // last one, because on live activePly() is null and the cell compared it.
+  it('marks the latest ply when the board is on it, live or stepped back to', () => {
+    const h = createHarness();
+    h.feedHello({ events: [], state: view({}) });
+    h.feedEvent({
+      event: moveEvent('red', 'a1', 'a2', 1),
+      state: view({ squares: { a2: 'red' } }),
+    });
+    h.feedEvent({
+      event: moveEvent('blue', 'b1', 'b2', 2),
+      state: view({ squares: { a2: 'red', b2: 'blue' } }),
+    });
+    const active = () =>
+      [...h.refs().moveList.querySelectorAll('.active')].map((cell) => cell.textContent);
+    expect(h.client.replay.isLive()).toBe(true);
+    expect(active()).toEqual(['b1-b2']);
+    h.refs().moveList.querySelector<HTMLButtonElement>('button.move-jump')?.click();
+    expect(active()).toEqual(['a1-a2']);
+    const cells = h.refs().moveList.querySelectorAll<HTMLButtonElement>('button.move-jump');
+    cells[cells.length - 1]?.click();
+    expect(h.client.replay.isLive()).toBe(true);
+    expect(active()).toEqual(['b1-b2']);
+  });
+
+  it('marks nothing before the first move', () => {
+    const h = createHarness();
+    h.feedHello({ events: [], state: view({}) });
+    expect(h.refs().moveList.querySelector('.active')).toBeNull();
+  });
+
   it('leaves an unplayed cell inert rather than offering a jump to it', () => {
     const h = createHarness();
     // One ply played: blue's half of the row is an empty, unclickable cell.

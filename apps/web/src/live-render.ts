@@ -401,11 +401,11 @@ function renderGameInfo(view: PlayerView | null): void {
     subline,
     players: seats.map((color, index) => {
       const colorName = color === 'white' ? t('setup.white') : t('setup.black');
-      return {
-        color,
-        name: liveState.seat === color ? t('live.youAre', { color: colorName }) : colorName,
-        score: scores[index] ?? null,
-      };
+      // The disc beside the name shows the colour, so the viewer's own seat
+      // reads "You", with the colour word kept for screen readers.
+      return liveState.seat === color
+        ? { color, name: t('live.you'), colorLabel: colorName, score: scores[index] ?? null }
+        : { color, name: colorName, score: scores[index] ?? null };
     }),
     status: statusLine,
   });
