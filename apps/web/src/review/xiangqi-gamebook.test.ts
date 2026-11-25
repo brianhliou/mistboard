@@ -267,6 +267,10 @@ test('solved, a tap on the board tucks the text and a tap on the text opens it',
   mountXiangqiGamebook(host, { tree, orientation: 'red', onNext: () => {} });
   const coach = host.querySelector<HTMLElement>('.gamebook__coach')!;
   const frame = host.querySelector<HTMLElement>('.gamebook__board-frame')!;
+  // A short phone: the solved sheet starts above the board's bottom edge.
+  let coachTop = 400;
+  frame.getBoundingClientRect = () => ({ bottom: 495 }) as DOMRect;
+  coach.getBoundingClientRect = () => ({ top: coachTop }) as DOMRect;
   // Before the line is solved a tap on the board is only a move.
   frame.click();
   expect(coach.dataset.tucked).toBeUndefined();
@@ -281,6 +285,11 @@ test('solved, a tap on the board tucks the text and a tap on the text opens it',
   nextButton(host)?.click();
   expect(coach.dataset.tucked).toBe('true');
   host.querySelector<HTMLElement>('.gamebook__bubble')!.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+  expect(coach.dataset.over).toBe('');
+  // A tall phone: the text sits under the board, so there is nothing to tuck.
+  coachTop = 520;
+  frame.click();
   expect(coach.dataset.tucked).toBeUndefined();
 });
 

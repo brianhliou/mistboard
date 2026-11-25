@@ -76,7 +76,7 @@ describe('lesson player phone stack', () => {
   });
 
   it('shows a handle on the solved sheet, out of the grid flow', () => {
-    const handle = rule(`${scope} .gamebook__coach[data-state="end"]::before`);
+    const handle = rule(`${scope} .gamebook__coach[data-state="end"][data-over]::before`);
     expect(handle).toContain('position: absolute;');
     expect(handle).toContain('width: 40px;');
   });

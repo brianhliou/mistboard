@@ -213,8 +213,14 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     },
     true,
   );
+  // Only a sheet that covers part of the board can be tucked: on a tall screen
+  // the text fits under the board, and cutting it short would hide it for nothing.
+  const coversBoard = (): boolean =>
+    coach.getBoundingClientRect().top < boardFrame.getBoundingClientRect().bottom - 8;
   boardFrame.addEventListener('click', () => {
-    if (solvedBeforeTap && coach.dataset.state === 'end') coach.dataset.tucked = 'true';
+    if (solvedBeforeTap && coach.dataset.state === 'end' && coversBoard()) {
+      coach.dataset.tucked = 'true';
+    }
   });
   coach.addEventListener('click', (event) => {
     if (event.target instanceof Element && event.target.closest('button, a')) return;
@@ -430,6 +436,9 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     hintBtn.disabled = busy();
     coach.dataset.state = view.feedback;
     if (view.feedback !== 'end' || lastFeedback !== 'end') delete coach.dataset.tucked;
+    // The handle (gamebook.css) shows only on a sheet that can be tucked.
+    if (view.feedback !== 'end') delete coach.dataset.over;
+    else if (!coach.dataset.tucked) coach.toggleAttribute('data-over', coversBoard());
     hintText.textContent = '';
     // The puzzle page's solve sound, once, when the line's last move lands.
     const justSolved = !playing && view.feedback === 'end' && lastFeedback !== 'end';

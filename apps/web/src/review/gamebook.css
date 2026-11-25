@@ -657,7 +657,7 @@
     box-shadow: 0 -6px 18px rgb(0 0 0 / 0.18);
   }
   /* The handle the study's other phone sheets carry: the cue that this one moves. */
-  .gamebook:not(.practice) .gamebook__coach[data-state="end"]::before {
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"][data-over]::before {
     content: "";
     position: absolute;
     top: 4px;
