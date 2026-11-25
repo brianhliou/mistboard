@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- At the end of a game, Review game now sits right under Rematch with a green outline ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - Verified titles and flair now show beside player names in game rooms, review, /games, /watch, the correspondence inbox and the homepage game board ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - In games against a bot you now have five minutes to make your first move before the game is cancelled, up from 30 seconds ([8ba06e9c](https://github.com/brianhliou/mistboard/commit/8ba06e9c))
 - Correspondence games show the move deadline before you accept them ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
@@ -123,6 +124,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Broadcast board pages now use the game review layout on phone and desktop, with a larger board and the moves, chart and chat where review has them ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - Live games on Watch glide each new move ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - Duck Xiangqi replays glide moves when stepping ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - DPXQ games get English names for team sides, repeated sections and new event terms ([2a35f690](https://github.com/brianhliou/mistboard/commit/2a35f690))
@@ -235,6 +237,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- On a broadcast board page the game list and chat now start and end level with the board, as on the game review page ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
+- A profile no longer tells other visitors that the account is an admin ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
+- A bot game aborted before its first move now offers New game ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - An article's What changed line is kept out of search result snippets ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The phone top bar's pieces button shows your own piece set from the first paint, and Chinese pages bake the Chinese default ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The 2026 North American Championship broadcast spells Fan Chi and Lien The Quoc correctly ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
