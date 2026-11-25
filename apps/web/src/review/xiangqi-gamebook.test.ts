@@ -12,20 +12,27 @@ import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
+  parseStandardXiangqiFen,
   standardXiangqiEngineFen,
   type XiangqiMove,
 } from '@mistboard/game';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { pieceAnimationDurationMs } from '../board-anim.js';
 import { LOCALE_STORAGE_KEY, setStoredLocale } from '../i18n/locale.js';
+import { playSound } from '../live-sound.js';
 import * as board from '../xiangqi-board.js';
 import { createGameTree } from './game-tree.js';
 import { serializeTree } from './tree-serialize.js';
 import { mountXiangqiGamebook } from './xiangqi-gamebook.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
+// The tones are not observable under a test DOM, so the calls are what is pinned.
+vi.mock('../live-sound.js', () => ({ initLiveSound: vi.fn(), playSound: vi.fn() }));
+const sounds = (): string[] => vi.mocked(playSound).mock.calls.map(([kind]) => kind);
+
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.mocked(playSound).mockClear();
   const store = new Map<string, string>();
   Object.defineProperty(window, 'localStorage', {
     configurable: true,
@@ -98,7 +105,6 @@ const LOCALES = [
     wrong: 'Not that one. Try another move.',
     correct: 'Correct! Keep going.',
     complete: 'Lesson complete! 🎉',
-    restart: 'Restart lesson',
   },
   {
     locale: 'zh-Hans',
@@ -111,7 +117,6 @@ const LOCALES = [
     wrong: '不是这一着，试试其他着法。',
     correct: '正确！继续。',
     complete: '课程完成！🎉',
-    restart: '重新开始课程',
   },
   {
     locale: 'zh-Hant',
@@ -124,20 +129,18 @@ const LOCALES = [
     wrong: '不是這一著，試試其他著法。',
     correct: '正確！繼續。',
     complete: '課程完成！🎉',
-    restart: '重新開始課程',
   },
 ] as const;
 
 for (const copy of LOCALES) {
-  test(`${copy.locale}: hint, wrong move, correct move, completion and restart`, () => {
+  test(`${copy.locale}: hint, wrong move, correct move, completion`, () => {
     setStoredLocale(copy.locale);
     const { host, m1, m3, wrongFirst } = mount();
     expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.red);
     expect(host.querySelector('.gamebook__prompt-task')?.textContent).toBe(copy.task);
     expect(host.querySelector('.gamebook__board')?.getAttribute('aria-label')).toBe(copy.board);
-    const [hint, restart] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
+    const [hint] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
     expect(hint?.textContent).toBe(copy.hint);
-    expect(restart?.textContent).toBe(copy.restart);
     hint?.click();
     expect(host.querySelector('.gamebook__hint')?.textContent).toBe(copy.fallback);
     expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
@@ -149,14 +152,7 @@ for (const copy of LOCALES) {
     play(host, m3);
     expect(feedback(host)).toBe(copy.complete);
     expect(hint?.hidden).toBe(true);
-    expect(restart?.hidden).toBe(false);
-    restart?.click();
-    expect(state(host)).toBe('play');
-    expect(feedback(host)).toBe('');
-    expect(hint?.hidden).toBe(false);
-    expect(restart?.hidden).toBe(true);
-    play(host, m1);
-    expect(feedback(host)).toBe(copy.correct);
+    expect(host.querySelectorAll('.gamebook__controls button').length).toBe(1);
   });
 
   test(`${copy.locale}: black prompt and authored lesson text and names survive`, () => {
@@ -227,6 +223,99 @@ test('reaching the tip completes the lesson', () => {
   expect(feedback(host)).toBe('Lesson complete! 🎉');
 });
 
+const nextButton = (host: HTMLElement): HTMLButtonElement | null =>
+  host.querySelector<HTMLButtonElement>('.gamebook__next');
+
+test('a solved line with a chapter after it leads to Next puzzle, and says Solved', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  const onNext = vi.fn();
+  mountXiangqiGamebook(host, {
+    tree,
+    orientation: 'red',
+    progress: { index: 1, total: 10 },
+    onNext,
+  });
+  expect(host.querySelector('.gamebook__progress')?.textContent).toBe('#1of 10');
+  // Offered only once the line is solved.
+  expect(nextButton(host)?.hidden).toBe(true);
+  play(host, m1);
+  expect(nextButton(host)?.hidden).toBe(true);
+  play(host, m3);
+  expect(state(host)).toBe('end');
+  const next = nextButton(host);
+  expect(next?.hidden).toBe(false);
+  expect(next?.textContent).toBe('Next puzzle');
+  // Next is the only control once solved; there is no Restart.
+  const shown = [...host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button')].filter(
+    (b) => !b.hidden,
+  );
+  expect(shown.map((b) => b.textContent)).toEqual(['Next puzzle']);
+  // The header stops asking for a move, and no "Lesson complete" dead end.
+  const side = host.querySelector<HTMLElement>('.gamebook__prompt-side');
+  expect(side?.textContent).toBe('Solved. 🎉');
+  expect(side?.classList.contains('gamebook__prompt-side--solved')).toBe(true);
+  expect(host.querySelector<HTMLElement>('.gamebook__prompt-task')?.hidden).toBe(true);
+  expect(feedback(host)).toBe('');
+  next?.click();
+  expect(onNext).toHaveBeenCalledTimes(1);
+});
+
+test('solved, a tap on the board tucks the text and a tap on the text opens it', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree, orientation: 'red', onNext: () => {} });
+  const coach = host.querySelector<HTMLElement>('.gamebook__coach')!;
+  const frame = host.querySelector<HTMLElement>('.gamebook__board-frame')!;
+  // A short phone: the solved sheet starts above the board's bottom edge.
+  let coachTop = 400;
+  frame.getBoundingClientRect = () => ({ bottom: 495 }) as DOMRect;
+  coach.getBoundingClientRect = () => ({ top: coachTop }) as DOMRect;
+  // Before the line is solved a tap on the board is only a move.
+  frame.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+  play(host, m1);
+  play(host, m3);
+  // The tap that solved it opens the text; it does not tuck it.
+  expect(state(host)).toBe('end');
+  expect(coach.dataset.tucked).toBeUndefined();
+  frame.click();
+  expect(coach.dataset.tucked).toBe('true');
+  // Next puzzle is a button on the strip and leaves it tucked.
+  nextButton(host)?.click();
+  expect(coach.dataset.tucked).toBe('true');
+  host.querySelector<HTMLElement>('.gamebook__bubble')!.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+  expect(coach.dataset.over).toBe('');
+  // A tall phone: the text sits under the board, so there is nothing to tuck.
+  coachTop = 520;
+  frame.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+});
+
+test('the last chapter offers no Next and keeps the closing line', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree, orientation: 'red', progress: { index: 10, total: 10 } });
+  play(host, m1);
+  play(host, m3);
+  expect(state(host)).toBe('end');
+  expect(nextButton(host)).toBeNull();
+  expect(feedback(host)).toBe('Lesson complete! 🎉');
+  expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe('Solved. 🎉');
+});
+
+test('the generic task line gives way to the author comment', () => {
+  const plain = mount().host;
+  expect(plain.querySelector<HTMLElement>('.gamebook__prompt-task')?.hidden).toBe(false);
+  const { tree } = fixture();
+  tree.root.annotations = { comments: [{ text: 'Checkmate in one move.' }] };
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree, orientation: 'red' });
+  expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Checkmate in one move.');
+  expect(host.querySelector<HTMLElement>('.gamebook__prompt-task')?.hidden).toBe(true);
+});
+
 test('the hint rings the piece the lesson moves', () => {
   const { host } = mount();
   const hint = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hint');
@@ -243,7 +332,6 @@ const LOCALE_COPY = [
     black: 'Black to play',
     task: 'Find the best move.',
     hint: 'Hint',
-    restart: 'Restart lesson',
     hintPiece: 'Look at the circled piece.',
     wrong: 'Not that one. Try another move.',
     correct: 'Correct! Keep going.',
@@ -256,7 +344,6 @@ const LOCALE_COPY = [
     black: '黑方走棋',
     task: '找出最佳着法。',
     hint: '提示',
-    restart: '重新开始课程',
     hintPiece: '看看圈出的棋子。',
     wrong: '不是这一着，试试其他着法。',
     correct: '正确！继续。',
@@ -269,7 +356,6 @@ const LOCALE_COPY = [
     black: '黑方走棋',
     task: '找出最佳著法。',
     hint: '提示',
-    restart: '重新開始課程',
     hintPiece: '看看圈出的棋子。',
     wrong: '不是這一著，試試其他著法。',
     correct: '正確！繼續。',
@@ -285,11 +371,9 @@ test.each(LOCALE_COPY)(
     expect(host.querySelector('.gamebook__board')?.getAttribute('aria-label')).toBe(copy.board);
     expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.red);
     expect(host.querySelector('.gamebook__prompt-task')?.textContent).toBe(copy.task);
-    const [hint, restart] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
+    const [hint] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
     expect(hint?.textContent).toBe(copy.hint);
-    expect(restart?.textContent).toBe(copy.restart);
     expect(hint?.hidden).toBe(false);
-    expect(restart?.hidden).toBe(true);
 
     hint!.click();
     expect(host.querySelector('.gamebook__hint')?.textContent).toBe(copy.hintPiece);
@@ -304,15 +388,6 @@ test.each(LOCALE_COPY)(
     expect(state(host)).toBe('end');
     expect(feedback(host)).toBe(copy.complete);
     expect(hint?.hidden).toBe(true);
-    expect(restart?.hidden).toBe(false);
-
-    restart!.click();
-    expect(state(host)).toBe('play');
-    expect(feedback(host)).toBe('');
-    expect(hint?.hidden).toBe(false);
-    expect(restart?.hidden).toBe(true);
-    play(host, m1);
-    expect(feedback(host)).toBe(copy.correct);
   },
 );
 
@@ -373,7 +448,7 @@ function opponentFixture() {
   return { blob, tree, moves };
 }
 
-test('first paint and Restart show the pre-move position before sliding the opponent move', () => {
+test('first paint shows the pre-move position before sliding the opponent move', () => {
   const { blob, tree, moves } = opponentFixture();
   const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
   const paint = vi.spyOn(board, 'createXiangqiInteractiveBoard');
@@ -406,10 +481,6 @@ test('first paint and Restart show the pre-move position before sliding the oppo
   expect(animate).toHaveBeenLastCalledWith(expect.any(HTMLElement), moves[2], 'red');
   play(host, moves[3]!);
   expect(state(host)).toBe('end');
-  host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button')[1]!.click();
-  expect(host.querySelector(`[data-piece-square="${first.from}"]`)).not.toBeNull();
-  vi.advanceTimersByTime(500);
-  expect(render.mock.calls.at(-1)?.[0]?.lastMove).toMatchObject(first);
   expect(tree.root.truth.moveNumber).toBe(20);
 });
 
@@ -457,4 +528,80 @@ test('a chapter change cancels the pending auto-move paint and sound', () => {
   vi.runAllTimers();
   expect(animate).not.toHaveBeenCalled();
   expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('false');
+});
+
+/** Red to play and mate in one: the chariot from a1 to e1 checks down the open
+ *  file, and the black chariots beside the general block its only side steps.
+ *  The advisor on f3 shields the red general from the chariot on f10. */
+function mateFixture() {
+  const parsed = parseStandardXiangqiFen('3rkr3/9/9/9/9/9/9/5A3/9/R4K3 w - - 0 1');
+  if (!parsed.ok) throw new Error('bad fixture FEN');
+  const root = parsed.state;
+  const legal = getStandardXiangqiLegalMoves(root);
+  const mate = legal.find((m) => m.from === 'a1' && m.to === 'e1')!;
+  const quiet = legal.find((m) => m.from === 'a1' && m.to === 'a2')!;
+  const tree = createGameTree(xiangqiTreeAdapter, [mate], root);
+  const blob = serializeTree(tree, xiangqiTreeAdapter, { rootFen: standardXiangqiEngineFen(root) });
+  return { blob, mate, quiet, after: applyStandardXiangqiMove(root, mate) };
+}
+
+const slash = (host: HTMLElement) => host.querySelector<HTMLElement>('.finish-badge--mated');
+
+test('the mating move slashes the mated general and sounds the solve, once', () => {
+  const { blob, mate, after } = mateFixture();
+  // The kernel decides it, not the notation: the fixture really is mate.
+  expect(after.status).toMatchObject({ type: 'finished', reason: 'checkmate', winner: 'red' });
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red', onNext: () => {} });
+  expect(slash(host)).toBeNull();
+  play(host, mate);
+  expect(state(host)).toBe('end');
+  expect(slash(host)?.dataset.finishSquare).toBe('e10');
+  // The puzzle page's check on the move just played.
+  expect(host.querySelector('.xq-marker--good')).not.toBeNull();
+  // The solve sound replaces the move sound; no second end chime under it.
+  expect(sounds()).toEqual(['puzzle-solved']);
+  // The panel says so: the solved band and the Next button.
+  expect(host.querySelector('.gamebook__prompt-side--solved')).not.toBeNull();
+  expect(host.querySelector<HTMLButtonElement>('.gamebook__next')?.hidden).toBe(false);
+});
+
+test('a line that ends without mate draws no slash, and the solve sounds once', () => {
+  const { host, m1, m3 } = mount();
+  play(host, m1);
+  // The learner's own move sound, then the reply's, as on the puzzle page.
+  expect(sounds().length).toBeGreaterThanOrEqual(1);
+  expect(sounds()).not.toContain('puzzle-solved');
+  vi.mocked(playSound).mockClear();
+  play(host, m3);
+  expect(state(host)).toBe('end');
+  expect(sounds()).toEqual(['puzzle-solved']);
+  expect(host.querySelector('.finish-badge')).toBeNull();
+});
+
+test('a wrong try stays under a cross, then glides back before the retry', () => {
+  const { blob, mate, quiet } = mateFixture();
+  const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red' });
+  play(host, quiet, false);
+  expect(sounds()).toEqual(['learn-failure']);
+  expect(state(host)).toBe('bad');
+  const cross = () => host.querySelector('.xq-marker--blunder');
+  expect(cross()).not.toBeNull();
+  expect(host.querySelector('[data-piece-square="a2"]')).not.toBeNull();
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('true');
+  // Held: the board takes no move yet.
+  play(host, mate, false);
+  expect(state(host)).toBe('bad');
+  vi.advanceTimersByTime(700);
+  expect(cross()).toBeNull();
+  expect(host.querySelector('[data-piece-square="a1"]')).not.toBeNull();
+  expect(animate).toHaveBeenLastCalledWith(expect.any(HTMLElement), quiet, 'red', {
+    reverse: true,
+  });
+  expect(slash(host)).toBeNull();
+  play(host, mate);
+  expect(state(host)).toBe('end');
+  expect(slash(host)).not.toBeNull();
 });

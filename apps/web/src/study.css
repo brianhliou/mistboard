@@ -896,7 +896,7 @@
 }
 .study-gamebook-rail .practice__rail-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   line-height: 1.3;
   color: var(--site-text);
 }
@@ -904,6 +904,7 @@
   display: flex;
   align-items: center;
   padding: 0.45rem 14px;
+  font-size: 0.8rem;
 }
 .study-gamebook-rail__actions {
   display: flex;
@@ -915,10 +916,22 @@
 .study-gamebook-rail .study-actions__like,
 .study-gamebook-rail .study-actions__clone {
   padding: 0.1rem 0.45rem;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.4;
+}
+/* On a phone the two buttons are tapped, so they get a full tap target. */
+@media (max-width: 60rem) {
+  .study-gamebook-rail .study-actions__like,
+  .study-gamebook-rail .study-actions__clone,
+  .study-info-sheet .study-actions__like,
+  .study-info-sheet .study-actions__clone {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 0.75rem;
+  }
 }
 .study-gamebook-rail .study-chapters__name {
   -webkit-line-clamp: 1;
@@ -926,9 +939,9 @@
 }
 .study-gamebook-rail .study-chapters__link {
   align-items: center;
-  padding-top: 0.3rem;
-  padding-bottom: 0.3rem;
-  font-size: 0.82rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  font-size: 0.95rem;
 }
 .study-gamebook-rail .study-chapters__row {
   min-height: 0;
