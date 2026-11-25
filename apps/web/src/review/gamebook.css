@@ -656,4 +656,31 @@
     align-content: start;
     box-shadow: 0 -6px 18px rgb(0 0 0 / 0.18);
   }
+  /* The handle the study's other phone sheets carry: the cue that this one moves. */
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"]::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 40px;
+    height: 5px;
+    margin-left: -20px;
+    border-radius: 3px;
+    background: var(--site-border);
+  }
+  /* Tucked by a tap on the board: back to the strip's height, text cut short,
+     so the whole final position shows. A tap on the strip opens it again. */
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"][data-tucked] {
+    max-height: calc(var(--gamebook-phone-height) - var(--gamebook-board-fit) * 1.1);
+    box-shadow: none;
+  }
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"][data-tucked] .gamebook__bubble {
+    overflow: hidden;
+  }
+  .gamebook:not(.practice) .gamebook__coach[data-state="end"][data-tucked] .gamebook__comment {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
 }

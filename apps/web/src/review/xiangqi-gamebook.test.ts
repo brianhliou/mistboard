@@ -261,6 +261,29 @@ test('a solved line with a chapter after it leads to Next puzzle, and says Solve
   expect(onNext).toHaveBeenCalledTimes(1);
 });
 
+test('solved, a tap on the board tucks the text and a tap on the text opens it', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree, orientation: 'red', onNext: () => {} });
+  const coach = host.querySelector<HTMLElement>('.gamebook__coach')!;
+  const frame = host.querySelector<HTMLElement>('.gamebook__board-frame')!;
+  // Before the line is solved a tap on the board is only a move.
+  frame.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+  play(host, m1);
+  play(host, m3);
+  // The tap that solved it opens the text; it does not tuck it.
+  expect(state(host)).toBe('end');
+  expect(coach.dataset.tucked).toBeUndefined();
+  frame.click();
+  expect(coach.dataset.tucked).toBe('true');
+  // Next puzzle is a button on the strip and leaves it tucked.
+  nextButton(host)?.click();
+  expect(coach.dataset.tucked).toBe('true');
+  host.querySelector<HTMLElement>('.gamebook__bubble')!.click();
+  expect(coach.dataset.tucked).toBeUndefined();
+});
+
 test('the last chapter offers no Next and keeps the closing line', () => {
   const { tree, m1, m3 } = fixture();
   const host = document.createElement('div');

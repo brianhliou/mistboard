@@ -199,6 +199,28 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   coach.append(bubble, controls);
   wrap.append(coach);
 
+  // On a phone the solved text is a sheet over the board's lower ranks
+  // (gamebook.css). A tap on the board tucks it back to the strip so the whole
+  // final position shows; a tap on the strip opens it again. Elsewhere the
+  // attribute styles nothing.
+  // Read on the way down: the move that solves the line is itself a tap on the
+  // board, and must not tuck the sheet it is about to open.
+  let solvedBeforeTap = false;
+  boardFrame.addEventListener(
+    'click',
+    () => {
+      solvedBeforeTap = coach.dataset.state === 'end';
+    },
+    true,
+  );
+  boardFrame.addEventListener('click', () => {
+    if (solvedBeforeTap && coach.dataset.state === 'end') coach.dataset.tucked = 'true';
+  });
+  coach.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('button, a')) return;
+    delete coach.dataset.tucked;
+  });
+
   const interactive = createXiangqiInteractiveBoard({
     board: boardEl,
     getInteractionView: () => currentView(),
@@ -407,6 +429,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     boardEl.setAttribute('aria-busy', String(busy()));
     hintBtn.disabled = busy();
     coach.dataset.state = view.feedback;
+    if (view.feedback !== 'end' || lastFeedback !== 'end') delete coach.dataset.tucked;
     hintText.textContent = '';
     // The puzzle page's solve sound, once, when the line's last move lands.
     const justSolved = !playing && view.feedback === 'end' && lastFeedback !== 'end';

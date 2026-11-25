@@ -66,6 +66,21 @@ describe('lesson player phone stack', () => {
     expect(sheet).toContain('min-height: calc(var(--gamebook-phone-height) -');
   });
 
+  it('tucks the solved sheet back to the strip height, text cut short', () => {
+    const tucked = rule(`${scope} .gamebook__coach[data-state="end"][data-tucked]`);
+    expect(tucked).toContain('max-height: calc(var(--gamebook-phone-height) -');
+    const bubble = rule(
+      `${scope} .gamebook__coach[data-state="end"][data-tucked] .gamebook__bubble`,
+    );
+    expect(bubble).toContain('overflow: hidden;');
+  });
+
+  it('shows a handle on the solved sheet, out of the grid flow', () => {
+    const handle = rule(`${scope} .gamebook__coach[data-state="end"]::before`);
+    expect(handle).toContain('position: absolute;');
+    expect(handle).toContain('width: 40px;');
+  });
+
   it('keeps the strip button a full tap target beside the prompt', () => {
     const button = rule(`${scope} .gamebook__coach .gamebook__btn.gamebook__next`);
     expect(button).toContain('min-height: 44px;');
