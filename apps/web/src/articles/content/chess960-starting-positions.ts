@@ -99,7 +99,7 @@ export const chess960StartingPositionsArticle: Article = {
   ],
   publishedAt: '2026-05-07',
   updatedAt: '2026-11-25',
-  updateNote: 'Added buttons at the end to play Fog Chess against Misty and read its rules.',
+  updateNote: 'Added a button at the end to read the Fog Chess rules.',
   thumbnail: {
     pieces: boardToPieces(SP_783),
     orientation: 'white',
@@ -499,14 +499,7 @@ export const chess960StartingPositionsArticle: Article = {
         ),
         {
           kind: 'cta',
-          buttons: [
-            {
-              label: 'Play Fog Chess against Misty',
-              href: '/?play=computer&gameSpecId=dark-chess',
-              emphasis: 'primary',
-            },
-            { label: 'Read Fog Chess Rules', href: '/rules/fog-chess', emphasis: 'secondary' },
-          ],
+          buttons: [{ label: 'Read Fog Chess Rules', href: '/rules/fog-chess', emphasis: 'secondary' }],
         },
       ],
     },
