@@ -224,7 +224,8 @@ test('all queries share a repeatable read-only transaction and reuse canonical f
     assert.ok(['dark-chess', 'dark-xiangqi'].includes(values[0]));
     assert.doesNotMatch(sql, /\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|COPY)\b/i);
     if (sql.includes('AS players')) assert.ok(sql.includes(countedPlayerSeat('p')));
-    if (sql.includes('JOIN users u')) assert.ok(sql.includes(countedAccountSeat('p')));
+    // The trailing ON keeps this off the `JOIN users uu` inside countedHumanGame.
+    if (sql.includes('JOIN users u ON')) assert.ok(sql.includes(countedAccountSeat('p')));
     if (sql.includes('bot_games AS')) {
       assert.ok(sql.includes(FOG_MISTY_BOT_SEAT));
       assert.ok(sql.includes(seatWonGame('h', 'g')));

@@ -140,6 +140,13 @@ async function seedMonth(): Promise<void> {
       `INSERT INTO users (id, email, handle, display_name, stats_excluded_at)
        VALUES ('data-operator', 'op@example.com', 'dataop', 'Operator', now())`,
     );
+    // The operator game's guest seat is the operator's own browser, so the
+    // game stays out. Against a guest browser with no tie to an excluded
+    // account it would count (persistence-counted-games-excluded.test.ts).
+    await client.query(
+      `INSERT INTO stats_excluded_devices (device_id, account_id)
+       VALUES ('device-b-xq_data_operator', 'data-operator') ON CONFLICT DO NOTHING`,
+    );
   } finally {
     await client.end();
   }
