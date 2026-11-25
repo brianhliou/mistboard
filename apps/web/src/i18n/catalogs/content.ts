@@ -330,15 +330,15 @@ export const EN_CONTENT = {
   'source.jqe':
     "jqe by Devin O'Keefe: a jieqi engine with its own neural network, MIT, played here as the jqe bot with the author's permission. The current AB-JChess release is built on its code.",
   'source.katagomo':
-    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
+    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
   'source.rapfi':
-    'Rapfi by dhbloo and contributors: the top Gomoku opponent and eight bot levels, GPL-3.0.',
+    'Rapfi by dhbloo and contributors: the Gomoku opponent and eight bot levels, GPL-3.0.',
   'source.rapfiNetworks': 'Rapfi neural networks by the Rapfi project, CC0 1.0.',
   'source.rapfiBuild':
     'rapfi-wasm by Brian H. Liou: the reproducible Rapfi browser build behind the Gomoku review analysis, GPL-3.0.',
   'source.dandelion':
-    "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
+    "Dandelion 4 by Kouza (lxsgx23): the source of the jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.chessdb':
     'chessdb.cn, the Chinese Chess Cloud Database: exact endgame results in the xiangqi analysis board and practice.',
   'source.pieceSetLacquer':
