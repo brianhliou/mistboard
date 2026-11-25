@@ -1237,6 +1237,22 @@ describe('account page auth flow', () => {
     ).toBe(true);
   });
 
+  it('drops the next username change date once that date has passed', async () => {
+    const { handleHelpText } = await import('./account.js');
+    const changedAt = '2026-03-01T12:00:00Z';
+    const changedMs = Date.parse(changedAt);
+    const day = 24 * 60 * 60 * 1000;
+
+    const waiting = handleHelpText({ handleChangedAt: changedAt }, 'en', changedMs + 10 * day);
+    expect(waiting).toMatch(/^Used in your profile URL\. Next username change: .+\.$/);
+
+    for (const nowMs of [changedMs + 30 * day, changedMs + 31 * day, changedMs + 400 * day]) {
+      const open = handleHelpText({ handleChangedAt: changedAt }, 'en', nowMs);
+      expect(open).toBe('Used in your profile URL. Later username changes are limited.');
+      expect(open).not.toMatch(/Next username change/);
+    }
+  });
+
   it('changes the sign-in email only after confirming its code', async () => {
     window.history.replaceState(null, '', '/account/settings/account');
     const user = testUser('misty');
