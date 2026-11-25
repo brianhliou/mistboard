@@ -174,6 +174,38 @@ const STARTUP_RESERVE_MS = 1_000;
 // linux/amd64 smoke runs); 300 ms is ~50 visits on the reference box.
 const MIN_STAGE_MS = 300;
 
+// What that start really costs on prod, which the 1 s above predates. Measured
+// 2026-11-25: on this Mac a bare start (spawn, net load, quit) takes 437-518 ms
+// and a move at the two 300 ms minimum stages 1,056-1,108 ms (12 runs each); on
+// prod the 1+1 game jgl_29484585 spent 2,230 ms on a move whose stages were both
+// at that minimum, so the start there is ~1.63 s, about 3.3x this Mac. The clock
+// planner uses this figure; the stage split below keeps the old 1 s so a move
+// at the tier ceiling (10+5, untimed) is the same move it always was.
+export const KATAGO_JUNGLE_STARTUP_MS = 1_650;
+/** The cheapest move KataGo can make on prod: the start plus both minimum stages. */
+export const KATAGO_JUNGLE_MIN_MOVE_MS = KATAGO_JUNGLE_STARTUP_MS + MIN_STAGE_MS * 2;
+
+/**
+ * The movetime to hand KataGo for a move the clock allows `budgetMs` of wall
+ * time. At the ceiling the ceiling is the latency bound it was sized for (the
+ * visits finish first), so it passes through unchanged. Below it the clock is
+ * the bound, and the part of the start the stage split does not reserve comes
+ * off first, so the move's wall time lands on its budget instead of ~0.65 s past it.
+ */
+export function katagoMovetimeCapForBudget(budgetMs: number, ceilingMs: number): number {
+  if (budgetMs >= ceilingMs) return ceilingMs;
+  return Math.max(
+    STARTUP_RESERVE_MS + MIN_STAGE_MS * 2,
+    Math.round(budgetMs - (KATAGO_JUNGLE_STARTUP_MS - STARTUP_RESERVE_MS)),
+  );
+}
+
+/** Prod wall time of a move handed `movetimeCapMs`, if both stages run their full
+ *  maxTime (the visits can end a stage sooner; this is the bound). */
+export function katagoPredictedWallMs(movetimeCapMs: number): number {
+  return KATAGO_JUNGLE_STARTUP_MS + Math.round(katagoStageSeconds(movetimeCapMs) * 1000) * 2;
+}
+
 /** The hard deadline on one move's process: its budget, both minimum stages, and
  *  8 s of slack for startup and net load. */
 export function katagoMoveDeadlineMs(movetimeCapMs: number): number {

@@ -55,7 +55,15 @@ import {
   katagoJungleAvailable,
   katagoJungleLiveEngineMove,
   katagoJungleTierFor,
+  katagoMovetimeCapForBudget,
 } from './jungle-katago-engine.js';
+import {
+  type KatagoJungleMoveMode,
+  katagoJungleMoveMode,
+  MISTY_LIGHT_MIN_MOVETIME_MS,
+  mistyLightMovetimeMs,
+  mistyTsLightDepth,
+} from './jungle-katago-time.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -294,6 +302,15 @@ export async function playJungleEngineMoveIfReady(
       await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
       return;
     }
+    // A budget KataGo cannot meet goes to MistyJungle for exactly that budget
+    // (jungle-katago-time.ts): the Rust binary where it runs, else the
+    // in-process search, so a short clock costs strength, never the game.
+    const lightRust =
+      jungleRustEngineEnabled() && jungleEngineBinaryAvailable()
+        ? jungleRustTierFor(JUNGLE_PLAYABLE_ENGINE_ID)
+        : null;
+    const repSeedFens = lightRust ? jungleRepSeedFensForRoom(room) : [];
+    let mode: KatagoJungleMoveMode = 'katago';
     await playJungleSearchedEngineMove(
       ctx,
       room,
@@ -306,10 +323,40 @@ export async function playJungleEngineMoveIfReady(
       {
         engineVersion: KATAGO_JUNGLE_ENGINE_VERSION,
         ceilingMs: katagoTier.movetimeCapMs,
+        // The cheapest mode's floor, so the bank share is not inflated by KataGo's.
+        floorMs: MISTY_LIGHT_MIN_MOVETIME_MS,
         // The decision artifact's tier_nodes column carries KataGo's VISIT budget.
         tier: { nodes: katagoTier.visits, movetimeMs: katagoTier.movetimeCapMs },
-        search: (fen, movetimeCapMs) =>
-          katagoProvider(fen, seat, { visits: katagoTier.visits, movetimeCapMs }),
+        mode: () => mode,
+        search: async (fen, budgetMs) => {
+          mode = katagoJungleMoveMode(budgetMs, lightRust ? 'misty' : 'misty-ts');
+          if (mode === 'katago') {
+            return katagoProvider(fen, seat, {
+              visits: katagoTier.visits,
+              movetimeCapMs: katagoMovetimeCapForBudget(budgetMs, katagoTier.movetimeCapMs),
+            });
+          }
+          if (lightRust) {
+            return moveProvider(JUNGLE_PLAYABLE_ENGINE_ID, fen, {
+              nodes: lightRust.nodes,
+              movetimeCapMs: mistyLightMovetimeMs(budgetMs),
+              repSeedFens,
+            });
+          }
+          const searchStarted = Date.now();
+          const depth = mistyTsLightDepth(budgetMs);
+          const chosen = chooseJungleEngineMove(room.projection.state, {
+            ...jungleEngineTierFor(JUNGLE_PLAYABLE_ENGINE_ID)!,
+            depth,
+          });
+          return {
+            best: chosen ? jungleMoveToEngineUci(chosen) : null,
+            cp: null,
+            mate: null,
+            depth,
+            timeMs: Date.now() - searchStarted,
+          };
+        },
       },
     );
     return;
@@ -469,8 +516,12 @@ type JungleSearchedEngine = {
   engineVersion: string;
   /** The tier's latency ceiling; the clock can only lower it. */
   ceilingMs: number;
+  /** The allocator's floor; MIN_MOVETIME_MS unless the engine has a cheaper mode. */
+  floorMs?: number;
   /** The tier as the decision artifact records it (KataGo's visits ride `nodes`). */
   tier: { nodes: number; movetimeMs: number };
+  /** Which of the engine's modes made the last move, for the decision artifact. */
+  mode?: () => string;
   search(fen: string, movetimeCapMs: number): Promise<UciEval>;
 };
 
@@ -512,7 +563,7 @@ async function playJungleSearchedEngineMove(
     engineId,
     ceilingMs: engine.ceilingMs,
     flatReserveMs: CLOCK_SAFETY_MS,
-    floorMs: MIN_MOVETIME_MS,
+    floorMs: engine.floorMs ?? MIN_MOVETIME_MS,
   };
   let { movetimeMs: movetimeCapMs } = liveBotMoveTime(budgetInput);
   if (movetimeCapMs <= 0 || !turn.current()) return;
@@ -629,6 +680,7 @@ async function playJungleSearchedEngineMove(
       fen,
       legalCount: getJungleLegalMoves(state).length,
     }),
+    ...(engine.mode ? { mode: engine.mode() } : {}),
     ...replyPacePayload(pace),
   });
   const seq = await ctx.appendEvent(room, event);
