@@ -733,7 +733,9 @@ function buildOpponentCard(
           ? engineOnlyBio(gameSpecId, selected.level)
           : bot.id === 'misty'
             ? t('bots.mistyGameBio', { variant: variantDisplayLabel(gameSpecId) })
-            : (systemBotBio(bot) ?? null),
+            : // The stored bio when no catalog line covers this bot (the Rapfi
+              // levels), as on its profile page; an empty card read as broken.
+              (systemBotBio(bot) ?? (bot.bio.trim() || null)),
     });
     card.dataset.opponentId = opponent.key;
     layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);

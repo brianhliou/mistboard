@@ -315,6 +315,52 @@ describe('bot pages', () => {
   );
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'gives the Rapfi card its level bio in %s, and keeps localized ladder bios localized',
+    async (locale) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      await ensureLocaleCatalog(locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
+      const { t } = await import('./i18n/catalog.js');
+      const { mountBots } = await import('./bots.js');
+      // Shaped like prod's /api/bots: only the eight level profiles, each with its
+      // stored bio, and no bare `rapfi` profile.
+      const rapfi = Array.from({ length: 8 }, (_, i) => {
+        const level = i + 1;
+        const id = `rapfi-level-${level}`;
+        return misty({
+          id,
+          displayName: `Rapfi Level ${level}`,
+          bio: `Rapfi plays freestyle Gomoku at level ${level} of 8. An open-source engine by dhbloo and the Rapfi contributors.`,
+          activeEngineId: id,
+          defaultGameSpecId: 'gomoku',
+          supportedGameSpecIds: ['gomoku'],
+          rating: null,
+          ratings: [],
+          playOptions: [{ gameSpecId: 'gomoku', engineId: id, playable: true }],
+        });
+      });
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+        jsonResponse({ bots: [...rosterPayload().bots, ...rapfi] }),
+      );
+      window.history.replaceState(null, '', '/bots?game=gomoku');
+      const root = document.createElement('div');
+      await mountBots(root);
+      const bioOf = (card: HTMLElement | null): string =>
+        card?.querySelector('.profile-summary-card-bio')?.textContent ?? '';
+      expect(bioOf(cardFor(root, 'rapfi'))).toBe(String(rapfi[0]!.bio));
+      expect(bioOf(pickLevel(root, 'rapfi', 'rapfi-level-8'))).toBe(String(rapfi[7]!.bio));
+
+      // A ladder that has a localized level bio still shows it, not its stored one.
+      window.history.replaceState(null, '', '/bots?game=xiangqi');
+      await mountBots(root);
+      window.history.replaceState(null, '', '/');
+      const ladder = bioOf(cardFor(root, 'fairy-stockfish'));
+      expect(ladder).toBe(t('bots.fairyStockfishLevelBio', { level: 2 }));
+      expect(ladder).not.toContain('Fairy-Stockfish at level');
+    },
+  );
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
     'offers only eight Rapfi levels in %s setup and posts Level 8',
     async (locale) => {
       await ensureLocaleCatalog(locale);
