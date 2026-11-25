@@ -149,3 +149,16 @@ test('FFQ finished-review route has a private crawler contract', () => {
   assert.ok(isClientRoute(entry.path));
   assert.ok(isNoindexRoute(entry.path));
 });
+
+test('the unlisted rating distribution is noindex and out of the sitemap', () => {
+  const entry = CLIENT_ONLY_NOINDEX.find((row) => row.routeId === '/player/rating-stats');
+  assert.ok(entry);
+  // Still reachable by URL: the client route stays admitted.
+  assert.ok(isClientRoute('/player/rating-stats'));
+  assert.ok(isNoindexRoute('/player/rating-stats'));
+  assert.ok(!SITEMAP_STATIC_ROUTES.includes('/player/rating-stats'));
+  assert.ok(!CRAWLER_CONTENT_MANIFEST.some((row) => row.path === '/player/rating-stats'));
+  // /player itself stays indexed and in the sitemap.
+  assert.ok(!isNoindexRoute('/player'));
+  assert.ok(SITEMAP_STATIC_ROUTES.includes('/player'));
+});

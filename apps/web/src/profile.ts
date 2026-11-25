@@ -6,6 +6,7 @@ import {
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   hasOwnKey,
+  isCorrespondenceRatedSpec,
   JUNGLE_SPEC_ID,
   type RatingVariant,
 } from '@mistboard/game';
@@ -63,6 +64,7 @@ import {
 } from './profile-ui.js';
 import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-flag.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { attachUserCard } from './user-card.js';
 import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -156,6 +158,9 @@ type UserProfile = {
   // Consecutive days with a puzzle solved, on the viewer's calendar; absent
   // from older payloads.
   puzzleStreak?: { current: number; best: number };
+  // Puzzle Storm and Puzzle Streak bests with their answered-run counts;
+  // absent from older payloads.
+  puzzleModes?: ProfilePuzzleModes;
   // Earned achievements, oldest first; absent from older payloads.
   achievements?: ProfileAchievement[];
   games: FeaturedGame[];
@@ -346,6 +351,7 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     profile.puzzleStreak ?? null,
     locale,
     selectPuzzle,
+    profile.puzzleModes ?? null,
   );
   // With no rated game there is no game rating to graph, so every visitor
   // opens on the player's puzzle rating. A variant in the URL still wins.
@@ -433,39 +439,112 @@ export function renderLeaderboardShellForPrerender(): string {
 
 type PaceLadders = { timeClass: ProfileRatingTimeClass; summary: LeaderboardSummary };
 
-// The ladders that have players, grouped under one heading per pace, lichess
-// /player style: no pace pills to click through, and no "No rated games yet"
-// panel for every variant x pace that nobody has played. Inside a pace the
-// panels keep the canonical variant order (#137).
-function renderPaceSections(
+// The rated pools a variant's leaderboard section lists: bullet, blitz and
+// rapid for every rated variant (all four live presets rate), plus
+// correspondence once rated correspondence is on and the variant's
+// correspondence rates (not Gomoku or Three Kingdoms Banqi).
+export function leaderboardPoolsForVariant(
+  gameSpecId: GameSpecId,
+  correspondenceShown: boolean,
+): ProfileRatingTimeClass[] {
+  return LEADERBOARD_TIME_CLASSES.map((pace) => pace.id).filter(
+    (id) =>
+      id !== 'correspondence' || (correspondenceShown && isCorrespondenceRatedSpec(gameSpecId)),
+  );
+}
+
+export type LeaderboardVariantGroup = {
+  variant: ProfileRatingVariant;
+  miniId: VariantMiniId;
+  // `entries` is null when that pace's summary failed to load.
+  pools: { timeClass: ProfileRatingTimeClass; entries: LeaderboardEntry[] | null }[];
+};
+
+// One group per launched leaderboard variant, in the canonical variant order
+// (#137), each holding every rated pool it supports, empty pools included.
+export function groupLeaderboardByVariant(
+  paces: readonly PaceLadders[],
+  correspondenceShown: boolean,
+): LeaderboardVariantGroup[] {
+  const byPace = new Map(
+    paces.map(({ timeClass, summary }) => [
+      timeClass,
+      summary
+        ? new Map(summary.ladders.map((ladder) => [ladder.variant, ladder.leaderboard]))
+        : null,
+    ]),
+  );
+  return LEADERBOARD_BUCKETS.map((bucket) => ({
+    variant: bucket.variant,
+    miniId: bucket.miniId,
+    pools: leaderboardPoolsForVariant(bucket.gameSpecId, correspondenceShown)
+      .filter((timeClass) => byPace.has(timeClass))
+      .map((timeClass) => {
+        const ladders = byPace.get(timeClass);
+        return { timeClass, entries: ladders ? (ladders.get(bucket.variant) ?? []) : null };
+      }),
+  }));
+}
+
+// One section per launched variant, lichess /player style but grouped by
+// variant: a variant heading over a panel per rated pool, so bullet, blitz,
+// rapid and correspondence sit side by side. An empty pool says so instead of
+// disappearing. Only when no pool anywhere has a player does the wall collapse
+// to the single "be the first" line.
+function renderVariantSections(
   container: HTMLElement,
   paces: readonly PaceLadders[],
   onlineHandles: Set<string>,
   locale: Locale,
 ): void {
-  const sections: HTMLElement[] = [];
-  let anyFailed = false;
-  for (const { timeClass, summary } of paces) {
-    if (!summary) {
-      anyFailed = true;
-      continue;
+  const groups = groupLeaderboardByVariant(paces, isCorrespondenceRatedModeEnabled());
+  const anyPlayers = groups.some((group) =>
+    group.pools.some((pool) => (pool.entries?.length ?? 0) > 0),
+  );
+  if (!anyPlayers) {
+    if (paces.some((pace) => !pace.summary)) {
+      const failed = document.createElement('p');
+      failed.className = 'leaderboard-awaiting';
+      failed.textContent = t('profile.ratingsLoadFailed', {}, locale);
+      container.replaceChildren(failed);
+      return;
     }
-    const byVariant = new Map(
-      summary.ladders.map((ladder) => [ladder.variant, ladder.leaderboard]),
+    container.replaceChildren(buildLeaderboardAwaitingRatedGames(locale));
+    return;
+  }
+  const sections: HTMLElement[] = [];
+  for (const group of groups) {
+    if (group.pools.length === 0) continue;
+    const variantLabel = profileVariantLabel(group.variant, locale);
+    const section = document.createElement('section');
+    section.className = 'leaderboard-variant-section';
+    section.dataset.variant = group.variant;
+    const heading = document.createElement('h2');
+    heading.className = 'leaderboard-variant-heading';
+    heading.append(
+      buildVariantThumb(
+        group.miniId,
+        22,
+        'leaderboard-variant-thumb',
+        t('profile.variantBoard', { variant: variantLabel }, locale),
+      ),
     );
+    const name = document.createElement('span');
+    name.textContent = variantLabel;
+    heading.append(name);
     const grid = document.createElement('div');
     grid.className = 'leaderboard-grid';
-    for (const bucket of LEADERBOARD_BUCKETS) {
-      const entries = byVariant.get(bucket.variant) ?? [];
-      if (entries.length === 0) continue;
+    for (const pool of group.pools) {
+      const label = LEADERBOARD_TIME_CLASSES.find((pace) => pace.id === pool.timeClass)?.label;
       const panelShell = buildLeaderboardPanelShell(
-        profileVariantLabel(bucket.variant, locale),
-        bucket.miniId,
+        label ? t(label, {}, locale) : pool.timeClass,
+        null,
         locale,
       );
+      panelShell.panel.dataset.timeClass = pool.timeClass;
       renderLeaderboardPanelBody(
         panelShell.body,
-        entries.map((entry) => ({
+        pool.entries?.map((entry) => ({
           rank: entry.rank,
           handle: entry.handle,
           displayName: entry.displayName,
@@ -473,36 +552,17 @@ function renderPaceSections(
           champions: entry.champions,
           value: entry.eloRating,
           provisional: entry.provisional,
-        })),
+        })) ?? null,
         onlineHandles,
-        'profile.noRatedGames',
+        'profile.leaderboardNoPlayers',
         locale,
       );
       grid.append(panelShell.panel);
     }
-    if (grid.childElementCount === 0) continue;
-    const section = document.createElement('section');
-    section.className = 'leaderboard-pace-section';
-    section.dataset.timeClass = timeClass;
-    const heading = document.createElement('h2');
-    heading.className = 'leaderboard-pace-heading';
-    const label = LEADERBOARD_TIME_CLASSES.find((pace) => pace.id === timeClass)?.label;
-    heading.textContent = label ? t(label, {}, locale) : timeClass;
     section.append(heading, grid);
     sections.push(section);
   }
-  if (sections.length > 0) {
-    container.replaceChildren(...sections);
-    return;
-  }
-  if (anyFailed) {
-    const failed = document.createElement('p');
-    failed.className = 'leaderboard-awaiting';
-    failed.textContent = t('profile.ratingsLoadFailed', {}, locale);
-    container.replaceChildren(failed);
-    return;
-  }
-  container.replaceChildren(buildLeaderboardAwaitingRatedGames(locale));
+  container.replaceChildren(...sections);
 }
 
 // The paces with a public ladder: the live three, plus correspondence once
@@ -541,7 +601,7 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
     (onlinePlayers?.players ?? []).map((player) => player.handle.toLowerCase()),
   );
 
-  renderPaceSections(ladders, paceLadders, onlineHandles, locale);
+  renderVariantSections(ladders, paceLadders, onlineHandles, locale);
   renderOnlinePlayers(onlineBody, onlinePlayers, locale);
 
   // The rated switch lands with /api/server-status, before, during or after the
@@ -555,7 +615,7 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
     renderedPaces = paces.join(',');
     void loadPaces(paces).then((next) => {
       if (renderedPaces !== paces.join(',')) return;
-      renderPaceSections(ladders, next, onlineHandles, locale);
+      renderVariantSections(ladders, next, onlineHandles, locale);
     });
   };
   onRatedModeChange(syncPaces);
@@ -970,7 +1030,7 @@ function renderLeaderboardPanelBody(
   body: HTMLElement,
   rows: LeaderboardTableRow[] | null,
   onlineHandles: Set<string>,
-  emptyKey: 'profile.noRatedGames' | 'profile.noGamesYet',
+  emptyKey: 'profile.noRatedGames' | 'profile.noGamesYet' | 'profile.leaderboardNoPlayers',
   locale: Locale = currentLocale(),
 ): void {
   if (rows && rows.length > 0) {
@@ -2713,21 +2773,23 @@ function puzzleVariantLabel(variant: string): string {
 
 // Append a "Puzzles" block to the ratings column: one row per variant the user
 // has attempted, showing the Glicko rating (with a "?" while provisional) and
-// the solved count, then a streak row (consecutive days with a solve) once one
-// has ever started. No-op when the user has no puzzle history, so the block
-// only appears once there is something to show.
-function appendProfilePuzzleRatings(
+// the solved count, then one row per puzzle mode with a stored score, lichess
+// profile style: Puzzle Storm and Puzzle Streak bests with their run counts,
+// and the days-in-a-row streak (which used to ride on the heading line). A mode
+// the user has never played gets no row. No-op when there is nothing to show.
+export function appendProfilePuzzleRatings(
   section: HTMLElement,
   puzzleRatings: ProfilePuzzleRating[],
   puzzleStreak: ProfileStreak | null,
   locale: Locale,
   onSelect?: (entry: ProfilePuzzleRating) => void,
+  puzzleModes: ProfilePuzzleModes | null = null,
 ): void {
   const visibleRatings = puzzleRatings.filter(
     (entry) => !HIDDEN_PROFILE_PUZZLE_VARIANTS.has(entry.variant),
   );
-  const streak = puzzleStreak && puzzleStreak.best >= 1 ? puzzleStreak : null;
-  if (visibleRatings.length === 0 && !streak) return;
+  const modeRows = profilePuzzleModeRows(puzzleModes, puzzleStreak, locale);
+  if (visibleRatings.length === 0 && modeRows.length === 0) return;
 
   const block = document.createElement('div');
   block.className = 'profile-puzzle-ratings';
@@ -2736,21 +2798,6 @@ function appendProfilePuzzleRatings(
   const title = document.createElement('span');
   title.textContent = t('nav.puzzles', {}, locale);
   heading.append(title);
-  // The streak rides on the heading line rather than as a row of its own: one
-  // fact about the whole surface, not a rating, and no extra rule in the rail.
-  if (streak) {
-    const line = document.createElement('span');
-    line.className = 'profile-puzzle-streak';
-    line.textContent =
-      streak.current > 0
-        ? t(
-            'profile.streakCurrent',
-            { days: streakDays(streak.current, locale), best: streakDays(streak.best, locale) },
-            locale,
-          )
-        : t('profile.streakLapsed', { best: streakDays(streak.best, locale) }, locale);
-    heading.append(line);
-  }
   block.append(heading);
 
   const rail = document.createElement('div');
@@ -2791,8 +2838,90 @@ function appendProfilePuzzleRatings(
     rail.append(row);
   }
 
+  for (const mode of modeRows) {
+    const row = document.createElement(mode.href ? 'a' : 'div');
+    row.className = 'profile-puzzle-row profile-puzzle-mode-row';
+    row.dataset.puzzleMode = mode.id;
+    if (row instanceof HTMLAnchorElement && mode.href) row.href = mode.href;
+
+    const icon = buildUiIcon(mode.icon, 'profile-puzzle-mode-icon');
+
+    const name = document.createElement('span');
+    name.className = 'profile-puzzle-name';
+    name.textContent = mode.name;
+
+    const value = document.createElement('span');
+    value.className = 'profile-puzzle-value';
+    value.textContent = String(mode.score);
+
+    const count = document.createElement('span');
+    count.className = 'profile-puzzle-games';
+    count.textContent = mode.count;
+
+    row.append(icon, name, value, count);
+    rail.append(row);
+  }
+
   block.append(rail);
   section.append(block);
+}
+
+export type ProfilePuzzleModes = {
+  storm: { best: number; runs: number };
+  streak: { best: number; runs: number };
+};
+
+export type ProfilePuzzleModeRow = {
+  id: 'storm' | 'streak' | 'days';
+  icon: UiIconName;
+  name: string;
+  score: number;
+  count: string;
+  href: string | null;
+};
+
+// The puzzle-mode rows a profile shows, in lichess order (Storm, Streak), then
+// the days-in-a-row streak. A row needs a real stored number: a mode with no
+// answered run, or a day streak that never started, is left out.
+export function profilePuzzleModeRows(
+  modes: ProfilePuzzleModes | null,
+  dayStreak: ProfileStreak | null,
+  locale: Locale,
+): ProfilePuzzleModeRow[] {
+  const rows: ProfilePuzzleModeRow[] = [];
+  const runs = (count: number) =>
+    t(count === 1 ? 'profile.puzzleRunOne' : 'profile.puzzleRunMany', { count }, locale);
+  if (modes && modes.storm.runs > 0) {
+    rows.push({
+      id: 'storm',
+      icon: 'puzzle-storm',
+      name: t('profile.puzzleStorm', {}, locale),
+      score: modes.storm.best,
+      count: runs(modes.storm.runs),
+      href: localizedHref('/puzzles?mode=storm', locale),
+    });
+  }
+  if (modes && modes.streak.runs > 0) {
+    rows.push({
+      id: 'streak',
+      icon: 'puzzle-streak',
+      name: t('profile.puzzleStreakMode', {}, locale),
+      score: modes.streak.best,
+      count: runs(modes.streak.runs),
+      href: localizedHref('/puzzles?mode=streak', locale),
+    });
+  }
+  if (dayStreak && dayStreak.best >= 1) {
+    rows.push({
+      id: 'days',
+      icon: 'puzzle-days',
+      name: t('profile.puzzleDaysInARow', {}, locale),
+      score: dayStreak.current,
+      count: t('profile.puzzleDaysBest', { best: streakDays(dayStreak.best, locale) }, locale),
+      href: null,
+    });
+  }
+  return rows;
 }
 
 type ProfileStreak = { current: number; best: number };

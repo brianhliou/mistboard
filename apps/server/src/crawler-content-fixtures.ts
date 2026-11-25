@@ -306,6 +306,7 @@ export const CRAWLER_PROFILE: UserProfile = {
   ],
   puzzleRatings: [],
   puzzleStreak: { current: 0, best: 0 },
+  puzzleModes: { storm: { best: 0, runs: 0 }, streak: { best: 0, runs: 0 } },
   achievements: [],
   games: [CRAWLER_PUBLIC_GAME],
   gamesTotal: 1,

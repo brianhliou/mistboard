@@ -242,7 +242,7 @@ describe('profile ratings rail', () => {
     await mountLeaderboard(root);
     const rows = [
       ...root.querySelectorAll(
-        '.leaderboard-pace-section[data-time-class="blitz"] .leaderboard-table tr',
+        '.leaderboard-variant-section[data-variant="xiangqi"] .leaderboard-panel[data-time-class="blitz"] .leaderboard-table tr',
       ),
     ];
     expect(rows).toHaveLength(3);
@@ -294,7 +294,9 @@ describe('profile ratings rail', () => {
     await mountLeaderboard(root);
     await vi.waitFor(() =>
       expect(
-        root.querySelector('.leaderboard-pace-section[data-time-class="correspondence"]'),
+        root.querySelector(
+          '.leaderboard-variant-section[data-variant="xiangqi"] .leaderboard-panel[data-time-class="correspondence"]',
+        ),
       ).not.toBeNull(),
     );
     expect(requested).toContain('correspondence');
@@ -1233,9 +1235,18 @@ describe('profile ratings rail', () => {
     expect(root.textContent).not.toContain('Atomic Xiangqi');
     expect(root.textContent).toContain('Crazyhouse Xiangqi');
     expect(root.textContent).toContain('Rated ladders across Mistboard variants.');
-    // 5 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Duck,
-    // Crazyhouse).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(5);
+    // One section per launched leaderboard variant, each with a panel per
+    // live pace (correspondence is off here); Drop Mini gets no section.
+    const sections = [...root.querySelectorAll<HTMLElement>('.leaderboard-variant-section')];
+    expect(sections.map((section) => section.dataset.variant)).not.toContain('drop_mini');
+    for (const section of sections) {
+      expect(
+        [...section.querySelectorAll<HTMLElement>('.leaderboard-panel')].map(
+          (panel) => panel.dataset.timeClass,
+        ),
+      ).toEqual(['bullet', 'blitz', 'rapid']);
+    }
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(sections.length * 3);
     expect(root.textContent).not.toContain('Active players');
     // One summary per live pace; correspondence stays off while its rated
     // switch is off.
@@ -1269,11 +1280,9 @@ describe('profile ratings rail', () => {
     const rail = root.querySelector('.community-rail');
     expect(rail).not.toBeNull();
     const links = [...(rail?.querySelectorAll('a') ?? [])];
-    expect(links.map((a) => a.getAttribute('href'))).toEqual([
-      '/player',
-      '/player/rating-stats',
-      '/bots',
-    ]);
+    // Rating stats is unlisted (2026-11-25): the rail no longer links it.
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/player', '/bots']);
+    expect(root.querySelector('a[href*="rating-stats"]')).toBeNull();
     expect(rail?.querySelector('a[aria-current="page"]')?.textContent).toBe('Leaderboard');
 
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('Online players');
@@ -1346,7 +1355,7 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('.leaderboard-online-empty')?.textContent).toBe('No players online.');
   });
 
-  it('renders ladders in canonical variant order within a pace', async () => {
+  it('renders one section per variant in canonical order', async () => {
     vi.stubEnv('DEV', false);
     // The leaderboard keys off CANONICAL_VARIANT_ORDER like the picker/profile/
     // rail (#137), not the order the summary happens to list ladders in.
@@ -1374,19 +1383,21 @@ describe('profile ratings rail', () => {
 
     await mountLeaderboard(root);
 
-    const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
+    const headings = [...root.querySelectorAll('.leaderboard-variant-heading')].map(
       (el) => el.textContent,
     );
-    expect(titles).toEqual([
-      'Duck Xiangqi',
-      'Crazyhouse Xiangqi',
-      'Fog Chess',
-      'Jungle Chess',
-      'Flip Jungle',
-    ]);
-    const fogPanel = [...root.querySelectorAll('.leaderboard-panel')].find((panel) =>
-      panel.querySelector('.leaderboard-panel-title')?.textContent?.includes('Fog Chess'),
+    // The populated variants keep their canonical relative order.
+    expect(
+      headings.filter((name) =>
+        ['Duck Xiangqi', 'Crazyhouse Xiangqi', 'Fog Chess', 'Jungle Chess', 'Flip Jungle'].includes(
+          name ?? '',
+        ),
+      ),
+    ).toEqual(['Duck Xiangqi', 'Crazyhouse Xiangqi', 'Fog Chess', 'Jungle Chess', 'Flip Jungle']);
+    const fogPanel = root.querySelector(
+      '.leaderboard-variant-section[data-variant="fog"] .leaderboard-panel[data-time-class="blitz"]',
     );
+    expect(fogPanel?.querySelector('.leaderboard-panel-title')?.textContent).toBe('Blitz');
     const row = fogPanel?.querySelector('.leaderboard-table tbody tr');
     expect(row?.textContent).toContain('1520');
     expect(row?.querySelector('a')?.getAttribute('href')).toBe('/@/misty');
@@ -1394,7 +1405,7 @@ describe('profile ratings rail', () => {
     expect(row?.querySelector('.leaderboard-presence-online')).not.toBeNull();
   });
 
-  it('shows only ladders with players, grouped under a heading per pace', async () => {
+  it('shows every rated pool under its variant, with a placeholder when empty', async () => {
     vi.stubEnv('DEV', false);
     // Prod, 2026-10-04: the only rated games were jieqi bullet, and the page
     // opened on an empty Blitz tab.
@@ -1409,19 +1420,26 @@ describe('profile ratings rail', () => {
 
     await mountLeaderboard(root);
 
-    const sections = [...root.querySelectorAll<HTMLElement>('.leaderboard-pace-section')];
+    const panelText = (variant: string, pace: string) =>
+      root.querySelector(
+        `.leaderboard-variant-section[data-variant="${variant}"] .leaderboard-panel[data-time-class="${pace}"]`,
+      )?.textContent ?? '';
+    expect(panelText('fog', 'bullet')).toContain('Misty');
+    expect(panelText('fog', 'blitz')).toContain('No rated players yet.');
+    expect(panelText('fog', 'rapid')).toContain('No rated players yet.');
+    expect(panelText('jungle', 'rapid')).toContain('P jungle');
+    expect(panelText('jungle', 'bullet')).toContain('No rated players yet.');
+    const fogSection = root.querySelector('.leaderboard-variant-section[data-variant="fog"]');
+    expect(fogSection?.querySelector('.leaderboard-variant-heading')?.textContent).toBe(
+      'Fog Chess',
+    );
     expect(
-      sections.map((section) => [
-        section.querySelector('.leaderboard-pace-heading')?.textContent,
-        [...section.querySelectorAll('.leaderboard-panel-title')].map((el) => el.textContent),
-      ]),
-    ).toEqual([
-      ['Bullet', ['Fog Chess']],
-      ['Rapid', ['Jungle Chess']],
-    ]);
-    // No pace pills, and no "No rated games yet" panel per empty ladder.
+      [...(fogSection?.querySelectorAll('.leaderboard-panel-title') ?? [])].map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(['Bullet', 'Blitz', 'Rapid']);
+    // No pace pills.
     expect(root.querySelector('.leaderboard-paces')).toBeNull();
-    expect(root.textContent).not.toContain('No rated games yet.');
   });
 
   it('localizes Traditional Chinese leaderboard chrome', async () => {
@@ -1453,7 +1471,8 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('h1')?.textContent).toBe('排行榜');
     expect(root.textContent).toContain('Mistboard 各變體的等級分排行榜。');
     expect(root.textContent).toContain('瘋狂屋象棋');
-    expect(root.querySelector('.leaderboard-pace-heading')?.textContent).toBeTruthy();
+    expect(root.querySelector('.leaderboard-variant-heading')?.textContent).toBeTruthy();
+    expect(root.textContent).toContain('還沒有計分玩家。');
     expect(root.textContent).not.toContain('活躍玩家');
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('線上玩家');
     expect(root.textContent).toContain('目前沒有玩家在線上。');
@@ -1513,8 +1532,10 @@ describe('profile ratings rail', () => {
 
     await mountRatingStats(root);
 
+    // Unlisted (2026-11-25): reachable by URL, but the rail has no link to it.
     const rail = root.querySelector('.community-rail');
-    expect(rail?.querySelector('a[aria-current="page"]')?.textContent).toBe('Rating stats');
+    expect(rail).not.toBeNull();
+    expect(rail?.querySelector('a[href*="rating-stats"]')).toBeNull();
     expect(root.querySelector('.rating-stats-heading')?.textContent).toContain('Weekly');
     expect(root.querySelector('.rating-stats-heading')?.textContent).toContain(
       'rating distribution',
@@ -1818,5 +1839,148 @@ describe('profile ratings rail', () => {
     expect(window.location.search).toBe('');
     expect(chip?.hidden).toBe(true);
     window.history.replaceState(null, '', '/');
+  });
+});
+
+describe('leaderboard grouping by variant', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('lists bullet, blitz and rapid for every variant, and correspondence only where it rates', async () => {
+    const { leaderboardPoolsForVariant } = await import('./profile.js');
+    expect(leaderboardPoolsForVariant('xiangqi', true)).toEqual([
+      'bullet',
+      'blitz',
+      'rapid',
+      'correspondence',
+    ]);
+    expect(leaderboardPoolsForVariant('xiangqi', false)).toEqual(['bullet', 'blitz', 'rapid']);
+    // Gomoku and Three Kingdoms Banqi correspondence stays casual.
+    expect(leaderboardPoolsForVariant('gomoku', true)).toEqual(['bullet', 'blitz', 'rapid']);
+    expect(leaderboardPoolsForVariant('three-kingdoms-banqi', true)).toEqual([
+      'bullet',
+      'blitz',
+      'rapid',
+    ]);
+  });
+
+  it('groups pools under each variant in canonical order, empty as [] and failed as null', async () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    const { groupLeaderboardByVariant } = await import('./profile.js');
+    const { leaderboardVariants } = await import('./variants.js');
+    const entry = {
+      rank: 1,
+      handle: 'a',
+      displayName: 'A',
+      eloRating: 1600,
+      gamesPlayed: 4,
+      provisional: false,
+    };
+    const groups = groupLeaderboardByVariant(
+      [
+        {
+          timeClass: 'bullet',
+          summary: { ladders: [{ variant: 'xiangqi', leaderboard: [entry] }] },
+        },
+        { timeClass: 'blitz', summary: { ladders: [] } },
+        // A pace whose summary failed to load.
+        { timeClass: 'rapid', summary: null },
+      ],
+      false,
+    );
+    expect(groups.map((group) => group.variant)).toEqual(
+      leaderboardVariants.map((variant) => variant.id),
+    );
+    // Go (admin-only) and retired variants never get a section.
+    expect(groups.map((group) => group.variant)).not.toContain('go');
+    expect(groups.map((group) => group.variant)).not.toContain('fortress_xiangqi');
+    const xiangqi = groups.find((group) => group.variant === 'xiangqi');
+    expect(xiangqi?.pools).toEqual([
+      { timeClass: 'bullet', entries: [entry] },
+      { timeClass: 'blitz', entries: [] },
+      { timeClass: 'rapid', entries: null },
+    ]);
+  });
+});
+
+describe('profile puzzle mode rows', () => {
+  afterEach(() => {
+    vi.resetModules();
+    document.body.innerHTML = '';
+  });
+
+  it('adds a row only for a mode with stored numbers', async () => {
+    const { profilePuzzleModeRows } = await import('./profile.js');
+    expect(profilePuzzleModeRows(null, null, 'en')).toEqual([]);
+    expect(
+      profilePuzzleModeRows(
+        { storm: { best: 0, runs: 0 }, streak: { best: 0, runs: 0 } },
+        { current: 0, best: 0 },
+        'en',
+      ),
+    ).toEqual([]);
+    const rows = profilePuzzleModeRows(
+      { storm: { best: 14, runs: 3 }, streak: { best: 5, runs: 1 } },
+      { current: 2, best: 7 },
+      'en',
+    );
+    expect(rows.map((row) => [row.id, row.name, row.score, row.count, row.href])).toEqual([
+      ['storm', 'Puzzle Storm', 14, '3 runs', '/puzzles?mode=storm'],
+      ['streak', 'Puzzle Streak', 5, '1 run', '/puzzles?mode=streak'],
+      ['days', 'Days in a row', 2, 'best 7 days', null],
+    ]);
+    // Storm played, Streak never: only the Storm row.
+    expect(
+      profilePuzzleModeRows(
+        { storm: { best: 4, runs: 1 }, streak: { best: 0, runs: 0 } },
+        null,
+        'en',
+      ).map((row) => row.id),
+    ).toEqual(['storm']);
+  });
+
+  it('shows the day streak as a row, not on the Puzzles heading line', async () => {
+    const { appendProfilePuzzleRatings } = await import('./profile.js');
+    const section = document.createElement('section');
+    appendProfilePuzzleRatings(section, [], { current: 3, best: 9 }, 'en', undefined, {
+      storm: { best: 21, runs: 2 },
+      streak: { best: 0, runs: 0 },
+    });
+    expect(section.querySelector('.profile-puzzle-ratings h2')?.textContent).toBe('Puzzles');
+    expect(section.querySelector('.profile-puzzle-streak')).toBeNull();
+    const rows = [...section.querySelectorAll<HTMLElement>('.profile-puzzle-mode-row')];
+    expect(rows.map((row) => row.dataset.puzzleMode)).toEqual(['storm', 'days']);
+    expect(rows[0]?.getAttribute('href')).toBe('/puzzles?mode=storm');
+    expect(rows[0]?.querySelector('.ui-icon-puzzle-storm')).not.toBeNull();
+    expect(rows[0]?.querySelector('.profile-puzzle-value')?.textContent).toBe('21');
+    expect(rows[1]?.querySelector('.profile-puzzle-value')?.textContent).toBe('3');
+    expect(rows[1]?.querySelector('.profile-puzzle-games')?.textContent).toBe('best 9 days');
+    // Exactly one streak figure on the block: no duplicate on the heading.
+    expect(section.textContent?.match(/9 days/g)).toHaveLength(1);
+  });
+
+  it('renders nothing for a player with no puzzle history', async () => {
+    const { appendProfilePuzzleRatings } = await import('./profile.js');
+    const section = document.createElement('section');
+    appendProfilePuzzleRatings(section, [], { current: 0, best: 0 }, 'en', undefined, {
+      storm: { best: 0, runs: 0 },
+      streak: { best: 0, runs: 0 },
+    });
+    expect(section.children).toHaveLength(0);
+  });
+
+  it('localizes the mode rows in Simplified and Traditional Chinese', async () => {
+    const { profilePuzzleModeRows } = await import('./profile.js');
+    const modes = { storm: { best: 3, runs: 2 }, streak: { best: 4, runs: 1 } };
+    expect(profilePuzzleModeRows(modes, null, 'zh-Hans').map((row) => row.name)).toEqual([
+      '限时解题',
+      '连续解题',
+    ]);
+    expect(profilePuzzleModeRows(modes, null, 'zh-Hant').map((row) => row.name)).toEqual([
+      '限時解題',
+      '連續解題',
+    ]);
   });
 });

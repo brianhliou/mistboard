@@ -7,9 +7,11 @@
 import {
   Bell,
   Bot,
+  CalendarCheck,
   ChessKnight,
   Crown,
   createElement,
+  Flame,
   Handshake,
   Heart,
   type IconNode,
@@ -30,6 +32,7 @@ import {
   Trophy,
   User,
   Users,
+  Zap,
 } from 'lucide';
 import './ui-icon.css';
 import type { AnnouncementKind } from './announcements.js';
@@ -62,6 +65,9 @@ export type UiIconName =
   | 'play-engine'
   | 'play-game'
   | 'player-human'
+  | 'puzzle-days'
+  | 'puzzle-storm'
+  | 'puzzle-streak'
   | 'store'
   | 'support'
   | 'title-champion';
@@ -101,6 +107,11 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'play-engine': Bot,
   'play-game': Swords,
   'player-human': User,
+  // Puzzle modes on the profile rail, lichess style: a bolt for Storm, a
+  // flame for Streak, a checked calendar for the days-in-a-row count.
+  'puzzle-days': CalendarCheck,
+  'puzzle-storm': Zap,
+  'puzzle-streak': Flame,
   store: Store,
   support: Heart,
   'title-champion': Crown,

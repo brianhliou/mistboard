@@ -215,10 +215,16 @@ test('served data pages pass the floor and first-paint guard; removing the wrapp
         pathname,
         publicHost: 'https://mistboard.test',
       });
+      assert.deepEqual(serverBodyProblems(html, css), [], pathname);
+      // The rating distribution is unlisted and noindex (2026-11-25): it keeps
+      // its first-paint body for direct visitors but has no crawler floor.
+      if (pathname === '/player/rating-stats') {
+        assert.ok(!CRAWLER_CONTENT_MANIFEST.some((e) => e.path === pathname), pathname);
+        continue;
+      }
       const entry = CRAWLER_CONTENT_MANIFEST.find((e) => e.path === pathname)!;
       assert.equal(entry.knownGap, undefined, pathname);
       assert.deepEqual(pageFailures(entry, { status: 200, html }).failures, [], pathname);
-      assert.deepEqual(serverBodyProblems(html, css), [], pathname);
       assert.ok(
         serverBodyProblems(html.replace('class="crawler-copy"', 'class="planted"'), css).includes(
           'server body text outside .crawler-copy',

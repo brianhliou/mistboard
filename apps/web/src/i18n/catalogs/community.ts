@@ -167,6 +167,7 @@ export const EN_COMMUNITY = {
   'profile.anonymousOnline': '+{count} anonymous online',
   'profile.noPlayersOnline': 'No players online.',
   'profile.noRatedGames': 'No rated games yet.',
+  'profile.leaderboardNoPlayers': 'No rated players yet.',
   'profile.leaderboardAwaiting': 'The ladders open with the first rated game.',
   'profile.leaderboardAwaitingCta': 'Play a rated game',
   'profile.ratingsLoadFailed': 'Could not load ratings.',
@@ -388,6 +389,15 @@ export const EN_COMMUNITY = {
   'profile.streakLapsed': 'best streak {best}',
   'profile.streakDays': '{count} days',
   'profile.streakDaysOne': '1 day',
+  // Puzzle mode rows under the per-variant puzzle ratings (lichess profile
+  // idiom): Puzzle Storm and Puzzle Streak bests with their run counts, and
+  // the days-in-a-row streak that used to sit on the heading line.
+  'profile.puzzleStorm': 'Puzzle Storm',
+  'profile.puzzleStreakMode': 'Puzzle Streak',
+  'profile.puzzleDaysInARow': 'Days in a row',
+  'profile.puzzleRunOne': '{count} run',
+  'profile.puzzleRunMany': '{count} runs',
+  'profile.puzzleDaysBest': 'best {best}',
   'profile.games': 'Games',
   'profile.savedGames': 'Saved',
   'profile.noSavedGames': 'No saved games yet.',
@@ -840,6 +850,7 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'profile.anonymousOnline',
   'profile.noPlayersOnline',
   'profile.noRatedGames',
+  'profile.leaderboardNoPlayers',
   'profile.ratingStatsEmptyPool',
   'profile.leaderboardAwaiting',
   'profile.leaderboardAwaitingCta',
