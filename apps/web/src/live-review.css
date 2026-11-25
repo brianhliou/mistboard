@@ -1003,15 +1003,18 @@
      game-shell.css, so a two-class rule here would lose to it. */
   .live-review__cluster .round-table__row.correspondence-room {
     order: 36;
+    /* The wide table's rule above the box; on a phone the box sits on the
+       seat line with nothing to rule off. */
+    border-top: 0;
   }
 
   /* The board was sized for one status row (--phone-room-notice), so the box
      fits in that row's place: one line of buttons. While a move waits, its
-     "Confirm to send" line is left to screen readers (the moved piece and
+     "Confirm your move" title is left to screen readers (the moved piece and
      the two buttons say it). After the move, the buttons replace the
      "Waiting on" notice (the clocks show whose move it is) unless that row
-     has something to press, and Next game stands alone without the inbox. */
-  .live-review__cluster .correspondence-room > p {
+     has something to press. */
+  .live-review__cluster .correspondence-room > .correspondence-room__notice {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1022,12 +1025,6 @@
 
   .live-review__cluster:has(.correspondence-room[data-state="moved"])
     [data-action-section]:not(:has(button, input, select)) {
-    display: none;
-  }
-
-  .live-review__cluster
-    .correspondence-room:has([data-correspondence-next])
-    [data-correspondence-inbox] {
     display: none;
   }
 

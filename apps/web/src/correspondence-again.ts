@@ -2,7 +2,8 @@
 // signed-in accounts, one click sends the opponent a private correspondence
 // challenge, same variant, sides swapped, casual, and lands the sender on the
 // challenge page the server returns. Shared by both room stacks' postgame
-// actions (postgame-panel.ts) and the review pages (review/game-review-meta.ts).
+// actions (postgame-panel.ts). The review pages carried it in their game card
+// until 2026-11-25; the room's post-game actions are now its only home.
 //
 // The terms are fixed rather than asked: the game they just played says the
 // variant and the opponent, the swap says the side, and the pace is the finished
@@ -10,26 +11,20 @@
 // terms still has "Challenge a friend" and the profile challenge dialog.
 //
 // Funnel (PostHog): correspondence_again_shown once per game per page, then
-// correspondence_seek_posted with surface 'postgame' or 'review', then the
+// correspondence_seek_posted with surface 'postgame' ('review' until 2026-11-25), then the
 // sender's game_started with entry_source 'postgame-correspondence' or
 // 'review-correspondence' when the opponent accepts.
-import { GOMOKU_SPEC_ID } from '@mistboard/game';
-import { loadCachedCurrentUser } from './account-nav.js';
 import { trackCorrespondenceAgainShown, trackCorrespondenceSeekPosted } from './analytics.js';
 import {
   type CorrespondenceAgainInput,
   type CorrespondenceAgainOffer,
   correspondenceAgainOffer,
   correspondenceAgainRequestBody,
-  type FinishedGameSeat,
-  finishedGameDaysPerMove,
-  finishedGameViewerSeat,
 } from './challenge-model.js';
 import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { rememberCorrespondenceStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
-import { isLikelySignedIn } from './signed-in-state.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 
 export type CorrespondenceAgainSurface = 'postgame' | 'review';
@@ -124,75 +119,6 @@ export function correspondenceAgainButton(
       .catch(() => fail(t('challenge.errorGeneric')));
   });
   return button;
-}
-
-/** The review page's offer: the viewer must be one of the game's two accounts,
- *  read from the signed-in account's handle. */
-export function reviewCorrespondenceOffer(
-  config: {
-    gameSpecId: string;
-    game: {
-      mode?: string;
-      players?: readonly FinishedGameSeat[];
-      initialMs?: number | null;
-      incrementMs?: number | null;
-      timeControl?: Record<string, unknown> | null;
-    };
-    firstMoverColor?: string;
-  },
-  viewerHandle: string | null | undefined,
-): CorrespondenceAgainOffer | null {
-  // Gomoku's first mover follows its opening, so only a page that names it
-  // can swap sides.
-  if (config.gameSpecId === GOMOKU_SPEC_ID && !config.firstMoverColor) return null;
-  const seats = finishedGameViewerSeat(config.game.players, viewerHandle, config.firstMoverColor);
-  if (!seats) return null;
-  return finishedGameCorrespondenceOffer({
-    seated: true,
-    mode: config.game.mode ?? 'pvp',
-    gameSpecId: config.gameSpecId,
-    viewerHandle: seats.viewer.handle,
-    opponent: {
-      handle: seats.opponent.handle ?? undefined,
-      botId: seats.opponent.botId ?? undefined,
-    },
-    viewerMovedFirst: seats.viewerMovedFirst,
-    daysPerMove: finishedGameDaysPerMove(config.game),
-  });
-}
-
-/** A review-page slot that stays empty until the signed-in account resolves,
- *  then holds the button when the viewer played this game. */
-export function reviewCorrespondenceAgainSlot(
-  config: Parameters<typeof reviewCorrespondenceOffer>[0] & { roomId: string },
-): HTMLElement {
-  const slot = document.createElement('div');
-  slot.className = 'review-actions review-correspondence-again';
-  slot.hidden = true;
-  // Cheap gates first: no account request for a signed-out reader or a game
-  // that could never qualify. The page's account nav reads the same cached
-  // account, so a signed-in reader costs no extra request.
-  const players = config.game.players ?? [];
-  if (
-    !isLikelySignedIn() ||
-    players.length !== 2 ||
-    players.some((player) => player.botId || !player.handle)
-  ) {
-    return slot;
-  }
-  void loadCachedCurrentUser()
-    .then((user) => {
-      const offer = reviewCorrespondenceOffer(config, user?.handle);
-      if (!offer) return;
-      const button = correspondenceAgainButton(offer, { surface: 'review', roomId: config.roomId });
-      button.classList.add('review-action-link');
-      slot.append(button);
-      slot.hidden = false;
-    })
-    .catch(() => {
-      // No account read, no offer: the review itself is unaffected.
-    });
-  return slot;
 }
 
 function correspondenceAgainErrorText(

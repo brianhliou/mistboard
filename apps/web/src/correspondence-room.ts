@@ -87,7 +87,7 @@ export function createCorrespondenceRoom(
       next = nextCorrespondenceGame(data.games, room);
       render();
     } catch {
-      // The inbox link remains usable when the list cannot be refreshed.
+      // No list, no Next game link: the site nav still reaches the inbox.
     }
   }
 
@@ -101,7 +101,10 @@ export function createCorrespondenceRoom(
     // so the phone room keeps the height its board was sized for.
     const status = frame.state?.status;
     const moved = submitted || (status?.type === 'playing' && status.turn !== frame.seat);
-    if (!active || !eligible() || !participant() || (!pending && !moved)) {
+    // After the move the box holds only the next game waiting on the player.
+    // With none, the "Waiting on" row says enough; the way back to the list is
+    // the site nav (Play > Correspondence) and the notifications bell.
+    if (!active || !eligible() || !participant() || (!pending && !(moved && next?.next))) {
       host?.remove();
       host = null;
       return;
@@ -121,9 +124,15 @@ export function createCorrespondenceRoom(
     host.replaceChildren();
     host.dataset.state = pending ? 'pending' : 'moved';
     if (pending) {
-      const label = document.createElement('p');
+      // Titled like the "Your move" / "Waiting on" notice it stands in for.
+      const label = document.createElement('div');
+      label.className = 'correspondence-room__notice';
       label.setAttribute('role', 'status');
-      label.textContent = t('correspondence.pendingMove');
+      const title = document.createElement('strong');
+      title.textContent = t('correspondence.pendingTitle');
+      const detail = document.createElement('span');
+      detail.textContent = t('correspondence.pendingMove');
+      label.append(title, detail);
       const actions = document.createElement('div');
       actions.className = 'correspondence-room__actions';
       const confirmButton = document.createElement('button');
@@ -146,7 +155,7 @@ export function createCorrespondenceRoom(
       host.append(label, actions);
       return;
     }
-    // After the move: the next game waiting on the player, and the inbox.
+    // After the move: the next game waiting on the player.
     const links = document.createElement('div');
     links.className = 'correspondence-room__actions';
     if (next?.next) {
@@ -156,11 +165,6 @@ export function createCorrespondenceRoom(
       link.textContent = t('correspondence.nextGame', { count: next.count });
       links.append(link);
     }
-    const back = document.createElement('a');
-    back.href = '/correspondence';
-    back.dataset.correspondenceInbox = '';
-    back.textContent = t('correspondence.backToGames');
-    links.append(back);
     host.append(links);
   }
 

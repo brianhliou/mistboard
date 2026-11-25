@@ -258,15 +258,19 @@ describe('tenant socket client', () => {
     expect(box?.previousElementSibling?.hasAttribute('data-action-section')).toBe(true);
     expect(document.querySelector('.review-shell__center')!.children).toHaveLength(1);
     expect(document.querySelector('.board-shell')!.children).toHaveLength(1);
-    // Pending: just the two buttons and their label; the inbox link waits.
-    expect(box?.querySelector('a[href="/correspondence"]')).toBeNull();
+    // Pending: a titled notice and the two buttons, no link out.
+    expect(box?.querySelector('.correspondence-room__notice strong')?.textContent).toBe(
+      'Confirm your move',
+    );
+    expect(box?.querySelector('a')).toBeNull();
     action('cancel').click();
     expect(document.querySelector('.correspondence-room')).toBeNull();
     made.client.send({ type: 'move', from: 'a1', to: 'a2' });
     action('confirm').click();
-    const after = document.querySelector('.correspondence-room');
-    expect(after?.previousElementSibling?.hasAttribute('data-action-section')).toBe(true);
-    expect(after?.querySelector('a[href="/correspondence"]')).not.toBeNull();
+    // Sent, and no other game waiting: no box, and no inbox link (the site
+    // nav and the bell reach the list).
+    expect(document.querySelector('.correspondence-room')).toBeNull();
+    expect(document.querySelector('a[href="/correspondence"]')).toBeNull();
   });
 
   it.each(['banqi', 'jieqi'])('never reveals a hidden %s piece in the whole preview', (spec) => {
@@ -491,7 +495,9 @@ describe('tenant socket client', () => {
       next: null,
       count: 0,
     });
-    expect(document.querySelector('a[href="/correspondence"]')).not.toBeNull();
+    // Next game stands alone: the inbox button is gone.
+    expect(document.querySelectorAll('.correspondence-room a')).toHaveLength(1);
+    expect(document.querySelector('a[href="/correspondence"]')).toBeNull();
   });
 
   it('connects, flips to connected on open, and sends only while open', () => {

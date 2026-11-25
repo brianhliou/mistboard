@@ -218,7 +218,7 @@ describe('incoming challenges on the homepage and correspondence page', () => {
   });
 });
 
-it('puts correspondence play-again before the live rematch on a finished correspondence game', () => {
+it('places correspondence play-again after Review game, as after a live game', () => {
   const rematch = document.createElement('button');
   rematch.textContent = 'Rematch';
   const box = postGameActions({
@@ -227,7 +227,6 @@ it('puts correspondence play-again before the live rematch on a finished corresp
     seated: true,
     rematch,
     reviewHref: '/game/old',
-    correspondence: true,
     correspondenceAgain: {
       roomId: 'old',
       offer: {
@@ -238,10 +237,14 @@ it('puts correspondence play-again before the live rematch on a finished corresp
       },
     },
   });
-  expect([...box.children].slice(0, 2).map((el) => el.textContent)).toEqual([
-    'Play again by correspondence',
+  expect([...box.children].slice(0, 3).map((el) => el.textContent)).toEqual([
     'Rematch',
+    'Review game',
+    'Play again by correspondence',
   ]);
+  // Styled as one of the rows, not a second rematch slab.
+  const again = box.querySelector('[data-correspondence-again]');
+  expect(again?.classList.contains('postgame-actions__rematch')).toBe(false);
 });
 
 describe('phone invite sharing', () => {

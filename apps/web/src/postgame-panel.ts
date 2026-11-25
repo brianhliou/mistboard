@@ -10,17 +10,18 @@
 //                  offer, or a fresh game against the same bot, sides swapped)
 //   Review game    everyone; second, an accent outline under the filled
 //                  rematch (#1235)
-//   New opponent   seated players only: the play dialog, same variant, as
-//   / New game     Find opponent after a PvP game ("New opponent") or as the
-//                  bot picker after a bot game ("New game": the dialog offers
-//                  the same bot and settings, so "opponent" read oddly; lichess
-//                  labels its post-AI-game button the same way)
 //   Play again by correspondence
 //                  seated players after a game between two accounts, in a
 //                  variant with correspondence: a private correspondence
 //                  challenge to the same opponent, sides swapped (#606,
 //                  correspondence-again.ts). The caller decides eligibility;
-//                  the panel only places it
+//                  the panel only places it, in this same place after a live
+//                  or a correspondence game, styled like the rows around it
+//   New opponent   seated players only: the play dialog, same variant, as
+//   / New game     Find opponent after a PvP game ("New opponent") or as the
+//                  bot picker after a bot game ("New game": the dialog offers
+//                  the same bot and settings, so "opponent" read oddly; lichess
+//                  labels its post-AI-game button the same way)
 //   Challenge a friend
 //                  seated players after a bot or PvP game, a row like the two
 //                  above it: it is the one post-game action that brings a new
@@ -99,8 +100,6 @@ export type PostGameActionsInput = {
   seated: boolean;
   /** The caller's rematch control (PvP offer widget or PvE new-game button), seated only. */
   rematch: HTMLElement | null;
-  /** Days-per-move game: keep its own way to play again first. */
-  correspondence?: boolean;
   reviewHref: string | null;
   /** The "play again by correspondence" offer (finishedGameCorrespondenceOffer),
    *  or null/absent when this game earns none. Seated players only. */
@@ -283,8 +282,7 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     });
     again.classList.add('postgame-actions__correspondence');
     again.addEventListener('click', report('correspondence_again'));
-    if (input.correspondence || input.mode === 'correspondence') box.prepend(again);
-    else box.append(again);
+    box.append(again);
   }
 
   const opponentHref = input.seated ? newOpponentHref(input.variant, input.mode) : null;
