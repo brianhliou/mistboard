@@ -209,6 +209,9 @@ const XIANGQI_BOARD_ASPECT = 552 / 612;
 const BOARD_ASPECT: Readonly<Record<string, number>> = {
   'xiangqi-9x10': XIANGQI_BOARD_ASPECT,
   'banqi-8x4': 568 / 312,
+  // FFQ banqi is a 4x8 board drawn as the same wide strip; its files-over-ranks
+  // guess (0.5) made a tall box that shrank by half once the board mounted.
+  'banqi-4x8': 568 / 312,
   'jungle-7x9': 336 / 432,
   'jungle-flip-4x4': 1,
   'chess-8x8': 1,
@@ -226,7 +229,7 @@ export function finishedBoardAspect(variant: string): number {
 
 // The card's board box: a board much wider than tall (banqi's 8x4) sits small
 // and centred in a box of a xiangqi board's shape, blank above and below, so
-// every card in the grid is one size (Brian, 2026-10-30).
+// every card in the grid is one size (decided 2026-10-30).
 export function finishedBoardBoxAspect(boardAspect: number): number {
   return boardAspect >= 1.4 ? XIANGQI_BOARD_ASPECT : boardAspect;
 }
@@ -237,6 +240,38 @@ export function finishedBoardBoxAspect(boardAspect: number): number {
 export function finishedWinnerColor(result: string): string | null {
   const match = /^([a-z]+)-wins$/.exec(result);
   return match ? (match[1] ?? null) : null;
+}
+
+// The score each seat row ends with: 1 and 0 for a win, ½ each for a draw.
+// A game with neither (no recorded result, or a winner that is neither seat)
+// scores nothing, so neither row claims a result the game does not have.
+export type FinishedSeatScore = '1' | '0' | '½';
+
+export function finishedSeatScores(
+  result: string,
+  first: string,
+  second: string,
+): Map<string, FinishedSeatScore> {
+  if (result === 'draw') {
+    return new Map([
+      [first, '½'],
+      [second, '½'],
+    ]);
+  }
+  const winner = finishedWinnerColor(result);
+  if (winner === first) {
+    return new Map([
+      [first, '1'],
+      [second, '0'],
+    ]);
+  }
+  if (winner === second) {
+    return new Map([
+      [first, '0'],
+      [second, '1'],
+    ]);
+  }
+  return new Map();
 }
 
 // How every "Just finished" thumbnail mounts (current-games.ts

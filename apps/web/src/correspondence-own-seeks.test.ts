@@ -12,7 +12,7 @@ const jieqiSeek = {
   id: 'seek-1',
   gameSpecId: 'jieqi',
   daysPerMove: 1,
-  preferredColor: 'any',
+  preferredColor: 'random',
   rated: false,
   visibility: 'public',
   targetName: null,
@@ -54,9 +54,18 @@ describe('correspondence: your open seeks', () => {
     expect(card?.closest('.current-games-grid')).not.toBeNull();
     expect(card?.querySelector('.current-game-board')).not.toBeNull();
     // The section heading already says "Waiting for an opponent"; the card does
-    // not repeat it (#1058).
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe('Open seek');
+    // not repeat it (#1058). Cancel takes the empty seat, and the meta line
+    // says what kind of seek it is.
+    expect(card?.querySelector('.is-empty-seat')).toBeNull();
+    expect(card?.querySelector('.current-game-seek-slot button')?.textContent).toBe('Cancel');
+    expect(card?.querySelector('.current-game-line')?.textContent).toMatch(/^Open seek · Jieqi · /);
     expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('You');
+    // You above the board, Cancel in the seat under it, as everyone else sees it.
+    expect(
+      card
+        ?.querySelector('.current-game-seek-slot')
+        ?.previousElementSibling?.classList.contains('current-game-board'),
+    ).toBe(true);
     // A public seek has no page of its own, so no card-wide link to cover Cancel.
     expect(card?.querySelector('a.current-game-open')).toBeNull();
     const cancel = card?.querySelector<HTMLButtonElement>('.current-game-seek-action button');
@@ -79,8 +88,8 @@ describe('correspondence: your open seeks', () => {
     const host = document.createElement('section');
     await renderChallenges(host);
     const card = host.querySelector<HTMLElement>('[data-seek-id="seek-1"]');
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
-      'Link challenge',
+    expect(card?.querySelector('.current-game-line')?.textContent).toMatch(
+      /^Link challenge · Jieqi · /,
     );
     expect(card?.querySelector('a.current-game-open')?.getAttribute('href')).toBe(
       '/challenge/seek-1',

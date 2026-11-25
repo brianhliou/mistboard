@@ -637,7 +637,6 @@ export const ZH_HANS_PLAY = {
   'correspondence.factReminders': '到期前提醒',
   'correspondence.factVariantsMore': '{list}及另外 {count} 种',
   'correspondence.gamesInProgress': '进行中的对局',
-  'correspondence.toMoveLeft': '轮到 {name}，剩余 {time}',
   'correspondence.howHeading': '怎么玩',
   'correspondence.step1Title': '发布或接受对局',
   'correspondence.step1Body': '选择变体和每步的天数，然后发布求战，或接受一个公开求战。',

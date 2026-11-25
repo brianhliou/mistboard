@@ -346,7 +346,9 @@ it('uses the /correspondence deadline clock on the game list and homepage', asyn
     true,
   );
   const expected = inbox.querySelector('.is-deadline:not([hidden])')?.textContent;
-  expect(expected).toBe('2d 4h left');
+  // The seat clock is the time alone (a narrow card has no room for a word
+  // beside the name); the homepage row is a sentence and keeps "left".
+  expect(expected).toBe('2d 4h');
   expect(root.querySelector('.is-deadline:not([hidden])')?.textContent).toBe(expected);
-  expect(home.yourMoveMeta(game, now)).toContain(expected);
+  expect(home.yourMoveMeta(game, now)).toContain(`${expected} left`);
 });

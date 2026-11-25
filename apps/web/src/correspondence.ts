@@ -64,7 +64,6 @@ import {
   correspondenceInProgress,
   correspondenceRatedAvailable,
   correspondenceSpecIdsFor,
-  deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
   type InboxBoardSide,
@@ -88,16 +87,27 @@ import {
   variantFactSpecIds,
 } from './correspondence-model.js';
 import {
+  buildSeatRow,
+  cardMetaText,
+  seatOrder,
+  seatRowFrame,
+  stampSeatInkFamily,
+  tickDeadlineClocks,
+} from './current-games.js';
+import {
   type CurrentGame,
+  type CurrentGamePlayer,
   type CurrentGamesResponse,
   liveCardShowsHands,
 } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
+import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
 import { buildFogTile } from './fog-tile.js';
 import type { FeaturedGame } from './game-display.js';
 import {
   displayLiveName,
   firstMoverColorName,
+  matchupSeats,
   namesMatchupLabel,
   secondMoverColorName,
   variantDisplayLabel,
@@ -112,7 +122,6 @@ import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-fla
 import type { ReplayHandle } from './replay.js';
 import {
   accepterColorLabel,
-  accepterSide,
   buildCorrespondenceDeadlineNotice,
   buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
@@ -135,7 +144,7 @@ import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
-import { correspondenceTimeLeftLabel, formatDayClock } from './web-utils.js';
+import { correspondenceSeatClockLabel, formatDayClock } from './web-utils.js';
 
 const TICK_MS = 30_000;
 // The "Challenges for you" section's id; the bell's challenge row links to it
@@ -416,12 +425,14 @@ function buildGrid(modifier: string): HTMLElement {
   return grid;
 }
 
-// One of your games as a /games card: the opponent's seat row on top and yours
-// at the bottom, the board drawn from your side, the time left on the seat that
-// is to move, the share of the move's allowance left as the bar, and the variant
-// and cadence in the meta. A "Your move" card adds Play your move. The whole
-// card opens the game through the stretched .current-game-open; the
-// opponent's profile link sits above it, a sibling, so anchors never nest.
+// One of your games as a /games Playing now card (current-games.ts
+// seatRowFrame, cardMetaText; the shape is current-games.css's): the
+// opponent's seat row on top and yours at the bottom, the board between them
+// edge to edge and drawn from your side, the time left as a badge on the seat
+// that is to move (amber under a day), and one line under the board with the
+// variant and cadence. A "Your move" card adds Play your move. The whole card
+// opens the game through the stretched .current-game-open; the opponent's
+// profile link sits above it, a sibling, so anchors never nest.
 export function buildInboxCard(
   ctx: PageContext,
   game: CorrespondenceGame,
@@ -429,7 +440,7 @@ export function buildInboxCard(
   yourMove: boolean,
 ): HTMLElement {
   const card = document.createElement('article');
-  card.className = 'current-game-card correspondence-game-card';
+  card.className = 'current-game-card is-slim correspondence-game-card';
   card.classList.toggle('is-your-move', yourMove);
   card.dataset.kind = 'correspondence';
   card.dataset.roomId = game.roomId;
@@ -444,7 +455,20 @@ export function buildInboxCard(
     `${variant}, ${t('correspondence.vsOpponent', { name: opponentName })}`,
   );
 
-  const opponentSeat = buildInboxSeat(
+  // Each seat's disc is the colour it plays, as on /games: yours is mySeat,
+  // the opponent's the other seat of the variant.
+  const seats = matchupSeats({ variant: game.gameSpecId } as FeaturedGame);
+  const opponentColor =
+    current?.players.find((player) => player.color !== game.mySeat)?.color ??
+    seats.find((seat) => seat !== game.mySeat) ??
+    null;
+  const firstColor = payloadFirstColor(current?.payload);
+  const ink = (color: string | null): string | null | false =>
+    !variantSeatsHaveInk(game.gameSpecId) || !color
+      ? false
+      : seatInkForVariant(game.gameSpecId, color, firstColor);
+
+  const opponentSeat = seatRowFrame(
     playerNameEl(
       opponentName,
       profileTargetFor({
@@ -454,51 +478,39 @@ export function buildInboxCard(
       }),
       'current-game-seat-name',
     ),
+    ink(opponentColor),
   );
   const you = document.createElement('span');
   you.className = 'current-game-seat-name';
   you.textContent = t('live.you');
-  const mySeat = buildInboxSeat(you);
+  const mySeat = seatRowFrame(you, ink(game.mySeat));
   const onMove = yourMove ? mySeat : opponentSeat;
+  opponentSeat.clock.hidden = true;
+  mySeat.clock.hidden = true;
   onMove.clock.hidden = false;
+  onMove.clock.classList.add('is-deadline');
 
   // You at the bottom and the opponent at the top on every card, the board
-  // turned to match (buildBoardHost). The deadline bar hangs under the row whose
-  // clock is running: yours on a Your move card, the opponent's on a Waiting one.
+  // turned to match (buildBoardHost).
   const board = buildBoardHost(ctx, game, current);
-  const days = current?.timeControl?.daysPerMove ?? null;
-  let track: HTMLElement | null = null;
-  let fill: HTMLElement | null = null;
-  if (days) {
-    track = document.createElement('div');
-    track.className = 'current-game-bar';
-    track.setAttribute('aria-hidden', 'true');
-    fill = document.createElement('span');
-    track.append(fill);
-  }
-  card.append(open, opponentSeat.row);
-  if (track && !yourMove) card.append(track);
-  card.append(board, mySeat.row);
-  if (track && yourMove) card.append(track);
+  card.append(open, opponentSeat.row, board, mySeat.row);
+  stampSeatInkFamily(card, game.gameSpecId);
 
-  const meta = document.createElement('div');
-  meta.className = 'current-game-meta';
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variant;
-  const parts: string[] = [];
-  if (days) parts.push(cadenceLabel(days));
-  parts.push(game.rated === true ? t('games.rated') : t('games.casual'));
-  if (current && current.ply > 0) parts.push(t('games.moveCount', { count: current.ply }));
-  const text = document.createElement('span');
-  text.textContent = parts.join(' · ');
-  meta.append(chip, text);
+  const meta = document.createElement('p');
+  meta.className = 'current-game-meta current-game-line';
+  meta.textContent = cardMetaText({
+    gameSpecId: game.gameSpecId,
+    rated: game.rated === true,
+    timeClass: 'correspondence',
+    timeControl: current?.timeControl ?? null,
+  });
+  meta.title = meta.textContent;
   card.append(meta);
 
-  // The badge and its bar are the card's one clock. The exact due time rides on
-  // the badge as a tooltip rather than a second line under the meta: a dated
-  // "due" line plus an "Updated" time (any event, not the last move) read as
-  // three competing clocks (Brian, 2026-10-08).
+  // The badge is the card's one clock. The exact due time rides on it as a
+  // tooltip rather than a second line under the meta: a dated "due" line plus
+  // an "Updated" time (any event, not the last move) read as three competing
+  // clocks (decided 2026-10-08).
   const due = formatDue(game.dueAt);
   if (due) onMove.clock.title = t('correspondence.dueAt', { when: due });
 
@@ -511,30 +523,12 @@ export function buildInboxCard(
   }
 
   const tick = (now: number): void => {
-    const urgency = deadlineUrgency(game.dueAt, now);
-    card.dataset.urgency = urgency;
-    onMove.clock.textContent = correspondenceTimeLeftLabel(game.dueAt, now);
-    if (fill) {
-      const fraction = deadlineFraction(game.dueAt, days, now) ?? 0;
-      fill.style.width = `${Math.round(fraction * 1000) / 10}%`;
-    }
+    card.dataset.urgency = deadlineUrgency(game.dueAt, now);
+    onMove.clock.textContent = correspondenceSeatClockLabel(game.dueAt, now);
   };
   tick(Date.now());
   ctx.tickers.push(tick);
   return card;
-}
-
-function buildInboxSeat(name: HTMLElement): { row: HTMLElement; clock: HTMLElement } {
-  const row = document.createElement('div');
-  row.className = 'current-game-seat';
-  const who = document.createElement('span');
-  who.className = 'current-game-seat-who';
-  who.append(name);
-  const clock = document.createElement('span');
-  clock.className = 'current-game-seat-clock is-deadline';
-  clock.hidden = true;
-  row.append(who, clock);
-  return { row, clock };
 }
 
 // ---- Boards -------------------------------------------------------------------------
@@ -1478,17 +1472,14 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
     status: error,
     surface: 'correspondence',
   });
-  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
-  // The poster picked a side: draw the board from the one you would take, your
-  // empty seat at the bottom. Random keeps the first side and the poster below.
-  const seat = accepterSide(seek.preferredColor);
+  // Accept sits in your seat under the board; a picked side turns the board to
+  // it, and the seat discs say the colours (seek-card.ts).
   return buildSeekCard(seek, {
     action: accept,
-    details: side ? [side] : [],
+    color: seek.preferredColor,
+    colorLabel: accepterColorLabel(seek.gameSpecId, seek.preferredColor),
     href: `/challenge/${encodeURIComponent(seek.id)}`,
-    side: seat ?? undefined,
     status: error,
-    waitingAtBottom: seat !== null,
   });
 }
 
@@ -1782,7 +1773,6 @@ export function buildIncomingChallengeCard(
 
   const details: string[] = [];
   const side = accepterColorLabel(challenge.gameSpecId, challenge.preferredColor);
-  if (side) details.push(side);
   const remaining = challenge.expiresAt
     ? deadlineRemainingMs(challenge.expiresAt, Date.now())
     : null;
@@ -1805,6 +1795,7 @@ export function buildIncomingChallengeCard(
     terms.textContent = [
       cadenceLabel(challenge.daysPerMove),
       challenge.rated ? t('games.rated') : t('games.casual'),
+      ...(side ? [side] : []),
       ...details,
     ].join(' · ');
     card.append(
@@ -1825,18 +1816,19 @@ export function buildIncomingChallengeCard(
       rated: challenge.rated === true,
     },
     {
-      action: withCorrespondenceDeadlineNotice(actions, challenge.daysPerMove),
+      // Accept and Decline take your seat, under the board; the deadline
+      // warning goes under the terms.
+      action: actions,
       ariaLabel: t('correspondence.challengeFrom', {
         name: challenger,
         variant: variantDisplayLabel(challenge.gameSpecId),
       }),
-      badge: false,
+      color: challenge.preferredColor,
+      colorLabel: side,
       details,
       href: `/challenge/${encodeURIComponent(challenge.id)}`,
-      side: accepterSide(challenge.preferredColor) ?? undefined,
+      notice: buildCorrespondenceDeadlineNotice(challenge.daysPerMove),
       status: error,
-      waiting: document.createTextNode(t('correspondence.waitingForYou')),
-      waitingAtBottom: true,
     },
   );
   card.classList.add('is-incoming');
@@ -1844,9 +1836,9 @@ export function buildIncomingChallengeCard(
 }
 
 // Your own seek as a seek card (seek-card.ts, the same card as Open seeks):
-// the empty seat says who it is waiting for (a directed challenge links its
-// recipient by handle, fail-closed); Copy link and Cancel sit in the card's
-// action row.
+// Copy link and Cancel take the empty seat, and the meta line leads with who it
+// is waiting for (a directed challenge links its recipient by handle,
+// fail-closed).
 export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTMLElement {
   const variant = variantDisplayLabel(seek.gameSpecId);
   let waiting: Node;
@@ -1873,7 +1865,7 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     waiting = document.createTextNode(label);
     ariaLabel = `${variant}, ${label}`;
   }
-  const details = [seekColorLabel(seek.gameSpecId, seek.preferredColor)];
+  const details: string[] = [];
   const remaining = seek.expiresAt ? deadlineRemainingMs(seek.expiresAt, Date.now()) : null;
   if (remaining !== null && remaining > 0) {
     details.push(t('correspondence.expiresIn', { time: formatDayClock(remaining) }));
@@ -1930,14 +1922,14 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     {
       action: actions,
       ariaLabel,
-      badge: false,
       details,
+      // "You" above the board with your disc, Copy link and Cancel in the
+      // seat still to be filled below it, as on everyone else's view of it.
+      color: seek.preferredColor,
+      colorLabel: seekColorLabel(seek.gameSpecId, seek.preferredColor),
       // A link or directed challenge opens its /challenge page (where the share
       // link lives); a public seek has no page of its own.
       href: seek.challengeUrl,
-      // Your seat's start board, your side at the bottom under "You". A random
-      // side has no seat yet, so it draws the first mover's.
-      side: seek.preferredColor === 'second' ? 'second' : 'first',
       waiting,
     },
   );
@@ -2162,18 +2154,34 @@ function showcaseMatchup(game: CurrentGame): string {
 function buildInPlaySection(ctx: PageContext, games: CurrentGame[]): HTMLElement {
   const section = buildSection(t('correspondence.gamesInProgress'), games.length);
   section.classList.add('correspondence-showcase');
-  const grid = document.createElement('div');
-  grid.className = 'correspondence-showcase-grid';
+  const grid = buildGrid('correspondence-showcase-grid');
   for (const game of games) grid.append(buildShowcaseCard(ctx, game));
   section.append(grid);
   return section;
 }
 
+// A game in progress as the /games Playing now card, built from the same parts
+// (current-games.ts seatOrder, buildSeatRow, cardMetaText, tickDeadlineClocks):
+// the second mover's seat, the board edge to edge, the first mover's seat with
+// the time left to move on whichever seat is to move, and one line with the
+// variant and cadence.
 function buildShowcaseCard(ctx: PageContext, game: CurrentGame): HTMLElement {
-  const card = document.createElement('a');
-  card.className = 'correspondence-showcase-card';
-  card.href = game.url;
+  const card = document.createElement('article');
+  card.className = 'current-game-card is-slim correspondence-game-card';
+  card.dataset.kind = 'correspondence';
   card.dataset.roomId = game.roomId;
+  const open = document.createElement('a');
+  open.className = 'current-game-open';
+  open.href = game.url;
+  open.setAttribute('aria-label', t('games.watchGame', { matchup: showcaseMatchup(game) }));
+
+  const [top, bottom] = seatOrder(game);
+  const clockEls: Record<string, HTMLElement> = {};
+  const firstColor = payloadFirstColor(game.payload);
+  const hasInk = variantSeatsHaveInk(game.gameSpecId);
+  const ink = (seat: CurrentGamePlayer | null): string | null | false =>
+    !hasInk ? false : seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
+
   const host = document.createElement('div');
   host.className = 'current-game-board';
   const kind = inboxTileKind(game.gameSpecId, game);
@@ -2185,34 +2193,27 @@ function buildShowcaseCard(ctx: PageContext, game: CurrentGame): HTMLElement {
       void mountBoard(ctx, host, game.gameSpecId, game.roomId, game, game.payload);
     }
   }
-  const names = document.createElement('span');
-  names.className = 'correspondence-showcase-names';
-  names.textContent = showcaseMatchup(game);
-  const meta = document.createElement('span');
-  meta.className = 'correspondence-card-meta';
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variantDisplayLabel(game.gameSpecId);
-  meta.append(chip);
-  const days = game.timeControl?.daysPerMove;
-  if (days) meta.append(document.createTextNode(cadenceLabel(days)));
-  const due = document.createElement('span');
-  due.className = 'correspondence-showcase-due';
+  card.append(
+    open,
+    buildSeatRow(top, clockEls, ink(top), game.gameSpecId),
+    host,
+    buildSeatRow(bottom, clockEls, ink(bottom), game.gameSpecId),
+  );
+  stampSeatInkFamily(card, game.gameSpecId);
+
+  const meta = document.createElement('p');
+  meta.className = 'current-game-meta current-game-line';
+  meta.textContent = cardMetaText(game);
+  meta.title = meta.textContent;
+  card.append(meta);
+
   const deadline = game.deadline;
-  if (deadline) {
-    const onMove = game.players.find((player) => player.color === deadline.seat);
-    const name = displayLiveName(onMove?.name, t('games.guest'));
-    const tick = (now: number): void => {
-      const remaining = deadlineRemainingMs(deadline.dueAt, now);
-      due.textContent =
-        remaining === null || remaining <= 0
-          ? t('correspondence.dueNow')
-          : t('correspondence.toMoveLeft', { name, time: formatDayClock(remaining) });
-    };
-    tick(Date.now());
-    ctx.tickers.push(tick);
-  }
-  card.append(host, names, meta, due);
+  const tick = (now: number): void => {
+    tickDeadlineClocks(clockEls, deadline, now);
+    if (deadline) card.dataset.urgency = deadlineUrgency(deadline.dueAt, now);
+  };
+  tick(Date.now());
+  ctx.tickers.push(tick);
   return card;
 }
 

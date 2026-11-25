@@ -1,7 +1,8 @@
 // "Fairy-Stockfish Level 8" was cut to "Fairy-Stockfish Le..." on a /games
 // card (2026-10-21): the seat line has about 130px beside the BOT tag and the
-// clock. Just finished cards call the engine FSF and keep the full name in the
-// tooltip; Playing now cards show the whole name, wrapping (2026-11-12).
+// clock. Both Just finished and Playing now cards call the engine FSF and keep
+// the full name in the tooltip; a Playing now seat is one line with the BOT tag
+// beside the name.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildFinishedTile, buildSeatRow } from './current-games.js';
 import type { CurrentGamePlayer } from './current-games-model.js';
@@ -64,14 +65,26 @@ describe('cardSeatName', () => {
 });
 
 describe('/games seat names', () => {
-  it('a live bot seat shows its whole name, with the BOT tag after it', () => {
+  it('a live bot seat shows FSF with the BOT tag beside it and the full name as its tooltip', () => {
     const row = buildSeatRow(player('Fairy-Stockfish Level 8', true), {}, 'black');
     const name = row.querySelector<HTMLElement>('.current-game-seat-name');
-    expect(name?.textContent).toBe('Fairy-Stockfish Level 8');
+    expect(name?.textContent).toBe('FSF Level 8');
     expect(name?.title).toBe('Fairy-Stockfish Level 8');
     const label = row.querySelector('.current-game-seat-label');
     expect(label?.lastElementChild?.classList.contains('current-game-bot')).toBe(true);
     expect(label?.contains(row.querySelector('.current-game-seat-clock'))).toBe(false);
+  });
+
+  it('a live Misty seat drops the game it is playing from her name', () => {
+    const row = buildSeatRow(
+      player('Misty Three Kingdoms Banqi Level 2', true),
+      {},
+      'black',
+      'three-kingdoms-banqi',
+    );
+    const name = row.querySelector<HTMLElement>('.current-game-seat-name');
+    expect(name?.textContent).toBe('Misty Level 2');
+    expect(name?.title).toBe('Misty Three Kingdoms Banqi Level 2');
   });
 
   it('a titled, flaired person shows the badge before and the flair after the name', () => {

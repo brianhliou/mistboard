@@ -414,29 +414,8 @@
   border-top: 3px solid var(--current-games-kind);
 }
 
-.current-game-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--current-games-kind, var(--site-muted)) 16%, transparent);
-  color: var(--current-games-kind, var(--site-muted));
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
-.current-game-card[data-kind="live"] .current-game-kind::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* An open seek: the empty seat is a dashed slot waiting for its player. */
+/* An open seek with no controls for you (your own, on /games): the empty seat
+   is a dashed slot waiting for its player. */
 .current-game-seat.is-empty-seat {
   justify-content: center;
   border: 1px dashed color-mix(in srgb, var(--current-games-kind-seek) 55%, var(--site-border));
@@ -456,20 +435,45 @@
   height: 100%;
 }
 
-/* A seek card's buttons get the bottom row to themselves, full width like an
-   in-progress card's Play, so the seat row above keeps the whole name. */
-.current-game-seek-actions {
-  display: flex;
-  min-width: 0;
+/* A seek card's controls take the seat still to be filled (seek-card.ts), full
+   width, so the card has no button row of its own and the poster's seat keeps
+   the whole name. The specificity outranks .correspondence-grid's phone seat
+   rule (wrap, no min-height) whatever order the stylesheets bundle in. */
+.current-game-card.is-seek > .current-game-seat.current-game-seek-slot {
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-height: 40px;
 }
 
-/* Two classes, so it beats .correspondence-ghost's flex: none whatever order
-   the stylesheets bundle in. */
-.current-game-seek-actions > .current-game-seek-action {
+/* Above the overlay link, and at least 40px tall: the tap-target floor
+   (scripts/lib/mobile-audit-rules.mjs). Three classes, so it beats
+   .correspondence-ghost's flex: none and 30-34px heights. */
+.current-game-card .current-game-seek-slot > .current-game-seek-action {
   position: relative;
   z-index: 2;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 40px;
+}
+
+/* A pair (Copy link and Cancel, Accept and Decline) splits the row. */
+.current-game-card .current-game-seek-slot .correspondence-ghost {
+  min-height: 40px;
+}
+
+/* One quiet line under the board, as on a game card (cardMetaText); it wraps
+   where the card has room for it to (/correspondence) and is one line with an
+   ellipsis in Playing now. */
+.current-game-card > .current-game-line {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--site-muted);
+}
+
+.current-game-card > .current-game-line a.player-name-link {
+  color: var(--site-heading);
+  font-weight: 600;
 }
 
 /* Accept on someone else's seek (seek-accept.ts): a button when signed in, a
@@ -478,7 +482,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--current-games-kind-seek);
   border-radius: 6px;
@@ -554,6 +558,26 @@
    seat-disc.css's. */
 .current-game-seat-disc {
   --seat-disc-size: 12px;
+}
+
+/* A seek with random colours (seek-card.ts): neither seat has a side yet, so
+   each carries one disc split between the two inks, the second clipped to the
+   right half of the first. The inks stay seat-disc.css's. */
+.current-game-seek-random-disc {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  width: var(--seat-disc-size);
+  height: var(--seat-disc-size);
+}
+
+.current-game-seek-random-disc > .seat-disc {
+  position: absolute;
+  inset: 0;
+}
+
+.current-game-seek-random-disc > .seat-disc + .seat-disc {
+  clip-path: inset(0 0 0 50%);
 }
 
 .current-game-seat-name {
@@ -711,11 +735,15 @@
 }
 
 /* The Three Kingdoms board carries an inline height:auto (its renderer,
-   three-kingdoms-banqi-diagrams.ts, sizes it by width on every other page),
-   which beat the rule above and drew the board at the top of the card with a
-   blank band below. Filling the box lets the viewBox centre it, as banqi's. */
-.current-game-board .replay-layout-solo .replay-board svg.banqi-board {
-  height: 100% !important;
+   three-kingdoms-banqi-diagrams.ts, sizes it by width on every other page). No
+   selector outranks an inline style, so rather than fight it the board's
+   holder centres it: the board keeps its width-driven height and sits in the
+   middle of the card's box, as banqi's viewBox centres it, instead of at the
+   top with a blank band below. */
+.current-game-board .replay-layout-solo .replay-board:has(> svg.banqi-board) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Crazyhouse Xiangqi keeps its hands on a live card (liveCardShowsHands in
@@ -917,21 +945,6 @@
   line-height: 1.5;
 }
 
-/* Correspondence: share of the move's allowance left. */
-.current-game-bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--site-panel-soft);
-  overflow: hidden;
-}
-
-.current-game-bar span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--current-games-kind, var(--site-accent));
-}
-
 .current-game-meta {
   display: flex;
   flex-wrap: wrap;
@@ -942,92 +955,184 @@
   min-width: 0;
 }
 
-.current-game-chip,
-.current-game-result {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--site-panel-soft);
-  color: var(--site-text);
-  white-space: nowrap;
-}
-
-/* Playing now on /games: every card is one shape, so the seat rows, time bar,
-   meta and buttons sit at the same height in every card of a grid row (decided
-   2026-11-12). The board runs edge to edge, as on the Just finished cards, in
-   one xiangqi-shaped box whatever the variant; a square, wide or tall board
-   sits centred in it. Each card spans seven rows of the grid and puts its parts
-   on them (subgrid): the seat above the board, the board, the seat below it,
-   the correspondence time bar, the meta, a seek's Accept button and its status
-   line. A row is as tall as that part's tallest card, so a bot name that wraps
-   moves every board in its row down together. Spacing is margins rather than
-   gaps, so a part no card in the row has takes no room. The seat rows, bar,
-   meta and buttons keep a 10px inset. The correspondence inbox and the
-   homepage keep the inset card. */
-.current-games-section[data-section="playing"] .current-games-grid {
+/* Playing now on /games and every card grid on /correspondence: every card is
+   one shape, so the seat rows, meta and buttons sit at the same height in every
+   card of a grid row (decided 2026-11-12; /correspondence joined 2026-11-24).
+   The board runs edge to edge, as on the Just finished cards, in one
+   xiangqi-shaped box whatever the variant; a square, wide or tall board sits
+   centred in it. Each card spans six rows of the grid and puts its parts on them
+   (subgrid): the seat above the board, the board, the seat below it, the meta,
+   whatever follows the meta (a challenge's deadline notice, Play your move) and
+   a seek's status line. A seek's Accept takes its empty seat's row, so a seek
+   and a game are one height. A row is as tall as that part's tallest card.
+   Spacing is margins rather than gaps, so a part no card in the row has takes
+   no room. The seat rows and meta keep a 10px inset. The homepage keeps the
+   inset card. */
+:is(
+  .current-games-section[data-section="playing"] .current-games-grid,
+  .current-games-grid.correspondence-grid
+) {
   row-gap: 0;
 }
 
-.current-games-section[data-section="playing"] .current-game-card {
+:is(.current-games-section[data-section="playing"], .correspondence-grid) .current-game-card {
   display: grid;
-  grid-row: span 7;
+  grid-row: span 6;
   grid-template-rows: subgrid;
+  /* One column no wider than the card: an auto column grows to a long name's
+     one-line width and pushed the board past a 174px phone card. */
+  grid-template-columns: minmax(0, 1fr);
   row-gap: 0;
   margin-bottom: 18px;
   padding: 8px 0 10px;
 }
 
-.current-games-section[data-section="playing"]
+/* A seek poster's name gives way with an ellipsis, as a game card's does. */
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-seek
+  .current-game-seat-who
+  > .current-game-seat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
   .current-game-card
   > :not(.current-game-board, .current-game-open) {
   margin-inline: 10px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > :has(+ .current-game-board) {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > :has(+ .current-game-board) {
   grid-row: 1;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-board {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-board {
   grid-row: 2;
   aspect-ratio: 552 / 612;
   margin-block: 6px;
   border-radius: 0;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-board + * {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-board
+  + * {
   grid-row: 3;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-bar {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-meta {
   grid-row: 4;
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-meta {
-  grid-row: 5;
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-meta
+  ~ * {
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-actions {
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card
+  > .current-game-seek-status {
   grid-row: 6;
   margin-top: 6px;
 }
 
-.current-games-section[data-section="playing"] .current-game-card > .current-game-seek-status {
-  grid-row: 7;
-  margin-top: 6px;
+/* A game card in Playing now (.is-slim: createCard in current-games.ts, and
+   /correspondence's buildInboxCard and buildShowcaseCard): the board, one line
+   per player (disc, name, BOT tag, clock) and one quiet line under the board.
+   The name gives way with an ellipsis; the tag and the clock stay whole. The
+   extra class outranks the base seat-label rules whatever order the
+   stylesheets load in. Seats are 34px in
+   game and seek cards alike: a seek's 40px Accept sits in its row and reaches
+   3px into the board's margin, so the two cards stay one height. One line even
+   where /correspondence's phone rule lets a seat wrap. */
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card:is(.is-slim, .is-seek)
+  > .current-game-seat {
+  flex-wrap: nowrap;
+  min-height: 34px;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-seek
+  > .current-game-seek-slot
+  > .current-game-seek-action {
+  margin-block: -3px;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  .current-game-seat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  .current-game-seat-label
+  > .current-game-seat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  .current-game-seat-label
+  > .current-game-bot {
+  flex: none;
+}
+
+/* A profile link is a 41px tap target on a 34px line: padding grows the box
+   into the board's margin and the negative margin keeps the line's height. */
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card.is-slim
+  a.player-name-link {
+  padding-block: 12px;
+  margin-block: -12px;
+}
+
+:is(.current-games-section[data-section="playing"], .correspondence-grid)
+  .current-game-card:is(.is-slim, .is-seek)
+  > .current-game-line {
+  display: block;
+  margin-bottom: 0;
+  font-size: 0.78rem;
+  color: var(--site-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Just finished: a smaller grid of final positions, every card one cell (a
-   banqi board is a short strip in its card; Brian, 2026-10-30). */
+   banqi board is a short strip in its card; decided 2026-10-30). */
 .current-games-finished-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  align-items: stretch;
   gap: 14px;
 }
 
-/* The board runs edge to edge; the names and the result sit in padded rows
-   above and below it. Cards in a row stretch to one height and the result
-   line keeps to the bottom. */
+/* The board runs edge to edge between the two name rows. Every card in a grid
+   row is stretched to the row's height and the board box takes the extra: a
+   shorter board (Jungle, gomoku, a square chess board) sits centred on the soft
+   panel, as the banqi strip does, so the bottom name row ends every card of the
+   row on one line and no blank band opens between the text rows. */
 .current-game-finished {
   display: flex;
   flex-direction: column;
@@ -1048,11 +1153,9 @@
 }
 
 .current-game-finished .current-game-board {
+  flex: 1 0 auto;
   aspect-ratio: var(--finished-board-aspect, 1);
   border-radius: 0;
-}
-
-.current-game-finished .current-game-board.is-loading {
   background: var(--site-panel-soft);
 }
 
@@ -1084,8 +1187,9 @@
 }
 
 /* One row per player, above and below the board on the side their pieces
-   start from (placeFinishedSeats), each with the card's full width. The
-   winner's name reads first; the other steps back. */
+   start from (placeFinishedSeats), each with the card's full width and ending
+   in the player's score (1, 0, or ½ each for a draw). The winner's name reads
+   first; the other steps back. */
 .current-game-finished-seat {
   display: flex;
   align-items: center;
@@ -1109,34 +1213,11 @@
   text-overflow: ellipsis;
 }
 
-/* The result on the left, when it ended in the bottom-right corner. */
-.current-game-finished-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  min-width: 0;
-  margin-top: auto;
-  padding: 0 10px 9px;
-}
-
-.current-game-finished .current-game-result {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.current-game-result {
-  border-radius: 5px;
-  font-weight: 600;
-  color: var(--site-heading);
-}
-
-.current-game-finished-when {
+.current-game-finished-score {
   flex: none;
   margin-left: auto;
-  color: var(--site-muted);
-  white-space: nowrap;
+  min-width: 1ch;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 

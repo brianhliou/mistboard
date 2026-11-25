@@ -12,8 +12,9 @@
 // masked and sealed specs arrive as cards only and get the misty tile, so
 // nothing about a hidden position is ever on this page. Clocks tick
 // client-side from the server snapshot; correspondence cards count down to the
-// seat-on-move's deadline with a thin bar of the move's allowance left. Open
-// seeks draw the variant's starting position (seek-card.ts).
+// seat-on-move's deadline in that seat's clock. A game card is the board, one
+// line per player and one quiet line under the board (the game and its time
+// control). Open seeks draw the variant's starting position (seek-card.ts).
 //
 // Just finished: /api/watch's public replay pool across every variant, without
 // the Featured channel's 20-ply bar (curated=0), so a game that leaves the wall
@@ -41,14 +42,15 @@ import {
   type CurrentGamePlayer,
   type CurrentGamesResponse,
   cardSeatName,
-  deadlineFractionLeft,
   FINISHED_BOARD_BOTTOM_SEAT,
   FINISHED_BOARD_POV,
   FINISHED_POOL_URL,
+  type FinishedSeatScore,
   finishedBoardAspect,
   finishedBoardBoxAspect,
   finishedBoardTenantPov,
   finishedPoolDue,
+  finishedSeatScores,
   finishedTileKind,
   finishedWinnerColor,
   isLowClock,
@@ -89,17 +91,17 @@ import type { ReplayHandle } from './replay.js';
 import { seatDiscClass, seatDiscEl } from './seat-disc.js';
 import {
   accepterColorLabel,
-  accepterSide,
   buildCorrespondenceListDeadlineNotice,
   buildSeekAcceptAction,
+  posterColorLabel,
 } from './seek-accept.js';
-import { buildKindBadge, buildSeekCard } from './seek-card.js';
+import { buildSeekCard } from './seek-card.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { seatInkFamily } from './variant-seat-label.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
-import { correspondenceTimeLeftLabel, formatClock } from './web-utils.js';
+import { correspondenceSeatClockLabel, formatClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
@@ -130,7 +132,6 @@ type CardState = {
   root: HTMLElement;
   boardRoot: HTMLElement;
   clockEls: Record<string, HTMLElement>;
-  bar: HTMLElement | null;
   meta: HTMLElement;
   // Client time the clock snapshot arrived; the tick drains from here.
   clockReceivedAt: number;
@@ -354,7 +355,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   function createCard(game: CurrentGame): CardState {
     const correspondence = game.timeClass === 'correspondence';
     const article = document.createElement('article');
-    article.className = 'current-game-card';
+    // is-slim scopes the one-line seats and the single meta line to these
+    // cards; seek cards and the correspondence inbox share the base styles.
+    article.className = 'current-game-card is-slim';
     article.dataset.roomId = game.roomId;
     article.dataset.observe = game.observe;
     article.dataset.kind = correspondence ? 'correspondence' : 'live';
@@ -381,23 +384,12 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     article.append(open, topRow, boardRoot, bottomRow);
     stampSeatInkFamily(article, game.gameSpecId);
 
-    let bar: HTMLElement | null = null;
-    if (correspondence) {
-      const track = document.createElement('div');
-      track.className = 'current-game-bar';
-      track.setAttribute('aria-hidden', 'true');
-      bar = document.createElement('span');
-      track.append(bar);
-      article.append(track);
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'current-game-meta';
+    const meta = document.createElement('p');
+    meta.className = 'current-game-meta current-game-line';
     renderMeta(meta, game);
     article.append(meta);
 
     const card: CardState = {
-      bar,
       boardRoot,
       clockEls,
       clockReceivedAt: Date.now(),
@@ -768,21 +760,41 @@ export function buildSeatRow(
   ink: string | null | false,
   gameSpecId?: string,
 ): HTMLElement {
+  // A bot goes by its short card name (FSF, Misty without the game, as Just
+  // finished does); the full name is the tooltip.
+  const nameEl = playerNameEl(
+    liveSeatName(player, gameSpecId, true),
+    profileTargetFor(player),
+    'current-game-seat-name',
+  );
+  nameEl.title = liveSeatName(player, gameSpecId);
+  const { row, clock } = seatRowFrame(nameEl, player ? ink : false, {
+    color: player?.color,
+    isEngine: player?.isEngine,
+  });
+  if (player) clockEls[player.color] = clock;
+  return row;
+}
+
+// One seat line of a Playing now card: the disc, the name with the BOT tag
+// beside a bot, and the clock badge (hidden until a tick fills it). The name
+// gives way (ellipsis); the tag and the clock stay whole. /correspondence
+// builds its game cards from the same line.
+export function seatRowFrame(
+  nameEl: HTMLElement,
+  ink: string | null | false,
+  options: { color?: string; isEngine?: boolean } = {},
+): { row: HTMLElement; clock: HTMLElement } {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
-  if (player) row.dataset.color = player.color;
+  if (options.color) row.dataset.color = options.color;
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
-  if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  const fullName = liveSeatName(player, gameSpecId);
-  // The whole name, wrapping onto a second line rather than cut (decided
-  // 2026-11-12), with the BOT tag following its last word.
+  if (ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
   const label = document.createElement('span');
   label.className = 'current-game-seat-label';
-  const nameEl = playerNameEl(fullName, profileTargetFor(player), 'current-game-seat-name');
-  nameEl.title = fullName;
   label.append(nameEl);
-  if (player?.isEngine) {
+  if (options.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
     badge.textContent = t('games.bot');
@@ -792,8 +804,7 @@ export function buildSeatRow(
   const clock = document.createElement('span');
   clock.className = 'current-game-seat-clock';
   row.append(who, clock);
-  if (player) clockEls[player.color] = clock;
-  return row;
+  return { row, clock };
 }
 
 // Recolour a card's seat discs once a flip game's opening flip is known. The
@@ -816,7 +827,7 @@ export function paintSeatDiscs(
 }
 
 // The Jungle family paints its second ink blue through this ancestor stamp.
-function stampSeatInkFamily(root: HTMLElement, variant: string): void {
+export function stampSeatInkFamily(root: HTMLElement, variant: string): void {
   const family = seatInkFamily(variant);
   if (family) root.dataset.seatInkFamily = family;
   else delete root.dataset.seatInkFamily;
@@ -824,15 +835,11 @@ function stampSeatInkFamily(root: HTMLElement, variant: string): void {
 
 function tickCard(card: CardState, now: number): void {
   const { game } = card;
-  const correspondence = game.timeClass === 'correspondence';
+  if (game.timeClass === 'correspondence') {
+    tickDeadlineClocks(card.clockEls, game.deadline, now);
+    return;
+  }
   for (const [color, el] of Object.entries(card.clockEls)) {
-    if (correspondence) {
-      const onMove = game.deadline?.seat === color;
-      el.textContent = onMove ? correspondenceTimeLeftLabel(game.deadline!.dueAt, now) : '';
-      el.classList.toggle('is-deadline', onMove);
-      el.hidden = !onMove;
-      continue;
-    }
     const remaining = clockRemaining(game, color, card.clockReceivedAt, now);
     el.hidden = remaining === null;
     if (remaining === null) continue;
@@ -840,9 +847,20 @@ function tickCard(card: CardState, now: number): void {
     el.classList.toggle('is-active', game.clock?.activeColor === color && !!game.clock?.running);
     el.classList.toggle('is-low', isLowClock(remaining, game.timeControl?.initialMs));
   }
-  if (card.bar) {
-    const fraction = deadlineFractionLeft(game, now);
-    card.bar.style.width = `${Math.round((fraction ?? 0) * 1000) / 10}%`;
+}
+
+// A correspondence game's one clock: the time left to move, on the seat that is
+// to move (keyed by colour, as buildSeatRow files them); the other seat shows none.
+export function tickDeadlineClocks(
+  clockEls: Record<string, HTMLElement>,
+  deadline: { seat: string; dueAt: string } | null,
+  now: number,
+): void {
+  for (const [color, el] of Object.entries(clockEls)) {
+    const onMove = deadline?.seat === color;
+    el.textContent = onMove && deadline ? correspondenceSeatClockLabel(deadline.dueAt, now) : '';
+    el.classList.toggle('is-deadline', onMove);
+    el.hidden = !onMove;
   }
 }
 
@@ -888,30 +906,31 @@ export function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): vo
   root.append(tile);
 }
 
-function renderMeta(root: HTMLElement, game: CurrentGame): void {
-  const chip = document.createElement('span');
-  chip.className = 'current-game-chip';
-  chip.textContent = variantDisplayLabel(game.gameSpecId);
-  const parts: string[] = [];
+// The one quiet line under the board: the game and its time control
+// ("Xiangqi · 10 + 5", "Xiangqi · 3 days per move"). Casual is the default and
+// goes unsaid; a rated game says so. The kind is the card's top edge.
+// /correspondence passes only the terms of one of your games.
+export function cardMetaText(
+  game: Pick<CurrentGame, 'gameSpecId' | 'rated' | 'timeClass' | 'timeControl'>,
+): string {
+  const parts = [variantDisplayLabel(game.gameSpecId)];
   if (game.timeClass === 'correspondence') {
     const days = game.timeControl?.daysPerMove ?? 0;
-    const cadence = days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
-    // Marked exactly like a live game since correspondence can be rated (2026-10-02).
-    parts.push(cadence, game.rated ? t('games.rated') : t('games.casual'));
-  } else {
-    const label = game.timeControl ? timeControlLabelForGame(asFeaturedGame(game)) : null;
-    parts.push(
-      [label, game.rated ? t('games.rated') : t('games.casual')].filter(Boolean).join(' '),
-    );
+    if (days > 0) {
+      parts.push(days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days }));
+    }
+  } else if (game.timeControl) {
+    const label = timeControlLabelForGame(asFeaturedGame(game as CurrentGame));
+    if (label) parts.push(label);
   }
-  parts.push(t('games.moveCount', { count: game.ply }));
-  const text = document.createElement('span');
-  text.textContent = parts.join(' · ');
-  root.replaceChildren(
-    buildKindBadge(game.timeClass === 'correspondence' ? 'correspondence' : 'live'),
-    chip,
-    text,
-  );
+  if (game.rated) parts.push(t('games.rated'));
+  return parts.join(' · ');
+}
+
+function renderMeta(root: HTMLElement, game: CurrentGame): void {
+  const text = cardMetaText(game);
+  root.textContent = text;
+  root.title = text;
 }
 
 function matchupLabel(game: CurrentGame): string {
@@ -930,15 +949,22 @@ export function namesFor(game: Pick<CurrentGame, 'players' | 'gameSpecId'>): {
   };
 }
 
-// A live seat's name as the card shows it; a bot's "Level N" in the visitor's
-// language (localizedBotName).
-function liveSeatName(player: CurrentGamePlayer | null, gameSpecId?: string): string {
+// A live seat's name; a bot's "Level N" in the visitor's language
+// (localizedBotName). `short` is the card's one-line form of a bot's name
+// (cardSeatName, which matches the English "Level N", so it runs first).
+function liveSeatName(
+  player: CurrentGamePlayer | null,
+  gameSpecId?: string,
+  short = false,
+): string {
   const name = displayLiveName(
     player?.name,
     t('games.guest'),
     player ? { ...player, gameSpecId } : undefined,
   );
-  return player?.isEngine ? localizedBotName(name) : name;
+  if (!player?.isEngine) return name;
+  const variantLabel = gameSpecId ? variantDisplayLabel(gameSpecId) : undefined;
+  return localizedBotName(short ? cardSeatName(name, variantLabel) : name);
 }
 
 function asFeaturedGame(game: CurrentGame): FeaturedGame {
@@ -967,7 +993,13 @@ export function buildGamesSeekCard(
   seek: CorrespondenceSeek,
   options: { signedIn?: boolean; navigate?: (url: string) => void } = {},
 ): HTMLElement {
-  if (seek.isMine) return buildSeekCard(seek, { href: '/correspondence' });
+  if (seek.isMine) {
+    return buildSeekCard(seek, {
+      color: seek.preferredColor,
+      colorLabel: posterColorLabel(seek.gameSpecId, seek.preferredColor),
+      href: '/correspondence',
+    });
+  }
   const status = document.createElement('p');
   status.className = 'current-game-seek-status';
   status.setAttribute('role', 'status');
@@ -980,17 +1012,14 @@ export function buildGamesSeekCard(
     status,
     surface: 'games',
   });
-  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
-  // A picked side: the board turns to the seat you would take, which sits at
-  // the bottom. Random keeps the first side with the poster below.
-  const seat = accepterSide(seek.preferredColor);
+  // Accept sits in your seat under the board; a picked side turns the board to
+  // it, and the seat discs say the colours (seek-card.ts).
   return buildSeekCard(seek, {
     action,
-    details: side ? [side] : [],
+    color: seek.preferredColor,
+    colorLabel: accepterColorLabel(seek.gameSpecId, seek.preferredColor),
     href: null,
-    side: seat ?? undefined,
     status,
-    waitingAtBottom: seat !== null,
   });
 }
 
@@ -1018,7 +1047,7 @@ async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
 
 // A finished card: the player names above and below the final position, each
 // on the side of the board their pieces start from, so a long name gets the
-// card's full width; then the result and when it ended.
+// card's full width, and each ending in that player's score.
 export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const locale = currentLocale();
   const [first, second] = matchupSeats(game);
@@ -1034,7 +1063,16 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   tile.dataset.roomId = game.roomId;
   tile.dataset.tileKind = kind;
   tile.href = profileGameHref(game);
-  tile.setAttribute('aria-label', t('games.finishedGame', { matchup }));
+  // The result words, how it ended and when leave the card face (each seat row
+  // carries its score) and stay in the hover title and the accessible name.
+  // An empty result has no words: resultLabel would call it a draw.
+  const details = [
+    game.result ? watchQueueResultLabel(game) : '',
+    terminationLabel(game.termination, terminationVariant(game.variant)),
+    game.endedAt ? formatGameTime(game.endedAt, locale) : '',
+  ].filter((part) => part !== '');
+  tile.title = [matchup, ...details].join(' · ');
+  tile.setAttribute('aria-label', [t('games.finishedGame', { matchup }), ...details].join(', '));
   const board = document.createElement('div');
   board.className = 'current-game-board';
   setBoardAspect(board, finishedBoardAspect(game.variant));
@@ -1043,26 +1081,11 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   } else {
     board.classList.add('is-loading');
   }
-  // The result on the left, when it ended in the bottom-right corner.
-  const line = document.createElement('span');
-  line.className = 'current-game-finished-line';
-  const result = document.createElement('span');
-  result.className = 'current-game-result';
-  result.textContent = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination, terminationVariant(game.variant));
-  if (reason) result.title = reason;
-  const when = document.createElement('time');
-  when.className = 'current-game-finished-when';
-  when.textContent = formatGameTime(game.endedAt, locale);
-  const ended = game.endedAt ? new Date(game.endedAt) : null;
-  if (ended && Number.isFinite(ended.getTime())) when.dateTime = ended.toISOString();
-  line.append(result, when);
-  const winner = finishedWinnerColor(game.result);
+  const scores = finishedSeatScores(game.result, first, second);
   tile.append(
-    finishedSeatRow(game, 'first', first, firstName, winner),
+    finishedSeatRow(game, 'first', first, firstName, scores.get(first) ?? null),
     board,
-    finishedSeatRow(game, 'second', second, secondName, winner),
-    line,
+    finishedSeatRow(game, 'second', second, secondName, scores.get(second) ?? null),
   );
   stampSeatInkFamily(tile, game.variant);
   placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
@@ -1106,14 +1129,15 @@ function finishedSeatRow(
   seat: BoardSeat,
   color: string,
   name: string,
-  winner: string | null = null,
+  score: FinishedSeatScore | null = null,
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = 'current-game-finished-seat';
   row.dataset.seat = seat;
   row.dataset.color = color;
   // The winner's name reads first; a draw leaves both as they are.
-  if (winner) row.dataset.outcome = winner === color ? 'won' : 'lost';
+  if (score === '1') row.dataset.outcome = 'won';
+  else if (score === '0') row.dataset.outcome = 'lost';
   const fullName = finishedSeatName(game, color, name);
   row.title = fullName;
   const label = document.createElement('span');
@@ -1134,6 +1158,15 @@ function finishedSeatRow(
     );
   }
   row.append(label);
+  // The score at the row's end. The title and accessible name already say the
+  // result in words, so the digit is hidden from screen readers.
+  if (score) {
+    const mark = document.createElement('span');
+    mark.className = 'current-game-finished-score';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = score;
+    row.append(mark);
+  }
   return row;
 }
 

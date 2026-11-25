@@ -123,25 +123,18 @@
   line-height: 1.5;
 }
 
-/* ---- Card grids (your seeks, your move, waiting, open seeks) --------------------
-   Every list is the site's game card (current-games.css .current-game-card);
-   these rules only size the grids and add the inbox's own lines. */
+/* ---- Card grids (your seeks, your move, waiting, open seeks, games in progress)
+   Every list is the site's game card in the /games Playing now shape
+   (current-games.css); these rules only size the grids and add the inbox's
+   own parts. */
 
 .correspondence-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
   gap: 14px;
 }
 
-.correspondence-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  font-size: 0.8rem;
-  color: var(--site-muted);
-}
-
-/* Play your move sits above the card-wide link, like the seat's profile link. */
+/* Play your move sits above the card-wide link, like the seat's profile link,
+   in the row after the meta line (current-games.css). */
 .correspondence-card-play {
   position: relative;
   z-index: 2;
@@ -155,11 +148,6 @@
   background: var(--site-warning-bg);
   color: var(--site-warning-text);
   box-shadow: inset 0 0 0 1px var(--site-warning-border);
-}
-
-.correspondence-game-card[data-urgency="urgent"] .current-game-bar span,
-.correspondence-game-card[data-urgency="due"] .current-game-bar span {
-  background: var(--site-warning-border);
 }
 
 /* A seek card's button pair (your Copy link and Cancel, a challenge's Accept
@@ -948,46 +936,6 @@
   font-size: 0.95rem;
 }
 
-/* Every correspondence game in play, as a board grid like /games. */
-.correspondence-showcase-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-  gap: 18px;
-}
-
-.correspondence-showcase-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--site-border);
-  border-radius: 8px;
-  background: var(--site-panel);
-  color: inherit;
-  text-decoration: none;
-}
-
-.correspondence-showcase-card:hover,
-.correspondence-showcase-card:focus-visible {
-  border-color: var(--site-accent);
-}
-
-.correspondence-showcase-names {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--site-heading);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.correspondence-showcase-due {
-  font-size: 0.8rem;
-  color: var(--site-accent-strong);
-  font-variant-numeric: tabular-nums;
-}
-
 .correspondence-seek-error {
   margin: 0;
   font-size: 0.78rem;
@@ -1104,9 +1052,9 @@
     font-size: 1.6rem;
   }
 
-  /* Two cards a row on a phone in every list, like the signed-out showcase
-     wall: one full-width board per game made the page a long scroll. The
-     seat rows wrap and the buttons go full width so they still fit. */
+  /* Two cards a row on a phone in every list: one full-width board per game
+     made the page a long scroll. The buttons go full width so they still
+     fit; the seat rows stay one line (current-games.css). */
   .correspondence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -1167,16 +1115,6 @@
   .correspondence-signedout-actions .correspondence-ghost {
     padding: 0 12px;
     white-space: nowrap;
-  }
-
-  /* Two boards a row on a phone, so the wall stays a wall. */
-  .correspondence-showcase-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .correspondence-showcase-card {
-    padding: 8px;
   }
 
   .correspondence-btn,

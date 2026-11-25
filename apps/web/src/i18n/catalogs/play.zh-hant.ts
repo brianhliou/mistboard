@@ -637,7 +637,6 @@ export const ZH_HANT_PLAY = {
   'correspondence.factReminders': '到期前提醒',
   'correspondence.factVariantsMore': '{list}及另外 {count} 種',
   'correspondence.gamesInProgress': '進行中的對局',
-  'correspondence.toMoveLeft': '輪到 {name}，剩餘 {time}',
   'correspondence.howHeading': '怎麼玩',
   'correspondence.step1Title': '發布或接受對局',
   'correspondence.step1Body': '選擇變體和每步的天數，然後發布求戰，或接受一個公開求戰。',

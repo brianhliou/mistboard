@@ -154,22 +154,31 @@ describe('/games seek card', () => {
     expect(navigate).toHaveBeenCalledWith('/account?tab=login&referrer=%2Fchallenge%2Fseek_9');
   });
 
-  it('says which side the accepter plays, or that colours are random', () => {
-    const meta = (preferredColor: string) =>
-      buildGamesSeekCard({ ...seek, preferredColor }, { signedIn: true }).textContent ?? '';
+  it("marks Accept with the accepter's colour, or random colours, and keeps the line to the terms", () => {
+    const view = (preferredColor: string) => {
+      const card = buildGamesSeekCard({ ...seek, preferredColor }, { signedIn: true });
+      return {
+        disc: card
+          .querySelector('.current-game-seek-slot .current-game-seat-disc')
+          ?.getAttribute('aria-label'),
+        line: card.querySelector('.current-game-line')?.textContent,
+      };
+    };
     // The poster moves first, so the accepter plays the second mover.
-    expect(meta('first')).toContain('you play Black');
-    expect(meta('second')).toContain('you play Red');
-    expect(meta('random')).toContain('random colors');
+    expect(view('first')).toEqual({ disc: 'Black', line: 'Jieqi · 3 days per move' });
+    expect(view('second')).toEqual({ disc: 'Red', line: 'Jieqi · 3 days per move' });
+    expect(view('random')).toEqual({ disc: 'Random colors', line: 'Jieqi · 3 days per move' });
   });
 
-  it("puts Accept in its own bottom row, not beside the poster's name", () => {
+  it("puts Accept in the empty seat under the board, not beside the poster's name", () => {
     const card = buildGamesSeekCard({ ...seek, preferredColor: 'random' }, { signedIn: true });
     const accept = card.querySelector('.current-game-seek-accept');
-    expect(accept?.closest('.current-game-seat')).toBeNull();
-    const row = accept?.closest('.current-game-seek-actions');
-    expect(row?.parentElement).toBe(card);
-    expect(row?.previousElementSibling?.classList.contains('current-game-meta')).toBe(true);
+    const slot = accept?.parentElement;
+    expect(slot?.classList.contains('current-game-seek-slot')).toBe(true);
+    expect(slot?.parentElement).toBe(card);
+    expect(slot?.previousElementSibling?.classList.contains('current-game-board')).toBe(true);
+    expect(slot?.querySelector('.current-game-seat-name')).toBeNull();
+    expect(card.querySelector('.is-empty-seat, .current-game-seek-actions')).toBeNull();
   });
 
   it("turns the board to the accepter's side when the poster picked one; random stays", () => {
@@ -177,13 +186,13 @@ describe('/games seek card', () => {
       const card = buildGamesSeekCard({ ...seek, preferredColor }, { signedIn: true });
       const seats = [...card.querySelectorAll(':scope > .current-game-seat')];
       return {
-        emptySeatAtBottom: seats[1]?.classList.contains('is-empty-seat') ?? false,
+        emptySeatAtBottom: seats[1]?.classList.contains('current-game-seek-slot') ?? false,
         perspective: card.querySelector<HTMLElement>('.current-game-board')?.dataset.perspective,
       };
     };
     expect(view('first')).toEqual({ emptySeatAtBottom: true, perspective: 'second' });
     expect(view('second')).toEqual({ emptySeatAtBottom: true, perspective: 'first' });
-    expect(view('random')).toEqual({ emptySeatAtBottom: false, perspective: undefined });
+    expect(view('random')).toEqual({ emptySeatAtBottom: true, perspective: undefined });
   });
 
   it('keeps your own seek leading to /correspondence with no Accept', () => {

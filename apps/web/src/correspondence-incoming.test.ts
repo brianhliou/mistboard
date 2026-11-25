@@ -44,14 +44,17 @@ describe('correspondence: challenges for you', () => {
     const card = host.querySelector<HTMLElement>('[data-seek-id="seek-in-1"]');
     expect(card?.classList.contains('current-game-card')).toBe(true);
     expect(card?.querySelector('.current-game-seat-name')?.textContent).toBe('Poster');
-    expect(card?.querySelector('.current-game-seat.is-empty-seat')?.textContent).toBe(
-      'Waiting for you',
-    );
-    const meta = card?.querySelector('.current-game-meta')?.textContent ?? '';
-    expect(meta).toContain('3 days per move');
-    expect(meta).toContain('Rated');
-    expect(meta).toContain('you play Black');
-    expect(meta).toContain('expires in');
+    // Accept and Decline take your empty seat; no dashed "Waiting for you".
+    expect(card?.querySelector('.is-empty-seat')).toBeNull();
+    const meta = card?.querySelector('.current-game-meta.current-game-line')?.textContent ?? '';
+    // The side is the disc on your seat, not words in the line.
+    expect(meta).toMatch(/^Xiangqi · 3 days per move · Rated · expires in /);
+    expect(
+      card
+        ?.querySelector('.current-game-seek-slot .current-game-seat-disc')
+        ?.getAttribute('aria-label'),
+    ).toBe('Black');
+    expect(card?.querySelector('.current-game-chip')).toBeNull();
     // A directed challenge is not on the open board, so no "Open seek" tag.
     expect(card?.querySelector('.current-game-kind')).toBeNull();
     expect(card?.querySelector('a.current-game-open')?.getAttribute('href')).toBe(
@@ -63,7 +66,7 @@ describe('correspondence: challenges for you', () => {
     expect(labels).toEqual(['Accept', 'Decline']);
   });
 
-  it('gives the buttons their own bottom row, so the seat row holds only the name', async () => {
+  it('puts Accept and Decline in your seat under the board, apart from the name', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => incomingResponse([xiangqiChallenge])),
@@ -76,11 +79,22 @@ describe('correspondence: challenges for you', () => {
     // The name used to share its row with Accept and Decline and truncated.
     expect(seatRow?.querySelector('button')).toBeNull();
     expect(seatRow?.querySelector('.current-game-seek-action')).toBeNull();
-    const row = card?.querySelector('.current-game-seek-actions');
-    expect(row?.parentElement).toBe(card);
-    // Under the meta line, the last row before the (hidden) error line.
-    expect(row?.previousElementSibling?.classList.contains('current-game-meta')).toBe(true);
-    expect([...(row?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual([
+    const slot = card?.querySelector('.current-game-seek-slot');
+    expect(slot?.parentElement).toBe(card);
+    // Your seat, right under the board; then the meta line, the deadline
+    // warning and the (hidden) error line. No button row of its own.
+    expect(slot?.previousElementSibling?.classList.contains('current-game-board')).toBe(true);
+    expect(
+      [...(slot?.parentElement?.children ?? [])]
+        .slice([...(card?.children ?? [])].indexOf(slot as Element) + 1)
+        .map((el) => el.className),
+    ).toEqual([
+      'current-game-meta current-game-line',
+      'correspondence-deadline-notice',
+      'correspondence-row-error correspondence-seek-error',
+    ]);
+    expect(card?.querySelector('.current-game-seek-actions')).toBeNull();
+    expect([...(slot?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual([
       'Accept',
       'Decline',
     ]);
@@ -103,7 +117,7 @@ describe('correspondence: challenges for you', () => {
       .map((el) =>
         el.classList.contains('current-game-board')
           ? 'board'
-          : el.classList.contains('is-empty-seat')
+          : el.classList.contains('current-game-seek-slot')
             ? 'you'
             : 'challenger',
       );
@@ -122,7 +136,10 @@ describe('correspondence: challenges for you', () => {
       undefined,
     );
     const seats = [...(card?.querySelectorAll(':scope > .current-game-seat') ?? [])];
-    expect(seats.map((el) => el.classList.contains('is-empty-seat'))).toEqual([false, true]);
+    expect(seats.map((el) => el.classList.contains('current-game-seek-slot'))).toEqual([
+      false,
+      true,
+    ]);
   });
 
   it('is hidden entirely when nothing is waiting', async () => {

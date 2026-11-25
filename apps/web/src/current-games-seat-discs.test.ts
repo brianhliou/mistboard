@@ -58,9 +58,11 @@ describe('just-finished tiles', () => {
     );
     expect(finishedDisc(tile, 'first')).toBe('red');
     expect(finishedDisc(tile, 'second')).toBe('black');
-    // The name is still the row's text, with the circle in front of it.
+    // The name is the row's text, with the circle in front of it and the score
+    // after it (red won).
     const row = tile.querySelector('.current-game-finished-seat[data-seat="first"]');
-    expect(row?.textContent).toBe('Ann');
+    expect(row?.querySelector('.current-game-finished-seat-name')?.textContent).toBe('Ann');
+    expect(row?.querySelector('.current-game-finished-score')?.textContent).toBe('1');
     expect(row?.firstElementChild?.classList.contains('seat-disc')).toBe(true);
   });
 

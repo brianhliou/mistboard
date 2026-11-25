@@ -302,6 +302,22 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey, prefix 
       shotFile = `${prefix}${deviceKey}-${page.name}.jpg`;
       shot = join(shotsDir, shotFile);
       shotHeight = Math.min(measured.docHeight ?? viewport.height, viewport.height * 3);
+      // Content that mounts only near the viewport (finished-game boards, lazy
+      // images) is blank in a full-page capture taken from the top. Walk the
+      // captured range once, come back, and give the mounts a moment.
+      await tab
+        .evaluate(
+          async ({ maxHeight, step }) => {
+            for (let y = 0; y < maxHeight; y += step) {
+              window.scrollTo(0, y);
+              await new Promise((resolve) => setTimeout(resolve, 200));
+            }
+            window.scrollTo(0, 0);
+          },
+          { maxHeight: shotHeight, step: Math.max(200, Math.floor(viewport.height / 2)) },
+        )
+        .catch(() => {});
+      await tab.waitForTimeout(1500);
       layout = await tab.evaluate(layoutFingerprint, { maxHeight: shotHeight }).catch(() => null);
       await tab.screenshot({
         path: shot,

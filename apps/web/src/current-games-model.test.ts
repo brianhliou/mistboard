@@ -221,6 +221,13 @@ describe('finishedBoardBoxAspect', () => {
     expect(finishedBoardBoxAspect(finishedBoardAspect('xiangqi'))).toBeCloseTo(552 / 612, 4);
     expect(finishedBoardBoxAspect(1)).toBe(1);
   });
+
+  it('sizes an FFQ banqi card before its board mounts as it will be after', () => {
+    // Its 4x8 board is drawn as banqi's 568x312 strip. The files-over-ranks
+    // guess (0.5) gave a box twice as tall that shrank when the board mounted.
+    expect(finishedBoardAspect('ffq-banqi')).toBeCloseTo(568 / 312, 4);
+    expect(finishedBoardBoxAspect(finishedBoardAspect('ffq-banqi'))).toBeCloseTo(552 / 612, 4);
+  });
 });
 
 describe('finishedWinnerColor', () => {

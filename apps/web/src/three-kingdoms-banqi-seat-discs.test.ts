@@ -108,7 +108,7 @@ describe.each(['black', 'red', null] as const)('TK seat ink firstColor=%s', (fir
     const label =
       firstColor === null ? 'First wins' : firstColor === 'red' ? 'Red wins' : 'Black wins';
     expect(watchQueueResultLabel(game)).toBe(label);
-    expect(buildFinishedTile(game).querySelector('.current-game-result')?.textContent).toBe(label);
+    expect(buildFinishedTile(game).title.split(' · ')).toContain(label);
   });
 
   it('/watch clock-side player rows use the enriched feed row', async () => {
