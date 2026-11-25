@@ -23,7 +23,7 @@ import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import './xiangqi-mahjong.css';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
-  fitXmjRackBadges,
+  placeXmjRackTags,
   toggleXmjLogHand,
   xiangqiMahjongTableHtml,
   xmjHandsTableHtml,
@@ -308,15 +308,15 @@ export function mountXiangqiMahjongWatchReplay(
     table.style.minHeight = `${Math.floor(availH / zoom)}px`;
     fitted = `${root.clientWidth}x${root.clientHeight}`;
   };
-  // A full-size table keeps its zoom; each rack scales its own tiles instead,
-  // as the room does, so a claimed set never pushes a badge off the felt.
+  // A full-size table keeps its zoom and its tiles' size; each rack's badges
+  // move to the felt's edge where the hand leaves them no room, as in the room.
   let rackWidth = 0;
   const resized = new ResizeObserver(() => {
     if (options.compact) {
       if (`${root.clientWidth}x${root.clientHeight}` !== fitted) fitToHost();
     } else if (board.clientWidth !== rackWidth) {
       rackWidth = board.clientWidth;
-      fitXmjRackBadges(board);
+      placeXmjRackTags(board);
     }
   });
   resized.observe(options.compact ? root : board);
@@ -345,7 +345,7 @@ export function mountXiangqiMahjongWatchReplay(
       row.classList.toggle('result-win', winner === seat);
     }
     if (options.compact) fitToHost();
-    else if (board.isConnected) fitXmjRackBadges(board);
+    else if (board.isConnected) placeXmjRackTags(board);
     log?.render(ply);
     options.onPlyChange?.(ply, maxPly());
   };

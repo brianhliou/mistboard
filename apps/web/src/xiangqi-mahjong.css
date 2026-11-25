@@ -38,12 +38,14 @@
 
 /* The side columns size themselves to width / aspect, which is the board's
    height only for a board drawn at a fixed ratio. The table is not one, so
-   both rails take its measured height instead and still line up with it. */
+   both rails take its measured height instead and still line up with it. The
+   height follows the tiles' unit width (--xmj-unit-w, below), not the felt's:
+   the felt may run wider than the tiles need, and that width adds no height. */
 @media (min-width: 800px) {
   .live-route--xiangqi-mahjong .live-review__cluster .moves-panel {
     min-height: max(
-      calc(var(--uni-board-width) * 0.69 + 302px),
-      calc(var(--uni-board-width) * 0.957 + 154px)
+      calc(var(--xmj-unit-w, var(--uni-board-width)) * 0.69 + 302px),
+      calc(var(--xmj-unit-w, var(--uni-board-width)) * 0.957 + 154px)
     );
   }
 }
@@ -51,8 +53,8 @@
 @media (min-width: 1260px) {
   .live-route--xiangqi-mahjong .live-review__cluster .meta-panel {
     max-height: max(
-      calc(var(--uni-board-width) * 0.69 + 302px),
-      calc(var(--uni-board-width) * 0.957 + 154px)
+      calc(var(--xmj-unit-w, var(--uni-board-width)) * 0.69 + 302px),
+      calc(var(--xmj-unit-w, var(--uni-board-width)) * 0.957 + 154px)
     );
   }
 }
@@ -63,6 +65,56 @@
    it. Declared here because the height budget lives on the cluster. */
 .live-route--xiangqi-mahjong .live-review__cluster {
   --uni-board-max: min(1040px, calc((var(--uni-board-h-budget) + 148px) / 0.957));
+}
+
+/* A wider felt on a wide screen (2026-11-25). The tiles keep the width the
+   shared formula gives a board (--xmj-unit-w: the height budget, the page
+   width and the grip), so the table is no taller and no tile larger than
+   before. The felt itself (--uni-board-width, the column) takes the width the
+   two rails leave at their widest, up to 1.45 x the unit width, so the racks,
+   the centre and the discards get room around them; at 1280 x 720 that is
+   what lets a seat's badges sit beside its hand. The grip scales both. */
+@media (min-width: 800px) {
+  .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
+    --xmj-unit-w: min(
+      calc(
+        min(
+          var(--uni-board-w-budget),
+          calc(var(--uni-board-h-budget) * var(--uni-board-aspect, 1)),
+          var(--uni-board-max, 10000px)
+        ) *
+        var(--uni-board-scale, 1)
+      ),
+      var(--uni-board-fit-w, 10000px)
+    );
+    --xmj-felt-room: calc(
+      min(100vw, var(--uni-main-max)) -
+      var(--uni-table-max) -
+      var(--uni-gap) -
+      var(--uni-page-reserve)
+    );
+    --uni-board-width: max(
+      var(--xmj-unit-w),
+      min(calc(var(--xmj-felt-room) * var(--uni-board-scale, 1)), calc(var(--xmj-unit-w) * 1.45))
+    );
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster .board-shell {
+    width: min(100%, var(--uni-board-width));
+  }
+}
+
+@media (min-width: 1260px) {
+  .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
+    --xmj-felt-room: calc(
+      min(100vw, var(--uni-main-max)) -
+      var(--uni-side-max) -
+      var(--uni-table-max) -
+      2 *
+      var(--uni-gap) -
+      var(--uni-page-reserve)
+    );
+  }
 }
 
 .live-route--xiangqi-mahjong .live-review__cluster .board-stage,
@@ -103,10 +155,14 @@
   }
 
   /* One unit per design pixel of a 560px table: tiles, discards and their
-     depth scale with the column; padding stays put, and type grows only
-     once the table is wider than 560px (below). */
+     depth scale with the column, less whatever the felt runs wider than the
+     tiles' unit width (above), so a wider felt never grows a tile; padding
+     stays put, and type grows only once that width passes 560px (below). */
   .live-route--xiangqi-mahjong .xmj-table {
-    --xmj-u: calc(100cqw / 560);
+    --xmj-u: calc(
+      (100cqw - var(--uni-board-width, 0px) + var(--xmj-unit-w, var(--uni-board-width, 0px))) /
+      560
+    );
     --xmj-tile-w: calc(52 * var(--xmj-u));
     --xmj-tile-h: calc(68 * var(--xmj-u));
     --xmj-depth: calc(5 * var(--xmj-u));
@@ -376,6 +432,44 @@
 
 .xmj-rack__tag--end {
   align-items: flex-start;
+}
+
+.xmj-rack__hand {
+  grid-column: 2;
+}
+
+/* A seat whose widest hand (a claimed set and two tiles, one just drawn)
+   leaves no room beside it for the badges sets them on the felt's edge at its
+   corners instead, half in the table's padding: the dealer on the left, the
+   seat to discard on the right. They take no height, so the table and the
+   rails beside it keep theirs, and the tiles keep their size: until
+   2026-11-25 the tiles shrank to make room, so they changed size with the
+   hand. placeXmjRackTags decides it from the seat's width, never its hand. */
+.xmj-seat--tags-edge {
+  position: relative;
+}
+
+.xmj-seat--tags-edge .xmj-rack__tag {
+  position: absolute;
+  z-index: 1;
+  flex-direction: row;
+  pointer-events: none;
+}
+
+.xmj-seat--tags-edge .xmj-rack__tag--start {
+  left: 0;
+}
+
+.xmj-seat--tags-edge .xmj-rack__tag--end {
+  right: 0;
+}
+
+.xmj-seat--opponent.xmj-seat--tags-edge .xmj-rack__tag {
+  top: -12px;
+}
+
+.xmj-seat--self.xmj-seat--tags-edge .xmj-rack__tag {
+  bottom: -12px;
 }
 
 .xmj-concealed {
@@ -725,12 +819,22 @@
   font-size: 13px;
 }
 
+/* "Hand 4 of 6" on the left, the wall and "21 tiles left" on the right. The
+   stacks give way first (below); on a table too narrow even for that, the
+   wall drops under the hand line, flush right, rather than run past the
+   band. */
 .xmj-centre__facts {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
+}
+
+.xmj-centre__facts > .xmj-wall {
+  margin-left: auto;
 }
 
 .xmj-hand-line {
@@ -755,7 +859,7 @@
 }
 
 /* The labels either side keep their size, so on a narrow table the stacks
-   give up width (never height) rather than push "Wall N" out of the band.
+   give up width (never height) rather than push "N tiles left" out of the band.
    Each stack's tiles take its width, so a width rule sets one property. */
 .xmj-wall__stacks {
   display: inline-flex;
@@ -792,7 +896,13 @@
   font-size: 13px;
   opacity: 0.85;
   white-space: nowrap;
-  min-width: 6ch;
+}
+
+/* The number holds two digits' width, so the stacks beside the label stay
+   put as the count drops under ten. */
+.xmj-wall__n {
+  display: inline-block;
+  min-width: 2ch;
   text-align: right;
 }
 
@@ -1230,7 +1340,7 @@ ol.xmj-log {
    height (see the rails above) less the ~490px of clocks, names and buttons
    around it, so the rail ends where the table does. */
 .live-route--xiangqi-mahjong .round-table__box .game-table-moves {
-  max-height: max(170px, calc(var(--uni-board-width) * 0.625 + 323px - 490px));
+  max-height: max(170px, calc(var(--xmj-unit-w, var(--uni-board-width)) * 0.625 + 323px - 490px));
 }
 
 /* Each hand's heading is one line: the hand, who won and how, the points

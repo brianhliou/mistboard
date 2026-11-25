@@ -15,11 +15,11 @@ import {
   xmjViewFor,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fitXmjRackBadges } from './xiangqi-mahjong-table.js';
+import { placeXmjRackTags } from './xiangqi-mahjong-table.js';
 
 vi.mock('./xiangqi-mahjong-table.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./xiangqi-mahjong-table.js')>();
-  return { ...actual, fitXmjRackBadges: vi.fn(actual.fitXmjRackBadges) };
+  return { ...actual, placeXmjRackTags: vi.fn(actual.placeXmjRackTags) };
 });
 
 import { embedRendererKindForVariant, showcaseRendererKindForSpec } from './showcase-dispatch.js';
@@ -163,8 +163,8 @@ describe('xiangqi mahjong TV mount', () => {
     handle.destroy();
   });
 
-  it('fits the racks of a full-size table so a claimed set keeps its badge on the felt', async () => {
-    const fit = vi.mocked(fitXmjRackBadges);
+  it('places the rack badges of a full-size table so a claimed set keeps its badge on the felt', async () => {
+    const fit = vi.mocked(placeXmjRackTags);
     fit.mockClear();
     const root = document.createElement('div');
     document.body.append(root);

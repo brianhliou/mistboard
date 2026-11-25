@@ -1,110 +1,125 @@
-// A seated player's own rack with a claimed set shown beside two concealed
-// tiles ran wider than the table had room for at the default board size, and
-// its "To discard" badge ran past the felt's edge ("To discar", 2026-10-27).
-// The rack's grid puts the hand in an `auto` column between two `1fr` badge
-// columns; happy-dom has no layout, so these tests model that grid's geometry
-// and check the fit shrinks the tiles until the badge sits inside its column.
-import { describe, expect, it } from 'vitest';
+// A seat's tiles keep one size at a given table width. Until 2026-11-25 a rack
+// whose badges had no room beside its hand shrank its tiles (to 0.6x), so the
+// same seat's tiles changed size as a fourth tile became a fifth or a set was
+// claimed. Now the badges move to the felt's edge instead, decided from the
+// widest hand the seat can ever hold. happy-dom has no layout, so these tests
+// give the seat, its tiles and the badges fixed boxes.
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  fitXmjRackBadges,
-  type XmjRackMeasure,
-  xmjRackTileScale,
+  placeXmjRackTags,
+  XMJ_TAGS_EDGE_CLASS,
+  xmjRackTagsBeside,
 } from './xiangqi-mahjong-table.js';
 
-/** The rack at a 1280px window: 390px inside the felt, 8px grid gaps. */
-const RACK_W = 390;
-const GRID_GAP = 8;
-const BASE_TILE = 48.45;
-/** The hand's fixed width: the 20px gap to the set, its tray, the tile gaps. */
-const HAND_FIXED = 36;
+/** The self seat at the narrowest desktop table before the felt widened. */
+const NARROW = { room: 282, tileW: 35.3, tileH: 46.3 };
+/** The self seat at a 1440x900 window on the wider felt. */
+const WIDE = { room: 646, tileW: 64.9, tileH: 85.2 };
 const BADGE_W = 75;
 
-function measureAt(tiles: number, badge = BADGE_W) {
-  return (scale: number): XmjRackMeasure => {
-    const hand = HAND_FIXED + tiles * BASE_TILE * scale;
-    const column = (RACK_W - 2 * GRID_GAP - hand) / 2;
-    return { overflow: Math.max(0, badge - column), tiles: tiles * BASE_TILE * scale };
-  };
-}
-
-describe('xmjRackTileScale', () => {
-  it('shrinks a rack whose badge runs past its column until it fits', () => {
-    const measure = measureAt(5);
-    expect(measure(1).overflow).toBeGreaterThan(10);
-    const scale = xmjRackTileScale(measure);
-    expect(scale).toBeLessThan(1);
-    expect(measure(scale).overflow).toBeLessThanOrEqual(0.5);
+describe('xmjRackTagsBeside', () => {
+  it('keeps the badges beside the hand when the widest hand leaves them room', () => {
+    expect(xmjRackTagsBeside({ ...WIDE, tag: BADGE_W })).toBe(true);
   });
 
-  it('leaves a rack whose badges fit at full size', () => {
-    expect(xmjRackTileScale(measureAt(5, 40))).toBe(1);
+  it('moves the badges to the edge when the widest hand would crowd them', () => {
+    expect(xmjRackTagsBeside({ ...NARROW, tag: BADGE_W })).toBe(false);
   });
 
-  it('never shrinks tiles past the floor, however long the badge', () => {
-    expect(xmjRackTileScale(measureAt(5, 400))).toBeCloseTo(0.6, 5);
+  it('answers from the widest hand, so room for five tiles today is not enough', () => {
+    // Five concealed tiles and a 75px badge each side fit in 470px; a claimed
+    // set with two concealed (4 upright, 1 sideways) does not, so the answer
+    // is already no before any set is claimed.
+    const tileW = 64.9;
+    const tileH = 85.2;
+    const fiveConcealed = 5 * tileW + 4 * 4 + 12;
+    const room = fiveConcealed + 2 * (BADGE_W + 8) + 1;
+    expect(room).toBeLessThan(4 * tileW + tileH + 48 + 2 * (BADGE_W + 8));
+    expect(xmjRackTagsBeside({ room, tileW, tileH, tag: BADGE_W })).toBe(false);
   });
 });
 
-function rect(left: number, width: number, height = 20): DOMRect {
+function box(width: number, height: number): DOMRect {
   return {
-    left,
-    right: left + width,
+    left: 0,
+    right: width,
     width,
     top: 0,
     bottom: height,
     height,
-    x: left,
+    x: 0,
     y: 0,
     toJSON: () => ({}),
   } as DOMRect;
 }
 
-/** A rack with one tile per entry and a turn badge, laid out as the grid would. */
-function mountRack(tiles: number, badge: string): { rack: HTMLElement; hand: HTMLElement } {
-  const root = document.createElement('div');
-  root.innerHTML = `<div class="xmj-rack"><span class="xmj-rack__tag xmj-rack__tag--start"></span><span class="xmj-rack__hand"><span class="xmj-concealed">${'<span class="xmj-tile"></span>'.repeat(2)}</span><span class="xmj-melds"><span class="xmj-meld"><span class="xmj-meld__tiles">${'<span class="xmj-tile"></span>'.repeat(tiles - 2)}</span></span></span></span><span class="xmj-rack__tag xmj-rack__tag--end">${badge}</span></div>`;
-  document.body.append(root);
-  const rack = root.querySelector<HTMLElement>('.xmj-rack') as HTMLElement;
-  const hand = rack.querySelector<HTMLElement>('.xmj-rack__hand') as HTMLElement;
-  const tileW = () => Number.parseFloat(hand.style.getPropertyValue('--xmj-tile-w')) || BASE_TILE;
-  const handW = () => HAND_FIXED + tiles * tileW();
-  const column = () => (RACK_W - 2 * GRID_GAP - handW()) / 2;
-  const endLeft = () => RACK_W - column();
-  for (const tile of hand.querySelectorAll<HTMLElement>('.xmj-tile')) {
-    tile.getBoundingClientRect = () => rect(0, tileW(), tileW() * 1.3);
+const TILE = '<span class="xmj-tile"></span>';
+
+/** A self seat holding `tiles` concealed tiles and a turn badge, `room` wide. */
+function mountSeat(tiles: number, room: number, tile: { w: number; h: number }): HTMLElement {
+  const host = document.createElement('div');
+  host.innerHTML = `<section class="xmj-seat xmj-seat--self"><div class="xmj-rack"><span class="xmj-rack__tag xmj-rack__tag--start"></span><span class="xmj-rack__hand"><span class="xmj-concealed">${TILE.repeat(tiles)}</span></span><span class="xmj-rack__tag xmj-rack__tag--end"><span class="xmj-badge xmj-badge--turn">To discard</span></span></div></section>`;
+  document.body.append(host);
+  const seat = host.querySelector<HTMLElement>('.xmj-seat') as HTMLElement;
+  Object.defineProperty(seat, 'clientWidth', { configurable: true, value: room });
+  for (const el of seat.querySelectorAll<HTMLElement>('.xmj-tile')) {
+    el.getBoundingClientRect = () => box(tile.w, tile.h);
   }
-  const start = rack.querySelector<HTMLElement>('.xmj-rack__tag--start') as HTMLElement;
-  const end = rack.querySelector<HTMLElement>('.xmj-rack__tag--end') as HTMLElement;
-  start.getBoundingClientRect = () => rect(0, column());
-  end.getBoundingClientRect = () => rect(endLeft(), column());
-  const turn = end.firstElementChild as HTMLElement | null;
-  if (turn) turn.getBoundingClientRect = () => rect(endLeft(), BADGE_W);
-  return { rack, hand };
+  return host;
 }
 
-describe('fitXmjRackBadges', () => {
-  it('sizes the tiles of a rack with a shown set so "To discard" stays inside the felt', () => {
-    const { rack, hand } = mountRack(
-      5,
-      '<span class="xmj-badge xmj-badge--turn">To discard</span>',
-    );
-    const badge = rack.querySelector('.xmj-badge--turn') as HTMLElement;
-    expect(badge.getBoundingClientRect().right).toBeGreaterThan(RACK_W);
-    fitXmjRackBadges(document.body);
-    expect(hand.style.getPropertyValue('--xmj-tile-w')).not.toBe('');
-    const column = (
-      rack.querySelector('.xmj-rack__tag--end') as HTMLElement
-    ).getBoundingClientRect();
-    expect(badge.getBoundingClientRect().right).toBeLessThanOrEqual(column.right + 0.5);
-    expect(badge.getBoundingClientRect().right).toBeLessThanOrEqual(RACK_W + 0.5);
-    rack.parentElement?.remove();
+describe('placeXmjRackTags', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
   });
 
-  it('leaves a rack with no badge at its own size', () => {
-    const { rack, hand } = mountRack(5, '');
-    hand.style.setProperty('--xmj-tile-w', '30px');
-    fitXmjRackBadges(document.body);
-    expect(hand.style.getPropertyValue('--xmj-tile-w')).toBe('');
-    rack.parentElement?.remove();
+  function badgesMeasure(width: number): void {
+    const real = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('xmj-badge') ? box(width, 20) : real.call(this);
+    });
+  }
+
+  it('never writes a tile size, at four tiles or five, wide or narrow', () => {
+    badgesMeasure(BADGE_W);
+    for (const tiles of [4, 5]) {
+      for (const at of [NARROW, WIDE]) {
+        const host = mountSeat(tiles, at.room, { w: at.tileW, h: at.tileH });
+        placeXmjRackTags(host);
+        for (const el of host.querySelectorAll<HTMLElement>('.xmj-rack__hand, .xmj-tile')) {
+          expect(el.style.getPropertyValue('--xmj-tile-w')).toBe('');
+          expect(el.style.getPropertyValue('--xmj-tile-h')).toBe('');
+        }
+        host.remove();
+      }
+    }
+  });
+
+  it('gives a seat the same placement at four tiles as at five', () => {
+    badgesMeasure(BADGE_W);
+    for (const at of [NARROW, WIDE]) {
+      const placed = [4, 5].map((tiles) => {
+        const host = mountSeat(tiles, at.room, { w: at.tileW, h: at.tileH });
+        placeXmjRackTags(host);
+        const edge = host.querySelector('.xmj-seat')?.classList.contains(XMJ_TAGS_EDGE_CLASS);
+        host.remove();
+        return edge;
+      });
+      expect(placed[0]).toBe(placed[1]);
+    }
+  });
+
+  it('sets the badges on the edge of a narrow seat and beside the hand of a wide one', () => {
+    badgesMeasure(BADGE_W);
+    const narrow = mountSeat(4, NARROW.room, { w: NARROW.tileW, h: NARROW.tileH });
+    const wide = mountSeat(4, WIDE.room, { w: WIDE.tileW, h: WIDE.tileH });
+    placeXmjRackTags(document.body);
+    expect(narrow.querySelector('.xmj-seat')?.classList.contains(XMJ_TAGS_EDGE_CLASS)).toBe(true);
+    expect(wide.querySelector('.xmj-seat')?.classList.contains(XMJ_TAGS_EDGE_CLASS)).toBe(false);
+    // The probe that measured the badges is gone.
+    expect(document.querySelectorAll('.xmj-badge').length).toBe(2);
   });
 });
