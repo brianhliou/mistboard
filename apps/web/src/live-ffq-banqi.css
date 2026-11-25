@@ -1,3 +1,13 @@
+/* The game review takes Three Kingdoms' column budget (three-kingdoms-banqi-board.css)
+   so the wide board can reach its 720px cap on desktop. Phones keep the shared
+   single-column fit. */
+.review-shell.ffq-banqi-review {
+  --uni-side-min: 230px;
+  --uni-side-max: 300px;
+  --uni-table-min: 280px;
+  --uni-table-max: 350px;
+}
+
 .ffq-banqi-hp {
   display: grid;
   grid-template-columns: auto 1fr auto;

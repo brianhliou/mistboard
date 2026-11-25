@@ -36,3 +36,14 @@ describe('Fanfanqi review seat row HP', () => {
     expect(11 + 2 + height).toBeLessThanOrEqual(24);
   });
 });
+
+describe('Fanfanqi review columns', () => {
+  // At 1440x900 the shared budget held the board at 560px; these rails let it
+  // reach the 720px cap Three Kingdoms' review uses.
+  it("takes Three Kingdoms' rail budget on its own page class only", () => {
+    const shell = css.match(/\.review-shell\.ffq-banqi-review \{([^}]*)\}/)?.[1];
+    expect(shell).toMatch(/--uni-side-max: 300px/);
+    expect(shell).toMatch(/--uni-table-max: 350px/);
+    expect(css).not.toMatch(/(?:^|\}) ?\.banqi-review \{/);
+  });
+});

@@ -90,10 +90,16 @@ export function mountFFQBanqiPostgame(root: HTMLElement, roomId: string): void {
     );
     return;
   }
-  void loadFFQBanqiPostgame(roomId)
+  const watch = new URLSearchParams(window.location.search).get('watch') === '1';
+  // The stored grades are read beside the game, not after it: otherwise the
+  // analysis GET waits for the game to load and mount, and the decisions GET
+  // for the analysis, three round trips in a row before a grade shows.
+  const loading = loadFFQBanqiPostgame(roomId);
+  const prefetched = watch ? null : prefetchStoredGrades(roomId);
+  void loading
     .then((result) => {
       if (result.ok) {
-        if (new URLSearchParams(window.location.search).get('watch') === '1') {
+        if (watch) {
           const host = document.createElement('main');
           host.className = 'game-shell';
           root.replaceChildren(buildNav(), host);
@@ -104,7 +110,7 @@ export function mountFFQBanqiPostgame(root: HTMLElement, roomId: string): void {
             .catch(() =>
               renderError(root, t('replay.postgameUnavailable'), t('replay.gameCouldNotBeLoaded')),
             );
-        } else renderPostgame(root, result.postgame);
+        } else renderPostgame(root, result.postgame, prefetched);
         return;
       }
       renderError(root, errorTitle(result.status), errorBody(result));
@@ -131,7 +137,32 @@ export function ffqBanqiPostgameApiUrl(roomId: string): string {
   return `/api/ffq-banqi/games/${encodeURIComponent(roomId)}`;
 }
 
-function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): void {
+type StoredGrades = {
+  analysis: () => Promise<Response> | undefined;
+  decisions: () => Promise<Response> | undefined;
+};
+
+/** Start the cached analysis and decisions reads now. Each response is handed
+ * over once; a retry or a later read fetches again. */
+function prefetchStoredGrades(roomId: string): StoredGrades {
+  const once = (path: string) => {
+    let pending: Promise<Response> | undefined = fetch(`${ffqBanqiPostgameApiUrl(roomId)}/${path}`);
+    // A failed read surfaces where it is awaited, not as an unhandled rejection.
+    pending.catch(() => {});
+    return () => {
+      const taken = pending;
+      pending = undefined;
+      return taken;
+    };
+  };
+  return { analysis: once('analysis'), decisions: once('decisions') };
+}
+
+function renderPostgame(
+  root: HTMLElement,
+  postgame: FFQBanqiPostgameResponse,
+  prefetched: StoredGrades | null = null,
+): void {
   const moveEvents = postgame.timeline.filter(
     (entry): entry is typeof entry & { move: FFQBanqiMove } =>
       entry.type === 'move-played' && !!entry.move,
@@ -186,7 +217,7 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
   watchRow.append(watchLabel, watchGroup);
   root.replaceChildren(buildNav());
   mountFFQBanqiReview(root, postgame.history.truth, {
-    pageClassName: 'banqi-review',
+    pageClassName: 'banqi-review ffq-banqi-review',
     ariaLabel: variantName,
     title: variantName,
     summary: `${status} · ${postgame.game.plyCount} plies`,
@@ -203,7 +234,11 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
     urlPly: true,
     decisions: {
       canRun: isLikelySignedIn(),
-      fetchCached: (options) => fetchCachedFFQBanqiDecisions(postgame.game.roomId, options),
+      fetchCached: (options) =>
+        fetchCachedFFQBanqiDecisions(postgame.game.roomId, {
+          ...options,
+          initialResponse: prefetched?.decisions(),
+        }),
       run: (options) => requestFFQBanqiDecisions(postgame.game.roomId, options),
     },
     analysis: {
@@ -211,9 +246,16 @@ function renderPostgame(root: HTMLElement, postgame: FFQBanqiPostgameResponse): 
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: (options) => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, options),
-      run: (_progress, signal, onStatus) =>
-        requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus }),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, {
+          ...options,
+          initialResponse: prefetched?.analysis(),
+        }),
+      run: (_progress, signal, onStatus) => {
+        // Decisions read before this analysis existed are stale once it runs.
+        prefetched?.decisions();
+        return requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus });
+      },
     },
   });
 }

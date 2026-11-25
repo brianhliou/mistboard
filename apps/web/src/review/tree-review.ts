@@ -266,6 +266,14 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
 export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   /** Rules seam: the concrete VariantTreeAdapter (already generic). */
   adapter: VariantTreeAdapter<Move, Truth, View>;
+  /** A page with no local engine (`engine: null`) can still draw the stored
+   *  analysis's better move on the position it was missed from, as an engine page
+   *  does with its engine off. Ignored when `engine` is set. */
+  storedBest?: {
+    bestMoveArrow?(best: string | null | undefined): Arrow[];
+    bestMoveMarker?(best: string | null | undefined): Marker[];
+    candidateArrows?(moves: readonly MarkArrowMove[]): Arrow[];
+  };
   /**
    * Whether the eval track's `best` may be quoted as advice ("X was best").
    * Default true. FALSE for imperfect-information variants: there the eval is
@@ -1130,7 +1138,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Engine PV / analysis-best arrows for the current node (transient, derived).
   function engineArrows(): Arrow[] {
     const engine = presentation.engine;
-    if (!engine || !engineOverlaysSupported || !showEngineArrows) return [];
+    if (!engine) return storedBestOverlays().arrows;
+    if (!engineOverlaysSupported || !showEngineArrows) return [];
     if (retro?.hideEngineOutput()) return [];
     if (engineLines?.length && engine.engineArrowsFromLines) {
       return engine.engineArrowsFromLines(engineLines);
@@ -1164,9 +1173,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (retro?.hidesPly(node.ply + 1)) return null;
     return betterFromPly(analysisMarkByPly, node.ply);
   }
+  /** The engine-off better-move ink for a page with no local engine: the same
+   *  marked move an engine page draws while its engine is off. */
+  function storedBestOverlays(): { arrows: Arrow[]; markers: Marker[] } {
+    const stored = presentation.storedBest;
+    const none = { arrows: [], markers: [] };
+    if (!stored || !showEngineArrows || retro?.hideEngineOutput()) return none;
+    const better = markedBetter();
+    if (!better) return none;
+    if (better.kind === 'candidates' && stored.candidateArrows) {
+      return { arrows: stored.candidateArrows(better.moves), markers: [] };
+    }
+    const top = better.kind === 'move' ? better.uci : better.moves[0]?.uci;
+    return {
+      arrows: stored.bestMoveArrow?.(top) ?? [],
+      markers: better.kind === 'move' ? (stored.bestMoveMarker?.(better.uci) ?? []) : [],
+    };
+  }
   function engineMarkers(): Marker[] {
     const engine = presentation.engine;
-    if (!engine || !engineOverlaysSupported || !showEngineArrows) return [];
+    if (!engine) return storedBestOverlays().markers;
+    if (!engineOverlaysSupported || !showEngineArrows) return [];
     if (retro?.hideEngineOutput()) return [];
     if (engineLines?.length && engine.engineMarkersFromLines) {
       return engine.engineMarkersFromLines(engineLines);

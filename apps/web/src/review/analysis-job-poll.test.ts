@@ -187,3 +187,28 @@ it('supports the browser floor without AbortSignal reason or throwIfAborted', as
     if (original) Object.defineProperty(AbortSignal.prototype, 'throwIfAborted', original);
   }
 });
+
+describe('fetchAnalysisJob with a response the page already started', () => {
+  it('reads it in place of the first GET and still polls a pending job', async () => {
+    const calls = stubFetch([
+      {
+        url: '/api/x/analysis/jobs/j1',
+        reply: response(200, { status: 'done', result: { a: 1 } }),
+      },
+    ]);
+    const initialResponse = Promise.resolve(response(202, { jobId: 'j1' }) as unknown as Response);
+    const result = await fetchAnalysisJob<{ a: number }>('/api/x/analysis', {
+      initialResponse,
+      pollIntervalMs: 0,
+    });
+    expect(result).toEqual({ a: 1 });
+    expect(calls.map((c) => c.url)).toEqual(['/api/x/analysis/jobs/j1']);
+  });
+
+  it('never stands in for an explicit POST', async () => {
+    const calls = stubFetch([{ method: 'POST', reply: response(200, { b: 2 }) }]);
+    const initialResponse = Promise.resolve(response(204, null) as unknown as Response);
+    expect(await postAnalysisJob('/api/x/analysis', { initialResponse })).toEqual({ b: 2 });
+    expect(calls).toHaveLength(1);
+  });
+});
