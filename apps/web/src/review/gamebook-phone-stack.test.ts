@@ -56,6 +56,16 @@ describe('lesson player phone stack', () => {
     expect(bubble).toContain('min-height: 0;');
   });
 
+  it('opens the solved text as a sheet over the board, which stays put', () => {
+    const root = phone.slice(phone.lastIndexOf(`${scope} { position: relative;`));
+    expect(root).toContain('justify-content: flex-start;');
+    const sheet = rule(`${scope} .gamebook__coach[data-state="end"]`);
+    expect(sheet).toContain('position: absolute;');
+    expect(sheet).toContain('inset: auto 0 0;');
+    expect(sheet).toContain('max-height: 50%;');
+    expect(sheet).toContain('min-height: calc(var(--gamebook-phone-height) -');
+  });
+
   it('keeps the strip button a full tap target beside the prompt', () => {
     const button = rule(`${scope} .gamebook__coach .gamebook__btn.gamebook__next`);
     expect(button).toContain('min-height: 44px;');
