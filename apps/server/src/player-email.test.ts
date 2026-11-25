@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { accountCodeEmail } from './account-session.js';
-import { renderEmail, shortLinkText } from './email-layout.js';
+import { clubConfirmEmail, clubConfirmUrl } from './club-signup.js';
+import { renderEmail } from './email-layout.js';
 import {
   challengeUrl,
   correspondenceChallengeEmail,
@@ -439,7 +440,7 @@ test('the layout renders without a button or settings link', () => {
   assert.ok(!email.html.includes('mb-button'));
 });
 
-test('the layout never prints a raw URL in the html part, only a short muted link', () => {
+test('the layout never prints a raw URL in the html part; the button is the only link to it', () => {
   const url =
     'https://mistboard.com/xiangqi/game/xq_7c2dbfde-41a9-4c3e-9b8f-2d6e5a1c0f37?from=email';
   const email = renderEmail({
@@ -452,39 +453,41 @@ test('the layout never prints a raw URL in the html part, only a short muted lin
   const visible = email.html.replace(/<[^>]*>/g, ' ');
   assert.ok(!visible.includes('https://'), 'a URL printed as text');
   assert.ok(!visible.includes('xq_7c2dbfde'), 'the room id printed as text');
-  assert.ok(email.html.includes(`href="${url.replace('&', '&amp;')}"`));
-  assert.match(email.html, /Or open: <a [^>]*>mistboard\.com\/xiangqi\/game\/…<\/a>/);
+  assert.equal(email.html.split(`href="${url}"`).length - 1, 1, 'one link to the game');
   assert.ok(!email.html.includes('word-break'), 'no wrapped URL block');
   // The text part keeps every URL in full.
   assert.ok(email.text.includes(`Review the game: ${url}`));
   assert.ok(email.text.includes('Manage: https://mistboard.com/m'));
 });
 
-test('the short link under the button is localized', () => {
-  const button = { label: 'x', url: 'https://mistboard.com/room/r1' };
-  const footer = { reason: 'r', manage: null };
-  const html = (lang: EmailLocale) =>
-    renderEmail({ lang, headline: 'h', paragraphs: [], button, footer }).html;
-  assert.match(html('en'), /Or open: <a [^>]*>mistboard\.com\/room\/r1<\/a>/);
-  assert.match(html('zh-Hans'), /或打开：<a [^>]*>mistboard\.com\/room\/r1<\/a>/);
-  assert.match(html('zh-Hant'), /或打開：<a [^>]*>mistboard\.com\/room\/r1<\/a>/);
-});
-
-test('short link text: host and path, no scheme or query, cut at a whole segment', () => {
-  assert.equal(shortLinkText('https://mistboard.com/room/r1'), 'mistboard.com/room/r1');
-  assert.equal(shortLinkText('https://www.mistboard.com/'), 'mistboard.com');
-  assert.equal(
-    shortLinkText('https://mistboard.com/api/club/washington/confirm?t=abc.def&lang=en'),
-    'mistboard.com/api/club/washington/confirm',
-  );
-  assert.equal(
-    shortLinkText('https://mistboard.com/room/xq_7c2dbfde-41a9-4c3e-9b8f-2d6e5a1c0f37'),
-    'mistboard.com/room/…',
-  );
-  assert.equal(
-    shortLinkText('https://mistboard.com/a-very-long-single-segment-that-cannot-be-cut-anywhere'),
-    'mistboard.com/…',
-  );
+test('no html body carries a link line under the button, in any email or locale', () => {
+  const all: Array<[string, PlayerEmail]> = [];
+  for (const locale of LOCALES) {
+    all.push(
+      ...correspondenceEmails(locale),
+      ...noticeEmails(locale),
+      [
+        'inbox notice',
+        inboxNoticeEmail(
+          { senderHandle: 'fox333', senderName: 'Fox', unsubscribeUrl: 'https://mistboard.com/u' },
+          locale,
+        ),
+      ],
+      [
+        'club confirm',
+        clubConfirmEmail(locale, clubConfirmUrl('https://mistboard.com', 't', locale)),
+      ],
+      ...CODE_PURPOSES.map((purpose): [string, PlayerEmail] => [
+        `code ${purpose}`,
+        accountCodeEmail('1', purpose, locale),
+      ]),
+    );
+  }
+  for (const [name, email] of all) {
+    for (const line of ['Or open', '或打开', '或打開', 'class="mb-muted"']) {
+      assert.ok(!email.html.includes(line), `${name} (${email.subject}) html has "${line}"`);
+    }
+  }
 });
 
 test('the layout is one centred 560px column with the icon beside the wordmark', () => {

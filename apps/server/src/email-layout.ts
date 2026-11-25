@@ -22,9 +22,9 @@
  *   Clients that force their own dark mode (Gmail apps, Outlook) invert the
  *   light palette, which stays legible because nothing relies on a background
  *   image or a low-contrast tint;
- * - a link is never printed as a raw URL in the HTML part: the line under the
- *   button is a short muted "Or open: mistboard.com/room/…" link, because Gmail
- *   turns a printed URL into a wrapped blue underlined block.
+ * - a link is never printed as a raw URL in the HTML part, and nothing sits
+ *   under the button: the button is the link (Gmail turns a printed URL into a
+ *   wrapped blue underlined block).
  *
  * The text part is the same message in plain text, with every URL written out
  * in full, so it reads the same in a client that never renders the HTML.
@@ -63,13 +63,6 @@ export const emailPublicHost = process.env.MISTBOARD_HOST ?? 'https://mistboard.
 const LOGO_PATH = '/logo-192.png';
 const LOGO_SIZE = 28;
 
-// The label on the short link under the button, per language.
-const OR_OPEN: Record<EmailLang, string> = {
-  en: 'Or open: ',
-  'zh-Hans': '或打开：',
-  'zh-Hant': '或打開：',
-};
-
 // apps/web/src/app-base.css :root (light) and [data-effective-theme="dark"].
 const LIGHT = {
   page: '#ffffff', // white, so a wide reading pane is not a tinted block
@@ -105,8 +98,6 @@ const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 
 // preheader instead of running on into the wordmark and the headline.
 const PREHEADER_FILL = '&#8199;&#847;'.repeat(60);
 
-const SHORT_LINK_MAX = 44;
-
 export function renderEmail(input: EmailLayoutInput): RenderedEmail {
   return { text: renderText(input), html: renderHtml(input) };
 }
@@ -123,25 +114,6 @@ function renderText(input: EmailLayoutInput): string {
   if (input.footer.manage) footer.push(`${input.footer.manage.label}: ${input.footer.manage.url}`);
   blocks.push(`--\n${footer.join('\n')}`);
   return blocks.join('\n\n');
-}
-
-/**
- * The readable part of a link for the line under a button: host and path, no
- * scheme or query, cut back to a whole path segment past SHORT_LINK_MAX
- * characters ("mistboard.com/room/…"). The href always keeps the full URL.
- */
-export function shortLinkText(url: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return url.length > SHORT_LINK_MAX ? `${url.slice(0, SHORT_LINK_MAX)}…` : url;
-  }
-  const host = parsed.host.replace(/^www\./, '');
-  const full = `${host}${parsed.pathname.replace(/\/+$/, '')}`;
-  if (full.length <= SHORT_LINK_MAX) return full;
-  const cut = full.slice(0, SHORT_LINK_MAX).lastIndexOf('/');
-  return `${full.slice(0, cut > host.length ? cut : host.length)}/…`;
 }
 
 function renderHtml(input: EmailLayoutInput): string {
@@ -188,12 +160,6 @@ function renderHtml(input: EmailLayoutInput): string {
   }
   if (input.button) {
     rows.push(row(buttonHtml(input.button), '12px 0 0'));
-    rows.push(
-      row(
-        `<p class="mb-muted" style="margin:0;font-family:${FONT};font-size:13px;line-height:1.5;color:${LIGHT.muted}">${escapeHtml(OR_OPEN[lang])}<a class="mb-muted" href="${escapeHtml(input.button.url)}" style="color:${LIGHT.muted};text-decoration:underline">${escapeHtml(shortLinkText(input.button.url))}</a></p>`,
-        '14px 0 0',
-      ),
-    );
   }
 
   const manage = input.footer.manage
@@ -220,7 +186,7 @@ function renderHtml(input: EmailLayoutInput): string {
   .mb-card { background-color: ${DARK.panel} !important; border-color: ${DARK.border} !important; }
   .mb-heading, .mb-wordmark { color: ${DARK.heading} !important; }
   .mb-text { color: ${DARK.text} !important; }
-  .mb-muted, .mb-footer { color: ${DARK.muted} !important; }
+  .mb-footer { color: ${DARK.muted} !important; }
   .mb-link { color: ${DARK.link} !important; }
   .mb-item { border-color: ${DARK.border} !important; }
   .mb-code { background-color: ${DARK.soft} !important; border-color: ${DARK.border} !important; color: ${DARK.heading} !important; }
