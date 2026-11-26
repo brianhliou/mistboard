@@ -19,6 +19,8 @@ import {
   banqiPieceGhostSvg,
 } from '../live-banqi-render.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
+import { bestMoveArrowWithParser, bestMoveMarkerWithParser } from './engine/engine-arrows.js';
+import { formatFFQBanqiBestMove, parseFFQBanqiEngineMove } from './ffq-banqi-decisions.js';
 import {
   type FFQBanqiReviewSnapshot,
   makeFFQBanqiStudyTreeAdapter,
@@ -57,6 +59,13 @@ export function mountFFQBanqiReview(
         ? makeFFQBanqiStudyTreeAdapter(config.initialTree.initialRevealed!)
         : makeFFQBanqiTreeAdapter(snapshots, config.moves),
     engine: null,
+    // No engine runs in the browser, but the stored analysis still names the
+    // better move: drawn on the board, and written "b3 flip" in the advice.
+    storedBest: {
+      bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseFFQBanqiEngineMove),
+      bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseFFQBanqiEngineMove),
+    },
+    formatBestMove: formatFFQBanqiBestMove,
     fen: (frame) => frame.fen,
     boardHostClassName: 'banqi-postgame-board',
     boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
@@ -65,7 +74,9 @@ export function mountFFQBanqiReview(
     // Coordinates are drawn inside the board, so a toggle only needs a re-render.
     appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     boardCols: 10,
-    boardMaxPx: 560,
+    // Three Kingdoms' cap: the game page's narrower rails (live-ffq-banqi.css)
+    // leave the eight-file board room to reach it on a 1440px desktop.
+    boardMaxPx: 720,
     // Keep the gauge's track so the columns land where banqi's and Three
     // Kingdoms' review pages put them.
     phoneForkPicker: true,

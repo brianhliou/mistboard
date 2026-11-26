@@ -11,6 +11,9 @@ export type AnalysisJobPollOptions = {
   errorPrefix?: string;
   signal?: AbortSignal;
   onStatus?(status: AnalysisJobStatus): void;
+  /** A GET of this same URL the page already started (alongside the game
+   *  itself), read in place of a fresh first GET. Polls still fetch. */
+  initialResponse?: Promise<Response>;
 };
 type JobStatusBody =
   | AnalysisJobStatus
@@ -52,7 +55,10 @@ async function analysisJob<T>(
   const signal = controller.signal;
   try {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-    const response = await fetch(url, { method, signal });
+    const response = await (method === 'GET' && opts.initialResponse
+      ? opts.initialResponse
+      : fetch(url, { method, signal }));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     if (method === 'GET' && response.status === 204) return null;
     if (response.status === 200) return (await response.json()) as T;
     if (response.status !== 202) throw new Error(`${prefix}_${response.status}`);

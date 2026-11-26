@@ -17,11 +17,13 @@ import {
   ffqBanqiPostgameApiUrl,
   mountFFQBanqiPostgame,
 } from './live-ffq-banqi-postgame.js';
+import { formatFFQBanqiBestMove } from './review/ffq-banqi-decisions.js';
 import { mountFFQBanqiReview } from './review/ffq-banqi-review.js';
 import {
   type FFQBanqiReviewSnapshot,
   makeFFQBanqiTreeAdapter,
 } from './review/ffq-banqi-tree-adapter.js';
+import type { GameAnalysis } from './review/game-analysis.js';
 import { createGameTree } from './review/game-tree.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 import { ffqBanqiWatchRecord, mountFFQBanqiWatchReplay } from './watch-ffq-banqi-replay.js';
@@ -92,6 +94,33 @@ const played = record.timeline.map(({ move }) => ({
   from: ffqBanqiSquare(move!.from),
   to: ffqBanqiSquare(move!.to),
 }));
+// The dealt states behind the record, only to list legal moves (an observer view
+// carries none); every assertion reads the masked snapshots.
+const dealt = [createInitialFFQBanqiState(ROOM, 800)];
+for (const { move } of record.timeline) dealt.push(applyFFQBanqiMove(dealt.at(-1)!, move!));
+const legalAt = (ply: number) => getFFQBanqiLegalMoves(dealt[ply]!);
+const square = (m: FFQBanqiMove) => ({ from: ffqBanqiSquare(m.from), to: ffqBanqiSquare(m.to) });
+const engineUci = (m: FFQBanqiMove) =>
+  [m.from, m.to].map((n) => `${String.fromCharCode(97 + (n % 4))}${Math.floor(n / 4)}`).join('');
+const sameMove = (a: { from: string; to: string } | undefined, m: FFQBanqiMove) =>
+  a?.from === ffqBanqiSquare(m.from) && a?.to === ffqBanqiSquare(m.to);
+/** A legal move off the record from a face-up piece to a square the masked board
+ * shows (empty, or a face-up piece), after a recorded move that drew nothing. */
+function publicAlternative({ quiet = false } = {}) {
+  for (const frame of record.history.truth.slice(0, -1)) {
+    const next = record.timeline[frame.ply]!.move!;
+    if (next.from === next.to || frame.view.board[next.to]?.faceDown) continue;
+    const alt = legalAt(frame.ply).find(
+      (m) =>
+        m.from !== m.to &&
+        !frame.view.board[m.from]?.faceDown &&
+        (quiet ? !frame.view.board[m.to] : !frame.view.board[m.to]?.faceDown) &&
+        !sameMove(played[frame.ply], m),
+    );
+    if (alt) return { frame, alt };
+  }
+  throw new Error('fixture has no public alternative');
+}
 const roots: HTMLElement[] = [];
 const destroy: Array<() => void> = [];
 function root() {
@@ -235,6 +264,7 @@ describe('FFQ masked review', () => {
     expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
       ffqBanqiPostgameApiUrl(ROOM),
       `${ffqBanqiPostgameApiUrl(ROOM)}/analysis`,
+      `${ffqBanqiPostgameApiUrl(ROOM)}/decisions`,
     ]);
     expect(host.textContent).toContain('Request computer analysis');
     expect(host.querySelector('textarea')?.value ?? '').not.toContain('/embed/');
@@ -344,7 +374,60 @@ describe('FFQ masked review', () => {
     assertMasked(decisions);
   });
 
-  it('translates native FFQ engine coordinates only into the recorded continuation', () => {
+  it('reads the stored grades beside the game, not after it, and only once each', async () => {
+    const analysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      plies: record.history.truth.map(({ ply }) => ({ ply, cp: 0, mate: null, best: null })),
+      chancePlies: [],
+    };
+    let releaseGame!: () => void;
+    const game = new Promise<void>((resolve) => {
+      releaseGame = resolve;
+    });
+    const spy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/analysis')) return new Response(JSON.stringify(analysis));
+      if (url.endsWith('/decisions'))
+        return new Response(
+          JSON.stringify({ engineId: 'misty-ffq-banqi-decisions@test', depth: 12, decisions: [] }),
+        );
+      await game;
+      return new Response(JSON.stringify(record));
+    });
+    vi.stubGlobal('fetch', spy);
+    const host = root();
+    mountFFQBanqiPostgame(host, ROOM);
+    // All three reads are in flight while the game itself is still loading.
+    expect(spy.mock.calls.map(([url]) => String(url))).toEqual([
+      ffqBanqiPostgameApiUrl(ROOM),
+      `${ffqBanqiPostgameApiUrl(ROOM)}/analysis`,
+      `${ffqBanqiPostgameApiUrl(ROOM)}/decisions`,
+    ]);
+    releaseGame();
+    await vi.waitFor(() => expect(host.querySelector('.advantage-chart__line')).not.toBeNull());
+    await vi.waitFor(() => expect(host.querySelector('.review-move-list__move')).not.toBeNull());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
+
+  it('reads the game alone for the as-played replay', () => {
+    window.history.replaceState(null, '', '/ffq-banqi/game/x?watch=1');
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Promise<Response>(() => {})),
+      );
+      mountFFQBanqiPostgame(root(), ROOM);
+      expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
+        ffqBanqiPostgameApiUrl(ROOM),
+      ]);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('translates native FFQ engine coordinates into the recorded continuation', () => {
     const adapter = makeFFQBanqiTreeAdapter(record.history.truth, played);
     for (let ply = 0; ply < played.length; ply++) {
       const native = record.timeline[ply]!.move!;
@@ -354,6 +437,95 @@ describe('FFQ masked review', () => {
       expect(adapter.fromUci(uci, record.history.truth[ply]!)).toEqual(played[ply]);
     }
     expect(adapter.fromUci('a0a0', record.history.truth.at(-1)!)).toBeNull();
+  });
+
+  it('branches off the record only where the masked board already shows the outcome', () => {
+    const adapter = makeFFQBanqiTreeAdapter(record.history.truth, played);
+    const { frame, alt } = publicAlternative();
+    const uci = engineUci(alt);
+    expect(adapter.isLegal(frame, square(alt))).toBe(true);
+    expect(adapter.fromUci(uci, frame)).toEqual(square(alt));
+    const branch = adapter.applyMove(frame, square(alt));
+    expect(branch.ply).toBe(frame.ply + 1);
+    expect(branch).toBe(adapter.applyMove(frame, square(alt)));
+    // The same backs, still anonymous, and the same hidden pool: nothing about a
+    // covered piece is known after the branch move that was not known before it.
+    const backs = (view: typeof frame.view) =>
+      view.board.flatMap((piece, i) => (piece?.faceDown ? [i] : []));
+    expect(backs(branch.view)).toEqual(backs(frame.view));
+    expect(branch.view.pool).toEqual(frame.view.pool);
+    assertMasked(branch);
+    // A flip or a covered capture off the record draws from the hidden pool, so
+    // neither has an outcome to show.
+    const back = backs(branch.view)[0]!;
+    const flip = { from: back, to: back };
+    expect(adapter.isLegal(branch, square(flip))).toBe(false);
+    expect(adapter.fromUci(engineUci(flip), branch)).toBeNull();
+    const covered = record.history.truth.flatMap((f) =>
+      legalAt(f.ply)
+        .filter((m) => m.from !== m.to && f.view.board[m.to]?.faceDown)
+        .filter((m) => !sameMove(played[f.ply], m))
+        .map((m) => ({ f, m })),
+    )[0]!;
+    expect(covered).toBeDefined();
+    expect(adapter.isLegal(covered.f, square(covered.m))).toBe(false);
+  });
+
+  it('grafts the stored best move as a clickable branch, arrows it and names it in board squares', async () => {
+    const { frame, alt } = publicAlternative({ quiet: true });
+    const judgedPly = frame.ply + 1;
+    const cp = judgedPly % 2 === 1 ? -1500 : 1500;
+    const analysis: GameAnalysis = {
+      engineId: 'misty-ffq-banqi-analysis@test',
+      depth: 12,
+      evals: record.history.truth.map(({ ply }) => ({
+        ply,
+        cp: ply < judgedPly ? 0 : cp,
+        mate: null,
+        best: ply === frame.ply ? engineUci(alt) : null,
+        pv: [],
+      })),
+      moves: played.map((_, i) => ({
+        ply: i + 1,
+        mover: i % 2 === 0 ? 'red' : 'black',
+        judgment: i + 1 === judgedPly ? 'blunder' : null,
+        accuracy: i + 1 === judgedPly ? 10 : 100,
+      })),
+      chancePlies: [],
+      unstablePlies: [],
+      bestPlayedPlies: [],
+      red: { accuracy: 90, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },
+      black: { accuracy: 90, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },
+    };
+    const host = root();
+    const handle = mountFFQBanqiReview(host, record.history.truth, {
+      moves: played,
+      ariaLabel: 'Review',
+      title: gameSpecForId(FFQ_BANQI_SPEC_ID).publicName,
+      summary: '',
+      seatLabels: true,
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => analysis,
+        run: async () => analysis,
+      },
+    });
+    destroy.push(handle.destroy);
+    await vi.waitFor(() => expect(host.querySelector('.move-tree__variation')).not.toBeNull());
+    const label = formatFFQBanqiBestMove(engineUci(alt));
+    expect(host.textContent).toContain(`${label} was best`);
+    // The position the blunder was played from carries the better move's arrow.
+    handle.jumpToPly(frame.ply);
+    await vi.waitFor(() => expect(host.querySelector('.xq-arrow--best')).not.toBeNull());
+    const branchMove = host.querySelector<HTMLButtonElement>(
+      '.move-tree__variation .review-move-list__move',
+    )!;
+    branchMove.click();
+    await vi.waitFor(() =>
+      expect(branchMove.classList.contains('review-move-list__move--current')).toBe(true),
+    );
+    assertMasked(handle.serialize());
+    expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
   });
 
   it('does not fetch when disabled and handles the server access refusal', async () => {
