@@ -544,6 +544,73 @@ definePersistenceTests('Mistboard readout', () => {
     });
   });
 
+  test('bot engine failures read every bot: failed-closed decisions, engine-failure forfeits, engine-unavailable aborts', async () => {
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
+       VALUES ('owner', 'owner@example.com', 'owner', 'Owner', '2026-06-01T00:00:00Z', '2026-06-02T00:00:00Z')`,
+    );
+    const at = '2026-11-10T12:00:00Z';
+    const pve = (roomId: string, extra: Partial<Parameters<typeof insertGame>[0]> = {}) =>
+      insertGame({
+        roomId,
+        variant: 'xiangqi',
+        mode: 'pve',
+        endedAt: at,
+        result: 'red-wins',
+        termination: 'resignation',
+        participants: [human, bot],
+        ...extra,
+      });
+    const unavailable = async (roomId: string) =>
+      getPool().query(
+        `UPDATE games SET termination = 'abandoned', aborted_reason = 'engine-unavailable'
+         WHERE room_id = $1`,
+        [roomId],
+      );
+    // Planted: a xiangqi bot resigned on a failed-closed decision; a Gomoku
+    // bot forfeited (engine-failure abort); a Duck bot's engine was unreachable.
+    await pve('ef-xq-resign');
+    await decision('ef-xq-resign', 9, { engine_id: 'pikafish', move: null, failed_closed: true });
+    await pve('ef-gmk-forfeit', { variant: 'gomoku', status: 'aborted' });
+    await pve('ef-duck-unavail', { variant: 'duck-xiangqi', status: 'aborted' });
+    await unavailable('ef-duck-unavail');
+    // Quiet: a good decision, a human abandoning, the old fail-closed artifact
+    // type, bot-vs-bot, the operator's game, a game outside the window.
+    await pve('ef-xq-ok');
+    await decision('ef-xq-ok', 1, { engine_id: 'pikafish', move: 'h2e2', failed_closed: false });
+    await pve('ef-human-abort', { status: 'aborted' });
+    await getPool().query(
+      `UPDATE games SET termination = 'abandoned', aborted_reason = 'abandoned' WHERE room_id = 'ef-human-abort'`,
+    );
+    await pve('ef-old-type');
+    await decision('ef-old-type', 1, { failed_closed: true }, 'live-engine-fail-closed');
+    await pve('ef-eve', { mode: 'eve', participants: [{ ...bot, color: 'red' }, bot] });
+    await decision('ef-eve', 1, { failed_closed: true });
+    await pve('ef-owner', {
+      participants: [{ color: 'red', subjectType: 'user', subjectId: 'owner' }, bot],
+    });
+    await decision('ef-owner', 1, { failed_closed: true });
+    await pve('ef-old', { variant: 'gomoku', status: 'aborted', endedAt: '2026-10-30T12:00:00Z' });
+
+    const timing = await collectBotTiming(getPool(), botNow);
+    assert.deepEqual(timing.engineFailures, [
+      { variant: 'duck-xiangqi', resignedRoomIds: [], abortedRoomIds: ['ef-duck-unavail'] },
+      { variant: 'gomoku', resignedRoomIds: [], abortedRoomIds: ['ef-gmk-forfeit'] },
+      { variant: 'xiangqi', resignedRoomIds: ['ef-xq-resign'], abortedRoomIds: [] },
+    ]);
+
+    // Through the stored readouts: told once, then quiet.
+    const first = await botReport();
+    const told = first.report.actions.filter((a) => a.code === 'bot-engine-failures');
+    assert.equal(told.length, 3);
+    assert.ok(told.every((a) => !/—/.test(a.text)));
+    const second = await botReport();
+    assert.deepEqual(
+      second.report.actions.filter((a) => a.code === 'bot-engine-failures'),
+      [],
+    );
+  });
+
   test('a bot loss on time alerts once across stored readouts, survives a failed collector, and old snapshots', async (t) => {
     await seedBotTiming();
     const first = await botReport();

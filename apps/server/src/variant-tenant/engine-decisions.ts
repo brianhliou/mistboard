@@ -26,7 +26,11 @@
  * cap made its deadline check unreachable, and nothing persisted could say so.
  */
 
-import { buildEngineDecisionRecord, type EngineMoveAttempt } from '../engine-move-guard.js';
+import {
+  buildEngineDecisionRecord,
+  type EngineDecisionRecord,
+  type EngineMoveAttempt,
+} from '../engine-move-guard.js';
 import {
   type GameDebugArtifactInput,
   LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
@@ -73,6 +77,37 @@ export function queueEngineDecision(
     engineColor: null,
     artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
     payload,
+  });
+}
+
+/**
+ * The durable mark of a bot whose engine gave no usable move: a
+ * `live-engine-decision` with `failed_closed: true`, which the readout's
+ * `bot-engine-failures` rule counts per variant. For the fail-closed paths
+ * that otherwise only log and page (reportEngineFallback has no room). Queue
+ * it before the resignation, whose append ends the game and flushes the queue.
+ *
+ * Deliberately thin: identities and counts only. No FEN, history, legal set or
+ * raw engine output, so nothing a hidden-information variant masks can ride
+ * in it; the full record still goes to the log and the alert email.
+ */
+export function queueFailClosedEngineDecision(
+  room: EngineDecisionQueueRoom,
+  record: EngineDecisionRecord,
+): void {
+  queueEngineDecision(room, {
+    variant: record.variant,
+    room_id: record.room_id,
+    engine_id: record.engine_id,
+    engine_version: record.engine_version,
+    engine_seat: record.to_move,
+    to_move: record.to_move,
+    ply: record.ply,
+    move: null,
+    failed_closed: true,
+    attempts: record.attempts,
+    reject_reason: record.reject_reason,
+    unreachable: record.unreachable,
   });
 }
 

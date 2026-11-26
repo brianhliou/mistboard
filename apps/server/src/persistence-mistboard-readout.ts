@@ -13,6 +13,7 @@ import {
   deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
   isDisruptiveDrain,
+  type MistboardReadoutBotEngineFailures,
   type MistboardReadoutBotTiming,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
@@ -40,6 +41,7 @@ import {
   countedHumanGame,
   countedPlayerSeat,
   liveClockGame,
+  pveBotGameEnded,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
@@ -855,6 +857,7 @@ export async function collectBotTiming(
   return {
     variants: [...byVariant.values()].sort((a, b) => a.variant.localeCompare(b.variant)),
     katagoJungle: await collectKatagoJungle(db, periodStart, periodEnd),
+    engineFailures: await collectBotEngineFailures(db, periodStart, periodEnd),
   };
 }
 
@@ -953,6 +956,58 @@ async function collectKatagoJungle(
     engineResignRoomIds: ids((room) => room.engine_resign),
     timeLossRoomIds: ids((room) => room.flagged),
   };
+}
+
+// Games a first-party bot ended because its engine gave no usable move, per
+// variant, over the window. Three durable marks, one per way the bots fail:
+// a `live-engine-decision` with failed_closed true (the resigning bots, queued
+// before the resignation and flushed at game end), termination
+// 'engine-failure' (the forfeiting bots that engineFailureAbort voids: Gomoku,
+// Fog Xiangqi, the chess-stack fog bots), and an abort whose reason is
+// 'engine-unavailable' (Duck Xiangqi's opening abort, on the row its game start
+// wrote). A game counts as aborted when its row says so, else resigned. The
+// population is pveBotGameEnded, not COUNTED_GAME: an engine that fails on its
+// first move leaves a game neither side finished. Lists are the newest
+// BOT_TIME_LOSS_ROOM_ID_CAP per variant and outcome, oldest first.
+async function collectBotEngineFailures(
+  db: Queryable,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<MistboardReadoutBotEngineFailures[]> {
+  const { rows } = await db.query<{ variant: string; room_id: string; aborted: boolean }>(
+    `SELECT g.variant, g.room_id, g.status = 'aborted' AS aborted
+     FROM games g
+     WHERE ${pveBotGameEnded('g')}
+       AND g.ended_at >= $1 AND g.ended_at < $2
+       AND (
+         g.termination = 'engine-failure'
+         OR (g.status = 'aborted' AND g.aborted_reason = 'engine-unavailable')
+         OR EXISTS (
+           SELECT 1 FROM game_debug_artifacts f
+           WHERE f.game_id = g.room_id AND f.artifact_type = $3
+             AND f.payload->>'failed_closed' = 'true'
+         )
+       )
+     ORDER BY g.ended_at DESC, g.room_id DESC`,
+    [periodStart, periodEnd, LIVE_ENGINE_DECISION_ARTIFACT_TYPE],
+  );
+  const byVariant = new Map<string, MistboardReadoutBotEngineFailures>();
+  for (const row of rows) {
+    let entry = byVariant.get(row.variant);
+    if (!entry) {
+      entry = { variant: row.variant, resignedRoomIds: [], abortedRoomIds: [] };
+      byVariant.set(row.variant, entry);
+    }
+    const list = row.aborted ? entry.abortedRoomIds : entry.resignedRoomIds;
+    if (list.length < BOT_TIME_LOSS_ROOM_ID_CAP) list.push(row.room_id);
+  }
+  return [...byVariant.values()]
+    .map((entry) => ({
+      variant: entry.variant,
+      resignedRoomIds: entry.resignedRoomIds.reverse(),
+      abortedRoomIds: entry.abortedRoomIds.reverse(),
+    }))
+    .sort((a, b) => a.variant.localeCompare(b.variant));
 }
 
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {

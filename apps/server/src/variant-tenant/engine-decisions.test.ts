@@ -8,12 +8,14 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { buildEngineDecisionRecord } from '../engine-move-guard.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from '../persistence-game-lifecycle.js';
 import {
   buildLiveEngineDecisionPayload,
   type EngineDecisionQueueRoom,
   MAX_QUEUED_ENGINE_DECISIONS,
   queueEngineDecision,
+  queueFailClosedEngineDecision,
 } from './engine-decisions.js';
 
 function room(id = 'room_queue'): EngineDecisionQueueRoom {
@@ -184,4 +186,35 @@ test('the payload marks a guard replacement and keeps what the engine wanted', (
     mate: null,
     pv: [],
   });
+});
+
+test('a fail-closed decision is the thin readout mark: identities and counts, no position', () => {
+  const room: EngineDecisionQueueRoom = { id: 'room-fc' };
+  const record = buildEngineDecisionRecord({
+    variant: 'banqi',
+    roomId: 'room-fc',
+    engineId: 'banqi-search',
+    engineVersion: 'v1',
+    movetimeMs: 1_000,
+    ply: 12,
+    toMove: 'black',
+    inCheck: false,
+    fen: 'SECRET-DEAL-FEN',
+    history: ['a1a2'],
+    legalUci: ['b1b2'],
+    attempts: [],
+  });
+  queueFailClosedEngineDecision(room, record);
+  const [entry] = room.pendingDebugArtifacts ?? [];
+  assert.equal(entry?.artifactType, LIVE_ENGINE_DECISION_ARTIFACT_TYPE);
+  assert.equal(entry?.ply, 12);
+  const payload = entry?.payload as Record<string, unknown>;
+  assert.equal(payload.failed_closed, true);
+  assert.equal(payload.move, null);
+  assert.equal(payload.variant, 'banqi');
+  assert.equal(payload.engine_seat, 'black');
+  for (const key of ['fen', 'history', 'legal_moves', 'last_output', 'attempts_detail']) {
+    assert.equal(key in payload, false, key);
+  }
+  assert.doesNotMatch(JSON.stringify(payload), /SECRET-DEAL-FEN|a1a2|b1b2/);
 });

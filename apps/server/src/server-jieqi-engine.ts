@@ -58,6 +58,7 @@ import type { UciEval } from './uci-engine-harness.js';
 import {
   buildLiveEngineDecisionPayload,
   queueEngineDecision,
+  queueFailClosedEngineDecision,
 } from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import {
@@ -433,6 +434,8 @@ export async function playJieqiEngineMoveIfReady(
       'Jieqi',
       abortable ? 'abort' : 'resign',
     );
+    // Dropped with the queue on an abort (no games row); kept on a resignation.
+    queueFailClosedEngineDecision(room, record);
     const terminal: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = abortable
       ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'engine-unavailable' }
       : { type: 'seat-resigned', at: Date.now(), roomId: room.id, color: seat };

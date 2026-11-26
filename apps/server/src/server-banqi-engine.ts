@@ -49,6 +49,7 @@ import type { UciEval } from './uci-engine-harness.js';
 import {
   buildLiveEngineDecisionPayload,
   queueEngineDecision,
+  queueFailClosedEngineDecision,
 } from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { replayTenantEvents, tenantClockRemainingMs } from './variant-tenant/runtime.js';
@@ -371,6 +372,7 @@ export async function playBanqiEngineMoveIfReady(
       attempts,
     });
     reportEngineFallback(record, 'banqi_engine_failed_closed', 'Banqi');
+    queueFailClosedEngineDecision(room, record);
     const resign: TenantRoomEvent<BanqiSeat, BanqiMove, BanqiSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),

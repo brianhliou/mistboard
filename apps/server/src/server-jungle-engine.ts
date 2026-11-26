@@ -64,6 +64,7 @@ import type { UciEval } from './uci-engine-harness.js';
 import {
   buildLiveEngineDecisionPayload,
   queueEngineDecision,
+  queueFailClosedEngineDecision,
 } from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
@@ -476,6 +477,21 @@ async function failClosedJungleBinaryMissing(
     room_id: room.id,
   });
   if (!engineToMove(room, seat)) return;
+  // The durable mark the readout counts (queueFailClosedEngineDecision's shape,
+  // with no record to build it from).
+  queueEngineDecision(room, {
+    variant: 'jungle',
+    room_id: room.id,
+    engine_id: engineId,
+    engine_seat: seat,
+    to_move: seat,
+    ply: room.projection.state.moveNumber,
+    move: null,
+    failed_closed: true,
+    attempts: 0,
+    reject_reason: null,
+    unreachable: true,
+  });
   const resign: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
     type: 'seat-resigned',
     at: Date.now(),
@@ -630,6 +646,9 @@ async function playJungleSearchedEngineMove(
         ...(engine.mode?.() ? { mode: engine.mode() } : {}),
         ...engine.record(attempts),
       });
+    } else {
+      // MistyJungle carries no per-move katago block, so the thin record.
+      queueFailClosedEngineDecision(room, record);
     }
     const resign: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
       type: 'seat-resigned',

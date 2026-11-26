@@ -228,6 +228,22 @@ export type MistboardReadoutBotTiming = {
   variants: MistboardReadoutBotTimingVariant[];
   // The KataGo jungle seat's shared process; absent on older snapshots.
   katagoJungle?: MistboardReadoutKatagoJungle;
+  // Games any first-party bot ended because its engine gave no usable move,
+  // one entry per variant with any; absent on older snapshots.
+  engineFailures?: MistboardReadoutBotEngineFailures[];
+};
+
+// A variant's games over the window that its bot resigned or aborted because
+// the engine gave no usable move (persistence-mistboard-readout.ts,
+// collectBotEngineFailures). Room ids only: the newest
+// BOT_TIME_LOSS_ROOM_ID_CAP of each list, oldest first, as above.
+export type MistboardReadoutBotEngineFailures = {
+  variant: string;
+  // The game finished: the bot resigned (or forfeited) it.
+  resignedRoomIds: string[];
+  // The game was voided: the server aborted it (an opening the engine never
+  // answered, or a forfeit engineFailureAbort turns into an abort).
+  abortedRoomIds: string[];
 };
 
 // The one KataGo process every jungle game against the KataGo seat shares
@@ -514,6 +530,7 @@ function buildActions(
     ...loginEmailDeliveryActions(facts.loginEmailDelivery ?? null, previousReport),
     ...botTimeLossActions(facts.botTiming ?? null, previousReport),
     ...katagoJungleActions(facts.botTiming?.katagoJungle, previousReport),
+    ...botEngineFailureActions(facts.botTiming ?? null, previousReport),
     ...staleBotRatingActions(facts.engines?.staleRatings, previousReport),
     ...heldBotRatingActions(facts.engines?.heldRatings, previousReport),
   ];
@@ -1115,6 +1132,64 @@ function katagoJungleActions(
   return actions;
 }
 
+// Any bot whose engine gave no usable move (action): each game is its own
+// event, edge-triggered on variant and room id the way bot losses on time are,
+// one line per variant, at any count. With no previous readout, or one from
+// before this list existed, every game in the window is new. The KataGo jungle
+// seat's resignations are told by katago-jungle-engine-failures above, with the
+// shared process named, so a jungle room in its list is left out here: one game
+// is one line.
+function botEngineFailureActions(
+  botTiming: MistboardReadoutBotTiming | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!botTiming?.engineFailures) return [];
+  const reported = new Set(
+    (previousReport?.botTiming?.engineFailures ?? []).flatMap((entry) =>
+      [...entry.resignedRoomIds, ...entry.abortedRoomIds].map(
+        (roomId) => `${entry.variant}:${roomId}`,
+      ),
+    ),
+  );
+  const katagoRooms = new Set(botTiming.katagoJungle?.engineResignRoomIds ?? []);
+  const games = (n: number) => `${n} game${n === 1 ? '' : 's'}`;
+  const list = (ids: string[]) => `${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}`;
+  return botTiming.engineFailures.flatMap((entry) => {
+    const fresh = (ids: string[]) =>
+      ids.filter(
+        (roomId) =>
+          !reported.has(`${entry.variant}:${roomId}`) &&
+          !(entry.variant === 'jungle' && katagoRooms.has(roomId)),
+      );
+    const resigned = fresh(entry.resignedRoomIds);
+    const aborted = fresh(entry.abortedRoomIds);
+    if (resigned.length + aborted.length === 0) return [];
+    const parts = [
+      ...(resigned.length > 0
+        ? [`${games(resigned.length)} the bot resigned (${list(resigned)})`]
+        : []),
+      ...(aborted.length > 0 ? [`${games(aborted.length)} aborted (${list(aborted)})`] : []),
+    ];
+    return [
+      {
+        code: 'bot-engine-failures',
+        severity: 'action' as const,
+        dedupeKey:
+          `bot-engine-failures:${entry.variant}:` +
+          [...resigned.map((id) => `resign:${id}`), ...aborted.map((id) => `abort:${id}`)].join(
+            ',',
+          ),
+        ownerIssue: null,
+        text:
+          `${entry.variant}: ${parts.join(' and ')} because the bot's engine gave no move, ` +
+          'new since the last readout (expected none). ' +
+          "Read those games' live-engine-decision artifacts and the server log's " +
+          '*_engine_failed_closed lines for the reject reason.',
+      },
+    ];
+  });
+}
+
 function seconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
@@ -1167,6 +1242,7 @@ const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
   // Each bot loss on time is its own game; the key names the rooms.
   'bot-time-losses',
   'katago-jungle-engine-failures',
+  'bot-engine-failures',
   'bot-ratings-stale',
   'bot-ratings-calibration-held',
   'site-milestone-crossed',

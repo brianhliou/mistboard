@@ -50,6 +50,7 @@ import type { UciEval } from './uci-engine-harness.js';
 import {
   buildLiveEngineDecisionPayload,
   queueEngineDecision,
+  queueFailClosedEngineDecision,
 } from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
@@ -293,6 +294,7 @@ export async function playJungleFlipEngineMoveIfReady(
       attempts,
     });
     reportEngineFallback(record, 'jungle_flip_engine_failed_closed', 'Flip Jungle');
+    queueFailClosedEngineDecision(room, record);
     const resign: TenantRoomEvent<JungleFlipSeat, JungleFlipMove, JungleFlipSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),
