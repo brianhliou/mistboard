@@ -1954,16 +1954,19 @@ html.landing-setup-open body {
 }
 /* Desktop: the picked player sits beside Share a link | Pick a player, so
    the Send to row stays one control tall and the dialog fits a laptop
-   screen without scrolling. The phone sheet keeps them stacked. */
+   screen without scrolling. The phone sheet keeps them stacked, and a
+   narrow window wraps the box to its own line rather than squeezing it. */
 .landing-setup-dialog:not(.landing-setup-sheet)
 .landing-setup-section:has(> .landing-challenge-player-row:not([hidden])) {
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
 }
 .landing-setup-dialog:not(.landing-setup-sheet)
   .landing-setup-section
   > .landing-challenge-player-row:not([hidden]) {
+  flex: 1 1 220px;
   min-height: 44px;
   min-width: 0;
   padding-block: 2px;
@@ -1971,6 +1974,7 @@ html.landing-setup-open body {
 .landing-setup-dialog:not(.landing-setup-sheet)
   .landing-setup-section:has(> .landing-challenge-player-row:not([hidden]))
   > .landing-start-options {
+  flex: 0 0 auto;
   grid-template-columns: auto auto;
 }
 .landing-setup-dialog:not(.landing-setup-sheet)
