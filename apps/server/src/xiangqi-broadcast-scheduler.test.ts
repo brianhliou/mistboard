@@ -131,7 +131,7 @@ type HarnessTour = {
   pollMode?: XiangqiBroadcastPollMode;
   startsAt?: string | null;
   endsAt?: string | null;
-  hasBoards?: boolean;
+  boards?: { total: number; recorded: number };
 };
 
 type Harness = {
@@ -474,12 +474,12 @@ test('scheduler polls an empty tour past its window once a day until its first b
     startsAt: new Date(h.now() - 12 * day).toISOString(),
     // Ended ten days ago: the 7-day tail closed three days ago.
     endsAt: new Date(h.now() - 10 * day).toISOString(),
-    hasBoards: false,
+    boards: { total: 0, recorded: 0 },
   };
-  h.setTours([empty, { ...empty, slug: 'imported', hasBoards: true }]);
+  h.setTours([empty, { ...empty, slug: 'imported', boards: { total: 2, recorded: 2 } }]);
 
   await scheduler.tick();
-  assert.deepEqual(h.pollSlugs, ['empty'], 'a tour with boards stays closed');
+  assert.deepEqual(h.pollSlugs, ['empty'], 'a tour with recorded boards stays closed');
 
   h.advance(day - 60_000);
   await scheduler.tick();
@@ -491,17 +491,56 @@ test('scheduler polls an empty tour past its window once a day until its first b
 
   // The source posted the records: the next poll imported boards, which ends
   // the late tail.
-  h.setTours([{ ...empty, hasBoards: true }]);
+  h.setTours([{ ...empty, boards: { total: 2, recorded: 2 } }]);
   h.advance(day + 1);
   await scheduler.tick();
   assert.equal(h.pollSlugs.length, 2);
   assert.equal((h.logs.at(-1) as { kind: string }).kind, 'poll_stopped_after_event');
 
-  // Thirty days past the window an empty tour stops too.
-  h.setTours([{ ...empty, endsAt: new Date(h.now() - 38 * day).toISOString() }]);
+  // Sixty days past the end an empty tour stops too.
+  h.setTours([{ ...empty, endsAt: new Date(h.now() - 61 * day).toISOString() }]);
   h.advance(day + 1);
   await scheduler.tick();
   assert.equal(h.pollSlugs.length, 2);
+});
+
+test('scheduler checks a results-only tour past its window once a day until the cap', async () => {
+  const h = harness();
+  const scheduler = createXiangqiBroadcastScheduler(h.deps);
+  const day = 24 * 60 * 60_000;
+  const resultsOnly = {
+    slug: 'results-only',
+    sourceUrl: 'https://fixture.invalid/results-only.json',
+    pollIntervalMs: 30_000,
+    pollMode: 'auto' as const,
+    startsAt: new Date(h.now() - 14 * day).toISOString(),
+    // Ended eight days ago: the 7-day tail closed yesterday.
+    endsAt: new Date(h.now() - 8 * day).toISOString(),
+    boards: { total: 231, recorded: 0 },
+  };
+  h.setTours([
+    resultsOnly,
+    { ...resultsOnly, slug: 'recorded', boards: { total: 231, recorded: 231 } },
+    { ...resultsOnly, slug: 'off', pollMode: 'off' as const },
+  ]);
+
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['results-only'], 'recorded and off tours stay closed');
+
+  h.advance(day - 60_000);
+  await scheduler.tick();
+  assert.equal(h.pollSlugs.length, 1, 'one check a day, not the live or tail cadence');
+
+  h.advance(60_001);
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['results-only', 'results-only']);
+
+  // Past the cap it stops for good.
+  h.setTours([{ ...resultsOnly, endsAt: new Date(h.now() - 61 * day).toISOString() }]);
+  h.advance(day + 1);
+  await scheduler.tick();
+  assert.equal(h.pollSlugs.length, 2);
+  assert.equal((h.logs.at(-1) as { kind: string }).kind, 'poll_stopped_after_event');
 });
 
 test('scheduler sweeps the dpxq index before polling, then every six hours', async () => {

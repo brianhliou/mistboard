@@ -8,11 +8,12 @@
 // to 7 days after its last day, `on` always, `off` never. Past the end date a
 // polling tour slows to one poll per half hour, since only late record
 // uploads are still to come (dpxq's operator, 2026-09-06: 不固定). A tour
-// still holding no boards when that tail ends polls once a day for 30 more
-// days (`auto-late`), so a source that posts the records later is picked up;
-// the first board it imports ends that. The window is derived, not written to
-// the tour, so when the dpxq index sweep moves an end date later (a league's
-// next stage) polling resumes with no operator step.
+// still waiting on its records when that tail ends (fewer than half its
+// boards hold a move, none at all included) polls once a day until sixty days
+// after the event (`auto-late`), so a source that posts the records later is
+// picked up; records on half the boards end that. The window is derived, not
+// written to the tour, so when the dpxq index sweep moves an end date later
+// (a league's next stage) polling resumes with no operator step.
 
 import { observeBackgroundJob } from './obs.js';
 import * as persistence from './persistence.js';
@@ -40,7 +41,8 @@ export const XIANGQI_BROADCAST_SCHEDULE_MAX_INTERVAL_MS = 300_000;
 export const XIANGQI_BROADCAST_SCHEDULE_DEFAULT_INTERVAL_MS = 30_000;
 const SCHEDULER_TICK_MS = 5_000;
 export const XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS = 30 * 60_000;
-/** The late tail's cadence: one poll a day for a tour with no boards yet. */
+/** The late tail's cadence: one poll a day for a tour still waiting on its
+ *  records, well clear of the bursts dpxq answers with 503. */
 export const XIANGQI_BROADCAST_LATE_TAIL_INTERVAL_MS = 24 * 60 * 60_000;
 
 // How often the scheduler reads dpxq's tour index to keep end dates in step.

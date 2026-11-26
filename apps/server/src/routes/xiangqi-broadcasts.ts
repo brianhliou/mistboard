@@ -17,6 +17,7 @@ import {
 } from './../xiangqi-broadcast-live-eval.js';
 import {
   isXiangqiBroadcastPollMode,
+  type XiangqiBroadcastBoardCounts,
   type XiangqiBroadcastPollMode,
   type XiangqiBroadcastPollState,
   xiangqiBroadcastPollState,
@@ -335,7 +336,10 @@ export async function xiangqiBroadcastOpsIndexForApi(
           startsAt: tour.startsAt ?? null,
           endsAt: tour.endsAt ?? null,
           createdAt: tour.createdAt,
-          hasBoards: boards.length > 0,
+          boards: {
+            total: boards.length,
+            recorded: boards.filter((board) => board.plyCount > 0).length,
+          },
         }),
         roundCount: rounds.length,
         boardCount: boards.length,
@@ -506,7 +510,7 @@ function scheduleForApi(
     startsAt: string | null;
     endsAt: string | null;
     createdAt?: string | Date | null;
-    hasBoards?: boolean;
+    boards?: XiangqiBroadcastBoardCounts | null;
   },
   now = Date.now(),
 ): XiangqiBroadcastScheduleForApi {

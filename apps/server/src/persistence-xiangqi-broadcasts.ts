@@ -29,6 +29,8 @@ import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
 import type { DpxqSiblingSeed, DpxqTrackedTour } from './xiangqi-broadcast-dpxq-index.js';
 import {
   normalizeXiangqiBroadcastPollMode,
+  XIANGQI_BROADCAST_POLL_LATE_CAP_MS,
+  type XiangqiBroadcastBoardCounts,
   type XiangqiBroadcastPollMode,
   xiangqiBroadcastPollState,
 } from './xiangqi-broadcast-poll-window.js';
@@ -62,9 +64,10 @@ export type XiangqiBroadcastTourSchedule = {
   endsAt: string | null;
   /** When the tour was seeded: a backfill's poll tail runs from here. */
   createdAt?: string;
-  /** Whether the tour holds any board; set by the scheduler's listing, where
-   *  `false` earns the daily late tail past the window. */
-  hasBoards?: boolean;
+  /** The tour's boards and how many hold a record; set by the scheduler's
+   *  listing for tours recent enough to need it, where a tour still waiting
+   *  on its records earns the daily late tail past the window. */
+  boards?: XiangqiBroadcastBoardCounts | null;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -1524,21 +1527,47 @@ export async function extendXiangqiBroadcastTourEndsAt(
   return (rowCount ?? 0) > 0;
 }
 
-export async function listXiangqiBroadcastScheduledTours(): Promise<
-  XiangqiBroadcastTourSchedule[]
-> {
+// A tour whose poll tail began (its end, or its creation when seeded later)
+// longer ago than this cannot be in the late tail, so the listing skips
+// counting its boards. A week of slack over the cap covers a payload date that
+// runs ahead of its column.
+const SCHEDULED_TOUR_COUNT_HORIZON_MS = XIANGQI_BROADCAST_POLL_LATE_CAP_MS + 7 * 24 * 60 * 60_000;
+
+export async function listXiangqiBroadcastScheduledTours(
+  now = Date.now(),
+): Promise<XiangqiBroadcastTourSchedule[]> {
   // Every tour that could poll; the scheduler applies each one's window
-  // (xiangqiBroadcastPollState), so the rule lives in one place.
-  const { rows } = await getPool().query<TourRow & { has_boards: boolean }>(
+  // (xiangqiBroadcastPollState), so the rule lives in one place. The board
+  // counts feed the late tail; they are taken only for tours inside its
+  // horizon (the gate in the lateral's WHERE is a one-time filter, so an old
+  // tour's boards are never scanned), which keeps this 5-second listing to an
+  // index range scan per recent tour.
+  const { rows } = await getPool().query<
+    TourRow & { counted: boolean; board_total: number; board_recorded: number }
+  >(
     `SELECT tour.*,
-            EXISTS (
-              SELECT 1 FROM xiangqi_broadcast_boards AS board WHERE board.tour_slug = tour.slug
-            ) AS has_boards
+            counts.counted,
+            counts.board_total,
+            counts.board_recorded
        FROM xiangqi_broadcast_tours AS tour
+       CROSS JOIN LATERAL (
+         SELECT GREATEST(COALESCE(tour.ends_at, tour.starts_at), tour.created_at) >= $1 AS counted
+       ) AS gate
+       CROSS JOIN LATERAL (
+         SELECT gate.counted,
+                count(*)::int AS board_total,
+                count(*) FILTER (WHERE board.ply_count > 0)::int AS board_recorded
+           FROM xiangqi_broadcast_boards AS board
+          WHERE gate.counted AND board.tour_slug = tour.slug
+       ) AS counts
       WHERE tour.poll_mode <> 'off' AND tour.source_url IS NOT NULL
       ORDER BY tour.slug`,
+    [new Date(now - SCHEDULED_TOUR_COUNT_HORIZON_MS)],
   );
-  return rows.map((row) => ({ ...scheduleFromRow(row), hasBoards: row.has_boards }));
+  return rows.map((row) => ({
+    ...scheduleFromRow(row),
+    boards: row.counted ? { total: row.board_total, recorded: row.board_recorded } : null,
+  }));
 }
 
 export type XiangqiBroadcastTranslationBackfillChange = {
